@@ -752,8 +752,8 @@ For each task, follow this cycle:
 |---|---|---|---|
 | Slice 1 - Active surface cutover | T001-T012 | 12/12 | Complete; committed in `21d5fce8` |
 | Slice 2 - Payload/release/docs gates | T013-T027 | 15/15 | Complete; payload completeness, release-readiness, Layer 4 gates, and docs validation passed |
-| Slice 3 - UAT/update/autoheal | Fill after Tasks | 0 | Pending |
-| Polish and release packet | Fill after Tasks | 0 | Pending |
+| Slice 3 - UAT/update/autoheal | T028-T042 | 8/15 | Deterministic UAT matrix, install-health repair, release-readiness blockers, metadata refresh, and request verification complete; native operator evidence T035-T041 pending |
+| Polish and release packet | T043-T047 | 0/5 | Pending native UAT evidence |
 
 ### Slice 2 Verification Evidence
 
@@ -761,6 +761,19 @@ For each task, follow this cycle:
 - `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness.json` passed with `gate_status: pass`.
 - `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/release-readiness.json` passed with `gate_status: pass` and `blocking_count: 0`.
 - `npx --yes pnpm@10.25.0 --dir docs-site validate` passed, including `88 passed` Playwright smoke tests.
+
+### Slice 3 Verification Evidence
+
+- `python3 -m json.tool` passed for the UAT matrix, install-health repair, release-readiness, and new request fixtures.
+- `python3 -m py_compile speckit-pro/speckit_pro_runner/gates/release.py speckit-pro/speckit_pro_runner/helpers/install.py speckit-pro/speckit_pro_runner/gates/registry.py speckit-pro/speckit_pro_runner/helpers/registry.py tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` passed.
+- `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` passed with 43/43 tests.
+- `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness.json` passed with `gate_status: pass`.
+- `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/uat-matrix.json` passed with `gate_status: pass` against fixture evidence.
+- `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/install-health-repair.json` passed with trusted missing artifact autoheal refresh evidence.
+- `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/release-readiness.json` passed with `gate_status: pass` and `blocking_count: 0` against fixture evidence.
+
+Native Windows/macOS/Linux Claude and Codex UAT is still pending. Fixture-backed
+gate proof does not satisfy T035-T041 or the release-ready support claim.
 
 ---
 

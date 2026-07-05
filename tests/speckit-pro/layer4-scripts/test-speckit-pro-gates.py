@@ -302,6 +302,9 @@ class GateFoundationTests(unittest.TestCase):
             "active-path-guard",
             "classify-shell-finding",
         }
+        us4_operations = {
+            "uat-matrix",
+        }
         for operation in operations:
             if operation.operation in runtime_operations:
                 self.assertEqual(operation.group, "runtime")
@@ -325,6 +328,11 @@ class GateFoundationTests(unittest.TestCase):
             elif operation.operation in us3_operations:
                 self.assertEqual(operation.group, "guard")
                 self.assertEqual(operation.story, "US3")
+                self.assertTrue(operation.implemented)
+                self.assertEqual(operation.promotion_status, "python_authoritative")
+            elif operation.operation in us4_operations:
+                self.assertEqual(operation.group, "release")
+                self.assertEqual(operation.story, "US4")
                 self.assertTrue(operation.implemented)
                 self.assertEqual(operation.promotion_status, "python_authoritative")
             else:
@@ -1538,6 +1546,12 @@ class GateFoundationTests(unittest.TestCase):
                 "missing-release-evidence",
                 "live-evidence-disabled",
                 "failed-runner-invocation",
+                "placeholder-uat",
+                "smoke-only-uat",
+                "raw-html-uat",
+                "missing-uat-evidence-link",
+                "incomplete-update-proof",
+                "broad-reinstall-rejected",
             },
         )
         request = xplat008_fixture_request("release-readiness")
@@ -1554,6 +1568,150 @@ class GateFoundationTests(unittest.TestCase):
             "release-readiness.json",
         ]:
             self.assertIn(f"tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/{request_name}", release_workflow)
+
+    def test_xplat008_uat_matrix_fixtures_cover_native_rows_and_blockers(self) -> None:
+        cases = xplat008_fixture_cases("uat-matrix")
+        self.assertEqual(cases["schema_version"], "1.0")
+        self.assertEqual(cases["feature_id"], "XPLAT-008")
+        ready_rows = cases["base_case"]["rows"]
+        self.assertEqual(len(ready_rows), 6)
+        self.assertEqual(
+            {(row["product"], row["platform"]) for row in ready_rows},
+            {
+                ("claude", "windows"),
+                ("claude", "macos"),
+                ("claude", "linux"),
+                ("codex", "windows"),
+                ("codex", "macos"),
+                ("codex", "linux"),
+            },
+        )
+        for row in ready_rows:
+            self.assertGreaterEqual(len(row["runner_invocation_ids"]), 3)
+            self.assertEqual(row["latest_tag_update"], "pass")
+            self.assertEqual(row["incomplete_install_repair"], "pass")
+            self.assertNotIn("<a", row["evidence_link"])
+        self.assertLessEqual(
+            {
+                "missing-row",
+                "placeholder-row",
+                "smoke-only-row",
+                "failing-update-row",
+                "raw-html-anchor",
+                "empty-expected-result",
+                "missing-evidence-link",
+                "unsupported-native-support-claim",
+            },
+            {case["case_id"] for case in cases["cases"]},
+        )
+        request = xplat008_fixture_request("uat-matrix")
+        self.assertEqual(request["helper_id"], "release-readiness")
+        self.assertEqual(request["operation"], "uat-matrix")
+
+    def test_xplat008_uat_matrix_reports_pass_and_seeded_blockers(self) -> None:
+        completed, response, stderr_records = run_runner(xplat008_fixture_request("uat-matrix"))
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        matrix = response["data"]["uat_matrix"]
+        self.assertEqual(matrix["status"], "pass")
+        self.assertEqual(matrix["blocking_count"], 0)
+        self.assertEqual(len(matrix["rows"]), 6)
+
+        for case_id in [
+            "missing-row",
+            "placeholder-row",
+            "smoke-only-row",
+            "failing-update-row",
+            "raw-html-anchor",
+            "empty-expected-result",
+            "missing-evidence-link",
+            "unsupported-native-support-claim",
+        ]:
+            with self.subTest(case_id=case_id):
+                completed, response, stderr_records = run_runner(
+                    gate_request(
+                        "release-readiness",
+                        "uat-matrix",
+                        inputs={
+                            "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/uat-matrix-cases.json",
+                            "case_id": case_id,
+                        },
+                    )
+                )
+                self.assertEqual(completed.returncode, 1)
+                self.assert_response(response, "expected_failure")
+                self.assertEqual([diag["code"] for diag in stderr_records], ["uat_matrix_blocked"])
+                self.assertGreater(response["data"]["uat_matrix"]["blocking_count"], 0)
+
+    def test_xplat008_install_health_repair_reports_safe_and_manual_outcomes(self) -> None:
+        cases = xplat008_fixture_cases("install-health-repair")
+        self.assertEqual(cases["schema_version"], "1.0")
+        self.assertEqual(cases["feature_id"], "XPLAT-008")
+        self.assertLessEqual(
+            {
+                "ready",
+                "trusted-missing",
+                "trusted-stale",
+                "unsafe-unknown",
+                "unsafe-extra",
+                "unsafe-mismatch",
+                "unsafe-trust-root-change",
+                "unsafe-out-of-cache",
+                "broad-reinstall-rejected",
+            },
+            {case["case_id"] for case in cases["cases"]},
+        )
+
+        completed, response, stderr_records = run_runner(xplat008_fixture_request("install-health-repair"))
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        health = response["data"]["install_health_repair"]
+        self.assertEqual(health["status"], "pass")
+        self.assertTrue(health["repair_actions"])
+        self.assertEqual(health["repair_actions"][0]["action_type"], "autoheal_refresh")
+        self.assertTrue(health["repair_actions"][0]["digest_verified"])
+
+        for case_id in [
+            "unsafe-unknown",
+            "unsafe-extra",
+            "unsafe-mismatch",
+            "unsafe-trust-root-change",
+            "unsafe-out-of-cache",
+        ]:
+            with self.subTest(case_id=case_id):
+                completed, response, stderr_records = run_runner(
+                    gate_request(
+                        "install-health-repair",
+                        "install-health-repair",
+                        inputs={
+                            "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/install-health-repair-cases.json",
+                            "case_id": case_id,
+                        },
+                    )
+                )
+                self.assertEqual(completed.returncode, 0)
+                self.assert_response(response, "ok")
+                self.assertEqual(stderr_records, [])
+                health = response["data"]["install_health_repair"]
+                self.assertEqual(health["status"], "manual_remediation_required")
+                self.assertEqual(health["repair_actions"][0]["action_type"], "manual_remediation")
+                self.assertTrue(health["repair_actions"][0]["manual_steps"])
+
+        completed, response, stderr_records = run_runner(
+            gate_request(
+                "install-health-repair",
+                "install-health-repair",
+                inputs={
+                    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/install-health-repair-cases.json",
+                    "case_id": "broad-reinstall-rejected",
+                },
+            )
+        )
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure")
+        self.assertEqual([diag["code"] for diag in stderr_records], ["install_health_repair_blocked"])
 
     def test_xplat008_release_readiness_reports_pass_and_seeded_blockers(self) -> None:
         completed, response, stderr_records = run_runner(xplat008_fixture_request("release-readiness"))
@@ -1613,6 +1771,12 @@ class GateFoundationTests(unittest.TestCase):
             "missing-release-evidence",
             "live-evidence-disabled",
             "failed-runner-invocation",
+            "placeholder-uat",
+            "smoke-only-uat",
+            "raw-html-uat",
+            "missing-uat-evidence-link",
+            "incomplete-update-proof",
+            "broad-reinstall-rejected",
         ]
         for case_id in blocker_cases:
             with self.subTest(case_id=case_id):

@@ -1,0 +1,366 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "XPLAT-008",
+  "coverage": [
+    "six required Claude/Codex platform rows",
+    "runner invocation IDs",
+    "non-placeholder reviewer fields",
+    "install-to-update-to-repair journey fields",
+    "raw HTML evidence link blocker",
+    "native support claim blocker"
+  ],
+  "base_case": {
+    "rows": [
+      {
+        "product": "claude",
+        "platform": "windows",
+        "operator": "Racecraft UAT fixture",
+        "date": "2026-07-05",
+        "host_version": "Windows 11 fixture",
+        "plugin_version_or_latest_tag": "2.17.0",
+        "installed_cache_path": "fixture/claude/windows/speckit-pro",
+        "interpreter_resolution": {"accepted": true, "minimum_version": "3.11", "resolved_executable": "py", "version": "3.11.9"},
+        "runner_invocation_ids": ["xplat-008-runner-invocation-claude-windows-install", "xplat-008-runner-invocation-claude-windows-update", "xplat-008-runner-invocation-claude-windows-autoheal"],
+        "install_result": "pass",
+        "bundled_agent_verification": "pass",
+        "first_use": "pass",
+        "scaffold_status": "pass",
+        "autopilot_dry_run": "pass",
+        "latest_tag_update": "pass",
+        "incomplete_install_repair": "pass",
+        "expected_result": "Claude on Windows installs SpecKit Pro, resolves Python 3.11+, runs first-use workflows, updates to the latest tag, and repairs a trusted incomplete install.",
+        "actual_result": "Fixture row represents passing native evidence for install, bundled agents, first use, scaffold/status, autopilot dry-run, latest-tag update, and incomplete-install repair.",
+        "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/claude-windows.md",
+        "operator_notes": "Detailed evidence file records command output, cache path, interpreter resolution, and repair result.",
+        "status": "pass"
+      },
+      {
+        "product": "claude",
+        "platform": "macos",
+        "operator": "Racecraft UAT fixture",
+        "date": "2026-07-05",
+        "host_version": "macOS 15 fixture",
+        "plugin_version_or_latest_tag": "2.17.0",
+        "installed_cache_path": "fixture/claude/macos/speckit-pro",
+        "interpreter_resolution": {"accepted": true, "minimum_version": "3.11", "resolved_executable": "python3", "version": "3.11.9"},
+        "runner_invocation_ids": ["xplat-008-runner-invocation-claude-macos-install", "xplat-008-runner-invocation-claude-macos-update", "xplat-008-runner-invocation-claude-macos-autoheal"],
+        "install_result": "pass",
+        "bundled_agent_verification": "pass",
+        "first_use": "pass",
+        "scaffold_status": "pass",
+        "autopilot_dry_run": "pass",
+        "latest_tag_update": "pass",
+        "incomplete_install_repair": "pass",
+        "expected_result": "Claude on macOS installs SpecKit Pro, resolves Python 3.11+, runs first-use workflows, updates to the latest tag, and repairs a trusted incomplete install.",
+        "actual_result": "Fixture row represents passing native evidence for install, bundled agents, first use, scaffold/status, autopilot dry-run, latest-tag update, and incomplete-install repair.",
+        "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/claude-macos.md",
+        "operator_notes": "Detailed evidence file records command output, cache path, interpreter resolution, and repair result.",
+        "status": "pass"
+      },
+      {
+        "product": "claude",
+        "platform": "linux",
+        "operator": "Racecraft UAT fixture",
+        "date": "2026-07-05",
+        "host_version": "Ubuntu 24.04 fixture",
+        "plugin_version_or_latest_tag": "2.17.0",
+        "installed_cache_path": "fixture/claude/linux/speckit-pro",
+        "interpreter_resolution": {"accepted": true, "minimum_version": "3.11", "resolved_executable": "python3", "version": "3.11.9"},
+        "runner_invocation_ids": ["xplat-008-runner-invocation-claude-linux-install", "xplat-008-runner-invocation-claude-linux-update", "xplat-008-runner-invocation-claude-linux-autoheal"],
+        "install_result": "pass",
+        "bundled_agent_verification": "pass",
+        "first_use": "pass",
+        "scaffold_status": "pass",
+        "autopilot_dry_run": "pass",
+        "latest_tag_update": "pass",
+        "incomplete_install_repair": "pass",
+        "expected_result": "Claude on Linux installs SpecKit Pro, resolves Python 3.11+, runs first-use workflows, updates to the latest tag, and repairs a trusted incomplete install.",
+        "actual_result": "Fixture row represents passing native evidence for install, bundled agents, first use, scaffold/status, autopilot dry-run, latest-tag update, and incomplete-install repair.",
+        "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/claude-linux.md",
+        "operator_notes": "Detailed evidence file records command output, cache path, interpreter resolution, and repair result.",
+        "status": "pass"
+      },
+      {
+        "product": "codex",
+        "platform": "windows",
+        "operator": "Racecraft UAT fixture",
+        "date": "2026-07-05",
+        "host_version": "Windows 11 fixture",
+        "plugin_version_or_latest_tag": "2.17.0",
+        "installed_cache_path": "fixture/codex/windows/speckit-pro",
+        "interpreter_resolution": {"accepted": true, "minimum_version": "3.11", "resolved_executable": "py", "version": "3.11.9"},
+        "runner_invocation_ids": ["xplat-008-runner-invocation-codex-windows-install", "xplat-008-runner-invocation-codex-windows-update", "xplat-008-runner-invocation-codex-windows-autoheal"],
+        "install_result": "pass",
+        "bundled_agent_verification": "pass",
+        "first_use": "pass",
+        "scaffold_status": "pass",
+        "autopilot_dry_run": "pass",
+        "latest_tag_update": "pass",
+        "incomplete_install_repair": "pass",
+        "expected_result": "Codex on Windows installs SpecKit Pro, resolves Python 3.11+, runs first-use workflows, updates to the latest tag, and repairs a trusted incomplete install.",
+        "actual_result": "Fixture row represents passing native evidence for install, bundled agents, first use, scaffold/status, autopilot dry-run, latest-tag update, and incomplete-install repair.",
+        "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/codex-windows.md",
+        "operator_notes": "Detailed evidence file records command output, cache path, interpreter resolution, and repair result.",
+        "status": "pass"
+      },
+      {
+        "product": "codex",
+        "platform": "macos",
+        "operator": "Racecraft UAT fixture",
+        "date": "2026-07-05",
+        "host_version": "macOS 15 fixture",
+        "plugin_version_or_latest_tag": "2.17.0",
+        "installed_cache_path": "fixture/codex/macos/speckit-pro",
+        "interpreter_resolution": {"accepted": true, "minimum_version": "3.11", "resolved_executable": "python3", "version": "3.11.9"},
+        "runner_invocation_ids": ["xplat-008-runner-invocation-codex-macos-install", "xplat-008-runner-invocation-codex-macos-update", "xplat-008-runner-invocation-codex-macos-autoheal"],
+        "install_result": "pass",
+        "bundled_agent_verification": "pass",
+        "first_use": "pass",
+        "scaffold_status": "pass",
+        "autopilot_dry_run": "pass",
+        "latest_tag_update": "pass",
+        "incomplete_install_repair": "pass",
+        "expected_result": "Codex on macOS installs SpecKit Pro, resolves Python 3.11+, runs first-use workflows, updates to the latest tag, and repairs a trusted incomplete install.",
+        "actual_result": "Fixture row represents passing native evidence for install, bundled agents, first use, scaffold/status, autopilot dry-run, latest-tag update, and incomplete-install repair.",
+        "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/codex-macos.md",
+        "operator_notes": "Detailed evidence file records command output, cache path, interpreter resolution, and repair result.",
+        "status": "pass"
+      },
+      {
+        "product": "codex",
+        "platform": "linux",
+        "operator": "Racecraft UAT fixture",
+        "date": "2026-07-05",
+        "host_version": "Ubuntu 24.04 fixture",
+        "plugin_version_or_latest_tag": "2.17.0",
+        "installed_cache_path": "fixture/codex/linux/speckit-pro",
+        "interpreter_resolution": {"accepted": true, "minimum_version": "3.11", "resolved_executable": "python3", "version": "3.11.9"},
+        "runner_invocation_ids": ["xplat-008-runner-invocation-codex-linux-install", "xplat-008-runner-invocation-codex-linux-update", "xplat-008-runner-invocation-codex-linux-autoheal"],
+        "install_result": "pass",
+        "bundled_agent_verification": "pass",
+        "first_use": "pass",
+        "scaffold_status": "pass",
+        "autopilot_dry_run": "pass",
+        "latest_tag_update": "pass",
+        "incomplete_install_repair": "pass",
+        "expected_result": "Codex on Linux installs SpecKit Pro, resolves Python 3.11+, runs first-use workflows, updates to the latest tag, and repairs a trusted incomplete install.",
+        "actual_result": "Fixture row represents passing native evidence for install, bundled agents, first use, scaffold/status, autopilot dry-run, latest-tag update, and incomplete-install repair.",
+        "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/codex-linux.md",
+        "operator_notes": "Detailed evidence file records command output, cache path, interpreter resolution, and repair result.",
+        "status": "pass"
+      }
+    ]
+  },
+  "cases": [
+    {"case_id": "ready", "expected_status": "pass"},
+    {
+      "case_id": "missing-row",
+      "expected_status": "fail",
+      "overrides": {
+        "rows": []
+      }
+    },
+    {
+      "case_id": "placeholder-row",
+      "expected_status": "fail",
+      "overrides": {
+        "rows": [
+          {
+            "product": "claude",
+            "platform": "windows",
+            "operator": "TBD",
+            "date": "2026-07-05",
+            "host_version": "Windows 11 fixture",
+            "plugin_version_or_latest_tag": "2.17.0",
+            "installed_cache_path": "fixture/claude/windows/speckit-pro",
+            "interpreter_resolution": {"accepted": true},
+            "runner_invocation_ids": ["xplat-008-runner-invocation-claude-windows-install"],
+            "install_result": "pass",
+            "bundled_agent_verification": "pass",
+            "first_use": "pass",
+            "scaffold_status": "pass",
+            "autopilot_dry_run": "pass",
+            "latest_tag_update": "pass",
+            "incomplete_install_repair": "pass",
+            "expected_result": "Expected result is recorded.",
+            "actual_result": "Actual result is recorded.",
+            "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/claude-windows.md",
+            "operator_notes": "Detailed evidence file records the complete journey.",
+            "status": "pass"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "smoke-only-row",
+      "expected_status": "fail",
+      "overrides": {
+        "rows": [
+          {
+            "product": "claude",
+            "platform": "windows",
+            "operator": "Racecraft UAT fixture",
+            "date": "2026-07-05",
+            "host_version": "Windows 11 fixture",
+            "plugin_version_or_latest_tag": "2.17.0",
+            "installed_cache_path": "fixture/claude/windows/speckit-pro",
+            "interpreter_resolution": {"accepted": true},
+            "runner_invocation_ids": ["xplat-008-runner-invocation-claude-windows-install"],
+            "install_result": "pass",
+            "bundled_agent_verification": "pass",
+            "first_use": "pass",
+            "scaffold_status": "pass",
+            "autopilot_dry_run": "pass",
+            "latest_tag_update": "pass",
+            "incomplete_install_repair": "pass",
+            "expected_result": "A smoke check completes.",
+            "actual_result": "Smoke check only.",
+            "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/claude-windows.md",
+            "operator_notes": "Smoke only.",
+            "status": "pass"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "failing-update-row",
+      "expected_status": "fail",
+      "overrides": {
+        "rows": [
+          {
+            "product": "codex",
+            "platform": "linux",
+            "operator": "Racecraft UAT fixture",
+            "date": "2026-07-05",
+            "host_version": "Ubuntu 24.04 fixture",
+            "plugin_version_or_latest_tag": "2.17.0",
+            "installed_cache_path": "fixture/codex/linux/speckit-pro",
+            "interpreter_resolution": {"accepted": true},
+            "runner_invocation_ids": ["xplat-008-runner-invocation-codex-linux-update"],
+            "install_result": "pass",
+            "bundled_agent_verification": "pass",
+            "first_use": "pass",
+            "scaffold_status": "pass",
+            "autopilot_dry_run": "pass",
+            "latest_tag_update": "fail",
+            "incomplete_install_repair": "pass",
+            "expected_result": "Latest-tag update succeeds.",
+            "actual_result": "Latest-tag update failed.",
+            "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/codex-linux.md",
+            "operator_notes": "Detailed evidence file records the failed update.",
+            "status": "fail"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "raw-html-anchor",
+      "expected_status": "fail",
+      "overrides": {
+        "rows": [
+          {
+            "product": "claude",
+            "platform": "macos",
+            "operator": "Racecraft UAT fixture",
+            "date": "2026-07-05",
+            "host_version": "macOS 15 fixture",
+            "plugin_version_or_latest_tag": "2.17.0",
+            "installed_cache_path": "fixture/claude/macos/speckit-pro",
+            "interpreter_resolution": {"accepted": true},
+            "runner_invocation_ids": ["xplat-008-runner-invocation-claude-macos-install"],
+            "install_result": "pass",
+            "bundled_agent_verification": "pass",
+            "first_use": "pass",
+            "scaffold_status": "pass",
+            "autopilot_dry_run": "pass",
+            "latest_tag_update": "pass",
+            "incomplete_install_repair": "pass",
+            "expected_result": "Expected result is recorded.",
+            "actual_result": "Actual result is recorded.",
+            "evidence_link": "<a href=\"uat/claude-macos.md\">evidence</a>",
+            "operator_notes": "Detailed evidence file records the complete journey.",
+            "status": "pass"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "empty-expected-result",
+      "expected_status": "fail",
+      "overrides": {
+        "rows": [
+          {
+            "product": "codex",
+            "platform": "windows",
+            "operator": "Racecraft UAT fixture",
+            "date": "2026-07-05",
+            "host_version": "Windows 11 fixture",
+            "plugin_version_or_latest_tag": "2.17.0",
+            "installed_cache_path": "fixture/codex/windows/speckit-pro",
+            "interpreter_resolution": {"accepted": true},
+            "runner_invocation_ids": ["xplat-008-runner-invocation-codex-windows-install"],
+            "install_result": "pass",
+            "bundled_agent_verification": "pass",
+            "first_use": "pass",
+            "scaffold_status": "pass",
+            "autopilot_dry_run": "pass",
+            "latest_tag_update": "pass",
+            "incomplete_install_repair": "pass",
+            "expected_result": "",
+            "actual_result": "Actual result is recorded.",
+            "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/codex-windows.md",
+            "operator_notes": "Detailed evidence file records the complete journey.",
+            "status": "pass"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "missing-evidence-link",
+      "expected_status": "fail",
+      "overrides": {
+        "rows": [
+          {
+            "product": "codex",
+            "platform": "macos",
+            "operator": "Racecraft UAT fixture",
+            "date": "2026-07-05",
+            "host_version": "macOS 15 fixture",
+            "plugin_version_or_latest_tag": "2.17.0",
+            "installed_cache_path": "fixture/codex/macos/speckit-pro",
+            "interpreter_resolution": {"accepted": true},
+            "runner_invocation_ids": ["xplat-008-runner-invocation-codex-macos-install"],
+            "install_result": "pass",
+            "bundled_agent_verification": "pass",
+            "first_use": "pass",
+            "scaffold_status": "pass",
+            "autopilot_dry_run": "pass",
+            "latest_tag_update": "pass",
+            "incomplete_install_repair": "pass",
+            "expected_result": "Expected result is recorded.",
+            "actual_result": "Actual result is recorded.",
+            "evidence_link": "",
+            "operator_notes": "Detailed evidence file records the complete journey.",
+            "status": "pass"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "unsupported-native-support-claim",
+      "expected_status": "fail",
+      "overrides": {
+        "public_claim_results": [
+          {
+            "claim_id": "windows-native-support",
+            "surface": "docs-site/src/content/docs/install/codex.md",
+            "claim_text_or_pattern": "native Windows support",
+            "classification": "native-platform-support",
+            "status": "fail",
+            "evidence": ["No passing Codex Windows row."]
+          }
+        ]
+      }
+    }
+  ]
+}
