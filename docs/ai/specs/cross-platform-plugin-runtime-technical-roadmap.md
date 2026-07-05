@@ -43,7 +43,10 @@ on `codex/xplat-006-mutation-install-pr-emission-helper-port`; the setup design
 concept accepted one workflow with three internal slices. Updated 2026-07-04
 after XPLAT-006 merged in PR #281 and the active spec folder was archived;
 XPLAT-007 became ready to scaffold from the Python runner helper contracts,
-fixture tree, install inventory, and deferred-live-mutation boundaries.
+fixture tree, install inventory, and deferred-live-mutation boundaries. Updated
+again on 2026-07-04 after XPLAT-007 scaffold started on
+`codex/xplat-007-python-tooling-and-release-gate-migration`; the setup design
+concept accepted one workflow with three internal slices.
 
 ---
 
@@ -235,7 +238,7 @@ PUBLIC RELEASE UNBLOCKED
 | XPLAT-004 | Cross-Platform Runner Foundation | Complete / Archived | `.process/XPLAT-004-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-01-xplat-004-post-merge-hygiene.md`; runner source, metadata, contract fixtures, and tests landed in PR #274 |
 | XPLAT-005 | Read-Only Helper Port | Complete / Archived | `.process/XPLAT-005-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-03-xplat-005-post-merge-hygiene.md`; read-only helper registry, Python-authoritative records, parity fixtures, and Layer 4 gates landed in PR #276 |
 | XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | Complete / Archived | `.process/XPLAT-006-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-04-xplat-006-post-merge-hygiene.md`; mutation primitives, install inventory/doctor proof, PR-body/command-plan fixtures, phase-coverage hardening, and Layer 4 mutation-helper gates landed in PR #281 |
-| XPLAT-007 | Python Tooling and Release-Gate Migration | Ready | — | Ready after XPLAT-006; owns active repo-local tests, evals, payload/build/release tooling, install verification, and CI dispatch allowlist guards |
+| XPLAT-007 | Python Tooling and Release-Gate Migration | In Progress | `.process/XPLAT-007-workflow.md` | Scaffolded on `codex/xplat-007-python-tooling-and-release-gate-migration`; next phase is `$speckit-autopilot docs/ai/specs/.process/XPLAT-007-workflow.md` |
 | XPLAT-008 | Claude/Codex Cutover and Universal Install Release Gate | Pending | — | Blocked by XPLAT-006 and XPLAT-007; owns active Claude/Codex cutover, payload rebuild, docs, UAT, update, autoheal, and public release readiness |
 
 **Status Legend:** Pending | Ready | In Progress | In Review | Complete | Complete / Archived | Blocked
@@ -740,7 +743,11 @@ if XPLAT-001 inventory shows the combined scope is too large.
 
 **Priority:** P1 | **Depends On:** XPLAT-006 | **Enables:** XPLAT-008
 
-**Status:** Pending.
+**Status:** In Progress. Scaffolded on 2026-07-04 in branch
+`codex/xplat-007-python-tooling-and-release-gate-migration`; workflow file is
+`docs/ai/specs/.process/XPLAT-007-workflow.md`; design concept is
+`docs/ai/specs/.process/XPLAT-007-design-concept.md`; active spec marker is
+`specs/xplat-007-python-tooling-and-release-gate-migration/SPEC-MOC.md`.
 
 **Goal:** Replace active repo-local Bash helpers, tests, evals, payload builders,
 install-verification scripts, and release-readiness gates with Python

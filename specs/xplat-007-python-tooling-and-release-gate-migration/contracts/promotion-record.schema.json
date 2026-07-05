@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/speckit-pro/xplat-007/promotion-record.schema.json",
+  "title": "Gate Promotion Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "gate_id",
+    "prior_bash_gate",
+    "python_operation",
+    "request_fixture",
+    "fixture_ids",
+    "bash_reference_ids",
+    "failure_classes",
+    "comparison_mode",
+    "exit_code_result",
+    "stream_result",
+    "artifact_result",
+    "active_path_guard_result",
+    "bash_reference_retirement",
+    "rollback"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "gate_id": { "type": "string", "minLength": 1 },
+    "prior_bash_gate": { "type": ["string", "null"] },
+    "python_operation": { "type": "string", "minLength": 1 },
+    "request_fixture": { "type": "string", "minLength": 1 },
+    "fixture_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "bash_reference_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "failure_classes": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "comparison_mode": {
+      "type": "string",
+      "enum": ["exact", "json_semantic", "semantic_markdown", "artifact_hash", "command_plan", "not_applicable"]
+    },
+    "normalized_fields": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "exit_code_result": { "type": "string", "enum": ["match", "mismatch", "not_applicable"] },
+    "stream_result": { "type": "string", "enum": ["match", "mismatch", "not_applicable"] },
+    "artifact_result": { "type": "string", "enum": ["match", "mismatch", "not_applicable"] },
+    "active_path_guard_result": { "type": "string", "enum": ["pass", "fail", "not_run"] },
+    "bash_reference_retirement": {
+      "type": "string",
+      "enum": ["removed_from_active_gate", "inactive_parity_evidence", "archive_provenance", "not_applicable"]
+    },
+    "rollback": { "type": "string", "minLength": 1 },
+    "promoted_at": { "type": "string" }
+  }
+}

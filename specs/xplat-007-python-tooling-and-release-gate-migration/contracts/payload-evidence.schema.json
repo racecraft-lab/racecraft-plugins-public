@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/speckit-pro/xplat-007/payload-evidence.schema.json",
+  "title": "Test Payload Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "evidence_id",
+    "payload_surface",
+    "mode",
+    "input_root",
+    "output_root",
+    "files",
+    "release_payload_cutover",
+    "status"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "evidence_id": { "type": "string", "minLength": 1 },
+    "payload_surface": { "type": "string", "enum": ["claude_test", "codex_test"] },
+    "mode": { "type": "string", "enum": ["read_only", "dry_run", "apply"] },
+    "input_root": { "type": "string", "minLength": 1 },
+    "output_root": { "type": "string", "minLength": 1 },
+    "file_tree_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256", "byte_count"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "byte_count": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "release_payload_cutover": { "type": "boolean", "const": false },
+    "status": { "type": "string", "enum": ["ok", "expected_failure", "input_error"] }
+  }
+}

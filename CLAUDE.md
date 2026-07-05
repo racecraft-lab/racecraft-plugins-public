@@ -508,6 +508,8 @@ If this leg proves flaky enough to disrupt the merge queue, consider demoting it
 - Checked-in repository files only; GitHub Pages stores the uploaded `docs-site/dist` static artifact outside repository source control (doc-011-github-pages-build-and-deploy-pipeline)
 - Python 3.11+ standard library through `speckit-pro/speckit_pro_runner/` + Existing XPLAT-004 runner envelope, diagnostics, typed path, runtime-info, and preflight primitives; current Bash helper scripts remain temporary source-checkout references only (xplat-005-read-only-helper-port)
 - Checked-in fixture, contract, and evidence files only; ported helpers must not write repository or user-local state (xplat-005-read-only-helper-port)
+- Python 3.11+ standard library through `speckit-pro/speckit_pro_runner/` + Existing runner envelope, diagnostics, typed path, subprocess fixture, helper registry, XPLAT-005 read-only helper records, and XPLAT-006 mutation/install/PR-emission contracts; no new runtime dependency (codex/xplat-007-python-tooling-and-release-gate-migration)
+- Checked-in source files, fixtures, JSON schemas, runner metadata, test payload evidence under fixture or temporary output roots; no database (codex/xplat-007-python-tooling-and-release-gate-migration)
 
 ## Recent Changes
 - prsg-010-harden-the-hatch: Added PRSG-010 foundation artifacts, contract schemas, workflow state updates, and planning docs for the split PR stack.
