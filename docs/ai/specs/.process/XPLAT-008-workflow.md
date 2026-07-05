@@ -58,13 +58,15 @@ accepted scope:
 
 | Phase | Command | Status | Notes |
 |---|---|---|---|
-| Specify | `$speckit-specify` | Pending | Generate the XPLAT-008 spec with active installed-runtime cutover, generated payload gates, public docs, UAT, update, and repair requirements |
+| Specify | `$speckit-specify` | Complete | Generated `spec.md` with 4 user stories, 22 functional requirements, 12 acceptance scenarios, 8 success criteria, and no active clarification markers |
 | Clarify | `$speckit-clarify` | Pending | Resolve active surface inventory, interpreter discovery, payload contract, UAT evidence, autoheal trust boundary, and public claim wording |
 | Plan | `$speckit-plan` | Pending | Produce the technical plan for three vertical slices and record reviewability warning handling |
 | Checklist | `$speckit-checklist` | Pending | Run integration, security, reliability, and release-readiness checklists |
 | Tasks | `$speckit-tasks` | Pending | Generate tasks ordered by active surface cutover, payload/release/docs gates, then UAT/update/autoheal |
 | Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, spec, plan, tasks, and prior XPLAT handoffs |
+| Confidence Gate | G6.5 | Pending | Record the pre-Implement confidence score in advisory mode before implementation starts |
 | Implement | `$speckit-implement` | Pending | Execute the accepted slices with tests, payload evidence, UAT runbooks, and release-readiness gates |
+| Post | Post | Pending | Run verification, reviewability, UAT runbook, PR packet, PR creation, review remediation, and retrospective items |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -78,6 +80,7 @@ accepted scope:
 | G4 | After Checklist | Integration, security, reliability, and release-readiness gaps are remediated or explicitly out of scope |
 | G5 | After Tasks | Tasks map to the accepted three slices and include tests, generated payload evidence, docs updates, UAT runbook completion, update proof, and autoheal proof |
 | G6 | After Analyze | No critical drift remains between roadmap, design concept, spec, plan, tasks, XPLAT-003 trust model, and XPLAT-007 Python gate handoff |
+| G6.5 | Confidence Gate | Advisory pre-Implement confidence evidence is recorded before implementation starts |
 | G7 | After Implementation | Native Windows/macOS/Linux Claude and Codex UAT pass; payload, install, update, autoheal, no-shell, and release-readiness gates pass; public docs match implemented controls |
 
 ---
@@ -278,13 +281,14 @@ and safe repair, and block public release when the proof is incomplete.
 
 | Metric | Value |
 |---|---|
-| Functional Requirements | Fill after Specify |
-| User Stories | Fill after Specify |
-| Acceptance Criteria | Fill after Specify |
+| Functional Requirements | 22 |
+| User Stories | 4 |
+| Acceptance Criteria | 12 |
 
 ### Files Generated
 
-- [ ] `specs/xplat-008-claude-codex-cutover-universal-install-release-gate/spec.md`
+- [x] `specs/xplat-008-claude-codex-cutover-universal-install-release-gate/spec.md`
+- [x] `specs/xplat-008-claude-codex-cutover-universal-install-release-gate/checklists/requirements.md`
 
 ### SpecKit Traceability Markers
 
@@ -641,6 +645,40 @@ Focus on XPLAT-008 cross-artifact consistency:
 
 ---
 
+## Phase 6.5: Confidence Gate
+
+**When to run:** After Analyze and before implementation. The Analyze consensus
+step must emit the canonical pre-Implement confidence block that
+`confidence-gate.sh` reads.
+
+### Confidence Gate Prompt
+
+```text
+Run the pre-Implement confidence gate for XPLAT-008 in advisory mode:
+
+bash speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh \
+  docs/ai/specs/.process/XPLAT-008-workflow.md \
+  --threshold 0.90 \
+  --mode advisory
+
+Record the result in this workflow and in `autopilot-state.json`. If no data is
+available, log the missing emit and continue because the default mode is
+advisory. If a score is below threshold, record the lowest criterion before
+Phase 7 starts.
+```
+
+### Confidence Gate Results
+
+| Metric | Value |
+|---|---|
+| Mode | advisory |
+| Threshold | 0.90 |
+| Composite Score | Fill after Analyze |
+| Lowest Criterion | Fill after Analyze |
+| Decision | Pending |
+
+---
+
 ## Phase 7: Implement
 
 **When to run:** After tasks and analysis are approved.
@@ -709,6 +747,23 @@ For each task, follow this cycle:
 - [ ] Latest-tag update proof is recorded
 - [ ] Safe repair/autoheal proof is recorded
 - [ ] PR packet includes summary, affected plugin paths, test commands, and UAT evidence
+
+### Canonical Post Items
+
+| Item | Status | Notes |
+|---|---|---|
+| Post: Doctor Extension Check | Pending | Run or skip with explicit extension evidence |
+| Post: Verify Implementation | Pending | Run or skip with explicit extension evidence |
+| Post: Verify Tasks Phantom Check | Pending | Run or skip with explicit extension evidence |
+| Post: Code Review | Pending | Independent diff review before PR creation |
+| Post: Integration Suite | Pending | Full deterministic verification after implementation |
+| Post: Reviewability Diff Gate | Pending | Final diff gate before PR packet generation |
+| Post: Self-Review | Pending | Four-question audit before UAT runbook generation |
+| Post: UAT Runbook Generation | Pending | Generate and author the feature UAT runbook |
+| Post: PR Body Generation | Pending | Generate and validate the PR packet/body |
+| Post: PR Creation | Pending | Push branch and open the PR from packet fields |
+| Post: Review Remediation | Pending | Monitor and resolve review feedback |
+| Post: Retrospective | Pending | Final post item; run or skip with explicit extension evidence |
 
 ---
 
