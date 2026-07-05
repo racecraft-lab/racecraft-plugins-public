@@ -900,7 +900,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertTrue(response["data"]["gate"]["blocking"])
 
         categories = {finding["category"] for finding in response["data"]["findings"]}
-        self.assertTrue(
+        self.assertLessEqual(
             {
                 "bash",
                 "script_file",
@@ -913,8 +913,8 @@ class GateFoundationTests(unittest.TestCase):
                 "shell_true",
                 "os_system",
                 "command_string_subprocess",
-            }
-            <= categories
+            },
+            categories,
         )
         self.assertEqual(response["data"]["blocking_count"], len(response["data"]["findings"]))
         self.assertEqual(response["data"]["classified_counts"]["blocking_active_gate"], response["data"]["blocking_count"])
@@ -1075,7 +1075,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(document["schema_version"], "1.0")
         self.assertEqual(document["promotion_status"], "us3_python_authoritative")
         records = document["records"]
-        self.assertEqual({"payload-gate", "install-verification", "release-readiness", "active-path-guard"} <= {record["gate_id"] for record in records}, True)
+        self.assertLessEqual({"payload-gate", "install-verification", "release-readiness", "active-path-guard"}, {record["gate_id"] for record in records})
         us1_operations = {
             "run-default-suite": "tests/speckit-pro/run-all.sh",
             "run-toolchain-preflight": "tests/speckit-pro/check-toolchain.sh",
@@ -1144,7 +1144,7 @@ class GateFoundationTests(unittest.TestCase):
         required = set(promotion_schema["required"])
         allowed = set(promotion_schema["properties"])
         for record in records:
-            self.assertTrue(required <= set(record), record["gate_id"])
+            self.assertLessEqual(required, set(record), record["gate_id"])
             self.assertFalse(set(record) - allowed, record["gate_id"])
             self.assertEqual(record["schema_version"], "1.0")
             self.assertTrue(record["rollback"])
@@ -1160,7 +1160,7 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertEqual(parsed["type"], "object")
                 if schema_path.name == "migrated-gate-request.schema.json":
                     operations = set(parsed["properties"]["operation"]["enum"])
-                    self.assertTrue(
+                    self.assertLessEqual(
                         {
                             "detect-changed-plugin",
                             "aggregate-suite-results",
@@ -1169,8 +1169,8 @@ class GateFoundationTests(unittest.TestCase):
                             "check-payload-evidence",
                             "parse-release-pr-payload-sync",
                             "check-post-release-drift",
-                        }
-                        <= operations
+                        },
+                        operations,
                     )
 
 
