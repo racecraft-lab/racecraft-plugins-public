@@ -435,11 +435,11 @@ $speckit-plan
 
 | Artifact | Status | Notes |
 |---|---|---|
-| `plan.md` | Pending | Technical context, execution flow, constitution check, complexity tracking |
-| `research.md` | Pending | Interpreter discovery, payload contract, UAT evidence, public trust wording |
-| `data-model.md` | Pending | Payload inventory, UAT runbook rows, repair result records, release gate records |
-| `contracts/` | Pending | Runner request/response, payload completeness, release-readiness, UAT runbook contracts |
-| `quickstart.md` | Pending | Maintainer workflow for cutover, payload rebuild, UAT, update, repair, and release gate |
+| `plan.md` | Complete | Technical context, three-slice execution flow, constitution check, accepted reviewability warning, and projected implementation footprint |
+| `research.md` | Complete | Direct runner invocation, interpreter discovery, active guard scope, payload contract, UAT evidence, bounded autoheal, and public trust wording decisions |
+| `data-model.md` | Complete | Installed runtime surfaces, interpreter records, payload inventory/results, native UAT rows, repair actions, and release gate records |
+| `contracts/` | Complete | Five JSON schemas: runner invocation, payload completeness, release-readiness, UAT matrix, and install health/repair |
+| `quickstart.md` | Complete | Maintainer workflow for three implementation slices, verification commands, UAT/update/repair evidence, and final release gate |
 
 ---
 

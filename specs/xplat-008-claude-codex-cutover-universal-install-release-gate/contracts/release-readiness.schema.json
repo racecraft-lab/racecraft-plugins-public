@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/speckit-pro/xplat-008/release-readiness.schema.json",
+  "title": "XPLAT-008 Release Readiness Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "feature_id",
+    "status",
+    "blocking_count",
+    "checks",
+    "evidence",
+    "traceability"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "feature_id": {
+      "const": "XPLAT-008"
+    },
+    "status": {
+      "enum": [
+        "pass",
+        "fail"
+      ]
+    },
+    "blocking_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/check"
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "payload_results",
+        "uat_matrix",
+        "install_health",
+        "public_claims",
+        "runner_invocations"
+      ],
+      "properties": {
+        "payload_results": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "uat_matrix": {
+          "type": "string",
+          "minLength": 1
+        },
+        "install_health": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "public_claims": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "runner_invocations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "traceability": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requirement_id",
+          "changed_files",
+          "verification_evidence"
+        ],
+        "properties": {
+          "requirement_id": {
+            "type": "string",
+            "pattern": "^(FR|SC)-[0-9]{3}$"
+          },
+          "changed_files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "verification_evidence": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "check_id",
+        "blocker_class",
+        "status",
+        "blocking",
+        "message",
+        "evidence"
+      ],
+      "properties": {
+        "check_id": {
+          "enum": [
+            "active-runtime-guard",
+            "payload-completeness",
+            "bundled-agents",
+            "hooks",
+            "runner-files",
+            "version-sync",
+            "trust-metadata",
+            "public-claims",
+            "uat-matrix",
+            "update-proof",
+            "install-health-repair",
+            "release-packet-traceability",
+            "dist-determinism"
+          ]
+        },
+        "blocker_class": {
+          "enum": [
+            "active_shell_runtime_dependency",
+            "incomplete_payload",
+            "missing_bundled_agent",
+            "missing_hook",
+            "missing_runner_file",
+            "stale_metadata",
+            "missing_trust_metadata",
+            "unsafe_public_claim",
+            "incomplete_uat_evidence",
+            "unsafe_repair_claim",
+            "missing_traceability",
+            "nondeterministic_dist"
+          ]
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "blocking": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

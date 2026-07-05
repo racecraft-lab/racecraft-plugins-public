@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-008-workflow.md",
   "feature_dir": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate",
   "feature_branch": "codex/xplat-008-claude-codex-cutover-universal-install-release-gate",
-  "updated_at": "2026-07-05T21:04:21Z",
+  "updated_at": "2026-07-05T21:14:18Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 3: Plan",
+  "active_step": "Phase 4: Checklist - integration",
   "archive_sweep": {
     "archive_extension_installed": true,
     "cleanup_mode": "feature-branch-sweep-static",
@@ -111,11 +111,12 @@
     },
     {
       "step": "Phase 3: Plan",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Generated plan.md, research.md, data-model.md, quickstart.md, and five JSON contracts for runner invocation, payload completeness, release-readiness, UAT matrix, and install health/repair; G3 passed with zero unresolved markers."
     },
     {
       "step": "Phase 4: Checklist - integration",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - integration Consensus",

@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/speckit-pro/xplat-008/runner-invocation.schema.json",
+  "title": "XPLAT-008 Runner Invocation Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "request_id",
+    "product",
+    "platform",
+    "surface_path",
+    "operation",
+    "interpreter_resolution",
+    "invocation",
+    "runner_request",
+    "runner_response",
+    "status",
+    "diagnostics"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "product": {
+      "enum": [
+        "claude",
+        "codex"
+      ]
+    },
+    "platform": {
+      "enum": [
+        "windows",
+        "macos",
+        "linux"
+      ]
+    },
+    "surface_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "operation": {
+      "enum": [
+        "preflight",
+        "scaffold",
+        "status",
+        "autopilot-dry-run",
+        "doctor",
+        "update",
+        "autoheal"
+      ]
+    },
+    "interpreter_resolution": {
+      "$ref": "#/$defs/interpreter_resolution"
+    },
+    "invocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "argv",
+        "stdin_mode",
+        "stdout_mode",
+        "stderr_mode",
+        "shell_used"
+      ],
+      "properties": {
+        "argv": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "const": "-m"
+            },
+            {
+              "const": "speckit_pro_runner"
+            }
+          ],
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "stdin_mode": {
+          "const": "single_json_request"
+        },
+        "stdout_mode": {
+          "const": "single_json_response"
+        },
+        "stderr_mode": {
+          "const": "diagnostics_only"
+        },
+        "shell_used": {
+          "const": false
+        }
+      }
+    },
+    "runner_request": {
+      "type": "object"
+    },
+    "runner_response": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "status": {
+      "enum": [
+        "pass",
+        "fail",
+        "blocked"
+      ]
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/diagnostic"
+      }
+    }
+  },
+  "$defs": {
+    "interpreter_resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attempted_candidates",
+        "resolved_executable",
+        "version",
+        "accepted",
+        "minimum_version",
+        "failure_code",
+        "diagnostic"
+      ],
+      "properties": {
+        "attempted_candidates": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "resolved_executable": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "accepted": {
+          "type": "boolean"
+        },
+        "minimum_version": {
+          "const": "3.11"
+        },
+        "failure_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "diagnostic": {
+          "type": "string"
+        }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "severity",
+        "code",
+        "message"
+      ],
+      "properties": {
+        "severity": {
+          "enum": [
+            "info",
+            "warning",
+            "error"
+          ]
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "remediation": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

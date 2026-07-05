@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/speckit-pro/xplat-008/uat-matrix.schema.json",
+  "title": "XPLAT-008 Native UAT Matrix Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "feature_id",
+    "rows",
+    "status"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "feature_id": {
+      "const": "XPLAT-008"
+    },
+    "rows": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "$ref": "#/$defs/uat_row"
+      }
+    },
+    "status": {
+      "enum": [
+        "pass",
+        "fail"
+      ]
+    }
+  },
+  "$defs": {
+    "uat_row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "product",
+        "platform",
+        "operator",
+        "date",
+        "host_version",
+        "plugin_version_or_latest_tag",
+        "installed_cache_path",
+        "interpreter_resolution",
+        "install_result",
+        "bundled_agent_verification",
+        "first_use",
+        "scaffold_status",
+        "autopilot_dry_run",
+        "latest_tag_update",
+        "incomplete_install_repair",
+        "expected_result",
+        "actual_result",
+        "evidence_link",
+        "operator_notes",
+        "status"
+      ],
+      "properties": {
+        "product": {
+          "enum": [
+            "claude",
+            "codex"
+          ]
+        },
+        "platform": {
+          "enum": [
+            "windows",
+            "macos",
+            "linux"
+          ]
+        },
+        "operator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "date": {
+          "type": "string",
+          "format": "date"
+        },
+        "host_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plugin_version_or_latest_tag": {
+          "type": "string",
+          "minLength": 1
+        },
+        "installed_cache_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "interpreter_resolution": {
+          "type": "object"
+        },
+        "install_result": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "bundled_agent_verification": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "first_use": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "scaffold_status": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "autopilot_dry_run": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "latest_tag_update": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "incomplete_install_repair": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "expected_result": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actual_result": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_link": {
+          "type": "string",
+          "minLength": 1,
+          "not": {
+            "pattern": "<a\\s"
+          }
+        },
+        "operator_notes": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        }
+      }
+    }
+  }
+}
