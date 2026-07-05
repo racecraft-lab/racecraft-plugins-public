@@ -122,7 +122,105 @@
         "repair_allowed": {
           "type": "boolean"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "classification": {
+                "enum": [
+                  "trusted_missing",
+                  "trusted_stale"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "artifact_kind": {
+                "enum": [
+                  "generated_payload",
+                  "bundled_agent",
+                  "hook",
+                  "runner_file",
+                  "manifest",
+                  "checksum"
+                ]
+              },
+              "source_identity": {
+                "type": "string",
+                "minLength": 1
+              },
+              "release_channel_or_tag": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expected_digest": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "repair_allowed": {
+                "const": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "classification": {
+                "const": "trusted_missing"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "actual_digest": {
+                "const": null
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "classification": {
+                "const": "trusted_stale"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "actual_digest": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "classification": {
+                "enum": [
+                  "unsafe_unknown",
+                  "unsafe_extra",
+                  "unsafe_mismatch",
+                  "unsafe_trust_root_change",
+                  "unsafe_out_of_cache"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "repair_allowed": {
+                "const": false
+              }
+            }
+          }
+        }
+      ]
     },
     "repair_action": {
       "type": "object",
@@ -155,12 +253,23 @@
         },
         "target_path": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "not": {
+            "pattern": "(^/|^[A-Za-z]:|\\.\\.)"
+          }
         },
         "source_path": {
-          "type": [
-            "string",
-            "null"
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "pattern": "(^/|^[A-Za-z]:|\\.\\.)"
+              }
+            }
           ]
         },
         "digest_verified": {
@@ -195,6 +304,13 @@
           },
           "then": {
             "properties": {
+              "source_path": {
+                "type": "string",
+                "minLength": 1,
+                "not": {
+                  "pattern": "(^/|^[A-Za-z]:|\\.\\.)"
+                }
+              },
               "digest_verified": {
                 "const": true
               },
@@ -214,8 +330,22 @@
           },
           "then": {
             "properties": {
+              "source_path": {
+                "const": null
+              },
+              "digest_verified": {
+                "const": false
+              },
               "status": {
                 "const": "blocked"
+              },
+              "manual_steps": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
               }
             }
           }

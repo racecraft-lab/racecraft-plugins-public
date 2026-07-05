@@ -60,16 +60,16 @@ As a maintainer or installed-plugin user, I can run doctor, update, and autoheal
 
 ### User Story 4 - Review public evidence and trust claims (Priority: P4)
 
-As a reviewer, I can inspect filled native UAT runbooks, public docs, release notes, and traceability evidence that match the implemented support and consumer-trust model.
+As a reviewer, I can inspect filled native UAT runbooks, public docs, README guidance, release notes, and traceability evidence that match the implemented support and consumer-trust model.
 
 **Why this priority**: Reviewers need release-reviewable proof that XPLAT-003, XPLAT-006, and XPLAT-007 handoffs are enforced in the installed plugin path.
 
-**Independent Test**: Can be tested by reviewing the feature-local evidence packet, UAT runbooks, public docs, release notes, and release-readiness output without relying on private context.
+**Independent Test**: Can be tested by reviewing the feature-local evidence packet, UAT runbooks, public docs, README guidance, release notes, and release-readiness output without relying on private context.
 
 **Acceptance Scenarios**:
 
 1. **Given** native UAT runbooks for Claude and Codex on Windows, macOS, and Linux, **When** a reviewer inspects them, **Then** every platform/product row is filled with install, bundled-agent verification, scaffold/status, autopilot dry-run, update, and repair evidence.
-2. **Given** public install, first-run, troubleshooting, trust, and release-note content, **When** a reviewer checks support claims, **Then** the docs claim only implemented and UAT-proven support and do not overstate cryptographic guarantees.
+2. **Given** public install, first-run, troubleshooting, trust, README, and release-note content, **When** a reviewer checks support claims, **Then** the docs claim only implemented and UAT-proven support and do not overstate cryptographic guarantees.
 3. **Given** the PR review packet, **When** a reviewer traces requirements to evidence, **Then** each major requirement maps to changed files and verification proof.
 
 ---
@@ -96,9 +96,9 @@ As a reviewer, I can inspect filled native UAT runbooks, public docs, release no
 - **FR-006**: Generated Claude and Codex payloads MUST be rebuilt from source for this release-readiness path.
 - **FR-007**: Generated payload verification MUST prove release version metadata, bundled agents, hooks, required runner files, and XPLAT-003 manifest/checksum metadata are complete for both Claude and Codex payloads.
 - **FR-008**: Release-readiness checks MUST fail when generated payloads are incomplete, stale, missing bundled agents, missing hooks, missing runner files, or missing required trust metadata.
-- **FR-009**: Public install and first-run docs MUST describe the supported installed-plugin prerequisites and MUST NOT describe Bash, Git Bash, WSL, PowerShell-specific command language, or `jq` as required for installed plugin workflows.
+- **FR-009**: Public install and first-run docs, including `README.md` and `speckit-pro/README.md` when they carry install or update guidance, MUST describe the supported installed-plugin prerequisites and MUST NOT describe Bash, Git Bash, WSL, PowerShell-specific command language, or `jq` as required for installed plugin workflows.
 - **FR-010**: Public docs MAY describe WSL or shell availability only as optional or out-of-scope context, never as the required native installed-plugin path.
-- **FR-011**: Public trust documentation and release notes MUST describe the implemented XPLAT-003 consumer-trust controls without claiming unimplemented cryptographic guarantees.
+- **FR-011**: Public trust documentation, README guidance, and release notes MUST describe the implemented XPLAT-003 consumer-trust controls without claiming unimplemented cryptographic guarantees.
 - **FR-012**: Native UAT evidence MUST cover Claude and Codex on Windows, macOS, and Linux.
 - **FR-013**: Native UAT evidence MUST cover install, bundled-agent verification, first use, scaffold/status, autopilot dry-run, update to the latest tagged release, and safe repair of an intentionally incomplete install.
 - **FR-014**: Release-readiness checks MUST block publication when any required native UAT row is missing, placeholder-only, smoke-only, or failing.
@@ -123,7 +123,7 @@ As a reviewer, I can inspect filled native UAT runbooks, public docs, release no
 - **Secondary surfaces, if any**: harness/adapter, seed/config
 - **Projected reviewable LOC**: 250-500
 - **Projected production files**: 4-8
-- **Projected total files**: 10-25
+- **Projected total files**: 10-30
 - **Budget result**: warning accepted
 - **Split decision**: Remain one XPLAT-008 spec with three internal slices. Split only if implementation evidence shows generated payload rebuilds or native UAT artifacts make the review packet too large to review coherently.
 
@@ -143,7 +143,7 @@ As a reviewer, I can inspect filled native UAT runbooks, public docs, release no
 - **Install Health Finding**: A stale, missing, incomplete, unsafe, or trusted gap found in an installed plugin cache.
 - **Repair Action**: Either a bounded autoheal refresh for trusted artifacts or exact manual remediation for unsafe gaps.
 - **Interpreter Resolution Record**: The detected Python launcher, resolved executable path, version, platform, attempted candidates, and failure diagnostics for installed runner invocation.
-- **Public Claim**: Any public docs or release-note statement about platform support, prerequisites, update, repair, or consumer-trust guarantees.
+- **Public Claim**: Any public docs, README, or release-note statement about platform support, prerequisites, update, repair, or consumer-trust guarantees.
 - **Trust Evidence Record**: Manifest, checksum, version, and completeness evidence that connects installed payload behavior to the implemented XPLAT-003 trust model.
 
 ## Success Criteria *(mandatory)*
@@ -156,7 +156,7 @@ As a reviewer, I can inspect filled native UAT runbooks, public docs, release no
 - **SC-004**: All 6 required platform/product UAT rows are complete, readable, non-placeholder, and passing for install, bundled-agent verification, scaffold/status, autopilot dry-run, update, and repair.
 - **SC-005**: Release-readiness checks fail for each seeded blocker class: active shell runtime dependency, incomplete payload, missing bundled agent, stale metadata, unsafe public claim, and incomplete UAT evidence.
 - **SC-006**: Doctor/autoheal evidence shows every trusted stale or missing artifact case is safely refreshed, and every unsafe gap produces exact manual remediation without broad automatic reinstall behavior.
-- **SC-007**: Public docs and release notes contain zero claims of native platform support or cryptographic guarantees that are not backed by implementation and UAT evidence.
+- **SC-007**: Public docs, README guidance, and release notes contain zero claims of native platform support or cryptographic guarantees that are not backed by implementation and UAT evidence.
 - **SC-008**: Reviewers can trace every functional requirement and success criterion to changed files and verification evidence in the PR packet.
 
 ## Assumptions
@@ -185,8 +185,8 @@ As a reviewer, I can inspect filled native UAT runbooks, public docs, release no
 - Release-readiness gates rebuild payloads to a temporary or staging location, compute the expected source inventory plus per-file SHA-256 or file-tree hashes, and compare the result against committed `dist/claude/speckit-pro/**` and `dist/codex/speckit-pro/**`. The gates must account for explicit transforms, including Claude guard stripping, Codex skill overlays or path rewrites, and manifest path normalization.
 - Release-readiness must fail on missing, extra, changed, path-leaking, or non-deterministic generated files; active shell runtime dependencies; incomplete payload inventory; stale generated payloads; stale version metadata; missing or mismatched runner manifest/checksum/trust records; unsupported public claims; incomplete UAT/update/repair evidence; or unsafe autoheal claims beyond bounded manifest/checksum refreshes.
 - Version consistency is blocking across source plugin manifests, generated dist manifests, Claude and Codex marketplace indexes, `.release-please-manifest.json`, runner manifest `plugin_version`, and generated release evidence. `runner_version` is independent but must be present and covered by runner manifest/checksum verification. Manual plugin version edits remain out of scope; release-please owns version bumps.
-- Public docs and release notes may claim only implemented and verified controls: Python 3.11+ standard-library runner as the installed runtime, source-built generated payloads with completeness/version/SHA-256 manifest gates, runner preflight or doctor verification of plugin root/prerequisites/metadata/integrity records, local verification and bounded repair paths with manual remediation for unsafe drift, and native Claude/Codex support only for platform/product rows with completed UAT.
-- Public docs and release notes must not claim signing, SBOMs, SLSA or in-toto provenance attestations, reproducible-build guarantees, formal audit or certification, vulnerability-free status, marketplace-enforced verification, or cryptographic trust-chain verification unless those controls are separately implemented and evidenced.
+- Public docs, README guidance, and release notes may claim only implemented and verified controls: Python 3.11+ standard-library runner as the installed runtime, source-built generated payloads with completeness/version/SHA-256 manifest gates, runner preflight or doctor verification of plugin root/prerequisites/metadata/integrity records, local verification and bounded repair paths with manual remediation for unsafe drift, and native Claude/Codex support only for platform/product rows with completed UAT.
+- Public docs, README guidance, and release notes must not claim signing, SBOMs, SLSA or in-toto provenance attestations, reproducible-build guarantees, formal audit or certification, vulnerability-free status, marketplace-enforced verification, or cryptographic trust-chain verification unless those controls are separately implemented and evidenced.
 
 ### Session 3 - UAT, Update, and Autoheal
 

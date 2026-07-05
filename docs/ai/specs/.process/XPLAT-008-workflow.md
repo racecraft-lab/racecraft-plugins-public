@@ -380,6 +380,10 @@ Focus on native installed-plugin UAT, update, and safe repair for XPLAT-008:
 | 2 | Clarify | Real installed-cache repair boundary | [codebase, security] | 1 | 3/3 | Enable automatic repair only for bounded manifest/checksum-backed refreshes; unsafe drift remains manual remediation | codebase-analyst, spec-context-analyst, domain-researcher |
 | 3 | Clarify | Public trust and support claim boundary | [codebase, spec-context, domain] | 2 | 3/3 | Claim only implemented and verified controls; deny signing, SBOMs, provenance attestations, reproducible-build guarantees, audits/certifications, vulnerability-free status, marketplace-enforced verification, and cryptographic trust-chain claims unless separately implemented and evidenced | codebase-analyst, spec-context-analyst, domain-researcher |
 | 4 | Clarify | Structured native UAT matrix and repair boundary | [codebase, spec-context, domain] | 3 | 3/3 | Require six Claude/Codex by Windows/macOS/Linux rows in `.process/uat-matrix.md`; gate missing, placeholder, smoke-only, failing, or unsupported-claim rows; limit autoheal to bounded checksum-backed installed-cache refreshes and route unsafe drift to exact manual remediation | codebase-analyst, spec-context-analyst, domain-researcher |
+| 5 | Checklist | Integration README guidance scope | [codebase] | 1 | agree | Keep root `README.md` and `speckit-pro/README.md` in public install/update/trust/support guidance scope, limited to active public claims rather than unrelated README prose | codebase-analyst |
+| 6 | Checklist | Security install-health repair schema binding | [domain] | 1 | gap-remediated | Tightened `install-health-repair.schema.json` so trusted autoheal records require non-null source identity, release channel/tag, expected digest, and safe paths; unsafe findings require manual remediation rather than autoheal | domain-researcher |
+| 7 | Checklist | Reliability runtime/update/repair coverage | [codebase] | 1 | agree | No missed reliability gap found across interpreter diagnostics, update proof, doctor/autoheal outcomes, native UAT rows, or installed-cache failure messaging | codebase-analyst |
+| 8 | Checklist | Release-readiness blocker coverage | [spec-context] | 1 | agree | No missed pre-Tasks release blocker found across payload completeness, stale metadata, public claims, UAT matrix, update/repair evidence, PR traceability, or nondeterministic/stale `dist/**` output | spec-context-analyst |
 
 ---
 
@@ -525,11 +529,11 @@ Focus on XPLAT-008 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |---|---|---|---|
-| integration | Fill after Checklist | Fill after Checklist | Fill after Checklist |
-| security | Fill after Checklist | Fill after Checklist | Fill after Checklist |
-| reliability | Fill after Checklist | Fill after Checklist | Fill after Checklist |
-| release-readiness | Fill after Checklist | Fill after Checklist | Fill after Checklist |
-| Total | Fill after Checklist | Fill after Checklist | Fill after Checklist |
+| integration | 20 | 1 found, 1 remediated | FR-001-FR-005, FR-009-FR-011, FR-019, FR-020, SC-001-SC-005, SC-007-SC-008 |
+| security | 20 | 0 initial; 1 consensus gap remediated | FR-007, FR-011, FR-016-FR-017, FR-019, SC-005-SC-007 |
+| reliability | 20 | 0 | FR-012-FR-018, SC-001, SC-004, SC-006 |
+| release-readiness | 20 | 0 | FR-007-FR-008, FR-014, FR-019-FR-021, SC-003-SC-008 |
+| Total | 80 | 1 found and remediated during checklist execution; 1 consensus gap remediated | FR-001-FR-022, SC-001-SC-008 |
 
 ---
 

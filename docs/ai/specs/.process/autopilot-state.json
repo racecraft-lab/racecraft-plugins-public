@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-008-workflow.md",
   "feature_dir": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate",
   "feature_branch": "codex/xplat-008-claude-codex-cutover-universal-install-release-gate",
-  "updated_at": "2026-07-05T21:14:18Z",
+  "updated_at": "2026-07-05T21:40:32Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 4: Checklist - integration",
+  "active_step": "Phase 5: Tasks",
   "archive_sweep": {
     "archive_extension_installed": true,
     "cleanup_mode": "feature-branch-sweep-static",
@@ -116,39 +116,47 @@
     },
     {
       "step": "Phase 4: Checklist - integration",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Generated 20-item integration checklist, found and remediated one scope gap by adding root README.md and speckit-pro/README.md to public install/update guidance scope."
     },
     {
       "step": "Phase 4: Checklist - integration Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Codebase consensus agreed the README scope remediation is necessary and should remain limited to active public install/update/trust/support claims."
     },
     {
       "step": "Phase 4: Checklist - security",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Generated 20-item security checklist covering XPLAT-003 trust metadata, bounded autoheal, and public claim limits; found 0 gaps."
     },
     {
       "step": "Phase 4: Checklist - security Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Domain consensus found one narrow schema gap; install-health-repair schema now machine-binds trusted autoheal to source identity, release channel/tag, expected digest, safe paths, and unsafe manual remediation."
     },
     {
       "step": "Phase 4: Checklist - reliability",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Generated 20-item reliability checklist covering interpreter discovery, update, doctor/autoheal, and native UAT evidence; found 0 gaps."
     },
     {
       "step": "Phase 4: Checklist - reliability Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Codebase consensus found no missed reliability gap across interpreter diagnostics, update proof, doctor/autoheal outcomes, native UAT rows, or installed-cache failure messaging."
     },
     {
       "step": "Phase 4: Checklist - release-readiness",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Generated 20-item release-readiness checklist covering payload completeness, UAT fill state, public claims, final blockers, and traceability; found 0 gaps."
     },
     {
       "step": "Phase 4: Checklist - release-readiness Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Spec-context consensus found no missed pre-Tasks release blocker across payload completeness, stale metadata, public claims, UAT matrix, update/repair evidence, PR traceability, or nondeterministic/stale dist output."
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",

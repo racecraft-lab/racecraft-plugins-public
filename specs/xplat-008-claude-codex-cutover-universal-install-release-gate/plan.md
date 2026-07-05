@@ -28,9 +28,9 @@ Cut over active installed Claude and Codex SpecKit Pro surfaces to direct Python
 
 **Constraints**: Active installed-runtime surfaces must discover Python `>=3.11`, invoke argv as `[resolved_python, "-m", "speckit_pro_runner"]`, send one JSON request on stdin, parse one JSON response from stdout, and surface diagnostics without Bash, Git Bash, WSL, PowerShell-specific command language, shell interpolation, redirection, Unix-only paths, or `jq`.
 
-**Scale/Scope**: Two generated payload families, six required platform/product UAT rows, one source-derived payload inventory contract, one release-readiness aggregate, and one bounded repair model. Primary review surface: docs/process. Secondary surfaces: harness/adapter and seed/config. Reviewability budget result: warning accepted.
+**Scale/Scope**: Two generated payload families, six required platform/product UAT rows, one source-derived payload inventory contract, one release-readiness aggregate, README public-guidance alignment, and one bounded repair model. Primary review surface: docs/process. Secondary surfaces: harness/adapter and seed/config. Reviewability budget result: warning accepted.
 
-**Reviewability Budget**: Primary surface `docs/process`; secondary surfaces `harness/adapter`, `seed/config`; projected reviewable LOC `250-500`; projected production files `4-8`; projected total files `10-25`; budget result `warning accepted`.
+**Reviewability Budget**: Primary surface `docs/process`; secondary surfaces `harness/adapter`, `seed/config`; projected reviewable LOC `250-500`; projected production files `4-8`; projected total files `10-30`; budget result `warning accepted`.
 
 ## Declared File Operations
 
@@ -52,6 +52,8 @@ The plan-phase reviewability estimator parses this block for projected implement
 - MODIFIED speckit-pro/codex-skills/speckit-install/SKILL.md
 - MODIFIED speckit-pro/hooks/hooks.json
 - MODIFIED speckit-pro/codex-hooks.json
+- MODIFIED README.md
+- MODIFIED speckit-pro/README.md
 - MODIFIED docs-site/src/content/docs/install/claude-code.md
 - MODIFIED docs-site/src/content/docs/install/codex.md
 - MODIFIED docs-site/src/content/docs/first-run.md
@@ -88,7 +90,7 @@ Classify active Claude/Codex installed-runtime surfaces and update them to direc
 
 ### Slice 2 - Payload, Release, and Public Docs Gates
 
-Rebuild generated Claude and Codex payloads from source and add a source-derived payload completeness contract. Gate release readiness on payload inventory, release/version metadata, bundled agents, hooks, runner files, runner manifest/checksum records, XPLAT-003 trust records, active shell dependency scans, public claim safety, and deterministic dist parity. Public docs and release notes may describe only implemented controls and must not claim signing, SBOM, SLSA, in-toto, reproducible-build guarantees, formal audit/certification, marketplace-enforced verification, vulnerability-free status, or cryptographic trust-chain verification.
+Rebuild generated Claude and Codex payloads from source and add a source-derived payload completeness contract. Gate release readiness on payload inventory, release/version metadata, bundled agents, hooks, runner files, runner manifest/checksum records, XPLAT-003 trust records, active shell dependency scans, public claim safety, and deterministic dist parity. Public docs, README guidance, and release notes may describe only implemented controls and must not claim signing, SBOM, SLSA, in-toto, reproducible-build guarantees, formal audit/certification, marketplace-enforced verification, vulnerability-free status, or cryptographic trust-chain verification.
 
 ### Slice 3 - Native UAT, Update, Repair, and Release Blocker
 
@@ -153,6 +155,9 @@ dist/
 ├── claude/speckit-pro/
 └── codex/speckit-pro/
 
+README.md
+speckit-pro/README.md
+
 docs-site/src/content/docs/
 ├── install/
 ├── first-run.md
@@ -166,7 +171,7 @@ tests/speckit-pro/layer4-scripts/
 └── fixtures/xplat-008-release/
 ```
 
-**Structure Decision**: Use the existing single plugin tree, existing generated `dist/**` payload directories, existing docs-site content tree, and existing Layer 4 runner/gate test layout. Do not add a new runtime package, plugin, external dependency, shell wrapper layer, or child spec at Plan time.
+**Structure Decision**: Use the existing single plugin tree, existing generated `dist/**` payload directories, existing README public guidance surfaces, existing docs-site content tree, and existing Layer 4 runner/gate test layout. Do not add a new runtime package, plugin, external dependency, shell wrapper layer, or child spec at Plan time.
 
 ## Complexity Tracking
 
