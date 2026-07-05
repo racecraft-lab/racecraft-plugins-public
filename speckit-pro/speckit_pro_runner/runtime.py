@@ -1,4 +1,4 @@
-"""Runtime-info, preflight, and fixture-only runner primitives."""
+"""Runtime-info, preflight, helper, and fixture-only gate dispatch primitives."""
 
 from __future__ import annotations
 
@@ -32,6 +32,8 @@ def handle_request(request: Any) -> dict[str, Any]:
     if getattr(request, "helper_id", "runner") != "runner":
         from .gates.registry import dispatch_gate, is_gate_helper_id
 
+        # Gate helper ids are registry-driven so US2 operations stay on the
+        # same runner envelope without widening the base runner operation list.
         if is_gate_helper_id(request.helper_id):
             return dispatch_gate(request)
 

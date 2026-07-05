@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-007-workflow.md",
   "feature_dir": "specs/xplat-007-python-tooling-and-release-gate-migration",
   "feature_branch": "codex/xplat-007-python-tooling-and-release-gate-migration",
-  "updated_at": "2026-07-04T18:17:39Z",
+  "updated_at": "2026-07-04T18:52:23Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 7: Implement - us1 (T014-T028)",
+  "active_step": "Phase 7: Implement - us2 (T029-T050)",
   "archive_sweep": {
     "archive_extension_installed": true,
     "cleanup_mode": "feature-branch-apply-eligible-noop",
@@ -175,11 +175,11 @@
     },
     {
       "step": "Phase 7: Implement - us1 (T014-T028)",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - us2 (T029-T050)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement - us3 (T051-T065)",
@@ -554,6 +554,76 @@
       "recommended_action": "soft_skip",
       "command": "bash speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh docs/ai/specs/.process/XPLAT-007-workflow.md --threshold 0.90 --mode advisory",
       "outcome": "No synthesizer confidence emit was present in the workflow file. Advisory mode records the no-data soft-skip and proceeds to implementation."
+    },
+    "implementation": {
+      "status": "in_progress",
+      "markers": {
+        "foundation": {
+          "status": "completed",
+          "commit_sha": "2b7158daf837402fb364d46af71ccaebb8981448",
+          "completed_at": "2026-07-04T18:17:39Z",
+          "task_range": "T001-T013",
+          "evidence_path": "specs/xplat-007-python-tooling-and-release-gate-migration/.process/marker-plan/foundation-checkpoint.json"
+        },
+        "us1": {
+          "status": "completed",
+          "commit_sha": "b3ae3c52e77988f01ec3534b72b3beb45a0b31fa",
+          "completed_at": "2026-07-04T18:52:23Z",
+          "task_range": "T014-T028",
+          "evidence_path": "specs/xplat-007-python-tooling-and-release-gate-migration/.process/marker-plan/us1-checkpoint.json",
+          "outcome": "Python-authoritative suite gates, request fixtures, promotion records, and quickstart updates are complete."
+        },
+        "us2": {
+          "status": "in_progress",
+          "task_range": "T029-T050"
+        },
+        "us3": {
+          "status": "pending",
+          "task_range": "T051-T065"
+        },
+        "validation": {
+          "status": "pending",
+          "task_range": "T066-T075"
+        }
+      },
+      "latest_validation": [
+        {
+          "command": "python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py",
+          "result": "14/14 passed"
+        },
+        {
+          "command": "PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json",
+          "result": "status ok; 6/6 suite commands passed"
+        },
+        {
+          "command": "python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py",
+          "result": "9/9 passed"
+        },
+        {
+          "command": "python3 -m json.tool for each schema in specs/xplat-007-python-tooling-and-release-gate-migration/contracts",
+          "result": "7 schemas parsed"
+        },
+        {
+          "command": "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .",
+          "result": "index current"
+        },
+        {
+          "command": "bash tests/speckit-pro/layer1-structural/validate-moc-stale-index.sh specs",
+          "result": "passed"
+        },
+        {
+          "command": "bash tests/speckit-pro/run-all.sh --layer 4",
+          "result": "2160/2160 passed"
+        },
+        {
+          "command": "git diff --check",
+          "result": "passed"
+        },
+        {
+          "command": "bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G7 specs/xplat-007-python-tooling-and-release-gate-migration",
+          "result": "expected incomplete: 28/75 tasks done; 47 tasks incomplete"
+        }
+      ]
     }
   },
   "pr_marker_plan": {
@@ -564,7 +634,7 @@
     "source_fingerprint": {
       "feature_spec_sha": "5aee7bde6b4ced83500dc5fd40f7adedbe106a1e2a1007daed43f434159aa382",
       "plan_declared_scope_sha": "c8bf742590eb6644f93e2f38812237f4d5d76d64896203686b7fbb90b9eac468",
-      "tasks_sha": "90a92360230161365906f306beb19ace4256ff1419ed92f0fd41092820444dd4",
+      "tasks_sha": "f60fceed627629c749723345ef09a8d9e3b022dfc9ec2ddd3c937e0126015592",
       "reviewability_sha": "d48d218c423be02574df96ba3a15b9f09addc29af7855f938ec1a9a753f777fc",
       "hazard_route_sha": "cd814db7ea0c124c10b53bed28ffac9c4288c63a419fb78e15f182b5d7ac7772"
     },
@@ -737,7 +807,11 @@
           "details": {}
         },
         "implementation_checkpoint": {
-          "status": "pending"
+          "status": "completed",
+          "evidence_path": "specs/xplat-007-python-tooling-and-release-gate-migration/.process/marker-plan/us1-checkpoint.json",
+          "commit_sha": "b3ae3c52e77988f01ec3534b72b3beb45a0b31fa",
+          "head_sha": "b3ae3c52e77988f01ec3534b72b3beb45a0b31fa",
+          "completed_at": "2026-07-04T18:52:23Z"
         },
         "emission_mapping": {
           "status": "pending"
@@ -950,7 +1024,7 @@
   "current_source_fingerprint": {
     "feature_spec_sha": "5aee7bde6b4ced83500dc5fd40f7adedbe106a1e2a1007daed43f434159aa382",
     "plan_declared_scope_sha": "c8bf742590eb6644f93e2f38812237f4d5d76d64896203686b7fbb90b9eac468",
-    "tasks_sha": "90a92360230161365906f306beb19ace4256ff1419ed92f0fd41092820444dd4",
+    "tasks_sha": "f60fceed627629c749723345ef09a8d9e3b022dfc9ec2ddd3c937e0126015592",
     "reviewability_sha": "d48d218c423be02574df96ba3a15b9f09addc29af7855f938ec1a9a753f777fc",
     "hazard_route_sha": "cd814db7ea0c124c10b53bed28ffac9c4288c63a419fb78e15f182b5d7ac7772"
   }
