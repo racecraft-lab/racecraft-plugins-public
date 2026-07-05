@@ -46,7 +46,10 @@ XPLAT-007 became ready to scaffold from the Python runner helper contracts,
 fixture tree, install inventory, and deferred-live-mutation boundaries. Updated
 again on 2026-07-04 after XPLAT-007 scaffold started on
 `codex/xplat-007-python-tooling-and-release-gate-migration`; the setup design
-concept accepted one workflow with three internal slices.
+concept accepted one workflow with three internal slices. Updated 2026-07-05
+after XPLAT-007 merged across PRs #284, #285, #286, and #287 and the active
+spec folder was archived; XPLAT-008 became ready for installed Claude/Codex
+cutover, native UAT, update/autoheal, and public release readiness.
 
 ---
 
@@ -63,8 +66,8 @@ dependency tiers**:
 | 4 | XPLAT-004 | Build the cross-platform runner foundation and parity harness | Sequential after runtime and security decisions |
 | 5 | XPLAT-005 | Port read-only/advisory helpers with fixture parity | Sequential after runner foundation |
 | 6 | XPLAT-006 | Port mutation, install, and PR-emission helpers | Complete / archived after PR #281 |
-| 7 | XPLAT-007 | Replace active repo-local Bash helpers, tests, evals, payload builders, release checks, install verification, and release-readiness gates with Python commands | Ready after helper contracts and deferred boundaries landed |
-| 8 | XPLAT-008 | Cut over Claude/Codex surfaces, rebuild payloads, and prove universal install/full-use/update/autoheal release readiness | Sequential release gate |
+| 7 | XPLAT-007 | Replace active repo-local Bash helpers, tests, evals, payload builders, release checks, install verification, and release-readiness gates with Python commands | Complete / archived after PRs #284-#287 |
+| 8 | XPLAT-008 | Cut over Claude/Codex surfaces, rebuild payloads, and prove universal install/full-use/update/autoheal release readiness | Ready after Python gate migration landed |
 
 **Execution Order:** XPLAT-001 -> XPLAT-002 -> XPLAT-003 -> XPLAT-004 -> XPLAT-005 -> XPLAT-006 -> XPLAT-007 -> XPLAT-008
 
@@ -238,8 +241,8 @@ PUBLIC RELEASE UNBLOCKED
 | XPLAT-004 | Cross-Platform Runner Foundation | Complete / Archived | `.process/XPLAT-004-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-01-xplat-004-post-merge-hygiene.md`; runner source, metadata, contract fixtures, and tests landed in PR #274 |
 | XPLAT-005 | Read-Only Helper Port | Complete / Archived | `.process/XPLAT-005-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-03-xplat-005-post-merge-hygiene.md`; read-only helper registry, Python-authoritative records, parity fixtures, and Layer 4 gates landed in PR #276 |
 | XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | Complete / Archived | `.process/XPLAT-006-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-04-xplat-006-post-merge-hygiene.md`; mutation primitives, install inventory/doctor proof, PR-body/command-plan fixtures, phase-coverage hardening, and Layer 4 mutation-helper gates landed in PR #281 |
-| XPLAT-007 | Python Tooling and Release-Gate Migration | In Progress | `.process/XPLAT-007-workflow.md` | Scaffolded on `codex/xplat-007-python-tooling-and-release-gate-migration`; next phase is `$speckit-autopilot docs/ai/specs/.process/XPLAT-007-workflow.md` |
-| XPLAT-008 | Claude/Codex Cutover and Universal Install Release Gate | Pending | — | Blocked by XPLAT-006 and XPLAT-007; owns active Claude/Codex cutover, payload rebuild, docs, UAT, update, autoheal, and public release readiness |
+| XPLAT-007 | Python Tooling and Release-Gate Migration | Complete / Archived | `.process/XPLAT-007-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md`; Python gate package, CI dispatch, promotion records, and Layer 4 gate tests landed across PRs #284-#287 |
+| XPLAT-008 | Claude/Codex Cutover and Universal Install Release Gate | Ready | — | Ready after XPLAT-007; owns active Claude/Codex cutover, payload rebuild, docs, UAT, update, autoheal, and public release readiness |
 
 **Status Legend:** Pending | Ready | In Progress | In Review | Complete | Complete / Archived | Blocked
 
@@ -743,11 +746,13 @@ if XPLAT-001 inventory shows the combined scope is too large.
 
 **Priority:** P1 | **Depends On:** XPLAT-006 | **Enables:** XPLAT-008
 
-**Status:** In Progress. Scaffolded on 2026-07-04 in branch
-`codex/xplat-007-python-tooling-and-release-gate-migration`; workflow file is
-`docs/ai/specs/.process/XPLAT-007-workflow.md`; design concept is
-`docs/ai/specs/.process/XPLAT-007-design-concept.md`; active spec marker is
-`specs/xplat-007-python-tooling-and-release-gate-migration/SPEC-MOC.md`.
+**Status:** Complete / Archived. XPLAT-007 shipped across PR #284, PR #285,
+PR #286, and PR #287 on 2026-07-05 and is archived in
+`.specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md`;
+workflow file is `docs/ai/specs/.process/XPLAT-007-workflow.md`; design concept
+is `docs/ai/specs/.process/XPLAT-007-design-concept.md`. The active spec
+folder was removed from `specs/**` after preserving contract schemas under
+`tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/contracts/`.
 
 **Goal:** Replace active repo-local Bash helpers, tests, evals, payload builders,
 install-verification scripts, and release-readiness gates with Python
@@ -800,7 +805,7 @@ and CI-dispatch guard slices if a single workflow exceeds review budget.
 - `.github/workflows/**` only where workflow steps must call Python gates instead
   of Bash implementations
 
-**Done When:**
+**Done When:** Complete.
 
 - Active repo-local helpers, tests, evals, payload builders,
   install-verification scripts, and release scripts use Python commands.
@@ -818,7 +823,10 @@ and CI-dispatch guard slices if a single workflow exceeds review budget.
 
 **Priority:** P1 | **Depends On:** XPLAT-006, XPLAT-007 | **Enables:** Public release readiness
 
-**Status:** Pending.
+**Status:** Ready. XPLAT-007 is complete and archived; XPLAT-008 is unblocked
+for installed Claude/Codex cutover, generated release payload publication,
+native installed-plugin UAT, update/autoheal proof, and public release
+readiness.
 
 **Goal:** Switch active Claude and Codex plugin runtime surfaces to the
 cross-platform runner and prove public-release readiness with complete

@@ -17,7 +17,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "xplat-007-gates"
-CONTRACT_DIR = REPO_ROOT / "specs" / "xplat-007-python-tooling-and-release-gate-migration" / "contracts"
+CONTRACT_DIR = FIXTURE_DIR / "contracts"
 PROMOTION_RECORDS = FIXTURE_DIR / "promotion-records.json"
 REQUESTS_DIR = FIXTURE_DIR / "requests"
 
