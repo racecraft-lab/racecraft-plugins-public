@@ -36,15 +36,20 @@ else
   _fail "expected validate-pr-title to checkout repository history before inspecting changed files"
 fi
 
-set_test "title validation uses shared workflow contract validator"
-assert_contains "$CONTENT" "validate-pr-workflow-contract.sh"
-
-set_test "title validation supplies changed-file evidence"
-if [[ "$CONTENT" == *"git diff --name-only"* \
-  && "$CONTENT" == *"--changed-files .git/pr-changed-files.txt"* ]]; then
+set_test "title validation uses Python release-readiness gate"
+if [[ "$CONTENT" == *"release-readiness-live-github.json"* \
+  && "$CONTENT" == *"python3 -m speckit_pro_runner"* ]]; then
   _pass
 else
-  _fail "expected title validation to pass changed-file evidence to the contract validator"
+  _fail "expected title validation to dispatch the Python release-readiness live GitHub gate"
+fi
+
+set_test "title validation supplies title and base evidence"
+if [[ "$CONTENT" == *"TITLE: \${{ github.event_name == 'pull_request' && github.event.pull_request.title || inputs.pr_title }}"* \
+  && "$CONTENT" == *"BASE_REF: \${{ github.event_name == 'pull_request' && github.base_ref || inputs.base_ref }}"* ]]; then
+  _pass
+else
+  _fail "expected title validation to pass PR title and base_ref inputs to the Python gate"
 fi
 
 section "pr-checks.yml — Workflow Validation"
@@ -69,11 +74,12 @@ else
   _fail "expected validate-workflows to run actionlint over all GitHub workflow YAML files"
 fi
 
-set_test "deploy-docs workflow changes trigger structural tests"
-if [[ "$CONTENT" == *".github/workflows/(pr-checks|release|deploy-docs)"* ]]; then
+set_test "Python-gated plugin matrix is emitted"
+if [[ "$CONTENT" == *"Emit Python-gated plugin matrix"* \
+  && "$CONTENT" == *'plugins=["speckit-pro"]'* ]]; then
   _pass
 else
-  _fail "expected workflow detector to include deploy-docs.yml so deploy workflow changes run plugin structural tests"
+  _fail "expected PR Checks to emit the speckit-pro Python-gated plugin matrix"
 fi
 
 section "pr-checks.yml — Release PR Dispatch"
@@ -115,8 +121,8 @@ fi
 
 section "pr-checks.yml — Sentinel Job Dependencies"
 
-set_test "sentinel depends on detect job"
-assert_contains "$CONTENT" "needs: [detect, test, test-latest-jq]"
+set_test "sentinel depends on detect and test jobs"
+assert_contains "$CONTENT" "needs: [detect, test]"
 
 set_test "sentinel runs if: always()"
 assert_contains "$CONTENT" "if: always()"
@@ -124,25 +130,30 @@ assert_contains "$CONTENT" "if: always()"
 set_test "sentinel has permissions: {}"
 assert_contains "$CONTENT" "permissions: {}"
 
-section "pr-checks.yml — Latest jq Job"
+section "pr-checks.yml — Python Runner Gate Jobs"
 
-set_test "latest jq job is defined"
-assert_contains "$CONTENT" "test-latest-jq:"
-
-set_test "latest jq job authenticates release API request"
-if [[ "$CONTENT" == *'GITHUB_TOKEN: ${{ github.token }}'* \
-  && "$CONTENT" == *'"Authorization": f"Bearer {os.environ['* ]]; then
+set_test "latest jq job is deferred"
+if [[ "$CONTENT" != *"test-latest-jq:"* \
+  && "$CONTENT" != *"latest_jq_result"* ]]; then
   _pass
 else
-  _fail "expected latest-jq release API request to use the workflow GITHUB_TOKEN"
+  _fail "expected XPLAT-007 PR Checks to defer the latest-jq leg"
 fi
 
-set_test "latest jq job verifies downloaded binary digest"
-if [[ "$CONTENT" == *"digest.startswith(\"sha256:\")"* \
-  && "$CONTENT" == *"sha256sum -c"* ]]; then
+set_test "test job dispatches runner toolchain gate"
+if [[ "$CONTENT" == *"run-toolchain-preflight.json"* \
+  && "$CONTENT" == *'PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner'* ]]; then
   _pass
 else
-  _fail "expected latest-jq job to require and verify a sha256 digest before execution"
+  _fail "expected test job to dispatch the Python runner toolchain gate"
+fi
+
+set_test "test job dispatches runner default suite gate"
+if [[ "$CONTENT" == *"run-default-suite.json"* \
+  && "$CONTENT" == *'PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner'* ]]; then
+  _pass
+else
+  _fail "expected test job to dispatch the Python runner default-suite gate"
 fi
 
 section "pr-checks.yml — Sentinel Job Logic"
@@ -153,14 +164,8 @@ assert_contains "$CONTENT" 'detect_result'
 set_test "sentinel checks test_result for success or skipped"
 assert_contains "$CONTENT" 'test_result'
 
-set_test "sentinel checks latest_jq_result for success or skipped"
-assert_contains "$CONTENT" 'latest_jq_result'
-
 set_test "sentinel exits 0 on success or skipped"
 assert_contains "$CONTENT" '"success" || "$test_result" == "skipped"'
-
-set_test "sentinel exits 0 on latest jq success or skipped"
-assert_contains "$CONTENT" '"success" || "$latest_jq_result" == "skipped"'
 
 set_test "sentinel exits 1 on detect failure"
 assert_contains "$CONTENT" '"failure"'

@@ -37,6 +37,54 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/gates/__init__.py",
+        "display": "speckit_pro_runner/gates/__init__.py"
+      },
+      "sha256": "5b4373aaf0afd0803e0885aa047974672cea3ff40e38a853fa1487735384909c"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/gates/active_path_guard.py",
+        "display": "speckit_pro_runner/gates/active_path_guard.py"
+      },
+      "sha256": "b2b9c5a369dacdb109a9126eba685f4cc99b24fb587edf63c1dcf1202f4916bd"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/gates/payloads.py",
+        "display": "speckit_pro_runner/gates/payloads.py"
+      },
+      "sha256": "402644f0a221e610c3a10457ee3ef66b79eb94fb17c7c8ae2130f9f2ceb6e8e7"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/gates/registry.py",
+        "display": "speckit_pro_runner/gates/registry.py"
+      },
+      "sha256": "85c58ae339ce674669c41e6d4e2e8b4fe5d06c9aab2ae2521ed9d40b12cd0070"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/gates/release.py",
+        "display": "speckit_pro_runner/gates/release.py"
+      },
+      "sha256": "9fb45a2816809b3756ee8b5119a656b9b16f8f8415e48df034b972c7fc858d78"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/gates/suite.py",
+        "display": "speckit_pro_runner/gates/suite.py"
+      },
+      "sha256": "ee165c390276886c9f18fcf9083a7ffc465493a9d108c9c16f507f386827e1a7"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/helpers/__init__.py",
         "display": "speckit_pro_runner/helpers/__init__.py"
       },
@@ -96,7 +144,7 @@
         "value": "speckit_pro_runner/runtime.py",
         "display": "speckit_pro_runner/runtime.py"
       },
-      "sha256": "df0b268a3d866bdd58294c0d56506e1fafa639ffbaa9ee71588e79e8e4d0b495"
+      "sha256": "b21ab6e4d025c999ec932809c17227365f12551251ce1133c7b92a7a584e98b8"
     }
   ]
 }

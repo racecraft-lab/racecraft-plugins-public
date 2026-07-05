@@ -25,11 +25,14 @@ assert_eq "2" "$checkout_count" "release workflow pinned checkout count"
 
 set_test "release workflow can dispatch PR checks"
 if grep -Fq "actions: write" "$WORKFLOW_FILE" \
-  && grep -Fq "gh workflow run pr-checks.yml" "$WORKFLOW_FILE" \
-  && grep -Fq -- '--ref "$branch"' "$WORKFLOW_FILE" \
-  && grep -Fq -- '-f pr_number="$pr_number"' "$WORKFLOW_FILE" \
-  && grep -Fq -- '-f pr_title="$title"' "$WORKFLOW_FILE" \
-  && grep -Fq -- '-f base_ref="main"' "$WORKFLOW_FILE"; then
+  && grep -Fq '"gh",' "$WORKFLOW_FILE" \
+  && grep -Fq '"workflow",' "$WORKFLOW_FILE" \
+  && grep -Fq '"run",' "$WORKFLOW_FILE" \
+  && grep -Fq '"pr-checks.yml",' "$WORKFLOW_FILE" \
+  && grep -Fq '"--ref",' "$WORKFLOW_FILE" \
+  && grep -Fq '"pr_number=" + number' "$WORKFLOW_FILE" \
+  && grep -Fq '"pr_title=" + title' "$WORKFLOW_FILE" \
+  && grep -Fq '"base_ref=main"' "$WORKFLOW_FILE"; then
   _pass
 else
   _fail "expected release workflow to dispatch PR Checks for release-please PR branches"
@@ -37,8 +40,8 @@ fi
 
 set_test "release workflow uses release-please PR output for payload sync"
 if grep -Fq 'RELEASE_PRS: ${{ steps.release.outputs.prs }}' "$WORKFLOW_FILE" \
-  && grep -Fq 'release_prs="${RELEASE_PRS:-[]}"' "$WORKFLOW_FILE" \
-  && grep -Fq 'headBranchName // .headRefName // empty' "$WORKFLOW_FILE" \
+  && grep -Fq 'json.loads(os.environ.get("RELEASE_PRS") or "[]")' "$WORKFLOW_FILE" \
+  && grep -Fq 'release_pr.get("headBranchName") or release_pr.get("headRefName") or ""' "$WORKFLOW_FILE" \
   && grep -Fq 'prs_created=true but returned no PR metadata' "$WORKFLOW_FILE"; then
   _pass
 else
@@ -52,22 +55,27 @@ else
   _pass
 fi
 
-set_test "release workflow syncs release PR payloads before release merge"
-if [[ "$CONTENT" == *"Sync release PR payloads"* \
+set_test "release workflow validates release PR readiness before dispatch"
+if [[ "$CONTENT" == *"Validate release PR readiness"* \
   && "$CONTENT" == *"steps.release.outputs.prs_created == 'true'"* \
   && "$CONTENT" == *'RELEASE_PRS: ${{ steps.release.outputs.prs }}'* \
-  && "$CONTENT" == *"bash scripts/build-plugin-payloads.sh"* \
-  && "$CONTENT" == *'git push origin "HEAD:${branch}"'* ]]; then
+  && "$CONTENT" == *"release-readiness.json"* \
+  && "$CONTENT" == *"Dispatch PR Checks for release PRs"* ]]; then
   _pass
 else
-  _fail "expected release workflow to rebuild and push dist payloads on release-please PRs"
+  _fail "expected release workflow to validate release PR readiness before dispatching PR Checks"
 fi
 
-set_test "release workflow rebuilds plugin payloads"
-assert_contains "$CONTENT" "bash scripts/build-plugin-payloads.sh"
+set_test "release workflow verifies generated test payload evidence"
+assert_contains "$CONTENT" "test-payload-evidence.json"
 
-set_test "release workflow syncs marketplace versions"
-assert_contains "$CONTENT" "bash scripts/sync-marketplace-versions.sh"
+set_test "release workflow defers public marketplace sync"
+if [[ "$CONTENT" == *"Public generated payload synchronization remains an XPLAT-008"* \
+  && "$CONTENT" != *"bash scripts/sync-marketplace-versions.sh"* ]]; then
+  _pass
+else
+  _fail "expected release workflow to defer public marketplace sync to XPLAT-008"
+fi
 
 set_test "release workflow regenerates the docs reference on sync"
 assert_contains "$CONTENT" "pnpm --dir docs-site reference:generate"

@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "XPLAT-007",
+  "coverage": [
+    "fingerprints",
+    "fixture-or-temp-output-roots",
+    "stale-generated-files",
+    "release_payload_cutover=false"
+  ],
+  "cases": [
+    {
+      "case_id": "claude-codex-test-payloads",
+      "expected_status": "ok",
+      "release_payload_cutover": false,
+      "payloads": [
+        {
+          "evidence_id": "us2-claude-test-payload",
+          "payload_surface": "claude_test",
+          "files": [
+            {
+              "path": "claude/.claude-plugin/plugin.json",
+              "content": "{\"name\":\"speckit-pro\",\"version\":\"2.17.0\",\"fixture\":\"claude\"}\n"
+            },
+            {
+              "path": "claude/skills/speckit-autopilot/SKILL.md",
+              "content": "# SpecKit Autopilot Claude fixture\n\nXPLAT-007 test payload evidence only.\n"
+            }
+          ]
+        },
+        {
+          "evidence_id": "us2-codex-test-payload",
+          "payload_surface": "codex_test",
+          "files": [
+            {
+              "path": "codex/.codex-plugin/plugin.json",
+              "content": "{\"name\":\"speckit-pro\",\"version\":\"2.17.0\",\"fixture\":\"codex\"}\n"
+            },
+            {
+              "path": "codex/skills/speckit-autopilot/SKILL.md",
+              "content": "# SpecKit Autopilot Codex fixture\n\nXPLAT-007 test payload evidence only.\n"
+            }
+          ]
+        }
+      ],
+      "stale_generated_files": []
+    },
+    {
+      "case_id": "stale-generated-files",
+      "expected_status": "expected_failure",
+      "release_payload_cutover": false,
+      "payloads": [
+        {
+          "evidence_id": "us2-stale-claude-test-payload",
+          "payload_surface": "claude_test",
+          "files": [
+            {
+              "path": "claude/.claude-plugin/plugin.json",
+              "content": "{\"name\":\"speckit-pro\",\"version\":\"2.16.0\",\"fixture\":\"stale\"}\n"
+            }
+          ]
+        }
+      ],
+      "stale_generated_files": [
+        "generated/release-payloads/speckit-pro-2.16.0.zip"
+      ]
+    }
+  ]
+}

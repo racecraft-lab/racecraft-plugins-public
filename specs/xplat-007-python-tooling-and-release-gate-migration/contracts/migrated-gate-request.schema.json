@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/speckit-pro/xplat-007/migrated-gate-request.schema.json",
+  "title": "Migrated Gate Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "helper_id", "operation", "mode", "inputs"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "request_id": { "type": "string", "minLength": 1 },
+    "helper_id": {
+      "type": "string",
+      "enum": [
+        "suite-gate",
+        "payload-gate",
+        "install-verification",
+        "release-readiness",
+        "active-path-guard"
+      ]
+    },
+    "operation": {
+      "type": "string",
+      "enum": [
+        "run-default-suite",
+        "run-layer",
+        "run-toolchain-preflight",
+        "run-ai-evals",
+        "run-integration-suite",
+        "run-parity-suite",
+        "build-test-payload-evidence",
+        "refresh-local-plugin-fixture",
+        "detect-changed-plugin",
+        "aggregate-suite-results",
+        "check-marketplace-version-sync",
+        "validate-pr-title",
+        "validate-workflow-contract",
+        "check-payload-evidence",
+        "parse-release-pr-payload-sync",
+        "check-post-release-drift",
+        "verify-install",
+        "release-readiness",
+        "active-path-guard",
+        "classify-shell-finding"
+      ]
+    },
+    "mode": { "type": "string", "enum": ["read_only", "dry_run", "apply"] },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "repo_root": { "type": "string" },
+        "fixture_root": { "type": "string" },
+        "output_root": { "type": "string" },
+        "layer": { "type": "string" },
+        "changed_files": { "type": "array", "items": { "type": "string" } },
+        "allow_ci_dispatch_glue": { "type": "boolean" },
+        "xplat_008_cutover_allowed": { "type": "boolean", "const": false }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "operation": { "const": "active-path-guard" } }, "required": ["operation"] },
+      "then": { "properties": { "helper_id": { "const": "active-path-guard" }, "mode": { "const": "read_only" } } }
+    },
+    {
+      "if": { "properties": { "operation": { "const": "classify-shell-finding" } }, "required": ["operation"] },
+      "then": { "properties": { "helper_id": { "const": "active-path-guard" }, "mode": { "const": "read_only" } } }
+    },
+    {
+      "if": { "properties": { "operation": { "const": "build-test-payload-evidence" } }, "required": ["operation"] },
+      "then": { "properties": { "helper_id": { "const": "payload-gate" } } }
+    },
+    {
+      "if": { "properties": { "operation": { "const": "verify-install" } }, "required": ["operation"] },
+      "then": { "properties": { "helper_id": { "const": "install-verification" } } }
+    },
+    {
+      "if": { "properties": { "operation": { "const": "release-readiness" } }, "required": ["operation"] },
+      "then": { "properties": { "helper_id": { "const": "release-readiness" }, "mode": { "const": "read_only" } } }
+    }
+  ]
+}

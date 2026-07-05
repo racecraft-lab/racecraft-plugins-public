@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "request_id": "us3-classify-shell-finding",
+  "helper_id": "active-path-guard",
+  "operation": "classify-shell-finding",
+  "mode": "read_only",
+  "inputs": {
+    "path": ".github/workflows/pr-checks.yml",
+    "line": 1,
+    "text": "run: bash tests/speckit-pro/run-all.sh",
+    "xplat_008_cutover_allowed": false
+  }
+}

@@ -15,8 +15,11 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 VALIDATOR = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "scripts" / "validate-autopilot-phase-coverage.py"
 REPORT_SCHEMA = (
     REPO_ROOT
-    / "specs"
-    / "xplat-006-mutation-install-pr-emission-helper-port"
+    / "tests"
+    / "speckit-pro"
+    / "layer4-scripts"
+    / "fixtures"
+    / "mutation-helpers"
     / "contracts"
     / "autopilot-phase-coverage-report.schema.json"
 )
