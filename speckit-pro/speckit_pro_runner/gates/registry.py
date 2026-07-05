@@ -10,9 +10,11 @@ from .payloads import run_payload_gate
 from .release import run_release_gate
 from .suite import run_suite_gate
 from .active_path_guard import run_active_path_guard
+from ..helpers.install import run_runner_invocation_gate
 
 
 REQUEST_BASE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests"
+XPLAT_008_REQUEST_BASE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests"
 
 
 @dataclass(frozen=True)
@@ -49,7 +51,24 @@ def request_fixture(name: str) -> str:
     return f"{REQUEST_BASE}/{name}.json"
 
 
+def xplat_008_request_fixture(name: str) -> str:
+    return f"{XPLAT_008_REQUEST_BASE}/{name}.json"
+
+
 GATE_OPERATIONS: tuple[GateOperation, ...] = (
+    GateOperation(
+        "runner-invocation",
+        "runner-invocation",
+        "runtime",
+        ("read_only",),
+        "speckit_pro_runner.helpers.install",
+        None,
+        xplat_008_request_fixture("runner-invocation"),
+        "US1",
+        "active_installed_runtime",
+        implemented=True,
+        promotion_status="python_authoritative",
+    ),
     GateOperation(
         "suite-gate",
         "run-default-suite",
@@ -299,6 +318,19 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
     ),
     GateOperation(
         "active-path-guard",
+        "active-runtime-guard",
+        "guard",
+        ("read_only",),
+        "speckit_pro_runner.gates.active_path_guard",
+        None,
+        xplat_008_request_fixture("active-runtime-guard"),
+        "US1",
+        "active_installed_runtime_guard",
+        implemented=True,
+        promotion_status="python_authoritative",
+    ),
+    GateOperation(
+        "active-path-guard",
         "classify-shell-finding",
         "guard",
         ("read_only",),
@@ -413,6 +445,8 @@ def dispatch_gate(request: Any) -> dict[str, Any]:
         return run_payload_gate(entry, request)
     if entry.group == "release":
         return run_release_gate(entry, request)
+    if entry.group == "runtime":
+        return run_runner_invocation_gate(entry, request)
     if entry.group == "guard":
         return run_active_path_guard(entry, request)
 

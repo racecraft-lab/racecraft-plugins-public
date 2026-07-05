@@ -20,6 +20,8 @@ FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "xplat-007-gates"
 CONTRACT_DIR = FIXTURE_DIR / "contracts"
 PROMOTION_RECORDS = FIXTURE_DIR / "promotion-records.json"
 REQUESTS_DIR = FIXTURE_DIR / "requests"
+XPLAT_008_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "xplat-008-release"
+XPLAT_008_REQUESTS_DIR = XPLAT_008_FIXTURE_DIR / "requests"
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
@@ -88,6 +90,14 @@ def fixture_request(name: str) -> dict[str, Any]:
 
 def fixture_cases(name: str) -> dict[str, Any]:
     return json.loads((FIXTURE_DIR / f"{name}-cases.json").read_text(encoding="utf-8"))
+
+
+def xplat008_fixture_request(name: str) -> dict[str, Any]:
+    return json.loads((XPLAT_008_REQUESTS_DIR / f"{name}.json").read_text(encoding="utf-8"))
+
+
+def xplat008_fixture_cases(name: str) -> dict[str, Any]:
+    return json.loads((XPLAT_008_FIXTURE_DIR / f"{name}-cases.json").read_text(encoding="utf-8"))
 
 
 def python_argv(source: str) -> list[str]:
@@ -181,11 +191,17 @@ class GateFoundationTests(unittest.TestCase):
         self.assertFalse(report["active_cutover"])
         self.assertEqual(
             set(report["groups"]),
-            {"suite", "payload", "install", "release", "guard"},
+            {"runtime", "suite", "payload", "install", "release", "guard"},
         )
 
         operations = all_gate_operations()
-        self.assertGreaterEqual(len(operations), 20)
+        self.assertGreaterEqual(len(operations), 21)
+        runtime_operations = {
+            "runner-invocation",
+        }
+        xplat008_guard_operations = {
+            "active-runtime-guard",
+        }
         us1_operations = {
             "run-default-suite",
             "run-layer",
@@ -213,7 +229,17 @@ class GateFoundationTests(unittest.TestCase):
             "classify-shell-finding",
         }
         for operation in operations:
-            if operation.operation in us1_operations:
+            if operation.operation in runtime_operations:
+                self.assertEqual(operation.group, "runtime")
+                self.assertEqual(operation.story, "US1")
+                self.assertTrue(operation.implemented)
+                self.assertEqual(operation.promotion_status, "python_authoritative")
+            elif operation.operation in xplat008_guard_operations:
+                self.assertEqual(operation.group, "guard")
+                self.assertEqual(operation.story, "US1")
+                self.assertTrue(operation.implemented)
+                self.assertEqual(operation.promotion_status, "python_authoritative")
+            elif operation.operation in us1_operations:
                 self.assertEqual(operation.group, "suite")
                 self.assertEqual(operation.story, "US1")
                 self.assertTrue(operation.implemented)
@@ -374,6 +400,172 @@ class GateFoundationTests(unittest.TestCase):
             "XPLAT-008 cutover surface",
         ]:
             self.assertIn(label, active_cases["coverage"])
+
+    def test_xplat008_runner_invocation_fixtures_cover_interpreter_resolution(self) -> None:
+        cases = xplat008_fixture_cases("runner-invocation")
+        self.assertEqual(cases["schema_version"], "1.0")
+        self.assertEqual(cases["feature_id"], "XPLAT-008")
+        self.assertEqual(
+            {case["case_id"] for case in cases["cases"]},
+            {
+                "windows-py-v3",
+                "windows-py-3-fallback",
+                "macos-python3",
+                "linux-python-fallback",
+                "too-old-or-missing",
+            },
+        )
+        expected_candidates = {
+            "windows": ["py -V:3", "py -3", "python", "python3"],
+            "macos": ["python3", "python"],
+            "linux": ["python3", "python"],
+        }
+        for case in cases["cases"]:
+            with self.subTest(case_id=case["case_id"]):
+                platform = case["platform"]
+                attempted = [item["candidate"] for item in case["candidate_results"]]
+                self.assertEqual(attempted, expected_candidates[platform][: len(attempted)])
+                self.assertIn(case["product"], {"claude", "codex"})
+                self.assertIn(case["operation"], {"preflight", "scaffold", "status", "autopilot-dry-run"})
+                self.assertTrue(case["cache_root"])
+
+        request = xplat008_fixture_request("runner-invocation")
+        self.assertEqual(request["helper_id"], "runner-invocation")
+        self.assertEqual(request["operation"], "runner-invocation")
+        self.assertEqual(request["mode"], "read_only")
+        self.assertEqual(request["inputs"]["case_id"], "windows-py-v3")
+
+    def test_xplat008_runner_invocation_records_have_no_shell_fallback(self) -> None:
+        pass_cases = [
+            "windows-py-v3",
+            "windows-py-3-fallback",
+            "macos-python3",
+            "linux-python-fallback",
+        ]
+        for case_id in pass_cases:
+            with self.subTest(case_id=case_id):
+                completed, response, stderr_records = run_runner(
+                    gate_request(
+                        "runner-invocation",
+                        "runner-invocation",
+                        inputs={
+                            "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json",
+                            "case_id": case_id,
+                        },
+                    )
+                )
+                self.assertEqual(completed.returncode, 0)
+                self.assert_stdout_json(completed)
+                self.assert_response(response, "ok")
+                self.assert_status_exit_mapping(completed, response)
+                self.assertEqual(stderr_records, [])
+                record = response["data"]["runner_invocation"]
+                self.assertEqual(record["schema_version"], "1.0")
+                self.assertEqual(record["request_id"], response["request_id"])
+                self.assertTrue(record["interpreter_resolution"]["accepted"])
+                self.assertEqual(record["interpreter_resolution"]["minimum_version"], "3.11")
+                self.assertIsNone(record["interpreter_resolution"]["failure_code"])
+                self.assertTrue(record["interpreter_resolution"]["attempted_candidates"])
+                self.assertTrue(record["interpreter_resolution"]["resolved_executable"])
+                self.assertRegex(record["interpreter_resolution"]["version"], r"^3\.(1[1-9]|[2-9][0-9])\.")
+                self.assertEqual(
+                    record["invocation"],
+                    {
+                        "argv": [record["interpreter_resolution"]["resolved_executable"], "-m", "speckit_pro_runner"],
+                        "stdin_mode": "single_json_request",
+                        "stdout_mode": "single_json_response",
+                        "stderr_mode": "diagnostics_only",
+                        "shell_used": False,
+                    },
+                )
+                self.assertEqual(record["runner_request"]["helper_id"], "runner")
+                self.assertEqual(record["runner_response"]["schema_version"], "1.0")
+                self.assertEqual(record["status"], "pass")
+                self.assertEqual(record["diagnostics"], [])
+                self.assert_no_shell_argv(record["invocation"]["argv"])
+
+        completed, response, stderr_records = run_runner(
+            gate_request(
+                "runner-invocation",
+                "runner-invocation",
+                inputs={
+                    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json",
+                    "case_id": "too-old-or-missing",
+                },
+            )
+        )
+        self.assertEqual(completed.returncode, 1)
+        self.assert_stdout_json(completed)
+        self.assert_response(response, "expected_failure")
+        self.assert_status_exit_mapping(completed, response)
+        self.assertEqual([diag["code"] for diag in stderr_records], ["python_runtime_unavailable"])
+        record = response["data"]["runner_invocation"]
+        self.assertFalse(record["interpreter_resolution"]["accepted"])
+        self.assertIsNone(record["interpreter_resolution"]["resolved_executable"])
+        self.assertEqual(record["interpreter_resolution"]["failure_code"], "python_runtime_unavailable")
+        self.assertIsNone(record["runner_response"])
+        self.assertEqual(record["status"], "blocked")
+        self.assertEqual(record["invocation"]["argv"], [])
+        self.assertFalse(record["invocation"]["shell_used"])
+
+    def test_xplat008_active_runtime_guard_fixtures_block_only_active_runtime_findings(self) -> None:
+        cases = xplat008_fixture_cases("active-runtime-guard")
+        self.assertEqual(cases["schema_version"], "1.0")
+        self.assertEqual(cases["feature_id"], "XPLAT-008")
+        self.assertEqual(
+            {case["case_id"] for case in cases["cases"]},
+            {
+                "blocking-active-runtime-patterns",
+                "allowed-runtime-exceptions",
+                "final-current-implementation",
+            },
+        )
+
+        completed, response, stderr_records = run_runner(
+            gate_request(
+                "active-path-guard",
+                "active-runtime-guard",
+                inputs={
+                    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json",
+                    "case_id": "blocking-active-runtime-patterns",
+                },
+            )
+        )
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure")
+        self.assertEqual([diag["code"] for diag in stderr_records], ["active_runtime_guard_blocked"])
+        self.assertGreaterEqual(response["data"]["blocking_count"], 4)
+        self.assertTrue(
+            all(finding["classification"] == "blocking_active_runtime" for finding in response["data"]["findings"])
+        )
+        self.assertLessEqual(
+            {"bash", "script_file", "jq", "git_bash", "wsl"},
+            {finding["category"] for finding in response["data"]["findings"]},
+        )
+
+        completed, response, stderr_records = run_runner(
+            gate_request(
+                "active-path-guard",
+                "active-runtime-guard",
+                inputs={
+                    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json",
+                    "case_id": "allowed-runtime-exceptions",
+                },
+            )
+        )
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        self.assertEqual(response["data"]["blocking_count"], 0)
+        self.assertLessEqual(
+            {
+                "archive_provenance",
+                "upstream_spec_kit_helper",
+                "test_fixture",
+                "ci_dispatch_glue",
+            },
+            set(response["data"]["classified_counts"]),
+        )
 
     def test_run_default_suite_aggregates_success_stdout_stderr_and_exit_behavior(self) -> None:
         request = gate_request(

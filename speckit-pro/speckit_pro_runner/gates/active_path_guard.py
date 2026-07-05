@@ -13,6 +13,8 @@ from ..envelope import diagnostic, response
 
 PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json"
 DEFAULT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/active-path-guard-cases.json"
+XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json"
+XPLAT_008_DEFAULT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json"
 TEXT_SUFFIXES = frozenset({".json", ".md", ".py", ".sh", ".toml", ".txt", ".yaml", ".yml"})
 SCAN_ROOTS = (
     "tests/speckit-pro",
@@ -50,12 +52,17 @@ FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = (
 
 CLASSIFICATIONS = (
     "blocking_active_gate",
+    "blocking_active_runtime",
     "ci_dispatch_glue",
     "temporary_parity_evidence",
     "archive_provenance",
     "consumer_spec_kit_helper",
+    "upstream_spec_kit_helper",
     "generated_payload_mirror",
     "xplat_008_cutover_surface",
+    "source_checkout_helper",
+    "docs_non_runtime",
+    "test_fixture",
     "docs_out_of_scope",
 )
 
@@ -100,6 +107,9 @@ def run_active_path_guard(entry: Any, request: Any) -> dict[str, Any]:
         return response(status, request_id=request.request_id, data=base_data(entry, request.operation, status), diagnostics=[repo_root_result])
     repo_root = repo_root_result
 
+    if request.operation == "active-runtime-guard":
+        return run_active_runtime_guard(entry, request, repo_root)
+
     if request.inputs.get("xplat_008_cutover_allowed") is not False:
         diag = diagnostic(
             "xplat_008_cutover_refused",
@@ -127,6 +137,27 @@ def run_active_path_guard(entry: Any, request: Any) -> dict[str, Any]:
 
     findings = scan_sources(source_result, repo_root)
     return guard_response(entry, request, findings)
+
+
+def run_active_runtime_guard(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
+    case_result = load_case(repo_root, request.inputs, default_case_file=XPLAT_008_DEFAULT_CASE_FILE)
+    if is_diagnostic(case_result):
+        return response(
+            "input_error",
+            request_id=request.request_id,
+            data=active_runtime_base_data(entry, request.operation, "input_error"),
+            diagnostics=[case_result],
+        )
+    source_result = source_files(repo_root, case_result)
+    if is_diagnostic(source_result):
+        return response(
+            "input_error",
+            request_id=request.request_id,
+            data=active_runtime_base_data(entry, request.operation, "input_error"),
+            diagnostics=[source_result],
+        )
+    findings = scan_sources_xplat008(source_result, repo_root)
+    return active_runtime_guard_response(entry, request, findings)
 
 
 def classify_shell_finding(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
@@ -210,6 +241,52 @@ def guard_response(entry: Any, request: Any, findings: list[RawFinding]) -> dict
     return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diag])
 
 
+def active_runtime_guard_response(entry: Any, request: Any, findings: list[RawFinding]) -> dict[str, Any]:
+    blocking = [finding for finding in findings if finding.classification == "blocking_active_runtime"]
+    status = "expected_failure" if blocking else "ok"
+    returned_findings = bounded_findings(findings, request.inputs)
+    data = active_runtime_base_data(entry, request.operation, status)
+    data.update(
+        {
+            "schema_version": "1.0",
+            "feature_id": "XPLAT-008",
+            "status": status,
+            "blocking_count": len(blocking),
+            "classified_counts": classified_counts(findings),
+            "findings": [finding.as_record() for finding in returned_findings],
+            "total_finding_count": len(findings),
+            "truncated_finding_count": max(0, len(findings) - len(returned_findings)),
+        }
+    )
+    if not blocking:
+        return response("ok", request_id=request.request_id, data=data)
+
+    diag = diagnostic(
+        "active_runtime_guard_blocked",
+        "active-runtime guard found prohibited shell-only behavior in installed-runtime surfaces",
+        details={
+            "blocking_count": len(blocking),
+            "categories": sorted({finding.category for finding in blocking}),
+            "paths": sorted({finding.path for finding in blocking})[:20],
+        },
+        remediation_summary="Move active installed-runtime behavior to argv-only Python runner invocation.",
+        remediation_actions=[
+            "Inspect data.findings for blocking_active_runtime entries.",
+            "Use a resolved Python 3.11+ executable with -m speckit_pro_runner and JSON stdin/stdout.",
+        ],
+    )
+    return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diag])
+
+
+def bounded_findings(findings: list[RawFinding], inputs: dict[str, Any]) -> list[RawFinding]:
+    raw_limit = inputs.get("max_findings", 25)
+    limit = raw_limit if isinstance(raw_limit, int) and raw_limit > 0 else 25
+    blocking = [finding for finding in findings if finding.classification == "blocking_active_runtime"]
+    if blocking:
+        return blocking[:limit]
+    return findings[:limit]
+
+
 def classified_counts(findings: list[RawFinding]) -> dict[str, int]:
     counts = {classification: 0 for classification in CLASSIFICATIONS}
     for finding in findings:
@@ -249,6 +326,50 @@ def scan_sources(sources: list[SourceFile], repo_root: Path) -> list[RawFinding]
     return findings
 
 
+def scan_sources_xplat008(sources: list[SourceFile], repo_root: Path) -> list[RawFinding]:
+    findings: list[RawFinding] = []
+    seen: set[tuple[str, int | None, str, str]] = set()
+    for source in sources:
+        path = normalize_path(source.path)
+        workflow_contexts = workflow_run_contexts(source.content) if path.startswith(".github/workflows/") else []
+        if path.endswith(".sh"):
+            add_finding(
+                findings,
+                seen,
+                classify_xplat008_raw_finding(path, 1, "script_file", "*.sh", ".sh file retained in scanned scope", source.content, source.source_kind),
+            )
+        if path.startswith(".github/workflows/") and is_direct_python_gate_dispatch(source.content):
+            line = direct_dispatch_line(source.content)
+            add_finding(
+                findings,
+                seen,
+                classify_xplat008_raw_finding(
+                    path,
+                    line,
+                    "bash",
+                    "run: python -m speckit_pro_runner",
+                    "workflow shell dispatches a Python gate",
+                    source.content,
+                    source.source_kind,
+                ),
+            )
+        for number, line in enumerate(source.content.splitlines(), start=1):
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            for category, pattern, reason in FORBIDDEN_PATTERNS:
+                match = pattern.search(line)
+                if match is None:
+                    continue
+                context = workflow_context_for_line(workflow_contexts, number) or line
+                add_finding(
+                    findings,
+                    seen,
+                    classify_xplat008_raw_finding(path, number, category, match.group(0), reason, context, source.source_kind),
+                )
+    return findings
+
+
 def add_finding(findings: list[RawFinding], seen: set[tuple[str, int | None, str, str]], finding: RawFinding) -> None:
     key = (finding.path, finding.line, finding.category, finding.pattern)
     if key in seen:
@@ -280,6 +401,29 @@ def classify_raw_finding(
     )
 
 
+def classify_xplat008_raw_finding(
+    path: str,
+    line: int | None,
+    category: str,
+    pattern: str,
+    reason: str,
+    content: str,
+    source_kind: str,
+) -> RawFinding:
+    role = xplat008_active_role(path)
+    classification = classify_xplat008_path(path, category, pattern, content, source_kind)
+    return RawFinding(
+        path=path,
+        line=line,
+        category=category,
+        pattern=pattern[:120],
+        reason=reason,
+        active_role=role,
+        classification=classification,
+        remediation=xplat008_remediation_for(classification),
+    )
+
+
 def classify_path(path: str, category: str, pattern: str, content: str, source_kind: str) -> str:
     if path.startswith(".specify/memory/"):
         return "archive_provenance"
@@ -306,6 +450,34 @@ def classify_path(path: str, category: str, pattern: str, content: str, source_k
     return "blocking_active_gate"
 
 
+def classify_xplat008_path(path: str, category: str, pattern: str, content: str, source_kind: str) -> str:
+    if path.startswith(".specify/memory/"):
+        return "archive_provenance"
+    if path.startswith(".specify/scripts/bash/"):
+        return "upstream_spec_kit_helper"
+    if path.startswith("tests/") or "/fixtures/" in path or "layer8-parity/" in path:
+        return "test_fixture"
+    if path.startswith("speckit-pro/") and any(part in path for part in ("/scripts/", "/references/", "/templates/")):
+        return "source_checkout_helper"
+    if path.startswith(".github/workflows/"):
+        if path == ".github/workflows/deploy-docs.yml" or is_docs_or_workflow_tooling(content):
+            return "docs_non_runtime"
+        if category == "bash" and pattern.startswith("run:") and is_direct_python_gate_dispatch(content):
+            return "ci_dispatch_glue"
+        return "blocking_active_runtime"
+    if path in {"speckit-pro/codex-hooks.json", "speckit-pro/hooks/hooks.json"}:
+        return "blocking_active_runtime"
+    if path.startswith("dist/") and not path.endswith(("README.md", "CHANGELOG.md", "LICENSE")):
+        return "blocking_active_runtime"
+    if path.startswith("speckit-pro/skills/") or path.startswith("speckit-pro/codex-skills/"):
+        return "blocking_active_runtime" if source_kind == "fixture" else "source_checkout_helper"
+    if path.startswith("speckit-pro/agents/") or path.startswith("speckit-pro/codex-agents/"):
+        return "blocking_active_runtime" if source_kind == "fixture" else "source_checkout_helper"
+    if path in {"README.md", "speckit-pro/README.md"} or path.startswith("docs-site/src/content/docs/"):
+        return "blocking_active_runtime" if source_kind == "fixture" else "docs_non_runtime"
+    return "source_checkout_helper"
+
+
 def active_role(path: str) -> str:
     if path.startswith(".github/workflows/"):
         return "active_ci_workflow"
@@ -321,6 +493,28 @@ def active_role(path: str) -> str:
         return "specify_provenance"
     if path.startswith("dist/"):
         return "generated_payload"
+    return "repository_text"
+
+
+def xplat008_active_role(path: str) -> str:
+    if path.startswith(".github/workflows/"):
+        return "release_gate"
+    if path.startswith("dist/"):
+        return "generated_payload"
+    if path.startswith("speckit-pro/skills/") or path.startswith("speckit-pro/codex-skills/"):
+        return "installed_skill"
+    if path.startswith("speckit-pro/agents/") or path.startswith("speckit-pro/codex-agents/"):
+        return "installed_agent"
+    if path in {"speckit-pro/codex-hooks.json", "speckit-pro/hooks/hooks.json"}:
+        return "installed_hook"
+    if path.startswith(".specify/scripts/bash/"):
+        return "upstream_spec_kit_helper"
+    if path.startswith("tests/"):
+        return "test_fixture"
+    if path.startswith(".specify/memory/"):
+        return "archive_provenance"
+    if path.startswith("docs-site/") or path in {"README.md", "speckit-pro/README.md"}:
+        return "install_guidance"
     return "repository_text"
 
 
@@ -340,6 +534,24 @@ def remediation_for(classification: str) -> str:
     if classification == "generated_payload_mirror":
         return "Do not cut over generated release payload mirrors until XPLAT-008."
     return "No XPLAT-007 gate change required for documentation-only text."
+
+
+def xplat008_remediation_for(classification: str) -> str:
+    if classification == "blocking_active_runtime":
+        return "Replace the installed-runtime shell dependency with argv-only Python runner invocation."
+    if classification == "ci_dispatch_glue":
+        return "Keep CI glue limited to direct Python runner dispatch."
+    if classification == "archive_provenance":
+        return "No change required for historical archive text."
+    if classification == "upstream_spec_kit_helper":
+        return "No change required for upstream consumer Spec Kit helper evidence."
+    if classification == "test_fixture":
+        return "No change required for fixture or parity evidence."
+    if classification == "source_checkout_helper":
+        return "Keep source-checkout helper references out of installed-runtime instructions."
+    if classification == "docs_non_runtime":
+        return "No change required for non-runtime docs prose."
+    return "No active-runtime change required."
 
 
 def is_direct_python_gate_dispatch(content: str) -> bool:
@@ -451,12 +663,15 @@ def source_files(repo_root: Path, case: dict[str, Any]) -> list[SourceFile] | di
         return sources
     if case.get("scan_repo") is False:
         return []
+    raw_roots = case.get("scan_roots")
+    if isinstance(raw_roots, list) and all(isinstance(item, str) and item for item in raw_roots):
+        return scan_repo_sources(repo_root, roots=tuple(raw_roots))
     return scan_repo_sources(repo_root)
 
 
-def scan_repo_sources(repo_root: Path) -> list[SourceFile]:
+def scan_repo_sources(repo_root: Path, *, roots: tuple[str, ...] = SCAN_ROOTS) -> list[SourceFile]:
     sources: list[SourceFile] = []
-    for root in SCAN_ROOTS:
+    for root in roots:
         path = repo_root / root
         if path.is_file():
             maybe_add_source(repo_root, path, sources)
@@ -481,8 +696,8 @@ def maybe_add_source(repo_root: Path, path: Path, sources: list[SourceFile]) -> 
     sources.append(SourceFile(path.resolve(strict=False).relative_to(repo_root.resolve(strict=False)).as_posix(), content, "repo"))
 
 
-def load_case(repo_root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
-    raw = inputs.get("case_file", DEFAULT_CASE_FILE)
+def load_case(repo_root: Path, inputs: dict[str, Any], *, default_case_file: str = DEFAULT_CASE_FILE) -> dict[str, Any]:
+    raw = inputs.get("case_file", default_case_file)
     if not isinstance(raw, str) or not raw:
         return diagnostic("invalid_case_file", "case_file must be a non-empty string")
     path = resolve_path(raw, repo_root)
@@ -517,6 +732,25 @@ def base_data(entry: Any, operation: str, status: str) -> dict[str, Any]:
             "promotion_record": PROMOTION_RECORD,
         },
         "artifacts": [{"path": PROMOTION_RECORD, "kind": "fixture"}, {"path": DEFAULT_CASE_FILE, "kind": "fixture"}],
+    }
+
+
+def active_runtime_base_data(entry: Any, operation: str, status: str) -> dict[str, Any]:
+    gate_status = "pass" if status == "ok" else "fail" if status == "expected_failure" else status
+    return {
+        "gate": {
+            "gate_id": entry.helper_id,
+            "operation": operation,
+            "gate_status": gate_status,
+            "promoted": status != "input_error",
+            "blocking": status != "ok",
+            "comparison_ids": [f"xplat-008-{operation}"],
+            "promotion_record": XPLAT_008_PROMOTION_RECORD,
+        },
+        "artifacts": [
+            {"path": XPLAT_008_PROMOTION_RECORD, "kind": "fixture"},
+            {"path": XPLAT_008_DEFAULT_CASE_FILE, "kind": "fixture"},
+        ],
     }
 
 

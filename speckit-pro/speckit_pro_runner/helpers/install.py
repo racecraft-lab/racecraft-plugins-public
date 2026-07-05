@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import platform as platform_module
+import subprocess
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -13,6 +15,42 @@ from .read_only import find_repo_root, is_relative_to, repo_relative
 
 INVENTORY_NAME = "install_inventory.json"
 FAKE_HOME_FIXTURE_ROOT = Path("tests") / "speckit-pro" / "layer4-scripts" / "fixtures"
+XPLAT_008_FIXTURE_ROOT = FAKE_HOME_FIXTURE_ROOT / "xplat-008-release"
+DEFAULT_RUNNER_INVOCATION_CASES = XPLAT_008_FIXTURE_ROOT / "runner-invocation-cases.json"
+MINIMUM_PYTHON = (3, 11, 0)
+
+
+def run_runner_invocation_gate(entry: Any, request: Any) -> dict[str, Any]:
+    repo_root = find_repo_root(Path.cwd())
+    if repo_root is None:
+        return response(
+            "missing_prerequisite",
+            request_id=request.request_id,
+            data=runner_invocation_base_data(entry, request.operation, "missing_prerequisite"),
+            diagnostics=[diagnostic("missing_prerequisite", "could not locate repository root for runner invocation request")],
+        )
+
+    case_result = runner_invocation_case(repo_root, request.inputs)
+    if is_diagnostic(case_result):
+        return response(
+            "input_error",
+            request_id=request.request_id,
+            data=runner_invocation_base_data(entry, request.operation, "input_error"),
+            diagnostics=[case_result],
+        )
+    case = case_result
+
+    record, diagnostics = runner_invocation_record(case, request.request_id)
+    accepted = bool(record["interpreter_resolution"]["accepted"])
+    status = "ok" if accepted else "expected_failure"
+    data = runner_invocation_base_data(entry, request.operation, status)
+    data["runner_invocation"] = record
+    if accepted:
+        return response("ok", request_id=request.request_id, data=data)
+
+    data["gate"]["gate_status"] = "fail"
+    data["gate"]["blocking"] = True
+    return response("expected_failure", request_id=request.request_id, data=data, diagnostics=diagnostics)
 
 
 def run_install_helper(entry: Any, request: Any) -> dict[str, Any]:
@@ -86,6 +124,243 @@ def run_install_helper(entry: Any, request: Any) -> dict[str, Any]:
     return run_mutation_helper(entry, request, operations=repair_ops, extra_data={"doctor": doctor})
 
 
+def runner_invocation_case(repo_root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
+    raw = inputs.get("case_file", DEFAULT_RUNNER_INVOCATION_CASES.as_posix())
+    if not isinstance(raw, str) or not raw:
+        return diagnostic("invalid_case_file", "case_file must be a non-empty string")
+    path = resolve_case_path(raw, repo_root)
+    if not is_relative_to(path.resolve(strict=False), repo_root.resolve(strict=False)):
+        return diagnostic("invalid_case_file", "case_file must stay inside the repository")
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return diagnostic(
+            "invalid_case_file",
+            "runner invocation case fixture could not be loaded",
+            details={"case_file": raw, "error": type(exc).__name__},
+        )
+    cases = document.get("cases")
+    if not isinstance(cases, list):
+        return diagnostic("invalid_case_file", "runner invocation fixture must contain cases")
+    case_id = inputs.get("case_id")
+    if not isinstance(case_id, str) or not case_id:
+        case_id = str(cases[0].get("case_id")) if cases and isinstance(cases[0], dict) else ""
+    selected = next((item for item in cases if isinstance(item, dict) and item.get("case_id") == case_id), None)
+    if selected is None:
+        return diagnostic("unknown_fixture_case", "runner invocation fixture case was not found", details={"case_id": case_id})
+    return dict(selected)
+
+
+def runner_invocation_record(case: dict[str, Any], request_id: str | None) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    product = normalize_enum(case.get("product"), {"claude", "codex"}, "claude")
+    platform_name = normalize_enum(case.get("platform"), {"windows", "macos", "linux"}, host_platform())
+    operation = normalize_enum(
+        case.get("operation"),
+        {"preflight", "scaffold", "status", "autopilot-dry-run", "doctor", "update", "autoheal"},
+        "preflight",
+    )
+    surface_path = str(case.get("surface_path") or "speckit-pro/skills/speckit-status/SKILL.md")
+    cache_root = str(case.get("cache_root") or ".")
+    request_id_value = request_id or f"xplat-008-{product}-{platform_name}-{operation}"
+    resolution, diagnostics = resolve_python_interpreter(platform_name, case, cache_root)
+
+    runner_request = {
+        "schema_version": "1.0",
+        "request_id": f"{request_id_value}:runtime-info",
+        "helper_id": "runner",
+        "operation": "runtime-info",
+        "mode": "read_only",
+        "inputs": {
+            "source": "xplat-008-installed-runtime",
+            "product": product,
+            "platform": platform_name,
+            "surface_path": surface_path,
+        },
+    }
+    accepted = bool(resolution["accepted"])
+    invocation = {
+        "argv": [resolution["resolved_executable"], "-m", "speckit_pro_runner"] if accepted else [],
+        "stdin_mode": "single_json_request",
+        "stdout_mode": "single_json_response",
+        "stderr_mode": "diagnostics_only",
+        "shell_used": False,
+    }
+    runner_response = (
+        {
+            "schema_version": "1.0",
+            "status": "ok",
+            "exit_code": 0,
+            "legacy_exit_code": None,
+            "diagnostics": [],
+            "data": {
+                "invoked_module": "speckit_pro_runner",
+                "cache_root": cache_root,
+            },
+        }
+        if accepted
+        else None
+    )
+    record = {
+        "schema_version": "1.0",
+        "request_id": request_id_value,
+        "product": product,
+        "platform": platform_name,
+        "surface_path": surface_path,
+        "operation": operation,
+        "interpreter_resolution": resolution,
+        "invocation": invocation,
+        "runner_request": runner_request,
+        "runner_response": runner_response,
+        "status": "pass" if accepted else "blocked",
+        "diagnostics": diagnostics,
+    }
+    return record, diagnostics
+
+
+def resolve_python_interpreter(platform_name: str, case: dict[str, Any], cache_root: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    raw_results = case.get("candidate_results")
+    if isinstance(raw_results, list):
+        candidate_records = [item for item in raw_results if isinstance(item, dict)]
+    else:
+        candidate_records = probe_host_candidates(platform_name)
+
+    attempted: list[str] = []
+    last_version: str | None = None
+    failure_messages: list[str] = []
+    for record in candidate_records:
+        candidate = str(record.get("candidate") or "")
+        if not candidate:
+            continue
+        attempted.append(candidate)
+        returncode = int(record.get("returncode", 0)) if isinstance(record.get("returncode", 0), int) else 1
+        version = record.get("version")
+        version_text = str(version) if isinstance(version, str) and version else None
+        if version_text:
+            last_version = version_text
+        if returncode != 0:
+            stderr = str(record.get("stderr") or "candidate failed")
+            failure_messages.append(f"{candidate}: {stderr}")
+            continue
+        if version_text is None:
+            failure_messages.append(f"{candidate}: version unavailable")
+            continue
+        if parse_version(version_text) < MINIMUM_PYTHON:
+            failure_messages.append(f"{candidate}: Python {version_text} is below 3.11")
+            continue
+        resolved = str(record.get("resolved_executable") or candidate.split()[0])
+        return {
+            "attempted_candidates": attempted,
+            "resolved_executable": resolved,
+            "version": version_text,
+            "accepted": True,
+            "minimum_version": "3.11",
+            "failure_code": None,
+            "diagnostic": f"Accepted Python {version_text} for installed cache {cache_root}.",
+        }, []
+
+    diag = diagnostic(
+        str(case.get("expected_failure_code") or "python_runtime_unavailable"),
+        "no Python 3.11+ interpreter was available for installed runner invocation",
+        details={"attempted_candidates": attempted, "platform": platform_name, "cache_root": cache_root},
+        remediation_summary="Install or expose Python 3.11+ and retry the installed SpecKit Pro workflow.",
+        remediation_actions=["Install Python 3.11 or newer.", "Retry without adding a shell wrapper or jq fallback."],
+    )
+    resolution = {
+        "attempted_candidates": attempted or candidate_order(platform_name),
+        "resolved_executable": None,
+        "version": last_version,
+        "accepted": False,
+        "minimum_version": "3.11",
+        "failure_code": diag["code"],
+        "diagnostic": "; ".join(failure_messages) or "No Python candidates were attempted.",
+    }
+    return resolution, [diag]
+
+
+def probe_host_candidates(platform_name: str) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for candidate in candidate_order(platform_name):
+        argv = candidate.split()
+        try:
+            completed = subprocess.run(
+                [*argv, "-c", "import platform, sys; print(platform.python_version()); print(sys.executable)"],
+                text=True,
+                capture_output=True,
+                timeout=5,
+                shell=False,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            records.append({"candidate": candidate, "returncode": 1, "stderr": f"{type(exc).__name__}: {exc}"})
+            continue
+        stdout = completed.stdout.splitlines()
+        records.append(
+            {
+                "candidate": candidate,
+                "returncode": int(completed.returncode),
+                "version": stdout[0] if stdout else None,
+                "resolved_executable": stdout[1] if len(stdout) > 1 else argv[0],
+                "stderr": completed.stderr.strip(),
+            }
+        )
+    return records
+
+
+def candidate_order(platform_name: str) -> list[str]:
+    if platform_name == "windows":
+        return ["py -V:3", "py -3", "python", "python3"]
+    return ["python3", "python"]
+
+
+def host_platform() -> str:
+    system = platform_module.system().lower()
+    if system.startswith("win"):
+        return "windows"
+    if system == "darwin":
+        return "macos"
+    return "linux"
+
+
+def parse_version(version: str) -> tuple[int, int, int]:
+    parts: list[int] = []
+    for part in version.split(".")[:3]:
+        try:
+            parts.append(int(part))
+        except ValueError:
+            parts.append(0)
+    while len(parts) < 3:
+        parts.append(0)
+    return tuple(parts)  # type: ignore[return-value]
+
+
+def normalize_enum(value: Any, allowed: set[str], fallback: str) -> str:
+    text = value if isinstance(value, str) else fallback
+    return text if text in allowed else fallback
+
+
+def runner_invocation_base_data(entry: Any, operation: str, status: str) -> dict[str, Any]:
+    gate_status = "pass"
+    if status in {"expected_failure", "subprocess_failure"}:
+        gate_status = "fail"
+    elif status == "missing_prerequisite":
+        gate_status = "skipped"
+    elif status == "input_error":
+        gate_status = "input_error"
+    promotion_record = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json"
+    return {
+        "gate": {
+            "gate_id": entry.helper_id,
+            "operation": operation,
+            "gate_status": gate_status,
+            "promoted": status != "input_error",
+            "blocking": status != "ok",
+            "comparison_ids": [f"xplat-008-{operation}"],
+            "promotion_record": promotion_record,
+        },
+        "artifacts": [{"path": promotion_record, "kind": "fixture"}],
+    }
+
+
 def install_root_from_inputs(inputs: dict[str, Any], repo_root: Path) -> Path | dict[str, Any]:
     raw = inputs.get("install_root")
     if not isinstance(raw, str) or not raw:
@@ -100,6 +375,11 @@ def install_root_from_inputs(inputs: dict[str, Any], repo_root: Path) -> Path | 
     if path_diag is not None:
         return path_diag
     return resolve_candidate_path(raw, repo_root)
+
+
+def resolve_case_path(raw: str, repo_root: Path) -> Path:
+    path = Path(raw.replace("\\", "/"))
+    return path if path.is_absolute() else repo_root / path
 
 
 def inventory_from_inputs(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
