@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import re
+import shutil
 import sys
 import tempfile
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from .. import RUNNER_VERSION
 from ..envelope import diagnostic, response
 
 PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json"
@@ -16,6 +20,8 @@ FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "layer4-scripts" / "fixtures"
 DEFAULT_PAYLOAD_CASES = FIXTURE_BOUNDARY / "payload-evidence-cases.json"
 DEFAULT_INSTALL_CASES = FIXTURE_BOUNDARY / "install-verification-cases.json"
 INSTALL_INVENTORY = Path("speckit-pro") / "speckit_pro_runner" / "install_inventory.json"
+XPLAT_008_FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "layer4-scripts" / "fixtures" / "xplat-008-release"
+DEFAULT_XPLAT_008_PAYLOAD_CASES = XPLAT_008_FIXTURE_BOUNDARY / "payload-completeness-cases.json"
 
 __all__ = ("run_payload_gate",)
 
@@ -33,6 +39,8 @@ def run_payload_gate(entry: Any, request: Any) -> dict[str, Any]:
 
     if request.operation == "build-test-payload-evidence":
         return build_test_payload_evidence(entry, request, repo_root)
+    if request.operation == "payload-completeness":
+        return payload_completeness_xplat008(entry, request, repo_root)
     if request.operation == "refresh-local-plugin-fixture":
         return install_verification(entry, request, repo_root, refresh=True)
     if request.operation == "verify-install":
@@ -44,6 +52,61 @@ def run_payload_gate(entry: Any, request: Any) -> dict[str, Any]:
         details={"operation": request.operation},
     )
     return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[diag])
+
+
+def payload_completeness_xplat008(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
+    case_result = load_case(repo_root, request.inputs, default_case_file=DEFAULT_XPLAT_008_PAYLOAD_CASES)
+    if is_diagnostic(case_result):
+        return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[case_result])
+    case = case_result
+
+    target_result = xplat008_build_target(request, repo_root)
+    if is_diagnostic(target_result):
+        return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[target_result])
+
+    temp_context: tempfile.TemporaryDirectory[str] | None = None
+    try:
+        if target_result is None:
+            temp_context = tempfile.TemporaryDirectory(prefix="xplat-008-payload-")
+            build_dist_root = Path(temp_context.name) / "dist"
+        else:
+            build_dist_root = target_result
+
+        build_xplat008_payloads(repo_root, build_dist_root)
+        compare_dist_root = build_dist_root if request.mode == "apply" else repo_root / "dist"
+        results = xplat008_payload_results(repo_root, build_dist_root, compare_dist_root, case)
+    finally:
+        if temp_context is not None:
+            temp_context.cleanup()
+
+    blocking = [result for result in results if result["status"] != "pass"]
+    status = "expected_failure" if blocking else "ok"
+    data = base_data(entry, request.operation, status)
+    data["gate"]["comparison_ids"] = ["xplat-008-payload-completeness"]
+    data["gate"]["promotion_record"] = DEFAULT_XPLAT_008_PAYLOAD_CASES.as_posix()
+    data["artifacts"] = [{"path": DEFAULT_XPLAT_008_PAYLOAD_CASES.as_posix(), "kind": "fixture"}]
+    data["payload_completeness"] = results
+    data["artifacts"].extend(
+        {"path": result["generated_root"], "kind": "generated_payload"}
+        for result in results
+        if isinstance(result.get("generated_root"), str) and not Path(result["generated_root"]).is_absolute()
+    )
+    if status == "ok":
+        return response("ok", request_id=request.request_id, data=data)
+
+    data["gate"]["gate_status"] = "fail"
+    data["gate"]["blocking"] = True
+    diag = diagnostic(
+        "payload_completeness_blocked",
+        "XPLAT-008 payload completeness found blocking generated payload drift",
+        details={
+            "case_id": case.get("case_id"),
+            "blocking_surfaces": [item["payload_surface"] for item in blocking],
+        },
+        remediation_summary="Rebuild generated Claude and Codex payloads from source through the runner apply request.",
+        remediation_actions=["Run payload-completeness in apply mode.", "Retry the read-only payload completeness gate."],
+    )
+    return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diag])
 
 
 def build_test_payload_evidence(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
@@ -169,6 +232,349 @@ def install_verification(entry: Any, request: Any, repo_root: Path, *, refresh: 
     data = base_data(entry, request.operation, "ok")
     data["install_verification"] = install
     return response("ok", request_id=request.request_id, data=data)
+
+
+def xplat008_build_target(request: Any, repo_root: Path) -> Path | None | dict[str, Any]:
+    if request.mode == "read_only":
+        return None
+
+    raw_output = request.inputs.get("output_root")
+    if isinstance(raw_output, str) and raw_output:
+        output_root = resolve_path(raw_output, repo_root)
+        resolved = output_root.resolve(strict=False)
+        fixture_root = (repo_root / XPLAT_008_FIXTURE_BOUNDARY).resolve(strict=False)
+        temp_root = Path(tempfile.gettempdir()).resolve(strict=False)
+        if is_relative_to(resolved, fixture_root) or is_relative_to(resolved, temp_root):
+            return output_root
+        return diagnostic(
+            "payload_output_root_refused",
+            "XPLAT-008 payload output_root must stay inside fixture or temporary roots",
+            details={"output_root": raw_output, "fixture_root": repo_relative(fixture_root, repo_root)},
+            remediation_summary="Use a fixture or OS temp output root for dry-run/apply tests.",
+            remediation_actions=["Set output_root under tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release.", "Or use an OS temp directory."],
+        )
+
+    if request.mode == "apply" and request.inputs.get("apply_dist") is True:
+        return repo_root / "dist"
+
+    return diagnostic(
+        "payload_output_root_refused",
+        "XPLAT-008 payload dry_run/apply requires output_root unless apply_dist is true",
+        remediation_summary="Use a fixture/temp output root or explicitly target committed dist in apply mode.",
+        remediation_actions=["Set output_root for test writes.", "Set apply_dist to true only when rebuilding committed dist output."],
+    )
+
+
+def build_xplat008_payloads(repo_root: Path, dist_root: Path) -> None:
+    source = repo_root / "speckit-pro"
+    claude = dist_root / "claude" / "speckit-pro"
+    codex = dist_root / "codex" / "speckit-pro"
+    if not source.is_dir():
+        raise FileNotFoundError(f"source plugin directory not found: {source}")
+
+    reset_payload_dir(claude, dist_root)
+    for name in [
+        ".claude-plugin",
+        "agents",
+        "commands",
+        "hooks",
+        "skills",
+        "scripts",
+        "speckit_pro_runner",
+        "README.md",
+        "CHANGELOG.md",
+    ]:
+        copy_optional_xplat008(source / name, claude / name)
+    copy_optional_xplat008(repo_root / "LICENSE", claude / "LICENSE")
+    for skill_file in claude.glob("skills/*/SKILL.md"):
+        strip_codex_guard(skill_file)
+
+    reset_payload_dir(codex, dist_root)
+    for name in [
+        ".codex-plugin",
+        "codex-agents",
+        "codex-hooks.json",
+        "scripts",
+        "speckit_pro_runner",
+        "README.md",
+        "CHANGELOG.md",
+    ]:
+        copy_optional_xplat008(source / name, codex / name)
+    copy_optional_xplat008(repo_root / "LICENSE", codex / "LICENSE")
+    copy_required_xplat008(source / "skills", codex / "skills")
+    copy_required_xplat008(source / "codex-skills", codex / "skills")
+    rewrite_codex_manifest_xplat008(codex)
+    for text_file in codex.rglob("*"):
+        if text_file.is_file():
+            rewrite_payload_skill_paths_xplat008(codex, text_file)
+
+
+def reset_payload_dir(path: Path, allowed_root: Path) -> None:
+    resolved_path = path.resolve(strict=False)
+    resolved_allowed = allowed_root.resolve(strict=False)
+    if not is_relative_to(resolved_path, resolved_allowed):
+        raise ValueError(f"refusing to reset path outside payload root: {path}")
+    if path.exists():
+        shutil.rmtree(path)
+    path.mkdir(parents=True, exist_ok=True)
+
+
+def copy_required_xplat008(src: Path, dst: Path) -> None:
+    if not src.exists():
+        raise FileNotFoundError(f"required source path missing: {src}")
+    copy_optional_xplat008(src, dst)
+
+
+def copy_optional_xplat008(src: Path, dst: Path) -> None:
+    if src.is_dir():
+        shutil.copytree(
+            src,
+            dst,
+            dirs_exist_ok=True,
+            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+        )
+    elif src.is_file():
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+
+
+def strip_codex_guard(skill_file: Path) -> None:
+    text = skill_file.read_text(encoding="utf-8")
+    lines = text.splitlines(keepends=True)
+    output: list[str] = []
+    i = 0
+    while i < len(lines):
+        if lines[i].rstrip("\n") == "## Codex Skill-Selection Guard":
+            i += 1
+            while i < len(lines) and not lines[i].startswith("## "):
+                i += 1
+            continue
+        output.append(lines[i])
+        i += 1
+    skill_file.write_text("".join(output), encoding="utf-8")
+
+
+def rewrite_codex_manifest_xplat008(codex_root: Path) -> None:
+    manifest = codex_root / ".codex-plugin" / "plugin.json"
+    data = json.loads(manifest.read_text(encoding="utf-8"))
+    data["skills"] = "./skills/"
+    manifest.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+
+REL_SKILL_PATH_XPLAT008 = re.compile(r"(?P<prefix>(?:\.\./)+(?:skills|codex-skills)/)(?P<rest>[^\s`)\"']+)")
+
+
+def rewrite_payload_skill_paths_xplat008(codex_root: Path, path: Path) -> None:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return
+
+    current_dir = path.parent
+
+    def replace(match: re.Match[str]) -> str:
+        rest = match.group("rest")
+        suffix = ""
+        while rest and rest[-1] in ".,;:":
+            suffix = rest[-1] + suffix
+            rest = rest[:-1]
+        anchor = ""
+        if "#" in rest:
+            rest, anchor = rest.split("#", 1)
+            anchor = "#" + anchor
+        trailing_slash = rest.endswith("/")
+        target = codex_root / "skills" / rest
+        rel = os.path.relpath(target, current_dir).replace(os.sep, "/")
+        if trailing_slash and not rel.endswith("/"):
+            rel += "/"
+        return rel + anchor + suffix
+
+    rewritten = REL_SKILL_PATH_XPLAT008.sub(replace, text)
+    if rewritten != text:
+        path.write_text(rewritten, encoding="utf-8")
+
+
+def xplat008_payload_results(repo_root: Path, expected_dist_root: Path, actual_dist_root: Path, case: dict[str, Any]) -> list[dict[str, Any]]:
+    surfaces = [item for item in case.get("surfaces", ["claude", "codex"]) if item in {"claude", "codex"}]
+    mutations = case.get("mutations") if isinstance(case.get("mutations"), dict) else {}
+    return [
+        xplat008_payload_result(
+            repo_root,
+            surface,
+            expected_dist_root / surface / "speckit-pro",
+            actual_dist_root / surface / "speckit-pro",
+            mutations.get(surface, {}) if isinstance(mutations, dict) else {},
+        )
+        for surface in surfaces
+    ]
+
+
+def xplat008_payload_result(
+    repo_root: Path,
+    surface: str,
+    expected_root: Path,
+    actual_root: Path,
+    mutation: dict[str, Any],
+) -> dict[str, Any]:
+    plugin_version = plugin_version_for_surface(repo_root, surface)
+    expected_files = scan_payload_files(expected_root, source_root=repo_root / "speckit-pro")
+    actual_files = scan_payload_files(actual_root, source_root=repo_root / "speckit-pro")
+    actual_files = apply_payload_mutation(actual_files, mutation)
+
+    expected_by_path = {item["path"]: item for item in expected_files}
+    actual_by_path = {item["path"]: item for item in actual_files}
+    missing = sorted(set(expected_by_path) - set(actual_by_path))
+    extra = sorted(set(actual_by_path) - set(expected_by_path))
+    mismatched = sorted(
+        path for path in set(expected_by_path) & set(actual_by_path)
+        if expected_by_path[path]["sha256"] != actual_by_path[path]["sha256"]
+    )
+    path_leaks = sorted(
+        set(path for path in actual_by_path if payload_path_leaks(path))
+        | set(str(item) for item in mutation.get("path_leaks", []) if isinstance(item, str))
+    )
+    status = "pass" if not missing and not extra and not mismatched and not path_leaks else "fail"
+
+    return {
+        "schema_version": "1.0",
+        "payload_surface": surface,
+        "source_root": "speckit-pro",
+        "generated_root": repo_relative(actual_root, repo_root) if is_relative_to(actual_root.resolve(strict=False), repo_root.resolve(strict=False)) else actual_root.as_posix(),
+        "plugin_version": plugin_version,
+        "runner_version": RUNNER_VERSION,
+        "expected_files": expected_files,
+        "actual_files": actual_files,
+        "missing_paths": missing,
+        "extra_paths": extra,
+        "mismatched_paths": mismatched,
+        "path_leaks": path_leaks,
+        "file_tree_hash": payload_tree_hash(actual_files),
+        "status": status,
+    }
+
+
+def plugin_version_for_surface(repo_root: Path, surface: str) -> str:
+    manifest_name = ".claude-plugin/plugin.json" if surface == "claude" else ".codex-plugin/plugin.json"
+    manifest = json.loads((repo_root / "speckit-pro" / manifest_name).read_text(encoding="utf-8"))
+    version = manifest.get("version")
+    return version if isinstance(version, str) and version else "0.0.0"
+
+
+def scan_payload_files(root: Path, *, source_root: Path) -> list[dict[str, Any]]:
+    if not root.is_dir():
+        return []
+    records: list[dict[str, Any]] = []
+    for path in sorted(item for item in root.rglob("*") if item.is_file() and "__pycache__" not in item.parts and not item.name.endswith(".pyc")):
+        rel = path.relative_to(root).as_posix()
+        source_path = infer_payload_source_path(rel, source_root)
+        records.append(
+            {
+                "path": rel,
+                "source_path": source_path,
+                "kind": payload_file_kind(rel),
+                "transform": payload_transform(rel, source_path),
+                "sha256": sha256_file(path),
+                "byte_count": path.stat().st_size,
+                "required": True,
+            }
+        )
+    return records
+
+
+def infer_payload_source_path(rel: str, source_root: Path) -> str:
+    if rel == ".claude-plugin/plugin.json":
+        return "speckit-pro/.claude-plugin/plugin.json"
+    if rel == ".codex-plugin/plugin.json":
+        return "speckit-pro/.codex-plugin/plugin.json"
+    if rel == "codex-hooks.json":
+        return "speckit-pro/codex-hooks.json"
+    if rel.startswith("codex-agents/"):
+        return f"speckit-pro/{rel}"
+    if rel.startswith("skills/"):
+        candidate = source_root / rel
+        codex_candidate = source_root / "codex-skills" / rel.removeprefix("skills/")
+        if codex_candidate.exists():
+            return f"speckit-pro/codex-skills/{rel.removeprefix('skills/')}"
+        if candidate.exists():
+            return f"speckit-pro/{rel}"
+    if rel == "LICENSE":
+        return "LICENSE"
+    return f"speckit-pro/{rel}"
+
+
+def payload_file_kind(path: str) -> str:
+    parts = PurePosixPath(path).parts
+    if path.endswith("plugin.json"):
+        return "manifest"
+    if parts and parts[0] in {"agents", "codex-agents"}:
+        return "agent"
+    if parts and parts[0] in {"hooks"} or path == "codex-hooks.json":
+        return "hook"
+    if parts and parts[0] == "skills":
+        return "skill"
+    if parts and parts[0] == "speckit_pro_runner":
+        if path.endswith(".sha256"):
+            return "checksum"
+        if path.endswith(".manifest.json") or path.endswith("install_inventory.json"):
+            return "trust_metadata"
+        return "runner"
+    if path in {"README.md", "CHANGELOG.md", "LICENSE"}:
+        return "install_guidance" if path == "README.md" else "version_metadata"
+    return "docs"
+
+
+def payload_transform(path: str, source_path: str) -> str:
+    if path == ".codex-plugin/plugin.json":
+        return "manifest_rewrite"
+    if "/SKILL.md" in path and "codex-skills" in source_path:
+        return "codex_overlay"
+    if "/SKILL.md" in path:
+        return "claude_guard_strip"
+    if source_path != f"speckit-pro/{path}" and path.startswith("skills/"):
+        return "path_normalization"
+    return "none"
+
+
+def apply_payload_mutation(files: list[dict[str, Any]], mutation: dict[str, Any]) -> list[dict[str, Any]]:
+    mutated = [dict(item) for item in files]
+    remove_paths = {item for item in mutation.get("remove_paths", []) if isinstance(item, str)}
+    if remove_paths:
+        mutated = [item for item in mutated if item["path"] not in remove_paths]
+    mismatch_paths = {item for item in mutation.get("mismatch_paths", []) if isinstance(item, str)}
+    for item in mutated:
+        if item["path"] in mismatch_paths:
+            item["sha256"] = "0" * 64
+    for extra in mutation.get("extra_files", []):
+        if not isinstance(extra, dict):
+            continue
+        path = str(extra.get("path", "extra.txt"))
+        content = str(extra.get("content", "extra"))
+        mutated.append(
+            {
+                "path": path,
+                "source_path": str(extra.get("source_path", "")),
+                "kind": str(extra.get("kind", "docs")),
+                "transform": str(extra.get("transform", "none")),
+                "sha256": sha256_text(content),
+                "byte_count": len(content.encode("utf-8")),
+                "required": bool(extra.get("required", True)),
+            }
+        )
+    return sorted(mutated, key=lambda item: item["path"])
+
+
+def payload_path_leaks(path: str) -> bool:
+    parts = PurePosixPath(path).parts
+    return path.startswith("/") or bool(re.match(r"^[A-Za-z]:", path)) or ".." in parts
+
+
+def payload_tree_hash(files: list[dict[str, Any]]) -> str:
+    payload = json.dumps(
+        [{"path": item["path"], "sha256": item["sha256"]} for item in sorted(files, key=lambda item: item["path"])],
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return sha256_text(payload)
 
 
 def payload_evidence_record(payload: dict[str, Any], mode: str, case: dict[str, Any], output_root: str) -> dict[str, Any]:
@@ -425,6 +831,14 @@ def is_relative_to(path: Path, root: Path) -> bool:
 
 def sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def is_diagnostic(value: Any) -> bool:

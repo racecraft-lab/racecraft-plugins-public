@@ -35,6 +35,8 @@ Keep these surfaces separate:
 - `speckit-pro/.claude-plugin/plugin.json` is source manifest evidence.
 - `dist/claude/speckit-pro/.claude-plugin/plugin.json` is generated payload
   manifest evidence.
+- `dist/claude/speckit-pro/speckit_pro_runner/` is the generated Python 3.11+
+  runner package used by installed runtime gates.
 - Claude Code's installed plugin state is runtime state, not as the editable
   source of truth.
 
@@ -48,6 +50,18 @@ For generated reference detail, use the focused DOC-007 pages:
 [agents](/racecraft-plugins-public/reference/agents/),
 [hooks](/racecraft-plugins-public/reference/hooks/), and
 [source vs dist](/racecraft-plugins-public/reference/source-vs-dist/).
+
+## Installed Runtime Prerequisites
+
+SpecKit Pro installed workflows require Python 3.11 or newer and the official
+Spec Kit CLI in the target project environment. The active installed surfaces
+invoke `python -m speckit_pro_runner` through argv-style calls from the generated
+payload; Bash, Git Bash, WSL, PowerShell-specific command language, and `jq` are
+not installed-runtime requirements.
+
+Source-checkout validation and release maintenance still have a separate shell
+toolchain. Use [Contribute & Release](/racecraft-plugins-public/contribute-and-release/)
+for those maintainer requirements.
 
 ## Install Path Matrix
 

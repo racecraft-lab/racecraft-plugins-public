@@ -1,0 +1,285 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "XPLAT-008",
+  "coverage": [
+    "active shell dependency blocker",
+    "incomplete payload blocker",
+    "missing bundled agent blocker",
+    "missing hook blocker",
+    "missing runner file blocker",
+    "stale metadata blocker",
+    "unsafe public claim blocker",
+    "incomplete UAT blocker",
+    "unsafe repair claim blocker",
+    "missing traceability blocker",
+    "nondeterministic dist blocker"
+  ],
+  "base_case": {
+    "checks": [
+      {
+        "check_id": "active-runtime-guard",
+        "blocker_class": "active_shell_runtime_dependency",
+        "status": "pass",
+        "message": "No blocking active-runtime shell dependency is present.",
+        "evidence": ["active-runtime-guard current tree"]
+      },
+      {
+        "check_id": "bundled-agents",
+        "blocker_class": "missing_bundled_agent",
+        "status": "pass",
+        "message": "Required bundled agents are present.",
+        "evidence": ["speckit-pro/agents", "speckit-pro/codex-agents"]
+      },
+      {
+        "check_id": "hooks",
+        "blocker_class": "missing_hook",
+        "status": "pass",
+        "message": "Claude and Codex hooks are present.",
+        "evidence": ["speckit-pro/hooks/hooks.json", "speckit-pro/codex-hooks.json"]
+      },
+      {
+        "check_id": "runner-files",
+        "blocker_class": "missing_runner_file",
+        "status": "pass",
+        "message": "Runner files and metadata are present.",
+        "evidence": ["speckit-pro/speckit_pro_runner"]
+      },
+      {
+        "check_id": "version-sync",
+        "blocker_class": "stale_metadata",
+        "status": "pass",
+        "message": "Version metadata is synchronized.",
+        "evidence": ["2.17.0"]
+      },
+      {
+        "check_id": "trust-metadata",
+        "blocker_class": "missing_trust_metadata",
+        "status": "pass",
+        "message": "Runner manifest and checksum metadata exist.",
+        "evidence": ["speckit-pro-runner.manifest.json", "speckit-pro-runner.sha256"]
+      },
+      {
+        "check_id": "update-proof",
+        "blocker_class": "stale_metadata",
+        "status": "pass",
+        "message": "Latest-tag update evidence is represented.",
+        "evidence": ["fixture latest-tag update"]
+      },
+      {
+        "check_id": "dist-determinism",
+        "blocker_class": "nondeterministic_dist",
+        "status": "pass",
+        "message": "Generated dist comparison is deterministic.",
+        "evidence": ["payload-completeness file-tree hash"]
+      }
+    ]
+  },
+  "cases": [
+    {
+      "case_id": "ready",
+      "expected_status": "pass"
+    },
+    {
+      "case_id": "active-shell-dependency",
+      "expected_status": "fail",
+      "overrides": {
+        "checks": [
+          {
+            "check_id": "active-runtime-guard",
+            "blocker_class": "active_shell_runtime_dependency",
+            "status": "fail",
+            "message": "Active installed runtime reintroduced Bash or jq.",
+            "evidence": ["speckit-pro/skills/speckit-status/SKILL.md"]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "incomplete-payload",
+      "expected_status": "fail",
+      "overrides": {
+        "payload_results": [
+          {
+            "payload_surface": "claude",
+            "plugin_version": "2.17.0",
+            "runner_version": "0.1.0",
+            "expected_files": [
+              {
+                "path": "speckit_pro_runner/__main__.py",
+                "kind": "runner",
+                "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+                "required": true
+              }
+            ],
+            "actual_files": [],
+            "missing_paths": ["speckit_pro_runner/__main__.py"],
+            "extra_paths": [],
+            "mismatched_paths": [],
+            "path_leaks": [],
+            "file_tree_hash": "2222222222222222222222222222222222222222222222222222222222222222",
+            "status": "fail"
+          },
+          {
+            "payload_surface": "codex",
+            "plugin_version": "2.17.0",
+            "runner_version": "0.1.0",
+            "expected_files": [
+              {
+                "path": ".codex-plugin/plugin.json",
+                "kind": "manifest",
+                "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+                "required": true
+              }
+            ],
+            "actual_files": [
+              {
+                "path": ".codex-plugin/plugin.json",
+                "kind": "manifest",
+                "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+                "required": true
+              }
+            ],
+            "missing_paths": [],
+            "extra_paths": [],
+            "mismatched_paths": [],
+            "path_leaks": [],
+            "file_tree_hash": "2222222222222222222222222222222222222222222222222222222222222222",
+            "status": "pass"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "missing-bundled-agent",
+      "expected_status": "fail",
+      "overrides": {
+        "checks": [
+          {
+            "check_id": "bundled-agents",
+            "blocker_class": "missing_bundled_agent",
+            "status": "fail",
+            "message": "Bundled agent payload is missing.",
+            "evidence": ["dist/codex/speckit-pro/codex-agents/phase-executor.toml"]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "missing-hook",
+      "expected_status": "fail",
+      "overrides": {
+        "checks": [
+          {
+            "check_id": "hooks",
+            "blocker_class": "missing_hook",
+            "status": "fail",
+            "message": "Hook payload is missing.",
+            "evidence": ["dist/claude/speckit-pro/hooks/hooks.json"]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "missing-runner-file",
+      "expected_status": "fail",
+      "overrides": {
+        "checks": [
+          {
+            "check_id": "runner-files",
+            "blocker_class": "missing_runner_file",
+            "status": "fail",
+            "message": "Runner file is missing from generated payload.",
+            "evidence": ["dist/claude/speckit-pro/speckit_pro_runner/__main__.py"]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "stale-metadata",
+      "expected_status": "fail",
+      "overrides": {
+        "checks": [
+          {
+            "check_id": "version-sync",
+            "blocker_class": "stale_metadata",
+            "status": "fail",
+            "message": "Version metadata is stale.",
+            "evidence": [".release-please-manifest.json", "speckit-pro-runner.manifest.json"]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "unsafe-public-claim",
+      "expected_status": "fail",
+      "overrides": {
+        "public_claim_results": [
+          {
+            "claim_id": "cryptographic-trust-chain",
+            "surface": "docs-site/src/content/docs/security-and-trust.md",
+            "claim_text_or_pattern": "cryptographic trust chain",
+            "classification": "unsupported-claim",
+            "status": "fail",
+            "evidence": ["XPLAT-008 does not implement signing, SLSA, or in-toto."]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "incomplete-uat",
+      "expected_status": "fail",
+      "overrides": {
+        "checks": [
+          {
+            "check_id": "uat-matrix",
+            "blocker_class": "incomplete_uat_evidence",
+            "status": "fail",
+            "message": "Native UAT matrix has missing or failing rows.",
+            "evidence": ["specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat-matrix.md"]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "unsafe-repair-claim",
+      "expected_status": "fail",
+      "overrides": {
+        "repair_actions": [
+          {
+            "action_id": "manual-unsafe-extra",
+            "finding_id": "extra-file",
+            "action_type": "manual_remediation",
+            "target_path": "unknown-extra.txt",
+            "source_path": null,
+            "digest_verified": false,
+            "status": "blocked",
+            "message": "Unknown extra file requires manual remediation.",
+            "manual_steps": ["Inspect installed cache.", "Remove or reinstall manually."]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "missing-traceability",
+      "expected_status": "fail",
+      "overrides": {
+        "traceability": []
+      }
+    },
+    {
+      "case_id": "nondeterministic-dist",
+      "expected_status": "fail",
+      "overrides": {
+        "checks": [
+          {
+            "check_id": "dist-determinism",
+            "blocker_class": "nondeterministic_dist",
+            "status": "fail",
+            "message": "Repeated payload rebuild produced a different tree hash.",
+            "evidence": ["file_tree_hash mismatch"]
+          }
+        ]
+      }
+    }
+  ]
+}

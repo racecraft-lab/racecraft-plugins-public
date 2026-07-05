@@ -141,10 +141,11 @@ shells.
 | Path | Purpose | Edit directly? |
 |---|---|---|
 | [`speckit-pro/`](./speckit-pro/) | Source of truth for SpecKit Pro across Claude Code and Codex. | Yes |
+| [`speckit-pro/speckit_pro_runner/`](./speckit-pro/speckit_pro_runner/) | Python 3.11+ standard-library runner used by installed runtime gates and payload checks. | Yes |
 | [`dist/claude/speckit-pro/`](./dist/claude/speckit-pro/) | Generated Claude Code install payload. | No, regenerate |
 | [`dist/codex/speckit-pro/`](./dist/codex/speckit-pro/) | Generated Codex install payload. | No, regenerate |
 | [`tests/speckit-pro/`](./tests/speckit-pro/) | Shell test suite for structure, scripts, tool scoping, and generated payloads. | Yes |
-| [`scripts/build-plugin-payloads.sh`](./scripts/build-plugin-payloads.sh) | Rebuilds platform-specific payloads from source. | Yes |
+| [`scripts/build-plugin-payloads.sh`](./scripts/build-plugin-payloads.sh) | Maintainer shell utility for source-checkout payload and release automation paths. | Yes |
 
 ## Contributor Path
 
@@ -152,10 +153,11 @@ Use this lane when changing documentation, skills, agents, hooks, scripts, or
 marketplace packaging.
 
 1. Edit source files under `speckit-pro/` or this root README.
-2. Rebuild generated install payloads:
+2. Rebuild generated install payloads through the Python runner gate:
 
    ```bash
-   bash scripts/build-plugin-payloads.sh
+   cd speckit-pro
+   python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness-apply.json
    ```
 
 3. Run the default validation suite:

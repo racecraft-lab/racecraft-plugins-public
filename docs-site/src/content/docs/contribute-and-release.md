@@ -17,7 +17,7 @@ DOC-002 created this route shell. DOC-009 owns the full workflow content here.
 | Plugin source | `speckit-pro/` | `dist/claude/speckit-pro/`, `dist/codex/speckit-pro/` | [Source vs dist](/racecraft-plugins-public/reference/source-vs-dist/) |
 | Claude marketplace | `.claude-plugin/marketplace.json` | Version values synced from the Claude payload manifest under the marketplace entry's `source` path | [Manifests](/racecraft-plugins-public/reference/manifests/) |
 | Codex marketplace | `.agents/plugins/marketplace.json` | Version values synced from the Codex payload manifest under the marketplace entry's `source.path` | [Manifests](/racecraft-plugins-public/reference/manifests/) |
-| Payload scripts | `scripts/build-plugin-payloads.sh`, `scripts/sync-marketplace-versions.sh` | Generated payloads and marketplace version sync PRs | [Scripts](/racecraft-plugins-public/reference/scripts/) |
+| Payload and release tools | `speckit-pro/speckit_pro_runner/`, XPLAT-008 payload-completeness requests, `scripts/sync-marketplace-versions.sh` | Generated payloads, payload completeness evidence, and marketplace version sync PRs | [Scripts](/racecraft-plugins-public/reference/scripts/) |
 | Tests | `tests/speckit-pro/run-all.sh` | Deterministic release-readiness evidence | [Tests](/racecraft-plugins-public/reference/tests/) |
 | Docs site | `docs-site/src/content/docs/` and `docs-site/package.json` | Static Astro/Starlight site output | [Reference overview](/racecraft-plugins-public/reference/) |
 | Generated references | `docs-site/scripts/generate-reference-pages.mjs` | `docs-site/src/content/docs/reference/*.md` | [Reference overview](/racecraft-plugins-public/reference/) |
@@ -30,8 +30,8 @@ Primary sources: [CLAUDE.md](https://github.com/racecraft-lab/racecraft-plugins-
 |-------------|----------------|-----------------------------------|-------------------|
 | Docs-only, outside docs site | Markdown docs outside `docs-site/` | None by default | Explain changed docs and include any relevant source review evidence. |
 | Docs-site content | `docs-site/src/content/docs/` | Astro/Starlight build output | `pnpm --dir docs-site validate`; use `reference:check` when generated references are involved. |
-| Plugin source | `speckit-pro/` | `dist/claude/speckit-pro/`, `dist/codex/speckit-pro/` | Payload rebuild evidence and `bash tests/speckit-pro/run-all.sh`. |
-| Generated payload/dist | `scripts/build-plugin-payloads.sh` output or a release PR payload sync | `dist/**` | Explain the source change or release automation that generated the payloads. |
+| Plugin source | `speckit-pro/` | `dist/claude/speckit-pro/`, `dist/codex/speckit-pro/` | Payload-completeness runner evidence and `bash tests/speckit-pro/run-all.sh`. |
+| Generated payload/dist | XPLAT-008 payload-completeness apply-mode output or a release PR payload sync | `dist/**` | Explain the source change or release automation that generated the payloads. |
 | Marketplace registry | `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json` | Version fields synced from platform plugin manifests | Marketplace sync evidence and manifest version consistency evidence. |
 | Release automation | `.github/workflows/release.yml`, `release-please-config.json`, `.release-please-manifest.json` | Release PRs, GitHub Releases, payload/marketplace sync PRs | Release workflow rationale, PR Checks evidence, and rollback notes. |
 
@@ -66,7 +66,9 @@ body.
 
 ```bash
 bash tests/speckit-pro/check-toolchain.sh --mode tests
-bash scripts/build-plugin-payloads.sh
+cd speckit-pro
+python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness-apply.json
+cd ..
 bash scripts/sync-marketplace-versions.sh
 bash tests/speckit-pro/run-all.sh
 pnpm --dir docs-site reference:check
@@ -78,7 +80,7 @@ What each command proves:
 | Command | Use when | Evidence it provides |
 |---------|----------|----------------------|
 | `bash tests/speckit-pro/check-toolchain.sh --mode tests` | Before deterministic shell validation or when tool versions are in question | Reports Bash, `jq`, `git`, Python, checksum, YAML, and optional live-eval tools before failures appear deeper in the suite. |
-| `bash scripts/build-plugin-payloads.sh` | Plugin source or release payloads changed | Rebuilds isolated Claude and Codex install payloads under `dist/`. |
+| `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness-apply.json` from `speckit-pro/` | Plugin source or release payloads changed | Rebuilds isolated Claude and Codex install payloads under `dist/` and emits payload completeness evidence. |
 | `bash scripts/sync-marketplace-versions.sh` | Marketplace versions or release sync are in scope | Syncs marketplace entry versions from platform plugin manifests. |
 | `bash tests/speckit-pro/run-all.sh` | Release readiness, especially plugin or release-affecting work | Runs the default deterministic shell suite. |
 | `pnpm --dir docs-site reference:check` | Generated reference drift is possible | Verifies generated reference pages match the generator. |
@@ -92,6 +94,7 @@ Maintainer validation has two toolchain buckets:
 
 | Bucket | Required tools |
 |---|---|
+| Installed plugin runtime | Python 3.11+ and the official Spec Kit CLI in the target project environment. |
 | Deterministic plugin suite | Bash 4.3+, `jq` 1.6+, `git`, Python 3, common Unix text tools, `sort -V`, `sha256sum` or `shasum`, and either Python PyYAML or Ruby YAML for workflow syntax checks. |
 | Docs-site validation | Node 22 or newer, Corepack, `pnpm@10.25.0`, installed `docs-site` dependencies, and Playwright for smoke validation. |
 
@@ -113,7 +116,7 @@ Treat version fields as owned by their source hierarchy:
   `speckit-pro/.claude-plugin/plugin.json` and
   `speckit-pro/.codex-plugin/plugin.json`.
 - Generated payload manifests under `dist/` are rebuilt from source by
-  `bash scripts/build-plugin-payloads.sh`.
+  the XPLAT-008 payload-completeness apply-mode runner request.
 - Marketplace registry versions are synchronized from platform plugin manifests
   by `bash scripts/sync-marketplace-versions.sh`.
 - Manual version edits should be rare and explicitly explained, such as a
@@ -184,7 +187,8 @@ Before requesting review, confirm:
   scope.
 - Source plugin manifest versions, generated payload manifest versions, and
   marketplace versions are consistent with the release/version ownership model.
-- `bash scripts/build-plugin-payloads.sh` ran or was not applicable.
+- The XPLAT-008 payload-completeness apply-mode runner request ran or was not
+  applicable.
 - `bash scripts/sync-marketplace-versions.sh` ran or was not applicable.
 - `bash tests/speckit-pro/run-all.sh` ran for release readiness or the PR body
   explains why it was not needed.

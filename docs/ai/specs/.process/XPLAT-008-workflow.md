@@ -750,10 +750,17 @@ For each task, follow this cycle:
 
 | Phase | Tasks | Completed | Notes |
 |---|---|---|---|
-| Slice 1 - Active surface cutover | Fill after Tasks | 0 | Pending |
-| Slice 2 - Payload/release/docs gates | Fill after Tasks | 0 | Pending |
+| Slice 1 - Active surface cutover | T001-T012 | 12/12 | Complete; committed in `21d5fce8` |
+| Slice 2 - Payload/release/docs gates | T013-T027 | 15/15 | Complete; payload completeness, release-readiness, Layer 4 gates, and docs validation passed |
 | Slice 3 - UAT/update/autoheal | Fill after Tasks | 0 | Pending |
 | Polish and release packet | Fill after Tasks | 0 | Pending |
+
+### Slice 2 Verification Evidence
+
+- `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` passed with 40/40 tests.
+- `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness.json` passed with `gate_status: pass`.
+- `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/release-readiness.json` passed with `gate_status: pass` and `blocking_count: 0`.
+- `npx --yes pnpm@10.25.0 --dir docs-site validate` passed, including `88 passed` Playwright smoke tests.
 
 ---
 
@@ -764,10 +771,10 @@ For each task, follow this cycle:
   `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"`
 - [ ] Python runner default suite passes:
   `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json`
-- [ ] Active-runtime no-shell/no-jq guard passes
-- [ ] Generated Claude and Codex payload completeness gates pass
-- [ ] Release-readiness guard passes
-- [ ] Docs validation passes when docs-site files change
+- [x] Active-runtime no-shell/no-jq guard passes
+- [x] Generated Claude and Codex payload completeness gates pass
+- [x] Release-readiness guard passes
+- [x] Docs validation passes when docs-site files change
 - [ ] Native Windows/macOS/Linux Claude and Codex UAT runbooks are filled and readable
 - [ ] Latest-tag update proof is recorded
 - [ ] Safe repair/autoheal proof is recorded

@@ -50,21 +50,21 @@
         "value": "speckit_pro_runner/gates/payloads.py",
         "format": "posix-relative"
       },
-      "sha256": "402644f0a221e610c3a10457ee3ef66b79eb94fb17c7c8ae2130f9f2ceb6e8e7"
+      "sha256": "88b5b2521086f7bdb09724a44cdf2c96dce028eaeb06219172f7b0985d78f891"
     },
     {
       "path": {
         "value": "speckit_pro_runner/gates/registry.py",
         "format": "posix-relative"
       },
-      "sha256": "154fe6087d7b6f7250e9fd8e19849e04df0c339eee48dc608325924eb3048b6e"
+      "sha256": "47f161b371980c1501d162a68b4fb365f5ca8c9582947cc810c0932675260d1c"
     },
     {
       "path": {
         "value": "speckit_pro_runner/gates/release.py",
         "format": "posix-relative"
       },
-      "sha256": "b598a91363f2ccb565491ddeefb987dd9c668d8767c1bb2040bc4c5930d1bc8c"
+      "sha256": "d623aa64fb0deb3c270d7beb64728781501e844db662459232cba2862d151084"
     },
     {
       "path": {

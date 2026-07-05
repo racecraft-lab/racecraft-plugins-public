@@ -43,18 +43,16 @@ You need:
 - Claude Code or Codex
 - GitHub Spec Kit installed from the official GitHub source
 - A repository initialized for Spec Kit
+- Python 3.11 or newer available to the installed agent runtime
 - `gh` for PR creation and review-comment workflows
-- Bash 4.3 or newer for the shell validation and planning scripts
-- `jq` 1.6 or newer for JSON validation and emitted workflow state
 - `git` for branch, diff, reviewability, and workflow-state checks
-- Python 3 for preset installation and repository validation helpers
-- `sha256sum` or `shasum` for PR-packet fingerprint checks
-- Standard Unix text tools, including version-aware `sort -V`
 
-The tools above are all you need to install and run the plugin in a project.
-Contributors working from a source checkout have an additional maintainer-only
-toolchain (Node, Corepack, `pnpm`, Playwright) plus a preflight that verifies
-both — see the
+The installed Claude Code and Codex surfaces invoke the bundled
+`speckit_pro_runner` with Python argv calls; they do not require Bash, Git Bash,
+WSL, PowerShell-specific command language, or `jq` as installed-runtime
+substrates. Contributors working from a source checkout have an additional
+maintainer-only validation toolchain, including Bash, `jq`, checksum utilities,
+Unix text tools, Node, Corepack, `pnpm`, and Playwright — see the
 [contributing guide](https://racecraft-lab.github.io/racecraft-plugins-public/contribute-and-release/).
 
 Spec Kit's official docs recommend installing from the GitHub repository. This
@@ -273,15 +271,17 @@ SpecKit Pro has one authoring source and two generated install payloads.
 |---|---|---|
 | Claude Code plugin | `speckit-pro/skills`, `speckit-pro/agents`, `speckit-pro/hooks`, `speckit-pro/.claude-plugin` | `dist/claude/speckit-pro/` |
 | Codex plugin | `speckit-pro/codex-skills`, `speckit-pro/codex-agents`, `speckit-pro/codex-hooks.json`, `speckit-pro/.codex-plugin` | `dist/codex/speckit-pro/` |
+| Python runner | `speckit-pro/speckit_pro_runner` | copied into both payloads |
 | Shared scripts and docs | `speckit-pro/scripts`, `speckit-pro/README.md`, `speckit-pro/CHANGELOG.md` | copied into both payloads as needed |
 
 When changing the plugin:
 
 1. Edit the source tree under `speckit-pro/`.
-2. Rebuild generated payloads:
+2. Rebuild generated payloads through the Python runner gate:
 
    ```bash
-   bash scripts/build-plugin-payloads.sh
+   cd speckit-pro
+   python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness-apply.json
    ```
 
 3. Run structural validation while iterating:

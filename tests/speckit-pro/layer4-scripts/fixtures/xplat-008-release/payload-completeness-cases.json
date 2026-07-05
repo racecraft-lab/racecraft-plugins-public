@@ -1,0 +1,78 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "XPLAT-008",
+  "coverage": [
+    "source-derived expected inventory",
+    "read-only committed dist comparison",
+    "apply-mode rebuild comparison",
+    "missing runner file blocker",
+    "stale metadata blocker",
+    "extra file blocker",
+    "path leak blocker",
+    "transform mismatch blocker"
+  ],
+  "cases": [
+    {
+      "case_id": "current-committed-dist",
+      "surfaces": ["claude", "codex"]
+    },
+    {
+      "case_id": "missing-runner-file",
+      "surfaces": ["claude", "codex"],
+      "mutations": {
+        "claude": {
+          "remove_paths": ["speckit_pro_runner/__main__.py"]
+        }
+      }
+    },
+    {
+      "case_id": "stale-metadata",
+      "surfaces": ["claude", "codex"],
+      "mutations": {
+        "codex": {
+          "mismatch_paths": ["speckit_pro_runner/speckit-pro-runner.manifest.json"]
+        }
+      }
+    },
+    {
+      "case_id": "extra-file",
+      "surfaces": ["claude", "codex"],
+      "mutations": {
+        "claude": {
+          "extra_files": [
+            {
+              "path": "unexpected/legacy-shell-wrapper.sh",
+              "kind": "docs",
+              "content": "legacy shell wrapper must not ship"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "path-leak",
+      "surfaces": ["claude", "codex"],
+      "mutations": {
+        "codex": {
+          "extra_files": [
+            {
+              "path": "../outside-cache.txt",
+              "kind": "docs",
+              "content": "path leak"
+            }
+          ],
+          "path_leaks": ["../outside-cache.txt"]
+        }
+      }
+    },
+    {
+      "case_id": "transform-mismatch",
+      "surfaces": ["claude", "codex"],
+      "mutations": {
+        "codex": {
+          "mismatch_paths": ["skills/speckit-status/SKILL.md"]
+        }
+      }
+    }
+  ]
+}

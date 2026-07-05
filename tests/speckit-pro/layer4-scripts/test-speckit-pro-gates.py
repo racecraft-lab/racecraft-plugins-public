@@ -213,6 +213,7 @@ class GateFoundationTests(unittest.TestCase):
             "run-parity-suite",
         }
         us2_operations = {
+            "payload-completeness",
             "build-test-payload-evidence",
             "refresh-local-plugin-fixture",
             "verify-install",
@@ -225,6 +226,7 @@ class GateFoundationTests(unittest.TestCase):
             "parse-release-pr-payload-sync",
             "check-post-release-drift",
             "release-readiness",
+            "release-readiness-xplat008",
         }
         us3_operations = {
             "active-path-guard",
@@ -1019,6 +1021,173 @@ class GateFoundationTests(unittest.TestCase):
         self.assert_response(response, "ok")
         self.assertEqual(stderr_records, [])
         self.assertEqual(response["data"]["blocking_count"], 0)
+
+    def test_xplat008_payload_completeness_fixtures_cover_release_payload_blockers(self) -> None:
+        cases = xplat008_fixture_cases("payload-completeness")
+        self.assertEqual(cases["schema_version"], "1.0")
+        self.assertEqual(cases["feature_id"], "XPLAT-008")
+        self.assertEqual(
+            {case["case_id"] for case in cases["cases"]},
+            {
+                "current-committed-dist",
+                "missing-runner-file",
+                "stale-metadata",
+                "extra-file",
+                "path-leak",
+                "transform-mismatch",
+            },
+        )
+        for label in [
+            "source-derived expected inventory",
+            "apply-mode rebuild comparison",
+            "missing runner file blocker",
+            "stale metadata blocker",
+            "extra file blocker",
+            "path leak blocker",
+            "transform mismatch blocker",
+        ]:
+            self.assertIn(label, cases["coverage"])
+
+        request = xplat008_fixture_request("payload-completeness")
+        self.assertEqual(request["helper_id"], "payload-gate")
+        self.assertEqual(request["operation"], "payload-completeness")
+        self.assertEqual(request["mode"], "read_only")
+
+        apply_request = xplat008_fixture_request("payload-completeness-apply")
+        self.assertEqual(apply_request["helper_id"], "payload-gate")
+        self.assertEqual(apply_request["operation"], "payload-completeness")
+        self.assertEqual(apply_request["mode"], "apply")
+        self.assertTrue(apply_request["inputs"]["apply_dist"])
+
+    def test_xplat008_payload_completeness_blocks_seeded_negative_cases(self) -> None:
+        for case_id in ["missing-runner-file", "stale-metadata", "extra-file", "path-leak", "transform-mismatch"]:
+            with self.subTest(case_id=case_id):
+                completed, response, stderr_records = run_runner(
+                    gate_request(
+                        "payload-gate",
+                        "payload-completeness",
+                        inputs={
+                            "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/payload-completeness-cases.json",
+                            "case_id": case_id,
+                        },
+                    )
+                )
+                self.assertEqual(completed.returncode, 1)
+                self.assert_response(response, "expected_failure")
+                self.assertEqual([diag["code"] for diag in stderr_records], ["payload_completeness_blocked"])
+                self.assertTrue(response["data"]["gate"]["blocking"])
+                self.assertTrue(
+                    any(result["status"] == "fail" for result in response["data"]["payload_completeness"])
+                )
+
+    def test_xplat008_payload_completeness_apply_builds_runner_payloads_without_shell(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output_root = str(Path(tmp) / "dist")
+            request = gate_request(
+                "payload-gate",
+                "payload-completeness",
+                mode="apply",
+                inputs={
+                    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/payload-completeness-cases.json",
+                    "case_id": "current-committed-dist",
+                    "output_root": output_root,
+                },
+            )
+            completed, response, stderr_records = run_runner(request)
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok")
+            self.assertEqual(stderr_records, [])
+            for surface in ["claude", "codex"]:
+                payload_root = Path(output_root) / surface / "speckit-pro"
+                self.assertTrue((payload_root / "speckit_pro_runner" / "__main__.py").is_file())
+                self.assertTrue((payload_root / "speckit_pro_runner" / "speckit-pro-runner.manifest.json").is_file())
+            for result in response["data"]["payload_completeness"]:
+                self.assertEqual(result["status"], "pass")
+                paths = {item["path"] for item in result["actual_files"]}
+                self.assertIn("speckit_pro_runner/__main__.py", paths)
+                self.assertIn("speckit_pro_runner/speckit-pro-runner.sha256", paths)
+
+    def test_xplat008_payload_completeness_current_dist_passes_after_runner_rebuild(self) -> None:
+        completed, response, stderr_records = run_runner(xplat008_fixture_request("payload-completeness"))
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        self.assertEqual({item["payload_surface"] for item in response["data"]["payload_completeness"]}, {"claude", "codex"})
+        for result in response["data"]["payload_completeness"]:
+            self.assertEqual(result["status"], "pass")
+            self.assertFalse(result["missing_paths"])
+            self.assertFalse(result["extra_paths"])
+            self.assertFalse(result["mismatched_paths"])
+            self.assertFalse(result["path_leaks"])
+
+    def test_xplat008_release_readiness_fixtures_cover_release_blockers(self) -> None:
+        cases = xplat008_fixture_cases("release-readiness")
+        self.assertEqual(cases["schema_version"], "1.0")
+        self.assertEqual(cases["feature_id"], "XPLAT-008")
+        self.assertEqual(
+            {case["case_id"] for case in cases["cases"]},
+            {
+                "ready",
+                "active-shell-dependency",
+                "incomplete-payload",
+                "missing-bundled-agent",
+                "missing-hook",
+                "missing-runner-file",
+                "stale-metadata",
+                "unsafe-public-claim",
+                "incomplete-uat",
+                "unsafe-repair-claim",
+                "missing-traceability",
+                "nondeterministic-dist",
+            },
+        )
+        request = xplat008_fixture_request("release-readiness")
+        self.assertEqual(request["helper_id"], "release-readiness")
+        self.assertEqual(request["operation"], "release-readiness-xplat008")
+        self.assertEqual(request["mode"], "read_only")
+
+    def test_xplat008_release_readiness_reports_pass_and_seeded_blockers(self) -> None:
+        completed, response, stderr_records = run_runner(xplat008_fixture_request("release-readiness"))
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        readiness = response["data"]["release_readiness"]
+        self.assertEqual(readiness["feature_id"], "XPLAT-008")
+        self.assertEqual(readiness["status"], "pass")
+        self.assertEqual(readiness["blocking_count"], 0)
+        self.assertEqual({item["payload_surface"] for item in readiness["payload_results"]}, {"claude", "codex"})
+        self.assertEqual(len(readiness["uat_rows"]), 6)
+        self.assertTrue(readiness["traceability"])
+
+        blocker_cases = [
+            "active-shell-dependency",
+            "incomplete-payload",
+            "missing-bundled-agent",
+            "missing-hook",
+            "missing-runner-file",
+            "stale-metadata",
+            "unsafe-public-claim",
+            "incomplete-uat",
+            "unsafe-repair-claim",
+            "missing-traceability",
+            "nondeterministic-dist",
+        ]
+        for case_id in blocker_cases:
+            with self.subTest(case_id=case_id):
+                completed, response, stderr_records = run_runner(
+                    gate_request(
+                        "release-readiness",
+                        "release-readiness-xplat008",
+                        inputs={
+                            "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json",
+                            "case_id": case_id,
+                        },
+                    )
+                )
+                self.assertEqual(completed.returncode, 1)
+                self.assert_response(response, "expected_failure")
+                self.assertEqual([diag["code"] for diag in stderr_records], ["release_readiness_xplat008_blocked"])
+                self.assertGreater(response["data"]["release_readiness"]["blocking_count"], 0)
 
     def test_run_default_suite_aggregates_success_stdout_stderr_and_exit_behavior(self) -> None:
         request = gate_request(

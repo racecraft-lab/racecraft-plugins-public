@@ -28,12 +28,11 @@ artifacts to live.
 |---|---|---|---|
 | Spec Kit CLI exists | `command -v specify` | A path to the `specify` executable | Return to the platform install page and confirm Spec Kit setup before continuing. |
 | Spec Kit CLI version | `specify version` | A version report from the installed CLI | Compare the local output with the install route and pause before documenting new command behavior. |
+| Python runtime | `python3 --version` | Python 3.11 or newer | Install or select Python 3.11+ before running installed SpecKit Pro workflows. |
 | Constitution exists | `test -f .specify/memory/constitution.md` | Exit status 0 | Inspect the repo's Spec Kit project setup and use the platform install route for setup context. |
 | Roadmap has the SPEC-ID | Review `docs/ai/specs/*.md` or run the project status skill | A roadmap row for the target SPEC-ID | Return to PRD or roadmap creation before scaffolding a SPEC. |
 | GitHub CLI exists | `command -v gh` | A path to `gh` | Continue only with local artifacts, or install GitHub CLI before PR creation. |
 | GitHub CLI version | `gh --version` | A version report from `gh` | Treat PR creation as out of scope until the CLI is available. |
-| `jq` exists | `command -v jq` | A path to `jq` | Pause validation scripts that parse JSON until `jq` is available. |
-| `jq` version | `jq --version` | A version string | Record the missing version in validation notes before continuing. |
 | Current branch | `git rev-parse --abbrev-ref HEAD` | A feature branch or worktree branch | Inspect branch state before scaffolding or running autopilot. |
 | Clean starting point | `git status --short` | No unrelated changes | Record unrelated work before starting so the tutorial artifacts remain reviewable. |
 
