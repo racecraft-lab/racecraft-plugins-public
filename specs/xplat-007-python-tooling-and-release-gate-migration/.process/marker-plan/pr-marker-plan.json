@@ -6,7 +6,7 @@
   "source_fingerprint": {
     "feature_spec_sha": "5aee7bde6b4ced83500dc5fd40f7adedbe106a1e2a1007daed43f434159aa382",
     "plan_declared_scope_sha": "c8bf742590eb6644f93e2f38812237f4d5d76d64896203686b7fbb90b9eac468",
-    "tasks_sha": "f60fceed627629c749723345ef09a8d9e3b022dfc9ec2ddd3c937e0126015592",
+    "tasks_sha": "da587566f3230f9951d60108ac56b7ea2a7d6e868321689b9e22ef28424b498d",
     "reviewability_sha": "d48d218c423be02574df96ba3a15b9f09addc29af7855f938ec1a9a753f777fc",
     "hazard_route_sha": "cd814db7ea0c124c10b53bed28ffac9c4288c63a419fb78e15f182b5d7ac7772"
   },
@@ -99,7 +99,7 @@
         "details": {}
       },
       "implementation_checkpoint": {
-        "status": "completed",
+        "status": "complete",
         "evidence_path": "specs/xplat-007-python-tooling-and-release-gate-migration/.process/marker-plan/foundation-checkpoint.json",
         "commit_sha": "2b7158daf837402fb364d46af71ccaebb8981448",
         "head_sha": "2b7158daf837402fb364d46af71ccaebb8981448",
@@ -179,7 +179,7 @@
         "details": {}
       },
       "implementation_checkpoint": {
-        "status": "completed",
+        "status": "complete",
         "evidence_path": "specs/xplat-007-python-tooling-and-release-gate-migration/.process/marker-plan/us1-checkpoint.json",
         "commit_sha": "b3ae3c52e77988f01ec3534b72b3beb45a0b31fa",
         "head_sha": "b3ae3c52e77988f01ec3534b72b3beb45a0b31fa",
@@ -289,7 +289,11 @@
         "details": {}
       },
       "implementation_checkpoint": {
-        "status": "pending"
+        "status": "complete",
+        "evidence_path": "specs/xplat-007-python-tooling-and-release-gate-migration/.process/marker-plan/us2-checkpoint.json",
+        "commit_sha": "692afc3b03d20206b630c505545abc1f1c7453d3",
+        "head_sha": "692afc3b03d20206b630c505545abc1f1c7453d3",
+        "completed_at": "2026-07-04T19:23:04Z"
       },
       "emission_mapping": {
         "status": "pending"

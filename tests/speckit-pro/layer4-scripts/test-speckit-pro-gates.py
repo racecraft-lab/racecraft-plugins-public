@@ -59,14 +59,21 @@ def gate_request(
     }
 
 
-def run_runner(request: object) -> tuple[subprocess.CompletedProcess[str], dict[str, Any], list[dict[str, Any]]]:
+def run_runner(
+    request: object,
+    *,
+    extra_env: dict[str, str] | None = None,
+) -> tuple[subprocess.CompletedProcess[str], dict[str, Any], list[dict[str, Any]]]:
+    env = runner_env()
+    if extra_env:
+        env.update(extra_env)
     completed = subprocess.run(
         [sys.executable, "-m", "speckit_pro_runner"],
         input=json.dumps(request) if not isinstance(request, str) else request,
         text=True,
         capture_output=True,
         cwd=REPO_ROOT,
-        env=runner_env(),
+        env=env,
         shell=False,
         check=False,
     )
@@ -201,6 +208,10 @@ class GateFoundationTests(unittest.TestCase):
             "check-post-release-drift",
             "release-readiness",
         }
+        us3_operations = {
+            "active-path-guard",
+            "classify-shell-finding",
+        }
         for operation in operations:
             if operation.operation in us1_operations:
                 self.assertEqual(operation.group, "suite")
@@ -209,6 +220,11 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertEqual(operation.promotion_status, "python_authoritative")
             elif operation.operation in us2_operations:
                 self.assertEqual(operation.story, "US2")
+                self.assertTrue(operation.implemented)
+                self.assertEqual(operation.promotion_status, "python_authoritative")
+            elif operation.operation in us3_operations:
+                self.assertEqual(operation.group, "guard")
+                self.assertEqual(operation.story, "US3")
                 self.assertTrue(operation.implemented)
                 self.assertEqual(operation.promotion_status, "python_authoritative")
             else:
@@ -228,6 +244,9 @@ class GateFoundationTests(unittest.TestCase):
             "test-payload-evidence.json",
             "install-verification.json",
             "release-readiness.json",
+            "release-readiness-live-github.json",
+            "active-path-guard.json",
+            "classify-shell-finding.json",
         }
         self.assertEqual({path.name for path in REQUESTS_DIR.iterdir()}, expected)
 
@@ -276,6 +295,20 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(release_request["operation"], "release-readiness")
         self.assertFalse(release_request["inputs"]["xplat_008_cutover_allowed"])
 
+        active_guard_request = fixture_request("active-path-guard")
+        self.assertEqual(active_guard_request["helper_id"], "active-path-guard")
+        self.assertEqual(active_guard_request["operation"], "active-path-guard")
+        self.assertEqual(active_guard_request["mode"], "read_only")
+        self.assertEqual(active_guard_request["inputs"]["case_id"], "final-current-implementation")
+        self.assertFalse(active_guard_request["inputs"]["xplat_008_cutover_allowed"])
+
+        classify_request = fixture_request("classify-shell-finding")
+        self.assertEqual(classify_request["helper_id"], "active-path-guard")
+        self.assertEqual(classify_request["operation"], "classify-shell-finding")
+        self.assertEqual(classify_request["mode"], "read_only")
+        self.assertIn("text", classify_request["inputs"])
+        self.assertFalse(classify_request["inputs"]["xplat_008_cutover_allowed"])
+
     def test_us2_case_fixtures_cover_payload_install_and_release_failures(self) -> None:
         payload_cases = fixture_cases("payload-evidence")
         self.assertEqual(payload_cases["schema_version"], "1.0")
@@ -312,6 +345,35 @@ class GateFoundationTests(unittest.TestCase):
                 "xplat-008-handoff-items",
             },
         )
+
+        active_cases = fixture_cases("active-path-guard")
+        self.assertEqual(active_cases["schema_version"], "1.0")
+        self.assertEqual(
+            {case["case_id"] for case in active_cases["cases"]},
+            {
+                "blocking-active-patterns",
+                "nonblocking-classifications",
+                "workflow-dispatch-good",
+                "workflow-dispatch-with-plugin-logic",
+                "final-current-implementation",
+            },
+        )
+        for label in [
+            "active Bash",
+            ".sh",
+            "jq",
+            "Git Bash",
+            "WSL",
+            "PowerShell helper",
+            "shell parsing",
+            "shell interpolation",
+            "shell=True",
+            "os.system",
+            "command-string subprocess",
+            "CI dispatch glue",
+            "XPLAT-008 cutover surface",
+        ]:
+            self.assertIn(label, active_cases["coverage"])
 
     def test_run_default_suite_aggregates_success_stdout_stderr_and_exit_behavior(self) -> None:
         request = gate_request(
@@ -384,6 +446,16 @@ class GateFoundationTests(unittest.TestCase):
             self.assertFalse(suite_gate.missing_executable("tests/speckit-pro/run-all.sh", REPO_ROOT))
         finally:
             suite_gate.os.altsep = original_altsep
+
+        layer1_scripts = [self.repo_rel(path) for path in suite_gate.canonical_test_scripts(REPO_ROOT, "1")]
+        layer4_scripts = [self.repo_rel(path) for path in suite_gate.canonical_test_scripts(REPO_ROOT, "4")]
+        self.assertGreaterEqual(len(layer1_scripts), 20)
+        self.assertGreaterEqual(len(layer4_scripts), 40)
+        self.assertIn("tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.sh", layer1_scripts)
+        self.assertIn("tests/speckit-pro/layer1-structural/validate-release-workflow.sh", layer1_scripts)
+        self.assertIn("tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh", layer4_scripts)
+        self.assertIn("tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py", layer4_scripts)
+        self.assertIn("tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py", layer4_scripts)
 
     def test_default_suite_without_explicit_suite_uses_python_authoritative_default(self) -> None:
         from speckit_pro_runner.gates import suite as suite_gate
@@ -726,6 +798,20 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(readiness["install_verification_ids"], ["us2-install-complete-fake-home"])
         self.assertEqual(readiness["active_path_guard_summary"], {"status": "ok", "blocking_count": 0})
         self.assertTrue(readiness["xplat_008_handoff_items"])
+        self.assertEqual(
+            {item["category"] for item in readiness["xplat_008_handoff_items"]},
+            {
+                "active_invocation_cutover",
+                "generated_release_payload",
+                "public_docs",
+                "release_notes",
+                "installed_cache_uat",
+                "native_platform_uat",
+                "update",
+                "autoheal",
+                "public_release_readiness",
+            },
+        )
         for item in readiness["xplat_008_handoff_items"]:
             self.assertEqual(item["owner_spec"], "XPLAT-008")
 
@@ -754,6 +840,175 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(check["status"], "fail")
         self.assertTrue(check["blocking"])
         self.assertTrue(details["changed_plugin"]["changed"])
+
+    def test_release_readiness_live_github_context_uses_real_title_and_changed_files(self) -> None:
+        request = fixture_request("release-readiness-live-github")
+        request["inputs"]["github_context"]["changed_files"] = [
+            "speckit-pro/speckit_pro_runner/gates/release.py",
+            "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py",
+        ]
+        completed, response, stderr_records = run_runner(
+            request,
+            extra_env={"TITLE": "feat(xplat): live release readiness", "BASE_REF": "main"},
+        )
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        readiness = response["data"]["release_readiness"]
+        self.assertEqual(readiness["status"], "pass")
+        checks = {check["check_id"]: check for check in readiness["checks"]}
+        self.assertEqual(checks["validate-pr-title"]["evidence"], ["feat(xplat): live release readiness"])
+        self.assertEqual(checks["detect-changed-plugin"]["evidence"], ["changed_plugin=true"])
+
+        request = fixture_request("release-readiness-live-github")
+        request["inputs"]["github_context"]["changed_files"] = [
+            "speckit-pro/speckit_pro_runner/gates/release.py"
+        ]
+        completed, response, stderr_records = run_runner(
+            request,
+            extra_env={"TITLE": "invalid title", "BASE_REF": "main"},
+        )
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure")
+        self.assertEqual([diag["code"] for diag in stderr_records], ["release_readiness_blocked"])
+        failed_checks = {
+            check["check_id"]
+            for check in response["data"]["release_readiness"]["checks"]
+            if check["blocking"]
+        }
+        self.assertIn("validate-pr-title", failed_checks)
+
+    def test_active_path_guard_blocks_active_findings_and_exit_1(self) -> None:
+        completed, response, stderr_records = run_runner(
+            gate_request(
+                "active-path-guard",
+                "active-path-guard",
+                inputs={
+                    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/active-path-guard-cases.json",
+                    "case_id": "blocking-active-patterns",
+                    "xplat_008_cutover_allowed": False,
+                },
+            )
+        )
+        self.assertEqual(completed.returncode, 1)
+        self.assert_stdout_json(completed)
+        self.assert_response(response, "expected_failure")
+        self.assert_status_exit_mapping(completed, response)
+        self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["active_path_guard_blocked"])
+        self.assertEqual([diag["code"] for diag in stderr_records], ["active_path_guard_blocked"])
+        self.assertEqual(response["data"]["gate"]["gate_status"], "fail")
+        self.assertTrue(response["data"]["gate"]["blocking"])
+
+        categories = {finding["category"] for finding in response["data"]["findings"]}
+        self.assertLessEqual(
+            {
+                "bash",
+                "script_file",
+                "jq",
+                "git_bash",
+                "wsl",
+                "powershell_helper",
+                "shell_parsing",
+                "shell_interpolation",
+                "shell_true",
+                "os_system",
+                "command_string_subprocess",
+            },
+            categories,
+        )
+        self.assertEqual(response["data"]["blocking_count"], len(response["data"]["findings"]))
+        self.assertEqual(response["data"]["classified_counts"]["blocking_active_gate"], response["data"]["blocking_count"])
+
+    def test_active_path_guard_classifies_nonblocking_findings(self) -> None:
+        completed, response, stderr_records = run_runner(
+            gate_request(
+                "active-path-guard",
+                "active-path-guard",
+                inputs={
+                    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/active-path-guard-cases.json",
+                    "case_id": "nonblocking-classifications",
+                    "xplat_008_cutover_allowed": False,
+                },
+            )
+        )
+        self.assertEqual(completed.returncode, 0)
+        self.assert_stdout_json(completed)
+        self.assert_response(response, "ok")
+        self.assert_status_exit_mapping(completed, response)
+        self.assertEqual(stderr_records, [])
+        self.assertEqual(response["data"]["blocking_count"], 0)
+        self.assertEqual(
+            {finding["classification"] for finding in response["data"]["findings"]},
+            {
+                "archive_provenance",
+                "temporary_parity_evidence",
+                "consumer_spec_kit_helper",
+                "generated_payload_mirror",
+                "docs_out_of_scope",
+                "ci_dispatch_glue",
+                "xplat_008_cutover_surface",
+            },
+        )
+
+    def test_classify_shell_finding_blocks_active_gate_candidates(self) -> None:
+        completed, response, stderr_records = run_runner(
+            fixture_request("classify-shell-finding")
+        )
+        self.assertEqual(completed.returncode, 1)
+        self.assert_stdout_json(completed)
+        self.assert_response(response, "expected_failure")
+        self.assert_status_exit_mapping(completed, response)
+        self.assertEqual([diag["code"] for diag in stderr_records], ["active_path_guard_blocked"])
+        self.assertGreaterEqual(response["data"]["blocking_count"], 1)
+        self.assertEqual(response["data"]["findings"][0]["classification"], "blocking_active_gate")
+        self.assertEqual(
+            response["data"]["classified_counts"]["blocking_active_gate"],
+            response["data"]["blocking_count"],
+        )
+
+    def test_workflow_dispatch_glue_is_only_allowed_for_direct_python_gate_dispatch(self) -> None:
+        good = gate_request(
+            "active-path-guard",
+            "active-path-guard",
+            inputs={
+                "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/active-path-guard-cases.json",
+                "case_id": "workflow-dispatch-good",
+                "xplat_008_cutover_allowed": False,
+            },
+        )
+        completed, response, stderr_records = run_runner(good)
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        self.assertEqual(response["data"]["blocking_count"], 0)
+        self.assertEqual([finding["classification"] for finding in response["data"]["findings"]], ["ci_dispatch_glue"])
+
+        bad = gate_request(
+            "active-path-guard",
+            "active-path-guard",
+            inputs={
+                "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/active-path-guard-cases.json",
+                "case_id": "workflow-dispatch-with-plugin-logic",
+                "xplat_008_cutover_allowed": False,
+            },
+        )
+        completed, response, stderr_records = run_runner(bad)
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure")
+        self.assertEqual([diag["code"] for diag in stderr_records], ["active_path_guard_blocked"])
+        self.assertGreater(response["data"]["blocking_count"], 0)
+        self.assertTrue(all(finding["classification"] == "blocking_active_gate" for finding in response["data"]["findings"]))
+
+    def test_active_path_guard_request_fixture_scans_current_repo_clean(self) -> None:
+        completed, response, stderr_records = run_runner(fixture_request("active-path-guard"))
+        self.assertEqual(completed.returncode, 0)
+        self.assert_stdout_json(completed)
+        self.assert_response(response, "ok")
+        self.assert_status_exit_mapping(completed, response)
+        self.assertEqual(stderr_records, [])
+        self.assertEqual(response["data"]["status"], "ok")
+        self.assertEqual(response["data"]["blocking_count"], 0)
+        self.assertGreater(sum(response["data"]["classified_counts"].values()), 0)
 
     def test_us2_gate_implementations_use_no_shell_true_os_system_or_command_string_subprocess(self) -> None:
         for module in ["payloads.py", "release.py"]:
@@ -818,7 +1073,7 @@ class GateFoundationTests(unittest.TestCase):
         promotion_schema = json.loads((CONTRACT_DIR / "promotion-record.schema.json").read_text(encoding="utf-8"))
         document = json.loads(PROMOTION_RECORDS.read_text(encoding="utf-8"))
         self.assertEqual(document["schema_version"], "1.0")
-        self.assertEqual(document["promotion_status"], "us2_python_authoritative")
+        self.assertEqual(document["promotion_status"], "us3_python_authoritative")
         records = document["records"]
         self.assertLessEqual({"payload-gate", "install-verification", "release-readiness", "active-path-guard"}, {record["gate_id"] for record in records})
         us1_operations = {
@@ -873,10 +1128,23 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertEqual(record["active_path_guard_result"], "pass")
                 self.assertEqual(record["bash_reference_retirement"], "inactive_parity_evidence")
                 self.assertIn("promoted_at", record)
+        guard_record = records_by_operation["active-path-guard"]
+        self.assertEqual(guard_record["gate_id"], "active-path-guard")
+        self.assertEqual(guard_record["fixture_ids"], [
+            "blocking-active-patterns",
+            "nonblocking-classifications",
+            "workflow-dispatch-good",
+            "workflow-dispatch-with-plugin-logic",
+            "final-current-implementation",
+        ])
+        self.assertEqual(guard_record["failure_classes"], ["active_path_guard_blocked", "xplat_008_cutover_refused"])
+        self.assertEqual(guard_record["active_path_guard_result"], "pass")
+        self.assertEqual(guard_record["bash_reference_retirement"], "not_applicable")
+        self.assertIn("promoted_at", guard_record)
         required = set(promotion_schema["required"])
         allowed = set(promotion_schema["properties"])
         for record in records:
-            self.assertTrue(required <= set(record), record["gate_id"])
+            self.assertLessEqual(required, set(record), record["gate_id"])
             self.assertFalse(set(record) - allowed, record["gate_id"])
             self.assertEqual(record["schema_version"], "1.0")
             self.assertTrue(record["rollback"])

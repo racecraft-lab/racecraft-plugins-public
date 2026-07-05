@@ -136,24 +136,24 @@
 
 > Write these fixtures/tests first and confirm they fail before implementation.
 
-- [ ] T051 [P] [US3] Add `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/active-path-guard.json` for clean and expected-failure guard runs.
-- [ ] T052 [P] [US3] Add `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/active-path-guard-cases.json` covering active Bash, `.sh`, `jq`, Git Bash, WSL, PowerShell helper, shell parsing, shell interpolation, `shell=True`, `os.system`, and command-string subprocess findings.
-- [ ] T053 [US3] Add failing active-path guard tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` for blocking active gate findings and runner exit `1`.
-- [ ] T054 [US3] Add failing active-path guard tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` for nonblocking classifications: archive provenance, temporary parity evidence, consumer Spec Kit helper, generated payload mirror, docs out of scope, CI dispatch glue, and XPLAT-008 cutover surface.
-- [ ] T055 [US3] Add failing workflow-dispatch tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` proving CI shell is allowed only when it directly invokes Python gates and contains no plugin validation, packaging, install, release, loop, `jq`, or parsing logic.
+- [x] T051 [P] [US3] Add `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/active-path-guard.json` for clean and expected-failure guard runs.
+- [x] T052 [P] [US3] Add `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/active-path-guard-cases.json` covering active Bash, `.sh`, `jq`, Git Bash, WSL, PowerShell helper, shell parsing, shell interpolation, `shell=True`, `os.system`, and command-string subprocess findings.
+- [x] T053 [US3] Add failing active-path guard tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` for blocking active gate findings and runner exit `1`.
+- [x] T054 [US3] Add failing active-path guard tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` for nonblocking classifications: archive provenance, temporary parity evidence, consumer Spec Kit helper, generated payload mirror, docs out of scope, CI dispatch glue, and XPLAT-008 cutover surface.
+- [x] T055 [US3] Add failing workflow-dispatch tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` proving CI shell is allowed only when it directly invokes Python gates and contains no plugin validation, packaging, install, release, loop, `jq`, or parsing logic.
 
 ### Implementation for User Story 3
 
-- [ ] T056 [US3] Implement active-path discovery and role classification in `speckit-pro/speckit_pro_runner/gates/active_path_guard.py` for `tests/speckit-pro/**`, `scripts/*`, reachable `speckit-pro/**/scripts/**`, and `.github/workflows/**`.
-- [ ] T057 [US3] Implement forbidden-pattern detection in `speckit-pro/speckit_pro_runner/gates/active_path_guard.py` for Bash, `.sh`, `jq`, Git Bash, WSL, PowerShell helpers, shell parsing, shell interpolation, `shell=True`, `os.system`, and command-string subprocess use.
-- [ ] T058 [US3] Implement nonblocking classifications in `speckit-pro/speckit_pro_runner/gates/active_path_guard.py` for archive/provenance, temporary parity evidence, consumer Spec Kit helpers, generated payload mirrors, docs out of scope, CI dispatch glue, and XPLAT-008 cutover surfaces.
-- [ ] T059 [US3] Register `active-path-guard` and `classify-shell-finding` in `speckit-pro/speckit_pro_runner/gates/registry.py`.
-- [ ] T060 [US3] Update `.github/workflows/pr-checks.yml` so plugin validation and release-readiness steps dispatch directly to Python runner gates without Bash or `jq` validation logic.
-- [ ] T061 [US3] Update `.github/workflows/release.yml` so release checks dispatch directly to Python runner gates without Bash or `jq` release logic.
-- [ ] T062 [US3] Remove active Bash command paths from `tests/speckit-pro/**`, `scripts/*.sh`, `speckit-pro/skills/**/scripts/**`, `speckit-pro/codex-skills/**/scripts/**`, and `speckit-pro/scripts/**` after their Python replacements are promoted, or reclassify retained files as inactive parity evidence.
-- [ ] T063 [US3] Update `CLAUDE.md` and `docs-site/src/content/docs/contribute-and-release.md` only for maintainer-facing repo-local Python gate commands required by XPLAT-007.
-- [ ] T064 [US3] Record XPLAT-008 handoff items for active Claude/Codex invocation cutover, generated release payloads, public docs, release notes, installed-cache UAT, native platform UAT, update, autoheal, and public release readiness in release-readiness evidence.
-- [ ] T065 [US3] Verify the final active-path guard emits `status=ok`, exit `0`, and `data.blocking_count=0` for the implementation.
+- [x] T056 [US3] Implement active-path discovery and role classification in `speckit-pro/speckit_pro_runner/gates/active_path_guard.py` for `tests/speckit-pro/**`, `scripts/*`, reachable `speckit-pro/**/scripts/**`, and `.github/workflows/**`.
+- [x] T057 [US3] Implement forbidden-pattern detection in `speckit-pro/speckit_pro_runner/gates/active_path_guard.py` for Bash, `.sh`, `jq`, Git Bash, WSL, PowerShell helpers, shell parsing, shell interpolation, `shell=True`, `os.system`, and command-string subprocess use.
+- [x] T058 [US3] Implement nonblocking classifications in `speckit-pro/speckit_pro_runner/gates/active_path_guard.py` for archive/provenance, temporary parity evidence, consumer Spec Kit helpers, generated payload mirrors, docs out of scope, CI dispatch glue, and XPLAT-008 cutover surfaces.
+- [x] T059 [US3] Register `active-path-guard` and `classify-shell-finding` in `speckit-pro/speckit_pro_runner/gates/registry.py`.
+- [x] T060 [US3] Update `.github/workflows/pr-checks.yml` so plugin validation and release-readiness steps dispatch directly to Python runner gates without Bash or `jq` validation logic.
+- [x] T061 [US3] Update `.github/workflows/release.yml` so release checks dispatch directly to Python runner gates without Bash or `jq` release logic.
+- [x] T062 [US3] Remove active Bash command paths from `tests/speckit-pro/**`, `scripts/*.sh`, `speckit-pro/skills/**/scripts/**`, `speckit-pro/codex-skills/**/scripts/**`, and `speckit-pro/scripts/**` after their Python replacements are promoted, or reclassify retained files as inactive parity evidence.
+- [x] T063 [US3] Update `CLAUDE.md` and `docs-site/src/content/docs/contribute-and-release.md` only for maintainer-facing repo-local Python gate commands required by XPLAT-007.
+- [x] T064 [US3] Record XPLAT-008 handoff items for active Claude/Codex invocation cutover, generated release payloads, public docs, release notes, installed-cache UAT, native platform UAT, update, autoheal, and public release readiness in release-readiness evidence.
+- [x] T065 [US3] Verify the final active-path guard emits `status=ok`, exit `0`, and `data.blocking_count=0` for the implementation.
 
 **Checkpoint**: All user stories are independently functional, promoted gates have retirement evidence, and the active-path guard blocks active shell regressions.
 

@@ -4,7 +4,8 @@
 # Release automation can also dispatch the same checks for release-please PRs
 # created or updated with GITHUB_TOKEN, because those pull_request events are
 # suppressed by GitHub's recursive workflow guard.
-# Only plugins whose files changed (relative to the base branch) are tested.
+# XPLAT-007 routes plugin validation through Python runner gates. Changed-file
+# selective plugin matrices are deferred until the active Python gate owns them.
 # PR titles must follow Conventional Commits format.
 #
 # Security notes:
@@ -39,12 +40,8 @@ on:
 # Each job declares only what it needs (principle of least privilege).
 permissions: {}
 
-defaults:
-  run:
-    shell: bash
-
 # ─────────────────────────────────────────────────────────────────────
-# Job 1: Detect which plugin directories have changed
+# Job 1: Emit the Python-gated plugin matrix
 # ─────────────────────────────────────────────────────────────────────
 jobs:
   detect:
@@ -61,44 +58,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Detect changed plugin directories
+      - name: Emit Python-gated plugin matrix
         id: changed
-        env:
-          BASE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || inputs.base_ref }}
-        run: |
-          set -euo pipefail
-
-          # All files changed relative to the base branch.
-          changed_files=$(git diff --name-only "origin/${BASE_REF}...HEAD")
-
-          # A plugin counts as "changed" if its source directory, generated
-          # payload directory, out-of-plugin test directory, marketplace entry,
-          # or shared packaging automation changed. The test suite lives at
-          # repo-root tests/<plugin>/ so it is NOT shipped to consumers — but
-          # test-only changes must still trigger that plugin's matrix job.
-          # Plugin directory names are kebab-case (Constitution Principle I), safe for regex.
-          plugins=()
-          for manifest in */.claude-plugin/plugin.json; do
-            [ -e "$manifest" ] || continue
-            dir="${manifest%%/.claude-plugin/plugin.json}"
-            if printf '%s\n' "$changed_files" | grep -qE "^(${dir}|tests/${dir}|dist/(claude|codex)/${dir})/|^\\.claude-plugin/marketplace\\.json$|^\\.agents/plugins/marketplace\\.json$|^scripts/(build-plugin-payloads|sync-marketplace-versions)\\.sh$|^release-please-config\\.json$|^\\.github/workflows/(pr-checks|release|deploy-docs)\\.yml$"; then
-              plugins+=("$dir")
-            fi
-          done
-
-          # Build a JSON array from the matched directories (jq handles escaping).
-          if [ ${#plugins[@]} -gt 0 ]; then
-            json_array=$(printf '%s\n' "${plugins[@]}" | jq -R -s -c 'split("\n") | map(select(. != ""))')
-            echo "Changed plugin directories: ${json_array}"
-          else
-            json_array='[]'
-            echo "No plugin directories changed in this PR. Test job will be skipped."
-          fi
-
-          echo "plugins=${json_array}" >> "$GITHUB_OUTPUT"
+        run: echo 'plugins=["speckit-pro"]' >> "$GITHUB_OUTPUT"
 
   # ───────────────────────────────────────────────────────────────────
-  # Job 2: Run plugin test suites (matrix over changed plugins)
+  # Job 2: Run Python-dispatched plugin gates
   # ───────────────────────────────────────────────────────────────────
   test:
     name: "test (${{ matrix.plugin }})"
@@ -119,108 +84,13 @@ jobs:
       - name: Report test toolchain
         env:
           PLUGIN: ${{ matrix.plugin }}
-        run: |
-          set -euo pipefail
-          checker="tests/${PLUGIN}/check-toolchain.sh"
-          if [ -f "$checker" ]; then
-            bash "$checker" --mode tests
-          else
-            echo "No toolchain checker found for ${PLUGIN}; continuing."
-          fi
+        run: PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-toolchain-preflight.json
 
       - name: Run test suite
         env:
           PLUGIN: ${{ matrix.plugin }}
           SPECKIT_SKIP_TOOLCHAIN_CHECK: "1"
-        run: |
-          set -euo pipefail
-
-          # The test suite lives at repo-root tests/<plugin>/ (outside the plugin
-          # dir, so it is not shipped to consumers). Run it from the repo root;
-          # run-all.sh self-locates the plugin it validates.
-          runner="tests/${PLUGIN}/run-all.sh"
-          if [ ! -f "$runner" ]; then
-            echo "::error::Missing test runner: ${runner}"
-            echo "Plugin '${PLUGIN}' is missing the required test runner at '${runner}'."
-            echo "Every plugin must include tests/<plugin>/run-all.sh."
-            exit 2
-          fi
-
-          bash "$runner"
-
-  # ───────────────────────────────────────────────────────────────────
-  # Job 2b: Run speckit-pro against the latest upstream jq release.
-  # The runner image jq can lag behind Homebrew/latest-release behavior, so
-  # this leg catches parser/regression drift before maintainers discover it
-  # locally on newer toolchains.
-  # ───────────────────────────────────────────────────────────────────
-  test-latest-jq:
-    name: test latest jq (speckit-pro)
-    runs-on: ubuntu-latest
-    if: needs.detect.result == 'success' && contains(needs.detect.outputs.plugins, 'speckit-pro')
-    needs: [detect]
-    permissions:
-      contents: read
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Install latest jq release
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-
-          jq_metadata="$(
-            python3 - <<'PY'
-          import json
-          import os
-          import sys
-          from urllib.request import Request, urlopen
-
-          request = Request(
-              "https://api.github.com/repos/jqlang/jq/releases/latest",
-              headers={
-                  "Accept": "application/vnd.github+json",
-                  "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
-              },
-          )
-          with urlopen(request, timeout=30) as response:
-              release = json.load(response)
-
-          for asset in release.get("assets", []):
-              if asset.get("name") == "jq-linux-amd64":
-                  digest = asset.get("digest", "")
-                  if not digest.startswith("sha256:"):
-                      print("latest jq release asset is missing a sha256 digest", file=sys.stderr)
-                      sys.exit(1)
-                  print(asset["browser_download_url"])
-                  print(digest.split(":", 1)[1])
-                  break
-          else:
-              print("latest jq release did not include jq-linux-amd64", file=sys.stderr)
-              sys.exit(1)
-          PY
-          )"
-
-          jq_url="$(printf '%s\n' "$jq_metadata" | sed -n '1p')"
-          jq_sha256="$(printf '%s\n' "$jq_metadata" | sed -n '2p')"
-          curl -fsSL "$jq_url" -o "${RUNNER_TEMP}/jq"
-          printf '%s  %s\n' "$jq_sha256" "${RUNNER_TEMP}/jq" | sha256sum -c -
-          chmod 0755 "${RUNNER_TEMP}/jq"
-          echo "${RUNNER_TEMP}" >> "$GITHUB_PATH"
-
-      - name: Report latest-jq toolchain
-        run: |
-          set -euo pipefail
-          jq --version
-          bash tests/speckit-pro/check-toolchain.sh --mode tests
-
-      - name: Run speckit-pro suite with latest jq
-        env:
-          SPECKIT_SKIP_TOOLCHAIN_CHECK: "1"
-        run: bash tests/speckit-pro/run-all.sh
+        run: PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json
 
   # ───────────────────────────────────────────────────────────────────
   # Job 3: Validate PR title against Conventional Commits format
@@ -240,13 +110,7 @@ jobs:
         env:
           TITLE: ${{ github.event_name == 'pull_request' && github.event.pull_request.title || inputs.pr_title }}
           BASE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || inputs.base_ref }}
-        run: |
-          set -euo pipefail
-
-          git diff --name-only "origin/${BASE_REF}...HEAD" > .git/pr-changed-files.txt
-          speckit-pro/skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh \
-            --title "$TITLE" \
-            --changed-files .git/pr-changed-files.txt
+        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness-live-github.json
 
   # ───────────────────────────────────────────────────────────────────
   # Job 4: Validate GitHub Actions workflow syntax and semantics
@@ -459,7 +323,7 @@ jobs:
     name: validate-plugins
     runs-on: ubuntu-latest
     if: always()
-    needs: [detect, test, test-latest-jq]
+    needs: [detect, test]
     permissions: {}
 
     steps:
@@ -468,7 +332,6 @@ jobs:
           set -euo pipefail
           detect_result="${{ needs.detect.result }}"
           test_result="${{ needs.test.result }}"
-          latest_jq_result="${{ needs.test-latest-jq.result }}"
           # detect failure or cancellation means the workflow itself is broken — fail the sentinel
           if [[ "$detect_result" == "failure" || "$detect_result" == "cancelled" ]]; then
             echo "::error::Detect job did not succeed (result: ${detect_result}). Workflow is broken."
@@ -480,10 +343,4 @@ jobs:
             echo "::error::Plugin tests failed or were cancelled (result: ${test_result})."
             exit 1
           fi
-          if [[ "$latest_jq_result" == "success" || "$latest_jq_result" == "skipped" ]]; then
-            :
-          else
-            echo "::error::Latest jq tests failed or were cancelled (result: ${latest_jq_result})."
-            exit 1
-          fi
-          echo "Plugin tests passed or were skipped (result: ${test_result}); latest-jq tests passed or were skipped (result: ${latest_jq_result})."
+          echo "Plugin tests passed or were skipped (result: ${test_result})."

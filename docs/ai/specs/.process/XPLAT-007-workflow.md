@@ -683,8 +683,8 @@ the current marker plan instead of a single unscoped implementation pass.
 |---|---|---|---|
 | Foundation marker | T001-T013 | Complete | Commit `2b7158daf837402fb364d46af71ccaebb8981448`; checkpoint evidence `specs/xplat-007-python-tooling-and-release-gate-migration/.process/marker-plan/foundation-checkpoint.json`; Layer 4 passed 2160/2160 |
 | Test/eval runner gates | T014-T028 | Complete | Commit `b3ae3c52e77988f01ec3534b72b3beb45a0b31fa`; checkpoint evidence `specs/xplat-007-python-tooling-and-release-gate-migration/.process/marker-plan/us1-checkpoint.json`; Python default-suite request passed; Layer 4 passed 2160/2160 |
-| Payload/install/release helpers | T029-T050 | In Progress | Next marker `us2` |
-| Active-path guardrails and cleanup | Pending | Pending | Pending |
+| Payload/install/release helpers | T029-T050 | Complete | Commit `692afc3b03d20206b630c505545abc1f1c7453d3`; checkpoint evidence `specs/xplat-007-python-tooling-and-release-gate-migration/.process/marker-plan/us2-checkpoint.json`; payload, install, and release-readiness requests passed; Layer 4 passed 2160/2160 |
+| Active-path guardrails and cleanup | T051-T065 | In Progress | Next marker `us3` |
 | Smoke and handoff | Pending | Pending | Pending |
 
 ---
