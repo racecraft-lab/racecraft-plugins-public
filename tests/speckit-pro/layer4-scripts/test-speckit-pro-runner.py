@@ -90,6 +90,47 @@ def changed_paths_against_review_base() -> list[str]:
     raise AssertionError(f"Unable to diff changed paths against review base: {'; '.join(errors)}")
 
 
+def changed_status_against_review_base() -> dict[str, str]:
+    candidates = ["origin/main...HEAD"]
+    parents = subprocess.run(
+        ["git", "rev-list", "--parents", "-n", "1", "HEAD"],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if parents.returncode == 0 and len(parents.stdout.split()) >= 3:
+        candidates.append("HEAD^1...HEAD")
+
+    errors = []
+    for candidate in candidates:
+        completed = subprocess.run(
+            ["git", "diff", "--name-status", candidate],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if completed.returncode == 0:
+            status_by_path: dict[str, str] = {}
+            for line in completed.stdout.splitlines():
+                parts = line.split("\t")
+                if len(parts) < 2:
+                    continue
+                status_by_path[parts[-1]] = parts[0][0]
+            return status_by_path
+        errors.append(f"{candidate}: {completed.stderr.strip() or completed.stdout.strip()}")
+
+    if CHANGED_FILES_FILE.is_file():
+        return {
+            line: "M"
+            for line in CHANGED_FILES_FILE.read_text(encoding="utf-8").splitlines()
+            if line
+        }
+
+    raise AssertionError(f"Unable to diff changed path statuses against review base: {'; '.join(errors)}")
+
+
 def base_request(operation: str = "runtime-info", inputs: dict[str, object] | None = None) -> dict[str, object]:
     return {
         "schema_version": "1.0",
@@ -364,6 +405,7 @@ class RunnerFoundationTests(unittest.TestCase):
 
     def test_no_cutover_or_public_claim_surfaces_changed(self) -> None:
         changed = changed_paths_against_review_base()
+        status_by_path = changed_status_against_review_base()
         forbidden_exact = {
             "speckit-pro/.claude-plugin/plugin.json",
             "speckit-pro/.codex-plugin/plugin.json",
@@ -443,6 +485,9 @@ class RunnerFoundationTests(unittest.TestCase):
         )
         for path in changed:
             if path in allowed_exact or path in allowed_xplat008_exact:
+                continue
+            if path.startswith("dist/") and "/scripts/" in path and path.endswith(".sh"):
+                self.assertEqual(status_by_path.get(path), "D", path)
                 continue
             if path.startswith(allowed_xplat008_prefixes):
                 continue
