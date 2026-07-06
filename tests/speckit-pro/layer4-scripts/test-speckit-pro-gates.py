@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 from pathlib import Path
 from typing import Any
@@ -870,6 +871,11 @@ class GateFoundationTests(unittest.TestCase):
             },
         )
         final_case = next(case for case in cases["cases"] if case["case_id"] == "final-current-implementation")
+        self.assertFalse(final_case["scan_changed_sources"])
+        self.assertIn(
+            "final current implementation scans the full release surface without requiring PR review-base diff metadata",
+            cases["coverage"],
+        )
         self.assertLessEqual(
             {
                 "dist/claude/speckit-pro/hooks",
@@ -891,6 +897,22 @@ class GateFoundationTests(unittest.TestCase):
             },
             set(final_case["scan_roots"]),
         )
+
+        with patch.object(active_path_guard, "review_base_ref", return_value=None):
+            response = active_path_guard.run_active_runtime_guard(
+                SimpleNamespace(helper_id="active-path-guard"),
+                SimpleNamespace(
+                    operation="active-runtime-guard",
+                    request_id="test-final-current-no-review-base",
+                    inputs={
+                        "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json",
+                        "case_id": "final-current-implementation",
+                    },
+                ),
+                REPO_ROOT,
+            )
+        self.assertEqual(response["status"], "ok")
+        self.assertEqual(response["data"]["blocking_count"], 0)
 
         with patch.object(active_path_guard, "review_base_ref", return_value=None):
             changed_sources = active_path_guard.changed_repo_sources(REPO_ROOT, {"scan_roots": ["speckit-pro/skills"]})

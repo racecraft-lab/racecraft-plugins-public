@@ -165,7 +165,11 @@ def run_active_runtime_guard(entry: Any, request: Any, repo_root: Path) -> dict[
         )
     coverage_findings = missing_xplat008_scan_root_findings(repo_root, case_result)
     diff_finding: RawFinding | None = None
-    if "files" not in case_result and case_result.get("scan_repo") is not False:
+    if (
+        "files" not in case_result
+        and case_result.get("scan_repo") is not False
+        and case_result.get("scan_changed_sources") is not False
+    ):
         changed_result = changed_repo_sources(repo_root, case_result)
         if isinstance(changed_result, RawFinding):
             diff_finding = changed_result
