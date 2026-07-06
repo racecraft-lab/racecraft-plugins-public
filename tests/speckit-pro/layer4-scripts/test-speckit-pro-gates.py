@@ -509,6 +509,49 @@ class GateFoundationTests(unittest.TestCase):
         self.assertFalse(record["invocation"]["shell_used"])
 
     def test_xplat008_active_runtime_guard_fixtures_block_only_active_runtime_findings(self) -> None:
+        from speckit_pro_runner.gates import active_path_guard
+
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "bash",
+                "bash",
+                "Run bash skills/speckit-autopilot/scripts/generate-spec-index.sh",
+                "repo",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/codex-agents/implement-executor.toml",
+                "script_file",
+                "runner.sh",
+                "runner.sh",
+                "repo",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "shell_interpolation",
+                "`speckit-pro/skills/speckit-status/SKILL.md`",
+                "`speckit-pro/skills/speckit-status/SKILL.md`",
+                "repo_baseline",
+            ),
+            "source_checkout_helper",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "jq",
+                "jq",
+                "Do not add a shell fallback, jq parsing path, Git Bash, WSL, or PowerShell requirement.",
+                "repo",
+            ),
+            "source_checkout_helper",
+        )
+
         cases = xplat008_fixture_cases("active-runtime-guard")
         self.assertEqual(cases["schema_version"], "1.0")
         self.assertEqual(cases["feature_id"], "XPLAT-008")

@@ -5,6 +5,8 @@ from __future__ import annotations
 import copy
 import json
 import re
+import os
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -148,7 +150,7 @@ def run_active_runtime_guard(entry: Any, request: Any, repo_root: Path) -> dict[
             data=active_runtime_base_data(entry, request.operation, "input_error"),
             diagnostics=[case_result],
         )
-    source_result = source_files(repo_root, case_result)
+    source_result = source_files(repo_root, case_result, repo_source_kind="repo_baseline")
     if is_diagnostic(source_result):
         return response(
             "input_error",
@@ -156,6 +158,8 @@ def run_active_runtime_guard(entry: Any, request: Any, repo_root: Path) -> dict[
             data=active_runtime_base_data(entry, request.operation, "input_error"),
             diagnostics=[source_result],
         )
+    if "files" not in case_result and case_result.get("scan_repo") is not False:
+        source_result.extend(changed_repo_sources(repo_root, case_result))
     findings = scan_sources_xplat008(source_result, repo_root)
     return active_runtime_guard_response(entry, request, findings)
 
@@ -470,9 +474,13 @@ def classify_xplat008_path(path: str, category: str, pattern: str, content: str,
     if path.startswith("dist/") and not path.endswith(("README.md", "CHANGELOG.md", "LICENSE")):
         return "blocking_active_runtime"
     if path.startswith("speckit-pro/skills/") or path.startswith("speckit-pro/codex-skills/"):
-        return "blocking_active_runtime" if source_kind == "fixture" else "source_checkout_helper"
+        if source_kind == "repo" and xplat008_repo_surface_exception(category, pattern, content):
+            return "source_checkout_helper"
+        return "blocking_active_runtime" if source_kind in {"fixture", "repo"} else "source_checkout_helper"
     if path.startswith("speckit-pro/agents/") or path.startswith("speckit-pro/codex-agents/"):
-        return "blocking_active_runtime" if source_kind == "fixture" else "source_checkout_helper"
+        if source_kind == "repo" and xplat008_repo_surface_exception(category, pattern, content):
+            return "source_checkout_helper"
+        return "blocking_active_runtime" if source_kind in {"fixture", "repo"} else "source_checkout_helper"
     if path in {"README.md", "speckit-pro/README.md"} or path.startswith("docs-site/src/content/docs/"):
         return "blocking_active_runtime" if source_kind == "fixture" else "docs_non_runtime"
     return "source_checkout_helper"
@@ -516,6 +524,26 @@ def xplat008_active_role(path: str) -> str:
     if path.startswith("docs-site/") or path in {"README.md", "speckit-pro/README.md"}:
         return "install_guidance"
     return "repository_text"
+
+
+def xplat008_repo_surface_exception(category: str, pattern: str, content: str) -> bool:
+    if category == "shell_interpolation" and pattern.startswith("`"):
+        return True
+    lowered = content.lower()
+    return any(
+        marker in lowered
+        for marker in (
+            "do not ",
+            "must not ",
+            "never ",
+            "without ",
+            "not require",
+            "not add",
+            "refuse",
+            "forbidden",
+            "specific command-language requirement",
+        )
+    )
 
 
 def remediation_for(classification: str) -> str:
@@ -652,7 +680,98 @@ def is_docs_or_workflow_tooling(content: str) -> bool:
     return any(marker in lowered for marker in markers) and not any(marker in lowered for marker in plugin_markers)
 
 
-def source_files(repo_root: Path, case: dict[str, Any]) -> list[SourceFile] | dict[str, Any]:
+def changed_repo_sources(repo_root: Path, case: dict[str, Any]) -> list[SourceFile]:
+    roots = case.get("scan_roots")
+    scan_roots = tuple(item for item in roots if isinstance(item, str) and item) if isinstance(roots, list) else SCAN_ROOTS
+    base = review_base_ref(repo_root)
+    if base is None:
+        return []
+    try:
+        completed = subprocess.run(
+            ["git", "diff", "--unified=0", "--no-color", base, "--", *scan_roots],
+            cwd=repo_root,
+            text=True,
+            capture_output=True,
+            timeout=10,
+            shell=False,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    if completed.returncode not in {0, 1}:
+        return []
+    return diff_added_line_sources(completed.stdout, repo_root)
+
+
+def review_base_ref(repo_root: Path) -> str | None:
+    candidates: list[str] = []
+    env_base = os.environ.get("GITHUB_BASE_REF")
+    if env_base:
+        candidates.extend([f"origin/{env_base}", env_base])
+    candidates.extend(["origin/main", "HEAD^"])
+    for candidate in candidates:
+        if not git_ref_exists(repo_root, candidate):
+            continue
+        merge_base = git_stdout(repo_root, ["git", "merge-base", "HEAD", candidate])
+        return merge_base or candidate
+    return None
+
+
+def git_ref_exists(repo_root: Path, ref: str) -> bool:
+    return subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", ref],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        timeout=5,
+        shell=False,
+        check=False,
+    ).returncode == 0
+
+
+def git_stdout(repo_root: Path, argv: list[str]) -> str:
+    completed = subprocess.run(
+        argv,
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        timeout=5,
+        shell=False,
+        check=False,
+    )
+    return completed.stdout.strip() if completed.returncode == 0 else ""
+
+
+def diff_added_line_sources(diff_text: str, repo_root: Path) -> list[SourceFile]:
+    sources: list[SourceFile] = []
+    current_path: str | None = None
+    added_lines: list[str] = []
+
+    def flush() -> None:
+        nonlocal added_lines
+        if current_path is None or not added_lines:
+            added_lines = []
+            return
+        path = repo_root / current_path
+        if path.suffix in TEXT_SUFFIXES:
+            sources.append(SourceFile(current_path, "\n".join(added_lines), "repo"))
+        added_lines = []
+
+    for line in diff_text.splitlines():
+        if line.startswith("diff --git "):
+            flush()
+            current_path = None
+            continue
+        if line.startswith("+++ b/"):
+            current_path = normalize_path(line.removeprefix("+++ b/"))
+            continue
+        if line.startswith("+") and not line.startswith("+++"):
+            added_lines.append(line[1:])
+    flush()
+    return sources
+
+
+def source_files(repo_root: Path, case: dict[str, Any], *, repo_source_kind: str = "repo") -> list[SourceFile] | dict[str, Any]:
     raw_files = case.get("files")
     if isinstance(raw_files, list):
         sources: list[SourceFile] = []
@@ -665,26 +784,26 @@ def source_files(repo_root: Path, case: dict[str, Any]) -> list[SourceFile] | di
         return []
     raw_roots = case.get("scan_roots")
     if isinstance(raw_roots, list) and all(isinstance(item, str) and item for item in raw_roots):
-        return scan_repo_sources(repo_root, roots=tuple(raw_roots))
-    return scan_repo_sources(repo_root)
+        return scan_repo_sources(repo_root, roots=tuple(raw_roots), source_kind=repo_source_kind)
+    return scan_repo_sources(repo_root, source_kind=repo_source_kind)
 
 
-def scan_repo_sources(repo_root: Path, *, roots: tuple[str, ...] = SCAN_ROOTS) -> list[SourceFile]:
+def scan_repo_sources(repo_root: Path, *, roots: tuple[str, ...] = SCAN_ROOTS, source_kind: str = "repo") -> list[SourceFile]:
     sources: list[SourceFile] = []
     for root in roots:
         path = repo_root / root
         if path.is_file():
-            maybe_add_source(repo_root, path, sources)
+            maybe_add_source(repo_root, path, sources, source_kind)
             continue
         if not path.is_dir():
             continue
         for candidate in sorted(path.rglob("*")):
             if candidate.is_file():
-                maybe_add_source(repo_root, candidate, sources)
+                maybe_add_source(repo_root, candidate, sources, source_kind)
     return sources
 
 
-def maybe_add_source(repo_root: Path, path: Path, sources: list[SourceFile]) -> None:
+def maybe_add_source(repo_root: Path, path: Path, sources: list[SourceFile], source_kind: str = "repo") -> None:
     if path.suffix not in TEXT_SUFFIXES:
         return
     try:
@@ -693,7 +812,7 @@ def maybe_add_source(repo_root: Path, path: Path, sources: list[SourceFile]) -> 
         content = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return
-    sources.append(SourceFile(path.resolve(strict=False).relative_to(repo_root.resolve(strict=False)).as_posix(), content, "repo"))
+    sources.append(SourceFile(path.resolve(strict=False).relative_to(repo_root.resolve(strict=False)).as_posix(), content, source_kind))
 
 
 def load_case(repo_root: Path, inputs: dict[str, Any], *, default_case_file: str = DEFAULT_CASE_FILE) -> dict[str, Any]:

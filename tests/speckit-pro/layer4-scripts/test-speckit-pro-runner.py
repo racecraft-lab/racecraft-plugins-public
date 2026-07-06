@@ -333,6 +333,12 @@ class RunnerFoundationTests(unittest.TestCase):
 
     def test_no_cutover_or_public_claim_surfaces_changed(self) -> None:
         changed = changed_paths_against_review_base()
+        forbidden_exact = {
+            "speckit-pro/.claude-plugin/plugin.json",
+            "speckit-pro/.codex-plugin/plugin.json",
+        }
+        for path in changed:
+            self.assertNotIn(path, forbidden_exact)
         if any(path.startswith("specs/xplat-008-") for path in changed):
             self.skipTest("XPLAT-008 intentionally owns the installed cutover and public-claim surfaces")
         forbidden_prefixes = (
@@ -361,14 +367,9 @@ class RunnerFoundationTests(unittest.TestCase):
             "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh",
             "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
         }
-        forbidden_exact = {
-            "speckit-pro/.claude-plugin/plugin.json",
-            "speckit-pro/.codex-plugin/plugin.json",
-        }
         for path in changed:
             if path in allowed_exact:
                 continue
-            self.assertNotIn(path, forbidden_exact)
             self.assertFalse(path.startswith(forbidden_prefixes), path)
             if path.startswith("docs/"):
                 self.assertTrue(path.startswith("docs/ai/specs/") or path.startswith("docs/prd-"), path)
