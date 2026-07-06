@@ -40,12 +40,12 @@ def run_runner_invocation_gate(entry: Any, request: Any) -> dict[str, Any]:
         )
     case = case_result
 
-    record, diagnostics = runner_invocation_record(case, request.request_id)
-    accepted = bool(record["interpreter_resolution"]["accepted"])
-    status = "ok" if accepted else "expected_failure"
+    record, diagnostics = runner_invocation_record(case, request.request_id, repo_root)
+    passed = record["status"] == "pass"
+    status = "ok" if passed else "expected_failure"
     data = runner_invocation_base_data(entry, request.operation, status)
     data["runner_invocation"] = record
-    if accepted:
+    if passed:
         return response("ok", request_id=request.request_id, data=data)
 
     data["gate"]["gate_status"] = "fail"
@@ -151,7 +151,7 @@ def runner_invocation_case(repo_root: Path, inputs: dict[str, Any]) -> dict[str,
     return dict(selected)
 
 
-def runner_invocation_record(case: dict[str, Any], request_id: str | None) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def runner_invocation_record(case: dict[str, Any], request_id: str | None, repo_root: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     product = normalize_enum(case.get("product"), {"claude", "codex"}, "claude")
     platform_name = normalize_enum(case.get("platform"), {"windows", "macos", "linux"}, host_platform())
     operation = normalize_enum(
@@ -163,6 +163,7 @@ def runner_invocation_record(case: dict[str, Any], request_id: str | None) -> tu
     cache_root = str(case.get("cache_root") or ".")
     request_id_value = request_id or f"xplat-008-{product}-{platform_name}-{operation}"
     resolution, diagnostics = resolve_python_interpreter(platform_name, case, cache_root)
+    fixture_backed = isinstance(case.get("candidate_results"), list)
 
     runner_request = {
         "schema_version": "1.0",
@@ -185,21 +186,25 @@ def runner_invocation_record(case: dict[str, Any], request_id: str | None) -> tu
         "stderr_mode": "diagnostics_only",
         "shell_used": False,
     }
-    runner_response = (
-        {
+    runner_response = None
+    if accepted and fixture_backed:
+        runner_response = {
             "schema_version": "1.0",
             "status": "ok",
             "exit_code": 0,
             "legacy_exit_code": None,
             "diagnostics": [],
+            "evidence_source": "fixture",
             "data": {
                 "invoked_module": "speckit_pro_runner",
                 "cache_root": cache_root,
             },
         }
-        if accepted
-        else None
-    )
+    elif accepted:
+        runner_response, execution_diag = execute_runner_runtime_info(invocation["argv"], runner_request, repo_root, cache_root)
+        if execution_diag is not None:
+            diagnostics = [execution_diag]
+    passed = accepted and not diagnostics
     record = {
         "schema_version": "1.0",
         "request_id": request_id_value,
@@ -211,7 +216,7 @@ def runner_invocation_record(case: dict[str, Any], request_id: str | None) -> tu
         "invocation": invocation,
         "runner_request": runner_request,
         "runner_response": runner_response,
-        "status": "pass" if accepted else "blocked",
+        "status": "pass" if passed else "blocked",
         "diagnostics": diagnostics,
     }
     return record, diagnostics
@@ -248,7 +253,9 @@ def resolve_python_interpreter(platform_name: str, case: dict[str, Any], cache_r
             failure_messages.append(f"{candidate}: Python {version_text} is below 3.11")
             continue
         resolved = str(record.get("resolved_executable") or candidate.split()[0])
-        invocation_prefix = invocation_prefix_for_candidate(platform_name, candidate, resolved)
+        invocation_prefix = record_invocation_prefix(record)
+        if invocation_prefix is None:
+            invocation_prefix = invocation_prefix_for_candidate(platform_name, candidate, resolved)
         return {
             "attempted_candidates": attempted,
             "resolved_executable": resolved,
@@ -303,6 +310,7 @@ def probe_host_candidates(platform_name: str) -> list[dict[str, Any]]:
                 "returncode": int(completed.returncode),
                 "version": stdout[0] if stdout else None,
                 "resolved_executable": stdout[1] if len(stdout) > 1 else argv[0],
+                "invocation_argv_prefix": invocation_prefix_for_live_probe(candidate, stdout[1] if len(stdout) > 1 else argv[0]),
                 "stderr": completed.stderr.strip(),
             }
         )
@@ -316,6 +324,20 @@ def probe_argv_for_candidate(candidate: str) -> list[str]:
     return argv
 
 
+def record_invocation_prefix(record: dict[str, Any]) -> list[str] | None:
+    raw = record.get("invocation_argv_prefix")
+    if isinstance(raw, list) and raw and all(isinstance(item, str) and item for item in raw):
+        return list(raw)
+    return None
+
+
+def invocation_prefix_for_live_probe(candidate: str, resolved_executable: str) -> list[str]:
+    argv = candidate.split()
+    if argv and argv[0].lower() == "py":
+        return probe_argv_for_candidate(candidate)
+    return [resolved_executable]
+
+
 def invocation_prefix_for_candidate(platform_name: str, candidate: str, resolved_executable: str) -> list[str]:
     argv = candidate.split()
     if platform_name == "windows" and argv and argv[0].lower() == "py":
@@ -323,8 +345,64 @@ def invocation_prefix_for_candidate(platform_name: str, candidate: str, resolved
         if len(argv) > 1:
             selector = "-3" if argv[1] == "-V:3" else argv[1]
         if selector and selector.startswith("-"):
-            return [resolved_executable, selector]
+            executable_name = resolved_executable.replace("\\", "/").rsplit("/", 1)[-1].lower()
+            if executable_name in {"py", "py.exe"}:
+                return [resolved_executable, selector]
     return [resolved_executable]
+
+
+def execute_runner_runtime_info(
+    argv: list[str],
+    runner_request: dict[str, Any],
+    repo_root: Path,
+    cache_root: str,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    cache_path = Path(cache_root.replace("\\", "/"))
+    cwd = cache_path if cache_path.is_absolute() else repo_root / cache_path
+    if not cwd.is_dir():
+        cwd = repo_root
+    try:
+        completed = subprocess.run(
+            argv,
+            input=json.dumps(runner_request),
+            text=True,
+            capture_output=True,
+            timeout=10,
+            shell=False,
+            cwd=cwd,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return None, diagnostic(
+            "runner_invocation_failed",
+            "selected Python interpreter could not execute speckit_pro_runner",
+            details={"error": type(exc).__name__, "cache_root": cache_root},
+            remediation_summary="Verify the selected interpreter can run the installed speckit_pro_runner package.",
+            remediation_actions=["Run the recorded argv from the installed plugin cache.", "Repair the installed cache or select another Python 3.11+ interpreter."],
+        )
+    try:
+        parsed = json.loads(completed.stdout)
+    except json.JSONDecodeError:
+        parsed = {
+            "schema_version": "1.0",
+            "status": "subprocess_failure",
+            "exit_code": completed.returncode,
+            "legacy_exit_code": None,
+            "diagnostics": [],
+            "data": {
+                "stdout_preview": completed.stdout[:200],
+                "stderr_preview": completed.stderr[:200],
+            },
+        }
+    if completed.returncode == 0 and parsed.get("status") == "ok":
+        return parsed, None
+    return parsed, diagnostic(
+        "runner_invocation_failed",
+        "selected Python interpreter did not return a successful runner runtime-info response",
+        details={"exit_code": completed.returncode, "status": parsed.get("status")},
+        remediation_summary="Repair the installed runner payload before claiming invocation readiness.",
+        remediation_actions=["Inspect runner_response for stdout/stderr diagnostics.", "Retry after reinstalling or repairing the plugin cache."],
+    )
 
 
 def candidate_order(platform_name: str) -> list[str]:

@@ -364,7 +364,7 @@ def gate_registry_report() -> dict[str, Any]:
     groups = sorted({entry.group for entry in GATE_OPERATIONS})
     return {
         "schema_version": "1.0",
-        "feature_id": "XPLAT-007",
+        "feature_id": "XPLAT-007+XPLAT-008",
         "promotion_status": "mixed",
         "active_cutover": False,
         "groups": groups,

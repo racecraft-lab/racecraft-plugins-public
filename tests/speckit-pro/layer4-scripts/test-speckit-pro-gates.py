@@ -188,6 +188,7 @@ class GateFoundationTests(unittest.TestCase):
 
         report = gate_registry_report()
         self.assertEqual(report["schema_version"], "1.0")
+        self.assertEqual(report["feature_id"], "XPLAT-007+XPLAT-008")
         self.assertEqual(report["promotion_status"], "mixed")
         self.assertFalse(report["active_cutover"])
         self.assertEqual(
@@ -443,9 +444,40 @@ class GateFoundationTests(unittest.TestCase):
                 / "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/contracts/runner-invocation.schema.json"
             ).read_text(encoding="utf-8")
         )
+        release_contract = json.loads(
+            (
+                REPO_ROOT
+                / "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/contracts/release-readiness.schema.json"
+            ).read_text(encoding="utf-8")
+        )
         argv_contract = contract["properties"]["invocation"]["properties"]["argv"]
         self.assertEqual(len(argv_contract["oneOf"]), 3)
         self.assertEqual(contract["$defs"]["diagnostic"]["properties"]["remediation"]["type"], "object")
+        release_runner = release_contract["$defs"]["runner_invocation"]
+        self.assertEqual(release_runner["properties"]["invocation"]["properties"]["argv"], argv_contract)
+        self.assertEqual(
+            release_contract["$defs"]["interpreter_resolution"],
+            contract["$defs"]["interpreter_resolution"],
+        )
+        self.assertEqual(
+            release_contract["$defs"]["diagnostic"]["properties"]["remediation"]["type"],
+            "object",
+        )
+
+        from speckit_pro_runner.helpers import install as install_helper
+
+        self.assertEqual(
+            install_helper.invocation_prefix_for_candidate("windows", "py -V:3", "C:/Python312/python.exe"),
+            ["C:/Python312/python.exe"],
+        )
+        self.assertEqual(
+            install_helper.invocation_prefix_for_candidate("windows", "py -V:3", "C:/Windows/py.exe"),
+            ["C:/Windows/py.exe", "-3"],
+        )
+        self.assertEqual(
+            install_helper.invocation_prefix_for_live_probe("py -V:3", "C:/Python312/python.exe"),
+            ["py", "-3"],
+        )
 
         pass_cases = [
             "windows-py-v3",
@@ -497,6 +529,7 @@ class GateFoundationTests(unittest.TestCase):
                 )
                 self.assertEqual(record["runner_request"]["helper_id"], "runner")
                 self.assertEqual(record["runner_response"]["schema_version"], "1.0")
+                self.assertEqual(record["runner_response"]["evidence_source"], "fixture")
                 self.assertEqual(record["status"], "pass")
                 self.assertEqual(record["diagnostics"], [])
                 self.assert_no_shell_argv(record["invocation"]["argv"])
@@ -625,6 +658,24 @@ class GateFoundationTests(unittest.TestCase):
         self.assertIsInstance(changed_sources, active_path_guard.RawFinding)
         self.assertEqual(changed_sources.classification, "blocking_active_runtime")
         self.assertEqual(changed_sources.category, "diff_scan")
+        self.assertNotIn("HEAD^", active_path_guard.review_base_ref.__code__.co_consts)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            completed, response, stderr_records = run_runner(
+                gate_request(
+                    "active-path-guard",
+                    "active-runtime-guard",
+                    inputs={"repo_root": tmp},
+                )
+            )
+        self.assertEqual(completed.returncode, 3)
+        self.assert_response(response, "missing_prerequisite")
+        self.assertEqual([diag["code"] for diag in stderr_records], ["missing_prerequisite"])
+        self.assertEqual(response["data"]["gate"]["comparison_ids"], ["xplat-008-active-runtime-guard"])
+        self.assertEqual(
+            response["data"]["gate"]["promotion_record"],
+            "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json",
+        )
 
         completed, response, stderr_records = run_runner(
             gate_request(

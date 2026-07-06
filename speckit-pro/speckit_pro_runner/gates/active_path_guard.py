@@ -106,7 +106,12 @@ def run_active_path_guard(entry: Any, request: Any) -> dict[str, Any]:
     repo_root_result = resolve_repo_root(request.inputs)
     if isinstance(repo_root_result, dict):
         status = "missing_prerequisite" if repo_root_result["code"] == "missing_prerequisite" else "input_error"
-        return response(status, request_id=request.request_id, data=base_data(entry, request.operation, status), diagnostics=[repo_root_result])
+        data = (
+            active_runtime_base_data(entry, request.operation, status)
+            if request.operation == "active-runtime-guard"
+            else base_data(entry, request.operation, status)
+        )
+        return response(status, request_id=request.request_id, data=data, diagnostics=[repo_root_result])
     repo_root = repo_root_result
 
     if request.operation == "active-runtime-guard":
@@ -780,7 +785,7 @@ def review_base_ref(repo_root: Path) -> str | None:
     env_base = os.environ.get("GITHUB_BASE_REF")
     if env_base:
         candidates.extend([f"origin/{env_base}", env_base])
-    candidates.extend(["origin/main", "HEAD^"])
+    candidates.append("origin/main")
     for candidate in candidates:
         if not git_ref_exists(repo_root, candidate):
             continue
