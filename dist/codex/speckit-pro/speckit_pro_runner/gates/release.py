@@ -51,6 +51,24 @@ XPLAT008_BLOCKER_CLASSES = {
     "unsafe_repair_claim",
 }
 VALID_STATUS = {"pass", "fail"}
+EVIDENCE_STATUS = {"pass", "fail", "blocked"}
+REPAIR_ACTION_TYPES = {"autoheal_refresh", "manual_remediation"}
+REPAIR_STATUS = {"completed", "skipped", "blocked"}
+RUNNER_OPERATIONS = {"preflight", "scaffold", "status", "autopilot-dry-run", "doctor", "update", "autoheal"}
+PAYLOAD_RESULT_KEYS = {
+    "payload_surface",
+    "plugin_version",
+    "runner_version",
+    "expected_files",
+    "actual_files",
+    "missing_paths",
+    "extra_paths",
+    "mismatched_paths",
+    "path_leaks",
+    "file_tree_hash",
+    "status",
+}
+PAYLOAD_FILE_KEYS = {"path", "source_path", "kind", "transform", "sha256", "byte_count", "required"}
 XPLAT008_REQUIRED_UAT_ROWS = (
     ("claude", "windows"),
     ("claude", "macos"),
@@ -195,10 +213,11 @@ def release_readiness_xplat008(entry: Any, request: Any, repo_root: Path) -> dic
     case = case_result
 
     live_evidence = live_xplat008_gate_evidence(repo_root) if case.get("use_live_gate_evidence") is not False else {}
-    payload_results = [
+    payload_evidence_records = [
         *normalize_payload_results(case.get("payload_results")),
         *normalize_payload_results(live_evidence.get("payload_results")),
     ]
+    payload_results = project_payload_results(payload_evidence_records)
     uat_rows = normalize_uat_rows(case.get("uat_rows"))
     repair_actions = normalize_repair_actions(case.get("repair_actions"))
     public_claim_results = normalize_public_claim_results(case.get("public_claim_results"))
@@ -214,7 +233,7 @@ def release_readiness_xplat008(entry: Any, request: Any, repo_root: Path) -> dic
 
     checks.extend(
         computed_xplat008_checks(
-            payload_results,
+            payload_evidence_records,
             uat_rows,
             repair_actions,
             public_claim_results,
@@ -252,11 +271,6 @@ def release_readiness_xplat008(entry: Any, request: Any, repo_root: Path) -> dic
             "install_health": ["tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/install-health-repair-cases.json"],
             "public_claims": ["tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json"],
             "runner_invocations": ["tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json"],
-            "live_gate_requests": [
-                "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/active-runtime-guard.json",
-                "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness.json",
-                "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/runner-invocation.json",
-            ],
         },
         "traceability": traceability,
     }
@@ -515,11 +529,33 @@ def malformed_repair_action_fields(item: dict[str, Any]) -> list[str]:
     problems: list[str] = []
     require_string(item, "action_id", problems)
     require_string(item, "finding_id", problems)
-    require_enum(item, "action_type", {"safe_repair", "manual_remediation"}, problems)
+    require_enum(item, "action_type", REPAIR_ACTION_TYPES, problems)
     require_string(item, "target_path", problems)
-    require_enum(item, "status", {"pass", "blocked"}, problems)
+    require_enum(item, "status", REPAIR_STATUS, problems)
+    require_string(item, "message", problems)
+    require_list(item, "manual_steps", problems)
     if not isinstance(item.get("digest_verified"), bool):
         problems.append("digest_verified")
+    action_type = item.get("action_type")
+    source_path = item.get("source_path")
+    if action_type == "autoheal_refresh":
+        if not isinstance(source_path, str) or not source_path:
+            problems.append("source_path")
+        if item.get("digest_verified") is not True:
+            problems.append("digest_verified")
+        if item.get("status") != "completed":
+            problems.append("status")
+    elif action_type == "manual_remediation":
+        if source_path is not None:
+            problems.append("source_path")
+        if item.get("digest_verified") is not False:
+            problems.append("digest_verified")
+        if item.get("status") != "blocked":
+            problems.append("status")
+        if not isinstance(item.get("manual_steps"), list) or not item.get("manual_steps"):
+            problems.append("manual_steps")
+    elif "source_path" not in item:
+        problems.append("source_path")
     return problems
 
 
@@ -529,7 +565,7 @@ def malformed_public_claim_fields(item: dict[str, Any]) -> list[str]:
     require_string(item, "surface", problems)
     require_string(item, "claim_text_or_pattern", problems)
     require_string(item, "classification", problems)
-    require_enum(item, "status", VALID_STATUS, problems)
+    require_enum(item, "status", EVIDENCE_STATUS, problems)
     require_list(item, "evidence", problems)
     return problems
 
@@ -540,8 +576,8 @@ def malformed_runner_invocation_fields(item: dict[str, Any]) -> list[str]:
     require_enum(item, "product", {"claude", "codex"}, problems)
     require_enum(item, "platform", {"windows", "macos", "linux"}, problems)
     require_string(item, "surface_path", problems)
-    require_string(item, "operation", problems)
-    require_enum(item, "status", {"pass", "blocked"}, problems)
+    require_enum(item, "operation", RUNNER_OPERATIONS, problems)
+    require_enum(item, "status", EVIDENCE_STATUS, problems)
     if not isinstance(item.get("interpreter_resolution"), dict):
         problems.append("interpreter_resolution")
     invocation = item.get("invocation")
@@ -551,6 +587,12 @@ def malformed_runner_invocation_fields(item: dict[str, Any]) -> list[str]:
         argv = invocation.get("argv")
         if not isinstance(argv, list) or "-m" not in argv or "speckit_pro_runner" not in argv:
             problems.append("invocation.argv")
+        if invocation.get("stdin_mode") != "single_json_request":
+            problems.append("invocation.stdin_mode")
+        if invocation.get("stdout_mode") != "single_json_response":
+            problems.append("invocation.stdout_mode")
+        if invocation.get("stderr_mode") != "diagnostics_only":
+            problems.append("invocation.stderr_mode")
         if invocation.get("shell_used") is not False:
             problems.append("invocation.shell_used")
     runner_request = item.get("runner_request")
@@ -718,6 +760,29 @@ def xplat008_check(check_id: str, blocker_class: str, ok: bool, message: str, ev
 
 def normalize_payload_results(raw: Any) -> list[dict[str, Any]]:
     return normalize_evidence_records(raw, "payload")
+
+
+def project_payload_results(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    projected_by_surface: dict[str, dict[str, Any]] = {}
+    for item in records:
+        surface = item.get("payload_surface")
+        if surface not in {"claude", "codex"}:
+            continue
+        projected_by_surface[surface] = project_payload_result(item)
+    return [projected_by_surface[surface] for surface in ("claude", "codex") if surface in projected_by_surface]
+
+
+def project_payload_result(item: dict[str, Any]) -> dict[str, Any]:
+    projected = {key: copy.deepcopy(value) for key, value in item.items() if key in PAYLOAD_RESULT_KEYS}
+    for key in ("expected_files", "actual_files"):
+        value = projected.get(key)
+        if isinstance(value, list):
+            projected[key] = [project_payload_file_record(record) if isinstance(record, dict) else record for record in value]
+    return projected
+
+
+def project_payload_file_record(record: dict[str, Any]) -> dict[str, Any]:
+    return {key: copy.deepcopy(value) for key, value in record.items() if key in PAYLOAD_FILE_KEYS}
 
 
 def synthetic_payload_result(surface: str, status: str) -> dict[str, Any]:

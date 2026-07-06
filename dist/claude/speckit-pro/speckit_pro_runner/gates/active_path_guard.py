@@ -508,23 +508,29 @@ def classify_xplat008_path(path: str, category: str, pattern: str, content: str,
             return "source_checkout_helper"
         return "blocking_active_runtime"
     if path.startswith("speckit-pro/skills/") or path.startswith("speckit-pro/codex-skills/"):
-        if source_kind == "repo_baseline" and xplat008_baseline_source_checkout_helper_reference(path, content):
+        if source_kind == "repo_baseline" and (
+            xplat008_baseline_source_checkout_helper_reference(path, content)
+            or xplat008_repo_surface_exception(category, pattern, content)
+        ):
             return "source_checkout_helper"
         if source_kind == "repo" and (
             xplat008_changed_source_checkout_helper_reference(path, content)
             or xplat008_repo_surface_exception(category, pattern, content)
         ):
             return "source_checkout_helper"
-        return "blocking_active_runtime" if source_kind in {"fixture", "repo"} else "source_checkout_helper"
+        return "blocking_active_runtime" if source_kind in {"fixture", "repo", "repo_baseline"} else "source_checkout_helper"
     if path.startswith("speckit-pro/agents/") or path.startswith("speckit-pro/codex-agents/"):
-        if source_kind == "repo_baseline" and xplat008_baseline_source_checkout_helper_reference(path, content):
+        if source_kind == "repo_baseline" and (
+            xplat008_baseline_source_checkout_helper_reference(path, content)
+            or xplat008_repo_surface_exception(category, pattern, content)
+        ):
             return "source_checkout_helper"
         if source_kind == "repo" and (
             xplat008_changed_source_checkout_helper_reference(path, content)
             or xplat008_repo_surface_exception(category, pattern, content)
         ):
             return "source_checkout_helper"
-        return "blocking_active_runtime" if source_kind in {"fixture", "repo"} else "source_checkout_helper"
+        return "blocking_active_runtime" if source_kind in {"fixture", "repo", "repo_baseline"} else "source_checkout_helper"
     if path in {"README.md", "speckit-pro/README.md"} or path.startswith("docs-site/src/content/docs/"):
         if (
             source_kind in {"fixture", "repo", "repo_baseline"}
@@ -897,7 +903,7 @@ def xplat008_baseline_source_checkout_helper_reference(path: str, content: str) 
 
 
 def xplat008_backtick_requires_shell(pattern: str, content: str) -> bool:
-    shell_markers = ("bash", "git bash", "wsl", "wsl.exe", "powershell", "pwsh", "jq", ".sh", "grep", "sed", "awk")
+    shell_markers = ("bash", "git bash", "wsl", "wsl.exe", "powershell", "pwsh", "$shell", "shell", "jq", ".sh", "grep", "sed", "awk")
     lowered_pattern = pattern.lower()
     if not any(marker in lowered_pattern for marker in shell_markers):
         return False

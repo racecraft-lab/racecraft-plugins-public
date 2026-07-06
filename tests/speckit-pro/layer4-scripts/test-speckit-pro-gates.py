@@ -211,6 +211,23 @@ class GateFoundationTests(unittest.TestCase):
         check_schema = schema["$defs"]["check"]["properties"]
         check_ids = set(check_schema["check_id"]["enum"])
         blocker_classes = set(check_schema["blocker_class"]["enum"])
+        payload_schema = schema["$defs"]["payload_result"]
+        payload_required = set(payload_schema["required"])
+        payload_allowed = set(payload_schema["properties"])
+        file_schema = schema["$defs"]["payload_file"]
+        file_required = set(file_schema["required"])
+        file_allowed = set(file_schema["properties"])
+        for result in readiness["payload_results"]:
+            with self.subTest(release_payload=result.get("payload_surface")):
+                self.assertLessEqual(payload_required, set(result), result.get("payload_surface"))
+                self.assertFalse(set(result) - payload_allowed, result.get("payload_surface"))
+                for files_key in ("expected_files", "actual_files"):
+                    for file_record in result[files_key]:
+                        self.assertLessEqual(file_required, set(file_record), file_record)
+                        self.assertFalse(set(file_record) - file_allowed, file_record)
+        evidence_ref_schema = schema["properties"]["evidence_refs"]
+        self.assertLessEqual(set(evidence_ref_schema["required"]), set(readiness["evidence_refs"]))
+        self.assertFalse(set(readiness["evidence_refs"]) - set(evidence_ref_schema["properties"]))
         for check in readiness["checks"]:
             with self.subTest(check_id=check["check_id"]):
                 self.assertIn(check["check_id"], check_ids)
@@ -1041,6 +1058,56 @@ class GateFoundationTests(unittest.TestCase):
         )
         self.assertEqual(
             active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "powershell",
+                "PowerShell",
+                "Requires PowerShell before status.",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "script_file",
+                "scripts/setup.sh",
+                "Run scripts/setup.sh before first use.",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "jq",
+                "jq",
+                "Run jq before status.",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/agents/phase-executor.md",
+                "shell_interpolation",
+                "`$SHELL`",
+                "Use `$SHELL` to run the installed agent.",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "bash",
+                "Bash",
+                "Do not add Bash as an installed-runtime requirement.",
+                "repo_baseline",
+            ),
+            "source_checkout_helper",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
                 "speckit-pro/skills/speckit-upgrade/SKILL.md",
                 "bash",
                 "Bash",
@@ -1449,10 +1516,11 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(readiness["feature_id"], "XPLAT-008")
         self.assertEqual(readiness["status"], "pass")
         self.assertEqual(readiness["blocking_count"], 0)
+        self.assertEqual(len(readiness["payload_results"]), 2)
         self.assertEqual({item["payload_surface"] for item in readiness["payload_results"]}, {"claude", "codex"})
         self.assertEqual(len(readiness["uat_rows"]), 6)
         self.assertTrue(readiness["traceability"])
-        self.assertIn("live_gate_requests", readiness["evidence_refs"])
+        self.assertNotIn("live_gate_requests", readiness["evidence_refs"])
         self.assertTrue(
             any(
                 item.get("request_id") == "xplat-008-release-readiness:runner-invocation"
@@ -1597,6 +1665,28 @@ class GateFoundationTests(unittest.TestCase):
         self.assertIn("missing_or_invalid=runner_request", evidence)
         self.assertIn("missing_or_invalid=surface_path", evidence)
         self.assertIn("missing_or_invalid=diagnostics", evidence)
+
+        valid_repair_checks = release_gate.validate_xplat008_evidence_contracts(
+            payload_results=[],
+            uat_rows=[],
+            repair_actions=[
+                {
+                    "action_id": "repair-1",
+                    "finding_id": "install-cache-drift",
+                    "action_type": "autoheal_refresh",
+                    "target_path": "speckit-pro/install_inventory.json",
+                    "source_path": "dist/codex/speckit-pro/install_inventory.json",
+                    "digest_verified": True,
+                    "status": "completed",
+                    "message": "Refreshed stale install inventory from generated payload.",
+                    "manual_steps": [],
+                }
+            ],
+            public_claim_results=[],
+            runner_invocations=[],
+            traceability=[],
+        )
+        self.assertFalse([check for check in valid_repair_checks if "repair" in ",".join(check["evidence"])])
 
         duplicate_uat_rows = [release_gate.default_uat_row("claude", "windows", "pass") for _ in range(6)]
         duplicate_uat_checks = release_gate.computed_xplat008_checks(
