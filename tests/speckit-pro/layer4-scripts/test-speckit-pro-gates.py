@@ -579,6 +579,37 @@ class GateFoundationTests(unittest.TestCase):
         self.assertIsNone(runner_response)
         self.assertEqual(execution_diag["code"], "runner_cache_missing")
 
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_root = Path(tmp) / "fake-payload"
+            package = fake_root / "speckit_pro_runner"
+            package.mkdir(parents=True)
+            (package / "__init__.py").write_text("", encoding="utf-8")
+            (package / "__main__.py").write_text(
+                "import json\n"
+                "print(json.dumps({"
+                "'schema_version':'1.0',"
+                "'status':'ok',"
+                "'exit_code':0,"
+                "'legacy_exit_code':None,"
+                "'diagnostics':[],"
+                "'data':{'report':{"
+                "'runner_name':'fake_runner',"
+                "'runner_contract_id':'speckit-pro-runner',"
+                "'selected_runtime_name':'python-stdlib-runner',"
+                "'source_vs_installed_context':'installed_payload',"
+                "'paths':{}"
+                "}}}))\n",
+                encoding="utf-8",
+            )
+            runner_response, execution_diag = install_helper.execute_runner_runtime_info(
+                [sys.executable, "-m", "speckit_pro_runner"],
+                record["runner_request"],
+                REPO_ROOT,
+                fake_root.as_posix(),
+            )
+        self.assertIsNotNone(runner_response)
+        self.assertEqual(execution_diag["code"], "runner_identity_mismatch")
+
         completed, response, stderr_records = run_runner(
             gate_request(
                 "runner-invocation",
@@ -717,6 +748,11 @@ class GateFoundationTests(unittest.TestCase):
         self.assertIsInstance(changed_sources, active_path_guard.RawFinding)
         self.assertEqual(changed_sources.classification, "blocking_active_runtime")
         self.assertEqual(changed_sources.category, "diff_scan")
+        with patch.object(active_path_guard.subprocess, "run", side_effect=OSError("git missing")):
+            changed_sources = active_path_guard.changed_repo_sources(REPO_ROOT, {"scan_roots": ["speckit-pro/skills"]})
+        self.assertIsInstance(changed_sources, active_path_guard.RawFinding)
+        self.assertEqual(changed_sources.classification, "blocking_active_runtime")
+        self.assertEqual(changed_sources.category, "diff_scan")
         self.assertNotIn("HEAD^", active_path_guard.review_base_ref.__code__.co_consts)
         self.assertEqual(
             active_path_guard.classify_xplat008_path(
@@ -781,6 +817,26 @@ class GateFoundationTests(unittest.TestCase):
                 "repo_baseline",
             ),
             "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
+                "script_file",
+                "scripts/setup.sh",
+                "Run scripts/setup.sh before use.",
+                "repo",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
+                "bash",
+                "Bash",
+                "Do not add Bash as an installed-runtime requirement.",
+                "repo_baseline",
+            ),
+            "source_checkout_helper",
         )
         self.assertEqual(
             active_path_guard.classify_xplat008_path(

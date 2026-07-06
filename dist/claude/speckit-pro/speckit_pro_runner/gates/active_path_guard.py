@@ -491,8 +491,10 @@ def classify_xplat008_path(path: str, category: str, pattern: str, content: str,
     if path.startswith("dist/") and not path.endswith(("README.md", "CHANGELOG.md", "LICENSE")):
         if source_kind == "repo_baseline" and xplat008_source_checkout_helper_reference(path, content):
             return "source_checkout_helper"
+        if "/speckit_pro_runner/" in path and source_kind == "repo" and xplat008_source_checkout_helper_reference(path, content):
+            return "source_checkout_helper"
         if source_kind in {"repo", "repo_baseline"} and (
-            xplat008_source_checkout_helper_reference(path, content)
+            xplat008_dist_source_checkout_helper_reference(path, content)
             or xplat008_repo_surface_exception(category, pattern, content)
         ):
             return "source_checkout_helper"
@@ -676,6 +678,54 @@ def xplat008_source_checkout_helper_reference(path: str, content: str) -> bool:
 def xplat008_dist_source_checkout_surface(path: str) -> bool:
     lowered = path.lower()
     return any(part in lowered for part in ("/skills/", "/agents/", "/codex-agents/", "/scripts/"))
+
+
+def xplat008_dist_source_checkout_helper_reference(path: str, content: str) -> bool:
+    if not xplat008_dist_source_checkout_surface(path):
+        return False
+    lowered = content.lower()
+    markers = (
+        "allowed-tools:",
+        "tools:",
+        "bash(",
+        "grep(",
+        "glob(",
+        "```bash",
+        "command -v",
+        "uv tool install",
+        "operator",
+        "official speckit cli",
+        "spec kit cli",
+        "skipped when",
+        "not on `path`",
+        "not on path",
+        "forbidden_patterns",
+        "bash dependency",
+        "shell=true subprocess execution",
+        "manual classification request",
+        "workflow shell dispatches a python gate",
+        "is_direct_python_gate_dispatch",
+        "blocking_active_gate",
+        "re.match(",
+        "argv-list subprocesses",
+        "argv array",
+        "existing bash gates authoritative",
+        "existing bash workflow",
+        "required_absent",
+        "claude_plugin_root",
+        "<skill_scripts>",
+        "source-checkout",
+        "source checkout",
+        "speckit-pro/skills/",
+        "speckit-pro/codex-skills/",
+        "tests/speckit-pro/",
+        ".specify/",
+        "docs/ai/specs/",
+        "docs-site/",
+        "deterministic bash scripts",
+        " is missing",
+    )
+    return any(marker in lowered for marker in markers)
 
 
 def xplat008_backtick_requires_shell(pattern: str, content: str) -> bool:
@@ -904,27 +954,34 @@ def review_base_ref(repo_root: Path) -> str | None:
 
 
 def git_ref_exists(repo_root: Path, ref: str) -> bool:
-    return subprocess.run(
-        ["git", "rev-parse", "--verify", "--quiet", ref],
-        cwd=repo_root,
-        text=True,
-        capture_output=True,
-        timeout=5,
-        shell=False,
-        check=False,
-    ).returncode == 0
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", "--verify", "--quiet", ref],
+            cwd=repo_root,
+            text=True,
+            capture_output=True,
+            timeout=5,
+            shell=False,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return completed.returncode == 0
 
 
 def git_stdout(repo_root: Path, argv: list[str]) -> str:
-    completed = subprocess.run(
-        argv,
-        cwd=repo_root,
-        text=True,
-        capture_output=True,
-        timeout=5,
-        shell=False,
-        check=False,
-    )
+    try:
+        completed = subprocess.run(
+            argv,
+            cwd=repo_root,
+            text=True,
+            capture_output=True,
+            timeout=5,
+            shell=False,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
     return completed.stdout.strip() if completed.returncode == 0 else ""
 
 

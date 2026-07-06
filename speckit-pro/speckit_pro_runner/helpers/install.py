@@ -409,13 +409,83 @@ def execute_runner_runtime_info(
             },
         }
     if completed.returncode == 0 and parsed.get("status") == "ok":
-        return parsed, None
+        identity_diag = validate_runner_runtime_response(parsed, cwd, cache_root)
+        if identity_diag is None:
+            return parsed, None
+        return parsed, identity_diag
     return parsed, diagnostic(
         "runner_invocation_failed",
         "selected Python interpreter did not return a successful runner runtime-info response",
         details={"exit_code": completed.returncode, "status": parsed.get("status")},
         remediation_summary="Repair the installed runner payload before claiming invocation readiness.",
         remediation_actions=["Inspect runner_response for stdout/stderr diagnostics.", "Retry after reinstalling or repairing the plugin cache."],
+    )
+
+
+def validate_runner_runtime_response(parsed: dict[str, Any], cwd: Path, cache_root: str) -> dict[str, Any] | None:
+    data = parsed.get("data")
+    report = data.get("report") if isinstance(data, dict) else None
+    if not isinstance(report, dict):
+        return runner_identity_mismatch(cache_root, "runner runtime-info response did not include a report")
+
+    expected = {
+        "runner_name": "speckit_pro_runner",
+        "runner_contract_id": "speckit-pro-runner",
+        "selected_runtime_name": "python-stdlib-runner",
+        "source_vs_installed_context": "installed_payload",
+    }
+    for key, value in expected.items():
+        if report.get(key) != value:
+            return runner_identity_mismatch(
+                cache_root,
+                "runner runtime-info response did not match installed runner identity",
+                details={"field": key, "expected": value, "actual": report.get(key)},
+            )
+
+    paths = report.get("paths")
+    if not isinstance(paths, dict):
+        return runner_identity_mismatch(cache_root, "runner runtime-info response did not include path records")
+
+    required_paths = {
+        "plugin_root": ".",
+        "runner_package": "speckit_pro_runner",
+        "manifest_file": "speckit_pro_runner/speckit-pro-runner.manifest.json",
+        "checksum_file": "speckit_pro_runner/speckit-pro-runner.sha256",
+    }
+    for key, expected_value in required_paths.items():
+        record = paths.get(key)
+        if not isinstance(record, dict) or record.get("value") != expected_value:
+            return runner_identity_mismatch(
+                cache_root,
+                "runner runtime-info response path records did not match installed payload layout",
+                details={
+                    "field": key,
+                    "expected": expected_value,
+                    "actual": record.get("value") if isinstance(record, dict) else None,
+                },
+            )
+        if key != "plugin_root" and not (cwd / expected_value).exists():
+            return runner_identity_mismatch(
+                cache_root,
+                "runner runtime-info response path record does not exist in installed payload",
+                details={"field": key, "path": expected_value},
+            )
+    return None
+
+
+def runner_identity_mismatch(cache_root: str, message: str, *, details: dict[str, Any] | None = None) -> dict[str, Any]:
+    merged_details: dict[str, Any] = {"cache_root": cache_root}
+    if details:
+        merged_details.update(details)
+    return diagnostic(
+        "runner_identity_mismatch",
+        message,
+        details=merged_details,
+        remediation_summary="Ensure the selected installed cache executes the shipped SpecKit Pro runner package.",
+        remediation_actions=[
+            "Rebuild generated Claude and Codex payloads.",
+            "Verify runtime-info reports the expected runner identity and installed payload paths.",
+        ],
     )
 
 

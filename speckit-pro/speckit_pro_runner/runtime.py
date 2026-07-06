@@ -155,7 +155,7 @@ def build_report(inputs: dict[str, Any], *, check_metadata: bool) -> dict[str, A
         "python_version": python_version,
         "platform": platform.system().lower() or sys.platform,
         "architecture": platform.machine() or "unknown",
-        "source_vs_installed_context": SOURCE_CONTEXT,
+        "source_vs_installed_context": runtime_context(plugin_root),
         "paths": path_report(plugin_root, package_dir),
         "prerequisites": {
             "python": {
@@ -196,6 +196,12 @@ def detect_plugin_root() -> Path | None:
         if (candidate / ".claude-plugin" / "plugin.json").is_file() or (candidate / ".codex-plugin" / "plugin.json").is_file():
             return candidate
     return None
+
+
+def runtime_context(plugin_root: Path | None) -> str:
+    if plugin_root is not None and "dist" in plugin_root.parts:
+        return "installed_payload"
+    return SOURCE_CONTEXT
 
 
 def typed_path(kind: str, value: str, display: str | None = None) -> dict[str, str]:
