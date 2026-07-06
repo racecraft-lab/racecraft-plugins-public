@@ -70,20 +70,46 @@
       "properties": {
         "argv": {
           "type": "array",
-          "prefixItems": [
+          "oneOf": [
             {
-              "type": "string",
-              "minLength": 1
+              "prefixItems": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "const": "-m"
+                },
+                {
+                  "const": "speckit_pro_runner"
+                }
+              ],
+              "minItems": 3,
+              "maxItems": 3
             },
             {
-              "const": "-m"
+              "prefixItems": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "pattern": "^-"
+                },
+                {
+                  "const": "-m"
+                },
+                {
+                  "const": "speckit_pro_runner"
+                }
+              ],
+              "minItems": 4,
+              "maxItems": 4
             },
             {
-              "const": "speckit_pro_runner"
+              "maxItems": 0
             }
-          ],
-          "minItems": 3,
-          "maxItems": 3
+          ]
         },
         "stdin_mode": {
           "const": "single_json_request"
@@ -129,6 +155,7 @@
       "required": [
         "attempted_candidates",
         "resolved_executable",
+        "invocation_argv_prefix",
         "version",
         "accepted",
         "minimum_version",
@@ -149,6 +176,13 @@
             "string",
             "null"
           ]
+        },
+        "invocation_argv_prefix": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
         "version": {
           "type": [
@@ -198,7 +232,7 @@
           "minLength": 1
         },
         "remediation": {
-          "type": "string"
+          "type": "object"
         }
       }
     }

@@ -158,9 +158,16 @@ def run_active_runtime_guard(entry: Any, request: Any, repo_root: Path) -> dict[
             data=active_runtime_base_data(entry, request.operation, "input_error"),
             diagnostics=[source_result],
         )
+    diff_finding: RawFinding | None = None
     if "files" not in case_result and case_result.get("scan_repo") is not False:
-        source_result.extend(changed_repo_sources(repo_root, case_result))
+        changed_result = changed_repo_sources(repo_root, case_result)
+        if isinstance(changed_result, RawFinding):
+            diff_finding = changed_result
+        else:
+            source_result.extend(changed_result)
     findings = scan_sources_xplat008(source_result, repo_root)
+    if diff_finding is not None:
+        findings.append(diff_finding)
     return active_runtime_guard_response(entry, request, findings)
 
 
@@ -472,12 +479,22 @@ def classify_xplat008_path(path: str, category: str, pattern: str, content: str,
     if path in {"speckit-pro/codex-hooks.json", "speckit-pro/hooks/hooks.json"}:
         return "blocking_active_runtime"
     if path.startswith("dist/") and not path.endswith(("README.md", "CHANGELOG.md", "LICENSE")):
+        if source_kind == "repo_baseline" and xplat008_dist_source_checkout_surface(path):
+            return "source_checkout_helper"
+        if source_kind == "repo_baseline" and xplat008_source_checkout_helper_reference(path, content):
+            return "source_checkout_helper"
+        if source_kind in {"repo", "repo_baseline"} and xplat008_repo_surface_exception(category, pattern, content):
+            return "source_checkout_helper"
         return "blocking_active_runtime"
     if path.startswith("speckit-pro/skills/") or path.startswith("speckit-pro/codex-skills/"):
+        if source_kind == "repo_baseline":
+            return "source_checkout_helper"
         if source_kind == "repo" and xplat008_repo_surface_exception(category, pattern, content):
             return "source_checkout_helper"
         return "blocking_active_runtime" if source_kind in {"fixture", "repo"} else "source_checkout_helper"
     if path.startswith("speckit-pro/agents/") or path.startswith("speckit-pro/codex-agents/"):
+        if source_kind == "repo_baseline":
+            return "source_checkout_helper"
         if source_kind == "repo" and xplat008_repo_surface_exception(category, pattern, content):
             return "source_checkout_helper"
         return "blocking_active_runtime" if source_kind in {"fixture", "repo"} else "source_checkout_helper"
@@ -528,7 +545,7 @@ def xplat008_active_role(path: str) -> str:
 
 def xplat008_repo_surface_exception(category: str, pattern: str, content: str) -> bool:
     if category == "shell_interpolation" and pattern.startswith("`"):
-        return True
+        return not xplat008_backtick_requires_shell(pattern, content)
     lowered = content.lower()
     return any(
         marker in lowered
@@ -536,14 +553,56 @@ def xplat008_repo_surface_exception(category: str, pattern: str, content: str) -
             "do not ",
             "must not ",
             "never ",
-            "without ",
             "not require",
             "not add",
+            "without requiring",
+            "without adding",
+            "without using",
+            "avoid ",
             "refuse",
             "forbidden",
             "specific command-language requirement",
         )
     )
+
+
+def xplat008_source_checkout_helper_reference(path: str, content: str) -> bool:
+    lowered_path = path.lower()
+    lowered = content.lower()
+    if any(part in lowered_path for part in ("/references/", "/templates/", "/contracts/", "/scripts/")):
+        return True
+    markers = (
+        "allowed-tools:",
+        "claude_plugin_root",
+        "<skill_scripts>",
+        "source-checkout",
+        "source checkout",
+        "speckit-pro/skills/",
+        "speckit-pro/codex-skills/",
+        "tests/speckit-pro/",
+        ".specify/",
+        "docs/ai/specs/",
+        "docs-site/",
+        ".sh",
+        "deterministic bash scripts",
+        " is missing",
+    )
+    return any(marker in lowered for marker in markers)
+
+
+def xplat008_dist_source_checkout_surface(path: str) -> bool:
+    lowered = path.lower()
+    return any(part in lowered for part in ("/skills/", "/agents/", "/codex-agents/", "/scripts/"))
+
+
+def xplat008_backtick_requires_shell(pattern: str, content: str) -> bool:
+    shell_markers = ("bash", "git bash", "wsl", "wsl.exe", "powershell", "pwsh", "jq", ".sh", "grep", "sed", "awk")
+    lowered_pattern = pattern.lower()
+    if not any(marker in lowered_pattern for marker in shell_markers):
+        return False
+    lowered_content = content.lower()
+    requirement_markers = ("run ", "execute ", "invoke ", "call ", "use ", "require ", "must ", "should ")
+    return any(marker in lowered_content for marker in requirement_markers)
 
 
 def remediation_for(classification: str) -> str:
@@ -680,12 +739,12 @@ def is_docs_or_workflow_tooling(content: str) -> bool:
     return any(marker in lowered for marker in markers) and not any(marker in lowered for marker in plugin_markers)
 
 
-def changed_repo_sources(repo_root: Path, case: dict[str, Any]) -> list[SourceFile]:
+def changed_repo_sources(repo_root: Path, case: dict[str, Any]) -> list[SourceFile] | RawFinding:
     roots = case.get("scan_roots")
     scan_roots = tuple(item for item in roots if isinstance(item, str) and item) if isinstance(roots, list) else SCAN_ROOTS
     base = review_base_ref(repo_root)
     if base is None:
-        return []
+        return diff_scan_unavailable_finding("active-runtime guard could not resolve a review base for changed-line scanning")
     try:
         completed = subprocess.run(
             ["git", "diff", "--unified=0", "--no-color", base, "--", *scan_roots],
@@ -696,11 +755,24 @@ def changed_repo_sources(repo_root: Path, case: dict[str, Any]) -> list[SourceFi
             shell=False,
             check=False,
         )
-    except (OSError, subprocess.TimeoutExpired):
-        return []
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return diff_scan_unavailable_finding(f"active-runtime guard could not run git diff for changed-line scanning: {type(exc).__name__}")
     if completed.returncode not in {0, 1}:
-        return []
+        return diff_scan_unavailable_finding("active-runtime guard git diff changed-line scan failed")
     return diff_added_line_sources(completed.stdout, repo_root)
+
+
+def diff_scan_unavailable_finding(reason: str) -> RawFinding:
+    return RawFinding(
+        path=".git",
+        line=None,
+        category="diff_scan",
+        pattern="git diff",
+        reason=reason,
+        active_role="release_gate",
+        classification="blocking_active_runtime",
+        remediation="Restore changed-line diff scanning or provide explicit active-runtime guard files before release readiness can pass.",
+    )
 
 
 def review_base_ref(repo_root: Path) -> str | None:

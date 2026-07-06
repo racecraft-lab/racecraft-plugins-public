@@ -179,7 +179,7 @@ def runner_invocation_record(case: dict[str, Any], request_id: str | None) -> tu
     }
     accepted = bool(resolution["accepted"])
     invocation = {
-        "argv": [resolution["resolved_executable"], "-m", "speckit_pro_runner"] if accepted else [],
+        "argv": [*resolution["invocation_argv_prefix"], "-m", "speckit_pro_runner"] if accepted else [],
         "stdin_mode": "single_json_request",
         "stdout_mode": "single_json_response",
         "stderr_mode": "diagnostics_only",
@@ -248,9 +248,11 @@ def resolve_python_interpreter(platform_name: str, case: dict[str, Any], cache_r
             failure_messages.append(f"{candidate}: Python {version_text} is below 3.11")
             continue
         resolved = str(record.get("resolved_executable") or candidate.split()[0])
+        invocation_prefix = invocation_prefix_for_candidate(platform_name, candidate, resolved)
         return {
             "attempted_candidates": attempted,
             "resolved_executable": resolved,
+            "invocation_argv_prefix": invocation_prefix,
             "version": version_text,
             "accepted": True,
             "minimum_version": "3.11",
@@ -268,6 +270,7 @@ def resolve_python_interpreter(platform_name: str, case: dict[str, Any], cache_r
     resolution = {
         "attempted_candidates": attempted or candidate_order(platform_name),
         "resolved_executable": None,
+        "invocation_argv_prefix": [],
         "version": last_version,
         "accepted": False,
         "minimum_version": "3.11",
@@ -280,7 +283,7 @@ def resolve_python_interpreter(platform_name: str, case: dict[str, Any], cache_r
 def probe_host_candidates(platform_name: str) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     for candidate in candidate_order(platform_name):
-        argv = candidate.split()
+        argv = probe_argv_for_candidate(candidate)
         try:
             completed = subprocess.run(
                 [*argv, "-c", "import platform, sys; print(platform.python_version()); print(sys.executable)"],
@@ -304,6 +307,24 @@ def probe_host_candidates(platform_name: str) -> list[dict[str, Any]]:
             }
         )
     return records
+
+
+def probe_argv_for_candidate(candidate: str) -> list[str]:
+    argv = candidate.split()
+    if argv[:2] == ["py", "-V:3"]:
+        return ["py", "-3"]
+    return argv
+
+
+def invocation_prefix_for_candidate(platform_name: str, candidate: str, resolved_executable: str) -> list[str]:
+    argv = candidate.split()
+    if platform_name == "windows" and argv and argv[0].lower() == "py":
+        selector: str | None = None
+        if len(argv) > 1:
+            selector = "-3" if argv[1] == "-V:3" else argv[1]
+        if selector and selector.startswith("-"):
+            return [resolved_executable, selector]
+    return [resolved_executable]
 
 
 def candidate_order(platform_name: str) -> list[str]:

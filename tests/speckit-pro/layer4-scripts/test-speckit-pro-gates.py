@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 from typing import Any
 
@@ -436,6 +437,16 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(request["inputs"]["case_id"], "windows-py-v3")
 
     def test_xplat008_runner_invocation_records_have_no_shell_fallback(self) -> None:
+        contract = json.loads(
+            (
+                REPO_ROOT
+                / "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/contracts/runner-invocation.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        argv_contract = contract["properties"]["invocation"]["properties"]["argv"]
+        self.assertEqual(len(argv_contract["oneOf"]), 3)
+        self.assertEqual(contract["$defs"]["diagnostic"]["properties"]["remediation"]["type"], "object")
+
         pass_cases = [
             "windows-py-v3",
             "windows-py-3-fallback",
@@ -467,11 +478,17 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertIsNone(record["interpreter_resolution"]["failure_code"])
                 self.assertTrue(record["interpreter_resolution"]["attempted_candidates"])
                 self.assertTrue(record["interpreter_resolution"]["resolved_executable"])
+                self.assertTrue(record["interpreter_resolution"]["invocation_argv_prefix"])
                 self.assertRegex(record["interpreter_resolution"]["version"], r"^3\.(1[1-9]|[2-9][0-9])\.")
+                expected_argv = [
+                    *record["interpreter_resolution"]["invocation_argv_prefix"],
+                    "-m",
+                    "speckit_pro_runner",
+                ]
                 self.assertEqual(
                     record["invocation"],
                     {
-                        "argv": [record["interpreter_resolution"]["resolved_executable"], "-m", "speckit_pro_runner"],
+                        "argv": expected_argv,
                         "stdin_mode": "single_json_request",
                         "stdout_mode": "single_json_response",
                         "stderr_mode": "diagnostics_only",
@@ -483,6 +500,8 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertEqual(record["status"], "pass")
                 self.assertEqual(record["diagnostics"], [])
                 self.assert_no_shell_argv(record["invocation"]["argv"])
+                if record["platform"] == "windows":
+                    self.assertEqual(record["invocation"]["argv"][-3:], ["-3", "-m", "speckit_pro_runner"])
 
         completed, response, stderr_records = run_runner(
             gate_request(
@@ -503,6 +522,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertFalse(record["interpreter_resolution"]["accepted"])
         self.assertIsNone(record["interpreter_resolution"]["resolved_executable"])
         self.assertEqual(record["interpreter_resolution"]["failure_code"], "python_runtime_unavailable")
+        self.assertEqual(record["interpreter_resolution"]["invocation_argv_prefix"], [])
         self.assertIsNone(record["runner_response"])
         self.assertEqual(record["status"], "blocked")
         self.assertEqual(record["invocation"]["argv"], [])
@@ -551,6 +571,26 @@ class GateFoundationTests(unittest.TestCase):
             ),
             "source_checkout_helper",
         )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "bash",
+                "bash",
+                "Run bash without Python before status.",
+                "repo",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "shell_interpolation",
+                "`bash`",
+                "Run `bash` before status.",
+                "repo",
+            ),
+            "blocking_active_runtime",
+        )
 
         cases = xplat008_fixture_cases("active-runtime-guard")
         self.assertEqual(cases["schema_version"], "1.0")
@@ -563,6 +603,28 @@ class GateFoundationTests(unittest.TestCase):
                 "final-current-implementation",
             },
         )
+        final_case = next(case for case in cases["cases"] if case["case_id"] == "final-current-implementation")
+        self.assertLessEqual(
+            {
+                "dist/claude/speckit-pro/hooks",
+                "dist/claude/speckit-pro/skills",
+                "dist/claude/speckit-pro/speckit_pro_runner",
+                "dist/codex/speckit-pro/codex-hooks.json",
+                "dist/codex/speckit-pro/skills",
+                "dist/codex/speckit-pro/speckit_pro_runner",
+                ".github/workflows",
+                "README.md",
+                "speckit-pro/README.md",
+                "docs-site/src/content/docs",
+            },
+            set(final_case["scan_roots"]),
+        )
+
+        with patch.object(active_path_guard, "review_base_ref", return_value=None):
+            changed_sources = active_path_guard.changed_repo_sources(REPO_ROOT, {"scan_roots": ["speckit-pro/skills"]})
+        self.assertIsInstance(changed_sources, active_path_guard.RawFinding)
+        self.assertEqual(changed_sources.classification, "blocking_active_runtime")
+        self.assertEqual(changed_sources.category, "diff_scan")
 
         completed, response, stderr_records = run_runner(
             gate_request(
