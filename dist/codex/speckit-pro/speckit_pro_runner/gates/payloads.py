@@ -307,6 +307,7 @@ def build_xplat008_payloads(repo_root: Path, dist_root: Path) -> None:
     copy_optional_xplat008(repo_root / "LICENSE", claude / "LICENSE")
     for skill_file in claude.glob("skills/*/SKILL.md"):
         strip_codex_guard(skill_file)
+    remove_payload_shell_scripts_xplat008(claude)
 
     reset_payload_dir(codex, dist_root)
     for name in [
@@ -326,6 +327,7 @@ def build_xplat008_payloads(repo_root: Path, dist_root: Path) -> None:
     for text_file in codex.rglob("*"):
         if text_file.is_file():
             rewrite_payload_skill_paths_xplat008(codex, text_file)
+    remove_payload_shell_scripts_xplat008(codex)
 
 
 def reset_payload_dir(path: Path, allowed_root: Path) -> None:
@@ -355,6 +357,16 @@ def copy_optional_xplat008(src: Path, dst: Path) -> None:
     elif src.is_file():
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dst)
+
+
+def remove_payload_shell_scripts_xplat008(root: Path) -> None:
+    for script in root.rglob("*.sh"):
+        script.unlink()
+    for directory in sorted((path for path in root.rglob("*") if path.is_dir()), key=lambda item: len(item.parts), reverse=True):
+        try:
+            directory.rmdir()
+        except OSError:
+            pass
 
 
 def strip_codex_guard(skill_file: Path) -> None:

@@ -497,6 +497,8 @@ def classify_xplat008_path(path: str, category: str, pattern: str, content: str,
     if xplat008_installed_runtime_requirement_without_source_context(path, content):
         return "blocking_active_runtime"
     if path.startswith("dist/") and not path.endswith(("README.md", "CHANGELOG.md", "LICENSE")):
+        if "/scripts/" in path:
+            return "blocking_active_runtime"
         if "/speckit_pro_runner/" in path and source_kind in {"repo", "repo_baseline"} and xplat008_source_checkout_helper_reference(path, content):
             return "source_checkout_helper"
         if source_kind == "repo_baseline" and xplat008_baseline_source_checkout_helper_reference(path, content):

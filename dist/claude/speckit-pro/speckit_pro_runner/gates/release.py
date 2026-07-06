@@ -23,7 +23,6 @@ XPLAT008_CHECK_IDS = {
     "dist-determinism",
     "hooks",
     "install-health-repair",
-    "latest-tag-update",
     "payload-completeness",
     "public-claims",
     "release-packet-traceability",
@@ -40,7 +39,6 @@ XPLAT008_BLOCKER_CLASSES = {
     "incomplete_uat_evidence",
     "missing_bundled_agent",
     "missing_hook",
-    "missing_release_evidence",
     "missing_runner_file",
     "missing_runner_invocation",
     "missing_traceability",
@@ -69,6 +67,8 @@ PAYLOAD_RESULT_KEYS = {
     "status",
 }
 PAYLOAD_FILE_KEYS = {"path", "source_path", "kind", "transform", "sha256", "byte_count", "required"}
+PAYLOAD_FILE_KINDS = {"manifest", "skill", "agent", "hook", "runner", "install_guidance", "trust_metadata", "checksum", "version_metadata", "docs"}
+PAYLOAD_FILE_TRANSFORMS = {"none", "claude_guard_strip", "codex_overlay", "path_normalization", "manifest_rewrite"}
 XPLAT008_REQUIRED_UAT_ROWS = (
     ("claude", "windows"),
     ("claude", "macos"),
@@ -212,7 +212,8 @@ def release_readiness_xplat008(entry: Any, request: Any, repo_root: Path) -> dic
         return response("input_error", request_id=request.request_id, data=xplat008_base_data(entry, request.operation, "input_error"), diagnostics=[case_result])
     case = case_result
 
-    live_evidence = live_xplat008_gate_evidence(repo_root) if case.get("use_live_gate_evidence") is not False else {}
+    live_gate_evidence_disabled = case.get("use_live_gate_evidence") is False
+    live_evidence = {} if live_gate_evidence_disabled else live_xplat008_gate_evidence(repo_root)
     payload_evidence_records = [
         *normalize_payload_results(case.get("payload_results")),
         *normalize_payload_results(live_evidence.get("payload_results")),
@@ -230,6 +231,16 @@ def release_readiness_xplat008(entry: Any, request: Any, repo_root: Path) -> dic
         *normalize_xplat008_checks(case.get("checks")),
         *normalize_xplat008_checks(live_evidence.get("checks")),
     ]
+    if live_gate_evidence_disabled:
+        checks.append(
+            xplat008_check(
+                "active-runtime-guard",
+                "active_shell_runtime_dependency",
+                False,
+                "Live XPLAT-008 release gate evidence is mandatory for release readiness.",
+                ["use_live_gate_evidence=false"],
+            )
+        )
 
     checks.extend(
         computed_xplat008_checks(
@@ -469,9 +480,9 @@ def malformed_payload_result_fields(item: dict[str, Any]) -> list[str]:
     problems: list[str] = []
     require_enum(item, "payload_surface", {"claude", "codex"}, problems)
     require_enum(item, "status", VALID_STATUS, problems)
-    require_string(item, "plugin_version", problems)
+    require_pattern(item, "plugin_version", r"^[0-9]+\.[0-9]+\.[0-9]+$", problems)
     require_string(item, "runner_version", problems)
-    require_string(item, "file_tree_hash", problems)
+    require_sha256(item, "file_tree_hash", problems)
     for key in ("expected_files", "actual_files", "missing_paths", "extra_paths", "mismatched_paths", "path_leaks"):
         require_list(item, key, problems)
     validate_payload_file_records(item, "expected_files", problems)
@@ -492,14 +503,21 @@ def validate_payload_file_records(item: dict[str, Any], key: str, problems: list
         kind = record.get("kind")
         sha256 = record.get("sha256")
         required = record.get("required")
-        if not isinstance(path, str) or not path:
+        if not valid_contract_path(path):
             problems.append(f"{prefix}.path")
-        if not isinstance(kind, str) or not kind:
+        if kind not in PAYLOAD_FILE_KINDS:
             problems.append(f"{prefix}.kind")
         if not isinstance(sha256, str) or re.fullmatch(r"[0-9a-f]{64}", sha256) is None:
             problems.append(f"{prefix}.sha256")
         if not isinstance(required, bool):
             problems.append(f"{prefix}.required")
+        if "source_path" in record and not isinstance(record.get("source_path"), str):
+            problems.append(f"{prefix}.source_path")
+        if "transform" in record and record.get("transform") not in PAYLOAD_FILE_TRANSFORMS:
+            problems.append(f"{prefix}.transform")
+        byte_count = record.get("byte_count")
+        if "byte_count" in record and (not isinstance(byte_count, int) or byte_count < 0):
+            problems.append(f"{prefix}.byte_count")
 
 
 def malformed_uat_row_fields(item: dict[str, Any]) -> list[str]:
@@ -507,6 +525,10 @@ def malformed_uat_row_fields(item: dict[str, Any]) -> list[str]:
     require_enum(item, "product", {"claude", "codex"}, problems)
     require_enum(item, "platform", {"windows", "macos", "linux"}, problems)
     require_enum(item, "status", VALID_STATUS, problems)
+    require_string(item, "operator", problems)
+    require_pattern(item, "date", r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$", problems)
+    require_string(item, "host_version", problems)
+    require_string(item, "plugin_version_or_latest_tag", problems)
     for key in (
         "install_result",
         "bundled_agent_verification",
@@ -519,7 +541,15 @@ def malformed_uat_row_fields(item: dict[str, Any]) -> list[str]:
         require_enum(item, key, VALID_STATUS, problems)
     require_string(item, "installed_cache_path", problems)
     require_string(item, "evidence_link", problems)
+    evidence_link = item.get("evidence_link")
+    if isinstance(evidence_link, str) and re.search(r"<a\s", evidence_link, flags=re.IGNORECASE):
+        problems.append("evidence_link")
+    runner_ids = item.get("runner_invocation_ids")
     require_list(item, "runner_invocation_ids", problems)
+    if isinstance(runner_ids, list) and (not runner_ids or any(not isinstance(value, str) or not value for value in runner_ids)):
+        problems.append("runner_invocation_ids")
+    for key in ("expected_result", "actual_result", "operator_notes"):
+        require_string(item, key, problems)
     if not isinstance(item.get("interpreter_resolution"), dict):
         problems.append("interpreter_resolution")
     return problems
@@ -615,15 +645,29 @@ def malformed_runner_invocation_fields(item: dict[str, Any]) -> list[str]:
 
 def malformed_traceability_fields(item: dict[str, Any]) -> list[str]:
     problems: list[str] = []
-    require_string(item, "requirement_id", problems)
+    require_pattern(item, "requirement_id", r"^(FR|SC)-[0-9]{3}$", problems)
     require_list(item, "changed_files", problems)
     require_list(item, "verification_evidence", problems)
+    for key in ("changed_files", "verification_evidence"):
+        values = item.get(key)
+        if isinstance(values, list) and any(not isinstance(value, str) for value in values):
+            problems.append(key)
     return problems
 
 
 def require_string(item: dict[str, Any], key: str, problems: list[str]) -> None:
     if not isinstance(item.get(key), str) or not item.get(key):
         problems.append(key)
+
+
+def require_pattern(item: dict[str, Any], key: str, pattern: str, problems: list[str]) -> None:
+    value = item.get(key)
+    if not isinstance(value, str) or re.fullmatch(pattern, value) is None:
+        problems.append(key)
+
+
+def require_sha256(item: dict[str, Any], key: str, problems: list[str]) -> None:
+    require_pattern(item, key, r"^[0-9a-f]{64}$", problems)
 
 
 def require_list(item: dict[str, Any], key: str, problems: list[str]) -> None:
@@ -634,6 +678,13 @@ def require_list(item: dict[str, Any], key: str, problems: list[str]) -> None:
 def require_enum(item: dict[str, Any], key: str, allowed: set[str], problems: list[str]) -> None:
     if item.get(key) not in allowed:
         problems.append(key)
+
+
+def valid_contract_path(value: Any) -> bool:
+    if not isinstance(value, str) or not value:
+        return False
+    first_segment = value.split("/", 1)[0]
+    return not (value.startswith("/") or ".." in value.split("/") or ":" in first_segment)
 
 
 def computed_xplat008_checks(

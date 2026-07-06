@@ -930,6 +930,8 @@ class GateFoundationTests(unittest.TestCase):
             )
         self.assertEqual(response["status"], "ok")
         self.assertEqual(response["data"]["blocking_count"], 0)
+        for payload_root in (REPO_ROOT / "dist/claude/speckit-pro", REPO_ROOT / "dist/codex/speckit-pro"):
+            self.assertFalse([path for path in payload_root.rglob("*.sh")], payload_root)
 
         with patch.object(active_path_guard, "review_base_ref", return_value=None):
             changed_sources = active_path_guard.changed_repo_sources(REPO_ROOT, {"scan_roots": ["speckit-pro/skills"]})
@@ -1032,6 +1034,16 @@ class GateFoundationTests(unittest.TestCase):
                 "script_file",
                 "scripts/setup.sh",
                 "Run scripts/setup.sh before use.",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "dist/codex/speckit-pro/scripts/install.sh",
+                "script_file",
+                "*.sh",
+                "#!/usr/bin/env bash\njq -n '{}'\n",
                 "repo_baseline",
             ),
             "blocking_active_runtime",
@@ -1485,6 +1497,7 @@ class GateFoundationTests(unittest.TestCase):
                 "missing-traceability",
                 "nondeterministic-dist",
                 "missing-release-evidence",
+                "live-evidence-disabled",
                 "failed-runner-invocation",
             },
         )
@@ -1559,6 +1572,7 @@ class GateFoundationTests(unittest.TestCase):
             "missing-traceability",
             "nondeterministic-dist",
             "missing-release-evidence",
+            "live-evidence-disabled",
             "failed-runner-invocation",
         ]
         for case_id in blocker_cases:

@@ -43,14 +43,14 @@
         "value": "speckit_pro_runner/gates/active_path_guard.py",
         "format": "posix-relative"
       },
-      "sha256": "b97a861b725dd722e53b32f4f6618f9cbedba0e7c0f450e2924b7da6c1a64ae4"
+      "sha256": "38d546507b714e2f3f4f872a3d61ef83674efeb2b93f09371e28d49883a94730"
     },
     {
       "path": {
         "value": "speckit_pro_runner/gates/payloads.py",
         "format": "posix-relative"
       },
-      "sha256": "26beffa2bfc87a2f2d5ae6c0a60ac25f6279544cc2b78c571855926a19d02947"
+      "sha256": "8959d50dfcd85f95bcb7f6bd5f40a06b9d2cb064d628cbc68aa3eda73a2ce9af"
     },
     {
       "path": {
@@ -64,7 +64,7 @@
         "value": "speckit_pro_runner/gates/release.py",
         "format": "posix-relative"
       },
-      "sha256": "07ae638bafd7d287c06307818992ad70588eeea56e8b53c5d85e74b1b14aae32"
+      "sha256": "109cfb8dbc57245f5259dfee0e3d63b26b1a091554a695ba4bed6e8b916f05c4"
     },
     {
       "path": {

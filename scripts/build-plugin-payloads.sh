@@ -132,6 +132,16 @@ def rewrite_payload_skill_paths(path: Path) -> None:
         path.write_text(new_text)
 
 
+def remove_payload_shell_scripts(root: Path) -> None:
+    for script in root.rglob("*.sh"):
+        script.unlink()
+    for directory in sorted((path for path in root.rglob("*") if path.is_dir()), key=lambda item: len(item.parts), reverse=True):
+        try:
+            directory.rmdir()
+        except OSError:
+            pass
+
+
 def build_claude_payload() -> None:
     reset_dir(claude)
     for name in [
@@ -149,6 +159,7 @@ def build_claude_payload() -> None:
     copy_repo_optional("LICENSE", claude)
     for skill_file in claude.glob("skills/*/SKILL.md"):
         strip_codex_guard(skill_file)
+    remove_payload_shell_scripts(claude)
 
 
 def build_codex_payload() -> None:
@@ -170,6 +181,7 @@ def build_codex_payload() -> None:
     for text_file in codex.rglob("*"):
         if text_file.is_file():
             rewrite_payload_skill_paths(text_file)
+    remove_payload_shell_scripts(codex)
 
 
 build_claude_payload()

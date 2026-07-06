@@ -636,6 +636,13 @@
       }
     },
     {
+      "case_id": "live-evidence-disabled",
+      "expected_status": "fail",
+      "overrides": {
+        "use_live_gate_evidence": false
+      }
+    },
+    {
       "case_id": "failed-runner-invocation",
       "expected_status": "fail",
       "overrides": {
