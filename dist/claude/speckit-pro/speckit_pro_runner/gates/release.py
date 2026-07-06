@@ -159,7 +159,16 @@ def release_readiness_xplat008(entry: Any, request: Any, repo_root: Path) -> dic
     traceability = normalize_traceability(case.get("traceability"))
     checks = normalize_xplat008_checks(case.get("checks"))
 
-    checks.extend(computed_xplat008_checks(payload_results, uat_rows, repair_actions, public_claim_results, traceability))
+    checks.extend(
+        computed_xplat008_checks(
+            payload_results,
+            uat_rows,
+            repair_actions,
+            public_claim_results,
+            runner_invocations,
+            traceability,
+        )
+    )
     checks = collapse_checks(checks)
     blocking_count = sum(1 for check in checks if check["blocking"])
 
@@ -228,20 +237,26 @@ def computed_xplat008_checks(
     uat_rows: list[dict[str, Any]],
     repair_actions: list[dict[str, Any]],
     public_claim_results: list[dict[str, Any]],
+    runner_invocations: list[dict[str, Any]],
     traceability: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     payload_failures = [item["payload_surface"] for item in payload_results if item.get("status") != "pass"]
+    payload_surfaces = {item.get("payload_surface") for item in payload_results if item.get("status") == "pass"}
     uat_failures = [f"{item.get('product')}:{item.get('platform')}" for item in uat_rows if item.get("status") != "pass"]
     repair_failures = [item["action_id"] for item in repair_actions if item.get("action_type") == "manual_remediation" or item.get("status") == "blocked"]
     claim_failures = [item["claim_id"] for item in public_claim_results if item.get("status") != "pass"]
+    runner_failures = [item.get("request_id", "unknown") for item in runner_invocations if item.get("status") != "pass"]
     missing_traceability = not traceability
     return [
         xplat008_check(
             "payload-completeness",
             "incomplete_payload",
-            not payload_failures,
+            {"claude", "codex"} <= payload_surfaces and not payload_failures,
             "Payload completeness covers Claude and Codex generated payloads.",
-            [f"failing_payloads={','.join(payload_failures) if payload_failures else 'none'}"],
+            [
+                f"surfaces={','.join(sorted(str(item) for item in payload_surfaces)) if payload_surfaces else 'none'}",
+                f"failing_payloads={','.join(payload_failures) if payload_failures else 'none'}",
+            ],
         ),
         xplat008_check(
             "uat-matrix",
@@ -260,9 +275,19 @@ def computed_xplat008_checks(
         xplat008_check(
             "public-claims",
             "unsafe_public_claim",
-            not claim_failures,
+            bool(public_claim_results) and not claim_failures,
             "Public claims are backed by implemented controls.",
             [f"blocked_claims={','.join(claim_failures) if claim_failures else 'none'}"],
+        ),
+        xplat008_check(
+            "runner-invocations",
+            "missing_runner_invocation",
+            bool(runner_invocations) and not runner_failures,
+            "Installed runner invocation evidence is present and passing.",
+            [
+                f"count={len(runner_invocations)}",
+                f"failing_runner_invocations={','.join(str(item) for item in runner_failures) if runner_failures else 'none'}",
+            ],
         ),
         xplat008_check(
             "release-packet-traceability",
@@ -305,7 +330,7 @@ def xplat008_check(check_id: str, blocker_class: str, ok: bool, message: str, ev
 def normalize_payload_results(raw: Any) -> list[dict[str, Any]]:
     if isinstance(raw, list) and raw:
         return [item for item in raw if isinstance(item, dict)]
-    return [synthetic_payload_result("claude", "pass"), synthetic_payload_result("codex", "pass")]
+    return []
 
 
 def synthetic_payload_result(surface: str, status: str) -> dict[str, Any]:
@@ -333,11 +358,7 @@ def synthetic_payload_result(surface: str, status: str) -> dict[str, Any]:
 def normalize_uat_rows(raw: Any) -> list[dict[str, Any]]:
     if isinstance(raw, list) and raw:
         return [item for item in raw if isinstance(item, dict)]
-    rows: list[dict[str, Any]] = []
-    for product in ["claude", "codex"]:
-        for platform in ["windows", "macos", "linux"]:
-            rows.append(default_uat_row(product, platform, "pass"))
-    return rows
+    return []
 
 
 def default_uat_row(product: str, platform: str, status: str) -> dict[str, Any]:
@@ -375,63 +396,19 @@ def normalize_repair_actions(raw: Any) -> list[dict[str, Any]]:
 def normalize_public_claim_results(raw: Any) -> list[dict[str, Any]]:
     if isinstance(raw, list) and raw:
         return [item for item in raw if isinstance(item, dict)]
-    return [
-        {
-            "claim_id": "python-runner",
-            "surface": "README.md",
-            "claim_text_or_pattern": "Python 3.11+ standard-library runner",
-            "classification": "implemented-control",
-            "status": "pass",
-            "evidence": ["speckit-pro/speckit_pro_runner/runtime.py"],
-        }
-    ]
+    return []
 
 
 def normalize_runner_invocations(raw: Any) -> list[dict[str, Any]]:
     if isinstance(raw, list) and raw:
         return [item for item in raw if isinstance(item, dict)]
-    return [
-        {
-            "schema_version": "1.0",
-            "request_id": "xplat-008-runner-invocation-fixture",
-            "product": "claude",
-            "platform": "macos",
-            "surface_path": "speckit-pro/skills/speckit-status/SKILL.md",
-            "operation": "status",
-            "interpreter_resolution": {
-                "accepted": True,
-                "attempted_candidates": ["python3"],
-                "resolved_executable": "python3",
-                "version": "3.11.0",
-                "minimum_version": "3.11",
-                "failure_code": None,
-                "diagnostic": "Fixture interpreter accepted.",
-            },
-            "invocation": {
-                "argv": ["python3", "-m", "speckit_pro_runner"],
-                "stdin_mode": "single_json_request",
-                "stdout_mode": "single_json_response",
-                "stderr_mode": "diagnostics_only",
-                "shell_used": False,
-            },
-            "runner_request": {"schema_version": "1.0", "helper_id": "runner", "operation": "runtime-info", "mode": "read_only", "inputs": {}},
-            "runner_response": {"schema_version": "1.0", "status": "ok", "exit_code": 0, "legacy_exit_code": None, "diagnostics": [], "data": {}},
-            "status": "pass",
-            "diagnostics": [],
-        }
-    ]
+    return []
 
 
 def normalize_traceability(raw: Any) -> list[dict[str, Any]]:
     if isinstance(raw, list):
         return [item for item in raw if isinstance(item, dict)]
-    return [
-        {
-            "requirement_id": "FR-006",
-            "changed_files": ["speckit-pro/speckit_pro_runner/gates/payloads.py"],
-            "verification_evidence": ["payload-completeness runner request"],
-        }
-    ]
+    return []
 
 
 def build_check(operation: str, case: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:

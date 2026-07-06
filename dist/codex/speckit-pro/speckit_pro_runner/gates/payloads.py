@@ -22,6 +22,7 @@ DEFAULT_INSTALL_CASES = FIXTURE_BOUNDARY / "install-verification-cases.json"
 INSTALL_INVENTORY = Path("speckit-pro") / "speckit_pro_runner" / "install_inventory.json"
 XPLAT_008_FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "layer4-scripts" / "fixtures" / "xplat-008-release"
 DEFAULT_XPLAT_008_PAYLOAD_CASES = XPLAT_008_FIXTURE_BOUNDARY / "payload-completeness-cases.json"
+XPLAT_008_PROMOTION_RECORD = XPLAT_008_FIXTURE_BOUNDARY / "promotion-records.json"
 
 __all__ = ("run_payload_gate",)
 
@@ -83,8 +84,11 @@ def payload_completeness_xplat008(entry: Any, request: Any, repo_root: Path) -> 
     status = "expected_failure" if blocking else "ok"
     data = base_data(entry, request.operation, status)
     data["gate"]["comparison_ids"] = ["xplat-008-payload-completeness"]
-    data["gate"]["promotion_record"] = DEFAULT_XPLAT_008_PAYLOAD_CASES.as_posix()
-    data["artifacts"] = [{"path": DEFAULT_XPLAT_008_PAYLOAD_CASES.as_posix(), "kind": "fixture"}]
+    data["gate"]["promotion_record"] = XPLAT_008_PROMOTION_RECORD.as_posix()
+    data["artifacts"] = [
+        {"path": XPLAT_008_PROMOTION_RECORD.as_posix(), "kind": "promotion_record"},
+        {"path": DEFAULT_XPLAT_008_PAYLOAD_CASES.as_posix(), "kind": "fixture"},
+    ]
     data["payload_completeness"] = results
     data["artifacts"].extend(
         {"path": result["generated_root"], "kind": "generated_payload"}
@@ -235,7 +239,7 @@ def install_verification(entry: Any, request: Any, repo_root: Path, *, refresh: 
 
 
 def xplat008_build_target(request: Any, repo_root: Path) -> Path | None | dict[str, Any]:
-    if request.mode == "read_only":
+    if request.mode in {"read_only", "dry_run"}:
         return None
 
     raw_output = request.inputs.get("output_root")
@@ -417,8 +421,8 @@ def xplat008_payload_result(
     mutation: dict[str, Any],
 ) -> dict[str, Any]:
     plugin_version = plugin_version_for_surface(repo_root, surface)
-    expected_files = scan_payload_files(expected_root, source_root=repo_root / "speckit-pro")
-    actual_files = scan_payload_files(actual_root, source_root=repo_root / "speckit-pro")
+    expected_files = scan_payload_files(expected_root, source_root=repo_root / "speckit-pro", surface=surface)
+    actual_files = scan_payload_files(actual_root, source_root=repo_root / "speckit-pro", surface=surface)
     actual_files = apply_payload_mutation(actual_files, mutation)
 
     expected_by_path = {item["path"]: item for item in expected_files}
@@ -460,13 +464,13 @@ def plugin_version_for_surface(repo_root: Path, surface: str) -> str:
     return version if isinstance(version, str) and version else "0.0.0"
 
 
-def scan_payload_files(root: Path, *, source_root: Path) -> list[dict[str, Any]]:
+def scan_payload_files(root: Path, *, source_root: Path, surface: str) -> list[dict[str, Any]]:
     if not root.is_dir():
         return []
     records: list[dict[str, Any]] = []
     for path in sorted(item for item in root.rglob("*") if item.is_file() and "__pycache__" not in item.parts and not item.name.endswith(".pyc")):
         rel = path.relative_to(root).as_posix()
-        source_path = infer_payload_source_path(rel, source_root)
+        source_path = infer_payload_source_path(rel, source_root, surface)
         records.append(
             {
                 "path": rel,
@@ -481,7 +485,7 @@ def scan_payload_files(root: Path, *, source_root: Path) -> list[dict[str, Any]]
     return records
 
 
-def infer_payload_source_path(rel: str, source_root: Path) -> str:
+def infer_payload_source_path(rel: str, source_root: Path, surface: str) -> str:
     if rel == ".claude-plugin/plugin.json":
         return "speckit-pro/.claude-plugin/plugin.json"
     if rel == ".codex-plugin/plugin.json":
@@ -493,7 +497,7 @@ def infer_payload_source_path(rel: str, source_root: Path) -> str:
     if rel.startswith("skills/"):
         candidate = source_root / rel
         codex_candidate = source_root / "codex-skills" / rel.removeprefix("skills/")
-        if codex_candidate.exists():
+        if surface == "codex" and codex_candidate.exists():
             return f"speckit-pro/codex-skills/{rel.removeprefix('skills/')}"
         if candidate.exists():
             return f"speckit-pro/{rel}"

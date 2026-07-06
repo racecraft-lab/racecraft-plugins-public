@@ -1155,6 +1155,28 @@ class GateFoundationTests(unittest.TestCase):
 
     def test_xplat008_payload_completeness_apply_builds_runner_payloads_without_shell(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
+            output_root = Path(tmp) / "dist"
+            sentinel = output_root / "claude" / "speckit-pro" / "sentinel.txt"
+            sentinel.parent.mkdir(parents=True)
+            sentinel.write_text("keep", encoding="utf-8")
+            completed, response, stderr_records = run_runner(
+                gate_request(
+                    "payload-gate",
+                    "payload-completeness",
+                    mode="dry_run",
+                    inputs={
+                        "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/payload-completeness-cases.json",
+                        "case_id": "current-committed-dist",
+                        "output_root": output_root.as_posix(),
+                    },
+                )
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok")
+            self.assertEqual(stderr_records, [])
+            self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep")
+
+        with tempfile.TemporaryDirectory() as tmp:
             output_root = str(Path(tmp) / "dist")
             request = gate_request(
                 "payload-gate",
@@ -1185,7 +1207,16 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 0)
         self.assert_response(response, "ok")
         self.assertEqual(stderr_records, [])
+        self.assert_xplat008_promotion_metadata(
+            response,
+            "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/payload-completeness-cases.json",
+        )
         self.assertEqual({item["payload_surface"] for item in response["data"]["payload_completeness"]}, {"claude", "codex"})
+        by_surface = {item["payload_surface"]: item for item in response["data"]["payload_completeness"]}
+        claude_status = next(item for item in by_surface["claude"]["actual_files"] if item["path"] == "skills/speckit-status/SKILL.md")
+        codex_status = next(item for item in by_surface["codex"]["actual_files"] if item["path"] == "skills/speckit-status/SKILL.md")
+        self.assertEqual(claude_status["source_path"], "speckit-pro/skills/speckit-status/SKILL.md")
+        self.assertEqual(codex_status["source_path"], "speckit-pro/codex-skills/speckit-status/SKILL.md")
         for result in response["data"]["payload_completeness"]:
             self.assertEqual(result["status"], "pass")
             self.assertFalse(result["missing_paths"])
@@ -1220,6 +1251,8 @@ class GateFoundationTests(unittest.TestCase):
                 "unsafe-repair-claim",
                 "missing-traceability",
                 "nondeterministic-dist",
+                "missing-release-evidence",
+                "failed-runner-invocation",
             },
         )
         request = xplat008_fixture_request("release-readiness")
@@ -1256,6 +1289,8 @@ class GateFoundationTests(unittest.TestCase):
             "unsafe-repair-claim",
             "missing-traceability",
             "nondeterministic-dist",
+            "missing-release-evidence",
+            "failed-runner-invocation",
         ]
         for case_id in blocker_cases:
             with self.subTest(case_id=case_id):
