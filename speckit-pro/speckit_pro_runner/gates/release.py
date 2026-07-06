@@ -777,6 +777,7 @@ def computed_xplat008_checks(
     payload_surfaces = {item.get("payload_surface") for item in payload_results if item.get("status") == "pass"}
     uat_checks = uat_matrix_checks(uat_rows, public_claim_results)
     uat_failures = [evidence for check in uat_checks if check["blocking"] for evidence in check["evidence"]]
+    uat_evidence = [f"rows={len(uat_rows)}", *(uat_failures or ["blockers=none"])]
     repair_failures = repair_action_failures(repair_actions)
     claim_failures = [
         str(item.get("claim_id") or "unknown-public-claim")
@@ -805,7 +806,7 @@ def computed_xplat008_checks(
             "incomplete_uat_evidence",
             not uat_failures,
             "Native UAT matrix has exactly six complete passing product/platform rows.",
-            [f"rows={len(uat_rows)}", f"blockers={';'.join(uat_failures) if uat_failures else 'none'}"],
+            uat_evidence,
         ),
         xplat008_check(
             "install-health-repair",
@@ -910,7 +911,11 @@ def uat_matrix_checks(rows: list[dict[str, Any]], public_claim_results: list[dic
             "incomplete_uat_evidence",
             len(rows) == 6 and not missing and not duplicates and not extra,
             "UAT matrix has exactly one row for each required Claude/Codex platform.",
-            [f"missing={','.join(missing) if missing else 'none'}", f"duplicates={','.join(duplicates) if duplicates else 'none'}", f"extra={','.join(extra) if extra else 'none'}"],
+            [
+                f"missing_rows={','.join(missing) if missing else 'none'}",
+                f"duplicate_rows={','.join(duplicates) if duplicates else 'none'}",
+                f"extra_rows={','.join(extra) if extra else 'none'}",
+            ],
         ),
         xplat008_check(
             "uat-row-fields",
