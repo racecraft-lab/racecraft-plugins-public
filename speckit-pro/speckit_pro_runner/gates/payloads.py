@@ -368,6 +368,8 @@ def remove_payload_shell_scripts_xplat008(root: Path) -> None:
         try:
             directory.rmdir()
         except OSError:
+            # Best-effort cleanup: directories may still contain files or may
+            # have changed while the payload tree was being scanned.
             pass
 
 
