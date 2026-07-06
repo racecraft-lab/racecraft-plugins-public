@@ -324,15 +324,21 @@ def normalize_xplat008_checks(raw: Any) -> list[dict[str, Any]]:
     for item in raw:
         if not isinstance(item, dict):
             continue
-        status = "fail" if item.get("status") == "fail" else "pass"
+        raw_status = item.get("status")
+        raw_evidence = item.get("evidence")
+        malformed = raw_status not in {"pass", "fail"} or not isinstance(raw_evidence, list)
+        status = raw_status if raw_status in {"pass", "fail"} else "fail"
+        evidence = [str(evidence) for evidence in raw_evidence if isinstance(evidence, (str, int, float))] if isinstance(raw_evidence, list) else []
+        if malformed:
+            evidence.append("malformed_check_record")
         checks.append(
             {
                 "check_id": str(item.get("check_id") or "release-packet-traceability"),
                 "blocker_class": str(item.get("blocker_class") or "missing_traceability"),
                 "status": status,
-                "blocking": status == "fail" or item.get("blocking") is True,
+                "blocking": malformed or status == "fail" or item.get("blocking") is True,
                 "message": str(item.get("message") or item.get("check_id") or "release readiness check"),
-                "evidence": [str(evidence) for evidence in item.get("evidence", []) if isinstance(evidence, (str, int, float))],
+                "evidence": evidence,
             }
         )
     return checks

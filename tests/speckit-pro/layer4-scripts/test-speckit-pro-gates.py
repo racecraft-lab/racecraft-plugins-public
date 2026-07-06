@@ -1487,6 +1487,20 @@ class GateFoundationTests(unittest.TestCase):
         payload_check = next(check for check in collapsed if check["check_id"] == "payload-completeness")
         self.assertIn("failing_payloads=unknown", payload_check["evidence"])
 
+        malformed_checks = release_gate.normalize_xplat008_checks(
+            [
+                {
+                    "check_id": "public-claims",
+                    "blocker_class": "unsafe_public_claim",
+                    "status": "maybe",
+                    "evidence": None,
+                }
+            ]
+        )
+        self.assertEqual(malformed_checks[0]["status"], "fail")
+        self.assertTrue(malformed_checks[0]["blocking"])
+        self.assertIn("malformed_check_record", malformed_checks[0]["evidence"])
+
     def test_run_default_suite_aggregates_success_stdout_stderr_and_exit_behavior(self) -> None:
         request = gate_request(
             "suite-gate",
