@@ -31,6 +31,25 @@
     {"case_id": "ready", "expected_status": "pass"},
     {"case_id": "trusted-missing", "expected_status": "pass"},
     {
+      "case_id": "trusted-missing-metadata",
+      "expected_status": "manual_remediation_required",
+      "overrides": {
+        "findings": [
+          {
+            "finding_id": "trusted-missing-no-metadata",
+            "artifact_path": "speckit_pro_runner/__main__.py",
+            "artifact_kind": "runner_file",
+            "source_identity": null,
+            "release_channel_or_tag": null,
+            "expected_digest": null,
+            "actual_digest": null,
+            "classification": "trusted_missing",
+            "repair_allowed": true
+          }
+        ]
+      }
+    },
+    {
       "case_id": "trusted-stale",
       "expected_status": "pass",
       "overrides": {

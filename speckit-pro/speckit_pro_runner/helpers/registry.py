@@ -267,7 +267,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
     "install-health-repair": MutationEntry(
         "install-health-repair",
         "install-health-repair",
-        ("read_only", "dry_run", "apply"),
+        ("read_only",),
         None,
         "golden_only",
         "fixture_semantic",

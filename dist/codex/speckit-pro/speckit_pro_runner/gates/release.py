@@ -811,9 +811,12 @@ def computed_xplat008_checks(
         xplat008_check(
             "install-health-repair",
             "unsafe_repair_claim",
-            not repair_failures,
+            bool(repair_actions) and not repair_failures,
             "Install-health repair evidence contains no unsafe repair or unresolved manual-remediation claims.",
-            [f"blocked_repairs={','.join(repair_failures) if repair_failures else 'none'}"],
+            [
+                f"action_count={len(repair_actions)}",
+                f"blocked_repairs={','.join(repair_failures) if repair_failures else 'none'}",
+            ],
         ),
         xplat008_check(
             "public-claims",
@@ -1090,10 +1093,16 @@ def normalize_repair_actions(raw: Any, repo_root: Path | None = None) -> list[di
     if isinstance(raw, list):
         return normalize_evidence_records(raw, "repair")
     if repo_root is not None:
+        from ..helpers import install as install_helper
+
         case = load_xplat008_install_health_case(repo_root, {"case_file": XPLAT_008_INSTALL_HEALTH_CASE_FILE, "case_id": "ready"})
         if isinstance(case, dict) and not is_diagnostic(case):
             actions = case.get("repair_actions")
             if isinstance(actions, list):
+                return normalize_evidence_records(actions, "repair")
+            findings = install_helper.normalize_install_health_findings(case.get("findings"))
+            actions = install_helper.normalize_install_health_actions(None, findings)
+            if actions:
                 return normalize_evidence_records(actions, "repair")
     return []
 

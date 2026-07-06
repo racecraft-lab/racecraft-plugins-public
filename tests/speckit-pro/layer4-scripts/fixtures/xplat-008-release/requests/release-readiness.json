@@ -6,6 +6,6 @@
   "mode": "read_only",
   "inputs": {
     "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json",
-    "case_id": "ready"
+    "case_id": "current-native-uat-pending"
   }
 }

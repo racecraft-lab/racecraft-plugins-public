@@ -240,6 +240,21 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertLessEqual(resolution_required, set(record["interpreter_resolution"]), record)
                 self.assertIsInstance(record["interpreter_resolution"]["invocation_argv_prefix"], list)
 
+    def assert_uat_matrix_contract_subset(self, matrix: dict[str, Any]) -> None:
+        schema = json.loads(
+            (
+                REPO_ROOT
+                / "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/contracts/uat-matrix.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertLessEqual(set(schema["required"]), set(matrix))
+        self.assertFalse(set(matrix) - set(schema["properties"]))
+        check_ids = set(schema["$defs"]["check"]["properties"]["check_id"]["enum"])
+        blocker_classes = set(schema["$defs"]["check"]["properties"]["blocker_class"]["enum"])
+        for check in matrix["checks"]:
+            self.assertIn(check["check_id"], check_ids)
+            self.assertIn(check["blocker_class"], blocker_classes)
+
     def repo_rel(self, path: Path) -> str:
         return path.resolve(strict=False).relative_to(REPO_ROOT.resolve(strict=False)).as_posix()
 
@@ -1618,6 +1633,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(matrix["status"], "pass")
         self.assertEqual(matrix["blocking_count"], 0)
         self.assertEqual(len(matrix["rows"]), 6)
+        self.assert_uat_matrix_contract_subset(matrix)
 
         for case_id in [
             "missing-row",
@@ -1653,6 +1669,7 @@ class GateFoundationTests(unittest.TestCase):
             {
                 "ready",
                 "trusted-missing",
+                "trusted-missing-metadata",
                 "trusted-stale",
                 "unsafe-unknown",
                 "unsafe-extra",
@@ -1674,7 +1691,12 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(health["repair_actions"][0]["action_type"], "autoheal_refresh")
         self.assertTrue(health["repair_actions"][0]["digest_verified"])
 
+        from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+        self.assertEqual(MUTATION_HELPERS["install-health-repair"].modes, ("read_only",))
+
         for case_id in [
+            "trusted-missing-metadata",
             "unsafe-unknown",
             "unsafe-extra",
             "unsafe-mismatch",
@@ -1714,28 +1736,8 @@ class GateFoundationTests(unittest.TestCase):
         self.assert_response(response, "expected_failure")
         self.assertEqual([diag["code"] for diag in stderr_records], ["install_health_repair_blocked"])
 
-    def test_xplat008_release_readiness_default_request_uses_ready_native_uat(self) -> None:
+    def test_xplat008_release_readiness_default_request_blocks_until_native_uat_complete(self) -> None:
         completed, response, stderr_records = run_runner(xplat008_fixture_request("release-readiness"))
-        self.assertEqual(completed.returncode, 0)
-        self.assert_response(response, "ok")
-        self.assertEqual(stderr_records, [])
-        readiness = response["data"]["release_readiness"]
-        self.assertEqual(readiness["feature_id"], "XPLAT-008")
-        self.assertEqual(readiness["status"], "pass")
-        self.assertEqual(readiness["blocking_count"], 0)
-        self.assertEqual(len(readiness["uat_rows"]), 6)
-        self.assertTrue(any(check["check_id"] == "uat-matrix" and not check["blocking"] for check in readiness["checks"]))
-
-        completed, response, stderr_records = run_runner(
-            gate_request(
-                "release-readiness",
-                "release-readiness-xplat008",
-                inputs={
-                    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json",
-                    "case_id": "current-native-uat-pending",
-                },
-            )
-        )
         self.assertEqual(completed.returncode, 1)
         self.assert_response(response, "expected_failure")
         self.assertEqual([diag["code"] for diag in stderr_records], ["release_readiness_xplat008_blocked"])
@@ -1745,18 +1747,10 @@ class GateFoundationTests(unittest.TestCase):
         self.assertGreater(readiness["blocking_count"], 0)
         self.assertEqual(readiness["uat_rows"], [])
         self.assertTrue(any(check["check_id"] == "uat-matrix" and check["blocking"] for check in readiness["checks"]))
+        self.assert_release_readiness_contract_subset(readiness)
 
     def test_xplat008_release_readiness_ready_fixture_passes_and_seeded_blockers(self) -> None:
-        completed, response, stderr_records = run_runner(
-            gate_request(
-                "release-readiness",
-                "release-readiness-xplat008",
-                inputs={
-                    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json",
-                    "case_id": "ready",
-                },
-            )
-        )
+        completed, response, stderr_records = run_runner(xplat008_fixture_request("release-readiness-ready"))
         self.assertEqual(completed.returncode, 0)
         self.assert_response(response, "ok")
         self.assertEqual(stderr_records, [])

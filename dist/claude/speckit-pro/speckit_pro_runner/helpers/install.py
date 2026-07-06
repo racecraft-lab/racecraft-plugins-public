@@ -223,9 +223,9 @@ def normalize_install_health_findings(raw: Any) -> list[dict[str, Any]]:
                 "finding_id": str(item.get("finding_id") or f"finding-{index}"),
                 "artifact_path": artifact_path,
                 "artifact_kind": str(item.get("artifact_kind") or ("runner_file" if trusted else "unknown")),
-                "source_identity": item.get("source_identity") if isinstance(item.get("source_identity"), str) else ("speckit-pro" if trusted else None),
-                "release_channel_or_tag": item.get("release_channel_or_tag") if isinstance(item.get("release_channel_or_tag"), str) else ("2.17.0" if trusted else None),
-                "expected_digest": normalize_digest(item.get("expected_digest"), fallback="1" * 64 if trusted else None),
+                "source_identity": item.get("source_identity") if isinstance(item.get("source_identity"), str) else None,
+                "release_channel_or_tag": item.get("release_channel_or_tag") if isinstance(item.get("release_channel_or_tag"), str) else None,
+                "expected_digest": normalize_digest(item.get("expected_digest"), fallback=None),
                 "actual_digest": normalize_digest(item.get("actual_digest"), fallback=None),
                 "classification": classification,
                 "repair_allowed": bool(item.get("repair_allowed")) if "repair_allowed" in item else trusted,
@@ -241,7 +241,11 @@ def normalize_install_health_actions(raw: Any, findings: list[dict[str, Any]]) -
     for finding in findings:
         finding_id = str(finding.get("finding_id"))
         target_path = str(finding.get("artifact_path"))
-        if finding.get("classification") in {"trusted_missing", "trusted_stale"} and finding.get("repair_allowed") is True:
+        if (
+            finding.get("classification") in {"trusted_missing", "trusted_stale"}
+            and finding.get("repair_allowed") is True
+            and has_trusted_repair_evidence(finding)
+        ):
             actions.append(
                 {
                     "action_id": f"autoheal:{finding_id}",
@@ -273,6 +277,14 @@ def normalize_install_health_actions(raw: Any, findings: list[dict[str, Any]]) -
             }
         )
     return actions
+
+
+def has_trusted_repair_evidence(finding: dict[str, Any]) -> bool:
+    for key in ("source_identity", "release_channel_or_tag", "expected_digest"):
+        value = finding.get(key)
+        if not isinstance(value, str) or not value:
+            return False
+    return True
 
 
 def install_health_action_failures(actions: list[dict[str, Any]]) -> list[str]:
