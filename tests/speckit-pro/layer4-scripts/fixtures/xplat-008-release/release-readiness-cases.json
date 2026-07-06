@@ -414,7 +414,10 @@
     },
     {
       "case_id": "current-native-uat-pending",
-      "expected_status": "fail"
+      "expected_status": "fail",
+      "overrides": {
+        "uat_rows": []
+      }
     },
     {
       "case_id": "active-shell-dependency",

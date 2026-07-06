@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 2,
+  "records": [
+    {
+      "review_order": 1,
+      "slice_id": "us1",
+      "layer": "us1",
+      "branch": "codex/xplat-008-review/01-us1",
+      "base_branch": "main",
+      "pr_number": 289,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/289",
+      "declared_files": [
+        "speckit-pro/codex-hooks.json",
+        "speckit-pro/hooks/hooks.json",
+        "speckit-pro/speckit_pro_runner/gates/active_path_guard.py",
+        "speckit-pro/speckit_pro_runner/gates/registry.py",
+        "speckit-pro/speckit_pro_runner/helpers/install.py",
+        "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/active-runtime-inventory.md"
+      ],
+      "verification_evidence": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/emission/us1/layer4.log",
+      "stack_manager_evidence_path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/stack-manager/emission/link/preflight/decision.json",
+      "status": "opened",
+      "head_sha": "4041d16b9a08547cbc814a8c327e406340428eee",
+      "merged_sha": null
+    },
+    {
+      "review_order": 2,
+      "slice_id": "us2",
+      "layer": "us2",
+      "branch": "codex/xplat-008-review/02-us2",
+      "base_branch": "codex/xplat-008-review/01-us1",
+      "pr_number": 290,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/290",
+      "declared_files": [
+        "docs-site/src/content/docs/contribute-and-release.md",
+        "docs-site/src/content/docs/first-run.md",
+        "docs-site/src/content/docs/install/claude-code.md",
+        "docs-site/src/content/docs/install/codex.md",
+        "docs-site/src/content/docs/security-and-trust.md",
+        "docs-site/src/content/docs/troubleshooting.md",
+        "docs-site/src/content/docs/update-and-rollback.md",
+        "speckit-pro/README.md",
+        "speckit-pro/speckit_pro_runner/gates/payloads.py",
+        "speckit-pro/speckit_pro_runner/gates/registry.py",
+        "speckit-pro/speckit_pro_runner/gates/release.py",
+        "speckit-pro/speckit_pro_runner/install_inventory.json",
+        "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+        "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
+      ],
+      "verification_evidence": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/emission/us2/layer4.log",
+      "stack_manager_evidence_path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/stack-manager/emission/link/preflight/decision.json",
+      "status": "opened",
+      "head_sha": "17c0f952d145ea559b965020b6aa1160855f6bae",
+      "merged_sha": null
+    },
+    {
+      "review_order": 3,
+      "slice_id": "us3",
+      "layer": "us3",
+      "branch": "codex/xplat-008-review/03-us3",
+      "base_branch": "codex/xplat-008-review/02-us2",
+      "pr_number": 291,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/291",
+      "declared_files": [
+        "speckit-pro/speckit_pro_runner/gates/registry.py",
+        "speckit-pro/speckit_pro_runner/gates/release.py",
+        "speckit-pro/speckit_pro_runner/helpers/install.py",
+        "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/release-readiness.md",
+        "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat-matrix.md"
+      ],
+      "verification_evidence": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/emission/us3/layer4.log",
+      "stack_manager_evidence_path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/stack-manager/emission/link/preflight/decision.json",
+      "status": "opened",
+      "head_sha": "53b0d3193c9c3c126f655a0155c8a31560cd8d60",
+      "merged_sha": null
+    }
+  ]
+}
