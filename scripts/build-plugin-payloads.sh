@@ -43,7 +43,12 @@ def reset_dir(path: Path) -> None:
 
 def copy_path(src: Path, dst: Path) -> None:
     if src.is_dir():
-        shutil.copytree(src, dst, dirs_exist_ok=True)
+        shutil.copytree(
+            src,
+            dst,
+            dirs_exist_ok=True,
+            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+        )
     elif src.is_file():
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dst)
@@ -136,6 +141,7 @@ def build_claude_payload() -> None:
         "hooks",
         "skills",
         "scripts",
+        "speckit_pro_runner",
         "README.md",
         "CHANGELOG.md",
     ]:
@@ -152,6 +158,7 @@ def build_codex_payload() -> None:
         "codex-agents",
         "codex-hooks.json",
         "scripts",
+        "speckit_pro_runner",
         "README.md",
         "CHANGELOG.md",
     ]:

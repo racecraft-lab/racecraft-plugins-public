@@ -483,6 +483,12 @@ class GateFoundationTests(unittest.TestCase):
             install_helper.invocation_prefix_for_live_probe("py -V:3", "C:/Python312/python.exe"),
             ["py", "-3"],
         )
+        for payload_root in [
+            REPO_ROOT / "dist" / "claude" / "speckit-pro",
+            REPO_ROOT / "dist" / "codex" / "speckit-pro",
+        ]:
+            self.assertTrue((payload_root / "speckit_pro_runner" / "__main__.py").is_file())
+            self.assertTrue((payload_root / "speckit_pro_runner" / "speckit-pro-runner.manifest.json").is_file())
 
         pass_cases = [
             "windows-py-v3",
@@ -563,6 +569,15 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(record["runner_response"]["status"], "ok")
         self.assertEqual(record["runner_response"]["data"]["report"]["runner_name"], "speckit_pro_runner")
         self.assert_no_shell_argv(record["invocation"]["argv"])
+
+        runner_response, execution_diag = install_helper.execute_runner_runtime_info(
+            [sys.executable, "-m", "speckit_pro_runner"],
+            record["runner_request"],
+            REPO_ROOT,
+            "dist/missing-installed-cache",
+        )
+        self.assertIsNone(runner_response)
+        self.assertEqual(execution_diag["code"], "runner_cache_missing")
 
         completed, response, stderr_records = run_runner(
             gate_request(
@@ -681,11 +696,13 @@ class GateFoundationTests(unittest.TestCase):
                 "dist/claude/speckit-pro/agents",
                 "dist/claude/speckit-pro/skills",
                 "dist/claude/speckit-pro/scripts",
+                "dist/claude/speckit-pro/speckit_pro_runner",
                 "dist/claude/speckit-pro/.claude-plugin",
                 "dist/codex/speckit-pro/codex-hooks.json",
                 "dist/codex/speckit-pro/codex-agents",
                 "dist/codex/speckit-pro/skills",
                 "dist/codex/speckit-pro/scripts",
+                "dist/codex/speckit-pro/speckit_pro_runner",
                 "dist/codex/speckit-pro/.codex-plugin",
                 ".github/workflows",
                 "README.md",

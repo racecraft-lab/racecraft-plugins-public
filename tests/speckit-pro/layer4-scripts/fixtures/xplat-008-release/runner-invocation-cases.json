@@ -89,7 +89,7 @@
       "product": "codex",
       "surface_path": "speckit-pro/codex-skills/speckit-status/SKILL.md",
       "operation": "status",
-      "cache_root": "."
+      "cache_root": "dist/codex/speckit-pro"
     },
     {
       "case_id": "too-old-or-missing",
