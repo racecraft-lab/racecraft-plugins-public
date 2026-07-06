@@ -240,6 +240,7 @@
             "uat-matrix",
             "update-proof",
             "install-health-repair",
+            "runner-invocations",
             "release-packet-traceability",
             "dist-determinism"
           ]
@@ -256,6 +257,7 @@
             "unsafe_public_claim",
             "incomplete_uat_evidence",
             "unsafe_repair_claim",
+            "missing_runner_invocation",
             "missing_traceability",
             "nondeterministic_dist"
           ]

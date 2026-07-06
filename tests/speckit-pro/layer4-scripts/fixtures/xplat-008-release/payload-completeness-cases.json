@@ -9,12 +9,22 @@
     "stale metadata blocker",
     "extra file blocker",
     "path leak blocker",
+    "empty surface selection blocker",
+    "invalid surface selection blocker",
     "transform mismatch blocker"
   ],
   "cases": [
     {
       "case_id": "current-committed-dist",
       "surfaces": ["claude", "codex"]
+    },
+    {
+      "case_id": "empty-surfaces",
+      "surfaces": []
+    },
+    {
+      "case_id": "invalid-surfaces",
+      "surfaces": ["claude", "invalid"]
     },
     {
       "case_id": "missing-runner-file",

@@ -344,6 +344,9 @@
             "python3"
           ],
           "resolved_executable": "python3",
+          "invocation_argv_prefix": [
+            "python3"
+          ],
           "version": "3.11.0",
           "minimum_version": "3.11",
           "failure_code": null,
@@ -637,8 +640,41 @@
       "overrides": {
         "runner_invocations": [
           {
+            "schema_version": "1.0",
             "request_id": "xplat-008-runner-invocation-failed",
-            "status": "blocked"
+            "product": "claude",
+            "platform": "macos",
+            "surface_path": "speckit-pro/skills/speckit-status/SKILL.md",
+            "operation": "status",
+            "interpreter_resolution": {
+              "accepted": false,
+              "attempted_candidates": [
+                "python3"
+              ],
+              "resolved_executable": null,
+              "invocation_argv_prefix": [],
+              "version": null,
+              "minimum_version": "3.11",
+              "failure_code": "python_runtime_unavailable",
+              "diagnostic": "Fixture runner invocation blocked."
+            },
+            "invocation": {
+              "argv": [],
+              "stdin_mode": "single_json_request",
+              "stdout_mode": "single_json_response",
+              "stderr_mode": "diagnostics_only",
+              "shell_used": false
+            },
+            "runner_request": {
+              "schema_version": "1.0",
+              "helper_id": "runner",
+              "operation": "runtime-info",
+              "mode": "read_only",
+              "inputs": {}
+            },
+            "runner_response": null,
+            "status": "blocked",
+            "diagnostics": []
           }
         ]
       }

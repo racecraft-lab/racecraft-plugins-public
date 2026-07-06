@@ -178,6 +178,50 @@ class GateFoundationTests(unittest.TestCase):
         self.assertNotIn("pwsh", joined)
         self.assertFalse(any(arg.lower().endswith(".sh") for arg in argv))
 
+    def assert_payload_completeness_contract_subset(self, results: list[dict[str, Any]]) -> None:
+        schema = json.loads(
+            (
+                REPO_ROOT
+                / "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/contracts/payload-completeness.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        required = set(schema["required"])
+        allowed = set(schema["properties"])
+        file_required = set(schema["$defs"]["payload_file"]["required"])
+        file_allowed = set(schema["$defs"]["payload_file"]["properties"])
+        for result in results:
+            self.assertLessEqual(required, set(result), result.get("payload_surface"))
+            self.assertFalse(set(result) - allowed, result.get("payload_surface"))
+            for files_key in ("expected_files", "actual_files"):
+                for file_record in result[files_key]:
+                    with self.subTest(surface=result["payload_surface"], path=file_record["path"]):
+                        self.assertLessEqual(file_required, set(file_record), file_record)
+                        self.assertFalse(set(file_record) - file_allowed, file_record)
+                        path = file_record["path"]
+                        self.assertFalse(path.startswith("/") or ".." in path.split("/") or ":" in path.split("/")[0], path)
+
+    def assert_release_readiness_contract_subset(self, readiness: dict[str, Any]) -> None:
+        schema = json.loads(
+            (
+                REPO_ROOT
+                / "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/contracts/release-readiness.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        check_schema = schema["$defs"]["check"]["properties"]
+        check_ids = set(check_schema["check_id"]["enum"])
+        blocker_classes = set(check_schema["blocker_class"]["enum"])
+        for check in readiness["checks"]:
+            with self.subTest(check_id=check["check_id"]):
+                self.assertIn(check["check_id"], check_ids)
+                self.assertIn(check["blocker_class"], blocker_classes)
+        runner_required = set(schema["$defs"]["runner_invocation"]["required"])
+        resolution_required = set(schema["$defs"]["interpreter_resolution"]["required"])
+        for record in readiness["runner_invocations"]:
+            with self.subTest(runner_invocation=record["request_id"]):
+                self.assertLessEqual(runner_required, set(record), record)
+                self.assertLessEqual(resolution_required, set(record["interpreter_resolution"]), record)
+                self.assertIsInstance(record["interpreter_resolution"]["invocation_argv_prefix"], list)
+
     def repo_rel(self, path: Path) -> str:
         return path.resolve(strict=False).relative_to(REPO_ROOT.resolve(strict=False)).as_posix()
 
@@ -468,6 +512,14 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(contract["$defs"]["diagnostic"]["properties"]["remediation"]["type"], "object")
         release_runner = release_contract["$defs"]["runner_invocation"]
         self.assertEqual(release_runner["properties"]["invocation"]["properties"]["argv"], argv_contract)
+        self.assertIn(
+            "runner-invocations",
+            release_contract["$defs"]["check"]["properties"]["check_id"]["enum"],
+        )
+        self.assertIn(
+            "missing_runner_invocation",
+            release_contract["$defs"]["check"]["properties"]["blocker_class"]["enum"],
+        )
         self.assertIn("evidence_refs", release_contract["required"])
         self.assertEqual(release_contract["properties"]["runner_invocations"]["minItems"], 1)
         self.assertEqual(
@@ -540,6 +592,12 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(resolution["failure_code"], "python_runtime_unavailable")
         self.assertEqual([diag["code"] for diag in diagnostics], ["python_runtime_unavailable"])
         self.assertIn("unsupported invocation prefix", resolution["diagnostic"])
+        for prefix in [["python3", "-c"], ["python3", "bash"], ["python3", "-m"], ["py"], ["py", "-c"]]:
+            with self.subTest(prefix=prefix):
+                self.assertFalse(install_helper.allowed_python_invocation_prefix("linux", prefix))
+        self.assertFalse(install_helper.allowed_python_invocation_prefix("windows", ["py", "-c"]))
+        self.assertTrue(install_helper.allowed_python_invocation_prefix("windows", ["py", "-3"]))
+        self.assertTrue(install_helper.allowed_python_invocation_prefix("linux", ["python3"]))
         for payload_root in [
             REPO_ROOT / "dist" / "claude" / "speckit-pro",
             REPO_ROOT / "dist" / "codex" / "speckit-pro",
@@ -1103,6 +1161,8 @@ class GateFoundationTests(unittest.TestCase):
             {case["case_id"] for case in cases["cases"]},
             {
                 "current-committed-dist",
+                "empty-surfaces",
+                "invalid-surfaces",
                 "missing-runner-file",
                 "stale-metadata",
                 "extra-file",
@@ -1117,6 +1177,8 @@ class GateFoundationTests(unittest.TestCase):
             "stale metadata blocker",
             "extra file blocker",
             "path leak blocker",
+            "empty surface selection blocker",
+            "invalid surface selection blocker",
             "transform mismatch blocker",
         ]:
             self.assertIn(label, cases["coverage"])
@@ -1152,6 +1214,28 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertTrue(
                     any(result["status"] == "fail" for result in response["data"]["payload_completeness"])
                 )
+                self.assert_payload_completeness_contract_subset(response["data"]["payload_completeness"])
+                if case_id == "path-leak":
+                    failed = [result for result in response["data"]["payload_completeness"] if result["status"] == "fail"]
+                    self.assertEqual(len(failed), 1)
+                    self.assertEqual(failed[0]["path_leaks"], ["../outside-cache.txt"])
+                    self.assertFalse(any(".." in item["path"].split("/") for item in failed[0]["actual_files"]))
+
+        for case_id in ["empty-surfaces", "invalid-surfaces"]:
+            with self.subTest(case_id=case_id):
+                completed, response, stderr_records = run_runner(
+                    gate_request(
+                        "payload-gate",
+                        "payload-completeness",
+                        inputs={
+                            "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/payload-completeness-cases.json",
+                            "case_id": case_id,
+                        },
+                    )
+                )
+                self.assertEqual(completed.returncode, 2)
+                self.assert_response(response, "input_error")
+                self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_payload_surface_selection"])
 
     def test_xplat008_payload_completeness_apply_builds_runner_payloads_without_shell(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1223,6 +1307,7 @@ class GateFoundationTests(unittest.TestCase):
             self.assertFalse(result["extra_paths"])
             self.assertFalse(result["mismatched_paths"])
             self.assertFalse(result["path_leaks"])
+        self.assert_payload_completeness_contract_subset(response["data"]["payload_completeness"])
 
     def test_xplat008_release_readiness_fixtures_cover_release_blockers(self) -> None:
         promotion_records = json.loads((XPLAT_008_FIXTURE_DIR / "promotion-records.json").read_text(encoding="utf-8"))
@@ -1233,6 +1318,15 @@ class GateFoundationTests(unittest.TestCase):
             {"runner-invocation", "active-path-guard", "payload-gate", "release-readiness"},
             {record["gate_id"] for record in promotion_records["records"]},
         )
+        case_ids_by_operation = {
+            "runner-invocation": {case["case_id"] for case in xplat008_fixture_cases("runner-invocation")["cases"]},
+            "active-runtime-guard": {case["case_id"] for case in xplat008_fixture_cases("active-runtime-guard")["cases"]},
+            "payload-completeness": {case["case_id"] for case in xplat008_fixture_cases("payload-completeness")["cases"]},
+            "release-readiness-xplat008": {case["case_id"] for case in xplat008_fixture_cases("release-readiness")["cases"]},
+        }
+        for record in promotion_records["records"]:
+            with self.subTest(promotion=record["python_operation"]):
+                self.assertLessEqual(set(record["fixture_ids"]), case_ids_by_operation[record["python_operation"]])
         cases = xplat008_fixture_cases("release-readiness")
         self.assertEqual(cases["schema_version"], "1.0")
         self.assertEqual(cases["feature_id"], "XPLAT-008")
@@ -1276,6 +1370,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual({item["payload_surface"] for item in readiness["payload_results"]}, {"claude", "codex"})
         self.assertEqual(len(readiness["uat_rows"]), 6)
         self.assertTrue(readiness["traceability"])
+        self.assert_release_readiness_contract_subset(readiness)
 
         blocker_cases = [
             "active-shell-dependency",
@@ -1308,6 +1403,7 @@ class GateFoundationTests(unittest.TestCase):
                 self.assert_response(response, "expected_failure")
                 self.assertEqual([diag["code"] for diag in stderr_records], ["release_readiness_xplat008_blocked"])
                 self.assertGreater(response["data"]["release_readiness"]["blocking_count"], 0)
+                self.assert_release_readiness_contract_subset(response["data"]["release_readiness"])
 
     def test_run_default_suite_aggregates_success_stdout_stderr_and_exit_behavior(self) -> None:
         request = gate_request(

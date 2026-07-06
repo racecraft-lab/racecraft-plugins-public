@@ -50,7 +50,7 @@
         "value": "speckit_pro_runner/gates/payloads.py",
         "format": "posix-relative"
       },
-      "sha256": "f788bd308908b91cf491731f595546934ad4aeb9837eed1c7bcebeb6b719e7c8"
+      "sha256": "6470ab00740e3cb7bd70fc7dc79832ce8ce5f2f5a5249c5909d6dd313289008e"
     },
     {
       "path": {
@@ -85,7 +85,7 @@
         "value": "speckit_pro_runner/helpers/install.py",
         "format": "posix-relative"
       },
-      "sha256": "dd52ad8d6fac9ccaadecaaaaa90a810fd2a3019f10fef0d32e7373d8f02286c6"
+      "sha256": "02a7d0b2b6ccf766cadccc1c704b1c7e5aef318b002e491e18e644e66b1ac382"
     },
     {
       "path": {

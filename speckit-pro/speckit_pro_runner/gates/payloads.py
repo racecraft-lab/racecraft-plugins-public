@@ -61,6 +61,11 @@ def payload_completeness_xplat008(entry: Any, request: Any, repo_root: Path) -> 
         return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[case_result])
     case = case_result
 
+    surfaces_result = xplat008_payload_surfaces(case)
+    if is_diagnostic(surfaces_result):
+        return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[surfaces_result])
+    surfaces = surfaces_result
+
     target_result = xplat008_build_target(request, repo_root)
     if is_diagnostic(target_result):
         return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[target_result])
@@ -75,7 +80,7 @@ def payload_completeness_xplat008(entry: Any, request: Any, repo_root: Path) -> 
 
         build_xplat008_payloads(repo_root, build_dist_root)
         compare_dist_root = build_dist_root if request.mode == "apply" else repo_root / "dist"
-        results = xplat008_payload_results(repo_root, build_dist_root, compare_dist_root, case)
+        results = xplat008_payload_results(repo_root, build_dist_root, compare_dist_root, case, surfaces)
     finally:
         if temp_context is not None:
             temp_context.cleanup()
@@ -398,8 +403,36 @@ def rewrite_payload_skill_paths_xplat008(codex_root: Path, path: Path) -> None:
         path.write_text(rewritten, encoding="utf-8")
 
 
-def xplat008_payload_results(repo_root: Path, expected_dist_root: Path, actual_dist_root: Path, case: dict[str, Any]) -> list[dict[str, Any]]:
-    surfaces = [item for item in case.get("surfaces", ["claude", "codex"]) if item in {"claude", "codex"}]
+def xplat008_payload_surfaces(case: dict[str, Any]) -> list[str] | dict[str, Any]:
+    raw_surfaces = case.get("surfaces", ["claude", "codex"])
+    if not isinstance(raw_surfaces, list):
+        return diagnostic(
+            "invalid_payload_surface_selection",
+            "XPLAT-008 payload completeness requires explicit Claude and Codex surfaces",
+            details={"case_id": case.get("case_id"), "surfaces_type": type(raw_surfaces).__name__},
+            remediation_summary="Select exactly the Claude and Codex generated payload surfaces.",
+            remediation_actions=["Set surfaces to [\"claude\", \"codex\"].", "Retry the payload completeness request."],
+        )
+    surfaces = [item for item in raw_surfaces if isinstance(item, str) and item in {"claude", "codex"}]
+    invalid = [str(item) for item in raw_surfaces if not isinstance(item, str) or item not in {"claude", "codex"}]
+    if set(surfaces) != {"claude", "codex"} or len(surfaces) != 2 or invalid:
+        return diagnostic(
+            "invalid_payload_surface_selection",
+            "XPLAT-008 payload completeness must compare exactly the Claude and Codex generated payloads",
+            details={"case_id": case.get("case_id"), "surfaces": raw_surfaces, "invalid_surfaces": invalid},
+            remediation_summary="Do not allow a payload completeness gate to pass without both generated payload surfaces.",
+            remediation_actions=["Set surfaces to [\"claude\", \"codex\"].", "Retry the payload completeness request."],
+        )
+    return surfaces
+
+
+def xplat008_payload_results(
+    repo_root: Path,
+    expected_dist_root: Path,
+    actual_dist_root: Path,
+    case: dict[str, Any],
+    surfaces: list[str],
+) -> list[dict[str, Any]]:
     mutations = case.get("mutations") if isinstance(case.get("mutations"), dict) else {}
     return [
         xplat008_payload_result(
@@ -552,6 +585,8 @@ def apply_payload_mutation(files: list[dict[str, Any]], mutation: dict[str, Any]
         if not isinstance(extra, dict):
             continue
         path = str(extra.get("path", "extra.txt"))
+        if payload_path_leaks(path):
+            continue
         content = str(extra.get("content", "extra"))
         mutated.append(
             {

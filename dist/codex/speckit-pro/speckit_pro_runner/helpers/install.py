@@ -349,7 +349,11 @@ def allowed_python_candidate(platform_name: str, candidate: str) -> bool:
 def allowed_python_invocation_prefix(platform_name: str, prefix: list[str]) -> bool:
     if not prefix:
         return False
-    return allowed_python_program(platform_name, prefix[0])
+    if not allowed_python_program(platform_name, prefix[0]):
+        return False
+    if len(prefix) == 1:
+        return program_name(prefix[0]) != "py"
+    return platform_name == "windows" and len(prefix) == 2 and program_name(prefix[0]) == "py" and prefix[1] == "-3"
 
 
 def allowed_python_executable(platform_name: str, executable: str) -> bool:
