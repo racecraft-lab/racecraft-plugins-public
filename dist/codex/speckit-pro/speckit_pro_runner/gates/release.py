@@ -960,7 +960,6 @@ def repair_action_failures(actions: list[dict[str, Any]]) -> list[str]:
         action_type = action.get("action_type")
         target_path = str(action.get("target_path") or "")
         source_path = action.get("source_path")
-        manual_steps = action.get("manual_steps")
         broad = action.get("operation_scope") == "broad_reinstall" or target_path in {"", ".", "/"} or "wipe" in str(action.get("message", "")).lower()
         unsafe_path = target_path.startswith("/") or re.match(r"^[A-Za-z]:", target_path) is not None or ".." in target_path.split("/")
         if action_type == "autoheal_refresh":
@@ -968,10 +967,8 @@ def repair_action_failures(actions: list[dict[str, Any]]) -> list[str]:
                 failures.append(action_id)
             continue
         if action_type == "manual_remediation":
-            if action.get("status") == "blocked" and isinstance(manual_steps, list) and manual_steps:
-                failures.append(action_id)
-            else:
-                failures.append(action_id)
+            # Manual remediation is release-blocking until autoheal proof exists.
+            failures.append(action_id)
             continue
         failures.append(action_id)
     return failures
