@@ -349,6 +349,7 @@ def scan_sources_xplat008(sources: list[SourceFile], repo_root: Path) -> list[Ra
     seen: set[tuple[str, int | None, str, str]] = set()
     for source in sources:
         path = normalize_path(source.path)
+        lines = source.content.splitlines()
         workflow_contexts = workflow_run_contexts(source.content) if path.startswith(".github/workflows/") else []
         if path.endswith(".sh"):
             add_finding(
@@ -371,7 +372,7 @@ def scan_sources_xplat008(sources: list[SourceFile], repo_root: Path) -> list[Ra
                     source.source_kind,
                 ),
             )
-        for number, line in enumerate(source.content.splitlines(), start=1):
+        for number, line in enumerate(lines, start=1):
             stripped = line.strip()
             if not stripped or stripped.startswith("#"):
                 continue
@@ -379,7 +380,7 @@ def scan_sources_xplat008(sources: list[SourceFile], repo_root: Path) -> list[Ra
                 match = pattern.search(line)
                 if match is None:
                     continue
-                context = workflow_context_for_line(workflow_contexts, number) or line
+                context = workflow_context_for_line(workflow_contexts, number) or line_context(lines, number)
                 add_finding(
                     findings,
                     seen,
@@ -488,27 +489,38 @@ def classify_xplat008_path(path: str, category: str, pattern: str, content: str,
     if path in {"speckit-pro/codex-hooks.json", "speckit-pro/hooks/hooks.json"}:
         return "blocking_active_runtime"
     if path.startswith("dist/") and not path.endswith(("README.md", "CHANGELOG.md", "LICENSE")):
-        if source_kind == "repo_baseline" and xplat008_dist_source_checkout_surface(path):
-            return "source_checkout_helper"
         if source_kind == "repo_baseline" and xplat008_source_checkout_helper_reference(path, content):
             return "source_checkout_helper"
-        if source_kind in {"repo", "repo_baseline"} and xplat008_repo_surface_exception(category, pattern, content):
+        if source_kind in {"repo", "repo_baseline"} and (
+            xplat008_source_checkout_helper_reference(path, content)
+            or xplat008_repo_surface_exception(category, pattern, content)
+        ):
             return "source_checkout_helper"
         return "blocking_active_runtime"
     if path.startswith("speckit-pro/skills/") or path.startswith("speckit-pro/codex-skills/"):
-        if source_kind == "repo_baseline":
+        if source_kind == "repo_baseline" and xplat008_source_checkout_helper_reference(path, content):
             return "source_checkout_helper"
-        if source_kind == "repo" and xplat008_repo_surface_exception(category, pattern, content):
+        if source_kind == "repo" and (
+            xplat008_source_checkout_helper_reference(path, content)
+            or xplat008_repo_surface_exception(category, pattern, content)
+        ):
             return "source_checkout_helper"
         return "blocking_active_runtime" if source_kind in {"fixture", "repo"} else "source_checkout_helper"
     if path.startswith("speckit-pro/agents/") or path.startswith("speckit-pro/codex-agents/"):
-        if source_kind == "repo_baseline":
+        if source_kind == "repo_baseline" and xplat008_source_checkout_helper_reference(path, content):
             return "source_checkout_helper"
-        if source_kind == "repo" and xplat008_repo_surface_exception(category, pattern, content):
+        if source_kind == "repo" and (
+            xplat008_source_checkout_helper_reference(path, content)
+            or xplat008_repo_surface_exception(category, pattern, content)
+        ):
             return "source_checkout_helper"
         return "blocking_active_runtime" if source_kind in {"fixture", "repo"} else "source_checkout_helper"
     if path in {"README.md", "speckit-pro/README.md"} or path.startswith("docs-site/src/content/docs/"):
-        if source_kind in {"fixture", "repo"} and xplat008_install_guidance_requires_shell(category, pattern, content):
+        if (
+            source_kind in {"fixture", "repo"}
+            and xplat008_installed_runtime_guidance_path(path)
+            and xplat008_install_guidance_requires_shell(category, pattern, content)
+        ):
             return "blocking_active_runtime"
         return "docs_non_runtime"
     return "source_checkout_helper"
@@ -555,13 +567,11 @@ def xplat008_active_role(path: str) -> str:
 
 
 def xplat008_repo_surface_exception(category: str, pattern: str, content: str) -> bool:
-    if category == "shell_interpolation" and pattern.startswith("`"):
-        return not xplat008_backtick_requires_shell(pattern, content)
     lowered = content.lower()
-    return any(
+    has_negative_context = any(
         marker in lowered
         for marker in (
-            "do not ",
+            "do not add",
             "must not ",
             "never ",
             "not require",
@@ -569,23 +579,48 @@ def xplat008_repo_surface_exception(category: str, pattern: str, content: str) -
             "without requiring",
             "without adding",
             "without using",
-            "avoid ",
+            "avoid requiring",
+            "avoid using",
+            "avoid adding",
             "refuse",
             "forbidden",
+            "not installed-runtime",
+            "source-checkout",
+            "maintainer-only",
+            "maintainer shell",
             "specific command-language requirement",
         )
     )
+    if category == "shell_interpolation" and pattern.startswith("`"):
+        return has_negative_context or not xplat008_backtick_requires_shell(pattern, content)
+    return has_negative_context
 
 
 def xplat008_install_guidance_requires_shell(category: str, pattern: str, content: str) -> bool:
     return not xplat008_repo_surface_exception(category, pattern, content)
 
 
+def xplat008_installed_runtime_guidance_path(path: str) -> bool:
+    if path in {"README.md", "speckit-pro/README.md"}:
+        return True
+    if path.startswith("docs-site/src/content/docs/install/"):
+        return True
+    return path == "docs-site/src/content/docs/troubleshooting.md"
+
+
 def xplat008_agent_tool_declaration(path: str, content: str) -> bool:
     if not any(part in path for part in ("/agents/", "/codex-agents/")):
         return False
-    stripped = content.strip().lower()
-    return stripped.startswith("allowed-tools:") or stripped.startswith("tools =")
+    tool_items = {"- bash", "- grep", "- glob", "- read", "- write", "- edit", "- websearch", "- webfetch"}
+    for line in content.splitlines() or [content]:
+        stripped = line.strip().lower()
+        if stripped.startswith(("allowed-tools:", "tools =", "tools:")):
+            return True
+        if stripped in tool_items:
+            return True
+        if re.match(r"^-\s+use\s+`(?:bash|grep|glob|read|write|edit|websearch|webfetch)`", stripped):
+            return True
+    return False
 
 
 def xplat008_source_checkout_helper_reference(path: str, content: str) -> bool:
@@ -595,6 +630,19 @@ def xplat008_source_checkout_helper_reference(path: str, content: str) -> bool:
         return True
     markers = (
         "allowed-tools:",
+        "tools:",
+        "bash(",
+        "grep(",
+        "glob(",
+        "```bash",
+        "command -v",
+        "uv tool install",
+        "operator",
+        "official speckit cli",
+        "spec kit cli",
+        "skipped when",
+        "not on `path`",
+        "not on path",
         "claude_plugin_root",
         "<skill_scripts>",
         "source-checkout",
@@ -692,6 +740,12 @@ def direct_dispatch_line(content: str) -> int | None:
         if "speckit_pro_runner" in line:
             return number
     return None
+
+
+def line_context(lines: list[str], number: int, *, radius: int = 3) -> str:
+    start = max(number - radius - 1, 0)
+    end = min(number + radius, len(lines))
+    return "\n".join(lines[start:end])
 
 
 def workflow_run_contexts(content: str) -> list[tuple[int, int, str]]:

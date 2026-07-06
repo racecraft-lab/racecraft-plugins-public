@@ -148,7 +148,7 @@ BACKUP=/tmp/specify-upgrade-backup-$STAMP
 mkdir -p "$BACKUP"
 cp -R .specify "$BACKUP/.specify"
 for d in .claude .codex .github; do
-  [ -e "$d" ] && cp -R "$d" "$BACKUP/$(basename $d)" || true
+  [ -e "$d" ] && cp -R "$d" "$BACKUP/$d" || true
 done
 ls "$BACKUP"
 ```

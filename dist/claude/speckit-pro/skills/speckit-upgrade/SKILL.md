@@ -100,7 +100,7 @@ Also snapshot the agent integration directories that the upgrade
 may touch:
 
 ```text
-Bash("BACKUP=/tmp/specify-upgrade-backup-$STAMP; for d in .claude .codex .github; do [ -e $d ] && cp -R $d $BACKUP/$(basename $d) || true; done; ls $BACKUP")
+Bash("BACKUP=/tmp/specify-upgrade-backup-$STAMP; for d in .claude .codex .github; do [ -e $d ] && cp -R $d $BACKUP/$d || true; done; ls $BACKUP")
 ```
 
 Tell the operator: "Repo state snapshotted to `$BACKUP/`. If

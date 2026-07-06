@@ -339,8 +339,6 @@ class RunnerFoundationTests(unittest.TestCase):
         }
         for path in changed:
             self.assertNotIn(path, forbidden_exact)
-        if any(path.startswith("specs/xplat-008-") for path in changed):
-            self.skipTest("XPLAT-008 intentionally owns the installed cutover and public-claim surfaces")
         forbidden_prefixes = (
             "dist/",
             "speckit-pro/skills/",
@@ -367,8 +365,36 @@ class RunnerFoundationTests(unittest.TestCase):
             "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh",
             "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
         }
+        allowed_xplat008_exact = {
+            "dist/claude/speckit-pro/hooks/hooks.json",
+            "dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md",
+            "dist/claude/speckit-pro/skills/speckit-install/SKILL.md",
+            "dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+            "dist/claude/speckit-pro/skills/speckit-status/SKILL.md",
+            "dist/codex/speckit-pro/codex-hooks.json",
+            "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
+            "dist/codex/speckit-pro/skills/speckit-install/SKILL.md",
+            "dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+            "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
+            "speckit-pro/codex-hooks.json",
+            "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+            "speckit-pro/codex-skills/speckit-install/SKILL.md",
+            "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+            "speckit-pro/codex-skills/speckit-status/SKILL.md",
+            "speckit-pro/hooks/hooks.json",
+            "speckit-pro/skills/speckit-autopilot/SKILL.md",
+            "speckit-pro/skills/speckit-install/SKILL.md",
+            "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+            "speckit-pro/skills/speckit-status/SKILL.md",
+        }
+        allowed_xplat008_prefixes = (
+            "docs/ai/specs/.process/XPLAT-008",
+            "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/",
+        )
         for path in changed:
-            if path in allowed_exact:
+            if path in allowed_exact or path in allowed_xplat008_exact:
+                continue
+            if path.startswith(allowed_xplat008_prefixes):
                 continue
             self.assertFalse(path.startswith(forbidden_prefixes), path)
             if path.startswith("docs/"):

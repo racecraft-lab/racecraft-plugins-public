@@ -414,6 +414,7 @@ class GateFoundationTests(unittest.TestCase):
                 "windows-py-3-fallback",
                 "macos-python3",
                 "linux-python-fallback",
+                "live-host-runtime-info",
                 "too-old-or-missing",
             },
         )
@@ -424,12 +425,14 @@ class GateFoundationTests(unittest.TestCase):
         }
         for case in cases["cases"]:
             with self.subTest(case_id=case["case_id"]):
-                platform = case["platform"]
-                attempted = [item["candidate"] for item in case["candidate_results"]]
-                self.assertEqual(attempted, expected_candidates[platform][: len(attempted)])
                 self.assertIn(case["product"], {"claude", "codex"})
                 self.assertIn(case["operation"], {"preflight", "scaffold", "status", "autopilot-dry-run"})
                 self.assertTrue(case["cache_root"])
+                if "candidate_results" not in case:
+                    continue
+                platform = case["platform"]
+                attempted = [item["candidate"] for item in case["candidate_results"]]
+                self.assertEqual(attempted, expected_candidates[platform][: len(attempted)])
 
         request = xplat008_fixture_request("runner-invocation")
         self.assertEqual(request["helper_id"], "runner-invocation")
@@ -544,6 +547,29 @@ class GateFoundationTests(unittest.TestCase):
                 "runner-invocation",
                 inputs={
                     "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json",
+                    "case_id": "live-host-runtime-info",
+                },
+            )
+        )
+        self.assertEqual(completed.returncode, 0)
+        self.assert_stdout_json(completed)
+        self.assert_response(response, "ok")
+        self.assert_status_exit_mapping(completed, response)
+        self.assertEqual(stderr_records, [])
+        record = response["data"]["runner_invocation"]
+        self.assertEqual(record["status"], "pass")
+        self.assertTrue(record["interpreter_resolution"]["accepted"])
+        self.assertNotEqual(record["runner_response"].get("evidence_source"), "fixture")
+        self.assertEqual(record["runner_response"]["status"], "ok")
+        self.assertEqual(record["runner_response"]["data"]["report"]["runner_name"], "speckit_pro_runner")
+        self.assert_no_shell_argv(record["invocation"]["argv"])
+
+        completed, response, stderr_records = run_runner(
+            gate_request(
+                "runner-invocation",
+                "runner-invocation",
+                inputs={
+                    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json",
                     "case_id": "too-old-or-missing",
                 },
             )
@@ -571,7 +597,7 @@ class GateFoundationTests(unittest.TestCase):
                 "speckit-pro/skills/speckit-status/SKILL.md",
                 "bash",
                 "bash",
-                "Run bash skills/speckit-autopilot/scripts/generate-spec-index.sh",
+                "Run bash before status.",
                 "repo",
             ),
             "blocking_active_runtime",
@@ -579,9 +605,9 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(
             active_path_guard.classify_xplat008_path(
                 "speckit-pro/codex-agents/implement-executor.toml",
-                "script_file",
-                "runner.sh",
-                "runner.sh",
+                "bash",
+                "Bash",
+                "Require Bash before running this agent.",
                 "repo",
             ),
             "blocking_active_runtime",
@@ -605,6 +631,16 @@ class GateFoundationTests(unittest.TestCase):
                 "repo",
             ),
             "source_checkout_helper",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "bash",
+                "Bash",
+                "Do not run without Bash.",
+                "repo",
+            ),
+            "blocking_active_runtime",
         )
         self.assertEqual(
             active_path_guard.classify_xplat008_path(
@@ -644,9 +680,13 @@ class GateFoundationTests(unittest.TestCase):
                 "dist/claude/speckit-pro/hooks",
                 "dist/claude/speckit-pro/agents",
                 "dist/claude/speckit-pro/skills",
+                "dist/claude/speckit-pro/scripts",
+                "dist/claude/speckit-pro/.claude-plugin",
                 "dist/codex/speckit-pro/codex-hooks.json",
                 "dist/codex/speckit-pro/codex-agents",
                 "dist/codex/speckit-pro/skills",
+                "dist/codex/speckit-pro/scripts",
+                "dist/codex/speckit-pro/.codex-plugin",
                 ".github/workflows",
                 "README.md",
                 "speckit-pro/README.md",
@@ -680,6 +720,50 @@ class GateFoundationTests(unittest.TestCase):
                 "repo",
             ),
             "docs_non_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "docs-site/src/content/docs/contribute-and-release.md",
+                "script_file",
+                "scripts/sync-marketplace-versions.sh",
+                "`scripts/sync-marketplace-versions.sh`",
+                "repo",
+            ),
+            "docs_non_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "docs-site/src/content/docs/troubleshooting.md",
+                "bash",
+                "Bash",
+                "Bash source-checkout prerequisite",
+                "repo",
+            ),
+            "docs_non_runtime",
+        )
+        wrapped_negative_findings = active_path_guard.scan_sources_xplat008(
+            [
+                active_path_guard.SourceFile(
+                    "docs-site/src/content/docs/install/codex.md",
+                    "payload; Bash, Git Bash, WSL, PowerShell-specific command language, and `jq` are\n"
+                    "not installed-runtime requirements.",
+                    "repo",
+                )
+            ],
+            REPO_ROOT,
+        )
+        self.assertFalse(
+            [finding for finding in wrapped_negative_findings if finding.classification == "blocking_active_runtime"]
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
+                "bash",
+                "bash",
+                "Run bash before status.",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
         )
         self.assertEqual(
             active_path_guard.classify_xplat008_path(
