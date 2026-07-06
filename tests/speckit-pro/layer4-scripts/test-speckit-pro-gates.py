@@ -1632,7 +1632,7 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertGreater(response["data"]["release_readiness"]["blocking_count"], 0)
                 self.assert_release_readiness_contract_subset(response["data"]["release_readiness"])
 
-    def test_xplat008_release_readiness_malformed_records_become_structured_blockers(self) -> None:
+    def test_xplat008_release_readiness_handles_partial_failure_records(self) -> None:
         from speckit_pro_runner.gates import release as release_gate
 
         checks = release_gate.computed_xplat008_checks(
@@ -1648,7 +1648,12 @@ class GateFoundationTests(unittest.TestCase):
         self.assertTrue(all("check_id" in check for check in collapsed))
         self.assertTrue(any(check["check_id"] == "payload-completeness" and check["blocking"] for check in collapsed))
         payload_check = next(check for check in collapsed if check["check_id"] == "payload-completeness")
-        self.assertIn("failing_payloads=unknown", payload_check["evidence"])
+        evidence = "\n".join(item for check in checks for item in check["evidence"])
+        self.assertIn("unknown-payload", evidence)
+        self.assertIn("unknown-repair-action", evidence)
+        self.assertIn("unknown-public-claim", evidence)
+        self.assertIn("unknown-runner-invocation", evidence)
+        self.assertGreaterEqual(sum(1 for check in checks if check["blocking"]), 5)
 
         malformed_checks = release_gate.normalize_xplat008_checks(
             [

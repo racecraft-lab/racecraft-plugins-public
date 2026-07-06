@@ -723,7 +723,11 @@ def computed_xplat008_checks(
     runner_invocations: list[dict[str, Any]],
     traceability: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    payload_failures = [str(item.get("payload_surface") or "unknown") for item in payload_results if item.get("status") != "pass"]
+    payload_failures = [
+        str(item.get("payload_surface") or "unknown-payload")
+        for item in payload_results
+        if item.get("status") != "pass"
+    ]
     payload_surfaces = {item.get("payload_surface") for item in payload_results if item.get("status") == "pass"}
     uat_failures = [f"{item.get('product')}:{item.get('platform')}" for item in uat_rows if item.get("status") != "pass"]
     uat_keys = [
@@ -738,12 +742,20 @@ def computed_xplat008_checks(
     duplicate_uat = sorted(key for key in uat_key_set if uat_keys.count(key) > 1)
     uat_complete = len(uat_rows) == len(required_uat) and not missing_uat and not unexpected_uat and not duplicate_uat
     repair_failures = [
-        str(item.get("action_id") or "unknown")
+        str(item.get("action_id") or "unknown-repair-action")
         for item in repair_actions
         if item.get("action_type") == "manual_remediation" or item.get("status") == "blocked"
     ]
-    claim_failures = [str(item.get("claim_id") or "unknown") for item in public_claim_results if item.get("status") != "pass"]
-    runner_failures = [item.get("request_id", "unknown") for item in runner_invocations if item.get("status") != "pass"]
+    claim_failures = [
+        str(item.get("claim_id") or "unknown-public-claim")
+        for item in public_claim_results
+        if item.get("status") != "pass"
+    ]
+    runner_failures = [
+        str(item.get("request_id") or "unknown-runner-invocation")
+        for item in runner_invocations
+        if item.get("status") != "pass"
+    ]
     missing_traceability = not traceability
     return [
         xplat008_check(
