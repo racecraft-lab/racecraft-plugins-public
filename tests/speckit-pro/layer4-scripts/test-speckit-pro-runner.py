@@ -9,6 +9,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 RUNNER_DIR = PLUGIN_ROOT / "speckit_pro_runner"
+sys.path.insert(0, str(PLUGIN_ROOT))
 FIXTURE_FILE = Path(__file__).resolve().parent / "fixtures" / "speckit-pro-runner" / "contract-fixtures.json"
 RUNBOOK_FILE = Path(__file__).resolve().parent / "fixtures" / "speckit-pro-runner" / "platform-runbook-fixtures.md"
 CHANGED_FILES_FILE = (
@@ -308,6 +310,35 @@ class RunnerFoundationTests(unittest.TestCase):
                 self.assert_response(response, "missing_prerequisite", 3)
                 self.assertIn(code, [diag["code"] for diag in response["diagnostics"]])
                 self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
+
+    def test_malformed_checksum_metadata_reports_incomplete(self) -> None:
+        from speckit_pro_runner import runtime
+
+        with tempfile.TemporaryDirectory() as tmp:
+            plugin_root = Path(tmp) / "plugin"
+            package_dir = plugin_root / "speckit_pro_runner"
+            package_dir.mkdir(parents=True)
+            (plugin_root / ".codex-plugin").mkdir()
+            (plugin_root / ".codex-plugin" / "plugin.json").write_text("{}", encoding="utf-8")
+            (package_dir / "__init__.py").write_text("", encoding="utf-8")
+            (package_dir / runtime.MANIFEST_NAME).write_text(
+                json.dumps(
+                    {
+                        "runner_files": [
+                            {
+                                "path": {"value": "speckit_pro_runner/__init__.py"},
+                                "sha256": hashlib.sha256(b"").hexdigest(),
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (package_dir / runtime.CHECKSUM_NAME).write_text("malformed-without-path\n", encoding="utf-8")
+
+            report = runtime.metadata_report(plugin_root, package_dir, check_metadata=True, overrides={})
+
+        self.assertEqual(report["verification_status"], "incomplete_metadata")
 
     def test_runbook_fixtures_have_non_claim_language(self) -> None:
         text = RUNBOOK_FILE.read_text(encoding="utf-8")

@@ -51,6 +51,14 @@ XPLAT008_BLOCKER_CLASSES = {
     "unsafe_repair_claim",
 }
 VALID_STATUS = {"pass", "fail"}
+XPLAT008_REQUIRED_UAT_ROWS = (
+    ("claude", "windows"),
+    ("claude", "macos"),
+    ("claude", "linux"),
+    ("codex", "windows"),
+    ("codex", "macos"),
+    ("codex", "linux"),
+)
 RELEASE_OPERATIONS = (
     "detect-changed-plugin",
     "aggregate-suite-results",
@@ -452,7 +460,32 @@ def malformed_payload_result_fields(item: dict[str, Any]) -> list[str]:
     require_string(item, "file_tree_hash", problems)
     for key in ("expected_files", "actual_files", "missing_paths", "extra_paths", "mismatched_paths", "path_leaks"):
         require_list(item, key, problems)
+    validate_payload_file_records(item, "expected_files", problems)
+    validate_payload_file_records(item, "actual_files", problems)
     return problems
+
+
+def validate_payload_file_records(item: dict[str, Any], key: str, problems: list[str]) -> None:
+    records = item.get(key)
+    if not isinstance(records, list):
+        return
+    for index, record in enumerate(records):
+        prefix = f"{key}[{index}]"
+        if not isinstance(record, dict):
+            problems.append(prefix)
+            continue
+        path = record.get("path")
+        kind = record.get("kind")
+        sha256 = record.get("sha256")
+        required = record.get("required")
+        if not isinstance(path, str) or not path:
+            problems.append(f"{prefix}.path")
+        if not isinstance(kind, str) or not kind:
+            problems.append(f"{prefix}.kind")
+        if not isinstance(sha256, str) or re.fullmatch(r"[0-9a-f]{64}", sha256) is None:
+            problems.append(f"{prefix}.sha256")
+        if not isinstance(required, bool):
+            problems.append(f"{prefix}.required")
 
 
 def malformed_uat_row_fields(item: dict[str, Any]) -> list[str]:
@@ -506,6 +539,8 @@ def malformed_runner_invocation_fields(item: dict[str, Any]) -> list[str]:
     require_string(item, "request_id", problems)
     require_enum(item, "product", {"claude", "codex"}, problems)
     require_enum(item, "platform", {"windows", "macos", "linux"}, problems)
+    require_string(item, "surface_path", problems)
+    require_string(item, "operation", problems)
     require_enum(item, "status", {"pass", "blocked"}, problems)
     if not isinstance(item.get("interpreter_resolution"), dict):
         problems.append("interpreter_resolution")
@@ -518,9 +553,21 @@ def malformed_runner_invocation_fields(item: dict[str, Any]) -> list[str]:
             problems.append("invocation.argv")
         if invocation.get("shell_used") is not False:
             problems.append("invocation.shell_used")
+    runner_request = item.get("runner_request")
+    if not isinstance(runner_request, dict):
+        problems.append("runner_request")
+    else:
+        if runner_request.get("operation") != "runtime-info":
+            problems.append("runner_request.operation")
+        if runner_request.get("mode") != "read_only":
+            problems.append("runner_request.mode")
+        if not isinstance(runner_request.get("inputs"), dict):
+            problems.append("runner_request.inputs")
     runner_response = item.get("runner_response")
     if item.get("status") == "pass" and (not isinstance(runner_response, dict) or runner_response.get("status") != "ok"):
         problems.append("runner_response")
+    if not isinstance(item.get("diagnostics"), list):
+        problems.append("diagnostics")
     return problems
 
 
@@ -558,6 +605,17 @@ def computed_xplat008_checks(
     payload_failures = [str(item.get("payload_surface") or "unknown") for item in payload_results if item.get("status") != "pass"]
     payload_surfaces = {item.get("payload_surface") for item in payload_results if item.get("status") == "pass"}
     uat_failures = [f"{item.get('product')}:{item.get('platform')}" for item in uat_rows if item.get("status") != "pass"]
+    uat_keys = [
+        (item.get("product"), item.get("platform"))
+        for item in uat_rows
+        if isinstance(item.get("product"), str) and isinstance(item.get("platform"), str)
+    ]
+    uat_key_set = set(uat_keys)
+    required_uat = set(XPLAT008_REQUIRED_UAT_ROWS)
+    missing_uat = sorted(required_uat - uat_key_set)
+    unexpected_uat = sorted(uat_key_set - required_uat)
+    duplicate_uat = sorted(key for key in uat_key_set if uat_keys.count(key) > 1)
+    uat_complete = len(uat_rows) == len(required_uat) and not missing_uat and not unexpected_uat and not duplicate_uat
     repair_failures = [
         str(item.get("action_id") or "unknown")
         for item in repair_actions
@@ -580,9 +638,15 @@ def computed_xplat008_checks(
         xplat008_check(
             "uat-matrix",
             "incomplete_uat_evidence",
-            len(uat_rows) == 6 and not uat_failures,
+            uat_complete and not uat_failures,
             "Native UAT matrix has exactly six passing product/platform rows.",
-            [f"rows={len(uat_rows)}", f"failing_rows={','.join(uat_failures) if uat_failures else 'none'}"],
+            [
+                f"rows={len(uat_rows)}",
+                f"missing_rows={','.join(f'{product}:{platform}' for product, platform in missing_uat) if missing_uat else 'none'}",
+                f"unexpected_rows={','.join(f'{product}:{platform}' for product, platform in unexpected_uat) if unexpected_uat else 'none'}",
+                f"duplicate_rows={','.join(f'{product}:{platform}' for product, platform in duplicate_uat) if duplicate_uat else 'none'}",
+                f"failing_rows={','.join(uat_failures) if uat_failures else 'none'}",
+            ],
         ),
         xplat008_check(
             "install-health-repair",
@@ -653,9 +717,7 @@ def xplat008_check(check_id: str, blocker_class: str, ok: bool, message: str, ev
 
 
 def normalize_payload_results(raw: Any) -> list[dict[str, Any]]:
-    if isinstance(raw, list) and raw:
-        return [item for item in raw if isinstance(item, dict)]
-    return []
+    return normalize_evidence_records(raw, "payload")
 
 
 def synthetic_payload_result(surface: str, status: str) -> dict[str, Any]:
@@ -681,9 +743,7 @@ def synthetic_payload_result(surface: str, status: str) -> dict[str, Any]:
 
 
 def normalize_uat_rows(raw: Any) -> list[dict[str, Any]]:
-    if isinstance(raw, list) and raw:
-        return [item for item in raw if isinstance(item, dict)]
-    return []
+    return normalize_evidence_records(raw, "uat")
 
 
 def default_uat_row(product: str, platform: str, status: str) -> dict[str, Any]:
@@ -713,27 +773,31 @@ def default_uat_row(product: str, platform: str, status: str) -> dict[str, Any]:
 
 
 def normalize_repair_actions(raw: Any) -> list[dict[str, Any]]:
-    if isinstance(raw, list):
-        return [item for item in raw if isinstance(item, dict)]
-    return []
+    return normalize_evidence_records(raw, "repair")
 
 
 def normalize_public_claim_results(raw: Any) -> list[dict[str, Any]]:
-    if isinstance(raw, list) and raw:
-        return [item for item in raw if isinstance(item, dict)]
-    return []
+    return normalize_evidence_records(raw, "public_claim")
 
 
 def normalize_runner_invocations(raw: Any) -> list[dict[str, Any]]:
-    if isinstance(raw, list) and raw:
-        return [item for item in raw if isinstance(item, dict)]
-    return []
+    return normalize_evidence_records(raw, "runner_invocation")
 
 
 def normalize_traceability(raw: Any) -> list[dict[str, Any]]:
-    if isinstance(raw, list):
-        return [item for item in raw if isinstance(item, dict)]
-    return []
+    return normalize_evidence_records(raw, "traceability")
+
+
+def normalize_evidence_records(raw: Any, record_type: str) -> list[dict[str, Any]]:
+    if not isinstance(raw, list):
+        return []
+    records: list[dict[str, Any]] = []
+    for item in raw:
+        if isinstance(item, dict):
+            records.append(item)
+        else:
+            records.append({"__malformed_record_type": record_type, "__raw_type": type(item).__name__})
+    return records
 
 
 def build_check(operation: str, case: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:

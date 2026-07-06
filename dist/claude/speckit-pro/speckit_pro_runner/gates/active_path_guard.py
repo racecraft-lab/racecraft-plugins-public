@@ -527,7 +527,7 @@ def classify_xplat008_path(path: str, category: str, pattern: str, content: str,
         return "blocking_active_runtime" if source_kind in {"fixture", "repo"} else "source_checkout_helper"
     if path in {"README.md", "speckit-pro/README.md"} or path.startswith("docs-site/src/content/docs/"):
         if (
-            source_kind in {"fixture", "repo"}
+            source_kind in {"fixture", "repo", "repo_baseline"}
             and xplat008_installed_runtime_guidance_path(path)
             and xplat008_install_guidance_requires_shell(category, pattern, content)
         ):
@@ -599,6 +599,19 @@ def xplat008_repo_surface_exception(category: str, pattern: str, content: str) -
             "maintainer-only",
             "maintainer shell",
             "specific command-language requirement",
+            "contributor path",
+            "source files",
+            "source tree",
+            "validation suite",
+            "default suite",
+            "structural validation",
+            "structural-only changes",
+            "while iterating",
+            "local repository evidence",
+            "spec kit's official docs",
+            "spec kit installation guide",
+            "specify init",
+            "codex first-install guidance",
         )
     )
     if category == "shell_interpolation" and pattern.startswith("`"):

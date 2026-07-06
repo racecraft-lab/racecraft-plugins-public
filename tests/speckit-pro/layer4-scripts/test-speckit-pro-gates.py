@@ -940,6 +940,26 @@ class GateFoundationTests(unittest.TestCase):
                 "README.md",
                 "bash",
                 "bash",
+                "Install requires Bash before running SpecKit Pro.",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "docs-site/src/content/docs/install/codex.md",
+                "jq",
+                "jq",
+                "Installed runtime requires jq before first use.",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "README.md",
+                "bash",
+                "bash",
                 "SpecKit Pro does not require Bash.",
                 "repo",
             ),
@@ -1538,7 +1558,24 @@ class GateFoundationTests(unittest.TestCase):
         self.assertIn("malformed_check_record", unknown_checks[0]["evidence"])
 
         malformed_contract_checks = release_gate.validate_xplat008_evidence_contracts(
-            payload_results=[{"payload_surface": "claude", "status": "pass"}],
+            payload_results=release_gate.normalize_payload_results(
+                [
+                    "not-an-object",
+                    {
+                        "payload_surface": "claude",
+                        "plugin_version": "2.17.0",
+                        "runner_version": "0.1.0",
+                        "expected_files": [{}],
+                        "actual_files": ["bad-file-record"],
+                        "missing_paths": [],
+                        "extra_paths": [],
+                        "mismatched_paths": [],
+                        "path_leaks": [],
+                        "file_tree_hash": "2" * 64,
+                        "status": "pass",
+                    },
+                ]
+            ),
             uat_rows=[{"product": "codex", "platform": "macos", "status": "pass"}],
             repair_actions=[{"action_id": "repair", "status": "pass"}],
             public_claim_results=[{"claim_id": "claim", "status": "pass"}],
@@ -1555,6 +1592,50 @@ class GateFoundationTests(unittest.TestCase):
             "malformed_traceability_record:index=0",
         ]:
             self.assertIn(marker, evidence)
+        self.assertIn("missing_or_invalid=expected_files[0].path", evidence)
+        self.assertIn("missing_or_invalid=actual_files[0]", evidence)
+        self.assertIn("missing_or_invalid=runner_request", evidence)
+        self.assertIn("missing_or_invalid=surface_path", evidence)
+        self.assertIn("missing_or_invalid=diagnostics", evidence)
+
+        duplicate_uat_rows = [release_gate.default_uat_row("claude", "windows", "pass") for _ in range(6)]
+        duplicate_uat_checks = release_gate.computed_xplat008_checks(
+            payload_results=[
+                release_gate.synthetic_payload_result("claude", "pass"),
+                release_gate.synthetic_payload_result("codex", "pass"),
+            ],
+            uat_rows=duplicate_uat_rows,
+            repair_actions=[],
+            public_claim_results=[
+                {
+                    "claim_id": "python-runner",
+                    "surface": "README.md",
+                    "claim_text_or_pattern": "Python runner",
+                    "classification": "implemented-control",
+                    "status": "pass",
+                    "evidence": ["speckit-pro/speckit_pro_runner/runtime.py"],
+                }
+            ],
+            runner_invocations=[
+                {
+                    "request_id": "runner",
+                    "product": "codex",
+                    "platform": "macos",
+                    "surface_path": "speckit-pro/codex-skills/speckit-status/SKILL.md",
+                    "operation": "status",
+                    "interpreter_resolution": {"accepted": True},
+                    "invocation": {"argv": ["python3", "-m", "speckit_pro_runner"], "shell_used": False},
+                    "runner_request": {"operation": "runtime-info", "mode": "read_only", "inputs": {}},
+                    "runner_response": {"status": "ok"},
+                    "status": "pass",
+                    "diagnostics": [],
+                }
+            ],
+            traceability=[{"requirement_id": "FR-006", "changed_files": ["README.md"], "verification_evidence": ["test"]}],
+        )
+        uat_check = next(check for check in duplicate_uat_checks if check["check_id"] == "uat-matrix")
+        self.assertTrue(uat_check["blocking"])
+        self.assertIn("duplicate_rows=claude:windows", uat_check["evidence"])
 
     def test_run_default_suite_aggregates_success_stdout_stderr_and_exit_behavior(self) -> None:
         request = gate_request(

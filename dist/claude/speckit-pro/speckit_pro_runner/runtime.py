@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -26,6 +27,10 @@ from .envelope import diagnostic, response
 CAPTURE_LIMIT_BYTES = 16 * 1024
 MANIFEST_NAME = "speckit-pro-runner.manifest.json"
 CHECKSUM_NAME = "speckit-pro-runner.sha256"
+
+
+class MetadataFormatError(ValueError):
+    """Raised when runner metadata exists but does not match the expected shape."""
 
 
 def handle_request(request: Any) -> dict[str, Any]:
@@ -264,7 +269,7 @@ def metadata_report(
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         checksum_records = parse_checksum_file(checksum_path)
-    except (OSError, json.JSONDecodeError):
+    except (OSError, json.JSONDecodeError, MetadataFormatError):
         base["verification_status"] = "incomplete_metadata"
         return base
 
@@ -315,10 +320,16 @@ def runner_source_files(package_dir: Path) -> list[Path]:
 
 def parse_checksum_file(path: Path) -> dict[str, str]:
     records: dict[str, str] = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        stripped = line.strip()
+        if not stripped:
             continue
-        digest, rel = line.split(maxsplit=1)
+        parts = stripped.split(maxsplit=1)
+        if len(parts) != 2:
+            raise MetadataFormatError(f"checksum line {line_number} must contain digest and path")
+        digest, rel = parts
+        if re.fullmatch(r"[0-9a-f]{64}", digest) is None or not rel.strip():
+            raise MetadataFormatError(f"checksum line {line_number} is malformed")
         records[rel.strip()] = digest
     return records
 
