@@ -15,6 +15,7 @@
     "repair_actions",
     "public_claim_results",
     "runner_invocations",
+    "evidence_refs",
     "traceability"
   ],
   "properties": {
@@ -133,7 +134,8 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/runner_invocation"
-      }
+      },
+      "minItems": 1
     },
     "evidence_refs": {
       "type": "object",

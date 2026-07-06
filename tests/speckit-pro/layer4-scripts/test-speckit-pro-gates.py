@@ -455,6 +455,8 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(contract["$defs"]["diagnostic"]["properties"]["remediation"]["type"], "object")
         release_runner = release_contract["$defs"]["runner_invocation"]
         self.assertEqual(release_runner["properties"]["invocation"]["properties"]["argv"], argv_contract)
+        self.assertIn("evidence_refs", release_contract["required"])
+        self.assertEqual(release_contract["properties"]["runner_invocations"]["minItems"], 1)
         self.assertEqual(
             release_contract["$defs"]["interpreter_resolution"],
             contract["$defs"]["interpreter_resolution"],
@@ -640,11 +642,11 @@ class GateFoundationTests(unittest.TestCase):
         self.assertLessEqual(
             {
                 "dist/claude/speckit-pro/hooks",
+                "dist/claude/speckit-pro/agents",
                 "dist/claude/speckit-pro/skills",
-                "dist/claude/speckit-pro/speckit_pro_runner",
                 "dist/codex/speckit-pro/codex-hooks.json",
+                "dist/codex/speckit-pro/codex-agents",
                 "dist/codex/speckit-pro/skills",
-                "dist/codex/speckit-pro/speckit_pro_runner",
                 ".github/workflows",
                 "README.md",
                 "speckit-pro/README.md",
@@ -659,6 +661,43 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(changed_sources.classification, "blocking_active_runtime")
         self.assertEqual(changed_sources.category, "diff_scan")
         self.assertNotIn("HEAD^", active_path_guard.review_base_ref.__code__.co_consts)
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "README.md",
+                "bash",
+                "bash",
+                "Install requires Bash before running SpecKit Pro.",
+                "repo",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "README.md",
+                "bash",
+                "bash",
+                "SpecKit Pro does not require Bash.",
+                "repo",
+            ),
+            "docs_non_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/agents/phase-executor.md",
+                "bash",
+                "Bash",
+                "allowed-tools: Bash, Read",
+                "repo",
+            ),
+            "source_checkout_helper",
+        )
+        missing_roots = active_path_guard.missing_xplat008_scan_root_findings(
+            REPO_ROOT,
+            {"scan_roots": ["dist/missing-runtime-root"]},
+        )
+        self.assertEqual(len(missing_roots), 1)
+        self.assertEqual(missing_roots[0].classification, "blocking_active_runtime")
+        self.assertEqual(missing_roots[0].category, "scan_root")
 
         with tempfile.TemporaryDirectory() as tmp:
             completed, response, stderr_records = run_runner(
@@ -722,6 +761,21 @@ class GateFoundationTests(unittest.TestCase):
             },
             set(response["data"]["classified_counts"]),
         )
+
+        completed, response, stderr_records = run_runner(
+            gate_request(
+                "active-path-guard",
+                "active-runtime-guard",
+                inputs={
+                    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json",
+                    "case_id": "final-current-implementation",
+                },
+            )
+        )
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        self.assertEqual(response["data"]["blocking_count"], 0)
 
     def test_run_default_suite_aggregates_success_stdout_stderr_and_exit_behavior(self) -> None:
         request = gate_request(

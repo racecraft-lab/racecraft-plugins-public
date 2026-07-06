@@ -163,6 +163,7 @@ def run_active_runtime_guard(entry: Any, request: Any, repo_root: Path) -> dict[
             data=active_runtime_base_data(entry, request.operation, "input_error"),
             diagnostics=[source_result],
         )
+    coverage_findings = missing_xplat008_scan_root_findings(repo_root, case_result)
     diff_finding: RawFinding | None = None
     if "files" not in case_result and case_result.get("scan_repo") is not False:
         changed_result = changed_repo_sources(repo_root, case_result)
@@ -171,6 +172,7 @@ def run_active_runtime_guard(entry: Any, request: Any, repo_root: Path) -> dict[
         else:
             source_result.extend(changed_result)
     findings = scan_sources_xplat008(source_result, repo_root)
+    findings.extend(coverage_findings)
     if diff_finding is not None:
         findings.append(diff_finding)
     return active_runtime_guard_response(entry, request, findings)
@@ -473,6 +475,8 @@ def classify_xplat008_path(path: str, category: str, pattern: str, content: str,
         return "upstream_spec_kit_helper"
     if path.startswith("tests/") or "/fixtures/" in path or "layer8-parity/" in path:
         return "test_fixture"
+    if xplat008_agent_tool_declaration(path, content):
+        return "source_checkout_helper"
     if path.startswith("speckit-pro/") and any(part in path for part in ("/scripts/", "/references/", "/templates/")):
         return "source_checkout_helper"
     if path.startswith(".github/workflows/"):
@@ -504,7 +508,9 @@ def classify_xplat008_path(path: str, category: str, pattern: str, content: str,
             return "source_checkout_helper"
         return "blocking_active_runtime" if source_kind in {"fixture", "repo"} else "source_checkout_helper"
     if path in {"README.md", "speckit-pro/README.md"} or path.startswith("docs-site/src/content/docs/"):
-        return "blocking_active_runtime" if source_kind == "fixture" else "docs_non_runtime"
+        if source_kind in {"fixture", "repo"} and xplat008_install_guidance_requires_shell(category, pattern, content):
+            return "blocking_active_runtime"
+        return "docs_non_runtime"
     return "source_checkout_helper"
 
 
@@ -569,6 +575,17 @@ def xplat008_repo_surface_exception(category: str, pattern: str, content: str) -
             "specific command-language requirement",
         )
     )
+
+
+def xplat008_install_guidance_requires_shell(category: str, pattern: str, content: str) -> bool:
+    return not xplat008_repo_surface_exception(category, pattern, content)
+
+
+def xplat008_agent_tool_declaration(path: str, content: str) -> bool:
+    if not any(part in path for part in ("/agents/", "/codex-agents/")):
+        return False
+    stripped = content.strip().lower()
+    return stripped.startswith("allowed-tools:") or stripped.startswith("tools =")
 
 
 def xplat008_source_checkout_helper_reference(path: str, content: str) -> bool:
@@ -778,6 +795,31 @@ def diff_scan_unavailable_finding(reason: str) -> RawFinding:
         classification="blocking_active_runtime",
         remediation="Restore changed-line diff scanning or provide explicit active-runtime guard files before release readiness can pass.",
     )
+
+
+def missing_xplat008_scan_root_findings(repo_root: Path, case: dict[str, Any]) -> list[RawFinding]:
+    roots = case.get("scan_roots")
+    if not isinstance(roots, list):
+        return []
+    findings: list[RawFinding] = []
+    for root in roots:
+        if not isinstance(root, str) or not root:
+            continue
+        if (repo_root / root).exists():
+            continue
+        findings.append(
+            RawFinding(
+                path=root,
+                line=None,
+                category="scan_root",
+                pattern=root,
+                reason="configured active-runtime scan root is missing",
+                active_role=xplat008_active_role(root),
+                classification="blocking_active_runtime",
+                remediation="Restore the active-runtime scan root or remove it from the promoted final-current fixture.",
+            )
+        )
+    return findings
 
 
 def review_base_ref(repo_root: Path) -> str | None:
