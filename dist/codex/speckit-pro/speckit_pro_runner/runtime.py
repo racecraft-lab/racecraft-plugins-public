@@ -199,9 +199,20 @@ def detect_plugin_root() -> Path | None:
 
 
 def runtime_context(plugin_root: Path | None) -> str:
-    if plugin_root is not None and "dist" in plugin_root.parts:
+    if plugin_root is not None and installed_payload_root(plugin_root):
         return "installed_payload"
     return SOURCE_CONTEXT
+
+
+def installed_payload_root(plugin_root: Path) -> bool:
+    has_claude_manifest = (plugin_root / ".claude-plugin" / "plugin.json").is_file()
+    has_codex_manifest = (plugin_root / ".codex-plugin" / "plugin.json").is_file()
+    if has_claude_manifest == has_codex_manifest:
+        return False
+    source_only_paths = (
+        "codex-skills",
+    )
+    return not any((plugin_root / path).exists() for path in source_only_paths)
 
 
 def typed_path(kind: str, value: str, display: str | None = None) -> dict[str, str]:

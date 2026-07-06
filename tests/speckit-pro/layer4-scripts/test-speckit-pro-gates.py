@@ -570,6 +570,16 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(record["runner_response"]["data"]["report"]["runner_name"], "speckit_pro_runner")
         self.assert_no_shell_argv(record["invocation"]["argv"])
 
+        from speckit_pro_runner import runtime as runner_runtime
+
+        with tempfile.TemporaryDirectory() as tmp:
+            installed_root = Path(tmp) / "installed-cache" / "speckit-pro"
+            (installed_root / ".codex-plugin").mkdir(parents=True)
+            (installed_root / ".codex-plugin" / "plugin.json").write_text("{}", encoding="utf-8")
+            (installed_root / "speckit_pro_runner").mkdir()
+            self.assertEqual(runner_runtime.runtime_context(installed_root), "installed_payload")
+        self.assertEqual(runner_runtime.runtime_context(PLUGIN_ROOT), "source_checkout")
+
         runner_response, execution_diag = install_helper.execute_runner_runtime_info(
             [sys.executable, "-m", "speckit_pro_runner"],
             record["runner_request"],
@@ -609,6 +619,22 @@ class GateFoundationTests(unittest.TestCase):
             )
         self.assertIsNotNone(runner_response)
         self.assertEqual(execution_diag["code"], "runner_identity_mismatch")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_root = Path(tmp) / "list-payload"
+            package = fake_root / "speckit_pro_runner"
+            package.mkdir(parents=True)
+            (package / "__init__.py").write_text("", encoding="utf-8")
+            (package / "__main__.py").write_text("print('[]')\n", encoding="utf-8")
+            runner_response, execution_diag = install_helper.execute_runner_runtime_info(
+                [sys.executable, "-m", "speckit_pro_runner"],
+                record["runner_request"],
+                REPO_ROOT,
+                fake_root.as_posix(),
+            )
+        self.assertIsNotNone(runner_response)
+        self.assertEqual(runner_response["data"]["parsed_type"], "list")
+        self.assertEqual(execution_diag["code"], "runner_response_malformed")
 
         completed, response, stderr_records = run_runner(
             gate_request(
@@ -824,7 +850,17 @@ class GateFoundationTests(unittest.TestCase):
                 "script_file",
                 "scripts/setup.sh",
                 "Run scripts/setup.sh before use.",
-                "repo",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
+                "jq",
+                "jq",
+                "Run jq before use.",
+                "repo_baseline",
             ),
             "blocking_active_runtime",
         )

@@ -395,7 +395,7 @@ def execute_runner_runtime_info(
             remediation_actions=["Run the recorded argv from the installed plugin cache.", "Repair the installed cache or select another Python 3.11+ interpreter."],
         )
     try:
-        parsed = json.loads(completed.stdout)
+        parsed_value = json.loads(completed.stdout)
     except json.JSONDecodeError:
         parsed = {
             "schema_version": "1.0",
@@ -408,6 +408,17 @@ def execute_runner_runtime_info(
                 "stderr_preview": completed.stderr[:200],
             },
         }
+    else:
+        if not isinstance(parsed_value, dict):
+            parsed = malformed_runner_response(completed, type(parsed_value).__name__)
+            return parsed, diagnostic(
+                "runner_response_malformed",
+                "selected Python interpreter returned non-object JSON for runner runtime-info",
+                details={"exit_code": completed.returncode, "parsed_type": type(parsed_value).__name__},
+                remediation_summary="Repair the installed runner payload before claiming invocation readiness.",
+                remediation_actions=["Verify the installed runner emits a JSON object envelope.", "Retry after reinstalling or repairing the plugin cache."],
+            )
+        parsed = parsed_value
     if completed.returncode == 0 and parsed.get("status") == "ok":
         identity_diag = validate_runner_runtime_response(parsed, cwd, cache_root)
         if identity_diag is None:
@@ -420,6 +431,21 @@ def execute_runner_runtime_info(
         remediation_summary="Repair the installed runner payload before claiming invocation readiness.",
         remediation_actions=["Inspect runner_response for stdout/stderr diagnostics.", "Retry after reinstalling or repairing the plugin cache."],
     )
+
+
+def malformed_runner_response(completed: subprocess.CompletedProcess[str], parsed_type: str) -> dict[str, Any]:
+    return {
+        "schema_version": "1.0",
+        "status": "subprocess_failure",
+        "exit_code": completed.returncode,
+        "legacy_exit_code": None,
+        "diagnostics": [],
+        "data": {
+            "stdout_preview": completed.stdout[:200],
+            "stderr_preview": completed.stderr[:200],
+            "parsed_type": parsed_type,
+        },
+    }
 
 
 def validate_runner_runtime_response(parsed: dict[str, Any], cwd: Path, cache_root: str) -> dict[str, Any] | None:

@@ -489,9 +489,9 @@ def classify_xplat008_path(path: str, category: str, pattern: str, content: str,
     if path in {"speckit-pro/codex-hooks.json", "speckit-pro/hooks/hooks.json"}:
         return "blocking_active_runtime"
     if path.startswith("dist/") and not path.endswith(("README.md", "CHANGELOG.md", "LICENSE")):
-        if source_kind == "repo_baseline" and xplat008_source_checkout_helper_reference(path, content):
+        if "/speckit_pro_runner/" in path and source_kind in {"repo", "repo_baseline"} and xplat008_source_checkout_helper_reference(path, content):
             return "source_checkout_helper"
-        if "/speckit_pro_runner/" in path and source_kind == "repo" and xplat008_source_checkout_helper_reference(path, content):
+        if source_kind == "repo_baseline" and xplat008_baseline_source_checkout_helper_reference(path, content):
             return "source_checkout_helper"
         if source_kind in {"repo", "repo_baseline"} and (
             xplat008_dist_source_checkout_helper_reference(path, content)
@@ -500,7 +500,7 @@ def classify_xplat008_path(path: str, category: str, pattern: str, content: str,
             return "source_checkout_helper"
         return "blocking_active_runtime"
     if path.startswith("speckit-pro/skills/") or path.startswith("speckit-pro/codex-skills/"):
-        if source_kind == "repo_baseline" and xplat008_source_checkout_helper_reference(path, content):
+        if source_kind == "repo_baseline" and xplat008_baseline_source_checkout_helper_reference(path, content):
             return "source_checkout_helper"
         if source_kind == "repo" and (
             xplat008_source_checkout_helper_reference(path, content)
@@ -509,7 +509,7 @@ def classify_xplat008_path(path: str, category: str, pattern: str, content: str,
             return "source_checkout_helper"
         return "blocking_active_runtime" if source_kind in {"fixture", "repo"} else "source_checkout_helper"
     if path.startswith("speckit-pro/agents/") or path.startswith("speckit-pro/codex-agents/"):
-        if source_kind == "repo_baseline" and xplat008_source_checkout_helper_reference(path, content):
+        if source_kind == "repo_baseline" and xplat008_baseline_source_checkout_helper_reference(path, content):
             return "source_checkout_helper"
         if source_kind == "repo" and (
             xplat008_source_checkout_helper_reference(path, content)
@@ -693,6 +693,84 @@ def xplat008_dist_source_checkout_helper_reference(path: str, content: str) -> b
         "```bash",
         "command -v",
         "uv tool install",
+        "operator",
+        "official speckit cli",
+        "spec kit cli",
+        "skipped when",
+        "not on `path`",
+        "not on path",
+        "forbidden_patterns",
+        "bash dependency",
+        "shell=true subprocess execution",
+        "manual classification request",
+        "workflow shell dispatches a python gate",
+        "is_direct_python_gate_dispatch",
+        "blocking_active_gate",
+        "re.match(",
+        "argv-list subprocesses",
+        "argv array",
+        "existing bash gates authoritative",
+        "existing bash workflow",
+        "required_absent",
+        "claude_plugin_root",
+        "<skill_scripts>",
+        "source-checkout",
+        "source checkout",
+        "speckit-pro/skills/",
+        "speckit-pro/codex-skills/",
+        "tests/speckit-pro/",
+        ".specify/",
+        "docs/ai/specs/",
+        "docs-site/",
+        "deterministic bash scripts",
+        " is missing",
+        "aggregate-crl.sh",
+        "atomicity-route.sh",
+        "check-prerequisites.sh",
+        "confidence-gate.sh",
+        "count-markers.sh",
+        "create-new-feature.sh",
+        "detect-commands.sh",
+        "detect-presets.sh",
+        "detect-stack-manager.sh",
+        "estimate-spec-size.sh",
+        "estimate-reviewable-loc.sh",
+        "final-reviewability-backstop.sh",
+        "generate-pr-body.sh",
+        "generate-spec-index.sh",
+        "generate-uat-skeleton.sh",
+        "install-curated-set.sh",
+        "migrate-structure.sh",
+        "multi-pr-emission.sh",
+        "o5-topology.sh",
+        "parse-consensus-categories.sh",
+        "plan-layers.sh",
+        "project-fixup.sh",
+        "relocate-process-artifacts.sh",
+        "resolve-confidence-mode.sh",
+        "restack.sh",
+        "reviewability-gate.sh",
+        "validate-agent-install.sh",
+        "validate-autopilot-phase-coverage.py",
+        "validate-gate.sh",
+        "validate-pr-packet.sh",
+        "validate-pr-workflow-contract.sh",
+        "validate-uat-runbook.sh",
+    )
+    return any(marker in lowered for marker in markers)
+
+
+def xplat008_baseline_source_checkout_helper_reference(path: str, content: str) -> bool:
+    lowered_path = path.lower()
+    if any(part in lowered_path for part in ("/references/", "/templates/", "/contracts/", "/scripts/")):
+        return True
+    lowered = content.lower()
+    markers = (
+        "allowed-tools:",
+        "tools:",
+        "bash(",
+        "grep(",
+        "glob(",
         "operator",
         "official speckit cli",
         "spec kit cli",
