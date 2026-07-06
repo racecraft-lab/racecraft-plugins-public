@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import platform as platform_module
+import re
 import subprocess
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -17,6 +18,7 @@ INVENTORY_NAME = "install_inventory.json"
 FAKE_HOME_FIXTURE_ROOT = Path("tests") / "speckit-pro" / "layer4-scripts" / "fixtures"
 XPLAT_008_FIXTURE_ROOT = FAKE_HOME_FIXTURE_ROOT / "xplat-008-release"
 DEFAULT_RUNNER_INVOCATION_CASES = XPLAT_008_FIXTURE_ROOT / "runner-invocation-cases.json"
+XPLAT_008_PROMOTION_RECORDS = XPLAT_008_FIXTURE_ROOT / "promotion-records.json"
 MINIMUM_PYTHON = (3, 11, 0)
 
 
@@ -237,6 +239,9 @@ def resolve_python_interpreter(platform_name: str, case: dict[str, Any], cache_r
         if not candidate:
             continue
         attempted.append(candidate)
+        if not allowed_python_candidate(platform_name, candidate):
+            failure_messages.append(f"{candidate}: unsupported Python candidate")
+            continue
         returncode = int(record.get("returncode", 0)) if isinstance(record.get("returncode", 0), int) else 1
         version = record.get("version")
         version_text = str(version) if isinstance(version, str) and version else None
@@ -253,9 +258,15 @@ def resolve_python_interpreter(platform_name: str, case: dict[str, Any], cache_r
             failure_messages.append(f"{candidate}: Python {version_text} is below 3.11")
             continue
         resolved = str(record.get("resolved_executable") or candidate.split()[0])
+        if not allowed_python_executable(platform_name, resolved):
+            failure_messages.append(f"{candidate}: unsupported resolved executable")
+            continue
         invocation_prefix = record_invocation_prefix(record)
         if invocation_prefix is None:
             invocation_prefix = invocation_prefix_for_candidate(platform_name, candidate, resolved)
+        if not allowed_python_invocation_prefix(platform_name, invocation_prefix):
+            failure_messages.append(f"{candidate}: unsupported invocation prefix")
+            continue
         return {
             "attempted_candidates": attempted,
             "resolved_executable": resolved,
@@ -329,6 +340,34 @@ def record_invocation_prefix(record: dict[str, Any]) -> list[str] | None:
     if isinstance(raw, list) and raw and all(isinstance(item, str) and item for item in raw):
         return list(raw)
     return None
+
+
+def allowed_python_candidate(platform_name: str, candidate: str) -> bool:
+    return allowed_python_program(platform_name, candidate.split()[0] if candidate.split() else "")
+
+
+def allowed_python_invocation_prefix(platform_name: str, prefix: list[str]) -> bool:
+    if not prefix:
+        return False
+    return allowed_python_program(platform_name, prefix[0])
+
+
+def allowed_python_executable(platform_name: str, executable: str) -> bool:
+    return allowed_python_program(platform_name, executable)
+
+
+def allowed_python_program(platform_name: str, value: str) -> bool:
+    name = program_name(value)
+    return (
+        name in {"python", "python3"}
+        or bool(re.fullmatch(r"python3(?:\.\d+){1,2}", name))
+        or (platform_name == "windows" and name == "py")
+    )
+
+
+def program_name(value: str) -> str:
+    name = value.replace("\\", "/").rsplit("/", 1)[-1].lower()
+    return name.removesuffix(".exe")
 
 
 def invocation_prefix_for_live_probe(candidate: str, resolved_executable: str) -> list[str]:
@@ -555,7 +594,8 @@ def runner_invocation_base_data(entry: Any, operation: str, status: str) -> dict
         gate_status = "skipped"
     elif status == "input_error":
         gate_status = "input_error"
-    promotion_record = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json"
+    promotion_record = XPLAT_008_PROMOTION_RECORDS.as_posix()
+    case_file = DEFAULT_RUNNER_INVOCATION_CASES.as_posix()
     return {
         "gate": {
             "gate_id": entry.helper_id,
@@ -566,7 +606,10 @@ def runner_invocation_base_data(entry: Any, operation: str, status: str) -> dict
             "comparison_ids": [f"xplat-008-{operation}"],
             "promotion_record": promotion_record,
         },
-        "artifacts": [{"path": promotion_record, "kind": "fixture"}],
+        "artifacts": [
+            {"path": promotion_record, "kind": "promotion_record"},
+            {"path": case_file, "kind": "fixture"},
+        ],
     }
 
 

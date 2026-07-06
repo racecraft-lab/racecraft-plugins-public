@@ -15,6 +15,7 @@ from ..envelope import diagnostic, response
 PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json"
 DEFAULT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/release-readiness-cases.json"
 XPLAT_008_RELEASE_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json"
+XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/promotion-records.json"
 RELEASE_OPERATIONS = (
     "detect-changed-plugin",
     "aggregate-suite-results",
@@ -730,8 +731,11 @@ def base_data(entry: Any, operation: str, status: str) -> dict[str, Any]:
 def xplat008_base_data(entry: Any, operation: str, status: str) -> dict[str, Any]:
     data = base_data(entry, operation, status)
     data["gate"]["comparison_ids"] = ["xplat-008-release-readiness"]
-    data["gate"]["promotion_record"] = XPLAT_008_RELEASE_CASE_FILE
-    data["artifacts"] = [{"path": XPLAT_008_RELEASE_CASE_FILE, "kind": "fixture"}]
+    data["gate"]["promotion_record"] = XPLAT_008_PROMOTION_RECORD
+    data["artifacts"] = [
+        {"path": XPLAT_008_PROMOTION_RECORD, "kind": "promotion_record"},
+        {"path": XPLAT_008_RELEASE_CASE_FILE, "kind": "fixture"},
+    ]
     return data
 
 

@@ -23,6 +23,7 @@ PROMOTION_RECORDS = FIXTURE_DIR / "promotion-records.json"
 REQUESTS_DIR = FIXTURE_DIR / "requests"
 XPLAT_008_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "xplat-008-release"
 XPLAT_008_REQUESTS_DIR = XPLAT_008_FIXTURE_DIR / "requests"
+XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/promotion-records.json"
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
@@ -161,6 +162,13 @@ class GateFoundationTests(unittest.TestCase):
             path = Path(artifact["path"])
             self.assertFalse(path.is_absolute(), artifact["path"])
             self.assertNotIn("..", path.parts)
+
+    def assert_xplat008_promotion_metadata(self, response: dict[str, Any], case_file: str) -> None:
+        self.assertEqual(response["data"]["gate"]["promotion_record"], XPLAT_008_PROMOTION_RECORD)
+        artifacts = response["data"].get("artifacts", [])
+        self.assertIn({"path": XPLAT_008_PROMOTION_RECORD, "kind": "promotion_record"}, artifacts)
+        self.assertIn({"path": case_file, "kind": "fixture"}, artifacts)
+        self.assertEqual(len({artifact["path"] for artifact in artifacts}), len(artifacts))
 
     def assert_no_shell_argv(self, argv: list[str]) -> None:
         joined = " ".join(argv).lower()
@@ -485,6 +493,53 @@ class GateFoundationTests(unittest.TestCase):
             install_helper.invocation_prefix_for_live_probe("py -V:3", "C:/Python312/python.exe"),
             ["py", "-3"],
         )
+        self.assertTrue(install_helper.allowed_python_executable("linux", "/usr/bin/python3.11"))
+        resolution, diagnostics = install_helper.resolve_python_interpreter(
+            "linux",
+            {"candidate_results": [{"candidate": "bash", "returncode": 0, "version": "3.11.8", "resolved_executable": "bash"}]},
+            "dist/codex/speckit-pro",
+        )
+        self.assertFalse(resolution["accepted"])
+        self.assertEqual(resolution["failure_code"], "python_runtime_unavailable")
+        self.assertEqual([diag["code"] for diag in diagnostics], ["python_runtime_unavailable"])
+        self.assertIn("unsupported Python candidate", resolution["diagnostic"])
+        resolution, diagnostics = install_helper.resolve_python_interpreter(
+            "linux",
+            {
+                "candidate_results": [
+                    {
+                        "candidate": "python3",
+                        "returncode": 0,
+                        "version": "3.11.8",
+                        "resolved_executable": "bash",
+                    }
+                ]
+            },
+            "dist/codex/speckit-pro",
+        )
+        self.assertFalse(resolution["accepted"])
+        self.assertEqual(resolution["failure_code"], "python_runtime_unavailable")
+        self.assertEqual([diag["code"] for diag in diagnostics], ["python_runtime_unavailable"])
+        self.assertIn("unsupported resolved executable", resolution["diagnostic"])
+        resolution, diagnostics = install_helper.resolve_python_interpreter(
+            "linux",
+            {
+                "candidate_results": [
+                    {
+                        "candidate": "python3",
+                        "returncode": 0,
+                        "version": "3.11.8",
+                        "resolved_executable": "python3",
+                        "invocation_argv_prefix": ["bash"],
+                    }
+                ]
+            },
+            "dist/codex/speckit-pro",
+        )
+        self.assertFalse(resolution["accepted"])
+        self.assertEqual(resolution["failure_code"], "python_runtime_unavailable")
+        self.assertEqual([diag["code"] for diag in diagnostics], ["python_runtime_unavailable"])
+        self.assertIn("unsupported invocation prefix", resolution["diagnostic"])
         for payload_root in [
             REPO_ROOT / "dist" / "claude" / "speckit-pro",
             REPO_ROOT / "dist" / "codex" / "speckit-pro",
@@ -515,6 +570,10 @@ class GateFoundationTests(unittest.TestCase):
                 self.assert_response(response, "ok")
                 self.assert_status_exit_mapping(completed, response)
                 self.assertEqual(stderr_records, [])
+                self.assert_xplat008_promotion_metadata(
+                    response,
+                    "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json",
+                )
                 record = response["data"]["runner_invocation"]
                 self.assertEqual(record["schema_version"], "1.0")
                 self.assertEqual(record["request_id"], response["request_id"])
@@ -564,6 +623,10 @@ class GateFoundationTests(unittest.TestCase):
         self.assert_response(response, "ok")
         self.assert_status_exit_mapping(completed, response)
         self.assertEqual(stderr_records, [])
+        self.assert_xplat008_promotion_metadata(
+            response,
+            "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json",
+        )
         record = response["data"]["runner_invocation"]
         self.assertEqual(record["status"], "pass")
         self.assertTrue(record["interpreter_resolution"]["accepted"])
@@ -888,6 +951,16 @@ class GateFoundationTests(unittest.TestCase):
         )
         self.assertEqual(
             active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-upgrade/SKILL.md",
+                "bash",
+                "Bash",
+                "allowed-tools: Bash Read Edit Write\nRun Bash before use.",
+                "repo",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
                 "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
                 "bash",
                 "Bash",
@@ -956,8 +1029,8 @@ class GateFoundationTests(unittest.TestCase):
         self.assert_response(response, "missing_prerequisite")
         self.assertEqual([diag["code"] for diag in stderr_records], ["missing_prerequisite"])
         self.assertEqual(response["data"]["gate"]["comparison_ids"], ["xplat-008-active-runtime-guard"])
-        self.assertEqual(
-            response["data"]["gate"]["promotion_record"],
+        self.assert_xplat008_promotion_metadata(
+            response,
             "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json",
         )
 
@@ -1121,6 +1194,14 @@ class GateFoundationTests(unittest.TestCase):
             self.assertFalse(result["path_leaks"])
 
     def test_xplat008_release_readiness_fixtures_cover_release_blockers(self) -> None:
+        promotion_records = json.loads((XPLAT_008_FIXTURE_DIR / "promotion-records.json").read_text(encoding="utf-8"))
+        self.assertEqual(promotion_records["schema_version"], "1.0")
+        self.assertEqual(promotion_records["feature_id"], "XPLAT-008")
+        self.assertEqual(promotion_records["promotion_status"], "installed_cutover_release_authoritative")
+        self.assertLessEqual(
+            {"runner-invocation", "active-path-guard", "payload-gate", "release-readiness"},
+            {record["gate_id"] for record in promotion_records["records"]},
+        )
         cases = xplat008_fixture_cases("release-readiness")
         self.assertEqual(cases["schema_version"], "1.0")
         self.assertEqual(cases["feature_id"], "XPLAT-008")
@@ -1151,6 +1232,10 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 0)
         self.assert_response(response, "ok")
         self.assertEqual(stderr_records, [])
+        self.assert_xplat008_promotion_metadata(
+            response,
+            "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json",
+        )
         readiness = response["data"]["release_readiness"]
         self.assertEqual(readiness["feature_id"], "XPLAT-008")
         self.assertEqual(readiness["status"], "pass")

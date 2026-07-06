@@ -15,7 +15,7 @@ from ..envelope import diagnostic, response
 
 PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json"
 DEFAULT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/active-path-guard-cases.json"
-XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json"
+XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/promotion-records.json"
 XPLAT_008_DEFAULT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json"
 TEXT_SUFFIXES = frozenset({".json", ".md", ".py", ".sh", ".toml", ".txt", ".yaml", ".yml"})
 SCAN_ROOTS = (
@@ -381,6 +381,8 @@ def scan_sources_xplat008(sources: list[SourceFile], repo_root: Path) -> list[Ra
                 if match is None:
                     continue
                 context = workflow_context_for_line(workflow_contexts, number) or line_context(lines, number)
+                if xplat008_agent_tool_declaration(path, line):
+                    context = line
                 add_finding(
                     findings,
                     seen,
@@ -613,16 +615,16 @@ def xplat008_installed_runtime_guidance_path(path: str) -> bool:
 def xplat008_agent_tool_declaration(path: str, content: str) -> bool:
     if not any(part in path for part in ("/agents/", "/codex-agents/", "/skills/", "/codex-skills/")):
         return False
+    lines = [line.strip().lower() for line in content.splitlines() if line.strip()]
+    if len(lines) != 1:
+        return False
+    stripped = lines[0]
     tool_items = {"- bash", "- grep", "- glob", "- read", "- write", "- edit", "- websearch", "- webfetch"}
-    for line in content.splitlines() or [content]:
-        stripped = line.strip().lower()
-        if stripped.startswith(("allowed-tools:", "tools =", "tools:")):
-            return True
-        if stripped in tool_items:
-            return True
-        if re.match(r"^-\s+use\s+`(?:bash|grep|glob|read|write|edit|websearch|webfetch)`", stripped):
-            return True
-    return False
+    if stripped.startswith(("allowed-tools:", "tools =", "tools:")):
+        return True
+    if stripped in tool_items:
+        return True
+    return bool(re.match(r"^-\s+use\s+`(?:bash|grep|glob|read|write|edit|websearch|webfetch)`", stripped))
 
 
 def xplat008_source_checkout_helper_reference(path: str, content: str) -> bool:
@@ -1216,7 +1218,7 @@ def active_runtime_base_data(entry: Any, operation: str, status: str) -> dict[st
             "promotion_record": XPLAT_008_PROMOTION_RECORD,
         },
         "artifacts": [
-            {"path": XPLAT_008_PROMOTION_RECORD, "kind": "fixture"},
+            {"path": XPLAT_008_PROMOTION_RECORD, "kind": "promotion_record"},
             {"path": XPLAT_008_DEFAULT_CASE_FILE, "kind": "fixture"},
         ],
     }
