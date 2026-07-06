@@ -21,8 +21,9 @@ Run these checks before reviewer walk-through:
 2. `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py`
 3. `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/active-runtime-guard.json`
 4. `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness.json`
-5. `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/release-readiness.json`
-6. `npx --yes pnpm@10.25.0 --dir docs-site validate`
+5. `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/release-readiness.json` (expected failure while native UAT rows are pending)
+6. `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/release-readiness-ready.json` (expected pass for seeded ready evidence)
+7. `npx --yes pnpm@10.25.0 --dir docs-site validate`
 
 Native platform support remains blocked until separate operators fill the six
 Claude/Codex Windows, macOS, and Linux rows in `.process/uat-matrix.md`.
@@ -62,8 +63,9 @@ Claude/Codex Windows, macOS, and Linux rows in `.process/uat-matrix.md`.
 1. Open `README.md`, `speckit-pro/README.md`, and the docs-site install, first-run, troubleshooting, security, update, and release workflow pages touched by this branch.
 2. Confirm public guidance names Python 3.11+ as the installed runtime prerequisite without requiring Bash, Git Bash, WSL, PowerShell-specific command language, or `jq`.
 3. Confirm trust wording is limited to implemented runner, inventory, checksum, payload, update, and repair controls. It must not claim signing, SBOM, SLSA, formal audit, vulnerability-free status, or marketplace-enforced verification.
-4. Run the release-readiness command from Env Setup and confirm the fixture-backed positive case passes.
-5. Open `.process/release-readiness.md` and confirm the release decision remains blocked until real native operator evidence replaces the pending UAT rows.
+4. Run the current release-readiness command from Env Setup and confirm it blocks native support publication while real UAT rows are pending.
+5. Run the seeded ready release-readiness command from Env Setup and confirm the fixture-backed positive case passes.
+6. Open `.process/release-readiness.md` and confirm the release decision remains blocked until real native operator evidence replaces the pending UAT rows.
 
 - [ ] Reviewer confirmed public claims are implemented-only and the release blocker is visible.
 

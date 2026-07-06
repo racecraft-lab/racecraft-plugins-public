@@ -16,7 +16,7 @@ release-ready native UAT row.
 | Plugin version | 2.17.0 |
 | Isolated CODEX_HOME | `/tmp/xplat008-codex-uat-home` |
 | Installed cache path | `/private/tmp/xplat008-codex-uat-home/plugins/cache/racecraft-plugins-public/speckit-pro/2.17.0` |
-| SpecKit CLI | `/Users/fredrickgabelmann/.local/bin/specify`, `specify 0.11.8` |
+| SpecKit CLI | `<local-user-bin>/specify`, `specify 0.11.8` |
 | Python interpreter | `/opt/homebrew/opt/python@3.14/bin/python3.14`, Python 3.14.6 |
 
 ## Steps And Results
@@ -30,7 +30,7 @@ release-ready native UAT row.
 | Bundled skills | `find <installed-cache>/skills -maxdepth 2 -name SKILL.md` | Pass; installed Codex skills include autopilot, scaffold, status, install, upgrade, and resolve-pr. |
 | Runner runtime-info | `python3 -m speckit_pro_runner` with `runtime-info` request from the installed cache | Pass; status `ok`, platform `darwin`, architecture `arm64`, Python `3.11.0` in the default shell path. |
 | Runner preflight without SpecKit PATH | `python3 -m speckit_pro_runner` with `preflight` request from the installed cache | Expected fail; status `missing_prerequisite`, diagnostic `specify_missing`, runner metadata verified. |
-| Runner preflight with SpecKit PATH | `env PATH=/Users/fredrickgabelmann/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin PYTHONPATH=<installed-cache> python3 -m speckit_pro_runner` with `preflight` request | Pass; status `ok`, runner metadata verified, Python `3.14.6`, and `specify` found at `/Users/fredrickgabelmann/.local/bin/specify`. |
+| Runner preflight with SpecKit PATH | `env PATH=<local-user-bin>:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin PYTHONPATH=<installed-cache> python3 -m speckit_pro_runner` with `preflight` request | Pass; status `ok`, runner metadata verified, Python `3.14.6`, and `specify` found at `<local-user-bin>/specify`. |
 | Install-health repair fixture | `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/.../requests/install-health-repair.json` | Pass; trusted missing runner artifact produces checksum-backed `autoheal_refresh` in read-only fixture mode. |
 
 ## Expected Result
