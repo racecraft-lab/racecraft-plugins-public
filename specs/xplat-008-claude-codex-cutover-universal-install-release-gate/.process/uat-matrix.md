@@ -15,7 +15,7 @@ replaces every `PENDING:` field with real evidence from a native host.
 | Claude | macOS | `.process/uat/claude-macos.md` | Pending |
 | Claude | Linux | `.process/uat/claude-linux.md` | Pending |
 | Codex | Windows | `.process/uat/codex-windows.md` | Pending |
-| Codex | macOS | `.process/uat/codex-macos.md` | Pending |
+| Codex | macOS | `.process/uat/codex-macos.md` | Partial |
 | Codex | Linux | `.process/uat/codex-linux.md` | Pending |
 
 ## Row Template
@@ -61,7 +61,7 @@ Status:
 | Claude | macOS | PENDING: operator | PENDING: date | PENDING: host version | PENDING: plugin version/latest tag | PENDING: installed cache path | PENDING: interpreter resolution | PENDING: runner invocation IDs | Pending | Pending | Pending | Pending | Pending | Pending | Pending | PENDING: expected result | PENDING: actual result | `.process/uat/claude-macos.md` | PENDING: notes | Pending |
 | Claude | Linux | PENDING: operator | PENDING: date | PENDING: host version | PENDING: plugin version/latest tag | PENDING: installed cache path | PENDING: interpreter resolution | PENDING: runner invocation IDs | Pending | Pending | Pending | Pending | Pending | Pending | Pending | PENDING: expected result | PENDING: actual result | `.process/uat/claude-linux.md` | PENDING: notes | Pending |
 | Codex | Windows | PENDING: operator | PENDING: date | PENDING: host version | PENDING: plugin version/latest tag | PENDING: installed cache path | PENDING: interpreter resolution | PENDING: runner invocation IDs | Pending | Pending | Pending | Pending | Pending | Pending | Pending | PENDING: expected result | PENDING: actual result | `.process/uat/codex-windows.md` | PENDING: notes | Pending |
-| Codex | macOS | PENDING: operator | PENDING: date | PENDING: host version | PENDING: plugin version/latest tag | PENDING: installed cache path | PENDING: interpreter resolution | PENDING: runner invocation IDs | Pending | Pending | Pending | Pending | Pending | Pending | Pending | PENDING: expected result | PENDING: actual result | `.process/uat/codex-macos.md` | PENDING: notes | Pending |
+| Codex | macOS | Codex autopilot local UAT | 2026-07-06 | macOS 26.6 (25G5052e); codex-cli 0.139.0 | 2.17.0 | `/private/tmp/xplat008-codex-uat-home/plugins/cache/racecraft-plugins-public/speckit-pro/2.17.0` | Python 3.14.6 via `/opt/homebrew/opt/python@3.14/bin/python3.14`; `specify` 0.11.8 via `/Users/fredrickgabelmann/.local/bin/specify` when PATH is set | `xplat-008-codex-macos-installed-runtime-info`, `xplat-008-codex-macos-installed-preflight-with-specify-path`, `xplat-008-codex-macos-installed-install-health-repair` | Pass | Pass | Partial | Partial | Not run | Not run | Fixture pass only | Installed cache should install and preflight through the Python runner when official SpecKit is on PATH. | Isolated Codex plugin install/list, bundled skills/agents, runner runtime-info, and runner preflight passed; default PATH correctly failed with `specify_missing` until existing SpecKit CLI path was exposed. | `.process/uat/codex-macos.md` | Local installed-cache proof only; does not complete the full native interactive journey. | Partial |
 | Codex | Linux | PENDING: operator | PENDING: date | PENDING: host version | PENDING: plugin version/latest tag | PENDING: installed cache path | PENDING: interpreter resolution | PENDING: runner invocation IDs | Pending | Pending | Pending | Pending | Pending | Pending | Pending | PENDING: expected result | PENDING: actual result | `.process/uat/codex-linux.md` | PENDING: notes | Pending |
 
 ## Completion Rule

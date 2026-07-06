@@ -4,7 +4,7 @@
   "feature_branch": "codex/xplat-008-claude-codex-cutover-universal-install-release-gate",
   "updated_at": "2026-07-05T23:23:53Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 7: Implement - Slice 3 native UAT/update/repair",
+  "active_step": "Post: PR creation",
   "archive_sweep": {
     "archive_extension_installed": true,
     "cleanup_mode": "feature-branch-sweep-static",
@@ -186,8 +186,13 @@
     },
     {
       "step": "Phase 7: Implement - Slice 3 native UAT/update/repair",
-      "status": "in_progress",
+      "status": "blocked",
       "summary": "Completed T028-T034 and T042: UAT matrix fixtures and request, install-health repair fixtures and request, deterministic blocker tests, UAT/release-readiness gate implementation, install-health repair helper behavior, registry entries, refreshed runner metadata, generated payload rebuild, feature-local UAT matrix scaffold, and focused request verification. Native operator evidence T035-T041 remains pending and is required before release-ready support claims."
+    },
+    {
+      "step": "Phase 7: Implement - Polish and release packet",
+      "status": "completed",
+      "summary": "Completed T043-T047: blocked release-readiness packet, requirement and success-criteria traceability, non-goal audit, final focused verification, UAT runbook, generated PR packet/body, packet validation, and PR workflow contract validation. The PR is reviewable but not native-release-ready until T035-T041 are filled."
     },
     {
       "step": "Post: Doctor Extension Check",

@@ -404,7 +404,17 @@
   "cases": [
     {
       "case_id": "ready",
-      "expected_status": "pass"
+      "expected_status": "pass",
+      "overrides": {
+        "uat_case": {
+          "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/uat-matrix-cases.json",
+          "case_id": "ready"
+        }
+      }
+    },
+    {
+      "case_id": "current-native-uat-pending",
+      "expected_status": "fail"
     },
     {
       "case_id": "active-shell-dependency",

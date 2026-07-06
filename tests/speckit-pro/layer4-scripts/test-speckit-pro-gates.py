@@ -1532,6 +1532,7 @@ class GateFoundationTests(unittest.TestCase):
             {case["case_id"] for case in cases["cases"]},
             {
                 "ready",
+                "current-native-uat-pending",
                 "active-shell-dependency",
                 "incomplete-payload",
                 "missing-bundled-agent",
@@ -1713,8 +1714,29 @@ class GateFoundationTests(unittest.TestCase):
         self.assert_response(response, "expected_failure")
         self.assertEqual([diag["code"] for diag in stderr_records], ["install_health_repair_blocked"])
 
-    def test_xplat008_release_readiness_reports_pass_and_seeded_blockers(self) -> None:
+    def test_xplat008_release_readiness_defaults_to_blocked_native_uat(self) -> None:
         completed, response, stderr_records = run_runner(xplat008_fixture_request("release-readiness"))
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure")
+        self.assertEqual([diag["code"] for diag in stderr_records], ["release_readiness_xplat008_blocked"])
+        readiness = response["data"]["release_readiness"]
+        self.assertEqual(readiness["feature_id"], "XPLAT-008")
+        self.assertEqual(readiness["status"], "fail")
+        self.assertGreater(readiness["blocking_count"], 0)
+        self.assertEqual(readiness["uat_rows"], [])
+        self.assertTrue(any(check["check_id"] == "uat-matrix" and check["blocking"] for check in readiness["checks"]))
+
+    def test_xplat008_release_readiness_ready_fixture_passes_and_seeded_blockers(self) -> None:
+        completed, response, stderr_records = run_runner(
+            gate_request(
+                "release-readiness",
+                "release-readiness-xplat008",
+                inputs={
+                    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json",
+                    "case_id": "ready",
+                },
+            )
+        )
         self.assertEqual(completed.returncode, 0)
         self.assert_response(response, "ok")
         self.assertEqual(stderr_records, [])

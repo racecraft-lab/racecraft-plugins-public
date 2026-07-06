@@ -10,7 +10,7 @@
 
 **Slice dependencies**: Slice 1 before Slice 2 before Slice 3. Within each slice, fixtures/tests and deterministic verification precede active runtime, payload, docs, release, UAT, update, or repair changes.
 
-## Phase 1: Slice 1 - Active Installed-Runtime Surface Cutover
+## Phase 1: User Story 1 - Active Installed-Runtime Surface Cutover
 
 **Goal**: Installed Claude and Codex runtime surfaces resolve Python `>=3.11` and invoke `[resolved_python, "-m", "speckit_pro_runner"]` without Bash, Git Bash, WSL, PowerShell-specific command language, shell parsing, shell redirection, Unix-only path assumptions, or `jq`.
 
@@ -27,7 +27,7 @@
 - [x] T011 [S1] [US1, FR-002, FR-003, FR-022] Update Claude/Codex bundled agents and hooks in `speckit-pro/agents/`, `speckit-pro/codex-agents/`, `speckit-pro/hooks/hooks.json`, and `speckit-pro/codex-hooks.json` to preserve the same runner invocation contract.
 - [x] T012 [S1] [US1, FR-002, FR-003, FR-004] Run Slice 1 verification with the XPLAT-008 runner invocation request, active-path guard request, and focused Layer 4 gate tests before starting generated payload or docs changes.
 
-## Phase 2: Slice 2 - Payload, Release, and Public Docs Gates
+## Phase 2: User Story 2 - Payload, Release, and Public Docs Gates
 
 **Goal**: Rebuild Claude and Codex generated payloads from source, verify payload completeness and release readiness, and align public docs and release-note guidance with implemented controls only.
 
@@ -47,7 +47,7 @@
 - [x] T026 [S2] [US4, FR-009, FR-010, FR-011, FR-019] Run docs validation and the public-claim release-readiness check to prove docs contain no unsupported native-platform or cryptographic trust claims.
 - [x] T027 [S2] [US2, US4, FR-006, FR-007, FR-008, FR-019] Run focused Layer 4 gate tests plus the XPLAT-008 payload completeness and release-readiness runner requests before starting native UAT/update/repair work.
 
-## Phase 3: Slice 3 - Native UAT, Update, and Safe Repair
+## Phase 3: User Story 3 - Native UAT, Update, and Safe Repair
 
 **Goal**: Provide release-reviewable native Claude/Codex evidence across Windows, macOS, and Linux, prove latest-tag update behavior, and prove bounded doctor/autoheal repair with exact manual remediation for unsafe gaps.
 
@@ -64,20 +64,37 @@
 - [ ] T038 [P] [S3] [US1, US3, US4, FR-012, FR-013, FR-018] Fill Codex on Windows native UAT evidence under `.process/uat/` for install, bundled-agent verification, first use, scaffold/status, autopilot dry-run, latest-tag update, incomplete-install repair, expected/actual results, notes, and pass/fail.
 - [ ] T039 [P] [S3] [US1, US3, US4, FR-012, FR-013, FR-018] Fill Codex on macOS native UAT evidence under `.process/uat/` for install, bundled-agent verification, first use, scaffold/status, autopilot dry-run, latest-tag update, incomplete-install repair, expected/actual results, notes, and pass/fail.
 - [ ] T040 [P] [S3] [US1, US3, US4, FR-012, FR-013, FR-018] Fill Codex on Linux native UAT evidence under `.process/uat/` for install, bundled-agent verification, first use, scaffold/status, autopilot dry-run, latest-tag update, incomplete-install repair, expected/actual results, notes, and pass/fail.
-- [ ] T041 [S3] [US4, FR-012, FR-013, FR-014, FR-020] Consolidate the six native UAT evidence files into `.process/uat-matrix.md` with non-placeholder operator/date, host version, plugin version or latest tag, installed cache path, interpreter resolution, runner invocation IDs, evidence link, expected result, actual result, notes, and pass/fail.
+- [ ] T041 [S3] [US4, FR-012, FR-013, FR-014, FR-020] Consolidate the six native UAT evidence files into `specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat-matrix.md` with non-placeholder operator/date, host version, plugin version or latest tag, installed cache path, interpreter resolution, runner invocation IDs, evidence link, expected result, actual result, notes, and pass/fail.
 - [x] T042 [S3] [US3, US4, FR-014, FR-015, FR-016, FR-017, FR-018, FR-019] Run the XPLAT-008 release-readiness request and confirm it blocks missing/failing UAT rows, unsafe repair claims, broad reinstall behavior, and incomplete update proof.
 
 ## Phase 4: Polish and Release Packet
 
 **Goal**: Make the implementation reviewable as one XPLAT-008 packet with traceable requirements, verification evidence, non-goal preservation, and a blocking release-readiness result.
 
-- [ ] T043 [S4] [US4, FR-019, FR-020] Create `specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/release-readiness.md` summarizing payload completeness, active guard, docs claim, UAT, update, repair, and release-readiness outputs.
-- [ ] T044 [S4] [US1, US2, US3, US4, FR-001, FR-020] Trace every functional requirement and success criterion to changed files and verification evidence in the release-readiness packet.
-- [ ] T045 [S4] [US1, US2, US3, US4, FR-001, FR-019, FR-021, FR-022] Audit the diff for preserved non-goals: no child specs, no installed-runtime shell wrapper transition, no repo-wide historical purge, no future-facing claims, no smoke-only UAT support claim, no broad reinstall or wipe-copy repair, and no manual plugin version edits outside release-please.
-- [ ] T046 [S4] [US1, US2, US3, US4, FR-004, FR-008, FR-014, FR-019] Run final verification: Layer 1 structural validation, focused Layer 4 gate tests, XPLAT-008 active guard, payload completeness, release-readiness runner requests, and docs-site validation.
-- [ ] T047 [S4] [US4, FR-020] Prepare the PR review packet text with what changed, why, non-goals, review order, scope budget, traceability, verification evidence, known gaps, rollback notes, and generated payload review guidance.
+- [x] T043 [S4] [US4, FR-019, FR-020] Create `specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/release-readiness.md` summarizing payload completeness, active guard, docs claim, UAT, update, repair, and release-readiness outputs.
+- [x] T044 [S4] [US1, US2, US3, US4, FR-001, FR-020] Trace every functional requirement and success criterion to changed files and verification evidence in the release-readiness packet.
+- [x] T045 [S4] [US1, US2, US3, US4, FR-001, FR-019, FR-021, FR-022] Audit the diff for preserved non-goals: no child specs, no installed-runtime shell wrapper transition, no repo-wide historical purge, no future-facing claims, no smoke-only UAT support claim, no broad reinstall or wipe-copy repair, and no manual plugin version edits outside release-please.
+- [x] T046 [S4] [US1, US2, US3, US4, FR-004, FR-008, FR-014, FR-019] Run final verification: Layer 1 structural validation, focused Layer 4 gate tests, XPLAT-008 active guard, payload completeness, release-readiness runner requests, and docs-site validation.
+- [x] T047 [S4] [US4, FR-020] Prepare the PR review packet text with what changed, why, non-goals, review order, scope budget, traceability, verification evidence, known gaps, rollback notes, and generated payload review guidance.
 
-## Dependencies and Parallel Opportunities
+## Dependencies & Execution Order
+
+### Phase Dependencies
+
+- **US1**: No prerequisites; establishes the active installed-runtime runner surface.
+- **US2**: Depends on US1 because generated payload and public docs gates must consume the active runtime contract.
+- **US3**: Depends on US2 because native UAT, update, and repair evidence must validate the generated payload and release-readiness contract.
+- **Polish**: Depends on US3 deterministic gates and records the blocked native-UAT release packet.
+
+### Incremental Delivery
+
+1. Complete US1 active installed-runtime cutover: T001-T012.
+2. Complete US2 payload, release, and public docs gates: T013-T027.
+3. Complete US3 deterministic UAT, update, and safe repair contract work: T028-T034 and T042.
+4. Keep native operator evidence pending until real platform runs are available: T035-T041.
+5. Complete the blocked release-readiness and PR packet: T043-T047.
+
+### Parallel Opportunities
 
 - Slice 1 gates and fixtures (T002-T005) must pass before active runtime surface changes (T006-T011).
 - Slice 2 payload/release fixtures and tests (T013-T015) must pass before payload/release gate changes (T016-T019), committed `dist/**` rebuild (T021), or public docs changes (T023-T025).

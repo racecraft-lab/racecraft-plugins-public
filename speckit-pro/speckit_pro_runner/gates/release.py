@@ -1279,6 +1279,18 @@ def load_release_case(repo_root: Path, inputs: dict[str, Any]) -> dict[str, Any]
     overrides = selected.get("overrides")
     if isinstance(overrides, dict):
         deep_merge(base, overrides)
+    uat_case = base.pop("uat_case", None)
+    if "uat_rows" not in base and isinstance(uat_case, dict):
+        uat_case_inputs = {
+            "case_file": uat_case.get("case_file", XPLAT_008_UAT_CASE_FILE),
+            "case_id": uat_case.get("case_id", "ready"),
+        }
+        uat_case_result = load_xplat008_uat_case(repo_root, uat_case_inputs)
+        if is_diagnostic(uat_case_result):
+            return uat_case_result
+        rows = uat_case_result.get("rows")
+        if isinstance(rows, list):
+            base["uat_rows"] = [item for item in rows if isinstance(item, dict)]
     base["case_id"] = case_id
     base["expected_status"] = selected.get("expected_status")
     base["_required_promotion_operations"] = [
@@ -1325,6 +1337,18 @@ def load_xplat008_release_case(repo_root: Path, inputs: dict[str, Any]) -> dict[
     overrides = selected.get("overrides")
     if isinstance(overrides, dict):
         deep_merge(base, overrides)
+    uat_case = base.pop("uat_case", None)
+    if "uat_rows" not in base and isinstance(uat_case, dict):
+        uat_case_inputs = {
+            "case_file": uat_case.get("case_file", XPLAT_008_UAT_CASE_FILE),
+            "case_id": uat_case.get("case_id", "ready"),
+        }
+        uat_case_result = load_xplat008_uat_case(repo_root, uat_case_inputs)
+        if is_diagnostic(uat_case_result):
+            return uat_case_result
+        rows = uat_case_result.get("rows")
+        if isinstance(rows, list):
+            base["uat_rows"] = [item for item in rows if isinstance(item, dict)]
     base["case_id"] = case_id
     base["expected_status"] = selected.get("expected_status")
     return base
