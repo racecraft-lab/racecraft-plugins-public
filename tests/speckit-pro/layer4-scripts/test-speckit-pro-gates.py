@@ -493,7 +493,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(request["helper_id"], "runner-invocation")
         self.assertEqual(request["operation"], "runner-invocation")
         self.assertEqual(request["mode"], "read_only")
-        self.assertEqual(request["inputs"]["case_id"], "windows-py-v3")
+        self.assertEqual(request["inputs"]["case_id"], "live-host-runtime-info")
 
     def test_xplat008_runner_invocation_records_have_no_shell_fallback(self) -> None:
         contract = json.loads(
@@ -1072,6 +1072,16 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(
             active_path_guard.classify_xplat008_path(
                 "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
+                "jq",
+                "jq",
+                "If Python is missing, use command -v jq and run Bash.",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
                 "bash",
                 "Bash",
                 "Do not add Bash as an installed-runtime requirement.",
@@ -1395,6 +1405,8 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(request["helper_id"], "release-readiness")
         self.assertEqual(request["operation"], "release-readiness-xplat008")
         self.assertEqual(request["mode"], "read_only")
+        runner_request = xplat008_fixture_request("runner-invocation")
+        self.assertEqual(runner_request["inputs"]["case_id"], "live-host-runtime-info")
         release_workflow = (REPO_ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
         for request_name in [
             "runner-invocation.json",
@@ -1426,6 +1438,16 @@ class GateFoundationTests(unittest.TestCase):
                 item.get("request_id") == "xplat-008-release-readiness:runner-invocation"
                 for item in readiness["runner_invocations"]
             )
+        )
+        live_runner_record = next(
+            item
+            for item in readiness["runner_invocations"]
+            if item.get("request_id") == "xplat-008-release-readiness:runner-invocation"
+        )
+        self.assertEqual(live_runner_record["runner_response"]["status"], "ok")
+        self.assertEqual(
+            live_runner_record["runner_response"]["data"]["report"]["source_vs_installed_context"],
+            "installed_payload",
         )
         self.assertTrue(
             any(
@@ -1500,6 +1522,39 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(malformed_checks[0]["status"], "fail")
         self.assertTrue(malformed_checks[0]["blocking"])
         self.assertIn("malformed_check_record", malformed_checks[0]["evidence"])
+        unknown_checks = release_gate.normalize_xplat008_checks(
+            [
+                {
+                    "check_id": "unknown-check",
+                    "blocker_class": "unknown-blocker",
+                    "status": "pass",
+                    "evidence": [],
+                }
+            ]
+        )
+        self.assertEqual(unknown_checks[0]["status"], "fail")
+        self.assertTrue(unknown_checks[0]["blocking"])
+        self.assertEqual(unknown_checks[0]["check_id"], "release-packet-traceability")
+        self.assertIn("malformed_check_record", unknown_checks[0]["evidence"])
+
+        malformed_contract_checks = release_gate.validate_xplat008_evidence_contracts(
+            payload_results=[{"payload_surface": "claude", "status": "pass"}],
+            uat_rows=[{"product": "codex", "platform": "macos", "status": "pass"}],
+            repair_actions=[{"action_id": "repair", "status": "pass"}],
+            public_claim_results=[{"claim_id": "claim", "status": "pass"}],
+            runner_invocations=[{"request_id": "runner", "status": "pass"}],
+            traceability=[{"requirement_id": "FR-006"}],
+        )
+        evidence = [evidence for check in malformed_contract_checks for evidence in check["evidence"]]
+        for marker in [
+            "malformed_payload_record:index=0",
+            "malformed_uat_record:index=0",
+            "malformed_repair_record:index=0",
+            "malformed_public_claim_record:index=0",
+            "malformed_runner_invocation_record:index=0",
+            "malformed_traceability_record:index=0",
+        ]:
+            self.assertIn(marker, evidence)
 
     def test_run_default_suite_aggregates_success_stdout_stderr_and_exit_behavior(self) -> None:
         request = gate_request(

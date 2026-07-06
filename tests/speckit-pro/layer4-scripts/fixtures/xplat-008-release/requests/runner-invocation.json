@@ -1,11 +1,11 @@
 {
   "schema_version": "1.0",
-  "request_id": "xplat-008-runner-invocation-windows-py-v3",
+  "request_id": "xplat-008-runner-invocation-live-host-runtime-info",
   "helper_id": "runner-invocation",
   "operation": "runner-invocation",
   "mode": "read_only",
   "inputs": {
     "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json",
-    "case_id": "windows-py-v3"
+    "case_id": "live-host-runtime-info"
   }
 }

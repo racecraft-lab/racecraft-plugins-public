@@ -17,6 +17,40 @@ PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/pr
 DEFAULT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/release-readiness-cases.json"
 XPLAT_008_RELEASE_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json"
 XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/promotion-records.json"
+XPLAT008_CHECK_IDS = {
+    "active-runtime-guard",
+    "bundled-agents",
+    "dist-determinism",
+    "hooks",
+    "install-health-repair",
+    "latest-tag-update",
+    "payload-completeness",
+    "public-claims",
+    "release-packet-traceability",
+    "runner-files",
+    "runner-invocations",
+    "trust-metadata",
+    "uat-matrix",
+    "update-proof",
+    "version-sync",
+}
+XPLAT008_BLOCKER_CLASSES = {
+    "active_shell_runtime_dependency",
+    "incomplete_payload",
+    "incomplete_uat_evidence",
+    "missing_bundled_agent",
+    "missing_hook",
+    "missing_release_evidence",
+    "missing_runner_file",
+    "missing_runner_invocation",
+    "missing_traceability",
+    "missing_trust_metadata",
+    "nondeterministic_dist",
+    "stale_metadata",
+    "unsafe_public_claim",
+    "unsafe_repair_claim",
+}
+VALID_STATUS = {"pass", "fail"}
 RELEASE_OPERATIONS = (
     "detect-changed-plugin",
     "aggregate-suite-results",
@@ -180,6 +214,16 @@ def release_readiness_xplat008(entry: Any, request: Any, repo_root: Path) -> dic
             traceability,
         )
     )
+    checks.extend(
+        validate_xplat008_evidence_contracts(
+            payload_results,
+            uat_rows,
+            repair_actions,
+            public_claim_results,
+            runner_invocations,
+            traceability,
+        )
+    )
     checks = collapse_checks(checks)
     blocking_count = sum(1 for check in checks if check["blocking"])
 
@@ -293,7 +337,7 @@ def live_xplat008_gate_evidence(repo_root: Path) -> dict[str, Any]:
         repo_root,
         {
             "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json",
-            "case_id": "windows-py-v3",
+            "case_id": "live-host-runtime-info",
         },
     )
     if is_diagnostic(runner_case):
@@ -324,17 +368,26 @@ def normalize_xplat008_checks(raw: Any) -> list[dict[str, Any]]:
     for item in raw:
         if not isinstance(item, dict):
             continue
+        raw_check_id = item.get("check_id")
+        raw_blocker_class = item.get("blocker_class")
         raw_status = item.get("status")
         raw_evidence = item.get("evidence")
-        malformed = raw_status not in {"pass", "fail"} or not isinstance(raw_evidence, list)
-        status = raw_status if raw_status in {"pass", "fail"} else "fail"
+        malformed = (
+            raw_check_id not in XPLAT008_CHECK_IDS
+            or raw_blocker_class not in XPLAT008_BLOCKER_CLASSES
+            or raw_status not in VALID_STATUS
+            or not isinstance(raw_evidence, list)
+        )
+        check_id = raw_check_id if raw_check_id in XPLAT008_CHECK_IDS else "release-packet-traceability"
+        blocker_class = raw_blocker_class if raw_blocker_class in XPLAT008_BLOCKER_CLASSES else "missing_traceability"
+        status = "fail" if malformed else raw_status
         evidence = [str(evidence) for evidence in raw_evidence if isinstance(evidence, (str, int, float))] if isinstance(raw_evidence, list) else []
         if malformed:
             evidence.append("malformed_check_record")
         checks.append(
             {
-                "check_id": str(item.get("check_id") or "release-packet-traceability"),
-                "blocker_class": str(item.get("blocker_class") or "missing_traceability"),
+                "check_id": check_id,
+                "blocker_class": blocker_class,
                 "status": status,
                 "blocking": malformed or status == "fail" or item.get("blocking") is True,
                 "message": str(item.get("message") or item.get("check_id") or "release readiness check"),
@@ -342,6 +395,156 @@ def normalize_xplat008_checks(raw: Any) -> list[dict[str, Any]]:
             }
         )
     return checks
+
+
+def validate_xplat008_evidence_contracts(
+    payload_results: list[dict[str, Any]],
+    uat_rows: list[dict[str, Any]],
+    repair_actions: list[dict[str, Any]],
+    public_claim_results: list[dict[str, Any]],
+    runner_invocations: list[dict[str, Any]],
+    traceability: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    checks: list[dict[str, Any]] = []
+    for index, item in enumerate(payload_results):
+        problems = malformed_payload_result_fields(item)
+        if problems:
+            checks.append(malformed_evidence_check("payload-completeness", "incomplete_payload", "payload", index, problems))
+    for index, item in enumerate(uat_rows):
+        problems = malformed_uat_row_fields(item)
+        if problems:
+            checks.append(malformed_evidence_check("uat-matrix", "incomplete_uat_evidence", "uat", index, problems))
+    for index, item in enumerate(repair_actions):
+        problems = malformed_repair_action_fields(item)
+        if problems:
+            checks.append(malformed_evidence_check("install-health-repair", "unsafe_repair_claim", "repair", index, problems))
+    for index, item in enumerate(public_claim_results):
+        problems = malformed_public_claim_fields(item)
+        if problems:
+            checks.append(malformed_evidence_check("public-claims", "unsafe_public_claim", "public_claim", index, problems))
+    for index, item in enumerate(runner_invocations):
+        problems = malformed_runner_invocation_fields(item)
+        if problems:
+            checks.append(malformed_evidence_check("runner-invocations", "missing_runner_invocation", "runner_invocation", index, problems))
+    for index, item in enumerate(traceability):
+        problems = malformed_traceability_fields(item)
+        if problems:
+            checks.append(malformed_evidence_check("release-packet-traceability", "missing_traceability", "traceability", index, problems))
+    return checks
+
+
+def malformed_evidence_check(check_id: str, blocker_class: str, record_type: str, index: int, problems: list[str]) -> dict[str, Any]:
+    return xplat008_check(
+        check_id,
+        blocker_class,
+        False,
+        f"Malformed XPLAT-008 {record_type} evidence record.",
+        [f"malformed_{record_type}_record:index={index}", *[f"missing_or_invalid={problem}" for problem in problems]],
+    )
+
+
+def malformed_payload_result_fields(item: dict[str, Any]) -> list[str]:
+    problems: list[str] = []
+    require_enum(item, "payload_surface", {"claude", "codex"}, problems)
+    require_enum(item, "status", VALID_STATUS, problems)
+    require_string(item, "plugin_version", problems)
+    require_string(item, "runner_version", problems)
+    require_string(item, "file_tree_hash", problems)
+    for key in ("expected_files", "actual_files", "missing_paths", "extra_paths", "mismatched_paths", "path_leaks"):
+        require_list(item, key, problems)
+    return problems
+
+
+def malformed_uat_row_fields(item: dict[str, Any]) -> list[str]:
+    problems: list[str] = []
+    require_enum(item, "product", {"claude", "codex"}, problems)
+    require_enum(item, "platform", {"windows", "macos", "linux"}, problems)
+    require_enum(item, "status", VALID_STATUS, problems)
+    for key in (
+        "install_result",
+        "bundled_agent_verification",
+        "first_use",
+        "scaffold_status",
+        "autopilot_dry_run",
+        "latest_tag_update",
+        "incomplete_install_repair",
+    ):
+        require_enum(item, key, VALID_STATUS, problems)
+    require_string(item, "installed_cache_path", problems)
+    require_string(item, "evidence_link", problems)
+    require_list(item, "runner_invocation_ids", problems)
+    if not isinstance(item.get("interpreter_resolution"), dict):
+        problems.append("interpreter_resolution")
+    return problems
+
+
+def malformed_repair_action_fields(item: dict[str, Any]) -> list[str]:
+    problems: list[str] = []
+    require_string(item, "action_id", problems)
+    require_string(item, "finding_id", problems)
+    require_enum(item, "action_type", {"safe_repair", "manual_remediation"}, problems)
+    require_string(item, "target_path", problems)
+    require_enum(item, "status", {"pass", "blocked"}, problems)
+    if not isinstance(item.get("digest_verified"), bool):
+        problems.append("digest_verified")
+    return problems
+
+
+def malformed_public_claim_fields(item: dict[str, Any]) -> list[str]:
+    problems: list[str] = []
+    require_string(item, "claim_id", problems)
+    require_string(item, "surface", problems)
+    require_string(item, "claim_text_or_pattern", problems)
+    require_string(item, "classification", problems)
+    require_enum(item, "status", VALID_STATUS, problems)
+    require_list(item, "evidence", problems)
+    return problems
+
+
+def malformed_runner_invocation_fields(item: dict[str, Any]) -> list[str]:
+    problems: list[str] = []
+    require_string(item, "request_id", problems)
+    require_enum(item, "product", {"claude", "codex"}, problems)
+    require_enum(item, "platform", {"windows", "macos", "linux"}, problems)
+    require_enum(item, "status", {"pass", "blocked"}, problems)
+    if not isinstance(item.get("interpreter_resolution"), dict):
+        problems.append("interpreter_resolution")
+    invocation = item.get("invocation")
+    if not isinstance(invocation, dict):
+        problems.append("invocation")
+    else:
+        argv = invocation.get("argv")
+        if not isinstance(argv, list) or "-m" not in argv or "speckit_pro_runner" not in argv:
+            problems.append("invocation.argv")
+        if invocation.get("shell_used") is not False:
+            problems.append("invocation.shell_used")
+    runner_response = item.get("runner_response")
+    if item.get("status") == "pass" and (not isinstance(runner_response, dict) or runner_response.get("status") != "ok"):
+        problems.append("runner_response")
+    return problems
+
+
+def malformed_traceability_fields(item: dict[str, Any]) -> list[str]:
+    problems: list[str] = []
+    require_string(item, "requirement_id", problems)
+    require_list(item, "changed_files", problems)
+    require_list(item, "verification_evidence", problems)
+    return problems
+
+
+def require_string(item: dict[str, Any], key: str, problems: list[str]) -> None:
+    if not isinstance(item.get(key), str) or not item.get(key):
+        problems.append(key)
+
+
+def require_list(item: dict[str, Any], key: str, problems: list[str]) -> None:
+    if not isinstance(item.get(key), list):
+        problems.append(key)
+
+
+def require_enum(item: dict[str, Any], key: str, allowed: set[str], problems: list[str]) -> None:
+    if item.get(key) not in allowed:
+        problems.append(key)
 
 
 def computed_xplat008_checks(

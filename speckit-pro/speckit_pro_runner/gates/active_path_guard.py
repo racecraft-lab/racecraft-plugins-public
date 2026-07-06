@@ -494,6 +494,8 @@ def classify_xplat008_path(path: str, category: str, pattern: str, content: str,
         return "blocking_active_runtime"
     if path in {"speckit-pro/codex-hooks.json", "speckit-pro/hooks/hooks.json"}:
         return "blocking_active_runtime"
+    if xplat008_installed_runtime_requirement_without_source_context(path, content):
+        return "blocking_active_runtime"
     if path.startswith("dist/") and not path.endswith(("README.md", "CHANGELOG.md", "LICENSE")):
         if "/speckit_pro_runner/" in path and source_kind in {"repo", "repo_baseline"} and xplat008_source_checkout_helper_reference(path, content):
             return "source_checkout_helper"
@@ -777,6 +779,47 @@ def xplat008_likely_active_runtime_requirement(content: str) -> bool:
         "use bash",
     )
     return any(marker in lowered for marker in markers)
+
+
+def xplat008_installed_runtime_requirement_without_source_context(path: str, content: str) -> bool:
+    if not xplat008_installed_runtime_surface(path):
+        return False
+    lowered_path = path.lower()
+    if lowered_path.endswith("speckit_pro_runner/gates/active_path_guard.py"):
+        return False
+    if any(part in lowered_path for part in ("/references/", "/templates/", "/contracts/", "/scripts/")):
+        return False
+    if xplat008_explicit_source_checkout_context(content) or xplat008_official_spec_kit_cli_context(content):
+        return False
+    return xplat008_likely_active_runtime_requirement(content)
+
+
+def xplat008_official_spec_kit_cli_context(content: str) -> bool:
+    lowered = content.lower()
+    markers = (
+        "official speckit cli",
+        "official spec kit cli",
+        "speckit cli",
+        "spec kit cli",
+        "command -v specify",
+        "uv tool install specify-cli",
+    )
+    return any(marker in lowered for marker in markers)
+
+
+def xplat008_installed_runtime_surface(path: str) -> bool:
+    if path.startswith("dist/") and not path.endswith(("README.md", "CHANGELOG.md", "LICENSE")):
+        return True
+    if path in {"speckit-pro/codex-hooks.json", "speckit-pro/hooks/hooks.json"}:
+        return True
+    return path.startswith(
+        (
+            "speckit-pro/skills/",
+            "speckit-pro/codex-skills/",
+            "speckit-pro/agents/",
+            "speckit-pro/codex-agents/",
+        )
+    )
 
 
 def xplat008_explicit_source_checkout_context(content: str) -> bool:
