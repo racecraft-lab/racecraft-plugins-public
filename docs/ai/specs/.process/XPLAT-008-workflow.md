@@ -138,7 +138,7 @@ unless a deliberate higher-priority override exists.
 | Check | Result | Evidence |
 |---|---|---|
 | Codex agent install | Pass | `validate-agent-install.sh --surface codex --autoheal` reported `ok: codex: 10 bundled agents installed` |
-| SpecKit CLI | Pass | `command -v specify` resolved to `/Users/fredrickgabelmann/.local/bin/specify` |
+| SpecKit CLI | Pass | `command -v specify` resolved to a user-local `specify` executable |
 | Remote | Pass | `git remote -v` detected `origin` |
 | Branch/worktree | Pass | Created worktree on `codex/xplat-008-claude-codex-cutover-universal-install-release-gate` from `origin/main` at `2953e447` |
 | Reviewability setup gate | Warn/pass | `reviewability-gate.sh setup docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md` returned `status: warn`, `pass: true`, `reviewable_loc: 250`, `production_files: 4`, `total_files: 10`, warning: primary surfaces `docs/process` and `harness/adapter` exceed one-surface warning threshold |

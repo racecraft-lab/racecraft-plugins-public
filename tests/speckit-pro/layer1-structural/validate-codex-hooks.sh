@@ -9,12 +9,12 @@
 # the file location AND the manifest pointer so a stale rename can't
 # silently disable Codex hook loading.
 #
-# The Codex hook is scoped via UserPromptSubmit + body-side prompt
-# matching (Codex has no UserPromptExpansion equivalent; UserPromptSubmit's
-# matcher field is ignored per the docs). The hook command reads stdin,
-# extracts the prompt, and only runs the specify check if the prompt
-# invokes a speckit-pro skill or SpecKit native command. This matches
-# the Claude Code scoping behavior — fires only on plugin invocation.
+# The Codex hook uses UserPromptSubmit because Codex has no
+# UserPromptExpansion equivalent. XPLAT-008 deliberately keeps the hook
+# command list empty: a static hook command cannot perform the platform-
+# specific Python discovery that installed skills and agents perform before
+# invoking the runner. This prevents non-portable preflight failures before
+# the real runner discovery path is reached.
 set -euo pipefail
 
 source "$(dirname "$0")/../lib/assertions.sh"
@@ -63,7 +63,7 @@ fi
 
 CONTENT=$(cat "$HOOKS_FILE")
 
-section "codex-hooks.json — Scoping (UserPromptSubmit + body-side prompt match)"
+section "codex-hooks.json — Prompt hook shape"
 
 set_test "has top-level hooks key"
 assert_json_field_exists "$CONTENT" "hooks"
@@ -77,7 +77,7 @@ import sys, json
 data = json.load(sys.stdin)
 print('true' if 'SessionStart' in data.get('hooks', {}) else 'false')
 " 2>/dev/null)
-assert_eq "false" "$has_session_start" "Codex hook must not register SessionStart (always fires); use UserPromptSubmit with body-side prompt matching"
+assert_eq "false" "$has_session_start" "Codex hook must not register SessionStart; use UserPromptSubmit for the runner availability check"
 
 set_test "UserPromptSubmit has non-empty hooks array"
 has_hooks_array=$(printf '%s' "$CONTENT" | python3 -c "
@@ -97,81 +97,13 @@ print('true' if 'hooks' in entry and isinstance(entry['hooks'], list) else 'fals
 " 2>/dev/null)
 assert_eq "true" "$has_inner_hooks" "hook entry must have hooks array"
 
-set_test "Hook type is command"
-hook_type=$(printf '%s' "$CONTENT" | python3 -c "
+set_test "Hook entry has an empty command list"
+empty_inner_hooks=$(printf '%s' "$CONTENT" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
-h = data['hooks']['UserPromptSubmit'][0]['hooks'][0]
-print(h.get('type', ''))
+hooks = data['hooks']['UserPromptSubmit'][0]['hooks']
+print('true' if isinstance(hooks, list) and len(hooks) == 0 else 'false')
 " 2>/dev/null)
-assert_eq "command" "$hook_type"
-
-set_test "command field is non-empty"
-cmd_val=$(printf '%s' "$CONTENT" | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-h = data['hooks']['UserPromptSubmit'][0]['hooks'][0]
-print(h.get('command', ''))
-" 2>/dev/null)
-if [ -n "$cmd_val" ]; then
-  _pass
-else
-  _fail "command field is empty"
-fi
-
-set_test "has statusMessage field"
-has_status=$(printf '%s' "$CONTENT" | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-h = data['hooks']['UserPromptSubmit'][0]['hooks'][0]
-print('true' if 'statusMessage' in h and h['statusMessage'] else 'false')
-" 2>/dev/null)
-assert_eq "true" "$has_status" "hook must have a non-empty statusMessage field"
-
-section "codex-hooks.json — Body-side prompt-match scoping"
-
-set_test "Command body reads stdin and extracts the prompt via jq"
-# Codex UserPromptSubmit fires on every user prompt; the matcher field is
-# unused per the Codex docs. The hook must inspect the prompt content via
-# jq on stdin to scope to plugin invocation only. Without this, the
-# warning fires on every Codex prompt — exactly what we removed.
-if [[ "$cmd_val" == *"jq -r"* ]] && [[ "$cmd_val" == *".prompt"* ]]; then
-  _pass
-else
-  _fail "command must extract .prompt from stdin via jq for prompt-match scoping (was: '$cmd_val')"
-fi
-
-set_test "Command body greps for plugin-scoping invocation pattern"
-if [[ "$cmd_val" == *"speckit-"* ]] && [[ "$cmd_val" == *"grill-me"* ]] && [[ "$cmd_val" == *"/speckit"* ]]; then
-  _pass
-else
-  _fail "command must grep prompt for speckit-/grill-me/SpecKit invocation patterns (was: '$cmd_val')"
-fi
-
-set_test "Command body prepends common user CLI paths before probing specify"
-if [[ "$cmd_val" == *'$HOME/.local/bin'* ]] && [[ "$cmd_val" == *"/opt/homebrew/bin"* ]] && [[ "$cmd_val" == *"/usr/local/bin"* ]]; then
-  _pass
-else
-  _fail "command must prepend common user CLI paths before command -v specify (was: '$cmd_val')"
-fi
-
-set_test "Command does not warn when specify exists only in HOME/.local/bin"
-hook_tmp=$(mktemp -d)
-mkdir -p "$hook_tmp/.local/bin"
-cat > "$hook_tmp/.local/bin/specify" <<'SH'
-#!/usr/bin/env bash
-exit 0
-SH
-chmod +x "$hook_tmp/.local/bin/specify"
-hook_output=$(
-  printf '{"prompt":"$speckit-install"}' \
-    | HOME="$hook_tmp" PATH="/usr/bin:/bin:/usr/sbin:/sbin" sh -c "$cmd_val" 2>/dev/null || true
-)
-rm -rf "$hook_tmp"
-if [ -z "$hook_output" ]; then
-  _pass
-else
-  _fail "hook warned even though specify existed in HOME/.local/bin: $hook_output"
-fi
+assert_eq "true" "$empty_inner_hooks" "Codex plugin hook must not run a static interpreter command; skills own runner discovery"
 
 test_summary

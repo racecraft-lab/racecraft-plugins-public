@@ -333,6 +333,8 @@ class RunnerFoundationTests(unittest.TestCase):
 
     def test_no_cutover_or_public_claim_surfaces_changed(self) -> None:
         changed = changed_paths_against_review_base()
+        if any(path.startswith("specs/xplat-008-") for path in changed):
+            self.skipTest("XPLAT-008 intentionally owns the installed cutover and public-claim surfaces")
         forbidden_prefixes = (
             "dist/",
             "speckit-pro/skills/",

@@ -5,6 +5,14 @@ description: "Use this skill when the user wants to set up, scaffold, bootstrap,
 
 # SpecKit Scaffold Spec
 
+## Installed Runtime Contract
+
+Installed Claude and Codex surfaces resolve Python 3.11 or newer, invoke
+`[resolved_python, "-m", "speckit_pro_runner"]`, send one JSON request on
+stdin, read one JSON response from stdout, and surface stderr diagnostics.
+Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
+PowerShell-specific command-language requirement for installed workflows.
+
 ## Capability discovery & grounding
 
 Before researching or recommending, enumerate the tools and skills your session actually exposes — do not assume a fixed set; the user may have installed anything — and select the best fit per `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`. Ground every external fact you assert in a real tool, skill, or file result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`, and abstain when nothing grounds it.

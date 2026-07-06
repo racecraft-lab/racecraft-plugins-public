@@ -38,5 +38,6 @@ links to the slice artifacts in the body below.
 - [checklists/reliability.md](checklists/reliability.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [checklists/security.md](checklists/security.md)
+- [.process/active-runtime-inventory.md](.process/active-runtime-inventory.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

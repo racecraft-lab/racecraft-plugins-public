@@ -20,6 +20,14 @@ description: >
 
 # SpecKit Autopilot — Autonomous Execution Engine
 
+## Installed Runtime Contract
+
+Installed Claude and Codex surfaces resolve Python 3.11 or newer, invoke
+`[resolved_python, "-m", "speckit_pro_runner"]`, send one JSON request on
+stdin, read one JSON response from stdout, and surface stderr diagnostics.
+Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
+PowerShell-specific command-language requirement for installed workflows.
+
 ## Scope
 
 This skill handles autonomous workflow EXECUTION. For methodology

@@ -3,12 +3,7 @@
     "UserPromptExpansion": [
       {
         "matcher": "^(speckit-pro:|grill-me|speckit\\.|speckit-)",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python -m speckit_pro_runner --version"
-          }
-        ]
+        "hooks": []
       }
     ]
   }

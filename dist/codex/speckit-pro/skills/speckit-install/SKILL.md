@@ -5,6 +5,14 @@ description: "Install the SpecKit CLI and initialize the current repository for 
 
 # SpecKit Install
 
+## Installed Runtime Contract
+
+Installed Claude and Codex surfaces resolve Python 3.11 or newer, invoke
+`[resolved_python, "-m", "speckit_pro_runner"]`, send one JSON request on
+stdin, read one JSON response from stdout, and surface stderr diagnostics.
+Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
+PowerShell-specific command-language requirement for installed workflows.
+
 ## Scope
 
 Install the official SpecKit CLI (https://github.com/github/spec-kit)

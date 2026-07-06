@@ -15,7 +15,7 @@
       "platform": "windows",
       "surface_path": "speckit-pro/skills/speckit-status/SKILL.md",
       "operation": "status",
-      "cache_root": "C:/Users/alice/AppData/Local/Claude/plugins/speckit-pro",
+      "cache_root": "C:/fixture-home/AppData/Local/Claude/plugins/speckit-pro",
       "candidate_results": [
         {
           "candidate": "py -V:3",
@@ -31,7 +31,7 @@
       "platform": "windows",
       "surface_path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
       "operation": "scaffold",
-      "cache_root": "C:/Users/alice/.codex/plugins/speckit-pro",
+      "cache_root": "C:/fixture-home/.codex/plugins/speckit-pro",
       "candidate_results": [
         {
           "candidate": "py -V:3",
@@ -52,7 +52,7 @@
       "platform": "macos",
       "surface_path": "speckit-pro/skills/speckit-autopilot/SKILL.md",
       "operation": "autopilot-dry-run",
-      "cache_root": "/Users/alice/.claude/plugins/speckit-pro",
+      "cache_root": "/fixture-home/.claude/plugins/speckit-pro",
       "candidate_results": [
         {
           "candidate": "python3",
@@ -68,7 +68,7 @@
       "platform": "linux",
       "surface_path": "speckit-pro/codex-skills/speckit-status/SKILL.md",
       "operation": "status",
-      "cache_root": "/home/alice/.codex/plugins/speckit-pro",
+      "cache_root": "/fixture-home/.codex/plugins/speckit-pro",
       "candidate_results": [
         {
           "candidate": "python3",
@@ -90,7 +90,7 @@
       "platform": "linux",
       "surface_path": "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
       "operation": "preflight",
-      "cache_root": "/home/alice/.claude/plugins/speckit-pro",
+      "cache_root": "/fixture-home/.claude/plugins/speckit-pro",
       "candidate_results": [
         {
           "candidate": "python3",

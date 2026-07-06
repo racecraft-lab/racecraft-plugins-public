@@ -2,13 +2,7 @@
   "hooks": {
     "UserPromptSubmit": [
       {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python -m speckit_pro_runner --version",
-            "statusMessage": "Checking SpecKit Pro runner availability"
-          }
-        ]
+        "hooks": []
       }
     ]
   }
