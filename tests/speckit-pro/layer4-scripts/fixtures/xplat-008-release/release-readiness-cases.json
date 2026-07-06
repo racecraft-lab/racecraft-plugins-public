@@ -12,7 +12,8 @@
     "incomplete UAT blocker",
     "unsafe repair claim blocker",
     "missing traceability blocker",
-    "nondeterministic dist blocker"
+    "nondeterministic dist blocker",
+    "same-run live gate evidence for payload, active runtime, and runner invocation readiness"
   ],
   "base_case": {
     "checks": [

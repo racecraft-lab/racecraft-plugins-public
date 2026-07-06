@@ -78,9 +78,19 @@ def payload_completeness_xplat008(entry: Any, request: Any, repo_root: Path) -> 
         else:
             build_dist_root = target_result
 
-        build_xplat008_payloads(repo_root, build_dist_root)
-        compare_dist_root = build_dist_root if request.mode == "apply" else repo_root / "dist"
-        results = xplat008_payload_results(repo_root, build_dist_root, compare_dist_root, case, surfaces)
+        try:
+            build_xplat008_payloads(repo_root, build_dist_root)
+            compare_dist_root = build_dist_root if request.mode == "apply" else repo_root / "dist"
+            results = xplat008_payload_results(repo_root, build_dist_root, compare_dist_root, case, surfaces)
+        except (OSError, ValueError, json.JSONDecodeError, KeyError) as exc:
+            diag = diagnostic(
+                "payload_completeness_evidence_invalid",
+                "XPLAT-008 payload completeness could not build or read generated payload evidence",
+                details={"case_id": case.get("case_id"), "error": type(exc).__name__},
+                remediation_summary="Refresh source manifests and generated payload metadata before retrying.",
+                remediation_actions=["Run the payload build from a complete source checkout.", "Retry the read-only payload completeness gate."],
+            )
+            return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[diag])
     finally:
         if temp_context is not None:
             temp_context.cleanup()
@@ -466,6 +476,8 @@ def xplat008_payload_result(
         path for path in set(expected_by_path) & set(actual_by_path)
         if expected_by_path[path]["sha256"] != actual_by_path[path]["sha256"]
     )
+    trust_metadata_mismatches = payload_trust_metadata_mismatches(actual_root)
+    mismatched = sorted(set(mismatched) | set(trust_metadata_mismatches))
     path_leaks = sorted(
         set(path for path in actual_by_path if payload_path_leaks(path))
         | set(str(item) for item in mutation.get("path_leaks", []) if isinstance(item, str))
@@ -495,6 +507,68 @@ def plugin_version_for_surface(repo_root: Path, surface: str) -> str:
     manifest = json.loads((repo_root / "speckit-pro" / manifest_name).read_text(encoding="utf-8"))
     version = manifest.get("version")
     return version if isinstance(version, str) and version else "0.0.0"
+
+
+def payload_trust_metadata_mismatches(payload_root: Path) -> list[str]:
+    runner_root = payload_root / "speckit_pro_runner"
+    manifest_path = runner_root / "speckit-pro-runner.manifest.json"
+    checksum_path = runner_root / "speckit-pro-runner.sha256"
+    manifest_rel = "speckit_pro_runner/speckit-pro-runner.manifest.json"
+    checksum_rel = "speckit_pro_runner/speckit-pro-runner.sha256"
+    runner_files = sorted(
+        path
+        for path in runner_root.rglob("*.py")
+        if path.is_file() and "__pycache__" not in path.parts and not path.name.endswith(".pyc")
+    )
+    if not runner_files:
+        return []
+
+    actual = {path.relative_to(payload_root).as_posix(): sha256_file(path) for path in runner_files}
+    mismatches: set[str] = set()
+
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        records = manifest.get("runner_files")
+        if not isinstance(records, list):
+            mismatches.add(manifest_rel)
+        else:
+            manifest_hashes: dict[str, str] = {}
+            for record in records:
+                if not isinstance(record, dict):
+                    mismatches.add(manifest_rel)
+                    continue
+                path_record = record.get("path")
+                value = path_record.get("value") if isinstance(path_record, dict) else None
+                digest = record.get("sha256")
+                if not isinstance(value, str) or not isinstance(digest, str):
+                    mismatches.add(manifest_rel)
+                    continue
+                manifest_hashes[value] = digest
+            if manifest_hashes != actual:
+                mismatches.add(manifest_rel)
+    except (OSError, json.JSONDecodeError):
+        mismatches.add(manifest_rel)
+
+    try:
+        checksum_hashes = parse_payload_checksum(checksum_path)
+        if checksum_hashes != actual:
+            mismatches.add(checksum_rel)
+    except OSError:
+        mismatches.add(checksum_rel)
+
+    return sorted(mismatches)
+
+
+def parse_payload_checksum(path: Path) -> dict[str, str]:
+    records: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        digest, separator, rel = line.partition("  ")
+        if not separator or len(digest) != 64 or not rel:
+            return {}
+        records[rel] = digest
+    return records
 
 
 def scan_payload_files(root: Path, *, source_root: Path, surface: str) -> list[dict[str, Any]]:

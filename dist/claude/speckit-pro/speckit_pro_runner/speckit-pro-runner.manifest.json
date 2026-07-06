@@ -50,7 +50,7 @@
         "value": "speckit_pro_runner/gates/payloads.py",
         "format": "posix-relative"
       },
-      "sha256": "6470ab00740e3cb7bd70fc7dc79832ce8ce5f2f5a5249c5909d6dd313289008e"
+      "sha256": "26beffa2bfc87a2f2d5ae6c0a60ac25f6279544cc2b78c571855926a19d02947"
     },
     {
       "path": {
@@ -64,7 +64,7 @@
         "value": "speckit_pro_runner/gates/release.py",
         "format": "posix-relative"
       },
-      "sha256": "e6e0dc266b632704c929c010c3358682ed820249269974bac4e1b7f5b6b9a228"
+      "sha256": "5769e5bca8f89032d36ff972fe1ae7c2626b92f23e94c702e09061560a81a94f"
     },
     {
       "path": {

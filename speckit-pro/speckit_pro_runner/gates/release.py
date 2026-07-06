@@ -8,6 +8,7 @@ import os
 import re
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 from ..envelope import diagnostic, response
@@ -151,13 +152,23 @@ def release_readiness_xplat008(entry: Any, request: Any, repo_root: Path) -> dic
         return response("input_error", request_id=request.request_id, data=xplat008_base_data(entry, request.operation, "input_error"), diagnostics=[case_result])
     case = case_result
 
-    payload_results = normalize_payload_results(case.get("payload_results"))
+    live_evidence = live_xplat008_gate_evidence(repo_root) if case.get("use_live_gate_evidence") is not False else {}
+    payload_results = [
+        *normalize_payload_results(case.get("payload_results")),
+        *normalize_payload_results(live_evidence.get("payload_results")),
+    ]
     uat_rows = normalize_uat_rows(case.get("uat_rows"))
     repair_actions = normalize_repair_actions(case.get("repair_actions"))
     public_claim_results = normalize_public_claim_results(case.get("public_claim_results"))
-    runner_invocations = normalize_runner_invocations(case.get("runner_invocations"))
+    runner_invocations = [
+        *normalize_runner_invocations(case.get("runner_invocations")),
+        *normalize_runner_invocations(live_evidence.get("runner_invocations")),
+    ]
     traceability = normalize_traceability(case.get("traceability"))
-    checks = normalize_xplat008_checks(case.get("checks"))
+    checks = [
+        *normalize_xplat008_checks(case.get("checks")),
+        *normalize_xplat008_checks(live_evidence.get("checks")),
+    ]
 
     checks.extend(
         computed_xplat008_checks(
@@ -189,6 +200,11 @@ def release_readiness_xplat008(entry: Any, request: Any, repo_root: Path) -> dic
             "install_health": ["tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/install-health-repair-cases.json"],
             "public_claims": ["tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json"],
             "runner_invocations": ["tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json"],
+            "live_gate_requests": [
+                "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/active-runtime-guard.json",
+                "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness.json",
+                "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/runner-invocation.json",
+            ],
         },
         "traceability": traceability,
     }
@@ -209,6 +225,96 @@ def release_readiness_xplat008(entry: Any, request: Any, repo_root: Path) -> dic
         remediation_actions=["Inspect data.release_readiness.checks.", "Retry the XPLAT-008 release-readiness request after updating evidence."],
     )
     return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diag])
+
+
+def live_xplat008_gate_evidence(repo_root: Path) -> dict[str, Any]:
+    from . import active_path_guard, payloads as payload_gate
+    from ..helpers import install as install_helper
+
+    evidence: dict[str, Any] = {"checks": [], "payload_results": [], "runner_invocations": []}
+
+    active_response = active_path_guard.run_active_runtime_guard(
+        SimpleNamespace(helper_id="active-path-guard"),
+        SimpleNamespace(
+            operation="active-runtime-guard",
+            request_id="xplat-008-release-readiness:active-runtime-guard",
+            mode="read_only",
+            inputs={
+                "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json",
+                "case_id": "final-current-implementation",
+            },
+        ),
+        repo_root,
+    )
+    active_data = active_response.get("data") if isinstance(active_response, dict) else {}
+    active_blocking = active_response.get("status") != "ok" if isinstance(active_response, dict) else True
+    active_count = active_data.get("blocking_count") if isinstance(active_data, dict) else None
+    evidence["checks"].append(
+        xplat008_check(
+            "active-runtime-guard",
+            "active_shell_runtime_dependency",
+            not active_blocking and active_count == 0,
+            "Live active-runtime guard completed for current release surfaces.",
+            [
+                f"live_status={active_response.get('status', 'missing') if isinstance(active_response, dict) else 'missing'}",
+                f"blocking_count={active_count if isinstance(active_count, int) else 'unknown'}",
+            ],
+        )
+    )
+
+    payload_response = payload_gate.payload_completeness_xplat008(
+        SimpleNamespace(helper_id="payload-gate"),
+        SimpleNamespace(
+            operation="payload-completeness",
+            request_id="xplat-008-release-readiness:payload-completeness",
+            mode="read_only",
+            inputs={
+                "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/payload-completeness-cases.json",
+                "case_id": "current-committed-dist",
+            },
+        ),
+        repo_root,
+    )
+    payload_data = payload_response.get("data") if isinstance(payload_response, dict) else {}
+    payload_results = payload_data.get("payload_completeness") if isinstance(payload_data, dict) else None
+    if isinstance(payload_results, list):
+        evidence["payload_results"].extend(item for item in payload_results if isinstance(item, dict))
+    evidence["checks"].append(
+        xplat008_check(
+            "payload-completeness",
+            "incomplete_payload",
+            isinstance(payload_response, dict) and payload_response.get("status") == "ok",
+            "Live payload completeness gate completed for committed Claude and Codex payloads.",
+            [f"live_status={payload_response.get('status', 'missing') if isinstance(payload_response, dict) else 'missing'}"],
+        )
+    )
+
+    runner_case = install_helper.runner_invocation_case(
+        repo_root,
+        {
+            "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json",
+            "case_id": "windows-py-v3",
+        },
+    )
+    if is_diagnostic(runner_case):
+        evidence["checks"].append(
+            xplat008_check(
+                "runner-invocations",
+                "missing_runner_invocation",
+                False,
+                "Live runner invocation evidence could not be loaded.",
+                [str(runner_case.get("code"))],
+            )
+        )
+    else:
+        runner_record, _diagnostics = install_helper.runner_invocation_record(
+            runner_case,
+            "xplat-008-release-readiness:runner-invocation",
+            repo_root,
+        )
+        evidence["runner_invocations"].append(runner_record)
+
+    return evidence
 
 
 def normalize_xplat008_checks(raw: Any) -> list[dict[str, Any]]:
@@ -240,11 +346,15 @@ def computed_xplat008_checks(
     runner_invocations: list[dict[str, Any]],
     traceability: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    payload_failures = [item["payload_surface"] for item in payload_results if item.get("status") != "pass"]
+    payload_failures = [str(item.get("payload_surface") or "unknown") for item in payload_results if item.get("status") != "pass"]
     payload_surfaces = {item.get("payload_surface") for item in payload_results if item.get("status") == "pass"}
     uat_failures = [f"{item.get('product')}:{item.get('platform')}" for item in uat_rows if item.get("status") != "pass"]
-    repair_failures = [item["action_id"] for item in repair_actions if item.get("action_type") == "manual_remediation" or item.get("status") == "blocked"]
-    claim_failures = [item["claim_id"] for item in public_claim_results if item.get("status") != "pass"]
+    repair_failures = [
+        str(item.get("action_id") or "unknown")
+        for item in repair_actions
+        if item.get("action_type") == "manual_remediation" or item.get("status") == "blocked"
+    ]
+    claim_failures = [str(item.get("claim_id") or "unknown") for item in public_claim_results if item.get("status") != "pass"]
     runner_failures = [item.get("request_id", "unknown") for item in runner_invocations if item.get("status") != "pass"]
     missing_traceability = not traceability
     return [
@@ -302,7 +412,13 @@ def computed_xplat008_checks(
 def collapse_checks(checks: list[dict[str, Any]]) -> list[dict[str, Any]]:
     collapsed: dict[str, dict[str, Any]] = {}
     for check in checks:
-        check_id = check["check_id"]
+        check_id = str(check.get("check_id") or "release-packet-traceability")
+        check["check_id"] = check_id
+        check.setdefault("blocker_class", "missing_traceability")
+        check.setdefault("message", check_id)
+        check.setdefault("evidence", [])
+        check["blocking"] = check.get("blocking") is True or check.get("status") == "fail"
+        check["status"] = "fail" if check["blocking"] else "pass"
         existing = collapsed.get(check_id)
         if existing is None:
             collapsed[check_id] = check

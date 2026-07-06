@@ -1331,6 +1331,26 @@ class GateFoundationTests(unittest.TestCase):
             self.assertFalse(result["path_leaks"])
         self.assert_payload_completeness_contract_subset(response["data"]["payload_completeness"])
 
+    def test_xplat008_payload_completeness_detects_stale_runner_trust_metadata(self) -> None:
+        from speckit_pro_runner.gates import payloads as payload_gate
+
+        with tempfile.TemporaryDirectory() as tmp:
+            dist_root = Path(tmp) / "dist"
+            payload_gate.build_xplat008_payloads(REPO_ROOT, dist_root)
+            payload_root = dist_root / "claude" / "speckit-pro"
+            runner_file = payload_root / "speckit_pro_runner" / "__main__.py"
+            runner_file.write_text(runner_file.read_text(encoding="utf-8") + "\n# stale trust metadata test\n", encoding="utf-8")
+
+            mismatches = payload_gate.payload_trust_metadata_mismatches(payload_root)
+
+        self.assertEqual(
+            set(mismatches),
+            {
+                "speckit_pro_runner/speckit-pro-runner.manifest.json",
+                "speckit_pro_runner/speckit-pro-runner.sha256",
+            },
+        )
+
     def test_xplat008_release_readiness_fixtures_cover_release_blockers(self) -> None:
         promotion_records = json.loads((XPLAT_008_FIXTURE_DIR / "promotion-records.json").read_text(encoding="utf-8"))
         self.assertEqual(promotion_records["schema_version"], "1.0")
@@ -1375,6 +1395,14 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(request["helper_id"], "release-readiness")
         self.assertEqual(request["operation"], "release-readiness-xplat008")
         self.assertEqual(request["mode"], "read_only")
+        release_workflow = (REPO_ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        for request_name in [
+            "runner-invocation.json",
+            "active-runtime-guard.json",
+            "payload-completeness.json",
+            "release-readiness.json",
+        ]:
+            self.assertIn(f"tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/{request_name}", release_workflow)
 
     def test_xplat008_release_readiness_reports_pass_and_seeded_blockers(self) -> None:
         completed, response, stderr_records = run_runner(xplat008_fixture_request("release-readiness"))
@@ -1392,6 +1420,20 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual({item["payload_surface"] for item in readiness["payload_results"]}, {"claude", "codex"})
         self.assertEqual(len(readiness["uat_rows"]), 6)
         self.assertTrue(readiness["traceability"])
+        self.assertIn("live_gate_requests", readiness["evidence_refs"])
+        self.assertTrue(
+            any(
+                item.get("request_id") == "xplat-008-release-readiness:runner-invocation"
+                for item in readiness["runner_invocations"]
+            )
+        )
+        self.assertTrue(
+            any(
+                file_record["path"] == "speckit_pro_runner/speckit-pro-runner.manifest.json"
+                for result in readiness["payload_results"]
+                for file_record in result.get("actual_files", [])
+            )
+        )
         self.assert_release_readiness_contract_subset(readiness)
 
         blocker_cases = [
@@ -1426,6 +1468,24 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertEqual([diag["code"] for diag in stderr_records], ["release_readiness_xplat008_blocked"])
                 self.assertGreater(response["data"]["release_readiness"]["blocking_count"], 0)
                 self.assert_release_readiness_contract_subset(response["data"]["release_readiness"])
+
+    def test_xplat008_release_readiness_malformed_records_become_structured_blockers(self) -> None:
+        from speckit_pro_runner.gates import release as release_gate
+
+        checks = release_gate.computed_xplat008_checks(
+            payload_results=[{"status": "fail"}],
+            uat_rows=[],
+            repair_actions=[{"action_type": "manual_remediation"}],
+            public_claim_results=[{"status": "fail"}],
+            runner_invocations=[{"status": "blocked"}],
+            traceability=[],
+        )
+        collapsed = release_gate.collapse_checks(checks)
+
+        self.assertTrue(all("check_id" in check for check in collapsed))
+        self.assertTrue(any(check["check_id"] == "payload-completeness" and check["blocking"] for check in collapsed))
+        payload_check = next(check for check in collapsed if check["check_id"] == "payload-completeness")
+        self.assertIn("failing_payloads=unknown", payload_check["evidence"])
 
     def test_run_default_suite_aggregates_success_stdout_stderr_and_exit_behavior(self) -> None:
         request = gate_request(
