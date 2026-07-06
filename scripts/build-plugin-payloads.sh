@@ -24,6 +24,7 @@ source = repo / "speckit-pro"
 dist = repo / "dist"
 claude = dist / "claude" / "speckit-pro"
 codex = dist / "codex" / "speckit-pro"
+PROHIBITED_SCRIPT_SUFFIXES = (".sh", ".ps1", ".bat", ".cmd")
 
 if not source.is_dir():
     raise SystemExit(f"source plugin directory not found: {source}")
@@ -133,8 +134,9 @@ def rewrite_payload_skill_paths(path: Path) -> None:
 
 
 def remove_payload_shell_scripts(root: Path) -> None:
-    for script in root.rglob("*.sh"):
-        script.unlink()
+    for path in root.rglob("*"):
+        if path.is_file() and path.suffix.lower() in PROHIBITED_SCRIPT_SUFFIXES:
+            path.unlink()
     for directory in sorted((path for path in root.rglob("*") if path.is_dir()), key=lambda item: len(item.parts), reverse=True):
         try:
             directory.rmdir()

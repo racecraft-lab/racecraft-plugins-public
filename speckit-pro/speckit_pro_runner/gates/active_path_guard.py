@@ -17,7 +17,8 @@ PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/pr
 DEFAULT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/active-path-guard-cases.json"
 XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/promotion-records.json"
 XPLAT_008_DEFAULT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json"
-TEXT_SUFFIXES = frozenset({".json", ".md", ".py", ".sh", ".toml", ".txt", ".yaml", ".yml"})
+PROHIBITED_SCRIPT_SUFFIXES = (".sh", ".ps1", ".bat", ".cmd")
+TEXT_SUFFIXES = frozenset({".json", ".md", ".py", ".ps1", ".bat", ".cmd", ".sh", ".toml", ".txt", ".yaml", ".yml"})
 SCAN_ROOTS = (
     "tests/speckit-pro",
     "scripts",
@@ -47,7 +48,7 @@ FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = (
     ),
     ("jq", re.compile(r"(?<![\w-])jq(?![\w-])|--jq\b", re.IGNORECASE), "jq command dependency"),
     ("bash", re.compile(r"^#!.*\bbash\b|\bbash\b", re.IGNORECASE), "Bash dependency"),
-    ("script_file", re.compile(r"(?:^|\s|[\"'])[^\"'\s]+\.sh\b"), ".sh script path dependency"),
+    ("script_file", re.compile(r"(?:^|\s|[\"'])[^\"'\s]+\.(?:sh|ps1|bat|cmd)\b", re.IGNORECASE), "script path dependency"),
     ("shell_parsing", re.compile(r"\|.*\b(?:grep|sed|awk)\b|\b(?:grep|sed|awk)\b.*\|", re.IGNORECASE), "shell parsing pipeline"),
     ("shell_interpolation", re.compile(r"\$\(|`[^`]+`"), "shell command substitution"),
 )
@@ -333,7 +334,7 @@ def scan_sources(sources: list[SourceFile], repo_root: Path) -> list[RawFinding]
             )
         for number, line in enumerate(source.content.splitlines(), start=1):
             stripped = line.strip()
-            if not stripped or stripped.startswith("#"):
+            if not stripped or (stripped.startswith("#") and not path.endswith(".md")):
                 continue
             for category, pattern, reason in FORBIDDEN_PATTERNS:
                 match = pattern.search(line)
@@ -355,11 +356,19 @@ def scan_sources_xplat008(sources: list[SourceFile], repo_root: Path) -> list[Ra
         path = normalize_path(source.path)
         lines = source.content.splitlines()
         workflow_contexts = workflow_run_contexts(source.content) if path.startswith(".github/workflows/") else []
-        if path.endswith(".sh"):
+        if path.endswith(PROHIBITED_SCRIPT_SUFFIXES):
             add_finding(
                 findings,
                 seen,
-                classify_xplat008_raw_finding(path, 1, "script_file", "*.sh", ".sh file retained in scanned scope", source.content, source.source_kind),
+                classify_xplat008_raw_finding(
+                    path,
+                    1,
+                    "script_file",
+                    Path(path).suffix,
+                    "script file retained in scanned scope",
+                    source.content,
+                    source.source_kind,
+                ),
             )
         if path.startswith(".github/workflows/") and is_direct_python_gate_dispatch(source.content):
             line = direct_dispatch_line(source.content)
@@ -378,7 +387,7 @@ def scan_sources_xplat008(sources: list[SourceFile], repo_root: Path) -> list[Ra
             )
         for number, line in enumerate(lines, start=1):
             stripped = line.strip()
-            if not stripped or stripped.startswith("#"):
+            if not stripped or (stripped.startswith("#") and not path.endswith(".md")):
                 continue
             for category, pattern, reason in FORBIDDEN_PATTERNS:
                 match = pattern.search(line)

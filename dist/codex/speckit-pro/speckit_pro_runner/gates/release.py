@@ -483,8 +483,12 @@ def malformed_payload_result_fields(item: dict[str, Any]) -> list[str]:
     require_pattern(item, "plugin_version", r"^[0-9]+\.[0-9]+\.[0-9]+$", problems)
     require_string(item, "runner_version", problems)
     require_sha256(item, "file_tree_hash", problems)
-    for key in ("expected_files", "actual_files", "missing_paths", "extra_paths", "mismatched_paths", "path_leaks"):
+    for key in ("missing_paths", "extra_paths", "mismatched_paths", "path_leaks"):
+        require_string_list(item, key, problems)
+    for key in ("expected_files", "actual_files"):
         require_list(item, key, problems)
+    if isinstance(item.get("expected_files"), list) and not item.get("expected_files"):
+        problems.append("expected_files")
     validate_payload_file_records(item, "expected_files", problems)
     validate_payload_file_records(item, "actual_files", problems)
     return problems
@@ -563,7 +567,7 @@ def malformed_repair_action_fields(item: dict[str, Any]) -> list[str]:
     require_string(item, "target_path", problems)
     require_enum(item, "status", REPAIR_STATUS, problems)
     require_string(item, "message", problems)
-    require_list(item, "manual_steps", problems)
+    require_string_list(item, "manual_steps", problems)
     if not isinstance(item.get("digest_verified"), bool):
         problems.append("digest_verified")
     action_type = item.get("action_type")
@@ -596,7 +600,7 @@ def malformed_public_claim_fields(item: dict[str, Any]) -> list[str]:
     require_string(item, "claim_text_or_pattern", problems)
     require_string(item, "classification", problems)
     require_enum(item, "status", EVIDENCE_STATUS, problems)
-    require_list(item, "evidence", problems)
+    require_string_list(item, "evidence", problems)
     return problems
 
 
@@ -615,7 +619,9 @@ def malformed_runner_invocation_fields(item: dict[str, Any]) -> list[str]:
         problems.append("invocation")
     else:
         argv = invocation.get("argv")
-        if not isinstance(argv, list) or "-m" not in argv or "speckit_pro_runner" not in argv:
+        if not isinstance(argv, list) or any(not isinstance(value, str) or not value for value in argv):
+            problems.append("invocation.argv")
+        elif "-m" not in argv or "speckit_pro_runner" not in argv:
             problems.append("invocation.argv")
         if invocation.get("stdin_mode") != "single_json_request":
             problems.append("invocation.stdin_mode")
@@ -638,20 +644,15 @@ def malformed_runner_invocation_fields(item: dict[str, Any]) -> list[str]:
     runner_response = item.get("runner_response")
     if item.get("status") == "pass" and (not isinstance(runner_response, dict) or runner_response.get("status") != "ok"):
         problems.append("runner_response")
-    if not isinstance(item.get("diagnostics"), list):
-        problems.append("diagnostics")
+    require_diagnostic_list(item, "diagnostics", problems)
     return problems
 
 
 def malformed_traceability_fields(item: dict[str, Any]) -> list[str]:
     problems: list[str] = []
     require_pattern(item, "requirement_id", r"^(FR|SC)-[0-9]{3}$", problems)
-    require_list(item, "changed_files", problems)
-    require_list(item, "verification_evidence", problems)
-    for key in ("changed_files", "verification_evidence"):
-        values = item.get(key)
-        if isinstance(values, list) and any(not isinstance(value, str) for value in values):
-            problems.append(key)
+    require_string_list(item, "changed_files", problems)
+    require_string_list(item, "verification_evidence", problems)
     return problems
 
 
@@ -673,6 +674,33 @@ def require_sha256(item: dict[str, Any], key: str, problems: list[str]) -> None:
 def require_list(item: dict[str, Any], key: str, problems: list[str]) -> None:
     if not isinstance(item.get(key), list):
         problems.append(key)
+
+
+def require_string_list(item: dict[str, Any], key: str, problems: list[str]) -> None:
+    values = item.get(key)
+    if not isinstance(values, list):
+        problems.append(key)
+        return
+    if any(not isinstance(value, str) or not value for value in values):
+        problems.append(key)
+
+
+def require_diagnostic_list(item: dict[str, Any], key: str, problems: list[str]) -> None:
+    values = item.get(key)
+    if not isinstance(values, list):
+        problems.append(key)
+        return
+    for index, value in enumerate(values):
+        prefix = f"{key}[{index}]"
+        if not isinstance(value, dict):
+            problems.append(prefix)
+            continue
+        if value.get("severity") not in {"info", "warning", "error"}:
+            problems.append(f"{prefix}.severity")
+        if not isinstance(value.get("code"), str) or not value.get("code"):
+            problems.append(f"{prefix}.code")
+        if not isinstance(value.get("message"), str) or not value.get("message"):
+            problems.append(f"{prefix}.message")
 
 
 def require_enum(item: dict[str, Any], key: str, allowed: set[str], problems: list[str]) -> None:

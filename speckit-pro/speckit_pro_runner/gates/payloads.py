@@ -23,6 +23,7 @@ INSTALL_INVENTORY = Path("speckit-pro") / "speckit_pro_runner" / "install_invent
 XPLAT_008_FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "layer4-scripts" / "fixtures" / "xplat-008-release"
 DEFAULT_XPLAT_008_PAYLOAD_CASES = XPLAT_008_FIXTURE_BOUNDARY / "payload-completeness-cases.json"
 XPLAT_008_PROMOTION_RECORD = XPLAT_008_FIXTURE_BOUNDARY / "promotion-records.json"
+PROHIBITED_SCRIPT_SUFFIXES = (".sh", ".ps1", ".bat", ".cmd")
 
 __all__ = ("run_payload_gate",)
 
@@ -360,8 +361,9 @@ def copy_optional_xplat008(src: Path, dst: Path) -> None:
 
 
 def remove_payload_shell_scripts_xplat008(root: Path) -> None:
-    for script in root.rglob("*.sh"):
-        script.unlink()
+    for path in root.rglob("*"):
+        if path.is_file() and path.suffix.lower() in PROHIBITED_SCRIPT_SUFFIXES:
+            path.unlink()
     for directory in sorted((path for path in root.rglob("*") if path.is_dir()), key=lambda item: len(item.parts), reverse=True):
         try:
             directory.rmdir()

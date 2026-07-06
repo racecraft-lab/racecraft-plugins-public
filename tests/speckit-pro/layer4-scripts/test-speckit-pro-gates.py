@@ -931,7 +931,8 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(response["status"], "ok")
         self.assertEqual(response["data"]["blocking_count"], 0)
         for payload_root in (REPO_ROOT / "dist/claude/speckit-pro", REPO_ROOT / "dist/codex/speckit-pro"):
-            self.assertFalse([path for path in payload_root.rglob("*.sh")], payload_root)
+            for suffix in (".sh", ".ps1", ".bat", ".cmd"):
+                self.assertFalse([path for path in payload_root.rglob(f"*{suffix}")], payload_root)
 
         with patch.object(active_path_guard, "review_base_ref", return_value=None):
             changed_sources = active_path_guard.changed_repo_sources(REPO_ROOT, {"scan_roots": ["speckit-pro/skills"]})
@@ -1017,6 +1018,32 @@ class GateFoundationTests(unittest.TestCase):
         )
         self.assertFalse(
             [finding for finding in wrapped_negative_findings if finding.classification == "blocking_active_runtime"]
+        )
+        markdown_heading_findings = active_path_guard.scan_sources_xplat008(
+            [
+                active_path_guard.SourceFile(
+                    "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
+                    "# Requires Bash before first use\n",
+                    "repo_baseline",
+                )
+            ],
+            REPO_ROOT,
+        )
+        self.assertTrue(
+            [finding for finding in markdown_heading_findings if finding.classification == "blocking_active_runtime"]
+        )
+        script_suffix_findings = active_path_guard.scan_sources_xplat008(
+            [
+                active_path_guard.SourceFile(
+                    "dist/codex/speckit-pro/scripts/install.ps1",
+                    "Write-Host 'install'\n",
+                    "repo_baseline",
+                )
+            ],
+            REPO_ROOT,
+        )
+        self.assertTrue(
+            [finding for finding in script_suffix_findings if finding.classification == "blocking_active_runtime"]
         )
         self.assertEqual(
             active_path_guard.classify_xplat008_path(
@@ -1369,6 +1396,8 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_payload_surface_selection"])
 
     def test_xplat008_payload_completeness_apply_builds_runner_payloads_without_shell(self) -> None:
+        from speckit_pro_runner.gates import payloads as payload_gate
+
         with tempfile.TemporaryDirectory() as tmp:
             output_root = Path(tmp) / "dist"
             sentinel = output_root / "claude" / "speckit-pro" / "sentinel.txt"
@@ -1416,6 +1445,16 @@ class GateFoundationTests(unittest.TestCase):
                 paths = {item["path"] for item in result["actual_files"]}
                 self.assertIn("speckit_pro_runner/__main__.py", paths)
                 self.assertIn("speckit_pro_runner/speckit-pro-runner.sha256", paths)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            payload_root = Path(tmp) / "payload"
+            for relative in ("scripts/install.sh", "scripts/install.ps1", "scripts/install.bat", "scripts/install.cmd"):
+                script = payload_root / relative
+                script.parent.mkdir(parents=True, exist_ok=True)
+                script.write_text("echo unsafe\n", encoding="utf-8")
+            payload_gate.remove_payload_shell_scripts_xplat008(payload_root)
+            for suffix in (".sh", ".ps1", ".bat", ".cmd"):
+                self.assertFalse([path for path in payload_root.rglob(f"*{suffix}")], suffix)
 
     def test_xplat008_payload_completeness_current_dist_passes_after_runner_rebuild(self) -> None:
         completed, response, stderr_records = run_runner(xplat008_fixture_request("payload-completeness"))
@@ -1649,20 +1688,40 @@ class GateFoundationTests(unittest.TestCase):
                         "runner_version": "0.1.0",
                         "expected_files": [{}],
                         "actual_files": ["bad-file-record"],
-                        "missing_paths": [],
-                        "extra_paths": [],
-                        "mismatched_paths": [],
-                        "path_leaks": [],
+                        "missing_paths": [123],
+                        "extra_paths": [None],
+                        "mismatched_paths": [False],
+                        "path_leaks": [{}],
                         "file_tree_hash": "2" * 64,
                         "status": "pass",
                     },
                 ]
             ),
             uat_rows=[{"product": "codex", "platform": "macos", "status": "pass"}],
-            repair_actions=[{"action_id": "repair", "status": "pass"}],
-            public_claim_results=[{"claim_id": "claim", "status": "pass"}],
-            runner_invocations=[{"request_id": "runner", "status": "pass"}],
-            traceability=[{"requirement_id": "FR-006"}],
+            repair_actions=[
+                {
+                    "action_id": "repair",
+                    "finding_id": "finding",
+                    "action_type": "manual_remediation",
+                    "target_path": "install/cache",
+                    "status": "blocked",
+                    "message": "Manual remediation required.",
+                    "manual_steps": [123],
+                    "digest_verified": False,
+                }
+            ],
+            public_claim_results=[
+                {
+                    "claim_id": "claim",
+                    "surface": "docs",
+                    "claim_text_or_pattern": "safe install",
+                    "classification": "public",
+                    "status": "pass",
+                    "evidence": [123],
+                }
+            ],
+            runner_invocations=[{"request_id": "runner", "status": "pass", "diagnostics": ["bad-diagnostic"]}],
+            traceability=[{"requirement_id": "FR-006", "changed_files": [123], "verification_evidence": [None]}],
         )
         evidence = [evidence for check in malformed_contract_checks for evidence in check["evidence"]]
         for marker in [
@@ -1676,9 +1735,17 @@ class GateFoundationTests(unittest.TestCase):
             self.assertIn(marker, evidence)
         self.assertIn("missing_or_invalid=expected_files[0].path", evidence)
         self.assertIn("missing_or_invalid=actual_files[0]", evidence)
+        self.assertIn("missing_or_invalid=missing_paths", evidence)
+        self.assertIn("missing_or_invalid=extra_paths", evidence)
+        self.assertIn("missing_or_invalid=mismatched_paths", evidence)
+        self.assertIn("missing_or_invalid=path_leaks", evidence)
+        self.assertIn("missing_or_invalid=manual_steps", evidence)
+        self.assertIn("missing_or_invalid=evidence", evidence)
+        self.assertIn("missing_or_invalid=diagnostics[0]", evidence)
+        self.assertIn("missing_or_invalid=changed_files", evidence)
+        self.assertIn("missing_or_invalid=verification_evidence", evidence)
         self.assertIn("missing_or_invalid=runner_request", evidence)
         self.assertIn("missing_or_invalid=surface_path", evidence)
-        self.assertIn("missing_or_invalid=diagnostics", evidence)
 
         valid_repair_checks = release_gate.validate_xplat008_evidence_contracts(
             payload_results=[],
