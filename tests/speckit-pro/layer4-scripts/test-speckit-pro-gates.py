@@ -866,6 +866,56 @@ class GateFoundationTests(unittest.TestCase):
         )
         self.assertEqual(
             active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "jq",
+                "jq",
+                "If Python is missing, use command -v jq and run Bash.",
+                "repo",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-upgrade/SKILL.md",
+                "bash",
+                "Bash",
+                "allowed-tools: Bash Read Edit Write",
+                "repo",
+            ),
+            "source_checkout_helper",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
+                "bash",
+                "Bash",
+                "Maintainer-only source-checkout helper text may mention Bash.",
+                "repo",
+            ),
+            "source_checkout_helper",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
+                "script_file",
+                "`estimate-reviewable-loc.sh",
+                "The parent runs `estimate-reviewable-loc.sh <plan.md>` via `exec_command`, capturing the exit code.",
+                "repo",
+            ),
+            "source_checkout_helper",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
+                "jq",
+                "jq",
+                "If Python is missing, use command -v jq and run Bash.",
+                "repo",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
                 "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
                 "bash",
                 "Bash",

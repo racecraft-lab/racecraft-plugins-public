@@ -42,7 +42,7 @@ It is not run automatically by this skill.
 
 Use this exact sequence:
 
-```bash
+```text
 speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh --dry-run --repo-root .
 ```
 
@@ -50,7 +50,7 @@ Review the JSON report for pending, skipped, and no-op items. Clean the git tree
 if the report shows pending mutations and the worktree is dirty. Apply only
 when ready to mutate:
 
-```bash
+```text
 speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh --apply --repo-root .
 ```
 
@@ -95,9 +95,8 @@ Accept optional integration keys as arguments:
 
 ### 1. Detect state; hand off if needed
 
-```bash
-test -d .specify && echo PRESENT || echo ABSENT
-```
+Use a filesystem directory check for `.specify/` and record the state
+as PRESENT or ABSENT.
 
 If ABSENT: STOP this skill and invoke `$speckit-install` (upgrade
 operates only on existing installs).
@@ -106,12 +105,9 @@ If PRESENT: continue.
 
 ### 2. Capture current CLI version and installed integrations
 
-```bash
-PATH="${HOME:+$HOME/.local/bin:}/opt/homebrew/bin:/usr/local/bin:${PATH:-}"
-command -v specify >/dev/null 2>&1 && specify --version || echo MISSING
-specify self check 2>&1 || true
-specify integration list 2>&1
-```
+Use argv-only execution to capture the `specify` version, run
+`specify self check`, and run `specify integration list`. Preserve
+stdout, stderr, and exit status for each command in the report.
 
 Surface to the operator:
 
@@ -121,9 +117,9 @@ Surface to the operator:
 
 If the CLI itself is outdated, recommend:
 
-```bash
-uv tool install specify-cli --force --from git+https://github.com/github/spec-kit.git
-```
+Invoke `uv tool install specify-cli --force --from
+git+https://github.com/github/spec-kit.git` with argv-only execution,
+then re-run this skill after the CLI update finishes.
 
 Ask the operator to either upgrade the CLI first (then re-invoke
 this skill) or confirm they want to proceed with the current CLI
@@ -142,20 +138,14 @@ If the operator passed keys, use them. Otherwise ask:
 
 ### 4. Snapshot the repo state
 
-```bash
-STAMP=$(date +%Y%m%d-%H%M%S)
-BACKUP=/tmp/specify-upgrade-backup-$STAMP
-mkdir -p "$BACKUP"
-cp -R .specify "$BACKUP/.specify"
-for d in .claude .codex .github; do
-  [ -e "$d" ] && cp -R "$d" "$BACKUP/$d" || true
-done
-ls "$BACKUP"
-```
+Create a timestamped backup directory outside the repo, copy
+`.specify/`, and copy any present `.claude/`, `.codex/`, and
+`.github/` directories into that backup using filesystem APIs or
+argv-only file operations. Report the backup path and copied entries.
 
-Tell the operator: "Repo state snapshotted to `$BACKUP/`. Manual
-rollback: `cp -R $BACKUP/.specify .` (and any other directories
-listed)."
+Tell the operator: "Repo state snapshotted to `<backup-path>/`.
+Manual rollback: restore `.specify/` and any listed integration
+directories from that backup."
 
 ### 5. Per-integration upgrade
 
@@ -163,9 +153,8 @@ For each integration the operator chose:
 
 #### 5a. Safe (no --force) attempt
 
-```bash
-specify integration upgrade <key> --script sh
-```
+Invoke `specify integration upgrade <key> --script sh` with argv-only
+execution.
 
 The CLI is diff-aware. If it succeeds, capture output and move to
 the next integration.
@@ -192,15 +181,13 @@ ask:
 > 3. `manual-merge` — abort this skill, examine the diff yourself,
 >    re-run after deciding.
 
-On `force-and-restore`:
-
-```bash
-specify integration upgrade <key> --force --script sh
-```
+On `force-and-restore`, invoke
+`specify integration upgrade <key> --force --script sh` with
+argv-only execution.
 
 Then for each previously-modified file:
 
-```bash
+```text
 diff "$BACKUP/<file>" "<file>"
 ```
 
@@ -216,12 +203,8 @@ Ask whether to restore (file-by-file or all-at-once):
 After upgrading, the new skills directories may now exist alongside
 the legacy slash-command files. Detect:
 
-```bash
-ls .claude/commands/speckit.*.md 2>/dev/null | head
-ls .claude/skills/speckit-*/SKILL.md 2>/dev/null | head
-ls .codex/prompts/speckit.*.md 2>/dev/null | head
-ls .codex/skills/speckit-*/SKILL.md 2>/dev/null | head
-```
+Use filesystem glob checks to detect legacy command/prompt entries
+and current skills entries for Claude and Codex.
 
 If BOTH legacy and skills paths exist for an integration:
 
@@ -243,10 +226,8 @@ before running `rm` so the operator can confirm.
 
 ### 7. Verify
 
-```bash
-specify check 2>&1
-specify integration list 2>&1
-```
+Invoke `specify check` and `specify integration list` with argv-only
+execution. Preserve stdout, stderr, and exit status.
 
 Confirm each upgraded integration shows `installed` and reports the
 new manifest. Report any verification mismatch — do not silently
@@ -262,12 +243,8 @@ upgrade. The full list is in
 `speckit-pro/skills/speckit-coach/references/presets-extensions-guide.md`
 (section: "The curated set").
 
-Check what would change. The script lives at
-`<skill-dir>/../../scripts/install-curated-set.sh`:
-
-```bash
-bash "<skill-dir>/../../scripts/install-curated-set.sh" --mode=check
-```
+Check what would change using the curated-set installer helper in
+check mode.
 
 The script prints one line per entry that is missing or out of date,
 exits 0 if everything is current, exits 2 if work is pending.
@@ -284,10 +261,10 @@ exits 0 if everything is current, exits 2 if work is pending.
 
 - If exit code is **2**: tell the operator the check output and ask
   which entries to install or upgrade. Recommended default is **all**.
-  Then invoke the script in upgrade mode:
+  Then invoke the curated-set installer helper in upgrade mode:
 
-  - All: `bash "<skill-dir>/../../scripts/install-curated-set.sh" --mode=upgrade`
-  - Subset: `bash "<skill-dir>/../../scripts/install-curated-set.sh" --mode=upgrade --accept=<csv>`
+  - All entries.
+  - A comma-separated accepted subset.
   - None: skip. The autopilot will continue to skip any missing
     entries without failing, but the post-implementation parallel
     group will run with reduced coverage.

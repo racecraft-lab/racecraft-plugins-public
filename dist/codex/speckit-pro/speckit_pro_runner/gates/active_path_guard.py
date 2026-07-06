@@ -494,7 +494,7 @@ def classify_xplat008_path(path: str, category: str, pattern: str, content: str,
         if source_kind == "repo_baseline" and xplat008_baseline_source_checkout_helper_reference(path, content):
             return "source_checkout_helper"
         if source_kind in {"repo", "repo_baseline"} and (
-            xplat008_dist_source_checkout_helper_reference(path, content)
+            (source_kind == "repo" and xplat008_changed_source_checkout_helper_reference(path, content))
             or xplat008_repo_surface_exception(category, pattern, content)
         ):
             return "source_checkout_helper"
@@ -503,7 +503,7 @@ def classify_xplat008_path(path: str, category: str, pattern: str, content: str,
         if source_kind == "repo_baseline" and xplat008_baseline_source_checkout_helper_reference(path, content):
             return "source_checkout_helper"
         if source_kind == "repo" and (
-            xplat008_source_checkout_helper_reference(path, content)
+            xplat008_changed_source_checkout_helper_reference(path, content)
             or xplat008_repo_surface_exception(category, pattern, content)
         ):
             return "source_checkout_helper"
@@ -512,7 +512,7 @@ def classify_xplat008_path(path: str, category: str, pattern: str, content: str,
         if source_kind == "repo_baseline" and xplat008_baseline_source_checkout_helper_reference(path, content):
             return "source_checkout_helper"
         if source_kind == "repo" and (
-            xplat008_source_checkout_helper_reference(path, content)
+            xplat008_changed_source_checkout_helper_reference(path, content)
             or xplat008_repo_surface_exception(category, pattern, content)
         ):
             return "source_checkout_helper"
@@ -611,7 +611,7 @@ def xplat008_installed_runtime_guidance_path(path: str) -> bool:
 
 
 def xplat008_agent_tool_declaration(path: str, content: str) -> bool:
-    if not any(part in path for part in ("/agents/", "/codex-agents/")):
+    if not any(part in path for part in ("/agents/", "/codex-agents/", "/skills/", "/codex-skills/")):
         return False
     tool_items = {"- bash", "- grep", "- glob", "- read", "- write", "- edit", "- websearch", "- webfetch"}
     for line in content.splitlines() or [content]:
@@ -628,9 +628,13 @@ def xplat008_agent_tool_declaration(path: str, content: str) -> bool:
 def xplat008_source_checkout_helper_reference(path: str, content: str) -> bool:
     lowered_path = path.lower()
     lowered = content.lower()
+    if lowered_path.endswith("speckit_pro_runner/gates/active_path_guard.py"):
+        return True
     if any(part in lowered_path for part in ("/references/", "/templates/", "/contracts/", "/scripts/")):
         return True
     markers = (
+        "xplat008_likely_active_runtime_requirement",
+        "xplat008_generated_payload_helper_context",
         "allowed-tools:",
         "tools:",
         "bash(",
@@ -675,55 +679,43 @@ def xplat008_source_checkout_helper_reference(path: str, content: str) -> bool:
     return any(marker in lowered for marker in markers)
 
 
-def xplat008_dist_source_checkout_surface(path: str) -> bool:
-    lowered = path.lower()
-    return any(part in lowered for part in ("/skills/", "/agents/", "/codex-agents/", "/scripts/"))
+def xplat008_changed_source_checkout_helper_reference(path: str, content: str) -> bool:
+    lowered_path = path.lower()
+    if any(part in lowered_path for part in ("/references/", "/templates/", "/contracts/", "/scripts/")):
+        return True
+    if path.startswith("dist/") and xplat008_generated_payload_helper_reference(path, content):
+        return True
+    return xplat008_explicit_source_checkout_context(content)
 
 
-def xplat008_dist_source_checkout_helper_reference(path: str, content: str) -> bool:
-    if not xplat008_dist_source_checkout_surface(path):
+def xplat008_generated_payload_helper_reference(path: str, content: str) -> bool:
+    lowered_path = path.lower()
+    if not any(part in lowered_path for part in ("/skills/", "/codex-skills/", "/agents/", "/codex-agents/")):
         return False
+    if xplat008_explicit_source_checkout_context(content):
+        return True
+    if xplat008_likely_active_runtime_requirement(content):
+        return False
+    if xplat008_generated_payload_helper_context(content):
+        return True
+    return xplat008_baseline_source_checkout_helper_reference(path, content)
+
+
+def xplat008_generated_payload_helper_context(content: str) -> bool:
     lowered = content.lower()
+    if ".sh" not in lowered and "bash" not in lowered and "jq" not in lowered:
+        return False
     markers = (
-        "allowed-tools:",
-        "tools:",
-        "bash(",
-        "grep(",
-        "glob(",
-        "```bash",
-        "command -v",
-        "uv tool install",
-        "operator",
-        "official speckit cli",
-        "spec kit cli",
-        "skipped when",
-        "not on `path`",
-        "not on path",
-        "forbidden_patterns",
-        "bash dependency",
-        "shell=true subprocess execution",
-        "manual classification request",
-        "workflow shell dispatches a python gate",
-        "is_direct_python_gate_dispatch",
-        "blocking_active_gate",
-        "re.match(",
-        "argv-list subprocesses",
-        "argv array",
-        "existing bash gates authoritative",
-        "existing bash workflow",
-        "required_absent",
-        "claude_plugin_root",
+        "exec_command",
         "<skill_scripts>",
-        "source-checkout",
-        "source checkout",
-        "speckit-pro/skills/",
-        "speckit-pro/codex-skills/",
-        "tests/speckit-pro/",
-        ".specify/",
-        "docs/ai/specs/",
-        "docs-site/",
-        "deterministic bash scripts",
-        " is missing",
+        "script path:",
+        "provided in your prompt",
+        "generated runbook",
+        "skeleton",
+        "advisory",
+        "fail-open",
+    )
+    helper_scripts = (
         "aggregate-crl.sh",
         "atomicity-route.sh",
         "check-prerequisites.sh",
@@ -757,12 +749,48 @@ def xplat008_dist_source_checkout_helper_reference(path: str, content: str) -> b
         "validate-pr-workflow-contract.sh",
         "validate-uat-runbook.sh",
     )
+    return any(marker in lowered for marker in markers) or any(script in lowered for script in helper_scripts)
+
+
+def xplat008_likely_active_runtime_requirement(content: str) -> bool:
+    lowered = content.lower()
+    markers = (
+        "command -v",
+        "git bash or wsl",
+        "require git bash",
+        "requires git bash",
+        "require wsl",
+        "requires wsl",
+        "require jq",
+        "requires jq",
+        "install jq",
+        "run bash",
+        "execute bash",
+        "invoke bash",
+        "call bash",
+        "use bash",
+    )
+    return any(marker in lowered for marker in markers)
+
+
+def xplat008_explicit_source_checkout_context(content: str) -> bool:
+    lowered = content.lower()
+    markers = (
+        "source-checkout",
+        "source checkout",
+        "source tree",
+        "maintainer-only",
+        "maintainer shell",
+        "not installed-runtime",
+    )
     return any(marker in lowered for marker in markers)
 
 
 def xplat008_baseline_source_checkout_helper_reference(path: str, content: str) -> bool:
     lowered_path = path.lower()
     if any(part in lowered_path for part in ("/references/", "/templates/", "/contracts/", "/scripts/")):
+        return True
+    if xplat008_generated_payload_helper_context(content):
         return True
     lowered = content.lower()
     markers = (

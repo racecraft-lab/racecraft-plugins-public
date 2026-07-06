@@ -171,17 +171,15 @@ Before copying:
 
 If any required file is missing, stop immediately. Do not partially install.
 
-### 3. Run the bundled installer script
+### 3. Run the bundled installer helper
 
-Use the deterministic installer script that ships with this skill:
+Use the deterministic installed-runtime helper for `install-codex-agents`
+with the selected destination. Run it first in `dry_run` mode, then in
+`apply` mode after the plan matches the requested destination and model
+override. Use `gpt-5.4` only when fallback mode was requested.
 
-```bash
-bash "<skill-dir>/scripts/install-codex-agents.sh" "<destination>"
-bash "<skill-dir>/scripts/install-codex-agents.sh" "<destination>" --model gpt-5.4
-```
-
-The script must be the only mechanism used for copying files. Do not
-re-implement the copy loop inline unless the script itself is broken and
+The helper must be the only mechanism used for copying files. Do not
+re-implement the copy loop inline unless the helper itself is broken and
 you have already reported that failure.
 
 When fallback mode is requested, verify the destination copies of
