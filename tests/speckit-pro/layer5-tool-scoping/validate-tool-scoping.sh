@@ -25,6 +25,13 @@ _fail() {
 PLUGIN_ROOT="$(cd "$(dirname "$0")/../../../speckit-pro" && pwd)"
 AGENTS_DIR="$PLUGIN_ROOT/agents"
 
+# Host-project code-intelligence MCP metadata that is allowed for agents whose
+# scoping contract permits read-only codebase context. Do not add a tool here
+# unless the configured server contract is read/inspect only for that profile.
+READ_ONLY_CODEBASE_CONTEXT_MCP_TOOLS=(
+  "mcp__codegraph__codegraph_explore"
+)
+
 # ---------------------------------------------------------------------------
 # Helper: extract tools list from YAML frontmatter
 # ---------------------------------------------------------------------------
@@ -112,6 +119,25 @@ assert_no_mcp_tools() {
   fi
 }
 
+# ---------------------------------------------------------------------------
+# Helper: assert an MCP tool is classified as read-only codebase context
+# ---------------------------------------------------------------------------
+assert_readonly_codebase_context_tool() {
+  local tool="$1" agent="$2"
+  local found=false
+  for allowed in "${READ_ONLY_CODEBASE_CONTEXT_MCP_TOOLS[@]}"; do
+    if [ "$tool" = "$allowed" ]; then
+      found=true
+      break
+    fi
+  done
+  if [ "$found" = "true" ]; then
+    _pass
+  else
+    _fail "$agent uses '$tool' but it is not classified as read-only codebase context"
+  fi
+}
+
 # ===========================================================================
 # phase-executor
 # ===========================================================================
@@ -162,6 +188,12 @@ for tool in Skill Write Edit Bash ToolSearch; do
   assert_tool_absent "$TOOLS" "$tool" "clarify-executor"
 done
 
+set_test "clarify-executor has codegraph read-only codebase context"
+assert_tool_present "$TOOLS" "mcp__codegraph__codegraph_explore" "clarify-executor"
+
+set_test "clarify-executor codegraph tool is classified read-only"
+assert_readonly_codebase_context_tool "mcp__codegraph__codegraph_explore" "clarify-executor"
+
 set_test "clarify-executor maxTurns exists and is positive"
 max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
 assert_gt "$max_turns" 0
@@ -183,6 +215,9 @@ for tool in Skill Read Write Edit Bash Grep Glob WebSearch WebFetch; do
   assert_tool_present "$TOOLS" "$tool" "checklist-executor"
 done
 
+set_test "checklist-executor has codegraph codebase context"
+assert_tool_present "$TOOLS" "mcp__codegraph__codegraph_explore" "checklist-executor"
+
 set_test "checklist-executor maxTurns exists and is positive"
 max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
 assert_gt "$max_turns" 0
@@ -203,6 +238,9 @@ for tool in Skill Read Write Edit Bash Grep Glob WebSearch WebFetch; do
   set_test "analyze-executor has $tool"
   assert_tool_present "$TOOLS" "$tool" "analyze-executor"
 done
+
+set_test "analyze-executor has codegraph codebase context"
+assert_tool_present "$TOOLS" "mcp__codegraph__codegraph_explore" "analyze-executor"
 
 set_test "analyze-executor maxTurns exists and is positive"
 max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
@@ -236,6 +274,9 @@ for tool in WebSearch WebFetch; do
   assert_tool_present "$TOOLS" "$tool" "implement-executor"
 done
 
+set_test "implement-executor has codegraph codebase context"
+assert_tool_present "$TOOLS" "mcp__codegraph__codegraph_explore" "implement-executor"
+
 set_test "implement-executor does NOT have Skill"
 assert_tool_absent "$TOOLS" "Skill" "implement-executor"
 
@@ -266,6 +307,12 @@ for tool in Write Edit Bash ToolSearch; do
   set_test "codebase-analyst does NOT have $tool"
   assert_tool_absent "$TOOLS" "$tool" "codebase-analyst"
 done
+
+set_test "codebase-analyst has codegraph read-only codebase context"
+assert_tool_present "$TOOLS" "mcp__codegraph__codegraph_explore" "codebase-analyst"
+
+set_test "codebase-analyst codegraph tool is classified read-only"
+assert_readonly_codebase_context_tool "mcp__codegraph__codegraph_explore" "codebase-analyst"
 
 set_test "codebase-analyst maxTurns exists and is positive"
 max_turns=$(extract_field "$AGENT_FILE" "maxTurns")

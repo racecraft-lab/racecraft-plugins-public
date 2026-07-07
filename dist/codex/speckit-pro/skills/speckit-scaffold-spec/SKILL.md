@@ -247,11 +247,14 @@ code-intelligence tooling.
 1. Check the project's AGENTS.md / CLAUDE.md for a worktree preflight or
    bootstrap section (for example "Spec-worktree preflight") and run those
    commands from the worktree, in order.
-2. Otherwise run the stack's obvious minimum: detect the package manager from
-   the lockfile, install dependencies, and run the documented build command.
+2. If no explicit bootstrap/preflight commands are documented, do not infer an
+   install/build/index sequence. Report that no bootstrap is documented and ask
+   the operator before running any package install, build, or index command.
 3. If the project documents a code index or MCP prerequisite (for example:
-   build, then the project's documented index-init command), run it and verify
-   the documented health check passes.
+   build, then the project's documented index-init command), run only the
+   documented commands and verify the documented health check passes.
+4. After any bootstrap command, run `git status --porcelain` in the worktree. If
+   unexpected tracked changes appear, stop and report them before continuing.
 
 Report what was bootstrapped — or that the project documents nothing — in the
 scaffold summary. Never skip this silently: an unbootstrapped worktree is how
@@ -443,6 +446,8 @@ Finish with a concise scaffold report that includes:
 - design concept path
 - workflow path
 - remote branch that was pushed
+- bootstrap result from step 3.5, including commands run and health check, or
+  `no documented bootstrap`
 - the exact next step: run `$speckit-autopilot` with the generated
   workflow file (Codex skills are invoked via `$skill-name`, not via
   any `/<plugin>:<skill>` slash command — see openai/codex#7480)

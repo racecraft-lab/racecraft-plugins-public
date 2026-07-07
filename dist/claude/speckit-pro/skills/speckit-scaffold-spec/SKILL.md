@@ -225,13 +225,19 @@ without the project's code-intelligence tooling.
    bootstrap section (e.g. "Spec-worktree preflight") and run those
    commands FROM the worktree, in order.
 
-2. Otherwise run the stack's obvious minimum: detect the package manager
-   from the lockfile, install dependencies, and run the documented build
-   command.
+2. If no explicit bootstrap/preflight commands are documented, do not
+   infer an install/build/index sequence. Report that no bootstrap is
+   documented and ask the operator before running any package install,
+   build, or index command.
 
 3. If the project documents a code index or MCP prerequisite (for
    example: build, then the project's documented index-init command),
-   run it and verify the documented health check passes.
+   run only the documented commands and verify the documented health
+   check passes.
+
+4. After any bootstrap command, run `git status --porcelain` in the
+   worktree. If unexpected tracked changes appear, stop and report them
+   before continuing.
 ```
 
 Report what was bootstrapped — or that the project documents nothing —
@@ -453,6 +459,7 @@ Report:
 **Design Concept:** .worktrees/009-search-database/docs/ai/specs/.process/SPEC-009-design-concept.md
 **Workflow:** .worktrees/009-search-database/docs/ai/specs/.process/SPEC-009-workflow.md
 **Remote:** Pushed to <remote>/009-search-database
+**Bootstrap:** <commands run, documented health check, or "no documented bootstrap">
 
 **Ready to run:**
 /speckit-pro:speckit-autopilot docs/ai/specs/.process/SPEC-009-workflow.md
