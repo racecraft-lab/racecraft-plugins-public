@@ -24,6 +24,7 @@ source = repo / "speckit-pro"
 dist = repo / "dist"
 claude = dist / "claude" / "speckit-pro"
 codex = dist / "codex" / "speckit-pro"
+PROHIBITED_SCRIPT_SUFFIXES = (".sh", ".ps1", ".bat", ".cmd")
 
 if not source.is_dir():
     raise SystemExit(f"source plugin directory not found: {source}")
@@ -43,7 +44,12 @@ def reset_dir(path: Path) -> None:
 
 def copy_path(src: Path, dst: Path) -> None:
     if src.is_dir():
-        shutil.copytree(src, dst, dirs_exist_ok=True)
+        shutil.copytree(
+            src,
+            dst,
+            dirs_exist_ok=True,
+            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+        )
     elif src.is_file():
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dst)
@@ -127,6 +133,17 @@ def rewrite_payload_skill_paths(path: Path) -> None:
         path.write_text(new_text)
 
 
+def remove_payload_shell_scripts(root: Path) -> None:
+    for path in root.rglob("*"):
+        if path.is_file() and path.suffix.lower() in PROHIBITED_SCRIPT_SUFFIXES:
+            path.unlink()
+    for directory in sorted((path for path in root.rglob("*") if path.is_dir()), key=lambda item: len(item.parts), reverse=True):
+        try:
+            directory.rmdir()
+        except OSError:
+            pass
+
+
 def build_claude_payload() -> None:
     reset_dir(claude)
     for name in [
@@ -136,6 +153,7 @@ def build_claude_payload() -> None:
         "hooks",
         "skills",
         "scripts",
+        "speckit_pro_runner",
         "README.md",
         "CHANGELOG.md",
     ]:
@@ -143,6 +161,7 @@ def build_claude_payload() -> None:
     copy_repo_optional("LICENSE", claude)
     for skill_file in claude.glob("skills/*/SKILL.md"):
         strip_codex_guard(skill_file)
+    remove_payload_shell_scripts(claude)
 
 
 def build_codex_payload() -> None:
@@ -152,6 +171,7 @@ def build_codex_payload() -> None:
         "codex-agents",
         "codex-hooks.json",
         "scripts",
+        "speckit_pro_runner",
         "README.md",
         "CHANGELOG.md",
     ]:
@@ -163,6 +183,7 @@ def build_codex_payload() -> None:
     for text_file in codex.rglob("*"):
         if text_file.is_file():
             rewrite_payload_skill_paths(text_file)
+    remove_payload_shell_scripts(codex)
 
 
 build_claude_payload()

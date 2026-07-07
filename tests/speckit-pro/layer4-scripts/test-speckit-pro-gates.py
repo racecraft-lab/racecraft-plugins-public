@@ -10,6 +10,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +22,9 @@ FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "xplat-007-gates"
 CONTRACT_DIR = FIXTURE_DIR / "contracts"
 PROMOTION_RECORDS = FIXTURE_DIR / "promotion-records.json"
 REQUESTS_DIR = FIXTURE_DIR / "requests"
+XPLAT_008_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "xplat-008-release"
+XPLAT_008_REQUESTS_DIR = XPLAT_008_FIXTURE_DIR / "requests"
+XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/promotion-records.json"
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
@@ -90,6 +95,14 @@ def fixture_cases(name: str) -> dict[str, Any]:
     return json.loads((FIXTURE_DIR / f"{name}-cases.json").read_text(encoding="utf-8"))
 
 
+def xplat008_fixture_request(name: str) -> dict[str, Any]:
+    return json.loads((XPLAT_008_REQUESTS_DIR / f"{name}.json").read_text(encoding="utf-8"))
+
+
+def xplat008_fixture_cases(name: str) -> dict[str, Any]:
+    return json.loads((XPLAT_008_FIXTURE_DIR / f"{name}-cases.json").read_text(encoding="utf-8"))
+
+
 def python_argv(source: str) -> list[str]:
     return [sys.executable, "-c", source]
 
@@ -151,6 +164,13 @@ class GateFoundationTests(unittest.TestCase):
             self.assertFalse(path.is_absolute(), artifact["path"])
             self.assertNotIn("..", path.parts)
 
+    def assert_xplat008_promotion_metadata(self, response: dict[str, Any], case_file: str) -> None:
+        self.assertEqual(response["data"]["gate"]["promotion_record"], XPLAT_008_PROMOTION_RECORD)
+        artifacts = response["data"].get("artifacts", [])
+        self.assertIn({"path": XPLAT_008_PROMOTION_RECORD, "kind": "promotion_record"}, artifacts)
+        self.assertIn({"path": case_file, "kind": "fixture"}, artifacts)
+        self.assertEqual(len({artifact["path"] for artifact in artifacts}), len(artifacts))
+
     def assert_no_shell_argv(self, argv: list[str]) -> None:
         joined = " ".join(argv).lower()
         self.assertNotIn("bash", joined)
@@ -158,6 +178,67 @@ class GateFoundationTests(unittest.TestCase):
         self.assertNotIn("powershell", joined)
         self.assertNotIn("pwsh", joined)
         self.assertFalse(any(arg.lower().endswith(".sh") for arg in argv))
+
+    def assert_payload_completeness_contract_subset(self, results: list[dict[str, Any]]) -> None:
+        schema = json.loads(
+            (
+                REPO_ROOT
+                / "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/contracts/payload-completeness.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        required = set(schema["required"])
+        allowed = set(schema["properties"])
+        file_required = set(schema["$defs"]["payload_file"]["required"])
+        file_allowed = set(schema["$defs"]["payload_file"]["properties"])
+        for result in results:
+            self.assertLessEqual(required, set(result), result.get("payload_surface"))
+            self.assertFalse(set(result) - allowed, result.get("payload_surface"))
+            for files_key in ("expected_files", "actual_files"):
+                for file_record in result[files_key]:
+                    with self.subTest(surface=result["payload_surface"], path=file_record["path"]):
+                        self.assertLessEqual(file_required, set(file_record), file_record)
+                        self.assertFalse(set(file_record) - file_allowed, file_record)
+                        path = file_record["path"]
+                        self.assertFalse(path.startswith("/") or ".." in path.split("/") or ":" in path.split("/")[0], path)
+
+    def assert_release_readiness_contract_subset(self, readiness: dict[str, Any]) -> None:
+        schema = json.loads(
+            (
+                REPO_ROOT
+                / "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/contracts/release-readiness.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        check_schema = schema["$defs"]["check"]["properties"]
+        check_ids = set(check_schema["check_id"]["enum"])
+        blocker_classes = set(check_schema["blocker_class"]["enum"])
+        payload_schema = schema["$defs"]["payload_result"]
+        payload_required = set(payload_schema["required"])
+        payload_allowed = set(payload_schema["properties"])
+        file_schema = schema["$defs"]["payload_file"]
+        file_required = set(file_schema["required"])
+        file_allowed = set(file_schema["properties"])
+        for result in readiness["payload_results"]:
+            with self.subTest(release_payload=result.get("payload_surface")):
+                self.assertLessEqual(payload_required, set(result), result.get("payload_surface"))
+                self.assertFalse(set(result) - payload_allowed, result.get("payload_surface"))
+                for files_key in ("expected_files", "actual_files"):
+                    for file_record in result[files_key]:
+                        self.assertLessEqual(file_required, set(file_record), file_record)
+                        self.assertFalse(set(file_record) - file_allowed, file_record)
+        evidence_ref_schema = schema["properties"]["evidence_refs"]
+        self.assertLessEqual(set(evidence_ref_schema["required"]), set(readiness["evidence_refs"]))
+        self.assertFalse(set(readiness["evidence_refs"]) - set(evidence_ref_schema["properties"]))
+        for check in readiness["checks"]:
+            with self.subTest(check_id=check["check_id"]):
+                self.assertIn(check["check_id"], check_ids)
+                self.assertIn(check["blocker_class"], blocker_classes)
+        runner_required = set(schema["$defs"]["runner_invocation"]["required"])
+        resolution_required = set(schema["$defs"]["interpreter_resolution"]["required"])
+        for record in readiness["runner_invocations"]:
+            with self.subTest(runner_invocation=record["request_id"]):
+                self.assertLessEqual(runner_required, set(record), record)
+                self.assertLessEqual(resolution_required, set(record["interpreter_resolution"]), record)
+                self.assertIsInstance(record["interpreter_resolution"]["invocation_argv_prefix"], list)
 
     def repo_rel(self, path: Path) -> str:
         return path.resolve(strict=False).relative_to(REPO_ROOT.resolve(strict=False)).as_posix()
@@ -177,15 +258,22 @@ class GateFoundationTests(unittest.TestCase):
 
         report = gate_registry_report()
         self.assertEqual(report["schema_version"], "1.0")
+        self.assertEqual(report["feature_id"], "XPLAT-007+XPLAT-008")
         self.assertEqual(report["promotion_status"], "mixed")
         self.assertFalse(report["active_cutover"])
         self.assertEqual(
             set(report["groups"]),
-            {"suite", "payload", "install", "release", "guard"},
+            {"runtime", "suite", "payload", "install", "release", "guard"},
         )
 
         operations = all_gate_operations()
-        self.assertGreaterEqual(len(operations), 20)
+        self.assertGreaterEqual(len(operations), 21)
+        runtime_operations = {
+            "runner-invocation",
+        }
+        xplat008_guard_operations = {
+            "active-runtime-guard",
+        }
         us1_operations = {
             "run-default-suite",
             "run-layer",
@@ -195,6 +283,7 @@ class GateFoundationTests(unittest.TestCase):
             "run-parity-suite",
         }
         us2_operations = {
+            "payload-completeness",
             "build-test-payload-evidence",
             "refresh-local-plugin-fixture",
             "verify-install",
@@ -207,13 +296,24 @@ class GateFoundationTests(unittest.TestCase):
             "parse-release-pr-payload-sync",
             "check-post-release-drift",
             "release-readiness",
+            "release-readiness-xplat008",
         }
         us3_operations = {
             "active-path-guard",
             "classify-shell-finding",
         }
         for operation in operations:
-            if operation.operation in us1_operations:
+            if operation.operation in runtime_operations:
+                self.assertEqual(operation.group, "runtime")
+                self.assertEqual(operation.story, "US1")
+                self.assertTrue(operation.implemented)
+                self.assertEqual(operation.promotion_status, "python_authoritative")
+            elif operation.operation in xplat008_guard_operations:
+                self.assertEqual(operation.group, "guard")
+                self.assertEqual(operation.story, "US1")
+                self.assertTrue(operation.implemented)
+                self.assertEqual(operation.promotion_status, "python_authoritative")
+            elif operation.operation in us1_operations:
                 self.assertEqual(operation.group, "suite")
                 self.assertEqual(operation.story, "US1")
                 self.assertTrue(operation.implemented)
@@ -374,6 +474,1339 @@ class GateFoundationTests(unittest.TestCase):
             "XPLAT-008 cutover surface",
         ]:
             self.assertIn(label, active_cases["coverage"])
+
+    def test_xplat008_runner_invocation_fixtures_cover_interpreter_resolution(self) -> None:
+        cases = xplat008_fixture_cases("runner-invocation")
+        self.assertEqual(cases["schema_version"], "1.0")
+        self.assertEqual(cases["feature_id"], "XPLAT-008")
+        self.assertEqual(
+            {case["case_id"] for case in cases["cases"]},
+            {
+                "windows-py-v3",
+                "windows-py-3-fallback",
+                "macos-python3",
+                "linux-python-fallback",
+                "live-host-runtime-info",
+                "too-old-or-missing",
+            },
+        )
+        expected_candidates = {
+            "windows": ["py -V:3", "py -3", "python", "python3"],
+            "macos": ["python3", "python"],
+            "linux": ["python3", "python"],
+        }
+        for case in cases["cases"]:
+            with self.subTest(case_id=case["case_id"]):
+                self.assertIn(case["product"], {"claude", "codex"})
+                self.assertIn(case["operation"], {"preflight", "scaffold", "status", "autopilot-dry-run"})
+                self.assertTrue(case["cache_root"])
+                if "candidate_results" not in case:
+                    continue
+                platform = case["platform"]
+                attempted = [item["candidate"] for item in case["candidate_results"]]
+                self.assertEqual(attempted, expected_candidates[platform][: len(attempted)])
+
+        request = xplat008_fixture_request("runner-invocation")
+        self.assertEqual(request["helper_id"], "runner-invocation")
+        self.assertEqual(request["operation"], "runner-invocation")
+        self.assertEqual(request["mode"], "read_only")
+        self.assertEqual(request["inputs"]["case_id"], "live-host-runtime-info")
+
+    def test_xplat008_runner_invocation_records_have_no_shell_fallback(self) -> None:
+        contract = json.loads(
+            (
+                REPO_ROOT
+                / "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/contracts/runner-invocation.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        release_contract = json.loads(
+            (
+                REPO_ROOT
+                / "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/contracts/release-readiness.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        argv_contract = contract["properties"]["invocation"]["properties"]["argv"]
+        self.assertEqual(len(argv_contract["oneOf"]), 3)
+        self.assertEqual(contract["$defs"]["diagnostic"]["properties"]["remediation"]["type"], "object")
+        release_runner = release_contract["$defs"]["runner_invocation"]
+        self.assertEqual(release_runner["properties"]["invocation"]["properties"]["argv"], argv_contract)
+        self.assertIn(
+            "runner-invocations",
+            release_contract["$defs"]["check"]["properties"]["check_id"]["enum"],
+        )
+        self.assertIn(
+            "missing_runner_invocation",
+            release_contract["$defs"]["check"]["properties"]["blocker_class"]["enum"],
+        )
+        self.assertIn("evidence_refs", release_contract["required"])
+        self.assertEqual(release_contract["properties"]["runner_invocations"]["minItems"], 1)
+        self.assertEqual(
+            release_contract["$defs"]["interpreter_resolution"],
+            contract["$defs"]["interpreter_resolution"],
+        )
+        self.assertEqual(
+            release_contract["$defs"]["diagnostic"]["properties"]["remediation"]["type"],
+            "object",
+        )
+
+        from speckit_pro_runner.helpers import install as install_helper
+
+        self.assertEqual(
+            install_helper.invocation_prefix_for_candidate("windows", "py -V:3", "C:/Python312/python.exe"),
+            ["C:/Python312/python.exe"],
+        )
+        self.assertEqual(
+            install_helper.invocation_prefix_for_candidate("windows", "py -V:3", "C:/Windows/py.exe"),
+            ["C:/Windows/py.exe", "-3"],
+        )
+        self.assertEqual(
+            install_helper.invocation_prefix_for_live_probe("py -V:3", "C:/Python312/python.exe"),
+            ["py", "-3"],
+        )
+        self.assertTrue(install_helper.allowed_python_executable("linux", "/usr/bin/python3.11"))
+        resolution, diagnostics = install_helper.resolve_python_interpreter(
+            "linux",
+            {"candidate_results": [{"candidate": "bash", "returncode": 0, "version": "3.11.8", "resolved_executable": "bash"}]},
+            "dist/codex/speckit-pro",
+        )
+        self.assertFalse(resolution["accepted"])
+        self.assertEqual(resolution["failure_code"], "python_runtime_unavailable")
+        self.assertEqual([diag["code"] for diag in diagnostics], ["python_runtime_unavailable"])
+        self.assertIn("unsupported Python candidate", resolution["diagnostic"])
+        resolution, diagnostics = install_helper.resolve_python_interpreter(
+            "linux",
+            {
+                "candidate_results": [
+                    {
+                        "candidate": "python3",
+                        "returncode": 0,
+                        "version": "3.11.8",
+                        "resolved_executable": "bash",
+                    }
+                ]
+            },
+            "dist/codex/speckit-pro",
+        )
+        self.assertFalse(resolution["accepted"])
+        self.assertEqual(resolution["failure_code"], "python_runtime_unavailable")
+        self.assertEqual([diag["code"] for diag in diagnostics], ["python_runtime_unavailable"])
+        self.assertIn("unsupported resolved executable", resolution["diagnostic"])
+        resolution, diagnostics = install_helper.resolve_python_interpreter(
+            "linux",
+            {
+                "candidate_results": [
+                    {
+                        "candidate": "python3",
+                        "returncode": 0,
+                        "version": "3.11.8",
+                        "resolved_executable": "python3",
+                        "invocation_argv_prefix": ["bash"],
+                    }
+                ]
+            },
+            "dist/codex/speckit-pro",
+        )
+        self.assertFalse(resolution["accepted"])
+        self.assertEqual(resolution["failure_code"], "python_runtime_unavailable")
+        self.assertEqual([diag["code"] for diag in diagnostics], ["python_runtime_unavailable"])
+        self.assertIn("unsupported invocation prefix", resolution["diagnostic"])
+        for prefix in [["python3", "-c"], ["python3", "bash"], ["python3", "-m"], ["py"], ["py", "-c"]]:
+            with self.subTest(prefix=prefix):
+                self.assertFalse(install_helper.allowed_python_invocation_prefix("linux", prefix))
+        self.assertFalse(install_helper.allowed_python_invocation_prefix("windows", ["py", "-c"]))
+        self.assertTrue(install_helper.allowed_python_invocation_prefix("windows", ["py", "-3"]))
+        self.assertTrue(install_helper.allowed_python_invocation_prefix("linux", ["python3"]))
+        for payload_root in [
+            REPO_ROOT / "dist" / "claude" / "speckit-pro",
+            REPO_ROOT / "dist" / "codex" / "speckit-pro",
+        ]:
+            self.assertTrue((payload_root / "speckit_pro_runner" / "__main__.py").is_file())
+            self.assertTrue((payload_root / "speckit_pro_runner" / "speckit-pro-runner.manifest.json").is_file())
+
+        pass_cases = [
+            "windows-py-v3",
+            "windows-py-3-fallback",
+            "macos-python3",
+            "linux-python-fallback",
+        ]
+        for case_id in pass_cases:
+            with self.subTest(case_id=case_id):
+                completed, response, stderr_records = run_runner(
+                    gate_request(
+                        "runner-invocation",
+                        "runner-invocation",
+                        inputs={
+                            "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json",
+                            "case_id": case_id,
+                        },
+                    )
+                )
+                self.assertEqual(completed.returncode, 0)
+                self.assert_stdout_json(completed)
+                self.assert_response(response, "ok")
+                self.assert_status_exit_mapping(completed, response)
+                self.assertEqual(stderr_records, [])
+                self.assert_xplat008_promotion_metadata(
+                    response,
+                    "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json",
+                )
+                record = response["data"]["runner_invocation"]
+                self.assertEqual(record["schema_version"], "1.0")
+                self.assertEqual(record["request_id"], response["request_id"])
+                self.assertTrue(record["interpreter_resolution"]["accepted"])
+                self.assertEqual(record["interpreter_resolution"]["minimum_version"], "3.11")
+                self.assertIsNone(record["interpreter_resolution"]["failure_code"])
+                self.assertTrue(record["interpreter_resolution"]["attempted_candidates"])
+                self.assertTrue(record["interpreter_resolution"]["resolved_executable"])
+                self.assertTrue(record["interpreter_resolution"]["invocation_argv_prefix"])
+                self.assertRegex(record["interpreter_resolution"]["version"], r"^3\.(1[1-9]|[2-9][0-9])\.")
+                expected_argv = [
+                    *record["interpreter_resolution"]["invocation_argv_prefix"],
+                    "-m",
+                    "speckit_pro_runner",
+                ]
+                self.assertEqual(
+                    record["invocation"],
+                    {
+                        "argv": expected_argv,
+                        "stdin_mode": "single_json_request",
+                        "stdout_mode": "single_json_response",
+                        "stderr_mode": "diagnostics_only",
+                        "shell_used": False,
+                    },
+                )
+                self.assertEqual(record["runner_request"]["helper_id"], "runner")
+                self.assertEqual(record["runner_response"]["schema_version"], "1.0")
+                self.assertEqual(record["runner_response"]["evidence_source"], "fixture")
+                self.assertEqual(record["status"], "pass")
+                self.assertEqual(record["diagnostics"], [])
+                self.assert_no_shell_argv(record["invocation"]["argv"])
+                if record["platform"] == "windows":
+                    self.assertEqual(record["invocation"]["argv"][-3:], ["-3", "-m", "speckit_pro_runner"])
+
+        completed, response, stderr_records = run_runner(
+            gate_request(
+                "runner-invocation",
+                "runner-invocation",
+                inputs={
+                    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json",
+                    "case_id": "live-host-runtime-info",
+                },
+            )
+        )
+        self.assertEqual(completed.returncode, 0)
+        self.assert_stdout_json(completed)
+        self.assert_response(response, "ok")
+        self.assert_status_exit_mapping(completed, response)
+        self.assertEqual(stderr_records, [])
+        self.assert_xplat008_promotion_metadata(
+            response,
+            "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json",
+        )
+        record = response["data"]["runner_invocation"]
+        self.assertEqual(record["status"], "pass")
+        self.assertTrue(record["interpreter_resolution"]["accepted"])
+        self.assertNotEqual(record["runner_response"].get("evidence_source"), "fixture")
+        self.assertEqual(record["runner_response"]["status"], "ok")
+        self.assertEqual(record["runner_response"]["data"]["report"]["runner_name"], "speckit_pro_runner")
+        self.assert_no_shell_argv(record["invocation"]["argv"])
+
+        from speckit_pro_runner import runtime as runner_runtime
+
+        with tempfile.TemporaryDirectory() as tmp:
+            installed_root = Path(tmp) / "installed-cache" / "speckit-pro"
+            (installed_root / ".codex-plugin").mkdir(parents=True)
+            (installed_root / ".codex-plugin" / "plugin.json").write_text("{}", encoding="utf-8")
+            (installed_root / "speckit_pro_runner").mkdir()
+            self.assertEqual(runner_runtime.runtime_context(installed_root), "installed_payload")
+        self.assertEqual(runner_runtime.runtime_context(PLUGIN_ROOT), "source_checkout")
+
+        runner_response, execution_diag = install_helper.execute_runner_runtime_info(
+            [sys.executable, "-m", "speckit_pro_runner"],
+            record["runner_request"],
+            REPO_ROOT,
+            "dist/missing-installed-cache",
+        )
+        self.assertIsNone(runner_response)
+        self.assertEqual(execution_diag["code"], "runner_cache_missing")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_root = Path(tmp) / "fake-payload"
+            package = fake_root / "speckit_pro_runner"
+            package.mkdir(parents=True)
+            (package / "__init__.py").write_text("", encoding="utf-8")
+            (package / "__main__.py").write_text(
+                "import json\n"
+                "print(json.dumps({"
+                "'schema_version':'1.0',"
+                "'status':'ok',"
+                "'exit_code':0,"
+                "'legacy_exit_code':None,"
+                "'diagnostics':[],"
+                "'data':{'report':{"
+                "'runner_name':'fake_runner',"
+                "'runner_contract_id':'speckit-pro-runner',"
+                "'selected_runtime_name':'python-stdlib-runner',"
+                "'source_vs_installed_context':'installed_payload',"
+                "'paths':{}"
+                "}}}))\n",
+                encoding="utf-8",
+            )
+            runner_response, execution_diag = install_helper.execute_runner_runtime_info(
+                [sys.executable, "-m", "speckit_pro_runner"],
+                record["runner_request"],
+                REPO_ROOT,
+                fake_root.as_posix(),
+            )
+        self.assertIsNotNone(runner_response)
+        self.assertEqual(execution_diag["code"], "runner_identity_mismatch")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_root = Path(tmp) / "list-payload"
+            package = fake_root / "speckit_pro_runner"
+            package.mkdir(parents=True)
+            (package / "__init__.py").write_text("", encoding="utf-8")
+            (package / "__main__.py").write_text("print('[]')\n", encoding="utf-8")
+            runner_response, execution_diag = install_helper.execute_runner_runtime_info(
+                [sys.executable, "-m", "speckit_pro_runner"],
+                record["runner_request"],
+                REPO_ROOT,
+                fake_root.as_posix(),
+            )
+        self.assertIsNotNone(runner_response)
+        self.assertEqual(runner_response["data"]["parsed_type"], "list")
+        self.assertEqual(execution_diag["code"], "runner_response_malformed")
+
+        completed, response, stderr_records = run_runner(
+            gate_request(
+                "runner-invocation",
+                "runner-invocation",
+                inputs={
+                    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json",
+                    "case_id": "too-old-or-missing",
+                },
+            )
+        )
+        self.assertEqual(completed.returncode, 1)
+        self.assert_stdout_json(completed)
+        self.assert_response(response, "expected_failure")
+        self.assert_status_exit_mapping(completed, response)
+        self.assertEqual([diag["code"] for diag in stderr_records], ["python_runtime_unavailable"])
+        record = response["data"]["runner_invocation"]
+        self.assertFalse(record["interpreter_resolution"]["accepted"])
+        self.assertIsNone(record["interpreter_resolution"]["resolved_executable"])
+        self.assertEqual(record["interpreter_resolution"]["failure_code"], "python_runtime_unavailable")
+        self.assertEqual(record["interpreter_resolution"]["invocation_argv_prefix"], [])
+        self.assertIsNone(record["runner_response"])
+        self.assertEqual(record["status"], "blocked")
+        self.assertEqual(record["invocation"]["argv"], [])
+        self.assertFalse(record["invocation"]["shell_used"])
+
+    def test_xplat008_active_runtime_guard_fixtures_block_only_active_runtime_findings(self) -> None:
+        from speckit_pro_runner.gates import active_path_guard
+
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "bash",
+                "bash",
+                "Run bash before status.",
+                "repo",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/codex-agents/implement-executor.toml",
+                "bash",
+                "Bash",
+                "Require Bash before running this agent.",
+                "repo",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "shell_interpolation",
+                "`speckit-pro/skills/speckit-status/SKILL.md`",
+                "`speckit-pro/skills/speckit-status/SKILL.md`",
+                "repo_baseline",
+            ),
+            "source_checkout_helper",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "jq",
+                "jq",
+                "Do not add a shell fallback, jq parsing path, Git Bash, WSL, or PowerShell requirement.",
+                "repo",
+            ),
+            "source_checkout_helper",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "bash",
+                "Bash",
+                "Do not run without Bash.",
+                "repo",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "bash",
+                "bash",
+                "Run bash without Python before status.",
+                "repo",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "shell_interpolation",
+                "`bash`",
+                "Run `bash` before status.",
+                "repo",
+            ),
+            "blocking_active_runtime",
+        )
+
+        cases = xplat008_fixture_cases("active-runtime-guard")
+        self.assertEqual(cases["schema_version"], "1.0")
+        self.assertEqual(cases["feature_id"], "XPLAT-008")
+        self.assertEqual(
+            {case["case_id"] for case in cases["cases"]},
+            {
+                "blocking-active-runtime-patterns",
+                "allowed-runtime-exceptions",
+                "final-current-implementation",
+            },
+        )
+        final_case = next(case for case in cases["cases"] if case["case_id"] == "final-current-implementation")
+        self.assertFalse(final_case["scan_changed_sources"])
+        self.assertIn(
+            "final current implementation scans the full release surface without requiring PR review-base diff metadata",
+            cases["coverage"],
+        )
+        self.assertLessEqual(
+            {
+                "dist/claude/speckit-pro/hooks",
+                "dist/claude/speckit-pro/agents",
+                "dist/claude/speckit-pro/skills",
+                "dist/claude/speckit-pro/scripts",
+                "dist/claude/speckit-pro/speckit_pro_runner",
+                "dist/claude/speckit-pro/.claude-plugin",
+                "dist/codex/speckit-pro/codex-hooks.json",
+                "dist/codex/speckit-pro/codex-agents",
+                "dist/codex/speckit-pro/skills",
+                "dist/codex/speckit-pro/scripts",
+                "dist/codex/speckit-pro/speckit_pro_runner",
+                "dist/codex/speckit-pro/.codex-plugin",
+                ".github/workflows",
+                "README.md",
+                "speckit-pro/README.md",
+                "docs-site/src/content/docs",
+            },
+            set(final_case["scan_roots"]),
+        )
+
+        with patch.object(active_path_guard, "review_base_ref", return_value=None):
+            response = active_path_guard.run_active_runtime_guard(
+                SimpleNamespace(helper_id="active-path-guard"),
+                SimpleNamespace(
+                    operation="active-runtime-guard",
+                    request_id="test-final-current-no-review-base",
+                    inputs={
+                        "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json",
+                        "case_id": "final-current-implementation",
+                    },
+                ),
+                REPO_ROOT,
+            )
+        self.assertEqual(response["status"], "ok")
+        self.assertEqual(response["data"]["blocking_count"], 0)
+        for payload_root in (REPO_ROOT / "dist/claude/speckit-pro", REPO_ROOT / "dist/codex/speckit-pro"):
+            for suffix in (".sh", ".ps1", ".bat", ".cmd"):
+                self.assertFalse([path for path in payload_root.rglob(f"*{suffix}")], payload_root)
+
+        with patch.object(active_path_guard, "review_base_ref", return_value=None):
+            changed_sources = active_path_guard.changed_repo_sources(REPO_ROOT, {"scan_roots": ["speckit-pro/skills"]})
+        self.assertIsInstance(changed_sources, active_path_guard.RawFinding)
+        self.assertEqual(changed_sources.classification, "blocking_active_runtime")
+        self.assertEqual(changed_sources.category, "diff_scan")
+        with patch.object(active_path_guard.subprocess, "run", side_effect=OSError("git missing")):
+            changed_sources = active_path_guard.changed_repo_sources(REPO_ROOT, {"scan_roots": ["speckit-pro/skills"]})
+        self.assertIsInstance(changed_sources, active_path_guard.RawFinding)
+        self.assertEqual(changed_sources.classification, "blocking_active_runtime")
+        self.assertEqual(changed_sources.category, "diff_scan")
+        self.assertNotIn("HEAD^", active_path_guard.review_base_ref.__code__.co_consts)
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "README.md",
+                "bash",
+                "bash",
+                "Install requires Bash before running SpecKit Pro.",
+                "repo",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "README.md",
+                "bash",
+                "bash",
+                "Install requires Bash before running SpecKit Pro.",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "docs-site/src/content/docs/install/codex.md",
+                "jq",
+                "jq",
+                "Installed runtime requires jq before first use.",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "README.md",
+                "bash",
+                "bash",
+                "SpecKit Pro does not require Bash.",
+                "repo",
+            ),
+            "docs_non_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "docs-site/src/content/docs/contribute-and-release.md",
+                "script_file",
+                "scripts/sync-marketplace-versions.sh",
+                "`scripts/sync-marketplace-versions.sh`",
+                "repo",
+            ),
+            "docs_non_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "docs-site/src/content/docs/troubleshooting.md",
+                "bash",
+                "Bash",
+                "Bash source-checkout prerequisite",
+                "repo",
+            ),
+            "docs_non_runtime",
+        )
+        wrapped_negative_findings = active_path_guard.scan_sources_xplat008(
+            [
+                active_path_guard.SourceFile(
+                    "docs-site/src/content/docs/install/codex.md",
+                    "payload; Bash, Git Bash, WSL, PowerShell-specific command language, and `jq` are\n"
+                    "not installed-runtime requirements.",
+                    "repo",
+                )
+            ],
+            REPO_ROOT,
+        )
+        self.assertFalse(
+            [finding for finding in wrapped_negative_findings if finding.classification == "blocking_active_runtime"]
+        )
+        markdown_heading_findings = active_path_guard.scan_sources_xplat008(
+            [
+                active_path_guard.SourceFile(
+                    "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
+                    "# Requires Bash before first use\n",
+                    "repo_baseline",
+                )
+            ],
+            REPO_ROOT,
+        )
+        self.assertTrue(
+            [finding for finding in markdown_heading_findings if finding.classification == "blocking_active_runtime"]
+        )
+        script_suffix_findings = active_path_guard.scan_sources_xplat008(
+            [
+                active_path_guard.SourceFile(
+                    "dist/codex/speckit-pro/scripts/install.ps1",
+                    "Write-Host 'install'\n",
+                    "repo_baseline",
+                )
+            ],
+            REPO_ROOT,
+        )
+        self.assertTrue(
+            [finding for finding in script_suffix_findings if finding.classification == "blocking_active_runtime"]
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
+                "bash",
+                "bash",
+                "Run bash before status.",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
+                "script_file",
+                "scripts/setup.sh",
+                "Run scripts/setup.sh before use.",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "dist/codex/speckit-pro/scripts/install.sh",
+                "script_file",
+                "*.sh",
+                "#!/usr/bin/env bash\njq -n '{}'\n",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
+                "jq",
+                "jq",
+                "Run jq before use.",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "jq",
+                "jq",
+                "If Python is missing, use command -v jq and run Bash.",
+                "repo",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "powershell",
+                "PowerShell",
+                "Requires PowerShell before status.",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "script_file",
+                "scripts/setup.sh",
+                "Run scripts/setup.sh before first use.",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "jq",
+                "jq",
+                "Run jq before status.",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/agents/phase-executor.md",
+                "shell_interpolation",
+                "`$SHELL`",
+                "Use `$SHELL` to run the installed agent.",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "bash",
+                "Bash",
+                "Do not add Bash as an installed-runtime requirement.",
+                "repo_baseline",
+            ),
+            "source_checkout_helper",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-upgrade/SKILL.md",
+                "bash",
+                "Bash",
+                "allowed-tools: Bash Read Edit Write",
+                "repo",
+            ),
+            "source_checkout_helper",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/skills/speckit-upgrade/SKILL.md",
+                "bash",
+                "Bash",
+                "allowed-tools: Bash Read Edit Write\nRun Bash before use.",
+                "repo",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
+                "bash",
+                "Bash",
+                "Maintainer-only source-checkout helper text may mention Bash.",
+                "repo",
+            ),
+            "source_checkout_helper",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
+                "script_file",
+                "`estimate-reviewable-loc.sh",
+                "The parent runs `estimate-reviewable-loc.sh <plan.md>` via `exec_command`, capturing the exit code.",
+                "repo",
+            ),
+            "source_checkout_helper",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
+                "jq",
+                "jq",
+                "If Python is missing, use command -v jq and run Bash.",
+                "repo",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
+                "jq",
+                "jq",
+                "If Python is missing, use command -v jq and run Bash.",
+                "repo_baseline",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
+                "bash",
+                "Bash",
+                "Do not add Bash as an installed-runtime requirement.",
+                "repo_baseline",
+            ),
+            "source_checkout_helper",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/agents/phase-executor.md",
+                "bash",
+                "Bash",
+                "allowed-tools: Bash, Read",
+                "repo",
+            ),
+            "source_checkout_helper",
+        )
+        missing_roots = active_path_guard.missing_xplat008_scan_root_findings(
+            REPO_ROOT,
+            {"scan_roots": ["dist/missing-runtime-root"]},
+        )
+        self.assertEqual(len(missing_roots), 1)
+        self.assertEqual(missing_roots[0].classification, "blocking_active_runtime")
+        self.assertEqual(missing_roots[0].category, "scan_root")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            completed, response, stderr_records = run_runner(
+                gate_request(
+                    "active-path-guard",
+                    "active-runtime-guard",
+                    inputs={"repo_root": tmp},
+                )
+            )
+        self.assertEqual(completed.returncode, 3)
+        self.assert_response(response, "missing_prerequisite")
+        self.assertEqual([diag["code"] for diag in stderr_records], ["missing_prerequisite"])
+        self.assertEqual(response["data"]["gate"]["comparison_ids"], ["xplat-008-active-runtime-guard"])
+        self.assert_xplat008_promotion_metadata(
+            response,
+            "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json",
+        )
+
+        completed, response, stderr_records = run_runner(
+            gate_request(
+                "active-path-guard",
+                "active-runtime-guard",
+                inputs={
+                    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json",
+                    "case_id": "blocking-active-runtime-patterns",
+                },
+            )
+        )
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure")
+        self.assertEqual([diag["code"] for diag in stderr_records], ["active_runtime_guard_blocked"])
+        self.assertGreaterEqual(response["data"]["blocking_count"], 4)
+        self.assertTrue(
+            all(finding["classification"] == "blocking_active_runtime" for finding in response["data"]["findings"])
+        )
+        self.assertLessEqual(
+            {"bash", "script_file", "jq", "git_bash", "wsl"},
+            {finding["category"] for finding in response["data"]["findings"]},
+        )
+
+        completed, response, stderr_records = run_runner(
+            gate_request(
+                "active-path-guard",
+                "active-runtime-guard",
+                inputs={
+                    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json",
+                    "case_id": "allowed-runtime-exceptions",
+                },
+            )
+        )
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        self.assertEqual(response["data"]["blocking_count"], 0)
+        self.assertLessEqual(
+            {
+                "archive_provenance",
+                "upstream_spec_kit_helper",
+                "test_fixture",
+                "ci_dispatch_glue",
+            },
+            set(response["data"]["classified_counts"]),
+        )
+
+        completed, response, stderr_records = run_runner(
+            gate_request(
+                "active-path-guard",
+                "active-runtime-guard",
+                inputs={
+                    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json",
+                    "case_id": "final-current-implementation",
+                },
+            )
+        )
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        self.assertEqual(response["data"]["blocking_count"], 0)
+
+    def test_xplat008_payload_completeness_fixtures_cover_release_payload_blockers(self) -> None:
+        cases = xplat008_fixture_cases("payload-completeness")
+        self.assertEqual(cases["schema_version"], "1.0")
+        self.assertEqual(cases["feature_id"], "XPLAT-008")
+        self.assertEqual(
+            {case["case_id"] for case in cases["cases"]},
+            {
+                "current-committed-dist",
+                "empty-surfaces",
+                "invalid-surfaces",
+                "missing-runner-file",
+                "stale-metadata",
+                "extra-file",
+                "path-leak",
+                "transform-mismatch",
+            },
+        )
+        for label in [
+            "source-derived expected inventory",
+            "apply-mode rebuild comparison",
+            "missing runner file blocker",
+            "stale metadata blocker",
+            "extra file blocker",
+            "path leak blocker",
+            "empty surface selection blocker",
+            "invalid surface selection blocker",
+            "transform mismatch blocker",
+        ]:
+            self.assertIn(label, cases["coverage"])
+
+        request = xplat008_fixture_request("payload-completeness")
+        self.assertEqual(request["helper_id"], "payload-gate")
+        self.assertEqual(request["operation"], "payload-completeness")
+        self.assertEqual(request["mode"], "read_only")
+
+        apply_request = xplat008_fixture_request("payload-completeness-apply")
+        self.assertEqual(apply_request["helper_id"], "payload-gate")
+        self.assertEqual(apply_request["operation"], "payload-completeness")
+        self.assertEqual(apply_request["mode"], "apply")
+        self.assertTrue(apply_request["inputs"]["apply_dist"])
+
+    def test_xplat008_payload_completeness_blocks_seeded_negative_cases(self) -> None:
+        for case_id in ["missing-runner-file", "stale-metadata", "extra-file", "path-leak", "transform-mismatch"]:
+            with self.subTest(case_id=case_id):
+                completed, response, stderr_records = run_runner(
+                    gate_request(
+                        "payload-gate",
+                        "payload-completeness",
+                        inputs={
+                            "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/payload-completeness-cases.json",
+                            "case_id": case_id,
+                        },
+                    )
+                )
+                self.assertEqual(completed.returncode, 1)
+                self.assert_response(response, "expected_failure")
+                self.assertEqual([diag["code"] for diag in stderr_records], ["payload_completeness_blocked"])
+                self.assertTrue(response["data"]["gate"]["blocking"])
+                self.assertTrue(
+                    any(result["status"] == "fail" for result in response["data"]["payload_completeness"])
+                )
+                self.assert_payload_completeness_contract_subset(response["data"]["payload_completeness"])
+                if case_id == "path-leak":
+                    failed = [result for result in response["data"]["payload_completeness"] if result["status"] == "fail"]
+                    self.assertEqual(len(failed), 1)
+                    self.assertEqual(failed[0]["path_leaks"], ["../outside-cache.txt"])
+                    self.assertFalse(any(".." in item["path"].split("/") for item in failed[0]["actual_files"]))
+
+        for case_id in ["empty-surfaces", "invalid-surfaces"]:
+            with self.subTest(case_id=case_id):
+                completed, response, stderr_records = run_runner(
+                    gate_request(
+                        "payload-gate",
+                        "payload-completeness",
+                        inputs={
+                            "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/payload-completeness-cases.json",
+                            "case_id": case_id,
+                        },
+                    )
+                )
+                self.assertEqual(completed.returncode, 2)
+                self.assert_response(response, "input_error")
+                self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_payload_surface_selection"])
+
+    def test_xplat008_payload_completeness_apply_builds_runner_payloads_without_shell(self) -> None:
+        from speckit_pro_runner.gates import payloads as payload_gate
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output_root = Path(tmp) / "dist"
+            sentinel = output_root / "claude" / "speckit-pro" / "sentinel.txt"
+            sentinel.parent.mkdir(parents=True)
+            sentinel.write_text("keep", encoding="utf-8")
+            completed, response, stderr_records = run_runner(
+                gate_request(
+                    "payload-gate",
+                    "payload-completeness",
+                    mode="dry_run",
+                    inputs={
+                        "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/payload-completeness-cases.json",
+                        "case_id": "current-committed-dist",
+                        "output_root": output_root.as_posix(),
+                    },
+                )
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok")
+            self.assertEqual(stderr_records, [])
+            self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output_root = str(Path(tmp) / "dist")
+            request = gate_request(
+                "payload-gate",
+                "payload-completeness",
+                mode="apply",
+                inputs={
+                    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/payload-completeness-cases.json",
+                    "case_id": "current-committed-dist",
+                    "output_root": output_root,
+                },
+            )
+            completed, response, stderr_records = run_runner(request)
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok")
+            self.assertEqual(stderr_records, [])
+            for surface in ["claude", "codex"]:
+                payload_root = Path(output_root) / surface / "speckit-pro"
+                self.assertTrue((payload_root / "speckit_pro_runner" / "__main__.py").is_file())
+                self.assertTrue((payload_root / "speckit_pro_runner" / "speckit-pro-runner.manifest.json").is_file())
+            for result in response["data"]["payload_completeness"]:
+                self.assertEqual(result["status"], "pass")
+                paths = {item["path"] for item in result["actual_files"]}
+                self.assertIn("speckit_pro_runner/__main__.py", paths)
+                self.assertIn("speckit_pro_runner/speckit-pro-runner.sha256", paths)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            payload_root = Path(tmp) / "payload"
+            for relative in ("scripts/install.sh", "scripts/install.ps1", "scripts/install.bat", "scripts/install.cmd"):
+                script = payload_root / relative
+                script.parent.mkdir(parents=True, exist_ok=True)
+                script.write_text("echo unsafe\n", encoding="utf-8")
+            payload_gate.remove_payload_shell_scripts_xplat008(payload_root)
+            for suffix in (".sh", ".ps1", ".bat", ".cmd"):
+                self.assertFalse([path for path in payload_root.rglob(f"*{suffix}")], suffix)
+
+    def test_xplat008_payload_completeness_current_dist_passes_after_runner_rebuild(self) -> None:
+        completed, response, stderr_records = run_runner(xplat008_fixture_request("payload-completeness"))
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        self.assert_xplat008_promotion_metadata(
+            response,
+            "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/payload-completeness-cases.json",
+        )
+        self.assertEqual({item["payload_surface"] for item in response["data"]["payload_completeness"]}, {"claude", "codex"})
+        by_surface = {item["payload_surface"]: item for item in response["data"]["payload_completeness"]}
+        claude_status = next(item for item in by_surface["claude"]["actual_files"] if item["path"] == "skills/speckit-status/SKILL.md")
+        codex_status = next(item for item in by_surface["codex"]["actual_files"] if item["path"] == "skills/speckit-status/SKILL.md")
+        self.assertEqual(claude_status["source_path"], "speckit-pro/skills/speckit-status/SKILL.md")
+        self.assertEqual(codex_status["source_path"], "speckit-pro/codex-skills/speckit-status/SKILL.md")
+        for result in response["data"]["payload_completeness"]:
+            self.assertEqual(result["status"], "pass")
+            self.assertFalse(result["missing_paths"])
+            self.assertFalse(result["extra_paths"])
+            self.assertFalse(result["mismatched_paths"])
+            self.assertFalse(result["path_leaks"])
+        self.assert_payload_completeness_contract_subset(response["data"]["payload_completeness"])
+
+    def test_xplat008_payload_completeness_detects_stale_runner_trust_metadata(self) -> None:
+        from speckit_pro_runner.gates import payloads as payload_gate
+
+        with tempfile.TemporaryDirectory() as tmp:
+            dist_root = Path(tmp) / "dist"
+            payload_gate.build_xplat008_payloads(REPO_ROOT, dist_root)
+            payload_root = dist_root / "claude" / "speckit-pro"
+            runner_file = payload_root / "speckit_pro_runner" / "__main__.py"
+            runner_file.write_text(runner_file.read_text(encoding="utf-8") + "\n# stale trust metadata test\n", encoding="utf-8")
+
+            mismatches = payload_gate.payload_trust_metadata_mismatches(payload_root)
+
+        self.assertEqual(
+            set(mismatches),
+            {
+                "speckit_pro_runner/speckit-pro-runner.manifest.json",
+                "speckit_pro_runner/speckit-pro-runner.sha256",
+            },
+        )
+
+    def test_xplat008_release_readiness_fixtures_cover_release_blockers(self) -> None:
+        promotion_records = json.loads((XPLAT_008_FIXTURE_DIR / "promotion-records.json").read_text(encoding="utf-8"))
+        self.assertEqual(promotion_records["schema_version"], "1.0")
+        self.assertEqual(promotion_records["feature_id"], "XPLAT-008")
+        self.assertEqual(promotion_records["promotion_status"], "installed_cutover_release_authoritative")
+        self.assertLessEqual(
+            {"runner-invocation", "active-path-guard", "payload-gate", "release-readiness"},
+            {record["gate_id"] for record in promotion_records["records"]},
+        )
+        case_ids_by_operation = {
+            "runner-invocation": {case["case_id"] for case in xplat008_fixture_cases("runner-invocation")["cases"]},
+            "active-runtime-guard": {case["case_id"] for case in xplat008_fixture_cases("active-runtime-guard")["cases"]},
+            "payload-completeness": {case["case_id"] for case in xplat008_fixture_cases("payload-completeness")["cases"]},
+            "release-readiness-xplat008": {case["case_id"] for case in xplat008_fixture_cases("release-readiness")["cases"]},
+        }
+        for record in promotion_records["records"]:
+            with self.subTest(promotion=record["python_operation"]):
+                self.assertLessEqual(set(record["fixture_ids"]), case_ids_by_operation[record["python_operation"]])
+        cases = xplat008_fixture_cases("release-readiness")
+        self.assertEqual(cases["schema_version"], "1.0")
+        self.assertEqual(cases["feature_id"], "XPLAT-008")
+        self.assertEqual(
+            {case["case_id"] for case in cases["cases"]},
+            {
+                "ready",
+                "active-shell-dependency",
+                "incomplete-payload",
+                "missing-bundled-agent",
+                "missing-hook",
+                "missing-runner-file",
+                "stale-metadata",
+                "unsafe-public-claim",
+                "incomplete-uat",
+                "unsafe-repair-claim",
+                "missing-traceability",
+                "nondeterministic-dist",
+                "missing-release-evidence",
+                "live-evidence-disabled",
+                "failed-runner-invocation",
+            },
+        )
+        request = xplat008_fixture_request("release-readiness")
+        self.assertEqual(request["helper_id"], "release-readiness")
+        self.assertEqual(request["operation"], "release-readiness-xplat008")
+        self.assertEqual(request["mode"], "read_only")
+        runner_request = xplat008_fixture_request("runner-invocation")
+        self.assertEqual(runner_request["inputs"]["case_id"], "live-host-runtime-info")
+        release_workflow = (REPO_ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        for request_name in [
+            "runner-invocation.json",
+            "active-runtime-guard.json",
+            "payload-completeness.json",
+            "release-readiness.json",
+        ]:
+            self.assertIn(f"tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/{request_name}", release_workflow)
+
+    def test_xplat008_release_readiness_reports_pass_and_seeded_blockers(self) -> None:
+        completed, response, stderr_records = run_runner(xplat008_fixture_request("release-readiness"))
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        self.assert_xplat008_promotion_metadata(
+            response,
+            "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json",
+        )
+        readiness = response["data"]["release_readiness"]
+        self.assertEqual(readiness["feature_id"], "XPLAT-008")
+        self.assertEqual(readiness["status"], "pass")
+        self.assertEqual(readiness["blocking_count"], 0)
+        self.assertEqual(len(readiness["payload_results"]), 2)
+        self.assertEqual({item["payload_surface"] for item in readiness["payload_results"]}, {"claude", "codex"})
+        self.assertEqual(len(readiness["uat_rows"]), 6)
+        self.assertTrue(readiness["traceability"])
+        self.assertNotIn("live_gate_requests", readiness["evidence_refs"])
+        self.assertTrue(
+            any(
+                item.get("request_id") == "xplat-008-release-readiness:runner-invocation"
+                for item in readiness["runner_invocations"]
+            )
+        )
+        live_runner_record = next(
+            item
+            for item in readiness["runner_invocations"]
+            if item.get("request_id") == "xplat-008-release-readiness:runner-invocation"
+        )
+        self.assertEqual(live_runner_record["runner_response"]["status"], "ok")
+        self.assertEqual(
+            live_runner_record["runner_response"]["data"]["report"]["source_vs_installed_context"],
+            "installed_payload",
+        )
+        self.assertTrue(
+            any(
+                file_record["path"] == "speckit_pro_runner/speckit-pro-runner.manifest.json"
+                for result in readiness["payload_results"]
+                for file_record in result.get("actual_files", [])
+            )
+        )
+        self.assert_release_readiness_contract_subset(readiness)
+
+        blocker_cases = [
+            "active-shell-dependency",
+            "incomplete-payload",
+            "missing-bundled-agent",
+            "missing-hook",
+            "missing-runner-file",
+            "stale-metadata",
+            "unsafe-public-claim",
+            "incomplete-uat",
+            "unsafe-repair-claim",
+            "missing-traceability",
+            "nondeterministic-dist",
+            "missing-release-evidence",
+            "live-evidence-disabled",
+            "failed-runner-invocation",
+        ]
+        for case_id in blocker_cases:
+            with self.subTest(case_id=case_id):
+                completed, response, stderr_records = run_runner(
+                    gate_request(
+                        "release-readiness",
+                        "release-readiness-xplat008",
+                        inputs={
+                            "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json",
+                            "case_id": case_id,
+                        },
+                    )
+                )
+                self.assertEqual(completed.returncode, 1)
+                self.assert_response(response, "expected_failure")
+                self.assertEqual([diag["code"] for diag in stderr_records], ["release_readiness_xplat008_blocked"])
+                self.assertGreater(response["data"]["release_readiness"]["blocking_count"], 0)
+                self.assert_release_readiness_contract_subset(response["data"]["release_readiness"])
+
+    def test_xplat008_release_readiness_malformed_records_become_structured_blockers(self) -> None:
+        from speckit_pro_runner.gates import release as release_gate
+
+        checks = release_gate.computed_xplat008_checks(
+            payload_results=[{"status": "fail"}],
+            uat_rows=[],
+            repair_actions=[{"action_type": "manual_remediation"}],
+            public_claim_results=[{"status": "fail"}],
+            runner_invocations=[{"status": "blocked"}],
+            traceability=[],
+        )
+        collapsed = release_gate.collapse_checks(checks)
+
+        self.assertTrue(all("check_id" in check for check in collapsed))
+        self.assertTrue(any(check["check_id"] == "payload-completeness" and check["blocking"] for check in collapsed))
+        payload_check = next(check for check in collapsed if check["check_id"] == "payload-completeness")
+        self.assertIn("failing_payloads=unknown", payload_check["evidence"])
+
+        malformed_checks = release_gate.normalize_xplat008_checks(
+            [
+                {
+                    "check_id": "public-claims",
+                    "blocker_class": "unsafe_public_claim",
+                    "status": "maybe",
+                    "evidence": None,
+                }
+            ]
+        )
+        self.assertEqual(malformed_checks[0]["status"], "fail")
+        self.assertTrue(malformed_checks[0]["blocking"])
+        self.assertIn("malformed_check_record", malformed_checks[0]["evidence"])
+        unknown_checks = release_gate.normalize_xplat008_checks(
+            [
+                {
+                    "check_id": "unknown-check",
+                    "blocker_class": "unknown-blocker",
+                    "status": "pass",
+                    "evidence": [],
+                }
+            ]
+        )
+        self.assertEqual(unknown_checks[0]["status"], "fail")
+        self.assertTrue(unknown_checks[0]["blocking"])
+        self.assertEqual(unknown_checks[0]["check_id"], "release-packet-traceability")
+        self.assertIn("malformed_check_record", unknown_checks[0]["evidence"])
+
+        malformed_contract_checks = release_gate.validate_xplat008_evidence_contracts(
+            payload_results=release_gate.normalize_payload_results(
+                [
+                    "not-an-object",
+                    {
+                        "payload_surface": "claude",
+                        "plugin_version": "2.17.0",
+                        "runner_version": "0.1.0",
+                        "expected_files": [{}],
+                        "actual_files": ["bad-file-record"],
+                        "missing_paths": [123],
+                        "extra_paths": [None],
+                        "mismatched_paths": [False],
+                        "path_leaks": [{}],
+                        "file_tree_hash": "2" * 64,
+                        "status": "pass",
+                    },
+                ]
+            ),
+            uat_rows=[{"product": "codex", "platform": "macos", "status": "pass"}],
+            repair_actions=[
+                {
+                    "action_id": "repair",
+                    "finding_id": "finding",
+                    "action_type": "manual_remediation",
+                    "target_path": "install/cache",
+                    "status": "blocked",
+                    "message": "Manual remediation required.",
+                    "manual_steps": [123],
+                    "digest_verified": False,
+                }
+            ],
+            public_claim_results=[
+                {
+                    "claim_id": "claim",
+                    "surface": "docs",
+                    "claim_text_or_pattern": "safe install",
+                    "classification": "public",
+                    "status": "pass",
+                    "evidence": [123],
+                }
+            ],
+            runner_invocations=[{"request_id": "runner", "status": "pass", "diagnostics": ["bad-diagnostic"]}],
+            traceability=[{"requirement_id": "FR-006", "changed_files": [123], "verification_evidence": [None]}],
+        )
+        evidence = [evidence for check in malformed_contract_checks for evidence in check["evidence"]]
+        for marker in [
+            "malformed_payload_record:index=0",
+            "malformed_uat_record:index=0",
+            "malformed_repair_record:index=0",
+            "malformed_public_claim_record:index=0",
+            "malformed_runner_invocation_record:index=0",
+            "malformed_traceability_record:index=0",
+        ]:
+            self.assertIn(marker, evidence)
+        self.assertIn("missing_or_invalid=expected_files[0].path", evidence)
+        self.assertIn("missing_or_invalid=actual_files[0]", evidence)
+        self.assertIn("missing_or_invalid=missing_paths", evidence)
+        self.assertIn("missing_or_invalid=extra_paths", evidence)
+        self.assertIn("missing_or_invalid=mismatched_paths", evidence)
+        self.assertIn("missing_or_invalid=path_leaks", evidence)
+        self.assertIn("missing_or_invalid=manual_steps", evidence)
+        self.assertIn("missing_or_invalid=evidence", evidence)
+        self.assertIn("missing_or_invalid=diagnostics[0]", evidence)
+        self.assertIn("missing_or_invalid=changed_files", evidence)
+        self.assertIn("missing_or_invalid=verification_evidence", evidence)
+        self.assertIn("missing_or_invalid=runner_request", evidence)
+        self.assertIn("missing_or_invalid=surface_path", evidence)
+
+        valid_repair_checks = release_gate.validate_xplat008_evidence_contracts(
+            payload_results=[],
+            uat_rows=[],
+            repair_actions=[
+                {
+                    "action_id": "repair-1",
+                    "finding_id": "install-cache-drift",
+                    "action_type": "autoheal_refresh",
+                    "target_path": "speckit-pro/install_inventory.json",
+                    "source_path": "dist/codex/speckit-pro/install_inventory.json",
+                    "digest_verified": True,
+                    "status": "completed",
+                    "message": "Refreshed stale install inventory from generated payload.",
+                    "manual_steps": [],
+                }
+            ],
+            public_claim_results=[],
+            runner_invocations=[],
+            traceability=[],
+        )
+        self.assertFalse([check for check in valid_repair_checks if "repair" in ",".join(check["evidence"])])
+
+        duplicate_uat_rows = [release_gate.default_uat_row("claude", "windows", "pass") for _ in range(6)]
+        duplicate_uat_checks = release_gate.computed_xplat008_checks(
+            payload_results=[
+                release_gate.synthetic_payload_result("claude", "pass"),
+                release_gate.synthetic_payload_result("codex", "pass"),
+            ],
+            uat_rows=duplicate_uat_rows,
+            repair_actions=[],
+            public_claim_results=[
+                {
+                    "claim_id": "python-runner",
+                    "surface": "README.md",
+                    "claim_text_or_pattern": "Python runner",
+                    "classification": "implemented-control",
+                    "status": "pass",
+                    "evidence": ["speckit-pro/speckit_pro_runner/runtime.py"],
+                }
+            ],
+            runner_invocations=[
+                {
+                    "request_id": "runner",
+                    "product": "codex",
+                    "platform": "macos",
+                    "surface_path": "speckit-pro/codex-skills/speckit-status/SKILL.md",
+                    "operation": "status",
+                    "interpreter_resolution": {"accepted": True},
+                    "invocation": {"argv": ["python3", "-m", "speckit_pro_runner"], "shell_used": False},
+                    "runner_request": {"operation": "runtime-info", "mode": "read_only", "inputs": {}},
+                    "runner_response": {"status": "ok"},
+                    "status": "pass",
+                    "diagnostics": [],
+                }
+            ],
+            traceability=[{"requirement_id": "FR-006", "changed_files": ["README.md"], "verification_evidence": ["test"]}],
+        )
+        uat_check = next(check for check in duplicate_uat_checks if check["check_id"] == "uat-matrix")
+        self.assertTrue(uat_check["blocking"])
+        self.assertIn("duplicate_rows=claude:windows", uat_check["evidence"])
 
     def test_run_default_suite_aggregates_success_stdout_stderr_and_exit_behavior(self) -> None:
         request = gate_request(

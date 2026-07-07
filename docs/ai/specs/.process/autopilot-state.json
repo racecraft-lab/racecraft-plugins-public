@@ -1,32 +1,31 @@
 {
-  "workflow_file": "docs/ai/specs/.process/XPLAT-007-workflow.md",
-  "feature_dir": "specs/xplat-007-python-tooling-and-release-gate-migration",
-  "feature_branch": "codex/xplat-007-python-tooling-and-release-gate-migration",
-  "updated_at": "2026-07-05T19:07:05Z",
+  "workflow_file": "docs/ai/specs/.process/XPLAT-008-workflow.md",
+  "feature_dir": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate",
+  "feature_branch": "codex/xplat-008-claude-codex-cutover-universal-install-release-gate",
+  "updated_at": "2026-07-05T23:10:15Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Post-merge archive cleanup applied",
+  "active_step": "Phase 7: Implement - Slice 3 native UAT/update/repair",
   "archive_sweep": {
     "archive_extension_installed": true,
-    "cleanup_mode": "post-merge-apply",
-    "current_target": null,
-    "excluded_current_spec": null,
-    "eligible_previous_specs": [
-      "specs/xplat-007-python-tooling-and-release-gate-migration"
+    "cleanup_mode": "feature-branch-sweep-static",
+    "current_target": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate",
+    "excluded_current_spec": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate",
+    "eligible_previous_specs": [],
+    "active_specs_inventory": [
+      "specs/xplat-008-claude-codex-cutover-universal-install-release-gate"
     ],
-    "active_specs_inventory": [],
-    "safeToApplyCleanup": true,
-    "cleanupApplied": true,
-    "notes": "Post-merge cleanup archived XPLAT-007 after PRs #284-#287 merged; process workflow/design files remain preserved under docs/ai/specs/.process/.",
-    "archived_spec": "specs/xplat-007-python-tooling-and-release-gate-migration",
-    "archive_report": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
+    "safeToApplyCleanup": false,
+    "cleanupApplied": false,
+    "notes": "Archive extension is installed and enabled. Static startup sweep found only the current XPLAT-008 active spec, so no prior active spec is eligible for archival or cleanup in this run."
   },
   "preflight": {
     "model": "gpt-5.5 available for required installed Codex subagents",
     "model_reasoning_effort": "xhigh for required executor subagents",
+    "current_model_verification": "No parent-session model introspection tool is exposed; installed phase/custom agents advertise gpt-5.5/xhigh in the runtime tool schema.",
     "codex_agent_install": "validate-agent-install.sh --surface codex --autoheal passed with 10 bundled agents installed",
     "check_prerequisites": {
       "all_pass": true,
-      "branch": "codex/xplat-007-python-tooling-and-release-gate-migration",
+      "branch": "codex/xplat-008-claude-codex-cutover-universal-install-release-gate",
       "is_worktree": true,
       "on_feature_branch": false,
       "specify_version": "0.11.8",
@@ -63,7 +62,8 @@
       "speckit-utils": true
     },
     "implementation_agent": "implement-executor",
-    "constitution": "Racecraft Plugins Public Constitution 1.1.0 read during preflight"
+    "branch_refresh": "Rebased XPLAT-008 branch onto origin/main fd2d94af before phase execution.",
+    "constitution": "Racecraft Plugins Public Constitution 1.1.0 available for phase validation."
   },
   "plan": [
     {
@@ -76,1018 +76,165 @@
     },
     {
       "step": "Phase 1: Specify",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Active Gate Inventory And Ownership",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Active Gate Inventory And Ownership Consensus",
       "status": "completed",
-      "skipped": "No unresolved items reported by clarify-executor"
+      "summary": "Generated spec.md with 4 user stories, 22 functional requirements, 12 acceptance scenarios, 8 success criteria, and 0 active NEEDS CLARIFICATION markers."
     },
     {
-      "step": "Phase 2: Clarify - Runner Command Surface And Promotion Rules",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Runner Command Surface And Promotion Rules Consensus",
+      "step": "Phase 2: Clarify - Active Surface Inventory",
       "status": "completed",
-      "skipped": "No unresolved items reported by clarify-executor"
+      "summary": "Accepted 5 clarification answers covering active surface scope, direct runner invocation, payload manifest source, UAT matrix path, and bounded autoheal."
     },
     {
-      "step": "Phase 2: Clarify - No-Shell Guard And Legacy Cleanup",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - No-Shell Guard And Legacy Cleanup Consensus",
+      "step": "Phase 2: Clarify - Active Surface Inventory Consensus",
       "status": "completed",
-      "skipped": "No unresolved items reported by clarify-executor"
+      "summary": "Consensus refined interpreter discovery and confirmed bounded manifest/checksum-backed real-cache autoheal only."
     },
     {
-      "step": "Phase 2: Clarify - Payload, Install, Release, And Platform Proof",
-      "status": "completed"
+      "step": "Phase 2: Clarify - Payload, Release, and Trust Contract",
+      "status": "completed",
+      "summary": "Accepted source-derived Claude/Codex payload inventories, temporary rebuild comparison against committed dist outputs, blocking version consistency, seeded release blockers, and implemented-only public trust/support claims."
     },
     {
-      "step": "Phase 2: Clarify - Payload, Install, Release, And Platform Proof Consensus",
-      "status": "completed"
+      "step": "Phase 2: Clarify - Payload, Release, and Trust Contract Consensus",
+      "status": "completed",
+      "summary": "Three-way consensus accepted the allow/deny list for public trust claims and denied stronger assurances unless separately implemented and evidenced."
+    },
+    {
+      "step": "Phase 2: Clarify - UAT, Update, and Autoheal",
+      "status": "completed",
+      "summary": "Accepted a feature-local UAT matrix plus optional detail files, six Claude/Codex by platform rows, required install-to-repair fields, structured matrix fill-state gating, prior interpreter discovery order with diagnostics, and checksum-backed repair boundaries."
+    },
+    {
+      "step": "Phase 2: Clarify - UAT, Update, and Autoheal Consensus",
+      "status": "completed",
+      "summary": "Three-way consensus confirmed a structured six-row native UAT matrix gate and bounded checksum-backed installed-cache repair only; checksum repair is integrity/completeness repair, not signing, provenance, SLSA, or cryptographic trust-chain evidence."
     },
     {
       "step": "Phase 3: Plan",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Integration",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Integration Consensus",
       "status": "completed",
-      "skipped": "No unresolved items reported by checklist-executor"
+      "summary": "Generated plan.md, research.md, data-model.md, quickstart.md, and five JSON contracts for runner invocation, payload completeness, release-readiness, UAT matrix, and install health/repair; G3 passed with zero unresolved markers."
     },
     {
-      "step": "Phase 4: Checklist - Reliability",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Reliability Consensus",
+      "step": "Phase 4: Checklist - integration",
       "status": "completed",
-      "skipped": "No unresolved items reported by checklist-executor"
+      "summary": "Generated 20-item integration checklist, found and remediated one scope gap by adding root README.md and speckit-pro/README.md to public install/update guidance scope."
     },
     {
-      "step": "Phase 4: Checklist - Security",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Security Consensus",
+      "step": "Phase 4: Checklist - integration Consensus",
       "status": "completed",
-      "skipped": "No unresolved items reported by checklist-executor"
+      "summary": "Codebase consensus agreed the README scope remediation is necessary and should remain limited to active public install/update/trust/support claims."
     },
     {
-      "step": "Phase 4: Checklist - Release-Readiness",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Release-Readiness Consensus",
+      "step": "Phase 4: Checklist - security",
       "status": "completed",
-      "skipped": "No unresolved items reported by checklist-executor"
+      "summary": "Generated 20-item security checklist covering XPLAT-003 trust metadata, bounded autoheal, and public claim limits; found 0 gaps."
+    },
+    {
+      "step": "Phase 4: Checklist - security Consensus",
+      "status": "completed",
+      "summary": "Domain consensus found one narrow schema gap; install-health-repair schema now machine-binds trusted autoheal to source identity, release channel/tag, expected digest, safe paths, and unsafe manual remediation."
+    },
+    {
+      "step": "Phase 4: Checklist - reliability",
+      "status": "completed",
+      "summary": "Generated 20-item reliability checklist covering interpreter discovery, update, doctor/autoheal, and native UAT evidence; found 0 gaps."
+    },
+    {
+      "step": "Phase 4: Checklist - reliability Consensus",
+      "status": "completed",
+      "summary": "Codebase consensus found no missed reliability gap across interpreter diagnostics, update proof, doctor/autoheal outcomes, native UAT rows, or installed-cache failure messaging."
+    },
+    {
+      "step": "Phase 4: Checklist - release-readiness",
+      "status": "completed",
+      "summary": "Generated 20-item release-readiness checklist covering payload completeness, UAT fill state, public claims, final blockers, and traceability; found 0 gaps."
+    },
+    {
+      "step": "Phase 4: Checklist - release-readiness Consensus",
+      "status": "completed",
+      "summary": "Spec-context consensus found no missed pre-Tasks release blocker across payload completeness, stale metadata, public claims, UAT matrix, update/repair evidence, PR traceability, or nondeterministic/stale dist output."
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "completed"
+      "status": "completed",
+      "summary": "Generated tasks.md with 47 tasks across 4 phases, 15 parallel-safe tasks, US1-US4 coverage, G5 pass, and atomicity route one-navigable-PR/releasable true."
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "completed"
+      "status": "completed",
+      "summary": "Analyze remediated five drift findings: exact UAT row enforcement, structured release-readiness evidence, payload expected/actual field alignment, hyphenated runner operation IDs, and canonical runner invocation/UAT linkage alignment."
     },
     {
       "step": "Phase 6: Analyze - Consensus",
       "status": "completed",
-      "skipped": "No unresolved items reported by analyze-executor"
+      "summary": "Final codebase consensus confirmed no remaining schema/model drift across release-readiness, UAT matrix, runner invocation, and data model contracts."
     },
     {
       "step": "Phase 6.5: Confidence Gate",
       "status": "completed",
-      "no_data": true
+      "summary": "Advisory confidence gate passed: composite 0.93 >= 0.90, lowest criterion risk assessment 0.91, recommended action proceed."
     },
     {
-      "step": "Phase 7: Implement - foundation (T001-T013)",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 7: Implement - us1 (T014-T028)",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 7: Implement - us2 (T029-T050)",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 7: Implement - us3 (T051-T065)",
+      "step": "Phase 7: Implement - Slice 1 active installed-runtime cutover",
       "status": "completed",
-      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
+      "summary": "Completed T001-T012: active runtime inventory, runner invocation fixtures, active-runtime guard fixtures, installed-cache interpreter discovery, argv-only runner invocation, Claude/Codex skill and hook guidance updates, registry entries, refreshed runner manifest/checksum metadata, and focused verification."
     },
     {
-      "step": "Phase 7: Implement - validation (T066-T075)",
+      "step": "Phase 7: Implement - Slice 2 payload and release gates",
       "status": "completed",
-      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
+      "summary": "Completed T013-T027: source-derived payload completeness and release-readiness fixtures, payload-completeness and release-readiness runner gates, regenerated Claude/Codex payloads through the apply-mode runner request, public README/docs claim alignment, refreshed runner metadata, and focused verification including Layer 4 gates, payload completeness, release-readiness, and docs validation."
+    },
+    {
+      "step": "Phase 7: Implement - Slice 3 native UAT/update/repair",
+      "status": "in_progress"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "archived",
-      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
+      "status": "pending"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "archived",
-      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
+      "status": "pending"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "archived",
-      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
+      "status": "pending"
     },
     {
       "step": "Post: Code Review",
-      "status": "archived",
-      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
+      "status": "pending"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "archived",
-      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
+      "status": "pending"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "archived",
-      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
+      "status": "pending"
     },
     {
       "step": "Post: Self-Review",
-      "status": "archived",
-      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
+      "status": "pending"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "archived",
-      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
+      "status": "pending"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "archived",
-      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
+      "status": "pending"
     },
     {
       "step": "Post: PR Creation",
-      "status": "archived",
-      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
+      "status": "pending"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "archived",
-      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
+      "status": "pending"
     },
     {
       "step": "Post: Retrospective",
-      "status": "archived",
-      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
+      "status": "pending"
     }
-  ],
-  "phase_results": {
-    "archive_sweep": {
-      "status": "completed",
-      "outcome": "No previously merged active specs found; current XPLAT-007 target excluded."
-    },
-    "preflight": {
-      "status": "completed",
-      "commands": [
-        "bash speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh docs/ai/specs/.process/XPLAT-007-workflow.md",
-        "bash speckit-pro/skills/speckit-autopilot/scripts/validate-agent-install.sh --surface codex --autoheal",
-        "bash speckit-pro/skills/speckit-autopilot/scripts/detect-commands.sh",
-        "bash speckit-pro/skills/speckit-autopilot/scripts/detect-presets.sh",
-        "bash speckit-pro/skills/speckit-autopilot/scripts/resolve-confidence-mode.sh -- docs/ai/specs/.process/XPLAT-007-workflow.md"
-      ]
-    },
-    "specify": {
-      "status": "completed",
-      "completed_at": "2026-07-04T16:48:02Z",
-      "files_created": [
-        "specs/xplat-007-python-tooling-and-release-gate-migration/spec.md",
-        "specs/xplat-007-python-tooling-and-release-gate-migration/checklists/requirements.md"
-      ],
-      "functional_requirements": 18,
-      "user_stories": 3,
-      "acceptance_scenarios": 7,
-      "success_criteria": 7,
-      "requirements_checklist": "16/16 complete",
-      "g1_gate": {
-        "pass": true,
-        "markers": 0
-      },
-      "validation": [
-        "bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G1 specs/xplat-007-python-tooling-and-release-gate-migration",
-        "rg -n \"NEEDS CLARIFICATION|\\\\[Gap\\\\]|\\\\[CRITICAL\\\\]\" specs/xplat-007-python-tooling-and-release-gate-migration/spec.md specs/xplat-007-python-tooling-and-release-gate-migration/checklists/requirements.md",
-        "git diff --check"
-      ],
-      "outcome": "Generated XPLAT-007 spec and requirements checklist with explicit XPLAT-008 boundaries and zero clarification, gap, or critical markers."
-    },
-    "clarify": {
-      "active_gate_inventory_and_ownership": {
-        "status": "completed",
-        "completed_at": "2026-07-04T16:53:45Z",
-        "questions_resolved": 5,
-        "consensus": "skipped: clarify-executor reported no unresolved items",
-        "outcome": "Accepted invocation-role taxonomy: active runner/workflow/release/helper entrypoints are XPLAT-007 gates; fixtures and Bash-reference manifests are temporary parity evidence; installed Claude/Codex invocation cutover remains XPLAT-008.",
-        "artifact_updates": [
-          "specs/xplat-007-python-tooling-and-release-gate-migration/spec.md",
-          "docs/ai/specs/.process/XPLAT-007-workflow.md"
-        ]
-      },
-      "runner_command_surface_and_promotion_rules": {
-        "status": "completed",
-        "completed_at": "2026-07-04T16:58:46Z",
-        "questions_resolved": 5,
-        "consensus": "skipped: clarify-executor reported no unresolved items",
-        "outcome": "Accepted python -m speckit_pro_runner JSON-envelope operations as the authoritative active gate surface, with standalone Python limited to non-authoritative harnesses or justified wrappers; runner stream/exit semantics, promotion records, mutable command modes, and Bash retirement rules are now explicit.",
-        "artifact_updates": [
-          "specs/xplat-007-python-tooling-and-release-gate-migration/spec.md",
-          "docs/ai/specs/.process/XPLAT-007-workflow.md"
-        ],
-        "source_note": "Runner contract files are __main__.py, envelope.py, runtime.py, and helpers/registry.py; cli.py and contracts.py are not present in this worktree."
-      },
-      "no_shell_guard_and_legacy_cleanup": {
-        "status": "completed",
-        "completed_at": "2026-07-04T17:03:00Z",
-        "questions_resolved": 5,
-        "consensus": "skipped: clarify-executor reported no unresolved items",
-        "outcome": "Accepted classified active-path guard behavior: scan tracked text, fail only active repo-local gate/release paths for shell-specific dependencies, allow workflow shell only as Python-gate dispatch glue, classify archive/provenance and consumer helpers as nonblocking unless reachable, and emit runner JSON-envelope findings.",
-        "artifact_updates": [
-          "specs/xplat-007-python-tooling-and-release-gate-migration/spec.md",
-          "docs/ai/specs/.process/XPLAT-007-workflow.md"
-        ]
-      },
-      "payload_install_release_and_platform_proof": {
-        "status": "completed",
-        "completed_at": "2026-07-04T17:09:40Z",
-        "questions_resolved": 5,
-        "consensus": "Round 1 [spec] high-confidence resolution by spec-context-analyst for platform proof boundary",
-        "outcome": "Accepted isolated test payload evidence only, fixture/stubbed local refresh and install verification, runner-based plugin release-readiness gates, active maintainer-doc updates only, and source-checkout platform proof only. Installed-cache launch proof and native UAT remain XPLAT-008.",
-        "artifact_updates": [
-          "specs/xplat-007-python-tooling-and-release-gate-migration/spec.md",
-          "docs/ai/specs/.process/XPLAT-007-workflow.md"
-        ],
-        "consensus_resolution": {
-          "item": "Q5 platform proof boundary versus older XPLAT-004 fixture wording",
-          "categories": [
-            "spec"
-          ],
-          "round": 1,
-          "outcome": "high-confidence",
-          "analysts_used": [
-            "spec-context-analyst"
-          ],
-          "resolution": "XPLAT-007 requires source-checkout proof only; older fixture wording is superseded or annotated if touched, and installed-cache/native UAT remains XPLAT-008."
-        }
-      }
-    },
-    "plan": {
-      "status": "completed",
-      "completed_at": "2026-07-04T17:25:06Z",
-      "files_created": [
-        "specs/xplat-007-python-tooling-and-release-gate-migration/plan.md",
-        "specs/xplat-007-python-tooling-and-release-gate-migration/research.md",
-        "specs/xplat-007-python-tooling-and-release-gate-migration/data-model.md",
-        "specs/xplat-007-python-tooling-and-release-gate-migration/quickstart.md",
-        "specs/xplat-007-python-tooling-and-release-gate-migration/contracts/active-path-guard-result.schema.json",
-        "specs/xplat-007-python-tooling-and-release-gate-migration/contracts/install-verification-result.schema.json",
-        "specs/xplat-007-python-tooling-and-release-gate-migration/contracts/migrated-gate-request.schema.json",
-        "specs/xplat-007-python-tooling-and-release-gate-migration/contracts/migrated-gate-result.schema.json",
-        "specs/xplat-007-python-tooling-and-release-gate-migration/contracts/payload-evidence.schema.json",
-        "specs/xplat-007-python-tooling-and-release-gate-migration/contracts/promotion-record.schema.json",
-        "specs/xplat-007-python-tooling-and-release-gate-migration/contracts/release-readiness-result.schema.json"
-      ],
-      "files_modified": [
-        "CLAUDE.md",
-        "specs/xplat-007-python-tooling-and-release-gate-migration/SPEC-MOC.md",
-        "docs/ai/specs/.process/XPLAT-007-workflow.md",
-        "docs/ai/specs/.process/autopilot-state.json"
-      ],
-      "declared_file_operations": {
-        "new": 17,
-        "modified": 7,
-        "total_entries": 24
-      },
-      "research_decisions": 9,
-      "contract_schemas": 7,
-      "reviewability_estimate": {
-        "status": "pass",
-        "projected": 0,
-        "declared_files_total": 24
-      },
-      "g3_gate": {
-        "pass": true,
-        "markers": 0
-      },
-      "validation": [
-        "bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G3 specs/xplat-007-python-tooling-and-release-gate-migration",
-        "bash speckit-pro/skills/speckit-autopilot/scripts/estimate-reviewable-loc.sh specs/xplat-007-python-tooling-and-release-gate-migration/plan.md",
-        "python3 -m json.tool for each schema in specs/xplat-007-python-tooling-and-release-gate-migration/contracts",
-        "rg -n \"NEEDS CLARIFICATION|\\\\[Gap\\\\]|\\\\[CRITICAL\\\\]\" specs/xplat-007-python-tooling-and-release-gate-migration/plan.md specs/xplat-007-python-tooling-and-release-gate-migration/research.md specs/xplat-007-python-tooling-and-release-gate-migration/data-model.md specs/xplat-007-python-tooling-and-release-gate-migration/quickstart.md specs/xplat-007-python-tooling-and-release-gate-migration/contracts",
-        "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .",
-        "bash tests/speckit-pro/layer1-structural/validate-moc-stale-index.sh specs",
-        "git diff --check"
-      ],
-      "outcome": "Generated the technical plan, research, data model, seven contract schemas, quickstart, CLAUDE context update, and refreshed SPEC-MOC backlinks. The plan keeps XPLAT-007 as one workflow with three internal slices and preserves XPLAT-008 cutover boundaries."
-    },
-    "checklist": {
-      "integration": {
-        "status": "completed",
-        "completed_at": "2026-07-04T17:30:41Z",
-        "items": 28,
-        "gaps_found": 0,
-        "gaps_remediated": 0,
-        "gaps_remaining": 0,
-        "consensus": "skipped: checklist-executor reported no unresolved items",
-        "artifact_updates": [
-          "specs/xplat-007-python-tooling-and-release-gate-migration/checklists/integration.md",
-          "docs/ai/specs/.process/XPLAT-007-workflow.md"
-        ],
-        "validation": [
-          "rg -c \"^- \\\\[x\\\\] CHK\" specs/xplat-007-python-tooling-and-release-gate-migration/checklists/integration.md",
-          "bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh gaps specs/xplat-007-python-tooling-and-release-gate-migration",
-          "git diff --check"
-        ],
-        "outcome": "Integration checklist found complete coverage across active gate migration scope, runner contract reuse, prior XPLAT contract reuse, suite/eval/parity/promotion flow, payload/install/release-readiness integration, active-path guard behavior, and XPLAT-008 boundaries."
-      },
-      "reliability": {
-        "status": "completed",
-        "completed_at": "2026-07-04T17:33:31Z",
-        "items": 30,
-        "gaps_found": 0,
-        "gaps_remediated": 0,
-        "gaps_remaining": 0,
-        "consensus": "skipped: checklist-executor reported no unresolved items",
-        "artifact_updates": [
-          "specs/xplat-007-python-tooling-and-release-gate-migration/checklists/reliability.md",
-          "docs/ai/specs/.process/XPLAT-007-workflow.md"
-        ],
-        "validation": [
-          "rg -c \"^- \\\\[x\\\\] CHK\" specs/xplat-007-python-tooling-and-release-gate-migration/checklists/reliability.md",
-          "bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh gaps specs/xplat-007-python-tooling-and-release-gate-migration",
-          "git diff --check"
-        ],
-        "outcome": "Reliability checklist found complete coverage across golden fixtures, Bash-reference comparison, deterministic runner output, exit codes, stderr diagnostics, artifact paths, test payload evidence, source-checkout macOS smoke, platform/path edge cases, CI/local dispatch differences, promotion records, and Bash-reference retirement evidence."
-      },
-      "security": {
-        "status": "completed",
-        "completed_at": "2026-07-04T17:37:23Z",
-        "items": 25,
-        "gaps_found": 0,
-        "gaps_remediated": 0,
-        "gaps_remaining": 0,
-        "consensus": "skipped: checklist-executor reported no unresolved items",
-        "artifact_updates": [
-          "specs/xplat-007-python-tooling-and-release-gate-migration/checklists/security.md",
-          "docs/ai/specs/.process/XPLAT-007-workflow.md"
-        ],
-        "validation": [
-          "rg -c \"^- \\\\[x\\\\] CHK[0-9]{3}\" specs/xplat-007-python-tooling-and-release-gate-migration/checklists/security.md",
-          "bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh gaps specs/xplat-007-python-tooling-and-release-gate-migration",
-          "git diff --check"
-        ],
-        "outcome": "Security checklist found complete coverage across no-shell subprocess safety, bounded writes, active-path guard scope, fixture-bound install and payload boundaries, release/install safety, public-claim controls, and XPLAT-008 cutover boundaries."
-      },
-      "release_readiness": {
-        "status": "completed",
-        "completed_at": "2026-07-04T17:41:27Z",
-        "items": 28,
-        "gaps_found": 0,
-        "gaps_remediated": 0,
-        "gaps_remaining": 0,
-        "consensus": "skipped: checklist-executor reported no unresolved items",
-        "artifact_updates": [
-          "specs/xplat-007-python-tooling-and-release-gate-migration/checklists/release-readiness.md",
-          "docs/ai/specs/.process/XPLAT-007-workflow.md",
-          "specs/xplat-007-python-tooling-and-release-gate-migration/SPEC-MOC.md"
-        ],
-        "validation": [
-          "bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh gaps specs/xplat-007-python-tooling-and-release-gate-migration",
-          "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .",
-          "bash tests/speckit-pro/layer1-structural/validate-moc-stale-index.sh specs",
-          "git diff --check"
-        ],
-        "outcome": "Release-readiness checklist found complete coverage across Python-authoritative release checks, marketplace/version sync, payload evidence, install verification, active-path no-shell guardrails, release blockers, and XPLAT-008 handoff boundaries."
-      }
-    },
-    "tasks": {
-      "status": "completed",
-      "completed_at": "2026-07-04T17:47:59Z",
-      "files_created": [
-        "specs/xplat-007-python-tooling-and-release-gate-migration/tasks.md"
-      ],
-      "files_modified": [
-        "docs/ai/specs/.process/XPLAT-007-workflow.md",
-        "specs/xplat-007-python-tooling-and-release-gate-migration/SPEC-MOC.md"
-      ],
-      "total_tasks": 75,
-      "phases": 6,
-      "parallel_opportunities": "9 [P] tasks plus documented fixture/docs opportunities",
-      "user_stories_covered": "3 of 3",
-      "atomicity_route": {
-        "route": "one-navigable-PR",
-        "releasable": true,
-        "signals": [
-          "change-shape:modify-heavy"
-        ],
-        "hints": [
-          "hint:release-cadence:weak"
-        ],
-        "warnings": []
-      },
-      "g5_gate": {
-        "pass": true,
-        "markers": 0,
-        "task_count": 75
-      },
-      "validation": [
-        "bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G5 specs/xplat-007-python-tooling-and-release-gate-migration",
-        "bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/xplat-007-python-tooling-and-release-gate-migration",
-        "rg -n \"NEEDS CLARIFICATION|\\\\[Gap\\\\]|\\\\[CRITICAL\\\\]\" specs/xplat-007-python-tooling-and-release-gate-migration/tasks.md",
-        "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .",
-        "bash tests/speckit-pro/layer1-structural/validate-moc-stale-index.sh specs",
-        "git diff --check"
-      ],
-      "outcome": "Generated 75 implementation tasks across setup, foundational runner contracts, three user-story slices, and cross-cutting validation. The task plan preserves the accepted one-navigable-PR route with a split checkpoint after US1 if implementation expands beyond the planned envelope."
-    },
-    "analyze": {
-      "status": "completed",
-      "completed_at": "2026-07-04T17:55:19Z",
-      "findings": {
-        "total": 4,
-        "critical": 0,
-        "high": 1,
-        "medium": 2,
-        "low": 1
-      },
-      "remediations": [
-        "A1 HIGH: specified changed-plugin detection, suite aggregation, release-PR payload-sync parsing, and post-release drift checks in plan/tasks/quickstart.",
-        "A2 MEDIUM: added source-checkout preflight smoke coverage alongside runtime-info after runner manifest/checksum updates.",
-        "A3 MEDIUM: added CLAUDE.md to maintainer-facing repo-local documentation scope and PR packet evidence.",
-        "A4 LOW: narrowed public docs wording to public install/runtime docs, platform-support claim docs, and release notes."
-      ],
-      "consensus": "skipped: analyze-executor reported no unresolved items",
-      "artifact_updates": [
-        "docs/ai/specs/.process/XPLAT-007-workflow.md",
-        "specs/xplat-007-python-tooling-and-release-gate-migration/spec.md",
-        "specs/xplat-007-python-tooling-and-release-gate-migration/plan.md",
-        "specs/xplat-007-python-tooling-and-release-gate-migration/tasks.md",
-        "specs/xplat-007-python-tooling-and-release-gate-migration/quickstart.md"
-      ],
-      "g6_gate": {
-        "pass": true,
-        "markers": 0
-      },
-      "validation": [
-        "bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh findings specs/xplat-007-python-tooling-and-release-gate-migration",
-        "bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G6 specs/xplat-007-python-tooling-and-release-gate-migration",
-        "python3 -m json.tool for each schema in specs/xplat-007-python-tooling-and-release-gate-migration/contracts",
-        "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .",
-        "bash tests/speckit-pro/layer1-structural/validate-moc-stale-index.sh specs",
-        "git diff --check",
-        "PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/smoke-runtime-info-request.json",
-        "preflight runner smoke via python -m speckit_pro_runner"
-      ],
-      "outcome": "Analyze resolved four non-critical drift or coverage issues before implementation. No critical/high findings remain after remediation, no consensus items remain, and source-checkout runtime-info plus preflight smoke checks pass."
-    },
-    "confidence_gate": {
-      "status": "completed",
-      "completed_at": "2026-07-04T17:56:17Z",
-      "mode": "advisory",
-      "threshold": 0.9,
-      "exit_code": 1,
-      "result": "no_data",
-      "recommended_action": "soft_skip",
-      "command": "bash speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh docs/ai/specs/.process/XPLAT-007-workflow.md --threshold 0.90 --mode advisory",
-      "outcome": "No synthesizer confidence emit was present in the workflow file. Advisory mode records the no-data soft-skip and proceeds to implementation."
-    },
-    "implementation": {
-      "status": "completed_archived",
-      "markers": {
-        "foundation": {
-          "status": "completed",
-          "commit_sha": "2b7158daf837402fb364d46af71ccaebb8981448",
-          "completed_at": "2026-07-04T18:17:39Z",
-          "task_range": "T001-T013",
-          "evidence_path": "specs/xplat-007-python-tooling-and-release-gate-migration/.process/marker-plan/foundation-checkpoint.json"
-        },
-        "us1": {
-          "status": "completed",
-          "commit_sha": "b3ae3c52e77988f01ec3534b72b3beb45a0b31fa",
-          "completed_at": "2026-07-04T18:52:23Z",
-          "task_range": "T014-T028",
-          "evidence_path": "specs/xplat-007-python-tooling-and-release-gate-migration/.process/marker-plan/us1-checkpoint.json",
-          "outcome": "Python-authoritative suite gates, request fixtures, promotion records, and quickstart updates are complete."
-        },
-        "us2": {
-          "status": "completed",
-          "commit_sha": "692afc3b03d20206b630c505545abc1f1c7453d3",
-          "completed_at": "2026-07-04T19:23:04Z",
-          "task_range": "T029-T050",
-          "evidence_path": "specs/xplat-007-python-tooling-and-release-gate-migration/.process/marker-plan/us2-checkpoint.json",
-          "outcome": "Python-authoritative payload evidence, install verification, and release-readiness gates are complete; native installed-plugin and release-payload cutover remain XPLAT-008 handoff items."
-        },
-        "us3": {
-          "status": "completed",
-          "task_range": "T051-T065",
-          "commit_sha": "0ff2d8d731698cde02b334cdc3b2a377216b5d45",
-          "completed_at": "2026-07-05T18:57:01Z",
-          "outcome": "Active-path guardrails and no-shell review surface merged in PR #287."
-        },
-        "validation": {
-          "status": "completed",
-          "task_range": "T066-T075",
-          "completed_at": "2026-07-05T18:57:01Z",
-          "outcome": "Validation evidence merged across PRs #284-#287; post-merge archive verification recorded in archive report."
-        }
-      },
-      "latest_validation": [
-        {
-          "command": "python3 -m py_compile speckit-pro/speckit_pro_runner/gates/payloads.py speckit-pro/speckit_pro_runner/gates/release.py speckit-pro/speckit_pro_runner/gates/registry.py speckit-pro/speckit_pro_runner/runtime.py",
-          "result": "passed"
-        },
-        {
-          "command": "python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py",
-          "result": "22/22 passed"
-        },
-        {
-          "command": "python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py",
-          "result": "9/9 passed"
-        },
-        {
-          "command": "PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/test-payload-evidence.json",
-          "result": "status ok; exit_code 0"
-        },
-        {
-          "command": "PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/install-verification.json",
-          "result": "status ok; exit_code 0"
-        },
-        {
-          "command": "PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness.json",
-          "result": "status ok; exit_code 0"
-        },
-        {
-          "command": "python3 -m json.tool for each schema in specs/xplat-007-python-tooling-and-release-gate-migration/contracts",
-          "result": "7 schemas parsed"
-        },
-        {
-          "command": "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .",
-          "result": "index current"
-        },
-        {
-          "command": "bash tests/speckit-pro/layer1-structural/validate-moc-stale-index.sh specs",
-          "result": "passed"
-        },
-        {
-          "command": "bash tests/speckit-pro/run-all.sh --layer 4",
-          "result": "2160/2160 passed"
-        },
-        {
-          "command": "git diff --check",
-          "result": "passed"
-        },
-        {
-          "command": "bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G7 specs/xplat-007-python-tooling-and-release-gate-migration",
-          "result": "expected incomplete: 50/75 tasks done; 25 tasks incomplete"
-        }
-      ],
-      "archive_cleanup": {
-        "status": "completed_archived",
-        "archive_report": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md",
-        "cleanup_applied": true
-      }
-    }
-  },
-  "pr_marker_plan": {
-    "schema_version": "pr-marker-plan.v1",
-    "kind": "pr_marker_plan",
-    "feature_id": "xplat-007-python-tooling-and-release-gate-migration",
-    "status": "planned",
-    "source_fingerprint": {
-      "feature_spec_sha": "5aee7bde6b4ced83500dc5fd40f7adedbe106a1e2a1007daed43f434159aa382",
-      "plan_declared_scope_sha": "c8bf742590eb6644f93e2f38812237f4d5d76d64896203686b7fbb90b9eac468",
-      "tasks_sha": "da587566f3230f9951d60108ac56b7ea2a7d6e868321689b9e22ef28424b498d",
-      "reviewability_sha": "d48d218c423be02574df96ba3a15b9f09addc29af7855f938ec1a9a753f777fc",
-      "hazard_route_sha": "cd814db7ea0c124c10b53bed28ffac9c4288c63a419fb78e15f182b5d7ac7772"
-    },
-    "markers": [
-      {
-        "id": "foundation",
-        "review_order": 1,
-        "kind": "foundation",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "Foundation",
-          "story_id": null,
-          "start_task_id": "T001",
-          "end_task_id": "T013"
-        },
-        "task_ids": [
-          "T001",
-          "T002",
-          "T003",
-          "T004",
-          "T005",
-          "T006",
-          "T007",
-          "T008",
-          "T009",
-          "T010",
-          "T011",
-          "T012",
-          "T013"
-        ],
-        "folded_polish_task_ids": [],
-        "folded_polish_target_reason": "",
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/gates/__init__.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/gates/active_path_guard.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/gates/payloads.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/gates/registry.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/gates/release.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/gates/suite.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/runtime.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "specs/xplat-007-python-tooling-and-release-gate-migration/tasks.md"
-          }
-        ],
-        "declared_tests": [
-          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json",
-          "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py"
-        ],
-        "reviewability": {
-          "status": "block",
-          "mode": "tasks",
-          "scope": "foundation",
-          "evidence_path": ""
-        },
-        "hazards": [
-          "change-shape:modify-heavy"
-        ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "complete",
-          "evidence_path": "specs/xplat-007-python-tooling-and-release-gate-migration/.process/marker-plan/foundation-checkpoint.json",
-          "commit_sha": "2b7158daf837402fb364d46af71ccaebb8981448",
-          "head_sha": "2b7158daf837402fb364d46af71ccaebb8981448",
-          "completed_at": "2026-07-04T18:17:39Z"
-        },
-        "emission_mapping": {
-          "status": "pending"
-        },
-        "warnings": []
-      },
-      {
-        "id": "us1",
-        "review_order": 2,
-        "kind": "user_story",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "User Story 1 - Run Repo-Local Gates Through Python",
-          "story_id": 1,
-          "start_task_id": "T014",
-          "end_task_id": "T028"
-        },
-        "task_ids": [
-          "T014",
-          "T015",
-          "T016",
-          "T017",
-          "T018",
-          "T019",
-          "T020",
-          "T021",
-          "T022",
-          "T023",
-          "T024",
-          "T025",
-          "T026",
-          "T027",
-          "T028"
-        ],
-        "folded_polish_task_ids": [],
-        "folded_polish_target_reason": "",
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/gates/registry.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/gates/suite.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/runtime.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "specs/xplat-007-python-tooling-and-release-gate-migration/quickstart.md"
-          }
-        ],
-        "declared_tests": [
-          "tests/speckit-pro/check-toolchain.sh",
-          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json",
-          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json",
-          "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py",
-          "tests/speckit-pro/run-all.sh"
-        ],
-        "reviewability": {
-          "status": "block",
-          "mode": "tasks",
-          "scope": "us1",
-          "evidence_path": ""
-        },
-        "hazards": [
-          "change-shape:modify-heavy"
-        ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "complete",
-          "evidence_path": "specs/xplat-007-python-tooling-and-release-gate-migration/.process/marker-plan/us1-checkpoint.json",
-          "commit_sha": "b3ae3c52e77988f01ec3534b72b3beb45a0b31fa",
-          "head_sha": "b3ae3c52e77988f01ec3534b72b3beb45a0b31fa",
-          "completed_at": "2026-07-04T18:52:23Z"
-        },
-        "emission_mapping": {
-          "status": "pending"
-        },
-        "warnings": []
-      },
-      {
-        "id": "us2",
-        "review_order": 3,
-        "kind": "user_story",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "User Story 2 - Run Payload, Install, And Release Checks Through Python",
-          "story_id": 2,
-          "start_task_id": "T029",
-          "end_task_id": "T050"
-        },
-        "task_ids": [
-          "T029",
-          "T030",
-          "T031",
-          "T032",
-          "T033",
-          "T034",
-          "T035",
-          "T036",
-          "T037",
-          "T038",
-          "T039",
-          "T040",
-          "T041",
-          "T042",
-          "T043",
-          "T044",
-          "T045",
-          "T046",
-          "T047",
-          "T048",
-          "T049",
-          "T050"
-        ],
-        "folded_polish_task_ids": [],
-        "folded_polish_target_reason": "",
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "scripts/build-plugin-payloads.sh"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "scripts/refresh-local-plugin.sh"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "scripts/sync-marketplace-versions.sh"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/gates/payloads.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/gates/registry.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/gates/release.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/install_inventory.json"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/runtime.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "specs/xplat-007-python-tooling-and-release-gate-migration/quickstart.md"
-          }
-        ],
-        "declared_tests": [
-          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/install-verification-cases.json",
-          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/payload-evidence-cases.json",
-          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json",
-          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/release-readiness-cases.json",
-          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/install-verification.json",
-          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness.json",
-          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/test-payload-evidence.json",
-          "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py"
-        ],
-        "reviewability": {
-          "status": "block",
-          "mode": "tasks",
-          "scope": "us2",
-          "evidence_path": ""
-        },
-        "hazards": [
-          "change-shape:modify-heavy"
-        ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "complete",
-          "evidence_path": "specs/xplat-007-python-tooling-and-release-gate-migration/.process/marker-plan/us2-checkpoint.json",
-          "commit_sha": "692afc3b03d20206b630c505545abc1f1c7453d3",
-          "head_sha": "692afc3b03d20206b630c505545abc1f1c7453d3",
-          "completed_at": "2026-07-04T19:23:04Z"
-        },
-        "emission_mapping": {
-          "status": "pending"
-        },
-        "warnings": []
-      },
-      {
-        "id": "us3",
-        "review_order": 4,
-        "kind": "user_story",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "User Story 3 - Review Active No-Shell Guardrails",
-          "story_id": 3,
-          "start_task_id": "T051",
-          "end_task_id": "T065"
-        },
-        "task_ids": [
-          "T051",
-          "T052",
-          "T053",
-          "T054",
-          "T055",
-          "T056",
-          "T057",
-          "T058",
-          "T059",
-          "T060",
-          "T061",
-          "T062",
-          "T063",
-          "T064",
-          "T065"
-        ],
-        "folded_polish_task_ids": [],
-        "folded_polish_target_reason": "",
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": ".github/workflows/pr-checks.yml"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": ".github/workflows/release.yml"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/src/content/docs/contribute-and-release.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "scripts/*.sh"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/gates/active_path_guard.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/gates/registry.py"
-          }
-        ],
-        "declared_tests": [
-          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/active-path-guard-cases.json",
-          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/active-path-guard.json",
-          "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py"
-        ],
-        "reviewability": {
-          "status": "block",
-          "mode": "tasks",
-          "scope": "us3",
-          "evidence_path": ""
-        },
-        "hazards": [
-          "change-shape:modify-heavy"
-        ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "pending"
-        },
-        "emission_mapping": {
-          "status": "pending"
-        },
-        "warnings": []
-      }
-    ],
-    "warnings": [
-      {
-        "code": "reviewability_size_warning",
-        "severity": "warning",
-        "message": "Reviewability sizing result is marker-planning input.",
-        "source": "reviewability",
-        "details": {
-          "status": "block",
-          "mode": "tasks",
-          "evidence_path": ""
-        }
-      }
-    ]
-  },
-  "current_source_fingerprint": {
-    "feature_spec_sha": "5aee7bde6b4ced83500dc5fd40f7adedbe106a1e2a1007daed43f434159aa382",
-    "plan_declared_scope_sha": "c8bf742590eb6644f93e2f38812237f4d5d76d64896203686b7fbb90b9eac468",
-    "tasks_sha": "da587566f3230f9951d60108ac56b7ea2a7d6e868321689b9e22ef28424b498d",
-    "reviewability_sha": "d48d218c423be02574df96ba3a15b9f09addc29af7855f938ec1a9a753f777fc",
-    "hazard_route_sha": "cd814db7ea0c124c10b53bed28ffac9c4288c63a419fb78e15f182b5d7ac7772"
-  },
-  "status": "completed_archived",
-  "archive_cleanup": {
-    "status": "completed_archived",
-    "archived_spec": "specs/xplat-007-python-tooling-and-release-gate-migration",
-    "archive_report": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md",
-    "cleanup_branch": "codex/xplat-007-archive-cleanup",
-    "cleanup_command": "git rm -r specs/xplat-007-python-tooling-and-release-gate-migration",
-    "cleanup_applied": true,
-    "completed_at": "2026-07-05T19:07:05Z",
-    "merge_commits": {
-      "284": "6c0af6cf6cd53e1569bcb03c9a56d939360a4b24",
-      "285": "cb1697290b8f7cb289d0740e59c899285dc95c33",
-      "286": "a0d2dd015f0a33e85634256061926e5274fdb69a",
-      "287": "0ff2d8d731698cde02b334cdc3b2a377216b5d45"
-    }
-  }
+  ]
 }

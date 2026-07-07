@@ -5,6 +5,14 @@ description: "Install the SpecKit CLI and initialize the current repository for 
 
 # SpecKit Install
 
+## Installed Runtime Contract
+
+Installed Claude and Codex surfaces resolve Python 3.11 or newer, invoke
+`[resolved_python, "-m", "speckit_pro_runner"]`, send one JSON request on
+stdin, read one JSON response from stdout, and surface stderr diagnostics.
+Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
+PowerShell-specific command-language requirement for installed workflows.
+
 ## Scope
 
 Install the official SpecKit CLI (https://github.com/github/spec-kit)
@@ -64,25 +72,13 @@ If the operator does not specify, ask before proceeding.
 
 ### 1. Resolve the SpecKit CLI
 
-```bash
-PATH="${HOME:+$HOME/.local/bin:}/opt/homebrew/bin:/usr/local/bin:${PATH:-}"
-command -v specify >/dev/null 2>&1 && specify --version || echo MISSING
-```
+Use argv-only executable lookup for `specify`. If it is present,
+capture the version (for example, `specify 0.8.13`) and continue.
 
-If the CLI is present, capture the version (e.g., `specify 0.8.13`)
-and continue.
-
-If MISSING, check for `uv`:
-
-```bash
-command -v uv >/dev/null 2>&1 && uv --version || echo NO_UV
-```
-
-If `uv` is present, install:
-
-```bash
-uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
-```
+If the CLI is missing, use argv-only executable lookup for `uv`.
+When `uv` is present, install the official SpecKit CLI by invoking
+the equivalent of `uv tool install specify-cli --from
+git+https://github.com/github/spec-kit.git` without shell parsing.
 
 If `uv` is missing, STOP and tell the operator:
 
@@ -95,17 +91,15 @@ the operator explicitly requests it.
 
 ### 2. Detect existing-install state
 
-```bash
-test -d .specify && echo PRESENT || echo ABSENT
-```
+Use a filesystem directory check for `.specify/` and record the state
+as PRESENT or ABSENT.
 
 If `.specify/` is **PRESENT**:
 
 1. Capture current integrations:
 
-   ```bash
-   specify integration list 2>&1
-   ```
+   Invoke `specify integration list` with argv-only execution and
+   capture stdout and stderr.
 
 2. Tell the operator: "This repo already has SpecKit installed
    (integrations: `<list>`). The right tool for this state is
@@ -148,25 +142,25 @@ For a fresh install (`.specify/` was ABSENT in Step 2):
 1. Pick the operator's first integration key as the bootstrap key.
 2. Run:
 
-   ```bash
+   ```text
    specify init --here --integration <first-key> --script sh
    ```
 
    For Codex with skills mode (the recommended setup in v0.8.13):
 
-   ```bash
+   ```text
    specify init --here --integration codex --integration-options="--skills" --script sh
    ```
 
 3. For each additional integration the operator chose, run:
 
-   ```bash
+   ```text
    specify integration install <key> --script sh
    ```
 
    For Codex with skills mode:
 
-   ```bash
+   ```text
    specify integration install codex --integration-options="--skills" --script sh
    ```
 
@@ -189,12 +183,8 @@ AskUserQuestion picker preset for `/speckit.clarify` and
 `speckit-pro/skills/speckit-coach/references/presets-extensions-guide.md`
 (section: "The curated set").
 
-Check what would change. The script lives at
-`<skill-dir>/../../scripts/install-curated-set.sh`:
-
-```bash
-bash "<skill-dir>/../../scripts/install-curated-set.sh" --mode=check
-```
+Check what would change using the curated-set installer helper in
+check mode.
 
 The script prints one line per entry that would be installed, exits 0
 if everything is already current, exits 2 if work is pending.
@@ -211,10 +201,10 @@ if everything is already current, exits 2 if work is pending.
 
 - If exit code is **2**: tell the operator the check output and ask
   which entries to install. Recommended default is **all**. Then
-  invoke the script in install mode:
+  invoke the curated-set installer helper in install mode:
 
-  - All: `bash "<skill-dir>/../../scripts/install-curated-set.sh" --mode=install`
-  - Subset: `bash "<skill-dir>/../../scripts/install-curated-set.sh" --mode=install --accept=<csv>`
+  - All entries.
+  - A comma-separated accepted subset.
   - None: skip. The operator can run `$speckit-upgrade` later to
     install the curated set on demand.
 
@@ -229,7 +219,7 @@ operator can re-run after the upstream extension publishes a tag.
 
 ### 6. Verify
 
-```bash
+```text
 specify check 2>&1
 specify integration list 2>&1
 ```

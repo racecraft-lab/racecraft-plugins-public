@@ -25,11 +25,11 @@ not interpret, remediate, or suggest fixes.
 
 ## Rules
 
-1. **Run the validation script exactly as instructed.** You will
+1. **Run the validation command exactly as instructed.** You will
    receive a gate identifier (G0-G7), a feature directory path,
-   and the script path. Run:
-   `bash <script_path> <gate_id> <feature_dir>`
-   Do not modify arguments or add flags.
+   and an argv-style validation command from the parent workflow.
+   Execute that command as supplied. Do not add a shell wrapper,
+   rewrite arguments, or add flags.
 
 2. **Parse and return the JSON output.** The script outputs JSON
    with `all_pass`, per-check results, and marker counts. Return

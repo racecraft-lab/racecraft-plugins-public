@@ -34,7 +34,7 @@ It is not run automatically by this skill.
 
 Use this exact sequence:
 
-```bash
+```text
 speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh --dry-run --repo-root .
 ```
 
@@ -42,7 +42,7 @@ Review the JSON report for pending, skipped, and no-op items. Clean the git tree
 if the report shows pending mutations and the worktree is dirty. Apply only
 when ready to mutate:
 
-```bash
+```text
 speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh --apply --repo-root .
 ```
 
@@ -63,9 +63,8 @@ must never be auto-run by `speckit-upgrade`.
 
 ### 1. Detect state and hand off if needed
 
-```text
-Bash("test -d .specify && echo PRESENT || echo ABSENT")
-```
+Use a filesystem directory check for `.specify/` and record the state
+as PRESENT or ABSENT.
 
 If `.specify/` is **ABSENT**: STOP and invoke `/speckit-pro:speckit-install`
 — upgrade only operates on existing installs.
@@ -74,11 +73,9 @@ If **PRESENT**: continue.
 
 ### 2. Capture current versions and integrations
 
-```text
-Bash("PATH=\"${HOME:+$HOME/.local/bin:}/opt/homebrew/bin:/usr/local/bin:${PATH:-}\"; command -v specify >/dev/null 2>&1 && specify --version || echo MISSING")
-Bash("specify self check 2>&1 || true")
-Bash("specify integration list 2>&1")
-```
+Use argv-only execution to capture the `specify` version, run
+`specify self check`, and run `specify integration list`. Preserve
+stdout, stderr, and exit status for each command in the report.
 
 Surface to the operator:
 - Current CLI version (e.g. `specify 0.6.1`).
@@ -87,9 +84,8 @@ Surface to the operator:
 
 If the CLI itself is outdated, recommend running:
 
-```bash
-uv tool install specify-cli --force --from git+https://github.com/github/spec-kit.git
-```
+Invoke `uv tool install specify-cli --force --from
+git+https://github.com/github/spec-kit.git` with argv-only execution.
 
 Wait for the operator to confirm they've upgraded the CLI (or want
 to proceed with the current version) before continuing.
@@ -107,21 +103,14 @@ If the operator passed integration keys, use those. Otherwise: ask.
 
 ### 4. Snapshot the repo state for safety
 
-Create a timestamped backup directory outside the repo:
+Create a timestamped backup directory outside the repo, copy
+`.specify/`, and copy any present `.claude/`, `.codex/`, and
+`.github/` directories into that backup using filesystem APIs or
+argv-only file operations. Report the backup path and copied entries.
 
-```text
-Bash("STAMP=$(date +%Y%m%d-%H%M%S); BACKUP=/tmp/specify-upgrade-backup-$STAMP; mkdir -p $BACKUP; cp -R .specify $BACKUP/.specify; ls $BACKUP")
-```
-
-Also snapshot the agent integration directories that the upgrade
-may touch:
-
-```text
-Bash("BACKUP=/tmp/specify-upgrade-backup-$STAMP; for d in .claude .codex .github; do [ -e $d ] && cp -R $d $BACKUP/$(basename $d) || true; done; ls $BACKUP")
-```
-
-Tell the operator: "Repo state snapshotted to `$BACKUP/`. If
-anything goes wrong, restore with `cp -R $BACKUP/.specify .`."
+Tell the operator: "Repo state snapshotted to `<backup-path>/`. If
+anything goes wrong, restore `.specify/` and any listed integration
+directories from that backup."
 
 ### 5. Per-integration upgrade
 
@@ -129,9 +118,8 @@ For each integration the operator chose:
 
 #### 5a. Try the safe (no --force) upgrade first
 
-```bash
-specify integration upgrade <key> --script sh
-```
+Invoke `specify integration upgrade <key> --script sh` with argv-only
+execution.
 
 The CLI is diff-aware: it compares manifest hashes and blocks if
 the operator has locally-modified files. If the upgrade succeeds
@@ -159,19 +147,16 @@ that list to the operator and ask:
 > 3. `manual-merge` — abort this skill, examine the diff yourself,
 >    and re-run after deciding which edits to keep.
 
-If `force-and-restore`:
-
-```bash
-specify integration upgrade <key> --force --script sh
-```
+If `force-and-restore`, invoke
+`specify integration upgrade <key> --force --script sh` with
+argv-only execution.
 
 Then for each previously-modified file, surface the differences
 between the freshly-templated version and the backup, and ask
 whether to restore (one-by-one or all-at-once):
 
-```text
-Bash("diff $BACKUP/<file> <file>")
-```
+Use a diff tool to compare the backup copy with the current file and
+show the operator the result.
 
 Constitution.md is the most-common case — almost always restore the
 backup verbatim. Templates, scripts, and gate validators are case-
@@ -185,10 +170,8 @@ After upgrading, the new `.claude/skills/speckit-*/` and
 old `.claude/commands/speckit.*.md` and `.codex/prompts/speckit.*.md`
 files (if the prior install was in legacy mode).
 
-```text
-Bash("ls .claude/commands/speckit.*.md 2>/dev/null | head")
-Bash("ls .claude/skills/speckit-*/SKILL.md 2>/dev/null | head")
-```
+Use filesystem glob checks to detect legacy `.claude/commands/`
+entries and current `.claude/skills/` entries.
 
 If BOTH exist:
 
@@ -207,17 +190,13 @@ not any commands without the `speckit.` prefix.
 
 Do the symmetric check for Codex:
 
-```text
-Bash("ls .codex/prompts/speckit.*.md 2>/dev/null | head")
-Bash("ls .codex/skills/speckit-*/SKILL.md 2>/dev/null | head")
-```
+Use filesystem glob checks to detect legacy `.codex/prompts/`
+entries and current `.codex/skills/` entries.
 
 ### 7. Verify
 
-```text
-Bash("specify check 2>&1")
-Bash("specify integration list 2>&1")
-```
+Invoke `specify check` and `specify integration list` with argv-only
+execution. Preserve stdout, stderr, and exit status.
 
 Confirm each upgraded integration shows `installed` and is on the
 new manifest. Report any verification mismatch — do not silently
@@ -233,11 +212,8 @@ integration upgrade. See
 [presets-extensions-guide.md → The curated set](../skills/speckit-coach/references/presets-extensions-guide.md)
 for the full list.
 
-Check what would change:
-
-```text
-Bash("bash \"${CLAUDE_PLUGIN_ROOT}/scripts/install-curated-set.sh\" --mode=check")
-```
+Check what would change using the curated-set installer helper in
+check mode.
 
 The script prints one line per entry that is missing or out of date,
 exits 0 if everything is current, exits 2 if work is pending.
@@ -254,10 +230,10 @@ exits 0 if everything is current, exits 2 if work is pending.
 
 - If exit code is **2**: tell the operator the check output and ask
   which entries to install or upgrade. Recommended default is **all**.
-  Then invoke the script in upgrade mode:
+  Then invoke the curated-set installer helper in upgrade mode:
 
-  - All: `Bash("bash \"${CLAUDE_PLUGIN_ROOT}/scripts/install-curated-set.sh\" --mode=upgrade")`
-  - Subset: `Bash("bash \"${CLAUDE_PLUGIN_ROOT}/scripts/install-curated-set.sh\" --mode=upgrade --accept=<csv>")`
+  - All entries.
+  - A comma-separated accepted subset.
   - None: skip. The autopilot will continue to skip any missing
     entries without failing, but the post-implementation parallel
     group will run with reduced coverage.

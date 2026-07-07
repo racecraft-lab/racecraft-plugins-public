@@ -3,12 +3,7 @@
     "UserPromptExpansion": [
       {
         "matcher": "^(speckit-pro:|grill-me|speckit\\.|speckit-)",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "PATH=\"${HOME:+$HOME/.local/bin:}/opt/homebrew/bin:/usr/local/bin:${PATH:-}\"; command -v specify >/dev/null 2>&1 || echo 'speckit-pro: WARNING — SpecKit CLI not found. Install: uv tool install specify-cli --from git+https://github.com/github/spec-kit.git'"
-          }
-        ]
+        "hooks": []
       }
     ]
   }

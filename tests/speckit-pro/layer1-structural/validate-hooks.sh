@@ -2,10 +2,13 @@
 # validate-hooks.sh — Structural validation for hooks/hooks.json
 #
 # The plugin hook is scoped via UserPromptExpansion with a matcher that
-# only fires on speckit-pro / SpecKit / bundled-skill command invocations
+# only scopes speckit-pro / SpecKit / bundled-skill command invocations
 # — NOT a global SessionStart hook that would fire on every Claude Code
-# session. This validator asserts the scoping shape so future edits can't
-# silently broaden it back to always-fires behavior.
+# session. XPLAT-008 deliberately keeps the hook command list empty: a
+# static hook command cannot perform the platform-specific Python discovery
+# that installed skills and agents perform before invoking the runner.
+# This validator asserts the scoping shape and prevents reintroducing
+# non-portable command probing.
 set -euo pipefail
 
 source "$(dirname "$0")/../lib/assertions.sh"
@@ -94,58 +97,13 @@ print('true' if 'hooks' in entry and isinstance(entry['hooks'], list) else 'fals
 " 2>/dev/null)
 assert_eq "true" "$has_inner_hooks" "hook entry must have hooks array"
 
-set_test "Each hook entry has type field"
-has_type=$(printf '%s' "$CONTENT" | python3 -c "
+set_test "Hook entry has an empty command list"
+empty_inner_hooks=$(printf '%s' "$CONTENT" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
 hooks = data['hooks']['UserPromptExpansion'][0]['hooks']
-print('true' if all('type' in h for h in hooks) else 'false')
+print('true' if isinstance(hooks, list) and len(hooks) == 0 else 'false')
 " 2>/dev/null)
-assert_eq "true" "$has_type" "every hook must have a type field"
-
-set_test "Hook type is command"
-hook_type=$(printf '%s' "$CONTENT" | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-h = data['hooks']['UserPromptExpansion'][0]['hooks'][0]
-print(h.get('type', ''))
-" 2>/dev/null)
-assert_eq "command" "$hook_type"
-
-set_test "Command field is non-empty"
-cmd_val=$(printf '%s' "$CONTENT" | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-h = data['hooks']['UserPromptExpansion'][0]['hooks'][0]
-print(h.get('command', ''))
-" 2>/dev/null)
-if [ -n "$cmd_val" ]; then
-  _pass
-else
-  _fail "command field is empty"
-fi
-
-set_test "Command prepends common user CLI paths before probing specify"
-if [[ "$cmd_val" == *'$HOME/.local/bin'* ]] && [[ "$cmd_val" == *"/opt/homebrew/bin"* ]] && [[ "$cmd_val" == *"/usr/local/bin"* ]]; then
-  _pass
-else
-  _fail "command must prepend common user CLI paths before command -v specify (was: '$cmd_val')"
-fi
-
-set_test "Command does not warn when specify exists only in HOME/.local/bin"
-hook_tmp=$(mktemp -d)
-mkdir -p "$hook_tmp/.local/bin"
-cat > "$hook_tmp/.local/bin/specify" <<'SH'
-#!/usr/bin/env bash
-exit 0
-SH
-chmod +x "$hook_tmp/.local/bin/specify"
-hook_output=$(HOME="$hook_tmp" PATH="/usr/bin:/bin:/usr/sbin:/sbin" sh -c "$cmd_val" 2>/dev/null || true)
-rm -rf "$hook_tmp"
-if [ -z "$hook_output" ]; then
-  _pass
-else
-  _fail "hook warned even though specify existed in HOME/.local/bin: $hook_output"
-fi
+assert_eq "true" "$empty_inner_hooks" "Claude plugin hook must not run a static interpreter command; skills own runner discovery"
 
 test_summary

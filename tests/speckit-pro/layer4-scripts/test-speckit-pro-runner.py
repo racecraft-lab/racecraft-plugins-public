@@ -9,6 +9,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 RUNNER_DIR = PLUGIN_ROOT / "speckit_pro_runner"
+sys.path.insert(0, str(PLUGIN_ROOT))
 FIXTURE_FILE = Path(__file__).resolve().parent / "fixtures" / "speckit-pro-runner" / "contract-fixtures.json"
 RUNBOOK_FILE = Path(__file__).resolve().parent / "fixtures" / "speckit-pro-runner" / "platform-runbook-fixtures.md"
 CHANGED_FILES_FILE = (
@@ -86,6 +88,47 @@ def changed_paths_against_review_base() -> list[str]:
             return changed
 
     raise AssertionError(f"Unable to diff changed paths against review base: {'; '.join(errors)}")
+
+
+def changed_status_against_review_base() -> dict[str, str]:
+    candidates = ["origin/main...HEAD"]
+    parents = subprocess.run(
+        ["git", "rev-list", "--parents", "-n", "1", "HEAD"],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if parents.returncode == 0 and len(parents.stdout.split()) >= 3:
+        candidates.append("HEAD^1...HEAD")
+
+    errors = []
+    for candidate in candidates:
+        completed = subprocess.run(
+            ["git", "diff", "--name-status", candidate],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if completed.returncode == 0:
+            status_by_path: dict[str, str] = {}
+            for line in completed.stdout.splitlines():
+                parts = line.split("\t")
+                if len(parts) < 2:
+                    continue
+                status_by_path[parts[-1]] = parts[0][0]
+            return status_by_path
+        errors.append(f"{candidate}: {completed.stderr.strip() or completed.stdout.strip()}")
+
+    if CHANGED_FILES_FILE.is_file():
+        return {
+            line: "M"
+            for line in CHANGED_FILES_FILE.read_text(encoding="utf-8").splitlines()
+            if line
+        }
+
+    raise AssertionError(f"Unable to diff changed path statuses against review base: {'; '.join(errors)}")
 
 
 def base_request(operation: str = "runtime-info", inputs: dict[str, object] | None = None) -> dict[str, object]:
@@ -309,6 +352,35 @@ class RunnerFoundationTests(unittest.TestCase):
                 self.assertIn(code, [diag["code"] for diag in response["diagnostics"]])
                 self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
 
+    def test_malformed_checksum_metadata_reports_incomplete(self) -> None:
+        from speckit_pro_runner import runtime
+
+        with tempfile.TemporaryDirectory() as tmp:
+            plugin_root = Path(tmp) / "plugin"
+            package_dir = plugin_root / "speckit_pro_runner"
+            package_dir.mkdir(parents=True)
+            (plugin_root / ".codex-plugin").mkdir()
+            (plugin_root / ".codex-plugin" / "plugin.json").write_text("{}", encoding="utf-8")
+            (package_dir / "__init__.py").write_text("", encoding="utf-8")
+            (package_dir / runtime.MANIFEST_NAME).write_text(
+                json.dumps(
+                    {
+                        "runner_files": [
+                            {
+                                "path": {"value": "speckit_pro_runner/__init__.py"},
+                                "sha256": hashlib.sha256(b"").hexdigest(),
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (package_dir / runtime.CHECKSUM_NAME).write_text("malformed-without-path\n", encoding="utf-8")
+
+            report = runtime.metadata_report(plugin_root, package_dir, check_metadata=True, overrides={})
+
+        self.assertEqual(report["verification_status"], "incomplete_metadata")
+
     def test_runbook_fixtures_have_non_claim_language(self) -> None:
         text = RUNBOOK_FILE.read_text(encoding="utf-8")
         self.assertIn("installed-cache launch proof", text)
@@ -333,6 +405,13 @@ class RunnerFoundationTests(unittest.TestCase):
 
     def test_no_cutover_or_public_claim_surfaces_changed(self) -> None:
         changed = changed_paths_against_review_base()
+        status_by_path = changed_status_against_review_base()
+        forbidden_exact = {
+            "speckit-pro/.claude-plugin/plugin.json",
+            "speckit-pro/.codex-plugin/plugin.json",
+        }
+        for path in changed:
+            self.assertNotIn(path, forbidden_exact)
         forbidden_prefixes = (
             "dist/",
             "speckit-pro/skills/",
@@ -359,14 +438,59 @@ class RunnerFoundationTests(unittest.TestCase):
             "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh",
             "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
         }
-        forbidden_exact = {
-            "speckit-pro/.claude-plugin/plugin.json",
-            "speckit-pro/.codex-plugin/plugin.json",
+        allowed_xplat008_exact = {
+            "docs-site/src/content/docs/contribute-and-release.md",
+            "docs-site/src/content/docs/first-run.md",
+            "docs-site/src/content/docs/install/claude-code.md",
+            "docs-site/src/content/docs/install/codex.md",
+            "docs-site/src/content/docs/security-and-trust.md",
+            "docs-site/src/content/docs/troubleshooting.md",
+            "docs-site/src/content/docs/update-and-rollback.md",
+            "dist/claude/speckit-pro/README.md",
+            "dist/claude/speckit-pro/hooks/hooks.json",
+            "dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md",
+            "dist/claude/speckit-pro/skills/speckit-install/SKILL.md",
+            "dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+            "dist/claude/speckit-pro/skills/speckit-status/SKILL.md",
+            "dist/claude/speckit-pro/skills/speckit-upgrade/SKILL.md",
+            "dist/codex/speckit-pro/README.md",
+            "dist/codex/speckit-pro/codex-hooks.json",
+            "dist/codex/speckit-pro/skills/install/SKILL.md",
+            "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
+            "dist/codex/speckit-pro/skills/speckit-install/SKILL.md",
+            "dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+            "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
+            "dist/codex/speckit-pro/skills/speckit-upgrade/SKILL.md",
+            "dist/claude/speckit-pro/agents/gate-validator.md",
+            "speckit-pro/codex-hooks.json",
+            "speckit-pro/codex-skills/install/SKILL.md",
+            "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+            "speckit-pro/codex-skills/speckit-install/SKILL.md",
+            "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+            "speckit-pro/codex-skills/speckit-status/SKILL.md",
+            "speckit-pro/codex-skills/speckit-upgrade/SKILL.md",
+            "speckit-pro/hooks/hooks.json",
+            "speckit-pro/agents/gate-validator.md",
+            "speckit-pro/skills/speckit-autopilot/SKILL.md",
+            "speckit-pro/skills/speckit-install/SKILL.md",
+            "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+            "speckit-pro/skills/speckit-status/SKILL.md",
+            "speckit-pro/skills/speckit-upgrade/SKILL.md",
         }
+        allowed_xplat008_prefixes = (
+            "dist/claude/speckit-pro/speckit_pro_runner/",
+            "dist/codex/speckit-pro/speckit_pro_runner/",
+            "docs/ai/specs/.process/XPLAT-008",
+            "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/",
+        )
         for path in changed:
-            if path in allowed_exact:
+            if path in allowed_exact or path in allowed_xplat008_exact:
                 continue
-            self.assertNotIn(path, forbidden_exact)
+            if path.startswith("dist/") and "/scripts/" in path and path.endswith(".sh"):
+                self.assertEqual(status_by_path.get(path), "D", path)
+                continue
+            if path.startswith(allowed_xplat008_prefixes):
+                continue
             self.assertFalse(path.startswith(forbidden_prefixes), path)
             if path.startswith("docs/"):
                 self.assertTrue(path.startswith("docs/ai/specs/") or path.startswith("docs/prd-"), path)

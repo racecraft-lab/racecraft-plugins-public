@@ -1,0 +1,117 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "XPLAT-008",
+  "coverage": [
+    "Windows discovery order: py -V:3, py -3, python, python3",
+    "macOS/Linux discovery order: python3, python",
+    "Python >=3.11 accepted",
+    "failure diagnostics include attempted candidates and no shell fallback",
+    "runner invocation uses argv-only -m speckit_pro_runner"
+  ],
+  "cases": [
+    {
+      "case_id": "windows-py-v3",
+      "product": "claude",
+      "platform": "windows",
+      "surface_path": "speckit-pro/skills/speckit-status/SKILL.md",
+      "operation": "status",
+      "cache_root": "C:/fixture-home/AppData/Local/Claude/plugins/speckit-pro",
+      "candidate_results": [
+        {
+          "candidate": "py -V:3",
+          "resolved_executable": "C:/Windows/py.exe",
+          "version": "3.12.4",
+          "returncode": 0
+        }
+      ]
+    },
+    {
+      "case_id": "windows-py-3-fallback",
+      "product": "codex",
+      "platform": "windows",
+      "surface_path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+      "operation": "scaffold",
+      "cache_root": "C:/fixture-home/.codex/plugins/speckit-pro",
+      "candidate_results": [
+        {
+          "candidate": "py -V:3",
+          "returncode": 1,
+          "stderr": "launcher did not find Python 3"
+        },
+        {
+          "candidate": "py -3",
+          "resolved_executable": "C:/Windows/py.exe",
+          "version": "3.11.9",
+          "returncode": 0
+        }
+      ]
+    },
+    {
+      "case_id": "macos-python3",
+      "product": "claude",
+      "platform": "macos",
+      "surface_path": "speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "operation": "autopilot-dry-run",
+      "cache_root": "/fixture-home/.claude/plugins/speckit-pro",
+      "candidate_results": [
+        {
+          "candidate": "python3",
+          "resolved_executable": "/opt/homebrew/bin/python3",
+          "version": "3.12.2",
+          "returncode": 0
+        }
+      ]
+    },
+    {
+      "case_id": "linux-python-fallback",
+      "product": "codex",
+      "platform": "linux",
+      "surface_path": "speckit-pro/codex-skills/speckit-status/SKILL.md",
+      "operation": "status",
+      "cache_root": "/fixture-home/.codex/plugins/speckit-pro",
+      "candidate_results": [
+        {
+          "candidate": "python3",
+          "resolved_executable": "/usr/bin/python3",
+          "version": "3.10.12",
+          "returncode": 0
+        },
+        {
+          "candidate": "python",
+          "resolved_executable": "/usr/local/bin/python",
+          "version": "3.11.8",
+          "returncode": 0
+        }
+      ]
+    },
+    {
+      "case_id": "live-host-runtime-info",
+      "product": "codex",
+      "surface_path": "speckit-pro/codex-skills/speckit-status/SKILL.md",
+      "operation": "status",
+      "cache_root": "dist/codex/speckit-pro"
+    },
+    {
+      "case_id": "too-old-or-missing",
+      "product": "claude",
+      "platform": "linux",
+      "surface_path": "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+      "operation": "preflight",
+      "cache_root": "/fixture-home/.claude/plugins/speckit-pro",
+      "candidate_results": [
+        {
+          "candidate": "python3",
+          "resolved_executable": "/usr/bin/python3",
+          "version": "3.10.12",
+          "returncode": 0
+        },
+        {
+          "candidate": "python",
+          "returncode": 127,
+          "stderr": "not found"
+        }
+      ],
+      "expected_failure_code": "python_runtime_unavailable"
+    }
+  ]
+}

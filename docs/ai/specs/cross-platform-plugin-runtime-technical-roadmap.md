@@ -49,7 +49,10 @@ again on 2026-07-04 after XPLAT-007 scaffold started on
 concept accepted one workflow with three internal slices. Updated 2026-07-05
 after XPLAT-007 merged across PRs #284, #285, #286, and #287 and the active
 spec folder was archived; XPLAT-008 became ready for installed Claude/Codex
-cutover, native UAT, update/autoheal, and public release readiness.
+cutover, native UAT, update/autoheal, and public release readiness. Updated
+again on 2026-07-05 after XPLAT-008 scaffold started on
+`codex/xplat-008-claude-codex-cutover-universal-install-release-gate`; the
+setup design concept accepted one workflow with three internal slices.
 
 ---
 
@@ -67,7 +70,7 @@ dependency tiers**:
 | 5 | XPLAT-005 | Port read-only/advisory helpers with fixture parity | Sequential after runner foundation |
 | 6 | XPLAT-006 | Port mutation, install, and PR-emission helpers | Complete / archived after PR #281 |
 | 7 | XPLAT-007 | Replace active repo-local Bash helpers, tests, evals, payload builders, release checks, install verification, and release-readiness gates with Python commands | Complete / archived after PRs #284-#287 |
-| 8 | XPLAT-008 | Cut over Claude/Codex surfaces, rebuild payloads, and prove universal install/full-use/update/autoheal release readiness | Ready after Python gate migration landed |
+| 8 | XPLAT-008 | Cut over Claude/Codex surfaces, rebuild payloads, and prove universal install/full-use/update/autoheal release readiness | In progress after scaffold started on `codex/xplat-008-claude-codex-cutover-universal-install-release-gate` |
 
 **Execution Order:** XPLAT-001 -> XPLAT-002 -> XPLAT-003 -> XPLAT-004 -> XPLAT-005 -> XPLAT-006 -> XPLAT-007 -> XPLAT-008
 
@@ -242,7 +245,7 @@ PUBLIC RELEASE UNBLOCKED
 | XPLAT-005 | Read-Only Helper Port | Complete / Archived | `.process/XPLAT-005-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-03-xplat-005-post-merge-hygiene.md`; read-only helper registry, Python-authoritative records, parity fixtures, and Layer 4 gates landed in PR #276 |
 | XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | Complete / Archived | `.process/XPLAT-006-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-04-xplat-006-post-merge-hygiene.md`; mutation primitives, install inventory/doctor proof, PR-body/command-plan fixtures, phase-coverage hardening, and Layer 4 mutation-helper gates landed in PR #281 |
 | XPLAT-007 | Python Tooling and Release-Gate Migration | Complete / Archived | `.process/XPLAT-007-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md`; Python gate package, CI dispatch, promotion records, and Layer 4 gate tests landed across PRs #284-#287 |
-| XPLAT-008 | Claude/Codex Cutover and Universal Install Release Gate | Ready | — | Ready after XPLAT-007; owns active Claude/Codex cutover, payload rebuild, docs, UAT, update, autoheal, and public release readiness |
+| XPLAT-008 | Claude/Codex Cutover and Universal Install Release Gate | In Progress | `.process/XPLAT-008-workflow.md` | Scaffolded on `codex/xplat-008-claude-codex-cutover-universal-install-release-gate`; owns active Claude/Codex cutover, payload rebuild, docs, UAT, update, autoheal, and public release readiness |
 
 **Status Legend:** Pending | Ready | In Progress | In Review | Complete | Complete / Archived | Blocked
 
@@ -823,10 +826,11 @@ and CI-dispatch guard slices if a single workflow exceeds review budget.
 
 **Priority:** P1 | **Depends On:** XPLAT-006, XPLAT-007 | **Enables:** Public release readiness
 
-**Status:** Ready. XPLAT-007 is complete and archived; XPLAT-008 is unblocked
-for installed Claude/Codex cutover, generated release payload publication,
-native installed-plugin UAT, update/autoheal proof, and public release
-readiness.
+**Status:** In Progress. XPLAT-007 is complete and archived; XPLAT-008 is
+scaffolded on
+`codex/xplat-008-claude-codex-cutover-universal-install-release-gate` for
+installed Claude/Codex cutover, generated release payload publication, native
+installed-plugin UAT, update/autoheal proof, and public release readiness.
 
 **Goal:** Switch active Claude and Codex plugin runtime surfaces to the
 cross-platform runner and prove public-release readiness with complete
