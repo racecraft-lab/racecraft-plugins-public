@@ -2,7 +2,7 @@
 
 **Status**: Draft
 **Created**: 2026-06-24
-**Last updated**: 2026-07-03
+**Last updated**: 2026-07-07
 **Owner**: Racecraft Lab
 **Spec ID prefix**: `XPLAT-###`
 **Technical roadmap**: [docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md](ai/specs/cross-platform-plugin-runtime-technical-roadmap.md)
@@ -38,15 +38,15 @@ Windows, macOS, and Linux:
 - Python as the universal dependency: high confidence, approximately 90%.
 - Python stdlib runner behavior after launch: high confidence, approximately
   85-90%.
-- Full Claude/Codex installed-plugin user journey today: medium confidence,
-  approximately 65-75%, because XPLAT-004, XPLAT-007, and XPLAT-008 still need
-  Python release-gate migration, installed-cache launch proof,
-  generated-payload cutover, and platform UAT.
+- Public Bash-free release readiness today: medium confidence, approximately
+  65-75%, because the XPLAT-008 native operator UAT matrix and the
+  XPLAT-009/XPLAT-010 zero-Bash cleanup gates still need proof.
 
 These confidence levels are planning inputs, not public support evidence.
 Native Windows/macOS/Linux claims remain blocked until downstream specs prove
 interpreter discovery, `specify` discovery, installed-cache execution, payload
-freshness, and full workflow UAT for every claimed platform and host product.
+freshness, zero active Bash surfaces, and full workflow UAT for every claimed
+platform and host product.
 
 ## Goals
 
@@ -305,6 +305,48 @@ runtime dependencies or publishing incomplete Claude/Codex installs.
   fields, raw HTML anchors, empty expected-result sections, or unfilled
   platform/product rows.
 
+### 9. Plugin Source and Payload Bash Eradication *(-> XPLAT-009)*
+
+Remove every remaining Bash script file and active Bash instruction from the
+plugin source tree and generated Claude/Codex payloads. Replace remaining helper
+and agent guidance with Python runner operations, and add deterministic guards
+that fail if Bash or `jq` returns to active plugin surfaces.
+
+**Acceptance Criteria**
+
+- AC-9.1: `speckit-pro/` contains zero `.sh` files after cleanup.
+- AC-9.2: Generated Claude and Codex payloads under `dist/**/speckit-pro`
+  contain zero `.sh` files after rebuild.
+- AC-9.3: Active Claude/Codex skills, agents, install guidance, payloads, and
+  runner gates contain no Bash or `jq` invocation instructions outside
+  explicitly historical/archive prose.
+- AC-9.4: Any helper behavior formerly owned by source plugin Bash scripts is
+  ported to Python runner operations or removed as dead/stale behavior.
+- AC-9.5: Release-readiness validation includes a plugin-scope zero-Bash guard
+  that blocks source or payload regressions.
+
+### 10. Repository Bash Confinement and CI Dispatch Guard *(-> XPLAT-010)*
+
+Constrain Bash usage across the repository to GitHub CI/CD workflow dispatch
+only. Port or remove repo-local shell harnesses and helper scripts that are not
+allowed workflow dispatch glue, then enforce the policy with a repo-wide guard.
+
+**Acceptance Criteria**
+
+- AC-10.1: A repo-wide scan, excluding `.github/workflows/`, finds zero `.sh`
+  files unless a documented upstream-generated exception is explicitly excluded
+  from active release behavior.
+- AC-10.2: GitHub workflow shell snippets are limited to CI/CD dispatch and call
+  Python gates rather than embedding validation, packaging, install, or runtime
+  logic.
+- AC-10.3: Active test, eval, payload, release-readiness, install-verification,
+  hook, and helper paths no longer require Bash outside the GitHub workflow
+  dispatch boundary.
+- AC-10.4: The CI guard fails on new Bash scripts, active Bash invocations, or
+  `jq` dependencies outside the allowed workflow dispatch boundary.
+- AC-10.5: Any remaining historical/archive Bash prose is allowlisted with a
+  narrow reason and cannot satisfy an active release gate.
+
 ## Success Metrics
 
 - Zero active Claude/Codex plugin runtime invocations require Bash or `jq`.
@@ -318,8 +360,11 @@ runtime dependencies or publishing incomplete Claude/Codex installs.
 - Zero active plugin test/eval/release-readiness gates that validate or publish
   shipped behavior require Bash, `jq`, Git Bash, WSL, or PowerShell helper
   scripts.
+- Zero plugin source or generated payload files are Bash scripts.
 - Zero active repo-local test, eval, helper, payload, install-verification, or
   release scripts require Bash outside GitHub CI/CD dispatch glue.
+- Zero repository `.sh` files remain outside the GitHub workflow boundary unless
+  a non-active upstream-generated exception is documented and guarded.
 - Scaffold/status/autopilot detect incomplete installs before doing meaningful
   work and either autoheal them or provide a specific, tested remediation path.
 - The release-readiness checklist has a hard gate for native Windows plugin UAT.
@@ -350,3 +395,5 @@ runtime dependencies or publishing incomplete Claude/Codex installs.
 | Mutation/install/PR-emission helper port | AC-6.* | XPLAT-006 | XPLAT-004, XPLAT-005 | P1 |
 | Python tooling and release-gate migration | AC-7.* | XPLAT-007 | XPLAT-006 | P1 |
 | Claude/Codex cutover and universal install release gate | AC-8.* | XPLAT-008 | XPLAT-006, XPLAT-007 | P1 |
+| Plugin source and payload Bash eradication | AC-9.* | XPLAT-009 | XPLAT-008 | P1 |
+| Repository Bash confinement and CI dispatch guard | AC-10.* | XPLAT-010 | XPLAT-009 | P1 |
