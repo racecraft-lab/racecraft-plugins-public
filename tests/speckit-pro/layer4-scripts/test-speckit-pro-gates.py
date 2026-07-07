@@ -1736,15 +1736,37 @@ class GateFoundationTests(unittest.TestCase):
         self.assert_response(response, "expected_failure")
         self.assertEqual([diag["code"] for diag in stderr_records], ["install_health_repair_blocked"])
 
-    def test_xplat008_release_readiness_default_request_blocks_until_native_uat_complete(self) -> None:
+    def test_xplat008_release_readiness_default_request_passes_after_native_uat_completion(self) -> None:
         completed, response, stderr_records = run_runner(xplat008_fixture_request("release-readiness"))
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        readiness = response["data"]["release_readiness"]
+        self.assertEqual(readiness["feature_id"], "XPLAT-008")
+        self.assertEqual(readiness["status"], "pass")
+        self.assertEqual(readiness["blocking_count"], 0)
+        self.assertEqual(len(readiness["uat_rows"]), 6)
+        self.assertFalse(any(check["blocking"] for check in readiness["checks"]))
+        self.assert_release_readiness_contract_subset(readiness)
+
+    def test_xplat008_release_readiness_pending_native_uat_still_blocks(self) -> None:
+        completed, response, stderr_records = run_runner(
+            gate_request(
+                "release-readiness",
+                "release-readiness-xplat008",
+                inputs={
+                    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json",
+                    "case_id": "current-native-uat-pending",
+                },
+            )
+        )
         self.assertEqual(completed.returncode, 1)
         self.assert_response(response, "expected_failure")
         self.assertEqual([diag["code"] for diag in stderr_records], ["release_readiness_xplat008_blocked"])
         readiness = response["data"]["release_readiness"]
         self.assertEqual(readiness["feature_id"], "XPLAT-008")
         self.assertEqual(readiness["status"], "fail")
-        self.assertGreater(readiness["blocking_count"], 0)
+        self.assertEqual(readiness["blocking_count"], 1)
         self.assertEqual(readiness["uat_rows"], [])
         self.assertTrue(any(check["check_id"] == "uat-matrix" and check["blocking"] for check in readiness["checks"]))
         self.assert_release_readiness_contract_subset(readiness)
