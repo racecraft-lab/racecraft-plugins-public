@@ -602,6 +602,23 @@ class ReadOnlyHelperTests(unittest.TestCase):
 
             self.assertEqual(git_branch(project_path), "")
 
+    def test_git_branch_accepts_same_repo_worktree_metadata_name(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("git branch worktree metadata case uses check-prerequisites")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as workspace, tempfile.TemporaryDirectory() as checkout_parent:
+            project_path = Path(workspace) / REPO_ROOT.name
+            project_path.mkdir()
+            checkout_root = Path(checkout_parent) / REPO_ROOT.name
+            git_dir = checkout_root / ".git" / "worktrees" / f"{REPO_ROOT.name}1"
+            runner_dir = checkout_root / "speckit-pro" / "speckit_pro_runner"
+            runner_dir.mkdir(parents=True)
+            git_dir.mkdir(parents=True)
+            (git_dir / "HEAD").write_text("ref: refs/heads/codex/xplat-008-archive-cleanup\n", encoding="utf-8")
+            (project_path / ".git").write_text(f"gitdir: {git_dir}\n", encoding="utf-8")
+            from speckit_pro_runner.helpers.read_only import git_branch
+
+            self.assertEqual(git_branch(project_path), "codex/xplat-008-archive-cleanup")
+
     def test_trusted_text_returns_none_on_read_error(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("trusted text read-error case uses shared helper behavior")

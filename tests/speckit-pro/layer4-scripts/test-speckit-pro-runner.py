@@ -481,7 +481,6 @@ class RunnerFoundationTests(unittest.TestCase):
             "dist/claude/speckit-pro/speckit_pro_runner/",
             "dist/codex/speckit-pro/speckit_pro_runner/",
             "docs/ai/specs/.process/XPLAT-008",
-            "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/",
         )
         for path in changed:
             if path in allowed_exact or path in allowed_xplat008_exact:

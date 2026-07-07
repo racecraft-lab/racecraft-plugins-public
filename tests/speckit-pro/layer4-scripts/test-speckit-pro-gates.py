@@ -23,6 +23,7 @@ CONTRACT_DIR = FIXTURE_DIR / "contracts"
 PROMOTION_RECORDS = FIXTURE_DIR / "promotion-records.json"
 REQUESTS_DIR = FIXTURE_DIR / "requests"
 XPLAT_008_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "xplat-008-release"
+XPLAT_008_CONTRACT_DIR = XPLAT_008_FIXTURE_DIR / "contracts"
 XPLAT_008_REQUESTS_DIR = XPLAT_008_FIXTURE_DIR / "requests"
 XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/promotion-records.json"
 
@@ -180,12 +181,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertFalse(any(arg.lower().endswith(".sh") for arg in argv))
 
     def assert_payload_completeness_contract_subset(self, results: list[dict[str, Any]]) -> None:
-        schema = json.loads(
-            (
-                REPO_ROOT
-                / "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/contracts/payload-completeness.schema.json"
-            ).read_text(encoding="utf-8")
-        )
+        schema = json.loads((XPLAT_008_CONTRACT_DIR / "payload-completeness.schema.json").read_text(encoding="utf-8"))
         required = set(schema["required"])
         allowed = set(schema["properties"])
         file_required = set(schema["$defs"]["payload_file"]["required"])
@@ -202,12 +198,7 @@ class GateFoundationTests(unittest.TestCase):
                         self.assertFalse(path.startswith("/") or ".." in path.split("/") or ":" in path.split("/")[0], path)
 
     def assert_release_readiness_contract_subset(self, readiness: dict[str, Any]) -> None:
-        schema = json.loads(
-            (
-                REPO_ROOT
-                / "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/contracts/release-readiness.schema.json"
-            ).read_text(encoding="utf-8")
-        )
+        schema = json.loads((XPLAT_008_CONTRACT_DIR / "release-readiness.schema.json").read_text(encoding="utf-8"))
         check_schema = schema["$defs"]["check"]["properties"]
         check_ids = set(check_schema["check_id"]["enum"])
         blocker_classes = set(check_schema["blocker_class"]["enum"])
@@ -241,12 +232,7 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertIsInstance(record["interpreter_resolution"]["invocation_argv_prefix"], list)
 
     def assert_uat_matrix_contract_subset(self, matrix: dict[str, Any]) -> None:
-        schema = json.loads(
-            (
-                REPO_ROOT
-                / "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/contracts/uat-matrix.schema.json"
-            ).read_text(encoding="utf-8")
-        )
+        schema = json.loads((XPLAT_008_CONTRACT_DIR / "uat-matrix.schema.json").read_text(encoding="utf-8"))
         self.assertLessEqual(set(schema["required"]), set(matrix))
         self.assertFalse(set(matrix) - set(schema["properties"]))
         check_ids = set(schema["$defs"]["check"]["properties"]["check_id"]["enum"])
@@ -536,18 +522,8 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(request["inputs"]["case_id"], "live-host-runtime-info")
 
     def test_xplat008_runner_invocation_records_have_no_shell_fallback(self) -> None:
-        contract = json.loads(
-            (
-                REPO_ROOT
-                / "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/contracts/runner-invocation.schema.json"
-            ).read_text(encoding="utf-8")
-        )
-        release_contract = json.loads(
-            (
-                REPO_ROOT
-                / "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/contracts/release-readiness.schema.json"
-            ).read_text(encoding="utf-8")
-        )
+        contract = json.loads((XPLAT_008_CONTRACT_DIR / "runner-invocation.schema.json").read_text(encoding="utf-8"))
+        release_contract = json.loads((XPLAT_008_CONTRACT_DIR / "release-readiness.schema.json").read_text(encoding="utf-8"))
         argv_contract = contract["properties"]["invocation"]["properties"]["argv"]
         self.assertEqual(len(argv_contract["oneOf"]), 3)
         self.assertEqual(contract["$defs"]["diagnostic"]["properties"]["remediation"]["type"], "object")

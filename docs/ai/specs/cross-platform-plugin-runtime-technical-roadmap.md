@@ -52,7 +52,12 @@ spec folder was archived; XPLAT-008 became ready for installed Claude/Codex
 cutover, native UAT, update/autoheal, and public release readiness. Updated
 again on 2026-07-05 after XPLAT-008 scaffold started on
 `codex/xplat-008-claude-codex-cutover-universal-install-release-gate`; the
-setup design concept accepted one workflow with three internal slices.
+setup design concept accepted one workflow with three internal slices. Updated
+2026-07-07 after XPLAT-008 merged across PRs #289, #290, and #291, followed by
+readiness fix PR #292, and the active spec folder was archived. The
+implementation lane is complete, but public native Windows/macOS/Linux release
+claims remain blocked until the preserved XPLAT-008 UAT matrix has six passing
+operator rows.
 
 ---
 
@@ -70,7 +75,7 @@ dependency tiers**:
 | 5 | XPLAT-005 | Port read-only/advisory helpers with fixture parity | Sequential after runner foundation |
 | 6 | XPLAT-006 | Port mutation, install, and PR-emission helpers | Complete / archived after PR #281 |
 | 7 | XPLAT-007 | Replace active repo-local Bash helpers, tests, evals, payload builders, release checks, install verification, and release-readiness gates with Python commands | Complete / archived after PRs #284-#287 |
-| 8 | XPLAT-008 | Cut over Claude/Codex surfaces, rebuild payloads, and prove universal install/full-use/update/autoheal release readiness | In progress after scaffold started on `codex/xplat-008-claude-codex-cutover-universal-install-release-gate` |
+| 8 | XPLAT-008 | Cut over Claude/Codex surfaces, rebuild payloads, and prove universal install/full-use/update/autoheal release readiness | Complete / archived after PRs #289-#292; public native-platform claims remain blocked by pending operator UAT |
 
 **Execution Order:** XPLAT-001 -> XPLAT-002 -> XPLAT-003 -> XPLAT-004 -> XPLAT-005 -> XPLAT-006 -> XPLAT-007 -> XPLAT-008
 
@@ -91,9 +96,11 @@ dependency tiers**:
   evals, payload builders, install-verification scripts, and release gates
   cannot become Python-authoritative until every plugin-runtime helper has a
   runner-side contract, fixture boundary, and migration handoff.
-- XPLAT-008 requires XPLAT-006 and XPLAT-007 because no active Claude/Codex
-  surface should switch and no public release claim should ship until every
-  plugin-runtime helper and release gate has a Python path.
+- XPLAT-008 required XPLAT-006 and XPLAT-007 because no active Claude/Codex
+  surface could switch and no public release claim could ship until every
+  plugin-runtime helper and release gate had a Python path. It is now complete
+  and archived after PRs #289-#292; public native-platform claims still require
+  passing operator UAT rows in `docs/ai/specs/.process/XPLAT-008-uat-matrix.md`.
 
 ## Reviewability Contract
 
@@ -229,7 +236,7 @@ XPLAT-007 Python Tooling and Release-Gate Migration
 XPLAT-008 Claude/Codex Cutover and Universal Install Release Gate
     |
     v
-PUBLIC RELEASE UNBLOCKED
+PUBLIC RELEASE HELD BY XPLAT-008 UAT MATRIX
 ```
 
 ---
@@ -245,7 +252,7 @@ PUBLIC RELEASE UNBLOCKED
 | XPLAT-005 | Read-Only Helper Port | Complete / Archived | `.process/XPLAT-005-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-03-xplat-005-post-merge-hygiene.md`; read-only helper registry, Python-authoritative records, parity fixtures, and Layer 4 gates landed in PR #276 |
 | XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | Complete / Archived | `.process/XPLAT-006-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-04-xplat-006-post-merge-hygiene.md`; mutation primitives, install inventory/doctor proof, PR-body/command-plan fixtures, phase-coverage hardening, and Layer 4 mutation-helper gates landed in PR #281 |
 | XPLAT-007 | Python Tooling and Release-Gate Migration | Complete / Archived | `.process/XPLAT-007-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md`; Python gate package, CI dispatch, promotion records, and Layer 4 gate tests landed across PRs #284-#287 |
-| XPLAT-008 | Claude/Codex Cutover and Universal Install Release Gate | In Progress | `.process/XPLAT-008-workflow.md` | Scaffolded on `codex/xplat-008-claude-codex-cutover-universal-install-release-gate`; owns active Claude/Codex cutover, payload rebuild, docs, UAT, update, autoheal, and public release readiness |
+| XPLAT-008 | Claude/Codex Cutover and Universal Install Release Gate | Complete / Archived | `.process/XPLAT-008-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md`; active Claude/Codex cutover, payload rebuild, public docs claim alignment, release-readiness gates, and safe repair controls landed across PRs #289-#292; public native-platform claims remain blocked by `docs/ai/specs/.process/XPLAT-008-uat-matrix.md` |
 
 **Status Legend:** Pending | Ready | In Progress | In Review | Complete | Complete / Archived | Blocked
 
@@ -826,11 +833,14 @@ and CI-dispatch guard slices if a single workflow exceeds review budget.
 
 **Priority:** P1 | **Depends On:** XPLAT-006, XPLAT-007 | **Enables:** Public release readiness
 
-**Status:** In Progress. XPLAT-007 is complete and archived; XPLAT-008 is
-scaffolded on
-`codex/xplat-008-claude-codex-cutover-universal-install-release-gate` for
-installed Claude/Codex cutover, generated release payload publication, native
-installed-plugin UAT, update/autoheal proof, and public release readiness.
+**Status:** Complete / Archived. XPLAT-008 merged across PRs #289, #290, and
+#291, followed by readiness fix PR #292. The active spec folder was archived
+after preserving release-readiness and UAT evidence under
+`docs/ai/specs/.process/`. The implementation shipped installed Claude/Codex
+cutover, generated payload rebuilds, public docs claim alignment, native UAT
+matrix gating, update/repair blockers, and safe repair controls. Public native
+Windows/macOS/Linux support claims remain blocked until all six native operator
+UAT rows pass in `docs/ai/specs/.process/XPLAT-008-uat-matrix.md`.
 
 **Goal:** Switch active Claude and Codex plugin runtime surfaces to the
 cross-platform runner and prove public-release readiness with complete

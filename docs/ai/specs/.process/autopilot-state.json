@@ -2,21 +2,23 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-008-workflow.md",
   "feature_dir": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate",
   "feature_branch": "codex/xplat-008-claude-codex-cutover-universal-install-release-gate",
-  "updated_at": "2026-07-06T04:55:27Z",
+  "updated_at": "2026-07-07T02:00:33Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Complete: Review Ready",
+  "active_step": "Post-merge archive cleanup applied",
   "archive_sweep": {
     "archive_extension_installed": true,
-    "cleanup_mode": "feature-branch-sweep-static",
-    "current_target": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate",
-    "excluded_current_spec": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate",
-    "eligible_previous_specs": [],
-    "active_specs_inventory": [
+    "cleanup_mode": "post-merge-apply",
+    "current_target": null,
+    "excluded_current_spec": null,
+    "eligible_previous_specs": [
       "specs/xplat-008-claude-codex-cutover-universal-install-release-gate"
     ],
-    "safeToApplyCleanup": false,
-    "cleanupApplied": false,
-    "notes": "Archive extension is installed and enabled. Static startup sweep found only the current XPLAT-008 active spec, so no prior active spec is eligible for archival or cleanup in this run."
+    "active_specs_inventory": [],
+    "safeToApplyCleanup": true,
+    "cleanupApplied": true,
+    "notes": "Post-merge cleanup archived XPLAT-008 after PRs #289-#292 merged; process workflow/design files, release-readiness packet, UAT matrix, and partial Codex/macOS UAT evidence remain preserved under docs/ai/specs/.process/.",
+    "archived_spec": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate",
+    "archive_report": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
   },
   "preflight": {
     "model": "gpt-5.5 available for required installed Codex subagents",
@@ -196,58 +198,70 @@
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "completed"
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "completed"
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "completed"
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
     },
     {
       "step": "Post: Code Review",
-      "status": "completed"
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "completed"
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "completed",
-      "summary": "Final backstop proceeded with marker_split; aggregate diff remains size-blocked at 137 files, and the current three-marker plan is valid for scoped PR emission."
+      "status": "archived",
+      "summary": "Final backstop proceeded with marker_split; aggregate diff remains size-blocked at 137 files, and the current three-marker plan is valid for scoped PR emission.",
+      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
     },
     {
       "step": "Post: Self-Review",
-      "status": "completed",
-      "summary": "Self-review completed before PR body generation; reviewable stack remains intentionally not native-release-ready until six operator UAT rows are filled."
+      "status": "archived",
+      "summary": "Self-review completed before PR body generation; reviewable stack remains intentionally not native-release-ready until six operator UAT rows are filled.",
+      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "completed",
-      "summary": "UAT runbook generated and validated with current expected-failure and ready-fixture release-readiness paths."
+      "status": "archived",
+      "summary": "UAT runbook generated and validated with current expected-failure and ready-fixture release-readiness paths.",
+      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "completed",
-      "summary": "Generated PR body and packet evidence updated for marker-split review and UAT/release-readiness evidence."
+      "status": "archived",
+      "summary": "Generated PR body and packet evidence updated for marker-split review and UAT/release-readiness evidence.",
+      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
     },
     {
       "step": "Post: PR Creation",
-      "status": "completed",
-      "summary": "Live marker emission pushed the three review branches and opened PR#289, PR#290, and PR#291 in stack order."
+      "status": "archived",
+      "summary": "Live marker emission pushed the three review branches and opened PR#289, PR#290, and PR#291 in stack order.",
+      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "completed",
-      "summary": "Resolved all Copilot review threads on PR#289, PR#290, and PR#291 after pushing reviewed fixes; final PR checks are green and merge states clean."
+      "status": "archived",
+      "summary": "Resolved all Copilot review threads on PR#289, PR#290, and PR#291 after pushing reviewed fixes; final PR checks are green and merge states clean.",
+      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
     },
     {
       "step": "Post: Retrospective",
-      "status": "completed",
-      "summary": "Retrospective complete: PR stack is review-ready with automated and local manual UAT evidence; public release remains blocked until six native operator UAT rows are filled."
+      "status": "archived",
+      "summary": "Retrospective complete: PR stack is review-ready with automated and local manual UAT evidence; public release remains blocked until six native operator UAT rows are filled.",
+      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
     }
   ],
   "current_source_fingerprint": {
@@ -632,7 +646,7 @@
         "parsed": false,
         "matched_expected_topology": false,
         "stdout_tail": "",
-        "stderr_tail": "\u2717 current branch \"codex/xplat-008-claude-codex-cutover-universal-install-release-gate\" is not part of a stack",
+        "stderr_tail": "✗ current branch \"codex/xplat-008-claude-codex-cutover-universal-install-release-gate\" is not part of a stack",
         "evidence_path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/stack-manager/emission/link/preflight/decision.json"
       },
       "topology_compatibility": {
@@ -884,6 +898,30 @@
     },
     "marker_split_result": {
       "path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/marker-plan/final-marker-split-result.json"
+    }
+  },
+  "status": "completed_archived",
+  "archive_cleanup": {
+    "status": "completed_archived",
+    "archived_spec": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate",
+    "archive_report": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md",
+    "cleanup_branch": "codex/xplat-008-archive-cleanup",
+    "cleanup_command": "git rm -r specs/xplat-008-claude-codex-cutover-universal-install-release-gate",
+    "cleanup_applied": true,
+    "completed_at": "2026-07-07T02:00:33Z",
+    "release_readiness_status": "blocked_for_public_native_platform_release_until_operator_uat_passes",
+    "preserved_process_evidence": [
+      "docs/ai/specs/.process/XPLAT-008-workflow.md",
+      "docs/ai/specs/.process/XPLAT-008-design-concept.md",
+      "docs/ai/specs/.process/XPLAT-008-release-readiness.md",
+      "docs/ai/specs/.process/XPLAT-008-uat-matrix.md",
+      "docs/ai/specs/.process/XPLAT-008-uat-codex-macos.md"
+    ],
+    "merge_commits": {
+      "289": "59c18b2dcf79284182f6f5932e61716db0d58090",
+      "290": "1793128875dd0a31e9fafd606eaa55e92123d63e",
+      "291": "66defab977c166bff8726724cdb728b95eec0165",
+      "292": "9507fd452a3e344c1912b449f3bb4f2c38437b38"
     }
   }
 }

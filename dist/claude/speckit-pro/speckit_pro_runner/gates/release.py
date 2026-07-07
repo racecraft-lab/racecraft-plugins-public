@@ -288,7 +288,7 @@ def release_readiness_xplat008(entry: Any, request: Any, repo_root: Path) -> dic
         "runner_invocations": runner_invocations,
         "evidence_refs": {
             "payload_results": ["tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/payload-completeness-cases.json"],
-            "uat_matrix": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat-matrix.md",
+            "uat_matrix": "docs/ai/specs/.process/XPLAT-008-uat-matrix.md",
             "install_health": ["tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/install-health-repair-cases.json"],
             "public_claims": ["tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json"],
             "runner_invocations": ["tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json"],
@@ -1083,7 +1083,7 @@ def default_uat_row(product: str, platform: str, status: str) -> dict[str, Any]:
         "incomplete_install_repair": status,
         "expected_result": "Installed runtime uses Python runner without shell fallback.",
         "actual_result": "Fixture row passed." if status == "pass" else "Fixture row failed.",
-        "evidence_link": f"specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/{product}-{platform}.md",
+        "evidence_link": f"docs/ai/specs/.process/XPLAT-008-uat-{product}-{platform}.md",
         "operator_notes": "Fixture evidence for release gate coverage.",
         "status": status,
     }

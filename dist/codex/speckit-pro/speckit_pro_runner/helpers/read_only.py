@@ -1600,11 +1600,11 @@ def git_is_worktree(repo_root: Path) -> bool:
 def allowed_git_dir(git_dir: Path, repo_root: Path) -> bool:
     if path_stays_in_trust_boundary(git_dir, repo_root):
         return True
-    if git_dir.name != repo_root.name:
-        return False
     if git_dir.parent.name != "worktrees" or git_dir.parent.parent.name != ".git":
         return False
     checkout_root = git_dir.parent.parent.parent
+    if checkout_root.name != repo_root.name:
+        return False
     runner_dir = checkout_root / "speckit-pro" / "speckit_pro_runner"
     return runner_dir.is_dir() and path_stays_in_trust_boundary(runner_dir, checkout_root)
 
