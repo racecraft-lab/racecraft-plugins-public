@@ -487,7 +487,17 @@ class RunnerFoundationTests(unittest.TestCase):
                 continue
             if path.startswith("dist/claude/speckit-pro/agents/") and path.endswith(".md"):
                 source_agent = path.removeprefix("dist/claude/")
+                dist_agent_path = REPO_ROOT / path
+                source_agent_path = REPO_ROOT / source_agent
+                self.assertNotEqual(status_by_path.get(path), "D", path)
                 self.assertIn(source_agent, changed, path)
+                self.assertTrue(source_agent_path.is_file(), source_agent)
+                self.assertTrue(dist_agent_path.is_file(), path)
+                self.assertEqual(
+                    source_agent_path.read_text(encoding="utf-8"),
+                    dist_agent_path.read_text(encoding="utf-8"),
+                    path,
+                )
                 continue
             if path.startswith("dist/") and "/scripts/" in path and path.endswith(".sh"):
                 self.assertEqual(status_by_path.get(path), "D", path)
