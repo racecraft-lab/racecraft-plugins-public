@@ -275,8 +275,8 @@ PUBLIC RELEASE HELD BY XPLAT-008 UAT MATRIX AND ZERO-BASH BACKSTOP GATES
 | XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | Complete / Archived | `.process/XPLAT-006-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-04-xplat-006-post-merge-hygiene.md`; mutation primitives, install inventory/doctor proof, PR-body/command-plan fixtures, phase-coverage hardening, and Layer 4 mutation-helper gates landed in PR #281 |
 | XPLAT-007 | Python Tooling and Release-Gate Migration | Complete / Archived | `.process/XPLAT-007-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md`; Python gate package, CI dispatch, promotion records, and Layer 4 gate tests landed across PRs #284-#287 |
 | XPLAT-008 | Claude/Codex Cutover and Universal Install Release Gate | Complete / Archived | `.process/XPLAT-008-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md`; active Claude/Codex cutover, payload rebuild, public docs claim alignment, release-readiness gates, and safe repair controls landed across PRs #289-#292; public native-platform claims remain blocked by `docs/ai/specs/.process/XPLAT-008-uat-matrix.md` |
-| XPLAT-009 | Plugin Source and Payload Bash Eradication | Ready | `.process/XPLAT-009-workflow.md` | Scaffold next with `$speckit-scaffold-spec XPLAT-009`; remove remaining plugin Bash scripts and active Bash instructions while preserving XPLAT-008 installed-runtime behavior |
-| XPLAT-010 | Repository Bash Confinement and CI Dispatch Guard | Blocked | `.process/XPLAT-010-workflow.md` | Scaffold after XPLAT-009; enforce repository-wide Bash confinement to GitHub CI/CD workflow dispatch glue only |
+| XPLAT-009 | Plugin Source and Payload Bash Eradication | Ready | — | Scaffold next with `$speckit-scaffold-spec XPLAT-009`; remove remaining plugin Bash scripts and active Bash instructions while preserving XPLAT-008 installed-runtime behavior |
+| XPLAT-010 | Repository Bash Confinement and CI Dispatch Guard | Blocked | — | Scaffold after XPLAT-009; enforce repository-wide Bash confinement to GitHub CI/CD workflow dispatch glue only |
 
 **Status Legend:** Pending | Ready | In Progress | In Review | Complete | Complete / Archived | Blocked
 
@@ -1049,10 +1049,10 @@ current test harness and process helper scripts are broad.
 
 **Scope:**
 
-- Port or remove repo-local `.sh` files outside `.github/workflows/`, including
-  `tests/speckit-pro/**`, top-level `scripts/**`, `.claude/hooks/**`, and
-  committed `.specify/**` helper surfaces that participate in active release
-  behavior.
+- Port or remove repo-local `.sh` files and Bash-shebang executables outside
+  `.github/workflows/`, including `tests/speckit-pro/**`, top-level
+  `scripts/**`, `.claude/hooks/**`, and committed `.specify/**` helper surfaces
+  that participate in active release behavior.
 - Update GitHub workflows so any remaining shell is limited to CI/CD dispatch
   and calls Python gates rather than embedding validation, packaging, install,
   release, or runtime logic.
@@ -1080,7 +1080,8 @@ current test harness and process helper scripts are broad.
 
 **Done When:**
 
-- A repo-wide scan excluding `.github/workflows/` finds zero `.sh` files, or any
+- A repo-wide scan excluding `.github/workflows/` finds zero `.sh` files and
+  zero Bash-shebang scripts, including extensionless executables, or any
   remaining non-active upstream-generated exception is documented, allowlisted,
   and excluded from release behavior.
 - GitHub workflow shell snippets contain only dispatch glue and no embedded

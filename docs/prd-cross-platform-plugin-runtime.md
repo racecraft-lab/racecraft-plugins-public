@@ -334,8 +334,9 @@ allowed workflow dispatch glue, then enforce the policy with a repo-wide guard.
 **Acceptance Criteria**
 
 - AC-10.1: A repo-wide scan, excluding `.github/workflows/`, finds zero `.sh`
-  files unless a documented upstream-generated exception is explicitly excluded
-  from active release behavior.
+  files and zero Bash-shebang scripts, including extensionless executables,
+  unless a documented upstream-generated exception is explicitly excluded from
+  active release behavior.
 - AC-10.2: GitHub workflow shell snippets are limited to CI/CD dispatch and call
   Python gates rather than embedding validation, packaging, install, or runtime
   logic.
