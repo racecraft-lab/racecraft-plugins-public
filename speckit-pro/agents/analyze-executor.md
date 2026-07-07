@@ -10,29 +10,7 @@ description: >
   workflow.
 model: opus
 color: orange
-tools:
-  - Skill
-  - Read
-  - Write
-  - Edit
-  - Bash
-  - Grep
-  - Glob
-  - WebSearch
-  - WebFetch
-  - mcp__tavily-mcp__tavily-search
-  - mcp__context7__resolve-library-id
-  - mcp__context7__get-library-docs
-  - mcp__RepoPrompt__context_builder
-  - mcp__RepoPrompt__file_search
-  - mcp__codegraph__codegraph_explore
-  - mcp__codegraph__codegraph_node
-  - mcp__codegraph__codegraph_search
-  - mcp__codegraph__codegraph_callers
-  - mcp__codegraph__codegraph_callees
-  - mcp__codegraph__codegraph_impact
-  - mcp__codegraph__codegraph_files
-  - mcp__codegraph__codegraph_status
+disallowedTools: Agent, TeamCreate, SendMessage
 maxTurns: 100
 effort: max
 ---

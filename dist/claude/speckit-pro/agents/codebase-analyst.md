@@ -9,22 +9,7 @@ description: >
   file-level evidence from the codebase.
 model: sonnet
 color: blue
-tools:
-  - mcp__RepoPrompt__context_builder
-  - mcp__RepoPrompt__file_search
-  - mcp__RepoPrompt__get_code_structure
-  - mcp__RepoPrompt__read_file
-  - Read
-  - Glob
-  - Grep
-  - mcp__codegraph__codegraph_explore
-  - mcp__codegraph__codegraph_node
-  - mcp__codegraph__codegraph_search
-  - mcp__codegraph__codegraph_callers
-  - mcp__codegraph__codegraph_callees
-  - mcp__codegraph__codegraph_impact
-  - mcp__codegraph__codegraph_files
-  - mcp__codegraph__codegraph_status
+disallowedTools: Write, Edit, NotebookEdit, Bash, Skill, Agent, TeamCreate, SendMessage
 maxTurns: 25
 background: true
 effort: max

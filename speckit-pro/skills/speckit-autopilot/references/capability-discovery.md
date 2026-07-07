@@ -46,10 +46,12 @@ select capabilities by their exact runtime identifier rather than a guessed name
 A component that cannot enumerate (its runtime exposes only a fixed set) selects
 directly from what it has.
 
-The orchestrator and the user-invocable skills run with the full session surface
-and enumerate it directly. A read-only subagent does not enumerate beyond its
-granted set; it works within its role boundary (below) and consumes capability
-results the orchestrator gathered and passed to it.
+Every component — the orchestrator, the user-invocable skills, and all
+subagents — inherits the operator's full session surface and enumerates it
+directly; the plugin never pins an availability allowlist. A read-only
+subagent enumerates and selects like any other component, but only among
+read/research capabilities: its role boundary (below) is enforced by denying
+the built-in mutation primitives, not by shrinking what it can see.
 
 ## Selection Rule
 
@@ -64,14 +66,17 @@ results the orchestrator gathered and passed to it.
 
 Proactive discovery never overrides a component's role. A platform cannot
 categorically tell a "read" capability from a "write" one for an arbitrary
-installed tool, so the boundary is enforced by which capabilities a component is
-granted, not by inspecting each tool at call time.
+installed tool, so the boundary is enforced two ways: the built-in mutation
+primitives are denied at the platform layer (Claude `disallowedTools`, Codex
+`sandbox_mode`), and this role rule governs everything the platform cannot
+classify.
 
 - A component declared **read-only** (research and context agents) must never
-  acquire or invoke a capability that writes, mutates, installs, pushes, or
-  otherwise changes state. It is granted only read/research capabilities, and it
-  gains breadth from results the orchestrator already gathered — not by reaching
-  for new write-capable capabilities itself.
+  invoke a capability that writes, mutates, installs, pushes, or otherwise
+  changes state. It sees the full installed surface and selects freely among
+  read/research capabilities — including any the operator installed that this
+  plugin has never heard of — but anything that changes state is off-limits by
+  role, regardless of availability.
 - A component declared **mutating** (the implementation and artifact executors,
   the orchestrator) may use capabilities appropriate to its role, scoped to the
   work it is authorized to perform.
@@ -123,7 +128,8 @@ Exact IDs may remain when they are schema-required metadata rather than active p
 Metadata examples:
 
 - Codex dependency values in generated or runtime metadata.
-- Claude frontmatter `tools:` allowlist IDs.
+- Claude frontmatter `disallowedTools` built-in IDs (role denials name
+  built-in tools only, never a vendor-qualified MCP tool).
 - Generated manifest or path-rewrite metadata.
 - Historical, archive, changelog, or provenance references.
 

@@ -8,14 +8,7 @@ description: >
   external documentation and community best practices.
 model: sonnet
 color: green
-tools:
-  - mcp__tavily-mcp__tavily-search
-  - mcp__tavily-mcp__tavily-extract
-  - mcp__context7__resolve-library-id
-  - mcp__context7__get-library-docs
-  - WebSearch
-  - WebFetch
-  - Read
+disallowedTools: Write, Edit, NotebookEdit, Bash, Skill, Agent, TeamCreate, SendMessage
 maxTurns: 25
 background: true
 effort: max

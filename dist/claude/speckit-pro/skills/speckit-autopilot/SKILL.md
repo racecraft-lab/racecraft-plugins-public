@@ -48,9 +48,11 @@ Agent Team, model routing, lifecycle sequencing — happens HERE. Phase
 executors are terminal workers; they don't dispatch, don't branch on
 `AGENT_TEAMS_AVAILABLE`, don't create teams.
 
-Runtime enforcement: no phase agent has `Agent` or team-management
-tools (`TeamCreate`/`sendMessage`/`taskUpdate`) in its allowlist
-(Layer 5 verifies). **If this skill is ever loaded inside a subagent
+Runtime enforcement: every phase agent explicitly denies `Agent` and
+the team-management tools (`TeamCreate`/`SendMessage`) via
+`disallowedTools` — subagents can nest as of Claude Code v2.1.172, so
+the invariant is an explicit denial, not allowlist omission (Layer 5
+verifies). **If this skill is ever loaded inside a subagent
 context**, it MUST refuse rather than orchestrate. Full invariant +
 implications for new workstreams in
 [`references/agent-teams-integration.md`](./references/agent-teams-integration.md)
@@ -324,9 +326,11 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    registry. Select best-fit per
    [`references/capability-discovery.md`](./references/capability-discovery.md) —
    do not assume a fixed set; the user may have installed anything. Your phase
-   and consensus subagents run with **curated, bounded allowlists and do NOT
-   self-discover**, so when you dispatch one, pass the discovered evidence and
-   capability context it needs directly in its prompt. Ground your OWN output
+   and consensus subagents inherit the operator's full installed surface and
+   follow the same directive — read-only roles select only read/research
+   capabilities (their mutation built-ins are denied). Still pass the
+   discovered evidence and capability context a subagent needs directly in its
+   prompt: shared context beats re-discovery. Ground your OWN output
    (gate decisions, consensus synthesis, generated PR bodies) per
    [`references/grounding.md`](./references/grounding.md): every external fact
    you assert must cite a real tool/skill/file result, and you abstain when

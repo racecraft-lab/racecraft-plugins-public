@@ -149,18 +149,21 @@ sequencing — happen in this one place.
 Claude Code's platform imposes two hard architectural limits that
 together force a single-orchestrator design:
 
-1. **Subagents cannot spawn other subagents.** Per
-   [Anthropic's sub-agent docs](https://code.claude.com/docs/en/sub-agents):
-   *"Subagents work within a single session."* The `Agent` tool is
-   omitted from every speckit-pro phase agent's frontmatter — Layer 5
-   tool scoping verifies this on every test run. The runtime, not
-   just convention, prevents nesting.
+1. **Speckit-pro subagents must not spawn other subagents.** The
+   platform no longer prevents this — per
+   [Anthropic's sub-agent docs](https://code.claude.com/docs/en/subagents),
+   subagents CAN spawn their own subagents as of Claude Code v2.1.172
+   (depth-limited to 5, not configurable) — so the invariant is now
+   enforced by explicit denial: every speckit-pro agent carries
+   `Agent` in its `disallowedTools`, and Layer 5 tool scoping verifies
+   this on every test run.
 2. **Subagents cannot create Agent Teams.** Per
    [Anthropic's Agent Teams architecture](https://code.claude.com/docs/en/agent-teams#architecture):
    *"Team lead: The main Claude Code session that creates the team,
    spawns teammates, and coordinates work."* Team creation requires
    team-management tools (`TeamCreate`, upgraded `Task`, `sendMessage`,
-   `taskUpdate`) which are not in any speckit-pro subagent's allowlist.
+   `taskUpdate`) which every speckit-pro subagent explicitly denies via
+   `disallowedTools`.
 
 Anthropic's own framing makes this a three-tier model that subagents
 can NOT collapse:
@@ -220,8 +223,8 @@ isn't a design preference, it's the only valid topology.
   `bash tests/run-all.sh --layer 5`. Any future agent added to
   `agents/` that violates these denials fails the test.
 
-- **Code review:** any PR that adds an agent definition must keep
-  these three tools out of the allowlist. The Layer 5 universal
+- **Code review:** any PR that adds an agent definition must carry
+  these denials in its `disallowedTools`. The Layer 5 universal
   check catches it automatically, but reviewers should call this out
   explicitly so the design intent is visible in the PR conversation.
 
@@ -355,7 +358,7 @@ Per [Anthropic's Agent Teams docs](https://code.claude.com/docs/en/agent-teams#c
 |-----------|---------|-----|---------------------|
 | Single prompt, single file fix | **Regular session** (no agents) | Tool-call overhead outweighs the work | grill-me Q&A loop, coach response, status read |
 | 3 independent tasks, no dependencies | **Parallel subagents** (`run_in_background: true` × N in one tool turn) | Fast fan-out, results merge in lead context | Within-item consensus (3 analysts), post-impl Path B (3 tracks) |
-| Repeatable workflow with consistent contract | **Subagents with YAML config** | YAML pins tools allowlist + model; same behavior every time | All phase executors (phase-executor, clarify-executor, etc.) |
+| Repeatable workflow with consistent contract | **Subagents with YAML config** | YAML pins role denials (`disallowedTools`) + model; same behavior every time | All phase executors (phase-executor, clarify-executor, etc.) |
 | Multi-file work that needs cross-teammate coordination | **Agent Teams** | Shared task list + mailbox for inter-teammate messaging | Post-impl Path A (Use site 1); planned Use sites 2/3 |
 | Overnight backlog drain | **Headless mode + `--max-budget-usd`** | Budget cap prevents runaway spend on long-running runs | Recommended for autopilot runs scheduled via cron or `/loop` |
 

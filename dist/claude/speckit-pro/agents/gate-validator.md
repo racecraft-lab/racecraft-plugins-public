@@ -7,10 +7,7 @@ description: >
   gate checking to offload mechanical work from the opus orchestrator.
 model: sonnet
 color: cyan
-tools:
-  - Bash
-  - Read
-  - Grep
+disallowedTools: Write, Edit, NotebookEdit, Skill, Agent, TeamCreate, SendMessage
 maxTurns: 10
 effort: max
 ---
