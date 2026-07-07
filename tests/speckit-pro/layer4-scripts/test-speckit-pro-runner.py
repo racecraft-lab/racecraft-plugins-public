@@ -485,6 +485,10 @@ class RunnerFoundationTests(unittest.TestCase):
         for path in changed:
             if path in allowed_exact or path in allowed_xplat008_exact:
                 continue
+            if path.startswith("dist/claude/speckit-pro/agents/") and path.endswith(".md"):
+                source_agent = path.removeprefix("dist/claude/")
+                self.assertIn(source_agent, changed, path)
+                continue
             if path.startswith("dist/") and "/scripts/" in path and path.endswith(".sh"):
                 self.assertEqual(status_by_path.get(path), "D", path)
                 continue
