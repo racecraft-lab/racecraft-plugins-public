@@ -23,9 +23,9 @@ complete native release UAT.
 | Isolated Git CODEX_HOME | `/private/tmp/xplat008-codex-git-macos-uat.1kw5AR` |
 | Installed cache path | `/private/tmp/xplat008-codex-macos-uat.1F8LdV/plugins/cache/racecraft-plugins-public/speckit-pro/2.17.0` |
 | Git install cache path | `/private/tmp/xplat008-codex-git-macos-uat.1kw5AR/plugins/cache/racecraft-plugins-public/speckit-pro/2.17.0` |
-| Real Codex installed source | `/Users/fredrickgabelmann/.codex/.tmp/marketplaces/racecraft-plugins-public/dist/codex/speckit-pro` |
-| SpecKit CLI | `/Users/fredrickgabelmann/.local/bin/specify`, `specify 0.11.8` |
-| Python interpreter | `/Users/fredrickgabelmann/.pyenv/versions/3.11.0/bin/python3`, Python 3.11.0 |
+| Real Codex installed source | `<real-codex-home>/.tmp/marketplaces/racecraft-plugins-public/dist/codex/speckit-pro` |
+| SpecKit CLI | `<local-user-home>/.local/bin/specify`, `specify 0.11.8` |
+| Python interpreter | `<local-user-home>/.pyenv/versions/3.11.0/bin/python3`, Python 3.11.0 |
 
 ## Steps And Results
 

@@ -20,8 +20,8 @@ plugin payload.
 | Plugin version | 2.17.0 |
 | Isolated HOME | `/private/tmp/xplat008-claude-macos-uat.gFoutU` |
 | Installed cache path | `/private/tmp/xplat008-claude-macos-uat.gFoutU/.claude/plugins/cache/racecraft-plugins-public/speckit-pro/2.17.0` |
-| SpecKit CLI | `/Users/fredrickgabelmann/.local/bin/specify`, `specify 0.11.8` |
-| Python interpreter | `/Users/fredrickgabelmann/.pyenv/versions/3.11.0/bin/python3`, Python 3.11.0 |
+| SpecKit CLI | `<local-user-home>/.local/bin/specify`, `specify 0.11.8` |
+| Python interpreter | `<local-user-home>/.pyenv/versions/3.11.0/bin/python3`, Python 3.11.0 |
 
 ## Steps And Results
 
