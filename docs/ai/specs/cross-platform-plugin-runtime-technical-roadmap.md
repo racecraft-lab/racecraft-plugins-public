@@ -54,16 +54,20 @@ again on 2026-07-05 after XPLAT-008 scaffold started on
 `codex/xplat-008-claude-codex-cutover-universal-install-release-gate`; the
 setup design concept accepted one workflow with three internal slices. Updated
 2026-07-07 after XPLAT-008 merged across PRs #289, #290, and #291, followed by
-readiness fix PR #292, and the active spec folder was archived. The
-implementation lane is complete, but public native Windows/macOS/Linux release
-claims remain blocked until the preserved XPLAT-008 UAT matrix has six passing
-operator rows.
+readiness fix PR #292, and the active spec folder was archived. A follow-up
+audit found that generated and installed payloads contain zero `.sh` files, but
+the source plugin still contains 35 Bash scripts and active generated/source
+agent instructions still reference Bash. The roadmap now adds XPLAT-009 for
+plugin source/payload Bash eradication and XPLAT-010 for repository-wide Bash
+confinement. Public native Windows/macOS/Linux release claims remain blocked
+until the preserved XPLAT-008 UAT matrix has six passing operator rows and the
+zero-Bash backstop gates are complete.
 
 ---
 
 ## Roadmap Overview
 
-The release-blocker work is decomposed into **8 specifications** across **8
+The release-blocker work is decomposed into **10 specifications** across **10
 dependency tiers**:
 
 | Tier | Specs | Purpose | Parallelization |
@@ -76,8 +80,10 @@ dependency tiers**:
 | 6 | XPLAT-006 | Port mutation, install, and PR-emission helpers | Complete / archived after PR #281 |
 | 7 | XPLAT-007 | Replace active repo-local Bash helpers, tests, evals, payload builders, release checks, install verification, and release-readiness gates with Python commands | Complete / archived after PRs #284-#287 |
 | 8 | XPLAT-008 | Cut over Claude/Codex surfaces, rebuild payloads, and prove universal install/full-use/update/autoheal release readiness | Complete / archived after PRs #289-#292; public native-platform claims remain blocked by pending operator UAT |
+| 9 | XPLAT-009 | Remove remaining Bash script files and active Bash instructions from plugin source and generated payloads | Ready; follow-up audit found 35 source plugin `.sh` files and stale active Bash guidance |
+| 10 | XPLAT-010 | Confine repository Bash usage to GitHub CI/CD workflow dispatch glue only | Blocked until XPLAT-009 completes |
 
-**Execution Order:** XPLAT-001 -> XPLAT-002 -> XPLAT-003 -> XPLAT-004 -> XPLAT-005 -> XPLAT-006 -> XPLAT-007 -> XPLAT-008
+**Execution Order:** XPLAT-001 -> XPLAT-002 -> XPLAT-003 -> XPLAT-004 -> XPLAT-005 -> XPLAT-006 -> XPLAT-007 -> XPLAT-008 -> XPLAT-009 -> XPLAT-010
 
 **Dependency Constraints:**
 
@@ -101,6 +107,11 @@ dependency tiers**:
   plugin-runtime helper and release gate had a Python path. It is now complete
   and archived after PRs #289-#292; public native-platform claims still require
   passing operator UAT rows in `docs/ai/specs/.process/XPLAT-008-uat-matrix.md`.
+- XPLAT-009 requires XPLAT-008 because the plugin source/payload cleanup must
+  preserve the installed Claude/Codex cutover contract and release-readiness
+  gates that XPLAT-008 established.
+- XPLAT-010 requires XPLAT-009 because repository-wide Bash confinement should
+  not start until plugin source and generated payloads are already Bash-free.
 
 ## Reviewability Contract
 
@@ -146,6 +157,11 @@ release-readiness gates are inside this lane. Historical/archive references may
 remain as prose only. Shell may remain only as GitHub CI/CD dispatch glue that
 invokes Python gates and contains no validation, packaging, install, or runtime
 logic.
+
+After XPLAT-009, `speckit-pro/` and generated `dist/**/speckit-pro` payloads
+must contain zero Bash script files and zero active Bash/`jq` instructions. After
+XPLAT-010, the whole repository must confine Bash to GitHub CI/CD workflow
+dispatch glue only.
 
 ## Python Confidence And Proof Boundary
 
@@ -236,7 +252,13 @@ XPLAT-007 Python Tooling and Release-Gate Migration
 XPLAT-008 Claude/Codex Cutover and Universal Install Release Gate
     |
     v
-PUBLIC RELEASE HELD BY XPLAT-008 UAT MATRIX
+XPLAT-009 Plugin Source and Payload Bash Eradication
+    |
+    v
+XPLAT-010 Repository Bash Confinement and CI Dispatch Guard
+    |
+    v
+PUBLIC RELEASE HELD BY XPLAT-008 UAT MATRIX AND ZERO-BASH BACKSTOP GATES
 ```
 
 ---
@@ -253,6 +275,8 @@ PUBLIC RELEASE HELD BY XPLAT-008 UAT MATRIX
 | XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | Complete / Archived | `.process/XPLAT-006-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-04-xplat-006-post-merge-hygiene.md`; mutation primitives, install inventory/doctor proof, PR-body/command-plan fixtures, phase-coverage hardening, and Layer 4 mutation-helper gates landed in PR #281 |
 | XPLAT-007 | Python Tooling and Release-Gate Migration | Complete / Archived | `.process/XPLAT-007-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md`; Python gate package, CI dispatch, promotion records, and Layer 4 gate tests landed across PRs #284-#287 |
 | XPLAT-008 | Claude/Codex Cutover and Universal Install Release Gate | Complete / Archived | `.process/XPLAT-008-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md`; active Claude/Codex cutover, payload rebuild, public docs claim alignment, release-readiness gates, and safe repair controls landed across PRs #289-#292; public native-platform claims remain blocked by `docs/ai/specs/.process/XPLAT-008-uat-matrix.md` |
+| XPLAT-009 | Plugin Source and Payload Bash Eradication | Ready | — | Scaffold next with `$speckit-scaffold-spec XPLAT-009`; remove remaining plugin Bash scripts and active Bash instructions while preserving XPLAT-008 installed-runtime behavior |
+| XPLAT-010 | Repository Bash Confinement and CI Dispatch Guard | Blocked | — | Scaffold after XPLAT-009; enforce repository-wide Bash confinement to GitHub CI/CD workflow dispatch glue only |
 
 **Status Legend:** Pending | Ready | In Progress | In Review | Complete | Complete / Archived | Blocked
 
@@ -927,32 +951,174 @@ split only if generated payload rebuilds make the review packet too large.
 
 ---
 
+### XPLAT-009: Plugin Source and Payload Bash Eradication
+
+**Priority:** P1 | **Depends On:** XPLAT-008 | **Enables:** XPLAT-010, public Bash-free release readiness
+
+**Status:** Ready. A 2026-07-07 post-XPLAT-008 audit found that generated
+payloads and the installed Codex cache contain zero `.sh` files, but
+`speckit-pro/` still contains 35 Bash scripts and active generated/source agent
+instructions still reference Bash. This spec is the next scaffold target.
+
+**Goal:** Remove every remaining Bash script file and active Bash/`jq`
+instruction from plugin source and generated Claude/Codex payloads while
+preserving the installed-runtime behavior shipped by XPLAT-008.
+
+**Reviewability Budget:** Primary surfaces: harness/adapter + docs/process |
+Projected reviewable LOC: 300-700 |
+Production files: 6-8 |
+Total files: 12-25 |
+Budget result: likely warn because the cleanup spans helper ports, agent
+guidance, generated payloads, and release guards; split only if the scaffold
+finds a clean helper-family boundary that avoids duplicated gate work.
+
+**Scope:**
+
+- Port or remove the remaining plugin Bash scripts under
+  `speckit-pro/skills/speckit-autopilot/scripts/`,
+  `speckit-pro/skills/speckit-coach/scripts/`,
+  `speckit-pro/codex-skills/install/scripts/`, and `speckit-pro/scripts/`.
+- Replace active source and generated agent instructions that still call Bash
+  helpers with Python runner operations or equivalent no-shell guidance.
+- Remove stale Bash-reference parity concepts from active release gates where
+  they imply a live fallback rather than archived provenance.
+- Rebuild Claude and Codex payloads from the updated source surfaces.
+- Add or tighten deterministic guards proving zero `.sh` files in `speckit-pro/`
+  and zero `.sh` files in generated `dist/**/speckit-pro` payloads.
+- Add an active-instruction guard that blocks Bash, `.sh`, `jq`, shell
+  interpolation, or Unix-only assumptions in plugin source and generated
+  payloads outside historical/archive prose.
+- Preserve GitHub workflow dispatch glue as out of scope for this spec.
+
+**Out of Scope:**
+
+- Repository-wide shell harness cleanup under `tests/**`, top-level `scripts/**`,
+  hooks outside the plugin package, and `.specify/**`; XPLAT-010 owns that.
+- Completing the XPLAT-008 native operator UAT matrix.
+- Replacing GitHub Actions workflow YAML or CI/CD dispatch snippets.
+- Rewriting historical/archive prose that describes prior Bash behavior.
+
+**Key Files Likely To Change:**
+
+- `speckit-pro/skills/speckit-autopilot/scripts/**`
+- `speckit-pro/skills/speckit-coach/scripts/**`
+- `speckit-pro/codex-skills/install/scripts/**`
+- `speckit-pro/scripts/**`
+- `speckit-pro/agents/**`
+- `speckit-pro/codex-agents/**`
+- `speckit-pro/speckit_pro_runner/helpers/**`
+- `speckit-pro/speckit_pro_runner/gates/**`
+- `dist/claude/speckit-pro/**`
+- `dist/codex/speckit-pro/**`
+- `tests/speckit-pro/layer4-scripts/fixtures/**`
+
+**Done When:**
+
+- `find speckit-pro -type f -name '*.sh'` returns zero files.
+- `find dist/claude/speckit-pro dist/codex/speckit-pro -type f -name '*.sh'`
+  returns zero files after payload rebuild.
+- The installed Claude/Codex plugin cache produced from the rebuilt payloads
+  contains zero Bash script files.
+- Active source and generated plugin instructions contain no Bash or `jq`
+  invocation path outside a narrow historical/archive allowlist.
+- Focused runner/helper tests and release-readiness gates pass with the new
+  no-shell guard enabled.
+
+---
+
+### XPLAT-010: Repository Bash Confinement and CI Dispatch Guard
+
+**Priority:** P1 | **Depends On:** XPLAT-009 | **Enables:** public Bash-free release readiness
+
+**Status:** Blocked until XPLAT-009 completes. The current repo-wide scan still
+finds many `.sh` files outside `.github/workflows/`, including active test
+harnesses, top-level helper scripts, hooks, and SpecKit process helpers.
+
+**Goal:** Enforce the strict repository policy that Bash may remain only as
+GitHub CI/CD workflow dispatch glue. All active repo-local validation,
+packaging, install, helper, hook, payload, release, and test/eval behavior must
+run through Python gates or another approved non-shell path.
+
+**Reviewability Budget:** Primary surfaces: harness/adapter + seed/config +
+docs/process |
+Projected reviewable LOC: 400-800 |
+Production files: 6-8 |
+Total files: 15-25 |
+Budget result: likely warn and may need typed split exceptions because the
+current test harness and process helper scripts are broad.
+
+**Scope:**
+
+- Port or remove repo-local `.sh` files and Bash-shebang executables outside
+  `.github/workflows/`, including `tests/speckit-pro/**`, top-level
+  `scripts/**`, `.claude/hooks/**`, and committed `.specify/**` helper surfaces
+  that participate in active release behavior.
+- Update GitHub workflows so any remaining shell is limited to CI/CD dispatch
+  and calls Python gates rather than embedding validation, packaging, install,
+  release, or runtime logic.
+- Add a repo-wide guard proving no `.sh` files and no active Bash/`jq`
+  invocations exist outside the workflow dispatch boundary.
+- Document any non-active upstream-generated exceptions with a narrow allowlist
+  and ensure they cannot satisfy release readiness.
+
+**Out of Scope:**
+
+- Plugin source and generated payload cleanup already completed by XPLAT-009.
+- Native operator UAT rows already tracked by XPLAT-008 evidence.
+- Third-party upstream repositories or consumer-project generated files outside
+  this plugin repository.
+
+**Key Files Likely To Change:**
+
+- `tests/speckit-pro/**`
+- `scripts/**`
+- `.claude/hooks/**`
+- `.specify/**`
+- `.github/workflows/**`
+- `speckit-pro/speckit_pro_runner/gates/**`
+- `docs/ai/specs/.process/**`
+
+**Done When:**
+
+- A repo-wide scan excluding `.github/workflows/` finds zero `.sh` files and
+  zero Bash-shebang scripts, including extensionless executables, or any
+  remaining non-active upstream-generated exception is documented, allowlisted,
+  and excluded from release behavior.
+- GitHub workflow shell snippets contain only dispatch glue and no embedded
+  plugin validation, packaging, install, release, or runtime logic.
+- Active tests, evals, payload builders, release-readiness checks,
+  install-verification paths, hooks, and helper tools run without Bash or `jq`.
+- CI fails on new Bash scripts, active Bash invocations, or `jq` dependencies
+  outside the workflow dispatch boundary.
+
+---
+
 ## Release Blocker Statement
 
 SpecKit Pro should not be marketed as a public, cross-platform Claude/Codex
-plugin until XPLAT-008 is complete. Before then, native Windows support is not a
-documentation problem; it is an implementation gap. A complete public claim also
-requires proven Claude/Codex install completeness, latest-tag update behavior,
-doctor/autoheal behavior, and filled UAT runbooks. Consumer trust is now
-specified by XPLAT-003, but it remains an implementation gap until its required
-controls are wired into XPLAT-004, XPLAT-007, and XPLAT-008.
+plugin until XPLAT-008 native operator UAT is complete and the XPLAT-009/XPLAT-010
+zero-Bash backstop gates pass. Before then, native Windows support and
+Bash-free release readiness are implementation gaps, not documentation problems.
+A complete public claim also requires proven Claude/Codex install completeness,
+latest-tag update behavior, doctor/autoheal behavior, filled UAT runbooks, zero
+plugin Bash scripts, and repository Bash confinement to GitHub CI/CD workflow
+dispatch glue. Consumer trust is specified by XPLAT-003 and implemented through
+the runner/release gates, but it remains incomplete until the remaining Bash
+surfaces are removed or confined.
 
 ## References
 
-- Current active Claude autopilot startup invokes Bash helpers from
-  `speckit-pro/skills/speckit-autopilot/SKILL.md`.
-- Current active Codex autopilot startup resolves the same shared script
-  directory from `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`.
-- Current plugin README lists `jq` as a validation-script prerequisite.
-- Current helper scripts under `speckit-pro/skills/**/scripts/`,
-  `speckit-pro/codex-skills/**/scripts/`, and `speckit-pro/scripts/` are Bash.
-- Current test and eval gates under `tests/speckit-pro/**`, including
-  `run-all.sh`, Layer 1 structural tests, Layer 2/3 AI-eval runners, Layer 4
-  helper tests, Layer 5 tool scoping, Layer 6 efficiency, Layer 7 integration,
-  and Layer 8 parity, are Bash and must be ported or removed from the active
-  release gate before XPLAT-007 can pass.
-- Current payload/release helper scripts such as
-  `scripts/build-plugin-payloads.sh`, `scripts/refresh-local-plugin.sh`, and
-  `scripts/sync-marketplace-versions.sh` are Bash and must have Python
-  standard-library replacements when they build, install-test, sync, or validate
-  shipped plugin payloads.
+- 2026-07-07 audit: `find speckit-pro -type f -name '*.sh'` found 35 plugin
+  source Bash scripts across `speckit-pro/skills/speckit-autopilot/scripts/`,
+  `speckit-pro/skills/speckit-coach/scripts/`,
+  `speckit-pro/codex-skills/install/scripts/`, and `speckit-pro/scripts/`.
+- 2026-07-07 audit: generated Claude/Codex payloads under
+  `dist/claude/speckit-pro` and `dist/codex/speckit-pro` contained zero `.sh`
+  files, and the installed Codex cache for version 2.17.0 also contained zero
+  `.sh` files.
+- 2026-07-07 audit: active source and generated agent instructions still
+  referenced Bash helper commands, including marker-counting guidance in
+  analyze/checklist executor agents and UAT runbook author guidance.
+- 2026-07-07 audit: a repo-wide scan excluding `.github/workflows/` still found
+  many `.sh` files outside the plugin source tree, so repository-wide Bash
+  confinement is intentionally split into XPLAT-010.
