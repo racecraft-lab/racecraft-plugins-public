@@ -23,6 +23,7 @@ tools:
   - mcp__context7__get-library-docs
   - mcp__RepoPrompt__file_search
   - mcp__RepoPrompt__context_builder
+  - mcp__codegraph__codegraph_explore
 maxTurns: 50
 effort: max
 memory: project

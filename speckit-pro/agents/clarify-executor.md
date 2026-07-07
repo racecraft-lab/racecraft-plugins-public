@@ -20,6 +20,7 @@ tools:
   - mcp__context7__get-library-docs
   - mcp__RepoPrompt__context_builder
   - mcp__RepoPrompt__file_search
+  - mcp__codegraph__codegraph_explore
 maxTurns: 35
 effort: max
 ---

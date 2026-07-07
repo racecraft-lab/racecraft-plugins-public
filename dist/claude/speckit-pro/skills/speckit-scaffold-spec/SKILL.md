@@ -212,6 +212,33 @@ the existing one or recreate it.
 If the branch already exists (locally or remotely), check it
 out in the worktree instead of creating a new one.
 
+### 3.5. Bootstrap the Worktree (IN the Worktree)
+
+A fresh worktree has only tracked files — no installed dependencies, no
+build outputs, no code indexes. Checked-in agent config (for example a
+project-scoped MCP server that runs a local build) can silently fail to
+start until the worktree is bootstrapped, and the spec session then runs
+without the project's code-intelligence tooling.
+
+```text
+1. Check the project's CLAUDE.md / AGENTS.md for a worktree preflight or
+   bootstrap section (e.g. "Spec-worktree preflight") and run those
+   commands FROM the worktree, in order.
+
+2. Otherwise run the stack's obvious minimum: detect the package manager
+   from the lockfile, install dependencies, and run the documented build
+   command.
+
+3. If the project documents a code index or MCP prerequisite (for
+   example: build, then the project's documented index-init command),
+   run it and verify the documented health check passes.
+```
+
+Report what was bootstrapped — or that the project documents nothing —
+in the scaffold summary. Never skip this silently: an unbootstrapped
+worktree is how spec sessions end up running without the project's
+tooling.
+
 ### 4. Run Grill Me Interview (IN the Worktree)
 
 <hard_constraints>

@@ -17,6 +17,7 @@ tools:
   - Read
   - Glob
   - Grep
+  - mcp__codegraph__codegraph_explore
 maxTurns: 25
 background: true
 effort: max
