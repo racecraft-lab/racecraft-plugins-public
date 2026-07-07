@@ -18,6 +18,13 @@ tools:
   - Glob
   - Grep
   - mcp__codegraph__codegraph_explore
+  - mcp__codegraph__codegraph_node
+  - mcp__codegraph__codegraph_search
+  - mcp__codegraph__codegraph_callers
+  - mcp__codegraph__codegraph_callees
+  - mcp__codegraph__codegraph_impact
+  - mcp__codegraph__codegraph_files
+  - mcp__codegraph__codegraph_status
 maxTurns: 25
 background: true
 effort: max

@@ -24,6 +24,13 @@ tools:
   - mcp__RepoPrompt__file_search
   - mcp__RepoPrompt__context_builder
   - mcp__codegraph__codegraph_explore
+  - mcp__codegraph__codegraph_node
+  - mcp__codegraph__codegraph_search
+  - mcp__codegraph__codegraph_callers
+  - mcp__codegraph__codegraph_callees
+  - mcp__codegraph__codegraph_impact
+  - mcp__codegraph__codegraph_files
+  - mcp__codegraph__codegraph_status
 maxTurns: 50
 effort: max
 memory: project
