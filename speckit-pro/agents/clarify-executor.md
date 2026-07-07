@@ -8,7 +8,7 @@ description: >
   answer/apply. It never edits artifacts and never waits on a user.
 model: opus
 color: pink
-disallowedTools: Write, Edit, NotebookEdit, Bash, Skill, Agent, TeamCreate, SendMessage
+disallowedTools: Write, Edit, MultiEdit, NotebookEdit, Bash, Skill, Agent, TeamCreate, SendMessage
 maxTurns: 35
 effort: max
 ---

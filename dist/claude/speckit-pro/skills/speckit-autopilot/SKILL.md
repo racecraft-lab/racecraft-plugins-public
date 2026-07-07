@@ -62,6 +62,12 @@ implications for new workstreams in
 [`references/agent-teams-integration.md`](./references/agent-teams-integration.md)
 §Single orchestrator invariant.
 
+The no-allowlist rule is about **agent definitions**: Claude agents must omit
+`tools:` so they inherit the operator's installed surface. This skill's
+frontmatter may still declare Claude `allowed-tools` to authorize the
+orchestrator's core primitives; that declaration is not an MCP/vendor
+availability list and does not replace runtime capability discovery.
+
 ## Prerequisites — Model & Effort
 
 The orchestrator makes gate decisions, synthesizes consensus, and

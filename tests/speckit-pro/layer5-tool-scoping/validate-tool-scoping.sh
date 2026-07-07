@@ -54,7 +54,7 @@ AGENTS_DIR="$PLUGIN_ROOT/agents"
 #   FOCUS-CONSTRAINED BY DESIGN — hyper-focused single-purpose workers stay
 #   deliberately narrow so they do exactly their one job:
 #   - The five read-only consensus roles deny the mutation primitives
-#     (Write/Edit/NotebookEdit/Bash — the Claude twin of the Codex agents'
+#     (Write/Edit/MultiEdit/NotebookEdit/Bash — the Claude twin of the Codex agents'
 #     kept `sandbox_mode = "read-only"`; consensus integrity depends on
 #     analysts not mutating artifacts mid-round), plus Skill and the
 #     orchestration tools: a bounded answer-one-question worker neither
@@ -69,7 +69,7 @@ AGENTS_DIR="$PLUGIN_ROOT/agents"
 # denial is ever plugin-wide: each is a per-role focus decision.
 
 ORCHESTRATION_TOOLS=(Agent TeamCreate SendMessage)
-MUTATION_DENIALS=(Write Edit NotebookEdit Bash)
+MUTATION_DENIALS=(Write Edit MultiEdit NotebookEdit Bash)
 OPEN_EXECUTORS=(phase-executor analyze-executor checklist-executor implement-executor)
 
 # ---------------------------------------------------------------------------
@@ -236,7 +236,7 @@ section "gate-validator"
 AGENT_FILE="$AGENTS_DIR/gate-validator.md"
 DENIALS=$(extract_disallowed "$AGENT_FILE")
 
-for tool in Write Edit NotebookEdit Skill; do
+for tool in Write Edit MultiEdit NotebookEdit Skill; do
   set_test "gate-validator denies $tool (validates, never fixes)"
   assert_denied "$DENIALS" "$tool" "gate-validator"
 done

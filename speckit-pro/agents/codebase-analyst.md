@@ -9,7 +9,7 @@ description: >
   file-level evidence from the codebase.
 model: sonnet
 color: blue
-disallowedTools: Write, Edit, NotebookEdit, Bash, Skill, Agent, TeamCreate, SendMessage
+disallowedTools: Write, Edit, MultiEdit, NotebookEdit, Bash, Skill, Agent, TeamCreate, SendMessage
 maxTurns: 25
 background: true
 effort: max

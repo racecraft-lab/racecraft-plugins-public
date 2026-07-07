@@ -46,12 +46,18 @@ select capabilities by their exact runtime identifier rather than a guessed name
 A component that cannot enumerate (its runtime exposes only a fixed set) selects
 directly from what it has.
 
-Every component — the orchestrator, the user-invocable skills, and all
-subagents — inherits the operator's full session surface and enumerates it
-directly; the plugin never pins an availability allowlist. A read-only
-subagent enumerates and selects like any other component, but only among
-read/research capabilities: its role boundary (below) is enforced by denying
-the built-in mutation primitives, not by shrinking what it can see.
+Subagent definitions that omit `tools:` inherit the operator's full session
+surface and enumerate it directly; the plugin never pins an agent availability
+allowlist. User-invocable skills may still declare platform-specific
+authorization metadata, such as Claude Code `allowed-tools`, so the invocation
+can call the core primitives it needs. That metadata is not an installed-tool
+inventory or a vendor/MCP availability allowlist; it is applied before
+discovery, and components enumerate only the runtime surface they actually
+receive.
+
+A read-only subagent enumerates and selects like any other component, but only
+among read/research capabilities: its role boundary (below) is enforced by
+denying the built-in mutation primitives, not by shrinking what it can see.
 
 ## Selection Rule
 
@@ -67,9 +73,10 @@ the built-in mutation primitives, not by shrinking what it can see.
 Proactive discovery never overrides a component's role. A platform cannot
 categorically tell a "read" capability from a "write" one for an arbitrary
 installed tool, so the boundary is enforced two ways: the built-in mutation
-primitives are denied at the platform layer (Claude `disallowedTools`, Codex
-`sandbox_mode`), and this role rule governs everything the platform cannot
-classify.
+primitives (`Write`, `Edit`, `MultiEdit`, `NotebookEdit`, and where the role
+requires it, `Bash`) are denied at the platform layer (Claude
+`disallowedTools`, Codex `sandbox_mode`), and this role rule governs everything
+the platform cannot classify.
 
 - A component declared **read-only** (research and context agents) must never
   invoke a capability that writes, mutates, installs, pushes, or otherwise

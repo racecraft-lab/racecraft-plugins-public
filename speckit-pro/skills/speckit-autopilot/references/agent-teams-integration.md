@@ -164,7 +164,10 @@ held two ways:
    consensus analysts, clarify-executor, gate-validator, and
    uat-runbook-author deny `Agent`/`TeamCreate`/`SendMessage` via
    `disallowedTools` so a bounded answer-one-question worker does
-   exactly its one job and never fans out. Per
+   exactly its one job and never fans out. Read-only and validation
+   roles also deny their role-specific built-in mutation primitives
+   (`Write`, `Edit`, `MultiEdit`, `NotebookEdit`, and for read-only
+   workers `Bash`). Per
    [Anthropic's Agent Teams architecture](https://code.claude.com/docs/en/agent-teams#architecture),
    team-lead duties sit with the main session anyway: *"Team lead: The
    main Claude Code session that creates the team, spawns teammates,
@@ -221,11 +224,11 @@ own is the workflow's phase dispatch.
 
 - **Layer 5 (tool scoping) — machine-verified, two-tier:** the
   hyper-focused workers (consensus analysts, clarify-executor,
-  gate-validator, uat-runbook-author) must DENY
-  `Agent`/`TeamCreate`/`SendMessage` in `disallowedTools`; the open
-  executors (phase-, analyze-, checklist-, implement-executor) must
-  NOT deny them — operator orchestration capability stays available
-  on agents doing open-ended work.
+  gate-validator, uat-runbook-author) must DENY their role-specific
+  mutation/orchestration tools in `disallowedTools`; the open executors
+  (phase-, analyze-, checklist-, implement-executor) must NOT deny
+  orchestration tools — operator orchestration capability stays
+  available on agents doing open-ended work.
 
   See `tests/layer5-tool-scoping/validate-tool-scoping.sh` §"Open
   executors — orchestration capabilities never denied" and the

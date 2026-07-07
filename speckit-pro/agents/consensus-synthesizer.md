@@ -9,7 +9,7 @@ description: >
   autopilot workflow.
 model: sonnet
 color: purple
-disallowedTools: Write, Edit, NotebookEdit, Bash, Skill, Agent, TeamCreate, SendMessage
+disallowedTools: Write, Edit, MultiEdit, NotebookEdit, Bash, Skill, Agent, TeamCreate, SendMessage
 maxTurns: 15
 effort: max
 ---
