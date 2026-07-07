@@ -48,11 +48,15 @@ Agent Team, model routing, lifecycle sequencing — happens HERE. Phase
 executors are terminal workers; they don't dispatch, don't branch on
 `AGENT_TEAMS_AVAILABLE`, don't create teams.
 
-Runtime enforcement: every phase agent explicitly denies `Agent` and
-the team-management tools (`TeamCreate`/`SendMessage`) via
-`disallowedTools` — subagents can nest as of Claude Code v2.1.172, so
-the invariant is an explicit denial, not allowlist omission (Layer 5
-verifies). **If this skill is ever loaded inside a subagent
+Runtime enforcement is two-tier (Layer 5 verifies both): the
+hyper-focused single-purpose workers (the consensus analysts,
+clarify-executor, gate-validator, uat-runbook-author) explicitly deny
+`Agent`/`TeamCreate`/`SendMessage` via `disallowedTools` so they stay
+on their one job; the open workhorse executors (phase-, analyze-,
+checklist-, implement-executor) keep the operator's full surface —
+including orchestration tools — and the invariant there is carried by
+this skill owning all PHASE dispatch plus each executor's
+terminal-worker prompt, never by a capability block. **If this skill is ever loaded inside a subagent
 context**, it MUST refuse rather than orchestrate. Full invariant +
 implications for new workstreams in
 [`references/agent-teams-integration.md`](./references/agent-teams-integration.md)

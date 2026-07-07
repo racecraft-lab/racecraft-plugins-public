@@ -144,26 +144,31 @@ workflow run.** All dispatch decisions, all subagent spawns, all
 Agent Team creation, all model-routing decisions, all lifecycle
 sequencing — happen in this one place.
 
-### Why this invariant exists
+### Why this invariant exists — and what it does NOT block
 
-Claude Code's platform imposes two hard architectural limits that
-together force a single-orchestrator design:
+The invariant is about the WORKFLOW, not about capability: every
+phase-dispatch decision belongs to the autopilot main session. It is
+held two ways:
 
-1. **Speckit-pro subagents must not spawn other subagents.** The
-   platform no longer prevents this — per
+1. **Open executors keep full orchestration capability.** Per
    [Anthropic's sub-agent docs](https://code.claude.com/docs/en/subagents),
    subagents CAN spawn their own subagents as of Claude Code v2.1.172
-   (depth-limited to 5, not configurable) — so the invariant is now
-   enforced by explicit denial: every speckit-pro agent carries
-   `Agent` in its `disallowedTools`, and Layer 5 tool scoping verifies
-   this on every test run.
-2. **Subagents cannot create Agent Teams.** Per
-   [Anthropic's Agent Teams architecture](https://code.claude.com/docs/en/agent-teams#architecture):
-   *"Team lead: The main Claude Code session that creates the team,
-   spawns teammates, and coordinates work."* Team creation requires
-   team-management tools (`TeamCreate`, upgraded `Task`, `sendMessage`,
-   `taskUpdate`) which every speckit-pro subagent explicitly denies via
-   `disallowedTools`.
+   (depth-limited to 5). The workhorse executors (phase-, analyze-,
+   checklist-, implement-executor) deliberately keep `Agent` and the
+   team tools — the plugin never prevents maximum use of the
+   operator's installed capabilities on agents doing open-ended work.
+   What keeps phase dispatch in the main session for them is their
+   terminal-worker prompts plus this skill owning the dispatch tables —
+   convention by design, not a capability block.
+2. **Hyper-focused workers are scope-constrained on purpose.** The
+   consensus analysts, clarify-executor, gate-validator, and
+   uat-runbook-author deny `Agent`/`TeamCreate`/`SendMessage` via
+   `disallowedTools` so a bounded answer-one-question worker does
+   exactly its one job and never fans out. Per
+   [Anthropic's Agent Teams architecture](https://code.claude.com/docs/en/agent-teams#architecture),
+   team-lead duties sit with the main session anyway: *"Team lead: The
+   main Claude Code session that creates the team, spawns teammates,
+   and coordinates work."*
 
 Anthropic's own framing makes this a three-tier model that subagents
 can NOT collapse:
@@ -206,27 +211,33 @@ spawns the consensus analysts, not the executor.
 
 This is the flat orchestrator-worker pattern from Anthropic's
 [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents)
-guide. Layered orchestration (sub-orchestrators that themselves
-dispatch) is not possible on Claude Code's runtime; the flat pattern
-isn't a design preference, it's the only valid topology.
+guide. The runtime permits nesting (depth-limited), so the flat
+pattern IS a design preference — chosen because phase dispatch has one
+owner and results merge in one context. Open executors may still
+spawn platform-permitted helpers for their own work; what they never
+own is the workflow's phase dispatch.
 
 ### Enforcement
 
-- **Layer 5 (tool scoping) — machine-verified:** every agent under
-  `agents/*.md` is universally checked for absence of:
-  - `Agent` (subagent-nesting prevention — runtime-enforced)
-  - `TeamCreate` (no team-lead capability)
-  - `SendMessage` (no team-mailbox participation)
+- **Layer 5 (tool scoping) — machine-verified, two-tier:** the
+  hyper-focused workers (consensus analysts, clarify-executor,
+  gate-validator, uat-runbook-author) must DENY
+  `Agent`/`TeamCreate`/`SendMessage` in `disallowedTools`; the open
+  executors (phase-, analyze-, checklist-, implement-executor) must
+  NOT deny them — operator orchestration capability stays available
+  on agents doing open-ended work.
 
-  See `tests/layer5-tool-scoping/validate-tool-scoping.sh` §"Single
-  orchestrator invariant — universal denial." Run via
-  `bash tests/run-all.sh --layer 5`. Any future agent added to
-  `agents/` that violates these denials fails the test.
+  See `tests/layer5-tool-scoping/validate-tool-scoping.sh` §"Open
+  executors — orchestration capabilities never denied" and the
+  focused-role sections. Run via `bash tests/run-all.sh --layer 5`.
+  Any future agent added to `agents/` is checked on both tiers.
 
-- **Code review:** any PR that adds an agent definition must carry
-  these denials in its `disallowedTools`. The Layer 5 universal
-  check catches it automatically, but reviewers should call this out
-  explicitly so the design intent is visible in the PR conversation.
+- **Code review:** any PR that adds an agent definition must decide
+  its tier deliberately — fully open where the agent's work is
+  open-ended, maximally constrained where hyper-focus serves the
+  workflow — and Layer 5 encodes the decision. Reviewers should call
+  the tier choice out explicitly so the design intent is visible in
+  the PR conversation.
 
 - **Runtime self-check:** SKILL.md's §Codex Skill-Selection Guard plus
   the *"If this skill is ever loaded inside a subagent context"*
@@ -358,7 +369,7 @@ Per [Anthropic's Agent Teams docs](https://code.claude.com/docs/en/agent-teams#c
 |-----------|---------|-----|---------------------|
 | Single prompt, single file fix | **Regular session** (no agents) | Tool-call overhead outweighs the work | grill-me Q&A loop, coach response, status read |
 | 3 independent tasks, no dependencies | **Parallel subagents** (`run_in_background: true` × N in one tool turn) | Fast fan-out, results merge in lead context | Within-item consensus (3 analysts), post-impl Path B (3 tracks) |
-| Repeatable workflow with consistent contract | **Subagents with YAML config** | YAML pins role denials (`disallowedTools`) + model; same behavior every time | All phase executors (phase-executor, clarify-executor, etc.) |
+| Repeatable workflow with consistent contract | **Subagents with YAML config** | YAML pins model + the agent's tier (open, or focus denials via `disallowedTools`); same behavior every time | All phase executors (phase-executor, clarify-executor, etc.) |
 | Multi-file work that needs cross-teammate coordination | **Agent Teams** | Shared task list + mailbox for inter-teammate messaging | Post-impl Path A (Use site 1); planned Use sites 2/3 |
 | Overnight backlog drain | **Headless mode + `--max-budget-usd`** | Budget cap prevents runaway spend on long-running runs | Recommended for autopilot runs scheduled via cron or `/loop` |
 

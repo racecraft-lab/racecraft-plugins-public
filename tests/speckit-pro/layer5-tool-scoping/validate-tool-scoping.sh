@@ -38,24 +38,39 @@ AGENTS_DIR="$PLUGIN_ROOT/agents"
 # per-tool governance is operator machinery (config layers, rules, hooks —
 # all trust-gated; developers.openai.com/codex/subagents, /codex/config-reference).
 #
-# What the plugin DOES pin, via `disallowedTools` (a comma-separated scalar per
+# What the plugin MAY pin, via `disallowedTools` (a comma-separated scalar per
 # code.claude.com/docs/en/subagents; supported for plugin agents per
-# /docs/en/plugins-reference), is built-in ROLE-INTEGRITY denials only:
-#   - Single orchestrator invariant: subagents can nest as of Claude Code
-#     v2.1.172 (depth-limited, not prevented), so every phase agent must
-#     explicitly deny Agent + team tools — only the main-session orchestrator
-#     fans out (references/agent-teams-integration.md).
-#   - Read-only consensus roles deny the built-in mutation primitives
-#     (Write/Edit/NotebookEdit/Bash) — the Claude twin of the Codex agents'
-#     kept `sandbox_mode = "read-only"`. Consensus integrity depends on
-#     analysts not mutating artifacts mid-round.
-#   - Workflow discipline: terminal workers deny Skill so a single-task agent
-#     cannot re-enter /speckit-* phases recursively.
+# /docs/en/plugins-reference), is built-in ROLE-FOCUS denials, two-tier:
+#
+#   OPEN BY DEFAULT — the heavy workhorse executors (phase-executor,
+#   analyze-executor, checklist-executor, implement-executor) carry no denial
+#   beyond implement-executor's Skill (no /speckit-* phase re-entry from a
+#   single-task worker). They keep the operator's FULL surface — including
+#   orchestration tools (Agent, TeamCreate, SendMessage): what an agent may
+#   spawn is the operator's call, subagent nesting is platform depth-limited,
+#   and the plugin must never prevent maximum use of the operator's installed
+#   Claude Code or Codex capabilities on the agents doing open-ended work.
+#
+#   FOCUS-CONSTRAINED BY DESIGN — hyper-focused single-purpose workers stay
+#   deliberately narrow so they do exactly their one job:
+#   - The five read-only consensus roles deny the mutation primitives
+#     (Write/Edit/NotebookEdit/Bash — the Claude twin of the Codex agents'
+#     kept `sandbox_mode = "read-only"`; consensus integrity depends on
+#     analysts not mutating artifacts mid-round), plus Skill and the
+#     orchestration tools: a bounded answer-one-question worker neither
+#     re-enters phases nor fans out.
+#   - gate-validator denies mutation + Skill + orchestration (validates,
+#     never fixes; keeps Bash to run gate scripts).
+#   - uat-runbook-author denies Skill + orchestration (single-file author;
+#     keeps its mutation surface).
+#
 # Denials name BUILT-IN tools only — never a vendor-qualified MCP tool. An
-# unknown installed capability is never blocked by this plugin.
+# unknown installed capability is never blocked by this plugin, and no
+# denial is ever plugin-wide: each is a per-role focus decision.
 
-ORCHESTRATION_DENIALS=(Agent TeamCreate SendMessage)
+ORCHESTRATION_TOOLS=(Agent TeamCreate SendMessage)
 MUTATION_DENIALS=(Write Edit NotebookEdit Bash)
+OPEN_EXECUTORS=(phase-executor analyze-executor checklist-executor implement-executor)
 
 # ---------------------------------------------------------------------------
 # Helper: extract YAML frontmatter (between the first pair of --- lines)
@@ -152,13 +167,6 @@ for agent_file in "$AGENTS_DIR"/*.md; do
     _pass
   fi
 
-  set_test "$agent_name declares disallowedTools (role-integrity denials are mandatory)"
-  if printf '%s\n' "$FRONTMATTER" | grep -q '^disallowedTools:'; then
-    _pass
-  else
-    _fail "$agent_name is missing disallowedTools — at minimum the single-orchestrator denials are required"
-  fi
-
   # Denials must name built-in tools only. A vendor-qualified token anywhere
   # in frontmatter would reintroduce named-vendor pinning through the back
   # door (blocking one vendor's tool is still a named-vendor contract).
@@ -171,22 +179,24 @@ for agent_file in "$AGENTS_DIR"/*.md; do
 done
 
 # ===========================================================================
-# Universal: single orchestrator invariant — no subagent may dispatch
+# Open executors: orchestration capabilities are never denied
 # ===========================================================================
-# Subagents CAN spawn subagents as of Claude Code v2.1.172 (depth-limited to
-# 5, not prevented), so with an inherited tool surface this invariant MUST be
-# an explicit denial: only the main session (which loads the
-# speckit-autopilot skill) may spawn subagents or create Agent Teams. Phase
-# agents are terminal workers.
-section "Single orchestrator invariant — universal denial"
+# The workhorse executors must keep maximum use of the operator's installed
+# capabilities — including spawning subagents, creating Agent Teams, and
+# messaging teammates. The single-orchestrator WORKFLOW remains the design
+# (the autopilot skill does the phase dispatching; executor prompts define
+# their job), but for these agents it is convention carried by prompts, not
+# a capability block: subagent nesting is platform depth-limited, and what
+# an open executor may spawn for its own work is the operator's call.
+section "Open executors — orchestration capabilities never denied"
 
-for agent_file in "$AGENTS_DIR"/*.md; do
-  agent_name=$(basename "$agent_file" .md)
-  DENIALS=$(extract_disallowed "$agent_file")
+for agent in "${OPEN_EXECUTORS[@]}"; do
+  AGENT_FILE="$AGENTS_DIR/$agent.md"
+  DENIALS=$(extract_disallowed "$AGENT_FILE")
 
-  for tool in "${ORCHESTRATION_DENIALS[@]}"; do
-    set_test "$agent_name denies $tool (single orchestrator invariant)"
-    assert_denied "$DENIALS" "$tool" "$agent_name"
+  for tool in "${ORCHESTRATION_TOOLS[@]}"; do
+    set_test "$agent does NOT deny $tool (operator orchestration stays available)"
+    assert_not_denied "$DENIALS" "$tool" "$agent"
   done
 done
 
@@ -211,6 +221,11 @@ for agent in codebase-analyst spec-context-analyst domain-researcher clarify-exe
 
   set_test "$agent denies Skill (consensus workers do not re-enter phases)"
   assert_denied "$DENIALS" "Skill" "$agent"
+
+  for tool in "${ORCHESTRATION_TOOLS[@]}"; do
+    set_test "$agent denies $tool (hyper-focused worker does not fan out)"
+    assert_denied "$DENIALS" "$tool" "$agent"
+  done
 done
 
 # ===========================================================================
@@ -223,6 +238,11 @@ DENIALS=$(extract_disallowed "$AGENT_FILE")
 
 for tool in Write Edit NotebookEdit Skill; do
   set_test "gate-validator denies $tool (validates, never fixes)"
+  assert_denied "$DENIALS" "$tool" "gate-validator"
+done
+
+for tool in "${ORCHESTRATION_TOOLS[@]}"; do
+  set_test "gate-validator denies $tool (hyper-focused validator does not fan out)"
   assert_denied "$DENIALS" "$tool" "gate-validator"
 done
 
@@ -257,6 +277,14 @@ for agent in implement-executor uat-runbook-author; do
     set_test "$agent does NOT deny $tool (mutating role requires it)"
     assert_not_denied "$DENIALS" "$tool" "$agent"
   done
+done
+
+# uat-runbook-author is a hyper-focused single-file author: no fan-out.
+# (implement-executor is an OPEN executor — its non-denial is asserted above.)
+DENIALS=$(extract_disallowed "$AGENTS_DIR/uat-runbook-author.md")
+for tool in "${ORCHESTRATION_TOOLS[@]}"; do
+  set_test "uat-runbook-author denies $tool (hyper-focused worker does not fan out)"
+  assert_denied "$DENIALS" "$tool" "uat-runbook-author"
 done
 
 set_test "uat-runbook-author model is sonnet (read-and-synthesize task)"
@@ -375,6 +403,16 @@ if [ -d "$CODEX_AGENTS_DIR" ]; then
       assert_eq "read-only" "$sandbox" "${agent} must be read-only"
     fi
   done
+
+  # autopilot-fast-helper: advisory text-only leaf on a latency-first model
+  # (deliberately not the gpt-5.5 policy model, so it sits outside the loops
+  # above); its only lever is the sandbox, which must stay read-only.
+  AGENT_FILE="$CODEX_AGENTS_DIR/autopilot-fast-helper.toml"
+  if [ -f "$AGENT_FILE" ]; then
+    sandbox=$(extract_toml_field "$AGENT_FILE" "sandbox_mode")
+    set_test "codex autopilot-fast-helper: sandbox_mode is read-only (advisory text-only leaf)"
+    assert_eq "read-only" "$sandbox" "autopilot-fast-helper must be read-only"
+  fi
 
   # Write agents must have sandbox_mode: workspace-write
   for agent in checklist-executor analyze-executor implement-executor phase-executor uat-runbook-author; do

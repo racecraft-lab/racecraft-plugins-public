@@ -13,7 +13,6 @@ description: >
   markers found, and errors.
 model: opus
 color: cyan
-disallowedTools: Agent, TeamCreate, SendMessage
 maxTurns: 50
 effort: max
 ---

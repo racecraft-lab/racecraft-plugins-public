@@ -9,7 +9,6 @@ description: >
   checklist domain in the autopilot workflow.
 model: opus
 color: yellow
-disallowedTools: Agent, TeamCreate, SendMessage
 maxTurns: 100
 effort: max
 ---

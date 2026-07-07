@@ -9,7 +9,7 @@ description: >
   tasks in the autopilot implement phase.
 model: opus
 color: red
-disallowedTools: Skill, Agent, TeamCreate, SendMessage
+disallowedTools: Skill
 maxTurns: 50
 effort: max
 memory: project

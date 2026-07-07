@@ -10,7 +10,6 @@ description: >
   workflow.
 model: opus
 color: orange
-disallowedTools: Agent, TeamCreate, SendMessage
 maxTurns: 100
 effort: max
 ---
