@@ -19,8 +19,17 @@
         "host_version": "Windows 11 fixture",
         "plugin_version_or_latest_tag": "2.17.0",
         "installed_cache_path": "fixture/claude/windows/speckit-pro",
-        "interpreter_resolution": {"accepted": true, "minimum_version": "3.11", "resolved_executable": "py", "version": "3.11.9"},
-        "runner_invocation_ids": ["xplat-008-runner-invocation-claude-windows-install", "xplat-008-runner-invocation-claude-windows-update", "xplat-008-runner-invocation-claude-windows-autoheal"],
+        "interpreter_resolution": {
+          "accepted": true,
+          "minimum_version": "3.11",
+          "resolved_executable": "py",
+          "version": "3.11.9"
+        },
+        "runner_invocation_ids": [
+          "xplat-008-runner-invocation-claude-windows-install",
+          "xplat-008-runner-invocation-claude-windows-update",
+          "xplat-008-runner-invocation-claude-windows-autoheal"
+        ],
         "install_result": "pass",
         "bundled_agent_verification": "pass",
         "first_use": "pass",
@@ -30,7 +39,7 @@
         "incomplete_install_repair": "pass",
         "expected_result": "Claude on Windows installs SpecKit Pro, resolves Python 3.11+, runs first-use workflows, updates to the latest tag, and repairs a trusted incomplete install.",
         "actual_result": "Fixture row represents passing native evidence for install, bundled agents, first use, scaffold/status, autopilot dry-run, latest-tag update, and incomplete-install repair.",
-        "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/claude-windows.md",
+        "evidence_link": "docs/ai/specs/.process/XPLAT-008-uat-claude-windows.md",
         "operator_notes": "Detailed evidence file records command output, cache path, interpreter resolution, and repair result.",
         "status": "pass"
       },
@@ -42,8 +51,17 @@
         "host_version": "macOS 15 fixture",
         "plugin_version_or_latest_tag": "2.17.0",
         "installed_cache_path": "fixture/claude/macos/speckit-pro",
-        "interpreter_resolution": {"accepted": true, "minimum_version": "3.11", "resolved_executable": "python3", "version": "3.11.9"},
-        "runner_invocation_ids": ["xplat-008-runner-invocation-claude-macos-install", "xplat-008-runner-invocation-claude-macos-update", "xplat-008-runner-invocation-claude-macos-autoheal"],
+        "interpreter_resolution": {
+          "accepted": true,
+          "minimum_version": "3.11",
+          "resolved_executable": "python3",
+          "version": "3.11.9"
+        },
+        "runner_invocation_ids": [
+          "xplat-008-runner-invocation-claude-macos-install",
+          "xplat-008-runner-invocation-claude-macos-update",
+          "xplat-008-runner-invocation-claude-macos-autoheal"
+        ],
         "install_result": "pass",
         "bundled_agent_verification": "pass",
         "first_use": "pass",
@@ -53,7 +71,7 @@
         "incomplete_install_repair": "pass",
         "expected_result": "Claude on macOS installs SpecKit Pro, resolves Python 3.11+, runs first-use workflows, updates to the latest tag, and repairs a trusted incomplete install.",
         "actual_result": "Fixture row represents passing native evidence for install, bundled agents, first use, scaffold/status, autopilot dry-run, latest-tag update, and incomplete-install repair.",
-        "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/claude-macos.md",
+        "evidence_link": "docs/ai/specs/.process/XPLAT-008-uat-claude-macos.md",
         "operator_notes": "Detailed evidence file records command output, cache path, interpreter resolution, and repair result.",
         "status": "pass"
       },
@@ -65,8 +83,17 @@
         "host_version": "Ubuntu 24.04 fixture",
         "plugin_version_or_latest_tag": "2.17.0",
         "installed_cache_path": "fixture/claude/linux/speckit-pro",
-        "interpreter_resolution": {"accepted": true, "minimum_version": "3.11", "resolved_executable": "python3", "version": "3.11.9"},
-        "runner_invocation_ids": ["xplat-008-runner-invocation-claude-linux-install", "xplat-008-runner-invocation-claude-linux-update", "xplat-008-runner-invocation-claude-linux-autoheal"],
+        "interpreter_resolution": {
+          "accepted": true,
+          "minimum_version": "3.11",
+          "resolved_executable": "python3",
+          "version": "3.11.9"
+        },
+        "runner_invocation_ids": [
+          "xplat-008-runner-invocation-claude-linux-install",
+          "xplat-008-runner-invocation-claude-linux-update",
+          "xplat-008-runner-invocation-claude-linux-autoheal"
+        ],
         "install_result": "pass",
         "bundled_agent_verification": "pass",
         "first_use": "pass",
@@ -76,7 +103,7 @@
         "incomplete_install_repair": "pass",
         "expected_result": "Claude on Linux installs SpecKit Pro, resolves Python 3.11+, runs first-use workflows, updates to the latest tag, and repairs a trusted incomplete install.",
         "actual_result": "Fixture row represents passing native evidence for install, bundled agents, first use, scaffold/status, autopilot dry-run, latest-tag update, and incomplete-install repair.",
-        "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/claude-linux.md",
+        "evidence_link": "docs/ai/specs/.process/XPLAT-008-uat-claude-linux.md",
         "operator_notes": "Detailed evidence file records command output, cache path, interpreter resolution, and repair result.",
         "status": "pass"
       },
@@ -88,8 +115,17 @@
         "host_version": "Windows 11 fixture",
         "plugin_version_or_latest_tag": "2.17.0",
         "installed_cache_path": "fixture/codex/windows/speckit-pro",
-        "interpreter_resolution": {"accepted": true, "minimum_version": "3.11", "resolved_executable": "py", "version": "3.11.9"},
-        "runner_invocation_ids": ["xplat-008-runner-invocation-codex-windows-install", "xplat-008-runner-invocation-codex-windows-update", "xplat-008-runner-invocation-codex-windows-autoheal"],
+        "interpreter_resolution": {
+          "accepted": true,
+          "minimum_version": "3.11",
+          "resolved_executable": "py",
+          "version": "3.11.9"
+        },
+        "runner_invocation_ids": [
+          "xplat-008-runner-invocation-codex-windows-install",
+          "xplat-008-runner-invocation-codex-windows-update",
+          "xplat-008-runner-invocation-codex-windows-autoheal"
+        ],
         "install_result": "pass",
         "bundled_agent_verification": "pass",
         "first_use": "pass",
@@ -99,7 +135,7 @@
         "incomplete_install_repair": "pass",
         "expected_result": "Codex on Windows installs SpecKit Pro, resolves Python 3.11+, runs first-use workflows, updates to the latest tag, and repairs a trusted incomplete install.",
         "actual_result": "Fixture row represents passing native evidence for install, bundled agents, first use, scaffold/status, autopilot dry-run, latest-tag update, and incomplete-install repair.",
-        "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/codex-windows.md",
+        "evidence_link": "docs/ai/specs/.process/XPLAT-008-uat-codex-windows.md",
         "operator_notes": "Detailed evidence file records command output, cache path, interpreter resolution, and repair result.",
         "status": "pass"
       },
@@ -111,8 +147,17 @@
         "host_version": "macOS 15 fixture",
         "plugin_version_or_latest_tag": "2.17.0",
         "installed_cache_path": "fixture/codex/macos/speckit-pro",
-        "interpreter_resolution": {"accepted": true, "minimum_version": "3.11", "resolved_executable": "python3", "version": "3.11.9"},
-        "runner_invocation_ids": ["xplat-008-runner-invocation-codex-macos-install", "xplat-008-runner-invocation-codex-macos-update", "xplat-008-runner-invocation-codex-macos-autoheal"],
+        "interpreter_resolution": {
+          "accepted": true,
+          "minimum_version": "3.11",
+          "resolved_executable": "python3",
+          "version": "3.11.9"
+        },
+        "runner_invocation_ids": [
+          "xplat-008-runner-invocation-codex-macos-install",
+          "xplat-008-runner-invocation-codex-macos-update",
+          "xplat-008-runner-invocation-codex-macos-autoheal"
+        ],
         "install_result": "pass",
         "bundled_agent_verification": "pass",
         "first_use": "pass",
@@ -122,7 +167,7 @@
         "incomplete_install_repair": "pass",
         "expected_result": "Codex on macOS installs SpecKit Pro, resolves Python 3.11+, runs first-use workflows, updates to the latest tag, and repairs a trusted incomplete install.",
         "actual_result": "Fixture row represents passing native evidence for install, bundled agents, first use, scaffold/status, autopilot dry-run, latest-tag update, and incomplete-install repair.",
-        "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/codex-macos.md",
+        "evidence_link": "docs/ai/specs/.process/XPLAT-008-uat-codex-macos.md",
         "operator_notes": "Detailed evidence file records command output, cache path, interpreter resolution, and repair result.",
         "status": "pass"
       },
@@ -134,8 +179,17 @@
         "host_version": "Ubuntu 24.04 fixture",
         "plugin_version_or_latest_tag": "2.17.0",
         "installed_cache_path": "fixture/codex/linux/speckit-pro",
-        "interpreter_resolution": {"accepted": true, "minimum_version": "3.11", "resolved_executable": "python3", "version": "3.11.9"},
-        "runner_invocation_ids": ["xplat-008-runner-invocation-codex-linux-install", "xplat-008-runner-invocation-codex-linux-update", "xplat-008-runner-invocation-codex-linux-autoheal"],
+        "interpreter_resolution": {
+          "accepted": true,
+          "minimum_version": "3.11",
+          "resolved_executable": "python3",
+          "version": "3.11.9"
+        },
+        "runner_invocation_ids": [
+          "xplat-008-runner-invocation-codex-linux-install",
+          "xplat-008-runner-invocation-codex-linux-update",
+          "xplat-008-runner-invocation-codex-linux-autoheal"
+        ],
         "install_result": "pass",
         "bundled_agent_verification": "pass",
         "first_use": "pass",
@@ -145,14 +199,17 @@
         "incomplete_install_repair": "pass",
         "expected_result": "Codex on Linux installs SpecKit Pro, resolves Python 3.11+, runs first-use workflows, updates to the latest tag, and repairs a trusted incomplete install.",
         "actual_result": "Fixture row represents passing native evidence for install, bundled agents, first use, scaffold/status, autopilot dry-run, latest-tag update, and incomplete-install repair.",
-        "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/codex-linux.md",
+        "evidence_link": "docs/ai/specs/.process/XPLAT-008-uat-codex-linux.md",
         "operator_notes": "Detailed evidence file records command output, cache path, interpreter resolution, and repair result.",
         "status": "pass"
       }
     ]
   },
   "cases": [
-    {"case_id": "ready", "expected_status": "pass"},
+    {
+      "case_id": "ready",
+      "expected_status": "pass"
+    },
     {
       "case_id": "missing-row",
       "expected_status": "fail",
@@ -173,8 +230,12 @@
             "host_version": "Windows 11 fixture",
             "plugin_version_or_latest_tag": "2.17.0",
             "installed_cache_path": "fixture/claude/windows/speckit-pro",
-            "interpreter_resolution": {"accepted": true},
-            "runner_invocation_ids": ["xplat-008-runner-invocation-claude-windows-install"],
+            "interpreter_resolution": {
+              "accepted": true
+            },
+            "runner_invocation_ids": [
+              "xplat-008-runner-invocation-claude-windows-install"
+            ],
             "install_result": "pass",
             "bundled_agent_verification": "pass",
             "first_use": "pass",
@@ -184,7 +245,7 @@
             "incomplete_install_repair": "pass",
             "expected_result": "Expected result is recorded.",
             "actual_result": "Actual result is recorded.",
-            "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/claude-windows.md",
+            "evidence_link": "docs/ai/specs/.process/XPLAT-008-uat-claude-windows.md",
             "operator_notes": "Detailed evidence file records the complete journey.",
             "status": "pass"
           }
@@ -204,8 +265,12 @@
             "host_version": "Windows 11 fixture",
             "plugin_version_or_latest_tag": "2.17.0",
             "installed_cache_path": "fixture/claude/windows/speckit-pro",
-            "interpreter_resolution": {"accepted": true},
-            "runner_invocation_ids": ["xplat-008-runner-invocation-claude-windows-install"],
+            "interpreter_resolution": {
+              "accepted": true
+            },
+            "runner_invocation_ids": [
+              "xplat-008-runner-invocation-claude-windows-install"
+            ],
             "install_result": "pass",
             "bundled_agent_verification": "pass",
             "first_use": "pass",
@@ -215,7 +280,7 @@
             "incomplete_install_repair": "pass",
             "expected_result": "A smoke check completes.",
             "actual_result": "Smoke check only.",
-            "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/claude-windows.md",
+            "evidence_link": "docs/ai/specs/.process/XPLAT-008-uat-claude-windows.md",
             "operator_notes": "Smoke only.",
             "status": "pass"
           }
@@ -235,8 +300,12 @@
             "host_version": "Ubuntu 24.04 fixture",
             "plugin_version_or_latest_tag": "2.17.0",
             "installed_cache_path": "fixture/codex/linux/speckit-pro",
-            "interpreter_resolution": {"accepted": true},
-            "runner_invocation_ids": ["xplat-008-runner-invocation-codex-linux-update"],
+            "interpreter_resolution": {
+              "accepted": true
+            },
+            "runner_invocation_ids": [
+              "xplat-008-runner-invocation-codex-linux-update"
+            ],
             "install_result": "pass",
             "bundled_agent_verification": "pass",
             "first_use": "pass",
@@ -246,7 +315,7 @@
             "incomplete_install_repair": "pass",
             "expected_result": "Latest-tag update succeeds.",
             "actual_result": "Latest-tag update failed.",
-            "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/codex-linux.md",
+            "evidence_link": "docs/ai/specs/.process/XPLAT-008-uat-codex-linux.md",
             "operator_notes": "Detailed evidence file records the failed update.",
             "status": "fail"
           }
@@ -266,8 +335,12 @@
             "host_version": "macOS 15 fixture",
             "plugin_version_or_latest_tag": "2.17.0",
             "installed_cache_path": "fixture/claude/macos/speckit-pro",
-            "interpreter_resolution": {"accepted": true},
-            "runner_invocation_ids": ["xplat-008-runner-invocation-claude-macos-install"],
+            "interpreter_resolution": {
+              "accepted": true
+            },
+            "runner_invocation_ids": [
+              "xplat-008-runner-invocation-claude-macos-install"
+            ],
             "install_result": "pass",
             "bundled_agent_verification": "pass",
             "first_use": "pass",
@@ -297,8 +370,12 @@
             "host_version": "Windows 11 fixture",
             "plugin_version_or_latest_tag": "2.17.0",
             "installed_cache_path": "fixture/codex/windows/speckit-pro",
-            "interpreter_resolution": {"accepted": true},
-            "runner_invocation_ids": ["xplat-008-runner-invocation-codex-windows-install"],
+            "interpreter_resolution": {
+              "accepted": true
+            },
+            "runner_invocation_ids": [
+              "xplat-008-runner-invocation-codex-windows-install"
+            ],
             "install_result": "pass",
             "bundled_agent_verification": "pass",
             "first_use": "pass",
@@ -308,7 +385,7 @@
             "incomplete_install_repair": "pass",
             "expected_result": "",
             "actual_result": "Actual result is recorded.",
-            "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/codex-windows.md",
+            "evidence_link": "docs/ai/specs/.process/XPLAT-008-uat-codex-windows.md",
             "operator_notes": "Detailed evidence file records the complete journey.",
             "status": "pass"
           }
@@ -328,8 +405,12 @@
             "host_version": "macOS 15 fixture",
             "plugin_version_or_latest_tag": "2.17.0",
             "installed_cache_path": "fixture/codex/macos/speckit-pro",
-            "interpreter_resolution": {"accepted": true},
-            "runner_invocation_ids": ["xplat-008-runner-invocation-codex-macos-install"],
+            "interpreter_resolution": {
+              "accepted": true
+            },
+            "runner_invocation_ids": [
+              "xplat-008-runner-invocation-codex-macos-install"
+            ],
             "install_result": "pass",
             "bundled_agent_verification": "pass",
             "first_use": "pass",
@@ -357,7 +438,9 @@
             "claim_text_or_pattern": "native Windows support",
             "classification": "native-platform-support",
             "status": "fail",
-            "evidence": ["No passing Codex Windows row."]
+            "evidence": [
+              "No passing Codex Windows row."
+            ]
           }
         ]
       }

@@ -3,6 +3,11 @@
 Status: Partial pass for local Codex/macOS installed-cache checks; not a
 release-ready native UAT row.
 
+Archive note: preserved from
+`specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/codex-macos.md`
+after PRs #289-#292 merged. This is partial local installed-cache evidence, not
+complete native release UAT.
+
 ## Environment
 
 | Field | Value |
