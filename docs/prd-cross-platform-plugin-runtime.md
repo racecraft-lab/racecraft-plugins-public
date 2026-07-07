@@ -347,6 +347,15 @@ allowed workflow dispatch glue, then enforce the policy with a repo-wide guard.
   `jq` dependencies outside the allowed workflow dispatch boundary.
 - AC-10.5: Any remaining historical/archive Bash prose is allowlisted with a
   narrow reason and cannot satisfy an active release gate.
+- AC-10.6: XPLAT-010 adds a maintainer-local recipe and GitHub Actions Linux
+  container preflight path for `linux/amd64` and `linux/arm64` that validates
+  Python runner and release-gate behavior without relying on Bash.
+- AC-10.7: XPLAT-010 adds direct-host GitHub Actions smoke coverage for Windows
+  x64 and Windows ARM64 runner labels when available, and explicitly records
+  that Windows container runs cannot satisfy native Windows installed-plugin UAT.
+- AC-10.8: Containerized evidence is labeled as preflight-only; it can harden
+  CI and catch Linux architecture regressions, but it does not replace the
+  XPLAT-008 native operator UAT matrix.
 
 ## Success Metrics
 
@@ -366,6 +375,10 @@ allowed workflow dispatch glue, then enforce the policy with a repo-wide guard.
   release scripts require Bash outside GitHub CI/CD dispatch glue.
 - Zero repository `.sh` files remain outside the GitHub workflow boundary unless
   a non-active upstream-generated exception is documented and guarded.
+- Linux AMD64 and ARM64 container preflight has a passing maintainer-local
+  recipe and GitHub Actions evidence when Docker and runner access are
+  available, with Windows x64/ARM64 runner smoke recorded separately as native
+  runner evidence.
 - Scaffold/status/autopilot detect incomplete installs before doing meaningful
   work and either autoheal them or provide a specific, tested remediation path.
 - The release-readiness checklist has a hard gate for native Windows plugin UAT.

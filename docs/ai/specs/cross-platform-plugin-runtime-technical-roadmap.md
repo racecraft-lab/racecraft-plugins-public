@@ -1037,7 +1037,10 @@ harnesses, top-level helper scripts, hooks, and SpecKit process helpers.
 **Goal:** Enforce the strict repository policy that Bash may remain only as
 GitHub CI/CD workflow dispatch glue. All active repo-local validation,
 packaging, install, helper, hook, payload, release, and test/eval behavior must
-run through Python gates or another approved non-shell path.
+run through Python gates or another approved non-shell path. Add containerized
+Linux architecture preflight coverage and direct Windows runner smoke coverage
+as CI hardening, while preserving XPLAT-008 native operator UAT as the release
+claim gate.
 
 **Reviewability Budget:** Primary surfaces: harness/adapter + seed/config +
 docs/process |
@@ -1056,15 +1059,26 @@ current test harness and process helper scripts are broad.
 - Update GitHub workflows so any remaining shell is limited to CI/CD dispatch
   and calls Python gates rather than embedding validation, packaging, install,
   release, or runtime logic.
+- Add a local and GitHub Actions Linux container preflight path for
+  `linux/amd64` and `linux/arm64` that runs the Python runner, no-shell guard,
+  and relevant release-readiness checks without relying on Bash.
+- Add direct-host GitHub Actions smoke coverage for Windows x64 and Windows
+  ARM64 runner labels when available, focused on interpreter discovery,
+  runner `runtime-info`/`preflight`, and no Bash/`jq` release-gate behavior.
 - Add a repo-wide guard proving no `.sh` files and no active Bash/`jq`
   invocations exist outside the workflow dispatch boundary.
 - Document any non-active upstream-generated exceptions with a narrow allowlist
   and ensure they cannot satisfy release readiness.
+- Document that GitHub job containers are Linux-runner only, Windows containers
+  have host/image compatibility constraints, and any Windows container
+  experiment is preflight-only rather than native installed-plugin UAT.
 
 **Out of Scope:**
 
 - Plugin source and generated payload cleanup already completed by XPLAT-009.
 - Native operator UAT rows already tracked by XPLAT-008 evidence.
+- Treating Docker, QEMU, or Windows containers as proof of native Claude/Codex
+  installed-plugin behavior.
 - Third-party upstream repositories or consumer-project generated files outside
   this plugin repository.
 
@@ -1077,6 +1091,8 @@ current test harness and process helper scripts are broad.
 - `.github/workflows/**`
 - `speckit-pro/speckit_pro_runner/gates/**`
 - `docs/ai/specs/.process/**`
+- `containers/**` or another documented container-preflight fixture path if
+  XPLAT-010 introduces one.
 
 **Done When:**
 
@@ -1088,8 +1104,15 @@ current test harness and process helper scripts are broad.
   plugin validation, packaging, install, release, or runtime logic.
 - Active tests, evals, payload builders, release-readiness checks,
   install-verification paths, hooks, and helper tools run without Bash or `jq`.
+- Linux container preflight evidence exists for `linux/amd64` and `linux/arm64`
+  using the same Python runner/release-gate entrypoints used by CI.
+- Windows x64 and Windows ARM64 direct-runner smoke evidence exists when those
+  runner labels are available; unavailable or public-preview runner behavior is
+  recorded without converting container evidence into native UAT evidence.
 - CI fails on new Bash scripts, active Bash invocations, or `jq` dependencies
   outside the workflow dispatch boundary.
+- The XPLAT-008 native UAT matrix still remains the only release-satisfying
+  evidence for full Claude/Codex installed-plugin journeys on native hosts.
 
 ---
 
@@ -1122,3 +1145,15 @@ surfaces are removed or confined.
 - 2026-07-07 audit: a repo-wide scan excluding `.github/workflows/` still found
   many `.sh` files outside the plugin source tree, so repository-wide Bash
   confinement is intentionally split into XPLAT-010.
+- GitHub Actions workflow syntax documents that job containers, Docker
+  container actions, and service containers require Linux runners; hosted
+  container jobs must use Ubuntu runners.
+- GitHub-hosted runner reference lists Linux ARM64 and Windows ARM64 runner
+  labels as public preview, so XPLAT-010 should record runner availability in
+  evidence rather than assuming stable coverage.
+- Docker multi-platform build documentation supports `linux/amd64` and
+  `linux/arm64` targets through `buildx`; QEMU emulation is the easiest setup
+  path but can be slower than native nodes.
+- Microsoft Windows container compatibility documentation records Windows
+  host/image compatibility constraints, so Windows container experiments cannot
+  substitute for native Windows installed-plugin UAT.
