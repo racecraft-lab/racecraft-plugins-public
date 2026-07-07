@@ -32,7 +32,7 @@ the native UAT requirement by itself.
 | Public docs and README claim alignment | Complete | Root README, plugin README, docs-site install/first-run/troubleshooting/security/update/contribute pages |
 | UAT matrix gate contract | Complete | `tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/uat-matrix-cases.json`, `requests/uat-matrix.json` |
 | Install-health repair contract | Complete | `install-health-repair-cases.json`, `requests/install-health-repair.json`, `helpers/install.py` |
-| Native UAT evidence | Blocked | T035-T041 remain unchecked; `docs/ai/specs/.process/XPLAT-008-uat-codex-macos.md` records a local Codex/macOS installed-cache UAT partial pass, and the matrix remains non-release-ready |
+| Native UAT evidence | Blocked | T035-T041 remain incomplete; `docs/ai/specs/.process/XPLAT-008-uat-claude-macos.md` and `docs/ai/specs/.process/XPLAT-008-uat-codex-macos.md` record local macOS partial passes, and the matrix remains non-release-ready |
 | Release decision | Blocked | Release-readiness gate must not be used to claim native support until real rows replace fixture evidence |
 
 ## Verification Evidence
@@ -42,13 +42,17 @@ the native UAT requirement by itself.
 | `python3 -m json.tool` on XPLAT-008 fixture/request JSON | Pass | UAT matrix, install-health repair, release-readiness, and request fixtures parse |
 | `python3 -m py_compile speckit-pro/speckit_pro_runner/gates/release.py speckit-pro/speckit_pro_runner/helpers/install.py speckit-pro/speckit_pro_runner/gates/registry.py speckit-pro/speckit_pro_runner/helpers/registry.py tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` | Pass | Runner gate/helper code compiles |
 | `bash tests/speckit-pro/run-all.sh --layer 1` | Pass | 1439/1439 structural checks passed |
-| `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` | Pass | 43/43 focused Layer 4 gate tests |
+| `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` | Pass | 47/47 focused Layer 4 gate tests |
 | `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/active-runtime-guard.json` | Pass | Active runtime no-shell/no-jq guard |
 | `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness.json` | Pass | Generated payload completeness for Claude and Codex payloads |
 | `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/uat-matrix.json` | Pass | Fixture UAT matrix validates the positive gate case only |
 | `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/install-health-repair.json` | Pass | Trusted missing artifact autoheal fixture passes |
-| `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/release-readiness.json` | Expected failure | Current native UAT pending case blocks with `release_readiness.gate_status: fail` and `uat-matrix rows=0` |
-| Isolated Codex/macOS installed-cache UAT | Partial pass | `CODEX_HOME=/tmp/xplat008-codex-uat-home` install/list, bundled skills/agents, runner runtime-info, and preflight with SpecKit on PATH passed; see `docs/ai/specs/.process/XPLAT-008-uat-codex-macos.md` |
+| `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/release-readiness.json` | Pass | Promoted ready fixture validates the passing release-readiness contract |
+| Direct `release-readiness-xplat008` request for case `current-native-uat-pending` | Expected failure | Current native UAT pending case blocks with `release_readiness.gate_status: fail`, `status: expected_failure`, and `uat-matrix rows=0` |
+| Isolated Claude/macOS installed-cache UAT | Partial pass | `HOME=/private/tmp/xplat008-claude-macos-uat.gFoutU` install/list/details, bundled skills/agents/hook, runner runtime-info, runner preflight, and plugin update passed; model-backed first use was policy-blocked; see `docs/ai/specs/.process/XPLAT-008-uat-claude-macos.md` |
+| Isolated Codex/macOS installed-cache UAT | Partial pass | `CODEX_HOME=/private/tmp/xplat008-codex-macos-uat.1F8LdV` install/list, bundled skills/agents, runner runtime-info, and preflight passed; isolated first use was auth-blocked; see `docs/ai/specs/.process/XPLAT-008-uat-codex-macos.md` |
+| Real Codex/macOS status first use | Partial pass | Authenticated real Codex loaded installed `speckit-status` from plugin cache and returned the current XPLAT status without edits; output at `/private/tmp/xplat008-uat-logs.CIxABs/codex-real-first-use.txt` |
+| Isolated Codex/macOS Git marketplace update | Pass | `CODEX_HOME=/private/tmp/xplat008-codex-git-macos-uat.1kw5AR` added the Git marketplace, installed `speckit-pro` 2.17.0, and `codex plugin marketplace upgrade racecraft-plugins-public --json` completed with no errors |
 | `npx --yes pnpm@10.25.0 --dir docs-site validate` | Pass | Docs validation and 88 Playwright smoke checks passed |
 | `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/pr/speckit-pr-packet.json` | Pass | Packet validation wrote a fresh `status: "passed"` result |
 | `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh --title "feat(XPLAT-008): Add Claude/Codex cutover and universal install release gate" --changed-files specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/pr/changed-files.txt` | Pass | Single-PR workflow contract passed |
@@ -84,10 +88,10 @@ the native UAT requirement by itself.
 
 | Criterion | Status | Evidence |
 |---|---|---|
-| SC-001 | Blocked | Requires real native Claude/Codex Windows/macOS/Linux first-use journeys; T035-T040 pending |
+| SC-001 | Blocked | Requires real native Claude/Codex Windows/macOS/Linux first-use journeys; macOS has partial evidence only and T035-T040 remain incomplete |
 | SC-002 | Complete | Active-runtime no-shell/no-jq guard passes |
 | SC-003 | Complete | Payload completeness request passes for Claude and Codex generated payloads |
-| SC-004 | Blocked | `.process/uat-matrix.md` has one partial Codex/macOS local row and five pending rows; T041 pending |
+| SC-004 | Blocked | `.process/uat-matrix.md` has partial Claude/macOS and Codex/macOS local rows plus four pending rows; T041 pending |
 | SC-005 | Complete | Release-readiness seeded blocker cases cover active shell, incomplete payload, missing bundled agent, stale metadata, unsafe public claim, and incomplete UAT |
 | SC-006 | Complete for deterministic contract | Trusted stale/missing and unsafe/manual/broad-reinstall fixtures covered; real native repair proof pending under T035-T041 |
 | SC-007 | Complete for current public docs | Docs and public-claim gates avoid unsupported native support and cryptographic trust-chain claims |
@@ -108,13 +112,21 @@ the native UAT requirement by itself.
 ## Known Gaps
 
 - T035: Claude on Windows native UAT evidence is not filled.
-- T036: Claude on macOS native UAT evidence is not filled.
+- T036: Claude on macOS local installed-cache UAT evidence is partially filled
+  in `docs/ai/specs/.process/XPLAT-008-uat-claude-macos.md`; model-backed
+  first use, scaffold/status, autopilot dry-run, native repair proof, and
+  release-row completion remain pending.
 - T037: Claude on Linux native UAT evidence is not filled.
 - T038: Codex on Windows native UAT evidence is not filled.
-- T039: Codex on macOS local installed-cache UAT evidence is partially filled in `docs/ai/specs/.process/XPLAT-008-uat-codex-macos.md`; full interactive scaffold/status/autopilot, latest-tag update, and release-row completion remain pending.
+- T039: Codex on macOS local installed-cache UAT evidence is partially filled
+  in `docs/ai/specs/.process/XPLAT-008-uat-codex-macos.md`; real authenticated
+  status first use and isolated Git marketplace update pass, while isolated
+  auth, full scaffold/status, autopilot dry-run, native repair proof, and
+  release-row completion remain pending.
 - T040: Codex on Linux native UAT evidence is not filled.
 - T041: The six native evidence files have not been consolidated into a
-  passing `.process/uat-matrix.md`.
+  passing `.process/uat-matrix.md`; two macOS rows are partial and four rows
+  remain pending.
 
 ## Reviewer Order
 
