@@ -350,7 +350,7 @@ allowed workflow dispatch glue, then enforce the policy with a repo-wide guard.
 - AC-10.6: XPLAT-010 adds a maintainer-local recipe and GitHub Actions Linux
   container preflight path for `linux/amd64` and `linux/arm64` that validates
   Python runner and release-gate behavior without relying on Bash.
-- AC-10.7: XPLAT-010 adds direct-host GitHub Actions smoke coverage for Windows
+- AC-10.7: XPLAT-010 adds direct-runner smoke coverage for Windows
   x64 and Windows ARM64 runner labels when available, and explicitly records
   that Windows container runs cannot satisfy native Windows installed-plugin UAT.
 - AC-10.8: Containerized evidence is labeled as preflight-only; it can harden

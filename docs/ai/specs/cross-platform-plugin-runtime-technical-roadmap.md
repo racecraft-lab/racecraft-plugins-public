@@ -1062,7 +1062,7 @@ current test harness and process helper scripts are broad.
 - Add a local and GitHub Actions Linux container preflight path for
   `linux/amd64` and `linux/arm64` that runs the Python runner, no-shell guard,
   and relevant release-readiness checks without relying on Bash.
-- Add direct-host GitHub Actions smoke coverage for Windows x64 and Windows
+- Add direct-runner smoke coverage for Windows x64 and Windows
   ARM64 runner labels when available, focused on interpreter discovery,
   runner `runtime-info`/`preflight`, and no Bash/`jq` release-gate behavior.
 - Add a repo-wide guard proving no `.sh` files and no active Bash/`jq`
