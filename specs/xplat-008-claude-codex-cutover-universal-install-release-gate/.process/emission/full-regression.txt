@@ -1,0 +1,28 @@
+Command: bash tests/speckit-pro/run-all.sh
+Result: pass
+Evidence captured: 2026-07-06T02:34Z
+
+Summary:
+- speckit-pro test suite: 3835/3835 passed
+- toolchain preflight: ok (gate, not counted)
+- L1 structural validation: 986/986 passed
+- L1 Codex structural validation: 445/445 passed
+- L4 script/unit tests: 2204/2204 passed
+- L5 agent tool scoping: 200/200 passed
+
+Focused pre-rerun checks:
+- python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py: 9/9 passed, 1 skipped
+- python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py GateFoundationTests...: 44/44 passed
+- bash tests/speckit-pro/layer1-structural/validate-hooks.sh: 11/11 passed
+- bash tests/speckit-pro/layer1-structural/validate-codex-hooks.sh: 9/9 passed
+- bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .: passed
+- bash speckit-pro/skills/speckit-autopilot/scripts/validate-uat-runbook.sh specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat-runbook.md: passed
+- git diff --check: passed
+
+Manual/automated UAT evidence:
+- Isolated Codex/macOS install/list UAT with CODEX_HOME=/tmp/xplat008-codex-uat-home: passed for marketplace add, plugin add, plugin list, bundled skill inventory, and bundled Codex agent inventory.
+- Installed-cache runner runtime-info: passed with request_id xplat-008-codex-macos-installed-runtime-info.
+- Installed-cache runner preflight without SpecKit on PATH: expected missing_prerequisite/specify_missing.
+- Installed-cache runner preflight with existing SpecKit CLI on PATH: passed with request_id xplat-008-codex-macos-installed-preflight-with-specify-path.
+- XPLAT-008 fixture UAT matrix request: passed for seeded complete rows.
+- XPLAT-008 current release-readiness request: expected_failure because native UAT rows remain incomplete.

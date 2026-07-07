@@ -17,6 +17,17 @@ PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/pr
 DEFAULT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/release-readiness-cases.json"
 XPLAT_008_RELEASE_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json"
 XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/promotion-records.json"
+XPLAT_008_UAT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/uat-matrix-cases.json"
+XPLAT_008_INSTALL_HEALTH_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/install-health-repair-cases.json"
+REQUIRED_UAT_ROWS = (
+    ("claude", "windows"),
+    ("claude", "macos"),
+    ("claude", "linux"),
+    ("codex", "windows"),
+    ("codex", "macos"),
+    ("codex", "linux"),
+)
+PLACEHOLDER_TOKENS = ("todo", "tbd", "pending", "placeholder", "fill me", "n/a")
 XPLAT008_CHECK_IDS = {
     "active-runtime-guard",
     "bundled-agents",
@@ -29,7 +40,12 @@ XPLAT008_CHECK_IDS = {
     "runner-files",
     "runner-invocations",
     "trust-metadata",
+    "uat-backed-public-claims",
+    "uat-evidence-links",
     "uat-matrix",
+    "uat-journeys",
+    "uat-row-coverage",
+    "uat-row-fields",
     "update-proof",
     "version-sync",
 }
@@ -69,14 +85,6 @@ PAYLOAD_RESULT_KEYS = {
 PAYLOAD_FILE_KEYS = {"path", "source_path", "kind", "transform", "sha256", "byte_count", "required"}
 PAYLOAD_FILE_KINDS = {"manifest", "skill", "agent", "hook", "runner", "install_guidance", "trust_metadata", "checksum", "version_metadata", "docs"}
 PAYLOAD_FILE_TRANSFORMS = {"none", "claude_guard_strip", "codex_overlay", "path_normalization", "manifest_rewrite"}
-XPLAT008_REQUIRED_UAT_ROWS = (
-    ("claude", "windows"),
-    ("claude", "macos"),
-    ("claude", "linux"),
-    ("codex", "windows"),
-    ("codex", "macos"),
-    ("codex", "linux"),
-)
 RELEASE_OPERATIONS = (
     "detect-changed-plugin",
     "aggregate-suite-results",
@@ -104,6 +112,8 @@ def run_release_gate(entry: Any, request: Any) -> dict[str, Any]:
 
     if request.operation == "release-readiness-xplat008":
         return release_readiness_xplat008(entry, request, repo_root)
+    if request.operation == "uat-matrix":
+        return uat_matrix_xplat008(entry, request, repo_root)
 
     case_result = load_release_case(repo_root, request.inputs)
     if is_diagnostic(case_result):
@@ -219,8 +229,8 @@ def release_readiness_xplat008(entry: Any, request: Any, repo_root: Path) -> dic
         *normalize_payload_results(live_evidence.get("payload_results")),
     ]
     payload_results = project_payload_results(payload_evidence_records)
-    uat_rows = normalize_uat_rows(case.get("uat_rows"))
-    repair_actions = normalize_repair_actions(case.get("repair_actions"))
+    uat_rows = normalize_uat_rows(case.get("uat_rows"), repo_root)
+    repair_actions = normalize_repair_actions(case.get("repair_actions"), repo_root)
     public_claim_results = normalize_public_claim_results(case.get("public_claim_results"))
     runner_invocations = [
         *normalize_runner_invocations(case.get("runner_invocations")),
@@ -392,6 +402,42 @@ def live_xplat008_gate_evidence(repo_root: Path) -> dict[str, Any]:
         evidence["runner_invocations"].append(runner_record)
 
     return evidence
+
+
+def uat_matrix_xplat008(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
+    case_result = load_xplat008_uat_case(repo_root, request.inputs)
+    if is_diagnostic(case_result):
+        return response("input_error", request_id=request.request_id, data=xplat008_base_data(entry, request.operation, "input_error"), diagnostics=[case_result])
+    case = case_result
+
+    rows = normalize_uat_rows(case.get("rows"))
+    checks = uat_matrix_checks(rows, normalize_public_claim_results(case.get("public_claim_results")))
+    blocking_count = sum(1 for check in checks if check["blocking"])
+    matrix = {
+        "schema_version": "1.0",
+        "feature_id": "XPLAT-008",
+        "rows": rows,
+        "status": "pass" if blocking_count == 0 else "fail",
+        "blocking_count": blocking_count,
+        "checks": checks,
+    }
+
+    status = "ok" if blocking_count == 0 else "expected_failure"
+    data = xplat008_base_data(entry, request.operation, status)
+    data["uat_matrix"] = matrix
+    if status == "ok":
+        return response("ok", request_id=request.request_id, data=data)
+
+    data["gate"]["gate_status"] = "fail"
+    data["gate"]["blocking"] = True
+    diag = diagnostic(
+        "uat_matrix_blocked",
+        "XPLAT-008 UAT matrix has blocking evidence gaps",
+        details={"case_id": case.get("case_id"), "blocking_count": blocking_count},
+        remediation_summary="Fill every native UAT row with non-placeholder install, update, repair, and evidence fields.",
+        remediation_actions=["Inspect data.uat_matrix.checks.", "Retry the UAT matrix request after updating evidence."],
+    )
+    return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diag])
 
 
 def normalize_xplat008_checks(raw: Any) -> list[dict[str, Any]]:
@@ -729,23 +775,10 @@ def computed_xplat008_checks(
         if item.get("status") != "pass"
     ]
     payload_surfaces = {item.get("payload_surface") for item in payload_results if item.get("status") == "pass"}
-    uat_failures = [f"{item.get('product')}:{item.get('platform')}" for item in uat_rows if item.get("status") != "pass"]
-    uat_keys = [
-        (item.get("product"), item.get("platform"))
-        for item in uat_rows
-        if isinstance(item.get("product"), str) and isinstance(item.get("platform"), str)
-    ]
-    uat_key_set = set(uat_keys)
-    required_uat = set(XPLAT008_REQUIRED_UAT_ROWS)
-    missing_uat = sorted(required_uat - uat_key_set)
-    unexpected_uat = sorted(uat_key_set - required_uat)
-    duplicate_uat = sorted(key for key in uat_key_set if uat_keys.count(key) > 1)
-    uat_complete = len(uat_rows) == len(required_uat) and not missing_uat and not unexpected_uat and not duplicate_uat
-    repair_failures = [
-        str(item.get("action_id") or "unknown-repair-action")
-        for item in repair_actions
-        if item.get("action_type") == "manual_remediation" or item.get("status") == "blocked"
-    ]
+    uat_checks = uat_matrix_checks(uat_rows, public_claim_results)
+    uat_failures = [evidence for check in uat_checks if check["blocking"] for evidence in check["evidence"]]
+    uat_evidence = [f"rows={len(uat_rows)}", *(uat_failures or ["blockers=none"])]
+    repair_failures = repair_action_failures(repair_actions)
     claim_failures = [
         str(item.get("claim_id") or "unknown-public-claim")
         for item in public_claim_results
@@ -771,22 +804,19 @@ def computed_xplat008_checks(
         xplat008_check(
             "uat-matrix",
             "incomplete_uat_evidence",
-            uat_complete and not uat_failures,
-            "Native UAT matrix has exactly six passing product/platform rows.",
-            [
-                f"rows={len(uat_rows)}",
-                f"missing_rows={','.join(f'{product}:{platform}' for product, platform in missing_uat) if missing_uat else 'none'}",
-                f"unexpected_rows={','.join(f'{product}:{platform}' for product, platform in unexpected_uat) if unexpected_uat else 'none'}",
-                f"duplicate_rows={','.join(f'{product}:{platform}' for product, platform in duplicate_uat) if duplicate_uat else 'none'}",
-                f"failing_rows={','.join(uat_failures) if uat_failures else 'none'}",
-            ],
+            not uat_failures,
+            "Native UAT matrix has exactly six complete passing product/platform rows.",
+            uat_evidence,
         ),
         xplat008_check(
             "install-health-repair",
             "unsafe_repair_claim",
-            not repair_failures,
-            "Install-health repair evidence contains no unsafe repair claims.",
-            [f"blocked_repairs={','.join(repair_failures) if repair_failures else 'none'}"],
+            bool(repair_actions) and not repair_failures,
+            "Install-health repair evidence contains no unsafe repair or unresolved manual-remediation claims.",
+            [
+                f"action_count={len(repair_actions)}",
+                f"blocked_repairs={','.join(repair_failures) if repair_failures else 'none'}",
+            ],
         ),
         xplat008_check(
             "public-claims",
@@ -815,16 +845,147 @@ def computed_xplat008_checks(
     ]
 
 
+def uat_matrix_checks(rows: list[dict[str, Any]], public_claim_results: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    combo_counts: dict[tuple[str, str], int] = {}
+    for row in rows:
+        combo = (str(row.get("product")), str(row.get("platform")))
+        combo_counts[combo] = combo_counts.get(combo, 0) + 1
+
+    missing = [f"{product}:{platform}" for product, platform in REQUIRED_UAT_ROWS if combo_counts.get((product, platform), 0) == 0]
+    duplicates = [f"{product}:{platform}" for (product, platform), count in combo_counts.items() if count > 1]
+    extra = [f"{product}:{platform}" for product, platform in combo_counts if (product, platform) not in REQUIRED_UAT_ROWS]
+
+    field_gaps: list[str] = []
+    failing_journeys: list[str] = []
+    smoke_only: list[str] = []
+    raw_links: list[str] = []
+    missing_links: list[str] = []
+    runner_link_gaps: list[str] = []
+    unsupported_claims = [
+        str(item.get("claim_id"))
+        for item in public_claim_results or []
+        if item.get("classification") == "native-platform-support" and item.get("status") != "pass"
+    ]
+
+    for row in rows:
+        row_id = f"{row.get('product')}:{row.get('platform')}"
+        for field in (
+            "operator",
+            "date",
+            "host_version",
+            "plugin_version_or_latest_tag",
+            "installed_cache_path",
+            "expected_result",
+            "actual_result",
+            "operator_notes",
+        ):
+            if has_placeholder_value(row.get(field)):
+                field_gaps.append(f"{row_id}:{field}")
+        if not isinstance(row.get("interpreter_resolution"), dict) or row["interpreter_resolution"].get("accepted") is not True:
+            field_gaps.append(f"{row_id}:interpreter_resolution")
+        runner_ids = row.get("runner_invocation_ids")
+        if not isinstance(runner_ids, list) or not any(isinstance(item, str) and item.strip() for item in runner_ids):
+            runner_link_gaps.append(row_id)
+        evidence_link = row.get("evidence_link")
+        if has_placeholder_value(evidence_link):
+            missing_links.append(row_id)
+        elif "<a" in str(evidence_link).lower():
+            raw_links.append(row_id)
+        journey_fields = (
+            "install_result",
+            "bundled_agent_verification",
+            "first_use",
+            "scaffold_status",
+            "autopilot_dry_run",
+            "latest_tag_update",
+            "incomplete_install_repair",
+            "status",
+        )
+        for field in journey_fields:
+            if row.get(field) != "pass":
+                failing_journeys.append(f"{row_id}:{field}")
+        note_blob = " ".join(str(row.get(field) or "") for field in ("expected_result", "actual_result", "operator_notes")).lower()
+        if "smoke" in note_blob and not all(token in note_blob for token in ("install", "update", "repair")):
+            smoke_only.append(row_id)
+
+    return [
+        xplat008_check(
+            "uat-row-coverage",
+            "incomplete_uat_evidence",
+            len(rows) == 6 and not missing and not duplicates and not extra,
+            "UAT matrix has exactly one row for each required Claude/Codex platform.",
+            [
+                f"missing_rows={','.join(missing) if missing else 'none'}",
+                f"duplicate_rows={','.join(duplicates) if duplicates else 'none'}",
+                f"extra_rows={','.join(extra) if extra else 'none'}",
+            ],
+        ),
+        xplat008_check(
+            "uat-row-fields",
+            "incomplete_uat_evidence",
+            not field_gaps and not runner_link_gaps,
+            "UAT rows contain non-placeholder reviewer-readable fields and runner invocation links.",
+            [f"field_gaps={','.join(field_gaps) if field_gaps else 'none'}", f"runner_link_gaps={','.join(runner_link_gaps) if runner_link_gaps else 'none'}"],
+        ),
+        xplat008_check(
+            "uat-journeys",
+            "incomplete_uat_evidence",
+            not failing_journeys and not smoke_only,
+            "UAT rows pass install, first use, scaffold/status, autopilot dry-run, latest-tag update, and incomplete-install repair.",
+            [f"failing={','.join(failing_journeys) if failing_journeys else 'none'}", f"smoke_only={','.join(smoke_only) if smoke_only else 'none'}"],
+        ),
+        xplat008_check(
+            "uat-evidence-links",
+            "incomplete_uat_evidence",
+            not missing_links and not raw_links,
+            "UAT rows use durable Markdown evidence links without raw HTML anchors.",
+            [f"missing={','.join(missing_links) if missing_links else 'none'}", f"raw_html={','.join(raw_links) if raw_links else 'none'}"],
+        ),
+        xplat008_check(
+            "uat-backed-public-claims",
+            "unsafe_public_claim",
+            not unsupported_claims,
+            "Native platform support claims are backed by passing UAT rows.",
+            [f"unsupported_claims={','.join(unsupported_claims) if unsupported_claims else 'none'}"],
+        ),
+    ]
+
+
+def has_placeholder_value(value: Any) -> bool:
+    if not isinstance(value, str):
+        return True
+    text = value.strip()
+    if not text:
+        return True
+    lowered = text.lower()
+    return any(token == lowered or token in lowered for token in PLACEHOLDER_TOKENS)
+
+
+def repair_action_failures(actions: list[dict[str, Any]]) -> list[str]:
+    failures: list[str] = []
+    for action in actions:
+        action_id = str(action.get("action_id") or "unknown-repair-action")
+        action_type = action.get("action_type")
+        target_path = str(action.get("target_path") or "")
+        source_path = action.get("source_path")
+        broad = action.get("operation_scope") == "broad_reinstall" or target_path in {"", ".", "/"} or "wipe" in str(action.get("message", "")).lower()
+        unsafe_path = target_path.startswith("/") or re.match(r"^[A-Za-z]:", target_path) is not None or ".." in target_path.split("/")
+        if action_type == "autoheal_refresh":
+            if action.get("status") != "completed" or action.get("digest_verified") is not True or not isinstance(source_path, str) or not source_path or broad or unsafe_path:
+                failures.append(action_id)
+            continue
+        if action_type == "manual_remediation":
+            # Manual remediation is release-blocking until autoheal proof exists.
+            failures.append(action_id)
+            continue
+        failures.append(action_id)
+    return failures
+
+
 def collapse_checks(checks: list[dict[str, Any]]) -> list[dict[str, Any]]:
     collapsed: dict[str, dict[str, Any]] = {}
     for check in checks:
-        check_id = str(check.get("check_id") or "release-packet-traceability")
-        check["check_id"] = check_id
-        check.setdefault("blocker_class", "missing_traceability")
-        check.setdefault("message", check_id)
-        check.setdefault("evidence", [])
-        check["blocking"] = check.get("blocking") is True or check.get("status") == "fail"
-        check["status"] = "fail" if check["blocking"] else "pass"
+        check_id = check["check_id"]
         existing = collapsed.get(check_id)
         if existing is None:
             collapsed[check_id] = check
@@ -898,7 +1059,7 @@ def synthetic_payload_result(surface: str, status: str) -> dict[str, Any]:
     }
 
 
-def normalize_uat_rows(raw: Any) -> list[dict[str, Any]]:
+def normalize_uat_rows(raw: Any, repo_root: Path | None = None) -> list[dict[str, Any]]:
     return normalize_evidence_records(raw, "uat")
 
 
@@ -928,8 +1089,22 @@ def default_uat_row(product: str, platform: str, status: str) -> dict[str, Any]:
     }
 
 
-def normalize_repair_actions(raw: Any) -> list[dict[str, Any]]:
-    return normalize_evidence_records(raw, "repair")
+def normalize_repair_actions(raw: Any, repo_root: Path | None = None) -> list[dict[str, Any]]:
+    if isinstance(raw, list):
+        return normalize_evidence_records(raw, "repair")
+    if repo_root is not None:
+        from ..helpers import install as install_helper
+
+        case = load_xplat008_install_health_case(repo_root, {"case_file": XPLAT_008_INSTALL_HEALTH_CASE_FILE, "case_id": "ready"})
+        if isinstance(case, dict) and not is_diagnostic(case):
+            actions = case.get("repair_actions")
+            if isinstance(actions, list):
+                return normalize_evidence_records(actions, "repair")
+            findings = install_helper.normalize_install_health_findings(case.get("findings"))
+            actions = install_helper.normalize_install_health_actions(None, findings)
+            if actions:
+                return normalize_evidence_records(actions, "repair")
+    return []
 
 
 def normalize_public_claim_results(raw: Any) -> list[dict[str, Any]]:
@@ -1115,6 +1290,18 @@ def load_release_case(repo_root: Path, inputs: dict[str, Any]) -> dict[str, Any]
     overrides = selected.get("overrides")
     if isinstance(overrides, dict):
         deep_merge(base, overrides)
+    uat_case = base.pop("uat_case", None)
+    if "uat_rows" not in base and isinstance(uat_case, dict):
+        uat_case_inputs = {
+            "case_file": uat_case.get("case_file", XPLAT_008_UAT_CASE_FILE),
+            "case_id": uat_case.get("case_id", "ready"),
+        }
+        uat_case_result = load_xplat008_uat_case(repo_root, uat_case_inputs)
+        if is_diagnostic(uat_case_result):
+            return uat_case_result
+        rows = uat_case_result.get("rows")
+        if isinstance(rows, list):
+            base["uat_rows"] = [item for item in rows if isinstance(item, dict)]
     base["case_id"] = case_id
     base["expected_status"] = selected.get("expected_status")
     base["_required_promotion_operations"] = [
@@ -1154,6 +1341,81 @@ def load_xplat008_release_case(repo_root: Path, inputs: dict[str, Any]) -> dict[
     selected = next((item for item in cases if isinstance(item, dict) and item.get("case_id") == case_id), None)
     if selected is None:
         return diagnostic("unknown_fixture_case", "XPLAT-008 release readiness fixture case was not found", details={"case_id": case_id})
+
+    base = copy.deepcopy(document.get("base_case", {}))
+    if not isinstance(base, dict):
+        base = {}
+    overrides = selected.get("overrides")
+    if isinstance(overrides, dict):
+        deep_merge(base, overrides)
+    uat_case = base.pop("uat_case", None)
+    if "uat_rows" not in base and isinstance(uat_case, dict):
+        uat_case_inputs = {
+            "case_file": uat_case.get("case_file", XPLAT_008_UAT_CASE_FILE),
+            "case_id": uat_case.get("case_id", "ready"),
+        }
+        uat_case_result = load_xplat008_uat_case(repo_root, uat_case_inputs)
+        if is_diagnostic(uat_case_result):
+            return uat_case_result
+        rows = uat_case_result.get("rows")
+        if isinstance(rows, list):
+            base["uat_rows"] = [item for item in rows if isinstance(item, dict)]
+    base["case_id"] = case_id
+    base["expected_status"] = selected.get("expected_status")
+    return base
+
+
+def load_xplat008_uat_case(repo_root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
+    return load_named_xplat008_case(
+        repo_root,
+        inputs,
+        default_file=XPLAT_008_UAT_CASE_FILE,
+        document_label="XPLAT-008 UAT matrix",
+        default_case_id="ready",
+    )
+
+
+def load_xplat008_install_health_case(repo_root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
+    return load_named_xplat008_case(
+        repo_root,
+        inputs,
+        default_file=XPLAT_008_INSTALL_HEALTH_CASE_FILE,
+        document_label="XPLAT-008 install-health repair",
+        default_case_id="ready",
+    )
+
+
+def load_named_xplat008_case(
+    repo_root: Path,
+    inputs: dict[str, Any],
+    *,
+    default_file: str,
+    document_label: str,
+    default_case_id: str,
+) -> dict[str, Any]:
+    raw = inputs.get("case_file", default_file)
+    if not isinstance(raw, str) or not raw:
+        return diagnostic("invalid_case_file", "case_file must be a non-empty string")
+    path = resolve_path(raw, repo_root)
+    if not is_relative_to(path.resolve(strict=False), repo_root.resolve(strict=False)):
+        return diagnostic("invalid_case_file", "case_file must stay inside the repository")
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return diagnostic(
+            "invalid_case_file",
+            f"{document_label} case fixture could not be loaded",
+            details={"case_file": raw, "error": type(exc).__name__},
+        )
+    cases = document.get("cases")
+    if not isinstance(cases, list):
+        return diagnostic("invalid_case_file", f"{document_label} fixture must contain cases")
+    case_id = inputs.get("case_id")
+    if not isinstance(case_id, str) or not case_id:
+        case_id = default_case_id
+    selected = next((item for item in cases if isinstance(item, dict) and item.get("case_id") == case_id), None)
+    if selected is None:
+        return diagnostic("unknown_fixture_case", f"{document_label} fixture case was not found", details={"case_id": case_id})
 
     base = copy.deepcopy(document.get("base_case", {}))
     if not isinstance(base, dict):

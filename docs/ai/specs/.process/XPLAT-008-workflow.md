@@ -59,14 +59,14 @@ accepted scope:
 | Phase | Command | Status | Notes |
 |---|---|---|---|
 | Specify | `$speckit-specify` | Complete | Generated `spec.md` with 4 user stories, 22 functional requirements, 12 acceptance scenarios, 8 success criteria, and no active clarification markers |
-| Clarify | `$speckit-clarify` | Pending | Resolve active surface inventory, interpreter discovery, payload contract, UAT evidence, autoheal trust boundary, and public claim wording |
-| Plan | `$speckit-plan` | Pending | Produce the technical plan for three vertical slices and record reviewability warning handling |
-| Checklist | `$speckit-checklist` | Pending | Run integration, security, reliability, and release-readiness checklists |
-| Tasks | `$speckit-tasks` | Pending | Generate tasks ordered by active surface cutover, payload/release/docs gates, then UAT/update/autoheal |
+| Clarify | `$speckit-clarify` | Complete | Resolved active surface inventory, interpreter discovery, payload contract, UAT evidence, autoheal trust boundary, and public claim wording |
+| Plan | `$speckit-plan` | Complete | Produced the technical plan for three vertical slices and recorded reviewability warning handling |
+| Checklist | `$speckit-checklist` | Complete | Ran integration, security, reliability, and release-readiness checklists |
+| Tasks | `$speckit-tasks` | Complete | Generated tasks ordered by active surface cutover, payload/release/docs gates, then UAT/update/autoheal |
 | Analyze | `$speckit-analyze` | Complete | 4 findings remediated; structured release/UAT contracts aligned; G6 marker counter clean |
-| Confidence Gate | G6.5 | Pending | Record the pre-Implement confidence score in advisory mode before implementation starts |
-| Implement | `$speckit-implement` | Pending | Execute the accepted slices with tests, payload evidence, UAT runbooks, and release-readiness gates |
-| Post | Post | Pending | Run verification, reviewability, UAT runbook, PR packet, PR creation, review remediation, and retrospective items |
+| Confidence Gate | G6.5 | Complete | Advisory pre-Implement confidence gate passed |
+| Implement | `$speckit-implement` | Complete | Review-ready stack complete; native operator UAT remains the public-release blocker |
+| Post | Post | Complete | Verification, reviewability, UAT runbook, PR packet, PR creation, review remediation, and retrospective items complete |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -752,50 +752,84 @@ For each task, follow this cycle:
 |---|---|---|---|
 | Slice 1 - Active surface cutover | T001-T012 | 12/12 | Complete; committed in `21d5fce8` |
 | Slice 2 - Payload/release/docs gates | T013-T027 | 15/15 | Complete; payload completeness, release-readiness, Layer 4 gates, and docs validation passed |
-| Slice 3 - UAT/update/autoheal | Fill after Tasks | 0 | Pending |
-| Polish and release packet | Fill after Tasks | 0 | Pending |
+| Slice 3 - UAT/update/autoheal | T028-T042 | 8/15 | Deterministic UAT matrix, install-health repair, release-readiness blockers, metadata refresh, and request verification complete; native operator evidence T035-T041 pending |
+| Polish and release packet | T043-T047 | 5/5 | Complete as a blocked release-readiness packet; native operator evidence remains pending |
 
 ### Slice 2 Verification Evidence
 
 - `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` passed with 40/40 tests.
 - `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness.json` passed with `gate_status: pass`.
-- `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/release-readiness.json` passed with `gate_status: pass` and `blocking_count: 0`.
+- `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/release-readiness.json` now intentionally returns `expected_failure` for the current native-UAT-pending case; the ready fixture remains covered separately by focused tests.
 - `npx --yes pnpm@10.25.0 --dir docs-site validate` passed, including `88 passed` Playwright smoke tests.
+
+### Slice 3 Verification Evidence
+
+- `python3 -m json.tool` passed for the UAT matrix, install-health repair, release-readiness, and new request fixtures.
+- `python3 -m py_compile speckit-pro/speckit_pro_runner/gates/release.py speckit-pro/speckit_pro_runner/helpers/install.py speckit-pro/speckit_pro_runner/gates/registry.py speckit-pro/speckit_pro_runner/helpers/registry.py tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` passed.
+- `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` passed with 43/43 tests.
+- `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness.json` passed with `gate_status: pass`.
+- `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/uat-matrix.json` passed with `gate_status: pass` against fixture evidence.
+- `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/install-health-repair.json` passed with trusted missing artifact autoheal refresh evidence.
+- `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/release-readiness.json` returned `expected_failure` against the current native-UAT-pending case, with the UAT matrix blocker preserved.
+
+Native Windows/macOS/Linux Claude and Codex UAT is still pending. Fixture-backed
+gate proof does not satisfy T035-T041 or the release-ready support claim.
+
+### Polish and Release Packet Evidence
+
+- `specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/release-readiness.md` records the blocked release decision, requirement traceability, success-criteria status, non-goal audit, known gaps, reviewer order, and release rule.
+- `bash tests/speckit-pro/run-all.sh --layer 1` passed with 1439/1439 structural checks.
+- `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` passed with 43/43 focused gate tests.
+- XPLAT-008 active-runtime, payload-completeness, UAT-matrix fixture, install-health repair, and release-readiness runner requests passed from the repository root with `PYTHONPATH=speckit-pro`.
+- `npx --yes pnpm@10.25.0 --dir docs-site validate` passed, including 88 Playwright smoke checks.
+- `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/pr/speckit-pr-packet.json` passed and wrote a fresh packet validation result.
+- `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh --title "feat(XPLAT-008): Add Claude/Codex cutover and universal install release gate" --changed-files specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/pr/changed-files.txt` passed.
 
 ---
 
 ## Post-Implementation Checklist
 
 - [ ] All tasks marked complete in `tasks.md`
-- [ ] Spec index check passes:
+- [x] Spec index check passes:
   `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"`
-- [ ] Python runner default suite passes:
+- [x] Python runner default suite passes:
   `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json`
 - [x] Active-runtime no-shell/no-jq guard passes
 - [x] Generated Claude and Codex payload completeness gates pass
-- [x] Release-readiness guard passes
+- [x] Release-readiness guard blocks current native-UAT-pending evidence as expected
 - [x] Docs validation passes when docs-site files change
-- [ ] Native Windows/macOS/Linux Claude and Codex UAT runbooks are filled and readable
+- [ ] Native Windows/macOS/Linux Claude and Codex UAT runbooks are filled and readable; local Codex/macOS installed-cache evidence is partially recorded in `.process/uat/codex-macos.md`
 - [ ] Latest-tag update proof is recorded
-- [ ] Safe repair/autoheal proof is recorded
-- [ ] PR packet includes summary, affected plugin paths, test commands, and UAT evidence
+- [x] Safe repair/autoheal proof is recorded
+- [x] PR packet includes summary, affected plugin paths, test commands, and UAT evidence
 
 ### Canonical Post Items
 
 | Item | Status | Notes |
 |---|---|---|
-| Post: Doctor Extension Check | Pending | Run or skip with explicit extension evidence |
-| Post: Verify Implementation | Pending | Run or skip with explicit extension evidence |
-| Post: Verify Tasks Phantom Check | Pending | Run or skip with explicit extension evidence |
-| Post: Code Review | Pending | Independent diff review before PR creation |
-| Post: Integration Suite | Pending | Full deterministic verification after implementation |
-| Post: Reviewability Diff Gate | Pending | Final diff gate before PR packet generation |
-| Post: Self-Review | Pending | Four-question audit before UAT runbook generation |
-| Post: UAT Runbook Generation | Pending | Generate and author the feature UAT runbook |
-| Post: PR Body Generation | Pending | Generate and validate the PR packet/body |
-| Post: PR Creation | Pending | Push branch and open the PR from packet fields |
-| Post: Review Remediation | Pending | Monitor and resolve review feedback |
-| Post: Retrospective | Pending | Final post item; run or skip with explicit extension evidence |
+| Post: Doctor Extension Check | Complete | Extension evidence recorded in autopilot state |
+| Post: Verify Implementation | Complete | Local verification and GitHub PR checks are green |
+| Post: Verify Tasks Phantom Check | Complete | Tasks/state consistency reviewed; native operator UAT remains explicitly pending |
+| Post: Code Review | Complete | Copilot review feedback resolved across PR#289, PR#290, and PR#291 |
+| Post: Integration Suite | Complete | Python runner default suite and docs validation passed locally; PR checks passed remotely |
+| Post: Reviewability Diff Gate | Complete | Final backstop proceeded with marker_split; aggregate diff remains size-blocked and the three-marker plan is valid for scoped PR emission |
+| Post: Self-Review | Complete | Self-review completed before PR body generation; reviewable stack remains intentionally not native-release-ready until six operator UAT rows are filled |
+| Post: UAT Runbook Generation | Complete | Generated and authored `.process/uat-runbook.md`; RepoPrompt agent transport failed, so the fail-open rewrite was completed locally |
+| Post: PR Body Generation | Complete | Generated and validated `.process/pr/speckit-pr-packet.json` and `.process/pr/speckit-pr-body.md` |
+| Post: PR Creation | Complete | Opened PR#289, PR#290, and PR#291 in marker stack order |
+| Post: Review Remediation | Complete | Resolved all Copilot review threads after pushing review-fix commits |
+| Post: Retrospective | Complete | Review-ready stack is complete; public release remains blocked until six native operator UAT rows are filled |
+
+---
+
+## PR Emission Evidence
+
+- Opened PR#289 for `us1` (`codex/xplat-008-review/01-us1` -> `main`).
+- Opened PR#290 for `us2` (`codex/xplat-008-review/02-us2` -> `codex/xplat-008-review/01-us1`).
+- Opened PR#291 for `us3` (`codex/xplat-008-review/03-us3` -> `codex/xplat-008-review/02-us2`).
+- Persisted stack mapping in `specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/prs.json`.
+- Review remediation heads: PR#289 `4041d16b`, PR#290 `17c0f952`, PR#291 `53b0d319`.
+- Final GitHub PR Checks are green on PR#289, PR#290, and PR#291; all Copilot review threads are resolved.
 
 ---
 

@@ -13,6 +13,12 @@
     "unsafe repair claim blocker",
     "missing traceability blocker",
     "nondeterministic dist blocker",
+    "placeholder UAT blocker",
+    "smoke-only UAT blocker",
+    "raw HTML UAT evidence blocker",
+    "missing UAT evidence link blocker",
+    "incomplete update proof blocker",
+    "broad reinstall blocker",
     "same-run live gate evidence for payload, active runtime, and runner invocation readiness"
   ],
   "base_case": {
@@ -398,7 +404,20 @@
   "cases": [
     {
       "case_id": "ready",
-      "expected_status": "pass"
+      "expected_status": "pass",
+      "overrides": {
+        "uat_case": {
+          "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/uat-matrix-cases.json",
+          "case_id": "ready"
+        }
+      }
+    },
+    {
+      "case_id": "current-native-uat-pending",
+      "expected_status": "fail",
+      "overrides": {
+        "uat_rows": []
+      }
     },
     {
       "case_id": "active-shell-dependency",
@@ -544,6 +563,21 @@
       }
     },
     {
+      "case_id": "incomplete-update-proof",
+      "expected_status": "fail",
+      "overrides": {
+        "checks": [
+          {
+            "check_id": "update-proof",
+            "blocker_class": "stale_metadata",
+            "status": "fail",
+            "message": "Latest-tag update proof is incomplete.",
+            "evidence": ["missing latest-tag update row"]
+          }
+        ]
+      }
+    },
+    {
       "case_id": "unsafe-public-claim",
       "expected_status": "fail",
       "overrides": {
@@ -579,6 +613,130 @@
       }
     },
     {
+      "case_id": "placeholder-uat",
+      "expected_status": "fail",
+      "overrides": {
+        "uat_rows": [
+          {
+            "product": "claude",
+            "platform": "windows",
+            "operator": "TBD",
+            "date": "2026-07-05",
+            "host_version": "Windows 11 fixture",
+            "plugin_version_or_latest_tag": "2.17.0",
+            "installed_cache_path": "fixture/claude/windows/speckit-pro",
+            "interpreter_resolution": {"accepted": true},
+            "runner_invocation_ids": ["xplat-008-runner-invocation-claude-windows-install"],
+            "install_result": "pass",
+            "bundled_agent_verification": "pass",
+            "first_use": "pass",
+            "scaffold_status": "pass",
+            "autopilot_dry_run": "pass",
+            "latest_tag_update": "pass",
+            "incomplete_install_repair": "pass",
+            "expected_result": "Expected result is recorded.",
+            "actual_result": "Actual result is recorded.",
+            "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/claude-windows.md",
+            "operator_notes": "Detailed evidence file records the complete journey.",
+            "status": "pass"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "smoke-only-uat",
+      "expected_status": "fail",
+      "overrides": {
+        "uat_rows": [
+          {
+            "product": "codex",
+            "platform": "linux",
+            "operator": "Racecraft UAT fixture",
+            "date": "2026-07-05",
+            "host_version": "Ubuntu 24.04 fixture",
+            "plugin_version_or_latest_tag": "2.17.0",
+            "installed_cache_path": "fixture/codex/linux/speckit-pro",
+            "interpreter_resolution": {"accepted": true},
+            "runner_invocation_ids": ["xplat-008-runner-invocation-codex-linux-install"],
+            "install_result": "pass",
+            "bundled_agent_verification": "pass",
+            "first_use": "pass",
+            "scaffold_status": "pass",
+            "autopilot_dry_run": "pass",
+            "latest_tag_update": "pass",
+            "incomplete_install_repair": "pass",
+            "expected_result": "Smoke check completes.",
+            "actual_result": "Smoke check only.",
+            "evidence_link": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat/codex-linux.md",
+            "operator_notes": "Smoke only.",
+            "status": "pass"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "raw-html-uat",
+      "expected_status": "fail",
+      "overrides": {
+        "uat_rows": [
+          {
+            "product": "claude",
+            "platform": "macos",
+            "operator": "Racecraft UAT fixture",
+            "date": "2026-07-05",
+            "host_version": "macOS 15 fixture",
+            "plugin_version_or_latest_tag": "2.17.0",
+            "installed_cache_path": "fixture/claude/macos/speckit-pro",
+            "interpreter_resolution": {"accepted": true},
+            "runner_invocation_ids": ["xplat-008-runner-invocation-claude-macos-install"],
+            "install_result": "pass",
+            "bundled_agent_verification": "pass",
+            "first_use": "pass",
+            "scaffold_status": "pass",
+            "autopilot_dry_run": "pass",
+            "latest_tag_update": "pass",
+            "incomplete_install_repair": "pass",
+            "expected_result": "Expected result is recorded.",
+            "actual_result": "Actual result is recorded.",
+            "evidence_link": "<a href=\"uat/claude-macos.md\">evidence</a>",
+            "operator_notes": "Detailed evidence file records the complete journey.",
+            "status": "pass"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "missing-uat-evidence-link",
+      "expected_status": "fail",
+      "overrides": {
+        "uat_rows": [
+          {
+            "product": "codex",
+            "platform": "windows",
+            "operator": "Racecraft UAT fixture",
+            "date": "2026-07-05",
+            "host_version": "Windows 11 fixture",
+            "plugin_version_or_latest_tag": "2.17.0",
+            "installed_cache_path": "fixture/codex/windows/speckit-pro",
+            "interpreter_resolution": {"accepted": true},
+            "runner_invocation_ids": ["xplat-008-runner-invocation-codex-windows-install"],
+            "install_result": "pass",
+            "bundled_agent_verification": "pass",
+            "first_use": "pass",
+            "scaffold_status": "pass",
+            "autopilot_dry_run": "pass",
+            "latest_tag_update": "pass",
+            "incomplete_install_repair": "pass",
+            "expected_result": "Expected result is recorded.",
+            "actual_result": "Actual result is recorded.",
+            "evidence_link": "",
+            "operator_notes": "Detailed evidence file records the complete journey.",
+            "status": "pass"
+          }
+        ]
+      }
+    },
+    {
       "case_id": "unsafe-repair-claim",
       "expected_status": "fail",
       "overrides": {
@@ -596,6 +754,26 @@
               "Inspect installed cache.",
               "Remove or reinstall manually."
             ]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "broad-reinstall-rejected",
+      "expected_status": "fail",
+      "overrides": {
+        "repair_actions": [
+          {
+            "action_id": "broad-reinstall",
+            "finding_id": "whole-plugin",
+            "action_type": "autoheal_refresh",
+            "target_path": ".",
+            "source_path": "dist/codex/speckit-pro",
+            "digest_verified": false,
+            "status": "blocked",
+            "message": "Broad reinstall or wipe-copy behavior is not allowed.",
+            "manual_steps": [],
+            "operation_scope": "broad_reinstall"
           }
         ]
       }

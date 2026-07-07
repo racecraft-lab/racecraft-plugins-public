@@ -1,0 +1,188 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "XPLAT-008",
+  "coverage": [
+    "trusted missing artifact autoheal",
+    "trusted stale artifact autoheal",
+    "unsafe unknown artifact manual remediation",
+    "unsafe extra artifact manual remediation",
+    "unsafe mismatch manual remediation",
+    "unsafe trust-root change manual remediation",
+    "unsafe out-of-cache manual remediation",
+    "broad reinstall rejection"
+  ],
+  "base_case": {
+    "installed_cache_path": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/fake-home/speckit-pro",
+    "findings": [
+      {
+        "finding_id": "trusted-missing-runner-main",
+        "artifact_path": "speckit_pro_runner/__main__.py",
+        "artifact_kind": "runner_file",
+        "source_identity": "speckit-pro/speckit_pro_runner/__main__.py",
+        "release_channel_or_tag": "2.17.0",
+        "expected_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "actual_digest": null,
+        "classification": "trusted_missing",
+        "repair_allowed": true
+      }
+    ]
+  },
+  "cases": [
+    {"case_id": "ready", "expected_status": "pass"},
+    {"case_id": "trusted-missing", "expected_status": "pass"},
+    {
+      "case_id": "trusted-missing-metadata",
+      "expected_status": "manual_remediation_required",
+      "overrides": {
+        "findings": [
+          {
+            "finding_id": "trusted-missing-no-metadata",
+            "artifact_path": "speckit_pro_runner/__main__.py",
+            "artifact_kind": "runner_file",
+            "source_identity": null,
+            "release_channel_or_tag": null,
+            "expected_digest": null,
+            "actual_digest": null,
+            "classification": "trusted_missing",
+            "repair_allowed": true
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "trusted-stale",
+      "expected_status": "pass",
+      "overrides": {
+        "findings": [
+          {
+            "finding_id": "trusted-stale-hook",
+            "artifact_path": "hooks/hooks.json",
+            "artifact_kind": "hook",
+            "source_identity": "speckit-pro/hooks/hooks.json",
+            "release_channel_or_tag": "2.17.0",
+            "expected_digest": "2222222222222222222222222222222222222222222222222222222222222222",
+            "actual_digest": "3333333333333333333333333333333333333333333333333333333333333333",
+            "classification": "trusted_stale",
+            "repair_allowed": true
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "unsafe-unknown",
+      "expected_status": "manual_remediation_required",
+      "overrides": {
+        "findings": [
+          {
+            "finding_id": "unknown-file",
+            "artifact_path": "unknown-extra.txt",
+            "artifact_kind": "unknown",
+            "source_identity": null,
+            "release_channel_or_tag": null,
+            "expected_digest": null,
+            "actual_digest": "4444444444444444444444444444444444444444444444444444444444444444",
+            "classification": "unsafe_unknown",
+            "repair_allowed": false
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "unsafe-extra",
+      "expected_status": "manual_remediation_required",
+      "overrides": {
+        "findings": [
+          {
+            "finding_id": "extra-file",
+            "artifact_path": "skills/untracked/SKILL.md",
+            "artifact_kind": "extra",
+            "source_identity": null,
+            "release_channel_or_tag": null,
+            "expected_digest": null,
+            "actual_digest": "5555555555555555555555555555555555555555555555555555555555555555",
+            "classification": "unsafe_extra",
+            "repair_allowed": false
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "unsafe-mismatch",
+      "expected_status": "manual_remediation_required",
+      "overrides": {
+        "findings": [
+          {
+            "finding_id": "digest-mismatch",
+            "artifact_path": "speckit_pro_runner/runtime.py",
+            "artifact_kind": "runner_file",
+            "source_identity": "speckit-pro/speckit_pro_runner/runtime.py",
+            "release_channel_or_tag": "2.17.0",
+            "expected_digest": "6666666666666666666666666666666666666666666666666666666666666666",
+            "actual_digest": "7777777777777777777777777777777777777777777777777777777777777777",
+            "classification": "unsafe_mismatch",
+            "repair_allowed": false
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "unsafe-trust-root-change",
+      "expected_status": "manual_remediation_required",
+      "overrides": {
+        "findings": [
+          {
+            "finding_id": "trust-root-change",
+            "artifact_path": ".codex-plugin/plugin.json",
+            "artifact_kind": "manifest",
+            "source_identity": null,
+            "release_channel_or_tag": null,
+            "expected_digest": null,
+            "actual_digest": "8888888888888888888888888888888888888888888888888888888888888888",
+            "classification": "unsafe_trust_root_change",
+            "repair_allowed": false
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "unsafe-out-of-cache",
+      "expected_status": "manual_remediation_required",
+      "overrides": {
+        "findings": [
+          {
+            "finding_id": "out-of-cache",
+            "artifact_path": "unsafe-out-of-cache/outside-cache.txt",
+            "artifact_kind": "unknown",
+            "source_identity": null,
+            "release_channel_or_tag": null,
+            "expected_digest": null,
+            "actual_digest": "9999999999999999999999999999999999999999999999999999999999999999",
+            "classification": "unsafe_out_of_cache",
+            "repair_allowed": false
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "broad-reinstall-rejected",
+      "expected_status": "fail",
+      "overrides": {
+        "findings": [],
+        "repair_actions": [
+          {
+            "action_id": "broad-reinstall",
+            "finding_id": "whole-plugin",
+            "action_type": "autoheal_refresh",
+            "target_path": ".",
+            "source_path": "dist/codex/speckit-pro",
+            "digest_verified": false,
+            "status": "blocked",
+            "message": "Broad reinstall or wipe-copy behavior is not allowed.",
+            "manual_steps": [],
+            "operation_scope": "broad_reinstall"
+          }
+        ]
+      }
+    }
+  ]
+}

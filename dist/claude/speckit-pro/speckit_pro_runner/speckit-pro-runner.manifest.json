@@ -57,14 +57,14 @@
         "value": "speckit_pro_runner/gates/registry.py",
         "format": "posix-relative"
       },
-      "sha256": "47f161b371980c1501d162a68b4fb365f5ca8c9582947cc810c0932675260d1c"
+      "sha256": "357b62e3dad65debd48651354a6fcd45ae11f8380371771e77a86ed0180b6f84"
     },
     {
       "path": {
         "value": "speckit_pro_runner/gates/release.py",
         "format": "posix-relative"
       },
-      "sha256": "bad959ad46776bfcd4b0f231e8ca53433a9bc7e634bbd3d0ac6960ace0fb98f4"
+      "sha256": "2b58139b57c8157c5c087b3d7a7119bcd346f24ddf9937c3e6366f6dec68ac8e"
     },
     {
       "path": {
@@ -85,7 +85,7 @@
         "value": "speckit_pro_runner/helpers/install.py",
         "format": "posix-relative"
       },
-      "sha256": "02a7d0b2b6ccf766cadccc1c704b1c7e5aef318b002e491e18e644e66b1ac382"
+      "sha256": "db11a4695856453a736580727b8fbeec6f7d97043f3ddf33e7ef117dfa6535cf"
     },
     {
       "path": {
@@ -120,7 +120,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "format": "posix-relative"
       },
-      "sha256": "34a004d4d7756e1814709ef05c00e40f66d8069523fa8e84c478e21415b3d14c"
+      "sha256": "847de97738406c58e4ebb46191680d409854360a10e31ea2ecf103661a9e6142"
     },
     {
       "path": {

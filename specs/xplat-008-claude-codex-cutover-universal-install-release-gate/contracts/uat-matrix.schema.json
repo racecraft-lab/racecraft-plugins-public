@@ -8,6 +8,8 @@
     "schema_version",
     "feature_id",
     "rows",
+    "blocking_count",
+    "checks",
     "status"
   ],
   "properties": {
@@ -74,9 +76,67 @@
         "pass",
         "fail"
       ]
+    },
+    "blocking_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/check"
+      }
     }
   },
   "$defs": {
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "check_id",
+        "blocker_class",
+        "status",
+        "blocking",
+        "message",
+        "evidence"
+      ],
+      "properties": {
+        "check_id": {
+          "enum": [
+            "uat-row-coverage",
+            "uat-row-fields",
+            "uat-journeys",
+            "uat-evidence-links",
+            "uat-backed-public-claims"
+          ]
+        },
+        "blocker_class": {
+          "enum": [
+            "incomplete_uat_evidence",
+            "unsafe_public_claim"
+          ]
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "blocking": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "claude_windows_row": {
       "$ref": "#/$defs/product_platform_row",
       "properties": {

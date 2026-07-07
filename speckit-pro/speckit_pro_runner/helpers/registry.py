@@ -264,6 +264,17 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         mutation_authoritative_request("doctor-repair"),
         ("safe-repair", "real-home-refusal"),
     ),
+    "install-health-repair": MutationEntry(
+        "install-health-repair",
+        "install-health-repair",
+        ("read_only",),
+        None,
+        "golden_only",
+        "fixture_semantic",
+        "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/install-health-repair.json",
+        ("trusted-missing", "trusted-stale", "unsafe-manual-remediation", "broad-reinstall-rejected"),
+        rollback="Keep autoheal limited to checksum-backed fixture evidence until native install evidence is complete.",
+    ),
     "install-codex-agents": MutationEntry(
         "install-codex-agents",
         "install-codex-agents",
@@ -537,7 +548,7 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
     if entry.helper_id == "mutation-registry-dispatch":
         return response("ok", request_id=request.request_id, data=mutation_registry_report())
 
-    if entry.helper_id in {"doctor-preflight", "doctor-repair"}:
+    if entry.helper_id in {"doctor-preflight", "doctor-repair", "install-health-repair"}:
         return run_install_helper(entry, request)
 
     if entry.helper_id in {
