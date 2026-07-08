@@ -60,6 +60,40 @@ jobs:
           PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness.json
           PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/release-readiness.json
 
+      - name: Sync generated artifacts onto the release PR
+        if: steps.release.outputs.prs_created == 'true'
+        env:
+          RELEASE_PRS: ${{ steps.release.outputs.prs }}
+        run: |
+          set -euo pipefail
+          # release-please bumps only the source plugin versions; refresh the
+          # generated payloads, marketplace registries, installed-cache proofs,
+          # and gate evidence so the release PR passes its own gates. All
+          # artifact logic lives in the Python refresh script; this step only
+          # checks out the PR branch, runs the script + docs reference, and
+          # commits the result when anything changed.
+          branch="$(python3 -c 'import json, os; prs = json.loads(os.environ["RELEASE_PRS"] or "[]"); pr = prs[0] if prs else {}; print(pr.get("headBranchName") or pr.get("headRefName") or "")')"
+          if [ -z "$branch" ]; then
+            echo "::error::release PR branch could not be resolved from release-please output"
+            exit 1
+          fi
+          git fetch origin "$branch"
+          git checkout -B "$branch" FETCH_HEAD
+          corepack enable
+          corepack prepare pnpm@10.25.0 --activate
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/refresh-release-artifacts.py
+          pnpm --dir docs-site install --frozen-lockfile
+          pnpm --dir docs-site reference:generate
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "chore(release): sync generated artifacts for release"
+            git push origin "HEAD:$branch"
+          else
+            echo "Release artifacts already consistent; nothing to sync."
+          fi
+
       - name: Dispatch PR Checks for release PRs
         if: steps.release.outputs.prs_created == 'true'
         env:
@@ -143,13 +177,14 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Public generated payload synchronization remains an XPLAT-008
-          # cutover item. This retained check is release-surface parity evidence.
+          # The release PR carries the generated payload, marketplace, and docs
+          # reference sync (see "Sync generated artifacts onto the release PR"),
+          # so main should already be consistent once the release PR is merged.
           if git diff --quiet -- dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json docs-site/src/content/docs/reference; then
-            echo "Release artifacts are currently consistent. Public payload-sync mutation remains deferred to XPLAT-008."
+            echo "Release artifacts are consistent: the release PR carried the generated sync."
             exit 0
           fi
 
-          echo "::error::Release artifacts drifted after publishing. Public payload-sync mutation remains deferred to XPLAT-008; this retained parity check records the drift for maintainer review:"
+          echo "::error::Release artifacts drifted after publishing. Re-run the Release workflow to re-sync the release PR (Recovery Scenario 1):"
           git --no-pager diff --stat -- dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json docs-site/src/content/docs/reference
           exit 1

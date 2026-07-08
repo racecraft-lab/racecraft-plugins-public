@@ -69,12 +69,29 @@ fi
 set_test "release workflow verifies generated test payload evidence"
 assert_contains "$CONTENT" "test-payload-evidence.json"
 
-set_test "release workflow defers public marketplace sync"
-if [[ "$CONTENT" == *"Public generated payload synchronization remains an XPLAT-008"* \
+set_test "release workflow syncs generated artifacts on the release PR"
+if [[ "$CONTENT" == *"scripts/refresh-release-artifacts.py"* \
+  && "$CONTENT" == *"Sync generated artifacts onto the release PR"* \
   && "$CONTENT" != *"bash scripts/sync-marketplace-versions.sh"* ]]; then
   _pass
 else
-  _fail "expected release workflow to defer public marketplace sync to XPLAT-008"
+  _fail "expected release workflow to refresh generated artifacts via the Python refresh script on the release PR"
+fi
+
+set_test "release workflow sync checks out the release PR branch with the release token"
+if grep -Fq 'token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}' "$WORKFLOW_FILE" \
+  && grep -Fq 'git checkout -B "$branch" FETCH_HEAD' "$WORKFLOW_FILE"; then
+  _pass
+else
+  _fail "expected release workflow to check out the release PR branch using the release token"
+fi
+
+set_test "release workflow guards the artifact sync commit with a dirty check"
+if grep -Fq 'git status --porcelain' "$WORKFLOW_FILE" \
+  && grep -Fq 'chore(release): sync generated artifacts for release' "$WORKFLOW_FILE"; then
+  _pass
+else
+  _fail "expected release workflow to commit the artifact sync only when the tree is dirty"
 fi
 
 set_test "release workflow regenerates the docs reference on sync"
