@@ -82,7 +82,6 @@ jobs:
           corepack enable
           corepack prepare pnpm@10.25.0 --activate
           PYTHONDONTWRITEBYTECODE=1 python3 scripts/refresh-release-artifacts.py
-          pnpm --dir docs-site install --frozen-lockfile
           pnpm --dir docs-site reference:generate
           if [ -n "$(git status --porcelain)" ]; then
             git config user.name "github-actions[bot]"
