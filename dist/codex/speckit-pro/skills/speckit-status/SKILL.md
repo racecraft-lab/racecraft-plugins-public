@@ -137,7 +137,7 @@ reference it by its plugin-root-relative path rather than reimplementing the
 check:
 
 ```text
-skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"
+Run runner helper generate-spec-index-check with repo root "$PWD".
 ```
 
 Pass `"$PWD"` (the project root) explicitly. Without it the generator infers its
@@ -166,7 +166,7 @@ When a spec directory contains `o5-parent-manifest.json`, validate topology
 before reporting child status:
 
 ```text
-skills/speckit-autopilot/scripts/o5-topology.sh specs/<parent-branch>
+Run runner helper o5-topology for specs/<parent-branch>.
 ```
 
 This script is read-only and emits one JSON rollup. If `topologyStatus` is

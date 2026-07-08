@@ -433,7 +433,7 @@ extensions, and project health.
 
 ### `specify init` — Project Initialization
 
-```bash
+```text
 specify init [PROJECT_NAME]
 ```
 
@@ -457,7 +457,7 @@ specify init [PROJECT_NAME]
 
 Verifies all required tools are installed and operational.
 
-```bash
+```text
 specify check
 ```
 
@@ -465,7 +465,7 @@ Shows which AI agents are detected (25+ supported), Git status, and CLI readines
 
 ### `specify version` — Version Information
 
-```bash
+```text
 specify version
 ```
 
@@ -527,7 +527,7 @@ file is actually being used.
 Multiple presets can be installed simultaneously. Lower priority
 numbers win when templates conflict:
 
-```bash
+```text
 specify preset add compliance --priority 5    # wins over...
 specify preset add agile --priority 10        # ...this one
 ```
@@ -679,7 +679,7 @@ checked simultaneously:
 
 Add custom catalogs for your organization:
 
-```bash
+```text
 specify extension catalog add \
   --name "internal" \
   --install-allowed \
@@ -714,7 +714,7 @@ catalogs:
 
 ### Upgrading the CLI
 
-```bash
+```text
 uv tool install specify-cli --force --from git+https://github.com/github/spec-kit.git
 ```
 
@@ -722,7 +722,7 @@ Verify: `specify version` → should show latest version.
 
 ### Upgrading Project Files
 
-```bash
+```text
 # 1. Back up constitution (WILL be overwritten)
 cp .specify/memory/constitution.md .specify/memory/constitution-backup.md
 

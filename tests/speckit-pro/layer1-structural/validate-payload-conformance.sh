@@ -180,7 +180,7 @@ section "Claude payload conformance (dist/claude/speckit-pro)"
 
 set_test "[claude] built payload root exists ($CLAUDE_ROOT)"
 if [ -d "$CLAUDE_ROOT" ]; then _pass; else
-  _fail "Claude payload missing — run scripts/build-plugin-payloads.sh"; test_summary; exit $?; fi
+  _fail "Claude payload missing — run python3 scripts/build-plugin-payloads.py"; test_summary; exit $?; fi
 
 CLAUDE_MANIFEST="$CLAUDE_ROOT/.claude-plugin/plugin.json"
 set_test "[claude] manifest exists at .claude-plugin/plugin.json"
@@ -236,7 +236,7 @@ section "Codex payload conformance (dist/codex/speckit-pro)"
 
 set_test "[codex] built payload root exists ($CODEX_ROOT)"
 if [ -d "$CODEX_ROOT" ]; then _pass; else
-  _fail "Codex payload missing — run scripts/build-plugin-payloads.sh"; test_summary; exit $?; fi
+  _fail "Codex payload missing — run python3 scripts/build-plugin-payloads.py"; test_summary; exit $?; fi
 
 CODEX_MANIFEST="$CODEX_ROOT/.codex-plugin/plugin.json"
 set_test "[codex] manifest exists at .codex-plugin/plugin.json"

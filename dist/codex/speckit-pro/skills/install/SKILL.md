@@ -111,7 +111,7 @@ Sync is **skipped** when:
 - `SPECKIT_SKIP_PLUGIN_SYNC=1` is set (escape hatch for plugin
   developers working against a local checkout they don't want
   overwritten).
-- `jq` is not on `PATH` (no version comparison possible).
+- JSON version comparison is unavailable.
 - The marketplace tmp root is absent (plugin installed via a
   non-marketplace path).
 - The marketplace tmp root is not strictly newer than the active

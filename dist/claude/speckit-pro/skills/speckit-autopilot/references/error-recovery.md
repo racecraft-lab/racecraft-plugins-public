@@ -21,7 +21,7 @@ the specified phase.
 
 - **Subagent returns empty/incomplete summary:** Re-spawn with
   the same prompt. If it fails again, run the command directly
-  via Bash and parse the output.
+  via command tool and parse the output.
 - **Gate fails after 2 auto-fix attempts:** If `gate-failure`
   setting is `stop`, STOP and report. Show the gate script
   output so the user can diagnose.

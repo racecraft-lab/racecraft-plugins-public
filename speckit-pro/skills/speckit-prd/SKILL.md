@@ -170,12 +170,7 @@ is a consequential decision.
 you draft, derive its size signals from the entry itself — number of user stories
 / acceptance-criteria groups, files or surfaces touched, functional requirements,
 and whether it is net-new or modifies existing code (mark a research-only slice
-with `--spike`) — then run the single shared estimator:
-
-```text
-Bash("${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/scripts/estimate-spec-size.sh \
-  --user-stories N --files N --frs N --new-vs-modify new|modify [--spike]")
-```
+with `--spike`) — then run runner operation `estimate-spec-size`.
 
 Populate that entry's existing **`Projected reviewable LOC`** field in its
 `**Reviewability Budget:**` line with the returned `estimated_loc` (this is the
@@ -190,8 +185,8 @@ interview. Nothing is blocked or rejected; the estimate is a forward guess that
 shapes decomposition early, never a gate (see the shared reference's
 "forward guess, not the authoritative count" caveat).
 
-If the estimator cannot produce a usable result for any reason — the script is
-missing, `jq` is missing, it exits non-zero, or it prints empty/unparseable
+If the estimator cannot produce a usable result for any reason — the operation is
+unavailable, it exits non-zero, or it prints empty/unparseable
 output — treat it as an **absent estimate**: leave that entry's
 `Projected reviewable LOC` field unpopulated (or note it as unavailable), add a
 short advisory note, and continue the interview. Never read the script's exit
@@ -240,7 +235,7 @@ which is correct in this plugin-source repo but **wrong in a consumer install**
 user's project root (the directory that contains `docs/` and `specs/`) explicitly:
 
 ```text
-Bash("${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/generate-spec-index.sh \"$REPO_ROOT\"")
+Run runner operation generate-spec-index-write with repo root "$REPO_ROOT".
 ```
 
 The generator fills the INDEX with one `- [<spec_id>](../../../specs/<dir>/SPEC-MOC.md) · <status>`
@@ -363,7 +358,7 @@ interactive pass before it is roadmap-ready. Do not invent user intent.
 - `${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/templates/prd-template.md` — the lean PRD template.
 - `${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/templates/technical-roadmap-template.md` — the roadmap / SPEC-catalog template.
 - `${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/templates/roadmap-moc-template.md` — the roadmap-MOC home-note template (carries the empty GENERATED INDEX sentinel pair the generator fills).
-- `${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/generate-spec-index.sh` — the generator that fills the home note's GENERATED INDEX zone (invoke with the consumer repo root positionally).
-- [`speckit-coach/references/slicing-heuristics.md`](../speckit-coach/references/slicing-heuristics.md) — the single source of truth for SPIDR + INVEST + vertical-slicing and the ~400 reviewable-LOC ceiling (summarized inline above; invoked via `${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/scripts/estimate-spec-size.sh`).
+- Runner operation `generate-spec-index-write` — fills the home note's GENERATED INDEX zone (invoke with the consumer repo root positionally).
+- [`speckit-coach/references/slicing-heuristics.md`](../speckit-coach/references/slicing-heuristics.md) — the single source of truth for SPIDR + INVEST + vertical-slicing and the ~400 reviewable-LOC ceiling (summarized inline above; invoked via runner operation `estimate-spec-size`).
 - `/speckit-pro:speckit-coach` — decomposition algorithm and SDD methodology depth.
 - `/speckit-pro:grill-me` — the downstream per-spec interview that mirrors this skill's one-question-at-a-time machinery.

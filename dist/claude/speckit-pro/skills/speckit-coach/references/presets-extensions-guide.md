@@ -25,7 +25,7 @@ core files.
 
 ### Preset Commands
 
-```bash
+```text
 # Discovery
 specify preset search                         # browse available presets
 specify preset search --tag <tag>             # filter by tag
@@ -77,7 +77,7 @@ are not combined.
    (the `--dev` flag copies INTO `.specify/presets/`, so the
    source must be elsewhere to avoid a self-referencing loop):
 
-```bash
+```text
 mkdir -p /tmp/my-preset/{templates,commands}
 ```
 
@@ -126,7 +126,7 @@ tags:                                    # Optional
 
 4. Install from the external directory:
 
-```bash
+```text
 specify preset add --dev /tmp/my-preset
 specify preset resolve tasks-template
 # Should show: .specify/presets/my-preset/templates/tasks-template.md
@@ -139,7 +139,7 @@ and install with `--dev <external-path>`.
 
 5. Clean up the external source after install:
 
-```bash
+```text
 rm -rf /tmp/my-preset
 ```
 
@@ -174,7 +174,7 @@ installed, and organized into 5 categories.
 
 ### Extension Commands
 
-```bash
+```text
 # Discovery
 specify extension search                       # browse all catalogs
 specify extension search <keyword>             # search by keyword
@@ -310,18 +310,18 @@ state on another developer's clone or in CI.
 **Invoking the installer directly.** `/speckit-pro:speckit-install` and
 `/speckit-pro:speckit-upgrade` call the same script under the hood:
 
-```bash
+```text
 # Check what would change without mutating anything:
-bash speckit-pro/scripts/install-curated-set.sh --mode=check
+speckit-pro/scripts/install-curated-set --mode=check
 
 # Install all entries that are missing:
-bash speckit-pro/scripts/install-curated-set.sh --mode=install
+speckit-pro/scripts/install-curated-set --mode=install
 
 # Install only a subset:
-bash speckit-pro/scripts/install-curated-set.sh --mode=install --accept=review,verify
+speckit-pro/scripts/install-curated-set --mode=install --accept=review,verify
 
 # Upgrade installed entries to the latest released tag:
-bash speckit-pro/scripts/install-curated-set.sh --mode=upgrade
+speckit-pro/scripts/install-curated-set --mode=upgrade
 ```
 
 The script is non-interactive — it never prompts. The install/upgrade
@@ -340,7 +340,7 @@ The user wants to browse or search the catalog. Run `specify extension
 search` against the user's local catalog stack (which respects custom
 catalogs and `SPECKIT_CATALOG_URL` env overrides):
 
-```bash
+```text
 specify extension search                       # browse everything
 specify extension search <keyword>             # filter by keyword
 specify extension search --tag <tag>           # filter by tag
@@ -351,12 +351,12 @@ specify extension search --verified            # verified extensions only
 Parse the output and render it as a markdown table grouped by category.
 
 If `specify` is unavailable, fall back to the GitHub API against the
-authoritative catalog file:
+authoritative catalog file and parse the returned JSON with a
+standard-library JSON reader:
 
-```bash
-gh api /repos/github/spec-kit/contents/extensions/catalog.community.json \
-  --jq '.content' | base64 -d | \
-  jq '.extensions[] | select(.id | test("KEYWORD"; "i")) | {id, name, category, description}'
+```text
+gh api /repos/github/spec-kit/contents/extensions/catalog.community.json
+decode the content field and filter extensions by keyword
 ```
 
 If neither CLI is available, WebFetch the raw URL:
@@ -368,7 +368,7 @@ The user wants details on one extension. Run `specify extension info <id>`
 to get the full manifest, then surface the salient fields (commands
 provided, hook events, `requires.speckit_version`, tags, repository URL):
 
-```bash
+```text
 specify extension info <id>
 ```
 
@@ -378,9 +378,9 @@ about something they read on a blog), fetch the extension's own
 entry gives the URL; the manifest path is typically
 `<repo>/blob/main/extension.yml`:
 
-```bash
-gh api /repos/<owner>/<repo>/contents/extension.yml \
-  --jq '.content' | base64 -d
+```text
+gh api /repos/<owner>/<repo>/contents/extension.yml
+decode the content field and read extension.yml
 ```
 
 Read out: `provides.commands` (what slash commands the extension adds),
@@ -393,7 +393,7 @@ SpecKit version (`specify --version`) before recommending install.
 The user wants to change extension state. **Always confirm with the user
 before running any mutation.** Once confirmed:
 
-```bash
+```text
 # Install (community extensions are "discovery only" — must use --from)
 specify extension add <id> --from https://github.com/<owner>/<repo>/archive/refs/tags/<tag>.zip
 
@@ -559,7 +559,7 @@ checked simultaneously:
 
 Add organizational catalogs:
 
-```bash
+```text
 # Via CLI
 specify extension catalog add \
   --name "internal" \

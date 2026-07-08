@@ -74,7 +74,7 @@ for phase in PHASES starting from first_pending:
     6. Check .specify/extensions.yml for after_<phase> hooks
        → run accepted hooks (non-destructive), skip duplicates
     7. Validate gate directly in the main session:
-       Run '<SKILL_SCRIPTS>/validate-gate.sh' for gate G<N>
+       Run 'runner helper validate-gate' for gate G<N>
        against <feature_dir> from the orchestrator using the
        resolved scripts path for this skill.
        Parse the script output for PASS/FAIL status.
@@ -101,14 +101,14 @@ group (see [post-implementation-codex.md](./post-implementation-codex.md)).
 During pre-flight, the parent may inspect the active workflow target and nearby
 legacy spec candidates for Tier-2 PROCESS relocation. This is static
 inspection/reporting only. It does not run
-`relocate-process-artifacts.sh`.
+`relocate-process-artifacts`.
 
 Suggest relocation only for thawed in-scope legacy specs with relocatable
 PROCESS artifacts. For each eligible spec, print:
 
 ```text
-speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --dry-run --spec specs/<spec-dir> --repo-root .
-speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --apply --spec specs/<spec-dir> --repo-root .
+runner helper relocate-process-artifacts --dry-run --spec specs/<spec-dir> --repo-root .
+runner helper relocate-process-artifacts --apply --spec specs/<spec-dir> --repo-root .
 ```
 
 The `--apply` line is an operator follow-up after reviewing dry-run output and
@@ -127,18 +127,30 @@ an oversized slice at plan time, before any code is written. It is **advisory
 only**: no outcome blocks, prompts mid-autonomous-run, or aborts the run (hard
 blocking / re-slicing is PRSG-010, explicitly out of scope here).
 
-Invoke the estimator from the parent session with `exec_command` and **capture
-the exit code** rather than letting a non-zero exit propagate and abort the run:
+Invoke runner helper `estimate-reviewable-loc` from the parent session with
+`exec_command` and **capture the response status** rather than letting a
+non-zero tool result propagate and abort the run:
 
 ```text
 plan = "specs/<feature>/plan.md"
-exec_command: bash -c 'code=0; out=$("<SKILL_SCRIPTS>/estimate-reviewable-loc.sh" "$1") || code=$?; printf "%s\n" "$out"; exit "$code"' _ "$plan"
+python3 -m speckit_pro_runner < request.json
+
+request.json:
+{
+  "schema_version": "1.0",
+  "request_id": "plan-reviewability-budget",
+  "helper_id": "estimate-reviewable-loc",
+  "operation": "estimate-reviewable-loc",
+  "mode": "read_only",
+  "inputs": {"plan_file": "specs/<feature>/plan.md"}
+}
 ```
 
 The three budget statuses (`pass`, `over_budget`, `not_estimated`) all return
-exit 0 with the verdict in the JSON `status` field; a non-zero exit (exit 2:
-usage error or an absent/unreadable `plan.md`) is the only error path. Branch on
-the JSON `status` when the exit code is 0, and on the exit code otherwise:
+runner status `ok` with the verdict in the helper stdout JSON `status` field;
+`input_error` is the error path for usage errors or an absent/unreadable
+`plan.md`. Branch on the helper stdout JSON `status` when the runner response is
+`ok`, and on diagnostics otherwise:
 
 - **`pass`** → record "within budget" in the workflow/plan record and
   `autopilot-state.json` (silent — no prompt, no block).
@@ -150,16 +162,16 @@ the JSON `status` when the exit code is 0, and on the exit code otherwise:
 - **`not_estimated`** (`projected: null` — `plan.md` has no parseable declared
   production-file structure) → record "not estimated (no declared production
   files)" and continue. Never treat this as a within-budget pass.
-- **non-zero exit** (exit 2) → record "estimator could not run (exit N)" and
+- **diagnostic response** → record "estimator could not run" with the diagnostic code and
   continue the autonomous run.
 
-This mirrors the Codex gate-handling pattern (the G6.5 confidence-gate step reads
-the script's exit code and branches on it rather than aborting).
+This mirrors the Codex gate-handling pattern: read the structured runner
+response and branch on it rather than aborting.
 Advisory-and-never-crash is the invariant for every outcome — under-budget,
 over-budget, unmeasured, or errored — none may block, prompt
-mid-autonomous-run, or crash the run. The estimator does not yet exist on older
-plugin builds; when the script is absent the captured non-zero exit is recorded
-as the error note and the run continues, same as any other error path.
+mid-autonomous-run, or crash the run. If the helper is unavailable on an older
+plugin build, record the diagnostic note and continue, same as any other error
+path.
 
 ## Phase-Gate: Spec-MOC Navigation Regeneration
 
@@ -179,13 +191,13 @@ failure this ordering avoids.
 
 **Step (run at each boundary, before step 10):**
 
-```bash
+```text
 # Write mode (NO --check): regenerate over the autopilot's target repo.
 # Pass "$PWD" explicitly — do NOT rely on the generator's default REPO_ROOT.
 # In a cached-plugin run the default resolves to the plugin cache's parent, not
 # the user's project, so the explicit arg is required (same path-prefix +
-# "$PWD" convention as generate-pr-body.sh below).
-skills/speckit-autopilot/scripts/generate-spec-index.sh "$PWD"
+# "$PWD" convention as generate-pr-body below).
+runner helper generate-spec-index "$PWD"
 ```
 
 **Act on the result:**
@@ -229,7 +241,7 @@ surface a remediation hint, or stop.
 
 ```text
 1. Read mode from `CONFIDENCE_GATE_MODE` (set at Step 0.6b in
-   the autopilot SKILL.md by `resolve-confidence-mode.sh`). The
+   the autopilot SKILL.md by `resolve-confidence-mode`). The
    resolver runs once at autopilot start so `--strict --advisory`
    conflicts and unknown values fail fast before any phase work
    begins, instead of surfacing 6 phases in.
@@ -245,7 +257,7 @@ surface a remediation hint, or stop.
      bound."
 
 4. Run the gate:
-     bash '<SKILL_SCRIPTS>/confidence-gate.sh' \
+     'runner helper confidence-gate' \
        <workflow-file> --threshold <T> --mode <M>
 
 5. Parse exit code + JSON:
@@ -263,7 +275,7 @@ surface a remediation hint, or stop.
               "completeness" → verify artifact presence).
             - spawn_agent consensus-synthesizer to re-emit the
               pre-Implement Confidence block to the workflow file.
-            - Re-run confidence-gate.sh.
+            - Re-run confidence-gate.
             - Increment iteration_count.
        c. After max iterations OR exit 0:
             - mode=advisory: log + advance to Phase 7.
@@ -304,7 +316,7 @@ run, audit `update_plan` and `autopilot-state.json`, then run the
 reviewability task gate:
 
 ```text
-skills/speckit-autopilot/scripts/reviewability-gate.sh tasks specs/<feature>
+runner helper reviewability-gate tasks specs/<feature>
 ```
 
 Run the gate with guarded capture so a compatibility nonzero exit cannot abort
@@ -357,19 +369,19 @@ changed files or reviewability warnings.
 Before creating or updating a PR after G7, the parent session runs:
 
 ```text
-skills/speckit-autopilot/scripts/final-reviewability-backstop.sh --feature-dir specs/<feature> --feature-branch <branch> --diff-range origin/main...HEAD --state-output specs/<feature>/.process/final-reviewability/gate-state.json --packet-output specs/<feature>/.process/final-reviewability/reslicing-packet.json ...
-skills/speckit-autopilot/scripts/generate-pr-body.sh "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD
+final-reviewability boundary: use current committed reviewability evidence; if none is current, stop before PR side effects
+runner helper generate-pr-body "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD
 ```
 
-Run `generate-pr-body.sh` only after the final backstop exits 0. Exit 0 includes
-`pass`, `warn`, honored typed exception, and final `marker_split` with a current
+Run `generate-pr-body` only after current committed reviewability evidence shows
+`pass`, `warn`, honored typed exception, or final `marker_split` with a current
 `pr_marker_plan`. When a current `pr_marker_plan` exists, PR preparation
 continues through marker emission even if the final full-diff result is only
 `pass` or `warn`. A full-diff size block with current marker evidence also
 proceeds to marker emission and is not a manual re-slicing stop. Exit 1 is
 `reslicing_required` only for unexcepted correctness or missing-marker cases:
 do not generate a PR body, invoke any `gh pr create` variant, or run
-`multi-pr-emission.sh` yet. This blocks only PR side effects. It is not a final
+`multi-pr-emission` yet. This blocks only PR side effects. It is not a final
 response condition: read `autopilot_continuation`, the packet's
 `operator_steps`, and `resume.resume_from`; continue inside the same autopilot
 run through the named PRSG-007/008/009 phase until a valid slice PR stack is
@@ -382,7 +394,7 @@ fingerprint status, ordered marker IDs, checkpoints, warnings, final
 marker_split or marker-plan-ready handoff, packet validation, and PR mappings
 before PR side effects.
 
-`generate-pr-body.sh` uses the host repository's pull request template if it
+`generate-pr-body` uses the host repository's pull request template if it
 exists, preserves unknown host-required sections, appends missing review-packet
 sections, and falls back to the bundled template when the host has none. Use
 `gh pr create --body-file .git/speckit-pr-body.md`, not an inline placeholder.
@@ -408,6 +420,6 @@ Post:
 
 Then run the deterministic guard against the workflow/state pair:
 
-```bash
-python3 "<SKILL_SCRIPTS>/validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE" --state "$WORKFLOW_DIR/autopilot-state.json"
+```text
+python3 "runner helper validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE" --state "$WORKFLOW_DIR/autopilot-state.json"
 ```

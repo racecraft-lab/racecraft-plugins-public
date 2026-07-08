@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-zero-bash-guard-final",
+  "helper_id": "active-path-guard",
+  "operation": "zero-bash-guard",
+  "mode": "read_only",
+  "inputs": {
+    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/zero-bash-guard-cases.json",
+    "case_id": "final-current-implementation"
+  }
+}

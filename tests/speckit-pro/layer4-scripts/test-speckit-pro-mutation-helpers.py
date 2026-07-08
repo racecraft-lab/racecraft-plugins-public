@@ -97,6 +97,7 @@ class MutationHelperTests(unittest.TestCase):
         self.run_git(root, "init", "--quiet")
         self.run_git(root, "config", "user.email", "git@github.com")
         self.run_git(root, "config", "user.name", "XPLAT Tests")
+        self.run_git(root, "config", "commit.gpgsign", "false")
         (root / ".gitkeep").write_text("fixture\n", encoding="utf-8")
         marker = root / "speckit-pro" / "speckit_pro_runner"
         marker.mkdir(parents=True)
@@ -160,6 +161,7 @@ class MutationHelperTests(unittest.TestCase):
         self.assertEqual(data["active_cutover"], False)
         self.assertEqual(data["mode"], "mutation")
         for record in data["helpers"]:
+            self.assertNotIn("script", record)
             self.assertNotEqual(record["promotion_status"], "python_authoritative")
             if record["promotion_status"] in {"deferred", "out_of_scope"}:
                 self.assertEqual(record["authoritative_command"], "")
@@ -170,6 +172,17 @@ class MutationHelperTests(unittest.TestCase):
                 self.assertIn(required, promotion)
             self.assertEqual(promotion["helper_id"], record["helper_id"])
             self.assertIn(promotion["promotion_status"], promotion_schema["properties"]["promotion_status"]["enum"])
+        prior_scripts = {
+            record["helper_id"]: record.get("inactive_provenance", {}).get("prior_script")
+            for record in data["helpers"]
+        }
+        self.assertEqual(
+            prior_scripts["install-codex-agents"],
+            "speckit-pro/codex-skills/install/scripts/install-codex-agents.sh",
+        )
+        self.assertEqual(prior_scripts["install-curated-set"], "speckit-pro/scripts/install-curated-set.sh")
+        self.assertEqual(prior_scripts["generate-pr-body"], "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh")
+        self.assertEqual(prior_scripts["multi-pr-emission"], "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh")
 
     def test_dry_run_reports_planned_write_without_mutating(self) -> None:
         tmp, target, rel = self.temp_repo_path("dry-run-output.json")

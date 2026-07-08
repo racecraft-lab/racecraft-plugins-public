@@ -1,38 +1,31 @@
 {
-  "workflow_file": "docs/ai/specs/.process/XPLAT-008-workflow.md",
-  "feature_dir": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate",
-  "feature_branch": "codex/xplat-008-claude-codex-cutover-universal-install-release-gate",
-  "updated_at": "2026-07-07T02:00:33Z",
-  "confidence_gate_mode": "advisory",
-  "active_step": "Post-merge archive cleanup applied",
-  "archive_sweep": {
-    "archive_extension_installed": true,
-    "cleanup_mode": "post-merge-apply",
-    "current_target": null,
-    "excluded_current_spec": null,
-    "eligible_previous_specs": [
-      "specs/xplat-008-claude-codex-cutover-universal-install-release-gate"
-    ],
-    "active_specs_inventory": [],
-    "safeToApplyCleanup": true,
-    "cleanupApplied": true,
-    "notes": "Post-merge cleanup archived XPLAT-008 after PRs #289-#292 merged; process workflow/design files, release-readiness packet, UAT matrix, and partial Codex/macOS UAT evidence remain preserved under docs/ai/specs/.process/.",
-    "archived_spec": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate",
-    "archive_report": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
+  "workflow_file": "docs/ai/specs/.process/XPLAT-009-workflow.md",
+  "feature_dir": "specs/xplat-009-plugin-source-and-payload-bash-eradication",
+  "spec_id": "XPLAT-009",
+  "updated_at": "2026-07-08T07:10:34Z",
+  "active_step": "Complete",
+  "skill_scripts": {
+    "requested": "installed-cache:speckit-pro/skills/speckit-autopilot/scripts",
+    "resolved": "speckit-pro/skills/speckit-autopilot/scripts",
+    "note": "Installed plugin cache exposes only validate-autopilot-phase-coverage.py; source checkout scripts are used for this source-worktree autopilot run."
   },
-  "preflight": {
-    "model": "gpt-5.5 available for required installed Codex subagents",
-    "model_reasoning_effort": "xhigh for required executor subagents",
-    "current_model_verification": "No parent-session model introspection tool is exposed; installed phase/custom agents advertise gpt-5.5/xhigh in the runtime tool schema.",
-    "codex_agent_install": "validate-agent-install.sh --surface codex --autoheal passed with 10 bundled agents installed",
-    "check_prerequisites": {
-      "all_pass": true,
-      "branch": "codex/xplat-008-claude-codex-cutover-universal-install-release-gate",
-      "is_worktree": true,
-      "on_feature_branch": false,
-      "specify_version": "0.11.8",
-      "capability_coverage": "advisory pass"
-    },
+  "archive_sweep": {
+    "status": "completed",
+    "archive_extension_installed": true,
+    "cleanup_mode": "apply",
+    "current_target": "specs/xplat-009-plugin-source-and-payload-bash-eradication",
+    "excluded_current_spec": "specs/xplat-009-plugin-source-and-payload-bash-eradication",
+    "eligible_previous_specs": [],
+    "safeToApplyCleanup": true,
+    "note": "Only the current target exists under active specs/** in this worktree; no previous active spec cleanup was needed."
+  },
+  "prerequisites": {
+    "all_pass": true,
+    "branch": "codex/xplat-009-plugin-source-and-payload-bash-eradication",
+    "is_worktree": true,
+    "speckit_cli": "specify 0.11.8",
+    "codex_agents": "10 bundled agents installed",
+    "confidence_gate_mode": "advisory",
     "project_commands": {
       "BUILD": "N/A",
       "TYPECHECK": "N/A",
@@ -45,883 +38,113 @@
       "FULL_VERIFY": "N/A"
     },
     "preset_conventions": {
-      "has_presets": true,
-      "presets": [
-        "speckit-pro-reviewability"
-      ],
-      "templates": [
-        "spec-template",
-        "plan-template",
-        "tasks-template"
+      "preset": "speckit-pro-reviewability",
+      "version": "1.0.0",
+      "templates": ["spec", "plan", "tasks"]
+    },
+    "project_implementation_agent": "implement-executor"
+  },
+  "settings": {
+    "consensus_mode": "moderate",
+    "gate_failure": "stop",
+    "auto_commit": "per-phase",
+    "confidence_gate_mode": "advisory"
+  },
+  "post_implementation": {
+    "doctor_extension_check": {
+      "status": "skipped_codex_unavailable",
+      "evidence": ".specify/extensions/speckit-utils/commands/doctor.md exists, but no callable Codex doctor skill is exposed; toolchain preflight and full suite passed."
+    },
+    "verify_implementation": {
+      "status": "completed",
+      "evidence": "bash tests/speckit-pro/run-all.sh -> 2016/2016 passed after final clean-gate remediation"
+    },
+    "verify_tasks_phantom_check": {
+      "status": "completed",
+      "evidence": "tasks.md has zero open - [ ] T... checkboxes; T001-T031 complete"
+    },
+    "code_review": {
+      "status": "completed",
+      "evidence": "RepoPrompt review-agent failed with Transport closed; parent review found and fixed the XPLAT-004/XPLAT-008 runner guard regression."
+    },
+    "integration_suite": {
+      "status": "completed",
+      "evidence": [
+        "PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py -> 34/34 passed",
+        "PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py -> 17/17 passed",
+        "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py -> 51/51 passed",
+        "PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py -> 10/10 passed",
+        "bash tests/speckit-pro/layer4-scripts/test-privacy-scan.sh -> 10/10 passed",
+        "bash tests/speckit-pro/run-all.sh -> 2016/2016 passed after final clean-gate remediation",
+        "git diff --check -> passed"
       ]
     },
-    "extensions": {
-      "archive": true,
-      "git": true,
-      "verify": true,
-      "verify-tasks": true,
-      "retrospective": true,
-      "speckit-utils": true
+    "reviewability_diff_gate": {
+      "status": "warn_proceed",
+      "route": "one-navigable-PR",
+      "evidence": "specs/xplat-009-plugin-source-and-payload-bash-eradication/.process/final-reviewability/gate-state.json"
     },
-    "implementation_agent": "implement-executor",
-    "branch_refresh": "Rebased XPLAT-008 branch onto origin/main fd2d94af before phase execution.",
-    "constitution": "Racecraft Plugins Public Constitution 1.1.0 available for phase validation."
+    "self_review": {
+      "status": "completed",
+      "evidence": "No remaining blocking issue after runner guard fix; residual risk is PR/CI feedback after publication."
+    },
+    "uat_runbook_generation": {
+      "status": "completed",
+      "evidence": "specs/xplat-009-plugin-source-and-payload-bash-eradication/.process/uat-runbook.md"
+    },
+    "pr_body_generation": {
+      "status": "completed",
+      "evidence": [
+        "docs/ai/specs/.process/XPLAT-009-pr-packet.json",
+        "docs/ai/specs/.process/XPLAT-009-pr-body.md"
+      ]
+    },
+    "pr_creation": {
+      "status": "completed",
+      "evidence": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/297"
+    },
+    "review_remediation": {
+      "status": "completed",
+      "evidence": "PR #297 final pushed head 558a255b0863ebf9e0fbacd860347322c8960149 is clean: RepoPrompt clean-gate chat untitled-chat-5AF444 returned NO FINDINGS; gh pr checks 297 reports all checks passing including CodeQL and test (speckit-pro); GraphQL reports mergeStateStatus CLEAN; prior CodeQL review threads are resolved and outdated."
+    },
+    "retrospective": {
+      "status": "completed",
+      "evidence": "docs/ai/specs/.process/XPLAT-009-retrospective.md"
+    }
   },
   "plan": [
-    {
-      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 0: Prerequisites",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 1: Specify",
-      "status": "completed",
-      "summary": "Generated spec.md with 4 user stories, 22 functional requirements, 12 acceptance scenarios, 8 success criteria, and 0 active NEEDS CLARIFICATION markers."
-    },
-    {
-      "step": "Phase 2: Clarify - Active Surface Inventory",
-      "status": "completed",
-      "summary": "Accepted 5 clarification answers covering active surface scope, direct runner invocation, payload manifest source, UAT matrix path, and bounded autoheal."
-    },
-    {
-      "step": "Phase 2: Clarify - Active Surface Inventory Consensus",
-      "status": "completed",
-      "summary": "Consensus refined interpreter discovery and confirmed bounded manifest/checksum-backed real-cache autoheal only."
-    },
-    {
-      "step": "Phase 2: Clarify - Payload, Release, and Trust Contract",
-      "status": "completed",
-      "summary": "Accepted source-derived Claude/Codex payload inventories, temporary rebuild comparison against committed dist outputs, blocking version consistency, seeded release blockers, and implemented-only public trust/support claims."
-    },
-    {
-      "step": "Phase 2: Clarify - Payload, Release, and Trust Contract Consensus",
-      "status": "completed",
-      "summary": "Three-way consensus accepted the allow/deny list for public trust claims and denied stronger assurances unless separately implemented and evidenced."
-    },
-    {
-      "step": "Phase 2: Clarify - UAT, Update, and Autoheal",
-      "status": "completed",
-      "summary": "Accepted a feature-local UAT matrix plus optional detail files, six Claude/Codex by platform rows, required install-to-repair fields, structured matrix fill-state gating, prior interpreter discovery order with diagnostics, and checksum-backed repair boundaries."
-    },
-    {
-      "step": "Phase 2: Clarify - UAT, Update, and Autoheal Consensus",
-      "status": "completed",
-      "summary": "Three-way consensus confirmed a structured six-row native UAT matrix gate and bounded checksum-backed installed-cache repair only; checksum repair is integrity/completeness repair, not signing, provenance, SLSA, or cryptographic trust-chain evidence."
-    },
-    {
-      "step": "Phase 3: Plan",
-      "status": "completed",
-      "summary": "Generated plan.md, research.md, data-model.md, quickstart.md, and five JSON contracts for runner invocation, payload completeness, release-readiness, UAT matrix, and install health/repair; G3 passed with zero unresolved markers."
-    },
-    {
-      "step": "Phase 4: Checklist - integration",
-      "status": "completed",
-      "summary": "Generated 20-item integration checklist, found and remediated one scope gap by adding root README.md and speckit-pro/README.md to public install/update guidance scope."
-    },
-    {
-      "step": "Phase 4: Checklist - integration Consensus",
-      "status": "completed",
-      "summary": "Codebase consensus agreed the README scope remediation is necessary and should remain limited to active public install/update/trust/support claims."
-    },
-    {
-      "step": "Phase 4: Checklist - security",
-      "status": "completed",
-      "summary": "Generated 20-item security checklist covering XPLAT-003 trust metadata, bounded autoheal, and public claim limits; found 0 gaps."
-    },
-    {
-      "step": "Phase 4: Checklist - security Consensus",
-      "status": "completed",
-      "summary": "Domain consensus found one narrow schema gap; install-health-repair schema now machine-binds trusted autoheal to source identity, release channel/tag, expected digest, safe paths, and unsafe manual remediation."
-    },
-    {
-      "step": "Phase 4: Checklist - reliability",
-      "status": "completed",
-      "summary": "Generated 20-item reliability checklist covering interpreter discovery, update, doctor/autoheal, and native UAT evidence; found 0 gaps."
-    },
-    {
-      "step": "Phase 4: Checklist - reliability Consensus",
-      "status": "completed",
-      "summary": "Codebase consensus found no missed reliability gap across interpreter diagnostics, update proof, doctor/autoheal outcomes, native UAT rows, or installed-cache failure messaging."
-    },
-    {
-      "step": "Phase 4: Checklist - release-readiness",
-      "status": "completed",
-      "summary": "Generated 20-item release-readiness checklist covering payload completeness, UAT fill state, public claims, final blockers, and traceability; found 0 gaps."
-    },
-    {
-      "step": "Phase 4: Checklist - release-readiness Consensus",
-      "status": "completed",
-      "summary": "Spec-context consensus found no missed pre-Tasks release blocker across payload completeness, stale metadata, public claims, UAT matrix, update/repair evidence, PR traceability, or nondeterministic/stale dist output."
-    },
-    {
-      "step": "Phase 5: Tasks",
-      "status": "completed",
-      "summary": "Generated tasks.md with 47 tasks across 4 phases, 15 parallel-safe tasks, US1-US4 coverage, G5 pass, and atomicity route one-navigable-PR/releasable true."
-    },
-    {
-      "step": "Phase 6: Analyze",
-      "status": "completed",
-      "summary": "Analyze remediated five drift findings: exact UAT row enforcement, structured release-readiness evidence, payload expected/actual field alignment, hyphenated runner operation IDs, and canonical runner invocation/UAT linkage alignment."
-    },
-    {
-      "step": "Phase 6: Analyze - Consensus",
-      "status": "completed",
-      "summary": "Final codebase consensus confirmed no remaining schema/model drift across release-readiness, UAT matrix, runner invocation, and data model contracts."
-    },
-    {
-      "step": "Phase 6.5: Confidence Gate",
-      "status": "completed",
-      "summary": "Advisory confidence gate passed: composite 0.93 >= 0.90, lowest criterion risk assessment 0.91, recommended action proceed."
-    },
-    {
-      "step": "Phase 7: Implement - Slice 1 active installed-runtime cutover",
-      "status": "completed",
-      "summary": "Completed T001-T012: active runtime inventory, runner invocation fixtures, active-runtime guard fixtures, installed-cache interpreter discovery, argv-only runner invocation, Claude/Codex skill and hook guidance updates, registry entries, refreshed runner manifest/checksum metadata, and focused verification."
-    },
-    {
-      "step": "Phase 7: Implement - Slice 2 payload and release gates",
-      "status": "completed",
-      "summary": "Completed T013-T027: source-derived payload completeness and release-readiness fixtures, payload-completeness and release-readiness runner gates, regenerated Claude/Codex payloads through the apply-mode runner request, public README/docs claim alignment, refreshed runner metadata, and focused verification including Layer 4 gates, payload completeness, release-readiness, and docs validation."
-    },
-    {
-      "step": "Phase 7: Implement - Slice 3 native UAT/update/repair",
-      "status": "blocked",
-      "summary": "Completed T028-T034 and T042: UAT matrix fixtures and request, install-health repair fixtures and request, deterministic blocker tests, UAT/release-readiness gate implementation, install-health repair helper behavior, registry entries, refreshed runner metadata, generated payload rebuild, feature-local UAT matrix scaffold, and focused request verification. Native operator evidence T035-T041 remains pending and is required before release-ready support claims."
-    },
-    {
-      "step": "Phase 7: Implement - Polish and release packet",
-      "status": "completed",
-      "summary": "Completed T043-T047: blocked release-readiness packet, requirement and success-criteria traceability, non-goal audit, final focused verification, UAT runbook, generated PR packet/body, packet validation, and PR workflow contract validation. The PR is reviewable but not native-release-ready until T035-T041 are filled."
-    },
-    {
-      "step": "Post: Doctor Extension Check",
-      "status": "archived",
-      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
-    },
-    {
-      "step": "Post: Verify Implementation",
-      "status": "archived",
-      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
-    },
-    {
-      "step": "Post: Verify Tasks Phantom Check",
-      "status": "archived",
-      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
-    },
-    {
-      "step": "Post: Code Review",
-      "status": "archived",
-      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
-    },
-    {
-      "step": "Post: Integration Suite",
-      "status": "archived",
-      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
-    },
-    {
-      "step": "Post: Reviewability Diff Gate",
-      "status": "archived",
-      "summary": "Final backstop proceeded with marker_split; aggregate diff remains size-blocked at 137 files, and the current three-marker plan is valid for scoped PR emission.",
-      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
-    },
-    {
-      "step": "Post: Self-Review",
-      "status": "archived",
-      "summary": "Self-review completed before PR body generation; reviewable stack remains intentionally not native-release-ready until six operator UAT rows are filled.",
-      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
-    },
-    {
-      "step": "Post: UAT Runbook Generation",
-      "status": "archived",
-      "summary": "UAT runbook generated and validated with current expected-failure and ready-fixture release-readiness paths.",
-      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
-    },
-    {
-      "step": "Post: PR Body Generation",
-      "status": "archived",
-      "summary": "Generated PR body and packet evidence updated for marker-split review and UAT/release-readiness evidence.",
-      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
-    },
-    {
-      "step": "Post: PR Creation",
-      "status": "archived",
-      "summary": "Live marker emission pushed the three review branches and opened PR#289, PR#290, and PR#291 in stack order.",
-      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
-    },
-    {
-      "step": "Post: Review Remediation",
-      "status": "archived",
-      "summary": "Resolved all Copilot review threads on PR#289, PR#290, and PR#291 after pushing reviewed fixes; final PR checks are green and merge states clean.",
-      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
-    },
-    {
-      "step": "Post: Retrospective",
-      "status": "archived",
-      "summary": "Retrospective complete: PR stack is review-ready with automated and local manual UAT evidence; public release remains blocked until six native operator UAT rows are filled.",
-      "archived_by": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md"
-    }
-  ],
-  "current_source_fingerprint": {
-    "feature_spec_sha": "ef035bf677089203c9074b47571e9919597904e7717031862678062edc21407c",
-    "plan_declared_scope_sha": "8aad1afe0fe86074b6cb09299c51344d737c9053173124c385448d9e69db8ac9",
-    "tasks_sha": "be58f6d7964797296e789fb4bb70f5f23a4c3c6e7afdddd0d48cb05369aa633f",
-    "reviewability_sha": "eb71e40fd5e3da131670ad5535f93eb3c4f28b3864c6eb34b72e1b1b6a0a1dff",
-    "hazard_route_sha": "49346aecfecdc68511ef1b27d51d77bf3c931ffb3912daac3dfdf217314bb530"
-  },
-  "pr_marker_plan": {
-    "schema_version": "pr-marker-plan.v1",
-    "kind": "pr_marker_plan",
-    "feature_id": "xplat-008-claude-codex-cutover-universal-install-release-gate",
-    "status": "emission_ready",
-    "source_fingerprint": {
-      "feature_spec_sha": "ef035bf677089203c9074b47571e9919597904e7717031862678062edc21407c",
-      "plan_declared_scope_sha": "8aad1afe0fe86074b6cb09299c51344d737c9053173124c385448d9e69db8ac9",
-      "tasks_sha": "be58f6d7964797296e789fb4bb70f5f23a4c3c6e7afdddd0d48cb05369aa633f",
-      "reviewability_sha": "eb71e40fd5e3da131670ad5535f93eb3c4f28b3864c6eb34b72e1b1b6a0a1dff",
-      "hazard_route_sha": "49346aecfecdc68511ef1b27d51d77bf3c931ffb3912daac3dfdf217314bb530"
-    },
-    "markers": [
-      {
-        "id": "us1",
-        "review_order": 1,
-        "kind": "user_story",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "User Story 1 - Active Installed-Runtime Surface Cutover",
-          "story_id": 1,
-          "start_task_id": "T001",
-          "end_task_id": "T012"
-        },
-        "task_ids": [
-          "T001",
-          "T002",
-          "T003",
-          "T004",
-          "T005",
-          "T006",
-          "T007",
-          "T008",
-          "T009",
-          "T010",
-          "T011",
-          "T012"
-        ],
-        "folded_polish_task_ids": [],
-        "folded_polish_target_reason": "",
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/codex-hooks.json"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/hooks/hooks.json"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/gates/active_path_guard.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/gates/registry.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/helpers/install.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/active-runtime-inventory.md"
-          }
-        ],
-        "declared_tests": [
-          "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py"
-        ],
-        "reviewability": {
-          "status": "block",
-          "mode": "tasks",
-          "scope": "us1",
-          "evidence_path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/final-reviewability/tasks-reviewability.json"
-        },
-        "hazards": [
-          "change-shape:modify-heavy"
-        ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "complete",
-          "head_sha": "4041d16b",
-          "commit_sha": "4041d16b",
-          "evidence_path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/marker-plan/checkpoints/us1.md"
-        },
-        "emission_mapping": {
-          "status": "marker_split",
-          "source_marker_ids": [
-            "us1"
-          ],
-          "packet_path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/marker-plan/packets/us1.json"
-        },
-        "warnings": []
-      },
-      {
-        "id": "us2",
-        "review_order": 2,
-        "kind": "user_story",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "User Story 2 - Payload, Release, and Public Docs Gates",
-          "story_id": 2,
-          "start_task_id": "T013",
-          "end_task_id": "T027"
-        },
-        "task_ids": [
-          "T013",
-          "T014",
-          "T015",
-          "T016",
-          "T017",
-          "T018",
-          "T019",
-          "T020",
-          "T021",
-          "T022",
-          "T023",
-          "T024",
-          "T025",
-          "T026",
-          "T027"
-        ],
-        "folded_polish_task_ids": [],
-        "folded_polish_target_reason": "",
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/src/content/docs/contribute-and-release.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/src/content/docs/first-run.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/src/content/docs/install/claude-code.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/src/content/docs/install/codex.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/src/content/docs/security-and-trust.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/src/content/docs/troubleshooting.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/src/content/docs/update-and-rollback.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/README.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/gates/payloads.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/gates/registry.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/gates/release.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/install_inventory.json"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
-          }
-        ],
-        "declared_tests": [
-          "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py"
-        ],
-        "reviewability": {
-          "status": "block",
-          "mode": "tasks",
-          "scope": "us2",
-          "evidence_path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/final-reviewability/tasks-reviewability.json"
-        },
-        "hazards": [
-          "change-shape:modify-heavy"
-        ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "complete",
-          "head_sha": "17c0f952",
-          "commit_sha": "17c0f952",
-          "evidence_path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/marker-plan/checkpoints/us2.md"
-        },
-        "emission_mapping": {
-          "status": "marker_split",
-          "source_marker_ids": [
-            "us2"
-          ],
-          "packet_path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/marker-plan/packets/us2.json"
-        },
-        "warnings": []
-      },
-      {
-        "id": "us3",
-        "review_order": 3,
-        "kind": "user_story",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "User Story 3 - Native UAT, Update, and Safe Repair",
-          "story_id": 3,
-          "start_task_id": "T028",
-          "end_task_id": "T042"
-        },
-        "task_ids": [
-          "T028",
-          "T029",
-          "T030",
-          "T031",
-          "T032",
-          "T033",
-          "T034",
-          "T035",
-          "T036",
-          "T037",
-          "T038",
-          "T039",
-          "T040",
-          "T041",
-          "T042"
-        ],
-        "folded_polish_task_ids": [
-          "T043",
-          "T044",
-          "T045",
-          "T046",
-          "T047"
-        ],
-        "folded_polish_target_reason": "nearest_preceding_non_polish_scope",
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/gates/registry.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/gates/release.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/speckit_pro_runner/helpers/install.py"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/release-readiness.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat-matrix.md"
-          }
-        ],
-        "declared_tests": [
-          "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py"
-        ],
-        "reviewability": {
-          "status": "block",
-          "mode": "tasks",
-          "scope": "us3",
-          "evidence_path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/final-reviewability/tasks-reviewability.json"
-        },
-        "hazards": [
-          "change-shape:modify-heavy"
-        ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "complete",
-          "head_sha": "53b0d319",
-          "commit_sha": "53b0d319",
-          "evidence_path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/marker-plan/checkpoints/us3.md"
-        },
-        "emission_mapping": {
-          "status": "marker_split",
-          "source_marker_ids": [
-            "us3"
-          ],
-          "packet_path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/marker-plan/packets/us3.json"
-        },
-        "warnings": []
-      }
-    ],
-    "warnings": [
-      {
-        "code": "reviewability_size_warning",
-        "severity": "warning",
-        "message": "Reviewability sizing result is marker-planning input.",
-        "source": "reviewability",
-        "details": {
-          "status": "block",
-          "mode": "tasks",
-          "evidence_path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/final-reviewability/tasks-reviewability.json"
-        }
-      }
-    ]
-  },
-  "multi_pr_emission": {
-    "schema_version": 2,
-    "status": "complete",
-    "emission_mode": "marker",
-    "route": "marker_split",
-    "base_branch": "main",
-    "base_sha": "fd2d94afb00e731a520a47e5e7d53f9d9647af0b",
-    "stack_manager_decision": {
-      "schema_version": "stack-manager-decision.v1",
-      "phase": "emission",
-      "operation": "link",
-      "selected_manager": "explicit-gh",
-      "reason": "gh stack view --json failed or returned invalid JSON; using explicit gh fallback before mutation",
-      "fallback_reason": "gh stack view --json failed or returned invalid JSON",
-      "fallback_allowed": true,
-      "mutation_boundary": {
-        "status": "none",
-        "first_mutating_command_id": null,
-        "fallback_after_boundary_allowed": false
-      },
-      "gh_stack": {
-        "available": true,
-        "supported": false,
-        "reason": "gh stack view --json failed or returned invalid JSON",
-        "extension_owner": "github",
-        "extension_name": "gh-stack",
-        "version": "0.0.5",
-        "version_supported": true,
-        "repo_enabled": false,
-        "support_status": "read_only_proof_failed",
-        "invocation": [
-          [
-            "gh",
-            "stack",
-            "--version"
-          ],
-          [
-            "gh",
-            "stack",
-            "view",
-            "--json"
-          ]
-        ]
-      },
-      "read_only_proof": {
-        "argv": [
-          "gh",
-          "stack",
-          "view",
-          "--json"
-        ],
-        "exit_status": 2,
-        "parsed": false,
-        "matched_expected_topology": false,
-        "stdout_tail": "",
-        "stderr_tail": "✗ current branch \"codex/xplat-008-claude-codex-cutover-universal-install-release-gate\" is not part of a stack",
-        "evidence_path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/stack-manager/emission/link/preflight/decision.json"
-      },
-      "topology_compatibility": {
-        "compatible": false,
-        "source": "prs-v2",
-        "mismatch_reason": "observed stack order did not match expected topology",
-        "expected_order": [
-          "codex/xplat-008-review/01-us1",
-          "codex/xplat-008-review/02-us2",
-          "codex/xplat-008-review/03-us3"
-        ],
-        "observed_order": []
-      },
-      "command_plan": [
-        {
-          "id": "explicit-gh-fallback",
-          "action": "create_pr",
-          "manager": "explicit-gh",
-          "argv": [
-            "gh",
-            "pr",
-            "create",
-            "--base",
-            "main",
-            "--head",
-            "codex/xplat-008-review/01-us1",
-            "--body-file",
-            "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/pr-packets/us1.md",
-            "--title",
-            "chore(PRSG-014): stacked PR"
-          ],
-          "mutates": true,
-          "mutation_boundary": true,
-          "slice_id": "us1",
-          "review_order": 1,
-          "preconditions": [
-            "gh_stack_not_supported_before_mutation",
-            "packets_validated",
-            "topology_validated"
-          ],
-          "reason": "Explicit gh fallback before any gh stack mutation"
-        }
-      ],
-      "topology": {
-        "pre_mutation": [
-          {
-            "review_order": 1,
-            "slice_id": "us1",
-            "branch": "codex/xplat-008-review/01-us1",
-            "base_branch": "main",
-            "pr_number": null,
-            "pr_url": null,
-            "head_sha": "4041d16b",
-            "status": "review_ready"
-          },
-          {
-            "review_order": 2,
-            "slice_id": "us2",
-            "branch": "codex/xplat-008-review/02-us2",
-            "base_branch": "codex/xplat-008-review/01-us1",
-            "pr_number": null,
-            "pr_url": null,
-            "head_sha": "17c0f952",
-            "status": "review_ready"
-          },
-          {
-            "review_order": 3,
-            "slice_id": "us3",
-            "branch": "codex/xplat-008-review/03-us3",
-            "base_branch": "codex/xplat-008-review/02-us2",
-            "pr_number": null,
-            "pr_url": null,
-            "head_sha": "53b0d319",
-            "status": "review_ready"
-          }
-        ],
-        "post_mutation": []
-      },
-      "recovery": null,
-      "evidence_path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/stack-manager/emission/link/preflight/decision.json"
-    },
-    "stack_manager_evidence_path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/stack-manager/emission/link/preflight/decision.json",
-    "next_slice_id": null,
-    "reconciled_at": "2026-06-10T00:00:00Z",
-    "slices": [
-      {
-        "slice_id": "us1",
-        "review_order": 1,
-        "expected_branch": "codex/xplat-008-review/01-us1",
-        "expected_base_branch": "main",
-        "head_sha": "4041d16b9a08547cbc814a8c327e406340428eee",
-        "declared_files": [
-          "speckit-pro/codex-hooks.json",
-          "speckit-pro/hooks/hooks.json",
-          "speckit-pro/speckit_pro_runner/gates/active_path_guard.py",
-          "speckit-pro/speckit_pro_runner/gates/registry.py",
-          "speckit-pro/speckit_pro_runner/helpers/install.py",
-          "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/active-runtime-inventory.md"
-        ],
-        "declared_scoped_tests": [
-          "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py"
-        ],
-        "scoped_verification": {
-          "commands": [
-            {
-              "command": "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py",
-              "gate_type": "SCRIPT_UNIT",
-              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
-              "required": true,
-              "evidence_path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/emission/us1/layer4.log",
-              "exit_status": 0,
-              "started_at": "2026-06-10T00:00:00Z",
-              "finished_at": "2026-06-10T00:00:01Z"
-            }
-          ]
-        },
-        "status": "pr_opened",
-        "marker_id": "us1",
-        "source_marker_ids": [
-          "us1"
-        ],
-        "source_marker_checkpoints": [
-          "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/marker-plan/checkpoints/us1.md"
-        ],
-        "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/marker-plan/final-marker-split-result.json",
-        "pr": {
-          "number": 289,
-          "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/289",
-          "state": "opened",
-          "base_ref": "main",
-          "head_ref": "codex/xplat-008-review/01-us1",
-          "head_sha": "4041d16b9a08547cbc814a8c327e406340428eee",
-          "merged_sha": null
-        }
-      },
-      {
-        "slice_id": "us2",
-        "review_order": 2,
-        "expected_branch": "codex/xplat-008-review/02-us2",
-        "expected_base_branch": "codex/xplat-008-review/01-us1",
-        "head_sha": "17c0f952d145ea559b965020b6aa1160855f6bae",
-        "declared_files": [
-          "docs-site/src/content/docs/contribute-and-release.md",
-          "docs-site/src/content/docs/first-run.md",
-          "docs-site/src/content/docs/install/claude-code.md",
-          "docs-site/src/content/docs/install/codex.md",
-          "docs-site/src/content/docs/security-and-trust.md",
-          "docs-site/src/content/docs/troubleshooting.md",
-          "docs-site/src/content/docs/update-and-rollback.md",
-          "speckit-pro/README.md",
-          "speckit-pro/speckit_pro_runner/gates/payloads.py",
-          "speckit-pro/speckit_pro_runner/gates/registry.py",
-          "speckit-pro/speckit_pro_runner/gates/release.py",
-          "speckit-pro/speckit_pro_runner/install_inventory.json",
-          "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
-          "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
-        ],
-        "declared_scoped_tests": [
-          "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py"
-        ],
-        "scoped_verification": {
-          "commands": [
-            {
-              "command": "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py",
-              "gate_type": "SCRIPT_UNIT",
-              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
-              "required": true,
-              "evidence_path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/emission/us2/layer4.log",
-              "exit_status": 0,
-              "started_at": "2026-06-10T00:00:00Z",
-              "finished_at": "2026-06-10T00:00:01Z"
-            }
-          ]
-        },
-        "status": "pr_opened",
-        "marker_id": "us2",
-        "source_marker_ids": [
-          "us2"
-        ],
-        "source_marker_checkpoints": [
-          "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/marker-plan/checkpoints/us2.md"
-        ],
-        "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/marker-plan/final-marker-split-result.json",
-        "pr": {
-          "number": 290,
-          "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/290",
-          "state": "opened",
-          "base_ref": "codex/xplat-008-review/01-us1",
-          "head_ref": "codex/xplat-008-review/02-us2",
-          "head_sha": "17c0f952d145ea559b965020b6aa1160855f6bae",
-          "merged_sha": null
-        }
-      },
-      {
-        "slice_id": "us3",
-        "review_order": 3,
-        "expected_branch": "codex/xplat-008-review/03-us3",
-        "expected_base_branch": "codex/xplat-008-review/02-us2",
-        "head_sha": "53b0d3193c9c3c126f655a0155c8a31560cd8d60",
-        "declared_files": [
-          "speckit-pro/speckit_pro_runner/gates/registry.py",
-          "speckit-pro/speckit_pro_runner/gates/release.py",
-          "speckit-pro/speckit_pro_runner/helpers/install.py",
-          "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/release-readiness.md",
-          "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat-matrix.md"
-        ],
-        "declared_scoped_tests": [
-          "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py"
-        ],
-        "scoped_verification": {
-          "commands": [
-            {
-              "command": "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py",
-              "gate_type": "SCRIPT_UNIT",
-              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
-              "required": true,
-              "evidence_path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/emission/us3/layer4.log",
-              "exit_status": 0,
-              "started_at": "2026-06-10T00:00:00Z",
-              "finished_at": "2026-06-10T00:00:01Z"
-            }
-          ]
-        },
-        "status": "pr_opened",
-        "marker_id": "us3",
-        "source_marker_ids": [
-          "us3"
-        ],
-        "source_marker_checkpoints": [
-          "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/marker-plan/checkpoints/us3.md"
-        ],
-        "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/marker-plan/final-marker-split-result.json",
-        "pr": {
-          "number": 291,
-          "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/291",
-          "state": "opened",
-          "base_ref": "codex/xplat-008-review/02-us2",
-          "head_ref": "codex/xplat-008-review/03-us3",
-          "head_sha": "53b0d3193c9c3c126f655a0155c8a31560cd8d60",
-          "merged_sha": null
-        }
-      }
-    ],
-    "source_marker_plan": {
-      "path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/marker-plan/pr-marker-plan.json"
-    },
-    "marker_split_result": {
-      "path": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/marker-plan/final-marker-split-result.json"
-    }
-  },
-  "status": "completed_archived",
-  "archive_cleanup": {
-    "status": "completed_archived",
-    "archived_spec": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate",
-    "archive_report": ".specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md",
-    "cleanup_branch": "codex/xplat-008-archive-cleanup",
-    "cleanup_command": "git rm -r specs/xplat-008-claude-codex-cutover-universal-install-release-gate",
-    "cleanup_applied": true,
-    "completed_at": "2026-07-07T02:00:33Z",
-    "release_readiness_status": "blocked_for_public_native_platform_release_until_operator_uat_passes",
-    "preserved_process_evidence": [
-      "docs/ai/specs/.process/XPLAT-008-workflow.md",
-      "docs/ai/specs/.process/XPLAT-008-design-concept.md",
-      "docs/ai/specs/.process/XPLAT-008-release-readiness.md",
-      "docs/ai/specs/.process/XPLAT-008-uat-matrix.md",
-      "docs/ai/specs/.process/XPLAT-008-uat-codex-macos.md"
-    ],
-    "merge_commits": {
-      "289": "59c18b2dcf79284182f6f5932e61716db0d58090",
-      "290": "1793128875dd0a31e9fafd606eaa55e92123d63e",
-      "291": "66defab977c166bff8726724cdb728b95eec0165",
-      "292": "9507fd452a3e344c1912b449f3bb4f2c38437b38"
-    }
-  }
+    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
+    {"step": "Phase 0: Prerequisites", "status": "completed"},
+    {"step": "Phase 1: Specify", "status": "completed"},
+    {"step": "Phase 2: Clarify - Active Helper and Instruction Inventory", "status": "completed"},
+    {"step": "Phase 2: Clarify - Active Helper and Instruction Inventory Consensus", "status": "completed"},
+    {"step": "Phase 2: Clarify - Guard and Allowlist Contract", "status": "completed"},
+    {"step": "Phase 2: Clarify - Guard and Allowlist Contract Consensus", "status": "completed"},
+    {"step": "Phase 2: Clarify - Payload Rebuild and Installed-Cache Proof", "status": "completed"},
+    {"step": "Phase 2: Clarify - Payload Rebuild and Installed-Cache Proof Consensus", "status": "completed"},
+    {"step": "Phase 3: Plan", "status": "completed"},
+    {"step": "Phase 4: Checklist - integration", "status": "completed"},
+    {"step": "Phase 4: Checklist - integration Consensus", "status": "completed"},
+    {"step": "Phase 4: Checklist - reliability", "status": "completed"},
+    {"step": "Phase 4: Checklist - reliability Consensus", "status": "completed"},
+    {"step": "Phase 4: Checklist - security", "status": "completed"},
+    {"step": "Phase 4: Checklist - security Consensus", "status": "completed"},
+    {"step": "Phase 5: Tasks", "status": "completed"},
+    {"step": "Phase 6: Analyze", "status": "completed"},
+    {"step": "Phase 6: Analyze - Consensus", "status": "completed"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
+    {"step": "Phase 7: Implement - T001", "status": "completed"},
+    {"step": "Post: Doctor Extension Check", "status": "completed"},
+    {"step": "Post: Verify Implementation", "status": "completed"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "completed"},
+    {"step": "Post: Code Review", "status": "completed"},
+    {"step": "Post: Integration Suite", "status": "completed"},
+    {"step": "Post: Reviewability Diff Gate", "status": "completed"},
+    {"step": "Post: Self-Review", "status": "completed"},
+    {"step": "Post: UAT Runbook Generation", "status": "completed"},
+    {"step": "Post: PR Body Generation", "status": "completed"},
+    {"step": "Post: PR Creation", "status": "completed"},
+    {"step": "Post: Review Remediation", "status": "completed"},
+    {"step": "Post: Retrospective", "status": "completed"}
+  ]
 }

@@ -167,7 +167,7 @@ held two ways:
    exactly its one job and never fans out. Read-only and validation
    roles also deny their role-specific built-in mutation primitives
    (`Write`, `Edit`, `MultiEdit`, `NotebookEdit`, and for read-only
-   workers `Bash`). Per
+   workers the shell execution primitive). Per
    [Anthropic's Agent Teams architecture](https://code.claude.com/docs/en/agent-teams#architecture),
    team-lead duties sit with the main session anyway: *"Team lead: The
    main Claude Code session that creates the team, spawns teammates,
@@ -206,7 +206,7 @@ never in a subagent:
 ### What the orchestrator does NOT delegate
 
 The phase executors and analysts have rich tools (Read, Write, Edit,
-Bash, WebSearch, MCP tools) — but the **dispatch authority** does not
+command tool, WebSearch, MCP tools) — but the **dispatch authority** does not
 leave the orchestrator. A `checklist-executor` runs `/speckit-checklist`,
 does its own research, applies its own patches to spec.md — but if
 unresolved items remain, it returns a summary; the **orchestrator**
@@ -230,10 +230,10 @@ own is the workflow's phase dispatch.
   orchestration tools — operator orchestration capability stays
   available on agents doing open-ended work.
 
-  See `tests/layer5-tool-scoping/validate-tool-scoping.sh` §"Open
-  executors — orchestration capabilities never denied" and the
-  focused-role sections. Run via `bash tests/run-all.sh --layer 5`.
-  Any future agent added to `agents/` is checked on both tiers.
+  See the Layer 5 tool-scoping validator sections for open executors
+  and focused roles. Run the repository test entrypoint with the Layer
+  5 selector. Any future agent added to `agents/` is checked on both
+  tiers.
 
 - **Code review:** any PR that adds an agent definition must decide
   its tier deliberately — fully open where the agent's work is
@@ -390,7 +390,7 @@ by `/speckit-tasks`.
 For autopilot runs invoked from cron, GitHub Actions, or the
 `/loop` review-remediation flow, set a budget ceiling at invocation:
 
-```bash
+```text
 claude -p --max-budget-usd 25 \
   /speckit-pro:speckit-autopilot path/to/workflow.md
 ```

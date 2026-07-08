@@ -124,6 +124,7 @@
         "extra_paths": [],
         "mismatched_paths": [],
         "path_leaks": [],
+        "script_file_count": 0,
         "file_tree_hash": "2222222222222222222222222222222222222222222222222222222222222222",
         "status": "pass"
       },
@@ -151,6 +152,7 @@
         "extra_paths": [],
         "mismatched_paths": [],
         "path_leaks": [],
+        "script_file_count": 0,
         "file_tree_hash": "2222222222222222222222222222222222222222222222222222222222222222",
         "status": "pass"
       }
@@ -460,6 +462,7 @@
             "extra_paths": [],
             "mismatched_paths": [],
             "path_leaks": [],
+            "script_file_count": 0,
             "file_tree_hash": "2222222222222222222222222222222222222222222222222222222222222222",
             "status": "fail"
           },
@@ -487,6 +490,7 @@
             "extra_paths": [],
             "mismatched_paths": [],
             "path_leaks": [],
+            "script_file_count": 0,
             "file_tree_hash": "2222222222222222222222222222222222222222222222222222222222222222",
             "status": "pass"
           }

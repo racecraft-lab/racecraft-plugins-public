@@ -3,7 +3,7 @@ name: speckit-upgrade
 description: "Upgrades an existing SpecKit installation safely with backup-and-restore for locally-modified files. Preserves the project constitution and template overrides. Handles the v0.8.13 slash-command to skills migration. Supports upgrading one or both integrations (Claude Code, Codex CLI) and refreshing the curated set of community extensions and presets. Use when the user says \"upgrade speckit\", \"update speckit\", \"refresh speckit\", \"new speckit version\", \"latest speckit\", \"upgrade specify cli\", \"safe speckit upgrade\", \"speckit migration to skills\", \"preserve my constitution during upgrade\", or asks how to upgrade without losing template edits. Hands off to /speckit-pro:speckit-install if .specify/ is missing."
 argument-hint: "(optional) integration keys to upgrade, e.g. 'claude', 'codex', or omit for all"
 user-invocable: true
-allowed-tools: Bash Read Edit Write
+allowed-tools: Read Edit Write
 license: MIT
 ---
 
@@ -32,19 +32,11 @@ For existing projects, after integration upgrade and verification, tell the
 operator that repository structure migration is explicit and safe by default.
 It is not run automatically by this skill.
 
-Use this exact sequence:
-
-```text
-speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh --dry-run --repo-root .
-```
+Use runner helper `migrate-structure` in dry-run mode first.
 
 Review the JSON report for pending, skipped, and no-op items. Clean the git tree
 if the report shows pending mutations and the worktree is dirty. Apply only
-when ready to mutate:
-
-```text
-speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh --apply --repo-root .
-```
+when ready to mutate, run runner helper `migrate-structure` in apply mode.
 
 The apply command creates a backup before repository marker writes or generated
 navigation updates. Tier-2 PROCESS relocation is a separate per-spec codemod and
@@ -258,7 +250,7 @@ Return a concise upgrade summary:
 **Customizations preserved:**
 - .specify/memory/constitution.md (restored from backup)
 - .specify/templates/spec-template.md (kept upgrade version; your edits saved at $BACKUP)
-- .specify/scripts/bash/check-prerequisites.sh (restored from backup)
+- SpecKit prerequisite helper restored from backup
 
 **Next steps:**
 1. Restart your coding-agent process so the upgraded skills load.
@@ -296,7 +288,7 @@ STOP and report — do not improvise — when:
   upgrade. Their choice stands.
 - A restore step fails mid-flight. Report which files succeeded,
   which did not, and where the backup is.
-- `install-curated-set.sh --mode=check` reports that an extension
+- `install-curated-set` reports that an extension
   has neither a GitHub Release nor a git tag — surface the message
   but do not block the upgrade over it. The operator can re-run
   after the upstream extension publishes a tagged release.

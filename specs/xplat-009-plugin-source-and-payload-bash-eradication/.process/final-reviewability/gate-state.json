@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "kind": "final_reviewability_gate",
+  "status": "proceed",
+  "outcome": "one_navigable_pr",
+  "mode": "final",
+  "gate_result": "warn",
+  "gate_reason": "Diff exceeds generic file-count reviewability threshold because XPLAT-009 intentionally deletes plugin-owned Bash source, updates Python ownership, and rebuilds both generated plugin payloads.",
+  "metrics": {
+    "reviewable_loc": 5741,
+    "production_files": 94,
+    "total_files": 166,
+    "insertions": 5741,
+    "deletions": 16526,
+    "primary_surface_count": 6,
+    "primary_surfaces": [
+      "plugin-source",
+      "generated-payloads",
+      "python-runner",
+      "tests",
+      "spec-process",
+      "docs"
+    ],
+    "thresholds": {
+      "warn": {
+        "total_files": 15
+      },
+      "block": {
+        "total_files": 25
+      }
+    }
+  },
+  "route": {
+    "decision": "one-navigable-PR",
+    "releasable": true,
+    "source": "docs/ai/specs/.process/XPLAT-009-workflow.md#atomicity-route",
+    "reason": "The source deletion, Python runner ownership changes, payload rebuild, zero-Bash proof, and release-readiness guard must land together to keep the plugin install/runtime surface coherent."
+  },
+  "blocked_operations": [],
+  "warnings": [
+    {
+      "code": "FINAL_DIFF_SIZE_WARNING",
+      "severity": "warning",
+      "message": "Generic diff size thresholds are exceeded; the accepted atomicity route keeps this as one navigable PR."
+    }
+  ],
+  "evidence": [
+    "docs/ai/specs/.process/XPLAT-009-source-inventory.md",
+    "docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json",
+    "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json",
+    "docs/ai/specs/.process/XPLAT-009-zero-bash-guard-result.json",
+    "docs/ai/specs/.process/XPLAT-009-release-readiness-result.json"
+  ],
+  "timestamp": "2026-07-07T19:20:00Z",
+  "pr_created": true,
+  "pr": {
+    "number": 297,
+    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/297",
+    "draft": false
+  }
+}

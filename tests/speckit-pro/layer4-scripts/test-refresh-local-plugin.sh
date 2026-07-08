@@ -31,7 +31,7 @@ set_test "dry-run default rebuilds, validates, and prints Claude dev command"
 result=0
 output=$(bash "$SCRIPT" --dry-run 2>&1) || result=$?
 assert_eq "0" "$result" "exit code"
-assert_contains "$output" "build-plugin-payloads.sh" "dry-run should include payload build"
+assert_contains "$output" "build-plugin-payloads.py" "dry-run should include payload build"
 assert_contains "$output" "claude plugin validate" "dry-run should include Claude validation"
 assert_contains "$output" "claude --plugin-dir" "dry-run should print local dev command"
 

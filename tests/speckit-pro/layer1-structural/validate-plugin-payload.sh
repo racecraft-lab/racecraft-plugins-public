@@ -11,7 +11,7 @@ source "$(dirname "$0")/../lib/assertions.sh"
 
 REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 SOURCE_ROOT="$REPO_ROOT/speckit-pro"
-BUILDER="$REPO_ROOT/scripts/build-plugin-payloads.sh"
+BUILDER="$REPO_ROOT/scripts/build-plugin-payloads.py"
 CLAUDE_PAYLOAD="$REPO_ROOT/dist/claude/speckit-pro"
 CODEX_PAYLOAD="$REPO_ROOT/dist/codex/speckit-pro"
 
@@ -40,7 +40,7 @@ assert_file_exists "$BUILDER"
 
 set_test "payload builder rebuilds from scratch"
 builder_output=""
-if builder_output=$(cd "$REPO_ROOT" && bash "$BUILDER" 2>&1); then
+if builder_output=$(cd "$REPO_ROOT" && python3 "$BUILDER" 2>&1); then
   _pass
 else
   _fail "$builder_output"
@@ -108,7 +108,7 @@ assert_eq "" "$path_escape_matches" "source-tree path references"
 
 set_test "Payload rebuild is deterministic"
 first_fingerprint=$(payload_fingerprint)
-if rebuild_output=$(cd "$REPO_ROOT" && bash "$BUILDER" 2>&1); then
+if rebuild_output=$(cd "$REPO_ROOT" && python3 "$BUILDER" 2>&1); then
   second_fingerprint=$(payload_fingerprint)
   assert_eq "$first_fingerprint" "$second_fingerprint" "payload fingerprint"
 else

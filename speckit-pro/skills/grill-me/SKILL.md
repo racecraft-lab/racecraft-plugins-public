@@ -183,13 +183,8 @@ duplicate it here:
 [`speckit-coach/references/slicing-heuristics.md`](../speckit-coach/references/slicing-heuristics.md).
 
 **Run the shared estimator.** Derive the size signals from the spec you
-are scoping, then invoke the single shared estimator (the same copy
-`speckit-prd` uses — no per-skill copy):
-
-```text
-Bash("${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/scripts/estimate-spec-size.sh \
-  --user-stories N --files N --frs N --new-vs-modify new|modify [--spike]")
-```
+are scoping, then invoke runner operation `estimate-spec-size` with those
+signals (the same operation `speckit-prd` uses — no per-skill copy).
 
 It returns `{estimated_loc, suggested_slices, status}` where `status` is
 `ok` or `warn`. This is a forward guess to shape decomposition at scoping
@@ -216,13 +211,13 @@ of the spec:
   split.
 - **Borderline, a spike, or the estimator is unavailable** — degrade to
   an advisory note and continue. "Unavailable" means the estimator could
-  not produce a usable result for any reason: the script is missing,
-  `jq` is missing, it exited non-zero, or it printed empty/unparseable
+  not produce a usable result for any reason: the operation is unavailable,
+  it exited non-zero, or it printed empty/unparseable
   output. In every such case, treat the result as an **absent estimate**,
   note it, and keep interviewing.
 
 This branch is **advisory-only**. It NEVER blocks the interview, never
-rejects a spec, and never reads the script's exit code as a gate — a
+rejects a spec, and never reads the operation's exit code as a gate — a
 non-zero exit is treated as an unavailable estimate, not a hard stop. A
 `warn` is informational: the maintainer is free to decline the split and
 continue.
@@ -387,4 +382,4 @@ For detailed operational guidance, consult these files only as needed:
 - **[`speckit-coach/references/slicing-heuristics.md`](../speckit-coach/references/slicing-heuristics.md)** —
   the single source of truth for SPIDR + INVEST + vertical-slicing and the
   ~400 reviewable-LOC ceiling (summarized inline in the slice-sizing
-  branch; invoked via `${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/scripts/estimate-spec-size.sh`).
+  branch; invoked via runner operation `estimate-spec-size`).

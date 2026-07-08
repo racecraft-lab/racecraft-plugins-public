@@ -8,14 +8,14 @@ This is the Codex-specific mirror of `../../skills/speckit-autopilot/references/
 
 - [Step -1: Archive Sweep Startup](#step--1-archive-sweep-startup) — archive previously merged specs before workflow execution
 - [Step 0.0: Resolve Script Paths](#step-00-resolve-script-paths) — locate the plugin's `SKILL_SCRIPTS` directory
-- [Step 0.1–0.7: Environment Checks](#step-01-07-environment-checks) — `check-prerequisites.sh` JSON parsing, branch detection
+- [Step 0.1–0.7: Environment Checks](#step-01-07-environment-checks) — `check-prerequisites` JSON parsing, branch detection
 - [Step 0.6: Load Settings](#step-06-load-settings) — project settings YAML frontmatter
 - [Step 0.8: Capability Coverage & Plugin Limitation Check](#step-08-capability-coverage--plugin-limitation-check) — informational research/context advisory
 - [Step 0.9: Constitution Validation](#step-09-constitution-validation) — principle checks against current codebase
 - [Step 0.10: Codex Agent Availability Check](#step-010-codex-agent-availability-check) — verify and autoheal installed custom agents under `.codex/agents/`
 - [Step 0.10b: Implementation Agent Detection](#step-010b-implementation-agent-detection) — discover `PROJECT_IMPLEMENTATION_AGENT`
-- [Step 0.11: Project Command Discovery](#step-011-project-command-discovery) — `detect-commands.sh` → `PROJECT_COMMANDS`
-- [Step 0.12: Preset and Extension Detection](#step-012-preset-and-extension-detection) — `detect-presets.sh` → `PRESET_CONVENTIONS`
+- [Step 0.11: Project Command Discovery](#step-011-project-command-discovery) — `detect-commands` → `PROJECT_COMMANDS`
+- [Step 0.12: Preset and Extension Detection](#step-012-preset-and-extension-detection) — `detect-presets` → `PRESET_CONVENTIONS`
 
 ## Step -1: Archive Sweep Startup
 
@@ -60,7 +60,7 @@ check fails, STOP with the error message from the JSON output.
 
 ### 0.0 Resolve Script Paths
 
-The autopilot's bash scripts ship with the **plugin**, not the
+The autopilot's shell scripts ship with the **plugin**, not the
 project. Before running any script, resolve the absolute path
 to the scripts directory. The shared scripts live at:
 
@@ -77,7 +77,7 @@ speckit-pro plugin."
 
 **All script invocations below use the resolved `SKILL_SCRIPTS`
 path as prefix.** Never run these scripts from
-`.specify/scripts/bash/` — that directory contains project-level
+`.specify/scripts/<type>/` — that directory contains project-level
 SpecKit scripts (create-new-feature, setup-plan, etc.), which are
 different from the autopilot scripts.
 
@@ -85,8 +85,8 @@ different from the autopilot scripts.
 
 Run the prerequisites check script:
 
-```bash
-bash '<SKILL_SCRIPTS>/check-prerequisites.sh' <workflow_file_path>
+```text
+'runner helper check-prerequisites' <workflow_file_path>
 ```
 
 Parse the JSON result:
@@ -139,8 +139,8 @@ Before phase execution, validate that every bundled SpecKit Pro Codex custom
 agent is installed on official Codex runtime paths. Run the shared validator
 with autoheal:
 
-```bash
-bash '<SKILL_SCRIPTS>/validate-agent-install.sh' --surface codex --autoheal
+```text
+'runner helper validate-agent-install' --surface codex --autoheal
 ```
 
 The validator checks the bundled `codex-agents/*.toml` contract and verifies
@@ -198,8 +198,8 @@ Markdown/YAML agent is not spawnable by Codex.
 
 Run the command detection script:
 
-```bash
-bash '<SKILL_SCRIPTS>/detect-commands.sh'
+```text
+'runner helper detect-commands'
 ```
 
 Parse the JSON result for `commands` object containing:
@@ -219,8 +219,8 @@ across context compactions. Pass them to every subagent.
 
 Run the preset detection script:
 
-```bash
-bash '<SKILL_SCRIPTS>/detect-presets.sh'
+```text
+'runner helper detect-presets'
 ```
 
 Parse the JSON result for: `has_presets`, `presets` (names +

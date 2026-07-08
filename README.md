@@ -144,8 +144,8 @@ shells.
 | [`speckit-pro/speckit_pro_runner/`](./speckit-pro/speckit_pro_runner/) | Python 3.11+ standard-library runner used by installed runtime gates and payload checks. | Yes |
 | [`dist/claude/speckit-pro/`](./dist/claude/speckit-pro/) | Generated Claude Code install payload. | No, regenerate |
 | [`dist/codex/speckit-pro/`](./dist/codex/speckit-pro/) | Generated Codex install payload. | No, regenerate |
-| [`tests/speckit-pro/`](./tests/speckit-pro/) | Shell test suite for structure, scripts, tool scoping, and generated payloads. | Yes |
-| [`scripts/build-plugin-payloads.sh`](./scripts/build-plugin-payloads.sh) | Maintainer shell utility for source-checkout payload and release automation paths. | Yes |
+| [`tests/speckit-pro/`](./tests/speckit-pro/) | Repository validation suite for structure, tool scoping, and generated payloads. | Yes |
+| Payload rebuilds | Python runner payload-completeness operation for source-checkout payload and release automation paths. | Yes |
 
 ## Contributor Path
 
@@ -155,22 +155,18 @@ marketplace packaging.
 1. Edit source files under `speckit-pro/` or this root README.
 2. Rebuild generated install payloads through the Python runner gate:
 
-   ```bash
+   ```text
    cd speckit-pro
    python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness-apply.json
    ```
 
 3. Run the default validation suite:
 
-   ```bash
-   bash tests/speckit-pro/run-all.sh
-   ```
+   Use the repository default validation suite documented in the contributor guide.
 
 4. For structural-only changes, this narrower check is useful while iterating:
 
-   ```bash
-   bash tests/speckit-pro/run-all.sh --layer 1
-   ```
+   Use the repository structural validation suite documented in the contributor guide.
 
 5. Open a PR with a Conventional Commit title, for example:
 

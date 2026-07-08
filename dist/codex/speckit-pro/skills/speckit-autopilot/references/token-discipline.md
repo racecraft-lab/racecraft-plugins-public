@@ -51,7 +51,7 @@ token_discipline: on
 ```
 
 Default: `off`. The autopilot's prerequisites step
-(`detect-presets.sh` / Step 0.6) reads this value and sets
+(`detect-presets` / Step 0.6) reads this value and sets
 `TOKEN_DISCIPLINE` for every subsequent subagent dispatch.
 
 When `token_discipline: on`, the orchestrator's dispatch prompt

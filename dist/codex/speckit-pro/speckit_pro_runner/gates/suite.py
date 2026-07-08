@@ -6,7 +6,6 @@ import contextlib
 import io
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -20,8 +19,8 @@ from ..envelope import diagnostic, response
 CAPTURE_LIMIT_BYTES = 16 * 1024
 DEFAULT_TIMEOUT_SECONDS = 300
 PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json"
-RUN_ALL_SCRIPT_NAME = "run-all" + "." + "sh"
-SHELL_NAME = "ba" + "sh"
+LAYER_SCRIPT_DISPATCHER = "tests/speckit-pro/run-layer-scripts.py"
+LAYER_SCRIPT_TIMEOUT_SECONDS = 1800
 DEFAULT_SUITE = ("toolchain", "1", "4", "5")
 EXTENDED_SUITE = ("toolchain", "1", "4", "5", "7", "8")
 ALLOWED_LAYERS = frozenset({"1", "4", "5", "7", "8"})
@@ -272,7 +271,9 @@ def command_spec_from_override(command_id: str, raw: Any) -> CommandSpec | dict[
 def default_command_spec(command_id: str, inputs: dict[str, Any], repo_root: Path) -> CommandSpec | dict[str, Any]:
     if command_id == "toolchain":
         return internal_command_spec(command_id)
-    if command_id in {"layer-1", "layer-4", "layer-5"}:
+    if command_id in {"layer-1", "layer-4"}:
+        return external_layer_script_spec(command_id)
+    if command_id == "layer-5":
         return internal_command_spec(command_id)
     if command_id == "layer-7":
         return internal_command_spec(command_id)
@@ -289,12 +290,30 @@ def internal_command_spec(command_id: str) -> CommandSpec:
     )
 
 
+def external_layer_script_spec(command_id: str) -> CommandSpec:
+    layer = command_id.split("-", 1)[1]
+    return CommandSpec(
+        command_id=command_id,
+        argv=(sys.executable, LAYER_SCRIPT_DISPATCHER, "--layer", layer),
+        timeout_seconds=LAYER_SCRIPT_TIMEOUT_SECONDS,
+    )
+
+
 def run_command(command: CommandSpec, repo_root: Path) -> dict[str, Any]:
     if command.internal:
         return run_internal_command(command, repo_root)
     missing = missing_executable(command.argv[0], repo_root)
     if missing:
         return command_result(command, "missing_prerequisite", 3, "", f"missing executable: {command.argv[0]}\n", 0)
+    if LAYER_SCRIPT_DISPATCHER in command.argv and not (repo_root / LAYER_SCRIPT_DISPATCHER).is_file():
+        return command_result(
+            command,
+            "missing_prerequisite",
+            3,
+            "",
+            f"missing layer dispatcher: {LAYER_SCRIPT_DISPATCHER}; restore it from the source checkout — the layer dispatcher is repo-side and not shipped in payloads\n",
+            0,
+        )
     started = time.monotonic()
     try:
         completed = subprocess.run(
@@ -338,10 +357,6 @@ def run_internal_command(command: CommandSpec, repo_root: Path) -> dict[str, Any
 def run_internal_suite_check(command_id: str, repo_root: Path) -> int:
     if command_id == "toolchain":
         return check_toolchain(repo_root)
-    if command_id == "layer-1":
-        return check_layer1(repo_root)
-    if command_id == "layer-4":
-        return check_layer4(repo_root)
     if command_id == "layer-5":
         return check_layer5(repo_root)
     if command_id == "layer-7":
@@ -375,76 +390,13 @@ def check_toolchain(repo_root: Path) -> int:
     return emit_checks("toolchain preflight", checks)
 
 
-def check_layer1(repo_root: Path) -> int:
-    return run_script_suite("layer-1 structural validation", canonical_test_scripts(repo_root, "1"), repo_root)
-
-
-def check_layer4(repo_root: Path) -> int:
-    return run_script_suite("layer-4 python helper tests", canonical_test_scripts(repo_root, "4"), repo_root)
-
-
-def canonical_test_scripts(repo_root: Path, layer: str) -> list[Path]:
-    script = repo_root / "tests" / "speckit-pro" / RUN_ALL_SCRIPT_NAME
-    if not script.is_file():
-        return []
-    text = script.read_text(encoding="utf-8")
-    if layer == "1":
-        section = bounded_section(text, "# Layer 1:", "# Layer 2:")
-    elif layer == "4":
-        section = bounded_section(text, "# Layer 4:", "# Layer 5:")
-    else:
-        section = ""
-    matches = re.findall(r'"\$TESTS_DIR/([^"]+)"', section)
-    return [repo_root / "tests" / "speckit-pro" / match for match in matches]
-
-
-def bounded_section(text: str, start_marker: str, end_marker: str) -> str:
-    start = text.find(start_marker)
-    if start == -1:
-        return ""
-    end = text.find(end_marker, start + len(start_marker))
-    if end == -1:
-        return text[start:]
-    return text[start:end]
-
-
-def run_script_suite(label: str, tests: list[Path], repo_root: Path) -> int:
-    checks: list[tuple[str, bool, str]] = []
-    for test_path in tests:
-        if not test_path.is_file():
-            checks.append((rel(test_path, repo_root), False, "test file missing"))
-            continue
-        env = python_child_env(repo_root)
-        argv = [sys.executable, rel(test_path, repo_root)] if test_path.suffix == ".py" else [shell_executable(), rel(test_path, repo_root)]
-        completed = subprocess.run(
-            argv,
-            cwd=repo_root,
-            text=True,
-            capture_output=True,
-            env=env,
-            shell=False,
-            check=False,
-        )
-        detail = last_summary_line(completed.stdout) or completed.stderr.strip().splitlines()[-1:] or ["no summary"]
-        if isinstance(detail, list):
-            detail_text = detail[0]
-        else:
-            detail_text = detail
-        checks.append((rel(test_path, repo_root), completed.returncode == 0, detail_text))
-    return emit_checks(label, checks)
-
-
-def shell_executable() -> str:
-    return shutil.which(SHELL_NAME) or ("/bin/" + SHELL_NAME)
-
-
 def check_layer5(repo_root: Path) -> int:
     agents_dir = repo_root / "speckit-pro" / "agents"
     required_absent = {
-        "clarify-executor.md": {"Bash", "Write", "Edit", "Skill", "ToolSearch"},
-        "codebase-analyst.md": {"Bash", "Write", "Edit", "Skill"},
-        "domain-researcher.md": {"Bash", "Write", "Edit", "Skill"},
-        "spec-context-analyst.md": {"Bash", "Write", "Edit", "Skill"},
+        "clarify-executor.md": {"Write", "Edit", "Skill", "ToolSearch"},
+        "codebase-analyst.md": {"Write", "Edit", "Skill"},
+        "domain-researcher.md": {"Write", "Edit", "Skill"},
+        "spec-context-analyst.md": {"Write", "Edit", "Skill"},
     }
     checks: list[tuple[str, bool, str]] = []
     for agent_file, forbidden in required_absent.items():
@@ -519,24 +471,6 @@ def frontmatter_tools(path: Path) -> set[str]:
         if in_tools and line.strip().startswith("- "):
             tools.add(line.strip()[2:])
     return tools
-
-
-def last_summary_line(stdout: str) -> str:
-    for line in reversed(stdout.splitlines()):
-        if " passed" in line and "/" in line:
-            return line
-    return ""
-
-
-def python_child_env(repo_root: Path) -> dict[str, str]:
-    env = os.environ.copy()
-    plugin_root = repo_root / "speckit-pro"
-    existing = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = plugin_root.as_posix() if not existing else f"{plugin_root.as_posix()}{os.pathsep}{existing}"
-    env["GIT_CONFIG_COUNT"] = "1"
-    env["GIT_CONFIG_KEY_0"] = "commit.gpgsign"
-    env["GIT_CONFIG_VALUE_0"] = "false"
-    return env
 
 
 def command_result(

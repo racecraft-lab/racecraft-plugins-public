@@ -48,24 +48,25 @@ You need:
 - `git` for branch, diff, reviewability, and workflow-state checks
 
 The installed Claude Code and Codex surfaces invoke the bundled
-`speckit_pro_runner` with Python argv calls; they do not require Bash, Git Bash,
-WSL, PowerShell-specific command language, or `jq` as installed-runtime
-substrates. Contributors working from a source checkout have an additional
-maintainer-only validation toolchain, including Bash, `jq`, checksum utilities,
-Unix text tools, Node, Corepack, `pnpm`, and Playwright — see the
+`speckit_pro_runner` with Python argv calls; they use the Python runner rather
+than platform-specific command interpreters or JSON CLI parsers as
+installed-runtime substrates. Contributors working from a source checkout have
+an additional maintainer-only validation toolchain, including repository test
+harnesses, checksum utilities, Unix text tools, Node, Corepack, `pnpm`, and
+Playwright — see the
 [contributing guide](https://racecraft-lab.github.io/racecraft-plugins-public/contribute-and-release/).
 
 Spec Kit's official docs recommend installing from the GitHub repository. This
 plugin's examples use the same GitHub source:
 
-```bash
+```text
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 ```
 
 Initialize your repo with the Spec Kit integration for the agent you use. From
 the project directory, the Claude Code setup is:
 
-```bash
+```text
 specify init --integration claude
 ```
 
@@ -272,29 +273,25 @@ SpecKit Pro has one authoring source and two generated install payloads.
 | Claude Code plugin | `speckit-pro/skills`, `speckit-pro/agents`, `speckit-pro/hooks`, `speckit-pro/.claude-plugin` | `dist/claude/speckit-pro/` |
 | Codex plugin | `speckit-pro/codex-skills`, `speckit-pro/codex-agents`, `speckit-pro/codex-hooks.json`, `speckit-pro/.codex-plugin` | `dist/codex/speckit-pro/` |
 | Python runner | `speckit-pro/speckit_pro_runner` | copied into both payloads |
-| Shared scripts and docs | `speckit-pro/scripts`, `speckit-pro/README.md`, `speckit-pro/CHANGELOG.md` | copied into both payloads as needed |
+| Shared docs | `speckit-pro/README.md`, `speckit-pro/CHANGELOG.md` | copied into both payloads as needed |
 
 When changing the plugin:
 
 1. Edit the source tree under `speckit-pro/`.
 2. Rebuild generated payloads through the Python runner gate:
 
-   ```bash
+   ```text
    cd speckit-pro
    python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness-apply.json
    ```
 
 3. Run structural validation while iterating:
 
-   ```bash
-   bash tests/speckit-pro/run-all.sh --layer 1
-   ```
+   Use the repository structural validation suite documented in the contributor guide.
 
 4. Run the default suite before opening a PR:
 
-   ```bash
-   bash tests/speckit-pro/run-all.sh
-   ```
+   Use the repository default validation suite documented in the contributor guide.
 
 Do not hand-edit generated `dist/**` payloads as the source of truth. They are
 committed so marketplace installs can fetch self-contained platform payloads,

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://racecraft-lab/racecraft-plugins-public/prsg-010/routing-decision.schema.json",
   "title": "Atomicity router routing decision",
-  "description": "Production routing-decision contract for atomicity-route.sh.",
+  "description": "Production routing-decision contract for atomicity-route.",
   "oneOf": [
     {
       "title": "Success decision",

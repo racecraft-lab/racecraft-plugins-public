@@ -168,8 +168,8 @@ Run focused verification before committing:
 - docs reference generation/checks when reference pages changed
 - payload builder when plugin source changed
 - `git diff --check`
-- `bash tests/speckit-pro/run-all.sh` or the smallest repository-equivalent
-  structural suite
+- the repository structural validation suite or the smallest repository-equivalent
+  structural check
 
 If a command fails because of missing dependencies, sandboxing, or network
 access, retry only when the environment policy allows it. Otherwise report the

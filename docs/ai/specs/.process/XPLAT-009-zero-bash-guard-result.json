@@ -1,0 +1,342 @@
+{
+  "data": {
+    "allowlist": {
+      "entry_count": 1,
+      "path": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/allowlist.json",
+      "release_readiness_excluded": true
+    },
+    "artifacts": [
+      {
+        "kind": "promotion_record",
+        "path": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/promotion-records.json"
+      },
+      {
+        "kind": "fixture",
+        "path": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/zero-bash-guard-cases.json"
+      },
+      {
+        "kind": "allowlist",
+        "path": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/allowlist.json"
+      }
+    ],
+    "blocking_count": 0,
+    "classified_counts": {
+      "negative_policy": 144
+    },
+    "feature_id": "XPLAT-009",
+    "findings": [
+      {
+        "active_role": "installed_skill",
+        "category": "git_bash",
+        "classification": "negative_policy",
+        "line": 28,
+        "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+        "pattern": "Git Bash",
+        "reason": "Git Bash dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "wsl",
+        "classification": "negative_policy",
+        "line": 28,
+        "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+        "pattern": "WSL",
+        "reason": "WSL dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "jq",
+        "classification": "negative_policy",
+        "line": 28,
+        "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+        "pattern": "jq",
+        "reason": "jq command dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "bash",
+        "classification": "negative_policy",
+        "line": 28,
+        "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+        "pattern": "Bash",
+        "reason": "Bash dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "shell_interpolation",
+        "classification": "negative_policy",
+        "line": 28,
+        "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+        "pattern": "`jq`",
+        "reason": "shell command substitution",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "powershell_helper",
+        "classification": "negative_policy",
+        "line": 29,
+        "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+        "pattern": "PowerShell",
+        "reason": "PowerShell helper dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "git_bash",
+        "classification": "negative_policy",
+        "line": 13,
+        "path": "speckit-pro/codex-skills/speckit-install/SKILL.md",
+        "pattern": "Git Bash",
+        "reason": "Git Bash dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "wsl",
+        "classification": "negative_policy",
+        "line": 13,
+        "path": "speckit-pro/codex-skills/speckit-install/SKILL.md",
+        "pattern": "WSL",
+        "reason": "WSL dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "jq",
+        "classification": "negative_policy",
+        "line": 13,
+        "path": "speckit-pro/codex-skills/speckit-install/SKILL.md",
+        "pattern": "jq",
+        "reason": "jq command dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "bash",
+        "classification": "negative_policy",
+        "line": 13,
+        "path": "speckit-pro/codex-skills/speckit-install/SKILL.md",
+        "pattern": "Bash",
+        "reason": "Bash dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "shell_interpolation",
+        "classification": "negative_policy",
+        "line": 13,
+        "path": "speckit-pro/codex-skills/speckit-install/SKILL.md",
+        "pattern": "`jq`",
+        "reason": "shell command substitution",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "powershell_helper",
+        "classification": "negative_policy",
+        "line": 14,
+        "path": "speckit-pro/codex-skills/speckit-install/SKILL.md",
+        "pattern": "PowerShell",
+        "reason": "PowerShell helper dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "git_bash",
+        "classification": "negative_policy",
+        "line": 13,
+        "path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+        "pattern": "Git Bash",
+        "reason": "Git Bash dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "wsl",
+        "classification": "negative_policy",
+        "line": 13,
+        "path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+        "pattern": "WSL",
+        "reason": "WSL dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "jq",
+        "classification": "negative_policy",
+        "line": 13,
+        "path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+        "pattern": "jq",
+        "reason": "jq command dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "bash",
+        "classification": "negative_policy",
+        "line": 13,
+        "path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+        "pattern": "Bash",
+        "reason": "Bash dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "shell_interpolation",
+        "classification": "negative_policy",
+        "line": 13,
+        "path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+        "pattern": "`jq`",
+        "reason": "shell command substitution",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "powershell_helper",
+        "classification": "negative_policy",
+        "line": 14,
+        "path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+        "pattern": "PowerShell",
+        "reason": "PowerShell helper dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "git_bash",
+        "classification": "negative_policy",
+        "line": 17,
+        "path": "speckit-pro/codex-skills/speckit-status/SKILL.md",
+        "pattern": "Git Bash",
+        "reason": "Git Bash dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "wsl",
+        "classification": "negative_policy",
+        "line": 17,
+        "path": "speckit-pro/codex-skills/speckit-status/SKILL.md",
+        "pattern": "WSL",
+        "reason": "WSL dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "jq",
+        "classification": "negative_policy",
+        "line": 17,
+        "path": "speckit-pro/codex-skills/speckit-status/SKILL.md",
+        "pattern": "jq",
+        "reason": "jq command dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "bash",
+        "classification": "negative_policy",
+        "line": 17,
+        "path": "speckit-pro/codex-skills/speckit-status/SKILL.md",
+        "pattern": "Bash",
+        "reason": "Bash dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "shell_interpolation",
+        "classification": "negative_policy",
+        "line": 17,
+        "path": "speckit-pro/codex-skills/speckit-status/SKILL.md",
+        "pattern": "`jq`",
+        "reason": "shell command substitution",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "powershell_helper",
+        "classification": "negative_policy",
+        "line": 18,
+        "path": "speckit-pro/codex-skills/speckit-status/SKILL.md",
+        "pattern": "PowerShell",
+        "reason": "PowerShell helper dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      },
+      {
+        "active_role": "installed_skill",
+        "category": "git_bash",
+        "classification": "negative_policy",
+        "line": 23,
+        "path": "speckit-pro/skills/speckit-autopilot/SKILL.md",
+        "pattern": "Git Bash",
+        "reason": "Git Bash dependency",
+        "remediation": "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry.",
+        "surface": "plugin_source"
+      }
+    ],
+    "gate": {
+      "blocking": false,
+      "comparison_ids": [
+        "xplat-009-zero-bash-guard"
+      ],
+      "gate_id": "active-path-guard",
+      "gate_status": "pass",
+      "operation": "zero-bash-guard",
+      "promoted": true,
+      "promotion_record": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/promotion-records.json"
+    },
+    "installed_cache_proof": {
+      "mutable_user_cache": false,
+      "proof_count": 2,
+      "proof_path": "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json",
+      "required": true,
+      "script_file_count": 0,
+      "source_derived": true
+    },
+    "scan_roots": [
+      "speckit-pro",
+      "scripts/build-plugin-payloads.py",
+      "dist/claude/speckit-pro",
+      "dist/codex/speckit-pro",
+      "README.md"
+    ],
+    "schema_version": "1.0",
+    "script_file_count": 0,
+    "status": "pass",
+    "total_finding_count": 144,
+    "truncated_finding_count": 119
+  },
+  "diagnostics": [],
+  "exit_code": 0,
+  "legacy_exit_code": null,
+  "request_id": "fixture-zero-bash-guard-final",
+  "schema_version": "1.0",
+  "status": "ok"
+}

@@ -51,7 +51,7 @@ documented in the official Anthropic docs.
 To get full frontmatter support, copy agents from the plugin
 to your project or user agent directory:
 
-```bash
+```text
 # Copy to project scope
 cp -r ~/.claude/plugins/marketplaces/*/plugins/speckit-pro/agents/*.md .claude/agents/
 

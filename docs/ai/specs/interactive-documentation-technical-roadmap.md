@@ -353,7 +353,7 @@ Budget result: within budget
 **Scope:**
 - Source edit, payload rebuild, marketplace sync, tests, CI, release-please, conventional commits, and PR body expectations.
 - Explain docs-only PR behavior and future docs-site CI.
-- Surface `build-plugin-payloads.sh`, `sync-marketplace-versions.sh`, and `tests/speckit-pro/run-all.sh`.
+- Surface `build-plugin-payloads.py`, `sync-marketplace-versions.sh`, and `tests/speckit-pro/run-all.sh`.
 
 **Out of Scope:**
 - Changing CI/release behavior.
@@ -364,7 +364,7 @@ Budget result: within budget
 - `CLAUDE.md`
 - `.github/workflows/pr-checks.yml`
 - `.github/workflows/release.yml`
-- `scripts/build-plugin-payloads.sh`
+- `scripts/build-plugin-payloads.py`
 - `scripts/sync-marketplace-versions.sh`
 
 ### DOC-010: Search, accessibility, deep links, docs validation

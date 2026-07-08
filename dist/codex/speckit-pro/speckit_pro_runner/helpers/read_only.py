@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable
@@ -247,19 +248,20 @@ def validate_path_value(helper_id: str, field: str, raw: str, repo_root: Path) -
 
 
 def helper_argv(entry: Any, inputs: dict[str, Any], repo_root: Path) -> list[str] | dict[str, Any]:
-    script = repo_root / entry.script
-    if not trusted_file_exists(script, repo_root):
-        return diagnostic(
-            "missing_prerequisite",
-            "registered helper script is missing from the source checkout",
-            details={"helper_id": entry.helper_id, "script": entry.script},
-            remediation_summary="Refresh the source checkout before running helper parity.",
-            remediation_actions=["Verify the helper script path exists.", "Retry from the repository root."],
-        )
     args = explicit_or_derived_args(entry.helper_id, inputs, repo_root)
     if isinstance(args, dict):
         return args
-    return [str(script), *args]
+    return [sys.executable, "-m", "speckit_pro_runner"]
+
+
+def helper_stdin_request(entry: Any, inputs: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_version": "1.0",
+        "helper_id": entry.helper_id,
+        "operation": entry.operation,
+        "mode": "read_only",
+        "inputs": inputs,
+    }
 
 
 def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: Path) -> list[str] | dict[str, Any]:
@@ -372,6 +374,19 @@ def helper_result_data(
         "promotion_status": entry.promotion_status,
         "comparison_mode": entry.comparison_mode,
         "argv": display_argv(argv, repo_root),
+        "argv_role": "replay_runner_command",
+        "execution_model": "direct_python_helper",
+        "executed_in_process": True,
+        "stdin_mode": "single_json_request",
+        "stdin_request": helper_stdin_request(entry, inputs),
+        "invocation_contract": {
+            "argv_executable_without_stdin": False,
+            "stdin_required": True,
+            "stdin_request_field": "stdin_request",
+            "actual_execution_uses_argv": False,
+        },
+        "python_operation": entry.operation,
+        "authoritative_command": entry.authoritative_command,
         "shell": False,
         "cwd": {"kind": "repo_relative", "value": ".", "display": "."},
         "exit_code": exit_code,

@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/speckit-pro/xplat-009/zero-bash-guard-result.schema.json",
+  "title": "XPLAT-009 Zero Bash Guard Runner Response",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema_version", "status", "exit_code", "data", "diagnostics"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "status": {
+      "enum": ["ok", "expected_failure", "input_error", "missing_prerequisite", "subprocess_failure", "internal_failure"]
+    },
+    "exit_code": { "type": "integer" },
+    "legacy_exit_code": { "type": ["integer", "null"] },
+    "request_id": { "type": ["string", "null"] },
+    "data": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "gate",
+        "feature_id",
+        "status",
+        "blocking_count",
+        "classified_counts",
+        "findings",
+        "scan_roots",
+        "allowlist",
+        "installed_cache_proof"
+      ],
+      "properties": {
+        "gate": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["gate_id", "operation"],
+          "properties": {
+            "gate_id": { "const": "active-path-guard" },
+            "operation": { "const": "zero-bash-guard" },
+            "gate_status": { "enum": ["pass", "fail"] },
+            "blocking": { "type": "boolean" }
+          }
+        },
+        "feature_id": { "const": "XPLAT-009" },
+        "status": { "enum": ["pass", "fail"] },
+        "blocking_count": { "type": "integer", "minimum": 0 },
+        "classified_counts": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "findings": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/finding" }
+        },
+        "total_finding_count": { "type": "integer", "minimum": 0 },
+        "truncated_finding_count": { "type": "integer", "minimum": 0 },
+        "script_file_count": { "type": "integer", "minimum": 0 },
+        "scan_roots": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "allowlist": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "entry_count", "release_readiness_excluded"],
+          "properties": {
+            "path": { "type": "string", "minLength": 1 },
+            "entry_count": { "type": "integer", "minimum": 0 },
+            "release_readiness_excluded": { "type": "boolean" }
+          }
+        },
+        "installed_cache_proof": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["required", "proof_count", "source_derived", "mutable_user_cache", "script_file_count"],
+          "properties": {
+            "required": { "type": "boolean" },
+            "proof_path": { "type": ["string", "null"] },
+            "proof_count": { "type": "integer", "minimum": 0 },
+            "source_derived": { "type": "boolean" },
+            "mutable_user_cache": { "type": ["boolean", "null"] },
+            "script_file_count": { "type": ["integer", "null"], "minimum": 0 }
+          }
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface",
+        "path",
+        "line",
+        "category",
+        "pattern",
+        "reason",
+        "active_role",
+        "classification",
+        "remediation"
+      ],
+      "properties": {
+        "surface": {
+          "enum": ["plugin_source", "claude_payload", "codex_payload", "installed_cache_proof", "repository"]
+        },
+        "path": { "type": "string", "minLength": 1 },
+        "line": { "type": ["integer", "null"], "minimum": 1 },
+        "category": { "type": "string", "minLength": 1 },
+        "pattern": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string", "minLength": 1 },
+        "active_role": { "type": "string", "minLength": 1 },
+        "classification": {
+          "enum": ["blocking_zero_bash", "historical_allowlist", "tool_declaration", "negative_policy"]
+        },
+        "remediation": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

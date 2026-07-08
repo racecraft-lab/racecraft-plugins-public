@@ -157,11 +157,10 @@ class ReadOnlyHelperTests(unittest.TestCase):
     def assert_helper_matches_bash_reference(self, helper_id: str, inputs: dict[str, object]) -> dict[str, object]:
         completed, response, stderr_records = run_runner(helper_request(helper_id, inputs))
         data = response["data"]
-        reference = run_bash_reference(data["argv"], response_cwd(data))
         self.assertEqual(data["shell"], False)
-        self.assertEqual(data["exit_code"], reference.returncode)
-        self.assert_stdout_matches_reference(helper_id, data["stdout"]["text"], reference.stdout)
-        self.assertEqual(data["stderr"]["text"], reference.stderr)
+        self.assertEqual(data["argv"][-2:], ["-m", "speckit_pro_runner"])
+        self.assertEqual(data["python_operation"], helper_id)
+        self.assertEqual(data["authoritative_command"].split(" < ", 1)[0], "python -m speckit_pro_runner")
         self.assertEqual(completed.returncode, response["exit_code"])
         self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
         return response
@@ -196,6 +195,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
         for record in helpers:
             self.assertEqual(record["mode"], "read_only")
             self.assertIn(record["promotion_status"], {"python_authoritative", "bash_reference_only", "out_of_scope"})
+            self.assertEqual(record["python_operation"], record["operation"])
+            self.assertNotIn("script", record)
             self.assertNotIn("generate-pr-body", str(record))
             self.assertNotIn("restack.sh", str(record))
             fixture_path = command_stdin_fixture(record["authoritative_command"])
@@ -252,8 +253,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.assertFalse(comparison["subprocess"]["shell"])
             self.assertIsInstance(comparison["subprocess"]["argv"], list)
             self.assertLessEqual(comparison["subprocess"]["timeout_seconds"], 30)
-            script = REPO_ROOT / comparison["source_script"]
-            self.assertTrue(script.is_file(), comparison["source_script"])
+            self.assertTrue(comparison["source_script"].endswith(".sh"), comparison["source_script"])
             expected_stdout_comparison = "json_semantic" if comparison["helper_id"] in JSON_STDOUT_PARITY_HELPERS else "exact"
             self.assertEqual(comparison.get("stdout_comparison", "exact"), expected_stdout_comparison)
 
@@ -286,7 +286,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["unsupported_path"])
                     self.assertEqual([diag["code"] for diag in stderr_records], ["unsupported_path"])
 
-    def test_windows_style_relative_paths_are_normalized_in_reported_argv(self) -> None:
+    def test_windows_style_relative_paths_are_normalized_before_execution(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("path-normalization case uses check-prerequisites")
         windows_workflow = WORKFLOW_FILE.replace("/", "\\")
@@ -295,8 +295,13 @@ class ReadOnlyHelperTests(unittest.TestCase):
         )
         self.assertIn(completed.returncode, {0, 1})
         self.assertIn(response["status"], {"ok", "expected_failure"})
-        self.assertIn(WORKFLOW_FILE, response["data"]["argv"])
-        self.assertNotIn(windows_workflow, response["data"]["argv"])
+        self.assertEqual(response["data"]["argv"][-2:], ["-m", "speckit_pro_runner"])
+        workflow_checks = [
+            check
+            for check in response["data"]["stdout_json"]["checks"]
+            if check["check"] == "workflow_file"
+        ]
+        self.assertEqual(workflow_checks[0]["detail"], WORKFLOW_FILE)
         self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
 
     def test_explicit_repo_root_cannot_redefine_trust_boundary(self) -> None:
@@ -348,7 +353,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
 
             self.assertIsNone(find_repo_root(project_path))
 
-    def test_helper_argv_rejects_symlinked_registered_script(self) -> None:
+    def test_helper_argv_uses_runner_even_when_registered_script_is_symlinked(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("helper argv script-boundary case uses check-prerequisites")
         with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project, tempfile.TemporaryDirectory() as outside:
@@ -362,8 +367,47 @@ class ReadOnlyHelperTests(unittest.TestCase):
             from speckit_pro_runner.helpers.read_only import helper_argv
 
             result = helper_argv(SimpleNamespace(helper_id="check-prerequisites", script="helper.sh"), {}, project_path)
-            self.assertIsInstance(result, dict)
-            self.assertEqual(result["code"], "missing_prerequisite")
+            self.assertIsInstance(result, list)
+            self.assertEqual(result[-2:], ["-m", "speckit_pro_runner"])
+
+    def test_helper_result_reports_executable_runner_stdin_request(self) -> None:
+        if self.helper_filter and self.helper_filter != "detect-commands":
+            self.skipTest("helper argv/stdin metadata case uses detect-commands")
+        completed, response, stderr_records = run_runner(helper_request("detect-commands"))
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(stderr_records, [])
+        self.assert_response(response, "ok", 0)
+        data = response["data"]
+        self.assertEqual(data["argv"][-2:], ["-m", "speckit_pro_runner"])
+        self.assertEqual(data["argv_role"], "replay_runner_command")
+        self.assertEqual(data["execution_model"], "direct_python_helper")
+        self.assertTrue(data["executed_in_process"])
+        self.assertEqual(data["stdin_mode"], "single_json_request")
+        self.assertEqual(
+            data["invocation_contract"],
+            {
+                "actual_execution_uses_argv": False,
+                "argv_executable_without_stdin": False,
+                "stdin_required": True,
+                "stdin_request_field": "stdin_request",
+            },
+        )
+        stdin_request = data["stdin_request"]
+        self.assertEqual(stdin_request["helper_id"], "detect-commands")
+        self.assertEqual(stdin_request["operation"], "detect-commands")
+        replay = subprocess.run(
+            data["argv"],
+            input=json.dumps(stdin_request),
+            text=True,
+            capture_output=True,
+            cwd=REPO_ROOT,
+            env=runner_env(),
+            shell=False,
+            check=False,
+        )
+        self.assertEqual(replay.returncode, 0, replay.stderr)
+        replay_response = json.loads(replay.stdout)
+        self.assertEqual(replay_response["status"], "ok")
 
     def test_detect_commands_rejects_file_repo_root_and_reports_directory_cwd(self) -> None:
         if self.helper_filter and self.helper_filter != "detect-commands":
@@ -426,7 +470,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertEqual(response["data"]["cwd"]["value"], ".")
         self.assertNotEqual(response["data"]["effective_cwd"]["value"], ".")
 
-    def test_reported_path_argv_is_canonicalized_for_replay(self) -> None:
+    def test_redundant_confidence_gate_path_is_canonicalized_before_execution(self) -> None:
         if self.helper_filter and self.helper_filter != "confidence-gate":
             self.skipTest("confidence-gate canonical argv case")
         redundant_workflow = "docs/ai/specs/.process/../.process/XPLAT-005-workflow.md"
@@ -434,8 +478,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
             "confidence-gate",
             {"workflow_file": redundant_workflow, "mode_name": "advisory"},
         )
-        self.assertIn(WORKFLOW_FILE, response["data"]["argv"])
-        self.assertNotIn("..", " ".join(response["data"]["argv"]))
+        self.assertEqual(response["data"]["argv"][-2:], ["-m", "speckit_pro_runner"])
+        self.assertNotIn("..", response["data"]["stdout"]["text"])
 
     def test_check_prerequisites_uses_canonical_input_for_replay(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
@@ -445,8 +489,12 @@ class ReadOnlyHelperTests(unittest.TestCase):
             "check-prerequisites",
             {"workflow_file": redundant_workflow},
         )
-        self.assertIn(WORKFLOW_FILE, response["data"]["argv"])
-        self.assertNotIn("..", " ".join(response["data"]["argv"]))
+        workflow_checks = [
+            check
+            for check in response["data"]["stdout_json"]["checks"]
+            if check["check"] == "workflow_file"
+        ]
+        self.assertEqual(workflow_checks[0]["detail"], WORKFLOW_FILE)
 
     def test_confidence_gate_rejects_invalid_threshold(self) -> None:
         if self.helper_filter and self.helper_filter != "confidence-gate":
@@ -549,8 +597,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     "changed_files": redundant_changed_files,
                 },
             )
-        self.assertIn("--changed-files", response["data"]["argv"])
-        self.assertNotIn("..", " ".join(response["data"]["argv"]))
+        self.assertEqual(response["data"]["argv"][-2:], ["-m", "speckit_pro_runner"])
         failures = response["data"]["stdout_json"]["failures"]
         self.assertEqual(failures[0]["rule"], "title.spec_scope")
 
@@ -734,27 +781,26 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     {"gate": gate, "feature_dir": FEATURE_DIR},
                 )
 
-    def test_helper_bash_reference_parity(self) -> None:
+    def test_helper_python_authoritative_records(self) -> None:
         for helper_id in self.filtered_helpers():
             if helper_id == "helper-registry-dispatch":
                 continue
             with self.subTest(helper_id=helper_id):
                 completed, response, stderr_records = run_runner(helper_request(helper_id, HELPER_CASES[helper_id]))
                 data = response["data"]
-                reference = run_bash_reference(data["argv"], response_cwd(data))
                 self.assertEqual(data["shell"], False)
-                self.assertEqual(data["exit_code"], reference.returncode)
-                self.assert_stdout_matches_reference(helper_id, data["stdout"]["text"], reference.stdout)
-                self.assertEqual(data["stderr"]["text"], reference.stderr)
+                self.assertEqual(data["argv"][-2:], ["-m", "speckit_pro_runner"])
+                self.assertEqual(data["python_operation"], helper_id)
+                self.assertEqual(data["authoritative_command"].split(" < ", 1)[0], "python -m speckit_pro_runner")
                 self.assertEqual(completed.returncode, response["exit_code"])
                 self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
-                if reference.returncode == 0:
+                if data["exit_code"] == 0:
                     self.assert_response(response, "ok", 0)
-                elif reference.returncode == 1:
+                elif data["exit_code"] == 1:
                     self.assert_response(response, "expected_failure", 1)
-                elif reference.returncode == 2:
+                elif data["exit_code"] == 2:
                     self.assert_response(response, "input_error", 2)
-                elif reference.returncode == 3:
+                elif data["exit_code"] == 3:
                     self.assert_response(response, "missing_prerequisite", 3)
                 else:
                     self.assert_response(response, "subprocess_failure", response["exit_code"])

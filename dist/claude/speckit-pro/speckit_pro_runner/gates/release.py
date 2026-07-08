@@ -19,6 +19,7 @@ XPLAT_008_RELEASE_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-0
 XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/promotion-records.json"
 XPLAT_008_UAT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/uat-matrix-cases.json"
 XPLAT_008_INSTALL_HEALTH_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/install-health-repair-cases.json"
+XPLAT_009_INSTALLED_CACHE_PROOF = "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json"
 REQUIRED_UAT_ROWS = (
     ("claude", "windows"),
     ("claude", "macos"),
@@ -48,9 +49,11 @@ XPLAT008_CHECK_IDS = {
     "uat-row-fields",
     "update-proof",
     "version-sync",
+    "zero-bash-guard",
 }
 XPLAT008_BLOCKER_CLASSES = {
     "active_shell_runtime_dependency",
+    "active_zero_bash_dependency",
     "incomplete_payload",
     "incomplete_uat_evidence",
     "missing_bundled_agent",
@@ -79,6 +82,7 @@ PAYLOAD_RESULT_KEYS = {
     "extra_paths",
     "mismatched_paths",
     "path_leaks",
+    "script_file_count",
     "file_tree_hash",
     "status",
 }
@@ -288,6 +292,10 @@ def release_readiness_xplat008(entry: Any, request: Any, repo_root: Path) -> dic
         "runner_invocations": runner_invocations,
         "evidence_refs": {
             "payload_results": ["tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/payload-completeness-cases.json"],
+            "zero_bash_guard": [
+                "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/zero-bash-guard-cases.json",
+                XPLAT_009_INSTALLED_CACHE_PROOF,
+            ],
             "uat_matrix": "docs/ai/specs/.process/XPLAT-008-uat-matrix.md",
             "install_health": ["tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/install-health-repair-cases.json"],
             "public_claims": ["tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json"],
@@ -345,6 +353,35 @@ def live_xplat008_gate_evidence(repo_root: Path) -> dict[str, Any]:
             [
                 f"live_status={active_response.get('status', 'missing') if isinstance(active_response, dict) else 'missing'}",
                 f"blocking_count={active_count if isinstance(active_count, int) else 'unknown'}",
+            ],
+        )
+    )
+
+    zero_bash_response = active_path_guard.run_zero_bash_guard(
+        SimpleNamespace(helper_id="active-path-guard"),
+        SimpleNamespace(
+            operation="zero-bash-guard",
+            request_id="xplat-009-release-readiness:zero-bash-guard",
+            mode="read_only",
+            inputs={
+                "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/zero-bash-guard-cases.json",
+                "case_id": "final-current-implementation",
+            },
+        ),
+        repo_root,
+    )
+    zero_bash_data = zero_bash_response.get("data") if isinstance(zero_bash_response, dict) else {}
+    zero_bash_blocking = zero_bash_response.get("status") != "ok" if isinstance(zero_bash_response, dict) else True
+    zero_bash_count = zero_bash_data.get("blocking_count") if isinstance(zero_bash_data, dict) else None
+    evidence["checks"].append(
+        xplat008_check(
+            "zero-bash-guard",
+            "active_zero_bash_dependency",
+            not zero_bash_blocking and zero_bash_count == 0,
+            "Live XPLAT-009 zero-Bash guard completed for source, payload, and bounded installed-cache proof.",
+            [
+                f"zero_bash_status={zero_bash_response.get('status', 'missing') if isinstance(zero_bash_response, dict) else 'missing'}",
+                f"zero_bash_blocking_count={zero_bash_count if isinstance(zero_bash_count, int) else 'unknown'}",
             ],
         )
     )
@@ -529,6 +566,9 @@ def malformed_payload_result_fields(item: dict[str, Any]) -> list[str]:
     require_pattern(item, "plugin_version", r"^[0-9]+\.[0-9]+\.[0-9]+$", problems)
     require_string(item, "runner_version", problems)
     require_sha256(item, "file_tree_hash", problems)
+    script_file_count = item.get("script_file_count")
+    if type(script_file_count) is not int or script_file_count < 0:
+        problems.append("script_file_count")
     for key in ("missing_paths", "extra_paths", "mismatched_paths", "path_leaks"):
         require_string_list(item, key, problems)
     for key in ("expected_files", "actual_files"):
@@ -774,6 +814,11 @@ def computed_xplat008_checks(
         for item in payload_results
         if item.get("status") != "pass"
     ]
+    payload_script_failures = [
+        f"{item.get('payload_surface') or 'unknown-payload'}:script_file_count={item.get('script_file_count')}"
+        for item in payload_results
+        if item.get("script_file_count") != 0
+    ]
     payload_surfaces = {item.get("payload_surface") for item in payload_results if item.get("status") == "pass"}
     uat_checks = uat_matrix_checks(uat_rows, public_claim_results)
     uat_failures = [evidence for check in uat_checks if check["blocking"] for evidence in check["evidence"]]
@@ -794,11 +839,12 @@ def computed_xplat008_checks(
         xplat008_check(
             "payload-completeness",
             "incomplete_payload",
-            {"claude", "codex"} <= payload_surfaces and not payload_failures,
+            {"claude", "codex"} <= payload_surfaces and not payload_failures and not payload_script_failures,
             "Payload completeness covers Claude and Codex generated payloads.",
             [
                 f"surfaces={','.join(sorted(str(item) for item in payload_surfaces)) if payload_surfaces else 'none'}",
                 f"failing_payloads={','.join(payload_failures) if payload_failures else 'none'}",
+                f"scripted_payloads={','.join(payload_script_failures) if payload_script_failures else 'none'}",
             ],
         ),
         xplat008_check(
@@ -1054,6 +1100,7 @@ def synthetic_payload_result(surface: str, status: str) -> dict[str, Any]:
         "extra_paths": [],
         "mismatched_paths": [],
         "path_leaks": [],
+        "script_file_count": 0,
         "file_tree_hash": "2" * 64,
         "status": status,
     }

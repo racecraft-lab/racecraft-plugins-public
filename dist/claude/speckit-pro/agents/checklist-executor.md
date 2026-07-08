@@ -27,10 +27,8 @@ checklist and fix the gaps — all in one agent.
    `/speckit-checklist` with the provided domain prompt.
 
 2. **After the checklist completes, count [Gap] markers
-   deterministically.** Run the marker counter:
-   ```bash
-   bash "${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/count-markers.sh" gaps specs/<feature>
-   ```
+   deterministically.** Run runner helper `count-markers` in gaps mode
+   for `specs/<feature>`.
    This returns exact counts across spec.md, plan.md, and
    checklist files. Use these counts to verify you've
    addressed every gap.
@@ -66,11 +64,8 @@ checklist and fix the gaps — all in one agent.
    e. **Apply the fix** — edit the artifact directly
 
 4. **Re-run the checklist to verify.** After fixing all gaps,
-   re-run the same `/speckit-checklist` domain then run the
-   marker counter to verify gaps are closed:
-   ```bash
-   bash "${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/count-markers.sh" gaps specs/<feature>
-   ```
+   re-run the same `/speckit-checklist` domain then run runner helper
+   `count-markers` in gaps mode to verify gaps are closed.
    If new gaps appear, fix them (max 2 total loops).
 
 5. **Flag unresolved items for consensus, with a category

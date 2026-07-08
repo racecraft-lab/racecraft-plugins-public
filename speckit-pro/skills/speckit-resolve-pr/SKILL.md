@@ -3,7 +3,7 @@ name: speckit-resolve-pr
 description: "MANDATORY for resolving GitHub PR review comments by editing the source code those comments flagged. Use this skill — NOT a read-only PR review skill — whenever the user wants to ACT on PR review feedback by changing code, committing, and pushing. Triggers on these phrases: 'resolve PR review comments', 'address review feedback', 'fix the copilot comments', 'resolve the threads on PR #N', 'fix each review comment and resolve the threads', 'handle the Copilot review on this PR', 'work through the review comments on this PR', 'address them all', 'take care of the outstanding review feedback', or whenever a PR URL is pasted with unresolved comments. The skill edits files, runs project verification, commits the fixes, pushes, posts a reply per thread, and marks each thread resolved via gh API. NOT for read-only PR review, summarizing what a PR changes, or assessing PR merge risk — those are read-only review skills, this is a write skill that mutates the working tree."
 argument-hint: "PR URL or number (e.g., https://github.com/owner/repo/pull/46 or 46)"
 user-invocable: true
-allowed-tools: Bash Read Edit Write Grep Agent ToolSearch
+allowed-tools: Read Edit Write Grep Agent ToolSearch
 license: MIT
 ---
 
@@ -41,7 +41,7 @@ If full URL provided:
   Extract OWNER, REPO, PR_NUMBER from URL
 
 If just a number:
-  Bash("git remote -v") → extract OWNER/REPO from origin URL
+  Run `git remote -v` and extract OWNER/REPO from origin URL
   PR_NUMBER = the provided number
 ```
 
@@ -59,34 +59,11 @@ Detect package manager from lockfile if Node.js project.
 
 ### 3. Fetch All Unresolved Review Threads
 
-Fetch review threads via GraphQL to get thread IDs (needed
-for resolution) and comment details in one call:
-
-```text
-Bash("gh api graphql -f query='query {
-  repository(owner: \"<OWNER>\", name: \"<REPO>\") {
-    pullRequest(number: <PR_NUMBER>) {
-      reviewThreads(first: 100) {
-        nodes {
-          id
-          isResolved
-          path
-          line
-          comments(first: 10) {
-            nodes {
-              id
-              databaseId
-              body
-              author { login }
-              createdAt
-            }
-          }
-        }
-      }
-    }
-  }
-}'")
-```
+Fetch review threads via GraphQL with `gh api graphql` to get thread IDs
+(needed for resolution) and comment details in one call. Query
+`repository.pullRequest.reviewThreads(first: 100)` and include each thread's
+`id`, `isResolved`, `path`, `line`, and the first 10 comments with `id`,
+`databaseId`, `body`, `author.login`, and `createdAt`.
 
 Filter to unresolved threads only (`isResolved == false`).
 Each thread's `id` is the threadId needed for resolution.
@@ -199,19 +176,13 @@ resolves the thread via gh API. Writes to GitHub are cheap and ordered:
 
 ```text
 Reply to the comment:
-Bash("gh api repos/<OWNER>/<REPO>/pulls/<PR_NUMBER>/comments \
-  -X POST \
-  -f body='<explanation of what was fixed or why no change>' \
-  -f in_reply_to=<comment_id>")
+Use `gh api repos/<OWNER>/<REPO>/pulls/<PR_NUMBER>/comments` with `POST`,
+`body='<explanation of what was fixed or why no change>'`, and
+`in_reply_to=<comment_id>`.
 
 Resolve the review thread:
-Bash("gh api graphql -f query='mutation {
-  resolveReviewThread(input: {
-    threadId: \"<thread_id>\"
-  }) {
-    thread { isResolved }
-  }
-}'")
+Use `gh api graphql` with the `resolveReviewThread` mutation and
+`threadId: "<thread_id>"`.
 ```
 
 The `<thread_id>` comes from the GraphQL query in Step 3
@@ -222,9 +193,7 @@ node_id — thread resolution requires the thread ID.
 
 After all comments are addressed:
 
-```text
-Bash("git push")
-```
+Run `git push`.
 
 ### 7. Report Summary
 

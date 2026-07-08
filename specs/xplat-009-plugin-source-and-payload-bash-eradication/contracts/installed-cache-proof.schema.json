@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/speckit-pro/xplat-009/installed-cache-proof.schema.json",
+  "title": "XPLAT-009 Installed Cache Proof",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "feature_id", "proofs"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "feature_id": { "const": "XPLAT-009" },
+    "proofs": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "#/$defs/proof" }
+    }
+  },
+  "$defs": {
+    "proof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "product",
+        "surface",
+        "installed_root",
+        "source_payload_root",
+        "source_payload_tree_hash",
+        "source_derived",
+        "mutable_user_cache",
+        "script_file_count",
+        "active_guidance_findings",
+        "allowlist_release_readiness_excluded"
+      ],
+      "properties": {
+        "product": { "enum": ["claude", "codex"] },
+        "surface": { "type": "string", "minLength": 1 },
+        "installed_root": { "type": "string", "minLength": 1 },
+        "source_payload_root": { "type": "string", "minLength": 1 },
+        "source_payload_tree_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "source_derived": { "const": true },
+        "mutable_user_cache": { "const": false },
+        "script_file_count": { "const": 0 },
+        "active_guidance_findings": {
+          "type": "array",
+          "items": { "$ref": "zero-bash-guard-result.schema.json#/$defs/finding" }
+        },
+        "allowlist_release_readiness_excluded": { "const": true }
+      }
+    }
+  }
+}

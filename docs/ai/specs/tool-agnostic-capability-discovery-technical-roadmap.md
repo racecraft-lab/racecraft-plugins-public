@@ -235,7 +235,7 @@ Budget result: within budget
 - Rework the Layer 5 block so the formerly-required named MCP tools (`mcp__tavily-mcp__*`, `mcp__context7__*`, `mcp__RepoPrompt__*`) are removed from the scoping contract entirely.
 - Update Claude and Codex functional eval expectations across all four eval files so optional-tool questions are answered in vendor-neutral terms, asserting both the absence of a preferred named set and an affirmative capability-first answer.
 - Include behavior-observable eval scenarios for installed-capability discovery, fallback behavior, evidence path, citations or local file references, and lower-confidence reporting when fallback quality is lower (validated against committed fixtures; no live run gates merge).
-- Fix `strip_codex_guard` in `scripts/build-plugin-payloads.sh` to strip only the Codex guard block (to the next heading / EOF) instead of truncating to end-of-file, rebuild `dist/` so all skill bodies are restored, and add a deterministic body-completeness check that fails if any `dist/claude` SKILL.md is truncated relative to its source minus the guard section.
+- Fix `strip_codex_guard` in the payload builder to strip only the Codex guard block (to the next heading / EOF) instead of truncating to end-of-file, rebuild `dist/` so all skill bodies are restored, and add a deterministic body-completeness check that fails if any `dist/claude` SKILL.md is truncated relative to its source minus the guard section.
 - Verify the default deterministic suite with `bash tests/speckit-pro/run-all.sh`.
 
 **Out of Scope:**
@@ -253,7 +253,7 @@ Budget result: within budget
 **Key Files:**
 - `tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.sh` - named-tool guard + removal of the named-MCP assertions.
 - `tests/speckit-pro/layer1-structural/` - pointer-coverage, target-resolution, and payload body-completeness validators.
-- `scripts/build-plugin-payloads.sh` - `strip_codex_guard` fix.
+- `scripts/build-plugin-payloads.py` - `strip_codex_guard` fix.
 - `dist/claude/**` and `dist/codex/**` - regenerated payload copies (source-derived).
 - `tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json` - Claude functional evals.
 - `tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json` - Codex functional evals.

@@ -326,7 +326,7 @@ runtime `../` paths outside the installed plugin root.
 
 **Scope:**
 - Add a deterministic payload build script, likely
-  `scripts/build-plugin-payloads.sh`, that deletes and rebuilds:
+  `scripts/build-plugin-payloads.py`, that deletes and rebuilds:
   - `dist/claude/speckit-pro`
   - `dist/codex/speckit-pro`
 - Keep authoring source single-rooted for this spec. The existing `speckit-pro/`
@@ -430,7 +430,7 @@ entrypoints under `dist/codex/speckit-pro/skills/` and set the Codex manifest to
 second skill directory name into the install payload.
 
 **Key Files:**
-- `scripts/build-plugin-payloads.sh` — New: deterministic payload builder
+- `scripts/build-plugin-payloads.py` — New: deterministic payload builder
 - `dist/claude/speckit-pro/**` — New/generated: Claude Code install payload
 - `dist/codex/speckit-pro/**` — New/generated: Codex install payload
 - `.claude-plugin/marketplace.json` — Modified: point Claude Code marketplace to the Claude payload
@@ -467,7 +467,7 @@ second skill directory name into the install payload.
 | Add CI workflows | `.github/workflows/` | `pr-checks.yml`, `release.yml` |
 | Configure branch protection | GitHub repo settings | Require PR, CI checks, Copilot review, squash-only |
 | Exempt Actions bot | GitHub repo rulesets | Allow CI bot to push marketplace sync commits |
-| Add payload builder | `scripts/` | `build-plugin-payloads.sh` for deterministic Claude/Codex payload generation |
+| Add payload builder | `scripts/` | `build-plugin-payloads.py` for deterministic Claude/Codex payload generation |
 | Add generated install payloads | `dist/` | `dist/claude/speckit-pro` and `dist/codex/speckit-pro` become marketplace install roots |
 | Update marketplace source paths | `.claude-plugin/`, `.agents/plugins/` | Point Claude Code and Codex to their platform-specific payload roots |
 | Add payload cleanliness checks | `tests/speckit-pro/layer1-structural/` | Assert clean skill counts, no cross-runtime `SKILL.md` files, and no cross-root references |

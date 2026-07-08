@@ -83,7 +83,7 @@ run_layer() {
 
     # Extract pass/fail from the summary line (format: "name: X/Y passed")
     local summary
-    summary=$(echo "$output" | grep -E '[0-9]+/[0-9]+ passed' | tail -1)
+    summary=$(echo "$output" | grep -E '[0-9]+/[0-9]+ passed' | tail -1 || true)
     if [ -n "$summary" ]; then
       local passed total
       passed=$(echo "$summary" | grep -oE '[0-9]+/[0-9]+' | head -1 | cut -d/ -f1)
@@ -111,7 +111,7 @@ run_layer() {
         echo "$output" | tail -3 | while read -r line; do
           printf "       %s\n" "$line"
         done
-        ((layer_fail++))
+        layer_fail=$((layer_fail + 1))
       fi
     fi
   done
@@ -291,35 +291,14 @@ if should_run 4; then
   [ "$RUN_LIVE" = "true" ] && LIVE_FLAG="--live"
 
   layer4_scripts=(
-    "$TESTS_DIR/layer4-scripts/test-validate-gate.sh"
     "$TESTS_DIR/layer4-scripts/test-autopilot-phase-coverage.py"
-    "$TESTS_DIR/layer4-scripts/test-confidence-gate.sh"
-    "$TESTS_DIR/layer4-scripts/test-resolve-confidence-mode.sh"
-    "$TESTS_DIR/layer4-scripts/test-detect-commands.sh"
-    "$TESTS_DIR/layer4-scripts/test-check-prerequisites.sh"
     "$TESTS_DIR/layer4-scripts/test-check-toolchain.sh"
-    "$TESTS_DIR/layer4-scripts/test-detect-presets.sh"
-    "$TESTS_DIR/layer4-scripts/test-reviewability-gate.sh"
-    "$TESTS_DIR/layer4-scripts/test-final-reviewability-backstop.sh"
-    "$TESTS_DIR/layer4-scripts/test-estimate-reviewable-loc.sh"
-    "$TESTS_DIR/layer4-scripts/test-ensure-reviewability-preset.sh"
-    "$TESTS_DIR/layer4-scripts/test-estimate-spec-size.sh"
-    "$TESTS_DIR/layer4-scripts/test-generate-pr-body.sh"
-    "$TESTS_DIR/layer4-scripts/test-validate-pr-packet.sh"
-    "$TESTS_DIR/layer4-scripts/test-validate-pr-workflow-contract.sh"
     "$TESTS_DIR/layer4-scripts/test-post-implementation-reference.sh"
     "$TESTS_DIR/layer4-scripts/test-reviewability-marker-guidance.sh"
-    "$TESTS_DIR/layer4-scripts/test-generate-uat-skeleton.sh"
-    "$TESTS_DIR/layer4-scripts/test-validate-uat-runbook.sh"
-    "$TESTS_DIR/layer4-scripts/test-validate-agent-install.sh"
-    "$TESTS_DIR/layer4-scripts/test-project-fixup.sh"
     "$TESTS_DIR/layer4-scripts/test-eval-runner-skill-selection.sh"
     "$TESTS_DIR/layer4-scripts/test-refresh-local-plugin.sh"
-    "$TESTS_DIR/layer4-scripts/test-install-codex-agents.sh"
     "$TESTS_DIR/layer4-scripts/test-sync-marketplace-versions.sh"
     "$TESTS_DIR/layer4-scripts/test-speckit-pro-gates.py"
-    "$TESTS_DIR/layer4-scripts/test-parse-consensus-categories.sh"
-    "$TESTS_DIR/layer4-scripts/test-aggregate-crl.sh"
     "$TESTS_DIR/layer4-scripts/test-transcript-helpers.sh"
     "$TESTS_DIR/layer4-scripts/test-privacy-scan.sh"
     "$TESTS_DIR/layer4-scripts/test-speckit-pro-runner.sh"
@@ -328,16 +307,7 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-l6-codex-runner.sh"
     "$TESTS_DIR/layer4-scripts/test-l8-extractors.sh"
     "$TESTS_DIR/layer4-scripts/test-l8-judge.sh"
-    "$TESTS_DIR/layer4-scripts/test-install-curated-set.sh"
-    "$TESTS_DIR/layer4-scripts/test-moc-id-normalize.sh"
     "$TESTS_DIR/layer4-scripts/test-moc-lint-exit-codes.sh"
-    "$TESTS_DIR/layer4-scripts/test-generate-spec-index.sh"
-    "$TESTS_DIR/layer4-scripts/test-atomicity-route.sh"
-    "$TESTS_DIR/layer4-scripts/test-o5-topology.sh"
-    "$TESTS_DIR/layer4-scripts/test-plan-layers.sh"
-    "$TESTS_DIR/layer4-scripts/test-detect-stack-manager.sh"
-    "$TESTS_DIR/layer4-scripts/test-multi-pr-emission.sh"
-    "$TESTS_DIR/layer4-scripts/test-restack.sh"
   )
 
   if [ -n "$LIVE_FLAG" ]; then
@@ -354,7 +324,7 @@ if should_run 4; then
       else
         local_output=$(bash "$script" "$LIVE_FLAG" 2>&1) || true
       fi
-      summary=$(echo "$local_output" | grep -E '[0-9]+/[0-9]+ passed' | tail -1)
+      summary=$(echo "$local_output" | grep -E '[0-9]+/[0-9]+ passed' | tail -1 || true)
       if [ -n "$summary" ]; then
         passed=$(echo "$summary" | grep -oE '[0-9]+/[0-9]+' | head -1 | cut -d/ -f1)
         total=$(echo "$summary" | grep -oE '[0-9]+/[0-9]+' | head -1 | cut -d/ -f2)
@@ -379,8 +349,8 @@ if should_run 4; then
         echo "$local_output" | tail -3 | while read -r line; do
           printf "       %s\n" "$line"
         done
-        ((layer4_fail++))
-        ((TOTAL_FAIL++))
+        layer4_fail=$((layer4_fail + 1))
+        TOTAL_FAIL=$((TOTAL_FAIL + 1))
       fi
     done
     LAYER_RESULTS+=("L4: ${layer4_pass}/$((layer4_pass + layer4_fail))")

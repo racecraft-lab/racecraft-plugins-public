@@ -7,7 +7,8 @@
     "generated payload runtime files block prohibited shell behavior",
     "release gates allow only direct Python runner dispatch glue",
     "archive/provenance, tests/fixtures, CI docs glue, and upstream .specify/scripts/bash helpers are allowed",
-    "final current implementation scans the full release surface without requiring PR review-base diff metadata"
+    "final current implementation scans the full release surface without requiring PR review-base diff metadata",
+    "empty and non-list configured scan roots fail closed instead of falling back to default roots"
   ],
   "cases": [
     {
@@ -15,7 +16,7 @@
       "files": [
         {
           "path": "speckit-pro/skills/speckit-status/SKILL.md",
-          "content": "Run bash skills/speckit-autopilot/scripts/generate-spec-index.sh before status."
+          "content": "Run bash skills/speckit-autopilot/scripts/generate-spec-index.sh before status.\nUse $SHELL to run the helper."
         },
         {
           "path": "speckit-pro/codex-hooks.json",
@@ -28,6 +29,10 @@
         {
           "path": ".github/workflows/release.yml",
           "content": "steps:\n  - run: |\n      scripts/build-plugin-payloads.sh | jq .\n"
+        },
+        {
+          "path": "speckit-pro/codex-agents/openai.yaml",
+          "content": "command:\n  - /bin/sh\n  - -e\n  - -c\n  - python -m speckit_pro_runner\nbare_command:\n  - /bin/sh\ninline_command: [\"/usr/bin/zsh\"]\n"
         }
       ]
     },
@@ -80,6 +85,18 @@
         "speckit-pro/README.md",
         "docs-site/src/content/docs"
       ]
+    },
+    {
+      "case_id": "empty-scan-roots",
+      "scan_repo": true,
+      "scan_changed_sources": false,
+      "scan_roots": []
+    },
+    {
+      "case_id": "non-list-scan-roots",
+      "scan_repo": true,
+      "scan_changed_sources": false,
+      "scan_roots": "speckit-pro/skills"
     }
   ]
 }

@@ -171,7 +171,7 @@ principles will be lost unless you back up first.
 
 **Best practice:**
 
-```bash
+```text
 # Before upgrading
 cp .specify/memory/constitution.md .specify/memory/constitution-backup.md
 

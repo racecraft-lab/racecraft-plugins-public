@@ -61,7 +61,11 @@ agent instructions still reference Bash. The roadmap now adds XPLAT-009 for
 plugin source/payload Bash eradication and XPLAT-010 for repository-wide Bash
 confinement. Public native Windows/macOS/Linux release claims remain blocked
 until the preserved XPLAT-008 UAT matrix has six passing operator rows and the
-zero-Bash backstop gates are complete.
+zero-Bash backstop gates are complete. Updated again on 2026-07-07 after
+XPLAT-009 scaffold started on
+`codex/xplat-009-plugin-source-and-payload-bash-eradication`; the setup accepted
+one workflow with two vertical slices for plugin-source Bash removal and
+payload/cache zero-Bash proof.
 
 ---
 
@@ -80,7 +84,7 @@ dependency tiers**:
 | 6 | XPLAT-006 | Port mutation, install, and PR-emission helpers | Complete / archived after PR #281 |
 | 7 | XPLAT-007 | Replace active repo-local Bash helpers, tests, evals, payload builders, release checks, install verification, and release-readiness gates with Python commands | Complete / archived after PRs #284-#287 |
 | 8 | XPLAT-008 | Cut over Claude/Codex surfaces, rebuild payloads, and prove universal install/full-use/update/autoheal release readiness | Complete / archived after PRs #289-#292; public native-platform claims remain blocked by pending operator UAT |
-| 9 | XPLAT-009 | Remove remaining Bash script files and active Bash instructions from plugin source and generated payloads | Ready; follow-up audit found 35 source plugin `.sh` files and stale active Bash guidance |
+| 9 | XPLAT-009 | Remove remaining Bash script files and active Bash instructions from plugin source and generated payloads | In Progress; scaffolded on `codex/xplat-009-plugin-source-and-payload-bash-eradication` with a two-slice workflow |
 | 10 | XPLAT-010 | Confine repository Bash usage to GitHub CI/CD workflow dispatch glue only | Blocked until XPLAT-009 completes |
 
 **Execution Order:** XPLAT-001 -> XPLAT-002 -> XPLAT-003 -> XPLAT-004 -> XPLAT-005 -> XPLAT-006 -> XPLAT-007 -> XPLAT-008 -> XPLAT-009 -> XPLAT-010
@@ -275,7 +279,7 @@ PUBLIC RELEASE HELD BY XPLAT-008 UAT MATRIX AND ZERO-BASH BACKSTOP GATES
 | XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | Complete / Archived | `.process/XPLAT-006-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-04-xplat-006-post-merge-hygiene.md`; mutation primitives, install inventory/doctor proof, PR-body/command-plan fixtures, phase-coverage hardening, and Layer 4 mutation-helper gates landed in PR #281 |
 | XPLAT-007 | Python Tooling and Release-Gate Migration | Complete / Archived | `.process/XPLAT-007-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md`; Python gate package, CI dispatch, promotion records, and Layer 4 gate tests landed across PRs #284-#287 |
 | XPLAT-008 | Claude/Codex Cutover and Universal Install Release Gate | Complete / Archived | `.process/XPLAT-008-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md`; active Claude/Codex cutover, payload rebuild, public docs claim alignment, release-readiness gates, and safe repair controls landed across PRs #289-#292; public native-platform claims remain blocked by `docs/ai/specs/.process/XPLAT-008-uat-matrix.md` |
-| XPLAT-009 | Plugin Source and Payload Bash Eradication | Ready | — | Scaffold next with `$speckit-scaffold-spec XPLAT-009`; remove remaining plugin Bash scripts and active Bash instructions while preserving XPLAT-008 installed-runtime behavior |
+| XPLAT-009 | Plugin Source and Payload Bash Eradication | In Progress | `.process/XPLAT-009-workflow.md` | Resume with `$speckit-autopilot` against `docs/ai/specs/.process/XPLAT-009-workflow.md`; two accepted slices remove active plugin-source Bash first, then rebuild payloads and prove generated/installed-cache zero-Bash guards |
 | XPLAT-010 | Repository Bash Confinement and CI Dispatch Guard | Blocked | — | Scaffold after XPLAT-009; enforce repository-wide Bash confinement to GitHub CI/CD workflow dispatch glue only |
 
 **Status Legend:** Pending | Ready | In Progress | In Review | Complete | Complete / Archived | Blocked
@@ -830,7 +834,7 @@ and CI-dispatch guard slices if a single workflow exceeds review budget.
 **Key Files Likely To Change:**
 
 - `tests/speckit-pro/**`
-- `scripts/build-plugin-payloads.sh` -> Python standard-library replacement
+- `scripts/build-plugin-payloads.py` -> Python standard-library replacement
 - `scripts/refresh-local-plugin.sh` -> Python standard-library replacement
 - `scripts/sync-marketplace-versions.sh` -> Python standard-library replacement
 - `speckit-pro/skills/**/scripts/**`
@@ -955,10 +959,15 @@ split only if generated payload rebuilds make the review packet too large.
 
 **Priority:** P1 | **Depends On:** XPLAT-008 | **Enables:** XPLAT-010, public Bash-free release readiness
 
-**Status:** Ready. A 2026-07-07 post-XPLAT-008 audit found that generated
-payloads and the installed Codex cache contain zero `.sh` files, but
-`speckit-pro/` still contains 35 Bash scripts and active generated/source agent
-instructions still reference Bash. This spec is the next scaffold target.
+**Status:** In Progress. Scaffolded on 2026-07-07 in branch
+`codex/xplat-009-plugin-source-and-payload-bash-eradication`; workflow file is
+`docs/ai/specs/.process/XPLAT-009-workflow.md`; design concept is
+`docs/ai/specs/.process/XPLAT-009-design-concept.md`. A 2026-07-07
+post-XPLAT-008 audit found that generated payloads and the installed Codex cache
+contain zero `.sh` files, but `speckit-pro/` still contains 35 Bash scripts and
+active generated/source agent instructions still reference Bash. The accepted
+setup uses one workflow with two vertical slices: active plugin-source Bash
+removal first, then payload rebuild, installed-cache proof, and zero-Bash guards.
 
 **Goal:** Remove every remaining Bash script file and active Bash/`jq`
 instruction from plugin source and generated Claude/Codex payloads while

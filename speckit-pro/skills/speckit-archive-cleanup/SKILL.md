@@ -3,7 +3,7 @@ name: speckit-archive-cleanup
 description: "Archive a merged SpecKit spec and clean active workflow residue after the implementation PR has merged. Use after confirming merge provenance, when the user asks for post-merge SpecKit archive hygiene, cleanup hygiene, or removal of completed specs from active specs."
 argument-hint: "SPEC-ID and optional merged PR URL or number"
 user-invocable: true
-allowed-tools: Bash Read Edit Write Grep Agent
+allowed-tools: Read Edit Write Grep Agent
 license: MIT
 ---
 
@@ -129,7 +129,7 @@ checks if plugin or generated payload files changed. Typical checks:
 - docs-site reference generation/checks when reference pages changed
 - payload builder and payload parity checks when plugin source changed
 - `git diff --check`
-- repository structural test suite, usually `bash tests/speckit-pro/run-all.sh`
+- repository structural validation suite
 
 If a check cannot run, report the exact command and the reason. Do not claim the
 archive is fully verified when generated files or structural checks are stale.
