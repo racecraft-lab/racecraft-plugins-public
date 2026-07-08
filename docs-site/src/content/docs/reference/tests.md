@@ -11,7 +11,7 @@ SpecKit Pro validation layers and test-only files.
 
 - **Public path:** `/racecraft-plugins-public/reference/tests/`
 - **Generated output:** `docs-site/src/content/docs/reference/tests.md`
-- **Records:** 11
+- **Records:** 12
 
 ## Navigation Summary
 
@@ -26,6 +26,7 @@ SpecKit Pro validation layers and test-only files.
 - tests/speckit-pro/layer8-parity
 - tests/speckit-pro/lib
 - tests/speckit-pro/run-all.sh
+- tests/speckit-pro/run-layer-scripts.py
 
 ## Page Sources
 
@@ -1207,3 +1208,25 @@ SpecKit Pro validation layers and test-only files.
 
 - These files are validation evidence only; DOC-007 does not change test semantics unless a docs-site validation need explicitly requires it.
   - Based on: `tests/speckit-pro/run-all.sh`
+
+### tests/speckit-pro/run-layer-scripts.py
+
+- **Purpose:** Validation files in run-layer-scripts.py.
+- **Classification:** `test-only`
+- **Platform concept:** SpecKit Pro validation layer
+- **Claude Code:** tests/speckit-pro/run-layer-scripts.py
+- **Codex:** tests/speckit-pro/run-layer-scripts.py
+- **Runtime difference:** Layer 1 includes separate Claude Code and Codex structural checks where the repository has runtime-specific plugin surfaces.
+
+#### Source Facts
+
+- tests/speckit-pro/run-layer-scripts.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/run-layer-scripts.py`.
+
+#### Sources
+
+- [tests/speckit-pro/run-layer-scripts.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/run-layer-scripts.py)
+
+#### Inferred Notes
+
+- These files are validation evidence only; DOC-007 does not change test semantics unless a docs-site validation need explicitly requires it.
+  - Based on: `tests/speckit-pro/run-layer-scripts.py`
