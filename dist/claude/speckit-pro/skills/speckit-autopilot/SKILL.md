@@ -285,7 +285,7 @@ path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|anal
 Run the pre-flight sequence before any phase work. STOP on failure.
 
 1. **Use runner helper operation IDs**. Invoke read-only helper behavior through
-   `python -m speckit_pro_runner` with one JSON request on stdin; do not rely on
+   `resolved_python -m speckit_pro_runner` with one JSON request on stdin; do not rely on
    plugin-local script files.
 2. **Archive Sweep** — `/speckit-archive-run --sweep --current-target
    <current-spec-dir>` on feature/spec branches; add `--dry-run` on
@@ -651,7 +651,7 @@ in [`references/error-recovery.md`](./references/error-recovery.md).
 
 Deterministic prerequisite checks, validation, reviewability, routing, payload,
 and PR-preparation behavior is owned by `speckit_pro_runner`. Invoke
-`python -m speckit_pro_runner` with one JSON request on stdin and use the
+`resolved_python -m speckit_pro_runner` with one JSON request on stdin and use the
 registered helper or gate operation IDs below.
 
 - `check-prerequisites` — Verify CLI, project init, constitution, commands,

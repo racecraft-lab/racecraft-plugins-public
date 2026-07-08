@@ -49,8 +49,11 @@ You will receive a prompt like:
 
 ```text
 Validate gate G2 for feature at specs/SPEC-005/
-Command: python -m speckit_pro_runner < request for validate-gate
+Command: resolved_python -m speckit_pro_runner < request for validate-gate
 ```
+
+`resolved_python` is the Python 3.11+ interpreter resolved by the installed
+runner contract, not a hardcoded interpreter name.
 
 ## Output Format
 

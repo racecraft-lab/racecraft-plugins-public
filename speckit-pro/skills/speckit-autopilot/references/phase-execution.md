@@ -304,7 +304,7 @@ capture the structured response instead of letting a failed helper response
 abort the run:
 
 ```text
-python3 -m speckit_pro_runner < request.json
+resolved_python -m speckit_pro_runner < request.json
 
 request.json:
 {
@@ -316,6 +316,9 @@ request.json:
   "inputs": {"plan_file": "specs/<feature>/plan.md"}
 }
 ```
+
+`resolved_python` is the Python 3.11+ interpreter resolved by the installed
+runtime contract, not a hardcoded interpreter name.
 
 The three budget statuses (`pass`, `over_budget`, `not_estimated`) all return
 runner status `ok` with the verdict in the helper stdout JSON `status` field;

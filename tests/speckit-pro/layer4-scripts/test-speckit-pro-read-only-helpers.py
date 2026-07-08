@@ -353,6 +353,16 @@ class ReadOnlyHelperTests(unittest.TestCase):
 
             self.assertIsNone(find_repo_root(project_path))
 
+    def test_find_specify_returns_none_when_home_is_unresolvable(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("specify discovery case uses check-prerequisites")
+        from speckit_pro_runner.helpers import read_only
+
+        with patch.object(read_only.shutil, "which", return_value=None), patch.object(
+            read_only.Path, "home", side_effect=RuntimeError("no home directory")
+        ):
+            self.assertIsNone(read_only.find_specify())
+
     def test_helper_argv_uses_runner_even_when_registered_script_is_symlinked(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("helper argv script-boundary case uses check-prerequisites")
