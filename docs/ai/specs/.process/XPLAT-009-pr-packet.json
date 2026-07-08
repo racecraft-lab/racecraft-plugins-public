@@ -47,7 +47,7 @@
     "PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py -> 48/48 passed",
     "PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py -> 10/10 passed",
     "bash tests/speckit-pro/layer4-scripts/test-privacy-scan.sh -> 10/10 passed",
-    "bash tests/speckit-pro/run-all.sh -> 2021/2021 passed",
+    "bash tests/speckit-pro/run-all.sh -> 2014/2014 passed",
     "git diff --check origin/main...HEAD -> passed"
   ],
   "evidence": [

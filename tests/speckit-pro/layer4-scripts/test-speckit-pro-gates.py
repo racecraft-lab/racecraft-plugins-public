@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import ast
+import importlib.util
 import json
 import os
 import subprocess
@@ -117,6 +118,14 @@ def xplat009_fixture_cases(name: str) -> dict[str, Any]:
 
 def python_argv(source: str) -> list[str]:
     return [sys.executable, "-c", source]
+
+
+def load_layer_script_dispatcher() -> Any:
+    dispatcher_path = REPO_ROOT / "tests" / "speckit-pro" / "run-layer-scripts.py"
+    spec = importlib.util.spec_from_file_location("run_layer_scripts", dispatcher_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def successful_command(label: str) -> dict[str, Any]:
@@ -2877,13 +2886,21 @@ class GateFoundationTests(unittest.TestCase):
             [result.command_id for result in results],
             ["toolchain", "layer-1", "layer-4", "layer-5", "layer-7", "layer-8"],
         )
+        external_layer_argv = {
+            "layer-1": [sys.executable, "tests/speckit-pro/run-layer-scripts.py", "--layer", "1"],
+            "layer-4": [sys.executable, "tests/speckit-pro/run-layer-scripts.py", "--layer", "4"],
+        }
         for result in results:
             argv = list(result.argv)
-            self.assertEqual(argv, [sys.executable, "-m", "speckit_pro_runner"])
+            if result.command_id in external_layer_argv:
+                self.assertEqual(argv, external_layer_argv[result.command_id])
+                self.assertFalse(result.internal)
+            else:
+                self.assertEqual(argv, [sys.executable, "-m", "speckit_pro_runner"])
+                self.assertTrue(result.internal)
             self.assertNotIn("bash", " ".join(argv).lower())
             self.assertNotIn("jq", " ".join(argv).lower())
             self.assertFalse(any(arg.endswith(".sh") for arg in argv))
-            self.assertTrue(result.internal)
 
     def test_missing_executable_treats_windows_altsep_paths_as_repo_relative(self) -> None:
         from speckit_pro_runner.gates import suite as suite_gate
@@ -2895,8 +2912,9 @@ class GateFoundationTests(unittest.TestCase):
         finally:
             suite_gate.os.altsep = original_altsep
 
-        layer1_scripts = [self.repo_rel(path) for path in suite_gate.canonical_test_scripts(REPO_ROOT, "1")]
-        layer4_scripts = [self.repo_rel(path) for path in suite_gate.canonical_test_scripts(REPO_ROOT, "4")]
+        dispatcher = load_layer_script_dispatcher()
+        layer1_scripts = [self.repo_rel(path) for path in dispatcher.canonical_test_scripts(REPO_ROOT, "1")]
+        layer4_scripts = [self.repo_rel(path) for path in dispatcher.canonical_test_scripts(REPO_ROOT, "4")]
         self.assertGreaterEqual(len(layer1_scripts), 20)
         self.assertGreaterEqual(len(layer4_scripts), 17)
         self.assertIn("tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.sh", layer1_scripts)
@@ -2982,6 +3000,25 @@ class GateFoundationTests(unittest.TestCase):
         self.assertIn("layer4 stdout", result["stdout"]["text"])
         self.assertIn("layer4 stderr", result["stderr"]["text"])
         self.assertEqual(response["data"]["gate"]["gate_status"], "fail")
+
+    def test_run_layer_missing_dispatcher_reports_missing_prerequisite(self) -> None:
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
+            (Path(tmp) / "speckit-pro" / "speckit_pro_runner").mkdir(parents=True)
+            request = gate_request(
+                "suite-gate",
+                "run-layer",
+                inputs={"layer": "1", "repo_root": tmp},
+            )
+            completed, response, stderr_records = run_runner(request)
+        self.assert_stdout_json(completed)
+        self.assert_response(response, "missing_prerequisite")
+        self.assert_status_exit_mapping(completed, response)
+        self.assertEqual([diag["code"] for diag in stderr_records], ["gate_missing_prerequisite"])
+        result = response["data"]["suite"]["results"][0]
+        self.assertEqual(result["command_id"], "layer-1")
+        self.assertEqual(result["status"], "missing_prerequisite")
+        self.assertEqual(result["exit_code"], 3)
+        self.assertIn("tests/speckit-pro/run-layer-scripts.py", result["stderr"]["text"])
 
     def test_toolchain_integration_and_parity_suite_dispatch(self) -> None:
         cases = [

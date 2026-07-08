@@ -31,7 +31,7 @@ Run these commands from the repository root on a clean checkout of the PR branch
 
 3. Verify the deterministic suite:
    `bash tests/speckit-pro/run-all.sh`
-   Expected: `speckit-pro test suite: 2021/2021 passed`.
+   Expected: `speckit-pro test suite: 2014/2014 passed`.
 
 4. Inspect zero-Bash guard evidence:
    `python3 -m json.tool docs/ai/specs/.process/XPLAT-009-zero-bash-guard-result.json`
