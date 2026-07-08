@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.18.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.17.0...speckit-pro-v2.18.0) (2026-07-08)
+
+
+### Features
+
+* **speckit-pro:** operator-owned tool surface — agents inherit all installed tools ([#298](https://github.com/racecraft-lab/racecraft-plugins-public/issues/298)) ([c917690](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c9176902d98082415aac88954b2f66fa6c499506))
+* **speckit-pro:** Update Active Installed-Runtime Surface Cutover ([#289](https://github.com/racecraft-lab/racecraft-plugins-public/issues/289)) ([59c18b2](https://github.com/racecraft-lab/racecraft-plugins-public/commit/59c18b2dcf79284182f6f5932e61716db0d58090))
+* **speckit-pro:** Update Native UAT, Update, and Safe Repair ([#291](https://github.com/racecraft-lab/racecraft-plugins-public/issues/291)) ([66defab](https://github.com/racecraft-lab/racecraft-plugins-public/commit/66defab977c166bff8726724cdb728b95eec0165))
+* **speckit-pro:** Update Payload, Release, and Public Docs Gates ([#290](https://github.com/racecraft-lab/racecraft-plugins-public/issues/290)) ([1793128](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1793128875dd0a31e9fafd606eaa55e92123d63e))
+* **speckit-pro:** Update Review Active No-Shell Guardrails ([#287](https://github.com/racecraft-lab/racecraft-plugins-public/issues/287)) ([0ff2d8d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0ff2d8d731698cde02b334cdc3b2a377216b5d45))
+* **XPLAT-004:** Add cross-platform runner foundation ([#274](https://github.com/racecraft-lab/racecraft-plugins-public/issues/274)) ([cef3ed2](https://github.com/racecraft-lab/racecraft-plugins-public/commit/cef3ed260dabf73833d3de82f82cacdb2c7758fa))
+* **XPLAT-005:** Add read-only helper port ([#276](https://github.com/racecraft-lab/racecraft-plugins-public/issues/276)) ([c4642f5](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c4642f50ae99172170798a49f0c8fd990891c0f9))
+* **XPLAT-006:** Add mutation, install, and PR-emission helper port ([#281](https://github.com/racecraft-lab/racecraft-plugins-public/issues/281)) ([85e79cd](https://github.com/racecraft-lab/racecraft-plugins-public/commit/85e79cd4b5ccc0116a2c5cdd0f04ce274294075f))
+* **XPLAT-007:** Add gate dispatch foundation ([#284](https://github.com/racecraft-lab/racecraft-plugins-public/issues/284)) ([6c0af6c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/6c0af6cf6cd53e1569bcb03c9a56d939360a4b24))
+* **XPLAT-007:** Update payload install release gates ([#286](https://github.com/racecraft-lab/racecraft-plugins-public/issues/286)) ([a0d2dd0](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a0d2dd015f0a33e85634256061926e5274fdb69a))
+* **XPLAT-007:** Update Python repo-local gate runner ([#285](https://github.com/racecraft-lab/racecraft-plugins-public/issues/285)) ([cb16972](https://github.com/racecraft-lab/racecraft-plugins-public/commit/cb1697290b8f7cb289d0740e59c899285dc95c33))
+* **xplat:** eradicate plugin Bash runtime surface ([#297](https://github.com/racecraft-lab/racecraft-plugins-public/issues/297)) ([7bc6be1](https://github.com/racecraft-lab/racecraft-plugins-public/commit/7bc6be1a9faaa3113f8db903188ddb49a445e7ce))
+
+
+### Bug Fixes
+
+* **curated-set:** detect preset version under nested preset.yml schema ([#271](https://github.com/racecraft-lab/racecraft-plugins-public/issues/271)) ([d75fcf1](https://github.com/racecraft-lab/racecraft-plugins-public/commit/d75fcf1ae454d45527d94d761acf8e5abd42f8af))
+* **runner:** resolve python interpreter and home directory on windows ([#299](https://github.com/racecraft-lab/racecraft-plugins-public/issues/299)) ([fa7cd56](https://github.com/racecraft-lab/racecraft-plugins-public/commit/fa7cd5671a40350e8a3feb9a13ebc3900591eef1))
+* **xplat-008:** harden release readiness failure extraction ([1793128](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1793128875dd0a31e9fafd606eaa55e92123d63e))
+
 ## [2.17.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.16.0...speckit-pro-v2.17.0) (2026-06-29)
 
 
