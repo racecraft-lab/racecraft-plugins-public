@@ -215,16 +215,16 @@
               "kind": "manifest",
               "path": ".claude-plugin/plugin.json",
               "required": true,
-              "sha256": "6c7d88ea52ad246ef5af7d568e457374c2c4af78e4a9631493d15ffb8b6480cf",
+              "sha256": "530452773e04d8c02e9de709bc50e97c306d45381a83ae5a28956693a40e42f3",
               "source_path": "speckit-pro/.claude-plugin/plugin.json",
               "transform": "none"
             },
             {
-              "byte_count": 59712,
+              "byte_count": 63686,
               "kind": "version_metadata",
               "path": "CHANGELOG.md",
               "required": true,
-              "sha256": "2bd6dc0b2c11141fb805f4257f933f434305040e203553428a4b49092ae2af28",
+              "sha256": "2f96a00e772da50f75a77627d0d5fde7a62c99d7e7232e0cef74a7dc9aba217f",
               "source_path": "speckit-pro/CHANGELOG.md",
               "transform": "none"
             },
@@ -1063,16 +1063,16 @@
               "kind": "manifest",
               "path": ".claude-plugin/plugin.json",
               "required": true,
-              "sha256": "6c7d88ea52ad246ef5af7d568e457374c2c4af78e4a9631493d15ffb8b6480cf",
+              "sha256": "530452773e04d8c02e9de709bc50e97c306d45381a83ae5a28956693a40e42f3",
               "source_path": "speckit-pro/.claude-plugin/plugin.json",
               "transform": "none"
             },
             {
-              "byte_count": 59712,
+              "byte_count": 63686,
               "kind": "version_metadata",
               "path": "CHANGELOG.md",
               "required": true,
-              "sha256": "2bd6dc0b2c11141fb805f4257f933f434305040e203553428a4b49092ae2af28",
+              "sha256": "2f96a00e772da50f75a77627d0d5fde7a62c99d7e7232e0cef74a7dc9aba217f",
               "source_path": "speckit-pro/CHANGELOG.md",
               "transform": "none"
             },
@@ -1906,12 +1906,12 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "e35487d637250713861b4ad8353136d69ce5670f728d2ad5736bfbe23b5eb056",
+          "file_tree_hash": "e908e58c024470a139ac2386805521fe6985f8ed9f3cdec3452d1d4aabf32a14",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
           "payload_surface": "claude",
-          "plugin_version": "2.17.0",
+          "plugin_version": "2.18.0",
           "runner_version": "0.1.0",
           "script_file_count": 0,
           "status": "pass"
@@ -1923,16 +1923,16 @@
               "kind": "manifest",
               "path": ".codex-plugin/plugin.json",
               "required": true,
-              "sha256": "a7a75fc45e29f2516ad7850331fb3a4a44cb719e3877cab7c76148fccf9868cc",
+              "sha256": "212eb0fe943f5bbdbcfe07b332da653272db2f2f8122a8afa79773234f691058",
               "source_path": "speckit-pro/.codex-plugin/plugin.json",
               "transform": "manifest_rewrite"
             },
             {
-              "byte_count": 59712,
+              "byte_count": 63686,
               "kind": "version_metadata",
               "path": "CHANGELOG.md",
               "required": true,
-              "sha256": "2bd6dc0b2c11141fb805f4257f933f434305040e203553428a4b49092ae2af28",
+              "sha256": "2f96a00e772da50f75a77627d0d5fde7a62c99d7e7232e0cef74a7dc9aba217f",
               "source_path": "speckit-pro/CHANGELOG.md",
               "transform": "none"
             },
@@ -2924,16 +2924,16 @@
               "kind": "manifest",
               "path": ".codex-plugin/plugin.json",
               "required": true,
-              "sha256": "a7a75fc45e29f2516ad7850331fb3a4a44cb719e3877cab7c76148fccf9868cc",
+              "sha256": "212eb0fe943f5bbdbcfe07b332da653272db2f2f8122a8afa79773234f691058",
               "source_path": "speckit-pro/.codex-plugin/plugin.json",
               "transform": "manifest_rewrite"
             },
             {
-              "byte_count": 59712,
+              "byte_count": 63686,
               "kind": "version_metadata",
               "path": "CHANGELOG.md",
               "required": true,
-              "sha256": "2bd6dc0b2c11141fb805f4257f933f434305040e203553428a4b49092ae2af28",
+              "sha256": "2f96a00e772da50f75a77627d0d5fde7a62c99d7e7232e0cef74a7dc9aba217f",
               "source_path": "speckit-pro/CHANGELOG.md",
               "transform": "none"
             },
@@ -3920,12 +3920,12 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "2cc100ada1cbce4e3de5bd255ef28f8e564eccbe95cb52bcdf756d7e35834566",
+          "file_tree_hash": "fd29747d97ddd10a5b268ee3fbd04afb990b6246910b6d53bd74ad698b102852",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
           "payload_surface": "codex",
-          "plugin_version": "2.17.0",
+          "plugin_version": "2.18.0",
           "runner_version": "0.1.0",
           "script_file_count": 0,
           "status": "pass"
@@ -4014,18 +4014,18 @@
             "attempted_candidates": [
               "python3"
             ],
-            "diagnostic": "Accepted Python 3.11.0 for installed cache dist/codex/speckit-pro.",
+            "diagnostic": "Accepted Python 3.12.3 for installed cache dist/codex/speckit-pro.",
             "failure_code": null,
             "invocation_argv_prefix": [
-              "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3"
+              "/usr/bin/python3"
             ],
             "minimum_version": "3.11",
-            "resolved_executable": "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3",
-            "version": "3.11.0"
+            "resolved_executable": "/usr/bin/python3",
+            "version": "3.12.3"
           },
           "invocation": {
             "argv": [
-              "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3",
+              "/usr/bin/python3",
               "-m",
               "speckit_pro_runner"
             ],
@@ -4035,13 +4035,13 @@
             "stdout_mode": "single_json_response"
           },
           "operation": "status",
-          "platform": "macos",
+          "platform": "linux",
           "product": "codex",
           "request_id": "xplat-008-release-readiness:runner-invocation",
           "runner_request": {
             "helper_id": "runner",
             "inputs": {
-              "platform": "macos",
+              "platform": "linux",
               "product": "codex",
               "source": "xplat-008-installed-runtime",
               "surface_path": "speckit-pro/codex-skills/speckit-status/SKILL.md"
@@ -4054,7 +4054,7 @@
           "runner_response": {
             "data": {
               "report": {
-                "architecture": "arm64",
+                "architecture": "x86_64",
                 "contract_version": "1.0",
                 "metadata": {
                   "checksum": {
@@ -4092,26 +4092,26 @@
                     "value": "speckit_pro_runner"
                   }
                 },
-                "platform": "darwin",
+                "platform": "linux",
                 "prerequisites": {
                   "python": {
                     "diagnostic_code": null,
                     "name": "python",
-                    "path": "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3",
+                    "path": "/usr/bin/python3",
                     "required": true,
                     "status": "available",
-                    "version": "3.11.0"
+                    "version": "3.12.3"
                   },
                   "specify": {
-                    "diagnostic_code": null,
+                    "diagnostic_code": "specify_missing",
                     "name": "specify",
-                    "path": "<home>/.local/bin/specify",
+                    "path": null,
                     "required": true,
-                    "status": "available",
+                    "status": "missing",
                     "version": null
                   }
                 },
-                "python_version": "3.11.0",
+                "python_version": "3.12.3",
                 "runner_contract_id": "speckit-pro-runner",
                 "runner_name": "speckit_pro_runner",
                 "runner_version": "0.1.0",
