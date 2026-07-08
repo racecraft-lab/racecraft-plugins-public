@@ -12,13 +12,7 @@ description: >
   and never blocks PR creation.
 model: sonnet
 color: cyan
-tools:
-  - Read
-  - Edit
-  - Write
-  - Bash
-  - Grep
-  - Glob
+disallowedTools: Skill, Agent, TeamCreate, SendMessage
 maxTurns: 30
 effort: max
 ---

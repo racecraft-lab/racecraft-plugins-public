@@ -26,14 +26,72 @@ PLUGIN_ROOT="$(cd "$(dirname "$0")/../../../speckit-pro" && pwd)"
 AGENTS_DIR="$PLUGIN_ROOT/agents"
 
 # ---------------------------------------------------------------------------
-# Helper: extract tools list from YAML frontmatter
+# Tool-surface doctrine (operator-owned availability)
 # ---------------------------------------------------------------------------
-extract_tools() {
+# The plugin never pins which tools an agent MAY use. Per the official Claude
+# Code docs (code.claude.com/docs/en/subagents: "Inherits all tools if
+# omitted" — including MCP tools; and the parent conversation's permission
+# rules govern subagent tool calls), omitting `tools:` gives every agent the
+# operator's full installed surface — present and future — governed by the
+# operator's own permission configuration. This matches the Codex side of the
+# same plugin, where agent TOMLs have no tool-restriction field at all and
+# per-tool governance is operator machinery (config layers, rules, hooks —
+# all trust-gated; developers.openai.com/codex/subagents, /codex/config-reference).
+#
+# What the plugin MAY pin, via `disallowedTools` (a comma-separated scalar per
+# code.claude.com/docs/en/subagents; supported for plugin agents per
+# /docs/en/plugins-reference), is built-in ROLE-FOCUS denials, two-tier:
+#
+#   OPEN BY DEFAULT — the heavy workhorse executors (phase-executor,
+#   analyze-executor, checklist-executor, implement-executor) carry no denial
+#   beyond implement-executor's Skill (no /speckit-* phase re-entry from a
+#   single-task worker). They keep the operator's FULL surface — including
+#   orchestration tools (Agent, TeamCreate, SendMessage): what an agent may
+#   spawn is the operator's call, subagent nesting is platform depth-limited,
+#   and the plugin must never prevent maximum use of the operator's installed
+#   Claude Code or Codex capabilities on the agents doing open-ended work.
+#
+#   FOCUS-CONSTRAINED BY DESIGN — hyper-focused single-purpose workers stay
+#   deliberately narrow so they do exactly their one job:
+#   - The five read-only consensus roles deny the mutation primitives
+#     (Write/Edit/MultiEdit/NotebookEdit/Bash — the Claude twin of the Codex agents'
+#     kept `sandbox_mode = "read-only"`; consensus integrity depends on
+#     analysts not mutating artifacts mid-round), plus Skill and the
+#     orchestration tools: a bounded answer-one-question worker neither
+#     re-enters phases nor fans out.
+#   - gate-validator denies mutation + Skill + orchestration (validates,
+#     never fixes; keeps Bash to run gate scripts).
+#   - uat-runbook-author denies Skill + orchestration (single-file author;
+#     keeps its mutation surface).
+#
+# Denials name BUILT-IN tools only — never a vendor-qualified MCP tool. An
+# unknown installed capability is never blocked by this plugin, and no
+# denial is ever plugin-wide: each is a per-role focus decision.
+
+ORCHESTRATION_TOOLS=(Agent TeamCreate SendMessage)
+MUTATION_DENIALS=(Write Edit MultiEdit NotebookEdit Bash)
+OPEN_EXECUTORS=(phase-executor analyze-executor checklist-executor implement-executor)
+
+# ---------------------------------------------------------------------------
+# Helper: extract YAML frontmatter (between the first pair of --- lines)
+# ---------------------------------------------------------------------------
+extract_frontmatter() {
   local file="$1"
-  sed -n '/^---$/,/^---$/p' "$file" | \
-    sed -n '/^tools:/,/^[a-z]/p' | \
-    grep '^ *- ' | \
-    sed 's/^ *- //'
+  awk 'BEGIN{d=0} /^---$/{d++; if(d==2) exit; next} d==1{print}' "$file"
+}
+
+# ---------------------------------------------------------------------------
+# Helper: extract the disallowedTools list (comma-separated scalar), one per line
+# ---------------------------------------------------------------------------
+extract_disallowed() {
+  local file="$1"
+  extract_frontmatter "$file" | \
+    grep '^disallowedTools:' | \
+    head -1 | \
+    sed 's/^disallowedTools:[[:space:]]*//' | \
+    tr ',' '\n' | \
+    sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | \
+    grep -v '^$' || true
 }
 
 # ---------------------------------------------------------------------------
@@ -56,301 +114,140 @@ extract_toml_field() {
 }
 
 # ---------------------------------------------------------------------------
-# Helper: assert a tool IS present in the tools list
+# Helper: assert a tool IS in the disallowedTools list
 # ---------------------------------------------------------------------------
-assert_tool_present() {
-  local tools="$1" tool="$2" agent="$3"
+assert_denied() {
+  local denials="$1" tool="$2" agent="$3"
   local found=false
   while IFS= read -r line; do
     if [ "$line" = "$tool" ]; then
       found=true
       break
     fi
-  done <<< "$tools"
+  done <<< "$denials"
   if [ "$found" = "true" ]; then
     _pass
   else
-    _fail "$agent must have tool '$tool' but it is missing"
+    _fail "$agent must deny '$tool' in disallowedTools but does not"
   fi
 }
 
 # ---------------------------------------------------------------------------
-# Helper: assert a tool is NOT present in the tools list
+# Helper: assert a tool is NOT in the disallowedTools list (the agent needs it)
 # ---------------------------------------------------------------------------
-assert_tool_absent() {
-  local tools="$1" tool="$2" agent="$3"
+assert_not_denied() {
+  local denials="$1" tool="$2" agent="$3"
   local found=false
   while IFS= read -r line; do
     if [ "$line" = "$tool" ]; then
       found=true
       break
     fi
-  done <<< "$tools"
+  done <<< "$denials"
   if [ "$found" = "false" ]; then
     _pass
   else
-    _fail "$agent must NOT have tool '$tool' but it is present"
+    _fail "$agent denies '$tool' but its role requires it"
   fi
 }
 
-# ---------------------------------------------------------------------------
-# Helper: assert NO mcp__ tools are present
-# ---------------------------------------------------------------------------
-assert_no_mcp_tools() {
-  local tools="$1" agent="$2"
-  local mcp_found=""
-  while IFS= read -r line; do
-    if [[ "$line" == mcp__* ]]; then
-      mcp_found="$line"
-      break
-    fi
-  done <<< "$tools"
-  if [ -z "$mcp_found" ]; then
-    _pass
+# ===========================================================================
+# Universal: operator-owned tool surface — no allowlist pinning
+# ===========================================================================
+section "Operator tool surface — no tools: allowlist pinning"
+
+for agent_file in "$AGENTS_DIR"/*.md; do
+  agent_name=$(basename "$agent_file" .md)
+  FRONTMATTER=$(extract_frontmatter "$agent_file")
+
+  set_test "$agent_name has NO tools: allowlist (inherits the operator's full surface)"
+  if printf '%s\n' "$FRONTMATTER" | grep -q '^tools:'; then
+    _fail "$agent_name pins a tools: allowlist — availability is operator-owned; use disallowedTools for role denials only"
   else
-    _fail "$agent must NOT have any mcp__ tools but found '$mcp_found'"
+    _pass
   fi
-}
 
-# ===========================================================================
-# phase-executor
-# ===========================================================================
-section "phase-executor"
-
-AGENT_FILE="$AGENTS_DIR/phase-executor.md"
-TOOLS=$(extract_tools "$AGENT_FILE")
-
-for tool in Skill Read Write Edit Bash Grep Glob; do
-  set_test "phase-executor has $tool"
-  assert_tool_present "$TOOLS" "$tool" "phase-executor"
+  # Denials must name built-in tools only. A vendor-qualified token anywhere
+  # in frontmatter would reintroduce named-vendor pinning through the back
+  # door (blocking one vendor's tool is still a named-vendor contract).
+  set_test "$agent_name frontmatter has no vendor-qualified mcp__ token"
+  if printf '%s\n' "$FRONTMATTER" | grep -qE 'mcp__[A-Za-z0-9-]+__[A-Za-z0-9_-]+'; then
+    _fail "$agent_name frontmatter names a vendor-qualified MCP tool — the plugin neither grants nor blocks named vendor tools"
+  else
+    _pass
+  fi
 done
 
-set_test "phase-executor has no mcp__ tools"
-assert_no_mcp_tools "$TOOLS" "phase-executor"
-
-set_test "phase-executor maxTurns exists and is positive"
-max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
-assert_gt "$max_turns" 0
-
-set_test "phase-executor effort field exists"
-effort=$(extract_field "$AGENT_FILE" "effort")
-assert_not_contains "" "$effort" "effort must not be empty"
-
-set_test "phase-executor effort is max (max-thinking policy)"
-effort=$(extract_field "$AGENT_FILE" "effort")
-assert_eq "max" "$effort"
-
 # ===========================================================================
-# clarify-executor
+# Open executors: orchestration capabilities are never denied
 # ===========================================================================
-section "clarify-executor"
+# The workhorse executors must keep maximum use of the operator's installed
+# capabilities — including spawning subagents, creating Agent Teams, and
+# messaging teammates. The single-orchestrator WORKFLOW remains the design
+# (the autopilot skill does the phase dispatching; executor prompts define
+# their job), but for these agents it is convention carried by prompts, not
+# a capability block: subagent nesting is platform depth-limited, and what
+# an open executor may spawn for its own work is the operator's call.
+section "Open executors — orchestration capabilities never denied"
 
-AGENT_FILE="$AGENTS_DIR/clarify-executor.md"
-TOOLS=$(extract_tools "$AGENT_FILE")
+for agent in "${OPEN_EXECUTORS[@]}"; do
+  AGENT_FILE="$AGENTS_DIR/$agent.md"
+  DENIALS=$(extract_disallowed "$AGENT_FILE")
 
-for tool in Read Grep Glob WebSearch WebFetch; do
-  set_test "clarify-executor has $tool"
-  assert_tool_present "$TOOLS" "$tool" "clarify-executor"
+  for tool in "${ORCHESTRATION_TOOLS[@]}"; do
+    set_test "$agent does NOT deny $tool (operator orchestration stays available)"
+    assert_not_denied "$DENIALS" "$tool" "$agent"
+  done
 done
 
-# Read-only contract: no write-capable tool (Bash/Write/Edit), no Skill, and no
-# ToolSearch. ToolSearch would let this closed-allowlist agent self-discover and
-# reach a write-capable MCP, defeating the provable read-only guarantee — open
-# discovery is the orchestrator's job, which feeds evidence down.
-for tool in Skill Write Edit Bash ToolSearch; do
-  set_test "clarify-executor does NOT have $tool"
-  assert_tool_absent "$TOOLS" "$tool" "clarify-executor"
+# ===========================================================================
+# Read-only consensus roles — mutation primitives denied
+# ===========================================================================
+# The Claude twin of the Codex agents' sandbox_mode = "read-only": consensus
+# analysts and question-prep agents must not mutate state mid-round. They
+# inherit every installed read/research capability (that is the point), and
+# capability-discovery.md's role rule covers tools the platform cannot
+# classify; the built-in mutation primitives are denied outright.
+section "Read-only roles deny built-in mutation primitives"
+
+for agent in codebase-analyst spec-context-analyst domain-researcher clarify-executor consensus-synthesizer; do
+  AGENT_FILE="$AGENTS_DIR/$agent.md"
+  DENIALS=$(extract_disallowed "$AGENT_FILE")
+
+  for tool in "${MUTATION_DENIALS[@]}"; do
+    set_test "$agent denies $tool (read-only role)"
+    assert_denied "$DENIALS" "$tool" "$agent"
+  done
+
+  set_test "$agent denies Skill (consensus workers do not re-enter phases)"
+  assert_denied "$DENIALS" "Skill" "$agent"
+
+  for tool in "${ORCHESTRATION_TOOLS[@]}"; do
+    set_test "$agent denies $tool (hyper-focused worker does not fan out)"
+    assert_denied "$DENIALS" "$tool" "$agent"
+  done
 done
 
-set_test "clarify-executor maxTurns exists and is positive"
-max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
-assert_gt "$max_turns" 0
-
-set_test "clarify-executor effort field exists"
-effort=$(extract_field "$AGENT_FILE" "effort")
-assert_not_contains "" "$effort" "effort must not be empty"
-
 # ===========================================================================
-# checklist-executor
-# ===========================================================================
-section "checklist-executor"
-
-AGENT_FILE="$AGENTS_DIR/checklist-executor.md"
-TOOLS=$(extract_tools "$AGENT_FILE")
-
-for tool in Skill Read Write Edit Bash Grep Glob WebSearch WebFetch; do
-  set_test "checklist-executor has $tool"
-  assert_tool_present "$TOOLS" "$tool" "checklist-executor"
-done
-
-set_test "checklist-executor maxTurns exists and is positive"
-max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
-assert_gt "$max_turns" 0
-
-set_test "checklist-executor effort field exists"
-effort=$(extract_field "$AGENT_FILE" "effort")
-assert_not_contains "" "$effort" "effort must not be empty"
-
-# ===========================================================================
-# analyze-executor
-# ===========================================================================
-section "analyze-executor"
-
-AGENT_FILE="$AGENTS_DIR/analyze-executor.md"
-TOOLS=$(extract_tools "$AGENT_FILE")
-
-for tool in Skill Read Write Edit Bash Grep Glob WebSearch WebFetch; do
-  set_test "analyze-executor has $tool"
-  assert_tool_present "$TOOLS" "$tool" "analyze-executor"
-done
-
-set_test "analyze-executor maxTurns exists and is positive"
-max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
-assert_gt "$max_turns" 0
-
-set_test "analyze-executor effort field exists"
-effort=$(extract_field "$AGENT_FILE" "effort")
-assert_not_contains "" "$effort" "effort must not be empty"
-
-# ===========================================================================
-# implement-executor
-# ===========================================================================
-section "implement-executor"
-
-AGENT_FILE="$AGENTS_DIR/implement-executor.md"
-TOOLS=$(extract_tools "$AGENT_FILE")
-
-for tool in Read Write Edit Bash Grep Glob; do
-  set_test "implement-executor has $tool"
-  assert_tool_present "$TOOLS" "$tool" "implement-executor"
-done
-
-# Research tools — generic web capability only. The named vendor MCP set
-# (Tavily/Context7/RepoPrompt) was removed per TACD-004 FR-002 so the
-# tool-scoping contract no longer requires a specific vendor MCP set by
-# name; capability discovery (not a hardcoded tool list) governs which
-# optional tools an agent reaches for. The named-tool prose guard below
-# enforces that the removed preference does not creep back into guidance.
-for tool in WebSearch WebFetch; do
-  set_test "implement-executor has $tool (research capability)"
-  assert_tool_present "$TOOLS" "$tool" "implement-executor"
-done
-
-set_test "implement-executor does NOT have Skill"
-assert_tool_absent "$TOOLS" "Skill" "implement-executor"
-
-set_test "implement-executor maxTurns exists and is positive"
-max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
-assert_gt "$max_turns" 0
-
-set_test "implement-executor effort field exists"
-effort=$(extract_field "$AGENT_FILE" "effort")
-assert_not_contains "" "$effort" "effort must not be empty"
-
-# ===========================================================================
-# codebase-analyst
-# ===========================================================================
-section "codebase-analyst"
-
-AGENT_FILE="$AGENTS_DIR/codebase-analyst.md"
-TOOLS=$(extract_tools "$AGENT_FILE")
-
-for tool in Read Glob Grep; do
-  set_test "codebase-analyst has $tool"
-  assert_tool_present "$TOOLS" "$tool" "codebase-analyst"
-done
-
-# Read-only contract: no write tool and no ToolSearch self-discovery (see
-# clarify-executor note). Reaches only its enumerated read capabilities.
-for tool in Write Edit Bash ToolSearch; do
-  set_test "codebase-analyst does NOT have $tool"
-  assert_tool_absent "$TOOLS" "$tool" "codebase-analyst"
-done
-
-set_test "codebase-analyst maxTurns exists and is positive"
-max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
-assert_gt "$max_turns" 0
-
-set_test "codebase-analyst effort field exists"
-effort=$(extract_field "$AGENT_FILE" "effort")
-assert_not_contains "" "$effort" "effort must not be empty"
-
-# ===========================================================================
-# spec-context-analyst
-# ===========================================================================
-section "spec-context-analyst"
-
-AGENT_FILE="$AGENTS_DIR/spec-context-analyst.md"
-TOOLS=$(extract_tools "$AGENT_FILE")
-
-for tool in Read Glob Grep; do
-  set_test "spec-context-analyst has $tool"
-  assert_tool_present "$TOOLS" "$tool" "spec-context-analyst"
-done
-
-# Read-only contract: no write tool and no ToolSearch self-discovery (see
-# clarify-executor note). Reaches only its enumerated read capabilities.
-for tool in Write Edit Bash ToolSearch; do
-  set_test "spec-context-analyst does NOT have $tool"
-  assert_tool_absent "$TOOLS" "$tool" "spec-context-analyst"
-done
-
-set_test "spec-context-analyst maxTurns exists and is positive"
-max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
-assert_gt "$max_turns" 0
-
-set_test "spec-context-analyst effort field exists"
-effort=$(extract_field "$AGENT_FILE" "effort")
-assert_not_contains "" "$effort" "effort must not be empty"
-
-# ===========================================================================
-# domain-researcher
-# ===========================================================================
-section "domain-researcher"
-
-AGENT_FILE="$AGENTS_DIR/domain-researcher.md"
-TOOLS=$(extract_tools "$AGENT_FILE")
-
-for tool in Read WebSearch WebFetch; do
-  set_test "domain-researcher has $tool"
-  assert_tool_present "$TOOLS" "$tool" "domain-researcher"
-done
-
-# Read-only contract: no write tool and no ToolSearch self-discovery (see
-# clarify-executor note). Reaches only its enumerated read capabilities.
-for tool in Write Edit Bash Glob Grep ToolSearch; do
-  set_test "domain-researcher does NOT have $tool"
-  assert_tool_absent "$TOOLS" "$tool" "domain-researcher"
-done
-
-set_test "domain-researcher maxTurns exists and is positive"
-max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
-assert_gt "$max_turns" 0
-
-set_test "domain-researcher effort field exists"
-effort=$(extract_field "$AGENT_FILE" "effort")
-assert_not_contains "" "$effort" "effort must not be empty"
-
-# ===========================================================================
-# gate-validator
+# gate-validator — validates, never fixes; needs the shell it runs gates with
 # ===========================================================================
 section "gate-validator"
 
 AGENT_FILE="$AGENTS_DIR/gate-validator.md"
-TOOLS=$(extract_tools "$AGENT_FILE")
+DENIALS=$(extract_disallowed "$AGENT_FILE")
 
-for tool in Bash Read Grep; do
-  set_test "gate-validator has $tool"
-  assert_tool_present "$TOOLS" "$tool" "gate-validator"
+for tool in Write Edit MultiEdit NotebookEdit Skill; do
+  set_test "gate-validator denies $tool (validates, never fixes)"
+  assert_denied "$DENIALS" "$tool" "gate-validator"
 done
 
-for tool in Write Edit Skill; do
-  set_test "gate-validator does NOT have $tool"
-  assert_tool_absent "$TOOLS" "$tool" "gate-validator"
+for tool in "${ORCHESTRATION_TOOLS[@]}"; do
+  set_test "gate-validator denies $tool (hyper-focused validator does not fan out)"
+  assert_denied "$DENIALS" "$tool" "gate-validator"
 done
 
-set_test "gate-validator has no mcp__ tools"
-assert_no_mcp_tools "$TOOLS" "gate-validator"
+set_test "gate-validator does NOT deny Bash (runs gate scripts)"
+assert_not_denied "$DENIALS" "Bash" "gate-validator"
 
 set_test "gate-validator model is sonnet (max-thinking policy: haiku does not support max)"
 model=$(extract_field "$AGENT_FILE" "model")
@@ -365,97 +262,78 @@ max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
 assert_gt "$max_turns" 0
 
 # ===========================================================================
-# consensus-synthesizer
+# Terminal single-task workers — deny Skill, keep mutation
 # ===========================================================================
-section "consensus-synthesizer"
+section "Terminal workers deny Skill, keep their mutation surface"
 
-AGENT_FILE="$AGENTS_DIR/consensus-synthesizer.md"
-TOOLS=$(extract_tools "$AGENT_FILE")
+for agent in implement-executor uat-runbook-author; do
+  AGENT_FILE="$AGENTS_DIR/$agent.md"
+  DENIALS=$(extract_disallowed "$AGENT_FILE")
 
-for tool in Read Grep Glob; do
-  set_test "consensus-synthesizer has $tool"
-  assert_tool_present "$TOOLS" "$tool" "consensus-synthesizer"
+  set_test "$agent denies Skill (terminal worker, no phase re-entry)"
+  assert_denied "$DENIALS" "Skill" "$agent"
+
+  for tool in Write Edit Bash; do
+    set_test "$agent does NOT deny $tool (mutating role requires it)"
+    assert_not_denied "$DENIALS" "$tool" "$agent"
+  done
 done
 
-for tool in Write Edit Bash Skill; do
-  set_test "consensus-synthesizer does NOT have $tool"
-  assert_tool_absent "$TOOLS" "$tool" "consensus-synthesizer"
+# uat-runbook-author is a hyper-focused single-file author: no fan-out.
+# (implement-executor is an OPEN executor — its non-denial is asserted above.)
+DENIALS=$(extract_disallowed "$AGENTS_DIR/uat-runbook-author.md")
+for tool in "${ORCHESTRATION_TOOLS[@]}"; do
+  set_test "uat-runbook-author denies $tool (hyper-focused worker does not fan out)"
+  assert_denied "$DENIALS" "$tool" "uat-runbook-author"
 done
-
-set_test "consensus-synthesizer has no mcp__ tools"
-assert_no_mcp_tools "$TOOLS" "consensus-synthesizer"
-
-set_test "consensus-synthesizer model is sonnet"
-model=$(extract_field "$AGENT_FILE" "model")
-assert_eq "sonnet" "$model"
-
-set_test "consensus-synthesizer effort is max (max-thinking policy)"
-effort=$(extract_field "$AGENT_FILE" "effort")
-assert_eq "max" "$effort"
-
-set_test "consensus-synthesizer maxTurns exists and is positive"
-max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
-assert_gt "$max_turns" 0
-
-# ===========================================================================
-# uat-runbook-author
-# ===========================================================================
-section "uat-runbook-author"
-
-AGENT_FILE="$AGENTS_DIR/uat-runbook-author.md"
-TOOLS=$(extract_tools "$AGENT_FILE")
-
-for tool in Read Edit Write Bash Grep Glob; do
-  set_test "uat-runbook-author has $tool"
-  assert_tool_present "$TOOLS" "$tool" "uat-runbook-author"
-done
-
-set_test "uat-runbook-author does NOT have Skill (terminal worker)"
-assert_tool_absent "$TOOLS" "Skill" "uat-runbook-author"
-
-set_test "uat-runbook-author has no mcp__ tools"
-assert_no_mcp_tools "$TOOLS" "uat-runbook-author"
 
 set_test "uat-runbook-author model is sonnet (read-and-synthesize task)"
-model=$(extract_field "$AGENT_FILE" "model")
+model=$(extract_field "$AGENTS_DIR/uat-runbook-author.md" "model")
 assert_eq "sonnet" "$model"
 
-set_test "uat-runbook-author effort is max (max-thinking policy)"
-effort=$(extract_field "$AGENT_FILE" "effort")
-assert_eq "max" "$effort"
+# ===========================================================================
+# Skill-driven executors — full surface minus orchestration
+# ===========================================================================
+section "Skill-driven executors keep Skill and their mutation surface"
 
-set_test "uat-runbook-author maxTurns exists and is positive"
-max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
-assert_gt "$max_turns" 0
+for agent in phase-executor analyze-executor checklist-executor; do
+  AGENT_FILE="$AGENTS_DIR/$agent.md"
+  DENIALS=$(extract_disallowed "$AGENT_FILE")
+
+  for tool in Skill Write Edit Bash; do
+    set_test "$agent does NOT deny $tool (skill-driven executor requires it)"
+    assert_not_denied "$DENIALS" "$tool" "$agent"
+  done
+done
 
 # ===========================================================================
-# Universal: single orchestrator invariant — no subagent may dispatch
+# Session-shape metadata every agent must carry
 # ===========================================================================
-# Enforces the architectural rule documented in
-# references/agent-teams-integration.md §Single orchestrator invariant:
-# only the main session (which loads the speckit-autopilot skill) may
-# spawn subagents or create Agent Teams. Phase agents are terminal
-# workers — they MUST NOT have the Agent tool (subagent nesting) or
-# any team-management tool (team creation).
-section "Single orchestrator invariant — universal denial"
+section "Session-shape metadata (maxTurns / effort)"
 
 for agent_file in "$AGENTS_DIR"/*.md; do
   agent_name=$(basename "$agent_file" .md)
-  TOOLS=$(extract_tools "$agent_file")
 
-  # Subagent-nesting prevention
-  set_test "$agent_name does NOT have Agent tool (subagents cannot nest)"
-  assert_tool_absent "$TOOLS" "Agent" "$agent_name"
+  set_test "$agent_name maxTurns exists and is positive"
+  max_turns=$(extract_field "$agent_file" "maxTurns")
+  assert_gt "$max_turns" 0
 
-  # Team-creation prevention — denylist known team-management tools.
-  # Per Anthropic's Agent Teams docs, team-lead is the main session;
-  # only it can create teams. Any subagent with these tools could
-  # attempt to upgrade itself to a team-lead, violating the invariant.
-  for team_tool in TeamCreate SendMessage; do
-    set_test "$agent_name does NOT have $team_tool (team-lead is main session only)"
-    assert_tool_absent "$TOOLS" "$team_tool" "$agent_name"
-  done
+  set_test "$agent_name effort field exists"
+  effort=$(extract_field "$agent_file" "effort")
+  assert_not_contains "" "$effort" "effort must not be empty"
 done
+
+set_test "phase-executor effort is max (max-thinking policy)"
+effort=$(extract_field "$AGENTS_DIR/phase-executor.md" "effort")
+assert_eq "max" "$effort"
+
+set_test "consensus-synthesizer model is sonnet"
+model=$(extract_field "$AGENTS_DIR/consensus-synthesizer.md" "model")
+assert_eq "sonnet" "$model"
+
+set_test "consensus-synthesizer effort is max (max-thinking policy)"
+effort=$(extract_field "$AGENTS_DIR/consensus-synthesizer.md" "effort")
+assert_eq "max" "$effort"
 
 # ─────────────────────────────────────────
 # Codex Agent Sandbox Mode Validation
@@ -466,7 +344,8 @@ done
 # sandbox MCP server processes — a read-only Codex agent can still cause writes
 # through an enabled write-capable MCP tool (confirmed by openai/codex; see the
 # operator note in codex-skills/install/SKILL.md). Codex agent TOMLs cannot
-# restrict tools, so closing that gap is an OPERATOR responsibility (curate
+# restrict tools (developers.openai.com/codex/subagents documents no per-tool
+# allow/deny field), so closing that gap is an OPERATOR responsibility (curate
 # write-capable MCP servers out at the profile level via enabled/enabled_tools/
 # disabled_tools). This test asserts the filesystem read-only boundary that the
 # plugin CAN enforce; the MCP boundary is documented for the operator, not
@@ -525,6 +404,16 @@ if [ -d "$CODEX_AGENTS_DIR" ]; then
     fi
   done
 
+  # autopilot-fast-helper: advisory text-only leaf on a latency-first model
+  # (deliberately not the gpt-5.5 policy model, so it sits outside the loops
+  # above); its only lever is the sandbox, which must stay read-only.
+  AGENT_FILE="$CODEX_AGENTS_DIR/autopilot-fast-helper.toml"
+  if [ -f "$AGENT_FILE" ]; then
+    sandbox=$(extract_toml_field "$AGENT_FILE" "sandbox_mode")
+    set_test "codex autopilot-fast-helper: sandbox_mode is read-only (advisory text-only leaf)"
+    assert_eq "read-only" "$sandbox" "autopilot-fast-helper must be read-only"
+  fi
+
   # Write agents must have sandbox_mode: workspace-write
   for agent in checklist-executor analyze-executor implement-executor phase-executor uat-runbook-author; do
     AGENT_FILE="$CODEX_AGENTS_DIR/${agent}.toml"
@@ -569,11 +458,11 @@ fi
 # Allowlist Recommendation" — reused, not redefined):
 #   - generic `mcp`/`MCP` vocabulary: a bare token with no `__<vendor>__`
 #     qualifier never matches the vendor-qualified pattern below;
-#   - runtime/dependency metadata IDs (the frontmatter `tools:` list, e.g.
-#     implement-executor's mcp__* entries): excluded because only the body/
-#     prose is scanned, never the frontmatter or TOML config keys;
 #   - fixtures and historical/provenance mentions: out of scope because only
 #     ACTIVE agent source is scanned (not tests/**/fixtures/** or docs/**).
+# Since the tools: allowlists were retired for an inherited operator surface,
+# the frontmatter carries no vendor-qualified IDs either (enforced above by
+# the frontmatter guard), so prose and metadata are BOTH vendor-neutral.
 # An explicit literal allowlist (PROSE_TOKEN_ALLOWLIST) covers the rare case of
 # an active-agent prose token that is legitimate metadata; it is an enumerated
 # set (not a heuristic) and is empty by default — no active-agent prose

@@ -8,18 +8,7 @@ description: >
   answer/apply. It never edits artifacts and never waits on a user.
 model: opus
 color: pink
-tools:
-  - Read
-  - Grep
-  - Glob
-  - WebSearch
-  - WebFetch
-  - mcp__tavily-mcp__tavily-search
-  - mcp__tavily-mcp__tavily-extract
-  - mcp__context7__resolve-library-id
-  - mcp__context7__get-library-docs
-  - mcp__RepoPrompt__context_builder
-  - mcp__RepoPrompt__file_search
+disallowedTools: Write, Edit, MultiEdit, NotebookEdit, Bash, Skill, Agent, TeamCreate, SendMessage
 maxTurns: 35
 effort: max
 ---

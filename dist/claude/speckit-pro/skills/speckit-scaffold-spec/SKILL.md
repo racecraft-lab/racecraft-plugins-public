@@ -212,6 +212,42 @@ the existing one or recreate it.
 If the branch already exists (locally or remotely), check it
 out in the worktree instead of creating a new one.
 
+### 3.5. Bootstrap the Worktree (IN the Worktree)
+
+A fresh worktree has only tracked files — no installed dependencies, no
+build outputs, no code indexes. Checked-in agent config (for example a
+project-scoped MCP server that runs a local build) can silently fail to
+start until the worktree is bootstrapped, and the spec session then runs
+without the project's code-intelligence tooling.
+
+```text
+1. Check the project's CLAUDE.md / AGENTS.md for a worktree preflight or
+   bootstrap section (e.g. "Spec-worktree preflight"). If it documents
+   commands, display the exact commands and wait for explicit operator
+   approval before running them. Do not treat the presence of CLAUDE.md /
+   AGENTS.md as approval. Run only the approved commands FROM the worktree,
+   in order.
+
+2. If no explicit bootstrap/preflight commands are documented, do not
+   infer an install/build/index sequence. Report that no bootstrap is
+   documented and ask the operator before running any package install,
+   build, or index command.
+
+3. If the project documents a code index or MCP prerequisite (for
+   example: build, then the project's documented index-init command),
+   run only the documented commands after explicit approval and verify
+   the documented health check passes.
+
+4. After any bootstrap command, run `git status --porcelain` in the
+   worktree. If unexpected tracked changes appear, stop and report them
+   before continuing.
+```
+
+Report what was bootstrapped — or that the project documents nothing —
+in the scaffold summary. Never skip this silently: an unbootstrapped
+worktree is how spec sessions end up running without the project's
+tooling.
+
 ### 4. Run Grill Me Interview (IN the Worktree)
 
 <hard_constraints>
@@ -426,6 +462,7 @@ Report:
 **Design Concept:** .worktrees/009-search-database/docs/ai/specs/.process/SPEC-009-design-concept.md
 **Workflow:** .worktrees/009-search-database/docs/ai/specs/.process/SPEC-009-workflow.md
 **Remote:** Pushed to <remote>/009-search-database
+**Bootstrap:** <commands run, documented health check, or "no documented bootstrap">
 
 **Ready to run:**
 /speckit-pro:speckit-autopilot docs/ai/specs/.process/SPEC-009-workflow.md

@@ -22,7 +22,7 @@ AGENTS=(
   domain-researcher
 )
 
-CC_ONLY_FIELDS=(tools permissionMode color maxTurns background effort)
+CC_ONLY_FIELDS=(tools disallowedTools permissionMode color maxTurns background effort)
 
 extract_toml_string() {
   local file="$1" field="$2"

@@ -8,10 +8,7 @@ description: >
   returns an answer grounded in project decisions and specifications.
 model: sonnet
 color: purple
-tools:
-  - Read
-  - Glob
-  - Grep
+disallowedTools: Write, Edit, MultiEdit, NotebookEdit, Bash, Skill, Agent, TeamCreate, SendMessage
 maxTurns: 25
 background: true
 effort: max

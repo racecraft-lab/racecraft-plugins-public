@@ -482,8 +482,38 @@ class RunnerFoundationTests(unittest.TestCase):
             "dist/codex/speckit-pro/speckit_pro_runner/",
             "docs/ai/specs/.process/XPLAT-008",
         )
+        allowed_tool_surface_exact = {
+            # Operator-owned tool surface (tools: allowlist retirement):
+            # capability-discovery role boundaries and the single-orchestrator
+            # invariant moved to denial-based enforcement (disallowedTools);
+            # dist mirrors rebuilt by scripts/build-plugin-payloads.sh.
+            "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
+            "speckit-pro/skills/speckit-autopilot/references/capability-discovery.md",
+            "dist/claude/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
+            "dist/claude/speckit-pro/skills/speckit-autopilot/references/capability-discovery.md",
+            "dist/codex/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
+            "dist/codex/speckit-pro/skills/speckit-autopilot/references/capability-discovery.md",
+        }
         for path in changed:
-            if path in allowed_exact or path in allowed_xplat008_exact:
+            if (
+                path in allowed_exact
+                or path in allowed_xplat008_exact
+                or path in allowed_tool_surface_exact
+            ):
+                continue
+            if path.startswith("dist/claude/speckit-pro/agents/") and path.endswith(".md"):
+                source_agent = path.removeprefix("dist/claude/")
+                dist_agent_path = REPO_ROOT / path
+                source_agent_path = REPO_ROOT / source_agent
+                self.assertNotEqual(status_by_path.get(path), "D", path)
+                self.assertIn(source_agent, changed, path)
+                self.assertTrue(source_agent_path.is_file(), source_agent)
+                self.assertTrue(dist_agent_path.is_file(), path)
+                self.assertEqual(
+                    source_agent_path.read_text(encoding="utf-8"),
+                    dist_agent_path.read_text(encoding="utf-8"),
+                    path,
+                )
                 continue
             if path.startswith("dist/") and "/scripts/" in path and path.endswith(".sh"):
                 self.assertEqual(status_by_path.get(path), "D", path)

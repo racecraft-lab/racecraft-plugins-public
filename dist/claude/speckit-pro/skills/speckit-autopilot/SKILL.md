@@ -48,13 +48,25 @@ Agent Team, model routing, lifecycle sequencing — happens HERE. Phase
 executors are terminal workers; they don't dispatch, don't branch on
 `AGENT_TEAMS_AVAILABLE`, don't create teams.
 
-Runtime enforcement: no phase agent has `Agent` or team-management
-tools (`TeamCreate`/`sendMessage`/`taskUpdate`) in its allowlist
-(Layer 5 verifies). **If this skill is ever loaded inside a subagent
+Runtime enforcement is two-tier (Layer 5 verifies both): the
+hyper-focused single-purpose workers (the consensus analysts,
+clarify-executor, gate-validator, uat-runbook-author) explicitly deny
+`Agent`/`TeamCreate`/`SendMessage` via `disallowedTools` so they stay
+on their one job; the open workhorse executors (phase-, analyze-,
+checklist-, implement-executor) keep the operator's full surface —
+including orchestration tools — and the invariant there is carried by
+this skill owning all PHASE dispatch plus each executor's
+terminal-worker prompt, never by a capability block. **If this skill is ever loaded inside a subagent
 context**, it MUST refuse rather than orchestrate. Full invariant +
 implications for new workstreams in
 [`references/agent-teams-integration.md`](./references/agent-teams-integration.md)
 §Single orchestrator invariant.
+
+The no-allowlist rule is about **agent definitions**: Claude agents must omit
+`tools:` so they inherit the operator's installed surface. This skill's
+frontmatter may still declare Claude `allowed-tools` to authorize the
+orchestrator's core primitives; that declaration is not an MCP/vendor
+availability list and does not replace runtime capability discovery.
 
 ## Prerequisites — Model & Effort
 
@@ -324,9 +336,11 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    registry. Select best-fit per
    [`references/capability-discovery.md`](./references/capability-discovery.md) —
    do not assume a fixed set; the user may have installed anything. Your phase
-   and consensus subagents run with **curated, bounded allowlists and do NOT
-   self-discover**, so when you dispatch one, pass the discovered evidence and
-   capability context it needs directly in its prompt. Ground your OWN output
+   and consensus subagents inherit the operator's full installed surface and
+   follow the same directive — read-only roles select only read/research
+   capabilities (their mutation built-ins are denied). Still pass the
+   discovered evidence and capability context a subagent needs directly in its
+   prompt: shared context beats re-discovery. Ground your OWN output
    (gate decisions, consensus synthesis, generated PR bodies) per
    [`references/grounding.md`](./references/grounding.md): every external fact
    you assert must cite a real tool/skill/file result, and you abstain when

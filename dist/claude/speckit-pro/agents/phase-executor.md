@@ -13,14 +13,6 @@ description: >
   markers found, and errors.
 model: opus
 color: cyan
-tools:
-  - Skill
-  - Read
-  - Write
-  - Edit
-  - Bash
-  - Grep
-  - Glob
 maxTurns: 50
 effort: max
 ---

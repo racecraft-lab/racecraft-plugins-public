@@ -236,6 +236,33 @@ full worktree path should follow the pattern `.worktrees/<number>-<short-slug>`,
 for example `.worktrees/009-search-database`. Use a different root only if the
 user provides an explicit override.
 
+### 3.5. Bootstrap the worktree (in the worktree)
+
+A fresh worktree has only tracked files — no installed dependencies, no build
+outputs, no code indexes. Checked-in agent config (for example a project-scoped
+MCP server that runs a local build) can silently fail to start until the
+worktree is bootstrapped, and the spec session then runs without the project's
+code-intelligence tooling.
+
+1. Check the project's AGENTS.md / CLAUDE.md for a worktree preflight or
+   bootstrap section (for example "Spec-worktree preflight"). If it documents
+   commands, display the exact commands and wait for explicit operator approval
+   before running them. Do not treat the presence of AGENTS.md / CLAUDE.md as
+   approval. Run only the approved commands from the worktree, in order.
+2. If no explicit bootstrap/preflight commands are documented, do not infer an
+   install/build/index sequence. Report that no bootstrap is documented and ask
+   the operator before running any package install, build, or index command.
+3. If the project documents a code index or MCP prerequisite (for example:
+   build, then the project's documented index-init command), run only the
+   documented commands after explicit approval and verify the documented health
+   check passes.
+4. After any bootstrap command, run `git status --porcelain` in the worktree. If
+   unexpected tracked changes appear, stop and report them before continuing.
+
+Report what was bootstrapped — or that the project documents nothing — in the
+scaffold summary. Never skip this silently: an unbootstrapped worktree is how
+spec sessions end up running without the project's tooling.
+
 ### 4. Run the Grill Me interview (in the worktree)
 
 Before writing the workflow file, run an iterative scoping interview so the
@@ -422,6 +449,8 @@ Finish with a concise scaffold report that includes:
 - design concept path
 - workflow path
 - remote branch that was pushed
+- bootstrap result from step 3.5, including commands run and health check, or
+  `no documented bootstrap`
 - the exact next step: run `$speckit-autopilot` with the generated
   workflow file (Codex skills are invoked via `$skill-name`, not via
   any `/<plugin>:<skill>` slash command — see openai/codex#7480)

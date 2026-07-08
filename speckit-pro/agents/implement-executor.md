@@ -9,20 +9,7 @@ description: >
   tasks in the autopilot implement phase.
 model: opus
 color: red
-tools:
-  - Read
-  - Write
-  - Edit
-  - Bash
-  - Grep
-  - Glob
-  - WebSearch
-  - WebFetch
-  - mcp__tavily-mcp__tavily-search
-  - mcp__context7__resolve-library-id
-  - mcp__context7__get-library-docs
-  - mcp__RepoPrompt__file_search
-  - mcp__RepoPrompt__context_builder
+disallowedTools: Skill
 maxTurns: 50
 effort: max
 memory: project
