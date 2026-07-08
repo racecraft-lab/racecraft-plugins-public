@@ -307,6 +307,8 @@ def regenerate_evidence(repo_root: Path, runner_root: Path) -> list[str]:
     changed: list[str] = []
 
     completeness = run_runner_request(repo_root, runner_root, PAYLOAD_COMPLETENESS_REQUEST)
+    if completeness.get("status") != "ok":
+        fail(f"payload-completeness gate did not pass (status={completeness.get('status')})")
     changed += write_text_if_changed(
         repo_root / PAYLOAD_COMPLETENESS_RESULT, json.dumps(completeness, indent=2) + "\n", repo_root
     )
