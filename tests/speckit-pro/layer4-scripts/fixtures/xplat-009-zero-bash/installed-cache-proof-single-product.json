@@ -7,7 +7,7 @@
       "surface": "claude_payload_fixture",
       "installed_root": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache/claude/speckit-pro",
       "source_payload_root": "dist/claude/speckit-pro",
-      "source_payload_tree_hash": "f1491f04fbe113991946b47bcfefe62e0987ec8727f31ceb0d08b180aef9c2a0",
+      "source_payload_tree_hash": "6139fa87858bbe8ddba02c1c1abe5c43646fe07df02a6306526558fcef7f03c6",
       "source_derived": true,
       "mutable_user_cache": false,
       "script_file_count": 0,

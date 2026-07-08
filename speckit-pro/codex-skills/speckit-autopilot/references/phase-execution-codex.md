@@ -133,7 +133,7 @@ non-zero tool result propagate and abort the run:
 
 ```text
 plan = "specs/<feature>/plan.md"
-python3 -m speckit_pro_runner < request.json
+resolved_python -m speckit_pro_runner < request.json
 
 request.json:
 {
@@ -145,6 +145,9 @@ request.json:
   "inputs": {"plan_file": "specs/<feature>/plan.md"}
 }
 ```
+
+`resolved_python` is the Python 3.11+ interpreter resolved by the installed
+runtime contract, not a hardcoded interpreter name.
 
 The three budget statuses (`pass`, `over_budget`, `not_estimated`) all return
 runner status `ok` with the verdict in the helper stdout JSON `status` field;

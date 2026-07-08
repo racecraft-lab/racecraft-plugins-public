@@ -683,7 +683,7 @@ multiple small PRs safely. Splittability is judged by structural seams
 abort the run:
 
 ```text
-out = exec_command("python -m speckit_pro_runner < atomicity-route request for specs/<feature>")
+out = exec_command("resolved_python -m speckit_pro_runner < atomicity-route request for specs/<feature>")
 # stdout is one decision object: {route, releasable, signals[], hints[],
 # warnings[]} on success, or {"error": <string>} with exit 2.
 ```
@@ -980,7 +980,7 @@ PR URL.
 
 Deterministic prerequisite checks, validation, reviewability, routing, payload,
 and PR-preparation behavior is owned by `speckit_pro_runner`. Invoke
-`python -m speckit_pro_runner` with one JSON request on stdin and use the
+`resolved_python -m speckit_pro_runner` with one JSON request on stdin and use the
 registered helper or gate operation IDs below.
 
 - `check-prerequisites` — Verify CLI, project init, constitution, commands,

@@ -1628,7 +1628,7 @@ def find_specify() -> str | None:
     path = shutil.which("specify")
     if path:
         return path
-    home = Path(os.environ.get("HOME", ""))
+    home = Path.home()
     local = home / ".local" / "bin" / "specify"
     return str(local) if local.is_file() else None
 
