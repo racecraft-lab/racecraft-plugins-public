@@ -56,7 +56,7 @@ commands and scripts:
 | ----------- | ---------------------------------------- | --------------------------------------------------------- |
 | **Core phase skills** | `.claude/skills/speckit-*/SKILL.md` | Skills that orchestrate each SDD phase (specify/plan/tasks/clarify/checklist/analyze/implement) — SpecKit v0.8.13+ |
 | **Extension commands** | `.claude/commands/speckit.*.md` | Slash commands provided by SpecKit extensions (verify, retrospective, …) |
-| **Scripts** | `.specify/scripts/bash/` | Shell scripts for branch creation, path resolution, prerequisite checking |
+| **Scripts** | `.specify/scripts/<type>/` | Shell scripts for branch creation, path resolution, prerequisite checking |
 | **Templates** | `.specify/templates/` | Spec, plan, tasks, checklist, and agent file templates |
 | **Constitution** | `.specify/memory/constitution.md` | Project principles for gate validation |
 
@@ -64,11 +64,11 @@ commands and scripts:
 
 | Script | Used By | What It Does |
 | -------- | --------- | ----------- |
-| `common.sh` | All scripts | Branch detection (`get_current_branch`), feature path resolution (`get_feature_paths`, `find_feature_dir_by_prefix`) |
-| `create-new-feature.sh` | `/speckit-specify` | Creates git branch, `specs/` dir, copies spec template. Supports `--json`, `--short-name`, `--number` |
-| `setup-plan.sh` | `/speckit-plan` | Copies plan template to feature dir. Outputs `FEATURE_SPEC`, `IMPL_PLAN`, `SPECS_DIR`, `BRANCH` |
-| `check-prerequisites.sh` | `/speckit-clarify`, `.checklist`, `.tasks`, `.analyze`, `.implement` | Validates feature dir + required files exist. Supports `--json`, `--require-tasks`, `--include-tasks`, `--paths-only` |
-| `update-agent-context.sh` | `/speckit-plan` | Updates CLAUDE.md with tech stack extracted from plan.md |
+| `common` | All scripts | Branch detection (`get_current_branch`), feature path resolution (`get_feature_paths`, `find_feature_dir_by_prefix`) |
+| `create-new-feature` | `/speckit-specify` | Creates git branch, `specs/` dir, copies spec template. Supports `--json`, `--short-name`, `--number` |
+| `setup-plan` | `/speckit-plan` | Copies plan template to feature dir. Outputs `FEATURE_SPEC`, `IMPL_PLAN`, `SPECS_DIR`, `BRANCH` |
+| `check-prerequisites` | `/speckit-clarify`, `.checklist`, `.tasks`, `.analyze`, `.implement` | Validates feature dir + required files exist. Supports `--json`, `--require-tasks`, `--include-tasks`, `--paths-only` |
+| `update-agent-context` | `/speckit-plan` | Updates CLAUDE.md with tech stack extracted from plan.md |
 
 ## Subagent Delegation
 
@@ -114,14 +114,14 @@ The `speckit-pro:phase-executor` handles summary formatting and the
 
 Before executing any phase, detect the current branch context:
 
-```bash
+```text
 # Detect current branch
-CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+CURRENT_BRANCH=<command output>
 
 # Check if in a worktree
-GIT_DIR=$(git rev-parse --git-dir 2>/dev/null)
-GIT_COMMON=$(git rev-parse --git-common-dir 2>/dev/null)
-IS_WORKTREE=$( [ "$GIT_DIR" != "$GIT_COMMON" ] && echo "true" || echo "false" )
+GIT_DIR=<command output>
+GIT_COMMON=<command output>
+IS_WORKTREE=<command output>
 ```
 
 Record two facts:
@@ -197,14 +197,14 @@ the command into your context and can kill the agent loop.
 During pre-flight, the parent may inspect the active workflow target and nearby
 legacy spec candidates for Tier-2 PROCESS relocation. This is static
 inspection/reporting only. It does not run
-`relocate-process-artifacts.sh`.
+`relocate-process-artifacts`.
 
 Suggest relocation only for thawed in-scope legacy specs with relocatable
 PROCESS artifacts. For each eligible spec, print:
 
 ```text
-speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --dry-run --spec specs/<spec-dir> --repo-root .
-speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --apply --spec specs/<spec-dir> --repo-root .
+runner helper relocate-process-artifacts --dry-run --spec specs/<spec-dir> --repo-root .
+runner helper relocate-process-artifacts --apply --spec specs/<spec-dir> --repo-root .
 ```
 
 The `--apply` line is an operator follow-up after reviewing dry-run output and
@@ -225,7 +225,7 @@ Agent(description: "SPEC-XXX specify", prompt: "...")
 
 **Branch-aware:** If `ON_FEATURE_BRANCH` is true, add
 prefix: "Already on feature branch `<branch>`. Do NOT run
-`create-new-feature.sh`. Skip to spec content generation."
+`create-new-feature`. Skip to spec content generation."
 
 **Gate:** G1 — check subagent summary for
 `[NEEDS CLARIFICATION]` markers (routing decision)
@@ -299,21 +299,29 @@ any code is written. It is **advisory only**: no outcome blocks, prompts
 mid-autonomous-run, or aborts the run (hard blocking / re-slicing is PRSG-010,
 explicitly out of scope here).
 
-Because the autopilot harness runs under `set -euo pipefail`, the invocation
-MUST be guarded so a non-zero exit cannot trip `errexit` and abort the run —
-capture the exit code instead of letting it propagate:
+Invoke runner helper `estimate-reviewable-loc` from the parent session and
+capture the structured response instead of letting a failed helper response
+abort the run:
 
-```bash
-plan="specs/<feature>/plan.md"
-code=0
-out=$("<SKILL_SCRIPTS>/estimate-reviewable-loc.sh" "$plan") || code=$?
+```text
+python3 -m speckit_pro_runner < request.json
+
+request.json:
+{
+  "schema_version": "1.0",
+  "request_id": "plan-reviewability-budget",
+  "helper_id": "estimate-reviewable-loc",
+  "operation": "estimate-reviewable-loc",
+  "mode": "read_only",
+  "inputs": {"plan_file": "specs/<feature>/plan.md"}
+}
 ```
 
 The three budget statuses (`pass`, `over_budget`, `not_estimated`) all return
-exit 0 with the verdict in the JSON `status` field; a non-zero exit (exit 2:
-usage error or an absent/unreadable `plan.md`) is the only error path. Branch on
-the JSON `status` (read with `jq`) when `code == 0`, and on the exit code
-otherwise:
+runner status `ok` with the verdict in the helper stdout JSON `status` field;
+`input_error` is the error path for usage errors or an absent/unreadable
+`plan.md`. Branch on the helper stdout JSON `status` when the runner response is
+`ok`, and on diagnostics otherwise:
 
 - **`pass`** → log "within budget" and record it in the workflow/plan record
   (silent — no prompt, no block).
@@ -325,16 +333,15 @@ otherwise:
 - **`not_estimated`** (`projected: null` — `plan.md` has no parseable declared
   production-file structure) → record "not estimated (no declared production
   files)" and continue. Never treat this as a within-budget pass.
-- **non-zero exit** (exit 2) → record "estimator could not run (exit N)" and
+- **diagnostic response** → record "estimator could not run" with the diagnostic code and
   continue the autonomous run.
 
-This mirrors the established gate-handling pattern below (the G6/G6.5 steps read
-the gate's exit code and branch on it rather than aborting).
+This mirrors the established gate-handling pattern below: read the structured
+runner response and branch on it rather than aborting.
 Advisory-and-never-crash is the invariant for every outcome — under-budget,
 over-budget, unmeasured, or errored — none may block, prompt mid-autonomous-run,
-or crash the run. The estimator does not yet exist on older plugin builds; when
-the script is absent the guarded invocation records the non-zero exit note and
-continues, same as any other error path.
+or crash the run. If the helper is unavailable on an older plugin build, record
+the diagnostic note and continue, same as any other error path.
 
 **Gate:** G3 — verify plan.md, research.md, data-model.md
 exist
@@ -420,9 +427,9 @@ TaskUpdate: → completed
 After G5 and Verify Tasks pass, run the task reviewability gate without letting
 the script's compatibility exit code abort the run:
 
-```bash
+```text
 code=0
-out=$("<SKILL_SCRIPTS>/reviewability-gate.sh" tasks "specs/<feature>") || code=$?
+out=<command output> || code=$?
 ```
 
 Parse stdout as JSON and record stdout, stderr, exit code, gate
@@ -467,10 +474,10 @@ no file of its own; **the SKILL records that decision** into the
 workflow file's `## Atomicity Route` section. It is advisory-only —
 no outcome blocks the run.
 
-```bash
+```text
 # Single positional arg = the feature dir holding tasks.md/plan.md/spec.md.
 # Emits {route, releasable, signals[], hints[], warnings[]} (or {"error":…}).
-out=$("<SKILL_SCRIPTS>/atomicity-route.sh" "specs/<feature>")
+out=<command output>
 ```
 
 Then record the four surfaced fields (`route`, `releasable`,
@@ -563,7 +570,7 @@ to proceed, surface a remediation hint, or stop.
 ```
 1. Read mode from `CONFIDENCE_GATE_MODE` (set at Step 0.6b — see
    [Prerequisites](./prerequisites.md) and the SKILL.md orchestration
-   summary). Do not re-run `resolve-confidence-mode.sh` here —
+   summary). Do not re-run `resolve-confidence-mode` here —
    the resolver runs once at autopilot start so `--strict --advisory`
    conflicts fail fast before any phase work happens, instead of
    surfacing 6 phases in.
@@ -580,7 +587,7 @@ to proceed, surface a remediation hint, or stop.
    not first-class — the 3-iteration cap is the safety bound."
 
 4. Run the gate:
-     bash speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh \
+     runner helper confidence-gate \
        <workflow-file> --threshold <T> --mode <M>
 
 5. Parse exit code + JSON:
@@ -603,7 +610,7 @@ to proceed, surface a remediation hint, or stop.
               consensus-synthesizer agent (single fan-out) to
               re-emit the pre-Implement Confidence block to the
               workflow file.
-            - Re-run confidence-gate.sh.
+            - Re-run confidence-gate.
             - Increment iteration_count.
        c. If iteration_count == 3 OR exit 0 reached: stop iterating.
        d. After max iterations:
@@ -736,7 +743,7 @@ For each phase group in tasks.md:
         Wait for ALL to complete.
 
       # Safety net for either path: verify no regression
-      Run Bash("<TYPECHECK> && <UNIT_TEST>") in the orchestrator.
+      Run Command("<TYPECHECK> && <UNIT_TEST>") in the orchestrator.
       If FAIL:
         Log regression to workflow file.
         Re-run the tasks SERIALLY (one foreground agent each):
@@ -800,8 +807,8 @@ For each phase group in tasks.md:
   }
 
   Phase-group verification (orchestrator-direct):
-    Bash(BUILD) && Bash(TYPECHECK) && Bash(LINT) &&
-    Bash(UNIT_TEST)
+    Command(BUILD) && Command(TYPECHECK) && Command(LINT) &&
+    Command(UNIT_TEST)
     If any fail → dispatch fix agent, re-run.
 
   TaskUpdate: "<Phase 7: group name>" → completed
@@ -813,8 +820,8 @@ After all phase groups complete:
 
 ```text
 Run FULL_VERIFY:
-  Bash(BUILD) && Bash(TYPECHECK) && Bash(LINT) &&
-  Bash(UNIT_TEST) && Bash(INTEGRATION_TEST)
+  Command(BUILD) && Command(TYPECHECK) && Command(LINT) &&
+  Command(UNIT_TEST) && Command(INTEGRATION_TEST)
 ```
 
 #### Agent Routing Table
@@ -824,7 +831,7 @@ Run FULL_VERIFY:
 | Contract/unit/integration tests | `speckit-pro:implement-executor` | Yes |
 | Implementation needing project patterns | PROJECT_IMPLEMENTATION_AGENT | Yes |
 | Research / API investigation | `speckit-pro:domain-researcher` | No |
-| Verification (build, lint, typecheck) | orchestrator-direct (Bash) | No |
+| Verification (build, lint, typecheck) | orchestrator-direct (command tool) | No |
 
 Every agent receiving implementation work gets the TDD protocol
 injected. Agent selection is about DOMAIN EXPERTISE — the
@@ -857,13 +864,13 @@ map-affecting boundary — that is the failure this ordering avoids.
 
 **Step (run at each boundary, before the Commit step):**
 
-```bash
+```text
 # Write mode (NO --check): regenerate over the autopilot's target repo.
 # Pass "$PWD" explicitly — do NOT rely on the generator's default
 # REPO_ROOT. In a cached-plugin run the default resolves to the plugin
 # cache's parent, not the user's project, so the explicit arg is required
-# (same path-prefix + "$PWD" convention as generate-pr-body.sh below).
-skills/speckit-autopilot/scripts/generate-spec-index.sh "$PWD"
+# (same path-prefix + "$PWD" convention as generate-pr-body below).
+runner helper generate-spec-index "$PWD"
 ```
 
 **Act on the result:**
@@ -911,7 +918,7 @@ regressions from other specs.
 2. If missing → spawn implement-executor to create them
    (the Implement phase failed to meet this requirement)
 3. Run the FULL integration suite (all specs, not just new):
-   `Bash("<INTEGRATION_TEST command>")`
+   `Command("<INTEGRATION_TEST command>")`
 4. Fix any failures (max 2 attempts)
 5. Record results in workflow file
 
@@ -1010,10 +1017,10 @@ After G7 passes:
 Step 1: Run final verification suite (build, typecheck, lint, test)
 Step 2: Detect remote name: git remote -v
 Step 3: Push branch: git push -u <remote> <branch>
-Step 4: Run final reviewability backstop:
-  skills/speckit-autopilot/scripts/final-reviewability-backstop.sh --feature-dir specs/<number>-<name> --feature-branch <branch> --diff-range origin/main...HEAD --state-output specs/<number>-<name>/.process/final-reviewability/gate-state.json --packet-output specs/<number>-<name>/.process/final-reviewability/reslicing-packet.json ...
+Step 4: Apply final reviewability boundary:
+  Use current committed reviewability evidence; if none is current, stop before PR side effects because final-reviewability-backstop is deferred.
 Step 5: If the backstop proceeds, generate PR body:
-  skills/speckit-autopilot/scripts/generate-pr-body.sh "$PWD" specs/<number>-<name> .git/speckit-pr-body.md origin/main...HEAD
+  runner helper generate-pr-body "$PWD" specs/<number>-<name> .git/speckit-pr-body.md origin/main...HEAD
 Step 6: Create PR via gh CLI:
   gh pr create \
     --title "feat(SPEC-XXX): <Spec Name>" \
@@ -1030,8 +1037,8 @@ marker emission even if the final full-diff result is only `pass` or `warn`.
 A full-diff size block with current marker evidence also proceeds to marker
 emission and is not a manual re-slicing stop. Exit 1 means `reslicing_required`
 only for unexcepted
-correctness or missing-marker cases: do not run `generate-pr-body.sh`, do not
-invoke any `gh pr create` variant, and do not run `multi-pr-emission.sh` yet.
+correctness or missing-marker cases: do not run `generate-pr-body`, do not
+invoke any `gh pr create` variant, and do not run `multi-pr-emission` yet.
 This blocks only PR side effects. It is not a final response condition: read
 `autopilot_continuation`, `operator_steps`, and `resume.resume_from`; continue
 inside the same autopilot run through PRSG-007, regenerate PRSG-008, or hand off
@@ -1064,8 +1071,8 @@ Skill("loop", args: "5m
   comments and resolve them.
 
   Step 1 — Fetch reviews and comments:
-  Bash('gh api repos/<REPO>/pulls/<PR_NUMBER>/reviews ...')
-  Bash('gh api repos/<REPO>/pulls/<PR_NUMBER>/comments ...')
+  Command('gh api repos/<REPO>/pulls/<PR_NUMBER>/reviews ...')
+  Command('gh api repos/<REPO>/pulls/<PR_NUMBER>/comments ...')
 
   Step 2 — If 0 unresolved, report and stop.
 

@@ -196,7 +196,7 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 
 ### Gate Validator
 
-- **Purpose:** Runs gate validation scripts (marker checks, metric thresholds) and returns pass/fail with structured JSON evidence.
+- **Purpose:** Runs gate validation commands (marker checks, metric thresholds) and returns pass/fail with structured JSON evidence.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro gate-validator agent
 - **Claude Code:** gate-validator.md plugin agent source

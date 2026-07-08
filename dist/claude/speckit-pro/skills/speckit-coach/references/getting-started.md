@@ -25,19 +25,19 @@ A guided walkthrough for developers new to Spec-Driven Development. This covers 
 
 ### 1. Install the SpecKit CLI
 
-```bash
+```text
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 ```
 
 Verify it works:
 
-```bash
+```text
 specify check
 ```
 
 ### 2. Initialize SpecKit in Your Project
 
-```bash
+```text
 cd your-project
 specify init --integration claude
 ```
@@ -54,7 +54,7 @@ specify init --integration claude
 | `--no-git` | Skip git initialization |
 | `--preset <name>` | Install a preset during initialization |
 | `--branch-numbering <strategy>` | Branch numbering strategy, e.g. `sequential` (001-feature prefixes) |
-| `--script sh\|ps` | Script type (bash or PowerShell) |
+| `--script <type>` | Project script type |
 | `--skip-tls` | Disable SSL/TLS verification |
 | `--debug` | Verbose troubleshooting output |
 | `--ignore-agent-tools` | Skip agent availability checks |
@@ -96,7 +96,7 @@ This creates:
 | Directory/File | Purpose |
 |---|---|
 | `.specify/templates/` | Templates that guide each SpecKit command |
-| `.specify/scripts/bash/` | Helper scripts (prerequisites, branch creation, plan setup) |
+| `.specify/scripts/<type>/` | Helper scripts (prerequisites, branch creation, plan setup) |
 | `.specify/memory/constitution.md` | Your project's constitution (starts as template) |
 | `.claude/skills/speckit-*/SKILL.md` | Core SDD phase skills for Claude Code (SpecKit v0.8.13+) |
 | `.claude/commands/speckit.*.md` | Extension-provided slash commands for Claude Code |
@@ -106,7 +106,7 @@ This creates:
 
 SpecKit auto-detects your feature from the current Git branch:
 
-```bash
+```text
 git checkout -b feature/my-new-feature
 ```
 
@@ -116,7 +116,7 @@ The branch name becomes the feature identifier. All spec artifacts go to `specs/
 
 Before writing any specs, establish your project's principles:
 
-```bash
+```text
 /speckit-constitution
 ```
 
@@ -129,7 +129,7 @@ Tell the agent about your project: tech stack, testing philosophy, code style pr
 Presets override templates to enforce methodology, compliance,
 or project-specific patterns:
 
-```bash
+```text
 specify preset search                          # browse available
 specify preset add <preset-name>               # install one
 specify preset add --dev ./my-preset           # install local preset
@@ -143,7 +143,7 @@ See the [Presets & Extensions Guide](./presets-extensions-guide.md) for details.
 Extensions add new commands and hooks — code review, verification,
 integration with Jira/Azure DevOps, and more:
 
-```bash
+```text
 specify extension search                       # browse 26+ community extensions
 specify extension add verify --from <zip-url>  # install from URL
 specify extension list                         # show installed
@@ -155,7 +155,7 @@ See the [Presets & Extensions Guide](./presets-extensions-guide.md) for the full
 
 If you already have SpecKit installed and want the latest version:
 
-```bash
+```text
 # 1. Upgrade CLI
 uv tool install specify-cli --force --from git+https://github.com/github/spec-kit.git
 
@@ -179,7 +179,7 @@ specify check
 For projects without Git, set the `SPECIFY_FEATURE` environment
 variable to tell SpecKit which feature directory to use:
 
-```bash
+```text
 export SPECIFY_FEATURE="001-my-feature"
 ```
 
@@ -191,7 +191,7 @@ This replaces the auto-detection from Git branch names.
 
 Before writing your first SpecKit spec, consider running `/speckit-pro:grill-me` against your raw idea, brief, or stakeholder transcript:
 
-```bash
+```text
 /speckit-pro:grill-me docs/raw-idea.md
 /speckit-pro:grill-me notes/stakeholder-meeting.txt
 /speckit-pro:grill-me "gamification overhaul for the user dashboard"
@@ -212,7 +212,7 @@ Here's what the full process looks like for a single feature, from idea to worki
 
 ### Phase 1: Specify — Define WHAT and WHY
 
-```bash
+```text
 /speckit-specify
 
 I need a user authentication system. Users should be able to:
@@ -258,7 +258,7 @@ Before moving on, verify:
 
 Only run this if the spec has `[NEEDS CLARIFICATION]` markers or areas you're unsure about.
 
-```bash
+```text
 /speckit-clarify Focus on API: session token format, rate limiting thresholds, password reset flow
 ```
 
@@ -270,7 +270,7 @@ Only run this if the spec has `[NEEDS CLARIFICATION]` markers or areas you're un
 
 ### Phase 3: Plan — Define HOW
 
-```bash
+```text
 /speckit-plan
 
 Tech Stack:
@@ -316,7 +316,7 @@ Don't guess which domains to check. Analyze what's in your spec:
 
 Run enriched prompts for each domain:
 
-```bash
+```text
 /speckit-checklist security
 
 Focus on user authentication requirements:
@@ -327,7 +327,7 @@ Focus on user authentication requirements:
 - Pay special attention to: secrets management and credential storage
 ```
 
-```bash
+```text
 /speckit-checklist api-contracts
 
 Focus on auth endpoint requirements:
@@ -345,7 +345,7 @@ Focus on auth endpoint requirements:
 
 ### Phase 5: Tasks — Break Into Implementable Chunks
 
-```bash
+```text
 /speckit-tasks
 
 Task structure:
@@ -378,7 +378,7 @@ Task structure:
 
 ### Phase 6: Analyze — Catch Issues Before Coding
 
-```bash
+```text
 /speckit-analyze
 
 Focus on:
@@ -402,7 +402,7 @@ Focus on:
 
 ### Phase 7: Implement — Write the Code
 
-```bash
+```text
 /speckit-implement
 ```
 

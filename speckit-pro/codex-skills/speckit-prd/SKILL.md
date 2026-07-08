@@ -127,9 +127,8 @@ starting. High-level loop:
    SPEC you draft, derive its size signals from the entry itself — number of
    user stories / acceptance-criteria groups, files or surfaces touched,
    functional requirements, and whether it is net-new or modifies existing code
-   (mark a research-only slice with `--spike`) — then run the single shared
-   estimator:
-   `bash "../../skills/speckit-coach/scripts/estimate-spec-size.sh" --user-stories N --files N --frs N --new-vs-modify new|modify [--spike]`.
+   (mark a research-only slice with `--spike`) — then run runner operation
+   `estimate-spec-size` with those signals.
    Populate that entry's existing `Projected reviewable LOC` field in its
    `Reviewability Budget` line with the returned `estimated_loc` (reuse the
    roadmap template's per-SPEC budget line; do **not** add a new `Budget` field
@@ -140,8 +139,8 @@ starting. High-level loop:
    user may take, and continue the interview. Nothing is blocked or rejected; the
    estimate is a forward guess that shapes decomposition early, never a gate.
 
-   If the estimator cannot produce a usable result for any reason — the script is
-   missing, `jq` is missing, it exits non-zero, or it prints empty/unparseable
+   If the estimator cannot produce a usable result for any reason — the operation is
+   unavailable, it exits non-zero, or it prints empty/unparseable
    output — treat it as an **absent estimate**: leave that entry's
    `Projected reviewable LOC` field unpopulated (or note it as unavailable), add a
    short advisory note, and continue. Never read the script's exit code as a gate
@@ -175,8 +174,8 @@ starting. High-level loop:
    The generator's default repo root is the plugin's parent, correct in the
    plugin-source repo but **wrong in a consumer install** (the plugin lives in the
    plugin cache, not under the user's repo), so always pass the user's project root
-   (the directory holding `docs/` and `specs/`) explicitly:
-   `bash "../../skills/speckit-autopilot/scripts/generate-spec-index.sh" "$REPO_ROOT"`.
+   (the directory holding `docs/` and `specs/`) explicitly by running runner
+   operation `generate-spec-index-write`.
    The generator fills one `- [<spec_id>](../../../specs/<dir>/SPEC-MOC.md) · <status>`
    row per gated spec, normalized-ID ascending. Do not author the sentinel bytes or
    the INDEX rows by hand — the template carries the sentinels and the generator owns
@@ -283,5 +282,5 @@ interactive pass before it is roadmap-ready.
 - `../../skills/speckit-coach/templates/prd-template.md` — lean PRD template.
 - `../../skills/speckit-coach/templates/technical-roadmap-template.md` — roadmap / SPEC-catalog template.
 - `../../skills/speckit-coach/templates/roadmap-moc-template.md` — roadmap-MOC home-note template (carries the empty GENERATED INDEX sentinel pair the generator fills).
-- `../../skills/speckit-autopilot/scripts/generate-spec-index.sh` — the generator that fills the home note's GENERATED INDEX zone (invoke with the consumer repo root positionally).
-- `../../skills/speckit-coach/references/slicing-heuristics.md` — single source of truth for SPIDR + INVEST + vertical-slicing and the ~400 reviewable-LOC ceiling (summarized inline above; invoked via `../../skills/speckit-coach/scripts/estimate-spec-size.sh`).
+- Runner operation `generate-spec-index-write` — fills the home note's GENERATED INDEX zone (invoke with the consumer repo root positionally).
+- `../../skills/speckit-coach/references/slicing-heuristics.md` — single source of truth for SPIDR + INVEST + vertical-slicing and the ~400 reviewable-LOC ceiling (summarized inline above; invoked via runner operation `estimate-spec-size`).

@@ -24,16 +24,19 @@ class HelperEntry:
     out_of_scope_modes: tuple[str, ...] = ()
 
     def as_record(self) -> dict[str, Any]:
-        return {
+        record = {
             "helper_id": self.helper_id,
             "operation": self.operation,
             "mode": "read_only",
-            "script": self.script,
+            "python_operation": self.operation,
             "promotion_status": self.promotion_status,
             "comparison_mode": self.comparison_mode,
             "authoritative_command": self.authoritative_command,
             "out_of_scope_modes": list(self.out_of_scope_modes),
         }
+        if self.script is not None:
+            record["inactive_provenance"] = {"prior_script": self.script}
+        return record
 
 
 @dataclass(frozen=True)
@@ -50,12 +53,12 @@ class MutationEntry:
     rollback: str = "Disable the helper registry entry before active cutover."
 
     def as_record(self) -> dict[str, Any]:
-        return {
+        record = {
             "helper_id": self.helper_id,
             "operation": self.operation,
             "mode": "mutation",
             "modes": list(self.modes),
-            "script": self.script,
+            "python_operation": self.operation if self.authoritative_command else None,
             "promotion_status": self.promotion_status,
             "comparison_mode": self.comparison_mode,
             "authoritative_command": self.authoritative_command,
@@ -67,6 +70,9 @@ class MutationEntry:
                 rollback=self.rollback,
             ),
         }
+        if self.script is not None:
+            record["inactive_provenance"] = {"prior_script": self.script}
+        return record
 
 
 SCRIPT_BASE = "speckit-pro/skills/speckit-autopilot/scripts"
@@ -279,7 +285,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "install-codex-agents",
         "install-codex-agents",
         ("dry_run", "apply"),
-        "speckit-pro/skills/speckit-scaffold-spec/scripts/install-codex-agents.sh",
+        "speckit-pro/codex-skills/install/scripts/install-codex-agents.sh",
         "deferred",
         "golden_fixture",
         deferred_authoritative_request(),
@@ -300,7 +306,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "project-fixup-apply",
         "project-fixup-apply",
         ("dry_run", "apply"),
-        None,
+        "speckit-pro/skills/speckit-coach/scripts/project-fixup.sh",
         "deferred",
         "golden_fixture",
         deferred_authoritative_request(),
@@ -309,7 +315,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "ensure-reviewability-preset",
         "ensure-reviewability-preset",
         ("dry_run", "apply"),
-        None,
+        "speckit-pro/skills/speckit-coach/scripts/ensure-reviewability-preset.sh",
         "deferred",
         "golden_fixture",
         deferred_authoritative_request(),
@@ -386,7 +392,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "migrate-structure",
         "migrate-structure",
         ("dry_run", "apply"),
-        None,
+        f"{SCRIPT_BASE}/migrate-structure.sh",
         "deferred",
         "golden_fixture",
         deferred_authoritative_request(),
@@ -432,7 +438,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "detect-stack-manager-plan",
         "detect-stack-manager-plan",
         ("dry_run",),
-        None,
+        f"{SCRIPT_BASE}/detect-stack-manager.sh",
         "out_of_scope",
         "command_plan",
         deferred_authoritative_request(),

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import ast
 import copy
 import json
-import re
 import os
+import re
+import shlex
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,8 +19,40 @@ PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/pr
 DEFAULT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/active-path-guard-cases.json"
 XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/promotion-records.json"
 XPLAT_008_DEFAULT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json"
-PROHIBITED_SCRIPT_SUFFIXES = (".sh", ".ps1", ".bat", ".cmd")
-TEXT_SUFFIXES = frozenset({".json", ".md", ".py", ".ps1", ".bat", ".cmd", ".sh", ".toml", ".txt", ".yaml", ".yml"})
+XPLAT_009_PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/promotion-records.json"
+XPLAT_009_DEFAULT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/zero-bash-guard-cases.json"
+XPLAT_009_ALLOWLIST = "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/allowlist.json"
+XPLAT_009_INSTALLED_CACHE_PREFIX = "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache/"
+XPLAT_009_REQUIRED_SCAN_ROOTS = frozenset(
+    {
+        "speckit-pro",
+        "scripts/build-plugin-payloads.py",
+        "dist/claude/speckit-pro",
+        "dist/codex/speckit-pro",
+        "README.md",
+    }
+)
+PROHIBITED_SCRIPT_SUFFIXES = (".sh", ".bash", ".zsh", ".ps1", ".bat", ".cmd")
+PROHIBITED_COMMAND_NAMES = {"bash", "bash.exe", "jq", "jq.exe", "wsl", "wsl.exe", "powershell", "powershell.exe", "pwsh", "pwsh.exe"}
+SHELL_RUNTIME_COMMAND_NAMES = {"sh", "sh.exe", "zsh", "zsh.exe"}
+SHELL_COMMAND_NAMES = {"sh", "sh.exe", "bash", "bash.exe", "zsh", "zsh.exe", "powershell", "powershell.exe", "pwsh", "pwsh.exe"}
+VALID_INSTALLED_CACHE_PRODUCTS = frozenset({"claude", "codex"})
+SUBPROCESS_ARGV_FUNCTION_NAMES = {"run", "Popen", "call", "check_call", "check_output"}
+SUBPROCESS_SHELL_FUNCTION_NAMES = {"getoutput", "getstatusoutput"}
+OS_SHELL_FUNCTION_NAMES = {"system", "popen"}
+SHELL_RUNTIME_TOKEN_PATTERN = r"(?:[A-Za-z]:[\\/])?(?:[^\s\"'`,\]\[]+[\\/])?(?:sh|zsh)(?:\.exe)?"
+TEXT_SUFFIXES = frozenset({".json", ".md", ".py", ".ps1", ".bat", ".cmd", ".sh", ".bash", ".zsh", ".toml", ".txt", ".yaml", ".yml"})
+HARD_RUNTIME_CATEGORIES = frozenset(
+    {
+        "script_file",
+        "shell_command_wrapper",
+        "shell_runtime",
+        "shell_true",
+        "os_system",
+        "command_string_subprocess",
+        "command_argv_subprocess",
+    }
+)
 SCAN_ROOTS = (
     "tests/speckit-pro",
     "scripts",
@@ -34,23 +68,137 @@ SCAN_ROOTS = (
     "docs-site/src/content/docs/contribute-and-release.md",
 )
 MAX_SCAN_BYTES = 512 * 1024
+INSTALLED_CACHE_PROOF_REQUIRED_FIELDS = frozenset(
+    {
+        "product",
+        "surface",
+        "installed_root",
+        "source_payload_root",
+        "source_payload_tree_hash",
+        "source_derived",
+        "mutable_user_cache",
+        "script_file_count",
+        "active_guidance_findings",
+        "allowlist_release_readiness_excluded",
+    }
+)
+INSTALLED_CACHE_PROOF_ALLOWED_FIELDS = INSTALLED_CACHE_PROOF_REQUIRED_FIELDS
 
 FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = (
     ("git_bash", re.compile(r"\bgit\s+bash\b", re.IGNORECASE), "Git Bash dependency"),
     ("wsl", re.compile(r"\b(?:wsl|wsl\.exe)\b", re.IGNORECASE), "WSL dependency"),
     ("powershell_helper", re.compile(r"\b(?:powershell|pwsh)\b|\.ps1\b", re.IGNORECASE), "PowerShell helper dependency"),
-    ("shell_true", re.compile(r"shell\s*=\s*True|[\"']shell[\"']\s*:\s*true"), "shell=True subprocess execution"),
+    ("shell_true", re.compile(r"[\"']?shell[\"']?\s*[:=]\s*true", re.IGNORECASE), "shell=True subprocess execution"),
     ("os_system", re.compile(r"\bos\.system\s*\("), "os.system shell execution"),
     (
         "command_string_subprocess",
         re.compile(r"\bsubprocess\.(?:run|Popen|call|check_call|check_output)\(\s*[\"']"),
         "command-string subprocess execution",
     ),
+    (
+        "shell_command_wrapper",
+        re.compile(
+            r"(?:[\"'](?:[^\"']*[\\/])?(?:sh|zsh|bash|powershell|pwsh)(?:\.exe)?[\"']\s*,\s*"
+            r"(?:(?:[\"'](?!-[A-Za-z]*c[A-Za-z]*[\"'])--?[A-Za-z][A-Za-z0-9-]*[\"']\s*,\s*)"
+            r"(?:[\"'](?!-)[^\"']+[\"']\s*,\s*)?){0,6}[\"']-[A-Za-z]*c[A-Za-z]*[\"'])|"
+            r"(?<![\w-])(?:[A-Za-z]:[\\/])?(?:[^\s\"'`]+[\\/])?(?:sh|zsh|bash|powershell|pwsh)(?:\.exe)?\s+"
+            r"(?:(?!-[A-Za-z]*c[A-Za-z]*\b)--?[A-Za-z][A-Za-z0-9-]*\s+(?:(?!-)\S+\s+)?){0,6}-[A-Za-z]*c[A-Za-z]*\b",
+            re.IGNORECASE,
+        ),
+        "shell command wrapper dependency",
+    ),
+    (
+        "shell_runtime",
+        re.compile(
+            rf"(?:\[[ \t]*[\"']{SHELL_RUNTIME_TOKEN_PATTERN}[\"'][ \t]*\])|"
+            rf"(?:^[ \t]*(?:[\w-]*command|cmd|argv|args|runtime)[ \t]*[:=][ \t]*(?:\[[^\]\n]*)?[\"']?{SHELL_RUNTIME_TOKEN_PATTERN}[\"']?(?=[ \t]*(?:,|\]|$)))|"
+            rf"(?:^[ \t]*(?:allowed-tools|tools[ \t]*=|tools:)[ \t]*[^\n]*?(?<![\w./-]){SHELL_RUNTIME_TOKEN_PATTERN}(?![\w-]))|"
+            rf"(?:(?<!do not )(?<!don't )(?<!must not )(?<!never )\b(?:run|use|require|requires|execute|invoke|call|install)[ \t]+[\"']?{SHELL_RUNTIME_TOKEN_PATTERN}[\"']?\b)|"
+            r"(?:[\"'](?:[^\"']*[\\/])?(?:sh|zsh)(?:\.exe)?[\"']\s*,)|"
+            r"(?:[\"'](?:[^\"']*[\\/])?env(?:\.exe)?[\"']\s*,\s*[\"'](?:sh|zsh)(?:\.exe)?[\"'])|"
+            r"(?<![\w./-])(?:[A-Za-z]:[\\/])?(?:[^\s\"'`,]+[\\/])?(?:sh|zsh)(?:\.exe)?\s+(?!-[A-Za-z]*c[A-Za-z]*\b)[^\s#]+",
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        "Unix shell runtime dependency",
+    ),
     ("jq", re.compile(r"(?<![\w-])jq(?![\w-])|--jq\b", re.IGNORECASE), "jq command dependency"),
     ("bash", re.compile(r"^#!.*\bbash\b|\bbash\b", re.IGNORECASE), "Bash dependency"),
-    ("script_file", re.compile(r"(?:^|\s|[\"'])[^\"'\s]+\.(?:sh|ps1|bat|cmd)\b", re.IGNORECASE), "script path dependency"),
+    ("script_file", re.compile(r"(?<![\w./-])[^\"'`\s<>)\]]+\.(?:sh|bash|zsh|ps1|bat|cmd)\b", re.IGNORECASE), "script path dependency"),
     ("shell_parsing", re.compile(r"\|.*\b(?:grep|sed|awk)\b|\b(?:grep|sed|awk)\b.*\|", re.IGNORECASE), "shell parsing pipeline"),
-    ("shell_interpolation", re.compile(r"\$\(|`[^`]+`"), "shell command substitution"),
+    (
+        "shell_interpolation",
+        re.compile(
+            r"\$\(|"
+            r"\$\{?SHELL\}?|"
+            r"`[^`]*(?:"
+            r"\bbash\b|\bgit\s+bash\b|\bwsl(?:\.exe)?\b|\bpowershell\b|\bpwsh\b|"
+            r"(?<![\w-])jq(?![\w-])|--jq\b|[^`\"'\s]+\.(?:sh|bash|zsh|ps1|bat|cmd)\b|"
+            r"\|\s*(?:grep|sed|awk)\b|\b(?:grep|sed|awk)\s*\|"
+            r")[^`]*`",
+            re.IGNORECASE,
+        ),
+        "shell command substitution",
+    ),
+)
+FORBIDDEN_CONTENT_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = (
+    (
+        "shell_command_wrapper",
+        re.compile(
+            r"[\"'](?:[^\"']*[\\/])?(?:sh|zsh|bash|powershell|pwsh)(?:\.exe)?[\"'][ \t]*,[ \t]*\r?\n"
+            r"(?:(?:[ \t]*[\"'](?!-[A-Za-z]*c[A-Za-z]*[\"'])--?[A-Za-z][A-Za-z0-9-]*[\"'][ \t]*,[ \t]*\r?\n)"
+            r"(?:[ \t]*[\"'](?!-)[^\"']+[\"'][ \t]*,[ \t]*\r?\n)?){0,6}"
+            r"[ \t]*[\"']-[A-Za-z]*c[A-Za-z]*[\"']",
+            re.IGNORECASE,
+        ),
+        "shell command wrapper dependency",
+    ),
+    (
+        "shell_command_wrapper",
+        re.compile(
+            r"^[ \t]*-[ \t]*[\"']?(?:[^\s\"'`]+[\\/])?(?:sh|zsh|bash|powershell|pwsh)(?:\.exe)?[\"']?[ \t]*(?:\r?\n)+"
+            r"(?:(?:[ \t]*-[ \t]*[\"']?(?!-[A-Za-z]*c[A-Za-z]*[\"']?)--?[A-Za-z][A-Za-z0-9-]*[\"']?[ \t]*(?:\r?\n)+)"
+            r"(?:[ \t]*-[ \t]*[\"']?(?!-)[^\r\n\"']+[\"']?[ \t]*(?:\r?\n)+)?){0,6}"
+            r"[ \t]*-[ \t]*[\"']?-[A-Za-z]*c[A-Za-z]*[\"']?",
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        "shell command wrapper dependency",
+    ),
+    (
+        "shell_runtime",
+        re.compile(
+            rf"^[ \t]*(?:[\w-]*command|cmd|argv|args|runtime)[ \t]*:[ \t]*(?:\r?\n)+"
+            rf"[ \t]*-[ \t]*[\"']?{SHELL_RUNTIME_TOKEN_PATTERN}[\"']?[ \t]*(?:\r?\n|$)",
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        "Unix shell runtime dependency",
+    ),
+    (
+        "shell_runtime",
+        re.compile(
+            rf"[\"'](?:[\w-]*command|cmd|argv|args|runtime)[\"'][ \t]*:[ \t]*\[[ \t]*(?:\r?\n)?"
+            rf"[ \t]*[\"']{SHELL_RUNTIME_TOKEN_PATTERN}[\"'][ \t]*(?:,?[ \t]*(?:\r?\n)?[ \t]*\])",
+            re.IGNORECASE,
+        ),
+        "Unix shell runtime dependency",
+    ),
+    (
+        "shell_runtime",
+        re.compile(
+            r"[\"'](?:[^\"']*[\\/])?(?:sh|zsh)(?:\.exe)?[\"'][ \t]*,[ \t]*\r?\n"
+            r"[ \t]*[\"'](?!-[A-Za-z]*c[A-Za-z]*[\"'])[^\"']+[\"']",
+            re.IGNORECASE,
+        ),
+        "Unix shell runtime dependency",
+    ),
+    (
+        "shell_runtime",
+        re.compile(
+            r"^[ \t]*-[ \t]*[\"']?(?:[^\s\"'`]+[\\/])?(?:sh|zsh)(?:\.exe)?[\"']?[ \t]*(?:\r?\n)+"
+            r"[ \t]*-[ \t]*[\"']?(?!-[A-Za-z]*c[A-Za-z]*[\"']?)[^\r\n\"']+[\"']?",
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        "Unix shell runtime dependency",
+    ),
 )
 
 CLASSIFICATIONS = (
@@ -77,6 +225,20 @@ class SourceFile:
     path: str
     content: str
     source_kind: str
+
+
+@dataclass(frozen=True)
+class StaticAssignment:
+    value: list[str] | str | bool
+    line: int
+    column: int
+
+
+@dataclass(frozen=True)
+class PartialStaticAssignment:
+    value: list[str | None]
+    line: int
+    column: int
 
 
 @dataclass(frozen=True)
@@ -110,6 +272,8 @@ def run_active_path_guard(entry: Any, request: Any) -> dict[str, Any]:
         data = (
             active_runtime_base_data(entry, request.operation, status)
             if request.operation == "active-runtime-guard"
+            else zero_bash_base_data(entry, request.operation, status)
+            if request.operation == "zero-bash-guard"
             else base_data(entry, request.operation, status)
         )
         return response(status, request_id=request.request_id, data=data, diagnostics=[repo_root_result])
@@ -117,6 +281,9 @@ def run_active_path_guard(entry: Any, request: Any) -> dict[str, Any]:
 
     if request.operation == "active-runtime-guard":
         return run_active_runtime_guard(entry, request, repo_root)
+
+    if request.operation == "zero-bash-guard":
+        return run_zero_bash_guard(entry, request, repo_root)
 
     if request.inputs.get("xplat_008_cutover_allowed") is not False:
         diag = diagnostic(
@@ -234,6 +401,1451 @@ def classify_shell_finding(entry: Any, request: Any, repo_root: Path) -> dict[st
     return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diag])
 
 
+def run_zero_bash_guard(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
+    case_result = load_case(repo_root, request.inputs, default_case_file=XPLAT_009_DEFAULT_CASE_FILE)
+    if is_diagnostic(case_result):
+        return response("input_error", request_id=request.request_id, data=zero_bash_base_data(entry, request.operation, "input_error"), diagnostics=[case_result])
+    case = case_result
+
+    allowlist_result = load_zero_bash_allowlist(repo_root, case)
+    if is_diagnostic(allowlist_result):
+        return response("input_error", request_id=request.request_id, data=zero_bash_base_data(entry, request.operation, "input_error"), diagnostics=[allowlist_result])
+    allowlist = allowlist_result
+
+    allowlist_findings = zero_bash_allowlist_findings(allowlist)
+    missing_roots = missing_zero_bash_scan_root_findings(repo_root, case)
+    source_result = source_files(repo_root, case, repo_source_kind="repo")
+    if is_diagnostic(source_result):
+        return response("input_error", request_id=request.request_id, data=zero_bash_base_data(entry, request.operation, "input_error"), diagnostics=[source_result])
+
+    source_findings = zero_bash_source_findings(source_result, allowlist)
+    proof_result = load_installed_cache_proof(repo_root, case)
+    proof_findings: list[RawFinding] = []
+    proof_summary: dict[str, Any] = {
+        "required": case.get("require_installed_cache_proof") is not False,
+        "proof_path": case.get("installed_cache_proof"),
+        "proof_count": 0,
+        "source_derived": False,
+        "mutable_user_cache": None,
+        "script_file_count": None,
+    }
+    require_installed_cache_proof = case.get("require_installed_cache_proof") is not False
+    if is_diagnostic(proof_result):
+        proof_findings.append(zero_bash_finding_from_diag(proof_result))
+    elif require_installed_cache_proof:
+        proof_findings.extend(installed_cache_proof_findings(repo_root, proof_result, allowlist))
+        proofs = proof_result.get("proofs") if isinstance(proof_result.get("proofs"), list) else []
+        script_count = sum(int(item.get("script_file_count", 0)) for item in proofs if isinstance(item, dict) and isinstance(item.get("script_file_count", 0), int))
+        proof_summary.update(
+            {
+                "proof_path": proof_result.get("_proof_path"),
+                "proof_count": len(proofs),
+                "source_derived": all(item.get("source_derived") is True for item in proofs if isinstance(item, dict)) if proofs else False,
+                "mutable_user_cache": (
+                    not all(item.get("mutable_user_cache") is False for item in proofs if isinstance(item, dict))
+                    if proofs
+                    else None
+                ),
+                "script_file_count": script_count,
+            }
+        )
+
+    findings = [*allowlist_findings, *missing_roots, *source_findings, *proof_findings]
+    blocking = [finding for finding in findings if finding.classification == "blocking_zero_bash"]
+    status = "expected_failure" if blocking else "ok"
+    returned_findings = bounded_findings(blocking if blocking else findings, request.inputs)
+    data = zero_bash_base_data(entry, request.operation, status)
+    data.update(
+        {
+            "schema_version": "1.0",
+            "feature_id": "XPLAT-009",
+            "status": "pass" if status == "ok" else "fail",
+            "blocking_count": len(blocking),
+            "classified_counts": classified_counts(findings),
+            "findings": [zero_bash_finding_record(finding) for finding in returned_findings],
+            "total_finding_count": len(findings),
+            "truncated_finding_count": max(0, len(findings) - len(returned_findings)),
+            "script_file_count": sum(1 for finding in findings if finding.category == "script_file" and finding.classification == "blocking_zero_bash"),
+            "scan_roots": [root for root in case.get("scan_roots", []) if isinstance(root, str)],
+            "allowlist": {
+                "path": case.get("allowlist_file", XPLAT_009_ALLOWLIST),
+                "entry_count": len(allowlist),
+                "release_readiness_excluded": all(entry.get("release_readiness_excluded") is True for entry in allowlist),
+            },
+            "installed_cache_proof": proof_summary,
+        }
+    )
+    if status == "ok":
+        return response("ok", request_id=request.request_id, data=data)
+
+    data["gate"]["gate_status"] = "fail"
+    data["gate"]["blocking"] = True
+    diag = diagnostic(
+        "zero_bash_guard_blocked",
+        "zero-Bash guard found active shell-specific behavior or missing source-derived cache proof",
+        details={
+            "blocking_count": len(blocking),
+            "categories": sorted({finding.category for finding in blocking}),
+            "paths": sorted({finding.path for finding in blocking})[:20],
+        },
+        remediation_summary="Remove active shell behavior or provide bounded source-derived installed-cache proof.",
+        remediation_actions=[
+            "Inspect data.findings for blocking_zero_bash entries.",
+            "Remove live script files and active Bash/jq guidance from in-scope plugin surfaces.",
+            "Regenerate payload/cache proof from cleaned source.",
+        ],
+    )
+    return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diag])
+
+
+def zero_bash_source_findings(sources: list[SourceFile], allowlist: list[dict[str, Any]]) -> list[RawFinding]:
+    findings: list[RawFinding] = []
+    seen: set[tuple[str, int | None, str, str]] = set()
+    for source in sources:
+        path = normalize_path(source.path)
+        if has_prohibited_script_suffix(path):
+            finding = RawFinding(
+                path=path,
+                line=1,
+                category="script_file",
+                pattern=Path(path).suffix,
+                reason="script file retained in in-scope plugin, payload, or cache surface",
+                active_role=zero_bash_active_role(path),
+                classification=zero_bash_classification(path, "script_file", Path(path).suffix, source.content, allowlist),
+                remediation=zero_bash_remediation(path),
+            )
+            add_finding(findings, seen, finding)
+            continue
+        if not zero_bash_text_scan_path(path):
+            continue
+        if has_prohibited_script_shebang_content(source.content):
+            first_line = source.content.splitlines()[0] if source.content.splitlines() else "#!"
+            finding = RawFinding(
+                path=path,
+                line=1,
+                category="script_file",
+                pattern=first_line[:120],
+                reason="shell script shebang retained in in-scope plugin, payload, or cache surface",
+                active_role=zero_bash_active_role(path),
+                classification=zero_bash_classification(path, "script_file", first_line, source.content, allowlist),
+                remediation=zero_bash_remediation(path),
+            )
+            add_finding(findings, seen, finding)
+            continue
+        if Path(path).suffix.lower() == ".py":
+            for finding in python_shell_execution_findings(path, source.content, allowlist):
+                add_finding(findings, seen, finding)
+            continue
+        lines = source.content.splitlines()
+        for category, pattern, reason in FORBIDDEN_CONTENT_PATTERNS:
+            if not zero_bash_scans_category(path, category):
+                continue
+            for match in pattern.finditer(source.content):
+                line_number = line_number_for_offset(source.content, match.start())
+                context = line_context(lines, line_number)
+                finding = RawFinding(
+                    path=path,
+                    line=line_number,
+                    category=category,
+                    pattern=match.group(0)[:120],
+                    reason=reason,
+                    active_role=zero_bash_active_role(path),
+                    classification=zero_bash_classification(
+                        path,
+                        category,
+                        match.group(0),
+                        context,
+                        allowlist,
+                        declaration_line=match.group(0),
+                    ),
+                    remediation=zero_bash_remediation(path),
+                )
+                add_finding(findings, seen, finding)
+        for number, line in enumerate(lines, start=1):
+            stripped = line.strip()
+            if not stripped or (stripped.startswith("#") and not stripped.startswith("#!") and not path.endswith(".md")):
+                continue
+            for category, pattern, reason in FORBIDDEN_PATTERNS:
+                if not zero_bash_scans_category(path, category):
+                    continue
+                match = pattern.search(line)
+                if match is None:
+                    continue
+                context = line_context(lines, number)
+                finding = RawFinding(
+                    path=path,
+                    line=number,
+                    category=category,
+                    pattern=match.group(0)[:120],
+                    reason=reason,
+                    active_role=zero_bash_active_role(path),
+                    classification=zero_bash_classification(
+                        path,
+                        category,
+                        match.group(0),
+                        context,
+                        allowlist,
+                        declaration_line=line,
+                    ),
+                    remediation=zero_bash_remediation(path),
+                )
+                add_finding(findings, seen, finding)
+    return findings
+
+
+def zero_bash_classification(
+    path: str,
+    category: str,
+    pattern: str,
+    content: str,
+    allowlist: list[dict[str, Any]],
+    *,
+    declaration_line: str | None = None,
+) -> str:
+    if zero_bash_allowlisted(path, category, allowlist):
+        return "historical_allowlist"
+    if category in HARD_RUNTIME_CATEGORIES and not zero_bash_historical_path(path):
+        return "blocking_zero_bash"
+    line_text = declaration_line or content
+    if category != "script_file" and zero_bash_active_guidance(line_text):
+        return "blocking_zero_bash"
+    if category != "script_file" and xplat008_agent_tool_declaration(path, line_text):
+        return "blocking_zero_bash" if zero_bash_active_tool_declaration(line_text) else "tool_declaration"
+    if category != "script_file" and zero_bash_negative_policy_exception(content):
+        return "negative_policy"
+    if zero_bash_historical_path(path):
+        return "historical_allowlist"
+    return "blocking_zero_bash"
+
+
+def zero_bash_negative_policy_exception(content: str) -> bool:
+    lowered = content.lower()
+    clauses = [clause.strip() for clause in re.split(r"[.!?;\n]+", lowered) if clause.strip()]
+    if any(zero_bash_active_shell_invocation(clause) and not zero_bash_negative_policy_clause(clause) for clause in clauses):
+        return False
+    return any(zero_bash_negative_policy_clause(clause) for clause in clauses)
+
+
+def zero_bash_active_tool_declaration(content: str) -> bool:
+    for line in content.splitlines():
+        stripped = line.strip()
+        lowered = stripped.lower()
+        if not lowered:
+            continue
+        restricted = re.match(r"^(?:disallowedtools:|disallowed-tools:|denied-tools:|forbidden-tools:)\s*(?P<value>.+)$", lowered)
+        if restricted is not None:
+            if zero_bash_shell_marker_present(restricted.group("value")):
+                return True
+            continue
+        declaration = re.match(r"^(?:allowed-tools:|tools\s*=|tools:)\s*(?P<value>.+)$", lowered)
+        if declaration is not None and zero_bash_shell_marker_present(declaration.group("value")):
+            return True
+        if re.match(r"^-\s*(?:bash|sh|zsh|powershell|pwsh|jq)\b", lowered):
+            return True
+    return False
+
+
+def zero_bash_negative_policy_clause(clause: str) -> bool:
+    if not zero_bash_shell_marker_present(clause):
+        return False
+    if zero_bash_clause_has_contrast_active_invocation(clause):
+        return False
+    if re.search(r"\b(?:do not|don't|must not|never)\s+skip\b", clause):
+        return False
+    if re.search(r"\b(?:do not|don't|must not|never)\s+run\b.*\b(?:without|unless|until)\b", clause):
+        return False
+    if re.search(r"\b(?:do not|don't|must not|never)\s+(?:use|require|depend(?:\s+on)?|execute|invoke|call|install|add)\b", clause):
+        return True
+    if re.search(r"\b(?:deny|denies|denied|disallow|disallowed|forbid|forbidden|prohibit|prohibited)\b", clause):
+        return True
+    if re.search(r"\b(?:do not|don't|must not|never)\s+run\s+", clause) and zero_bash_direct_shell_command_after_run(clause):
+        return True
+    if zero_bash_active_shell_invocation(clause):
+        return False
+    if re.search(
+        r"\b(?:not\s+(?:require|use|depend)|no live|without\s+(?:requiring|using|depending)|avoid\s+(?:requiring|using|depending)|forbidden|refuse|instead of|rather than)\b",
+        clause,
+    ):
+        return True
+    if any(marker in clause for marker in ("zero-bash", "bash-free", "shell-free")) and not zero_bash_active_shell_invocation(clause):
+        return True
+    return False
+
+
+def zero_bash_clause_has_contrast_active_invocation(clause: str) -> bool:
+    segments = re.split(r"\b(?:but|however|nevertheless|then)\b|;", clause)
+    if len(segments) < 2:
+        return False
+    return any(zero_bash_active_shell_invocation(segment.strip()) for segment in segments[1:])
+
+
+def zero_bash_direct_shell_command_after_run(clause: str) -> bool:
+    match = re.search(r"\brun\s+(?P<target>[^\s`\"']+)", clause)
+    if match is None:
+        return False
+    return zero_bash_shell_command_token(match.group("target"))
+
+
+def zero_bash_active_shell_invocation(clause: str) -> bool:
+    return bool(
+        re.search(
+            r"\b(?:run|use|execute|invoke|call|require|install)\s+(?:\$[{]?shell[}]?|bash(?:\.exe)?(?!-)|jq(?:\.exe)?(?!-)|wsl(?:\.exe)?(?!-)|powershell(?:\.exe)?(?!-)|pwsh(?:\.exe)?(?!-)|[^\s`\"']+\.(?:sh|ps1|bat|cmd))\b",
+            clause,
+        )
+    )
+
+
+def zero_bash_shell_command_token(token: str) -> bool:
+    normalized = executable_basename(token)
+    if normalized in PROHIBITED_COMMAND_NAMES:
+        return True
+    return has_prohibited_script_suffix(token)
+
+
+def zero_bash_active_guidance(content: str) -> bool:
+    lowered = content.lower()
+    for clause in re.split(r"[.!?;\n,]+", lowered):
+        normalized = clause.strip()
+        if not normalized or not zero_bash_shell_marker_present(normalized):
+            continue
+        if zero_bash_negative_policy_exception(normalized):
+            continue
+        if re.search(r"\b(?:run|use|execute|invoke|call|require|install)\b", normalized):
+            return True
+    return False
+
+
+def zero_bash_shell_marker_present(lowered: str) -> bool:
+    if "$(" in lowered or "$shell" in lowered or "${shell}" in lowered or any(command in lowered.split() for command in PROHIBITED_COMMAND_NAMES):
+        return True
+    if any(suffix in lowered for suffix in PROHIBITED_SCRIPT_SUFFIXES):
+        return True
+    return any(marker in lowered for marker in ("git bash", "wsl", "powershell", "pwsh", "jq", "bash"))
+
+
+def zero_bash_text_scan_path(path: str) -> bool:
+    path = normalize_path(path)
+    if zero_bash_historical_path(path) or path.endswith("CHANGELOG.md"):
+        return False
+    if zero_bash_installed_cache_path(path):
+        return Path(path).suffix.lower() in TEXT_SUFFIXES or zero_bash_extensionless_scan_path(path)
+    if path.startswith("tests/"):
+        return False
+    if path.startswith(("speckit-pro/", "dist/claude/speckit-pro/", "dist/codex/speckit-pro/")):
+        return Path(path).suffix.lower() in TEXT_SUFFIXES or zero_bash_extensionless_scan_path(path)
+    if path.startswith(("dist/claude/speckit-pro/agents/", "dist/codex/speckit-pro/codex-agents/")):
+        return True
+    if path.startswith(("speckit-pro/hooks/", "dist/claude/speckit-pro/hooks/")):
+        return True
+    return path in {
+        "speckit-pro/codex-hooks.json",
+        "dist/codex/speckit-pro/codex-hooks.json",
+        "speckit-pro/README.md",
+        "dist/claude/speckit-pro/README.md",
+        "dist/codex/speckit-pro/README.md",
+        "README.md",
+    }
+
+
+def zero_bash_installed_cache_path(path: str) -> bool:
+    return normalize_path(path).startswith(XPLAT_009_INSTALLED_CACHE_PREFIX)
+
+
+def zero_bash_scans_category(path: str, category: str) -> bool:
+    if Path(path).suffix.lower() == ".py":
+        return category in {"os_system", "shell_true", "command_string_subprocess", "command_argv_subprocess"}
+    if any(part in path for part in ("/references/", "/templates/", "/contracts/")):
+        return True
+    return True
+
+
+def python_shell_execution_findings(path: str, content: str, allowlist: list[dict[str, Any]]) -> list[RawFinding]:
+    try:
+        tree = ast.parse(content)
+    except SyntaxError:
+        return []
+    aliases = python_shell_aliases(tree)
+    command_assignments = python_static_command_assignments(tree)
+    bool_assignments = python_static_bool_assignments(tree)
+    partial_command_assignments = python_partial_command_assignments(tree, command_assignments)
+    findings: list[RawFinding] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        category = ""
+        reason = ""
+        pattern = ""
+        if is_os_system_call(node.func, aliases):
+            category = "os_system"
+            reason = "os shell execution"
+            pattern = os_shell_call_pattern(node.func)
+        elif is_shell_backed_subprocess_call(node.func, aliases):
+            category = "command_string_subprocess"
+            reason = "shell-backed subprocess execution"
+            pattern = subprocess_call_pattern(node.func)
+        elif is_subprocess_call(node.func, aliases):
+            if call_has_shell_enabled(node, bool_assignments):
+                category = "shell_true"
+                reason = "shell=True subprocess execution"
+                pattern = shell_keyword_pattern(node, bool_assignments)
+            elif call_has_command_string(node, command_assignments):
+                category = "command_string_subprocess"
+                reason = "command-string subprocess execution"
+                pattern = "subprocess command string"
+            else:
+                argv_pattern = command_argv_subprocess_pattern(node, command_assignments, partial_command_assignments)
+                if argv_pattern is not None:
+                    category = "command_argv_subprocess"
+                    reason = "argv subprocess invokes shell-specific command"
+                    pattern = argv_pattern
+        if not category:
+            continue
+        line_no = getattr(node, "lineno", None)
+        findings.append(
+            RawFinding(
+                path=path,
+                line=line_no if isinstance(line_no, int) else None,
+                category=category,
+                pattern=pattern,
+                reason=reason,
+                active_role=zero_bash_active_role(path),
+                classification=zero_bash_python_classification(path, category, allowlist),
+                remediation=zero_bash_remediation(path),
+            )
+        )
+    return findings
+
+
+def python_static_command_assignments(tree: ast.AST) -> dict[str, list[StaticAssignment]]:
+    assignments: dict[str, list[StaticAssignment]] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            value = static_command_value(node.value)
+            if value is None:
+                continue
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    assignments.setdefault(target.id, []).append(
+                        StaticAssignment(value=value, line=getattr(node, "lineno", 0), column=getattr(node, "col_offset", 0))
+                    )
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            value = static_command_value(node.value)
+            if value is not None:
+                assignments.setdefault(node.target.id, []).append(
+                    StaticAssignment(value=value, line=getattr(node, "lineno", 0), column=getattr(node, "col_offset", 0))
+                )
+    return assignments
+
+
+def python_static_bool_assignments(tree: ast.AST) -> dict[str, list[StaticAssignment]]:
+    assignments: dict[str, list[StaticAssignment]] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            value = static_bool_value(node.value)
+            if value is None:
+                continue
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    assignments.setdefault(target.id, []).append(
+                        StaticAssignment(value=value, line=getattr(node, "lineno", 0), column=getattr(node, "col_offset", 0))
+                    )
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            value = static_bool_value(node.value)
+            if value is not None:
+                assignments.setdefault(node.target.id, []).append(
+                    StaticAssignment(value=value, line=getattr(node, "lineno", 0), column=getattr(node, "col_offset", 0))
+                )
+    return assignments
+
+
+def python_partial_command_assignments(
+    tree: ast.AST,
+    static_assignments: dict[str, list[StaticAssignment]],
+) -> dict[str, list[PartialStaticAssignment]]:
+    assignments: dict[str, list[PartialStaticAssignment]] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            value = partial_static_string_argv(node.value, static_assignments, node)
+            if value is None:
+                continue
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    assignments.setdefault(target.id, []).append(
+                        PartialStaticAssignment(value=value, line=getattr(node, "lineno", 0), column=getattr(node, "col_offset", 0))
+                    )
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            value = partial_static_string_argv(node.value, static_assignments, node)
+            if value is not None:
+                assignments.setdefault(node.target.id, []).append(
+                    PartialStaticAssignment(value=value, line=getattr(node, "lineno", 0), column=getattr(node, "col_offset", 0))
+                )
+    return assignments
+
+
+def python_shell_aliases(tree: ast.AST) -> dict[str, set[str]]:
+    aliases = {
+        "os_modules": {"os"},
+        "os_system_functions": set[str](),
+        "subprocess_modules": {"subprocess"},
+        "subprocess_functions": set[str](),
+        "subprocess_shell_functions": set[str](),
+    }
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                bound = alias.asname or alias.name
+                if alias.name == "os":
+                    aliases["os_modules"].add(bound)
+                elif alias.name == "subprocess":
+                    aliases["subprocess_modules"].add(bound)
+        elif isinstance(node, ast.ImportFrom):
+            if node.module == "os":
+                for alias in node.names:
+                    if alias.name in OS_SHELL_FUNCTION_NAMES:
+                        aliases["os_system_functions"].add(alias.asname or alias.name)
+            elif node.module == "subprocess":
+                for alias in node.names:
+                    if alias.name in SUBPROCESS_ARGV_FUNCTION_NAMES:
+                        aliases["subprocess_functions"].add(alias.asname or alias.name)
+                    elif alias.name in SUBPROCESS_SHELL_FUNCTION_NAMES:
+                        aliases["subprocess_shell_functions"].add(alias.asname or alias.name)
+    return aliases
+
+
+def is_os_system_call(func: ast.expr, aliases: dict[str, set[str]]) -> bool:
+    if isinstance(func, ast.Attribute) and func.attr in OS_SHELL_FUNCTION_NAMES and isinstance(func.value, ast.Name):
+        return func.value.id in aliases["os_modules"]
+    return isinstance(func, ast.Name) and func.id in aliases["os_system_functions"]
+
+
+def os_shell_call_pattern(func: ast.expr) -> str:
+    if isinstance(func, ast.Attribute):
+        return f"os.{func.attr}("
+    if isinstance(func, ast.Name):
+        return f"{func.id}("
+    return "os shell execution"
+
+
+def is_shell_backed_subprocess_call(func: ast.expr, aliases: dict[str, set[str]]) -> bool:
+    if isinstance(func, ast.Attribute) and func.attr in SUBPROCESS_SHELL_FUNCTION_NAMES and isinstance(func.value, ast.Name):
+        return func.value.id in aliases["subprocess_modules"]
+    return isinstance(func, ast.Name) and func.id in aliases["subprocess_shell_functions"]
+
+
+def subprocess_call_pattern(func: ast.expr) -> str:
+    if isinstance(func, ast.Attribute):
+        return f"subprocess.{func.attr}("
+    if isinstance(func, ast.Name):
+        return f"{func.id}("
+    return "subprocess shell execution"
+
+
+def is_subprocess_call(func: ast.expr, aliases: dict[str, set[str]]) -> bool:
+    if isinstance(func, ast.Attribute) and func.attr in SUBPROCESS_ARGV_FUNCTION_NAMES and isinstance(func.value, ast.Name):
+        return func.value.id in aliases["subprocess_modules"]
+    return isinstance(func, ast.Name) and func.id in aliases["subprocess_functions"]
+
+
+def call_has_shell_enabled(node: ast.Call, assignments: dict[str, list[StaticAssignment]] | None = None) -> bool:
+    for keyword in node.keywords:
+        if keyword.arg != "shell":
+            continue
+        if shell_keyword_is_statically_false(keyword.value, assignments or {}, node):
+            return False
+        return True
+    return False
+
+
+def shell_keyword_pattern(node: ast.Call, assignments: dict[str, list[StaticAssignment]] | None = None) -> str:
+    for keyword in node.keywords:
+        if keyword.arg != "shell":
+            continue
+        if isinstance(keyword.value, ast.Name):
+            assignment = latest_static_assignment(keyword.value.id, assignments or {}, node)
+            if assignment is not None:
+                return f"shell={keyword.value.id} ({assignment.value})"
+            return f"shell={keyword.value.id}"
+        if isinstance(keyword.value, ast.Constant):
+            return f"shell={keyword.value.value!r}"
+        return "shell=<dynamic>"
+    return "shell=True"
+
+
+def shell_keyword_is_statically_false(
+    value: ast.AST,
+    assignments: dict[str, list[StaticAssignment]],
+    node: ast.AST,
+) -> bool:
+    bool_value = static_bool_value(value)
+    if bool_value is False:
+        return True
+    if not isinstance(value, ast.Name):
+        return False
+    assignment = latest_static_assignment(value.id, assignments, node)
+    return assignment is not None and assignment.value is False
+
+
+def static_bool_value(node: ast.AST | None) -> bool | None:
+    if isinstance(node, ast.Constant):
+        if node.value is True:
+            return True
+        if node.value is False or node.value == 0:
+            return False
+    return None
+
+
+def call_has_command_string(node: ast.Call, assignments: dict[str, list[StaticAssignment]] | None = None) -> bool:
+    return isinstance(static_subprocess_arg_value(node, assignments or {}), str)
+
+
+def command_argv_subprocess_pattern(
+    node: ast.Call,
+    assignments: dict[str, list[StaticAssignment]] | None = None,
+    partial_assignments: dict[str, list[PartialStaticAssignment]] | None = None,
+) -> str | None:
+    args_node = subprocess_args_node(node)
+    if isinstance(args_node, ast.Name):
+        prior_pattern = prior_forbidden_argv_assignment_pattern(
+            args_node.id,
+            assignments or {},
+            partial_assignments or {},
+            node,
+        )
+        if prior_pattern is not None:
+            return prior_pattern
+    value = static_subprocess_arg_value(node, assignments or {})
+    if not isinstance(value, list):
+        partial_argv = partial_static_subprocess_argv(node, partial_assignments or {}, assignments or {})
+        if partial_argv is None or not partial_command_argv_contains_forbidden(partial_argv):
+            return None
+        return " ".join(item if item is not None else "<dynamic>" for item in partial_argv)[:120]
+    argv = value
+    if command_argv_contains_forbidden(argv):
+        return " ".join(argv)[:120]
+    if executable_basename(argv[0]) == "env":
+        for delegated_argv in env_delegated_argvs(argv):
+            if command_argv_contains_forbidden(delegated_argv):
+                return " ".join(argv)[:120]
+    return None
+
+
+def prior_forbidden_argv_assignment_pattern(
+    name: str,
+    assignments: dict[str, list[StaticAssignment]],
+    partial_assignments: dict[str, list[PartialStaticAssignment]],
+    node: ast.AST,
+) -> str | None:
+    call_position = (getattr(node, "lineno", 0), getattr(node, "col_offset", 0))
+    for assignment in assignments.get(name, []):
+        if (assignment.line, assignment.column) > call_position or not isinstance(assignment.value, list):
+            continue
+        if command_argv_contains_forbidden(assignment.value):
+            return " ".join(assignment.value)[:120]
+    for assignment in partial_assignments.get(name, []):
+        if (assignment.line, assignment.column) > call_position:
+            continue
+        if partial_command_argv_contains_forbidden(assignment.value):
+            return " ".join(item if item is not None else "<dynamic>" for item in assignment.value)[:120]
+    return None
+
+
+def static_subprocess_arg_value(node: ast.Call, assignments: dict[str, list[StaticAssignment]]) -> list[str] | str | None:
+    args_node = subprocess_args_node(node)
+    if isinstance(args_node, ast.Name):
+        assignment = latest_static_assignment(args_node.id, assignments, node)
+        return assignment.value if assignment is not None else None
+    return static_command_value(args_node)
+
+
+def partial_static_subprocess_argv(
+    node: ast.Call,
+    assignments: dict[str, list[PartialStaticAssignment]],
+    static_assignments: dict[str, list[StaticAssignment]],
+) -> list[str | None] | None:
+    args_node = subprocess_args_node(node)
+    if isinstance(args_node, ast.Name):
+        assignment = latest_partial_static_assignment(args_node.id, assignments, node)
+        return assignment.value if assignment is not None else None
+    return partial_static_string_argv(args_node, static_assignments, node)
+
+
+def latest_partial_static_assignment(
+    name: str,
+    assignments: dict[str, list[PartialStaticAssignment]],
+    node: ast.AST,
+) -> PartialStaticAssignment | None:
+    call_position = (getattr(node, "lineno", 0), getattr(node, "col_offset", 0))
+    candidates = [
+        assignment
+        for assignment in assignments.get(name, [])
+        if (assignment.line, assignment.column) <= call_position
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda assignment: (assignment.line, assignment.column))
+
+
+def latest_static_assignment(name: str, assignments: dict[str, list[StaticAssignment]], node: ast.AST) -> StaticAssignment | None:
+    call_position = (getattr(node, "lineno", 0), getattr(node, "col_offset", 0))
+    candidates = [
+        assignment
+        for assignment in assignments.get(name, [])
+        if (assignment.line, assignment.column) <= call_position
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda assignment: (assignment.line, assignment.column))
+
+
+def subprocess_args_node(node: ast.Call) -> ast.AST | None:
+    if node.args:
+        return node.args[0]
+    for keyword in node.keywords:
+        if keyword.arg == "args":
+            return keyword.value
+    return None
+
+
+def command_argv_contains_forbidden(argv: list[str], *, depth: int = 0) -> bool:
+    if not argv:
+        return False
+    if executable_basename(argv[0]) in PROHIBITED_COMMAND_NAMES | SHELL_RUNTIME_COMMAND_NAMES:
+        return True
+    if any(has_prohibited_script_suffix(item) for item in argv):
+        return True
+    if shell_c_payload_has_forbidden_command(argv):
+        return True
+    if executable_basename(argv[0]) == "env" and depth < 4:
+        for delegated_argv in env_delegated_argvs(argv):
+            if command_argv_contains_forbidden(delegated_argv, depth=depth + 1):
+                return True
+    joined = " ".join(item.lower() for item in argv)
+    if "git bash" in joined:
+        return True
+    return False
+
+
+def partial_command_argv_contains_forbidden(argv: list[str | None], *, depth: int = 0) -> bool:
+    if not argv:
+        return False
+    executable = argv[0]
+    if executable is not None and executable_basename(executable) in PROHIBITED_COMMAND_NAMES | SHELL_RUNTIME_COMMAND_NAMES:
+        return True
+    if any(item is not None and has_prohibited_script_suffix(item) for item in argv):
+        return True
+    if executable is not None and executable_basename(executable) in SHELL_COMMAND_NAMES:
+        return any(item is not None and shell_command_payload_flag(item) for item in argv[1:])
+    if executable is not None and executable_basename(executable) == "env" and depth < 4:
+        return partial_env_delegation_contains_forbidden(argv, depth=depth)
+    return False
+
+
+def static_command_value(node: ast.AST | None) -> list[str] | str | None:
+    argv = static_string_argv(node)
+    if argv is not None:
+        return argv
+    return static_command_string(node)
+
+
+def static_string_argv(node: ast.AST | None) -> list[str] | None:
+    if not isinstance(node, (ast.List, ast.Tuple)):
+        return None
+    argv: list[str] = []
+    for element in node.elts:
+        value = static_string_literal(element)
+        if value is None:
+            return None
+        argv.append(value)
+    return argv or None
+
+
+def partial_static_string_argv(
+    node: ast.AST | None,
+    assignments: dict[str, list[StaticAssignment]] | None = None,
+    context_node: ast.AST | None = None,
+) -> list[str | None] | None:
+    if not isinstance(node, (ast.List, ast.Tuple)):
+        return None
+    argv = [partial_static_string_value(element, assignments or {}, context_node or node) for element in node.elts]
+    return argv if any(item is not None for item in argv) else None
+
+
+def partial_static_string_value(
+    node: ast.AST,
+    assignments: dict[str, list[StaticAssignment]],
+    context_node: ast.AST,
+) -> str | None:
+    value = static_string_literal(node)
+    if value is not None:
+        return value
+    if not isinstance(node, ast.Name):
+        return None
+    candidates = [
+        assignment
+        for assignment in assignments.get(node.id, [])
+        if isinstance(assignment.value, str)
+        and (assignment.line, assignment.column) <= (getattr(context_node, "lineno", 0), getattr(context_node, "col_offset", 0))
+    ]
+    if not candidates:
+        return None
+    unsafe_values = [assignment.value for assignment in candidates if scalar_static_value_can_hide_forbidden_argv(assignment.value)]
+    if unsafe_values:
+        return unsafe_values[0]
+    if len(candidates) == 1:
+        return candidates[0].value
+    return None
+
+
+def static_command_string(node: ast.AST | None) -> str | None:
+    if isinstance(node, ast.JoinedStr):
+        return static_string_literal(node) or "f-string subprocess command"
+    return static_string_literal(node)
+
+
+def static_string_literal(node: ast.AST | None) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if not isinstance(node, ast.JoinedStr):
+        return None
+    parts: list[str] = []
+    for value in node.values:
+        if isinstance(value, ast.Constant) and isinstance(value.value, str):
+            parts.append(value.value)
+            continue
+        if isinstance(value, ast.FormattedValue) and isinstance(value.value, ast.Constant):
+            parts.append(str(value.value.value))
+            continue
+        return None
+    return "".join(parts)
+
+
+def shell_c_payload_has_forbidden_command(argv: list[str]) -> bool:
+    if executable_basename(argv[0]) not in SHELL_COMMAND_NAMES:
+        return False
+    for index, item in enumerate(argv[1:], start=1):
+        if not shell_command_payload_flag(item) or index + 1 >= len(argv):
+            continue
+        return True
+    return False
+
+
+def shell_command_payload_flag(item: str) -> bool:
+    return bool(re.fullmatch(r"-[A-Za-z]*c[A-Za-z]*", item))
+
+
+def scalar_static_value_can_hide_forbidden_argv(value: str) -> bool:
+    if executable_basename(value) in PROHIBITED_COMMAND_NAMES | SHELL_RUNTIME_COMMAND_NAMES or has_prohibited_script_suffix(value):
+        return True
+    if "git bash" in value.lower():
+        return True
+    return any(command_argv_contains_forbidden(delegated_argv) for delegated_argv in env_split_string_argvs(value))
+
+
+def partial_env_delegation_contains_forbidden(argv: list[str | None], *, depth: int = 0) -> bool:
+    index = 1
+    while index < len(argv):
+        item = argv[index]
+        if item is None:
+            return True
+        if item in {"-S", "--split-string"}:
+            if index + 1 >= len(argv):
+                return False
+            payload = argv[index + 1]
+            if payload is None:
+                return True
+            return any(command_argv_contains_forbidden(delegated_argv) for delegated_argv in env_split_string_argvs(payload))
+        if item.startswith("-S") and item != "-S":
+            return any(command_argv_contains_forbidden(delegated_argv) for delegated_argv in env_split_string_argvs(item[2:].strip()))
+        if item.startswith("--split-string="):
+            return any(command_argv_contains_forbidden(delegated_argv) for delegated_argv in env_split_string_argvs(item.split("=", 1)[1]))
+        if item in {"-u", "--unset", "-C", "--chdir"}:
+            index += 2
+            continue
+        if item.startswith("--unset=") or item.startswith("--chdir="):
+            index += 1
+            continue
+        if item.startswith("-"):
+            index += 1
+            continue
+        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", item):
+            index += 1
+            continue
+        return partial_command_argv_contains_forbidden(argv[index:], depth=depth + 1)
+    return False
+
+
+def env_delegated_argvs(argv: list[str]) -> list[list[str]]:
+    delegated: list[list[str]] = []
+    index = 1
+    while index < len(argv):
+        item = argv[index]
+        if item in {"-S", "--split-string"}:
+            if index + 1 < len(argv):
+                delegated.extend(env_split_string_argvs(argv[index + 1]))
+            index += 2
+            continue
+        if item.startswith("-S") and item != "-S":
+            delegated.extend(env_split_string_argvs(item[2:].strip()))
+            index += 1
+            continue
+        if item.startswith("--split-string="):
+            delegated.extend(env_split_string_argvs(item.split("=", 1)[1]))
+            index += 1
+            continue
+        if item in {"-u", "--unset", "-C", "--chdir"}:
+            index += 2
+            continue
+        if item.startswith("--unset=") or item.startswith("--chdir="):
+            index += 1
+            continue
+        if item.startswith("-"):
+            index += 1
+            continue
+        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", item):
+            index += 1
+            continue
+        delegated.append(argv[index:])
+        break
+    return delegated
+
+
+def env_split_string_argvs(payload: str) -> list[list[str]]:
+    try:
+        tokens = shlex.split(payload)
+    except ValueError:
+        tokens = payload.split()
+    if not tokens:
+        return []
+    return env_delegated_argvs(["env", *tokens])
+
+
+def has_prohibited_script_suffix(path: str) -> bool:
+    return Path(normalize_path(path)).suffix.lower() in PROHIBITED_SCRIPT_SUFFIXES
+
+
+def executable_basename(path: str) -> str:
+    return Path(normalize_path(path)).name.lower()
+
+
+def env_delegated_commands(argv: list[str]) -> list[str]:
+    candidates: list[str] = []
+    for delegated_argv in env_delegated_argvs(argv):
+        if delegated_argv:
+            candidates.append(delegated_argv[0])
+    return candidates
+
+
+def env_split_string_candidates(payload: str) -> list[str]:
+    candidates: list[str] = []
+    for delegated_argv in env_split_string_argvs(payload):
+        if delegated_argv:
+            candidates.append(delegated_argv[0])
+    return candidates
+
+
+def zero_bash_python_classification(path: str, category: str, allowlist: list[dict[str, Any]]) -> str:
+    if zero_bash_allowlisted(path, category, allowlist):
+        return "historical_allowlist"
+    if zero_bash_historical_path(path):
+        return "historical_allowlist"
+    return "blocking_zero_bash"
+
+
+def zero_bash_active_role(path: str) -> str:
+    if path.startswith("dist/"):
+        return "generated_payload"
+    if path.startswith("speckit-pro/skills/") or path.startswith("speckit-pro/codex-skills/"):
+        return "installed_skill"
+    if path.startswith("speckit-pro/agents/") or path.startswith("speckit-pro/codex-agents/"):
+        return "installed_agent"
+    if path.startswith("speckit-pro/hooks/") or path == "speckit-pro/codex-hooks.json":
+        return "installed_hook"
+    if path.startswith("installed-cache-proof:") or zero_bash_installed_cache_path(path):
+        return "installed_cache_proof"
+    return "plugin_source"
+
+
+def zero_bash_historical_path(path: str) -> bool:
+    return path.startswith((".specify/memory/", "docs/ai/specs/.process/"))
+
+
+def zero_bash_allowlisted(path: str, category: str, allowlist: list[dict[str, Any]]) -> bool:
+    if not zero_bash_historical_path(path):
+        return False
+    for entry in allowlist:
+        entry_path = entry.get("path")
+        categories = entry.get("categories")
+        if entry_path != path:
+            continue
+        if entry.get("release_readiness_excluded") is not True:
+            return False
+        if isinstance(categories, list) and categories and category not in categories:
+            continue
+        return True
+    return False
+
+
+def zero_bash_remediation(path: str) -> str:
+    if path.startswith("installed-cache-proof:"):
+        return "Regenerate bounded installed-cache proof from rebuilt payloads."
+    return "Remove active shell guidance or move historical prose into a release-readiness-excluded allowlist entry."
+
+
+def zero_bash_finding_record(finding: RawFinding) -> dict[str, Any]:
+    record = finding.as_record()
+    if finding.path.startswith("dist/claude/"):
+        surface = "claude_payload"
+    elif finding.path.startswith("dist/codex/"):
+        surface = "codex_payload"
+    elif finding.path.startswith("installed-cache-proof:") or zero_bash_installed_cache_path(finding.path):
+        surface = "installed_cache_proof"
+    elif finding.path.startswith("speckit-pro/"):
+        surface = "plugin_source"
+    else:
+        surface = "repository"
+    record["surface"] = surface
+    return record
+
+
+def load_zero_bash_allowlist(repo_root: Path, case: dict[str, Any]) -> list[dict[str, Any]] | dict[str, Any]:
+    raw = case.get("allowlist_file", XPLAT_009_ALLOWLIST)
+    if not isinstance(raw, str) or not raw:
+        return diagnostic("invalid_allowlist", "zero-Bash allowlist path must be a non-empty string")
+    path = resolve_path(raw, repo_root)
+    if not is_relative_to(path.resolve(strict=False), repo_root.resolve(strict=False)):
+        return diagnostic("invalid_allowlist", "zero-Bash allowlist must stay inside the repository")
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return diagnostic("invalid_allowlist", "zero-Bash allowlist could not be loaded", details={"allowlist_file": raw, "error": type(exc).__name__})
+    if document.get("schema_version") != "1.0":
+        return diagnostic("invalid_allowlist", "zero-Bash allowlist schema_version must be 1.0")
+    if document.get("feature_id") != "XPLAT-009":
+        return diagnostic("invalid_allowlist", "zero-Bash allowlist feature_id must be XPLAT-009")
+    entries = document.get("entries")
+    if not isinstance(entries, list):
+        return diagnostic("invalid_allowlist", "zero-Bash allowlist must contain an entries array")
+    valid_entries: list[dict[str, Any]] = []
+    allowed_entry_fields = {
+        "path",
+        "line_start",
+        "line_end",
+        "categories",
+        "reason",
+        "scope",
+        "release_readiness_excluded",
+    }
+    for entry in entries:
+        if not isinstance(entry, dict):
+            return diagnostic("invalid_allowlist", "zero-Bash allowlist entries must be objects")
+        if not isinstance(entry.get("path"), str) or not entry.get("path"):
+            return diagnostic("invalid_allowlist", "zero-Bash allowlist entries require path")
+        if entry.get("release_readiness_excluded") is not True:
+            return diagnostic("invalid_allowlist", "zero-Bash allowlist entries must be excluded from release readiness")
+        normalized_entry = dict(entry)
+        reason = normalized_entry.get("reason")
+        scope = normalized_entry.get("scope")
+        categories = normalized_entry.get("categories")
+        normalized_path = normalize_path(str(normalized_entry["path"]))
+        line_start = normalized_entry.get("line_start")
+        line_end = normalized_entry.get("line_end")
+        extra_fields = sorted(set(normalized_entry) - allowed_entry_fields)
+        if extra_fields:
+            normalized_entry["_invalid_reason"] = "zero-Bash allowlist entries contain unsupported fields"
+        elif normalized_path.startswith("/") or any(part == ".." for part in normalized_path.split("/")):
+            normalized_entry["_invalid_reason"] = "zero-Bash allowlist paths must be repository-relative and must not traverse"
+        elif line_start is not None and (not isinstance(line_start, int) or line_start < 1):
+            normalized_entry["_invalid_reason"] = "zero-Bash allowlist line_start must be an integer greater than or equal to 1"
+        elif line_end is not None and (not isinstance(line_end, int) or line_end < 1):
+            normalized_entry["_invalid_reason"] = "zero-Bash allowlist line_end must be an integer greater than or equal to 1"
+        elif isinstance(line_start, int) and isinstance(line_end, int) and line_end < line_start:
+            normalized_entry["_invalid_reason"] = "zero-Bash allowlist line_end must be greater than or equal to line_start"
+        elif not isinstance(reason, str) or not reason.strip():
+            normalized_entry["_invalid_reason"] = "zero-Bash allowlist entries require a non-empty reason"
+        elif not isinstance(scope, str) or not scope.strip():
+            normalized_entry["_invalid_reason"] = "zero-Bash allowlist entries require a non-empty scope"
+        elif not isinstance(categories, list) or not categories or any(not isinstance(category, str) or not category for category in categories):
+            normalized_entry["_invalid_reason"] = "zero-Bash allowlist entries require a non-empty categories array of strings"
+        elif len(set(categories)) != len(categories):
+            normalized_entry["_invalid_reason"] = "zero-Bash allowlist categories must be unique"
+        elif not zero_bash_historical_path(normalized_path):
+            normalized_entry["_invalid_reason"] = "zero-Bash allowlist entries must be limited to historical process evidence"
+        valid_entries.append(normalized_entry)
+    return valid_entries
+
+
+def zero_bash_allowlist_findings(allowlist: list[dict[str, Any]]) -> list[RawFinding]:
+    findings: list[RawFinding] = []
+    for entry in allowlist:
+        invalid_reason = entry.get("_invalid_reason")
+        if not isinstance(invalid_reason, str) or not invalid_reason:
+            continue
+        path = normalize_path(str(entry.get("path") or "allowlist"))
+        findings.append(
+            RawFinding(
+                path=path,
+                line=None,
+                category="allowlist",
+                pattern="allowlist",
+                reason=invalid_reason,
+                active_role="zero_bash_allowlist",
+                classification="blocking_zero_bash",
+                remediation="Keep zero-Bash allowlist entries historical, category-scoped, and release-readiness excluded.",
+            )
+        )
+    return findings
+
+
+def missing_zero_bash_scan_root_findings(repo_root: Path, case: dict[str, Any]) -> list[RawFinding]:
+    if isinstance(case.get("files"), list):
+        return []
+    roots = case.get("scan_roots")
+    if not isinstance(roots, list):
+        return [
+            RawFinding(
+                path="scan_roots",
+                line=None,
+                category="scan_root",
+                pattern="scan_roots",
+                reason="zero-Bash guard requires explicit scan roots",
+                active_role="zero_bash_guard",
+                classification="blocking_zero_bash",
+                remediation="Declare source, generated payload, and installed-cache proof roots in the guard case.",
+            )
+        ]
+    if not roots:
+        return [
+            RawFinding(
+                path="scan_roots",
+                line=None,
+                category="scan_root",
+                pattern="[]",
+                reason="zero-Bash guard requires at least one scan root",
+                active_role="zero_bash_guard",
+                classification="blocking_zero_bash",
+                remediation="Declare source, generated payload, and installed-cache proof roots in the guard case.",
+            )
+        ]
+    findings: list[RawFinding] = []
+    for index, root in enumerate(roots):
+        root_path, root_pattern, invalid_reason = scan_root_entry_validation(index, root)
+        if invalid_reason is not None:
+            findings.append(
+                RawFinding(
+                    path=root_path,
+                    line=None,
+                    category="scan_root",
+                    pattern=root_pattern,
+                    reason=invalid_reason,
+                    active_role="zero_bash_guard",
+                    classification="blocking_zero_bash",
+                    remediation="Keep zero-Bash scan roots normalized, repository-relative, and inside the repository.",
+                )
+            )
+            continue
+        root = str(root)
+        if (repo_root / normalize_path(root)).exists():
+            continue
+        findings.append(
+            RawFinding(
+                path=root,
+                line=None,
+                category="scan_root",
+                pattern=root,
+                reason="configured zero-Bash scan root is missing",
+                active_role="zero_bash_guard",
+                classification="blocking_zero_bash",
+                remediation="Restore the scan root or update the promoted zero-Bash fixture.",
+            )
+        )
+    if case.get("require_installed_cache_proof") is not False:
+        configured_roots = {
+            normalize_path(str(root)).rstrip("/")
+            for root in roots
+            if isinstance(root, str) and root and invalid_scan_root_reason(root) is None
+        }
+        for required_root in sorted(XPLAT_009_REQUIRED_SCAN_ROOTS):
+            if any(required_root == root or required_root.startswith(f"{root}/") for root in configured_roots):
+                continue
+            findings.append(
+                RawFinding(
+                    path=required_root,
+                    line=None,
+                    category="scan_root",
+                    pattern=required_root,
+                    reason="zero-Bash guard requires source and generated payload scan roots",
+                    active_role="zero_bash_guard",
+                    classification="blocking_zero_bash",
+                    remediation="Declare source, generated payload, payload builder, and README roots in the promoted zero-Bash guard case.",
+                )
+            )
+    return findings
+
+
+def load_installed_cache_proof(repo_root: Path, case: dict[str, Any]) -> dict[str, Any] | dict[str, Any]:
+    raw = case.get("installed_cache_proof")
+    if raw is None and case.get("require_installed_cache_proof") is False:
+        return {"schema_version": "1.0", "feature_id": "XPLAT-009", "proofs": [], "_proof_path": None}
+    if not isinstance(raw, str) or not raw:
+        return diagnostic("missing_installed_cache_proof", "zero-Bash guard requires bounded installed-cache proof")
+    path = resolve_path(raw, repo_root)
+    if not is_relative_to(path.resolve(strict=False), repo_root.resolve(strict=False)):
+        return diagnostic("invalid_installed_cache_proof", "installed-cache proof must stay inside the repository")
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return diagnostic("invalid_installed_cache_proof", "installed-cache proof could not be loaded", details={"proof": raw, "error": type(exc).__name__})
+    if document.get("schema_version") != "1.0":
+        return diagnostic("invalid_installed_cache_proof", "installed-cache proof schema_version must be 1.0")
+    if document.get("feature_id") != "XPLAT-009":
+        return diagnostic("invalid_installed_cache_proof", "installed-cache proof feature_id must be XPLAT-009")
+    if not isinstance(document.get("proofs"), list):
+        return diagnostic("invalid_installed_cache_proof", "installed-cache proof must contain proofs array")
+    document["_proof_path"] = raw
+    return document
+
+
+def installed_cache_proof_findings(repo_root: Path, proof: dict[str, Any], allowlist: list[dict[str, Any]]) -> list[RawFinding]:
+    findings: list[RawFinding] = []
+    proofs = proof.get("proofs") if isinstance(proof.get("proofs"), list) else []
+    if not proofs:
+        findings.append(installed_cache_finding("proof", "missing", "installed-cache proof contains no proof records"))
+        return findings
+    products = [item.get("product") for item in proofs if isinstance(item, dict)]
+    missing_products = sorted(VALID_INSTALLED_CACHE_PRODUCTS - {product for product in products if product in VALID_INSTALLED_CACHE_PRODUCTS})
+    if missing_products:
+        findings.append(
+            installed_cache_finding(
+                "proofs",
+                "product_coverage",
+                "installed-cache proof must include Claude and Codex proof records",
+            )
+        )
+    seen_products: set[str] = set()
+    seen_root_pairs: dict[tuple[str, str], str] = {}
+    for index, item in enumerate(proofs):
+        if not isinstance(item, dict):
+            findings.append(installed_cache_finding(f"proofs[{index}]", "malformed", "installed-cache proof record must be an object"))
+            continue
+        surface_name = item.get("surface")
+        prefix = f"installed-cache-proof:{surface_name if isinstance(surface_name, str) and surface_name else index}"
+        missing_fields = sorted(INSTALLED_CACHE_PROOF_REQUIRED_FIELDS - set(item))
+        extra_fields = sorted(set(item) - INSTALLED_CACHE_PROOF_ALLOWED_FIELDS)
+        for field in missing_fields:
+            findings.append(installed_cache_finding(prefix, field, f"installed-cache proof record requires {field}"))
+        for field in extra_fields:
+            findings.append(installed_cache_finding(prefix, "malformed", f"installed-cache proof record contains unsupported field {field}"))
+        product = item.get("product")
+        if product in VALID_INSTALLED_CACHE_PRODUCTS:
+            if str(product) in seen_products:
+                findings.append(installed_cache_finding(prefix, "product_coverage", "installed-cache proof must not duplicate product coverage"))
+            seen_products.add(str(product))
+        elif not isinstance(product, str):
+            findings.append(installed_cache_finding(prefix, "product", "installed-cache proof product must be a string"))
+        else:
+            findings.append(installed_cache_finding(prefix, "product", "installed-cache proof product must be claude or codex"))
+        if not isinstance(surface_name, str) or not surface_name:
+            findings.append(installed_cache_finding(prefix, "surface", "installed-cache proof record requires surface"))
+        surface = installed_payload_surface(str(item.get("installed_root") or ""), item)
+        if surface is None:
+            findings.append(installed_cache_finding(prefix, "product", "installed-cache proof product must identify Claude or Codex payload surface"))
+        if item.get("source_derived") is not True:
+            findings.append(installed_cache_finding(prefix, "source_derived", "installed-cache proof must be source-derived"))
+        if item.get("mutable_user_cache") is not False:
+            findings.append(installed_cache_finding(prefix, "mutable_user_cache", "installed-cache proof must explicitly set mutable_user_cache to false"))
+        if item.get("allowlist_release_readiness_excluded") is not True:
+            findings.append(installed_cache_finding(prefix, "allowlist", "allowlist evidence must be excluded from release readiness"))
+        script_count = item.get("script_file_count")
+        if type(script_count) is not int or script_count != 0:
+            findings.append(installed_cache_finding(prefix, "script_file", "installed-cache proof reports retained script files"))
+        active_findings = item.get("active_guidance_findings")
+        if not isinstance(active_findings, list):
+            findings.append(installed_cache_finding(prefix, "active_guidance", "installed-cache proof must include active_guidance_findings array"))
+        elif active_findings:
+            findings.append(installed_cache_finding(prefix, "active_guidance", "installed-cache proof reports active guidance findings"))
+        root = item.get("installed_root")
+        if not isinstance(root, str) or not root:
+            findings.append(installed_cache_finding(prefix, "installed_root", "installed-cache proof record requires installed_root"))
+            continue
+        installed_path = resolve_path(root, repo_root)
+        if not is_relative_to(installed_path.resolve(strict=False), repo_root.resolve(strict=False)):
+            findings.append(installed_cache_finding(prefix, "installed_root", "installed-cache root must stay inside the repository trust boundary"))
+            continue
+        if not installed_path.is_dir():
+            findings.append(installed_cache_finding(prefix, "installed_root", "installed-cache proof root must exist as a directory"))
+            continue
+        source_root = item.get("source_payload_root")
+        if not isinstance(source_root, str) or not source_root:
+            findings.append(installed_cache_finding(prefix, "source_payload_root", "installed-cache proof record requires source_payload_root"))
+            continue
+        source_path = resolve_path(source_root, repo_root)
+        if not is_relative_to(source_path.resolve(strict=False), repo_root.resolve(strict=False)):
+            findings.append(installed_cache_finding(prefix, "source_payload_root", "source payload root must stay inside the repository trust boundary"))
+            continue
+        if not source_path.is_dir():
+            findings.append(installed_cache_finding(prefix, "source_payload_root", "source payload root must exist as a directory"))
+            continue
+        if product in VALID_INSTALLED_CACHE_PRODUCTS:
+            declared_surface = str(product)
+            source_surface = payload_surface_from_root(source_root, repo_root)
+            if normalize_path(root) == normalize_path(source_root):
+                findings.append(
+                    installed_cache_finding(
+                        prefix,
+                        "installed_root",
+                        "installed-cache proof installed_root must be distinct from source_payload_root",
+                    )
+                )
+            elif not canonical_installed_cache_root(root, declared_surface):
+                findings.append(
+                    installed_cache_finding(
+                        prefix,
+                        "installed_root",
+                        f"installed-cache proof installed_root must be tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache/{declared_surface}/speckit-pro",
+                    )
+                )
+            if not canonical_payload_root(source_root, declared_surface):
+                findings.append(
+                    installed_cache_finding(
+                        prefix,
+                        "source_payload_root",
+                        f"installed-cache proof source_payload_root must be dist/{declared_surface}/speckit-pro",
+                    )
+                )
+            elif source_surface != declared_surface:
+                findings.append(installed_cache_finding(prefix, "source_payload_root", "installed-cache proof source_payload_root must match the declared product"))
+        root_pair = (normalize_path(source_root), normalize_path(root))
+        if root_pair in seen_root_pairs:
+            findings.append(installed_cache_finding(prefix, "source_payload_root", "installed-cache proof must not reuse the same source/installed roots for multiple products"))
+        else:
+            seen_root_pairs[root_pair] = prefix
+        root_sources = scan_repo_sources(repo_root, roots=(root,), source_kind="repo")
+        findings.extend(zero_bash_source_findings(root_sources, allowlist))
+        actual_script_count = count_prohibited_script_files(installed_path)
+        if isinstance(script_count, int) and script_count != actual_script_count:
+            findings.append(
+                installed_cache_finding(
+                    prefix,
+                    "script_file_count",
+                    "installed-cache proof script_file_count does not match the scanned installed root",
+                )
+            )
+        expected_hash = item.get("source_payload_tree_hash")
+        source_inventory = payload_tree_inventory(repo_root, source_root, item)
+        installed_inventory = payload_tree_inventory(repo_root, root, item)
+        if not isinstance(expected_hash, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_hash):
+            findings.append(installed_cache_finding(prefix, "source_payload_tree_hash", "installed-cache proof requires a SHA-256 source_payload_tree_hash"))
+        elif source_inventory is None:
+            findings.append(installed_cache_finding(prefix, "source_payload_tree_hash", "installed-cache proof could not recompute the source payload tree hash"))
+        elif installed_inventory is None:
+            findings.append(installed_cache_finding(prefix, "source_payload_tree_hash", "installed-cache proof could not recompute the installed payload tree hash"))
+        else:
+            if not source_inventory["files"]:
+                findings.append(installed_cache_finding(prefix, "source_payload_root", "source payload root must contain payload files"))
+            if not installed_inventory["files"]:
+                findings.append(installed_cache_finding(prefix, "installed_root", "installed-cache proof root must contain payload files"))
+            if source_inventory["files"] and installed_inventory["files"]:
+                if expected_hash != source_inventory["tree_hash"]:
+                    findings.append(installed_cache_finding(prefix, "source_payload_tree_hash", "installed-cache proof source_payload_tree_hash is stale"))
+                elif source_inventory["files"] != installed_inventory["files"]:
+                    findings.append(installed_cache_finding(prefix, "source_payload_tree_hash", "installed-cache proof installed payload inventory does not match source payload inventory"))
+    return findings
+
+
+def installed_payload_tree_hash(repo_root: Path, root: str, item: dict[str, Any]) -> str | None:
+    inventory = payload_tree_inventory(repo_root, root, item)
+    return inventory["tree_hash"] if inventory is not None else None
+
+
+def payload_tree_inventory(repo_root: Path, root: str, item: dict[str, Any]) -> dict[str, Any] | None:
+    from . import payloads as payload_gate
+
+    surface = installed_payload_surface(root, item)
+    if surface is None:
+        return None
+    payload_root = resolve_path(root, repo_root)
+    records = payload_gate.scan_payload_files(payload_root, source_root=repo_root / "speckit-pro", surface=surface)
+    files = {record["path"]: record["sha256"] for record in records}
+    return {"tree_hash": payload_gate.payload_tree_hash(records), "files": files}
+
+
+def installed_payload_surface(root: str, item: dict[str, Any]) -> str | None:
+    product = item.get("product")
+    if product in VALID_INSTALLED_CACHE_PRODUCTS:
+        return str(product)
+    return payload_surface_from_root(root)
+
+
+def payload_surface_from_root(root: str, repo_root: Path | None = None) -> str | None:
+    normalized = normalize_path(root).rstrip("/")
+    if repo_root is None:
+        if normalized.startswith("dist/claude/"):
+            return "claude"
+        if normalized.startswith("dist/codex/"):
+            return "codex"
+    else:
+        resolved_root = repo_root.resolve(strict=False)
+        resolved_path = resolve_path(root, repo_root).resolve(strict=False)
+        if not is_relative_to(resolved_path, resolved_root):
+            return None
+        normalized = resolved_path.relative_to(resolved_root).as_posix().rstrip("/")
+        if normalized == "dist/claude/speckit-pro":
+            return "claude"
+        if normalized == "dist/codex/speckit-pro":
+            return "codex"
+    return None
+
+
+def canonical_payload_root(root: str, product: str) -> bool:
+    normalized = normalize_path(root)
+    if root != normalized or normalized != normalized.rstrip("/"):
+        return False
+    if normalized.startswith("/") or re.match(r"^[A-Za-z]:", root):
+        return False
+    parts = normalized.split("/")
+    if any(part in {"", ".", ".."} for part in parts):
+        return False
+    return normalized == f"dist/{product}/speckit-pro"
+
+
+def canonical_installed_cache_root(root: str, product: str) -> bool:
+    normalized = normalize_path(root)
+    if root != normalized or normalized != normalized.rstrip("/"):
+        return False
+    if normalized.startswith("/") or re.match(r"^[A-Za-z]:", root):
+        return False
+    parts = normalized.split("/")
+    if any(part in {"", ".", ".."} for part in parts):
+        return False
+    return normalized == f"tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache/{product}/speckit-pro"
+
+
+def installed_cache_finding(path: str, category: str, reason: str) -> RawFinding:
+    return RawFinding(
+        path=f"installed-cache-proof:{path}",
+        line=None,
+        category=category,
+        pattern=category,
+        reason=reason,
+        active_role="installed_cache_proof",
+        classification="blocking_zero_bash",
+        remediation="Regenerate bounded source-derived installed-cache proof from rebuilt payloads.",
+    )
+
+
+def zero_bash_finding_from_diag(diag: dict[str, Any]) -> RawFinding:
+    return RawFinding(
+        path="installed-cache-proof",
+        line=None,
+        category=str(diag.get("code") or "installed_cache_proof"),
+        pattern=str(diag.get("code") or "installed_cache_proof"),
+        reason=str(diag.get("message") or "installed-cache proof is invalid"),
+        active_role="installed_cache_proof",
+        classification="blocking_zero_bash",
+        remediation="Provide bounded source-derived installed-cache proof.",
+    )
+
+
 def guard_response(entry: Any, request: Any, findings: list[RawFinding]) -> dict[str, Any]:
     blocking = [finding for finding in findings if finding.classification == "blocking_active_gate"]
     status = "expected_failure" if blocking else "ok"
@@ -303,7 +1915,7 @@ def active_runtime_guard_response(entry: Any, request: Any, findings: list[RawFi
 
 def bounded_findings(findings: list[RawFinding], inputs: dict[str, Any]) -> list[RawFinding]:
     raw_limit = inputs.get("max_findings", 25)
-    limit = raw_limit if isinstance(raw_limit, int) and raw_limit > 0 else 25
+    limit = min(raw_limit, 500) if isinstance(raw_limit, int) and raw_limit > 0 else 25
     blocking = [finding for finding in findings if finding.classification == "blocking_active_runtime"]
     if blocking:
         return blocking[:limit]
@@ -322,6 +1934,7 @@ def scan_sources(sources: list[SourceFile], repo_root: Path) -> list[RawFinding]
     seen: set[tuple[str, int | None, str, str]] = set()
     for source in sources:
         path = normalize_path(source.path)
+        lines = source.content.splitlines()
         workflow_contexts = workflow_run_contexts(source.content) if path.startswith(".github/workflows/") else []
         if path.endswith(".sh"):
             add_finding(findings, seen, classify_raw_finding(path, 1, "script_file", "*.sh", ".sh file retained in scanned scope", source.content, source.source_kind))
@@ -332,7 +1945,16 @@ def scan_sources(sources: list[SourceFile], repo_root: Path) -> list[RawFinding]
                 seen,
                 classify_raw_finding(path, line, "bash", "run: python -m speckit_pro_runner", "workflow shell dispatches a Python gate", source.content, source.source_kind),
             )
-        for number, line in enumerate(source.content.splitlines(), start=1):
+        for category, pattern, reason in FORBIDDEN_CONTENT_PATTERNS:
+            for match in pattern.finditer(source.content):
+                line_number = line_number_for_offset(source.content, match.start())
+                context = workflow_context_for_line(workflow_contexts, line_number) or line_context(lines, line_number)
+                add_finding(
+                    findings,
+                    seen,
+                    classify_raw_finding(path, line_number, category, match.group(0), reason, context, source.source_kind),
+                )
+        for number, line in enumerate(lines, start=1):
             stripped = line.strip()
             if not stripped or (stripped.startswith("#") and not path.endswith(".md")):
                 continue
@@ -356,7 +1978,7 @@ def scan_sources_xplat008(sources: list[SourceFile], repo_root: Path) -> list[Ra
         path = normalize_path(source.path)
         lines = source.content.splitlines()
         workflow_contexts = workflow_run_contexts(source.content) if path.startswith(".github/workflows/") else []
-        if path.endswith(PROHIBITED_SCRIPT_SUFFIXES):
+        if has_prohibited_script_suffix(path):
             add_finding(
                 findings,
                 seen,
@@ -385,6 +2007,15 @@ def scan_sources_xplat008(sources: list[SourceFile], repo_root: Path) -> list[Ra
                     source.source_kind,
                 ),
             )
+        for category, pattern, reason in FORBIDDEN_CONTENT_PATTERNS:
+            for match in pattern.finditer(source.content):
+                line_number = line_number_for_offset(source.content, match.start())
+                context = workflow_context_for_line(workflow_contexts, line_number) or line_context(lines, line_number)
+                add_finding(
+                    findings,
+                    seen,
+                    classify_xplat008_raw_finding(path, line_number, category, match.group(0), reason, context, source.source_kind),
+                )
         for number, line in enumerate(lines, start=1):
             stripped = line.strip()
             if not stripped or (stripped.startswith("#") and not path.endswith(".md")):
@@ -491,6 +2122,8 @@ def classify_xplat008_path(path: str, category: str, pattern: str, content: str,
         return "upstream_spec_kit_helper"
     if path.startswith("tests/") or "/fixtures/" in path or "layer8-parity/" in path:
         return "test_fixture"
+    if xplat008_payload_script_detector_reference(path, content):
+        return "source_checkout_helper"
     if xplat008_agent_tool_declaration(path, content):
         return "source_checkout_helper"
     if path.startswith("speckit-pro/") and any(part in path for part in ("/scripts/", "/references/", "/templates/")):
@@ -651,22 +2284,29 @@ def xplat008_installed_runtime_guidance_path(path: str) -> bool:
 def xplat008_agent_tool_declaration(path: str, content: str) -> bool:
     if not any(part in path for part in ("/agents/", "/codex-agents/", "/skills/", "/codex-skills/")):
         return False
-    lines = [line.strip().lower() for line in content.splitlines() if line.strip()]
-    if len(lines) != 1:
+    if "\n" in content or "\r" in content:
         return False
-    stripped = lines[0]
+    if xplat008_likely_active_runtime_requirement(content) and not xplat008_repo_surface_exception("bash", "Bash", content):
+        return False
+    lines = [line.strip().lower() for line in content.splitlines() if line.strip()]
     tool_items = {"- bash", "- grep", "- glob", "- read", "- write", "- edit", "- websearch", "- webfetch"}
-    if stripped.startswith(("allowed-tools:", "tools =", "tools:")):
-        return True
-    if stripped in tool_items:
-        return True
-    return bool(re.match(r"^-\s+use\s+`(?:bash|grep|glob|read|write|edit|websearch|webfetch)`", stripped))
+    for stripped in lines:
+        declaration = re.match(r"^(?:allowed-tools:|disallowedtools:|tools\s*=|tools:)\s*(?P<value>[a-z0-9_, -]*)$", stripped)
+        if declaration is not None:
+            return True
+        if stripped in tool_items:
+            return True
+        if re.match(r"^-\s+use\s+`(?:bash|grep|glob|read|write|edit|websearch|webfetch)`", stripped):
+            return True
+    return False
 
 
 def xplat008_source_checkout_helper_reference(path: str, content: str) -> bool:
     lowered_path = path.lower()
     lowered = content.lower()
     if lowered_path.endswith("speckit_pro_runner/gates/active_path_guard.py"):
+        return True
+    if xplat008_payload_script_detector_reference(path, content):
         return True
     if any(part in lowered_path for part in ("/references/", "/templates/", "/contracts/", "/scripts/")):
         return True
@@ -699,6 +2339,11 @@ def xplat008_source_checkout_helper_reference(path: str, content: str) -> bool:
         "argv array",
         "existing bash gates authoritative",
         "existing bash workflow",
+        "zero-bash-guard",
+        "zero_bash_guard",
+        "zero_bash_status",
+        "zero_bash_blocking_count",
+        "xplat-009-zero-bash",
         "required_absent",
         "claude_plugin_root",
         "<skill_scripts>",
@@ -715,6 +2360,16 @@ def xplat008_source_checkout_helper_reference(path: str, content: str) -> bool:
         " is missing",
     )
     return any(marker in lowered for marker in markers)
+
+
+def xplat008_payload_script_detector_reference(path: str, content: str) -> bool:
+    lowered_path = path.lower()
+    if not lowered_path.endswith("speckit_pro_runner/gates/payloads.py"):
+        return False
+    lowered = content.lower()
+    if "payload_has_shell_shebang" in lowered or "payload_script_file_count" in lowered:
+        return True
+    return "first_line = handle.readline" in lowered and "re.search" in lowered and "first_line" in lowered
 
 
 def xplat008_changed_source_checkout_helper_reference(path: str, content: str) -> bool:
@@ -896,6 +2551,11 @@ def xplat008_baseline_source_checkout_helper_reference(path: str, content: str) 
         "argv array",
         "existing bash gates authoritative",
         "existing bash workflow",
+        "zero-bash-guard",
+        "zero_bash_guard",
+        "zero_bash_status",
+        "zero_bash_blocking_count",
+        "xplat-009-zero-bash",
         "required_absent",
         "claude_plugin_root",
         "<skill_scripts>",
@@ -996,6 +2656,10 @@ def line_context(lines: list[str], number: int, *, radius: int = 3) -> str:
     return "\n".join(lines[start:end])
 
 
+def line_number_for_offset(content: str, offset: int) -> int:
+    return content.count("\n", 0, max(offset, 0)) + 1
+
+
 def workflow_run_contexts(content: str) -> list[tuple[int, int, str]]:
     contexts: list[tuple[int, int, str]] = []
     lines = content.splitlines()
@@ -1065,7 +2729,47 @@ def is_docs_or_workflow_tooling(content: str) -> bool:
 
 def changed_repo_sources(repo_root: Path, case: dict[str, Any]) -> list[SourceFile] | RawFinding:
     roots = case.get("scan_roots")
-    scan_roots = tuple(item for item in roots if isinstance(item, str) and item) if isinstance(roots, list) else SCAN_ROOTS
+    if "scan_roots" in case:
+        if not isinstance(roots, list):
+            return RawFinding(
+                path="scan_roots",
+                line=None,
+                category="scan_root",
+                pattern=type(roots).__name__,
+                reason="configured active-runtime scan_roots must be a non-empty array",
+                active_role="repository_text",
+                classification="blocking_active_runtime",
+                remediation="Keep active-runtime scan roots as a non-empty array of normalized repository-relative paths.",
+            )
+        if not roots:
+            return RawFinding(
+                path="scan_roots",
+                line=None,
+                category="scan_root",
+                pattern="[]",
+                reason="configured active-runtime scan_roots must include at least one root",
+                active_role="repository_text",
+                classification="blocking_active_runtime",
+                remediation="Keep active-runtime scan roots as a non-empty array of normalized repository-relative paths.",
+            )
+        scan_roots = tuple(item for item in roots if isinstance(item, str) and item and invalid_scan_root_reason(item) is None)
+        entries = roots
+    else:
+        scan_roots = SCAN_ROOTS
+        entries = list(scan_roots)
+    for index, root in enumerate(entries):
+        root_path, root_pattern, invalid_reason = scan_root_entry_validation(index, root)
+        if invalid_reason is not None:
+            return RawFinding(
+                path=root_path,
+                line=None,
+                category="scan_root",
+                pattern=root_pattern,
+                reason=invalid_reason,
+                active_role=xplat008_active_role(root_path),
+                classification="blocking_active_runtime",
+                remediation="Keep active-runtime scan roots normalized, repository-relative, and inside the repository.",
+            )
     base = review_base_ref(repo_root)
     if base is None:
         return diff_scan_unavailable_finding("active-runtime guard could not resolve a review base for changed-line scanning")
@@ -1101,13 +2805,53 @@ def diff_scan_unavailable_finding(reason: str) -> RawFinding:
 
 def missing_xplat008_scan_root_findings(repo_root: Path, case: dict[str, Any]) -> list[RawFinding]:
     roots = case.get("scan_roots")
-    if not isinstance(roots, list):
+    if "scan_roots" not in case:
         return []
+    if not isinstance(roots, list):
+        return [
+            RawFinding(
+                path="scan_roots",
+                line=None,
+                category="scan_root",
+                pattern=type(roots).__name__,
+                reason="configured active-runtime scan_roots must be a non-empty array",
+                active_role="repository_text",
+                classification="blocking_active_runtime",
+                remediation="Keep active-runtime scan roots as a non-empty array of normalized repository-relative paths.",
+            )
+        ]
+    if not roots:
+        return [
+            RawFinding(
+                path="scan_roots",
+                line=None,
+                category="scan_root",
+                pattern="[]",
+                reason="configured active-runtime scan_roots must include at least one root",
+                active_role="repository_text",
+                classification="blocking_active_runtime",
+                remediation="Keep active-runtime scan roots as a non-empty array of normalized repository-relative paths.",
+            )
+        ]
     findings: list[RawFinding] = []
-    for root in roots:
-        if not isinstance(root, str) or not root:
+    for index, root in enumerate(roots):
+        root_path, root_pattern, invalid_reason = scan_root_entry_validation(index, root)
+        if invalid_reason is not None:
+            findings.append(
+                RawFinding(
+                    path=root_path,
+                    line=None,
+                    category="scan_root",
+                    pattern=root_pattern,
+                    reason=invalid_reason,
+                    active_role=xplat008_active_role(root_path),
+                    classification="blocking_active_runtime",
+                    remediation="Keep active-runtime scan roots normalized, repository-relative, and inside the repository.",
+                )
+            )
             continue
-        if (repo_root / root).exists():
+        root = str(root)
+        if (repo_root / normalize_path(root)).exists():
             continue
         findings.append(
             RawFinding(
@@ -1181,7 +2925,7 @@ def diff_added_line_sources(diff_text: str, repo_root: Path) -> list[SourceFile]
             added_lines = []
             return
         path = repo_root / current_path
-        if path.suffix in TEXT_SUFFIXES:
+        if path.suffix.lower() in TEXT_SUFFIXES:
             sources.append(SourceFile(current_path, "\n".join(added_lines), "repo"))
         added_lines = []
 
@@ -1211,15 +2955,20 @@ def source_files(repo_root: Path, case: dict[str, Any], *, repo_source_kind: str
     if case.get("scan_repo") is False:
         return []
     raw_roots = case.get("scan_roots")
-    if isinstance(raw_roots, list) and all(isinstance(item, str) and item for item in raw_roots):
-        return scan_repo_sources(repo_root, roots=tuple(raw_roots), source_kind=repo_source_kind)
+    if "scan_roots" in case:
+        if isinstance(raw_roots, list):
+            valid_roots = tuple(item for item in raw_roots if isinstance(item, str) and item and invalid_scan_root_reason(item) is None)
+            return scan_repo_sources(repo_root, roots=valid_roots, source_kind=repo_source_kind)
+        return []
     return scan_repo_sources(repo_root, source_kind=repo_source_kind)
 
 
 def scan_repo_sources(repo_root: Path, *, roots: tuple[str, ...] = SCAN_ROOTS, source_kind: str = "repo") -> list[SourceFile]:
     sources: list[SourceFile] = []
     for root in roots:
-        path = repo_root / root
+        if invalid_scan_root_reason(root) is not None:
+            continue
+        path = repo_root / normalize_path(root)
         if path.is_file():
             maybe_add_source(repo_root, path, sources, source_kind)
             continue
@@ -1232,15 +2981,33 @@ def scan_repo_sources(repo_root: Path, *, roots: tuple[str, ...] = SCAN_ROOTS, s
 
 
 def maybe_add_source(repo_root: Path, path: Path, sources: list[SourceFile], source_kind: str = "repo") -> None:
-    if path.suffix not in TEXT_SUFFIXES:
+    try:
+        relative_path = path.relative_to(repo_root).as_posix()
+    except ValueError:
+        return
+    if not is_relative_to(path.resolve(strict=False), repo_root.resolve(strict=False)):
+        return
+    if has_prohibited_script_suffix(relative_path):
+        sources.append(SourceFile(relative_path, "", source_kind))
+        return
+    first_line = read_first_line(path)
+    if has_prohibited_script_shebang_content(first_line):
+        sources.append(SourceFile(relative_path, first_line, source_kind))
+        return
+    extensionless = zero_bash_extensionless_scan_path(relative_path)
+    if path.suffix.lower() not in TEXT_SUFFIXES and not extensionless:
         return
     try:
+        if extensionless:
+            if has_prohibited_script_shebang_content(first_line):
+                sources.append(SourceFile(relative_path, first_line, source_kind))
+            return
         if path.stat().st_size > MAX_SCAN_BYTES:
             return
         content = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return
-    sources.append(SourceFile(path.resolve(strict=False).relative_to(repo_root.resolve(strict=False)).as_posix(), content, source_kind))
+    sources.append(SourceFile(relative_path, content, source_kind))
 
 
 def load_case(repo_root: Path, inputs: dict[str, Any], *, default_case_file: str = DEFAULT_CASE_FILE) -> dict[str, Any]:
@@ -1301,6 +3068,48 @@ def active_runtime_base_data(entry: Any, operation: str, status: str) -> dict[st
     }
 
 
+def zero_bash_base_data(entry: Any, operation: str, status: str) -> dict[str, Any]:
+    gate_status = "pass" if status == "ok" else "fail"
+    return {
+        "gate": {
+            "gate_id": entry.helper_id,
+            "operation": operation,
+            "gate_status": gate_status,
+            "promoted": status != "input_error",
+            "blocking": status != "ok",
+            "comparison_ids": [f"xplat-009-{operation}"],
+            "promotion_record": XPLAT_009_PROMOTION_RECORD,
+        },
+        "artifacts": [
+            {"path": XPLAT_009_PROMOTION_RECORD, "kind": "promotion_record"},
+            {"path": XPLAT_009_DEFAULT_CASE_FILE, "kind": "fixture"},
+            {"path": XPLAT_009_ALLOWLIST, "kind": "allowlist"},
+        ],
+        "feature_id": "XPLAT-009",
+        "status": "pass" if status == "ok" else "fail",
+        "blocking_count": 0 if status == "ok" else 1,
+        "classified_counts": {},
+        "findings": [],
+        "total_finding_count": 0,
+        "truncated_finding_count": 0,
+        "script_file_count": 0,
+        "scan_roots": [],
+        "allowlist": {
+            "path": XPLAT_009_ALLOWLIST,
+            "entry_count": 0,
+            "release_readiness_excluded": False,
+        },
+        "installed_cache_proof": {
+            "required": True,
+            "proof_path": None,
+            "proof_count": 0,
+            "source_derived": False,
+            "mutable_user_cache": None,
+            "script_file_count": None,
+        },
+    }
+
+
 def resolve_repo_root(inputs: dict[str, Any]) -> Path | dict[str, Any]:
     raw = inputs.get("repo_root", ".")
     if not isinstance(raw, str) or not raw:
@@ -1333,6 +3142,72 @@ def resolve_path(raw: str, root: Path) -> Path:
 def normalize_path(raw: str) -> str:
     path = raw.replace("\\", "/")
     return path[2:] if path.startswith("./") else path
+
+
+def invalid_scan_root_reason(raw: str) -> str | None:
+    root = normalize_path(raw)
+    if not root:
+        return "configured scan root must be non-empty"
+    if Path(root).is_absolute() or re.match(r"^[A-Za-z]:/", root) or root.startswith("~"):
+        return "configured scan root must be repository-relative"
+    parts = [part for part in root.split("/") if part and part != "."]
+    if any(part == ".." for part in parts):
+        return "configured scan root must not traverse outside the repository"
+    return None
+
+
+def scan_root_entry_validation(index: int, raw: object) -> tuple[str, str, str | None]:
+    if not isinstance(raw, str):
+        return f"scan_roots[{index}]", type(raw).__name__, "configured scan root must be a non-empty string"
+    if not raw:
+        return f"scan_roots[{index}]", "", "configured scan root must be a non-empty string"
+    return raw, raw, invalid_scan_root_reason(raw)
+
+
+def count_prohibited_script_files(root: Path) -> int:
+    if root.is_file():
+        return int(root.suffix.lower() in PROHIBITED_SCRIPT_SUFFIXES or has_prohibited_script_shebang(root))
+    if not root.is_dir():
+        return 0
+    return sum(
+        1
+        for candidate in root.rglob("*")
+        if candidate.is_file() and (candidate.suffix.lower() in PROHIBITED_SCRIPT_SUFFIXES or has_prohibited_script_shebang(candidate))
+    )
+
+
+def zero_bash_extensionless_scan_path(path: str) -> bool:
+    normalized = normalize_path(path)
+    if Path(normalized).suffix:
+        return False
+    return normalized.startswith(
+        (
+            "speckit-pro/",
+            "dist/claude/speckit-pro/",
+            "dist/codex/speckit-pro/",
+            XPLAT_009_INSTALLED_CACHE_PREFIX,
+        )
+    )
+
+
+def has_prohibited_script_shebang(path: Path) -> bool:
+    return has_prohibited_script_shebang_content(read_first_line(path))
+
+
+def read_first_line(path: Path) -> str:
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            return handle.readline(4096)
+    except (OSError, UnicodeDecodeError):
+        return ""
+
+
+def has_prohibited_script_shebang_content(content: str) -> bool:
+    try:
+        first_line = content.splitlines()[0]
+    except IndexError:
+        return False
+    return bool(re.search(r"^#!.*\b(?:bash|sh|zsh|powershell|pwsh)\b", first_line, re.IGNORECASE))
 
 
 def is_relative_to(path: Path, root: Path) -> bool:

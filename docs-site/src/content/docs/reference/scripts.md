@@ -21,8 +21,8 @@ Root scripts and SpecKit Pro helper scripts with repository-role classification.
 
 ## Page Sources
 
-- [scripts/build-plugin-payloads.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/build-plugin-payloads.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh)
+- [scripts/build-plugin-payloads.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/build-plugin-payloads.py)
+- [speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py)
 
 ## Records
 
@@ -31,127 +31,65 @@ Root scripts and SpecKit Pro helper scripts with repository-role classification.
 - **Purpose:** SpecKit autopilot helper scripts used for gates, reviewability, PR packets, UAT skeletons, and workflow checks.
 - **Classification:** `source`
 - **Platform concept:** Repository script group
-- **Claude Code:** speckit-pro/skills/speckit-autopilot/scripts/aggregate-crl.sh, speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh, speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh, speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh, speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh, speckit-pro/skills/speckit-autopilot/scripts/detect-commands.sh, speckit-pro/skills/speckit-autopilot/scripts/detect-presets.sh, speckit-pro/skills/speckit-autopilot/scripts/detect-stack-manager.sh, speckit-pro/skills/speckit-autopilot/scripts/estimate-reviewable-loc.sh, speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh, speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh, speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh, speckit-pro/skills/speckit-autopilot/scripts/generate-uat-skeleton.sh, speckit-pro/skills/speckit-autopilot/scripts/lib/moc-frontmatter.sh, speckit-pro/skills/speckit-autopilot/scripts/lib/moc-id-normalize.sh, speckit-pro/skills/speckit-autopilot/scripts/lib/specify-cli.sh, speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh, speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh, speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh, speckit-pro/skills/speckit-autopilot/scripts/parse-consensus-categories.sh, speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh, speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh, speckit-pro/skills/speckit-autopilot/scripts/resolve-confidence-mode.sh, speckit-pro/skills/speckit-autopilot/scripts/restack.sh, speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh, speckit-pro/skills/speckit-autopilot/scripts/validate-agent-install.sh, speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh, speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh, speckit-pro/skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh, speckit-pro/skills/speckit-autopilot/scripts/validate-uat-runbook.sh
-- **Codex:** speckit-pro/skills/speckit-autopilot/scripts/aggregate-crl.sh, speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh, speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh, speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh, speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh, speckit-pro/skills/speckit-autopilot/scripts/detect-commands.sh, speckit-pro/skills/speckit-autopilot/scripts/detect-presets.sh, speckit-pro/skills/speckit-autopilot/scripts/detect-stack-manager.sh, speckit-pro/skills/speckit-autopilot/scripts/estimate-reviewable-loc.sh, speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh, speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh, speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh, speckit-pro/skills/speckit-autopilot/scripts/generate-uat-skeleton.sh, speckit-pro/skills/speckit-autopilot/scripts/lib/moc-frontmatter.sh, speckit-pro/skills/speckit-autopilot/scripts/lib/moc-id-normalize.sh, speckit-pro/skills/speckit-autopilot/scripts/lib/specify-cli.sh, speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh, speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh, speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh, speckit-pro/skills/speckit-autopilot/scripts/parse-consensus-categories.sh, speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh, speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh, speckit-pro/skills/speckit-autopilot/scripts/resolve-confidence-mode.sh, speckit-pro/skills/speckit-autopilot/scripts/restack.sh, speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh, speckit-pro/skills/speckit-autopilot/scripts/validate-agent-install.sh, speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh, speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh, speckit-pro/skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh, speckit-pro/skills/speckit-autopilot/scripts/validate-uat-runbook.sh
+- **Claude Code:** speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py
+- **Codex:** speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py
 - **Runtime difference:** Script groups are repository role inventories; paths are shared unless an individual script name or source file declares a runtime-specific purpose.
 
 #### Source Facts
 
-- speckit-pro/skills/speckit-autopilot/scripts/aggregate-crl.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/aggregate-crl.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/detect-commands.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/detect-commands.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/detect-presets.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/detect-presets.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/detect-stack-manager.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/detect-stack-manager.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/estimate-reviewable-loc.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/estimate-reviewable-loc.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/generate-uat-skeleton.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/generate-uat-skeleton.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/lib/moc-frontmatter.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/lib/moc-frontmatter.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/lib/moc-id-normalize.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/lib/moc-id-normalize.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/lib/specify-cli.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/lib/specify-cli.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/parse-consensus-categories.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/parse-consensus-categories.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/resolve-confidence-mode.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/resolve-confidence-mode.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/restack.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/restack.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/validate-agent-install.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/validate-agent-install.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh`.
-- speckit-pro/skills/speckit-autopilot/scripts/validate-uat-runbook.sh is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/validate-uat-runbook.sh`.
+- speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`.
 
 #### Sources
 
-- [speckit-pro/skills/speckit-autopilot/scripts/aggregate-crl.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/aggregate-crl.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/detect-commands.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/detect-commands.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/detect-presets.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/detect-presets.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/detect-stack-manager.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/detect-stack-manager.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/estimate-reviewable-loc.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/estimate-reviewable-loc.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/generate-uat-skeleton.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/generate-uat-skeleton.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/lib/moc-frontmatter.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/lib/moc-frontmatter.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/lib/moc-id-normalize.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/lib/moc-id-normalize.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/lib/specify-cli.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/lib/specify-cli.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/parse-consensus-categories.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/parse-consensus-categories.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/resolve-confidence-mode.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/resolve-confidence-mode.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/restack.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/restack.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/validate-agent-install.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/validate-agent-install.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh)
-- [speckit-pro/skills/speckit-autopilot/scripts/validate-uat-runbook.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/validate-uat-runbook.sh)
+- [speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py)
 
 #### Inferred Notes
 
 - Review script behavior in its owning source files before changing generated docs that describe the group.
-  - Based on: `speckit-pro/skills/speckit-autopilot/scripts/aggregate-crl.sh`, `speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh`, `speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh`, `speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh`, `speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh`, `speckit-pro/skills/speckit-autopilot/scripts/detect-commands.sh`, `speckit-pro/skills/speckit-autopilot/scripts/detect-presets.sh`, `speckit-pro/skills/speckit-autopilot/scripts/detect-stack-manager.sh`, `speckit-pro/skills/speckit-autopilot/scripts/estimate-reviewable-loc.sh`, `speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh`, `speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh`, `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh`, `speckit-pro/skills/speckit-autopilot/scripts/generate-uat-skeleton.sh`, `speckit-pro/skills/speckit-autopilot/scripts/lib/moc-frontmatter.sh`, `speckit-pro/skills/speckit-autopilot/scripts/lib/moc-id-normalize.sh`, `speckit-pro/skills/speckit-autopilot/scripts/lib/specify-cli.sh`, `speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh`, `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`, `speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh`, `speckit-pro/skills/speckit-autopilot/scripts/parse-consensus-categories.sh`, `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`, `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh`, `speckit-pro/skills/speckit-autopilot/scripts/resolve-confidence-mode.sh`, `speckit-pro/skills/speckit-autopilot/scripts/restack.sh`, `speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh`, `speckit-pro/skills/speckit-autopilot/scripts/validate-agent-install.sh`, `speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh`, `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`, `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh`, `speckit-pro/skills/speckit-autopilot/scripts/validate-uat-runbook.sh`
+  - Based on: `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`
 
 ### Plugin Scripts
 
 - **Purpose:** SpecKit Pro plugin-level scripts and configuration data.
 - **Classification:** `source`
 - **Platform concept:** Repository script group
-- **Claude Code:** speckit-pro/scripts/curated-set.json, speckit-pro/scripts/install-curated-set.sh
-- **Codex:** speckit-pro/scripts/curated-set.json, speckit-pro/scripts/install-curated-set.sh
+- **Claude Code:** speckit-pro/scripts/curated-set.json
+- **Codex:** speckit-pro/scripts/curated-set.json
 - **Runtime difference:** Script groups are repository role inventories; paths are shared unless an individual script name or source file declares a runtime-specific purpose.
 
 #### Source Facts
 
 - speckit-pro/scripts/curated-set.json is a checked-in source file. Source refs: `speckit-pro/scripts/curated-set.json`.
-- speckit-pro/scripts/install-curated-set.sh is a checked-in source file. Source refs: `speckit-pro/scripts/install-curated-set.sh`.
 
 #### Sources
 
 - [speckit-pro/scripts/curated-set.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/scripts/curated-set.json)
-- [speckit-pro/scripts/install-curated-set.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/scripts/install-curated-set.sh)
 
 #### Inferred Notes
 
 - Review script behavior in its owning source files before changing generated docs that describe the group.
-  - Based on: `speckit-pro/scripts/curated-set.json`, `speckit-pro/scripts/install-curated-set.sh`
+  - Based on: `speckit-pro/scripts/curated-set.json`
 
 ### Root Release Scripts
 
 - **Purpose:** Root scripts used for payload building and marketplace version synchronization.
 - **Classification:** `release-infrastructure`
 - **Platform concept:** Repository script group
-- **Claude Code:** scripts/build-plugin-payloads.sh, scripts/refresh-local-plugin.sh, scripts/sync-marketplace-versions.sh
-- **Codex:** scripts/build-plugin-payloads.sh, scripts/refresh-local-plugin.sh, scripts/sync-marketplace-versions.sh
+- **Claude Code:** scripts/refresh-local-plugin.sh, scripts/sync-marketplace-versions.sh
+- **Codex:** scripts/refresh-local-plugin.sh, scripts/sync-marketplace-versions.sh
 - **Runtime difference:** Script groups are repository role inventories; paths are shared unless an individual script name or source file declares a runtime-specific purpose.
 
 #### Source Facts
 
-- scripts/build-plugin-payloads.sh is a checked-in release-infrastructure file. Source refs: `scripts/build-plugin-payloads.sh`.
 - scripts/refresh-local-plugin.sh is a checked-in release-infrastructure file. Source refs: `scripts/refresh-local-plugin.sh`.
 - scripts/sync-marketplace-versions.sh is a checked-in release-infrastructure file. Source refs: `scripts/sync-marketplace-versions.sh`.
 
 #### Sources
 
-- [scripts/build-plugin-payloads.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/build-plugin-payloads.sh)
 - [scripts/refresh-local-plugin.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/refresh-local-plugin.sh)
 - [scripts/sync-marketplace-versions.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/sync-marketplace-versions.sh)
 
 #### Inferred Notes
 
 - Review script behavior in its owning source files before changing generated docs that describe the group.
-  - Based on: `scripts/build-plugin-payloads.sh`, `scripts/refresh-local-plugin.sh`, `scripts/sync-marketplace-versions.sh`
+  - Based on: `scripts/refresh-local-plugin.sh`, `scripts/sync-marketplace-versions.sh`

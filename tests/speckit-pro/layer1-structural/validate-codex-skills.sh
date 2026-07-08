@@ -280,8 +280,8 @@ $(cat "$ref_file")"
     # vocab landed in BOTH the Codex SKILL.md body and the phase-execution
     # reference (asserted against each file's own content so a deleted mirror
     # fails the guard rather than passing on the other file's copy).
-    set_test "speckit-autopilot: Codex SKILL.md names the plan-phase estimator"
-    assert_contains "$body" "estimate-reviewable-loc.sh"
+    set_test "speckit-autopilot: Codex SKILL.md names the plan-phase estimator helper"
+    assert_contains "$body" "estimate-reviewable-loc"
 
     set_test "speckit-autopilot: Codex SKILL.md carries the three-value status vocab"
     assert_contains "$body" '`pass` / `over_budget` / `not_estimated`'
@@ -290,8 +290,8 @@ $(cat "$ref_file")"
     [ -f "$SKILL_DIR/references/phase-execution-codex.md" ] \
       && phase_exec=$(cat "$SKILL_DIR/references/phase-execution-codex.md")
 
-    set_test "speckit-autopilot: phase-execution-codex.md names the plan-phase estimator"
-    assert_contains "$phase_exec" "estimate-reviewable-loc.sh"
+    set_test "speckit-autopilot: phase-execution-codex.md names the plan-phase estimator helper"
+    assert_contains "$phase_exec" "estimate-reviewable-loc"
 
     set_test "speckit-autopilot: phase-execution-codex.md documents the over_budget status"
     assert_contains "$phase_exec" "over_budget"
@@ -377,8 +377,8 @@ $(cat "$ref_file")"
   fi
 
   if [ "$skill" = "install" ]; then
-    set_test "install: installer script exists"
-    assert_file_exists "$SKILL_DIR/scripts/install-codex-agents.sh"
+    set_test "install: installer helper is documented"
+    assert_contains "$body" "install-codex-agents"
   fi
 
 done

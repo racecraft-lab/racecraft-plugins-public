@@ -441,10 +441,10 @@ def shell_executable() -> str:
 def check_layer5(repo_root: Path) -> int:
     agents_dir = repo_root / "speckit-pro" / "agents"
     required_absent = {
-        "clarify-executor.md": {"Bash", "Write", "Edit", "Skill", "ToolSearch"},
-        "codebase-analyst.md": {"Bash", "Write", "Edit", "Skill"},
-        "domain-researcher.md": {"Bash", "Write", "Edit", "Skill"},
-        "spec-context-analyst.md": {"Bash", "Write", "Edit", "Skill"},
+        "clarify-executor.md": {"Write", "Edit", "Skill", "ToolSearch"},
+        "codebase-analyst.md": {"Write", "Edit", "Skill"},
+        "domain-researcher.md": {"Write", "Edit", "Skill"},
+        "spec-context-analyst.md": {"Write", "Edit", "Skill"},
     }
     checks: list[tuple[str, bool, str]] = []
     for agent_file, forbidden in required_absent.items():

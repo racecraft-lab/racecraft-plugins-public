@@ -265,7 +265,7 @@ When breaking a feature into specs:
 
 | Requirement | How |
 |-------------|-----|
-| <!-- e.g., CLI tool --> | <!-- e.g., curl -fsSL https://example.com/install.sh | bash --> |
+| <!-- e.g., CLI tool --> | <!-- e.g., curl -fsSL https://example.com/install | shell --> |
 | <!-- e.g., Database access --> | <!-- e.g., SSM tunnel to RDS on port 5433 --> |
 | <!-- e.g., Model weights --> | <!-- e.g., Download to ~/.models/ (~5GB) --> |
 | <!-- e.g., Frontend deps --> | <!-- e.g., cd frontend && npm install --> |

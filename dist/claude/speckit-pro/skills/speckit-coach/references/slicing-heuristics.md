@@ -6,7 +6,7 @@ PR-sized vertical slices. Both `speckit-prd` (catalog-level decomposition) and
 link here — there is no duplicated guidance prose anywhere else.
 
 This guidance is **advisory**. Nothing here blocks, gates, or rejects a spec.
-The companion estimator (`estimate-spec-size.sh`) and these heuristics exist to
+The companion estimator (`estimate-spec-size`) and these heuristics exist to
 make the right-sizing visible at authoring time, not to enforce a hard limit.
 
 ## Contents
@@ -27,7 +27,7 @@ A single spec (and the PR that implements it) should stay at or under
 rate drops sharply and the change becomes hard to reason about as one unit.
 
 This ceiling is the **single source-of-truth constant**. It lives as one
-hardcoded value in `estimate-spec-size.sh` (carrying a "keep in sync with the
+hardcoded value in `estimate-spec-size` (carrying a "keep in sync with the
 documented ceiling in slicing-heuristics.md" comment) and is referenced by value
 here and summarized in both skills. If the ceiling ever changes, it changes in
 the script and this doc together — there is no second copy.
@@ -77,14 +77,14 @@ end-to-end capability, rather than one fat layer at a time.
 
 ## The estimate is a forward guess, not the authoritative count
 
-The number `estimate-spec-size.sh` returns is an **approximate forward guess**
+The number `estimate-spec-size` returns is an **approximate forward guess**
 made *before* any code exists, from structured size signals (user-story count,
 files/surfaces touched, functional-requirement count, new-vs-modify). It is a
 right-sizing aid for authoring time.
 
 It is **NOT** the authoritative reviewable-LOC count. The authoritative
 measurement of actual reviewable LOC — and the plan-phase budget gate that acts
-on it — is owned by **PRSG-006** (`estimate-reviewable-loc.sh`). Do not over-trust
+on it — is owned by **PRSG-006** (`estimate-reviewable-loc`). Do not over-trust
 the forward guess or treat it as the final word; it exists to shape decomposition
 early, not to score a finished change.
 
@@ -124,7 +124,7 @@ at cleverness; the point is a stable forward guess that the fixtures can pin
 byte-for-byte.
 
 The documented weights (kept in sync with the constants in
-`estimate-spec-size.sh`) are:
+`estimate-spec-size`) are:
 
 | Signal | Weight (LOC per unit) |
 |--------|-----------------------|

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "XPLAT-009",
+  "entries": [
+    {
+      "path": "docs/ai/specs/.process/XPLAT-009-source-inventory.md",
+      "categories": ["bash"],
+      "reason": "Invalid fixture entry: unsupported fields must not pass silently.",
+      "scope": "historical-process-evidence",
+      "release_readiness_excluded": true,
+      "unexpected": "drift"
+    }
+  ]
+}

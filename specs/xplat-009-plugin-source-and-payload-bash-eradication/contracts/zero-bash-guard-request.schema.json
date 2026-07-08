@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/speckit-pro/xplat-009/zero-bash-guard-request.schema.json",
+  "title": "XPLAT-009 Zero Bash Guard Runner Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "helper_id", "operation", "mode", "inputs"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "request_id": { "type": "string", "minLength": 1 },
+    "helper_id": { "const": "active-path-guard" },
+    "operation": { "const": "zero-bash-guard" },
+    "mode": { "const": "read_only" },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["case_file", "case_id"],
+      "properties": {
+        "repo_root": { "type": "string", "minLength": 1 },
+        "case_file": { "type": "string", "minLength": 1 },
+        "case_id": { "type": "string", "minLength": 1 },
+        "max_findings": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500
+        }
+      }
+    }
+  }
+}

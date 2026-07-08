@@ -1,6 +1,6 @@
 <!--
   uat-runbook-template.md — fixed-order skeleton for the deterministic UAT runbook.
-  Rendered by generate-uat-skeleton.sh (FR-010). The eight section headers below are
+  Rendered by generate-uat-skeleton (FR-010). The eight section headers below are
   emitted in this exact order on every run; the script substitutes each {{...}} token
   with deterministic content parsed from spec.md. Do not reorder the sections — the
   FR Coverage Matrix and SC-005's `## UAT Runbook` embed depend on this order.

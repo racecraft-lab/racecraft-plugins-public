@@ -32,13 +32,53 @@
 set -euo pipefail
 
 LIB_DIR="$(cd "$(dirname "$0")/../lib" && pwd)"
-# The canonical MOC libs ship inside the plugin (FR-004); the test tree does not
-# ship, so source them from their shipped home, not from this test tree's lib/.
-MOC_LIB_DIR="$(cd "$(dirname "$0")/../../../speckit-pro/skills/speckit-autopilot/scripts/lib" && pwd)"
 # shellcheck source=../lib/assertions.sh
 source "$LIB_DIR/assertions.sh"
-# shellcheck source=../../../speckit-pro/skills/speckit-autopilot/scripts/lib/moc-frontmatter.sh
-source "$MOC_LIB_DIR/moc-frontmatter.sh"
+
+_moc_fm_block() {
+  local file="$1"
+  [ -r "$file" ] || return 0
+  awk '
+    NR == 1 { if ($0 == "---") { infm = 1; next } else { exit } }
+    infm && $0 == "---" { exit }
+    infm { print }
+  ' "$file" 2>/dev/null || true
+}
+
+moc_frontmatter_field() {
+  local file="$1" field="$2"
+  local block line value
+  block="$(_moc_fm_block "$file")"
+  line="$(printf '%s\n' "$block" | grep -m1 -E "^[[:space:]]*${field}:" 2>/dev/null || true)"
+  [ -n "$line" ] || return 1
+  value="${line#*:}"
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="$(printf '%s' "$value" | sed -E 's/[[:space:]]+#.*$//' 2>/dev/null || true)"
+  value="${value%"${value##*[![:space:]]}"}"
+  case "$value" in
+    \"*\") value="${value#\"}"; value="${value%\"}" ;;
+    \'*\') value="${value#\'}"; value="${value%\'}" ;;
+  esac
+  printf '%s' "$value"
+}
+
+moc_is_gated() {
+  local file="$1" version raw_line raw_token
+  [ -r "$file" ] || return 1
+  version="$(moc_frontmatter_field "$file" structureVersion)" || return 1
+  case "$version" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  raw_line="$(_moc_fm_block "$file" | grep -m1 -E '^[[:space:]]*structureVersion:' 2>/dev/null || true)"
+  raw_token="${raw_line#*:}"
+  raw_token="${raw_token#"${raw_token%%[![:space:]]*}"}"
+  raw_token="$(printf '%s' "$raw_token" | sed -E 's/[[:space:]]+#.*$//' 2>/dev/null || true)"
+  raw_token="${raw_token%"${raw_token##*[![:space:]]}"}"
+  case "$raw_token" in
+    ''|*[!0-9]*) return 1 ;;
+  esac
+  [ "$version" -ge 1 ] 2>/dev/null || return 1
+}
 
 # errtrace: propagate the ERR trap into shell FUNCTIONS so an unexpected failure
 # inside scan_root (e.g. a broken dirname) trips the trap -> exit 2 (FR-020).

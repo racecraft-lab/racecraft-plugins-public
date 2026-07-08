@@ -82,7 +82,7 @@ git+https://github.com/github/spec-kit.git` without shell parsing.
 
 If `uv` is missing, STOP and tell the operator:
 
-> Install `uv` first (https://docs.astral.sh/uv/#installation), then
+> Install `uv` first from the official Astral documentation, then
 > re-run `$speckit-install`. SpecKit CLI is distributed as a `uv`
 > tool.
 

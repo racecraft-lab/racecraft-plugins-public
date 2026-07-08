@@ -53,8 +53,8 @@ AGENTS_DIR="$PLUGIN_ROOT/agents"
 #
 #   FOCUS-CONSTRAINED BY DESIGN — hyper-focused single-purpose workers stay
 #   deliberately narrow so they do exactly their one job:
-#   - The five read-only consensus roles deny the mutation primitives
-#     (Write/Edit/MultiEdit/NotebookEdit/Bash — the Claude twin of the Codex agents'
+#   - The five read-only consensus roles deny the file mutation primitives
+#     (Write/Edit/MultiEdit/NotebookEdit — the Claude twin of the Codex agents'
 #     kept `sandbox_mode = "read-only"`; consensus integrity depends on
 #     analysts not mutating artifacts mid-round), plus Skill and the
 #     orchestration tools: a bounded answer-one-question worker neither
@@ -69,7 +69,7 @@ AGENTS_DIR="$PLUGIN_ROOT/agents"
 # denial is ever plugin-wide: each is a per-role focus decision.
 
 ORCHESTRATION_TOOLS=(Agent TeamCreate SendMessage)
-MUTATION_DENIALS=(Write Edit MultiEdit NotebookEdit Bash)
+MUTATION_DENIALS=(Write Edit MultiEdit NotebookEdit)
 OPEN_EXECUTORS=(phase-executor analyze-executor checklist-executor implement-executor)
 
 # ---------------------------------------------------------------------------

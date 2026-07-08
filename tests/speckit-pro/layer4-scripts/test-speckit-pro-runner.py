@@ -430,6 +430,9 @@ class RunnerFoundationTests(unittest.TestCase):
             "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
             "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh",
             "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
+            "docs-site/scripts/generate-reference-pages.mjs",
+            "docs-site/src/content/docs/reference/agents.md",
+            "docs-site/src/content/docs/reference/scripts.md",
             "docs-site/src/content/docs/reference/tests.md",
             "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
             "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
@@ -482,17 +485,31 @@ class RunnerFoundationTests(unittest.TestCase):
             "dist/codex/speckit-pro/speckit_pro_runner/",
             "docs/ai/specs/.process/XPLAT-008",
         )
+        allowed_xplat009_prefixes = (
+            "dist/claude/speckit-pro/",
+            "dist/codex/speckit-pro/",
+            "speckit-pro/agents/",
+            "speckit-pro/codex-agents/",
+            "speckit-pro/codex-skills/",
+            "speckit-pro/scripts/",
+            "speckit-pro/skills/",
+            "speckit-pro/speckit_pro_runner/",
+            "docs/ai/specs/.process/XPLAT-009",
+            "specs/xplat-009-plugin-source-and-payload-bash-eradication/",
+            "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/",
+        )
         allowed_tool_surface_exact = {
             # Operator-owned tool surface (tools: allowlist retirement):
             # capability-discovery role boundaries and the single-orchestrator
             # invariant moved to denial-based enforcement (disallowedTools);
-            # dist mirrors rebuilt by scripts/build-plugin-payloads.sh.
+            # dist mirrors rebuilt by scripts/build-plugin-payloads.py.
             "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
             "speckit-pro/skills/speckit-autopilot/references/capability-discovery.md",
             "dist/claude/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
             "dist/claude/speckit-pro/skills/speckit-autopilot/references/capability-discovery.md",
             "dist/codex/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
             "dist/codex/speckit-pro/skills/speckit-autopilot/references/capability-discovery.md",
+            "docs-site/src/content/docs/reference/source-vs-dist.md",
         }
         for path in changed:
             if (
@@ -520,9 +537,18 @@ class RunnerFoundationTests(unittest.TestCase):
                 continue
             if path.startswith(allowed_xplat008_prefixes):
                 continue
+            if path.startswith(allowed_xplat009_prefixes):
+                if path.endswith(".sh"):
+                    self.assertEqual(status_by_path.get(path), "D", path)
+                continue
             self.assertFalse(path.startswith(forbidden_prefixes), path)
             if path.startswith("docs/"):
-                self.assertTrue(path.startswith("docs/ai/specs/") or path.startswith("docs/prd-"), path)
+                self.assertTrue(
+                    path.startswith("docs/ai/specs/")
+                    or path.startswith("docs/prd-")
+                    or path.startswith("docs/roadmap-"),
+                    path,
+                )
 
 
 if __name__ == "__main__":

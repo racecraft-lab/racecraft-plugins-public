@@ -3,7 +3,7 @@ name: speckit-scaffold-spec
 description: "Use this skill when the user wants to set up, scaffold, bootstrap, prep, initialize, or prepare a SPEC-ID from the technical roadmap for autonomous execution. Triggers on: set up SPEC-XXX, scaffold SPEC-XXX, bootstrap SPEC-XXX for development, prep SPEC-XXX, initialize the workspace for SPEC-XXX, prepare SPEC-XXX for the autonomous run, create a spec branch and workflow for SPEC-XXX, generate the workflow file for SPEC-XXX, I need a workflow file generated for SPEC-XXX, fill the prompts from the roadmap, pre-fill the workflow template, start working on SPEC-XXX, populate the workflow file for SPEC-XXX. Creates the git worktree, spec branch, Design Concept doc, and populated workflow file ready for autopilot. Strictly interactive — requires a human to answer the grill-me questions. Not for checking roadmap status (use /speckit-pro:speckit-status), running a populated workflow (use /speckit-pro:speckit-autopilot), or SDD coaching (use /speckit-pro:speckit-coach)."
 argument-hint: "SPEC-ID (e.g., SPEC-009)"
 user-invocable: true
-allowed-tools: Bash Read Edit Write Skill Agent ToolSearch
+allowed-tools: Read Edit Write Skill Agent ToolSearch
 license: MIT
 ---
 
@@ -64,7 +64,7 @@ from the parent scaffold — each child is scaffolded independently.
 Before presenting O5 as ready, validate the manifest with:
 
 ```text
-Bash("${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/o5-topology.sh specs/<parent-branch>")
+Run runner helper o5-topology for specs/<parent-branch>.
 ```
 
 If topology is invalid, report the JSON `problems[]` and keep the operator on
@@ -95,18 +95,16 @@ relocation only when all of these are true:
 - A root PROCESS allow-list artifact or matching docs-side scaffold artifact is
   present. If none exists, report that no Tier-2 action is needed.
 
-For the one eligible thawed candidate, print these exact commands with the real
-`specs/<spec-dir>` value substituted:
+For the one eligible thawed candidate, print static operator guidance with the
+real `specs/<spec-dir>` value substituted:
 
 ```text
-speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --dry-run --spec specs/<spec-dir> --repo-root .
-speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --apply --spec specs/<spec-dir> --repo-root .
+Run runner helper relocate-process-artifacts in dry-run mode for specs/<spec-dir>.
+After reviewing a clean dry-run, run the same helper in apply mode.
 ```
 
 Frame `--apply` as a follow-up only after the operator reviews clean dry-run
-output and has a clean worktree. Never invoke
-`relocate-process-artifacts.sh --dry-run` or
-`relocate-process-artifacts.sh --apply` from scaffold.
+output and has a clean worktree. Never invoke the relocation helper from scaffold.
 
 ## Invocation
 
@@ -123,7 +121,7 @@ Before parsing or mutating the repository, resolve the plugin root from this
 skill location and run the shared install validator:
 
 ```text
-bash "<plugin-root>/skills/speckit-autopilot/scripts/validate-agent-install.sh" --surface claude --plugin-root "<plugin-root>"
+Run runner helper install-codex-agents/install validation for the target surface.
 ```
 
 This checks every bundled Claude Code `agents/*.md` file, including
@@ -136,15 +134,12 @@ self-heal a missing Claude agent file.
 
 Check for the official SpecKit CLI before parsing or mutating the repository:
 
-```text
-Bash("PATH=\"${HOME:+$HOME/.local/bin:}/opt/homebrew/bin:/usr/local/bin:${PATH:-}\"; command -v specify")
-```
+Use command execution to confirm the official `specify` CLI is available after
+including common user-local binary directories on PATH.
 
 If missing and `uv` exists, install it:
 
-```text
-Bash("uv tool install specify-cli --from git+https://github.com/github/spec-kit.git")
-```
+Run `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git`.
 
 If `uv` is unavailable or install fails, STOP and tell the operator to install
 SpecKit with that command. Do not run `specify init --here --force`
@@ -185,7 +180,7 @@ technical roadmap. Available specs: <list pending specs>."
 Run the reviewability setup gate before creating the worktree:
 
 ```text
-Bash("${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/reviewability-gate.sh setup <technical-roadmap-path>")
+Run runner helper reviewability-gate in setup mode for <technical-roadmap-path>.
 ```
 
 If it returns an unexcepted `block`, STOP and split the spec first. Warnings
@@ -202,20 +197,22 @@ worktree. The worktree branch is what gets pushed to remote.
 
 ```text
 1. Detect remote name:
-   Bash("git remote -v")
+   Run `git remote -v`.
 
 2. Create the branch and worktree:
-   Bash("git worktree add .worktrees/<number>-<short-name> -b <number>-<short-name>")
+   Run `git worktree add .worktrees/<number>-<short-name> -b <number>-<short-name>`.
 
 3. Switch your working directory to the worktree:
    ALL subsequent commands run FROM the worktree path:
    .worktrees/<number>-<short-name>/
 
 4. Push the WORKTREE BRANCH (not main) to remote:
-   Bash("cd .worktrees/<number>-<short-name> && git push -u <remote> <number>-<short-name>")
+   From `.worktrees/<number>-<short-name>/`, run
+   `git push -u <remote> <number>-<short-name>`.
 
 5. Verify you're on the correct branch:
-   Bash("cd .worktrees/<number>-<short-name> && git rev-parse --abbrev-ref HEAD")
+   From `.worktrees/<number>-<short-name>/`, run
+   `git rev-parse --abbrev-ref HEAD`.
    Must show: <number>-<short-name> (NOT main)
 ```
 
@@ -280,7 +277,7 @@ invocation — do not attempt to skip grilling.
 ```text
 1. Create the .process/ docs directory in the WORKTREE for the design concept
    (created when absent so the first exhaust artifact lands correctly):
-   Bash("mkdir -p .worktrees/<number>-<short-name>/docs/ai/specs/.process/")
+   Create `.worktrees/<number>-<short-name>/docs/ai/specs/.process/` if absent.
 
 2. Invoke the grill-me skill with the spec scope as input:
    Skill("grill-me", args: {
@@ -310,15 +307,16 @@ All file operations happen in the worktree directory.
 
 ```text
 0. Install or refresh the generic speckit-pro reviewability preset:
-   Bash("${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/scripts/ensure-reviewability-preset.sh .worktrees/<number>-<short-name> ${CLAUDE_PLUGIN_ROOT} speckit-pro-reviewability")
+   Run runner helper ensure-reviewability-preset for `.worktrees/<number>-<short-name>` and preset `speckit-pro-reviewability`.
 
    If status is installed, commit .specify/presets/speckit-pro-reviewability
    and .specify/presets/.registry with the setup artifacts.
 
    Verify resolution from the worktree:
-   Bash("cd .worktrees/<number>-<short-name> && specify preset resolve spec-template")
-   Bash("cd .worktrees/<number>-<short-name> && specify preset resolve plan-template")
-   Bash("cd .worktrees/<number>-<short-name> && specify preset resolve tasks-template")
+   From `.worktrees/<number>-<short-name>/`, run
+   `specify preset resolve spec-template`,
+   `specify preset resolve plan-template`, and
+   `specify preset resolve tasks-template`.
 
 1. Read the workflow template from the plugin:
    Read("${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/templates/workflow-template.md")
@@ -342,7 +340,7 @@ namespace-matches the directory.
 ```text
 1. Create the spec's contract directory in the WORKTREE (scaffold owns this
    early creation; mkdir -p is a no-op if it already exists):
-   Bash("mkdir -p .worktrees/<number>-<short-name>/specs/<branch-name>/")
+   Create `.worktrees/<number>-<short-name>/specs/<branch-name>/` if absent.
 
 2. Read the spec-MOC template from the plugin:
    Read("${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/templates/spec-moc-template.md")
@@ -441,16 +439,14 @@ All commits happen on the worktree branch — NEVER on main.
 ```text
 1. Stage and commit the design concept doc, the workflow file, AND the
    SPEC-MOC marker (the marker is a review-visible CONTRACT artifact — if it is
-   written but left untracked it never reaches the PR):
-   Bash("cd .worktrees/<number>-<short-name> && \
-     git add docs/ai/specs/.process/SPEC-<ID>-design-concept.md \
-             docs/ai/specs/.process/SPEC-<ID>-workflow.md \
-             specs/<branch-name>/SPEC-MOC.md && \
-     git commit -m 'chore(SPEC-XXX): add design concept and workflow for autopilot'")
+   written but left untracked it never reaches the PR). From the worktree, add
+   `docs/ai/specs/.process/SPEC-<ID>-design-concept.md`,
+   `docs/ai/specs/.process/SPEC-<ID>-workflow.md`, and
+   `specs/<branch-name>/SPEC-MOC.md`, then commit with
+   `chore(SPEC-XXX): add design concept and workflow for autopilot`.
 
 2. Push the WORKTREE BRANCH:
-   Bash("cd .worktrees/<number>-<short-name> && \
-     git push")
+   From `.worktrees/<number>-<short-name>/`, run `git push`.
 
 3. Verify:
    - Read the design concept doc — must contain Goals, Non-goals,
@@ -458,9 +454,9 @@ All commits happen on the worktree branch — NEVER on main.
    - Read the workflow file back — no placeholders remain, and the
      Specify/Clarify Prompts contain content traceable to the
      design concept's Q&A log.
-   - Bash("cd .worktrees/... && git rev-parse --abbrev-ref HEAD")
+   - From the worktree, run `git rev-parse --abbrev-ref HEAD`
      → must show the spec branch, NOT main
-   - Bash("cd .worktrees/... && git log --oneline -1")
+   - From the worktree, run `git log --oneline -1`
      → must show the design-concept-and-workflow commit
 ```
 
@@ -496,10 +492,8 @@ WORKTREE (not on main) to mark the spec as `🔄 In Progress`:
    Edit(".worktrees/<number>-<short-name>/<roadmap-path-from-step-1>")
 
 2. Commit IN THE WORKTREE:
-   Bash("cd .worktrees/<number>-<short-name> && \
-     git add docs/ai/ && \
-     git commit -m 'chore(SPEC-XXX): mark as In Progress' && \
-     git push")
+   From `.worktrees/<number>-<short-name>/`, stage `docs/ai/`, commit with
+   `chore(SPEC-XXX): mark as In Progress`, and push the branch.
 ```
 
 **NEVER push to main.** The technical roadmap update will reach

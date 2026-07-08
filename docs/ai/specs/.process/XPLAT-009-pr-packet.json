@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0",
+  "spec_id": "XPLAT-009",
+  "title": "feat(xplat): eradicate plugin Bash runtime surface",
+  "base_branch": "main",
+  "head_branch": "codex/xplat-009-plugin-source-and-payload-bash-eradication",
+  "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/297",
+  "diff_range": "origin/main...HEAD",
+  "reviewability_route": "one-navigable-PR",
+  "review_order": [
+    {
+      "label": "1. Source and guidance cleanup",
+      "paths": [
+        "speckit-pro/skills/**",
+        "speckit-pro/codex-skills/**",
+        "speckit-pro/agents/**",
+        "speckit-pro/codex-agents/**",
+        "speckit-pro/README.md",
+        "README.md"
+      ]
+    },
+    {
+      "label": "2. Python runner/helper/gate ownership",
+      "paths": [
+        "speckit-pro/speckit_pro_runner/**"
+      ]
+    },
+    {
+      "label": "3. Generated payload mirrors",
+      "paths": [
+        "dist/claude/speckit-pro/**",
+        "dist/codex/speckit-pro/**"
+      ]
+    },
+    {
+      "label": "4. Tests, fixtures, and process evidence",
+      "paths": [
+        "tests/speckit-pro/**",
+        "docs/ai/specs/.process/XPLAT-009-*",
+        "specs/xplat-009-plugin-source-and-payload-bash-eradication/**"
+      ]
+    }
+  ],
+  "verification": [
+    "PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py -> 33/33 passed",
+    "PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py -> 17/17 passed",
+    "PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py -> 48/48 passed",
+    "PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py -> 10/10 passed",
+    "bash tests/speckit-pro/layer4-scripts/test-privacy-scan.sh -> 10/10 passed",
+    "bash tests/speckit-pro/run-all.sh -> 2021/2021 passed",
+    "git diff --check origin/main...HEAD -> passed"
+  ],
+  "evidence": [
+    "docs/ai/specs/.process/XPLAT-009-source-inventory.md",
+    "docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json",
+    "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json",
+    "docs/ai/specs/.process/XPLAT-009-zero-bash-guard-result.json",
+    "docs/ai/specs/.process/XPLAT-009-release-readiness-result.json",
+    "specs/xplat-009-plugin-source-and-payload-bash-eradication/.process/final-reviewability/gate-state.json",
+    "specs/xplat-009-plugin-source-and-payload-bash-eradication/.process/uat-runbook.md"
+  ],
+  "known_gaps": [
+    "XPLAT-008 native Windows/macOS/Linux operator UAT remains outside this spec.",
+    "RepoPrompt review-agent transport closed during post review; parent review completed and deterministic gates passed."
+  ],
+  "rollback": "Revert the branch as a unit; do not partially restore deleted plugin Bash scripts without matching guidance, payload, test, and release-readiness state."
+}

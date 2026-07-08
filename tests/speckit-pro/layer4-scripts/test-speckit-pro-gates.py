@@ -26,6 +26,9 @@ XPLAT_008_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "xplat-00
 XPLAT_008_CONTRACT_DIR = XPLAT_008_FIXTURE_DIR / "contracts"
 XPLAT_008_REQUESTS_DIR = XPLAT_008_FIXTURE_DIR / "requests"
 XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/promotion-records.json"
+XPLAT_009_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "xplat-009-zero-bash"
+XPLAT_009_REQUESTS_DIR = XPLAT_009_FIXTURE_DIR / "requests"
+XPLAT_009_CONTRACT_DIR = REPO_ROOT / "specs" / "xplat-009-plugin-source-and-payload-bash-eradication" / "contracts"
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
@@ -102,6 +105,14 @@ def xplat008_fixture_request(name: str) -> dict[str, Any]:
 
 def xplat008_fixture_cases(name: str) -> dict[str, Any]:
     return json.loads((XPLAT_008_FIXTURE_DIR / f"{name}-cases.json").read_text(encoding="utf-8"))
+
+
+def xplat009_fixture_request(name: str) -> dict[str, Any]:
+    return json.loads((XPLAT_009_REQUESTS_DIR / f"{name}.json").read_text(encoding="utf-8"))
+
+
+def xplat009_fixture_cases(name: str) -> dict[str, Any]:
+    return json.loads((XPLAT_009_FIXTURE_DIR / f"{name}-cases.json").read_text(encoding="utf-8"))
 
 
 def python_argv(source: str) -> list[str]:
@@ -259,7 +270,7 @@ class GateFoundationTests(unittest.TestCase):
 
         report = gate_registry_report()
         self.assertEqual(report["schema_version"], "1.0")
-        self.assertEqual(report["feature_id"], "XPLAT-007+XPLAT-008")
+        self.assertEqual(report["feature_id"], "XPLAT-007+XPLAT-008+XPLAT-009")
         self.assertEqual(report["promotion_status"], "mixed")
         self.assertFalse(report["active_cutover"])
         self.assertEqual(
@@ -301,6 +312,7 @@ class GateFoundationTests(unittest.TestCase):
         }
         us3_operations = {
             "active-path-guard",
+            "zero-bash-guard",
             "classify-shell-finding",
         }
         us4_operations = {
@@ -884,6 +896,8 @@ class GateFoundationTests(unittest.TestCase):
                 "blocking-active-runtime-patterns",
                 "allowed-runtime-exceptions",
                 "final-current-implementation",
+                "empty-scan-roots",
+                "non-list-scan-roots",
             },
         )
         final_case = next(case for case in cases["cases"] if case["case_id"] == "final-current-implementation")
@@ -892,6 +906,24 @@ class GateFoundationTests(unittest.TestCase):
             "final current implementation scans the full release surface without requiring PR review-base diff metadata",
             cases["coverage"],
         )
+        self.assertIn(
+            "empty and non-list configured scan roots fail closed instead of falling back to default roots",
+            cases["coverage"],
+        )
+        blocking_case = next(case for case in cases["cases"] if case["case_id"] == "blocking-active-runtime-patterns")
+        blocking_yaml = next(file for file in blocking_case["files"] if file["path"] == "speckit-pro/codex-agents/openai.yaml")
+        blocking_yaml_findings = active_path_guard.scan_sources_xplat008(
+            [active_path_guard.SourceFile(blocking_yaml["path"], blocking_yaml["content"], "fixture")],
+            REPO_ROOT,
+        )
+        blocking_yaml_records = {(finding.category, finding.line): finding.pattern for finding in blocking_yaml_findings}
+        self.assertIn(("shell_command_wrapper", 2), blocking_yaml_records)
+        self.assertIn("/bin/sh", blocking_yaml_records[("shell_command_wrapper", 2)])
+        self.assertIn("-c", blocking_yaml_records[("shell_command_wrapper", 2)])
+        self.assertIn(("shell_runtime", 6), blocking_yaml_records)
+        self.assertIn("/bin/sh", blocking_yaml_records[("shell_runtime", 6)])
+        self.assertIn(("shell_runtime", 8), blocking_yaml_records)
+        self.assertIn("/usr/bin/zsh", blocking_yaml_records[("shell_runtime", 8)])
         self.assertLessEqual(
             {
                 "dist/claude/speckit-pro/hooks",
@@ -1043,6 +1075,37 @@ class GateFoundationTests(unittest.TestCase):
         )
         self.assertTrue(
             [finding for finding in script_suffix_findings if finding.classification == "blocking_active_runtime"]
+        )
+        payload_detector_findings = active_path_guard.scan_sources_xplat008(
+            [
+                active_path_guard.SourceFile(
+                    "dist/codex/speckit-pro/speckit_pro_runner/gates/payloads.py",
+                    '    first_line = handle.readline(4096)\n'
+                    '    return bool(re.search(r"^#!.*\\b(?:bash|sh|zsh|powershell|pwsh)\\b", first_line))\n',
+                    "repo",
+                )
+            ],
+            REPO_ROOT,
+        )
+        self.assertFalse(
+            [finding for finding in payload_detector_findings if finding.classification == "blocking_active_runtime"]
+        )
+        mixed_tool_guidance_findings = active_path_guard.scan_sources_xplat008(
+            [
+                active_path_guard.SourceFile(
+                    "speckit-pro/agents/phase-executor.md",
+                    "allowed-tools: Bash, Read\nRun scripts/install.sh before release.\n",
+                    "repo",
+                )
+            ],
+            REPO_ROOT,
+        )
+        self.assertTrue(
+            [
+                finding
+                for finding in mixed_tool_guidance_findings
+                if finding.line == 2 and finding.classification == "blocking_active_runtime"
+            ]
         )
         self.assertEqual(
             active_path_guard.classify_xplat008_path(
@@ -1224,6 +1287,70 @@ class GateFoundationTests(unittest.TestCase):
             ),
             "source_checkout_helper",
         )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/agents/clarify-executor.md",
+                "bash",
+                "Bash",
+                "disallowedTools: Write, Edit, Bash, Agent",
+                "repo",
+            ),
+            "source_checkout_helper",
+        )
+        self.assertEqual(
+            active_path_guard.classify_xplat008_path(
+                "speckit-pro/agents/phase-executor.md",
+                "bash",
+                "Bash",
+                "allowed-tools: Bash, Read; run scripts/install.sh",
+                "repo",
+            ),
+            "blocking_active_runtime",
+        )
+        self.assertEqual(
+            active_path_guard.zero_bash_classification(
+                "dist/claude/speckit-pro/agents/clarify-executor.md",
+                "bash",
+                "Bash",
+                "disallowedTools: Write, Edit, Bash, Agent",
+                [],
+                declaration_line="disallowedTools: Write, Edit, Bash, Agent",
+            ),
+            "blocking_zero_bash",
+        )
+        self.assertEqual(
+            active_path_guard.zero_bash_classification(
+                "dist/claude/speckit-pro/skills/speckit-autopilot/references/capability-discovery.md",
+                "shell_interpolation",
+                "$SHELL",
+                "Do not use $SHELL to run installed helpers.",
+                [],
+                declaration_line="Do not use $SHELL to run installed helpers.",
+            ),
+            "negative_policy",
+        )
+        self.assertEqual(
+            active_path_guard.zero_bash_classification(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "bash",
+                "Bash",
+                "Run Bash instead of Python.",
+                [],
+                declaration_line="Run Bash instead of Python.",
+            ),
+            "blocking_zero_bash",
+        )
+        self.assertEqual(
+            active_path_guard.zero_bash_classification(
+                "speckit-pro/skills/speckit-status/SKILL.md",
+                "jq",
+                "jq",
+                "Use jq rather than Python JSON parsing.",
+                [],
+                declaration_line="Use jq rather than Python JSON parsing.",
+            ),
+            "blocking_zero_bash",
+        )
         missing_roots = active_path_guard.missing_xplat008_scan_root_findings(
             REPO_ROOT,
             {"scan_roots": ["dist/missing-runtime-root"]},
@@ -1231,6 +1358,16 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(len(missing_roots), 1)
         self.assertEqual(missing_roots[0].classification, "blocking_active_runtime")
         self.assertEqual(missing_roots[0].category, "scan_root")
+        for malformed_case in ({"scan_roots": []}, {"scan_roots": "speckit-pro/skills"}):
+            with self.subTest(malformed_case=malformed_case):
+                malformed_roots = active_path_guard.missing_xplat008_scan_root_findings(REPO_ROOT, malformed_case)
+                self.assertEqual(len(malformed_roots), 1)
+                self.assertEqual(malformed_roots[0].classification, "blocking_active_runtime")
+                self.assertEqual(malformed_roots[0].category, "scan_root")
+                changed_sources = active_path_guard.changed_repo_sources(REPO_ROOT, malformed_case)
+                self.assertIsInstance(changed_sources, active_path_guard.RawFinding)
+                self.assertEqual(changed_sources.classification, "blocking_active_runtime")
+                self.assertEqual(changed_sources.category, "scan_root")
 
         with tempfile.TemporaryDirectory() as tmp:
             completed, response, stderr_records = run_runner(
@@ -1270,6 +1407,24 @@ class GateFoundationTests(unittest.TestCase):
             {"bash", "script_file", "jq", "git_bash", "wsl"},
             {finding["category"] for finding in response["data"]["findings"]},
         )
+
+        for case_id in ["empty-scan-roots", "non-list-scan-roots"]:
+            with self.subTest(case_id=case_id):
+                completed, response, stderr_records = run_runner(
+                    gate_request(
+                        "active-path-guard",
+                        "active-runtime-guard",
+                        inputs={
+                            "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json",
+                            "case_id": case_id,
+                        },
+                    )
+                )
+                self.assertEqual(completed.returncode, 1)
+                self.assert_response(response, "expected_failure")
+                self.assertEqual([diag["code"] for diag in stderr_records], ["active_runtime_guard_blocked"])
+                self.assertEqual(response["data"]["blocking_count"], 1)
+                self.assertEqual({finding["category"] for finding in response["data"]["findings"]}, {"scan_root"})
 
         completed, response, stderr_records = run_runner(
             gate_request(
@@ -1350,6 +1505,632 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(apply_request["operation"], "payload-completeness")
         self.assertEqual(apply_request["mode"], "apply")
         self.assertTrue(apply_request["inputs"]["apply_dist"])
+
+    def test_xplat009_zero_bash_guard_fixtures_cover_source_payload_and_cache_proof(self) -> None:
+        from speckit_pro_runner.gates import active_path_guard
+
+        cases = xplat009_fixture_cases("zero-bash-guard")
+        self.assertEqual(cases["schema_version"], "1.0")
+        self.assertEqual(cases["feature_id"], "XPLAT-009")
+        self.assertEqual(
+            {case["case_id"] for case in cases["cases"]},
+            {
+                "clean-fixture",
+                "blocking-active-source",
+                "blocking-active-allowlist-entry",
+                "blocking-missing-allowlist-fields",
+                "blocking-unsupported-allowlist-field",
+                "blocking-traversal-allowlist-path",
+                "blocking-invalid-allowlist-line-bounds",
+                "blocking-python-shell-exec",
+                "blocking-uppercase-script-file",
+                "blocking-suffixful-shell-script",
+                "blocking-extensionless-script",
+                "blocking-active-reference",
+                "blocking-active-source-tree-language",
+                "blocking-active-guidance-categories",
+                "blocking-active-tool-declaration",
+                "missing-scan-root",
+                "missing-required-scan-root",
+                "traversal-scan-root",
+                "malformed-scan-root",
+                "empty-scan-roots",
+                "non-list-scan-roots",
+                "missing-installed-cache-proof",
+                "mutable-installed-cache-proof",
+                "stale-installed-cache-proof",
+                "single-product-installed-cache-proof",
+                "missing-source-root-installed-cache-proof",
+                "file-root-installed-cache-proof",
+                "source-mismatch-installed-cache-proof",
+                "same-root-installed-cache-proof",
+                "product-root-mismatch-installed-cache-proof",
+                "partial-root-installed-cache-proof",
+                "traversal-root-installed-cache-proof",
+                "missing-mutable-installed-cache-proof",
+                "final-current-implementation",
+            },
+        )
+        final_case = next(case for case in cases["cases"] if case["case_id"] == "final-current-implementation")
+        self.assertLessEqual(
+            {"speckit-pro", "scripts/build-plugin-payloads.py", "dist/claude/speckit-pro", "dist/codex/speckit-pro", "README.md"},
+            set(final_case["scan_roots"]),
+        )
+        self.assertEqual(final_case["installed_cache_proof"], "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json")
+        self.assertEqual(
+            json.loads((REPO_ROOT / final_case["installed_cache_proof"]).read_text(encoding="utf-8")),
+            json.loads((XPLAT_009_FIXTURE_DIR / "installed-cache-proof.json").read_text(encoding="utf-8")),
+        )
+        self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/usr/bin/env", "-S bash -lc jq -r . package.json"]))
+        self.assertTrue(active_path_guard.command_argv_contains_forbidden(["sh", "-c", "python -m speckit_pro_runner"]))
+        self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/bin/sh", "runner"]))
+        self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/usr/bin/env", "zsh", "runner"]))
+        self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/usr/bin/env", "-i", "sh", "-c", "python -m speckit_pro_runner"]))
+        self.assertTrue(active_path_guard.command_argv_contains_forbidden(["env", "FOO=bar", "zsh", "-c", "python -m speckit_pro_runner"]))
+        self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/usr/bin/env", "--ignore-environment", "sh", "-c", "python -m speckit_pro_runner"]))
+        self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/bin/sh", "--noprofile", "--norc", "-c", "python -m speckit_pro_runner"]))
+        self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/bin/zsh", "-o", "pipefail", "-c", "python -m speckit_pro_runner"]))
+        self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/usr/bin/env", "-S", "sh -c python -m speckit_pro_runner"]))
+        self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/usr/bin/env", "-S sh -c python -m speckit_pro_runner"]))
+        with tempfile.TemporaryDirectory() as tmp:
+            extensionless = Path(tmp) / "install"
+            extensionless.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+            self.assertEqual(active_path_guard.count_prohibited_script_files(extensionless), 1)
+            zsh_script = Path(tmp) / "install.zsh"
+            zsh_script.write_text("#!/usr/bin/env zsh\n", encoding="utf-8")
+            self.assertEqual(active_path_guard.count_prohibited_script_files(zsh_script), 1)
+            bash_script = Path(tmp) / "install.bash"
+            bash_script.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+            self.assertEqual(active_path_guard.count_prohibited_script_files(bash_script), 1)
+            oversized = Path(tmp) / "large-install"
+            oversized.write_text("#!/usr/bin/env bash\n" + ("#" * (active_path_guard.MAX_SCAN_BYTES + 1)), encoding="utf-8")
+            self.assertEqual(active_path_guard.count_prohibited_script_files(oversized), 1)
+        with tempfile.TemporaryDirectory(prefix=".xplat009-large-script-", dir=PLUGIN_ROOT) as tmp:
+            temp_root = Path(tmp)
+            large_suffix_script = temp_root / "install.sh"
+            large_suffix_script.write_text("#!/usr/bin/env bash\n" + ("#" * (active_path_guard.MAX_SCAN_BYTES + 1)), encoding="utf-8")
+            large_extensionless_script = temp_root / "install"
+            large_extensionless_script.write_text(
+                "#!/usr/bin/env bash\n" + ("#" * (active_path_guard.MAX_SCAN_BYTES + 1)),
+                encoding="utf-8",
+            )
+            sources = active_path_guard.scan_repo_sources(
+                REPO_ROOT,
+                roots=(temp_root.relative_to(REPO_ROOT).as_posix(),),
+            )
+            findings = active_path_guard.zero_bash_source_findings(sources, [])
+            script_paths = {finding.path for finding in findings if finding.category == "script_file"}
+            self.assertLessEqual(
+                {
+                    large_suffix_script.relative_to(REPO_ROOT).as_posix(),
+                    large_extensionless_script.relative_to(REPO_ROOT).as_posix(),
+                },
+                script_paths,
+            )
+        with tempfile.TemporaryDirectory(prefix=".xplat009-symlink-", dir=PLUGIN_ROOT) as tmp:
+            temp_root = Path(tmp)
+            with tempfile.TemporaryDirectory() as outside:
+                outside_script = Path(outside) / "install"
+                outside_script.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+                symlink = temp_root / "install"
+                symlink.symlink_to(outside_script)
+                sources = active_path_guard.scan_repo_sources(
+                    REPO_ROOT,
+                    roots=(temp_root.relative_to(REPO_ROOT).as_posix(),),
+                )
+            self.assertFalse([source for source in sources if source.path == symlink.relative_to(REPO_ROOT).as_posix()])
+        with tempfile.TemporaryDirectory() as tmp:
+            completed, response, stderr_records = run_runner(
+                gate_request(
+                    "active-path-guard",
+                    "zero-bash-guard",
+                    inputs={"repo_root": tmp},
+                )
+            )
+            self.assertEqual(completed.returncode, 3)
+            self.assert_response(response, "missing_prerequisite")
+            self.assertEqual([diag["code"] for diag in stderr_records], ["missing_prerequisite"])
+            self.assertEqual(response["data"]["gate"]["comparison_ids"], ["xplat-009-zero-bash-guard"])
+            self.assertEqual(response["data"]["gate"]["gate_status"], "fail")
+            self.assertEqual(response["data"]["feature_id"], "XPLAT-009")
+            self.assertEqual(response["data"]["status"], "fail")
+            self.assertEqual(response["data"]["blocking_count"], 1)
+            self.assertEqual(
+                response["data"]["gate"]["promotion_record"],
+                "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/promotion-records.json",
+            )
+
+        completed, response, stderr_records = run_runner(
+            gate_request(
+                "active-path-guard",
+                "zero-bash-guard",
+                inputs={"case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/missing-case-file.json"},
+            )
+        )
+        self.assertEqual(completed.returncode, 2)
+        self.assert_response(response, "input_error")
+        self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_case_file"])
+        self.assertEqual(response["data"]["gate"]["gate_status"], "fail")
+        self.assertEqual(response["data"]["feature_id"], "XPLAT-009")
+        self.assertEqual(response["data"]["status"], "fail")
+
+        completed, response, stderr_records = run_runner(xplat009_fixture_request("zero-bash-guard"))
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        clean_response = response
+        result = response["data"]
+        self.assertEqual(result["feature_id"], "XPLAT-009")
+        self.assertEqual(result["status"], "pass")
+        self.assertEqual(result["blocking_count"], 0)
+        self.assertEqual(result["script_file_count"], 0)
+        self.assertTrue(result["allowlist"]["release_readiness_excluded"])
+        self.assertEqual(result["installed_cache_proof"]["proof_count"], 2)
+        self.assertTrue(result["installed_cache_proof"]["source_derived"])
+        self.assertFalse(result["installed_cache_proof"]["mutable_user_cache"])
+
+        for case_id in [
+            "blocking-active-source",
+            "blocking-active-allowlist-entry",
+            "blocking-missing-allowlist-fields",
+            "blocking-unsupported-allowlist-field",
+            "blocking-traversal-allowlist-path",
+            "blocking-invalid-allowlist-line-bounds",
+            "blocking-python-shell-exec",
+            "blocking-uppercase-script-file",
+            "blocking-suffixful-shell-script",
+            "blocking-extensionless-script",
+            "blocking-active-reference",
+            "blocking-active-source-tree-language",
+            "blocking-active-guidance-categories",
+            "blocking-active-tool-declaration",
+            "missing-scan-root",
+            "missing-required-scan-root",
+            "traversal-scan-root",
+            "malformed-scan-root",
+            "empty-scan-roots",
+            "non-list-scan-roots",
+            "missing-installed-cache-proof",
+            "mutable-installed-cache-proof",
+            "stale-installed-cache-proof",
+            "single-product-installed-cache-proof",
+            "missing-source-root-installed-cache-proof",
+            "file-root-installed-cache-proof",
+            "source-mismatch-installed-cache-proof",
+            "same-root-installed-cache-proof",
+            "product-root-mismatch-installed-cache-proof",
+            "partial-root-installed-cache-proof",
+            "traversal-root-installed-cache-proof",
+            "missing-mutable-installed-cache-proof",
+        ]:
+            with self.subTest(case_id=case_id):
+                completed, response, stderr_records = run_runner(
+                    gate_request(
+                        "active-path-guard",
+                        "zero-bash-guard",
+                        inputs={
+                            "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/zero-bash-guard-cases.json",
+                            "case_id": case_id,
+                        },
+                    )
+                )
+                self.assertEqual(completed.returncode, 1)
+                self.assert_response(response, "expected_failure")
+                self.assertEqual([diag["code"] for diag in stderr_records], ["zero_bash_guard_blocked"])
+                self.assertGreater(response["data"]["blocking_count"], 0)
+                self.assertTrue(
+                    all(finding["classification"] == "blocking_zero_bash" for finding in response["data"]["findings"])
+                )
+
+        expected_categories = {
+            "blocking-active-source": {"bash", "git_bash", "jq", "script_file", "shell_command_wrapper", "shell_runtime", "shell_true", "wsl"},
+            "blocking-missing-allowlist-fields": {"allowlist"},
+            "blocking-unsupported-allowlist-field": {"allowlist"},
+            "blocking-traversal-allowlist-path": {"allowlist"},
+            "blocking-invalid-allowlist-line-bounds": {"allowlist"},
+            "blocking-python-shell-exec": {"os_system", "shell_true", "command_string_subprocess", "command_argv_subprocess"},
+            "blocking-uppercase-script-file": {"script_file"},
+            "blocking-suffixful-shell-script": {"script_file"},
+            "blocking-extensionless-script": {"script_file"},
+            "blocking-active-reference": {"bash", "script_file", "wsl"},
+            "blocking-active-source-tree-language": {"bash", "jq"},
+            "blocking-active-guidance-categories": {
+                "bash",
+                "wsl",
+                "script_file",
+                "powershell_helper",
+                "jq",
+                "shell_interpolation",
+                "shell_command_wrapper",
+                "shell_runtime",
+            },
+            "blocking-active-tool-declaration": {"bash", "shell_runtime"},
+            "missing-required-scan-root": {"scan_root"},
+            "traversal-scan-root": {"scan_root"},
+            "malformed-scan-root": {"scan_root"},
+            "empty-scan-roots": {"scan_root"},
+            "non-list-scan-roots": {"scan_root"},
+            "mutable-installed-cache-proof": {"mutable_user_cache"},
+            "stale-installed-cache-proof": {"source_payload_tree_hash"},
+            "single-product-installed-cache-proof": {"product_coverage"},
+            "missing-source-root-installed-cache-proof": {"source_payload_root"},
+            "file-root-installed-cache-proof": {"installed_root"},
+            "source-mismatch-installed-cache-proof": {"source_payload_tree_hash"},
+            "same-root-installed-cache-proof": {"installed_root"},
+            "product-root-mismatch-installed-cache-proof": {"installed_root", "source_payload_root"},
+            "partial-root-installed-cache-proof": {"installed_root", "source_payload_root"},
+            "traversal-root-installed-cache-proof": {"installed_root", "source_payload_root"},
+            "missing-mutable-installed-cache-proof": {"mutable_user_cache"},
+        }
+        exact_category_cases = {case_id for case_id in expected_categories if case_id.endswith("-installed-cache-proof")}
+        for case_id, categories in expected_categories.items():
+            with self.subTest(case_id=f"{case_id}-categories"):
+                completed, response, _ = run_runner(
+                    gate_request(
+                        "active-path-guard",
+                        "zero-bash-guard",
+                        inputs={
+                            "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/zero-bash-guard-cases.json",
+                            "case_id": case_id,
+                            "max_findings": 20,
+                        },
+                    )
+                )
+                self.assertEqual(completed.returncode, 1)
+                actual_categories = {finding["category"] for finding in response["data"]["findings"]}
+                if case_id in exact_category_cases:
+                    self.assertEqual(actual_categories, categories)
+                else:
+                    self.assertLessEqual(categories, actual_categories)
+
+        capped = active_path_guard.bounded_findings(
+            [
+                active_path_guard.RawFinding(
+                    path=f"speckit-pro/file-{index}.py",
+                    line=None,
+                    category="bash",
+                    pattern="bash",
+                    reason="test",
+                    active_role="test",
+                    classification="blocking_zero_bash",
+                    remediation="test",
+                )
+                for index in range(600)
+            ],
+            {"max_findings": 10000},
+        )
+        self.assertEqual(len(capped), 500)
+
+        yaml_case = next(case for case in cases["cases"] if case["case_id"] == "blocking-active-guidance-categories")
+        yaml_source = next(file for file in yaml_case["files"] if file["path"] == "speckit-pro/codex-agents/openai.yaml")
+        yaml_findings = active_path_guard.zero_bash_source_findings(
+            [active_path_guard.SourceFile(yaml_source["path"], yaml_source["content"], "fixture")],
+            [],
+        )
+        yaml_records = {(finding.category, finding.line): finding.pattern for finding in yaml_findings}
+        self.assertIn(("shell_command_wrapper", 2), yaml_records)
+        self.assertIn("/bin/sh", yaml_records[("shell_command_wrapper", 2)])
+        self.assertIn("-c", yaml_records[("shell_command_wrapper", 2)])
+        self.assertIn(("shell_command_wrapper", 7), yaml_records)
+        self.assertIn("/usr/bin/zsh", yaml_records[("shell_command_wrapper", 7)])
+        self.assertIn("pipefail", yaml_records[("shell_command_wrapper", 7)])
+        self.assertIn("-c", yaml_records[("shell_command_wrapper", 7)])
+        self.assertIn(("shell_runtime", 14), yaml_records)
+        self.assertIn("/bin/sh", yaml_records[("shell_runtime", 14)])
+        self.assertIn("runner", yaml_records[("shell_runtime", 14)])
+        self.assertIn(("shell_runtime", 16), yaml_records)
+        self.assertIn("/bin/sh", yaml_records[("shell_runtime", 16)])
+        self.assertIn(("shell_runtime", 18), yaml_records)
+        self.assertIn("/usr/bin/zsh", yaml_records[("shell_runtime", 18)])
+
+        python_case = next(case for case in cases["cases"] if case["case_id"] == "blocking-python-shell-exec")
+        dynamic_python = next(file for file in python_case["files"] if file["path"].endswith("dynamic_shell.py"))
+        dynamic_python_findings = active_path_guard.zero_bash_source_findings(
+            [active_path_guard.SourceFile(dynamic_python["path"], dynamic_python["content"], "fixture")],
+            [],
+        )
+        dynamic_python_records = {(finding.category, finding.line): finding.pattern for finding in dynamic_python_findings}
+        self.assertIn(("shell_true", 8), dynamic_python_records)
+        self.assertIn("shell=use_shell", dynamic_python_records[("shell_true", 8)])
+        self.assertIn(("shell_true", 9), dynamic_python_records)
+        self.assertIn("shell=1", dynamic_python_records[("shell_true", 9)])
+        self.assertNotIn(("shell_true", 10), dynamic_python_records)
+        self.assertIn(("command_string_subprocess", 11), dynamic_python_records)
+        self.assertIn("subprocess.getoutput", dynamic_python_records[("command_string_subprocess", 11)])
+        self.assertIn(("command_string_subprocess", 12), dynamic_python_records)
+        self.assertIn("subprocess.getstatusoutput", dynamic_python_records[("command_string_subprocess", 12)])
+        self.assertIn(("os_system", 13), dynamic_python_records)
+        self.assertIn("os.popen", dynamic_python_records[("os_system", 13)])
+        self.assertIn(("os_system", 14), dynamic_python_records)
+        self.assertIn("os_popen", dynamic_python_records[("os_system", 14)])
+        self.assertIn(("command_string_subprocess", 15), dynamic_python_records)
+        self.assertIn("getoutput", dynamic_python_records[("command_string_subprocess", 15)])
+        self.assertIn(("command_string_subprocess", 16), dynamic_python_records)
+        self.assertIn("getstatusoutput", dynamic_python_records[("command_string_subprocess", 16)])
+
+        self.assert_xplat009_zero_bash_contracts_match_fixtures(clean_response)
+
+    def test_xplat009_installed_cache_proof_blocks_empty_payload_roots(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="xplat009-empty-", dir=REPO_ROOT / "dist" / "claude") as claude_root:
+            with tempfile.TemporaryDirectory(prefix="xplat009-empty-", dir=REPO_ROOT / "dist" / "codex") as codex_root:
+                with tempfile.TemporaryDirectory(prefix=".xplat009-proof-", dir=REPO_ROOT) as proof_root:
+                    proof_dir = Path(proof_root)
+                    proof_file = proof_dir / "installed-cache-proof-empty.json"
+                    case_file = proof_dir / "zero-bash-empty-root-case.json"
+                    proof_file.write_text(
+                        json.dumps(
+                            {
+                                "schema_version": "1.0",
+                                "feature_id": "XPLAT-009",
+                                "proofs": [
+                                    {
+                                        "product": "claude",
+                                        "surface": "claude_payload_fixture",
+                                        "installed_root": Path(claude_root).relative_to(REPO_ROOT).as_posix(),
+                                        "source_payload_root": Path(claude_root).relative_to(REPO_ROOT).as_posix(),
+                                        "source_payload_tree_hash": "0" * 64,
+                                        "source_derived": True,
+                                        "mutable_user_cache": False,
+                                        "script_file_count": 0,
+                                        "active_guidance_findings": [],
+                                        "allowlist_release_readiness_excluded": True,
+                                    },
+                                    {
+                                        "product": "codex",
+                                        "surface": "codex_payload_fixture",
+                                        "installed_root": Path(codex_root).relative_to(REPO_ROOT).as_posix(),
+                                        "source_payload_root": Path(codex_root).relative_to(REPO_ROOT).as_posix(),
+                                        "source_payload_tree_hash": "0" * 64,
+                                        "source_derived": True,
+                                        "mutable_user_cache": False,
+                                        "script_file_count": 0,
+                                        "active_guidance_findings": [],
+                                        "allowlist_release_readiness_excluded": True,
+                                    },
+                                ],
+                            },
+                            indent=2,
+                        )
+                        + "\n",
+                        encoding="utf-8",
+                    )
+                    case_file.write_text(
+                        json.dumps(
+                            {
+                                "schema_version": "1.0",
+                                "feature_id": "XPLAT-009",
+                                "cases": [
+                                    {
+                                        "case_id": "empty-installed-cache-proof",
+                                        "files": [
+                                            {
+                                                "path": "speckit-pro/skills/speckit-status/SKILL.md",
+                                                "content": "Use python -m speckit_pro_runner.\n",
+                                            }
+                                        ],
+                                        "allowlist_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/allowlist.json",
+                                        "installed_cache_proof": proof_file.relative_to(REPO_ROOT).as_posix(),
+                                    }
+                                ],
+                            },
+                            indent=2,
+                        )
+                        + "\n",
+                        encoding="utf-8",
+                    )
+
+                    completed, response, _ = run_runner(
+                        gate_request(
+                            "active-path-guard",
+                            "zero-bash-guard",
+                            inputs={
+                                "case_file": case_file.relative_to(REPO_ROOT).as_posix(),
+                                "case_id": "empty-installed-cache-proof",
+                            },
+                        )
+                    )
+
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure")
+        categories = {finding["category"] for finding in response["data"]["findings"]}
+        self.assertLessEqual({"source_payload_root", "installed_root"}, categories)
+
+    def test_xplat009_installed_cache_proof_blocks_schema_drift(self) -> None:
+        proof = json.loads((REPO_ROOT / "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json").read_text(encoding="utf-8"))
+        proof["proofs"][0].pop("surface")
+        proof["proofs"][1]["product"] = "cursor"
+        proof["proofs"][1]["unexpected_field"] = "drift"
+        with tempfile.TemporaryDirectory(prefix=".xplat009-proof-schema-", dir=REPO_ROOT) as proof_root:
+            proof_dir = Path(proof_root)
+            proof_file = proof_dir / "installed-cache-proof-schema-drift.json"
+            case_file = proof_dir / "zero-bash-proof-schema-drift-case.json"
+            proof_file.write_text(json.dumps(proof, indent=2) + "\n", encoding="utf-8")
+            case_file.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "1.0",
+                        "feature_id": "XPLAT-009",
+                        "cases": [
+                            {
+                                "case_id": "schema-drift-installed-cache-proof",
+                                "files": [
+                                    {
+                                        "path": "speckit-pro/skills/speckit-status/SKILL.md",
+                                        "content": "Use python -m speckit_pro_runner.\n",
+                                    }
+                                ],
+                                "allowlist_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/allowlist.json",
+                                "installed_cache_proof": proof_file.relative_to(REPO_ROOT).as_posix(),
+                            }
+                        ],
+                    },
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            completed, response, _ = run_runner(
+                gate_request(
+                    "active-path-guard",
+                    "zero-bash-guard",
+                    inputs={
+                        "case_file": case_file.relative_to(REPO_ROOT).as_posix(),
+                        "case_id": "schema-drift-installed-cache-proof",
+                    },
+                )
+            )
+
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure")
+        categories = {finding["category"] for finding in response["data"]["findings"]}
+        self.assertLessEqual({"surface", "product", "malformed"}, categories)
+
+    def test_xplat009_installed_cache_proof_scans_cache_text(self) -> None:
+        installed_root = REPO_ROOT / "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache/claude/speckit-pro"
+        with tempfile.TemporaryDirectory(prefix=".xplat009-active-cache-", dir=installed_root) as cache_root:
+            cache_file = Path(cache_root) / "README.md"
+            cache_file.write_text("Run Bash before continuing.\\n", encoding="utf-8")
+
+            completed, response, _ = run_runner(xplat009_fixture_request("zero-bash-guard"))
+
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure")
+        cache_findings = [
+            finding
+            for finding in response["data"]["findings"]
+            if "installed-cache/claude/speckit-pro" in finding["path"]
+        ]
+        self.assertTrue(cache_findings)
+        self.assertIn("bash", {finding["category"] for finding in cache_findings})
+
+    def test_xplat009_zero_bash_guard_allows_missing_optional_installed_cache_proof(self) -> None:
+        with tempfile.TemporaryDirectory(prefix=".xplat009-optional-proof-", dir=REPO_ROOT) as scan_root:
+            scan_dir = Path(scan_root)
+            (scan_dir / "README.md").write_text("Python runner only.\n", encoding="utf-8")
+            case_file = scan_dir / "zero-bash-optional-proof-case.json"
+            case_file.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "1.0",
+                        "feature_id": "XPLAT-009",
+                        "cases": [
+                            {
+                                "case_id": "optional-proof-clean-root",
+                                "scan_roots": [scan_dir.relative_to(REPO_ROOT).as_posix()],
+                                "require_installed_cache_proof": False,
+                                "allowlist_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/allowlist.json",
+                            }
+                        ],
+                    },
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            completed, response, stderr_records = run_runner(
+                gate_request(
+                    "active-path-guard",
+                    "zero-bash-guard",
+                    inputs={
+                        "case_file": case_file.relative_to(REPO_ROOT).as_posix(),
+                        "case_id": "optional-proof-clean-root",
+                    },
+                )
+            )
+
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        self.assertFalse(response["data"]["installed_cache_proof"]["required"])
+        self.assertEqual(response["data"]["installed_cache_proof"]["proof_count"], 0)
+        self.assertEqual(response["data"]["blocking_count"], 0)
+
+    def test_xplat009_zero_bash_guard_blocks_physical_uppercase_script_files(self) -> None:
+        with tempfile.TemporaryDirectory(prefix=".xplat009-uppercase-", dir=REPO_ROOT) as scan_root:
+            scan_dir = Path(scan_root)
+            (scan_dir / "RUN.SH").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+            case_file = scan_dir / "zero-bash-uppercase-case.json"
+            case_file.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "1.0",
+                        "feature_id": "XPLAT-009",
+                        "cases": [
+                            {
+                                "case_id": "physical-uppercase-script",
+                                "scan_roots": [scan_dir.relative_to(REPO_ROOT).as_posix()],
+                                "require_installed_cache_proof": False,
+                                "allowlist_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/allowlist.json",
+                            }
+                        ],
+                    },
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            completed, response, stderr_records = run_runner(
+                gate_request(
+                    "active-path-guard",
+                    "zero-bash-guard",
+                    inputs={
+                        "case_file": case_file.relative_to(REPO_ROOT).as_posix(),
+                        "case_id": "physical-uppercase-script",
+                    },
+                )
+            )
+
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure")
+        self.assertEqual([diag["code"] for diag in stderr_records], ["zero_bash_guard_blocked"])
+        self.assertIn("script_file", {finding["category"] for finding in response["data"]["findings"]})
+
+    def assert_xplat009_zero_bash_contracts_match_fixtures(self, response: dict[str, Any]) -> None:
+        request_schema = json.loads((XPLAT_009_CONTRACT_DIR / "zero-bash-guard-request.schema.json").read_text(encoding="utf-8"))
+        result_schema = json.loads((XPLAT_009_CONTRACT_DIR / "zero-bash-guard-result.schema.json").read_text(encoding="utf-8"))
+        proof_schema = json.loads((XPLAT_009_CONTRACT_DIR / "installed-cache-proof.schema.json").read_text(encoding="utf-8"))
+        allowlist_schema = json.loads((XPLAT_009_CONTRACT_DIR / "historical-allowlist-entry.schema.json").read_text(encoding="utf-8"))
+
+        request = xplat009_fixture_request("zero-bash-guard")
+        self.assertLessEqual(set(request_schema["required"]), set(request))
+        self.assertEqual(request_schema["properties"]["operation"]["const"], request["operation"])
+        self.assertEqual(request_schema["properties"]["mode"]["const"], request["mode"])
+        input_schema = request_schema["properties"]["inputs"]
+        self.assertLessEqual(set(input_schema["required"]), set(request["inputs"]))
+        self.assertFalse(set(request["inputs"]) - set(input_schema["properties"]))
+
+        self.assertIn(response["status"], result_schema["properties"]["status"]["enum"])
+        data_schema = result_schema["properties"]["data"]
+        self.assertLessEqual(set(data_schema["required"]), set(response["data"]))
+        self.assertIsInstance(response["data"]["scan_roots"], list)
+        for scan_root in response["data"]["scan_roots"]:
+            self.assertIsInstance(scan_root, str)
+        finding_schema = result_schema["$defs"]["finding"]
+        for finding in response["data"]["findings"]:
+            self.assertLessEqual(set(finding_schema["required"]), set(finding))
+            self.assertFalse(set(finding) - set(finding_schema["properties"]))
+            self.assertIn(finding["classification"], finding_schema["properties"]["classification"]["enum"])
+            self.assertIn(finding["surface"], finding_schema["properties"]["surface"]["enum"])
+
+        proof = json.loads((XPLAT_009_FIXTURE_DIR / "installed-cache-proof.json").read_text(encoding="utf-8"))
+        self.assertLessEqual(set(proof_schema["required"]), set(proof))
+        self.assertEqual({item["product"] for item in proof["proofs"]}, {"claude", "codex"})
+        proof_item_schema = proof_schema["$defs"]["proof"]
+        for item in proof["proofs"]:
+            self.assertLessEqual(set(proof_item_schema["required"]), set(item))
+            self.assertFalse(set(item) - set(proof_item_schema["properties"]))
+            self.assertNotEqual(item["installed_root"], item["source_payload_root"])
+
+        allowlist = json.loads((XPLAT_009_FIXTURE_DIR / "allowlist.json").read_text(encoding="utf-8"))
+        entry_schema = allowlist_schema["$defs"]["entry"]
+        for item in allowlist["entries"]:
+            self.assertLessEqual(set(entry_schema["required"]), set(item))
+            self.assertFalse(set(item) - set(entry_schema["properties"]))
+            self.assertIn("categories", item)
+            self.assertNotIn("category", item)
 
     def test_xplat008_payload_completeness_blocks_seeded_negative_cases(self) -> None:
         for case_id in ["missing-runner-file", "stale-metadata", "extra-file", "path-leak", "transform-mismatch"]:
@@ -1447,13 +2228,23 @@ class GateFoundationTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             payload_root = Path(tmp) / "payload"
-            for relative in ("scripts/install.sh", "scripts/install.ps1", "scripts/install.bat", "scripts/install.cmd"):
+            for relative in ("scripts/install.sh", "scripts/install.bash", "scripts/install.zsh", "scripts/install.ps1", "scripts/install.bat", "scripts/install.cmd"):
                 script = payload_root / relative
                 script.parent.mkdir(parents=True, exist_ok=True)
                 script.write_text("echo unsafe\n", encoding="utf-8")
             payload_gate.remove_payload_shell_scripts_xplat008(payload_root)
-            for suffix in (".sh", ".ps1", ".bat", ".cmd"):
+            for suffix in (".sh", ".bash", ".zsh", ".ps1", ".bat", ".cmd"):
                 self.assertFalse([path for path in payload_root.rglob(f"*{suffix}")], suffix)
+            extensionless = payload_root / "bin" / "install"
+            extensionless.parent.mkdir(parents=True, exist_ok=True)
+            extensionless.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+            self.assertEqual(payload_gate.payload_script_file_count(payload_root, [{"path": "bin/install"}]), 1)
+            suffixful = payload_root / "bin" / "install.zsh"
+            suffixful.write_text("#!/usr/bin/env zsh\n", encoding="utf-8")
+            self.assertEqual(payload_gate.payload_script_file_count(payload_root, [{"path": "bin/install.zsh"}]), 1)
+            result = payload_gate.xplat008_payload_result(REPO_ROOT, "claude", payload_root, payload_root, {})
+            self.assertEqual(result["script_file_count"], 2)
+            self.assertEqual(result["status"], "fail")
 
     def test_xplat008_payload_completeness_current_dist_passes_after_runner_rebuild(self) -> None:
         completed, response, stderr_records = run_runner(xplat008_fixture_request("payload-completeness"))
@@ -1723,6 +2514,11 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(readiness["blocking_count"], 0)
         self.assertEqual(len(readiness["uat_rows"]), 6)
         self.assertFalse(any(check["blocking"] for check in readiness["checks"]))
+        zero_bash_checks = [check for check in readiness["checks"] if check["check_id"] == "zero-bash-guard"]
+        self.assertEqual(len(zero_bash_checks), 1)
+        self.assertEqual(zero_bash_checks[0]["blocker_class"], "active_zero_bash_dependency")
+        self.assertIn("docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json", readiness["evidence_refs"]["zero_bash_guard"])
+        self.assertTrue(all("script_file_count" in item for item in readiness["payload_results"]))
         self.assert_release_readiness_contract_subset(readiness)
 
     def test_xplat008_release_readiness_pending_native_uat_still_blocks(self) -> None:
@@ -1848,10 +2644,26 @@ class GateFoundationTests(unittest.TestCase):
         payload_check = next(check for check in collapsed if check["check_id"] == "payload-completeness")
         evidence = "\n".join(item for check in checks for item in check["evidence"])
         self.assertIn("unknown-payload", evidence)
+        self.assertIn("scripted_payloads=unknown-payload:script_file_count=None", evidence)
         self.assertIn("unknown-repair-action", evidence)
         self.assertIn("unknown-public-claim", evidence)
         self.assertIn("unknown-runner-invocation", evidence)
         self.assertGreaterEqual(sum(1 for check in checks if check["blocking"]), 5)
+
+        scripted_payload_checks = release_gate.computed_xplat008_checks(
+            payload_results=[
+                {"payload_surface": "claude", "status": "pass", "script_file_count": 1},
+                {"payload_surface": "codex", "status": "pass", "script_file_count": 0},
+            ],
+            uat_rows=[],
+            repair_actions=[{"action_id": "repair", "status": "completed"}],
+            public_claim_results=[{"claim_id": "python-runner", "status": "pass"}],
+            runner_invocations=[{"request_id": "runner", "status": "pass"}],
+            traceability=[{"requirement_id": "FR-006"}],
+        )
+        scripted_payload_check = next(check for check in scripted_payload_checks if check["check_id"] == "payload-completeness")
+        self.assertTrue(scripted_payload_check["blocking"])
+        self.assertIn("scripted_payloads=claude:script_file_count=1", scripted_payload_check["evidence"])
 
         malformed_checks = release_gate.normalize_xplat008_checks(
             [
@@ -2086,12 +2898,31 @@ class GateFoundationTests(unittest.TestCase):
         layer1_scripts = [self.repo_rel(path) for path in suite_gate.canonical_test_scripts(REPO_ROOT, "1")]
         layer4_scripts = [self.repo_rel(path) for path in suite_gate.canonical_test_scripts(REPO_ROOT, "4")]
         self.assertGreaterEqual(len(layer1_scripts), 20)
-        self.assertGreaterEqual(len(layer4_scripts), 40)
+        self.assertGreaterEqual(len(layer4_scripts), 17)
         self.assertIn("tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.sh", layer1_scripts)
         self.assertIn("tests/speckit-pro/layer1-structural/validate-release-workflow.sh", layer1_scripts)
-        self.assertIn("tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh", layer4_scripts)
-        self.assertIn("tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py", layer4_scripts)
-        self.assertIn("tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py", layer4_scripts)
+        self.assertLessEqual(
+            {
+                "tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py",
+                "tests/speckit-pro/layer4-scripts/test-check-toolchain.sh",
+                "tests/speckit-pro/layer4-scripts/test-post-implementation-reference.sh",
+                "tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh",
+                "tests/speckit-pro/layer4-scripts/test-eval-runner-skill-selection.sh",
+                "tests/speckit-pro/layer4-scripts/test-refresh-local-plugin.sh",
+                "tests/speckit-pro/layer4-scripts/test-sync-marketplace-versions.sh",
+                "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py",
+                "tests/speckit-pro/layer4-scripts/test-transcript-helpers.sh",
+                "tests/speckit-pro/layer4-scripts/test-privacy-scan.sh",
+                "tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh",
+                "tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh",
+                "tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py",
+                "tests/speckit-pro/layer4-scripts/test-l6-codex-runner.sh",
+                "tests/speckit-pro/layer4-scripts/test-l8-extractors.sh",
+                "tests/speckit-pro/layer4-scripts/test-l8-judge.sh",
+                "tests/speckit-pro/layer4-scripts/test-moc-lint-exit-codes.sh",
+            },
+            set(layer4_scripts),
+        )
 
     def test_default_suite_without_explicit_suite_uses_python_authoritative_default(self) -> None:
         from speckit_pro_runner.gates import suite as suite_gate
@@ -2756,7 +3587,7 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertEqual(record["bash_reference_retirement"], "inactive_parity_evidence")
                 self.assertIn("promoted_at", record)
         us2_operations = {
-            "build-test-payload-evidence": "scripts/build-plugin-payloads.sh",
+            "build-test-payload-evidence": "scripts/build-plugin-payloads.py",
             "refresh-local-plugin-fixture": "scripts/refresh-local-plugin.sh",
             "verify-install": "scripts/refresh-local-plugin.sh",
             "detect-changed-plugin": ".github/workflows/pr-checks.yml",

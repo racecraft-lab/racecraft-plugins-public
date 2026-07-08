@@ -28,10 +28,8 @@ analysis and fix the findings — all in one agent.
    `/speckit-analyze` with the provided workflow prompt.
 
 2. **After the analysis completes, count and parse ALL
-   findings.** Run the deterministic marker counter first:
-   ```bash
-   bash "${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/count-markers.sh" findings specs/<feature>
-   ```
+   findings.** Run runner helper `count-markers` in findings mode first
+   for `specs/<feature>`.
    This returns exact counts by severity (CRITICAL, HIGH,
    MEDIUM, LOW). Use these counts to verify you've addressed
    every finding — none are skipped or "logged for later."
@@ -70,11 +68,8 @@ analysis and fix the findings — all in one agent.
    e. **Apply the fix** — edit the artifact directly
 
 4. **Re-run analyze to verify.** After fixing all findings,
-   re-run `/speckit-analyze` then run the marker counter to
-   verify 0 findings remain:
-   ```bash
-   bash "${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/count-markers.sh" findings specs/<feature>
-   ```
+   re-run `/speckit-analyze` then run runner helper `count-markers`
+   in findings mode to verify 0 findings remain.
    If new findings appear, fix them (max 2 total loops).
 
 5. **Flag unresolved items for consensus, with a category

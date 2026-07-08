@@ -195,23 +195,16 @@ This rule applies to: the orchestrator, every phase subagent
 
 Autopilot may surface Tier-2 PROCESS relocation guidance for thawed legacy
 specs, but it must never execute the relocation codemod. Do not invoke
-`relocate-process-artifacts.sh --dry-run` or
-`relocate-process-artifacts.sh --apply` from any autopilot phase, subagent, or
+relocation mutation from any autopilot phase, subagent, or
 post-implementation step.
 
 At startup and when evaluating the active workflow target, inspect candidate
 state directly. Suggest relocation only for a thawed in-scope legacy spec that
 has root PROCESS allow-list artifacts or matching docs-side scaffold artifacts.
 
-For an eligible candidate, print the exact operator sequence with the concrete
-`specs/<spec-dir>` value:
-
-```text
-speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --dry-run --spec specs/<spec-dir> --repo-root .
-speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --apply --spec specs/<spec-dir> --repo-root .
-```
-
-Describe `--apply` as a follow-up after dry-run review and a clean worktree.
+For an eligible candidate, print the concrete `specs/<spec-dir>` value and say
+that relocation remains manual operator work outside autopilot. Describe any
+write as a follow-up after review and a clean worktree.
 Suppress the suggestion and report the reason for:
 
 - `frozen/in-flight` specs named by `.specify/feature.json`
@@ -528,7 +521,7 @@ gate (G6.5) mode for this invocation. They beat
 `confidence_gate_mode` in `.claude/speckit-pro.local.md` (or
 `.codex/speckit-pro.local.md`). Passing both is a usage error;
 STOP before Phase 0 with the conflict message from
-`resolve-confidence-mode.sh`. See [Gate Validation §G6.5](../../skills/speckit-autopilot/references/gate-validation.md#g65--pre-implement-confidence-gate-between-analyze-and-implement)
+the runner helper operation `resolve-confidence-mode`. See [Gate Validation §G6.5](../../skills/speckit-autopilot/references/gate-validation.md#g65--pre-implement-confidence-gate-between-analyze-and-implement)
 and the precedence rule documented there.
 
 ## Step -1 + Step 0: Pre-flight (Archive Sweep + Prerequisites)
@@ -536,11 +529,11 @@ and the precedence rule documented there.
 See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full pre-flight sequence:
 
 - **Step -1: Archive Sweep Startup** — archive previously merged specs (sweep vs dry-run by branch type)
-- **Step 0.0: Resolve Script Paths** — locate `SKILL_SCRIPTS` (plugin path, not `.specify/scripts/`)
-- **Step 0.1–0.7: Environment Checks** — `check-prerequisites.sh` JSON parsing, branch detection
+- **Step 0.0: Use Runner Operations** — invoke `speckit_pro_runner` helper IDs with one JSON request on stdin
+- **Step 0.1–0.7: Environment Checks** — `check-prerequisites` JSON parsing, branch detection
 - **Step 0.6: Load Settings** — `consensus-mode`, `gate-failure`, `auto-commit`, `security-keywords`
-- **Step 0.6b: Resolve Pre-Implement Confidence Gate Mode** — run
-  `<SKILL_SCRIPTS>/resolve-confidence-mode.sh -- <argv>` to resolve
+- **Step 0.6b: Resolve Pre-Implement Confidence Gate Mode** — run helper
+  operation `resolve-confidence-mode` to resolve
   `CONFIDENCE_GATE_MODE` for G6.5. Precedence: `--strict`/`--advisory`
   flag > `confidence_gate_mode` in `.claude/speckit-pro.local.md`
   (or `.codex/speckit-pro.local.md` — the script checks both
@@ -551,10 +544,10 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
 - **Step 0.8: Capability Coverage Check** — informational research/context advisory (agents have fallbacks)
 - **Step 0.8b: Capability Enumeration, Grounding & Feed-down** — you are the only component that discovers openly. Enumerate the tools and installed skills this session actually exposes and select best-fit per the capability-discovery directive (speckit-pro/skills/speckit-autopilot/references/capability-discovery.md); assume no fixed set — the user may have installed anything. Subagents inherit the operator's full installed surface and follow the same directive — read-only roles select only read/research capabilities (their mutation built-ins are denied). Still pass the discovered evidence a subagent needs directly in each prompt: shared context beats re-discovery. Ground your OWN output (gate decisions, consensus synthesis, PR bodies) per the grounding contract (speckit-pro/skills/speckit-autopilot/references/grounding.md): cite a real tool/skill/file result for every external fact, and abstain when none grounds it.
 - **Step 0.9: Constitution Validation** — principle checks against current codebase
-- **Step 0.10: Codex Agent Availability Check** — run `<SKILL_SCRIPTS>/validate-agent-install.sh --surface codex --autoheal` to verify every bundled SpecKit Pro Codex agent is installed under `.codex/agents/<agent>.toml` or `~/.codex/agents/<agent>.toml`. If autoheal copies files, record that Codex must be restarted. If the check still fails, STOP and instruct the user to run `$install`, approve the expected local write, then restart Codex.
+- **Step 0.10: Codex Agent Availability Check** — `install-codex-agents` is registered as deferred in the runner mutation registry. Do not invoke it as an active helper. Verify bundled SpecKit Pro Codex agents from the installed file inventory; if required agents are missing, STOP and instruct the user to run `$install`, approve the expected local write, then restart Codex.
 - **Step 0.10b: Implementation Agent Detection** — discover `PROJECT_IMPLEMENTATION_AGENT` from `.codex/agents/`
-- **Step 0.11: Project Command Discovery** — `detect-commands.sh` → `PROJECT_COMMANDS`
-- **Step 0.12: Preset and Extension Detection** — `detect-presets.sh` → `PRESET_CONVENTIONS`
+- **Step 0.11: Project Command Discovery** — runner helper `detect-commands` → `PROJECT_COMMANDS`
+- **Step 0.12: Preset and Extension Detection** — runner helper `detect-presets` → `PRESET_CONVENTIONS`
 
 If any check fails, STOP with the error message from the script's JSON output. Pass `PROJECT_COMMANDS` and `PRESET_CONVENTIONS` to every subagent prompt.
 
@@ -609,8 +602,8 @@ when `--from-phase` starts execution in the middle of the workflow.
 After writing or repairing `autopilot-state.json`, run the deterministic
 coverage guard and STOP on nonzero exit:
 
-```bash
-python3 "<SKILL_SCRIPTS>/validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE" --state "$WORKFLOW_DIR/autopilot-state.json"
+```text
+python3 "runner helper validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE" --state "$WORKFLOW_DIR/autopilot-state.json"
 ```
 
 **CRITICAL — Consensus items are MANDATORY:**
@@ -647,7 +640,7 @@ and `--from-phase` semantics) lives in
 
 **Plan-phase reviewability budget (advisory):** After the Plan phase
 (G3 pass, `plan.md` exists), the parent runs
-`estimate-reviewable-loc.sh <plan.md>` via `exec_command`, capturing
+runner helper `estimate-reviewable-loc` via `exec_command`, capturing
 the exit code so a non-zero exit can never abort the run. Branch on the
 JSON `status` (`pass` / `over_budget` / `not_estimated`) or the exit
 code, recording the outcome to the workflow file and
@@ -665,7 +658,7 @@ with concrete Phase 7 task-group items in both `update_plan` and
 - the placeholder no longer exists in either state store
 - at least one concrete Phase 7 item exists
 - each concrete Phase 7 item names task IDs from tasks.md
-- `<SKILL_SCRIPTS>/reviewability-gate.sh tasks <feature_dir>` does
+- runner helper `reviewability-gate` in tasks mode does
   not return an unexcepted correctness block. Capture stdout, stderr,
   exit code, gate status/mode/exit/evidence path, and repo-relative evidence
   path. A valid current size-only `block` continues into marker planning and
@@ -690,7 +683,7 @@ multiple small PRs safely. Splittability is judged by structural seams
 abort the run:
 
 ```text
-out = exec_command("<SKILL_SCRIPTS>/atomicity-route.sh specs/<feature>")
+out = exec_command("python -m speckit_pro_runner < atomicity-route request for specs/<feature>")
 # stdout is one decision object: {route, releasable, signals[], hints[],
 # warnings[]} on success, or {"error": <string>} with exit 2.
 ```
@@ -721,7 +714,7 @@ PRSG-008 layer planner is required:
   `autopilot-state.json` and the workflow `## Layer Plan` section, then
   continue.
 - If `route == "split-PR"`, run
-  `<SKILL_SCRIPTS>/plan-layers.sh <feature_dir>` with `exec_command`,
+  runner helper `plan-layers-feature-dir` with `exec_command`,
   capturing stdout, stderr, and exit code before Analyze or Implement
   can continue.
 - Exit `0`: parse stdout as the full versioned layer-plan envelope,
@@ -807,7 +800,7 @@ the subagent prompt before the workflow prompt:
 
 ```text
 IMPORTANT: Already on feature branch `<CURRENT_BRANCH>`.
-Do NOT run `create-new-feature.sh` or create a new branch.
+Do NOT create a new feature branch.
 The branch and `specs/<CURRENT_BRANCH>/` directory already
 exist. Skip directly to spec content generation.
 ```
@@ -863,14 +856,17 @@ procedures in [post-implementation-codex.md](./references/post-implementation-co
    Suite and the PR body; findings are recorded in the workflow log and
    reproduced in the PR body. Reporting step — never gates the PR.
 3. **UAT Runbook Generation** — mandatory between Self-Review and the
-   PR body: run `generate-uat-skeleton.sh` to write
-   `<feature-dir>/.process/uat-runbook.md`, then `spawn_agent` the
-   `uat-runbook-author` agent to rewrite the skeleton into plain,
-   executable steps, then commit it. Both the script and the author step
-   are fail-open (never block the PR) but NOT optional — they run.
-4. **3.2 PR Creation** — final verification, then run
-   `final-reviewability-backstop.sh` as the last boundary before any PR body
-   generation, `gh pr create` variant, or `multi-pr-emission.sh`. Only
+   PR body. The runner helper `generate-uat-skeleton` is registered as
+   deferred, so do not invoke it as an active helper. Reuse a committed
+   source-derived runbook when present; otherwise record the UAT skeleton as
+   skipped with deferred-helper evidence, then `spawn_agent` the
+   `uat-runbook-author` agent only when a skeleton exists. This is fail-open
+   and must be logged.
+4. **3.2 PR Creation** — final verification, then apply the final
+   reviewability boundary. The runner helper `final-reviewability-backstop` is
+   registered as deferred, so do not invoke it as an active helper; use current
+   committed reviewability evidence or stop before PR side effects if no
+   current evidence exists. Only
    `pass`, `warn`, honored typed-exception outcomes, or final `marker_split`
    with a valid current `pr_marker_plan` may continue. A full-diff size block
    with current marker evidence proceeds to marker-based PR emission; it is not
@@ -882,27 +878,25 @@ procedures in [post-implementation-codex.md](./references/post-implementation-co
    until a valid slice PR stack is emitted or a typed exception is committed.
    Never report completion while `autopilot_continuation.required=true`; a gate
    error writes state and stops without a packet. After a proceed result, build
-   the PR packet/body by running
-   `generate-pr-body.sh --packet-output .git/speckit-pr-packet.json` →
+   the PR packet/body by running runner helper `generate-pr-body` with packet
+   output `.git/speckit-pr-packet.json` →
    `.git/speckit-pr-body.md`, refine only sanctioned editable prose fields,
-   then run the shared `validate-pr-packet.sh` against the just-rendered
+   then run runner helper `validate-pr-packet-read-only` against the just-rendered
    packet. Continue only on a fresh passing validation result. Open the PR
    with packet fields through
    `gh pr create --base --head --title --body-file`; never derive the title
    from the branch, write the body from scratch, pass inline `--body`, reuse
    stale validation JSON, or repair invalid packets after creation. Before any
-   single-PR create attempt, run the shared
-   `validate-pr-workflow-contract.sh` with the packet title and changed-file
+   single-PR create attempt, run runner helper
+   `validate-pr-workflow-contract` with the packet title and changed-file
    list; a nonzero result blocks the aggregate PR path. If the changed files
    include multi-PR candidate commands or final marker-split evidence for more
-   than one PR, the single-PR path is forbidden: run `multi-pr-emission.sh`
+   than one PR, the single-PR path is forbidden: run runner helper `multi-pr-emission`
    or stop blocked with the validator evidence. For
-   split-PR or marker emission, use the shared `detect-stack-manager.sh`
-   decision before any stack-manager mutation: supported `gh-stack` may proceed
-   only after version, read-only proof, packet, and topology checks pass;
-   missing/unsupported/ambiguous/unsafe environments keep the explicit `gh`
-   fallback before mutation; partial `gh-stack` mutation blocks rather than
-   mixing managers. Push, create PR, update workflow file.
+   split-PR or marker emission, `detect-stack-manager-plan` is registered as
+   out of scope, so do not invoke it as an active helper. Use the explicit
+   `gh pr create/edit` fallback before any stack-manager mutation. Push,
+   create PR, update workflow file.
    Required evidence prompts: gate status/mode/exit/evidence path,
    fingerprint status, ordered marker IDs, checkpoints, warnings, final
    marker_split, packet validation, and PR mappings.
@@ -982,84 +976,33 @@ PR URL.
   Opt-in compressed vocabulary for inter-agent transcripts
   (off by default; never applied to PR bodies, logs, or artifacts)
 
-## Scripts
+## Runner Operations
 
-Deterministic bash scripts for prerequisite checks and validation.
-These ship with the plugin at the shared scripts directory
-`../../skills/speckit-autopilot/scripts/` (resolved to an absolute
-path in Step 0.0). Always invoke via the full resolved path —
-never from `.specify/scripts/bash/`.
+Deterministic prerequisite checks, validation, reviewability, routing, payload,
+and PR-preparation behavior is owned by `speckit_pro_runner`. Invoke
+`python -m speckit_pro_runner` with one JSON request on stdin and use the
+registered helper or gate operation IDs below.
 
-- `check-prerequisites.sh <workflow_file>` — Verify CLI, project
-  init, constitution, commands, branch detection (JSON)
-- `validate-gate.sh <G1-G7> <feature_dir>` — Validate any gate
-  with marker counts and details (JSON)
-- `confidence-gate.sh <workflow-file> [--threshold N.NN] [--mode advisory|strict]` —
-  Read the synthesizer's `📊 Confidence: X.XX` pre-Implement emit and decide
-  whether Phase 7 may begin. Exit: 0 PASS, 1 NO_DATA (soft-skip), 2 FAIL.
-  See [Gate Validation §G6.5](../../skills/speckit-autopilot/references/gate-validation.md#g65--pre-implement-confidence-gate-between-analyze-and-implement).
-  In `codex exec` headless mode, `/goal` is not first-class
-  ([openai/codex#21764](https://github.com/openai/codex/discussions/21764));
-  the 3-iteration cap is the safety bound.
-- `resolve-confidence-mode.sh [--config <path>] [--] <argv>` —
-  Resolve the pre-Implement confidence gate mode (advisory|strict) for
-  the current invocation. Precedence: `--strict`/`--advisory` flag in argv >
-  `confidence_gate_mode` in `.claude/speckit-pro.local.md` (or
-  `.codex/speckit-pro.local.md`) > default `advisory`. Exit: 0 resolved,
-  2 flag conflict, 1 usage error. Used by the orchestrator in Step 0.6b
-  to set `CONFIDENCE_GATE_MODE` before G6.5.
-- `reviewability-gate.sh <setup|tasks|diff> <path-or-range>` — Enforce
-  setup, tasks, and pre-PR reviewability budgets (JSON)
-- `final-reviewability-backstop.sh --feature-dir <specs/feature> --feature-branch <branch> ...` —
-  Run the final diff gate before PR preparation, write top-level
-  `final_reviewability_gate` state, and write a re-slicing packet on
-  unexcepted blocks before any PR body, `gh pr create`, or multi-PR emission
-- `atomicity-route.sh <feature-dir>` — Read-only atomicity classifier:
-  given a feature's `tasks.md`/`plan.md`/`spec.md`, emit ONE routing
-  decision (`route` + `releasable` + `signals` + `hints` + `warnings`,
-  or `{"error":…}`) on stdout. Decides whether a change can be split into
-  multiple small PRs safely by structural seams (NOT LOC). Run after
-  Tasks/G5 with `exec_command`; the orchestrator records the decision into
-  the workflow file's `## Atomicity Route` section with `apply_patch` (the
-  script writes no file). Advisory-only (never blocks) and wires NO PR
-  emission/branch creation (PRSG-008/PRSG-009).
-- `plan-layers.sh <feature-dir>` — Read-only PRSG-008 layer planner:
-  emits one versioned JSON envelope (`ok`, `invalid_plan`, or
-  `input_error`) to stdout, concise diagnostics to stderr, and no repo
-  writes. Run after the atomicity route only when `route == split-PR`;
-  exit 0 continues with persisted layer context, while exit 1/2 stops
-  before implementation.
-- `estimate-reviewable-loc.sh <plan.md>` — Plan-phase reviewability
-  budget: project production-LOC from `plan.md`'s declared file structure
-  and emit a three-value `status` (`pass` / `over_budget` /
-  `not_estimated`) in JSON. Advisory — the three statuses return exit 0
-  (verdict in `status`); only a usage/IO error exits non-zero. Wired into
-  the Plan phase advisory-and-never-crash (see
-  [phase-execution-codex.md §Phase 3: Plan — Reviewability Budget](./references/phase-execution-codex.md#phase-3-plan--reviewability-budget-advisory)).
-- `generate-pr-body.sh [--packet-output <json-file>] <repo-root> <feature-dir> <output-file> [diff-range]` —
-  Generate a PR review packet from the host repository PR template when present,
-  or from the bundled fallback template
-- `validate-pr-packet.sh <packet-json>` — Validate generated PR packet metadata
-  and rendered body evidence before any `gh pr create`; exit 0 permits PR
-  creation, exit 1 writes packet remediation evidence, and exit 2 reports an
-  input error. Codex uses the shared primary script and schema; do not create
-  Codex-only copies.
-- `validate-pr-workflow-contract.sh --title <title> --changed-files <path>` —
-  Validate the actual PR title against changed spec scope and block aggregate
-  single-PR creation when split candidate or final marker-split evidence exists.
-- `detect-stack-manager.sh --phase <emission|restack> --operation <detect|link|sync|restack> --feature-dir <specs/name> ...` —
-  Emit and optionally persist the shared `stack-manager-decision.v1` evidence
-  used by multi-PR emission and restack. It is the only Codex/Claude stack
-  manager decision surface; do not create Codex-only detector or schema copies.
-- `generate-uat-skeleton.sh <spec-path> <output-path> [--workflow-file <path>]` —
-  Render a deterministic UAT runbook skeleton from `spec.md` (Env Setup formatted
-  from the `UAT_PROJECT_COMMANDS` env var). Exit 0/2/1; silent stdout. Run after
-  Self-Review and before PR-body generation (fail-open). See
-  [Post-Implementation for Codex §UAT Runbook Generation](./references/post-implementation-codex.md#uat-runbook-generation)
-- `detect-commands.sh` — Auto-detect build/test/lint commands for
-  Node.js, Rust, Go, Python, and Makefile projects (JSON)
-- `detect-presets.sh` — Find installed presets, extensions, hooks,
-  template resolution (JSON)
-- `count-markers.sh <type> <feature_dir>` — Deterministic marker
-  counting (gaps, findings, clarifications, all) for agent
-  validation. Used by analyze-executor and checklist-executor (JSON)
+- `check-prerequisites` — Verify CLI, project init, constitution, commands,
+  branch detection, and workflow file readiness (JSON).
+- `validate-gate` — Validate G1-G7 with marker counts and details (JSON).
+- `confidence-gate` — Read the synthesizer's `📊 Confidence: X.XX`
+  pre-Implement emit and decide whether Phase 7 may begin.
+- `resolve-confidence-mode` — Resolve the pre-Implement confidence mode from
+  invocation flags, local config, or the advisory default.
+- `reviewability-gate` — Enforce setup, tasks, and pre-PR reviewability budgets.
+- `atomicity-route` — Classify whether a feature should remain one PR or split.
+- `plan-layers-feature-dir` — Emit a versioned layer-plan envelope for split
+  routes before implementation.
+- `estimate-reviewable-loc` — Project production reviewable LOC from declared
+  file operations.
+- `generate-pr-body` and `validate-pr-packet-read-only` — Produce and validate
+  PR packet evidence before PR creation.
+- `validate-pr-workflow-contract` — Validate PR title and changed-file scope.
+- `detect-commands`, `detect-presets`, and `count-markers` — Provide
+  deterministic command, preset, and marker evidence through runner-owned
+  operation IDs.
+- `generate-uat-skeleton`, `install-codex-agents`,
+  `final-reviewability-backstop`, and `detect-stack-manager-plan` — Registered
+  but not active helper calls for installed workflows; follow the deferred or
+  out-of-scope guidance above instead of invoking them.

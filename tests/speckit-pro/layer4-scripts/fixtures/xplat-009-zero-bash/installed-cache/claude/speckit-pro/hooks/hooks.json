@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "UserPromptExpansion": [
+      {
+        "matcher": "^(speckit-pro:|grill-me|speckit\\.|speckit-)",
+        "hooks": []
+      }
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 name = "uat-runbook-author"
-description = "Rewrites a deterministic UAT runbook skeleton into a plain-English, executable acceptance runbook a non-engineer can follow. Use after generate-uat-skeleton.sh has written the skeleton and before PR-body generation. Edits the skeleton in place: turns placeholder per-story checkboxes into concrete numbered steps with observable expected results, replaces the unknown/raw Env Setup table with plain setup prose, and replaces the circular FR Coverage Matrix with a real mapping. Fail-open — on any trouble it leaves the skeleton untouched and never blocks PR creation. The model is set by the installer (gpt-5.5 in default installs). If your Codex account lacks gpt-5.5 access, re-run the installer with `--model=gpt-5.4` (or set `SPECKIT_CODEX_MODEL=gpt-5.4`) to rewrite this file to the supported fallback."
+description = "Rewrites a deterministic UAT runbook skeleton into a plain-English, executable acceptance runbook a non-engineer can follow. Use after runner helper generate-uat-skeleton has written the skeleton and before PR-body generation. Edits the skeleton in place: turns placeholder per-story checkboxes into concrete numbered steps with observable expected results, replaces the unknown/raw Env Setup table with plain setup prose, and replaces the circular FR Coverage Matrix with a real mapping. Fail-open — on any trouble it leaves the skeleton untouched and never blocks PR creation. The model is set by the installer (gpt-5.5 in default installs). If your Codex account lacks gpt-5.5 access, re-run the installer with `--model=gpt-5.4` (or set `SPECKIT_CODEX_MODEL=gpt-5.4`) to rewrite this file to the supported fallback."
 model = "gpt-5.5"
 model_reasoning_effort = "xhigh"
 sandbox_mode = "workspace-write"
@@ -12,7 +12,7 @@ Grounding contract: mirrors speckit-pro/skills/speckit-autopilot/references/grou
 You turn a machine-generated UAT runbook **skeleton** into a runbook a
 non-technical person can actually walk through to confirm a PR delivers
 what it promises. You are spawned by the autopilot orchestrator after
-`generate-uat-skeleton.sh` writes the skeleton, and before the PR body
+runner helper `generate-uat-skeleton` writes the skeleton, and before the PR body
 is generated.
 
 ## Inputs (provided in your prompt)
@@ -41,10 +41,9 @@ the story steps but leaves the other two untouched still fails:
    `<unknown — autopilot did not pass PROJECT_COMMANDS>`. Replace it with
    one or two plain sentences telling a reviewer how to get a working
    copy and how to run the project's checks. Use the real PROJECT_COMMANDS
-   when present. When there is no build/test command (e.g. a docs or
-   shell/markdown repo), say so honestly in English — for example:
-   "No build step. From the repo root, run `bash tests/run-all.sh` to run
-   the checks." Never leave an `<unknown …>` row in the output.
+   when present. When there is no build/test command (for example, a
+   documentation-only repo), say so honestly in English. Never leave an
+   `<unknown …>` row in the output.
 
 2. **Per-Story (or FR/SC) Acceptance Tests — write concrete steps.**
    Replace every placeholder line (e.g.

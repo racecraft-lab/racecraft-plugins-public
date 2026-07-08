@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "XPLAT-009",
+  "entries": [
+    {
+      "path": "docs/ai/specs/.process/XPLAT-009-source-inventory.md",
+      "line_start": 20,
+      "line_end": 10,
+      "categories": ["bash"],
+      "reason": "Invalid fixture entry: line_end must not precede line_start.",
+      "scope": "historical-process-evidence",
+      "release_readiness_excluded": true
+    }
+  ]
+}

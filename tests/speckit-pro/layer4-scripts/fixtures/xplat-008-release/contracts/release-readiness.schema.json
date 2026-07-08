@@ -142,6 +142,7 @@
       "additionalProperties": false,
       "required": [
         "payload_results",
+        "zero_bash_guard",
         "uat_matrix",
         "install_health",
         "public_claims",
@@ -149,6 +150,13 @@
       ],
       "properties": {
         "payload_results": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "zero_bash_guard": {
           "type": "array",
           "items": {
             "type": "string",
@@ -247,12 +255,14 @@
             "install-health-repair",
             "runner-invocations",
             "release-packet-traceability",
-            "dist-determinism"
+            "dist-determinism",
+            "zero-bash-guard"
           ]
         },
         "blocker_class": {
           "enum": [
             "active_shell_runtime_dependency",
+            "active_zero_bash_dependency",
             "incomplete_payload",
             "missing_bundled_agent",
             "missing_hook",
@@ -331,6 +341,7 @@
         "extra_paths",
         "mismatched_paths",
         "path_leaks",
+        "script_file_count",
         "file_tree_hash",
         "status"
       ],
@@ -385,6 +396,10 @@
           "items": {
             "type": "string"
           }
+        },
+        "script_file_count": {
+          "type": "integer",
+          "minimum": 0
         },
         "file_tree_hash": {
           "type": "string",

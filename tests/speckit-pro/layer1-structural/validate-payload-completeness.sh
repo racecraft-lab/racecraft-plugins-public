@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # validate-payload-completeness.sh — Layer 1 body-completeness check (FR-008).
 #
-# The Claude payload builder (`scripts/build-plugin-payloads.sh`) strips the
+# The Claude payload builder (`scripts/build-plugin-payloads.py`) strips the
 # `## Codex Skill-Selection Guard` section from each built Claude `SKILL.md`.
 # A regression in that strip once dropped the ENTIRE body of 8 of 10 skills,
 # shipping empty installs. This check guards against any built Claude SKILL.md
@@ -80,7 +80,7 @@ section "Body completeness — built Claude skills retain full bodies (dist/clau
 # Fail-closed: the built Claude skills directory must exist before we glob it.
 set_test "built Claude skills directory exists ($DIST_CLAUDE_SKILLS_DIR)"
 if [ ! -d "$DIST_CLAUDE_SKILLS_DIR" ]; then
-  _fail "built Claude skills directory missing: $DIST_CLAUDE_SKILLS_DIR (run scripts/build-plugin-payloads.sh)"
+  _fail "built Claude skills directory missing: $DIST_CLAUDE_SKILLS_DIR (run python3 scripts/build-plugin-payloads.py)"
   test_summary
   exit $?
 fi

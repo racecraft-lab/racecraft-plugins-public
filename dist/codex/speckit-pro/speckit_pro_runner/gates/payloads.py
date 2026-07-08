@@ -23,7 +23,7 @@ INSTALL_INVENTORY = Path("speckit-pro") / "speckit_pro_runner" / "install_invent
 XPLAT_008_FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "layer4-scripts" / "fixtures" / "xplat-008-release"
 DEFAULT_XPLAT_008_PAYLOAD_CASES = XPLAT_008_FIXTURE_BOUNDARY / "payload-completeness-cases.json"
 XPLAT_008_PROMOTION_RECORD = XPLAT_008_FIXTURE_BOUNDARY / "promotion-records.json"
-PROHIBITED_SCRIPT_SUFFIXES = (".sh", ".ps1", ".bat", ".cmd")
+PROHIBITED_SCRIPT_SUFFIXES = (".sh", ".bash", ".zsh", ".ps1", ".bat", ".cmd")
 
 __all__ = ("run_payload_gate",)
 
@@ -362,7 +362,7 @@ def copy_optional_xplat008(src: Path, dst: Path) -> None:
 
 def remove_payload_shell_scripts_xplat008(root: Path) -> None:
     for path in root.rglob("*"):
-        if path.is_file() and path.suffix.lower() in PROHIBITED_SCRIPT_SUFFIXES:
+        if path.is_file() and (path.suffix.lower() in PROHIBITED_SCRIPT_SUFFIXES or payload_has_shell_shebang(path)):
             path.unlink()
     for directory in sorted((path for path in root.rglob("*") if path.is_dir()), key=lambda item: len(item.parts), reverse=True):
         try:
@@ -498,7 +498,8 @@ def xplat008_payload_result(
         set(path for path in actual_by_path if payload_path_leaks(path))
         | set(str(item) for item in mutation.get("path_leaks", []) if isinstance(item, str))
     )
-    status = "pass" if not missing and not extra and not mismatched and not path_leaks else "fail"
+    script_file_count = payload_script_file_count(actual_root, actual_files)
+    status = "pass" if not missing and not extra and not mismatched and not path_leaks and script_file_count == 0 else "fail"
 
     return {
         "schema_version": "1.0",
@@ -513,6 +514,7 @@ def xplat008_payload_result(
         "extra_paths": extra,
         "mismatched_paths": mismatched,
         "path_leaks": path_leaks,
+        "script_file_count": script_file_count,
         "file_tree_hash": payload_tree_hash(actual_files),
         "status": status,
     }
@@ -695,6 +697,27 @@ def apply_payload_mutation(files: list[dict[str, Any]], mutation: dict[str, Any]
 def payload_path_leaks(path: str) -> bool:
     parts = PurePosixPath(path).parts
     return path.startswith("/") or bool(re.match(r"^[A-Za-z]:", path)) or ".." in parts
+
+
+def payload_script_file_count(root: Path, files: list[dict[str, Any]]) -> int:
+    count = 0
+    for item in files:
+        path = str(item.get("path", ""))
+        if Path(path).suffix.lower() in PROHIBITED_SCRIPT_SUFFIXES:
+            count += 1
+            continue
+        if payload_has_shell_shebang(root / path):
+            count += 1
+    return count
+
+
+def payload_has_shell_shebang(path: Path) -> bool:
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            first_line = handle.readline(4096)
+    except (OSError, UnicodeDecodeError):
+        return False
+    return bool(re.search(r"^#!.*\b(?:bash|sh|zsh|powershell|pwsh)\b", first_line, re.IGNORECASE))
 
 
 def payload_tree_hash(files: list[dict[str, Any]]) -> str:

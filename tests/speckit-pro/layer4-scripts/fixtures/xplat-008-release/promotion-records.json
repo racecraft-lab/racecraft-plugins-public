@@ -44,11 +44,11 @@
     {
       "schema_version": "1.0",
       "gate_id": "payload-gate",
-      "prior_bash_gate": "scripts/build-plugin-payloads.sh",
+      "prior_bash_gate": "scripts/build-plugin-payloads.py",
       "python_operation": "payload-completeness",
       "request_fixture": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness.json",
       "fixture_ids": ["current-committed-dist", "missing-runner-file", "stale-metadata", "extra-file", "path-leak", "transform-mismatch"],
-      "bash_reference_ids": ["scripts/build-plugin-payloads.sh"],
+      "bash_reference_ids": ["scripts/build-plugin-payloads.py"],
       "failure_classes": ["payload_missing_file", "payload_mismatch", "payload_path_leak"],
       "comparison_mode": "artifact_hash",
       "normalized_fields": ["absolute_paths", "file_tree_hash"],

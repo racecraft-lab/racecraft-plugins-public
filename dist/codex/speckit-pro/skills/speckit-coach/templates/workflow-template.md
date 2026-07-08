@@ -10,7 +10,7 @@
 
 1. **Copy this template** to create a new workflow guide:
 
-   ```bash
+   ```text
    cp .github/skills/speckit/templates/workflow-template.md docs/ai/specs/{{SPEC_ID}}-workflow.md
    ```
 
@@ -125,13 +125,13 @@ Each phase requires **human review and approval** before proceeding:
 
 ### Specify Prompt
 
-```bash
+```text
 /speckit-specify {{SPEC_DESCRIPTION}}
 ```
 
 #### Detailed Prompt (for complex specs)
 
-```bash
+```text
 /speckit-specify
 
 ## Feature: {{SPEC_NAME}}
@@ -190,19 +190,19 @@ Use these markers in spec.md for traceability through later phases:
 
 #### Session 1: UX Focus
 
-```bash
+```text
 /speckit-clarify Focus on UX: user flows, interactions, loading states, error states
 ```
 
 #### Session 2: API Focus
 
-```bash
+```text
 /speckit-clarify Focus on API: endpoint contracts, error responses, streaming behavior, rate limiting
 ```
 
 #### Session 3: Integration Focus
 
-```bash
+```text
 /speckit-clarify Focus on integration: external services, data dependencies, authentication
 ```
 
@@ -224,7 +224,7 @@ Use these markers in spec.md for traceability through later phases:
 
 ### Plan Prompt
 
-```bash
+```text
 /speckit-plan
 
 ## Tech Stack
@@ -290,7 +290,7 @@ For each domain, include spec-specific focus areas in the prompt — not just th
 
 <!-- Why this domain: [1-2 sentence justification from spec analysis] -->
 
-```bash
+```text
 /speckit-checklist <!-- DOMAIN_1 -->
 
 Focus on {{SPEC_NAME}} requirements:
@@ -304,7 +304,7 @@ Focus on {{SPEC_NAME}} requirements:
 
 <!-- Why this domain: [1-2 sentence justification from spec analysis] -->
 
-```bash
+```text
 /speckit-checklist <!-- DOMAIN_2 -->
 
 Focus on {{SPEC_NAME}} requirements:
@@ -318,7 +318,7 @@ Focus on {{SPEC_NAME}} requirements:
 
 <!-- Why this domain: [1-2 sentence justification from spec analysis] -->
 
-```bash
+```text
 /speckit-checklist <!-- DOMAIN_3 -->
 
 Focus on {{SPEC_NAME}} requirements:
@@ -353,7 +353,7 @@ When checklist identifies `[Gap]` items:
 
 ### Tasks Prompt
 
-```bash
+```text
 /speckit-tasks
 
 ## Task Structure
@@ -409,12 +409,12 @@ line count. Surface the four fields the SKILL extracts from the emitted decision
 
 To produce the decision, run the classifier against the feature directory:
 
-```bash
-bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/{{BRANCH_NAME}}
+```text
+runner helper atomicity-route specs/{{BRANCH_NAME}}
 ```
 
 See the classifier script at
-[`speckit-autopilot/scripts/atomicity-route.sh`](../../speckit-autopilot/scripts/atomicity-route.sh).
+[`speckit-autopilot/scripts/atomicity-route`](../../speckit-autopilot/scripts/atomicity-route).
 
 ---
 
@@ -424,7 +424,7 @@ See the classifier script at
 
 ### Analyze Prompt
 
-```bash
+```text
 /speckit-analyze
 
 Focus on:
@@ -457,7 +457,7 @@ Focus on:
 
 ### Implement Prompt
 
-```bash
+```text
 /speckit-implement
 
 ## Approach: TDD-First
@@ -498,7 +498,7 @@ Before starting any task:
 <!-- Populate with your project's quality gates from the constitution -->
 
 - [ ] All tasks marked complete in tasks.md
-- [ ] Linting passes: <!-- e.g., `scripts/lint.sh` -->
+- [ ] Linting passes: <!-- e.g., `scripts/lint` -->
 - [ ] Tests pass: <!-- e.g., `pytest` -->
 - [ ] Build succeeds: <!-- e.g., `npm run build` -->
 - [ ] Manual verification complete

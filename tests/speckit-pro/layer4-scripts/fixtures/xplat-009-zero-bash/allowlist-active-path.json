@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "XPLAT-009",
+  "entries": [
+    {
+      "path": "speckit-pro/skills/speckit-status/SKILL.md",
+      "categories": ["bash", "script_file", "jq"],
+      "reason": "Invalid fixture entry: active plugin paths must not be release-readiness allowlisted.",
+      "scope": "active-plugin-source",
+      "release_readiness_excluded": true
+    },
+    {
+      "path": "docs/ai/specs/.process/XPLAT-009-source-inventory.md",
+      "categories": [],
+      "reason": "Invalid fixture entry: categories must be explicit and non-empty.",
+      "scope": "historical-process-evidence",
+      "release_readiness_excluded": true
+    }
+  ]
+}

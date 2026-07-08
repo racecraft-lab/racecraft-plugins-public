@@ -1,0 +1,7 @@
+interface:
+  display_name: "SpecKit Install"
+  short_description: "Install the SpecKit CLI and initialize this repo for Claude, Codex, or both"
+  default_prompt: "Install SpecKit in this repository — ask me which integrations to set up"
+
+policy:
+  allow_implicit_invocation: false

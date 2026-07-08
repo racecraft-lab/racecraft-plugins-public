@@ -29,23 +29,23 @@ Use the **single-file command** for per-task RED/GREEN verification:
 ```text
 CORRECT (unit/contract test):
   1. Write test file
-     → Bash("SINGLE_FILE_TEST tests/myTest.test.ts")
+     → Command("SINGLE_FILE_TEST tests/myTest.test.ts")
      Output: "3 failed"     ← VERIFIED RED
   2. Write implementation
-     → Bash("SINGLE_FILE_TEST tests/myTest.test.ts")
+     → Command("SINGLE_FILE_TEST tests/myTest.test.ts")
      Output: "3 passed"     ← VERIFIED GREEN
 
 CORRECT (integration test):
   1. Write test file
-     → Bash("SINGLE_FILE_INTEGRATION tests/integration/myTest.integration.test.ts")
+     → Command("SINGLE_FILE_INTEGRATION tests/integration/myTest.integration.test.ts")
      Output: "2 failed"     ← VERIFIED RED
   2. Write implementation
-     → Bash("SINGLE_FILE_INTEGRATION tests/integration/myTest.integration.test.ts")
+     → Command("SINGLE_FILE_INTEGRATION tests/integration/myTest.integration.test.ts")
      Output: "2 passed"     ← VERIFIED GREEN
 
 WRONG:
   1. Write implementation + tests together
-     → Bash("UNIT_TEST") → "all passed"
+     → Command("UNIT_TEST") → "all passed"
      ← Never verified RED — tests might not test anything
   2. Run integration test with unit test command
      → Test file excluded by config, 0 tests run

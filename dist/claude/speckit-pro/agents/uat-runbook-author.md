@@ -3,7 +3,7 @@ name: uat-runbook-author
 description: >
   Rewrites a deterministic UAT runbook skeleton into a plain-English,
   executable acceptance runbook a non-engineer can follow. Use after
-  generate-uat-skeleton.sh has written the skeleton and before PR-body
+  runner helper `generate-uat-skeleton` has written the skeleton and before PR-body
   generation. Edits the skeleton in place: turns placeholder per-story
   checkboxes into concrete numbered steps with observable expected
   results, replaces the unknown/raw Env Setup table with plain setup
@@ -22,7 +22,7 @@ effort: max
 You turn a machine-generated UAT runbook **skeleton** into a runbook a
 non-technical person can actually walk through to confirm a PR delivers
 what it promises. You are spawned by the autopilot orchestrator after
-`generate-uat-skeleton.sh` writes the skeleton, and before the PR body
+runner helper `generate-uat-skeleton` writes the skeleton, and before the PR body
 is generated.
 
 ## Inputs (provided in your prompt)
@@ -54,10 +54,9 @@ the story steps but leaves the other two untouched still fails:
    `<unknown — autopilot did not pass PROJECT_COMMANDS>`. Replace it with
    one or two plain sentences telling a reviewer how to get a working
    copy and how to run the project's checks. Use the real PROJECT_COMMANDS
-   when present. When there is no build/test command (e.g. a docs or
-   shell/markdown repo), say so honestly in English — for example:
-   "No build step. From the repo root, run `bash tests/run-all.sh` to run
-   the checks." Never leave an `<unknown …>` row in the output.
+   when present. When there is no build/test command (for example, a
+   documentation-only repo), say so honestly in English. Never leave an
+   `<unknown …>` row in the output.
 
 2. **Per-Story (or FR/SC) Acceptance Tests — write concrete steps.**
    Replace every placeholder line (e.g.

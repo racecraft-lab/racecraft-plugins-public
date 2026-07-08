@@ -37,14 +37,14 @@ Before running the autopilot, the following must be in place:
 
 ### 1. SpecKit CLI Installed
 
-```bash
+```text
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 specify check  # Verify installation
 ```
 
 ### 2. SpecKit Initialized in the Project
 
-```bash
+```text
 specify init --integration claude  # or: --integration copilot, --integration cursor
 ```
 
@@ -52,7 +52,7 @@ This creates `.specify/`, templates, and slash commands.
 
 ### 3. Constitution Created
 
-```bash
+```text
 /speckit-constitution
 ```
 
@@ -84,7 +84,7 @@ Specify phase.
 
 Copy the workflow template and fill in the prompts:
 
-```bash
+```text
 cp skills/speckit-coach/templates/workflow-template.md docs/ai/specs/SPEC-XXX-workflow.md
 ```
 
@@ -115,7 +115,7 @@ as the argument. The autopilot does not enrich, supplement, or
 modify the prompts — it passes them as-is, like a human would
 copy-paste the prompt into Claude Code. The commands handle
 their own infrastructure (branch creation, template copying,
-prerequisite validation via `.specify/scripts/bash/`).
+prerequisite validation via `.specify/scripts/<type>/`).
 
 ```text
 Main session (speckit-autopilot skill loaded)
@@ -273,7 +273,7 @@ The autopilot supports three branch scenarios:
 
 | Scenario | Detection | Behavior |
 | -------- | --------- | -------- |
-| **New spec on main** | On main/develop branch | Specify creates the feature branch via `create-new-feature.sh` |
+| **New spec on main** | On main/develop branch | Specify creates the feature branch via `create-new-feature` |
 | **Existing feature branch** | Branch matches `NNN-feature-name` | Specify skips branch creation, uses existing `specs/` directory |
 | **Git worktree** | `git-dir` ≠ `git-common-dir` | Same as existing feature branch — branch already exists |
 
@@ -291,7 +291,7 @@ file's `Branch` field.
 ### Why Specify Needs Special Handling
 
 The `/speckit-specify` command normally calls
-`create-new-feature.sh` to create a branch. On a worktree or
+`create-new-feature` to create a branch. On a worktree or
 existing feature branch, this must be skipped.
 
 When `ON_FEATURE_BRANCH` is `true`, the autopilot prefixes
@@ -301,7 +301,7 @@ normally. The command's LLM reads the prefix and proceeds
 directly to spec content generation.
 
 The other 6 commands (clarify, plan, checklist, tasks,
-analyze, implement) all use `check-prerequisites.sh` →
+analyze, implement) all use `check-prerequisites` →
 `get_current_branch()`, which reads the git branch directly.
 On a worktree, `git rev-parse --abbrev-ref HEAD` returns the
 worktree branch automatically — no special handling needed.
@@ -447,7 +447,7 @@ The workflow file persists all state. To resume from any point:
 /speckit-pro:speckit-status
 
 # 2. Look at the workflow file for the last completed phase
-cat docs/ai/specs/SPEC-XXX-workflow.md | grep "✅\|⏳\|🔄"
+search docs/ai/specs/SPEC-XXX-workflow.md for phase status markers
 
 # 3. Resume from the next pending phase
 /speckit-pro:speckit-autopilot docs/ai/specs/SPEC-XXX-workflow.md --from-phase <next>
@@ -464,7 +464,7 @@ re-run from an earlier phase.
 
 ### 1. Prepare
 
-```bash
+```text
 # Install SpecKit (if not already)
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 specify init --integration claude
@@ -487,7 +487,7 @@ settings.
 
 ### 3. Run
 
-```bash
+```text
 # Start Claude with skip-permissions for fully autonomous execution
 claude --dangerously-skip-permissions
 

@@ -175,8 +175,8 @@ parse_args() {
 }
 
 validate_layout() {
-  [ -x "$REPO_ROOT/scripts/build-plugin-payloads.sh" ] || \
-    die "build script not executable: $REPO_ROOT/scripts/build-plugin-payloads.sh"
+  [ -f "$REPO_ROOT/scripts/build-plugin-payloads.py" ] || \
+    die "payload builder not found: $REPO_ROOT/scripts/build-plugin-payloads.py"
 
   # Only require pre-existing payloads when we skip the build AND actually run.
   # In --dry-run we just print commands, so missing payloads must not abort.
@@ -188,7 +188,7 @@ validate_layout() {
 
 build_payloads() {
   echo "==> Building generated Claude and Codex payloads ..."
-  run_in_repo ./scripts/build-plugin-payloads.sh
+  run_in_repo python3 scripts/build-plugin-payloads.py
 }
 
 validate_claude_payload() {

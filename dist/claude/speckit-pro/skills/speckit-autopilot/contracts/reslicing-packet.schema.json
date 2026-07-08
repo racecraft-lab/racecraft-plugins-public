@@ -144,7 +144,7 @@
         "changed_files_path"
       ],
       "properties": {
-        "tool": { "const": "multi-pr-emission.sh" },
+        "tool": { "const": "multi-pr-emission" },
         "command_template": { "type": "string", "minLength": 1 },
         "required_inputs": {
           "type": "array",

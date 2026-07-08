@@ -29,9 +29,9 @@ in order; do not collapse or defer.
 | 12 | Verify Tasks Phantom Check | verify-tasks ext | `$speckit-verify-tasks` |
 | 13 | Code Review | (none) — built-in | spawn a subagent to independently review the diff `origin/main...HEAD`; report findings by severity |
 | 14 | Integration Suite | (none) | `PROJECT_COMMANDS.FULL_VERIFY` or detected full test command |
-| 15 | Final Reviewability Backstop | (none) | `final-reviewability-backstop.sh --feature-dir specs/<feature> --feature-branch <branch> ...` |
-| 16 | PR Packet/Body Generation | final backstop proceeded | `generate-pr-body.sh --packet-output .git/speckit-pr-packet.json "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD` |
-| 17 | PR Creation | current packet validation passed | single-PR path only when no split route and no current `pr_marker_plan`; `multi-pr-emission.sh` for split-PR routes or marker-ready plans |
+| 15 | Final Reviewability Backstop | (none) | deferred helper; use current committed evidence or stop before PR side effects |
+| 16 | PR Packet/Body Generation | final backstop proceeded | `generate-pr-body --packet-output .git/speckit-pr-packet.json "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD` |
+| 17 | PR Creation | current packet validation passed | single-PR path only when no split route and no current `pr_marker_plan`; `multi-pr-emission` for split-PR routes or marker-ready plans |
 | 18 | Review Remediation | (none) | parent session loop — inspect PR feedback, dispatch fixes as needed |
 | 19 | Retrospective | retrospective ext | `$speckit-retrospective-analyze` (FINAL STEP) |
 
@@ -124,14 +124,14 @@ background subagents as the fallback path. The 3-track structure
 Before creating or updating PRs after G7, the parent session runs:
 
 ```text
-skills/speckit-autopilot/scripts/final-reviewability-backstop.sh --feature-dir specs/<feature> --feature-branch <branch> --diff-range origin/main...HEAD --state-output specs/<feature>/.process/final-reviewability/gate-state.json --packet-output specs/<feature>/.process/final-reviewability/reslicing-packet.json ...
-skills/speckit-autopilot/scripts/generate-pr-body.sh --packet-output .git/speckit-pr-packet.json "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD
-skills/speckit-autopilot/scripts/validate-pr-packet.sh .git/speckit-pr-packet.json
+final-reviewability boundary: use current committed reviewability evidence; if none is current, stop before PR side effects
+runner helper generate-pr-body --packet-output .git/speckit-pr-packet.json "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD
+runner helper validate-pr-packet .git/speckit-pr-packet.json
 git diff --name-only origin/main...HEAD > .git/speckit-pr-changed-files.txt
-skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh --title "$(jq -r '.generated_title.value' .git/speckit-pr-packet.json)" --changed-files .git/speckit-pr-changed-files.txt
+runner helper validate-pr-workflow-contract --title <packet.generated_title.value> --changed-files .git/speckit-pr-changed-files.txt
 ```
 
-`final-reviewability-backstop.sh` is the mandatory stop-before-PR boundary.
+`final-reviewability-backstop` is the mandatory stop-before-PR boundary.
 It runs the diff gate, writes top-level `final_reviewability_gate` state, and
 returns 0 only for `pass`, `warn`, honored typed-exception outcomes, or final
 `marker_split` when a valid current `pr_marker_plan` is present. If a current
@@ -141,7 +141,7 @@ all-changes PR just because the final full-diff gate is `pass` or `warn`. A
 valid current size-only block also continues into marker emission; it is not a
 manual re-slicing stop. If it returns 1 for an unexcepted
 correctness block or missing/stale marker plan, do not generate a PR body, do
-not invoke any `gh pr create` variant, and do not run `multi-pr-emission.sh`
+not invoke any `gh pr create` variant, and do not run `multi-pr-emission`
 yet. This blocks only PR side effects. It is not a final response condition:
 read `autopilot_continuation`, the `reslicing_required` packet, and the named
 PRSG-007/008/009 operator step, then continue internally until a valid slice PR
@@ -154,7 +154,7 @@ fingerprint status, ordered marker IDs, checkpoints, warnings, final
 marker_split or marker-plan-ready handoff, packet validation, and PR mappings
 before PR side effects. All evidence paths must be repo-relative.
 
-`generate-pr-body.sh --packet-output` uses the host repository's pull request
+`generate-pr-body --packet-output` uses the host repository's pull request
 template if it exists, preserves unknown host-required sections, appends
 missing review-packet sections, and falls back to the bundled template when the
 host has none. It writes packet-owned metadata for target base/head, generated
@@ -186,7 +186,7 @@ Style rules:
   are treated as stale generated-body content and block PR creation.
 
 Validate the current packet before any single-PR create attempt. Continue only
-when this just-run `validate-pr-packet.sh` invocation exits 0 and writes a
+when this just-run `validate-pr-packet` invocation exits 0 and writes a
 matching `status: "passed"` result to the packet's current
 `validation_result_path`. Never treat a pre-existing validation JSON file as
 authorization to create a PR; stale passed or failed records are evidence only
@@ -195,29 +195,29 @@ writes packet-specific remediation JSON, appends workflow evidence, and blocks
 before PR creation. Input error exits 2 and must also stop before PR creation.
 
 Validate the PR workflow contract before any single-PR create attempt. The
-shared `validate-pr-workflow-contract.sh` checks the actual PR title against the
+shared `validate-pr-workflow-contract` checks the actual PR title against the
 changed spec scope and rejects aggregate single-PR creation when changed files
 contain multi-PR candidate commands or multi-marker final split evidence. A
 `DOC-*` spec title must be `docs(DOC-XXX): ...`; `feat(speckit-pro): ...` is
 only valid for non-spec plugin changes. Any split-contract failure means the
-single-PR path is forbidden: run `multi-pr-emission.sh` with the current layer or
+single-PR path is forbidden: run `multi-pr-emission` with the current layer or
 marker plan, or stop blocked with the validator output.
 
 Create the single PR from packet fields, never from branch-derived title text
 or hand-written body content:
 
-```bash
+```text
 gh pr create \
-  --base "$(jq -r '.target.base_branch' .git/speckit-pr-packet.json)" \
-  --head "$(jq -r '.target.head_branch' .git/speckit-pr-packet.json)" \
-  --title "$(jq -r '.generated_title.value' .git/speckit-pr-packet.json)" \
-  --body-file "$(jq -r '.body_file' .git/speckit-pr-packet.json)"
+  --base <packet.target.base_branch> \
+  --head <packet.target.head_branch> \
+  --title <packet.generated_title.value> \
+  --body-file <packet.body_file>
 ```
 
 ## Multi-PR Emission Workflow
 
 For specs whose atomicity route is `split-PR`, Post item 18 is multi-PR
-emission. The PRSG-008 `plan-layers.sh` output is the authoritative source of
+emission. The PRSG-008 `plan-layers` output is the authoritative source of
 review order and slice membership. Codex MUST NOT infer, reroute, or re-slice
 work from changed files, reviewability warnings, or fallback heuristics.
 
@@ -234,10 +234,10 @@ Codex parent-session responsibilities:
 2. Run full verification once for the completed implementation and capture the
    evidence path under `specs/<feature>/.process/emission/`.
 3. Read the persisted PRSG-008 layer plan from `autopilot-state.json` or the
-   workflow evidence. It must be the exact `plan-layers.sh` envelope with
+   workflow evidence. It must be the exact `plan-layers` envelope with
    `status=ok`.
 4. After the final backstop proceeds, run
-   `skills/speckit-autopilot/scripts/multi-pr-emission.sh` with the layer or
+   `runner helper multi-pr-emission` with the layer or
    marker plan path, durable state path, feature branch, integration base, base
    SHA, full verification evidence path, and optional changed-file scope
    evidence. Marker packets must validate against current marker evidence
@@ -254,7 +254,7 @@ Codex parent-session responsibilities:
    `implementation_checkpoint.commit_sha`; without those commit SHAs, stop
    before branch or PR mutation and repair the marker checkpoints.
 5. Before any stack-manager mutation, rely on the shared
-   `skills/speckit-autopilot/scripts/detect-stack-manager.sh` helper and the
+   `runner helper detect-stack-manager` helper and the
    shared
    `skills/speckit-autopilot/contracts/stack-manager-decision.schema.json`
    contract. `gh-stack` is selected only after deterministic version,
@@ -266,7 +266,7 @@ Codex parent-session responsibilities:
 6. Record each slice outcome in `update_plan`, `autopilot-state.json`, and the
    workflow evidence before advancing the next Post item.
 
-For each planned slice, `multi-pr-emission.sh` creates the Style B branch
+For each planned slice, `multi-pr-emission` creates the Style B branch
 topology and PR packet:
 
 ```text
@@ -280,7 +280,7 @@ Each slice must pass or record scoped verification before PR creation. A failing
 required scoped command must stop before `gh pr create`, record the failed
 command, exit status, evidence path, stderr/stdout tail, and keep
 `next_slice_id` on the blocked slice. Each generated slice packet must also
-pass the shared `validate-pr-packet.sh` before `gh pr create`; a validation
+pass the shared `validate-pr-packet` before `gh pr create`; a validation
 failure writes packet remediation evidence and blocks on the same slice without
 opening or repairing a PR. A later failed slice must not rewind,
 invalidate, or mark earlier opened slice PRs as blocked.
@@ -306,8 +306,8 @@ packets, PR bodies, `.process/prs.json`, workflow evidence, and
 the existing PR Checks workflow remains unchanged.
 
 **Restack after lower squash merges:** Use `gh-stack` only when the shared
-`detect-stack-manager.sh` helper selects it from deterministic version,
-read-only proof, and topology checks. Otherwise use `restack.sh --apply`, which
+`detect-stack-manager` helper selects it from deterministic version,
+read-only proof, and topology checks. Otherwise use `restack --apply`, which
 retargets bases with explicit `gh pr edit --base` fallback. Restack is dry-run
 by default, preserves each remaining slice's declared file scope, retargets the
 first remaining open slice to the integration base, retargets each later slice
@@ -373,25 +373,15 @@ is a reporting step, not a gate.
 ## UAT Runbook Generation
 
 Immediately after Self-Review and before PR-body generation (between
-`Post: Self-Review` and `Post: PR Body Generation`), the parent
-session generates a deterministic UAT runbook from `spec.md` so the
-PR ships with a story-by-story acceptance artifact. The runbook is
-EXHAUST, so it is written under the feature's own `.process/` directory;
-create that directory first (it may not exist), then invoke the shared
-skeleton script by its `skills/...` path (the same single copy the Claude
-Code variant uses — there is no Codex copy of the script):
-
-```text
-mkdir -p <feature-dir>/.process && \
-  UAT_PROJECT_COMMANDS='<PROJECT_COMMANDS as JSON>' \
-  skills/speckit-autopilot/scripts/generate-uat-skeleton.sh \
-  <feature-dir>/spec.md <feature-dir>/.process/uat-runbook.md \
-  --workflow-file <workflow-file>
-```
+`Post: Self-Review` and `Post: PR Body Generation`), the parent session records
+UAT runbook status. The runner helper `generate-uat-skeleton` is registered as
+deferred for installed workflows; do not invoke it as an active helper. Reuse a
+committed source-derived runbook when present. If none exists, log
+`skipped: generate-uat-skeleton deferred` and continue.
 
 - `UAT_PROJECT_COMMANDS` is the discovered `PROJECT_COMMANDS`
   (Step 0.11) serialized to JSON — the script formats the Env Setup
-  table from it and never re-runs `detect-commands.sh`.
+  table from it and never re-runs `detect-commands`.
 - `--workflow-file <workflow-file>` lets the script echo the
   `## Self-Review` block written just above into the runbook's
   Self-Review Findings section.
@@ -440,7 +430,7 @@ wait_agent(...)
 After authoring, validate the runbook quality:
 
 ```text
-bash '<SKILL_SCRIPTS>/validate-uat-runbook.sh' <feature-dir>/.process/uat-runbook.md
+'runner helper validate-uat-runbook' <feature-dir>/.process/uat-runbook.md
 ```
 
 If validation fails, STOP before PR-body generation or PR creation and report the

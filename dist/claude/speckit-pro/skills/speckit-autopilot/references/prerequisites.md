@@ -7,13 +7,13 @@ The autopilot's pre-flight sequence. Run these before Step 1 (Parse Workflow Sta
 - [Step -1: Archive Sweep Startup](#step--1-archive-sweep-startup) — archive previously merged specs before workflow execution
 - [Step 0.0: Resolve Script Paths](#step-00-resolve-script-paths) — extract `SKILL_SCRIPTS` from the skill header (plugin path)
 - [Step 0.0b: Claude Agent Package Completeness](#step-00b-claude-agent-package-completeness) — verify bundled plugin agents are present
-- [Step 0.1–0.7: Environment Checks](#step-01-07-environment-checks) — `check-prerequisites.sh` JSON parsing, branch detection
+- [Step 0.1–0.7: Environment Checks](#step-01-07-environment-checks) — `check-prerequisites` JSON parsing, branch detection
 - [Step 0.6: Load Settings](#step-06-load-settings) — `.claude/speckit-pro.local.md` YAML frontmatter
 - [Step 0.8: Capability Coverage & Plugin Limitation Check](#step-08-capability-coverage--plugin-limitation-check) — informational research/context advisory + plugin-agent caveats
 - [Step 0.9: Constitution Validation](#step-09-constitution-validation) — principle checks against current codebase
 - [Step 0.10: Implementation Agent Detection](#step-010-implementation-agent-detection) — discover `PROJECT_IMPLEMENTATION_AGENT`
-- [Step 0.11: Project Command Discovery](#step-011-project-command-discovery) — `detect-commands.sh` → `PROJECT_COMMANDS`
-- [Step 0.12: Preset and Extension Detection](#step-012-preset-and-extension-detection) — `detect-presets.sh` → `PRESET_CONVENTIONS`
+- [Step 0.11: Project Command Discovery](#step-011-project-command-discovery) — `detect-commands` → `PROJECT_COMMANDS`
+- [Step 0.12: Preset and Extension Detection](#step-012-preset-and-extension-detection) — `detect-presets` → `PRESET_CONVENTIONS`
 
 ## Step -1: Archive Sweep Startup
 
@@ -53,7 +53,7 @@ install or vendor `racecraft-lab/spec-kit-archive` for archive-aware cleanup.
 
 ## Step 0.0: Resolve Script Paths
 
-The autopilot's bash scripts ship with the **plugin**, not the
+The autopilot's shell scripts ship with the **plugin**, not the
 project. Before running any script, resolve the absolute path
 to the scripts directory from the skill's base directory.
 
@@ -78,7 +78,7 @@ SKILL_SCRIPTS="<HOME>/.claude/plugins/cache/racecraft-plugins-public/speckit-pro
 Verify the directory exists:
 
 ```text
-Bash("ls '<SKILL_SCRIPTS>/'")
+Command("ls '<SKILL_SCRIPTS>/'")
 ```
 
 If it doesn't exist, STOP: "Plugin scripts not found. Reinstall
@@ -86,11 +86,11 @@ the speckit-pro plugin."
 
 **All script invocations below use the resolved `SKILL_SCRIPTS`
 path as prefix.** Never run these scripts from
-`.specify/scripts/bash/` — that directory contains project-level
+`.specify/scripts/<type>/` — that directory contains project-level
 SpecKit scripts (create-new-feature, setup-plan, etc.), which are
 different from the autopilot scripts.
 
-**WARNING:** `CLAUDE_PLUGIN_ROOT` is NOT available in Bash tool
+**WARNING:** `CLAUDE_PLUGIN_ROOT` is NOT available in command tool tool
 invocations — it only exists inside agent subprocesses. Always use
 the literal path extracted from the skill header.
 
@@ -100,7 +100,7 @@ Before any phase work, verify the installed Claude Code plugin package includes
 every bundled SpecKit Pro agent:
 
 ```text
-Bash("bash '<SKILL_SCRIPTS>/validate-agent-install.sh' --surface claude --plugin-root '<plugin-root>'")
+Command("'runner helper validate-agent-install' --surface claude --plugin-root '<plugin-root>'")
 ```
 
 Use the plugin root that owns `skills/speckit-autopilot/`; this is the directory
@@ -115,7 +115,7 @@ retry.
 ## Step 0.1–0.7: Environment Checks
 
 ```text
-Bash("bash '<SKILL_SCRIPTS>/check-prerequisites.sh' <workflow_file_path>")
+Command("'runner helper check-prerequisites' <workflow_file_path>")
 ```
 
 Parse the JSON result:
@@ -127,7 +127,7 @@ Parse the JSON result:
 If `on_feature_branch` is `true`, verify the branch matches the
 workflow file's `Branch` field. Warn if they don't match.
 
-**Important:** Environment variables set in Bash do NOT persist to
+**Important:** Environment variables set in command tool do NOT persist to
 Skill tool invocations. The autopilot handles branch context by
 adjusting how it invokes each phase (see Phase Dispatch).
 
@@ -152,8 +152,8 @@ Agent Teams on this machine, speckit-pro uses it.
 Probe two conditions:
 
 ```text
-Bash("test \"${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS}\" = \"1\"")
-Bash("claude --version | awk '{print $1}' | sort -V -C 2.1.32")
+Command("test \"${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS}\" = \"1\"")
+Command("claude --version with version sorting 2.1.32")
 ```
 
 1. **Env var:** `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is set
@@ -247,7 +247,7 @@ implementation agent (e.g., "my-project-developer" or
 ## Step 0.11: Project Command Discovery
 
 ```text
-Bash("bash '<SKILL_SCRIPTS>/detect-commands.sh'")
+Command("'runner helper detect-commands'")
 ```
 
 Parse the JSON result for `commands` object containing:
@@ -266,7 +266,7 @@ across context compactions. Pass them to every subagent.
 ## Step 0.12: Preset and Extension Detection
 
 ```text
-Bash("bash '<SKILL_SCRIPTS>/detect-presets.sh'")
+Command("'runner helper detect-presets'")
 ```
 
 Parse the JSON result for: `has_presets`, `presets` (names +

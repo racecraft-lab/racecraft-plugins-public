@@ -163,8 +163,8 @@ it.
 
 | Script | Purpose |
 |--------|---------|
-| `parse-consensus-categories.sh "<line>"` | Parses the leading `[<categories>]` prefix, returns JSON listing the analysts to spawn and the dispatch reason. Implements every routing rule in the table above (security override, ambiguous safe default, unknown-tag safe default, multi-tag union, untagged → all 3). |
-| `aggregate-crl.sh <workflow_file>` | Parses the Consensus Resolution Log table, computes total items / Round 1 / Round 2 / escape-hatch counts, returns escape-rate percent and `exceeds_threshold` boolean against `THRESHOLD_PERCENT` (default 10). |
+| `parse-consensus-categories "<line>"` | Parses the leading `[<categories>]` prefix, returns JSON listing the analysts to spawn and the dispatch reason. Implements every routing rule in the table above (security override, ambiguous safe default, unknown-tag safe default, multi-tag union, untagged → all 3). |
+| `aggregate-crl <workflow_file>` | Parses the Consensus Resolution Log table, computes total items / Round 1 / Round 2 / escape-hatch counts, returns escape-rate percent and `exceeds_threshold` boolean against `THRESHOLD_PERCENT` (default 10). |
 
 The orchestrator MAY call these scripts directly during dispatch
 or use them out-of-band for the 30-day review. Either way, they
@@ -547,7 +547,7 @@ the emit is not.
 - Completeness: 0.95
 ```
 
-The first line is the canonical signal. `scripts/confidence-gate.sh`
+The first line is the canonical signal. `scripts/confidence-gate`
 matches it with `^📊 Confidence: ([01]\.[0-9]{2})$` after
 trimming. The five subsequent lines are the per-criterion
 breakdown; the aggregate on the first line is their arithmetic

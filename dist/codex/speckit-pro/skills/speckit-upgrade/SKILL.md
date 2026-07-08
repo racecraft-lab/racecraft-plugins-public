@@ -43,7 +43,7 @@ It is not run automatically by this skill.
 Use this exact sequence:
 
 ```text
-speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh --dry-run --repo-root .
+Run runner helper migrate-structure in dry-run mode for the repository root.
 ```
 
 Review the JSON report for pending, skipped, and no-op items. Clean the git tree
@@ -51,7 +51,7 @@ if the report shows pending mutations and the worktree is dirty. Apply only
 when ready to mutate:
 
 ```text
-speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh --apply --repo-root .
+Run runner helper migrate-structure in apply mode after reviewing a clean dry-run.
 ```
 
 The apply command creates a backup before repository marker writes or generated
@@ -293,7 +293,7 @@ Return a structured summary:
 **Customizations preserved:**
 - .specify/memory/constitution.md (restored from backup)
 - .specify/templates/spec-template.md (kept upgrade version; your edits saved at $BACKUP)
-- .specify/scripts/bash/check-prerequisites.sh (restored from backup)
+- SpecKit prerequisite helper restored from backup
 
 **Next steps:**
 1. Restart Codex (and Claude Code if it's running) so the new

@@ -22,7 +22,7 @@ DOC-002 created this route shell. DOC-009 owns the full workflow content here.
 | Docs site | `docs-site/src/content/docs/` and `docs-site/package.json` | Static Astro/Starlight site output | [Reference overview](/racecraft-plugins-public/reference/) |
 | Generated references | `docs-site/scripts/generate-reference-pages.mjs` | `docs-site/src/content/docs/reference/*.md` | [Reference overview](/racecraft-plugins-public/reference/) |
 
-Primary sources: [CLAUDE.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/CLAUDE.md), [docs-site/package.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/docs-site/package.json), [generate-reference-pages.mjs](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/docs-site/scripts/generate-reference-pages.mjs), [build-plugin-payloads.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/build-plugin-payloads.sh), [sync-marketplace-versions.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/sync-marketplace-versions.sh), and [run-all.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/run-all.sh).
+Primary sources: [CLAUDE.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/CLAUDE.md), [docs-site/package.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/docs-site/package.json), [generate-reference-pages.mjs](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/docs-site/scripts/generate-reference-pages.mjs), [build-plugin-payloads.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/build-plugin-payloads.py), [sync-marketplace-versions.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/sync-marketplace-versions.sh), and [run-all.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/run-all.sh).
 
 ## Change Type Matrix
 
@@ -106,7 +106,7 @@ Live, AI-backed, or PR-backed validation can additionally require authenticated
 `gh`, `specify`, `claude`, `codex`, the skill-creator plugin, and
 `timeout`/`gtimeout` depending on the layer.
 
-Primary sources: [docs-site/package.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/docs-site/package.json), [build-plugin-payloads.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/build-plugin-payloads.sh), [sync-marketplace-versions.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/sync-marketplace-versions.sh), and [tests/speckit-pro/run-all.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/run-all.sh).
+Primary sources: [docs-site/package.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/docs-site/package.json), [build-plugin-payloads.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/build-plugin-payloads.py), [sync-marketplace-versions.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/sync-marketplace-versions.sh), and [tests/speckit-pro/run-all.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/run-all.sh).
 
 ## Version Fields
 
@@ -133,7 +133,7 @@ The maintainer-facing release flow is:
 2. Release-please opens or updates a release PR when releasable Conventional
    Commits exist.
 3. When release PRs are created, the Release workflow checks out the release PR
-   branch, runs `bash scripts/build-plugin-payloads.sh`, commits `dist/**`
+   branch, runs `python3 scripts/build-plugin-payloads.py`, commits `dist/**`
    payload updates back to that branch when needed, and manually dispatches
    `PR Checks`.
 4. When a release PR is merged, release-please publishes the GitHub Release.

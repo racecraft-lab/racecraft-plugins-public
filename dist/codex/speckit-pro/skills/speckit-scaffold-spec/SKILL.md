@@ -60,7 +60,7 @@ from the parent scaffold — each child is scaffolded independently.
 Before presenting O5 as ready, validate the manifest with:
 
 ```text
-skills/speckit-autopilot/scripts/o5-topology.sh specs/<parent-branch>
+Run runner helper o5-topology for specs/<parent-branch>.
 ```
 
 If topology is invalid, report the JSON `problems[]` and keep the operator on
@@ -91,18 +91,17 @@ relocation only when all of these are true:
 - A root PROCESS allow-list artifact or matching docs-side scaffold artifact is
   present. If none exists, report that no Tier-2 action is needed.
 
-For the one eligible thawed candidate, print these exact commands with the real
-`specs/<spec-dir>` value substituted:
+For the one eligible thawed candidate, print static operator guidance with the
+real `specs/<spec-dir>` value substituted:
 
 ```text
-speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --dry-run --spec specs/<spec-dir> --repo-root .
-speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --apply --spec specs/<spec-dir> --repo-root .
+Run runner helper relocate-process-artifacts in dry-run mode for specs/<spec-dir>.
+After reviewing a clean dry-run, run the same helper in apply mode.
 ```
 
 Frame `--apply` as a follow-up only after the operator reviews clean dry-run
-output and has a clean worktree. Never invoke
-`relocate-process-artifacts.sh --dry-run` or
-`relocate-process-artifacts.sh --apply` from `$speckit-scaffold-spec`.
+output and has a clean worktree. Never invoke the relocation helper from
+`$speckit-scaffold-spec`.
 
 > **Codex implicit-trigger note (eval harness vs production):** Layer 2 trigger evals score this skill at 69% (11/16) on the Codex selector — but POS is a perfect 8/8 (every "scaffold SPEC-009" / "create a new spec branch" / "prep SPEC-022 for autopilot" query fires correctly). All 5 NEG misses are false-positives in single-skill staging where the harness loads only this skill, so the Codex selector has no alternative to route adjacent SDD queries to ("roadmap status" / "what's the progress on SPEC-009" → should go to `$speckit-status`, "run the fully populated workflow" → `$speckit-autopilot`, "resolve PR review comments" → `$speckit-resolve-pr`). In production all six speckit-pro skills are loaded together and Codex routes those queries to their proper destinations. The eval results under-report real-world accuracy; positive-trigger reliability is the operationally-relevant number. (This skill was renamed from `speckit-setup` in v1.12; the rename did not regress trigger behavior — same POS pass rate as before.)
 
@@ -144,7 +143,7 @@ Before parsing or mutating the repository, resolve the plugin root from this
 skill location and run the shared install validator:
 
 ```text
-bash "<plugin-root>/skills/speckit-autopilot/scripts/validate-agent-install.sh" --surface codex --plugin-root "<plugin-root>" --autoheal
+Run runner helper install-codex-agents in dry-run or apply mode for the Codex surface.
 ```
 
 This checks every bundled `codex-agents/*.toml` file, including
@@ -208,7 +207,7 @@ Before creating the worktree, run the reviewability setup gate against the
 roadmap or extracted spec entry:
 
 ```text
-skills/speckit-autopilot/scripts/reviewability-gate.sh setup <technical-roadmap-path>
+Run runner helper reviewability-gate in setup mode for <technical-roadmap-path>.
 ```
 
 If the gate returns `block` without a ratified split exception, stop setup and
@@ -299,7 +298,7 @@ Before copying the workflow template, install or refresh the generic
 speckit-pro reviewability preset inside the worktree:
 
 ```text
-skills/speckit-coach/scripts/ensure-reviewability-preset.sh <worktree-path> <plugin-root> speckit-pro-reviewability
+Run runner helper ensure-reviewability-preset for <worktree-path> and preset speckit-pro-reviewability.
 ```
 
 This script generates `.specify/presets/speckit-pro-reviewability/` from the

@@ -25,7 +25,7 @@ Programmatic gate checks performed after each SDD phase. The autopilot validates
 6. Workflow file's Prerequisites table filled with baselines
 7. Constitution Check summary line set to "✅ Verified"
 8. Reviewability setup gate passes:
-   `skills/speckit-autopilot/scripts/reviewability-gate.sh setup <workflow-or-roadmap>`
+   `runner helper reviewability-gate setup <workflow-or-roadmap>`
    must be `pass`, `warn`, or a recorded `exception`; `block` stops before
    Specify and requires spec decomposition.
 ```
@@ -147,7 +147,7 @@ time) to prevent conflicting spec edits.
 2. For each FR-XXX, verify it appears in tasks.md
 3. Verify task dependency ordering makes sense (no forward references)
 4. Verify [P] markers are only on genuinely parallel-safe tasks
-5. Run `reviewability-gate.sh tasks specs/<feature>` with guarded capture:
+5. Run `reviewability-gate tasks specs/<feature>` with guarded capture:
    capture stdout, stderr, exit code, gate status/mode/exit/evidence path, and
    the repo-relative evidence path before deciding whether to proceed.
 6. Apply the post-G5 reviewability proceed/stop matrix below. A valid current
@@ -265,7 +265,7 @@ emit (see
 [consensus-protocol.md §Pre-Implement Confidence Emit](./consensus-protocol.md#pre-implement-confidence-emit-end-of-phase-6-analyze))
 clears a composite threshold of 0.90 (or the operator-configured
 threshold). Read by
-`speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh`.
+`runner helper confidence-gate`.
 
 **Default mode:** advisory.
 
@@ -276,14 +276,14 @@ threshold). Read by
    overrides everything below. Passing both flags is a usage
    error — the autopilot stops with a clear message before Phase
    0 runs. Resolved by
-   `speckit-pro/skills/speckit-autopilot/scripts/resolve-confidence-mode.sh`
+   `runner helper resolve-confidence-mode`
    (see [Script reference in SKILL.md](../SKILL.md)).
 2. **Local config:** `confidence_gate_mode: strict` (or
    `advisory`) in `.claude/speckit-pro.local.md`.
 3. **Default:** `advisory`.
 
 ```
-1. Run confidence-gate.sh against the workflow file
+1. Run confidence-gate against the workflow file
 2. Read exit code + JSON output:
    - exit 0 (PASS, composite ≥ threshold) → proceed to G7 / Phase 7
    - exit 1 (NO_DATA, no synthesizer emit found) → soft-skip:
@@ -304,7 +304,7 @@ threshold). Read by
        open CRITICAL/HIGH findings)
      - Re-invoke the synthesizer's pre-Implement confidence
        emit (consensus-synthesizer agent, single fan-out)
-     - Re-run confidence-gate.sh
+     - Re-run confidence-gate
    - After 3 iterations OR exit 0: stop iterating
 ```
 
@@ -353,9 +353,9 @@ and no placeholder tests exist.
    Glob("tests/integration/*<spec-name>*") → must find files
 7. Verify test count increased from G0 baseline
 8. Verify NO placeholder tests in new files:
-   Grep("it\.todo\(|test\.todo\(|it\.skip\(|xit\(|xtest\(|xit\(",
+   Search for placeholder test markers
         path: "specs/<number>-<name>/") → must be 0
-   Grep("it\.todo\(|test\.todo\(|it\.skip\(|xit\(",
+   Search for placeholder test markers
         path: "tests/integration/*<spec-name>*") → must be 0
 9. ALL must pass for G7 to pass
 ```
@@ -390,10 +390,13 @@ before G7 can pass.
 - Test failures: Fix failing tests or implementation bugs
 - Missing integration tests: Spawn implement-executor
 
-**After G7 passes:** Run full integration suite (Step 3.1), then run
-`final-reviewability-backstop.sh` as the mandatory last boundary before PR body
-generation, any `gh pr create` variant, or `multi-pr-emission.sh`. For example:
-`skills/speckit-autopilot/scripts/final-reviewability-backstop.sh --feature-dir specs/<feature> --feature-branch <branch> --diff-range origin/main...HEAD`.
+**After G7 passes:** Run full integration suite (Step 3.1), then apply the
+final reviewability boundary before PR body generation, any `gh pr create`
+variant, or `multi-pr-emission`. The runner helper
+`final-reviewability-backstop` is registered as deferred for installed
+workflows; do not invoke it as an active helper. Use current committed
+reviewability evidence or stop before PR side effects if no current evidence
+exists.
 Only `pass`, `warn`, or an honored typed-exception outcome may continue. An
 unexcepted block or gate error stops PR preparation and records the
 `final_reviewability_gate` state plus re-slicing packet when applicable.

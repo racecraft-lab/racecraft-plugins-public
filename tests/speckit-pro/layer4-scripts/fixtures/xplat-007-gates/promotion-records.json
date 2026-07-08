@@ -164,11 +164,11 @@
     {
       "schema_version": "1.0",
       "gate_id": "payload-gate",
-      "prior_bash_gate": "scripts/build-plugin-payloads.sh",
+      "prior_bash_gate": "scripts/build-plugin-payloads.py",
       "python_operation": "build-test-payload-evidence",
       "request_fixture": "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/test-payload-evidence.json",
       "fixture_ids": ["claude-codex-test-payloads", "stale-generated-files"],
-      "bash_reference_ids": ["scripts/build-plugin-payloads.sh"],
+      "bash_reference_ids": ["scripts/build-plugin-payloads.py"],
       "failure_classes": ["release_payload_cutover_refused", "stale_generated_payload_evidence", "fixture_output_root_refused"],
       "comparison_mode": "artifact_hash",
       "normalized_fields": ["absolute_paths", "duration_ms", "temporary_output_roots"],
@@ -177,7 +177,7 @@
       "artifact_result": "match",
       "active_path_guard_result": "pass",
       "bash_reference_retirement": "inactive_parity_evidence",
-      "rollback": "Restore scripts/build-plugin-payloads.sh as inactive parity evidence and disable build-test-payload-evidence if fixture hashes regress.",
+      "rollback": "Restore scripts/build-plugin-payloads.py as inactive parity evidence and disable build-test-payload-evidence if fixture hashes regress.",
       "promoted_at": "2026-07-04T00:00:00Z"
     },
     {
@@ -320,7 +320,7 @@
       "python_operation": "check-payload-evidence",
       "request_fixture": "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness.json",
       "fixture_ids": ["ready", "stale-payload-evidence"],
-      "bash_reference_ids": [".github/workflows/release.yml", "scripts/build-plugin-payloads.sh"],
+      "bash_reference_ids": [".github/workflows/release.yml", "scripts/build-plugin-payloads.py"],
       "failure_classes": ["stale_payload_evidence", "release_payload_cutover_refused"],
       "comparison_mode": "artifact_hash",
       "normalized_fields": ["absolute_paths", "payload_id_order"],

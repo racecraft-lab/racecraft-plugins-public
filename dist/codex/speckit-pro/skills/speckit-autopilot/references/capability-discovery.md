@@ -73,10 +73,9 @@ denying the built-in mutation primitives, not by shrinking what it can see.
 Proactive discovery never overrides a component's role. A platform cannot
 categorically tell a "read" capability from a "write" one for an arbitrary
 installed tool, so the boundary is enforced two ways: the built-in mutation
-primitives (`Write`, `Edit`, `MultiEdit`, `NotebookEdit`, and where the role
-requires it, `Bash`) are denied at the platform layer (Claude
-`disallowedTools`, Codex `sandbox_mode`), and this role rule governs everything
-the platform cannot classify.
+primitives (`Write`, `Edit`, `MultiEdit`, `NotebookEdit`) are denied at the
+platform layer (Claude `disallowedTools`, Codex `sandbox_mode`), and this role
+rule governs everything the platform cannot classify.
 
 - A component declared **read-only** (research and context agents) must never
   invoke a capability that writes, mutates, installs, pushes, or otherwise

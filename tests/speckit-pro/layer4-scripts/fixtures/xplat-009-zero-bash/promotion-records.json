@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "XPLAT-009",
+  "promotion_status": "zero_bash_guard_authoritative",
+  "records": [
+    {
+      "gate_id": "active-path-guard",
+      "python_operation": "zero-bash-guard",
+      "fixture_ids": [
+        "clean-fixture",
+        "blocking-active-source",
+        "missing-scan-root",
+        "missing-installed-cache-proof",
+        "mutable-installed-cache-proof",
+        "final-current-implementation"
+      ],
+      "rollback": "Restore release readiness blocking on active-runtime guard if zero-Bash proof cannot be produced."
+    }
+  ]
+}
