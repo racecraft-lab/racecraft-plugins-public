@@ -21,6 +21,7 @@ changes. It does NOT regenerate the docs reference — the release workflow runs
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import os
@@ -223,8 +224,11 @@ def remove_empty_dirs(root: Path) -> None:
     ):
         try:
             directory.rmdir()
-        except OSError:
-            pass
+        except OSError as exc:
+            # Expected during cleanup when a directory is still non-empty or
+            # disappears between discovery and removal; re-raise anything else.
+            if exc.errno not in (errno.ENOTEMPTY, errno.ENOENT):
+                raise
 
 
 # --------------------------------------------------------------------------- #
