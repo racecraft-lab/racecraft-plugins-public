@@ -9,7 +9,7 @@ single "valid YAML" outcome. Every former ``assert_*``/``_pass``/``_fail``
 execution maps to one counted ``subTest`` unit; names reproduced verbatim via
 ``subTest(msg=...)`` for a 1:1 baseline match.
 
-YAML validity (check 27): the bash predecessor validated each workflow via
+YAML validity (check 28): the bash predecessor validated each workflow via
 ``python3 -c "import yaml,…"`` with a ``ruby`` fallback. The port keeps its own
 module stdlib-only and reproduces that exact mechanism through ``subprocess``
 (argv list, ``shell=False``) — no new runtime dependency, identical pass/fail
@@ -18,7 +18,7 @@ folding. ``python3``/``ruby`` are outside the bash-scoped confinement vocabulary
 PR 5 later updates this ported validator for the CI dispatch swap (tasks T049).
 
 Baseline: ``tests/speckit-pro/parity/xplat-010/validate-pr-checks-sentinel-baseline.txt``
-(TOTAL: 27).
+(TOTAL: 28).
 """
 
 from __future__ import annotations
@@ -74,7 +74,10 @@ CONTENT_CHECKS: list[tuple[str, str, list[str]]] = [
     ]),
     ("all", "title validation supports dispatched release PR checks",
      ["github.event_name == 'pull_request' && github.event.pull_request.title || inputs.pr_title"]),
-    ("all", "sentinel depends on detect and test jobs", ["needs: [detect, test]"]),
+    ("all", "sentinel depends on detect, test, and artifact-consistency jobs",
+     ["needs: [detect, test, artifact-consistency]"]),
+    ("all", "sentinel checks the artifact-consistency result",
+     ['artifact_result="${{ needs.artifact-consistency.result }}"']),
     ("all", "sentinel runs if: always()", ["if: always()"]),
     ("all", "sentinel has permissions: {}", ["permissions: {}"]),
     ("absent", "latest jq job is deferred", ["test-latest-jq:", "latest_jq_result"]),

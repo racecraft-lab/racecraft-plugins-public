@@ -34,8 +34,13 @@ Columns:
 | PR 3b | port: `validate-payload-completeness.sh` → `validate-payload-completeness.py` | default | 52 → 52 | yes | `tests/speckit-pro/parity/xplat-010/validate-payload-completeness-baseline.txt` |
 | PR 3b | port: `validate-plugin-payload.sh` → `validate-plugin-payload.py` | default | 23 → 23 | yes | `tests/speckit-pro/parity/xplat-010/validate-plugin-payload-baseline.txt` |
 | PR 3b | port: `validate-plugin.sh` → `validate-plugin.py` | default | 8 → 8 | yes | `tests/speckit-pro/parity/xplat-010/validate-plugin-baseline.txt` |
-| PR 3b | port: `validate-pr-checks-sentinel.sh` → `validate-pr-checks-sentinel.py` | default | 27 → 27 | yes | `tests/speckit-pro/parity/xplat-010/validate-pr-checks-sentinel-baseline.txt` |
+| PR 3b | port: `validate-pr-checks-sentinel.sh` → `validate-pr-checks-sentinel.py` | default | 28 → 28 | yes | `tests/speckit-pro/parity/xplat-010/validate-pr-checks-sentinel-baseline.txt` |
 | PR 3b | port: `validate-process-gitattributes.sh` → `validate-process-gitattributes.py` | default | 6 → 6 | yes | `tests/speckit-pro/parity/xplat-010/validate-process-gitattributes-baseline.txt` |
+| PR 3b | port: `validate-release-workflow.sh` → `validate-release-workflow.py` | default | 24 → 24 | yes | `tests/speckit-pro/parity/xplat-010/validate-release-workflow-baseline.txt` |
+| PR 3b | port: `validate-scripts.sh` → `validate-scripts.py` | default | 37 → 37 | yes | `tests/speckit-pro/parity/xplat-010/validate-scripts-baseline.txt` |
+| PR 3b | port: `validate-skill-capability-pointers.sh` → `validate-skill-capability-pointers.py` | default | 55 → 55 | yes | `tests/speckit-pro/parity/xplat-010/validate-skill-capability-pointers-baseline.txt` |
+| PR 3b | port: `validate-skills.sh` → `validate-skills.py` | default | 124 → 124 | yes | `tests/speckit-pro/parity/xplat-010/validate-skills-baseline.txt` |
+| PR 3b | port: `validate-spec-index-determinism.sh` → `validate-spec-index-determinism.py` | default | 16 → 16 | yes | `tests/speckit-pro/parity/xplat-010/validate-spec-index-determinism-baseline.txt` |
 
 **PR 13 note (T121–T130):** The estimator Layer-4 test follows the
 Per-Port Protocol against historical predecessor commit
@@ -87,7 +92,7 @@ ported; ten `.sh` deleted.
 
 **PR 3b note (part 1 of 2, T029–T033):** The first five PR-3b mechanical Layer-1
 validators port with exact 1:1 name-and-count parity against their committed
-baselines (52, 23, 8, 27, 6 → same). Intentional change: `none` for every row.
+baselines (52, 23, 8, 28, 6 → same). Intentional change: `none` for every row.
 
 Four of the five (`validate-plugin`, `validate-plugin-payload`,
 `validate-pr-checks-sentinel`, `validate-process-gitattributes`) interpolate no
@@ -117,9 +122,33 @@ per-skill names and length numbers from the live Claude skill set, each source
 `SKILL.md`'s last non-guard `## ` heading, and the source/built line counts +
 per-skill guard-section size (it and `validate-plugin-payload` invoke the payload
 builder / read `dist/**` live); `validate-pr-checks-sentinel` folds the live
-`.github/workflows/*.yml` glob into its single 27th YAML-validity outcome and
+`.github/workflows/*.yml` glob into its single 28th YAML-validity outcome and
 reads `pr-checks.yml` content live. Adding/removing a skill, editing a source
 heading or length, changing the built payload, or adding a workflow file changes
 the affected inventory and requires recapturing that baseline. This is part 1 of
 PR 3b (T029–T033); part 2 (T034–T038) ports the remaining five and lands the
 batched manifest-registration + green-suite confirmation (T039).
+
+**PR 3b note (part 2 of 2, T034–T039):** The remaining five PR-3b mechanical
+Layer-1 validators port with exact 1:1 name-and-count parity against their
+committed baselines (24, 37, 55, 124, 16 → same). Intentional change: the
+`validate-release-workflow` YAML syntax check is now stdlib-only and no longer
+depends on optional PyYAML/Ruby parser availability, satisfying the XPLAT-010
+runtime contract while preserving the single counted YAML-validity assertion.
+
+Three baseline hygiene notes apply:
+  1. `validate-skill-capability-pointers` normalized four absolute checkout-path
+     names to repo-relative names (`speckit-pro/skills`,
+     `speckit-pro/codex-skills`, `dist/claude`, `dist/codex`), matching the PR
+     3a privacy/CI portability precedent.
+  2. `validate-spec-index-determinism` preserves the true `16/16` shell summary.
+     Its bash predecessor executed two assertions under the same
+     `generate-spec-index-write is registered as deferred` current-test name;
+     verbose capture printed the second as a bare `PASS`, so the committed
+     baseline records that duplicate name explicitly instead of losing a count.
+  3. Data-driven regeneration triggers for this batch are the Claude skill list
+     and frontmatter/body content (`validate-skills`), Claude/Codex skill
+     inventories and dist payload pointer files (`validate-skill-capability-pointers`),
+     release workflow content (`validate-release-workflow`), contract/template
+     files (`validate-scripts`), and runner registry/template sentinel output
+     (`validate-spec-index-determinism`).

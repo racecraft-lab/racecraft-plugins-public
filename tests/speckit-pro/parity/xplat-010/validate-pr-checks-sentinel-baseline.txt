@@ -13,16 +13,17 @@
 013 workflow_dispatch accepts PR check inputs
 014 detect supports dispatched release PR checks
 015 title validation supports dispatched release PR checks
-016 sentinel depends on detect and test jobs
-017 sentinel runs if: always()
-018 sentinel has permissions: {}
-019 latest jq job is deferred
-020 test job dispatches runner toolchain gate
-021 test job dispatches runner default suite gate
-022 sentinel checks detect_result for failure
-023 sentinel checks test_result for success or skipped
-024 sentinel exits 0 on success or skipped
-025 sentinel exits 1 on detect failure
-026 sentinel exits 1 on detect cancellation
-027 all GitHub workflow files are valid YAML
-TOTAL: 27
+016 sentinel depends on detect, test, and artifact-consistency jobs
+017 sentinel checks the artifact-consistency result
+018 sentinel runs if: always()
+019 sentinel has permissions: {}
+020 latest jq job is deferred
+021 test job dispatches runner toolchain gate
+022 test job dispatches runner default suite gate
+023 sentinel checks detect_result for failure
+024 sentinel checks test_result for success or skipped
+025 sentinel exits 0 on success or skipped
+026 sentinel exits 1 on detect failure
+027 sentinel exits 1 on detect cancellation
+028 all GitHub workflow files are valid YAML
+TOTAL: 28

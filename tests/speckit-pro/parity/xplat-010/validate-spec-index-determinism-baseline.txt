@@ -1,0 +1,17 @@
+001 runner package exists at the contracted path
+002 read-only registry dispatch succeeds
+003 generate-spec-index-check is registered
+004 generate-spec-index-check is Python-authoritative
+005 mutation registry dispatch succeeds
+006 generate-spec-index-write is registered as deferred
+007 generate-spec-index-write is registered as deferred
+008 generate-spec-index-check request succeeds
+009 generate-spec-index-check reports the helper id
+010 generate-spec-index-check uses shell:false
+011 generate-spec-index-check records writes_state:false
+012 generate-spec-index-check leaves fixture bytes unchanged
+013 roadmap-MOC template exists at the contracted path
+014 template INDEX sentinels are present
+015 template INDEX:START keeps the sentinel grammar
+016 template INDEX:END keeps the sentinel grammar
+TOTAL: 16

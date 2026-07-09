@@ -1,0 +1,25 @@
+001 release.yml exists
+002 release workflow uses release-please
+003 release workflow pins checkout actions
+004 release workflow can dispatch PR checks
+005 release workflow resolves new or unchanged release PRs for payload sync
+006 release PR resolver discovers unchanged open Release Please branches
+007 release reconciliation is not gated only on prs_created
+008 release workflow does not depend on pending release labels for payload sync
+009 release workflow validates release PR readiness before dispatch
+010 release workflow verifies generated test payload evidence
+011 release workflow syncs generated artifacts on the release PR
+012 release workflow sync checks out the release PR branch with the release token
+013 release workflow merges current main before regenerating an existing release PR
+014 release workflow pushes main-only reconciliation changes
+015 release workflow guards the artifact sync commit with a dirty check
+016 release workflow regenerates the docs reference on sync
+017 release workflow verifies release artifacts are consistent after publishing
+018 release workflow opens NO follow-up payload/marketplace sync PR
+019 release workflow sync commit does not skip required PR checks
+020 release workflow does not direct-push generated sync changes to main
+021 release workflow main-push regex catches common protected-branch pushes
+022 release.yml is valid YAML
+023 release-please-config.json exists
+024 release-please extra-files never pre-bump proof-covered trees
+TOTAL: 24

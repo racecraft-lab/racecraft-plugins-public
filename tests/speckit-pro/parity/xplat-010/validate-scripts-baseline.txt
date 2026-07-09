@@ -1,0 +1,38 @@
+001 speckit-pro: contains zero live shell/command script files
+002 skills/speckit-autopilot/contracts/final-reviewability-gate-state.schema.json: exists
+003 skills/speckit-autopilot/contracts/final-reviewability-gate-state.schema.json: parses as JSON
+004 skills/speckit-autopilot/contracts/reslicing-packet.schema.json: exists
+005 skills/speckit-autopilot/contracts/reslicing-packet.schema.json: parses as JSON
+006 skills/speckit-autopilot/contracts/routing-decision.schema.json: exists
+007 skills/speckit-autopilot/contracts/routing-decision.schema.json: parses as JSON
+008 skills/speckit-autopilot/contracts/o5-parent-manifest.schema.json: exists
+009 skills/speckit-autopilot/contracts/o5-parent-manifest.schema.json: parses as JSON
+010 technical-roadmap-template.md: exists
+011 technical-roadmap-template.md: has Reviewability Contract section
+012 technical-roadmap-template.md: advertises the production-LOC warn threshold
+013 technical-roadmap-template.md: advertises the production-LOC block threshold
+014 technical-roadmap-template.md: documents surface-count-as-warning rule
+015 technical-roadmap-template.md: documents the typed exception pragma
+016 technical-roadmap-template.md: names the refactor exception class
+017 technical-roadmap-template.md: names the infra exception class
+018 technical-roadmap-template.md: names the upgrade exception class
+019 technical-roadmap-template.md: no concrete 'refactor' exception pragma
+020 technical-roadmap-template.md: no concrete 'infra' exception pragma
+021 technical-roadmap-template.md: no concrete 'upgrade' exception pragma
+022 .specify/presets/speckit-pro-reviewability/templates/spec-template.md: exists
+023 .specify/presets/speckit-pro-reviewability/templates/spec-template.md: names accepted exception classes
+024 .specify/presets/speckit-pro-reviewability/templates/spec-template.md: explains invalid generated/template provenance
+025 .specify/presets/speckit-pro-reviewability/templates/spec-template.md: no concrete refactor exception pragma
+026 .specify/presets/speckit-pro-reviewability/templates/spec-template.md: no concrete infra exception pragma
+027 .specify/presets/speckit-pro-reviewability/templates/spec-template.md: no concrete upgrade exception pragma
+028 .specify/templates/spec-template.md: exists
+029 .specify/templates/spec-template.md: names accepted exception classes
+030 .specify/templates/spec-template.md: explains invalid generated/template provenance
+031 .specify/templates/spec-template.md: no concrete refactor exception pragma
+032 .specify/templates/spec-template.md: no concrete infra exception pragma
+033 .specify/templates/spec-template.md: no concrete upgrade exception pragma
+034 reviewability-preset plan-template.md: exists
+035 reviewability-preset plan-template.md: has Declared File Operations section
+036 reviewability-preset plan-template.md: teaches the '- NEW' list-marker format the parser requires
+037 reviewability-preset plan-template.md: teaches the '- MODIFIED' list-marker format the parser requires
+TOTAL: 37
