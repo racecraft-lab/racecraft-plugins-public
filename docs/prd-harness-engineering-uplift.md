@@ -40,6 +40,9 @@ framework or broad vendor product dependency.
   cleanup.
 - Convert harness needs into a durable surface inventory and gap taxonomy that
   future specs can use without rediscovering workflow boundaries.
+- Evaluate comparable agent harness, orchestration, schema, eval, trace,
+  guardrail, and workflow-runtime tools so the roadmap can borrow strong
+  patterns without prematurely binding installed plugin behavior to them.
 - Define runner/helper contracts with mutability, risk, preflight, output, trace,
   and review-packet behavior.
 - Add layered feedback sensors: deterministic checks first, fixture parity next,
@@ -54,8 +57,12 @@ framework or broad vendor product dependency.
 
 - Replacing the active XPLAT Python runner lane. HRNS depends on XPLAT where it
   needs runner behavior, but does not choose a new runtime substrate.
-- Adopting LangGraph, CrewAI, OpenHands, Temporal, Braintrust, Langfuse, Phoenix,
-  or any other full external harness platform as a required dependency.
+- Adopting LangGraph, CrewAI, OpenHands, Temporal, Braintrust, Langfuse,
+  Phoenix, LangSmith, OpenAI Agents SDK, AutoGen, Semantic Kernel, Haystack,
+  DSPy, promptfoo, Inspect AI, Guardrails AI, Pydantic, or any other external
+  harness platform/library as a required dependency without a dedicated spec,
+  supply-chain review, privacy review, and rollback plan. Evaluating these tools
+  as references, optional adapters, or decision candidates is in scope.
 - Making public security claims beyond what the installed Claude/Codex plugin
   and native-platform UAT have actually verified.
 - Creating a general agent benchmark suite. HRNS focuses on SpecKit Pro skill,
@@ -83,6 +90,12 @@ framework or broad vendor product dependency.
 - **AC-1.5**: The artifact records dependency posture: which gaps are handled by
   repo-local conventions, which need runner/helper changes, and which would
   require a dedicated dependency or supply-chain decision.
+- **AC-1.6**: The artifact includes an external-candidate evaluation matrix for
+  relevant harness libraries, frameworks, eval systems, trace/observability
+  tools, guardrail systems, workflow runtimes, and coding-agent exemplars. Each
+  candidate records category, mapped HRNS surfaces, local-first fit, runtime
+  dependency posture, telemetry/privacy posture, licensing/supply-chain risk,
+  and adoption recommendation.
 
 ### 3.2 Progressive Context and Durable State Contract *(-> HRNS-002)*
 
@@ -119,6 +132,11 @@ framework or broad vendor product dependency.
   call networked tools, use credentials, or emit PR/release artifacts.
 - **AC-3.6**: MCP/tool annotations from untrusted servers are treated as advisory
   until enforced by SpecKit Pro's runtime or policy layer.
+- **AC-3.7**: Helper/tool contract work evaluates Pydantic, JSON Schema/OpenAPI,
+  LangChain structured-output/tool schemas, and OpenAI Agents SDK function-tool
+  schemas as contract references. The decision distinguishes the
+  Python-authoritative source, generated schemas, test fixtures, and runtime
+  dependency impact.
 
 ### 3.4 Permission, Sandbox, and Pre-action Authorization Controls *(-> HRNS-004)*
 
@@ -144,6 +162,10 @@ framework or broad vendor product dependency.
   changes.
 - **AC-4.7**: Cross-platform sandbox/security claims remain narrow until proven
   on each target platform.
+- **AC-4.8**: Permission and sandbox work compares guardrail and policy patterns
+  from OpenAI Agents SDK, Guardrails AI, Semantic Kernel, promptfoo red-team
+  flows, and coding-agent sandboxes without outsourcing SpecKit Pro
+  authorization decisions to an external service.
 
 ### 3.5 Feedback Sensors and Eval Readiness Ladder *(-> HRNS-005)*
 
@@ -165,6 +187,12 @@ framework or broad vendor product dependency.
   allowed tools, permission mode, and command/trace evidence.
 - **AC-5.7**: Verification failures distinguish capability gaps from regression
   failures so low initial pass rates do not block exploratory specs.
+- **AC-5.8**: Eval readiness work evaluates promptfoo, Braintrust, Phoenix,
+  LangSmith, Langfuse, Inspect AI, DSPy, and repo-local deterministic fixtures
+  as candidate eval surfaces. The result classifies local/offline operation,
+  SaaS or external telemetry behavior, LLM-as-judge calibration needs, CI fit,
+  and whether the candidate should become a reference pattern, optional adapter,
+  or rejected dependency.
 
 ### 3.6 Trace, Debug, and Review Evidence Packets *(-> HRNS-006)*
 
@@ -184,6 +212,10 @@ framework or broad vendor product dependency.
   result.
 - **AC-6.6**: Debug packets support replay or reproduction for deterministic
   helper behavior.
+- **AC-6.7**: Trace schema work maps local JSONL records to
+  OpenTelemetry/OpenInference-compatible concepts where useful and evaluates
+  optional sinks such as LangSmith, Langfuse, Phoenix, and Braintrust while
+  keeping local trace/debug packets canonical by default.
 
 ### 3.7 Long-horizon Orchestration and Resumption Controls *(-> HRNS-007)*
 
@@ -204,6 +236,10 @@ framework or broad vendor product dependency.
   branch/worktree state.
 - **AC-7.7**: Resumption preserves the user's latest instruction over older
   context.
+- **AC-7.8**: Orchestration work compares LangGraph, OpenAI Agents SDK, AutoGen,
+  Semantic Kernel, CrewAI, Haystack, Temporal, OpenHands, and SWE-agent-style
+  agent-computer-interface patterns for checkpoint/resume, HITL, workspace
+  isolation, role handoff, failure recovery, and long-running job control.
 
 ### 3.8 Harness Drift, Garbage Collection, and Self-healing Remediation *(-> HRNS-008)*
 
@@ -220,11 +256,15 @@ framework or broad vendor product dependency.
   no-op archive; it does not silently rewrite harness-control files.
 - **AC-8.6**: Drift reports include coverage: what was scanned, what was skipped,
   and why.
+- **AC-8.7**: Drift reports include external-candidate drift: stale reference
+  docs, obsolete version assumptions, abandoned optional-adapter decisions, and
+  dependency recommendations that no longer match HRNS evidence.
 
 ## 4. Migration Path
 
-- **Phase 1 (HRNS-001) - Harness taxonomy**: Freeze the surface inventory and
-  gap taxonomy that downstream specs use for shared boundaries.
+- **Phase 1 (HRNS-001) - Harness taxonomy**: Freeze the surface inventory, gap
+  taxonomy, and external-candidate evaluation matrix that downstream specs use
+  for shared boundaries.
 - **Phase 2 (HRNS-002) - Context and state**: Update workflow entrypoints so long
   runs externalize durable state and resume instructions.
 - **Phase 3 (HRNS-003) - Helper/tool contract**: Normalize helper registry,
@@ -249,6 +289,10 @@ framework or broad vendor product dependency.
   substrate for installed-plugin helper work.
 - Do not require new runtime dependencies for installed Claude/Codex plugin
   operation without a dedicated spec and supply-chain review.
+- Treat external frameworks as reference patterns first. Any optional adapter or
+  required dependency needs an explicit decision record covering license,
+  supply chain, local/offline behavior, telemetry, secrets, cross-platform
+  support, operator setup, and rollback.
 - Preserve capability-first, vendor-neutral wording where a concept can be
   expressed without binding to one tool vendor.
 - Keep advisory code-intelligence hooks fail-open unless a spec proves they are
@@ -274,6 +318,13 @@ framework or broad vendor product dependency.
 - **OQ-5 (HRNS-007):** Should long-running inspection and eval jobs have a
   standard cap policy? Recommendation: yes; record scope, progress status,
   blocker classes, restart evidence, and continuation criteria.
+- **OQ-6 (HRNS-001):** Which external candidates deserve deeper spikes during
+  execution? Recommendation: start with Pydantic/JSON Schema for HRNS-003,
+  OpenTelemetry/OpenInference trace vocabulary for HRNS-006, LangGraph and
+  OpenAI Agents SDK as orchestration references for HRNS-007, and
+  LangSmith/Langfuse/Phoenix/Braintrust/promptfoo/Inspect AI/DSPy as eval and
+  trace comparisons for HRNS-005/HRNS-006. Keep all of them non-required until
+  the HRNS-001 matrix and a dedicated decision justify otherwise.
 
 ## 7. SPEC Catalog Crosswalk
 
