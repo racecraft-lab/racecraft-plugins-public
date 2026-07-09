@@ -55,6 +55,9 @@ framework or broad vendor product dependency.
   history or local memory alone.
 - Preserve warmed-up task understanding as explicit, task-scoped context
   checkpoints with summaries, provenance, freshness, and restoration rules.
+- Keep task focus and active instructions explicit so workflow switching does
+  not mutate canonical project guidance, dirty the worktree, or leak stale task
+  state into unrelated runs.
 - Add a bounded harness garbage-collection loop for stale prompts, docs, skills,
   helper registries, traces, generated payloads, and obsolete examples.
 
@@ -139,6 +142,10 @@ framework or broad vendor product dependency.
   degrading, and critical zones with token/budget baseline, burn-rate estimate,
   save recommendation, and fresh-session recommendation before compaction or
   recall degradation can silently affect decisions.
+- **AC-2.10**: Task and workflow switching distinguishes canonical shared
+  project guidance from active task-specific instructions or injected context.
+  Switching focus is atomic, records the active task/spec identity, and avoids
+  mutating root instructions or creating accidental PR diffs.
 
 ### 3.3 Helper, Tool, and Capability Contract *(-> HRNS-003)*
 
@@ -231,6 +238,20 @@ framework or broad vendor product dependency.
   fixtures, or self-improvement outputs runs from clean isolated context rather
   than the authoring session. The reviewer produces findings and risk
   acceptances; it does not silently fix its own findings.
+- **AC-5.11**: PRD-driven harness work treats user/operator documentation as an
+  early feedback artifact for workflow changes where applicable. Documentation
+  drafts expose ambiguous flows before implementation, and downstream docs are
+  regenerated or explicitly marked not applicable when acceptance criteria
+  change.
+- **AC-5.12**: Process sequencing detects stale downstream artifacts after PRD or
+  roadmap changes, including docs, test plans, dev plans, generated fixtures,
+  adversarial inventories, and risk acceptances. Proceeding with stale artifacts
+  requires an explicit force/acceptance record.
+- **AC-5.13**: Test/eval inventories record what each test actually verifies,
+  the acceptance criterion it maps to, and a verdict of pass, fail, escalate, or
+  accepted. They flag vacuous patterns such as placeholder assertions,
+  broad OR fallbacks, conditional file-existence guards, and self-fulfilling
+  setup.
 
 ### 3.6 Trace, Debug, and Review Evidence Packets *(-> HRNS-006)*
 

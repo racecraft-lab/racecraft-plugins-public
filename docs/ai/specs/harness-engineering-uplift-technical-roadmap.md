@@ -88,6 +88,9 @@ The harness hardening lane centers on these requirements:
 - Preserve warmed-up context deliberately: task-scoped checkpoints, summaries,
   context-health signals, and restoration rules prevent useful understanding
   from living only in chat.
+- Keep task focus explicit: active task/spec instructions should be swappable
+  without mutating canonical project guidance, dirtying the worktree, or leaking
+  stale context into unrelated workflows.
 - Define tool/helper interfaces as agent UX: names, schemas, mutability,
   remediation messages, and result size affect reliability.
 - Put humans on meaningful loop points: scope, plan, high-risk tool use,
@@ -251,6 +254,10 @@ Budget result: within budget
   critical zones, baseline token count, burn-rate estimate, save recommendation,
   and fresh-session recommendation before compaction or recall degradation
   silently affects decisions.
+- Define active task/spec instruction semantics: canonical shared guidance,
+  generated task-specific guidance, injected resume context, and default/fresh
+  task state must be distinguishable and switchable without changing root
+  instructions or producing accidental PR diffs.
 
 **Out of Scope:**
 
@@ -273,6 +280,8 @@ Budget result: within budget
   PRD, scaffold, status, autopilot, resolve-pr, and archive flows.
 - Context checkpoint metadata, storage class, health-zone thresholds, and
   restore semantics are specified for long-running workflows.
+- Task/spec switching records the active focus and rejects stale injected context
+  before resume without mutating canonical project guidance.
 - Verification includes a focused docs/reference check or fixture proving stale
   roadmap, workflow, feature, generated payload, or archive pointers are caught.
 
@@ -430,6 +439,15 @@ Budget result: within budget
 - Define clean-context adversarial review expectations for PRDs, test plans, dev
   plans, generated fixtures, and self-improvement outputs so review does not
   inherit the authoring session's blind spots.
+- Define docs-before-code feedback expectations for user/operator workflow
+  changes where applicable, including when docs are regenerated, intentionally
+  deferred, or not applicable.
+- Define process-sequencing gates that detect stale downstream artifacts after
+  PRD or roadmap changes: docs, test plan, dev plan, generated fixtures,
+  adversarial inventory, and risk acceptances.
+- Define test/eval inventory expectations: every row states what the test
+  actually verifies, which acceptance criterion it maps to, and a verdict of
+  pass, fail, escalate, or accepted.
 - Evaluate promptfoo, Braintrust, Phoenix, LangSmith, Langfuse, Inspect AI,
   DSPy, and repo-local deterministic fixtures as possible eval surfaces.
   Classify each candidate by local/offline fit, SaaS or external telemetry
@@ -448,6 +466,8 @@ Budget result: within budget
   evidence for promotion.
 - Letting an adversarial reviewer auto-fix findings in the same isolated review
   pass.
+- Treating stale docs, stale test plans, stale dev plans, or stale adversarial
+  inventories as safe defaults after PRD/roadmap changes.
 
 **Key Files:**
 
@@ -471,6 +491,11 @@ Budget result: within budget
   self-confirming loops, reward/eval tampering, or synthetic-fixture drift.
 - Adversarial review guidance requires fresh isolated context, findings-first
   output, and explicit risk acceptances for unresolved issues.
+- Process sequencing guidance names the stale-artifact checks, force/acceptance
+  behavior, and required review packet evidence.
+- Test/eval inventory guidance includes banned vacuous patterns such as
+  placeholder assertions, broad OR fallbacks, conditional file-existence guards,
+  and self-fulfilling setup.
 
 ---
 
