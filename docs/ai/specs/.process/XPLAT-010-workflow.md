@@ -99,8 +99,8 @@ a heavy phase orchestrator-direct.
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions total; 7 consensus items (6× Round 1, 1× Round 2 tie-break; 1 [security] all-3 operator-ratified); 12 Clarifications bullets in spec.md; G2 PASS (0 markers) |
 | Plan | `/speckit-plan` | ✅ Complete | 13 research decisions; 8 entities; 6 contracts; constitution 6/6; G3 PASS; advisory LOC estimator: pass (40 projected) |
 | Checklist | `/speckit-checklist` | ✅ Complete | 104 items / 21 gaps → 0 across 4 domains; G4 PASS; zero consensus escalations |
-| Tasks | `/speckit-tasks` | 🔄 In Progress | |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Tasks | `/speckit-tasks` | ✅ Complete | 136 tasks / 17 phases / 53 [P]; G5 PASS; route single-atomic-PR (advisory, superseded by ratified split); layer plan skipped; tasks-mode reviewability gate unavailable (defect logged) |
+| Analyze | `/speckit-analyze` | 🔄 In Progress | |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -161,6 +161,7 @@ are logged in this section as they surface.
 - (pre-run, already in scope) `estimate-spec-size` runner operation missing — PR 13 / US7.
 - (Clarify phase, recurring ×3 — also `domain-researcher`, Session 3 Q2) Read-only consensus analysts (`codebase-analyst`, Session 1 Q4 and Session 2 Q1) end their turn on an intermediate "let me check X" thought instead of the structured deliverable — the agent loop terminates on a no-tool-call text message and the half-finished thought becomes the returned result. Orchestrator remediation: SendMessage resume nudge (works). Root cause: `maxTurns: 25` in the analyst frontmatter — census-scale questions exceed the turn budget and the harness returns the last text message. FIXED via PR #301 (`ab89deb0`, own branch off main, awaiting human merge): maxTurns 25→50 + a Terminal Deliverable rule in all three analyst definitions; full payload/proof regen ritual executed (claude tree hash rotated, codex unchanged; `-source-mismatch` fixture trap documented — it pins the claude hash on both rows by design); battery green (gates 54/54, default suite 6/6, release-readiness ok, privacy clean). Codex TOML untouched (validators list maxTurns as CC-only; codex has no turn-budget concept).
 - (observed by the fix agent, pre-existing — CONFIRMED latent defect) `speckit-pro-runner.manifest.json` carries `"plugin_version": "2.17.0"` while the released plugin is 2.18.0. release-please never bumps the manifest, and `test-speckit-pro-runner.py:307` hardcodes the 2.17.0 value (the same version-pinning anti-pattern as the dependabot SHA-pin lesson), so shipped payloads self-describe with a stale version indefinitely. Functionally benign today (the release gate validates the version pattern, not the value). Remediation scheduled IN-RUN inside PR 13 (already a shipped-runner fix PR carrying the regen ritual): add the manifest to release-please's `extra-files` (jsonpath `$.plugin_version`) so releases bump it, and replace the hardcoded test assertion with a version-agnostic check (semver pattern + equality against `plugin.json`). Plan phase must carry this as an explicit PR 13 task.
+- (Tasks phase, step 8) The autopilot SKILL instructs "run runner helper `reviewability-gate` in tasks mode" and its Runner Operations list claims the op enforces "setup, tasks, and pre-PR reviewability budgets" — but the 2.18.0 runner's read-only implementation supports setup mode ONLY (`speckit_pro_runner/helpers/read_only.py:798` hard-rejects other modes, exit 2). XPLAT-009's port left tasks/pre-PR modes on the deleted bash path. Skill/runner contract mismatch. Remediation: align the skill text to mark tasks/pre-PR reviewability modes as deferred (matching the existing deferred-helper pattern for `generate-uat-skeleton`/`final-reviewability-backstop`) with the graceful-degradation instruction — fix PR off main; the full tasks-mode port is follow-up runner work, not XPLAT-010 scope.
 - (Clarify phase, discovered by S1-Q3 consensus) The shipped suite gate's native `check_layer5` is vacuously true (asserts on a `tools:` frontmatter field none of the checked agents carry), `check_layer7` validates an orphaned fixture directory, `check_layer8` checks 3 of 6 required files. Remediation is already encoded in this spec: FR-008 retires each native check at its layer's port-PR boundary (PRs 5/7/8) with the manifest-derived roster + drift-guard replacing them.
 
 **Archive Sweep record:** archive extension v1.1.0 installed; eligible =
@@ -583,10 +584,21 @@ When checklist identifies `[Gap]` items:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 136 (T001–T136, contiguous) |
+| **Phases** | 17 (Setup + 14 PR slices + Polish) |
+| **Parallel Opportunities** | 53 `[P]` tasks (primary fan-out: 20 mechanical L1 validator ports) |
+| **User Stories Covered** | US1–US7 all mapped (8/72/12/9/7/5/10 tasks respectively + 13 setup/cleanup/polish) |
+| **Gate G5** | PASS — runner-verified: 136 tasks found, 0 markers |
+| **Boundary guards** | 4 non-goals held out with a dedicated section; required-check ledger encoded (only PRs 11/12 add required checks) |
+
+**Reviewability tasks-mode gate (step 8):** UNAVAILABLE — the 2.18.0 runner's
+read-only `reviewability-gate` supports setup mode only (`read_only.py:798`);
+tasks/pre-PR modes were never ported (dogfood defect, see log). Degraded per the
+deferred-helper pattern: fallback evidence = setup-mode warn ratified at
+scaffold + plan-phase `estimate-reviewable-loc` pass (projected 40) +
+operator-ratified typed split. Not a correctness stop: the split decision is
+already operator-ratified and marker planning at PR-time rests on the ratified
+slice structure encoded in tasks.md.
 
 ---
 
@@ -601,10 +613,17 @@ it; recording it now wires no PR creation or branch splitting on its own.
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change. |
-| **Signals** | | The decisive detector findings behind the route and releasability reading. |
-| **Warnings** | | Any release-safety warning attached to the change. |
+| **Route** | `single-atomic-PR` | Advisory classifier reading of the feature as ONE unit (mass `.sh` deletion = destructive migration). The operator-ratified typed 14-PR stack supersedes as the delivery model — implementation proceeds slice-by-slice, each PR independently CI-green. Tension recorded for Analyze. |
+| **Releasable** | `false` | Destructive-migration releasability: CI-green ≠ releasable for the aggregate change; per-slice same-PR-swap discipline (FR-012) is the mitigating control. |
+| **Signals** | `hard-atomic:destructive-migration`, `change-shape:modify-heavy`, `releasability:destructive-migration` | Decisive detector findings. |
+| **Warnings** | "destructive migration: a passing CI run does not prove this change is releasable (CI-green ≠ releasable)" | Carried into the implementation context. |
+
+### Layer Plan
+
+`layer_plan.status = skipped` — route is not `split-PR`, so the layer planner
+does not run (step 8d non-split branch). PR slicing authority: the
+operator-ratified Scope Budget split + tasks.md's 17-phase grouping. Recorded in
+`autopilot-state.json` with route context.
 
 To produce the decision, run the classifier against the feature directory:
 

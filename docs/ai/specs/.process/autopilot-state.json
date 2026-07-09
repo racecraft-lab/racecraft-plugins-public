@@ -1,9 +1,9 @@
 {
-  "workflow_file": "docs/ai/specs/.process/XPLAT-009-workflow.md",
-  "feature_dir": "specs/xplat-009-plugin-source-and-payload-bash-eradication",
-  "spec_id": "XPLAT-009",
-  "updated_at": "2026-07-08T20:05:01Z",
-  "active_step": "Post-merge archive cleanup applied",
+  "workflow_file": "docs/ai/specs/.process/XPLAT-010-workflow.md",
+  "feature_dir": "specs/xplat-010-repository-bash-confinement",
+  "spec_id": "XPLAT-010",
+  "updated_at": "2026-07-09T05:39:59Z",
+  "active_step": "Tasks phase complete (G5 pass, 136 tasks); atomicity route recorded; entering Analyze",
   "skill_scripts": {
     "requested": "installed-cache:speckit-pro/skills/speckit-autopilot/scripts",
     "resolved": "speckit-pro/skills/speckit-autopilot/scripts",
@@ -269,5 +269,27 @@
       "status": "archived",
       "archived_by": ".specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md"
     }
-  ]
+  ],
+  "atomicity_route": {
+    "route": "single-atomic-PR",
+    "releasable": false,
+    "signals": [
+      "hard-atomic:destructive-migration",
+      "change-shape:modify-heavy",
+      "releasability:destructive-migration"
+    ],
+    "warnings": [
+      "destructive migration: a passing CI run does not prove this change is releasable (CI-green != releasable)"
+    ],
+    "note": "Advisory classifier reading of the feature as ONE unit. Operator-ratified delivery is the typed 14-PR stack (transition exception, design concept Q9); implementation proceeds slice-by-slice with each PR independently CI-green, which supersedes the single-unit reading as an operator decision. Tension recorded for Analyze."
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "atomicity route is single-atomic-PR (planner runs only on split-PR); PR slicing is operator-ratified in the workflow file Scope Budget section and encoded in tasks.md phase grouping"
+  },
+  "reviewability_tasks_gate": {
+    "status": "unavailable",
+    "reason": "runner read-only reviewability-gate supports setup mode only (2.18.0); tasks/pre-PR modes not ported by XPLAT-009 - recorded as dogfood defect; degradation per deferred-helper pattern",
+    "fallback_evidence": "setup-mode gate warn ratified at scaffold; plan-phase estimate-reviewable-loc pass (projected 40); operator-ratified typed split"
+  }
 }
