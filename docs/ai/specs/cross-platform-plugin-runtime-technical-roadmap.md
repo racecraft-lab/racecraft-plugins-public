@@ -280,7 +280,7 @@ PUBLIC RELEASE HELD BY XPLAT-008 UAT MATRIX AND ZERO-BASH BACKSTOP GATES
 | XPLAT-007 | Python Tooling and Release-Gate Migration | Complete / Archived | `.process/XPLAT-007-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md`; Python gate package, CI dispatch, promotion records, and Layer 4 gate tests landed across PRs #284-#287 |
 | XPLAT-008 | Claude/Codex Cutover and Universal Install Release Gate | Complete / Archived | `.process/XPLAT-008-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md`; active Claude/Codex cutover, payload rebuild, public docs claim alignment, release-readiness gates, and safe repair controls landed across PRs #289-#292; public native-platform claims remain blocked by `docs/ai/specs/.process/XPLAT-008-uat-matrix.md` |
 | XPLAT-009 | Plugin Source and Payload Bash Eradication | In Progress | `.process/XPLAT-009-workflow.md` | Resume with `$speckit-autopilot` against `docs/ai/specs/.process/XPLAT-009-workflow.md`; two accepted slices remove active plugin-source Bash first, then rebuild payloads and prove generated/installed-cache zero-Bash guards |
-| XPLAT-010 | Repository Bash Confinement and CI Dispatch Guard | Blocked | — | Scaffold after XPLAT-009; enforce repository-wide Bash confinement to GitHub CI/CD workflow dispatch glue only |
+| XPLAT-010 | Repository Bash Confinement and CI Dispatch Guard | In Progress | `.process/XPLAT-010-workflow.md` | Run `$speckit-autopilot` against `docs/ai/specs/.process/XPLAT-010-workflow.md`; scaffolded 2026-07-08 on branch `xplat-010-repository-bash-confinement` with an accepted 13-PR split and a public-release-notes scope addition (design concept Q9/Q10) |
 
 **Status Legend:** Pending | Ready | In Progress | In Review | Complete | Complete / Archived | Blocked
 
@@ -1039,9 +1039,13 @@ finds a clean helper-family boundary that avoids duplicated gate work.
 
 **Priority:** P1 | **Depends On:** XPLAT-009 | **Enables:** public Bash-free release readiness
 
-**Status:** Blocked until XPLAT-009 completes. The current repo-wide scan still
-finds many `.sh` files outside `.github/workflows/`, including active test
-harnesses, top-level helper scripts, hooks, and SpecKit process helpers.
+**Status:** In Progress. Scaffolded 2026-07-08 on branch
+`xplat-010-repository-bash-confinement` (XPLAT-009 merged via PR #297 and
+released in speckit-pro 2.18.0). The repo-wide scan still finds many `.sh`
+files outside `.github/workflows/`, including active test harnesses, top-level
+helper scripts, hooks, and SpecKit process helpers. Design concept and workflow
+file live under `docs/ai/specs/.process/`; an operator scope addition covers
+public-readable GitHub Release notes (design concept Q10/Q11).
 
 **Goal:** Enforce the strict repository policy that Bash may remain only as
 GitHub CI/CD workflow dispatch glue. All active repo-local validation,
@@ -1081,6 +1085,12 @@ current test harness and process helper scripts are broad.
 - Document that GitHub job containers are Linux-runner only, Windows containers
   have host/image compatibility constraints, and any Windows container
   experiment is preflight-only rather than native installed-plugin UAT.
+- Compose public-readable GitHub Release notes: each feat/fix PR carries a
+  consumer-facing release-note block (required CI check with a skip label for
+  changes with no consumer-visible effect), and a Python stdlib composer
+  rewrites the GitHub Release body with plain-English Highlights while keeping
+  the conventional-commit list as an appendix and `CHANGELOG.md` as the
+  machine ledger (operator scope addition, 2026-07-08).
 
 **Out of Scope:**
 
@@ -1122,6 +1132,9 @@ current test harness and process helper scripts are broad.
   outside the workflow dispatch boundary.
 - The XPLAT-008 native UAT matrix still remains the only release-satisfying
   evidence for full Claude/Codex installed-plugin journeys on native hosts.
+- GitHub Releases published after this spec open with composed plain-English
+  Highlights sourced from PR release-note blocks, and feat/fix PRs missing
+  both the block and the skip label fail a required check.
 
 ---
 
