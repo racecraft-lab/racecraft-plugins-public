@@ -658,7 +658,7 @@ with concrete Phase 7 task-group items in both `update_plan` and
 - the placeholder no longer exists in either state store
 - at least one concrete Phase 7 item exists
 - each concrete Phase 7 item names task IDs from tasks.md
-- the tasks-phase reviewability evidence contains no unexcepted
+- the tasks-phase reviewability evidence contains no unexpected
   correctness block. Runner helper `reviewability-gate` supports setup mode
   only on the installed runner — tasks mode is deferred, so do not invoke it
   as an active helper. Record the deferred-mode diagnostics (helper ID,
