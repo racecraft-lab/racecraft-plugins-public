@@ -147,12 +147,17 @@ time) to prevent conflicting spec edits.
 2. For each FR-XXX, verify it appears in tasks.md
 3. Verify task dependency ordering makes sense (no forward references)
 4. Verify [P] markers are only on genuinely parallel-safe tasks
-5. Run `reviewability-gate tasks specs/<feature>` with guarded capture:
-   capture stdout, stderr, exit code, gate status/mode/exit/evidence path, and
-   the repo-relative evidence path before deciding whether to proceed.
-6. Apply the post-G5 reviewability proceed/stop matrix below. A valid current
-   size-only `status=block` continues into marker planning and later marker
-   emission; it is not a manual re-slicing stop.
+5. Apply the tasks-phase reviewability boundary. Runner helper
+   `reviewability-gate` supports setup mode only on the installed runner —
+   tasks mode is deferred, so do not invoke it as an active helper. Record
+   the deferred-mode diagnostics (helper ID, requested mode, deferral
+   reason), then gather the fallback evidence chain: the setup-mode gate
+   result recorded at scaffold, the plan-phase `estimate-reviewable-loc`
+   verdict, and any operator-ratified split decision in the workflow file.
+6. Apply the post-G5 reviewability proceed/stop matrix below to that
+   committed evidence. A valid current size-only `status=block` continues
+   into marker planning and later marker emission; it is not a manual
+   re-slicing stop.
 ```
 
 **Auto-Fix:** For each unmapped FR:
@@ -164,9 +169,12 @@ time) to prevent conflicting spec edits.
 
 #### Post-G5 Reviewability Capture Matrix
 
-Autopilot owns the interpretation of the task-mode gate output. Preserve the
-existing script contract for lower-level callers, but do not collapse every
-nonzero task gate exit into a manual stop.
+Autopilot owns the interpretation of tasks-phase reviewability evidence. With
+tasks mode deferred on the installed runner, this matrix applies to the
+committed fallback evidence chain (and to any committed tasks-mode gate
+output from a prior run). Preserve the existing script contract for
+lower-level callers, but do not collapse every nonzero task gate exit into a
+manual stop.
 
 **Proceed inputs:**
 

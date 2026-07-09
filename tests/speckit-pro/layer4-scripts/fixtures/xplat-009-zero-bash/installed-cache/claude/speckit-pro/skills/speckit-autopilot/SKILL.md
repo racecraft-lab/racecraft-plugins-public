@@ -403,17 +403,23 @@ for phase in PHASES starting from first_pending:
         (pass / over_budget / not_estimated) or the exit code.
         ADVISORY — never blocks, prompts mid-autonomous-run, or
         crashes the run (hard block / re-slicing is PRSG-010).
-    8. After Tasks (G5 pass), run runner helper `reviewability-gate`
-       in tasks mode with
-       guarded capture of stdout, stderr, exit code, gate
-       status/mode/exit/evidence path, and repo-relative evidence path.
-       `pass`, `warn`, honored exception, and valid current size-only
-       `block` are marker-planning inputs. A valid current size-only
-       block continues into marker planning and marker emission; it is
-       not a manual re-slicing stop. Preserve correctness stops for
-       malformed/stale marker state, failed verification, invalid packet,
-       unsafe output, unusable gate evidence, invalid JSON, missing
-       status/mode, stale fingerprints, and non-size safety findings.
+    8. After Tasks (G5 pass), apply the tasks-phase reviewability
+       boundary. Runner helper `reviewability-gate` supports setup mode
+       only on the installed runner — tasks mode is deferred, so do not
+       invoke it as an active helper. Record the deferred-mode
+       diagnostics (helper ID, requested mode, deferral reason) in the
+       workflow file, then continue on the fallback evidence chain: the
+       setup-mode gate result recorded at scaffold, the plan-phase
+       `estimate-reviewable-loc` verdict from step 7b, and any
+       operator-ratified split decision in the workflow file.
+       In that committed evidence, `pass`, `warn`, honored exception,
+       and valid current size-only `block` are marker-planning inputs.
+       A valid current size-only block continues into marker planning
+       and marker emission; it is not a manual re-slicing stop.
+       Preserve correctness stops for malformed/stale marker state,
+       failed verification, invalid packet, unsafe output, unusable
+       gate evidence, invalid JSON, missing status/mode, stale
+       fingerprints, and non-size safety findings.
     8c. After Tasks (G5 pass), run runner helper `atomicity-route`
         for `<feature-dir>`
         and record the emitted JSON decision into the workflow
@@ -661,7 +667,10 @@ registered helper or gate operation IDs below.
   pre-Implement emit and decide whether Phase 7 may begin.
 - `resolve-confidence-mode` — Resolve the pre-Implement confidence mode from
   invocation flags, local config, or the advisory default.
-- `reviewability-gate` — Enforce setup, tasks, and pre-PR reviewability budgets.
+- `reviewability-gate` — Enforce the setup-mode reviewability budget. Tasks
+  and pre-PR modes are deferred for installed workflows; record the deferral
+  and use committed fallback evidence per the guidance above instead of
+  invoking them.
 - `atomicity-route` — Classify whether a feature should remain one PR or split.
 - `plan-layers-feature-dir` — Emit a versioned layer-plan envelope for split
   routes before implementation.
