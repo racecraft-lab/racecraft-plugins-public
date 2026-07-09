@@ -2139,7 +2139,7 @@
               "kind": "skill",
               "path": "skills/speckit-autopilot/SKILL.md",
               "required": true,
-              "sha256": "8b1ac0c0f5b51c009f8e792f30eb5e96612a67366d39f884aeeb8de5971fd33f",
+              "sha256": "14c91adfa8fcfb5277039e4bd445b8cb73e3238dfa624f632a2fac7a5d6ecada",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
               "transform": "codex_overlay"
             },
@@ -3140,7 +3140,7 @@
               "kind": "skill",
               "path": "skills/speckit-autopilot/SKILL.md",
               "required": true,
-              "sha256": "8b1ac0c0f5b51c009f8e792f30eb5e96612a67366d39f884aeeb8de5971fd33f",
+              "sha256": "14c91adfa8fcfb5277039e4bd445b8cb73e3238dfa624f632a2fac7a5d6ecada",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
               "transform": "codex_overlay"
             },
@@ -3920,7 +3920,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "140ec9881b84ca29a1af106a449e12f197c8bd6b5457ab2ced398a1a04010273",
+          "file_tree_hash": "dc4cace51b825dbf388c5a6dad8bf07874672ebebacfa8659f916d58fb60e502",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -4017,15 +4017,15 @@
             "diagnostic": "Accepted Python 3.11.0 for installed cache dist/codex/speckit-pro.",
             "failure_code": null,
             "invocation_argv_prefix": [
-              "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3"
+              "<home>/.pyenv/versions/3.11.0/bin/python3"
             ],
             "minimum_version": "3.11",
-            "resolved_executable": "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3",
+            "resolved_executable": "<home>/.pyenv/versions/3.11.0/bin/python3",
             "version": "3.11.0"
           },
           "invocation": {
             "argv": [
-              "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3",
+              "<home>/.pyenv/versions/3.11.0/bin/python3",
               "-m",
               "speckit_pro_runner"
             ],
@@ -4097,7 +4097,7 @@
                   "python": {
                     "diagnostic_code": null,
                     "name": "python",
-                    "path": "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3",
+                    "path": "<home>/.pyenv/versions/3.11.0/bin/python3",
                     "required": true,
                     "status": "available",
                     "version": "3.11.0"
