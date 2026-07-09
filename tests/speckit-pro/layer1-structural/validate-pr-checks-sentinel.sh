@@ -121,8 +121,11 @@ fi
 
 section "pr-checks.yml — Sentinel Job Dependencies"
 
-set_test "sentinel depends on detect and test jobs"
-assert_contains "$CONTENT" "needs: [detect, test]"
+set_test "sentinel depends on detect, test, and artifact-consistency jobs"
+assert_contains "$CONTENT" "needs: [detect, test, artifact-consistency]"
+
+set_test "sentinel checks the artifact-consistency result"
+assert_contains "$CONTENT" 'artifact_result="${{ needs.artifact-consistency.result }}"'
 
 set_test "sentinel runs if: always()"
 assert_contains "$CONTENT" "if: always()"
