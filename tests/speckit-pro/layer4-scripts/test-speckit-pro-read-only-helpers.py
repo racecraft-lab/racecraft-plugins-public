@@ -42,6 +42,7 @@ EXPECTED_HELPERS = [
     "plan-layers-feature-dir",
     "validate-pr-workflow-contract",
     "validate-pr-packet-read-only",
+    "estimate-spec-size",
 ]
 
 JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
@@ -62,6 +63,7 @@ HELPER_CASES: dict[str, dict[str, object]] = {
     "plan-layers-feature-dir": {"feature_dir": FEATURE_DIR},
     "validate-pr-workflow-contract": {"title": "feat(XPLAT-005): Add read-only helper port"},
     "validate-pr-packet-read-only": {"packet_path": "tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/missing-pr-packet.json"},
+    "estimate-spec-size": {"user_stories": 2, "files": 3, "frs": 4},
 }
 
 

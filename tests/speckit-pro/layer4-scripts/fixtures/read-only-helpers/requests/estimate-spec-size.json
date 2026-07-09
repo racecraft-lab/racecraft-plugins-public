@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-estimate-spec-size",
+  "helper_id": "estimate-spec-size",
+  "operation": "estimate-spec-size",
+  "mode": "read_only",
+  "inputs": {
+    "user_stories": 2,
+    "files": 3,
+    "frs": 4
+  }
+}

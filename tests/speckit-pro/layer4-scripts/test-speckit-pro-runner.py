@@ -304,7 +304,23 @@ class RunnerFoundationTests(unittest.TestCase):
         self.assertEqual(manifest["runner_contract_id"], "speckit-pro-runner")
         self.assertEqual(manifest["selected_runtime_name"], "python-stdlib-runner")
         self.assertEqual(manifest["contract_version"], "1.0")
-        self.assertEqual(manifest["plugin_version"], "2.17.0")
+        # Version-agnostic: the runner manifest's plugin_version must be a valid
+        # semantic version AND equal the released plugin version. release-please
+        # bumps it via release-please-config.json extra-files ($.plugin_version),
+        # so a hardcoded literal here would silently drift (the XPLAT-010 fix).
+        plugin_version = json.loads(
+            (PLUGIN_ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
+        )["version"]
+        self.assertRegex(
+            manifest["plugin_version"],
+            r"^\d+\.\d+\.\d+$",
+            "runner manifest plugin_version must be a semantic version",
+        )
+        self.assertEqual(
+            manifest["plugin_version"],
+            plugin_version,
+            "runner manifest plugin_version must track speckit-pro/.claude-plugin/plugin.json $.version",
+        )
         self.assertEqual(manifest["python_minimum_version"], "3.11")
         self.assertTrue(manifest["specify_required"])
         self.assertEqual(manifest["checksum_algorithm"], "sha256")

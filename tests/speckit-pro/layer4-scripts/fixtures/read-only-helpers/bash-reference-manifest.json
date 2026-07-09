@@ -83,6 +83,11 @@
       "helper_id": "validate-pr-packet-read-only",
       "source_script": "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
       "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh", "tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/missing-pr-packet.json"], "timeout_seconds": 30}
+    },
+    {
+      "helper_id": "estimate-spec-size",
+      "source_script": "speckit-pro/skills/speckit-coach/scripts/estimate-spec-size.sh",
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-coach/scripts/estimate-spec-size.sh", "--user-stories", "2", "--files", "3", "--frs", "4"], "timeout_seconds": 30}
     }
   ]
 }
