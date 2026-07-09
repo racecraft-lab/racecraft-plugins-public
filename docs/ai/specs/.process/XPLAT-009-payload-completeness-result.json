@@ -96,11 +96,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 5624,
+            "byte_count": 6116,
             "kind": "agent",
             "path": "agents/codebase-analyst.md",
             "required": true,
-            "sha256": "6c6e0becaab0e07417056f82b1f9a4cbbba8d8e7a96720716df7ae3a531125fd",
+            "sha256": "1cde5a8820173271d55d3077282caf9a4ad76bc92d90966e55b9fc70c587bac3",
             "source_path": "speckit-pro/agents/codebase-analyst.md",
             "transform": "none"
           },
@@ -114,11 +114,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 5931,
+            "byte_count": 6424,
             "kind": "agent",
             "path": "agents/domain-researcher.md",
             "required": true,
-            "sha256": "7041410e0bea6d28c7d8dc31705eaa87d71ec0ede42446ca81eb113ac735fc08",
+            "sha256": "be7237202cdc187443a2c246eaef72e9f566a496162b227ee9e4ff41b8481896",
             "source_path": "speckit-pro/agents/domain-researcher.md",
             "transform": "none"
           },
@@ -150,11 +150,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 5470,
+            "byte_count": 5964,
             "kind": "agent",
             "path": "agents/spec-context-analyst.md",
             "required": true,
-            "sha256": "18350921decdb09aad39804ccc9d7554f26608f0031ddace8f9a43a692cb2738",
+            "sha256": "6659fb1b08ecfbdb784ab7f47d7c5ac9f8ce45b705de9cfea5144ac573edbc4f",
             "source_path": "speckit-pro/agents/spec-context-analyst.md",
             "transform": "none"
           },
@@ -944,11 +944,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 5624,
+            "byte_count": 6116,
             "kind": "agent",
             "path": "agents/codebase-analyst.md",
             "required": true,
-            "sha256": "6c6e0becaab0e07417056f82b1f9a4cbbba8d8e7a96720716df7ae3a531125fd",
+            "sha256": "1cde5a8820173271d55d3077282caf9a4ad76bc92d90966e55b9fc70c587bac3",
             "source_path": "speckit-pro/agents/codebase-analyst.md",
             "transform": "none"
           },
@@ -962,11 +962,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 5931,
+            "byte_count": 6424,
             "kind": "agent",
             "path": "agents/domain-researcher.md",
             "required": true,
-            "sha256": "7041410e0bea6d28c7d8dc31705eaa87d71ec0ede42446ca81eb113ac735fc08",
+            "sha256": "be7237202cdc187443a2c246eaef72e9f566a496162b227ee9e4ff41b8481896",
             "source_path": "speckit-pro/agents/domain-researcher.md",
             "transform": "none"
           },
@@ -998,11 +998,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 5470,
+            "byte_count": 5964,
             "kind": "agent",
             "path": "agents/spec-context-analyst.md",
             "required": true,
-            "sha256": "18350921decdb09aad39804ccc9d7554f26608f0031ddace8f9a43a692cb2738",
+            "sha256": "6659fb1b08ecfbdb784ab7f47d7c5ac9f8ce45b705de9cfea5144ac573edbc4f",
             "source_path": "speckit-pro/agents/spec-context-analyst.md",
             "transform": "none"
           },
@@ -1728,7 +1728,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "e908e58c024470a139ac2386805521fe6985f8ed9f3cdec3452d1d4aabf32a14",
+        "file_tree_hash": "fc0d7f0bde479f2dd95c982bda3ab26a8d28ec1aed31b9db433d48016b1fbc6c",
         "generated_root": "dist/claude/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
