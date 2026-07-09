@@ -97,9 +97,9 @@ a heavy phase orchestrator-direct.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 25 FRs / 7 US / 20 scenarios / 8 SCs; 0 markers; G1 PASS (runner-verified) |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions total; 7 consensus items (6× Round 1, 1× Round 2 tie-break; 1 [security] all-3 operator-ratified); 12 Clarifications bullets in spec.md; G2 PASS (0 markers) |
-| Plan | `/speckit-plan` | 🔄 In Progress | |
-| Checklist | `/speckit-checklist` | ⏳ Pending | requirements, integration, reliability, security |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Plan | `/speckit-plan` | ✅ Complete | 13 research decisions; 8 entities; 6 contracts; constitution 6/6; G3 PASS; advisory LOC estimator: pass (40 projected) |
+| Checklist | `/speckit-checklist` | ✅ Complete | 104 items / 21 gaps → 0 across 4 domains; G4 PASS; zero consensus escalations |
+| Tasks | `/speckit-tasks` | 🔄 In Progress | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 
@@ -531,11 +531,11 @@ Focus on Repository Bash Confinement and CI Dispatch Guard requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| requirements | | | |
-| integration | | | |
-| reliability | | | |
-| security | | | |
-| **Total** | | | |
+| requirements | 32 | 2 found → 0 (1 loop) | +FR-026 (workflow shell = dispatch glue only), +FR-027 (preflight entrypoint fidelity); 13-vs-14 PR headline nuance noted for Analyze |
+| integration | 28 | 6 found → 0 (1 loop) | FR-006/SC-002 scoped to end-state w/ transitional-skip diagnostics; ordering enforcement decomposed (CI-self-enforcing vs review-preference); concurrent shipped-runner PR rebase+re-ritual rule (plan.md); branch-protection-change ledger (FR-018/FR-026); composer post-publish partial-failure recovery (FR-023 + Edge Case); manifest-integrity invariants (FR-007) |
+| reliability | 24 | 7 found → 0 (1 loop) | FR-002(e) binary/unreadable classification; FR-006 crash-vs-fail exit taxonomy; FR-023 transient-API fail-loud no-retry; FR-019 label-unavailability positive recording; FR-020 always-run evidence upload; Count-Parity entity environment-pin on capture AND comparison |
+| security | 20 | 6 found → 0 (1 loop) | FR-003 allowlist path-identity assertion; FR-004 negative-control exclusion test; FR-005 backstop-durability test; FR-022 dispatch-path env-var intake; FR-017 preflight least-privilege permissions; FR-014 hooks stdlib-json intake |
+| **Total** | **104** | **21 found → 0** | G4 PASS (runner-verified: 0 [Gap] markers); zero consensus escalations — all gaps closed at Layer 1 |
 
 ### Addressing Gaps
 
