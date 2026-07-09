@@ -17,22 +17,18 @@ maps the process exit code to a runner status: 0 -> ok, 1 -> expected_failure,
 
 from __future__ import annotations
 
+import json
 import os
-import re
 import shutil
 import subprocess
 import sys
 import traceback
 from pathlib import Path
 
-RUN_ALL_SCRIPT = "run-all.sh"
+SUITE_MANIFEST = "tests/speckit-pro/suite-manifest.json"
 LAYER_LABELS = {
     "1": "layer-1 structural validation",
     "4": "layer-4 python helper tests",
-}
-LAYER_BOUNDS = {
-    "1": ("# Layer 1:", "# Layer 2:"),
-    "4": ("# Layer 4:", "# Layer 5:"),
 }
 
 
@@ -43,25 +39,21 @@ def resolve_repo_root() -> Path | None:
     return None
 
 
-def bounded_section(text: str, start_marker: str, end_marker: str) -> str:
-    start = text.find(start_marker)
-    if start == -1:
-        return ""
-    end = text.find(end_marker, start + len(start_marker))
-    if end == -1:
-        return text[start:]
-    return text[start:end]
-
-
 def canonical_test_scripts(repo_root: Path, layer: str) -> list[Path]:
-    script = repo_root / "tests" / "speckit-pro" / RUN_ALL_SCRIPT
-    if not script.is_file():
+    """Return the layer's dispatch roster from suite-manifest.json (not run-all.sh).
+
+    The manifest's per-layer ``scripts[]`` is the single source of truth for the
+    Layer-1/Layer-4 dispatch set (XPLAT-010 FR-007, research §D4), replacing the
+    former ``re.findall`` text-parse of ``run-all.sh``.
+    """
+    manifest_path = repo_root / SUITE_MANIFEST
+    if not manifest_path.is_file():
         return []
-    text = script.read_text(encoding="utf-8")
-    start_marker, end_marker = LAYER_BOUNDS[layer]
-    section = bounded_section(text, start_marker, end_marker)
-    matches = re.findall(r'"\$TESTS_DIR/([^"]+)"', section)
-    return [repo_root / "tests" / "speckit-pro" / match for match in matches]
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    for entry in manifest.get("layers", []):
+        if entry.get("id") == layer:
+            return [repo_root / script["path"] for script in entry.get("scripts", [])]
+    return []
 
 
 def python_child_env(repo_root: Path) -> dict[str, str]:
@@ -133,14 +125,14 @@ def main(argv: list[str]) -> int:
         print("could not resolve repository root from run-layer-scripts.py location", file=sys.stderr)
         return 3
 
-    script = repo_root / "tests" / "speckit-pro" / RUN_ALL_SCRIPT
-    if not script.is_file():
-        print(f"missing prerequisite: {rel(script, repo_root)} not found", file=sys.stderr)
+    manifest_path = repo_root / SUITE_MANIFEST
+    if not manifest_path.is_file():
+        print(f"missing prerequisite: {SUITE_MANIFEST} not found", file=sys.stderr)
         return 3
 
     tests = canonical_test_scripts(repo_root, layer)
     if not tests:
-        print(f"missing prerequisite: no layer {layer} test entries parsed from run-all.sh", file=sys.stderr)
+        print(f"missing prerequisite: no layer {layer} test entries in {SUITE_MANIFEST}", file=sys.stderr)
         return 3
 
     # Sanctioned repo-side shell dispatch: bash runs the legacy .sh layers until

@@ -19,7 +19,7 @@
       "surface": "codex_payload_fixture",
       "installed_root": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache/codex/speckit-pro",
       "source_payload_root": "dist/codex/speckit-pro",
-      "source_payload_tree_hash": "2a48adaf1f5c5ec63bd6974d4fd185bbe6543b7c40c2649ac6e92501ef2d3dda",
+      "source_payload_tree_hash": "eff8b93794577e4c3b498f8a198df08b9d21f843617e3b545ea3d22912a28c13",
       "source_derived": true,
       "mutable_user_cache": false,
       "script_file_count": 0,

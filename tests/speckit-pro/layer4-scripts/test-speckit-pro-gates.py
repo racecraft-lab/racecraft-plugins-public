@@ -1767,7 +1767,11 @@ class GateFoundationTests(unittest.TestCase):
             "source-mismatch-installed-cache-proof": {"source_payload_tree_hash"},
             "same-root-installed-cache-proof": {"installed_root"},
             "product-root-mismatch-installed-cache-proof": {"installed_root", "source_payload_root"},
-            "partial-root-installed-cache-proof": {"installed_root", "source_payload_root"},
+            "partial-root-installed-cache-proof": {
+                "installed_root",
+                "source_payload_root",
+                "source_payload_tree_hash",
+            },
             "traversal-root-installed-cache-proof": {"installed_root", "source_payload_root"},
             "missing-mutable-installed-cache-proof": {"mutable_user_cache"},
         }
@@ -2908,7 +2912,7 @@ class GateFoundationTests(unittest.TestCase):
         original_altsep = suite_gate.os.altsep
         try:
             suite_gate.os.altsep = "/"
-            self.assertFalse(suite_gate.missing_executable("tests/speckit-pro/run-all.sh", REPO_ROOT))
+            self.assertFalse(suite_gate.missing_executable("tests/speckit-pro/run-layer-scripts.py", REPO_ROOT))
         finally:
             suite_gate.os.altsep = original_altsep
 
@@ -2931,8 +2935,8 @@ class GateFoundationTests(unittest.TestCase):
                 "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py",
                 "tests/speckit-pro/layer4-scripts/test-transcript-helpers.sh",
                 "tests/speckit-pro/layer4-scripts/test-privacy-scan.sh",
-                "tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh",
-                "tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh",
+                "tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py",
+                "tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py",
                 "tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py",
                 "tests/speckit-pro/layer4-scripts/test-l6-codex-runner.sh",
                 "tests/speckit-pro/layer4-scripts/test-l8-extractors.sh",
@@ -2951,6 +2955,83 @@ class GateFoundationTests(unittest.TestCase):
             [suite_gate.suite_item_to_command_id(item) for item in requested],
             ["toolchain", "layer-1", "layer-4", "layer-5"],
         )
+
+    def test_suite_manifest_is_single_source_of_truth_for_roster_and_dispatch(self) -> None:
+        # FR-007 drift guard: the shipped gate's advertised roster AND dispatch
+        # kinds equal tests/speckit-pro/suite-manifest.json, exactly.
+        from speckit_pro_runner.gates import suite as suite_gate
+
+        manifest = json.loads((REPO_ROOT / "tests/speckit-pro/suite-manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["schema_version"], "1.0")
+        layers = manifest["layers"]
+
+        default_suite = tuple(layer["id"] for layer in layers if layer["default"])
+        extended_suite = tuple(layer["id"] for layer in layers if not layer["live_only"])
+        allowed = frozenset(layer["id"] for layer in layers if not layer["live_only"] and layer["id"] != "toolchain")
+        ai_layers = frozenset(layer["id"] for layer in layers if layer["live_only"])
+
+        # (1) The module roster derives solely from the manifest.
+        self.assertEqual(suite_gate.DEFAULT_SUITE, default_suite)
+        self.assertEqual(suite_gate.EXTENDED_SUITE, extended_suite)
+        self.assertEqual(suite_gate.ALLOWED_LAYERS, allowed)
+        self.assertEqual(suite_gate.AI_EVAL_LAYERS, ai_layers)
+        self.assertIsNone(suite_gate.SUITE_MANIFEST_ERROR)
+
+        loaded = suite_gate.load_suite_manifest(REPO_ROOT)
+        self.assertEqual(suite_gate.manifest_default_suite(loaded), default_suite)
+        self.assertEqual(suite_gate.manifest_extended_suite(loaded), extended_suite)
+        self.assertEqual(suite_gate.manifest_allowed_layers(loaded), allowed)
+
+        # (2) Manifest dispatch kinds match the gate's actual command routing.
+        dispatch_by_id = {layer["id"]: layer["dispatch"] for layer in layers}
+        for item in extended_suite:
+            with self.subTest(layer=item):
+                spec = suite_gate.default_command_spec(suite_gate.suite_item_to_command_id(item), {}, REPO_ROOT)
+                self.assertNotIsInstance(spec, dict, item)
+                if dispatch_by_id[item] == "internal-check":
+                    self.assertTrue(spec.internal)
+                elif dispatch_by_id[item] == "python-module":
+                    self.assertFalse(spec.internal)
+                    self.assertIn("run-layer-scripts.py", " ".join(spec.argv))
+                else:
+                    self.fail(f"unexpected deterministic dispatch {dispatch_by_id[item]!r} for layer {item}")
+
+        # (3) Manifest-integrity invariant (a): every scripts[].path resolves.
+        for layer in layers:
+            for script in layer["scripts"]:
+                with self.subTest(path=script["path"]):
+                    self.assertEqual(set(script), {"path", "label", "baseline"})
+                    self.assertTrue((REPO_ROOT / script["path"]).is_file(), script["path"])
+
+        # (4) Manifest-integrity invariant (b): transitional Bash dispatch is
+        # the only escape hatch permitted until PR 10; the current architecture
+        # routes every layer via internal-check or a Python module, so none
+        # remain (the FR-007 terminal-absence assertion already holds).
+        self.assertEqual([layer["id"] for layer in layers if layer["dispatch"] == "shell-legacy-transitional"], [])
+
+    def test_suite_manifest_loader_fails_closed_when_absent_or_malformed(self) -> None:
+        from speckit_pro_runner.gates import suite as suite_gate
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(suite_gate.SuiteManifestError):
+                suite_gate.load_suite_manifest(Path(tmp))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "tests" / "speckit-pro"
+            target.mkdir(parents=True)
+            (target / "suite-manifest.json").write_text("{ not valid json", encoding="utf-8")
+            with self.assertRaises(suite_gate.SuiteManifestError):
+                suite_gate.load_suite_manifest(Path(tmp))
+
+    def test_run_suite_gate_fails_closed_when_manifest_unavailable(self) -> None:
+        from speckit_pro_runner.gates import suite as suite_gate
+
+        entry = SimpleNamespace(helper_id="suite-gate")
+        request = SimpleNamespace(operation="run-default-suite", request_id="drift-fail-closed", inputs={"repo_root": "."})
+        with patch.object(suite_gate, "SUITE_MANIFEST_ERROR", "simulated manifest loss"):
+            result = suite_gate.run_suite_gate(entry, request)
+        self.assertEqual(result["status"], "missing_prerequisite")
+        self.assertEqual([diag["code"] for diag in result["diagnostics"]], ["suite_manifest_unavailable"])
 
     def test_unknown_gate_operation_rejects_deterministically(self) -> None:
         response = self.assert_input_error_code(
