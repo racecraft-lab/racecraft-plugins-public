@@ -20,7 +20,7 @@ release-readiness gate and the default deterministic suite; add container/runner
 preflight CI (Linux gating, Windows advisory); add a deterministic Python release-notes
 composer plus a `validate-release-note` required check that makes GitHub Releases
 public-readable; and restore the deleted `estimate-spec-size` runner operation. Delivered
-as a dependency-ordered 14-PR stack (the operator-ratified typed-split transition
+as a dependency-ordered 15-PR stack (the operator-ratified typed-split transition
 exception), each PR independently CI-green with a runtime count-parity proof.
 
 ## Technical Context
@@ -76,14 +76,17 @@ validator in the same PR and call out branch-protection follow-ups.
 **Scale/Scope**: ~115 `.sh` files outside `.github/workflows/` today (101 under
 `tests/speckit-pro/`, 10 vendored `.specify/**`, 2 `.claude/hooks/`, 2 `scripts/`); of the
 101 harness scripts, 34 are deleted (32 orphans + 2 wrappers) and the remainder ported.
-Delivered as a 14-PR stack.
+Delivered as a 15-PR stack.
 
 **Reviewability Budget**: Primary surface harness/adapter (test-harness + runner-tooling
 port); secondary scheduler/runtime (CI workflows), seed/config (manifest, allowlist,
 release-note metadata), docs/process (ledgers). Projected reviewable LOC 400–800 (roadmap
 budget; setup gate returned a ~400-LOC warn). Projected production files ~6–25; total files
 ~15–25. Budget result: **transition exception** — reviewability-gate warn accepted, typed
-14-PR split ratified in `docs/ai/specs/.process/XPLAT-010-workflow.md` (refactor/infra class).
+15-PR split (13 numbered slices, with slices 3 and 7 each split into a/b PRs) ratified in
+`docs/ai/specs/.process/XPLAT-010-workflow.md` (refactor/infra class). This canonical 13-slice / 15-PR
+figure supersedes the design concept's earlier "~12–13-PR" phrasing (Q9) and the workflow file's transitional
+"14-PR" label; the enumerated slices are identical across all three — only the headline number is normalized.
 
 ## Declared File Operations
 
@@ -158,7 +161,7 @@ Constitution v1.1.0. Each principle evaluated below.
   (atomic same-PR swaps). Test files keep the house naming/convention; the shared
   `TestResult` subclass replaces `tests/lib/assertions.sh` for ported modules.
 
-- **V. Conventional Commits — PASS.** The 14-PR stack uses `feat`/`fix`/`chore`/`docs`/
+- **V. Conventional Commits — PASS.** The 15-PR stack uses `feat`/`fix`/`chore`/`docs`/
   `refactor`/`test` scoped to `speckit-pro` or unscoped for repo-wide CI changes; PR titles
   are plain-English for the public with the conventional-commits prefix retained.
 
@@ -172,12 +175,44 @@ Constitution v1.1.0. Each principle evaluated below.
   entries. The composer is stdlib-only, deterministic, no LLM, no new secret. The master-plan
   entry exists (cross-platform roadmap + workflow file). No speculative features.
 
+**Constitution amendment follow-up (required — recorded, not reinterpreted; severity CRITICAL):** Constitution
+v1.1.0 predates the cross-platform Bash→Python migration and still encodes bash-specific literal gate
+commands: Principle I names the `tests/` orchestrator `run-all.sh`; Principle II's quality gate cites
+`validate-scripts.sh`; Principle IV mandates the shared assertions library `tests/lib/assertions.sh` and
+`bash tests/run-all.sh` as the completion gate; the Quality Gates table lists `bash tests/run-all.sh` and
+`validate-scripts.sh`. This spec's same-PR atomic swaps retire these on a staggered timeline: `run-all.sh`
+at PR 2/T015, `validate-scripts.sh` at PR 3a/T035, `tests/lib/assertions.sh` at PR 10/T097 — literal-command
+staleness begins at PR 2, not at final Bash deletion. Per `/speckit-analyze`'s Constitution-Authority rule
+("Constitution conflicts are automatically CRITICAL... not dilution, reinterpretation"), this conflict is
+**CRITICAL** — the migration's intent-preservation and roadmap sanction bear on *which resolution path*
+applies (the rule's own second sanctioned path: "a separate, explicit constitution update... outside
+`/speckit-analyze`"), not on the severity label. Verified no automated gate or CI mechanism parses
+`constitution.md`'s literal commands (G0 discovers `PROJECT_COMMANDS` dynamically per `prerequisites.md`
+Step 0.11; G3 greps plan.md for `FAIL` text only; `pr-checks.yml` dispatches via independently-maintained
+JSON fixtures) — deferral carries no automated-breakage risk, only a recurring documentation-fidelity cost
+until amended. The amendment (MINOR-or-greater per the constitution's own Governance §Versioning policy) is
+out of scope for this spec's implementation per the constitution's own 4-step Amendment procedure
+(rationale + **cross-spec backward-compatibility assessment** + version bump + template propagation) —
+disproportionate to bundle into any single reviewability-budgeted PR of this stack. Sanctioned by the
+cross-platform roadmap master plan that Principle VI defers to; tracked as a small follow-up PR in the
+roadmap's XPLAT-010 status narrative (this repo's established pattern — cf. "Windows interpreter follow-up
+in PR #299"), landing any time after PR 10 merges (once all three named artifacts reach their terminal
+Python state).
+
+**Atomicity route (advisory, superseded):** The atomicity classifier read the feature-as-one-unit as
+`single-atomic-PR` / `releasable: false` — a destructive-migration signal driven by the mass `.sh`
+deletion. That route is advisory only and is superseded by the operator-ratified typed 15-PR slice stack
+recorded in the workflow file (§Route); delivery proceeds slice-by-slice, each PR independently CI-green.
+FR-012's same-PR atomic swap (port + manifest flip + `.sh` delete in one PR, never a broken intermediate
+state) is the mitigating control that keeps every slice releasable, so the destructive-migration /
+releasability warning is carried here into implementation context rather than driving delivery.
+
 **Reviewability budget gate:** setup returned **warn** (≈400 reviewable LOC, 6 production
 files, 2 primary surfaces — above the 400/6/15/1 warn thresholds, below the 800/8/25 block
 thresholds). Resolution: **transition exception** (refactor + infra + upgrade classes),
 ratified in `docs/ai/specs/.process/XPLAT-010-workflow.md` §Scope Budget and Split Decision
 and design-concept Q9 — not an ad-hoc override. Split decision: one spec, dependency-ordered
-14-PR stack, each PR independently CI-green and within the 400–800 reviewable-LOC budget
+15-PR stack, each PR independently CI-green and within the 400–800 reviewable-LOC budget
 (see Project Structure and research.md §PR-stack ordering). No deferred follow-up specs
 beyond the two pre-existing known gaps recorded in the design concept (Layer-8
 `semantic-equivalent` LLM judge; Windows ARM64 runner availability) — both out of scope here.
@@ -189,7 +224,9 @@ count-parity baseline path and the 6-item dual-run diff block
 (contracts/count-parity-baseline.contract.md §4); feat/fix PRs carry the Release note block
 once PR 12's template lands (authored from PR 1 onward to seed the composer's first run).
 
-**Result: no violations — Complexity Tracking table not required.**
+**Result: no requirement-level violations — Complexity Tracking table not required. Three principles
+(I/II/IV) carry bash-specific literal gate commands superseded by this roadmap-sanctioned migration and
+are flagged above for a separate constitution amendment (recorded, not reinterpreted).**
 
 ## Project Structure
 
@@ -208,7 +245,7 @@ specs/xplat-010-repository-bash-confinement/
 │   ├── estimate-spec-size.schema.json
 │   ├── release-note-block.contract.md
 │   └── count-parity-baseline.contract.md
-├── spec.md              # Finalized (25 FRs / 7 US / 8 SCs; 12 Clarifications)
+├── spec.md              # Finalized (27 FRs / 7 US / 8 SCs; 12 Clarifications)
 └── tasks.md             # Phase 2 output (/speckit-tasks — NOT created here)
 ```
 

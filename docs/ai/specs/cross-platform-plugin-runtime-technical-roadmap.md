@@ -1055,6 +1055,17 @@ helper scripts, hooks, and SpecKit process helpers. Design concept and workflow
 file live under `docs/ai/specs/.process/`; an operator scope addition covers
 public-readable GitHub Release notes (design concept Q10/Q11).
 
+**Follow-up (required, post-PR-10):** a constitution amendment updating
+Principles I/II/IV and the Quality Gates table's literal bash commands
+(`run-all.sh`, `validate-scripts.sh`, `tests/lib/assertions.sh`) to their
+Python equivalents — a CRITICAL constitution conflict recorded (not
+reinterpreted) during this spec's Analyze phase, resolved via the
+separate-explicit-constitution-update path per the constitution's own 4-step
+Amendment procedure. Lands as its own small PR after the final Bash-deletion
+slice merges (cf. the "Windows interpreter follow-up in PR #299" pattern). No
+automated gate parses the constitution's literal commands, so deferral carries
+documentation-fidelity cost only.
+
 **Goal:** Enforce the strict repository policy that Bash may remain only as
 GitHub CI/CD workflow dispatch glue. All active repo-local validation,
 packaging, install, helper, hook, payload, release, and test/eval behavior must

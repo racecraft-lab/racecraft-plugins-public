@@ -10,7 +10,7 @@ description: "Task list for XPLAT-010 — Repository Bash Confinement and CI Dis
 
 **Tests**: This feature is test-centric by nature (it ports a test harness). Every ported module lands with its `unittest` module + committed count-parity baseline in the SAME PR (FR-004/FR-011/FR-012). Test tasks are therefore first-class here, not optional.
 
-**Reviewability**: This spec is an operator-ratified **transition exception** (refactor + infra + upgrade classes) delivered as a dependency-ordered **14-PR stack**, each PR independently CI-green and inside the 400–800 reviewable-LOC budget. The exception's sole valid provenance is `docs/ai/specs/.process/XPLAT-010-workflow.md` §Scope Budget and Split Decision — not templates, generated zones, `.process` files, PR bodies, or code fences.
+**Reviewability**: This spec is an operator-ratified **transition exception** (refactor + infra + upgrade classes) delivered as a dependency-ordered **15-PR stack** (13 numbered slices, with slices 3 and 7 each split into a/b PRs), each PR independently CI-green and inside the 400–800 reviewable-LOC budget. The exception's sole valid provenance is `docs/ai/specs/.process/XPLAT-010-workflow.md` §Scope Budget and Split Decision — not templates, generated zones, `.process` files, PR bodies, or code fences.
 
 **Organization**: Tasks are grouped by **PR-stack slice** (the primary grouping the workflow prompt mandates). Each task additionally carries its `[USn]` user-story label so US1–US7 traceability stays 1:1. Setup / foundational-cleanup / polish tasks carry no story label.
 
@@ -29,7 +29,7 @@ description: "Task list for XPLAT-010 — Repository Bash Confinement and CI Dis
 
 ## Per-Port Protocol (applies to every `.sh`→`.py` port task in PRs 3a–9)
 
-Every port task is the **same-PR atomic swap** (FR-011/FR-012, Clarifications Session 1):
+Every port task is the **same-PR atomic swap** to Python 3.11+ standard library only, no new runtime dependency (FR-009/FR-011/FR-012, Clarifications Session 1):
 
 1. **Capture VERBOSE baseline** — run the bash script under `VERBOSE=true` via `tests/speckit-pro/lib/capture_baseline.py`, in the pinned **non-root, CI-matching** environment, writing `tests/speckit-pro/parity/xplat-010/<script>-baseline.txt` (one `NNN <canonical-name>` line per executed `_pass`/`_fail`, then `TOTAL: <N>`). One baseline per `(script, invocation-mode)` pair. Fail loud on an empty/stale name (no positional fallback).
 2. **Port** — author `<module>.py` (`unittest`, house `__main__` printing `<label>: {passed}/{total} passed`), computing `{passed}/{total}` via the shared `addSubTest` `TestResult` subclass; every former assertion execution = one counted unit; loop-generated assertions are `subTest`s reconciling each bash check name 1:1 via `subTest(msg=...)`.
@@ -45,7 +45,7 @@ Baseline capture AND the port-side parity comparison MUST run in the SAME pinned
 
 - [ ] T001 Verify the repo baseline is green before any change: run the toolchain preflight and default-suite gates from the repo root — `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-toolchain-preflight.json` and `.../run-default-suite.json` — and `pnpm --dir docs-site validate`. Record the pre-change `X/Y passed` headline as the parity reference.
 - [ ] T002 Confirm the working branch is `xplat-010-repository-bash-confinement` (or the active slice branch), never `main`; confirm `.specify/feature.json` pins `specs/xplat-010-repository-bash-confinement`; export `PYTHONDONTWRITEBYTECODE=1` for all runner invocations.
-- [ ] T003 **Reviewability checkpoint (mandatory — transition exception)**: record in the PR review packet that this spec is delivered as the ratified 14-PR transition-exception stack, provenance `docs/ai/specs/.process/XPLAT-010-workflow.md` §Scope Budget and Split Decision; confirm each planned PR slice stays within the 400–800 reviewable-LOC / 15–25 total-file budget and does not silently exceed the 800/8/25 block thresholds. If any slice would exceed the block thresholds without ratified provenance, STOP and re-split rather than adding tasks.
+- [ ] T003 **Reviewability checkpoint (mandatory — transition exception)**: record in the PR review packet that this spec is delivered as the ratified 15-PR transition-exception stack, provenance `docs/ai/specs/.process/XPLAT-010-workflow.md` §Scope Budget and Split Decision; confirm each planned PR slice stays within the 400–800 reviewable-LOC / 15–25 total-file budget and does not silently exceed the 800/8/25 block thresholds. If any slice would exceed the block thresholds without ratified provenance, STOP and re-split rather than adding tasks.
 - [ ] T004 Confirm the 6 contracts under `contracts/` are the frozen schemas the ports/guard/composer/estimator validate against (`suite-manifest.schema.json`, `confinement-allowlist.schema.json`, `repo-bash-confinement-result.schema.json`, `estimate-spec-size.schema.json`, `release-note-block.contract.md`, `count-parity-baseline.contract.md`).
 
 **Checkpoint**: Baseline green, branch verified, split exception recorded — implementation can begin.
@@ -71,7 +71,7 @@ Baseline capture AND the port-side parity comparison MUST run in the SAME pinned
 **Independent Test**: On a machine with only Python 3.11+ (no Bash, no `jq`), `python3 tests/speckit-pro/run-all.py --all`, `--layer N`, and the toolchain preflight match the recorded bash-runner `X/Y passed` headline, scope, and exit codes.
 
 - [ ] T008 [US1] Author `tests/speckit-pro/suite-manifest.json` per `contracts/suite-manifest.schema.json`: top-level `{schema_version, layers[]}`; per layer `{id, label, default, execution, live_only, integration, counted_in_total, dispatch, scripts[]}`; per script `{path, label, baseline}` (baseline = repo-relative pointer or `null`). Assign per-layer `dispatch` per research §D3 (toolchain=`internal-check`,`counted_in_total:false`; layers 1/4=`python-module`; 5=`internal-check` transitional; 7/8=`python-module`; 2/3/6=`python-module`+`live_only:true`); list still-unported layers as `shell-legacy-transitional` until their port-PR boundary (FR-006/FR-007).
-- [ ] T009 [P] [US1] Author `tests/speckit-pro/lib/test_result.py` — the shared `unittest.TestResult` subclass overriding `addSubTest` so `{passed}/{total}` counts every executed assertion (loop-generated AND non-loop grouped), reconciling bash check names 1:1 (research §D6, Clarifications Session 1). Land its own unit test.
+- [ ] T009 [P] [US1] Author `tests/speckit-pro/lib/test_result.py` — the shared `unittest.TestResult` subclass overriding `addSubTest` so `{passed}/{total}` counts every executed assertion (loop-generated AND non-loop grouped), reconciling bash check names 1:1 — the house-convention per-assertion counting contract (FR-010, research §D6, Clarifications Session 1). Land its own unit test.
 - [ ] T010 [P] [US2] Author `tests/speckit-pro/lib/capture_baseline.py` — runs a bash script under `VERBOSE=true`, parses only lines matching `^\s*(.+?)\s\.\.\.\s(PASS|FAIL)$`, writes the frozen baseline format (`NNN <name>` + `TOTAL: <N>`) to `tests/speckit-pro/parity/xplat-010/`, records the pinned capture environment, and fails loud on an empty/stale name (research §D6; `contracts/count-parity-baseline.contract.md`). Create the `tests/speckit-pro/parity/xplat-010/` directory. Land its own unit test.
 - [ ] T011 [US2] Create the running count ledger `docs/ai/specs/.process/XPLAT-010-count-ledger.md` (header + empty delta table) that each subsequent port PR appends one line to (FR-013).
 - [ ] T012 [US1] Author `tests/speckit-pro/run-all.py` reproducing `run-all.sh` UX 1:1 (research §D5): flags `--live`, `--layer N`, `--integration`, `--all`, `--verbose`; default run = Layers 1, 4, 5 + toolchain; headline `speckit-pro test suite: X/Y passed` (and `… (Z failed)` on failure); exit 0 iff no failures, 1 on failure, 2 on unknown flag; parse each child module's `X/Y passed` line. Child-outcome disposition mirrors the prior runner (FR-006): a crash (nonzero, no headline) forces exit 1 distinct from a transitional-skip; a zero-exit-no-headline module is a no-summary pass; a `shell-legacy-transitional` layer on a Bash-absent platform is skipped with an explicit diagnostic (never a silent green).
@@ -317,7 +317,7 @@ Baseline capture AND the port-side parity comparison MUST run in the SAME pinned
 - [ ] T127 [US7] Confirm the estimator port + version fix leave the default-suite gate + drift-guard test green.
 - [ ] T128 [US7] Record the CLAUDE.md note confirming whether the release-please-config change requires a CLAUDE.md release-section update.
 - [ ] T129 [US7] Add the PR-body branch-protection callout: PR 13 adds no required status check (shipped-runner fix only) — state this explicitly to keep the stack's branch-protection ledger complete.
-- [ ] T130 [US7] Verify US7 end-to-end (quickstart US7): `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/estimate-spec-size/requests/typical-under.json` returns the populated result restoring pre-XPLAT-009 scoping behavior (SC-007).
+- [ ] T130 [US7] Verify US7 end-to-end (quickstart US7): invoke the runner with an `estimate-spec-size` request envelope carrying the golden `typical-under` size signals (`{"helper_id":"estimate-spec-size","inputs":{"user_stories":2,"files":3,"frs":4}}` — the inputs recorded in `tests/speckit-pro/layer4-scripts/fixtures/estimate-spec-size/typical-under.args`) via `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner`, and confirm the returned `{estimated_loc, suggested_slices, status}` equals the golden `tests/speckit-pro/layer4-scripts/fixtures/estimate-spec-size/typical-under.json` (`{estimated_loc:230, suggested_slices:1, status:"ok"}`), restoring pre-XPLAT-009 scoping behavior (SC-007). Note: the `estimate-spec-size/` fixtures are golden `(.args → .json)` input/output pairs — there is no `requests/` envelope subdir; the request envelope is constructed from the `.args` signals (matching T123's golden-fixture validation).
 
 **Checkpoint**: Estimator restored for grill-me/speckit-prd; manifest version auto-bumps; stale hardcode removed.
 
@@ -343,6 +343,7 @@ Per the workflow prompt, tasks that would cross these boundaries were **flagged 
 - **No Layer-8 `semantic-equivalent` LLM judge.** PR 8 (T074) keeps `byte-identical`/`exact`/`tolerance-1` only; `semantic-equivalent` stays skipped-with-warning (known gap, out of scope).
 - **No UAT-matrix / native operator UAT work.** Container/Windows preflight (T100–T108) is preflight evidence only; XPLAT-008 native operator UAT remains the release-claim gate and is not tasked here.
 - **No new required status checks beyond the two ratified ones.** Only PR 11 (2 Linux checks) and PR 12 (`validate-release-note`) add required checks; PR 5 and PR 10 are required-check-neutral (T051/T099).
+- **No `constitution.md` amendment.** Principles I/II/IV and the Quality Gates table's literal bash commands (`run-all.sh`, `validate-scripts.sh`, `tests/lib/assertions.sh`) go stale progressively as this stack lands (PR 2, PR 3a, PR 10) — a **CRITICAL** constitution conflict per `/speckit-analyze`'s Constitution-Authority rule, resolved via that rule's separate-explicit-constitution-update path (see plan.md §Constitution Check). No task here edits `.specify/memory/constitution.md`; the amendment is a distinct governance-document follow-up tracked in the cross-platform roadmap's XPLAT-010 status narrative, landing as its own small PR any time after PR 10 merges.
 
 No task in this file crosses these boundaries.
 
@@ -350,7 +351,7 @@ No task in this file crosses these boundaries.
 
 ## Dependencies & Execution Order
 
-### PR-slice ordering (the 14-PR stack — CI-enforced where a violation breaks `main`)
+### PR-slice ordering (the 15-PR stack — CI-enforced where a violation breaks `main`)
 
 - **PR 1** (T005–T007): anytime — no dependency.
 - **PR 2** (T008–T017): **before PRs 3–10.** Self-enforcing — a port PR's atomic manifest edit (FR-012) targets `suite-manifest.json`, which does not exist until PR 2 creates it, so any 3–10 PR merged first fails CI.
