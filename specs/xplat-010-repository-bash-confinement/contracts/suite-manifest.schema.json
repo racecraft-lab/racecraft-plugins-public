@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/speckit-pro/xplat-010/suite-manifest.schema.json",
+  "title": "XPLAT-010 Suite Manifest",
+  "description": "Single per-layer source of truth for deterministic suite composition. Read by tests/speckit-pro/run-all.py (developer UX) and by the shipped suite gate speckit_pro_runner/gates/suite.py (CI dispatch). Replaces the hardcoded DEFAULT_SUITE/EXTENDED_SUITE/ALLOWED_LAYERS tuples and the native check_layer5/7/8 implementations. Composition changes are manifest-only edits; shipped-runner bytes change only when dispatch behavior changes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "layers"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "layers": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/layer" }
+    }
+  },
+  "$defs": {
+    "layer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "default",
+        "execution",
+        "live_only",
+        "integration",
+        "counted_in_total",
+        "dispatch",
+        "scripts"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Layer identifier, e.g. toolchain, 1, 4, 5, 7, 8, 2, 3, 6."
+        },
+        "label": { "type": "string", "minLength": 1 },
+        "default": {
+          "type": "boolean",
+          "description": "true if the layer is in the default deterministic suite (--all without extras)."
+        },
+        "execution": {
+          "enum": ["execute", "print-commands"],
+          "description": "Whether run-all.py executes the layer or prints its commands."
+        },
+        "live_only": {
+          "type": "boolean",
+          "description": "true for layers that require --live (Layers 2/3/6 live-AI evals)."
+        },
+        "integration": {
+          "type": "boolean",
+          "description": "true for integration layers (Layer 7)."
+        },
+        "counted_in_total": {
+          "type": "boolean",
+          "description": "false for the toolchain preflight layer; true for deterministic test layers whose passed/total counts roll into the headline."
+        },
+        "dispatch": {
+          "enum": ["python-module", "internal-check", "shell-legacy-transitional"],
+          "description": "python-module = dispatched to a repo-side Python module (Layers 1/4/7/8, and Layer 5 once ported); internal-check = run in-process inside the shipped suite gate (toolchain; Layer 5 transitionally with a replaced body); shell-legacy-transitional = temporary .sh dispatch permitted ONLY between PR 2 and the layer's port-PR boundary, removed by PR 10."
+        },
+        "scripts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/script" }
+        }
+      }
+    },
+    "script": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "label", "baseline"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Repo-relative path to the layer's test module (Python once ported; .sh only during the shell-legacy-transitional window)."
+        },
+        "label": { "type": "string", "minLength": 1 },
+        "baseline": {
+          "type": ["string", "null"],
+          "description": "Repo-relative pointer to the committed count-parity baseline file (the single count of record, eliminating manifest-vs-baseline drift), or null for layers with no per-script parity baseline (e.g. toolchain, or native-Python modules born without a bash predecessor)."
+        }
+      }
+    }
+  }
+}

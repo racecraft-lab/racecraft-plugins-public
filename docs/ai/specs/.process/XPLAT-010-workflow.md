@@ -449,11 +449,19 @@ validate-release-note check + release-note/skip label semantics.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, execution flow |
-| `research.md` | ⏳ | Decision rationales (if needed) |
-| `data-model.md` | ⏳ | Manifest/allowlist/ledger/release-note block schemas |
-| `contracts/` | ⏳ | suite-manifest, allowlist entry, release-note block, parity baseline |
-| `quickstart.md` | ⏳ | Developer onboarding |
+| `plan.md` | ✅ | Template filled; constitution 6/6 PASS; 29 Declared File Operations; 0 TODO/CRITICAL markers |
+| `research.md` | ✅ | 13 decisions (D1–D13) resolving every Plan-flagged Clarify item + the run-discovered PR-13 manifest-version fix |
+| `data-model.md` | ✅ | 8 entities |
+| `contracts/` | ✅ | 6 files: suite-manifest.schema.json, confinement-allowlist.schema.json, repo-bash-confinement-result.schema.json, estimate-spec-size.schema.json, release-note-block.contract.md, count-parity-baseline.contract.md (all JSON parse-valid) |
+| `quickstart.md` | ✅ | 7 per-user-story validation scenarios + full-suite gate |
+
+**Plan-phase reviewability budget (step 7b, advisory):** `estimate-reviewable-loc`
+→ `status: pass`, projected 40 production reviewable LOC (declared: 1 production,
+16 new, 13 modified, 29 total entries; thresholds warn 400 / block 800;
+greenfield=false). Within budget — recorded, no action. The low production
+projection reflects the estimator's classification: this spec's volume is
+test-harness/CI/process-side, matching the harness/adapter primary surface.
+CLAUDE.md gained the SPECKIT active-plan marker block (agent-context pointer).
 
 ---
 
