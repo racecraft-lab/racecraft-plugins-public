@@ -114,8 +114,7 @@ G56R-003 Tier-aware Installer Defaults and Explicit Override
 | G56R-007 | Latency-first Helper Routing | Pending | - | Blocked by G56R-003 |
 | G56R-008 | Payload, Documentation, UAT, and Release Proof | Pending | - | Blocked by G56R-004 through G56R-007 |
 
-**Status legend:** Pending | Ready | In Progress | In Review | Complete |
-Blocked
+**Status legend:** Pending | Ready | In Progress | In Review | Complete | Blocked
 
 ---
 
