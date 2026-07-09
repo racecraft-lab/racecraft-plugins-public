@@ -7,7 +7,7 @@
       "surface": "claude_payload_fixture",
       "installed_root": "dist/claude/speckit-pro",
       "source_payload_root": "dist/claude/speckit-pro",
-      "source_payload_tree_hash": "49a384872c879bc895680eb12495ed7482fa96852a70212f0d8c9620d015fbda",
+      "source_payload_tree_hash": "4058e8b561701e496594903f5a86e477d1e57d30548f309c7655418c51f7a001",
       "source_derived": true,
       "mutable_user_cache": false,
       "script_file_count": 0,

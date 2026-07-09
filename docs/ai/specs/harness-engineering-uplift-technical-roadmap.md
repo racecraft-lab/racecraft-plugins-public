@@ -85,6 +85,12 @@ The harness hardening lane centers on these requirements:
   feedback, and enforceable constraints around the model.
 - Use progressive disclosure: short entrypoint maps, deeper source-of-truth
   docs, and just-in-time context rather than oversized prompt manuals.
+- Preserve warmed-up context deliberately: task-scoped checkpoints, summaries,
+  context-health signals, and restoration rules prevent useful understanding
+  from living only in chat.
+- Keep task focus explicit: active task/spec instructions should be swappable
+  without mutating canonical project guidance, dirtying the worktree, or leaking
+  stale context into unrelated workflows.
 - Define tool/helper interfaces as agent UX: names, schemas, mutability,
   remediation messages, and result size affect reliability.
 - Put humans on meaningful loop points: scope, plan, high-risk tool use,
@@ -92,12 +98,19 @@ The harness hardening lane centers on these requirements:
 - Layer verification: deterministic checks first, fixture parity next,
   trace/transcript review where useful, and calibrated rubric review only where
   deterministic checks cannot cover the risk.
+- Bounded self-improvement loops: agents may generate, critique, refine, and test
+  their own proposed harness changes only within explicit scopes, budgets,
+  traces, rollback checkpoints, and human-visible promotion gates.
 - Make security policy structural: least privilege, pre-action authorization,
   protected harness-control files, default-deny posture, and safe stop.
 - Emit local trace/debug packets so failures can be classified and replayed
   without dumping raw logs into PRs.
 - Add garbage collection because prompts, docs, sensors, tests, generated
   payloads, and examples drift as models and workflows change.
+- Evaluate modern harness-adjacent tools during execution, including schema
+  validation, orchestration, eval, trace, guardrail, workflow-runtime, and
+  coding-agent references, before deciding whether any optional adapter or
+  dependency is justified.
 - Keep the first-release implementation dependency posture conservative:
   repo-local contracts and Python runner/helper surfaces first, with any larger
   runtime dependency requiring its own explicit decision.
@@ -163,6 +176,16 @@ Budget result: within budget
   observability, HITL, security, and garbage collection.
 - Record dependency posture: repo-local convention, runner/helper change,
   generated-doc/test change, or explicit future dependency decision.
+- Add an external-candidate evaluation matrix covering relevant schema,
+  orchestration, eval, trace/observability, guardrail, workflow-runtime, and
+  coding-agent harness references. Each row records mapped HRNS surfaces,
+  local-first fit, runtime dependency posture, telemetry/privacy posture,
+  licensing/supply-chain risk, and recommendation.
+- Classify self-improvement loop closure for workflows that can generate future
+  harness behavior: human-in-the-loop, human-on-the-loop, fully automated, or
+  disallowed. Flag open-ended recursive self-improvement and self-modifying
+  harness-control loops as disallowed unless a dedicated future spec proves
+  bounded safety controls.
 
 **Out of Scope:**
 
@@ -188,6 +211,12 @@ Budget result: within budget
 
 - A durable taxonomy artifact exists and covers every SpecKit Pro harness surface
   named in PRD AC-1.*.
+- The taxonomy includes the external-candidate matrix needed by HRNS-003,
+  HRNS-004, HRNS-005, HRNS-006, HRNS-007, and HRNS-008 before those specs make
+  implementation or dependency decisions.
+- The taxonomy names every self-improvement loop class discovered in current
+  skills, agents, helpers, generated payloads, evals, and workflow files, and
+  records its permitted closure level or disallowed status.
 - Each retained gap has surface tags, state classification, owner workflow, and
   downstream HRNS ownership.
 - The PR packet includes the taxonomy path, review scope, verification command or
@@ -217,11 +246,25 @@ Budget result: within budget
   payload, and archive pointer state.
 - Document compaction/resume expectations: what must be in files, what may
   remain in chat, and what requires user confirmation.
+- Define task-scoped context checkpoint metadata: name, summary, message/source
+  count where available, timestamp, task/spec association, storage class,
+  provenance, restore instructions, and whether the checkpoint is personal,
+  shared, or emergency fallback.
+- Define context-health monitoring signals for long runs: healthy/degrading/
+  critical zones, baseline token count, burn-rate estimate, save recommendation,
+  and fresh-session recommendation before compaction or recall degradation
+  silently affects decisions.
+- Define active task/spec instruction semantics: canonical shared guidance,
+  generated task-specific guidance, injected resume context, and default/fresh
+  task state must be distinguishable and switchable without changing root
+  instructions or producing accidental PR diffs.
 
 **Out of Scope:**
 
 - Implementing trace packet schema; handled by HRNS-006.
 - Parallel worktree orchestration; handled by HRNS-007.
+- Committing raw personal transcripts or emergency auto-saves as shared team
+  context artifacts.
 
 **Key Files:**
 
@@ -235,6 +278,10 @@ Budget result: within budget
   audited workflow.
 - Durable state artifacts and freshness checks are specified for long-running
   PRD, scaffold, status, autopilot, resolve-pr, and archive flows.
+- Context checkpoint metadata, storage class, health-zone thresholds, and
+  restore semantics are specified for long-running workflows.
+- Task/spec switching records the active focus and rejects stale injected context
+  before resume without mutating canonical project guidance.
 - Verification includes a focused docs/reference check or fixture proving stale
   roadmap, workflow, feature, generated payload, or archive pointers are caught.
 
@@ -263,11 +310,18 @@ Budget result: within budget
 - Align capability discovery guidance with TACD precedent: capability-first,
   schema-aware, and non-blocking where possible.
 - Add remediation-message standards for helper errors.
+- Evaluate schema and tool-contract references: Pydantic, JSON Schema/OpenAPI,
+  LangChain structured-output/tool schemas, OpenAI Agents SDK function-tool
+  schemas, and existing repo-local runner metadata. Record whether SpecKit Pro
+  should keep schemas Python-authoritative, generate machine-readable schemas,
+  or introduce an optional validation adapter.
 
 **Out of Scope:**
 
 - Enforcing permission policy; handled by HRNS-004.
 - Adding new MCP server dependencies.
+- Adding Pydantic or any other schema library as a required installed-plugin
+  runtime dependency without a dedicated dependency decision.
 
 **Key Files:**
 
@@ -286,6 +340,9 @@ Budget result: within budget
   dry-run or readiness behavior.
 - Tests or generated-doc checks prove registry, docs, runner metadata, and
   fixtures cannot drift silently.
+- A schema-contract decision names the canonical source of truth, generated
+  artifact format, validation path, dependency posture, and fixtures proving
+  contract drift is detected.
 
 ---
 
@@ -313,11 +370,20 @@ Budget result: within budget
   sandbox/write-root posture, trace/audit sink, git cleanliness where required,
   network/offline posture, and credential scope.
 - Define safe-stop semantics and reviewable autoheal expectations.
+- Compare permission and guardrail patterns from OpenAI Agents SDK, Guardrails
+  AI, Semantic Kernel, promptfoo red-team flows, OpenHands/SWE-agent-style
+  coding-agent sandboxes, and existing Codex/Claude permission semantics. Keep
+  SpecKit Pro authorization local and reviewable.
+- Define shared-context promotion gates: secret scan, size cap, provenance
+  check, storage-class check, human confirmation, and clean git-footprint
+  behavior before any context checkpoint is committed or distributed to a team.
 
 **Out of Scope:**
 
 - Claiming native platform sandbox guarantees before XPLAT UAT proves them.
 - Building enterprise policy engines or credential brokers.
+- Treating personal context captures, emergency auto-saves, or raw transcripts
+  as safe to commit by default.
 
 **Key Files:**
 
@@ -338,6 +404,12 @@ Budget result: within budget
   posture checks.
 - Preflight, safe-stop, protected-surface, and autoheal behavior is covered by
   focused fixtures or runner/helper tests.
+- A guardrail/policy comparison records which patterns are borrowed, rejected,
+  or deferred and confirms that external services do not own authorization
+  decisions for installed-plugin operations.
+- Shared-context promotion guidance includes explicit block/warn behavior for
+  secrets, oversize artifacts, missing provenance, and accidental personal-state
+  diffs.
 
 ---
 
@@ -364,11 +436,38 @@ Budget result: within budget
 - Define HITL eval requirements for Grill Me, scaffold, and autopilot flows.
 - Ensure eval reports name model, skill version, runner/helper version, allowed
   tools, permission mode, and command/trace evidence.
+- Define clean-context adversarial review expectations for PRDs, test plans, dev
+  plans, generated fixtures, and self-improvement outputs so review does not
+  inherit the authoring session's blind spots.
+- Define docs-before-code feedback expectations for user/operator workflow
+  changes where applicable, including when docs are regenerated, intentionally
+  deferred, or not applicable.
+- Define process-sequencing gates that detect stale downstream artifacts after
+  PRD or roadmap changes: docs, test plan, dev plan, generated fixtures,
+  adversarial inventory, and risk acceptances.
+- Define test/eval inventory expectations: every row states what the test
+  actually verifies, which acceptance criterion it maps to, and a verdict of
+  pass, fail, escalate, or accepted.
+- Evaluate promptfoo, Braintrust, Phoenix, LangSmith, Langfuse, Inspect AI,
+  DSPy, and repo-local deterministic fixtures as possible eval surfaces.
+  Classify each candidate by local/offline fit, SaaS or external telemetry
+  behavior, LLM-as-judge calibration needs, CI fit, and optional-adapter
+  viability.
+- Define the evaluator hierarchy for bounded self-improvement: deterministic
+  tests, formal or executable verifiers, and fixture parity outrank calibrated
+  rubrics and LLM judges; intrinsic self-assessment may propose changes but
+  cannot approve harness-control changes.
 
 **Out of Scope:**
 
 - Full benchmark suite implementation.
 - Blocking release gates on uncalibrated rubric review.
+- Treating self-assessment, self-scoring, or self-generated tests as sufficient
+  evidence for promotion.
+- Letting an adversarial reviewer auto-fix findings in the same isolated review
+  pass.
+- Treating stale docs, stale test plans, stale dev plans, or stale adversarial
+  inventories as safe defaults after PRD/roadmap changes.
 
 **Key Files:**
 
@@ -385,6 +484,18 @@ Budget result: within budget
   recorded discard rationale.
 - Eval report fixtures include model, skill version, runner/helper version,
   allowed tools, permission mode, command evidence, and trace/debug evidence.
+- The eval-surface comparison recommends which candidates should be reference
+  patterns, optional adapters, rejected dependencies, or future spikes.
+- Self-improvement evaluator guidance states which signals are blocking,
+  advisory, or disallowed and includes at least one failure mode for
+  self-confirming loops, reward/eval tampering, or synthetic-fixture drift.
+- Adversarial review guidance requires fresh isolated context, findings-first
+  output, and explicit risk acceptances for unresolved issues.
+- Process sequencing guidance names the stale-artifact checks, force/acceptance
+  behavior, and required review packet evidence.
+- Test/eval inventory guidance includes banned vacuous patterns such as
+  placeholder assertions, broad OR fallbacks, conditional file-existence guards,
+  and self-fulfilling setup.
 
 ---
 
@@ -411,6 +522,18 @@ Budget result: within budget
 - Keep traces local by default and avoid remote telemetry unless explicitly
   configured.
 - Preserve multi-agent/delegation lineage where available.
+- Map the local JSONL trace vocabulary to OpenTelemetry/OpenInference-compatible
+  concepts where useful, and evaluate optional sinks such as LangSmith,
+  Langfuse, Phoenix, and Braintrust without making external telemetry the
+  canonical record.
+- Add trace fields for bounded self-improvement iterations:
+  generate->critique->refine->verify step, prompt/input provenance, changed
+  artifacts, evaluator result, stop reason, checkpoint, rollback path, and human
+  approval state.
+- Add trace fields for context continuity: active checkpoint ID or warm-up
+  baseline, context-health zone, burn-rate estimate where available,
+  compaction/auto-save event, restore source, and whether the source was named,
+  workflow-derived, or emergency fallback.
 
 **Out of Scope:**
 
@@ -433,6 +556,13 @@ Budget result: within budget
   or secrets.
 - Failure classification and replay/reproduction expectations are covered by
   focused fixtures or PR-packet validation.
+- Trace schema fixtures show the local canonical record and any optional
+  export/sink mapping separately, including telemetry, secret, and retention
+  boundaries.
+- Self-improvement trace fixtures prove each iteration can be replayed or
+  rejected without raw log dumps, secrets, or reliance on chat history alone.
+- Context-continuity fixtures prove compaction/resume evidence can be summarized
+  without committing raw personal transcripts or leaking secrets.
 
 ---
 
@@ -462,11 +592,22 @@ Budget result: within budget
   inspection and eval jobs.
 - Keep latest user instruction precedence explicit after interruptions and
   compactions.
+- Compare orchestration and workflow-runtime references: LangGraph, OpenAI
+  Agents SDK, AutoGen, Semantic Kernel, CrewAI, Haystack, Temporal, OpenHands,
+  and SWE-agent-style agent-computer-interface patterns. Focus the comparison
+  on checkpoint/resume, HITL, workspace isolation, role handoff, failure
+  recovery, and long-running job control.
+- Define bounded self-improvement orchestration controls: iteration budgets,
+  resource caps, modification scope, rollback checkpoints, promotion gates,
+  and safe-stop behavior for loops that generate, critique, refine, or test
+  future harness behavior.
 
 **Out of Scope:**
 
 - Building a new external task scheduler.
 - Replacing Codex/Claude native thread or worktree management.
+- Allowing a loop to expand its own permissions, edit its own approval/eval
+  gates, or merge/promote its own harness changes.
 
 **Key Files:**
 
@@ -484,6 +625,12 @@ Budget result: within budget
   or long-running flows.
 - Resume checks reject stale, partial, conflicting, or user-instruction-stale
   state before work continues.
+- The orchestration comparison recommends borrowed patterns and rejects or
+  defers runtime dependencies that would conflict with local-first installed
+  Claude/Codex plugin operation.
+- Self-improvement loops record budget, scope, checkpoint, rollback, promotion,
+  and safe-stop state before execution and reject stale or self-authorizing
+  state before resume.
 
 ---
 
@@ -510,11 +657,23 @@ Budget result: within budget
   model limitations.
 - Ensure self-healing remediation produces reviewable diffs or explicit no-op
   evidence instead of silent policy/helper rewrites.
+- Include external-candidate drift checks for stale reference docs, obsolete
+  version assumptions, abandoned optional-adapter decisions, and dependency
+  recommendations that no longer match roadmap evidence.
+- Include self-generated harness artifacts in drift checks: prompts, fixtures,
+  eval cases, traces, skill-library entries, generated docs, synthetic examples,
+  and any agent-authored feedback memories used by later workflows.
+- Include context checkpoint drift checks for stale, duplicate, oversized,
+  secret-bearing, orphaned, or no-longer-load-bearing checkpoints and summaries.
 
 **Out of Scope:**
 
 - Broad speculative docs cleanup.
 - Automated mutation of protected harness-control files without review.
+- Reusing self-generated fixtures, evals, prompts, or skill-library artifacts as
+  trusted evidence without external validation or explicit provenance.
+- Deleting context checkpoints, emergency saves, or shared summaries without a
+  dry-run preview and recovery evidence.
 
 **Key Files:**
 
@@ -533,6 +692,12 @@ Budget result: within budget
   no-op archive.
 - Protected harness-control file changes require reviewable diffs, trace
   evidence, and human-visible remediation artifacts.
+- External-candidate findings are classified as update reference, re-evaluate
+  dependency decision, archive rejected candidate, or no-op.
+- Self-generated artifact findings are classified as externally validated,
+  stale, duplicate, unsafe to reuse, cleanup candidate, or no-op archive.
+- Context checkpoint findings are classified as active, stale, duplicate,
+  oversized, secret-bearing, orphaned, cleanup candidate, or no-op archive.
 
 ---
 
