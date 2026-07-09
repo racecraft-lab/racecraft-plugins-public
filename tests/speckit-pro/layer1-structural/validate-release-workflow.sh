@@ -146,4 +146,26 @@ else
   _fail "release.yml failed YAML syntax validation"
 fi
 
+section "release-please-config.json — extra-files scope"
+
+RELEASE_CONFIG_FILE="$REPO_ROOT/release-please-config.json"
+
+set_test "release-please-config.json exists"
+assert_file_exists "$RELEASE_CONFIG_FILE"
+
+RELEASE_CONFIG_CONTENT=$(cat "$RELEASE_CONFIG_FILE")
+
+set_test "release-please extra-files never pre-bump proof-covered trees"
+# The refresh script's proof-snapshot heuristic assumes it is the ONLY
+# mutator of dist/** and the installed-cache fixtures. If release-please
+# pre-bumps those trees, the snapshot misreads the live proof rows as
+# deliberate test sentinels, leaves them stale, and the zero-bash gate
+# blocks the release sync (see the release.yml sync-step comment).
+if [[ "$RELEASE_CONFIG_CONTENT" != *'"path": "/dist/'* \
+  && "$RELEASE_CONFIG_CONTENT" != *'installed-cache'* ]]; then
+  _pass
+else
+  _fail "release-please extra-files must not target dist/** payloads or installed-cache fixtures; scripts/refresh-release-artifacts.py owns those trees"
+fi
+
 test_summary

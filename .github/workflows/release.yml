@@ -66,12 +66,17 @@ jobs:
           RELEASE_PRS: ${{ steps.release.outputs.prs }}
         run: |
           set -euo pipefail
-          # release-please bumps only the source plugin versions; refresh the
-          # generated payloads, marketplace registries, installed-cache proofs,
-          # and gate evidence so the release PR passes its own gates. All
-          # artifact logic lives in the Python refresh script; this step only
-          # checks out the PR branch, runs the script + docs reference, and
-          # commits the result when anything changed.
+          # release-please bumps only the source plugin versions and the
+          # marketplace registries; refresh the generated payloads,
+          # installed-cache proofs, and gate evidence so the release PR passes
+          # its own gates. release-please's extra-files must NEVER pre-bump
+          # dist/** or the installed-cache fixtures: the refresh script's
+          # proof-snapshot heuristic assumes it is the only mutator of those
+          # trees, and a pre-bumped tree makes it skip the live proof rows as
+          # test sentinels (the zero-bash gate then blocks on stale hashes).
+          # All artifact logic lives in the Python refresh script; this step
+          # only checks out the PR branch, runs the script + docs reference,
+          # and commits the result when anything changed.
           branch="$(python3 -c 'import json, os; prs = json.loads(os.environ["RELEASE_PRS"] or "[]"); pr = prs[0] if prs else {}; print(pr.get("headBranchName") or pr.get("headRefName") or "")')"
           if [ -z "$branch" ]; then
             echo "::error::release PR branch could not be resolved from release-please output"

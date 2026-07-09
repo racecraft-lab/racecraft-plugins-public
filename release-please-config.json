@@ -25,26 +25,6 @@
           "type": "json",
           "path": "/.agents/plugins/marketplace.json",
           "jsonpath": "$.plugins[0].version"
-        },
-        {
-          "type": "json",
-          "path": "/dist/claude/speckit-pro/.claude-plugin/plugin.json",
-          "jsonpath": "$.version"
-        },
-        {
-          "type": "json",
-          "path": "/dist/codex/speckit-pro/.codex-plugin/plugin.json",
-          "jsonpath": "$.version"
-        },
-        {
-          "type": "json",
-          "path": "/tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache/claude/speckit-pro/.claude-plugin/plugin.json",
-          "jsonpath": "$.version"
-        },
-        {
-          "type": "json",
-          "path": "/tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache/codex/speckit-pro/.codex-plugin/plugin.json",
-          "jsonpath": "$.version"
         }
       ]
     }
