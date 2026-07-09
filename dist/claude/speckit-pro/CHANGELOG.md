@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.18.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.18.0...speckit-pro-v2.18.1) (2026-07-09)
+
+
+### Bug Fixes
+
+* **release:** close release-PR artifact drift and resolve installed-cache repo roots ([#308](https://github.com/racecraft-lab/racecraft-plugins-public/issues/308)) ([1c14b25](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1c14b257fbf5b928234d7d6141e5ba9520c2740b))
+* **speckit-pro:** give implementation agents room to finish large tasks ([#305](https://github.com/racecraft-lab/racecraft-plugins-public/issues/305)) ([755797f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/755797fa94971daff32cf7b6918411783b5a015e))
+* **speckit-pro:** keep consensus analysts from stopping before their final answer ([#301](https://github.com/racecraft-lab/racecraft-plugins-public/issues/301)) ([c08662d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c08662d6957ebe2f565c8002e016c532756d0062))
+* **speckit-pro:** stop the autopilot guide from invoking an unported reviewability mode ([#304](https://github.com/racecraft-lab/racecraft-plugins-public/issues/304)) ([514b1ba](https://github.com/racecraft-lab/racecraft-plugins-public/commit/514b1bab7d02edcd1d727410f9c034be8556844d))
+
 ## [2.18.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.17.0...speckit-pro-v2.18.0) (2026-07-08)
 
 
