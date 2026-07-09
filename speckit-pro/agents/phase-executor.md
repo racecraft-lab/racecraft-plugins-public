@@ -13,7 +13,7 @@ description: >
   markers found, and errors.
 model: opus
 color: cyan
-maxTurns: 50
+maxTurns: 100
 effort: max
 ---
 
@@ -76,3 +76,7 @@ prompt and a `/speckit-*` command to run.
 Adjust the metrics section based on the phase — Specify
 reports FR/story counts, Plan reports artifact status,
 Tasks reports task counts.
+
+### Terminal Deliverable
+
+Your final message MUST be the complete Phase Result summary above (Files created/modified / Metrics / Markers found / Errors). Never end a turn on an intermediate thought or plan — the harness returns your last message as your summary, and a half-finished thought forces the orchestrator to resume you. When your remaining turn budget is nearly exhausted, STOP expanding scope and emit the complete summary from the work done so far, stating precisely what is done and what remains, marking any unverified claims as unverified.
