@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
 
 
@@ -128,6 +130,29 @@ class ReleasePrReconciliationTests(unittest.TestCase):
                 refresh.canonical_proof_hash_replacements(repo_root, FakeGuard),
                 {old_claude: "c" * 64, old_codex: "d" * 64},
             )
+
+    def test_missing_canonical_proof_fails_with_targeted_diagnostic(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            stderr = io.StringIO()
+            with redirect_stderr(stderr), self.assertRaises(SystemExit) as raised:
+                refresh.canonical_proof_hash_replacements(Path(tmp), FakeGuard)
+
+            self.assertEqual(raised.exception.code, 1)
+            self.assertIn("unable to read canonical installed-cache proof", stderr.getvalue())
+            self.assertIn(refresh.EVIDENCE_PROOF, stderr.getvalue())
+
+    def test_malformed_canonical_proof_fails_with_targeted_diagnostic(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            proof_path = Path(tmp) / refresh.EVIDENCE_PROOF
+            proof_path.parent.mkdir(parents=True)
+            proof_path.write_text("{not-json\n", encoding="utf-8")
+            stderr = io.StringIO()
+            with redirect_stderr(stderr), self.assertRaises(SystemExit) as raised:
+                refresh.canonical_proof_hash_replacements(Path(tmp), FakeGuard)
+
+            self.assertEqual(raised.exception.code, 1)
+            self.assertIn("is malformed JSON", stderr.getvalue())
+            self.assertIn(refresh.EVIDENCE_PROOF, stderr.getvalue())
 
     def test_legacy_repair_preserves_deliberate_hash_sentinels(self) -> None:
         old_claude = "a" * 64

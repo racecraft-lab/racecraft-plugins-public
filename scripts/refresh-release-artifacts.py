@@ -277,7 +277,19 @@ def canonical_proof_hash_replacements(repo_root: Path, guard: Any) -> dict[str, 
     """
 
     proof_file = repo_root / EVIDENCE_PROOF
-    document = json.loads(proof_file.read_text(encoding="utf-8"))
+    try:
+        proof_text = proof_file.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        fail(f"unable to read canonical installed-cache proof at {EVIDENCE_PROOF}: {exc}")
+        raise  # unreachable; fail() exits
+    try:
+        document = json.loads(proof_text)
+    except json.JSONDecodeError as exc:
+        fail(
+            f"canonical installed-cache proof at {EVIDENCE_PROOF} is malformed JSON: "
+            f"{exc.msg} (line {exc.lineno}, column {exc.colno})"
+        )
+        raise  # unreachable; fail() exits
     rows = document.get("proofs") if isinstance(document.get("proofs"), list) else []
     replacements: dict[str, str] = {}
     for row in rows:
