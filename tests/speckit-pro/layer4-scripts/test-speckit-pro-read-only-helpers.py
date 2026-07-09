@@ -353,6 +353,47 @@ class ReadOnlyHelperTests(unittest.TestCase):
 
             self.assertIsNone(find_repo_root(project_path))
 
+    def test_find_repo_root_falls_back_to_specify_project_root(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("repo-root discovery case uses check-prerequisites")
+        with tempfile.TemporaryDirectory() as project:
+            project_path = Path(project)
+            (project_path / ".specify").mkdir()
+            nested = project_path / "docs" / "ai" / "specs"
+            nested.mkdir(parents=True)
+            from speckit_pro_runner.helpers.read_only import find_repo_root
+
+            self.assertEqual(find_repo_root(nested), project_path.resolve())
+
+    def test_find_repo_root_prefers_vendored_runner_over_specify_fallback(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("repo-root discovery case uses check-prerequisites")
+        with tempfile.TemporaryDirectory() as project:
+            project_path = Path(project)
+            (project_path / ".specify").mkdir()
+            vendored = project_path / "sub"
+            (vendored / "speckit-pro" / "speckit_pro_runner").mkdir(parents=True)
+            start = vendored / "deeper"
+            start.mkdir()
+            from speckit_pro_runner.helpers.read_only import find_repo_root
+
+            self.assertEqual(find_repo_root(start), vendored.resolve())
+
+    def test_find_repo_root_rejects_symlinked_specify_anchor(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("repo-root discovery case uses check-prerequisites")
+        with tempfile.TemporaryDirectory() as project, tempfile.TemporaryDirectory() as outside:
+            project_path = Path(project)
+            outside_specify = Path(outside) / ".specify"
+            outside_specify.mkdir()
+            try:
+                (project_path / ".specify").symlink_to(outside_specify, target_is_directory=True)
+            except OSError:
+                self.skipTest("symlink creation is unavailable")
+            from speckit_pro_runner.helpers.read_only import find_repo_root
+
+            self.assertIsNone(find_repo_root(project_path))
+
     def test_find_specify_returns_none_when_home_is_unresolvable(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("specify discovery case uses check-prerequisites")

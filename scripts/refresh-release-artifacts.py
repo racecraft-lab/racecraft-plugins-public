@@ -25,6 +25,7 @@ import errno
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -325,10 +326,78 @@ def regenerate_evidence(repo_root: Path, runner_root: Path) -> list[str]:
     )
     if readiness.get("status") != "ok":
         fail(f"release-readiness gate did not pass (status={readiness.get('status')})")
+    readiness = normalize_live_host_evidence(readiness)
     readiness_text = (json.dumps(readiness, indent=2) + "\n").replace(str(Path.home()), "<home>")
     changed += write_text_if_changed(repo_root / RELEASE_READINESS_RESULT, readiness_text, repo_root)
 
     return changed
+
+
+LIVE_HOST_PYTHON = "<python3>"
+LIVE_HOST_SPECIFY = "<specify>"
+LIVE_HOST_VERSION = "<version>"
+LIVE_HOST_PLATFORM = "<host>"
+LIVE_HOST_ARCHITECTURE = "<arch>"
+
+
+def normalize_live_host_evidence(readiness: dict[str, Any]) -> dict[str, Any]:
+    """Canonicalize live host probe fields before committing the evidence.
+
+    The release-readiness payload embeds whichever machine ran the refresh
+    last (interpreter path and version, platform, architecture, specify-on-
+    PATH), so regenerating on a different OS rewrites the file and the
+    artifact-consistency gate reports phantom drift. The release workflow
+    re-runs the live gates directly; the committed evidence only needs the
+    gate verdicts, not the refreshing host's identity.
+    """
+    release_readiness = readiness.get("data", {}).get("release_readiness")
+    if not isinstance(release_readiness, dict):
+        return readiness
+    for record in release_readiness.get("runner_invocations") or []:
+        if not isinstance(record, dict):
+            continue
+        if isinstance(record.get("platform"), str):
+            record["platform"] = LIVE_HOST_PLATFORM
+        inputs = record.get("runner_request", {}).get("inputs", {})
+        if isinstance(inputs, dict) and isinstance(inputs.get("platform"), str):
+            inputs["platform"] = LIVE_HOST_PLATFORM
+        resolution = record.get("interpreter_resolution")
+        if isinstance(resolution, dict):
+            if isinstance(resolution.get("resolved_executable"), str):
+                resolution["resolved_executable"] = LIVE_HOST_PYTHON
+            if isinstance(resolution.get("invocation_argv_prefix"), list):
+                resolution["invocation_argv_prefix"] = [LIVE_HOST_PYTHON]
+            if isinstance(resolution.get("version"), str):
+                resolution["version"] = LIVE_HOST_VERSION
+            if isinstance(resolution.get("diagnostic"), str):
+                resolution["diagnostic"] = re.sub(
+                    r"Python \d+(?:\.\d+)*", f"Python {LIVE_HOST_VERSION}", resolution["diagnostic"]
+                )
+        invocation = record.get("invocation")
+        if isinstance(invocation, dict) and isinstance(invocation.get("argv"), list) and invocation["argv"]:
+            invocation["argv"][0] = LIVE_HOST_PYTHON
+        report = record.get("runner_response", {}).get("data", {}).get("report")
+        if isinstance(report, dict):
+            if isinstance(report.get("platform"), str):
+                report["platform"] = LIVE_HOST_PLATFORM
+            if isinstance(report.get("architecture"), str):
+                report["architecture"] = LIVE_HOST_ARCHITECTURE
+            if isinstance(report.get("python_version"), str):
+                report["python_version"] = LIVE_HOST_VERSION
+            prerequisites = report.get("prerequisites")
+            if isinstance(prerequisites, dict):
+                for probe_name, placeholder in (("python", LIVE_HOST_PYTHON), ("specify", LIVE_HOST_SPECIFY)):
+                    probe = prerequisites.get(probe_name)
+                    if isinstance(probe, dict):
+                        if "path" in probe:
+                            probe["path"] = placeholder
+                        if "version" in probe:
+                            probe["version"] = LIVE_HOST_VERSION
+                        if "diagnostic_code" in probe:
+                            probe["diagnostic_code"] = None
+                        if "status" in probe:
+                            probe["status"] = "<probe>"
+    return readiness
 
 
 def run_runner_request(
