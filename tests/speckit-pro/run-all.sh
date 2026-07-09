@@ -298,6 +298,7 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-eval-runner-skill-selection.sh"
     "$TESTS_DIR/layer4-scripts/test-refresh-local-plugin.sh"
     "$TESTS_DIR/layer4-scripts/test-sync-marketplace-versions.sh"
+    "$TESTS_DIR/layer4-scripts/test-release-pr-reconciliation.py"
     "$TESTS_DIR/layer4-scripts/test-speckit-pro-gates.py"
     "$TESTS_DIR/layer4-scripts/test-transcript-helpers.sh"
     "$TESTS_DIR/layer4-scripts/test-privacy-scan.sh"

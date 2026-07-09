@@ -34,25 +34,34 @@ jobs:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
 
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        if: steps.release.outputs.prs_created == 'true'
         with:
           fetch-depth: 0
           # Persist the same token for the release PR checkout. XPLAT-007 keeps
           # public payload-sync mutation deferred to XPLAT-008.
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
 
+      - name: Resolve new or existing release PRs
+        id: release_prs
+        env:
+          BASE_REF: main
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+          RELEASE_PRS: ${{ steps.release.outputs.prs }}
+        run: |
+          set -euo pipefail
+          python3 scripts/resolve_release_prs.py --github-output "$GITHUB_OUTPUT"
+
       - name: Set up Node
-        if: steps.release.outputs.prs_created == 'true'
+        if: steps.release_prs.outputs.found == 'true'
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: 22
 
       - name: Validate release PR readiness
-        if: steps.release.outputs.prs_created == 'true'
+        if: steps.release_prs.outputs.found == 'true'
         run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness.json
 
       - name: Validate XPLAT-008 release gates
-        if: steps.release.outputs.prs_created == 'true'
+        if: steps.release_prs.outputs.found == 'true'
         run: |
           set -euo pipefail
           PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/runner-invocation.json
@@ -61,9 +70,10 @@ jobs:
           PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/release-readiness.json
 
       - name: Sync generated artifacts onto the release PR
-        if: steps.release.outputs.prs_created == 'true'
+        if: steps.release_prs.outputs.found == 'true'
         env:
-          RELEASE_PRS: ${{ steps.release.outputs.prs }}
+          BASE_REF: main
+          RELEASE_PRS: ${{ steps.release_prs.outputs.prs }}
         run: |
           set -euo pipefail
           # release-please bumps only the source plugin versions and the
@@ -74,35 +84,17 @@ jobs:
           # proof-snapshot heuristic assumes it is the only mutator of those
           # trees, and a pre-bumped tree makes it skip the live proof rows as
           # test sentinels (the zero-bash gate then blocks on stale hashes).
-          # All artifact logic lives in the Python refresh script; this step
-          # only checks out the PR branch, runs the script + docs reference,
-          # and commits the result when anything changed.
-          branch="$(python3 -c 'import json, os; prs = json.loads(os.environ["RELEASE_PRS"] or "[]"); pr = prs[0] if prs else {}; print(pr.get("headBranchName") or pr.get("headRefName") or "")')"
-          if [ -z "$branch" ]; then
-            echo "::error::release PR branch could not be resolved from release-please output"
-            exit 1
-          fi
-          git fetch origin "$branch"
-          git checkout -B "$branch" FETCH_HEAD
-          corepack enable
-          corepack prepare pnpm@10.25.0 --activate
-          PYTHONDONTWRITEBYTECODE=1 python3 scripts/refresh-release-artifacts.py
-          pnpm --dir docs-site reference:generate
-          if [ -n "$(git status --porcelain)" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -A
-            git commit -m "chore(release): sync generated artifacts for release"
-            git push origin "HEAD:$branch"
-          else
-            echo "Release artifacts already consistent; nothing to sync."
-          fi
+          # All artifact logic lives in the Python refresh script. This step
+          # also merges current main into an unchanged existing release branch,
+          # so release-infrastructure fixes are never stranded behind
+          # release-please's `prs_created=false` output.
+          PYTHONDONTWRITEBYTECODE=1 python3 scripts/sync_release_pr.py
 
       - name: Dispatch PR Checks for release PRs
-        if: steps.release.outputs.prs_created == 'true'
+        if: steps.release_prs.outputs.found == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_PRS: ${{ steps.release.outputs.prs }}
+          RELEASE_PRS: ${{ steps.release_prs.outputs.prs }}
         run: |
           python3 - <<'PY'
           import json
@@ -112,7 +104,7 @@ jobs:
 
           release_prs = json.loads(os.environ.get("RELEASE_PRS") or "[]")
           if not release_prs:
-              print("prs_created=true but returned no PR metadata", file=sys.stderr)
+              print("release PR resolver returned no metadata", file=sys.stderr)
               sys.exit(1)
 
           for release_pr in release_prs:
