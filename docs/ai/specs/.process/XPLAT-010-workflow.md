@@ -369,9 +369,17 @@ validate-release-note check + release-note/skip label semantics.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Suite manifest / count parity | | |
+| 1 | Suite manifest / count parity | 5 (Q2/Q5 parent-accepted; Q1/Q3/Q4 consensus) | Manifest schema frozen (baseline-pointer as count of record); dual-run diff = 6 required items; count granularity = per assertion execution via shared TestResult subclass (5 pre-existing testsRun modules exempt); native check_layer5/7/8 retired at port-PR boundaries + manifest-derived roster + drift-guard test; baseline format frozen (per-outcome lines, verbatim runtime names, 5 normalization rules). FR-007/008/010/011, Key Entities, and Clarifications updated. |
 | 2 | Confinement guard | | |
 | 3 | Release notes | | |
+
+### Consensus Resolution Log
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|------|----------------------|------------|-------|---------|------------|---------------|
+| 1 | Clarify | S1-Q1: count granularity + `{passed}/{total}` headline formula | [codebase, spec] | 1 | both-agree | Per-assertion-execution units via shared TestResult subclass (addSubTest); FR-010 tightened; 5 pre-existing testsRun modules exempt (XPLAT-007 FR-003 contract), prospective-only | codebase-analyst, spec-context-analyst |
+| 2 | Clarify | S1-Q3: retire vs keep suite.py native check_layer5/7/8 | [codebase] | 1 | high-confidence | Retire at each port-PR boundary (natives vacuous/orphaned/subset); manifest-derived roster fail-closed + drift-guard test; FR-007/FR-008 refined | codebase-analyst |
+| 3 | Clarify | S1-Q4: baseline file format + name reconciliation | [codebase] | 1 | high-confidence | Frozen per-outcome format with verbatim runtime-captured names + 5 normalization rules; zero un-named sites in full census → no positional fallback; FR-011 + Key Entities refined | codebase-analyst |
 
 ---
 
