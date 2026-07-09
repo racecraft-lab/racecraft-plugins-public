@@ -95,8 +95,8 @@ a heavy phase orchestrator-direct.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
-| Clarify | `/speckit-clarify` | ⏳ Pending | 3 sessions seeded from design-concept open questions |
+| Specify | `/speckit-specify` | ✅ Complete | 25 FRs / 7 US / 20 scenarios / 8 SCs; 0 markers; G1 PASS (runner-verified) |
+| Clarify | `/speckit-clarify` | 🔄 In Progress | 3 sessions seeded from design-concept open questions; runs despite 0 markers (operator-ratified seeded sessions) |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | requirements, integration, reliability, security |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -303,17 +303,19 @@ concept Q10; the speckit-pro v2.18.0 release body is the exemplar).
 
 ### Specify Results
 
-<!-- Fill in after running the command -->
-
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | |
-| User Stories | |
-| Acceptance Criteria | |
+| Functional Requirements | 25 (FR-001–FR-025, 7 domains: confinement guard, suite orchestration, port fidelity/count parity, orphan disposition, preflight CI, release notes, estimator) |
+| User Stories | 7 (US1–US7 preserved 1:1; P1×2, P2×4, P3×1) |
+| Acceptance Criteria | 20 Given/When/Then scenarios; 8 success criteria (SC-001–SC-008); 8 edge cases; 8 key entities |
+| Markers | 0 `[NEEDS CLARIFICATION]`; privacy scan clean (0 absolute paths) |
+| Gate G1 | PASS — runner validate-gate: `spec.md exists with 0 markers`; spec.md 24,605 bytes |
+| Reviewability budget | transition exception (typed ~13/14-PR split, operator-ratified) |
 
 ### Files Generated
 
-- [ ] `specs/xplat-010-repository-bash-confinement/spec.md`
+- [x] `specs/xplat-010-repository-bash-confinement/spec.md`
+- [x] `specs/xplat-010-repository-bash-confinement/checklists/requirements.md` (spec quality checklist, 16/16 pass)
 
 ### SpecKit Traceability Markers
 
