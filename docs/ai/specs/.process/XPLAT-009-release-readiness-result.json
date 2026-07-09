@@ -3967,15 +3967,15 @@
             "diagnostic": "Fixture interpreter accepted.",
             "failure_code": null,
             "invocation_argv_prefix": [
-              "python3"
+              "<python3>"
             ],
             "minimum_version": "3.11",
-            "resolved_executable": "python3",
-            "version": "3.11.0"
+            "resolved_executable": "<python3>",
+            "version": "<version>"
           },
           "invocation": {
             "argv": [
-              "python3",
+              "<python3>",
               "-m",
               "speckit_pro_runner"
             ],
@@ -3985,7 +3985,7 @@
             "stdout_mode": "single_json_response"
           },
           "operation": "status",
-          "platform": "macos",
+          "platform": "<host>",
           "product": "claude",
           "request_id": "xplat-008-runner-invocation-fixture",
           "runner_request": {
@@ -4014,18 +4014,18 @@
             "attempted_candidates": [
               "python3"
             ],
-            "diagnostic": "Accepted Python 3.11.0 for installed cache dist/codex/speckit-pro.",
+            "diagnostic": "Accepted Python <version> for installed cache dist/codex/speckit-pro.",
             "failure_code": null,
             "invocation_argv_prefix": [
-              "<home>/.pyenv/versions/3.11.0/bin/python3"
+              "<python3>"
             ],
             "minimum_version": "3.11",
-            "resolved_executable": "<home>/.pyenv/versions/3.11.0/bin/python3",
-            "version": "3.11.0"
+            "resolved_executable": "<python3>",
+            "version": "<version>"
           },
           "invocation": {
             "argv": [
-              "<home>/.pyenv/versions/3.11.0/bin/python3",
+              "<python3>",
               "-m",
               "speckit_pro_runner"
             ],
@@ -4035,13 +4035,13 @@
             "stdout_mode": "single_json_response"
           },
           "operation": "status",
-          "platform": "macos",
+          "platform": "<host>",
           "product": "codex",
           "request_id": "xplat-008-release-readiness:runner-invocation",
           "runner_request": {
             "helper_id": "runner",
             "inputs": {
-              "platform": "macos",
+              "platform": "<host>",
               "product": "codex",
               "source": "xplat-008-installed-runtime",
               "surface_path": "speckit-pro/codex-skills/speckit-status/SKILL.md"
@@ -4054,7 +4054,7 @@
           "runner_response": {
             "data": {
               "report": {
-                "architecture": "arm64",
+                "architecture": "<arch>",
                 "contract_version": "1.0",
                 "metadata": {
                   "checksum": {
@@ -4092,26 +4092,26 @@
                     "value": "speckit_pro_runner"
                   }
                 },
-                "platform": "darwin",
+                "platform": "<host>",
                 "prerequisites": {
                   "python": {
                     "diagnostic_code": null,
                     "name": "python",
-                    "path": "<home>/.pyenv/versions/3.11.0/bin/python3",
+                    "path": "<python3>",
                     "required": true,
-                    "status": "available",
-                    "version": "3.11.0"
+                    "status": "<probe>",
+                    "version": "<version>"
                   },
                   "specify": {
                     "diagnostic_code": null,
                     "name": "specify",
-                    "path": "<home>/.local/bin/specify",
+                    "path": "<specify>",
                     "required": true,
-                    "status": "available",
-                    "version": null
+                    "status": "<probe>",
+                    "version": "<version>"
                   }
                 },
-                "python_version": "3.11.0",
+                "python_version": "<version>",
                 "runner_contract_id": "speckit-pro-runner",
                 "runner_name": "speckit_pro_runner",
                 "runner_version": "0.1.0",
