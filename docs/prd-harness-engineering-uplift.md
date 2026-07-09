@@ -53,6 +53,8 @@ framework or broad vendor product dependency.
   promotion.
 - Make long-horizon workflows resumable from explicit state rather than chat
   history or local memory alone.
+- Preserve warmed-up task understanding as explicit, task-scoped context
+  checkpoints with summaries, provenance, freshness, and restoration rules.
 - Add a bounded harness garbage-collection loop for stale prompts, docs, skills,
   helper registries, traces, generated payloads, and obsolete examples.
 
@@ -126,6 +128,17 @@ framework or broad vendor product dependency.
   handoff artifact.
 - **AC-2.6**: The contract preserves current project guidance: ground on real
   repo state first and avoid speculative cleanup.
+- **AC-2.7**: Long-running workflows define task-scoped context checkpoints with
+  name, summary, message/source count where available, timestamp, task/spec
+  association, storage class, provenance, and restore instructions.
+- **AC-2.8**: The contract distinguishes intentional named checkpoints from
+  emergency auto-saves. Auto-saves may protect against compaction or
+  interruption, but only named checkpoints or workflow artifacts can be treated
+  as canonical resume inputs.
+- **AC-2.9**: Context health monitoring defines configurable healthy,
+  degrading, and critical zones with token/budget baseline, burn-rate estimate,
+  save recommendation, and fresh-session recommendation before compaction or
+  recall degradation can silently affect decisions.
 
 ### 3.3 Helper, Tool, and Capability Contract *(-> HRNS-003)*
 
@@ -178,6 +191,10 @@ framework or broad vendor product dependency.
   from OpenAI Agents SDK, Guardrails AI, Semantic Kernel, promptfoo red-team
   flows, and coding-agent sandboxes without outsourcing SpecKit Pro
   authorization decisions to an external service.
+- **AC-4.9**: Shared or promoted context artifacts run through secret scanning,
+  size limits, provenance checks, and human confirmation before commit or team
+  distribution. Personal context artifacts remain local by default and must not
+  appear in PR diffs accidentally.
 
 ### 3.5 Feedback Sensors and Eval Readiness Ladder *(-> HRNS-005)*
 
@@ -210,6 +227,10 @@ framework or broad vendor product dependency.
   calibrated rubrics and LLM judges are advisory unless grounded by
   known-good/known-bad cases; intrinsic self-assessment is the weakest signal and
   cannot approve harness-control changes by itself.
+- **AC-5.10**: Adversarial review for PRDs, test plans, dev plans, generated
+  fixtures, or self-improvement outputs runs from clean isolated context rather
+  than the authoring session. The reviewer produces findings and risk
+  acceptances; it does not silently fix its own findings.
 
 ### 3.6 Trace, Debug, and Review Evidence Packets *(-> HRNS-006)*
 
@@ -237,6 +258,10 @@ framework or broad vendor product dependency.
   generate->critique->refine->verify iteration with prompt/input provenance,
   changed artifacts, evaluator result, stop reason, checkpoint, rollback path,
   and human approval state where applicable.
+- **AC-6.9**: Trace/debug packets record the active context checkpoint or
+  warm-up baseline, context-health zone, compaction/auto-save event, and whether
+  resume evidence came from a named checkpoint, workflow artifact, or emergency
+  fallback.
 
 ### 3.7 Long-horizon Orchestration and Resumption Controls *(-> HRNS-007)*
 
@@ -289,6 +314,10 @@ framework or broad vendor product dependency.
   prompts, fixtures, eval cases, traces, skill-library entries, generated docs,
   and synthetic examples, then classify whether each is externally validated,
   stale, duplicate, unsafe to reuse, or eligible for cleanup.
+- **AC-8.9**: Drift and garbage-collection routines identify stale, duplicate,
+  oversized, secret-bearing, orphaned, or no-longer-load-bearing context
+  checkpoints. Cleanup requires a dry-run preview and preserves reviewable
+  recovery evidence.
 
 ## 4. Migration Path
 
@@ -296,12 +325,13 @@ framework or broad vendor product dependency.
   taxonomy, and external-candidate evaluation matrix that downstream specs use
   for shared boundaries.
 - **Phase 2 (HRNS-002) - Context and state**: Update workflow entrypoints so long
-  runs externalize durable state and resume instructions.
+  runs externalize durable state, context checkpoints, context-health signals,
+  and resume instructions.
 - **Phase 3 (HRNS-003) - Helper/tool contract**: Normalize helper registry,
   capability discovery, dry-run, and generated documentation behavior.
 - **Phase 4 (HRNS-004) - Permission and sandbox controls**: Add risk metadata,
-  pre-action authorization, protected harness-control surfaces, and safe-stop
-  semantics.
+  pre-action authorization, protected harness-control surfaces, shared-context
+  promotion gates, and safe-stop semantics.
 - **Phase 5 (HRNS-005) - Eval ladder**: Connect existing test layers and future
   evals to deterministic, fixture-first evidence, including evaluator hierarchy
   rules for bounded self-improvement loops.
@@ -331,6 +361,10 @@ framework or broad vendor product dependency.
   self-correction may be automated only inside explicit scopes with external
   verification, human-visible traces, rollback, and non-bypassable approval
   gates.
+- Keep personal context captures, emergency auto-saves, raw transcripts, and
+  machine-local state out of git by default. Any shared context checkpoint must
+  be intentionally promoted, secret-scanned, size-bounded, provenance-labeled,
+  and reviewable.
 - Preserve capability-first, vendor-neutral wording where a concept can be
   expressed without binding to one tool vendor.
 - Keep advisory code-intelligence hooks fail-open unless a spec proves they are
@@ -368,6 +402,11 @@ framework or broad vendor product dependency.
   fixture generation, require human approval before promotion, and defer helper,
   permission, eval-gate, model, training, or policy self-modification until a
   dedicated safety spec proves stronger controls.
+- **OQ-8 (HRNS-002/HRNS-004):** Should SpecKit Pro support shared warmed-up
+  context checkpoints? Recommendation: start with summaries, manifests, and
+  restore instructions rather than committed raw transcripts; require explicit
+  promotion, secret scanning, size caps, provenance, and human review before any
+  shared checkpoint becomes team-consumable.
 
 ## 7. SPEC Catalog Crosswalk
 

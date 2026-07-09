@@ -85,6 +85,9 @@ The harness hardening lane centers on these requirements:
   feedback, and enforceable constraints around the model.
 - Use progressive disclosure: short entrypoint maps, deeper source-of-truth
   docs, and just-in-time context rather than oversized prompt manuals.
+- Preserve warmed-up context deliberately: task-scoped checkpoints, summaries,
+  context-health signals, and restoration rules prevent useful understanding
+  from living only in chat.
 - Define tool/helper interfaces as agent UX: names, schemas, mutability,
   remediation messages, and result size affect reliability.
 - Put humans on meaningful loop points: scope, plan, high-risk tool use,
@@ -240,11 +243,21 @@ Budget result: within budget
   payload, and archive pointer state.
 - Document compaction/resume expectations: what must be in files, what may
   remain in chat, and what requires user confirmation.
+- Define task-scoped context checkpoint metadata: name, summary, message/source
+  count where available, timestamp, task/spec association, storage class,
+  provenance, restore instructions, and whether the checkpoint is personal,
+  shared, or emergency fallback.
+- Define context-health monitoring signals for long runs: healthy/degrading/
+  critical zones, baseline token count, burn-rate estimate, save recommendation,
+  and fresh-session recommendation before compaction or recall degradation
+  silently affects decisions.
 
 **Out of Scope:**
 
 - Implementing trace packet schema; handled by HRNS-006.
 - Parallel worktree orchestration; handled by HRNS-007.
+- Committing raw personal transcripts or emergency auto-saves as shared team
+  context artifacts.
 
 **Key Files:**
 
@@ -258,6 +271,8 @@ Budget result: within budget
   audited workflow.
 - Durable state artifacts and freshness checks are specified for long-running
   PRD, scaffold, status, autopilot, resolve-pr, and archive flows.
+- Context checkpoint metadata, storage class, health-zone thresholds, and
+  restore semantics are specified for long-running workflows.
 - Verification includes a focused docs/reference check or fixture proving stale
   roadmap, workflow, feature, generated payload, or archive pointers are caught.
 
@@ -350,11 +365,16 @@ Budget result: within budget
   AI, Semantic Kernel, promptfoo red-team flows, OpenHands/SWE-agent-style
   coding-agent sandboxes, and existing Codex/Claude permission semantics. Keep
   SpecKit Pro authorization local and reviewable.
+- Define shared-context promotion gates: secret scan, size cap, provenance
+  check, storage-class check, human confirmation, and clean git-footprint
+  behavior before any context checkpoint is committed or distributed to a team.
 
 **Out of Scope:**
 
 - Claiming native platform sandbox guarantees before XPLAT UAT proves them.
 - Building enterprise policy engines or credential brokers.
+- Treating personal context captures, emergency auto-saves, or raw transcripts
+  as safe to commit by default.
 
 **Key Files:**
 
@@ -378,6 +398,9 @@ Budget result: within budget
 - A guardrail/policy comparison records which patterns are borrowed, rejected,
   or deferred and confirms that external services do not own authorization
   decisions for installed-plugin operations.
+- Shared-context promotion guidance includes explicit block/warn behavior for
+  secrets, oversize artifacts, missing provenance, and accidental personal-state
+  diffs.
 
 ---
 
@@ -404,6 +427,9 @@ Budget result: within budget
 - Define HITL eval requirements for Grill Me, scaffold, and autopilot flows.
 - Ensure eval reports name model, skill version, runner/helper version, allowed
   tools, permission mode, and command/trace evidence.
+- Define clean-context adversarial review expectations for PRDs, test plans, dev
+  plans, generated fixtures, and self-improvement outputs so review does not
+  inherit the authoring session's blind spots.
 - Evaluate promptfoo, Braintrust, Phoenix, LangSmith, Langfuse, Inspect AI,
   DSPy, and repo-local deterministic fixtures as possible eval surfaces.
   Classify each candidate by local/offline fit, SaaS or external telemetry
@@ -420,6 +446,8 @@ Budget result: within budget
 - Blocking release gates on uncalibrated rubric review.
 - Treating self-assessment, self-scoring, or self-generated tests as sufficient
   evidence for promotion.
+- Letting an adversarial reviewer auto-fix findings in the same isolated review
+  pass.
 
 **Key Files:**
 
@@ -441,6 +469,8 @@ Budget result: within budget
 - Self-improvement evaluator guidance states which signals are blocking,
   advisory, or disallowed and includes at least one failure mode for
   self-confirming loops, reward/eval tampering, or synthetic-fixture drift.
+- Adversarial review guidance requires fresh isolated context, findings-first
+  output, and explicit risk acceptances for unresolved issues.
 
 ---
 
@@ -475,6 +505,10 @@ Budget result: within budget
   generate->critique->refine->verify step, prompt/input provenance, changed
   artifacts, evaluator result, stop reason, checkpoint, rollback path, and human
   approval state.
+- Add trace fields for context continuity: active checkpoint ID or warm-up
+  baseline, context-health zone, burn-rate estimate where available,
+  compaction/auto-save event, restore source, and whether the source was named,
+  workflow-derived, or emergency fallback.
 
 **Out of Scope:**
 
@@ -502,6 +536,8 @@ Budget result: within budget
   boundaries.
 - Self-improvement trace fixtures prove each iteration can be replayed or
   rejected without raw log dumps, secrets, or reliance on chat history alone.
+- Context-continuity fixtures prove compaction/resume evidence can be summarized
+  without committing raw personal transcripts or leaking secrets.
 
 ---
 
@@ -602,6 +638,8 @@ Budget result: within budget
 - Include self-generated harness artifacts in drift checks: prompts, fixtures,
   eval cases, traces, skill-library entries, generated docs, synthetic examples,
   and any agent-authored feedback memories used by later workflows.
+- Include context checkpoint drift checks for stale, duplicate, oversized,
+  secret-bearing, orphaned, or no-longer-load-bearing checkpoints and summaries.
 
 **Out of Scope:**
 
@@ -609,6 +647,8 @@ Budget result: within budget
 - Automated mutation of protected harness-control files without review.
 - Reusing self-generated fixtures, evals, prompts, or skill-library artifacts as
   trusted evidence without external validation or explicit provenance.
+- Deleting context checkpoints, emergency saves, or shared summaries without a
+  dry-run preview and recovery evidence.
 
 **Key Files:**
 
@@ -631,6 +671,8 @@ Budget result: within budget
   dependency decision, archive rejected candidate, or no-op.
 - Self-generated artifact findings are classified as externally validated,
   stale, duplicate, unsafe to reuse, cleanup candidate, or no-op archive.
+- Context checkpoint findings are classified as active, stale, duplicate,
+  oversized, secret-bearing, orphaned, cleanup candidate, or no-op archive.
 
 ---
 
