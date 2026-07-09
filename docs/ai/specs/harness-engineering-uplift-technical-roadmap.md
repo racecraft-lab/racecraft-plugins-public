@@ -98,7 +98,7 @@ The harness hardening lane centers on these requirements:
 - Layer verification: deterministic checks first, fixture parity next,
   trace/transcript review where useful, and calibrated rubric review only where
   deterministic checks cannot cover the risk.
-- Bound self-improvement loops: agents may generate, critique, refine, and test
+- Bounded self-improvement loops: agents may generate, critique, refine, and test
   their own proposed harness changes only within explicit scopes, budgets,
   traces, rollback checkpoints, and human-visible promotion gates.
 - Make security policy structural: least privilege, pre-action authorization,
