@@ -159,6 +159,8 @@ are logged in this section as they surface.
 
 **Dogfood defect log:**
 - (pre-run, already in scope) `estimate-spec-size` runner operation missing — PR 13 / US7.
+- (Clarify phase, recurring ×2) Read-only consensus analysts (`codebase-analyst`, Session 1 Q4 and Session 2 Q1) end their turn on an intermediate "let me check X" thought instead of the structured deliverable — the agent loop terminates on a no-tool-call text message and the half-finished thought becomes the returned result. Orchestrator remediation: SendMessage resume nudge (works). Root cause: the analyst agent definitions specify an output format but never state that the final message MUST be the complete deliverable and that ending a turn on an intermediate thought is forbidden. Fix (per operator directive): add a terminal-deliverable rule to the bundled read-only agent definitions in plugin source + payload regen; commit on this branch at a quiescent window.
+- (Clarify phase, discovered by S1-Q3 consensus) The shipped suite gate's native `check_layer5` is vacuously true (asserts on a `tools:` frontmatter field none of the checked agents carry), `check_layer7` validates an orphaned fixture directory, `check_layer8` checks 3 of 6 required files. Remediation is already encoded in this spec: FR-008 retires each native check at its layer's port-PR boundary (PRs 5/7/8) with the manifest-derived roster + drift-guard replacing them.
 
 **Archive Sweep record:** archive extension v1.1.0 installed; eligible =
 `specs/xplat-009-plugin-source-and-payload-bash-eradication` (PR #297 merged
@@ -370,7 +372,7 @@ validate-release-note check + release-note/skip label semantics.
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
 | 1 | Suite manifest / count parity | 5 (Q2/Q5 parent-accepted; Q1/Q3/Q4 consensus) | Manifest schema frozen (baseline-pointer as count of record); dual-run diff = 6 required items; count granularity = per assertion execution via shared TestResult subclass (5 pre-existing testsRun modules exempt); native check_layer5/7/8 retired at port-PR boundaries + manifest-derived roster + drift-guard test; baseline format frozen (per-outcome lines, verbatim runtime names, 5 normalization rules). FR-007/008/010/011, Key Entities, and Clarifications updated. |
-| 2 | Confinement guard | | |
+| 2 | Confinement guard | 5 (Q3/Q4/Q5 parent-accepted; Q1/Q2 consensus) | Enumeration = `git ls-files -z` argv, fail-closed without git; allowlist contract pins all 10 vendored paths under a `vendored_specify_helper` scope; composition = `repo_bash_confinement` release-readiness check + default-suite live-scan case riding existing required checks (zero branch-protection churn); invocation-text detection scoped to executable surfaces (`.py` AST + structural `hooks.json`/`package.json` JSON-value scans, no prose scanning); vocabulary bash-scoped (`.sh`/`.bash` + bash/POSIX-sh shebang; `.ps1`/`.bat`/`.cmd`/`.zsh` out of scope — the 4 vendored `.ps1` need no allowlist entry). FR-001/002/003/004/005, SC-001, Edge Cases, Key Entities, Assumptions updated. |
 | 3 | Release notes | | |
 
 ### Consensus Resolution Log
@@ -380,6 +382,8 @@ validate-release-note check + release-note/skip label semantics.
 | 1 | Clarify | S1-Q1: count granularity + `{passed}/{total}` headline formula | [codebase, spec] | 1 | both-agree | Per-assertion-execution units via shared TestResult subclass (addSubTest); FR-010 tightened; 5 pre-existing testsRun modules exempt (XPLAT-007 FR-003 contract), prospective-only | codebase-analyst, spec-context-analyst |
 | 2 | Clarify | S1-Q3: retire vs keep suite.py native check_layer5/7/8 | [codebase] | 1 | high-confidence | Retire at each port-PR boundary (natives vacuous/orphaned/subset); manifest-derived roster fail-closed + drift-guard test; FR-007/FR-008 refined | codebase-analyst |
 | 3 | Clarify | S1-Q4: baseline file format + name reconciliation | [codebase] | 1 | high-confidence | Frozen per-outcome format with verbatim runtime-captured names + 5 normalization rules; zero un-named sites in full census → no positional fallback; FR-011 + Key Entities refined | codebase-analyst |
+| 4 | Clarify | S2-Q1: invocation-text scan surfaces + self-reference avoidance | [codebase, domain] | 1 | both-agree | Executable-surface scoping: suffix+shebang repo-wide, `.py` AST + structural `hooks.json` command / `package.json` scripts JSON-value scans (reusing prohibited-command primitives); no prose scanning; FR-002 + Edge Cases refined | codebase-analyst, domain-researcher |
+| 5 | Clarify | S2-Q2: bash-scoped vs inherited broad detection vocabulary | [spec] | 1 | high-confidence | Bash-scoped only (`.sh`/`.bash` + bash/POSIX-sh shebang incl. `#!/bin/sh`); 4 vendored `.ps1` never in detection set, allowlist stays exactly 10; FR-001/FR-003/SC-001 refined; FR-002 bash/jq-pair note flagged for Plan | spec-context-analyst |
 
 ---
 
