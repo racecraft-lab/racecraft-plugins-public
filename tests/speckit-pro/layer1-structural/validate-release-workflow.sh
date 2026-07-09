@@ -6,6 +6,8 @@ source "$(dirname "$0")/../lib/assertions.sh"
 
 REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 WORKFLOW_FILE="$REPO_ROOT/.github/workflows/release.yml"
+RESOLVER_FILE="$REPO_ROOT/scripts/resolve_release_prs.py"
+SYNC_HELPER_FILE="$REPO_ROOT/scripts/sync_release_pr.py"
 
 section "release.yml — Payload and Marketplace Sync"
 
@@ -38,14 +40,35 @@ else
   _fail "expected release workflow to dispatch PR Checks for release-please PR branches"
 fi
 
-set_test "release workflow uses release-please PR output for payload sync"
+set_test "release workflow resolves new or unchanged release PRs for payload sync"
 if grep -Fq 'RELEASE_PRS: ${{ steps.release.outputs.prs }}' "$WORKFLOW_FILE" \
-  && grep -Fq 'json.loads(os.environ.get("RELEASE_PRS") or "[]")' "$WORKFLOW_FILE" \
+  && grep -Fq 'scripts/resolve_release_prs.py' "$WORKFLOW_FILE" \
+  && grep -Fq 'RELEASE_PRS: ${{ steps.release_prs.outputs.prs }}' "$WORKFLOW_FILE" \
+  && grep -Fq "steps.release_prs.outputs.found == 'true'" "$WORKFLOW_FILE" \
   && grep -Fq 'release_pr.get("headBranchName") or release_pr.get("headRefName") or ""' "$WORKFLOW_FILE" \
-  && grep -Fq 'prs_created=true but returned no PR metadata' "$WORKFLOW_FILE"; then
+  && grep -Fq 'release PR resolver returned no metadata' "$WORKFLOW_FILE"; then
   _pass
 else
-  _fail "expected release workflow to use release-please prs output instead of querying just-created PR labels"
+  _fail "expected release workflow to normalize release-please output and reconcile unchanged open release PRs"
+fi
+
+set_test "release PR resolver discovers unchanged open Release Please branches"
+if [ -f "$RESOLVER_FILE" ] \
+  && grep -Fq 'gh",' "$RESOLVER_FILE" \
+  && grep -Fq '"pr",' "$RESOLVER_FILE" \
+  && grep -Fq '"list",' "$RESOLVER_FILE" \
+  && grep -Fq 'release-please--branches--' "$RESOLVER_FILE" \
+  && grep -Fq 'headRefName' "$RESOLVER_FILE"; then
+  _pass
+else
+  _fail "expected resolver fallback to list and filter existing open Release Please PRs"
+fi
+
+set_test "release reconciliation is not gated only on prs_created"
+if grep -Fq "steps.release.outputs.prs_created == 'true'" "$WORKFLOW_FILE"; then
+  _fail "unchanged open release PRs must reconcile even when release-please reports prs_created=false"
+else
+  _pass
 fi
 
 set_test "release workflow does not depend on pending release labels for payload sync"
@@ -57,8 +80,8 @@ fi
 
 set_test "release workflow validates release PR readiness before dispatch"
 if [[ "$CONTENT" == *"Validate release PR readiness"* \
-  && "$CONTENT" == *"steps.release.outputs.prs_created == 'true'"* \
-  && "$CONTENT" == *'RELEASE_PRS: ${{ steps.release.outputs.prs }}'* \
+  && "$CONTENT" == *"steps.release_prs.outputs.found == 'true'"* \
+  && "$CONTENT" == *'RELEASE_PRS: ${{ steps.release_prs.outputs.prs }}'* \
   && "$CONTENT" == *"release-readiness.json"* \
   && "$CONTENT" == *"Dispatch PR Checks for release PRs"* ]]; then
   _pass
@@ -70,9 +93,11 @@ set_test "release workflow verifies generated test payload evidence"
 assert_contains "$CONTENT" "test-payload-evidence.json"
 
 set_test "release workflow syncs generated artifacts on the release PR"
-if [[ "$CONTENT" == *"scripts/refresh-release-artifacts.py"* \
+if [[ "$CONTENT" == *"scripts/sync_release_pr.py"* \
   && "$CONTENT" == *"Sync generated artifacts onto the release PR"* \
-  && "$CONTENT" != *"bash scripts/sync-marketplace-versions.sh"* ]]; then
+  && "$CONTENT" != *"bash scripts/sync-marketplace-versions.sh"* \
+  && -f "$SYNC_HELPER_FILE" ]] \
+  && grep -Fq 'scripts/refresh-release-artifacts.py' "$SYNC_HELPER_FILE"; then
   _pass
 else
   _fail "expected release workflow to refresh generated artifacts via the Python refresh script on the release PR"
@@ -80,15 +105,35 @@ fi
 
 set_test "release workflow sync checks out the release PR branch with the release token"
 if grep -Fq 'token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}' "$WORKFLOW_FILE" \
-  && grep -Fq 'git checkout -B "$branch" FETCH_HEAD' "$WORKFLOW_FILE"; then
+  && grep -Fq 'scripts/sync_release_pr.py' "$WORKFLOW_FILE" \
+  && grep -Fq '["git", "checkout", "-B", branch, remote_branch_sha]' "$SYNC_HELPER_FILE"; then
   _pass
 else
   _fail "expected release workflow to check out the release PR branch using the release token"
 fi
 
+set_test "release workflow merges current main before regenerating an existing release PR"
+merge_line=$(grep -nF '["git", "merge", "--no-edit", base_sha]' "$SYNC_HELPER_FILE" | head -1 | cut -d: -f1 || true)
+refresh_line=$(grep -nF '[sys.executable, "scripts/refresh-release-artifacts.py"]' "$SYNC_HELPER_FILE" | head -1 | cut -d: -f1 || true)
+if grep -Fq 'BASE_REF: main' "$WORKFLOW_FILE" \
+  && [ -n "$merge_line" ] && [ -n "$refresh_line" ] && [ "$merge_line" -lt "$refresh_line" ]; then
+  _pass
+else
+  _fail "expected release branch to merge current main before artifact refresh"
+fi
+
+set_test "release workflow pushes main-only reconciliation changes"
+if grep -Fq '["git", "rev-parse", "FETCH_HEAD"]' "$SYNC_HELPER_FILE" \
+  && grep -Fq 'if head_sha == remote_branch_sha:' "$SYNC_HELPER_FILE" \
+  && grep -Fq '["git", "push", "origin", f"HEAD:{branch}"]' "$SYNC_HELPER_FILE"; then
+  _pass
+else
+  _fail "expected workflow to push when merging main changed the release branch even if generated files were already current"
+fi
+
 set_test "release workflow guards the artifact sync commit with a dirty check"
-if grep -Fq 'git status --porcelain' "$WORKFLOW_FILE" \
-  && grep -Fq 'chore(release): sync generated artifacts for release' "$WORKFLOW_FILE"; then
+if grep -Fq '["git", "status", "--porcelain"]' "$SYNC_HELPER_FILE" \
+  && grep -Fq 'chore(release): sync generated artifacts for release' "$SYNC_HELPER_FILE"; then
   _pass
 else
   _fail "expected release workflow to commit the artifact sync only when the tree is dirty"

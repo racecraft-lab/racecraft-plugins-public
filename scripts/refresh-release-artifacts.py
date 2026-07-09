@@ -5,10 +5,11 @@ release-please bumps the source plugin versions and the marketplace registry
 version fields but does not rebuild the generated payloads, hash-pinned
 installed-cache proofs, or gate evidence. This refreshes all of them from the
 current source tree so a release PR is self-consistent before merge. The
-proof-snapshot heuristic below assumes this script is the ONLY mutator of
-dist/** and the installed-cache fixtures — release-please extra-files must
-never pre-bump those trees, or the snapshot misreads the live proof rows as
-deliberate test sentinels and leaves them stale:
+proof-snapshot heuristic below assumes this script is the ONLY normal mutator
+of dist/** and the installed-cache fixtures — release-please extra-files must
+never pre-bump those trees. A canonical-proof fallback also lets the refresh
+repair legacy release branches that were partially bumped before that invariant
+was enforced, without healing deliberate negative-test sentinels:
 
 1. Recompute the runner trust metadata (manifest sha256 entries + ``.sha256``).
 2. Rebuild the Claude and Codex install payloads.
@@ -92,8 +93,18 @@ def main() -> int:
     # 4. Content-sync the installed-cache fixtures to the rebuilt payloads.
     changed += sync_installed_cache_fixtures(repo_root)
 
-    # 5. Refresh installed-cache proof tree hashes.
-    changed += refresh_proof_tree_hashes(repo_root, proof_files, pre_rebuild, active_path_guard)
+    # 5. Refresh installed-cache proof tree hashes. The canonical evidence
+    # mapping recovers legacy release branches whose payload was partially
+    # bumped before the pre-rebuild snapshot, while the row-level snapshot
+    # continues to preserve deliberate negative-test sentinels.
+    canonical_replacements = canonical_proof_hash_replacements(repo_root, active_path_guard)
+    changed += refresh_proof_tree_hashes(
+        repo_root,
+        proof_files,
+        pre_rebuild,
+        active_path_guard,
+        canonical_replacements=canonical_replacements,
+    )
 
     # 6. Regenerate gate evidence in gate order.
     changed += regenerate_evidence(repo_root, runner_root)
@@ -255,18 +266,60 @@ def snapshot_proof_recomputes(repo_root: Path, proof_files: list[Path], guard: A
     return snapshot
 
 
+def canonical_proof_hash_replacements(repo_root: Path, guard: Any) -> dict[str, str]:
+    """Map trusted recorded hashes to rebuilt hashes for legacy partial bumps.
+
+    The committed evidence proof is the canonical positive case. Its recorded
+    hashes are trusted even when a legacy release commit already changed a
+    payload manifest before this refresh started. Replacing those exact hashes
+    across the fixture family preserves intentional cross-product mismatches and
+    all-zero stale sentinels while updating every positive hash consistently.
+    """
+
+    proof_file = repo_root / EVIDENCE_PROOF
+    try:
+        proof_text = proof_file.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        fail(f"unable to read canonical installed-cache proof at {EVIDENCE_PROOF}: {exc}")
+        raise  # unreachable; fail() exits
+    try:
+        document = json.loads(proof_text)
+    except json.JSONDecodeError as exc:
+        fail(
+            f"canonical installed-cache proof at {EVIDENCE_PROOF} is malformed JSON: "
+            f"{exc.msg} (line {exc.lineno}, column {exc.colno})"
+        )
+        raise  # unreachable; fail() exits
+    rows = document.get("proofs") if isinstance(document.get("proofs"), list) else []
+    replacements: dict[str, str] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        current = row.get("source_payload_tree_hash")
+        rebuilt = recompute_tree_hash(repo_root, guard, row)
+        if not isinstance(current, str) or rebuilt is None or current == rebuilt:
+            continue
+        existing = replacements.get(current)
+        if existing is not None and existing != rebuilt:
+            fail("canonical installed-cache proof maps one recorded hash to multiple rebuilt hashes")
+        replacements[current] = rebuilt
+    return replacements
+
+
 def refresh_proof_tree_hashes(
     repo_root: Path,
     proof_files: list[Path],
     pre_rebuild: dict[Path, list[str | None]],
     guard: Any,
+    *,
+    canonical_replacements: dict[str, str] | None = None,
 ) -> list[str]:
     changed: list[str] = []
     for proof_file in proof_files:
         text = proof_file.read_text(encoding="utf-8")
         document = json.loads(text)
         rows = document.get("proofs") if isinstance(document.get("proofs"), list) else []
-        replacements: dict[str, str] = {}
+        replacements = dict(canonical_replacements or {})
         for index, row in enumerate(rows):
             if not isinstance(row, dict):
                 continue
@@ -278,6 +331,9 @@ def refresh_proof_tree_hashes(
                 continue
             new = recompute_tree_hash(repo_root, guard, row)
             if new is not None and new != current:
+                existing = replacements.get(current)
+                if existing is not None and existing != new:
+                    fail("installed-cache proof hash replacement is ambiguous")
                 replacements[current] = new
         for current, new in replacements.items():
             text = text.replace(
