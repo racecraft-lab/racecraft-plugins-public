@@ -1091,6 +1091,11 @@ current test harness and process helper scripts are broad.
   rewrites the GitHub Release body with plain-English Highlights while keeping
   the conventional-commit list as an appendix and `CHANGELOG.md` as the
   machine ledger (operator scope addition, 2026-07-08).
+- Restore the `estimate-spec-size` runner operation that the grill-me and
+  speckit-prd skills invoke for slice sizing; its Bash predecessor was deleted
+  by XPLAT-009 without a Python port, a defect surfaced while dogfooding the
+  XPLAT-010 scaffold on speckit-pro 2.18.0 (operator scope addition,
+  2026-07-08).
 
 **Out of Scope:**
 
@@ -1135,6 +1140,9 @@ current test harness and process helper scripts are broad.
 - GitHub Releases published after this spec open with composed plain-English
   Highlights sourced from PR release-note blocks, and feat/fix PRs missing
   both the block and the skip label fail a required check.
+- The `estimate-spec-size` runner operation exists again and returns
+  `{estimated_loc, suggested_slices, status}` for the size signals the
+  grill-me and speckit-prd skills send it.
 
 ---
 

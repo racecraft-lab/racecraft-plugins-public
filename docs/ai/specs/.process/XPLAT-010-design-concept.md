@@ -51,6 +51,12 @@ stop_reason: "natural"
   conventional-commit list preserved below as an appendix. CHANGELOG.md stays
   the machine ledger — Q10/Q11. This closes the "public release notes" item
   deferred from the XPLAT-008 handoff.
+- Restore the `estimate-spec-size` runner operation (returns `{estimated_loc,
+  suggested_slices, status}` from the size signals grill-me and speckit-prd
+  send it). Its bash predecessor was deleted by XPLAT-009 with no Python port —
+  a defect surfaced by dogfooding this very scaffold. Operator directive
+  (2026-07-08): remediate IN this spec as its own early fix PR, not a
+  follow-up.
 - **Accepted split (slice-sizing):** one spec delivered as a ~13-PR stack —
   (1) orphan-test deletion + ledger, (2) suite manifest + run-all.py +
   manifest-reading suite gate, (3a/3b) 20 mechanical L1 validators, (4) MOC
@@ -289,15 +295,12 @@ stop_reason: "natural"
 
 ## Open Questions
 
-- **What:** The `estimate-spec-size` runner operation referenced by the
-  grill-me skill does not exist in the 2.18.0 runner — the only trace is
-  `estimate-spec-size.sh` in the guard's historical-scripts allowlist (the
-  bash was deleted by XPLAT-009; a runner port never landed).
-  **Why deferred:** Plugin defect discovered while dogfooding 2.18.0 during
-  this interview; out of XPLAT-010's repository-confinement scope.
-  **Suggested next step:** File a `fix(speckit-pro)` follow-up to either port
-  the estimator as a runner operation or correct the grill-me/speckit-prd
-  skill references. Do not fold into XPLAT-010.
+- ~~The `estimate-spec-size` runner operation referenced by the grill-me skill
+  does not exist in the 2.18.0 runner~~ — **promoted into scope by operator
+  directive (2026-07-08)**: remediated in this spec as its own early fix PR
+  (see Goals and the workflow file's PR 13). Original finding: the only trace
+  is `estimate-spec-size.sh` in the guard's historical-scripts allowlist; the
+  bash was deleted by XPLAT-009 and a runner port never landed.
 - **What:** L8 parity's `semantic-equivalent` tolerance still skips with a
   warning (needs an LLM judge).
   **Why deferred:** Pre-existing known gap; PR 8 ports the harness as-is.

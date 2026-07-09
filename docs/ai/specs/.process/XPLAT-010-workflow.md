@@ -36,7 +36,7 @@ reviewable LOC 400, production files 6, total files 15, primary surfaces 2
 roadmap budget projects 400–800 reviewable LOC and 15–25 total files.
 
 **Split decision (accepted in design-concept Q9/Q10):** one spec delivered as a
-~13-PR stack, each PR independently CI-green and sized to the 400–800
+~14-PR stack, each PR independently CI-green and sized to the 400–800
 reviewable-LOC budget:
 
 1. Orphaned-test deletion + disposition ledger (deletion-only)
@@ -52,8 +52,42 @@ reviewable-LOC budget:
 11. Container/Windows preflight CI workflow
 12. Release-notes composer + `validate-release-note` check + release workflow step
 
+13. Spec-size estimator restored as a runner operation (`fix`; shipped-runner
+    change with the payload/proof regeneration ritual; independent — land
+    early so scoping tooling works for future scaffolds)
+
 Ordering constraints: 1 anytime; 2 before 3–10; 10 after 3–9; 11 last among
-confinement PRs; 12 independent.
+confinement PRs; 12 and 13 independent (13 preferred early).
+
+---
+
+## Orchestration & Delegation Discipline
+
+The main session running this workflow is an **orchestrator only** — this is a
+hard constraint of the autopilot skill itself (SKILL.md §Architectural
+Constraint), not a preference: it reads prompts from this file, dispatches
+every phase to a subagent, validates gates, and synthesizes consensus. It never
+authors spec/plan/tasks/implementation artifacts directly, and it must refuse
+to run inside a subagent context.
+
+**Agent right-sizing is enforced by the bundled agent definitions** (dispatch
+as `speckit-pro:<name>`; verified from agent frontmatter in the 2.18.0 cache):
+
+| Tier | Model | Agents |
+|------|-------|--------|
+| Heavy reasoning | opus | phase-executor, implement-executor, clarify-executor, checklist-executor, analyze-executor |
+| Mechanical / support | sonnet | gate-validator, consensus-synthesizer, codebase-analyst, spec-context-analyst, domain-researcher, uat-runbook-author |
+
+Reasoning effort is pinned `max` for the orchestrator and every bundled agent
+by shipped skill policy ("quality is the only optimization axis" for SDD
+phases). Changing that policy is a plugin feature change informed by the
+Layer 6 efficiency benchmarks — out of scope for this run.
+
+**Supervision-layer rule for work outside the bundled agents** (baseline
+capture, payload/proof regeneration, fixture syncs, evidence regeneration,
+verification canaries): delegate to the cheapest capable agent and model;
+never absorb mechanical work into the orchestrator's own turn, and never run
+a heavy phase orchestrator-direct.
 
 ---
 
@@ -128,6 +162,7 @@ From the roadmap's Done When plus the design-concept scope addition:
 - [ ] Windows x64 and ARM64 direct-runner smoke evidence exists where runner labels are available, advisory (`continue-on-error`) with availability recorded; container evidence is never presented as native UAT
 - [ ] CI fails on new Bash scripts, active Bash invocations, or `jq` dependencies outside the workflow dispatch boundary
 - [ ] Every feat/fix PR carries a consumer-facing Release note block (required check with `release-note/skip` label escape), and the GitHub Release body is composed into plain-English Highlights with the conventional-commit list preserved as an appendix
+- [ ] The `estimate-spec-size` runner operation exists and returns `{estimated_loc, suggested_slices, status}` for the size signals grill-me and speckit-prd send it — closing the dogfood defect where the skill references an operation whose bash predecessor was deleted by XPLAT-009 without a Python port
 - [ ] The XPLAT-008 native UAT matrix remains the only release-satisfying evidence for native installed-plugin journeys
 
 ---
@@ -180,6 +215,11 @@ concept Q10; the speckit-pro v2.18.0 release body is the exemplar).
 - [US6] As a PR author, a required validate-release-note check tells me when a
   feat/fix PR is missing its Release note block, and a release-note/skip label
   exempts changes with no consumer-visible effect.
+- [US7] As a maintainer scoping a future spec, the estimate-spec-size runner
+  operation returns {estimated_loc, suggested_slices, status} from the size
+  signals the grill-me and speckit-prd skills send it, restoring the scoping
+  estimator whose bash predecessor XPLAT-009 deleted without a Python port
+  (operator directive: remediate in this spec, not a follow-up).
 
 ### Constraints
 - Python 3.11+ standard library only for all ported tooling; no new runtime
@@ -313,13 +353,13 @@ validate-release-note check + release-note/skip label semantics.
 ## Constraints
 - Read docs/ai/specs/.process/XPLAT-010-design-concept.md before planning —
   it records the 11 accepted decisions (triage, suite architecture, count
-  parity, hooks, live evals, CI triggers/gating, .specify allowlist, 13-PR
+  parity, hooks, live evals, CI triggers/gating, .specify allowlist, 14-PR
   split, release-notes mechanism and enforcement).
-- The 13-PR stack and its ordering constraints are fixed (see the Scope
+- The 14-PR stack and its ordering constraints are fixed (see the Scope
   Budget and Split Decision section of this workflow file). Plan tasks so
   each PR is independently CI-green.
 - Shipped-runner changes (suite gate manifest read, confinement guard op) are
-  confined to PRs 2 and 10; each triggers the payload rebuild + proof-hash
+  confined to PRs 2, 10, and 13; each triggers the payload rebuild + proof-hash
   regeneration ritual and must regenerate release-readiness evidence LAST
   with home-directory sanitization.
 - pr-checks.yml job renames require matching branch-protection updates —
@@ -369,7 +409,7 @@ Why: 8 success criteria spanning four subsystems (harness port, guard, CI prefli
 /speckit-checklist requirements
 
 Focus on Repository Bash Confinement and CI Dispatch Guard requirements:
-- Every "Done When" bullet maps to at least one FR and one PR in the 13-PR stack
+- Every "Done When" bullet maps to at least one FR and one PR in the 14-PR stack
 - Count-parity requirements are stated per layer, not just globally
 - Release-notes requirements cover authoring, enforcement, composition, and skip paths
 - Pay special attention to: the boundary between XPLAT-010 scope and XPLAT-008 UAT / XPLAT-009 completed work
@@ -450,10 +490,10 @@ When checklist identifies `[Gap]` items:
 ## Task Structure
 - Small, testable chunks (1-2 hours each)
 - Clear acceptance criteria referencing FR-xxx
-- Group tasks by PR-stack slice (the 13-PR split in this workflow file's
+- Group tasks by PR-stack slice (the 14-PR split in this workflow file's
   Scope Budget section), honoring the ordering constraints:
   1 anytime; 2 before 3-10; 10 after 3-9; 11 last among confinement PRs;
-  12 independent
+  12 and 13 independent (13 early)
 - Mark parallel-safe tasks explicitly with [P] — the 20 mechanical Layer-1
   validator ports (PRs 3a/3b) are the primary parallel fan-out
 - Every port task pairs with: capture VERBOSE baseline, port, dual-run diff,
@@ -462,7 +502,7 @@ When checklist identifies `[Gap]` items:
 ## Constraints
 - Repo-side Python lives under tests/speckit-pro/, scripts/, .claude/hooks/ —
   never under speckit-pro/ (the payload guard fails if tests reappear there)
-- Shipped-runner tasks (PRs 2 and 10) must include the payload rebuild +
+- Shipped-runner tasks (PRs 2, 10, and 13) must include the payload rebuild +
   proof-hash regeneration ritual as explicit tasks, release-readiness last
 - Bound task generation with the design concept Non-goals: no .specify/**
   ports, no AI release notes, no L8 semantic judge, no UAT-matrix work —
@@ -523,7 +563,7 @@ Focus on:
    wrong unless it carries an explicit revision note
 4. Consistency between task file paths and the actual repo structure
    (tests/speckit-pro/, scripts/, .claude/hooks/, .github/workflows/)
-5. Verify the 13-PR ordering constraints are encoded in task dependencies
+5. Verify the 14-PR ordering constraints are encoded in task dependencies
 ```
 
 ### Analyze Severity Levels
@@ -581,7 +621,7 @@ Before starting any task:
   tests/speckit-pro/parity/xplat-010/<script>-baseline.txt → port with names
   preserved 1:1 → dual-run diff recorded in the PR body → manifest flip →
   .sh delete. All in one PR.
-- Shipped-runner changes (PRs 2 and 10 only): after any
+- Shipped-runner changes (PRs 2, 10, and 13 only): after any
   speckit_pro_runner byte change, run the payload/proof regeneration ritual —
   manifest sha256 recompute, scripts/build-plugin-payloads.py, checksum-based
   fixture sync, per-row proof hash recompute, evidence regeneration in gate
@@ -611,6 +651,7 @@ Before starting any task:
 | PR 10 — confinement guard + bash deletion | | | |
 | PR 11 — container/Windows preflight CI | | | |
 | PR 12 — release-notes pipeline | | | |
+| PR 13 — spec-size estimator runner op | | | |
 
 ---
 
@@ -623,7 +664,7 @@ Before starting any task:
 - [ ] Docs validation passes: `pnpm --dir docs-site validate`
 - [ ] Container preflight + Windows smoke evidence artifacts recorded
 - [ ] Release-notes composer proven on a real release (first release after PR 12 merges shows Highlights)
-- [ ] PRs created and reviewed (13-PR stack, each independently green)
+- [ ] PRs created and reviewed (14-PR stack, each independently green)
 - [ ] Merged to main branch (humans merge; autopilot never merges)
 
 ---
