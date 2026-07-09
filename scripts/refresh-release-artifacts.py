@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """Refresh generated release artifacts so a release PR passes its own gates.
 
-release-please bumps the source plugin versions but does not rebuild the
-generated payloads, marketplace registries, hash-pinned installed-cache proofs,
-or gate evidence. This refreshes all of them from the current source tree so a
-release PR is self-consistent before merge:
+release-please bumps the source plugin versions and the marketplace registry
+version fields but does not rebuild the generated payloads, hash-pinned
+installed-cache proofs, or gate evidence. This refreshes all of them from the
+current source tree so a release PR is self-consistent before merge. The
+proof-snapshot heuristic below assumes this script is the ONLY mutator of
+dist/** and the installed-cache fixtures — release-please extra-files must
+never pre-bump those trees, or the snapshot misreads the live proof rows as
+deliberate test sentinels and leaves them stale:
 
 1. Recompute the runner trust metadata (manifest sha256 entries + ``.sha256``).
 2. Rebuild the Claude and Codex install payloads.
