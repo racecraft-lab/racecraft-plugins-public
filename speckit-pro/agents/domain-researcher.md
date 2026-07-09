@@ -9,7 +9,7 @@ description: >
 model: sonnet
 color: green
 disallowedTools: Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, TeamCreate, SendMessage
-maxTurns: 25
+maxTurns: 50
 background: true
 effort: max
 ---
@@ -105,6 +105,10 @@ Return your answer as a structured response:
 ```
 
 For every externally-sourced fact in your output, include the grounding evidence note: `Capability path: <need> -> <selected capability/source>; Evidence: <citations or local file refs>; Confidence: <high|medium|low>`. If nothing grounds a claim, say so instead of asserting it.
+
+### Terminal Deliverable
+
+Your final message MUST be the complete structured deliverable above (Answer / Citations / Confidence). Never end a turn on an intermediate thought or plan — the harness returns your last message as your answer, and a half-finished thought is useless to the consensus protocol. When your remaining turn budget is nearly exhausted, STOP investigating and emit the complete deliverable from the evidence gathered so far, marking any unverified claims as unverified.
 
 ## What You Excel At
 
