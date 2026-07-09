@@ -96,8 +96,8 @@ a heavy phase orchestrator-direct.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 25 FRs / 7 US / 20 scenarios / 8 SCs; 0 markers; G1 PASS (runner-verified) |
-| Clarify | `/speckit-clarify` | 🔄 In Progress | 3 sessions seeded from design-concept open questions; runs despite 0 markers (operator-ratified seeded sessions) |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions total; 7 consensus items (6× Round 1, 1× Round 2 tie-break; 1 [security] all-3 operator-ratified); 12 Clarifications bullets in spec.md; G2 PASS (0 markers) |
+| Plan | `/speckit-plan` | 🔄 In Progress | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | requirements, integration, reliability, security |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -385,7 +385,7 @@ validate-release-note check + release-note/skip label semantics.
 | 3 | Clarify | S1-Q4: baseline file format + name reconciliation | [codebase] | 1 | high-confidence | Frozen per-outcome format with verbatim runtime-captured names + 5 normalization rules; zero un-named sites in full census → no positional fallback; FR-011 + Key Entities refined | codebase-analyst |
 | 4 | Clarify | S2-Q1: invocation-text scan surfaces + self-reference avoidance | [codebase, domain] | 1 | both-agree | Executable-surface scoping: suffix+shebang repo-wide, `.py` AST + structural `hooks.json` command / `package.json` scripts JSON-value scans (reusing prohibited-command primitives); no prose scanning; FR-002 + Edge Cases refined | codebase-analyst, domain-researcher |
 | 5 | Clarify | S2-Q2: bash-scoped vs inherited broad detection vocabulary | [spec] | 1 | high-confidence | Bash-scoped only (`.sh`/`.bash` + bash/POSIX-sh shebang incl. `#!/bin/sh`); 4 vendored `.ps1` never in detection set, allowlist stays exactly 10; FR-001/FR-003/SC-001 refined; FR-002 bash/jq-pair note flagged for Plan | spec-context-analyst |
-| 6 | Clarify | S3-security: composer content-sanitization + token scope | [security] | 1 (mandatory all-3) | [HUMAN REVIEW] — 3/3 unanimous, held for operator ratification per the security-override gate | Draft merged (own-job contents:write only; HTML+image strip; structural-char neutralization; 2,000-char cap; CommonMark fence defense; harvest-all-types provenance bound; run-log as durable record) — PENDING operator sign-off, edits NOT applied | codebase-analyst, spec-context-analyst, domain-researcher |
+| 6 | Clarify | S3-security: composer content-sanitization + token scope | [security] | 1 (mandatory all-3) | [HUMAN REVIEW] → operator RATIFIED as drafted (2026-07-08) | 3/3 unanimous draft applied: own-job contents:write only; HTML+image strip; structural-char neutralization; 2,000-char cap; CommonMark fence defense; harvest-all-types provenance bound; RELEASE_PLEASE_TOKEN forbidden; run-log as durable record. FR-021/023/024 + Key Entity + Clarifications updated | codebase-analyst, spec-context-analyst, domain-researcher |
 | 7 | Clarify | S3-Q2: composer PR-discovery algorithm | [codebase, domain] | 1→2 | 2/3 | Compare-API commit-subject walk for discovery (body-regex provably lossy in-repo: PRs #210/#192 carry no `(#N)` in CHANGELOG); appendix stays verbatim body output; domain's fail-loud re-targeted at the compare/subject surface; FR-023 + Clarifications updated | codebase-analyst, domain-researcher (R1) + spec-context-analyst (R2 tie-breaker) |
 
 ---
