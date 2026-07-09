@@ -315,18 +315,16 @@ TDD protocol, `PROJECT_COMMANDS`, and `COMPLETED_TASKS` context accumulated from
 earlier work.
 
 After G5 passes, the placeholder is invalid. Before Analyze or Implement can
-run, audit `update_plan` and `autopilot-state.json`, then run the
-reviewability task gate:
-
-```text
-runner helper reviewability-gate tasks specs/<feature>
-```
-
-Run the gate with guarded capture so a compatibility nonzero exit cannot abort
-the parent session before it inspects stdout. Record stdout, stderr, exit code,
-gate status/mode/exit/evidence path, and a repo-relative evidence path. If the
-gate returns `pass`, `warn`, or an honored typed exception, continue. If the
-gate returns a valid current size-only `status=block`, continue into marker
+run, audit `update_plan` and `autopilot-state.json`, then apply the
+tasks-phase reviewability boundary. Runner helper `reviewability-gate`
+supports setup mode only on the installed runner — tasks mode is deferred, so
+do not invoke it as an active helper. Record the deferred-mode diagnostics
+(helper ID, requested mode, deferral reason) in the workflow file, then
+evaluate the fallback evidence chain: the setup-mode gate result recorded at
+scaffold, the plan-phase `estimate-reviewable-loc` verdict, and any
+operator-ratified split decision in the workflow file. If that committed
+evidence shows `pass`, `warn`, or an honored typed exception, continue. If it
+shows a valid current size-only `status=block`, continue into marker
 planning and later marker emission; it is not a manual re-slicing stop.
 Correctness stops remain blocking: malformed/stale marker state, failed
 verification, invalid packet, unsafe output, unusable gate evidence, invalid

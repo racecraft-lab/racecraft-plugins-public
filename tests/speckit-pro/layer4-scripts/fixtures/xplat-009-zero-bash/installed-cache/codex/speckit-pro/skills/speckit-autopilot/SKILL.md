@@ -658,11 +658,16 @@ with concrete Phase 7 task-group items in both `update_plan` and
 - the placeholder no longer exists in either state store
 - at least one concrete Phase 7 item exists
 - each concrete Phase 7 item names task IDs from tasks.md
-- runner helper `reviewability-gate` in tasks mode does
-  not return an unexcepted correctness block. Capture stdout, stderr,
-  exit code, gate status/mode/exit/evidence path, and repo-relative evidence
-  path. A valid current size-only `block` continues into marker planning and
-  marker emission; it is not a manual re-slicing stop.
+- the tasks-phase reviewability evidence contains no unexcepted
+  correctness block. Runner helper `reviewability-gate` supports setup mode
+  only on the installed runner — tasks mode is deferred, so do not invoke it
+  as an active helper. Record the deferred-mode diagnostics (helper ID,
+  requested mode, deferral reason), then evaluate the fallback evidence
+  chain: the setup-mode gate result recorded at scaffold, the plan-phase
+  `estimate-reviewable-loc` verdict, and any operator-ratified split
+  decision in the workflow file. A valid current size-only `block` in that
+  evidence continues into marker planning and marker emission; it is not a
+  manual re-slicing stop.
 
 If any check fails, STOP and repair the plan/state before advancing.
 
@@ -990,7 +995,10 @@ registered helper or gate operation IDs below.
   pre-Implement emit and decide whether Phase 7 may begin.
 - `resolve-confidence-mode` — Resolve the pre-Implement confidence mode from
   invocation flags, local config, or the advisory default.
-- `reviewability-gate` — Enforce setup, tasks, and pre-PR reviewability budgets.
+- `reviewability-gate` — Enforce the setup-mode reviewability budget. Tasks
+  and pre-PR modes are deferred for installed workflows; record the deferral
+  and use committed fallback evidence per the guidance above instead of
+  invoking them.
 - `atomicity-route` — Classify whether a feature should remain one PR or split.
 - `plan-layers-feature-dir` — Emit a versioned layer-plan envelope for split
   routes before implementation.
