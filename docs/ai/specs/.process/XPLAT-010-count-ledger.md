@@ -26,6 +26,11 @@ Columns:
 | PR 3a | port: `validate-capability-resolution.sh` → `validate-capability-resolution.py` | default | 43 → 43 | yes | `tests/speckit-pro/parity/xplat-010/validate-capability-resolution-baseline.txt` |
 | PR 3a | port: `validate-codex-agents.sh` → `validate-codex-agents.py` | default | 148 → 148 | yes | `tests/speckit-pro/parity/xplat-010/validate-codex-agents-baseline.txt` |
 | PR 3a | port: `validate-codex-hooks.sh` → `validate-codex-hooks.py` | default | 9 → 9 | yes | `tests/speckit-pro/parity/xplat-010/validate-codex-hooks-baseline.txt` |
+| PR 3a | port: `validate-codex-marketplace.sh` → `validate-codex-marketplace.py` | default | 13 → 13 | yes | `tests/speckit-pro/parity/xplat-010/validate-codex-marketplace-baseline.txt` |
+| PR 3a | port: `validate-codex-parity.sh` → `validate-codex-parity.py` | default | 81 → 81 | yes | `tests/speckit-pro/parity/xplat-010/validate-codex-parity-baseline.txt` |
+| PR 3a | port: `validate-codex-plugin.sh` → `validate-codex-plugin.py` | default | 33 → 33 | yes | `tests/speckit-pro/parity/xplat-010/validate-codex-plugin-baseline.txt` |
+| PR 3a | port: `validate-curated-set.sh` → `validate-curated-set.py` | default | 58 → 58 | yes | `tests/speckit-pro/parity/xplat-010/validate-curated-set-baseline.txt` |
+| PR 3a | port: `validate-hooks.sh` → `validate-hooks.py` | default | 11 → 11 | yes | `tests/speckit-pro/parity/xplat-010/validate-hooks-baseline.txt` |
 
 **PR 13 note (T121–T130):** The estimator Layer-4 test follows the
 Per-Port Protocol against historical predecessor commit
@@ -57,3 +62,20 @@ identity are preserved, and only the environment-specific prefix is normalized �
 so `names_equal` remains `yes` against the committed baseline. The extracted path
 tokens (`speckit-pro/skills/...`) are already repo-relative and are recorded
 verbatim.
+
+**PR 3a note (batch 2 of 2, T023–T027):** The remaining five mechanical Layer-1
+validators port with exact 1:1 name-and-count parity against their committed
+baselines (13, 81, 33, 58, 11 → same). Intentional change: `none` for every row.
+Unlike batch 1, none of these five interpolate an absolute repo-root prefix into
+any check name, so no environment-path normalization was needed — the ports read
+live data and reproduce the bash logic directly, and all names are recorded
+verbatim. Two data-driven name sources are recorded as baseline regeneration
+triggers (count-parity contract §2, rule 4): `validate-codex-parity` interpolates
+the shared plugin version (`.claude-plugin`/`.codex-plugin` `plugin.json`) and the
+marketplace name (both `marketplace.json` files) into two check names and
+enumerates each Codex `SKILL.md`'s `../../skills/**.md` reference links; and
+`validate-curated-set` derives its per-entry check names from live
+`speckit-pro/scripts/curated-set.json` content. Adding, removing, or reordering
+any of those inputs changes the inventory and requires recapturing the affected
+baseline. This completes PR 3a — all ten batch-1+batch-2 Layer-1 validators are
+ported; ten `.sh` deleted.

@@ -26,9 +26,9 @@
         { "path": "tests/speckit-pro/layer1-structural/validate-plugin-payload.sh", "label": "validate-plugin-payload", "baseline": null },
         { "path": "tests/speckit-pro/layer1-structural/validate-agents.py", "label": "validate-agents", "baseline": "tests/speckit-pro/parity/xplat-010/validate-agents-baseline.txt" },
         { "path": "tests/speckit-pro/layer1-structural/validate-skills.sh", "label": "validate-skills", "baseline": null },
-        { "path": "tests/speckit-pro/layer1-structural/validate-hooks.sh", "label": "validate-hooks", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-hooks.py", "label": "validate-hooks", "baseline": "tests/speckit-pro/parity/xplat-010/validate-hooks-baseline.txt" },
         { "path": "tests/speckit-pro/layer1-structural/validate-scripts.sh", "label": "validate-scripts", "baseline": null },
-        { "path": "tests/speckit-pro/layer1-structural/validate-curated-set.sh", "label": "validate-curated-set", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-curated-set.py", "label": "validate-curated-set", "baseline": "tests/speckit-pro/parity/xplat-010/validate-curated-set-baseline.txt" },
         { "path": "tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.sh", "label": "validate-pr-checks-sentinel", "baseline": null },
         { "path": "tests/speckit-pro/layer1-structural/validate-release-workflow.sh", "label": "validate-release-workflow", "baseline": null },
         { "path": "tests/speckit-pro/layer1-structural/validate-process-gitattributes.sh", "label": "validate-process-gitattributes", "baseline": null },
@@ -40,12 +40,12 @@
         { "path": "tests/speckit-pro/layer1-structural/validate-skill-capability-pointers.sh", "label": "validate-skill-capability-pointers", "baseline": null },
         { "path": "tests/speckit-pro/layer1-structural/validate-payload-completeness.sh", "label": "validate-payload-completeness", "baseline": null },
         { "path": "tests/speckit-pro/layer1-structural/validate-payload-conformance.sh", "label": "validate-payload-conformance", "baseline": null },
-        { "path": "tests/speckit-pro/layer1-structural/validate-codex-plugin.sh", "label": "validate-codex-plugin", "baseline": null },
-        { "path": "tests/speckit-pro/layer1-structural/validate-codex-marketplace.sh", "label": "validate-codex-marketplace", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-codex-plugin.py", "label": "validate-codex-plugin", "baseline": "tests/speckit-pro/parity/xplat-010/validate-codex-plugin-baseline.txt" },
+        { "path": "tests/speckit-pro/layer1-structural/validate-codex-marketplace.py", "label": "validate-codex-marketplace", "baseline": "tests/speckit-pro/parity/xplat-010/validate-codex-marketplace-baseline.txt" },
         { "path": "tests/speckit-pro/layer1-structural/validate-codex-agents.py", "label": "validate-codex-agents", "baseline": "tests/speckit-pro/parity/xplat-010/validate-codex-agents-baseline.txt" },
         { "path": "tests/speckit-pro/layer1-structural/validate-codex-skills.sh", "label": "validate-codex-skills", "baseline": null },
         { "path": "tests/speckit-pro/layer1-structural/validate-codex-hooks.py", "label": "validate-codex-hooks", "baseline": "tests/speckit-pro/parity/xplat-010/validate-codex-hooks-baseline.txt" },
-        { "path": "tests/speckit-pro/layer1-structural/validate-codex-parity.sh", "label": "validate-codex-parity", "baseline": null }
+        { "path": "tests/speckit-pro/layer1-structural/validate-codex-parity.py", "label": "validate-codex-parity", "baseline": "tests/speckit-pro/parity/xplat-010/validate-codex-parity-baseline.txt" }
       ]
     },
     {
