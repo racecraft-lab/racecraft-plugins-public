@@ -60,7 +60,14 @@ the payload/proof regeneration ritual).
 **Constraints**: No absolute `/Users` or `/home` paths in any authored artifact
 (repo-relative only). Shipped-runner byte changes are confined to PRs 2, 10, and 13, each
 carrying the payload rebuild + proof-hash regeneration ritual with release-readiness
-evidence regenerated LAST and home-directory sanitization (`<home>`). Every port swaps
+evidence regenerated LAST and home-directory sanitization (`<home>`). Because PRs 2, 10, and 13
+all rewrite the `speckit-pro-runner.manifest.json` sha256 proof rows and the generated `dist/**`
+payloads, when more than one of them is in flight simultaneously (for example PR 13 landing early
+while PR 2 is still open) their proof rows conflict on merge: the later-merging PR MUST rebase onto
+the merged one and re-run the full payload/proof regeneration ritual so its hashes are computed
+against the post-merge tree — the conflicting proof rows and payload bytes MUST NOT be hand-merged,
+since a hand-resolved hash corresponds to no real payload state and fails release-readiness
+verification. Every port swaps
 atomically in one PR (port + manifest flip + `.sh` delete), never a broken intermediate
 state; the repo runs its own gates on itself, so the full suite stays green at every commit.
 `pr-checks.yml`/`release.yml` job changes update the matching self-referential workflow
