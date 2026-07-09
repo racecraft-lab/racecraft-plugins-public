@@ -29,7 +29,7 @@ XPLAT_008_REQUESTS_DIR = XPLAT_008_FIXTURE_DIR / "requests"
 XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/promotion-records.json"
 XPLAT_009_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "xplat-009-zero-bash"
 XPLAT_009_REQUESTS_DIR = XPLAT_009_FIXTURE_DIR / "requests"
-XPLAT_009_CONTRACT_DIR = REPO_ROOT / "specs" / "xplat-009-plugin-source-and-payload-bash-eradication" / "contracts"
+XPLAT_009_CONTRACT_DIR = XPLAT_009_FIXTURE_DIR / "contracts"
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
