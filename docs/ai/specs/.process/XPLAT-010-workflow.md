@@ -135,6 +135,51 @@ Each phase requires **human review and approval** before proceeding:
 
 **Constitution Check:** ✅ (validated during scaffold; re-verify at G1)
 
+### Autopilot Pre-flight Record (2026-07-08)
+
+| Item | Value |
+|------|-------|
+| check-prerequisites | all_pass=true (specify CLI 0.11.8; project init, constitution, commands, workflow file OK) |
+| Branch state | worktree=true; branch `xplat-010-repository-bash-confinement`; non-numeric namespace → `.specify/feature.json` pins `specs/xplat-010-repository-bash-confinement` (vendored scripts support the feature.json bypass) |
+| PROJECT_COMMANDS | detect-commands: stack unknown / all N/A. Effective commands (CLAUDE.md): FULL_VERIFY + UNIT_TEST = `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json`; TOOLCHAIN = same runner with `run-toolchain-preflight.json`; DOCS = `pnpm --dir docs-site validate`; BUILD/TYPECHECK/LINT = N/A |
+| PRESET_CONVENTIONS | speckit-pro-reviewability v1.0.0 active; spec/plan/tasks templates resolve from `.specify/presets/speckit-pro-reviewability/templates/` |
+| CONFIDENCE_GATE_MODE | `advisory` (resolved at Step 0.6b; G6.5 reads this value, resolver not re-run) |
+| AGENT_TEAMS_AVAILABLE | `true` (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1; Claude Code 2.1.205 ≥ 2.1.32) |
+| PROJECT_IMPLEMENTATION_AGENT | none detected (`.claude/agents/` has release-auditor + skill-reviewer only, neither an implementation agent) → fallback `speckit-pro:phase-executor`; task-level routing uses `speckit-pro:implement-executor` for TDD tasks |
+| Settings | no `.claude/speckit-pro.local.md` → defaults (consensus-mode=moderate, gate-failure=stop, auto-commit=per-phase) |
+| Agent package | all 11 bundled `speckit-pro:*` agents registered in the session runtime (incl. uat-runbook-author) |
+| Extensions | agent-context, archive, checkpoint, git, retrospective, speckit-utils, verify, verify-tasks all installed |
+| Tier-2 relocation | suppressed — current spec carries `SPEC-MOC.md` `structureVersion: 1`; no eligible thawed legacy candidate |
+| before_specify git.feature hook | goal state already satisfied by scaffold (branch + worktree exist); recorded as satisfied, not re-executed |
+
+**Operator directive (2026-07-08, mid-run):** any dogfooding bug in the
+speckit-pro plugin encountered while executing this autopilot run MUST be fixed
+at root cause during the run (not papered over, not deferred). Discovered bugs
+are logged in this section as they surface.
+
+**Dogfood defect log:**
+- (pre-run, already in scope) `estimate-spec-size` runner operation missing — PR 13 / US7.
+
+**Archive Sweep record:** archive extension v1.1.0 installed; eligible =
+`specs/xplat-009-plugin-source-and-payload-bash-eradication` (PR #297 merged
+`7bc6be1a`, shipped in 2.18.0); current target excluded; apply mode with
+`safeToApplyCleanup=true`; commit `d3c95f73` (27 files, +546/−1704): spec dir
+removed with recovery commands recorded, 4 contract schemas relocated to
+`tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/contracts/`,
+memory/AGENTS/roadmap/MOC updated, archive report at
+`.specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md`.
+Post-commit verification by the sweep: gates test 54/54, runner test 10/10,
+default suite gate PASS (toolchain 5/5, L1 24/24, L4 17/17, L5 8/8, L7 9/9,
+L8 14/14).
+
+**Constitution validation (G0):** default-suite gate PASS on the quiesced tree
+(evidence above). An earlier overlapped run reported layer-4 16/17
+(`test_xplat008_release_readiness_pending_native_uat_still_blocks`,
+blocking_count 2≠1) — root-caused to orchestration, not the plugin: the
+release-readiness live scan ran while the archive sweep was mutating
+`specs/**`. Not reproducible on the quiesced tree. **Run lesson:** never
+overlap live-scan gate runs with worktree-mutating subagents.
+
 ---
 
 ## Specification Context
