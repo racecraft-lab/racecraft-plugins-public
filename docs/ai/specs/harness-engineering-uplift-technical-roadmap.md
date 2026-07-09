@@ -92,6 +92,9 @@ The harness hardening lane centers on these requirements:
 - Layer verification: deterministic checks first, fixture parity next,
   trace/transcript review where useful, and calibrated rubric review only where
   deterministic checks cannot cover the risk.
+- Bound self-improvement loops: agents may generate, critique, refine, and test
+  their own proposed harness changes only within explicit scopes, budgets,
+  traces, rollback checkpoints, and human-visible promotion gates.
 - Make security policy structural: least privilege, pre-action authorization,
   protected harness-control files, default-deny posture, and safe stop.
 - Emit local trace/debug packets so failures can be classified and replayed
@@ -172,6 +175,11 @@ Budget result: within budget
   coding-agent harness references. Each row records mapped HRNS surfaces,
   local-first fit, runtime dependency posture, telemetry/privacy posture,
   licensing/supply-chain risk, and recommendation.
+- Classify self-improvement loop closure for workflows that can generate future
+  harness behavior: human-in-the-loop, human-on-the-loop, fully automated, or
+  disallowed. Flag open-ended recursive self-improvement and self-modifying
+  harness-control loops as disallowed unless a dedicated future spec proves
+  bounded safety controls.
 
 **Out of Scope:**
 
@@ -200,6 +208,9 @@ Budget result: within budget
 - The taxonomy includes the external-candidate matrix needed by HRNS-003,
   HRNS-004, HRNS-005, HRNS-006, HRNS-007, and HRNS-008 before those specs make
   implementation or dependency decisions.
+- The taxonomy names every self-improvement loop class discovered in current
+  skills, agents, helpers, generated payloads, evals, and workflow files, and
+  records its permitted closure level or disallowed status.
 - Each retained gap has surface tags, state classification, owner workflow, and
   downstream HRNS ownership.
 - The PR packet includes the taxonomy path, review scope, verification command or
@@ -398,11 +409,17 @@ Budget result: within budget
   Classify each candidate by local/offline fit, SaaS or external telemetry
   behavior, LLM-as-judge calibration needs, CI fit, and optional-adapter
   viability.
+- Define the evaluator hierarchy for bounded self-improvement: deterministic
+  tests, formal or executable verifiers, and fixture parity outrank calibrated
+  rubrics and LLM judges; intrinsic self-assessment may propose changes but
+  cannot approve harness-control changes.
 
 **Out of Scope:**
 
 - Full benchmark suite implementation.
 - Blocking release gates on uncalibrated rubric review.
+- Treating self-assessment, self-scoring, or self-generated tests as sufficient
+  evidence for promotion.
 
 **Key Files:**
 
@@ -421,6 +438,9 @@ Budget result: within budget
   allowed tools, permission mode, command evidence, and trace/debug evidence.
 - The eval-surface comparison recommends which candidates should be reference
   patterns, optional adapters, rejected dependencies, or future spikes.
+- Self-improvement evaluator guidance states which signals are blocking,
+  advisory, or disallowed and includes at least one failure mode for
+  self-confirming loops, reward/eval tampering, or synthetic-fixture drift.
 
 ---
 
@@ -451,6 +471,10 @@ Budget result: within budget
   concepts where useful, and evaluate optional sinks such as LangSmith,
   Langfuse, Phoenix, and Braintrust without making external telemetry the
   canonical record.
+- Add trace fields for bounded self-improvement iterations:
+  generate->critique->refine->verify step, prompt/input provenance, changed
+  artifacts, evaluator result, stop reason, checkpoint, rollback path, and human
+  approval state.
 
 **Out of Scope:**
 
@@ -476,6 +500,8 @@ Budget result: within budget
 - Trace schema fixtures show the local canonical record and any optional
   export/sink mapping separately, including telemetry, secret, and retention
   boundaries.
+- Self-improvement trace fixtures prove each iteration can be replayed or
+  rejected without raw log dumps, secrets, or reliance on chat history alone.
 
 ---
 
@@ -510,11 +536,17 @@ Budget result: within budget
   and SWE-agent-style agent-computer-interface patterns. Focus the comparison
   on checkpoint/resume, HITL, workspace isolation, role handoff, failure
   recovery, and long-running job control.
+- Define bounded self-improvement orchestration controls: iteration budgets,
+  resource caps, modification scope, rollback checkpoints, promotion gates,
+  and safe-stop behavior for loops that generate, critique, refine, or test
+  future harness behavior.
 
 **Out of Scope:**
 
 - Building a new external task scheduler.
 - Replacing Codex/Claude native thread or worktree management.
+- Allowing a loop to expand its own permissions, edit its own approval/eval
+  gates, or merge/promote its own harness changes.
 
 **Key Files:**
 
@@ -535,6 +567,9 @@ Budget result: within budget
 - The orchestration comparison recommends borrowed patterns and rejects or
   defers runtime dependencies that would conflict with local-first installed
   Claude/Codex plugin operation.
+- Self-improvement loops record budget, scope, checkpoint, rollback, promotion,
+  and safe-stop state before execution and reject stale or self-authorizing
+  state before resume.
 
 ---
 
@@ -564,11 +599,16 @@ Budget result: within budget
 - Include external-candidate drift checks for stale reference docs, obsolete
   version assumptions, abandoned optional-adapter decisions, and dependency
   recommendations that no longer match roadmap evidence.
+- Include self-generated harness artifacts in drift checks: prompts, fixtures,
+  eval cases, traces, skill-library entries, generated docs, synthetic examples,
+  and any agent-authored feedback memories used by later workflows.
 
 **Out of Scope:**
 
 - Broad speculative docs cleanup.
 - Automated mutation of protected harness-control files without review.
+- Reusing self-generated fixtures, evals, prompts, or skill-library artifacts as
+  trusted evidence without external validation or explicit provenance.
 
 **Key Files:**
 
@@ -589,6 +629,8 @@ Budget result: within budget
   evidence, and human-visible remediation artifacts.
 - External-candidate findings are classified as update reference, re-evaluate
   dependency decision, archive rejected candidate, or no-op.
+- Self-generated artifact findings are classified as externally validated,
+  stale, duplicate, unsafe to reuse, cleanup candidate, or no-op archive.
 
 ---
 

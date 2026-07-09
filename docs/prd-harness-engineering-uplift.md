@@ -48,6 +48,9 @@ framework or broad vendor product dependency.
 - Add layered feedback sensors: deterministic checks first, fixture parity next,
   transcript/trace review where needed, and calibrated rubric review only for
   subjective behavior.
+- Define bounded self-improvement loops for safe agent self-correction:
+  generate, critique, refine, verify, trace, and hand off without autonomous
+  promotion.
 - Make long-horizon workflows resumable from explicit state rather than chat
   history or local memory alone.
 - Add a bounded harness garbage-collection loop for stale prompts, docs, skills,
@@ -67,6 +70,10 @@ framework or broad vendor product dependency.
   and native-platform UAT have actually verified.
 - Creating a general agent benchmark suite. HRNS focuses on SpecKit Pro skill,
   helper, workflow, and review-packet behavior.
+- Enabling open-ended recursive self-improvement, autonomous self-modification
+  of harness-control files, autonomous permission expansion, autonomous
+  promotion of agent-generated harness changes, or training/fine-tuning on
+  self-generated artifacts without an explicit reviewed spec.
 - Auto-fixing policy, permission, hook, MCP, or harness-control files without a
   reviewable diff and trace evidence.
 
@@ -96,6 +103,11 @@ framework or broad vendor product dependency.
   candidate records category, mapped HRNS surfaces, local-first fit, runtime
   dependency posture, telemetry/privacy posture, licensing/supply-chain risk,
   and adoption recommendation.
+- **AC-1.7**: The taxonomy records self-improvement loop closure for any
+  workflow that can generate future harness behavior: human-in-the-loop,
+  human-on-the-loop, fully automated, or disallowed. Open-ended recursive
+  self-improvement and self-modifying harness-control loops are classified as
+  disallowed unless a later dedicated spec proves bounded safety controls.
 
 ### 3.2 Progressive Context and Durable State Contract *(-> HRNS-002)*
 
@@ -193,6 +205,11 @@ framework or broad vendor product dependency.
   SaaS or external telemetry behavior, LLM-as-judge calibration needs, CI fit,
   and whether the candidate should become a reference pattern, optional adapter,
   or rejected dependency.
+- **AC-5.9**: Self-improvement loops use an evaluator hierarchy: deterministic
+  tests, formal or executable verifiers, and fixture parity are strongest;
+  calibrated rubrics and LLM judges are advisory unless grounded by
+  known-good/known-bad cases; intrinsic self-assessment is the weakest signal and
+  cannot approve harness-control changes by itself.
 
 ### 3.6 Trace, Debug, and Review Evidence Packets *(-> HRNS-006)*
 
@@ -216,6 +233,10 @@ framework or broad vendor product dependency.
   OpenTelemetry/OpenInference-compatible concepts where useful and evaluates
   optional sinks such as LangSmith, Langfuse, Phoenix, and Braintrust while
   keeping local trace/debug packets canonical by default.
+- **AC-6.8**: Every bounded self-improvement attempt records each
+  generate->critique->refine->verify iteration with prompt/input provenance,
+  changed artifacts, evaluator result, stop reason, checkpoint, rollback path,
+  and human approval state where applicable.
 
 ### 3.7 Long-horizon Orchestration and Resumption Controls *(-> HRNS-007)*
 
@@ -240,6 +261,11 @@ framework or broad vendor product dependency.
   Semantic Kernel, CrewAI, Haystack, Temporal, OpenHands, and SWE-agent-style
   agent-computer-interface patterns for checkpoint/resume, HITL, workspace
   isolation, role handoff, failure recovery, and long-running job control.
+- **AC-7.9**: Self-improvement orchestration has explicit iteration budgets,
+  resource caps, modification scope, rollback checkpoints, promotion gates, and
+  safe-stop behavior. No loop may expand its own permissions, edit its own
+  approval/eval gates, or merge/promote its own harness changes without a
+  human-visible review packet.
 
 ### 3.8 Harness Drift, Garbage Collection, and Self-healing Remediation *(-> HRNS-008)*
 
@@ -259,6 +285,10 @@ framework or broad vendor product dependency.
 - **AC-8.7**: Drift reports include external-candidate drift: stale reference
   docs, obsolete version assumptions, abandoned optional-adapter decisions, and
   dependency recommendations that no longer match HRNS evidence.
+- **AC-8.8**: Drift reports identify self-generated harness artifacts such as
+  prompts, fixtures, eval cases, traces, skill-library entries, generated docs,
+  and synthetic examples, then classify whether each is externally validated,
+  stale, duplicate, unsafe to reuse, or eligible for cleanup.
 
 ## 4. Migration Path
 
@@ -273,13 +303,17 @@ framework or broad vendor product dependency.
   pre-action authorization, protected harness-control surfaces, and safe-stop
   semantics.
 - **Phase 5 (HRNS-005) - Eval ladder**: Connect existing test layers and future
-  evals to deterministic, fixture-first evidence.
+  evals to deterministic, fixture-first evidence, including evaluator hierarchy
+  rules for bounded self-improvement loops.
 - **Phase 6 (HRNS-006) - Trace/debug packets**: Add bounded local trace records
-  and review-packet summaries.
+  and review-packet summaries for helper, workflow, and self-improvement
+  iterations.
 - **Phase 7 (HRNS-007) - Long-horizon orchestration**: Harden parallel work,
-  checkpoint/resume, planner/evaluator separation, and stop conditions.
+  checkpoint/resume, planner/evaluator separation, self-improvement loop
+  budgets, rollback, promotion gates, and stop conditions.
 - **Phase 8 (HRNS-008) - Garbage collection**: Add bounded drift detection and
-  self-healing remediation patterns.
+  self-healing remediation patterns for human-authored and self-generated
+  harness artifacts.
 
 ## 5. Constraints
 
@@ -293,6 +327,10 @@ framework or broad vendor product dependency.
   required dependency needs an explicit decision record covering license,
   supply chain, local/offline behavior, telemetry, secrets, cross-platform
   support, operator setup, and rollback.
+- Treat recursive self-improvement as a risk-bearing loop, not a goal by itself:
+  self-correction may be automated only inside explicit scopes with external
+  verification, human-visible traces, rollback, and non-bypassable approval
+  gates.
 - Preserve capability-first, vendor-neutral wording where a concept can be
   expressed without binding to one tool vendor.
 - Keep advisory code-intelligence hooks fail-open unless a spec proves they are
@@ -325,6 +363,11 @@ framework or broad vendor product dependency.
   LangSmith/Langfuse/Phoenix/Braintrust/promptfoo/Inspect AI/DSPy as eval and
   trace comparisons for HRNS-005/HRNS-006. Keep all of them non-required until
   the HRNS-001 matrix and a dedicated decision justify otherwise.
+- **OQ-7 (HRNS-005/HRNS-007):** Where should bounded recursive self-improvement
+  be allowed first? Recommendation: start with docs/process and deterministic
+  fixture generation, require human approval before promotion, and defer helper,
+  permission, eval-gate, model, training, or policy self-modification until a
+  dedicated safety spec proves stronger controls.
 
 ## 7. SPEC Catalog Crosswalk
 
