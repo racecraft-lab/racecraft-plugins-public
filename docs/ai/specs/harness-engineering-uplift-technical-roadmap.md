@@ -276,7 +276,7 @@ Budget result: within budget
   schema-aware, and non-blocking where possible.
 - Add remediation-message standards for helper errors.
 - Evaluate schema and tool-contract references: Pydantic, JSON Schema/OpenAPI,
-  LangChain structured output/tool schemas, OpenAI Agents SDK function-tool
+  LangChain structured-output/tool schemas, OpenAI Agents SDK function-tool
   schemas, and existing repo-local runner metadata. Record whether SpecKit Pro
   should keep schemas Python-authoritative, generate machine-readable schemas,
   or introduce an optional validation adapter.
