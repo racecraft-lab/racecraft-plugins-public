@@ -1,0 +1,690 @@
+# Container and runner preflight for XPLAT-010.
+#
+# Pull requests always start this workflow so the two branch-protection
+# sentinels always report. The changes job decides whether the heavyweight
+# platform jobs are relevant; unrelated changes receive explicit successful
+# sentinel conclusions instead of missing required-check contexts.
+
+name: Container Preflight
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      windows_x64_enabled:
+        description: Run the Windows x64 advisory smoke
+        required: true
+        type: boolean
+        default: true
+      windows_arm64_enabled:
+        description: Run the Windows ARM64 public-preview advisory smoke
+        required: true
+        type: boolean
+        default: false
+
+permissions: {}
+
+jobs:
+  changes:
+    name: Detect container preflight changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      run_preflight: ${{ steps.changes.outputs.run_preflight }}
+
+    steps:
+      - name: Checkout repository history
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Detect runner, gate, and workflow changes
+        id: changes
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          evidence_dir="${RUNNER_TEMP}/container-preflight-changes"
+          mkdir -p "$evidence_dir"
+
+          run_preflight=false
+          reason=unrelated_change
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            run_preflight=true
+            reason=manual_dispatch
+            printf '%s\n' workflow_dispatch > "${evidence_dir}/changed-files.txt"
+          else
+            git diff --name-only "$BASE_SHA" "$HEAD_SHA" > "${evidence_dir}/changed-files.txt"
+            while IFS= read -r file; do
+              case "$file" in
+                speckit-pro/speckit_pro_runner/*|tests/speckit-pro/*|.github/workflows/*)
+                  run_preflight=true
+                  reason=preflight_surface_changed
+                  break
+                  ;;
+              esac
+            done < "${evidence_dir}/changed-files.txt"
+          fi
+
+          {
+            echo "run_preflight=${run_preflight}"
+            echo "reason=${reason}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Write change-detection evidence
+        if: always()
+        shell: bash
+        env:
+          RUN_PREFLIGHT: ${{ steps.changes.outputs.run_preflight }}
+          REASON: ${{ steps.changes.outputs.reason }}
+          DETECTION_OUTCOME: ${{ steps.changes.outcome }}
+        run: |
+          set -euo pipefail
+          evidence_dir="${RUNNER_TEMP}/container-preflight-changes"
+          mkdir -p "$evidence_dir"
+          printf '{"schema_version":"1.0","role":"change-detection","outcome":"%s","run_preflight":"%s","reason":"%s"}\n' \
+            "$DETECTION_OUTCOME" "$RUN_PREFLIGHT" "$REASON" > "${evidence_dir}/result.json"
+
+      - name: Upload change-detection evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: container-preflight-change-detection
+          path: ${{ runner.temp }}/container-preflight-changes
+          if-no-files-found: error
+          retention-days: 14
+
+  linux-amd64-preflight:
+    name: Linux amd64 heavy preflight
+    needs: [changes]
+    if: needs.changes.result == 'success' && needs.changes.outputs.run_preflight == 'true'
+    runs-on: ubuntu-24.04
+    container:
+      image: ubuntu:24.04
+    permissions:
+      contents: read
+
+    steps:
+      - name: Prepare evidence directory
+        if: always()
+        shell: bash
+        run: mkdir -p "${RUNNER_TEMP}/container-preflight-linux-amd64"
+
+      - name: Install container prerequisites
+        id: prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends git python3
+
+      - name: Checkout repository
+        if: always()
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Run current Python preflight entrypoints
+        id: entrypoints
+        if: always()
+        shell: bash
+        env:
+          EVIDENCE_DIR: ${{ runner.temp }}/container-preflight-linux-amd64
+        run: |
+          set -uo pipefail
+          set +e
+          requests=(
+            "toolchain|tests/speckit-pro/unit/fixtures/runner-gates/requests/run-toolchain-preflight.json"
+            "default-suite|tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json"
+            "repository-bash-confinement|tests/speckit-pro/unit/fixtures/repository-bash-confinement/requests/repo-bash-confinement.json"
+            "source-runner-release-readiness|tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json"
+            "installed-plugin-release-readiness|tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/release-readiness.json"
+          )
+          failed=0
+          for item in "${requests[@]}"; do
+            name="${item%%|*}"
+            request="${item#*|}"
+            if [[ "$name" == "default-suite" ]]; then
+              SPECKIT_SKIP_TOOLCHAIN_CHECK=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner \
+                < "$request" > "${EVIDENCE_DIR}/${name}.json" 2> "${EVIDENCE_DIR}/${name}.stderr.txt"
+            else
+              PYTHONPATH=speckit-pro python3 -m speckit_pro_runner \
+                < "$request" > "${EVIDENCE_DIR}/${name}.json" 2> "${EVIDENCE_DIR}/${name}.stderr.txt"
+            fi
+            rc=$?
+            printf '%s\n' "$rc" > "${EVIDENCE_DIR}/${name}.exit-code.txt"
+            if (( rc != 0 )); then
+              failed=1
+            fi
+          done
+          exit "$failed"
+
+      - name: Write Linux amd64 summary evidence
+        if: always()
+        shell: bash
+        env:
+          PREREQUISITES_OUTCOME: ${{ steps.prerequisites.outcome }}
+          ENTRYPOINTS_OUTCOME: ${{ steps.entrypoints.outcome }}
+        run: |
+          set -euo pipefail
+          evidence_dir="${RUNNER_TEMP}/container-preflight-linux-amd64"
+          mkdir -p "$evidence_dir"
+          printf '{"schema_version":"1.0","role":"linux-amd64","architecture":"%s","prerequisites":"%s","entrypoints":"%s","native_installed_uat":false}\n' \
+            "$(uname -m)" "$PREREQUISITES_OUTCOME" "$ENTRYPOINTS_OUTCOME" > "${evidence_dir}/summary.json"
+
+      - name: Upload Linux amd64 heavy evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: container-preflight-linux-amd64-heavy
+          path: ${{ runner.temp }}/container-preflight-linux-amd64
+          if-no-files-found: error
+          retention-days: 14
+
+  linux-arm64-preflight:
+    name: Linux arm64 heavy preflight
+    needs: [changes]
+    if: needs.changes.result == 'success' && needs.changes.outputs.run_preflight == 'true'
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: ubuntu:24.04
+    permissions:
+      contents: read
+
+    steps:
+      - name: Prepare evidence directory
+        if: always()
+        shell: bash
+        run: mkdir -p "${RUNNER_TEMP}/container-preflight-linux-arm64"
+
+      - name: Install container prerequisites
+        id: prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends git python3
+
+      - name: Checkout repository
+        if: always()
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Run current Python preflight entrypoints
+        id: entrypoints
+        if: always()
+        shell: bash
+        env:
+          EVIDENCE_DIR: ${{ runner.temp }}/container-preflight-linux-arm64
+        run: |
+          set -uo pipefail
+          set +e
+          requests=(
+            "toolchain|tests/speckit-pro/unit/fixtures/runner-gates/requests/run-toolchain-preflight.json"
+            "default-suite|tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json"
+            "repository-bash-confinement|tests/speckit-pro/unit/fixtures/repository-bash-confinement/requests/repo-bash-confinement.json"
+            "source-runner-release-readiness|tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json"
+            "installed-plugin-release-readiness|tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/release-readiness.json"
+          )
+          failed=0
+          for item in "${requests[@]}"; do
+            name="${item%%|*}"
+            request="${item#*|}"
+            if [[ "$name" == "default-suite" ]]; then
+              SPECKIT_SKIP_TOOLCHAIN_CHECK=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner \
+                < "$request" > "${EVIDENCE_DIR}/${name}.json" 2> "${EVIDENCE_DIR}/${name}.stderr.txt"
+            else
+              PYTHONPATH=speckit-pro python3 -m speckit_pro_runner \
+                < "$request" > "${EVIDENCE_DIR}/${name}.json" 2> "${EVIDENCE_DIR}/${name}.stderr.txt"
+            fi
+            rc=$?
+            printf '%s\n' "$rc" > "${EVIDENCE_DIR}/${name}.exit-code.txt"
+            if (( rc != 0 )); then
+              failed=1
+            fi
+          done
+          exit "$failed"
+
+      - name: Write Linux arm64 summary evidence
+        if: always()
+        shell: bash
+        env:
+          PREREQUISITES_OUTCOME: ${{ steps.prerequisites.outcome }}
+          ENTRYPOINTS_OUTCOME: ${{ steps.entrypoints.outcome }}
+        run: |
+          set -euo pipefail
+          evidence_dir="${RUNNER_TEMP}/container-preflight-linux-arm64"
+          mkdir -p "$evidence_dir"
+          printf '{"schema_version":"1.0","role":"linux-arm64","architecture":"%s","prerequisites":"%s","entrypoints":"%s","native_installed_uat":false}\n' \
+            "$(uname -m)" "$PREREQUISITES_OUTCOME" "$ENTRYPOINTS_OUTCOME" > "${evidence_dir}/summary.json"
+
+      - name: Upload Linux arm64 heavy evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: container-preflight-linux-arm64-heavy
+          path: ${{ runner.temp }}/container-preflight-linux-arm64
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-availability:
+    name: Record Windows hosted-label enablement
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      x64_enabled: ${{ steps.availability.outputs.x64_enabled }}
+      arm64_enabled: ${{ steps.availability.outputs.arm64_enabled }}
+
+    steps:
+      - name: Resolve Windows smoke enablement
+        id: availability
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_X64_ENABLED: ${{ inputs.windows_x64_enabled }}
+          DISPATCH_ARM64_ENABLED: ${{ inputs.windows_arm64_enabled }}
+          REPO_X64_ENABLED: ${{ vars.XPLAT_WINDOWS_X64_ENABLED }}
+          REPO_ARM64_ENABLED: ${{ vars.XPLAT_WINDOWS_ARM64_ENABLED }}
+        run: |
+          set -euo pipefail
+          evidence_dir="${RUNNER_TEMP}/container-preflight-windows-availability"
+          mkdir -p "$evidence_dir/x64" "$evidence_dir/arm64"
+
+          x64_enabled="true"
+          arm64_enabled="false"
+          x64_source="stable_label_default"
+          arm64_source="public_preview_default"
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            x64_enabled="${DISPATCH_X64_ENABLED:-true}"
+            arm64_enabled="${DISPATCH_ARM64_ENABLED:-false}"
+            x64_source="workflow_dispatch_input"
+            arm64_source="workflow_dispatch_input"
+          else
+            if [[ "$REPO_X64_ENABLED" == "true" || "$REPO_X64_ENABLED" == "false" ]]; then
+              x64_enabled="$REPO_X64_ENABLED"
+              x64_source="repository_variable"
+            fi
+            if [[ "$REPO_ARM64_ENABLED" == "true" || "$REPO_ARM64_ENABLED" == "false" ]]; then
+              arm64_enabled="$REPO_ARM64_ENABLED"
+              arm64_source="repository_variable"
+            fi
+          fi
+          # A repository-level disable is authoritative even for manual runs.
+          if [[ "$REPO_X64_ENABLED" == "false" ]]; then
+            x64_enabled="false"
+            x64_source="repository_variable_disable"
+          fi
+          if [[ "$REPO_ARM64_ENABLED" == "false" ]]; then
+            arm64_enabled="false"
+            arm64_source="repository_variable_disable"
+          fi
+
+          {
+            echo "x64_enabled=${x64_enabled}"
+            echo "arm64_enabled=${arm64_enabled}"
+          } >> "$GITHUB_OUTPUT"
+
+          printf '{"schema_version":"1.0","role":"windows-x64","runner_label":"windows-2025","hosted_label_status":"stable","available":true,"enabled":%s,"availability_kind":"github_hosted_runner_reference","source":"%s","native_installed_uat":false}\n' \
+            "$x64_enabled" "$x64_source" > "${evidence_dir}/x64/availability.json"
+          printf '{"schema_version":"1.0","role":"windows-arm64","runner_label":"windows-11-arm","hosted_label_status":"public_preview","available":true,"enabled":%s,"availability_kind":"github_hosted_runner_reference","source":"%s","native_installed_uat":false}\n' \
+            "$arm64_enabled" "$arm64_source" > "${evidence_dir}/arm64/availability.json"
+
+      - name: Upload Windows x64 availability evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: container-preflight-windows-x64-availability
+          path: ${{ runner.temp }}/container-preflight-windows-availability/x64
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Windows ARM64 availability evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: container-preflight-windows-arm64-availability
+          path: ${{ runner.temp }}/container-preflight-windows-availability/arm64
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-x64-smoke:
+    name: Windows x64 advisory smoke
+    needs: [changes, windows-availability]
+    if: needs.changes.result == 'success' && needs.changes.outputs.run_preflight == 'true' && needs.windows-availability.outputs.x64_enabled == 'true'
+    continue-on-error: true
+    runs-on: windows-2025
+    permissions:
+      contents: read
+
+    steps:
+      - name: Prepare evidence directory
+        if: always()
+        shell: pwsh
+        run: New-Item -ItemType Directory -Force (Join-Path $env:RUNNER_TEMP "container-preflight-windows-x64") | Out-Null
+
+      - name: Checkout repository
+        if: always()
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Discover Python and run runner smoke
+        if: always()
+        shell: pwsh
+        env:
+          EVIDENCE_DIR: ${{ runner.temp }}/container-preflight-windows-x64
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = "Continue"
+          New-Item -ItemType Directory -Force $env:EVIDENCE_DIR | Out-Null
+
+          $probeCode = 'import json,sys; print(json.dumps({"major":sys.version_info.major,"minor":sys.version_info.minor,"micro":sys.version_info.micro,"executable":sys.executable}))'
+          $candidates = @(
+            [pscustomobject]@{ name = "py -V:3"; executable = "py"; args = @("-V:3") },
+            [pscustomobject]@{ name = "py -3"; executable = "py"; args = @("-3") },
+            [pscustomobject]@{ name = "python"; executable = "python"; args = @() },
+            [pscustomobject]@{ name = "python3"; executable = "python3"; args = @() }
+          )
+          $probeResults = @()
+          $selected = $null
+          foreach ($candidate in $candidates) {
+            $command = Get-Command $candidate.executable -CommandType Application -ErrorAction SilentlyContinue |
+              Select-Object -First 1
+            if (-not $command) {
+              $probeResults += [pscustomobject]@{ candidate = $candidate.name; status = "missing" }
+              continue
+            }
+
+            $slug = $candidate.name -replace "[^A-Za-z0-9]+", "-"
+            $probeStdout = Join-Path $env:EVIDENCE_DIR ("probe-{0}.json" -f $slug)
+            $probeStderr = Join-Path $env:EVIDENCE_DIR ("probe-{0}.stderr.txt" -f $slug)
+            [string[]]$candidateArgs = $candidate.args
+            & $command.Source @candidateArgs -c $probeCode 1> $probeStdout 2> $probeStderr
+            $probeExit = $LASTEXITCODE
+            $version = $null
+            if ($probeExit -eq 0) {
+              try {
+                $version = Get-Content -Raw $probeStdout | ConvertFrom-Json
+              } catch {
+                $version = $null
+              }
+            }
+            $supported = $null -ne $version -and (
+              [int]$version.major -gt 3 -or
+              ([int]$version.major -eq 3 -and [int]$version.minor -ge 11)
+            )
+            $probeResults += [pscustomobject]@{
+              candidate = $candidate.name
+              command = $command.Source
+              exit_code = $probeExit
+              supported = $supported
+            }
+            if ($supported) {
+              $selected = [pscustomobject]@{
+                name = $candidate.name
+                command = $command.Source
+                args = [string[]]$candidate.args
+                version = $version
+              }
+              break
+            }
+          }
+          $probeResults | ConvertTo-Json -Depth 4 |
+            Set-Content -Encoding utf8NoBOM (Join-Path $env:EVIDENCE_DIR "interpreter-probes.json")
+
+          if (-not $selected) {
+            @{schema_version = "1.0"; role = "windows-x64"; available = $true; enabled = $true; interpreter = "missing-python-3.11"; status = "fail"; native_installed_uat = $false} |
+              ConvertTo-Json -Compress | Set-Content -Encoding utf8NoBOM (Join-Path $env:EVIDENCE_DIR "summary.json")
+            exit 1
+          }
+
+          $env:PYTHONPATH = Join-Path $env:GITHUB_WORKSPACE "speckit-pro"
+          $env:PYTHONDONTWRITEBYTECODE = "1"
+          $env:PYTHONUTF8 = "1"
+          [string]$selectedCommand = $selected.command
+          [string[]]$selectedArgs = $selected.args
+          $runtimeStdout = Join-Path $env:EVIDENCE_DIR "runtime-info.json"
+          $runtimeStderr = Join-Path $env:EVIDENCE_DIR "runtime-info.stderr.txt"
+          $preflightStdout = Join-Path $env:EVIDENCE_DIR "preflight.json"
+          $preflightStderr = Join-Path $env:EVIDENCE_DIR "preflight.stderr.txt"
+          $runtimeRequest = @{
+            schema_version = "1.0"; request_id = "xplat-010-windows-x64-runtime-info"; helper_id = "runner"
+            operation = "runtime-info"; mode = "read_only"; inputs = @{}
+          } | ConvertTo-Json -Depth 4 -Compress
+          $runtimeRequest | & $selectedCommand @selectedArgs -m speckit_pro_runner 1> $runtimeStdout 2> $runtimeStderr
+          $runtimeExit = $LASTEXITCODE
+
+          $preflightRequest = @{
+            schema_version = "1.0"; request_id = "xplat-010-windows-x64-preflight"; helper_id = "runner"
+            operation = "preflight"; mode = "read_only"; inputs = @{}
+          } | ConvertTo-Json -Depth 4 -Compress
+          $preflightRequest | & $selectedCommand @selectedArgs -m speckit_pro_runner 1> $preflightStdout 2> $preflightStderr
+          $preflightExit = $LASTEXITCODE
+
+          $status = if ($runtimeExit -eq 0 -and $preflightExit -eq 0) { "pass" } else { "fail" }
+          @{schema_version = "1.0"; role = "windows-x64"; available = $true; enabled = $true; interpreter_candidate = $selected.name; interpreter = $selectedCommand; python_version = ("{0}.{1}.{2}" -f $selected.version.major, $selected.version.minor, $selected.version.micro); runtime_info_exit = $runtimeExit; preflight_exit = $preflightExit; status = $status; native_installed_uat = $false} |
+            ConvertTo-Json -Compress | Set-Content -Encoding utf8NoBOM (Join-Path $env:EVIDENCE_DIR "summary.json")
+          if ($status -eq "fail") { exit 1 }
+
+      - name: Upload Windows x64 smoke evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: container-preflight-windows-x64-smoke
+          path: ${{ runner.temp }}/container-preflight-windows-x64
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-arm64-smoke:
+    name: Windows ARM64 advisory smoke
+    needs: [changes, windows-availability]
+    if: needs.changes.result == 'success' && needs.changes.outputs.run_preflight == 'true' && needs.windows-availability.outputs.arm64_enabled == 'true'
+    continue-on-error: true
+    runs-on: windows-11-arm
+    permissions:
+      contents: read
+
+    steps:
+      - name: Prepare evidence directory
+        if: always()
+        shell: pwsh
+        run: New-Item -ItemType Directory -Force (Join-Path $env:RUNNER_TEMP "container-preflight-windows-arm64") | Out-Null
+
+      - name: Checkout repository
+        if: always()
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Discover Python and run runner smoke
+        if: always()
+        shell: pwsh
+        env:
+          EVIDENCE_DIR: ${{ runner.temp }}/container-preflight-windows-arm64
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = "Continue"
+          New-Item -ItemType Directory -Force $env:EVIDENCE_DIR | Out-Null
+
+          $probeCode = 'import json,sys; print(json.dumps({"major":sys.version_info.major,"minor":sys.version_info.minor,"micro":sys.version_info.micro,"executable":sys.executable}))'
+          $candidates = @(
+            [pscustomobject]@{ name = "py -V:3"; executable = "py"; args = @("-V:3") },
+            [pscustomobject]@{ name = "py -3"; executable = "py"; args = @("-3") },
+            [pscustomobject]@{ name = "python"; executable = "python"; args = @() },
+            [pscustomobject]@{ name = "python3"; executable = "python3"; args = @() }
+          )
+          $probeResults = @()
+          $selected = $null
+          foreach ($candidate in $candidates) {
+            $command = Get-Command $candidate.executable -CommandType Application -ErrorAction SilentlyContinue |
+              Select-Object -First 1
+            if (-not $command) {
+              $probeResults += [pscustomobject]@{ candidate = $candidate.name; status = "missing" }
+              continue
+            }
+
+            $slug = $candidate.name -replace "[^A-Za-z0-9]+", "-"
+            $probeStdout = Join-Path $env:EVIDENCE_DIR ("probe-{0}.json" -f $slug)
+            $probeStderr = Join-Path $env:EVIDENCE_DIR ("probe-{0}.stderr.txt" -f $slug)
+            [string[]]$candidateArgs = $candidate.args
+            & $command.Source @candidateArgs -c $probeCode 1> $probeStdout 2> $probeStderr
+            $probeExit = $LASTEXITCODE
+            $version = $null
+            if ($probeExit -eq 0) {
+              try {
+                $version = Get-Content -Raw $probeStdout | ConvertFrom-Json
+              } catch {
+                $version = $null
+              }
+            }
+            $supported = $null -ne $version -and (
+              [int]$version.major -gt 3 -or
+              ([int]$version.major -eq 3 -and [int]$version.minor -ge 11)
+            )
+            $probeResults += [pscustomobject]@{
+              candidate = $candidate.name
+              command = $command.Source
+              exit_code = $probeExit
+              supported = $supported
+            }
+            if ($supported) {
+              $selected = [pscustomobject]@{
+                name = $candidate.name
+                command = $command.Source
+                args = [string[]]$candidate.args
+                version = $version
+              }
+              break
+            }
+          }
+          $probeResults | ConvertTo-Json -Depth 4 |
+            Set-Content -Encoding utf8NoBOM (Join-Path $env:EVIDENCE_DIR "interpreter-probes.json")
+
+          if (-not $selected) {
+            @{schema_version = "1.0"; role = "windows-arm64"; available = $true; enabled = $true; interpreter = "missing-python-3.11"; status = "fail"; native_installed_uat = $false} |
+              ConvertTo-Json -Compress | Set-Content -Encoding utf8NoBOM (Join-Path $env:EVIDENCE_DIR "summary.json")
+            exit 1
+          }
+
+          $env:PYTHONPATH = Join-Path $env:GITHUB_WORKSPACE "speckit-pro"
+          $env:PYTHONDONTWRITEBYTECODE = "1"
+          $env:PYTHONUTF8 = "1"
+          [string]$selectedCommand = $selected.command
+          [string[]]$selectedArgs = $selected.args
+          $runtimeStdout = Join-Path $env:EVIDENCE_DIR "runtime-info.json"
+          $runtimeStderr = Join-Path $env:EVIDENCE_DIR "runtime-info.stderr.txt"
+          $preflightStdout = Join-Path $env:EVIDENCE_DIR "preflight.json"
+          $preflightStderr = Join-Path $env:EVIDENCE_DIR "preflight.stderr.txt"
+          $runtimeRequest = @{
+            schema_version = "1.0"; request_id = "xplat-010-windows-arm64-runtime-info"; helper_id = "runner"
+            operation = "runtime-info"; mode = "read_only"; inputs = @{}
+          } | ConvertTo-Json -Depth 4 -Compress
+          $runtimeRequest | & $selectedCommand @selectedArgs -m speckit_pro_runner 1> $runtimeStdout 2> $runtimeStderr
+          $runtimeExit = $LASTEXITCODE
+
+          $preflightRequest = @{
+            schema_version = "1.0"; request_id = "xplat-010-windows-arm64-preflight"; helper_id = "runner"
+            operation = "preflight"; mode = "read_only"; inputs = @{}
+          } | ConvertTo-Json -Depth 4 -Compress
+          $preflightRequest | & $selectedCommand @selectedArgs -m speckit_pro_runner 1> $preflightStdout 2> $preflightStderr
+          $preflightExit = $LASTEXITCODE
+
+          $status = if ($runtimeExit -eq 0 -and $preflightExit -eq 0) { "pass" } else { "fail" }
+          @{schema_version = "1.0"; role = "windows-arm64"; available = $true; enabled = $true; interpreter_candidate = $selected.name; interpreter = $selectedCommand; python_version = ("{0}.{1}.{2}" -f $selected.version.major, $selected.version.minor, $selected.version.micro); runtime_info_exit = $runtimeExit; preflight_exit = $preflightExit; status = $status; native_installed_uat = $false} |
+            ConvertTo-Json -Compress | Set-Content -Encoding utf8NoBOM (Join-Path $env:EVIDENCE_DIR "summary.json")
+          if ($status -eq "fail") { exit 1 }
+
+      - name: Upload Windows ARM64 smoke evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: container-preflight-windows-arm64-smoke
+          path: ${{ runner.temp }}/container-preflight-windows-arm64
+          if-no-files-found: error
+          retention-days: 14
+
+  linux-amd64:
+    name: container-preflight-linux-amd64
+    needs: [changes, linux-amd64-preflight]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+
+    steps:
+      - name: Report Linux amd64 required-check verdict
+        shell: bash
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          RUN_PREFLIGHT: ${{ needs.changes.outputs.run_preflight }}
+          PREFLIGHT_RESULT: ${{ needs.linux-amd64-preflight.result }}
+        run: |
+          set -euo pipefail
+          evidence_dir="${RUNNER_TEMP}/container-preflight-linux-amd64-sentinel"
+          mkdir -p "$evidence_dir"
+          verdict=pass
+          if [[ "$CHANGES_RESULT" != "success" ]]; then
+            verdict=fail
+          elif [[ "$RUN_PREFLIGHT" == "true" && "$PREFLIGHT_RESULT" != "success" ]]; then
+            verdict=fail
+          elif [[ "$RUN_PREFLIGHT" != "true" && "$PREFLIGHT_RESULT" != "skipped" ]]; then
+            verdict=fail
+          fi
+          printf '{"schema_version":"1.0","role":"linux-amd64-required","run_preflight":"%s","heavy_result":"%s","verdict":"%s","native_installed_uat":false}\n' \
+            "$RUN_PREFLIGHT" "$PREFLIGHT_RESULT" "$verdict" > "${evidence_dir}/result.json"
+          [[ "$verdict" == "pass" ]]
+
+      - name: Upload Linux amd64 required-check evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: container-preflight-linux-amd64-required
+          path: ${{ runner.temp }}/container-preflight-linux-amd64-sentinel
+          if-no-files-found: error
+          retention-days: 14
+
+  linux-arm64:
+    name: container-preflight-linux-arm64
+    needs: [changes, linux-arm64-preflight]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+
+    steps:
+      - name: Report Linux arm64 required-check verdict
+        shell: bash
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          RUN_PREFLIGHT: ${{ needs.changes.outputs.run_preflight }}
+          PREFLIGHT_RESULT: ${{ needs.linux-arm64-preflight.result }}
+        run: |
+          set -euo pipefail
+          evidence_dir="${RUNNER_TEMP}/container-preflight-linux-arm64-sentinel"
+          mkdir -p "$evidence_dir"
+          verdict=pass
+          if [[ "$CHANGES_RESULT" != "success" ]]; then
+            verdict=fail
+          elif [[ "$RUN_PREFLIGHT" == "true" && "$PREFLIGHT_RESULT" != "success" ]]; then
+            verdict=fail
+          elif [[ "$RUN_PREFLIGHT" != "true" && "$PREFLIGHT_RESULT" != "skipped" ]]; then
+            verdict=fail
+          fi
+          printf '{"schema_version":"1.0","role":"linux-arm64-required","run_preflight":"%s","heavy_result":"%s","verdict":"%s","native_installed_uat":false}\n' \
+            "$RUN_PREFLIGHT" "$PREFLIGHT_RESULT" "$verdict" > "${evidence_dir}/result.json"
+          [[ "$verdict" == "pass" ]]
+
+      - name: Upload Linux arm64 required-check evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: container-preflight-linux-arm64-required
+          path: ${{ runner.temp }}/container-preflight-linux-arm64-sentinel
+          if-no-files-found: error
+          retention-days: 14

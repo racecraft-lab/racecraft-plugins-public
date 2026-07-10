@@ -213,7 +213,7 @@ If a PR ever lands on `main` with a non-public-readable title (squash merges use
 
 ## CI/CD Workflow
 
-The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-draft PR and can also be dispatched by release automation for release-please PR branches created with `GITHUB_TOKEN`. It contains five jobs:
+The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-draft PR and can also be dispatched by release automation for release-please PR branches created with `GITHUB_TOKEN`. It contains seven jobs:
 
 | Job | Description |
 |-----|-------------|
@@ -221,7 +221,9 @@ The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-dra
 | `test (<plugin>)` | Dispatches the Python runner toolchain and default-suite gates for each plugin in the matrix. |
 | `validate-plugins` | Sentinel/aggregator job. Always runs. Passes when the plugin test matrix passed or was skipped; fails when it failed or was cancelled. Provides the stable check name that branch protection requires. |
 | `validate-pr-title` | Validates the PR title against the Conventional Commits pattern. |
+| `validate-workflows` | Installs pinned actionlint and validates every GitHub Actions workflow. |
 | `validate-docs` | Detects docs-site, generated-reference, release metadata, and docs-validation contract changes. Runs full docs validation for rendered docs or docs-contract changes, and reference plus quality validation for generated-reference changes. |
+| `artifact-consistency` | Regenerates release artifacts and fails when the checked-in payload, registry, fixture, or evidence mirrors drift from source. |
 
 **Why a sentinel job?** The `test` matrix job name is dynamic (`test (speckit-pro)`, `test (other-plugin)`, etc.) and cannot be registered as a stable required check name. The `validate-plugins` sentinel aggregates matrix results into one stable name that branch protection can require.
 
@@ -229,7 +231,9 @@ The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-dra
 
 **Release-please PRs:** GitHub suppresses normal `pull_request` workflow runs for PRs created or updated by `GITHUB_TOKEN`, so the Release workflow dispatches `PR Checks` manually after it syncs generated `dist/**` payloads onto the release PR branch. Those dispatched (`workflow_dispatch`) check runs are visible on the PR but live in a check suite that is **not associated with the PR**, so branch protection does not count them — which is why a `GITHUB_TOKEN`-authored release PR shows `BLOCKED` even with everything green. When the optional `RELEASE_PLEASE_TOKEN` secret is configured (see **Release Process → Release token**), the release PR is authored by that identity instead, its `pull_request` checks run un-gated and satisfy branch protection directly, and the manual dispatch becomes a fallback. Without the secret the workflow falls back to `GITHUB_TOKEN` and behaves as before.
 
-**Maintenance warning:** If any job in `pr-checks.yml` is renamed, the corresponding required status check name in branch protection MUST be updated manually — GitHub does NOT automatically track job renames. A stale check name silently degrades protection: the renamed check never reports, the branch protection rule becomes vacuous, and PRs become mergeable without the check passing.
+**Container preflight:** `.github/workflows/container-preflight.yml` starts on every PR and manual dispatch so required contexts are never stranded by workflow-level path filters. A lightweight Ubuntu job limits heavy execution to runner, gate, and workflow changes. The stable `container-preflight-linux-amd64` and `container-preflight-linux-arm64` sentinels report success for intentional no-op runs and fail when their matching heavy container job fails. The official GitHub-hosted runners reference lists `windows-2025` as stable and the ARM64 row containing `windows-11-arm` as Public Preview. Windows smoke remains advisory: x64 defaults enabled, ARM64 defaults disabled, and `XPLAT_WINDOWS_X64_ENABLED` / `XPLAT_WINDOWS_ARM64_ENABLED` or manual inputs provide explicit overrides. Uploaded evidence is diagnostic preflight data, not native installed-plugin UAT.
+
+**Maintenance warning:** If a required job in `pr-checks.yml` or `container-preflight.yml` is renamed, the corresponding required status check name in branch protection MUST be updated manually — GitHub does NOT automatically track job renames. The live rule currently requires `validate-plugins` and `validate-pr-title`; add `container-preflight-linux-amd64` and `container-preflight-linux-arm64` after both report on PR 11.
 
 To detect drift, run:
 ```bash
@@ -237,9 +241,9 @@ gh api /repos/racecraft-lab/racecraft-plugins-public/branches/main/protection \
   --jq '[.required_status_checks.contexts[]]'
 ```
 
-Compare the output against the actual job names in `pr-checks.yml`. Recovery: re-run the Stage 1 branch protection setup command from `docs/ai/specs/cicd-release-pipeline-verification.md` with the corrected check names.
+Compare the output against the actual required job names in both workflows. Recovery: re-run the Stage 1 branch protection setup command from `docs/ai/specs/cicd-release-pipeline-verification.md` with the corrected check names.
 
-When modifying `.github/workflows/pr-checks.yml` or `.github/workflows/release.yml`, include a note in the PR description confirming whether CLAUDE.md's CI/CD sections require updates.
+When modifying `.github/workflows/pr-checks.yml`, `.github/workflows/container-preflight.yml`, or `.github/workflows/release.yml`, include a note in the PR description confirming whether CLAUDE.md's CI/CD sections require updates.
 
 ## Docs Site Deployment
 

@@ -87,6 +87,7 @@ Columns:
 | PR 10 | shipped gate current-interpreter expansion | default | 59 → 60 | n/a | n/a |
 | PR 10 | purpose-based unit/fixture layout contract | default | 0 → 4 | n/a | n/a |
 | PR 10 | registered release-PR reconciliation contract | default | 0 → 9 | n/a | n/a |
+| PR 11 | workflow self-validator expansion: `validate-pr-checks-sentinel.py` | default | 30 → 49 | n/a (new container-preflight contract) | `tests/speckit-pro/parity/bash-to-python/validate-pr-checks-sentinel-baseline.txt` |
 
 **PR 13 note (T121–T130):** The estimator Layer-4 test follows the
 Per-Port Protocol against historical predecessor commit
@@ -304,3 +305,11 @@ Claude/Codex names and resolves through the selected executable directory,
 closing the arbitrary-runtime escape while preserving cross-platform command
 selection. The shipped artifact regeneration completed twice, with the second
 run reporting no changes.
+
+**PR 11 note (T100–T108):** The self-referential workflow validator expands
+from `30 → 49` checks to lock the always-reporting PR trigger, internal heavy
+path decision, two stable Linux sentinels, both release-readiness request
+families, exact least-privilege job maps, current hosted runner labels, ordered
+Python 3.11+ Windows discovery, separated stdout/stderr evidence, and nine
+non-masking always-run uploads. This is new workflow-contract coverage, not a
+port parity claim.

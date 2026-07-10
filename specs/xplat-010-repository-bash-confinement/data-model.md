@@ -103,13 +103,15 @@ Entities section + Clarifications; JSON/format contracts live under `contracts/`
 
 - **Home**: uploaded by the preflight jobs in `.github/workflows/container-preflight.yml`
   (NEW, PR 11); not a repository source file.
-- **Purpose**: Per-platform availability + smoke-result evidence (FR-020).
-- **Fields**: per job `{platform (linux/amd64|linux/arm64|windows-x64|windows-arm64),
-  runner_label, available (bool), gate_role ("required"|"advisory"), smoke_result, entrypoints}`.
-- **Validation rules**: Linux amd64/arm64 jobs are required (gating) on the paths they trigger;
-  Windows jobs are `continue-on-error` advisory with runner availability recorded per label; an
-  unavailable/public-preview Windows label records availability and blocks no merge. Never
-  treated as native installed-plugin UAT evidence (XPLAT-008 remains the release-claim gate).
+- **Purpose**: Per-role path decision, configured enablement, gate verdict, and smoke evidence
+  (FR-020).
+- **Fields**: role-specific JSON includes `{role, runner_label?, hosted_label_status?,
+  available?, enabled?, run_preflight?, entrypoints?, verdict?, native_installed_uat:false}`.
+- **Validation rules**: the Linux amd64/arm64 stable sentinels always report and gate only relevant
+  heavy-job failures; Windows jobs are `continue-on-error` advisory, use current official hosted
+  labels, and are queued only when the runner-independent control job records `enabled:true`.
+  Every executed role uploads with always-run semantics. Evidence is never native installed-plugin
+  UAT (XPLAT-008 remains the release-claim gate).
 
 ## 8. Spec-Size Estimate
 

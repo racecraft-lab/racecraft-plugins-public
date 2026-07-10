@@ -6,32 +6,33 @@ XPLAT-010 count-parity port (T032, US2). The module imports only the Python
 optional PyYAML/Ruby subprocess delegation described below.
 Verifies ``.github/workflows/pr-checks.yml`` defines the ``validate-plugins``
 sentinel with the correct triggers, dispatch inputs, Python-runner gate steps,
-and sentinel logic, then folds a glob of every ``.github/workflows/*.yml`` into a
-single "valid YAML" outcome. Every former ``assert_*``/``_pass``/``_fail``
-execution maps to one counted ``subTest`` unit; names reproduced verbatim via
-``subTest(msg=...)`` for a 1:1 baseline match.
+and sentinel logic. XPLAT-010 PR 11 extends the same structural boundary to
+``container-preflight.yml``: always-triggered PR reporting, lightweight change
+detection, conditional heavy jobs, stable Linux required-check sentinels,
+configured Windows availability, and always-run evidence uploads. The validator
+then folds every ``.github/workflows/*.yml`` into one "valid YAML" outcome.
 
-YAML validity (check 28): the bash predecessor validated each workflow via
-``python3 -c "import yaml,…"`` with a ``ruby`` fallback. The port keeps its own
-module stdlib-only and reproduces that exact mechanism through ``subprocess``
-(argv list, ``shell=False``) — no new runtime dependency, identical pass/fail
-folding. ``python3``/``ruby`` are outside the bash-scoped confinement vocabulary.
+YAML syntax: the shell predecessor used optional non-stdlib YAML parsers
+(``python -c import yaml`` or Ruby). This port is intentionally stdlib-only per
+XPLAT-010, so it applies a conservative GitHub-workflow YAML sanity check that
+guards indentation, mapping/sequence structure, and block-scalar boundaries
+without adding PyYAML/Ruby as runtime dependencies.
 
-PR 5 later updates this ported validator for the CI dispatch swap (tasks T049).
-
-PR 5 extends the ported validator for the docs-toolchain CI dispatch swap.
+PR 5 updated this ported validator for the CI dispatch swap (task T049); PR 11
+adds the container-preflight contract checks (task T106).
 
 Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-pr-checks-sentinel-baseline.txt``
-(TOTAL: 30).
+(TOTAL: 49).
 """
 
 from __future__ import annotations
 
 import re
-import subprocess
 import sys
 import unittest
 from pathlib import Path
+
+from workflow_yaml_sanity import yaml_syntax_sane as _yaml_syntax_sane
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
@@ -40,6 +41,7 @@ if str(LIB_DIR) not in sys.path:
 from test_result import run_counted  # noqa: E402
 
 WORKFLOW_FILE = REPO_ROOT / ".github" / "workflows" / "pr-checks.yml"
+CONTAINER_WORKFLOW_FILE = REPO_ROOT / ".github" / "workflows" / "container-preflight.yml"
 WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
 
 CHECKOUT_PIN_RE = re.compile(r"uses: actions/checkout@[0-9a-f]{40}")
@@ -90,7 +92,8 @@ CONTENT_CHECKS: list[tuple[str, str, list[str]]] = [
     ("all", "test job dispatches runner default suite gate",
      ["run-default-suite.json", 'PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner']),
     ("all", "docs validation dispatches runner toolchain preflight",
-     ["Report docs toolchain", "run-toolchain-preflight-docs.json"]),
+     ["Report docs toolchain",
+      "run-toolchain-preflight-docs.json"]),
     ("absent", "docs validation does not dispatch bash toolchain check",
      ["bash tests/speckit-pro/check-toolchain.sh --mode docs"]),
     ("all", "sentinel checks detect_result for failure", ["detect_result"]),
@@ -100,29 +103,66 @@ CONTENT_CHECKS: list[tuple[str, str, list[str]]] = [
     ("all", "sentinel exits 1 on detect cancellation", ['"cancelled"']),
 ]
 
+CONTAINER_JOBS = (
+    "changes",
+    "linux-amd64-preflight",
+    "linux-arm64-preflight",
+    "windows-availability",
+    "windows-x64-smoke",
+    "windows-arm64-smoke",
+    "linux-amd64",
+    "linux-arm64",
+)
+
+LINUX_REQUESTS = (
+    "run-toolchain-preflight.json",
+    "run-default-suite.json",
+    "repository-bash-confinement/requests/repo-bash-confinement.json",
+    "runner-gates/requests/release-readiness.json",
+    "installed-plugin-release/requests/release-readiness.json",
+)
+
+EXPECTED_PERMISSIONS = {
+    "changes": "contents: read",
+    "linux-amd64-preflight": "contents: read",
+    "linux-arm64-preflight": "contents: read",
+    "windows-availability": "{}",
+    "windows-x64-smoke": "contents: read",
+    "windows-arm64-smoke": "contents: read",
+    "linux-amd64": "{}",
+    "linux-arm64": "{}",
+}
+
+EXPECTED_UPLOAD_COUNTS = {
+    "changes": 1,
+    "linux-amd64-preflight": 1,
+    "linux-arm64-preflight": 1,
+    "windows-availability": 2,
+    "windows-x64-smoke": 1,
+    "windows-arm64-smoke": 1,
+    "linux-amd64": 1,
+    "linux-arm64": 1,
+}
+
+
+def _job_block(content: str, job_id: str) -> str:
+    match = re.search(
+        rf"(?ms)^  {re.escape(job_id)}:\n(?P<body>.*?)(?=^  [A-Za-z0-9_-]+:\n|\Z)",
+        content,
+    )
+    return match.group("body") if match else ""
+
 
 def _yaml_valid(path: Path) -> bool:
-    """Mirror the bash python-yaml-then-ruby validity check for one workflow file."""
-    content = path.read_bytes()
-    py = subprocess.run(
-        [sys.executable, "-c", "import yaml, sys; yaml.safe_load(sys.stdin)"],
-        input=content,
-        capture_output=True,
-        shell=False,
-        check=False,
-    )
-    if py.returncode == 0:
-        return True
-    try:
-        rb = subprocess.run(
-            ["ruby", "-e", "require 'yaml'; YAML.load_file(ARGV.fetch(0))", str(path)],
-            capture_output=True,
-            shell=False,
-            check=False,
-        )
-    except FileNotFoundError:
+    return _yaml_syntax_sane(path.read_text(encoding="utf-8"))
+
+
+def _required_sentinel_passes(changes: str, run_preflight: str, heavy: str) -> bool:
+    if changes != "success":
         return False
-    return rb.returncode == 0
+    if run_preflight == "true":
+        return heavy == "success"
+    return heavy == "skipped"
 
 
 class ValidatePrChecksSentinel(unittest.TestCase):
@@ -154,12 +194,242 @@ class ValidatePrChecksSentinel(unittest.TestCase):
                     self.assertEqual([], present, f"unexpected content present: {present}")
 
         with self.subTest(msg="all GitHub workflow files are valid YAML"):
+            valid_nested_step = """\
+name: Valid
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe
+        run: echo valid
+"""
+            under_indented_step = """\
+name: Invalid
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe
+      run: echo invalid
+"""
+            malformed = "name: Invalid\njobs:\n  probe:\n    runs-on: [ubuntu-latest\n"
+            self.assertTrue(
+                _yaml_syntax_sane(valid_nested_step),
+                "stdlib YAML sanity check rejected a valid nested workflow step",
+            )
+            self.assertFalse(
+                _yaml_syntax_sane(under_indented_step),
+                "stdlib YAML sanity check accepted an under-indented step child",
+            )
+            self.assertFalse(
+                _yaml_syntax_sane(malformed),
+                "stdlib YAML sanity check accepted an unterminated flow sequence",
+            )
             failures = [p.name for p in sorted(WORKFLOWS_DIR.glob("*.yml")) if not _yaml_valid(p)]
             self.assertEqual([], failures, f"GitHub workflow YAML syntax validation failed for: {failures}")
 
+    def test_container_preflight(self) -> None:
+        with self.subTest(msg="container-preflight.yml exists"):
+            self.assertTrue(
+                CONTAINER_WORKFLOW_FILE.is_file(),
+                f"file not found: {CONTAINER_WORKFLOW_FILE}",
+            )
+
+        content = (
+            CONTAINER_WORKFLOW_FILE.read_text(encoding="utf-8")
+            if CONTAINER_WORKFLOW_FILE.is_file()
+            else ""
+        )
+        trigger_block = content.split("permissions:", 1)[0]
+
+        with self.subTest(msg="container preflight always reports on pull requests"):
+            self.assertIn("pull_request:", trigger_block)
+            self.assertNotIn("paths:", trigger_block)
+
+        with self.subTest(msg="container preflight supports manual dispatch"):
+            self.assertIn("workflow_dispatch:", trigger_block)
+
+        with self.subTest(msg="container preflight has workflow permissions empty"):
+            self.assertRegex(content, r"(?m)^permissions: \{\}$")
+
+        with self.subTest(msg="change detector owns the heavy preflight decision"):
+            block = _job_block(content, "changes")
+            self.assertIn("run_preflight:", block)
+            self.assertIn("steps.changes.outputs.run_preflight", block)
+            for path in ("speckit-pro/speckit_pro_runner/", "tests/speckit-pro/", ".github/workflows/"):
+                self.assertIn(path, block)
+
+        with self.subTest(msg="Linux amd64 heavy preflight is job-level conditional"):
+            block = _job_block(content, "linux-amd64-preflight")
+            self.assertIn("needs.changes.outputs.run_preflight == 'true'", block)
+            self.assertIn("container:", block)
+
+        with self.subTest(msg="Linux arm64 heavy preflight is job-level conditional"):
+            block = _job_block(content, "linux-arm64-preflight")
+            self.assertIn("needs.changes.outputs.run_preflight == 'true'", block)
+            self.assertIn("runs-on: ubuntu-24.04-arm", block)
+            self.assertIn("container:", block)
+
+        with self.subTest(msg="Linux amd64 runs current Python gate entrypoints"):
+            block = _job_block(content, "linux-amd64-preflight")
+            self.assertIn("python3 -m speckit_pro_runner", block)
+            for request in LINUX_REQUESTS:
+                self.assertIn(request, block)
+
+        with self.subTest(msg="Linux arm64 runs current Python gate entrypoints"):
+            block = _job_block(content, "linux-arm64-preflight")
+            self.assertIn("python3 -m speckit_pro_runner", block)
+            for request in LINUX_REQUESTS:
+                self.assertIn(request, block)
+
+        with self.subTest(msg="Linux amd64 required check is an always sentinel"):
+            block = _job_block(content, "linux-amd64")
+            self.assertIn("name: container-preflight-linux-amd64", block)
+            self.assertIn("if: always()", block)
+            self.assertIn("needs.linux-amd64-preflight.result", block)
+            for condition in (
+                '[[ "$CHANGES_RESULT" != "success" ]]',
+                '[[ "$RUN_PREFLIGHT" == "true" && "$PREFLIGHT_RESULT" != "success" ]]',
+                '[[ "$RUN_PREFLIGHT" != "true" && "$PREFLIGHT_RESULT" != "skipped" ]]',
+            ):
+                self.assertIn(condition, block)
+            self.assertEqual(
+                [True, False, False, True, False, False, False],
+                [
+                    _required_sentinel_passes("success", "true", "success"),
+                    _required_sentinel_passes("success", "true", "failure"),
+                    _required_sentinel_passes("success", "true", "cancelled"),
+                    _required_sentinel_passes("success", "false", "skipped"),
+                    _required_sentinel_passes("success", "false", "success"),
+                    _required_sentinel_passes("failure", "true", "success"),
+                    _required_sentinel_passes("cancelled", "false", "skipped"),
+                ],
+            )
+
+        with self.subTest(msg="Linux arm64 required check is an always sentinel"):
+            block = _job_block(content, "linux-arm64")
+            self.assertIn("name: container-preflight-linux-arm64", block)
+            self.assertIn("if: always()", block)
+            self.assertIn("needs.linux-arm64-preflight.result", block)
+            for condition in (
+                '[[ "$CHANGES_RESULT" != "success" ]]',
+                '[[ "$RUN_PREFLIGHT" == "true" && "$PREFLIGHT_RESULT" != "success" ]]',
+                '[[ "$RUN_PREFLIGHT" != "true" && "$PREFLIGHT_RESULT" != "skipped" ]]',
+            ):
+                self.assertIn(condition, block)
+
+        with self.subTest(msg="Windows availability is configured on an Ubuntu control job"):
+            block = _job_block(content, "windows-availability")
+            self.assertIn("runs-on: ubuntu-latest", block)
+            self.assertIn("XPLAT_WINDOWS_X64_ENABLED", block)
+            self.assertIn("XPLAT_WINDOWS_ARM64_ENABLED", block)
+            self.assertNotIn("XPLAT_WINDOWS_ARM64_AVAILABLE", block)
+            self.assertEqual(1, trigger_block.count("default: true"))
+            self.assertEqual(1, trigger_block.count("default: false"))
+            for label in ("windows-2025", "windows-11-arm"):
+                self.assertIn(f'"runner_label":"{label}"', block)
+            self.assertIn('"hosted_label_status":"stable"', block)
+            self.assertIn('"hosted_label_status":"public_preview"', block)
+            self.assertEqual(2, block.count('"available":true'))
+            self.assertIn('x64_source="stable_label_default"', block)
+            self.assertIn('arm64_source="public_preview_default"', block)
+            self.assertIn('arm64_enabled="false"', block)
+            self.assertEqual(2, block.count('source="repository_variable_disable"'))
+            self.assertIn('"$x64_enabled" "$x64_source"', block)
+            self.assertIn('"$arm64_enabled" "$arm64_source"', block)
+            self.assertLess(
+                block.index('if [[ "$EVENT_NAME" == "workflow_dispatch" ]]'),
+                block.index('if [[ "$REPO_X64_ENABLED" == "false" ]]'),
+            )
+            self.assertIn("windows_x64_enabled", trigger_block)
+            self.assertIn("windows_arm64_enabled", trigger_block)
+
+        with self.subTest(msg="Windows x64 smoke is advisory and conditionally queued"):
+            block = _job_block(content, "windows-x64-smoke")
+            self.assertIn("continue-on-error: true", block)
+            self.assertIn("needs.windows-availability.outputs.x64_enabled == 'true'", block)
+            self.assertIn("runs-on: windows-2025", block)
+
+        with self.subTest(msg="Windows ARM64 smoke is advisory and conditionally queued"):
+            block = _job_block(content, "windows-arm64-smoke")
+            self.assertIn("continue-on-error: true", block)
+            self.assertIn("needs.windows-availability.outputs.arm64_enabled == 'true'", block)
+            self.assertIn("runs-on: windows-11-arm", block)
+
+        with self.subTest(msg="Windows smoke runs interpreter discovery runtime-info and preflight"):
+            for job_id in ("windows-x64-smoke", "windows-arm64-smoke"):
+                block = _job_block(content, job_id)
+                candidates = ('name = "py -V:3"', 'name = "py -3"', 'name = "python"', 'name = "python3"')
+                positions = [block.find(candidate) for candidate in candidates]
+                self.assertTrue(all(position >= 0 for position in positions))
+                self.assertEqual(sorted(positions), positions, "Python discovery order drifted")
+                self.assertIn("[int]$version.minor -ge 11", block)
+                self.assertIn("missing-python-3.11", block)
+                self.assertIn('operation = "runtime-info"', block)
+                self.assertIn('operation = "preflight"', block)
+                self.assertIn("runtime-info.stderr.txt", block)
+                self.assertIn("preflight.stderr.txt", block)
+                self.assertIn("1> $runtimeStdout 2> $runtimeStderr", block)
+                self.assertIn("1> $preflightStdout 2> $preflightStderr", block)
+                self.assertIn('$env:PYTHONUTF8 = "1"', block)
+                self.assertNotIn("2>&1", block)
+                self.assertNotIn("1> (Join-Path", block)
+
+        with self.subTest(msg="every container preflight job declares minimal permissions"):
+            failures = []
+            for job_id, expected in EXPECTED_PERMISSIONS.items():
+                block = _job_block(content, job_id)
+                if expected == "{}":
+                    valid = re.search(r"(?m)^    permissions: \{\}$", block) is not None
+                else:
+                    valid = re.search(
+                        rf"(?m)^    permissions:\n      {re.escape(expected)}$",
+                        block,
+                    ) is not None
+                if not valid or re.search(r"(?m)^\s+[A-Za-z-]+: write$", block):
+                    failures.append(job_id)
+            self.assertEqual([], failures, f"jobs with incorrect permissions: {failures}")
+
+        with self.subTest(msg="every container preflight job uploads evidence with always semantics"):
+            failures = []
+            for job_id, expected_count in EXPECTED_UPLOAD_COUNTS.items():
+                block = _job_block(content, job_id)
+                upload_steps = [
+                    step
+                    for step in re.split(r"(?m)(?=^      - name: )", block)
+                    if "actions/upload-artifact@v7" in step
+                ]
+                if len(upload_steps) != expected_count or any(
+                    "if: always()" not in step
+                    or "continue-on-error: true" not in step
+                    or "if-no-files-found: error" not in step
+                    for step in upload_steps
+                ):
+                    failures.append(job_id)
+            self.assertEqual([], failures, f"jobs with incorrect evidence uploads: {failures}")
+
+        with self.subTest(msg="evidence uploads cannot mask or flip role verdicts"):
+            upload_count = sum(EXPECTED_UPLOAD_COUNTS.values())
+            self.assertEqual(upload_count, content.count("uses: actions/upload-artifact@v7"))
+            self.assertEqual(
+                upload_count + 2,
+                content.count("continue-on-error: true"),
+                "only nine upload steps and two Windows advisory jobs may continue on error",
+            )
+
+        with self.subTest(msg="container preflight dispatches no repo-local shell helper"):
+            self.assertIsNone(
+                re.search(r"(?i)(?:scripts|tests|speckit-pro)/[^\s\"']+\.(?:sh|bash|zsh|ps1|bat|cmd)\b", content)
+            )
+            self.assertNotRegex(content, r"(?i)(?<![\w-])jq(?![\w-])")
 
 def build_suite() -> unittest.TestSuite:
-    return unittest.defaultTestLoader.loadTestsFromTestCase(ValidatePrChecksSentinel)
+    return unittest.TestSuite(
+        [
+            ValidatePrChecksSentinel("test_sentinel"),
+            ValidatePrChecksSentinel("test_container_preflight"),
+        ]
+    )
 
 
 def main() -> int:
