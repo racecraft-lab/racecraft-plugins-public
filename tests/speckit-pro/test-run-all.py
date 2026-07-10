@@ -84,12 +84,18 @@ class ScopeSelectionTests(unittest.TestCase):
             if layer["id"] != "toolchain" and run_all.layer_should_run(layer, config)
         }
 
+    def _ordered_runs(self, config):
+        return [layer["id"] for layer in run_all.execution_layers(self.manifest) if run_all.layer_should_run(layer, config)]
+
     def test_default_runs_only_1_4_5(self) -> None:
         self.assertEqual(self._runs(run_all.parse_args([])), {"1", "4", "5"})
 
+    def test_live_preserves_default_1_4_5_scope(self) -> None:
+        self.assertEqual(self._ordered_runs(run_all.parse_args(["--live"])), ["1", "4", "5"])
+
     def test_all_runs_every_runner_block_but_not_layer_8(self) -> None:
-        runs = self._runs(run_all.parse_args(["--all"]))
-        self.assertEqual(runs, {"1", "2", "3", "4", "5", "6", "7"})
+        runs = self._ordered_runs(run_all.parse_args(["--all"]))
+        self.assertEqual(runs, ["1", "2", "3", "4", "5", "6", "7"])
         self.assertNotIn("8", runs)
 
     def test_layer_selection_is_exact(self) -> None:
@@ -102,6 +108,18 @@ class ScopeSelectionTests(unittest.TestCase):
         self.assertTrue(run_all.toolchain_should_run(self.manifest, run_all.parse_args([])))
         self.assertTrue(run_all.toolchain_should_run(self.manifest, run_all.parse_args(["--integration"])))
         self.assertFalse(run_all.toolchain_should_run(self.manifest, run_all.parse_args(["--layer", "2"])))
+
+    def test_live_eval_layers_print_python_command_plans(self) -> None:
+        for layer_id in ("2", "3", "6"):
+            with self.subTest(msg=f"Layer {layer_id} uses Python command plans"):
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    run_all.print_layer_commands(self.by_id[layer_id], REPO_ROOT)
+                text = output.getvalue()
+                self.assertEqual(self._ordered_runs(run_all.parse_args(["--layer", layer_id])), [layer_id])
+                self.assertIn("python3 tests/speckit-pro/", text)
+                self.assertNotIn("    bash ", text)
+                self.assertTrue(all(script["path"].endswith(".py") for script in self.by_id[layer_id]["scripts"]))
 
 
 class SummaryParsingTests(unittest.TestCase):

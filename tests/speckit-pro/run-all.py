@@ -110,6 +110,12 @@ def layer_should_run(layer: dict, config: Config) -> bool:
     return bool(layer["default"])
 
 
+def execution_layers(manifest: dict) -> list[dict]:
+    """Return numeric layers in the predecessor's 1..8 presentation order."""
+    layers = [layer for layer in manifest["layers"] if layer["id"] != "toolchain"]
+    return sorted(layers, key=lambda layer: int(layer["id"]))
+
+
 def toolchain_should_run(manifest: dict, config: Config) -> bool:
     by_id = {layer["id"]: layer for layer in manifest["layers"]}
     return any(
@@ -242,7 +248,11 @@ def print_layer_commands(layer: dict, root: Path) -> None:
     print(RULE)
     print("  Run manually (requires claude -p / codex):")
     for script in layer["scripts"]:
-        print(f"    bash {script['path']}")
+        argument_hint = " <skill>" if layer["id"] in {"2", "3"} else ""
+        print(f"    python3 {script['path']}{argument_hint}")
+        if layer["id"] == "6":
+            print(f"    python3 {script['path']} --agent gate-validator")
+            print(f"    python3 {script['path']} --agent gate-validator --sweep")
 
 
 def run_toolchain_preflight(root: Path, config: Config, manifest: dict) -> bool:
@@ -312,7 +322,7 @@ def main(argv: list[str]) -> int:
         print("  PASS check-toolchain (gate; not counted in suite total)")
         layer_results.append("toolchain preflight: ok (gate, not counted)")
 
-    for layer in manifest["layers"]:
+    for layer in execution_layers(manifest):
         if not layer_should_run(layer, config):
             continue
         if layer["execution"] == "print-commands":

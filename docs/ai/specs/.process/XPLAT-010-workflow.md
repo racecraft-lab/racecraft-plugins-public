@@ -441,7 +441,7 @@ window, and the unavailable tasks-mode gate (recorded fallback chain).
   Budget and Split Decision section of this workflow file). Plan tasks so
   each PR is independently CI-green.
 - Shipped-runner changes (suite gate manifest read, confinement guard op) are
-  confined to PRs 2, 7b, 8, 10, and 13; each triggers the payload rebuild + proof-hash
+  confined to PRs 2, 7b, 8, 9, 10, and 13; each triggers the payload rebuild + proof-hash
   regeneration ritual and must regenerate release-readiness evidence LAST
   with home-directory sanitization.
 - pr-checks.yml job renames require matching branch-protection updates —
@@ -592,7 +592,7 @@ When checklist identifies `[Gap]` items:
 ## Constraints
 - Repo-side Python lives under tests/speckit-pro/, scripts/, .claude/hooks/ —
   never under speckit-pro/ (the payload guard fails if tests reappear there)
-- Shipped-runner tasks (PRs 2, 7b, 8, 10, and 13) must include the payload rebuild +
+- Shipped-runner tasks (PRs 2, 7b, 8, 9, 10, and 13) must include the payload rebuild +
   proof-hash regeneration ritual as explicit tasks, release-readiness last
 - Bound task generation with the design concept Non-goals: no .specify/**
   ports, no AI release notes, no L8 semantic judge, no UAT-matrix work —
@@ -735,7 +735,7 @@ Before starting any task:
   tests/speckit-pro/parity/xplat-010/<script>-baseline.txt → port with names
   preserved 1:1 → dual-run diff recorded in the PR body → manifest flip →
   .sh delete. All in one PR.
-- Shipped-runner changes (PRs 2, 7b, 8, 10, and 13 only): after any
+- Shipped-runner changes (PRs 2, 7b, 8, 9, 10, and 13 only): after any
   speckit_pro_runner byte change, run the payload/proof regeneration ritual —
   manifest sha256 recompute, scripts/build-plugin-payloads.py, checksum-based
   fixture sync, per-row proof hash recompute, evidence regeneration in gate
@@ -761,7 +761,7 @@ Before starting any task:
 | PR 6 — scripts + hooks ports | T054–T061 | 8/8 | Complete |
 | PRs 7a/7b — L7 replay harness | T062–T072 | 11/11 | Complete |
 | PR 8 — L8 parity | T073–T080 | 8/8 | Complete; `2197/2197` default, `88/88` docs smoke, shipped artifacts regenerated idempotently |
-| PR 9 — live-eval runners | | | |
+| PR 9 — live-eval runners | T081–T087 | 7/7 | Complete; `2250/2250` default, `88/88` docs smoke, exact shell scan empty, shipped artifacts idempotent |
 | PR 10 — confinement guard + bash deletion | | | |
 | PR 11 — container/Windows preflight CI | | | |
 | PR 12 — release-notes pipeline | | | |

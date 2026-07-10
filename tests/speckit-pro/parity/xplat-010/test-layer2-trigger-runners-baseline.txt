@@ -1,0 +1,25 @@
+001 imports the Claude trigger runner
+002 imports the Codex trigger runner
+003 imports the trigger-loop runner
+004 Claude wrapper creates a POSIX launcher
+005 Claude wrapper creates a Windows launcher
+006 Claude wrapper creates a Python launcher
+007 Python launcher prepends --settings
+008 Python launcher preserves incoming arguments
+009 Python launcher appends --bare
+010 Python launcher propagates the Claude exit code
+011 move_aside delegates cross-filesystem moves to shutil.move
+012 move_aside rejects an existing target without moving the source
+013 restore_moves reports a restoration collision
+014 restore_moves leaves the backup intact after a collision
+015 restore_moves restores a backup when the original is absent
+016 Codex --run checks for the codex executable
+017 Codex --run delegates through the current Python executable
+018 Codex --run strips every --run control flag
+019 Codex --run preserves all remaining arguments
+020 trigger loop delegates through the current Python executable
+021 trigger loop preserves the exact run_loop command and flags
+022 Layer-2 command argv contains no hard-coded python3 token
+023 Layer-2 runners never enable shell=True
+024 Layer-2 runners never call os.system
+TOTAL: 24
