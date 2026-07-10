@@ -96,8 +96,8 @@ prompt-injection instructions that alter eval outcomes or exfiltrate context.
   applies it with `Pattern.sub()`. Invalid or malicious expressions can still
   abort the scrubber or strip assertions the parser depends on, and Python's
   regex dialect is not identical to jq's. Treat the value as untrusted outside
-  the test environment. The Bash/jq predecessor remains only as a transitional
-  dependency of the unported PR-7b replay runners.
+  the test environment. The Bash/jq predecessor was retired with the converted
+  PR-7b replay runners.
 
 ---
 

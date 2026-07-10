@@ -56,6 +56,13 @@ Columns:
 | PR 6 | new contract coverage: `.claude/hooks/*.py` | default | 0 → 22 | n/a | `tests/speckit-pro/parity/xplat-010/test-claude-hooks-baseline.txt` |
 | PR 7a | port: `test-transcript-helpers.sh` → `test-transcript-helpers.py` | default | 42 → 42 | yes | `tests/speckit-pro/parity/xplat-010/test-transcript-helpers-baseline.txt` |
 | PR 7a | new CLI contracts: `scrub-transcript.py` + `reduce-transcript-fixture.py` | default | 0 → 25 | n/a | `tests/speckit-pro/parity/xplat-010/test-transcript-tools-baseline.txt` |
+| PR 7b | port: `run-dispatch-fixtures.sh` → `run-dispatch-fixtures.py` | replay | 184 → 184 | yes | `tests/speckit-pro/parity/xplat-010/run-dispatch-fixtures-baseline.txt` |
+| PR 7b | port: `run-return-format-fixtures.sh` → `run-return-format-fixtures.py` | replay | 17 → 17 | yes | `tests/speckit-pro/parity/xplat-010/run-return-format-fixtures-baseline.txt` |
+| PR 7b | port: `run-e2e-fixtures.sh` → `run-e2e-fixtures.py` | replay | 23 → 23 | yes | `tests/speckit-pro/parity/xplat-010/run-e2e-fixtures-baseline.txt` |
+| PR 7b | port: `run-grounding-fixtures.sh` → `run-grounding-fixtures.py` | replay | 33 → 33 | yes | `tests/speckit-pro/parity/xplat-010/run-grounding-fixtures-baseline.txt` |
+| PR 7b | port: `run-all-fixtures.sh` → `run-all-fixtures.py` | replay | 257 → 257 | yes | `tests/speckit-pro/parity/xplat-010/run-all-fixtures-baseline.txt` |
+| PR 7b | new replay/live runner contract | default | 0 → 26 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer7-runners-baseline.txt` |
+| PR 7b | shipped gate regression expansion | default | 57 → 58 | n/a | n/a |
 
 **PR 13 note (T121–T130):** The estimator Layer-4 test follows the
 Per-Port Protocol against historical predecessor commit
@@ -219,3 +226,12 @@ redaction and Bash-compatible null coalescing. The three Bash helper/tool
 predecessors remain temporarily as explicit dependencies of the four unported
 replay runners; PR 7b deletes them atomically with those consumers. Deleting
 them in PR 7a would make this stack increment non-runnable.
+
+**PR 7b note (T067–T072):** All four replay classes and the aggregate runner
+preserve the Bash predecessor's ordered `257`-assertion inventory. The new
+26-check runner contract covers replay summaries, live capture through a
+discovered executable, scrub/reduce integration, argv-list subprocesses, and
+shell-free execution. Layer 7 now dispatches through the manifest-backed Python
+module path; the shipped native `check_layer7` is retired, which expands its
+gate regression suite from 57 to 58 methods. The three PR-7a transitional Bash
+dependencies are deleted with their last Bash consumers in this slice.

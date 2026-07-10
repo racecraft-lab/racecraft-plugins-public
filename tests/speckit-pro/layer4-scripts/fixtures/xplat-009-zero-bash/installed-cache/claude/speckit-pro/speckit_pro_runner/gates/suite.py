@@ -362,10 +362,8 @@ def command_spec_from_override(command_id: str, raw: Any) -> CommandSpec | dict[
 def default_command_spec(command_id: str, inputs: dict[str, Any], repo_root: Path) -> CommandSpec | dict[str, Any]:
     if command_id == "toolchain":
         return toolchain_command_spec(command_id, inputs, repo_root)
-    if command_id in {"layer-1", "layer-4", "layer-5"}:
+    if command_id in {"layer-1", "layer-4", "layer-5", "layer-7"}:
         return external_layer_script_spec(command_id)
-    if command_id == "layer-7":
-        return internal_command_spec(command_id)
     if command_id == "layer-8":
         return internal_command_spec(command_id)
     return unsafe_command_diagnostic(command_id, "unknown suite command id")
@@ -459,8 +457,6 @@ def run_internal_command(command: CommandSpec, repo_root: Path) -> dict[str, Any
 def run_internal_suite_check(command_id: str, repo_root: Path) -> int:
     if command_id == "toolchain":
         return check_toolchain(repo_root)
-    if command_id == "layer-7":
-        return check_layer7(repo_root)
     if command_id == "layer-8":
         return check_layer8(repo_root)
     print(f"unknown internal suite command: {command_id}", file=sys.stderr)
@@ -490,16 +486,6 @@ def check_toolchain(repo_root: Path) -> int:
     return emit_checks("toolchain preflight", checks)
 
 
-def check_layer7(repo_root: Path) -> int:
-    fixture_dir = repo_root / "tests" / "speckit-pro" / "layer7-integration" / "test-fixtures"
-    checks: list[tuple[str, bool, str]] = [(rel(fixture_dir, repo_root), fixture_dir.is_dir(), "fixture directory exists")]
-    fixture_paths = sorted(fixture_dir.glob("*.jsonl")) if fixture_dir.is_dir() else []
-    checks.append(("layer7 fixture count", len(fixture_paths) >= 6, f"{len(fixture_paths)} jsonl fixtures"))
-    for path in fixture_paths:
-        checks.append((rel(path, repo_root), jsonl_file_ok(path), "valid JSONL"))
-    return emit_checks("layer-7 integration fixtures", checks)
-
-
 def check_layer8(repo_root: Path) -> int:
     parity_dir = repo_root / "tests" / "speckit-pro" / "layer8-parity"
     case_dirs = sorted(path for path in parity_dir.iterdir() if path.is_dir() and path.name[:2].isdigit()) if parity_dir.is_dir() else []
@@ -522,16 +508,6 @@ def json_file_ok(path: Path) -> bool:
     except (OSError, json.JSONDecodeError, UnicodeDecodeError):
         return False
     return isinstance(parsed, dict)
-
-
-def jsonl_file_ok(path: Path) -> bool:
-    try:
-        lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
-        for line in lines:
-            json.loads(line)
-    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
-        return False
-    return bool(lines)
 
 
 def command_result(

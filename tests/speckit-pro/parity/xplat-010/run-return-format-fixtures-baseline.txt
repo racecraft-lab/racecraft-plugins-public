@@ -1,0 +1,18 @@
+001 01-synthesizer-reads-analysts: dispatched to speckit-pro:consensus-synthesizer
+002 01-synthesizer-reads-analysts: no subagent spawned an Agent()
+003 01-synthesizer-reads-analysts: skill never invoked: grill-me (any scope)
+004 01-synthesizer-reads-analysts: speckit-pro:consensus-synthesizer response contains any of allowed substrings
+005 01-synthesizer-reads-analysts: speckit-pro:consensus-synthesizer response contains section keyword 'agreement'
+006 01-synthesizer-reads-analysts: speckit-pro:consensus-synthesizer response contains section keyword 'confidence'
+007 02-synthesizer-majority: dispatched to speckit-pro:consensus-synthesizer
+008 02-synthesizer-majority: no subagent spawned an Agent()
+009 02-synthesizer-majority: skill never invoked: grill-me (any scope)
+010 02-synthesizer-majority: speckit-pro:consensus-synthesizer response contains any of allowed substrings
+011 02-synthesizer-majority: speckit-pro:consensus-synthesizer response contains section keyword 'agreement'
+012 02-synthesizer-majority: speckit-pro:consensus-synthesizer response contains section keyword 'confidence'
+013 03-checklist-output: dispatched to speckit-pro:checklist-executor
+014 03-checklist-output: no subagent spawned an Agent()
+015 03-checklist-output: skill never invoked: grill-me (any scope)
+016 03-checklist-output: speckit-pro:checklist-executor response contains section keyword 'domain'
+017 03-checklist-output: speckit-pro:checklist-executor response contains section keyword 'gap'
+TOTAL: 17
