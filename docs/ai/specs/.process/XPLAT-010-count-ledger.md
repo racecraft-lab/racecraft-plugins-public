@@ -55,7 +55,7 @@ Columns:
 | PR 6 | port: `test-sync-marketplace-versions.sh` → `test-sync-marketplace-versions.py` | default | 49 → 49 | no (intentional `jq`-dependency replacement under T055) | retired Bash: `tests/speckit-pro/parity/xplat-010/test-sync-marketplace-versions-bash-baseline.txt`; current Python: `tests/speckit-pro/parity/xplat-010/test-sync-marketplace-versions-baseline.txt` |
 | PR 6 | new contract coverage: `.claude/hooks/*.py` | default | 0 → 22 | n/a | `tests/speckit-pro/parity/xplat-010/test-claude-hooks-baseline.txt` |
 | PR 7a | port: `test-transcript-helpers.sh` → `test-transcript-helpers.py` | default | 42 → 42 | yes | `tests/speckit-pro/parity/xplat-010/test-transcript-helpers-baseline.txt` |
-| PR 7a | new CLI contracts: `scrub-transcript.py` + `reduce-transcript-fixture.py` | default | 0 → 24 | n/a | `tests/speckit-pro/parity/xplat-010/test-transcript-tools-baseline.txt` |
+| PR 7a | new CLI contracts: `scrub-transcript.py` + `reduce-transcript-fixture.py` | default | 0 → 25 | n/a | `tests/speckit-pro/parity/xplat-010/test-transcript-tools-baseline.txt` |
 
 **PR 13 note (T121–T130):** The estimator Layer-4 test follows the
 Per-Port Protocol against historical predecessor commit
