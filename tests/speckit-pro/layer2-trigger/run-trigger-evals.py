@@ -175,6 +175,16 @@ def restore_moves(moves: list[tuple[Path, Path]]) -> list[tuple[Path, Path]]:
     return failures
 
 
+def wrapper_mode_message(skill: str, settings_enabled: bool, bare_enabled: bool) -> str:
+    if settings_enabled and bare_enabled:
+        return f"Using Claude wrapper with --settings and --bare for '{skill}'"
+    if settings_enabled:
+        return f"Using Claude wrapper with --settings only for '{skill}'"
+    if bare_enabled:
+        return f"Using Claude wrapper with --bare only for '{skill}'"
+    return f"Running Claude directly (no wrapper, no --settings, no --bare) for '{skill}'"
+
+
 def main(argv: list[str]) -> int:
     previous_handlers = install_termination_handlers()
     home = Path(os.environ.get("HOME", str(Path.home())))
@@ -245,14 +255,11 @@ def main(argv: list[str]) -> int:
 
         if need_bare == "1" or settings_file is not None:
             bare = need_bare == "1"
-            if bare:
-                eprint(f"Using --bare mode (installed plugin skill '{skill}' detected)")
-            else:
-                eprint(f"Skipping --bare mode (no installed plugin skill collision for '{skill}')")
+            eprint(wrapper_mode_message(skill, settings_file is not None, bare))
             write_claude_wrapper(wrapper_dir, settings_file, bare, env)
             env["PATH"] = f"{wrapper_dir}{os.pathsep}{env.get('PATH', '')}"
         else:
-            eprint(f"Skipping --bare mode (no installed plugin skill collision for '{skill}')")
+            eprint(wrapper_mode_message(skill, False, False))
 
         eval_dir = PLUGIN_ROOT / "../tests/speckit-pro/layer2-trigger/evals"
         eval_file = eval_dir / f"{skill}-trigger.json"

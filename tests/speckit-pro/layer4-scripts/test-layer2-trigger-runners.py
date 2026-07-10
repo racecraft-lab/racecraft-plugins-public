@@ -45,6 +45,8 @@ CURRENT_INVENTORY = [
     "Python launcher preserves incoming arguments",
     "Python launcher appends --bare",
     "Python launcher propagates the Claude exit code",
+    "settings-only branch reports wrapper plus --settings",
+    "direct branch reports no wrapper path",
     "move_aside delegates cross-filesystem moves to shutil.move",
     "move_aside rejects an existing target without moving the source",
     "restore_moves reports a restoration collision",
@@ -203,6 +205,68 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 json.loads(stub_record.read_text(encoding="utf-8")) if stub_record.is_file() else []
             )
 
+            claude_fixture_root = root / "claude-fixture"
+            claude_plugin_root = claude_fixture_root / "speckit-pro"
+            (claude_plugin_root / "skills" / "demo").mkdir(parents=True)
+            claude_eval = (
+                claude_fixture_root
+                / "tests"
+                / "speckit-pro"
+                / "layer2-trigger"
+                / "evals"
+                / "demo-trigger.json"
+            )
+            claude_eval.parent.mkdir(parents=True)
+            claude_eval.write_text("{}\n", encoding="utf-8")
+            claude.PLUGIN_ROOT = claude_plugin_root
+            fake_home = root / "fake-home"
+            fake_home.mkdir()
+            skill_creator = root / "claude-skill-creator"
+            skill_creator.mkdir()
+
+            settings_only_stderr = io.StringIO()
+            with (
+                mock.patch.dict(
+                    os.environ,
+                    {
+                        "HOME": str(fake_home),
+                        "PATH": wrapper_env.get("PATH", ""),
+                        "SKILL_CREATOR_ROOT": str(skill_creator),
+                        "EVAL_DISABLE_PLUGINS": "other-plugin@test",
+                    },
+                    clear=True,
+                ),
+                mock.patch.object(
+                    claude.subprocess,
+                    "run",
+                    return_value=SimpleNamespace(returncode=0),
+                ) as settings_only_run,
+                mock.patch.object(claude, "write_claude_wrapper", wraps=claude.write_claude_wrapper) as settings_wrap,
+                redirect_stderr(settings_only_stderr),
+            ):
+                settings_only_exit = claude.main(["demo"])
+
+            direct_mode_stderr = io.StringIO()
+            with (
+                mock.patch.dict(
+                    os.environ,
+                    {
+                        "HOME": str(fake_home),
+                        "PATH": wrapper_env.get("PATH", ""),
+                        "SKILL_CREATOR_ROOT": str(skill_creator),
+                    },
+                    clear=True,
+                ),
+                mock.patch.object(
+                    claude.subprocess,
+                    "run",
+                    return_value=SimpleNamespace(returncode=0),
+                ) as direct_mode_run,
+                mock.patch.object(claude, "write_claude_wrapper", wraps=claude.write_claude_wrapper) as direct_wrap,
+                redirect_stderr(direct_mode_stderr),
+            ):
+                direct_mode_exit = claude.main(["demo"])
+
             move_source = root / "move-source"
             move_source.write_text("source", encoding="utf-8")
             move_target = root / "move-target"
@@ -331,6 +395,25 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                 (
                     CURRENT_INVENTORY[10],
                     lambda: self.assertTrue(
+                        settings_only_exit == 0
+                        and settings_wrap.call_count == 1
+                        and "Using Claude wrapper with --settings only for 'demo'" in settings_only_stderr.getvalue()
+                        and settings_only_run.call_args is not None
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[11],
+                    lambda: self.assertTrue(
+                        direct_mode_exit == 0
+                        and direct_wrap.call_count == 0
+                        and "Running Claude directly (no wrapper, no --settings, no --bare) for 'demo'"
+                        in direct_mode_stderr.getvalue()
+                        and direct_mode_run.call_args is not None
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[12],
+                    lambda: self.assertTrue(
                         move_result
                         and move_call is not None
                         and tuple(Path(argument) for argument in move_call.args)
@@ -338,7 +421,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     ),
                 ),
                 (
-                    CURRENT_INVENTORY[11],
+                    CURRENT_INVENTORY[13],
                     lambda: self.assertTrue(
                         not collision_result
                         and collision_source.is_file()
@@ -347,7 +430,7 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     ),
                 ),
                 (
-                    CURRENT_INVENTORY[12],
+                    CURRENT_INVENTORY[14],
                     lambda: self.assertTrue(
                         "cannot restore" in restore_stderr.getvalue().lower()
                         and str(restore_original) in restore_stderr.getvalue()
@@ -355,14 +438,14 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     ),
                 ),
                 (
-                    CURRENT_INVENTORY[13],
+                    CURRENT_INVENTORY[15],
                     lambda: self.assertTrue(
                         restore_backup.is_file()
                         and restore_backup.read_text(encoding="utf-8") == "backup"
                     ),
                 ),
                 (
-                    CURRENT_INVENTORY[14],
+                    CURRENT_INVENTORY[16],
                     lambda: self.assertTrue(
                         success_original.is_file()
                         and success_original.read_text(encoding="utf-8") == "restored"
@@ -370,37 +453,37 @@ class Layer2TriggerRunnerTests(unittest.TestCase):
                     ),
                 ),
                 (
-                    CURRENT_INVENTORY[15],
+                    CURRENT_INVENTORY[17],
                     lambda: self.assertEqual(which_mock.call_args_list, [mock.call("codex")]),
                 ),
                 (
-                    CURRENT_INVENTORY[16],
+                    CURRENT_INVENTORY[18],
                     lambda: self.assertTrue(
                         len(exec_calls) == 1
                         and delegated_executable == sys.executable
                         and delegated_argv[:1] == [sys.executable]
                     ),
                 ),
-                (CURRENT_INVENTORY[17], lambda: self.assertNotIn("--run", delegated_argv)),
+                (CURRENT_INVENTORY[19], lambda: self.assertNotIn("--run", delegated_argv)),
                 (
-                    CURRENT_INVENTORY[18],
+                    CURRENT_INVENTORY[20],
                     lambda: self.assertEqual(delegated_argv[2:], ["demo", "--profile", "fast", "tail"]),
                 ),
                 (
-                    CURRENT_INVENTORY[19],
+                    CURRENT_INVENTORY[21],
                     lambda: self.assertTrue(loop_returncode == 0 and loop_command[:1] == [sys.executable]),
                 ),
-                (CURRENT_INVENTORY[20], lambda: self.assertEqual(loop_command, expected_loop_command)),
+                (CURRENT_INVENTORY[22], lambda: self.assertEqual(loop_command, expected_loop_command)),
                 (
-                    CURRENT_INVENTORY[21],
+                    CURRENT_INVENTORY[23],
                     lambda: self.assertFalse(any(python3_in_command_argv(path) for path in source_paths)),
                 ),
                 (
-                    CURRENT_INVENTORY[22],
+                    CURRENT_INVENTORY[24],
                     lambda: self.assertFalse(any(has_shell_true(path) for path in source_paths)),
                 ),
                 (
-                    CURRENT_INVENTORY[23],
+                    CURRENT_INVENTORY[25],
                     lambda: self.assertFalse(any(calls_os_system(path) for path in source_paths)),
                 ),
             ]
