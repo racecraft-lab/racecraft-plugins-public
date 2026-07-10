@@ -16,10 +16,11 @@
 016 reduce keeps only replay events
 017 reduce assigns deterministic tool ids
 018 reduce clears prompts
-019 reduce synthesizes expected response keywords
-020 reduce invalid usage exits 2
-021 reduce missing transcript exits 1
-022 transcript CLI extract exits 0
-023 transcript CLI emits JSON dispatches
-024 transcript CLI assertions preserve exit signals
-TOTAL: 24
+019 reduce preserves explicit boolean false agent fields
+020 reduce synthesizes expected response keywords
+021 reduce invalid usage exits 2
+022 reduce missing transcript exits 1
+023 transcript CLI extract exits 0
+024 transcript CLI emits JSON dispatches
+025 transcript CLI assertions preserve exit signals
+TOTAL: 25

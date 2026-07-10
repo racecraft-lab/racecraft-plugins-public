@@ -77,6 +77,12 @@ class TranscriptToolTests(unittest.TestCase):
                                 "name": "Agent",
                                 "input": {"subagent_type": None, "description": None},
                             },
+                            {
+                                "type": "tool_use",
+                                "id": "original-false-agent-id",
+                                "name": "Agent",
+                                "input": {"subagent_type": False, "description": False, "prompt": False},
+                            },
                         ],
                     },
                 },
@@ -94,6 +100,18 @@ class TranscriptToolTests(unittest.TestCase):
             ]
             source_text = "".join(json.dumps(event, separators=(",", ":")) + "\n" for event in source_events)
 
+            def scrubbed_events() -> list[dict[str, object]]:
+                self.assertEqual(scrubbed.returncode, 0, scrubbed.stderr)
+                return [json.loads(line) for line in scrubbed.stdout.splitlines()]
+
+            def reduced_events() -> list[dict[str, object]]:
+                self.assertEqual(reduced.returncode, 0, reduced.stderr)
+                return [json.loads(line) for line in reduced.stdout.splitlines()]
+
+            def helper_dispatches() -> list[dict[str, object]]:
+                self.assertEqual(helper_extract.returncode, 0, helper_extract.stderr)
+                return json.loads(helper_extract.stdout)
+
             checks: list[tuple[str, Callable[[], None]]] = []
             checks.append(("scrub helper exists", lambda: self.assertTrue(SCRUB.is_file())))
             checks.append(("reduce helper exists", lambda: self.assertTrue(REDUCE.is_file())))
@@ -101,30 +119,29 @@ class TranscriptToolTests(unittest.TestCase):
 
             scrubbed = run_script(SCRUB, input_text=source_text, env={"TRANSCRIPT_SCRUB_EXTRA_REGEX": "Alice"})
             checks.append(("scrub stdin exits 0", lambda: self.assertEqual(scrubbed.returncode, 0, scrubbed.stderr)))
-            output_events = [json.loads(line) for line in scrubbed.stdout.splitlines()]
             checks.append(
                 (
                     "scrub replaces machine paths",
                     lambda: self.assertEqual(
-                        (output_events[0]["cwd"], output_events[0]["note"]),
+                        (scrubbed_events()[0]["cwd"], scrubbed_events()[0]["note"]),
                         ("<scrubbed>", "Cache at <HOME>"),
                     ),
                 )
             )
-            checks.append(("scrub replaces session metadata", lambda: self.assertEqual(output_events[0]["sessionId"], "<scrubbed-session>")))
+            checks.append(("scrub replaces session metadata", lambda: self.assertEqual(scrubbed_events()[0]["sessionId"], "<scrubbed-session>")))
             checks.append(
                 (
                     "scrub applies extra identity regex",
                     lambda: self.assertEqual(
-                        output_events[0]["message"]["content"][0]["input"]["description"], "Analyze <USER> data"
+                        scrubbed_events()[0]["message"]["content"][0]["input"]["description"], "Analyze <USER> data"
                     ),
                 )
             )
-            checks.append(("scrub reduces system inventory events", lambda: self.assertEqual(output_events[2], {"type": "system", "subtype": "init"})))
+            checks.append(("scrub reduces system inventory events", lambda: self.assertEqual(scrubbed_events()[2], {"type": "system", "subtype": "init"})))
             checks.append(
                 (
                     "scrub reduces stream events",
-                    lambda: self.assertEqual(output_events[3], {"type": "stream_event", "subtype": "content_block_delta"}),
+                    lambda: self.assertEqual(scrubbed_events()[3], {"type": "stream_event", "subtype": "content_block_delta"}),
                 )
             )
 
@@ -165,12 +182,11 @@ class TranscriptToolTests(unittest.TestCase):
             )
             reduced = run_script(REDUCE, str(transcript), str(expected))
             checks.append(("reduce transcript exits 0", lambda: self.assertEqual(reduced.returncode, 0, reduced.stderr)))
-            reduced_events = [json.loads(line) for line in reduced.stdout.splitlines()]
-            checks.append(("reduce keeps only replay events", lambda: self.assertEqual(len(reduced_events), 2)))
+            checks.append(("reduce keeps only replay events", lambda: self.assertEqual(len(reduced_events()), 2)))
             checks.append(
                 (
                     "reduce assigns deterministic tool ids",
-                    lambda: self.assertEqual(reduced_events[0]["message"]["content"][0]["id"], "tool-001"),
+                    lambda: self.assertEqual(reduced_events()[0]["message"]["content"][0]["id"], "tool-001"),
                 )
             )
             checks.append(
@@ -178,11 +194,11 @@ class TranscriptToolTests(unittest.TestCase):
                     "reduce clears prompts",
                     lambda: self.assertEqual(
                         (
-                            reduced_events[0]["message"]["content"][0]["input"]["description"],
-                            reduced_events[0]["message"]["content"][0]["input"]["prompt"],
-                            reduced_events[0]["message"]["content"][1]["input"]["skill"],
-                            reduced_events[0]["message"]["content"][2]["input"]["subagent_type"],
-                            reduced_events[0]["message"]["content"][2]["input"]["description"],
+                            reduced_events()[0]["message"]["content"][0]["input"]["description"],
+                            reduced_events()[0]["message"]["content"][0]["input"]["prompt"],
+                            reduced_events()[0]["message"]["content"][1]["input"]["skill"],
+                            reduced_events()[0]["message"]["content"][2]["input"]["subagent_type"],
+                            reduced_events()[0]["message"]["content"][2]["input"]["description"],
                         ),
                         ("", "", "", "", ""),
                     ),
@@ -190,9 +206,21 @@ class TranscriptToolTests(unittest.TestCase):
             )
             checks.append(
                 (
+                    "reduce preserves explicit boolean false agent fields",
+                    lambda: self.assertEqual(
+                        (
+                            reduced_events()[0]["message"]["content"][3]["input"]["subagent_type"],
+                            reduced_events()[0]["message"]["content"][3]["input"]["description"],
+                        ),
+                        (False, False),
+                    ),
+                )
+            )
+            checks.append(
+                (
                     "reduce synthesizes expected response keywords",
                     lambda: self.assertEqual(
-                        reduced_events[1]["message"]["content"][0]["content"],
+                        reduced_events()[1]["message"]["content"][0]["content"],
                         "Reduced parser fixture response for speckit-pro:codebase-analyst: Finding Evidence",
                     ),
                 )
@@ -206,7 +234,7 @@ class TranscriptToolTests(unittest.TestCase):
             fixture = LAYER7 / "test-fixtures" / "single-dispatch.jsonl"
             helper_extract = run_script(HELPERS, "extract-orchestrator-dispatches", str(fixture))
             checks.append(("transcript CLI extract exits 0", lambda: self.assertEqual(helper_extract.returncode, 0, helper_extract.stderr)))
-            checks.append(("transcript CLI emits JSON dispatches", lambda: self.assertEqual(len(json.loads(helper_extract.stdout)), 1)))
+            checks.append(("transcript CLI emits JSON dispatches", lambda: self.assertEqual(len(helper_dispatches()), 1)))
             helper_assert = run_script(HELPERS, "assert-dispatched-to", str(fixture), "speckit-pro:domain-researcher")
             checks.append(("transcript CLI assertions preserve exit signals", lambda: self.assertEqual(helper_assert.returncode, 1)))
 

@@ -34,6 +34,10 @@ def empty_if_none(value: Any) -> Any:
     return "" if value is None else value
 
 
+def boolean_or_default(value: Any, default: bool = False) -> bool:
+    return value if isinstance(value, bool) else default
+
+
 def response_keywords(expected: JsonObject, subagent_type: Any) -> list[str]:
     keywords: list[str] = []
     assertions = expected.get("response_assertions", [])
@@ -103,7 +107,7 @@ def reduce_transcript(events: list[JsonObject], expected: JsonObject) -> list[Js
                 reduced.append(
                     {
                         "type": "assistant",
-                        "isSidechain": bool(event.get("isSidechain", False)),
+                        "isSidechain": boolean_or_default(event.get("isSidechain", False)),
                         "message": {"role": "assistant", "content": output_blocks},
                     }
                 )
@@ -130,7 +134,7 @@ def reduce_transcript(events: list[JsonObject], expected: JsonObject) -> list[Js
                 reduced.append(
                     {
                         "type": "user",
-                        "isSidechain": bool(event.get("isSidechain", False)),
+                        "isSidechain": boolean_or_default(event.get("isSidechain", False)),
                         "message": {"role": "user", "content": output_results},
                     }
                 )
