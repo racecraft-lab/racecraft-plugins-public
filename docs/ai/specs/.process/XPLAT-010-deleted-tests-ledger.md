@@ -2,8 +2,8 @@
 
 **Slice:** PR 1 (orphan-test deletion + disposition ledger). **Requirement:** FR-016.
 **Historical scope:** `tests/speckit-pro/layer4-scripts/*.sh` during the PR 1 deletion-only slice.
-**Current state:** Layer 4 is now manifest-backed Python (`tests/speckit-pro/suite-manifest.json`
-drives `tests/speckit-pro/run-layer-scripts.py`), so this ledger is historical evidence only.
+**Branch-local state:** `tests/speckit-pro/run-all.sh` remains authoritative for Layer 4.
+The two redundant wrapper shims remain tracked until the PR 2 manifest cutover.
 
 This ledger records, per file, the disposition of every Layer-4 Bash test script that was a
 candidate for deletion under FR-016. Deleted scripts are orphans: their subject-under-test — a
@@ -14,10 +14,8 @@ exercises nothing and is absent from the active suite list. Git history preserve
 
 A file was deleted only when **both** conditions held:
 
-1. **Absent from the active suite at the time** — not referenced anywhere in the then-authoritative
-   `tests/speckit-pro/run-all.sh` Layer-4 roster. In the current repo that historical roster has
-   been superseded by `tests/speckit-pro/suite-manifest.json`, and Layer 4 dispatch is now Python-only
-   through `tests/speckit-pro/run-layer-scripts.py`.
+1. **Absent from the active suite at the time** — not referenced anywhere in the authoritative
+   `tests/speckit-pro/run-all.sh` Layer-4 roster.
 2. **Subject-under-test removed** — the script targets a helper under `speckit-pro/**` that no
    longer exists. Confirmed live: `git ls-files 'speckit-pro/**/*.sh'` returns **0** files (the
    entire shipped-Bash tree was deleted by XPLAT-009). Each script's own `SCRIPT=`/`source` line
@@ -68,35 +66,34 @@ The "removed subject" path is under `speckit-pro/` and no longer exists.
 | 31 | `test-validate-uat-runbook.sh` | `speckit-pro/skills/speckit-autopilot/scripts/validate-uat-runbook.sh` |
 
 **Redundant-wrapper disposition (kind `redundant-wrapper`) — see retained note below.** The two
-seven-line wrapper shims FR-016 groups with the orphans were retained in PR 1 because they still
-sat in the historical `run-all.sh` Layer-4 roster. They were deleted once the manifest-backed
-Python dispatch landed; no active Layer-4 `.sh` wrappers remain in the current repo.
+seven-line wrapper shims FR-016 groups with the orphans are retained in PR 1 because they still
+sit in the `run-all.sh` Layer-4 roster. Their deletion is deferred to the PR 2 manifest cutover.
 
 ## Retained candidates (disposition documented, not deleted)
 
-### Redundant wrappers — historical PR 1 retention, later deleted after manifest cutover (2 files)
+### Redundant wrappers — retained; deletion deferred to manifest cutover (2 files)
 
 | retained test | kind | why not deleted now |
 |---|---|---|
-| `test-speckit-pro-runner.sh` | `redundant-wrapper` | Historical PR 1 note: this 7-line shim still sat in the old `run-all.sh` Layer-4 roster, so deleting it before the manifest cutover would have broken the active gate. The current repo dispatches `test-speckit-pro-runner.py` directly from `suite-manifest.json`, and the shim is gone. |
-| `test-speckit-pro-read-only-helpers.sh` | `redundant-wrapper` | Same historical PR 1 reasoning as above. The current repo dispatches `test-speckit-pro-read-only-helpers.py` directly from `suite-manifest.json`, and the shim is gone. |
+| `test-speckit-pro-runner.sh` | `redundant-wrapper` | This 7-line shim remains in the `run-all.sh` Layer-4 roster, so deleting it before the PR 2 manifest cutover would break the active gate. |
+| `test-speckit-pro-read-only-helpers.sh` | `redundant-wrapper` | Same branch-local reasoning as above; retain the shim until PR 2 replaces the shell roster. |
 
 ### PR-13 restore carve-out (1 file)
 
 | retained test | kind | why not deleted now |
 |---|---|---|
-| `test-estimate-spec-size.sh` | `active-port-later` | Historical PR 1 note: the Bash subject was temporarily absent, but XPLAT-010 later restored the `estimate-spec-size` operation in Python (FR-025). The current repo runs `test-estimate-spec-size.py`; the `.sh` test is gone. |
+| `test-estimate-spec-size.sh` | `active-port-later` | Retained in PR 1 because PR 13 owns restoring the `estimate-spec-size` operation in Python (FR-025) and replacing this test. |
 
 ### Active-port-later (12 files, not candidates)
 
-Referenced in the historical Layer-4 roster and ported in their own layer PRs, so never deletion
+Referenced in the historical Layer-4 roster and scheduled for their own layer port PRs, so never deletion
 candidates: `test-check-toolchain.sh`, `test-eval-runner-skill-selection.sh`, `test-l6-codex-runner.sh`,
 `test-l8-extractors.sh`, `test-l8-judge.sh`, `test-moc-lint-exit-codes.sh`,
 `test-post-implementation-reference.sh`, `test-privacy-scan.sh`, `test-refresh-local-plugin.sh`,
 `test-reviewability-marker-guidance.sh`, `test-sync-marketplace-versions.sh`, `test-transcript-helpers.sh`.
-Those subjects are now part of the current Python-only Layer-4 roster.
+Those subjects remain tracked until their owning port PRs replace them.
 
-## Count reconciliation (authoritative total: 31 true orphans + 2 wrappers = 33)
+## Count reconciliation (PR 1: 31 deleted; 2 wrapper deletions deferred)
 
 At PR 1, `tests/speckit-pro/layer4-scripts/` held 46 `.sh` files. Its disposition
 was **31 deleted** and **15 retained** (12 active-port-later, 1 PR-13 carve-out,
@@ -108,21 +105,18 @@ deletion-only / run-all.sh-untouched constraints:
 
 - **−1**: `test-estimate-spec-size.sh` is inside the "32 orphans" census (absent from run-all.sh, subject
   currently gone) but is the ratified PR-13 restore carve-out → not deleted. Real orphan count is 31.
-- **−2**: the 2 redundant wrappers were in the historical `run-all.sh` active list; deleting them
-  required the PR-2 manifest cutover (above) → deferred in PR 1, then deleted once
-  `suite-manifest.json` became authoritative.
+- **−2**: the 2 redundant wrappers are in the `run-all.sh` active list; deleting them
+  requires the PR-2 manifest cutover (above), so deletion is deferred in PR 1.
 
-Across PR 1 and PR 2, the authoritative FR-016 deletion set is **33 files**:
-31 true orphans plus 2 redundant wrappers. `test-estimate-spec-size.sh` is not
-an FR-016 orphan/wrapper deletion target; PR 13 restores its subject and ports
-its active test to Python.
+The authoritative FR-016 deletion set remains **33 files**: 31 true orphans
+deleted in PR 1 plus 2 redundant wrappers deferred to PR 2.
+`test-estimate-spec-size.sh` is not an FR-016 orphan/wrapper deletion target;
+PR 13 owns its Python restore and port.
 
 ## Suite evidence
 
 - **Before (historical PR 1):** default-suite gate `status: ok`; layer-1 direct `24/24 passed`;
   historical Layer-4 direct evidence remained green because the 31 deleted scripts were never in
   the active roster.
-- **Current repo state:** Layer 4 is Python-authoritative and manifest-backed; the active ported
-  shell-subject roster is 18 Python tests/modules, no active Layer-4 `.sh` wrappers remain, and
-  stale `run-all.sh` dispatch references in this ledger have been superseded by
-  `suite-manifest.json` plus `run-layer-scripts.py`.
+- **Branch-local state:** `run-all.sh` remains authoritative for Layer 4, and both redundant
+  wrapper shims remain in its active roster pending the PR 2 manifest cutover.
