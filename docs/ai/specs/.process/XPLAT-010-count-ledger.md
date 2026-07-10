@@ -83,7 +83,7 @@ Columns:
 | PR 10 | intentional replacement: terminal `test-check-toolchain.py` contract | tests/shell | 26 → 27 | no (Bash/`jq`/Unix-tool requirements replaced by Python 3.11+, Git, and Python-only dispatch; launch failures remain scored) | retired: `test-check-toolchain-baseline.txt`; current: `test-check-toolchain-pr10-baseline.txt` |
 | PR 10 | CLI boundary hardening: Layer 6/8 runtime command selection | default | 18 + 33 → 18 + 33 | no (configured runtime names constrained; selected executable directory pinned on `PATH`) | `test-layer6-portability-baseline.txt`; `test-layer8-runner-baseline.txt` |
 | PR 10 | new confinement guard contract | default | 0 → 47 | n/a | n/a |
-| PR 10 | orchestrator fail-closed expansion | default | 26 → 27 | n/a | n/a |
+| PR 10 | orchestrator fail-closed expansion | default | 26 → 28 | n/a | n/a |
 | PR 10 | shipped gate current-interpreter expansion | default | 59 → 60 | n/a | n/a |
 
 **PR 13 note (T121–T130):** The estimator Layer-4 test follows the

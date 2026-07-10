@@ -190,7 +190,11 @@ def dispatch_script(
     """Run one Python child test and fail closed on a non-Python manifest entry."""
     pass_live = config.live and layer["id"] in LIVE_AWARE_LAYERS
     if path.suffix != ".py":
-        return (f"unsupported non-Python manifest entry: {path}\n", 2)
+        return (
+            "manifest entry validation: 0/1 passed\n"
+            f"unsupported non-Python manifest entry: {path}\n",
+            1,
+        )
     argv = [sys.executable, str(path)]
     if pass_live:
         argv.append("--live")

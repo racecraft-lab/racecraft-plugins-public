@@ -222,6 +222,37 @@ class LayerExecutionRegressionTests(unittest.TestCase):
         self.assertIn("FAIL: missing-child (not found)", output.getvalue())
         self.assertIn("speckit-pro test suite: 0/1 passed (1 failed)", output.getvalue())
 
+    def test_non_python_manifest_entry_is_counted_failure_not_crash(self) -> None:
+        manifest = {
+            "layers": [
+                {
+                    "id": "4",
+                    "label": "Script unit tests",
+                    "default": True,
+                    "live_only": False,
+                    "integration": False,
+                    "execution": "execute",
+                    "scripts": [{"path": "tests/speckit-pro/not-python.sh"}],
+                }
+            ]
+        }
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as temp_root:
+            root = Path(temp_root)
+            script = root / "tests" / "speckit-pro" / "not-python.sh"
+            script.parent.mkdir(parents=True, exist_ok=True)
+            script.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            with (
+                mock.patch.object(run_all, "repo_root", return_value=root),
+                mock.patch.object(run_all, "load_manifest", return_value=manifest),
+                mock.patch.dict(run_all.os.environ, {"SPECKIT_SKIP_TOOLCHAIN_CHECK": "1"}),
+                contextlib.redirect_stdout(output),
+            ):
+                exit_code = run_all.main(["--layer", "4"])
+        self.assertEqual(exit_code, 1)
+        self.assertIn("FAIL not-python (0/1, 1 failed)", output.getvalue())
+        self.assertIn("speckit-pro test suite: 0/1 passed (1 failed)", output.getvalue())
+
 
 def main() -> int:
     loader = unittest.defaultTestLoader
