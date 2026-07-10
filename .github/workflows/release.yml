@@ -5,10 +5,7 @@ on:
     branches: [main]
   workflow_dispatch: {}
 
-permissions:
-  actions: write
-  contents: write
-  pull-requests: write
+permissions: {}
 
 concurrency:
   group: release-${{ github.ref_name }}
@@ -16,6 +13,14 @@ concurrency:
 
 jobs:
   release:
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs['speckit-pro--release_created'] }}
+      tag_name: ${{ steps.release.outputs['speckit-pro--tag_name'] }}
+      body: ${{ steps.release.outputs['speckit-pro--body'] }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -184,3 +189,380 @@ jobs:
           echo "::error::Release artifacts drifted after publishing. Re-run the Release workflow to re-sync the release PR (Recovery Scenario 1):"
           git --no-pager diff --stat -- dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json docs-site/src/content/docs/reference
           exit 1
+
+  capture-release-note-inputs:
+    needs: release
+    if: ${{ always() && needs.release.outputs.release_created == 'true' }}
+    permissions:
+      contents: read
+    outputs:
+      snapshot_artifact_id: ${{ steps.upload_release_snapshot.outputs['artifact-id'] }}
+      snapshot_artifact_digest: ${{ steps.upload_release_snapshot.outputs['artifact-digest'] }}
+      snapshot_artifact_url: ${{ steps.upload_release_snapshot.outputs['artifact-url'] }}
+      snapshot_sha256: ${{ steps.capture_snapshot.outputs.snapshot_sha256 }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Capture complete immutable release inputs
+        id: capture_snapshot
+        env:
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_BODY: ${{ needs.release.outputs.body }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag_name }}
+        run: python3 scripts/compose-release-notes.py --capture-snapshot --snapshot-output release-note-snapshot.json
+
+      # upload-artifact v4+ artifacts are immutable. The unique run/attempt
+      # name and default overwrite=false preserve the complete API input set.
+      - name: Upload immutable release input snapshot
+        id: upload_release_snapshot
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-note-input-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-note-snapshot.json
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+
+  compose-release-notes:
+    needs: [release, capture-release-note-inputs]
+    if: ${{ always() && needs.release.outputs.release_created == 'true' && needs.capture-release-note-inputs.result == 'success' && needs.capture-release-note-inputs.outputs.snapshot_artifact_id != '' }}
+    permissions:
+      contents: write
+    outputs:
+      audit_artifact_id: ${{ steps.upload_release_audit.outputs['artifact-id'] }}
+      audit_artifact_digest: ${{ steps.upload_release_audit.outputs['artifact-digest'] }}
+      audit_artifact_url: ${{ steps.upload_release_audit.outputs['artifact-url'] }}
+      audit_sha256: ${{ steps.compose.outputs.audit_sha256 }}
+      release_body_sha256: ${{ steps.compose.outputs.release_body_sha256 }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Download immutable release input snapshot
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          artifact-ids: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_id }}
+          path: release-note-input
+          digest-mismatch: error
+
+      - name: Compose and verify public release notes
+        id: compose
+        env:
+          EXPECTED_SNAPSHOT_SHA256: ${{ needs.capture-release-note-inputs.outputs.snapshot_sha256 }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          SNAPSHOT_ARTIFACT_DIGEST: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_digest }}
+          SNAPSHOT_ARTIFACT_ID: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_id }}
+          SNAPSHOT_ARTIFACT_URL: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_url }}
+          WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
+          import urllib.parse
+          import urllib.request
+          from pathlib import Path
+
+          snapshot_path = Path("release-note-input/release-note-snapshot.json")
+          audit_path = Path("release-note-audit.json")
+          composer_path = Path("scripts/compose-release-notes.py")
+          audit = {
+              "composer_run_attempt": int(os.environ["WORKFLOW_RUN_ATTEMPT"]),
+              "outcome": "release_note_audit_failed",
+              "schema_version": 1,
+              "workflow_run_id": int(os.environ["WORKFLOW_RUN_ID"]),
+          }
+
+          def sha256(data: bytes) -> str:
+              return hashlib.sha256(data).hexdigest()
+
+          def write_audit() -> str:
+              encoded = (json.dumps(audit, sort_keys=True, separators=(",", ":")) + "\n").encode()
+              audit_path.write_bytes(encoded)
+              digest = sha256(encoded)
+              with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
+                  output.write(f"audit_sha256={digest}\n")
+                  if "release_body_sha256" in audit:
+                      output.write(f"release_body_sha256={audit['release_body_sha256']}\n")
+              return digest
+
+          def append_summary(lines: list[str]) -> None:
+              summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+              if not summary_path:
+                  return
+              with Path(summary_path).open("a", encoding="utf-8") as summary:
+                  summary.write("\n".join(lines).rstrip() + "\n")
+
+          def fail(message: str, returncode: int = 1) -> None:
+              audit["error"] = message
+              audit_digest = write_audit()
+              append_summary(
+                  [
+                      "### Release note audit failed",
+                      "",
+                      f"- Audit SHA-256: `{audit_digest}`",
+                      f"- Reason: `{message}`",
+                  ]
+              )
+              print(
+                  json.dumps(
+                      {"error": message, "outcome": "release_note_audit_failed"},
+                      sort_keys=True,
+                      separators=(",", ":"),
+                  ),
+                  file=sys.stderr,
+              )
+              raise SystemExit(returncode or 1)
+
+          try:
+              snapshot_bytes = snapshot_path.read_bytes()
+              snapshot_sha256 = sha256(snapshot_bytes)
+              expected_sha256 = os.environ["EXPECTED_SNAPSHOT_SHA256"]
+              if not re.fullmatch(r"[0-9a-f]{64}", expected_sha256):
+                  fail("release snapshot has no valid expected SHA-256")
+              if snapshot_sha256 != expected_sha256:
+                  fail("release snapshot SHA-256 mismatch")
+
+              artifact_id = os.environ["SNAPSHOT_ARTIFACT_ID"]
+              artifact_digest = os.environ["SNAPSHOT_ARTIFACT_DIGEST"]
+              if not artifact_id.isdigit() or not re.fullmatch(r"[0-9a-f]{64}", artifact_digest):
+                  fail("release snapshot artifact metadata is invalid")
+
+              snapshot = json.loads(snapshot_bytes)
+              expected_keys = {
+                  "compare",
+                  "compare_headers",
+                  "previous_tag",
+                  "pulls",
+                  "release_body",
+                  "repository",
+                  "schema_version",
+                  "tag",
+              }
+              if not isinstance(snapshot, dict) or set(snapshot) != expected_keys:
+                  fail("release snapshot schema is invalid")
+              if (
+                  snapshot["schema_version"] != 1
+                  or snapshot["repository"] != os.environ["GITHUB_REPOSITORY"]
+                  or not isinstance(snapshot["release_body"], str)
+                  or not isinstance(snapshot["tag"], str)
+                  or not snapshot["tag"].strip()
+                  or not isinstance(snapshot["compare"], dict)
+                  or not isinstance(snapshot["pulls"], dict)
+              ):
+                  fail("release snapshot provenance is invalid")
+
+              audit["composer_sha256"] = sha256(composer_path.read_bytes())
+              audit["raw_release_body_sha256"] = sha256(snapshot["release_body"].encode())
+              audit["snapshot"] = {
+                  "artifact_digest": artifact_digest,
+                  "artifact_id": int(artifact_id),
+                  "artifact_url": os.environ["SNAPSHOT_ARTIFACT_URL"],
+                  "byte_count": len(snapshot_bytes),
+                  "content_sha256": snapshot_sha256,
+              }
+              audit["tag"] = snapshot["tag"]
+
+              composer_environment = os.environ.copy()
+              composer_environment["RELEASE_TAG"] = snapshot["tag"]
+              completed = subprocess.run(
+                  [sys.executable, str(composer_path), "--snapshot", str(snapshot_path)],
+                  env=composer_environment,
+                  text=True,
+                  capture_output=True,
+                  check=False,
+              )
+              sys.stdout.write(completed.stdout)
+              sys.stderr.write(completed.stderr)
+              audit["composer_returncode"] = completed.returncode
+              if completed.returncode != 0:
+                  audit["composer_diagnostic_sha256"] = sha256(completed.stderr.encode())
+                  fail("release-note composer failed", completed.returncode)
+
+              composer_result = json.loads(completed.stdout)
+              expected_result_keys = {
+                  "body_byte_count",
+                  "body_sha256",
+                  "commit_count",
+                  "outcome",
+                  "previous_tag",
+                  "pull_request_count",
+                  "release_id",
+                  "snapshot_byte_count",
+                  "snapshot_payload_sha256",
+                  "snapshot_reused",
+                  "snapshot_source_sha256",
+                  "tag",
+              }
+              if (
+                  not isinstance(composer_result, dict)
+                  or set(composer_result) != expected_result_keys
+                  or composer_result.get("outcome") != "release_note_composed"
+                  or composer_result.get("tag") != snapshot["tag"]
+              ):
+                  fail("release-note composer returned an invalid result envelope")
+              release_id = composer_result.get("release_id")
+              if isinstance(release_id, bool) or not isinstance(release_id, int) or release_id <= 0:
+                  fail("release-note composer returned an invalid release id")
+              composer_digests = (
+                  composer_result.get("body_sha256"),
+                  composer_result.get("snapshot_payload_sha256"),
+                  composer_result.get("snapshot_source_sha256"),
+              )
+              if not all(
+                  isinstance(digest, str) and re.fullmatch(r"[0-9a-f]{64}", digest)
+                  for digest in composer_digests
+              ):
+                  fail("release-note composer returned invalid digest metadata")
+              if not isinstance(composer_result.get("snapshot_reused"), bool):
+                  fail("release-note composer returned an invalid snapshot reuse verdict")
+              commit_count = composer_result.get("commit_count")
+              pull_request_count = composer_result.get("pull_request_count")
+              body_byte_count = composer_result.get("body_byte_count")
+              snapshot_byte_count = composer_result.get("snapshot_byte_count")
+              if (
+                  isinstance(commit_count, bool)
+                  or not isinstance(commit_count, int)
+                  or not 0 <= commit_count <= 250
+                  or isinstance(pull_request_count, bool)
+                  or not isinstance(pull_request_count, int)
+                  or not 0 <= pull_request_count <= commit_count
+                  or isinstance(body_byte_count, bool)
+                  or not isinstance(body_byte_count, int)
+                  or body_byte_count <= 0
+                  or snapshot_byte_count != len(snapshot_bytes)
+              ):
+                  fail("release-note composer returned invalid count metadata")
+
+              repository = urllib.parse.quote(os.environ["GITHUB_REPOSITORY"], safe="/")
+              release_url = (
+                  f"{os.environ['GITHUB_API_URL'].rstrip('/')}/repos/{repository}/releases/{release_id}"
+              )
+              request = urllib.request.Request(
+                  release_url,
+                  headers={
+                      "Accept": "application/vnd.github+json",
+                      "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
+                      "User-Agent": "racecraft-release-note-audit",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                  },
+                  method="GET",
+              )
+              with urllib.request.urlopen(request, timeout=30.0) as response:
+                  release = json.loads(response.read().decode("utf-8"))
+              published_body = release.get("body") if isinstance(release, dict) else None
+              expected_suffix = f"## Commit appendix\n\n{snapshot['release_body']}"
+              if (
+                  release.get("id") != release_id
+                  or release.get("tag_name") != snapshot["tag"]
+                  or not isinstance(published_body, str)
+                  or not published_body.startswith("## Highlights\n\n")
+              ):
+                  fail("published release body does not match the composed release contract")
+              marker = "\n\n<!-- release-note-composer-snapshot:v1 "
+              if published_body.count(marker) != 1:
+                  fail("published release body has no unique immutable snapshot marker")
+              payload, _marker_metadata = published_body.rsplit(marker, 1)
+              published_body_sha256 = sha256(published_body.encode())
+              if (
+                  not payload.endswith(expected_suffix)
+                  or composer_result["body_sha256"] != published_body_sha256
+                  or composer_result["body_byte_count"] != len(published_body.encode())
+                  or composer_result["snapshot_payload_sha256"] != sha256(payload.encode())
+                  or composer_result["snapshot_source_sha256"] != snapshot_sha256
+              ):
+                  fail("published release body does not match composer digest metadata")
+
+              audit.update(
+                  {
+                      "outcome": "release_note_composed_and_verified",
+                      "body_byte_count": composer_result["body_byte_count"],
+                      "commit_count": composer_result["commit_count"],
+                      "previous_tag": composer_result["previous_tag"],
+                      "pull_request_count": composer_result["pull_request_count"],
+                      "release_body_sha256": published_body_sha256,
+                      "release_id": release_id,
+                      "snapshot_payload_sha256": composer_result["snapshot_payload_sha256"],
+                      "snapshot_reused": composer_result["snapshot_reused"],
+                      "snapshot_source_sha256": composer_result["snapshot_source_sha256"],
+                      "snapshot_byte_count": composer_result["snapshot_byte_count"],
+                  }
+              )
+              audit_digest = write_audit()
+              append_summary(
+                  [
+                      "### Release note audit",
+                      "",
+                      f"- Snapshot SHA-256: `{snapshot_sha256}`",
+                      f"- Published body SHA-256: `{audit['release_body_sha256']}`",
+                      f"- Audit SHA-256: `{audit_digest}`",
+                      f"- Snapshot artifact: {os.environ['SNAPSHOT_ARTIFACT_URL']}",
+                  ]
+              )
+          except SystemExit:
+              raise
+          except Exception as error:
+              fail(f"release note audit raised {type(error).__name__}: {error}")
+          PY
+
+      - name: Upload immutable release note audit
+        id: upload_release_audit
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-note-audit-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-note-audit.json
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+
+      - name: Record immutable audit artifact
+        if: ${{ always() && steps.upload_release_audit.outcome == 'success' }}
+        env:
+          AUDIT_ARTIFACT_DIGEST: ${{ steps.upload_release_audit.outputs['artifact-digest'] }}
+          AUDIT_ARTIFACT_ID: ${{ steps.upload_release_audit.outputs['artifact-id'] }}
+          AUDIT_ARTIFACT_URL: ${{ steps.upload_release_audit.outputs['artifact-url'] }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          record = {
+              "artifact_digest": os.environ["AUDIT_ARTIFACT_DIGEST"],
+              "artifact_id": int(os.environ["AUDIT_ARTIFACT_ID"]),
+              "artifact_url": os.environ["AUDIT_ARTIFACT_URL"],
+              "outcome": "release_note_audit_published",
+          }
+          print(json.dumps(record, sort_keys=True, separators=(",", ":")))
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary_path:
+              with Path(summary_path).open("a", encoding="utf-8") as summary:
+                  summary.write(
+                      "\n".join(
+                          [
+                              "### Immutable audit artifact",
+                              "",
+                              f"- Artifact id: `{record['artifact_id']}`",
+                              f"- Artifact SHA-256: `{record['artifact_digest']}`",
+                              f"- Artifact: {record['artifact_url']}",
+                          ]
+                      )
+                      + "\n"
+                  )
+          PY

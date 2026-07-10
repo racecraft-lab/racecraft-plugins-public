@@ -256,7 +256,7 @@ success for docs-only no-op runs.
 - Split into 2–3 separate specs: adds scaffold/workflow overhead without shrinking any single PR.
 - Fewer, larger PRs (4–5): each blows past the 800-LOC block threshold.
 
-**User's answer:** Accept the 12-PR stack (Recommended)
+**User's answer:** Accept the typed stack (Recommended). The finalized task plan is 13 numbered slices / 15 PRs because slices 3 and 7 each require independently reviewable a/b ports.
 
 ---
 
@@ -273,7 +273,9 @@ success for docs-only no-op runs.
 > narrative up top, the conventional-commit list kept below as an appendix.
 > Deterministic, testable, no new secrets — the Kubernetes/Rust
 > release-notes-from-PR-metadata pattern. CHANGELOG.md stays the machine
-> ledger.
+> ledger. Implementation fact-grounding adds an immutable workflow-artifact
+> snapshot before composition so failed-job reruns cannot drift when PR metadata
+> changes after merge; fallback text comes from captured commit subjects.
 
 **Alternatives offered:**
 - AI-generated summary in CI: zero authoring burden but nondeterministic output in a deterministic-gates repo, plus a new secret and per-release cost.

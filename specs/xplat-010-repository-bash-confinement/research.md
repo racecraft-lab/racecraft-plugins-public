@@ -178,53 +178,74 @@ re-introduces the same hardcode; the fix is to remove the hardcode and automate 
 
 ---
 
-## D9. Composer wiring: component-scoped outputs, own job, job-level permission override
+## D9. Capture/composer wiring: immutable artifact, own jobs, minimal permissions
 
-**Decision**: PR 12 adds `compose-release-notes` as its **own** `release.yml` job with
-`needs:` on the publishing job, gated on `steps.release.outputs['speckit-pro--release_created']`,
-carrying `permissions: {contents: write}` only. It reads the new tag and body from the
-component-scoped outputs (`speckit-pro--tag_name`, `speckit-pro--body`), resolves the release
-id by tag (`GET .../releases/tags/{tag}`), and `PATCH`es the body — pure stdlib `urllib`, no
-checkout. Because a job-level `permissions:` block **overrides** (does not merge with) the
-workflow-level grant, the composer job cannot inherit the publishing job's
-`actions: write`/`pull-requests: write`, even though `release.yml` currently declares those at
-the top level. The fuller least-privilege shape (workflow-level `permissions: {}` + per-job
-grants, matching `pr-checks.yml`) is the recorded target; the load-bearing guarantee (composer
-never holds broader scope) is met by the composer job's own block regardless.
+**Decision**: PR 12 adds separate `capture-release-note-inputs` and
+`compose-release-notes` jobs. Both are gated on the publishing job's mapped
+`speckit-pro--release_created` output; composer `needs:` publishing plus capture. Capture reads
+the component tag/body outputs, Compare response, and PR bodies/labels, serializes canonical
+JSON, computes its SHA-256, and uploads it once through a SHA-pinned `actions/upload-artifact`
+release with v4-or-later immutable semantics. Its artifact digest and identity become composer
+inputs. Composer downloads and verifies that
+artifact, resolves the release by tag, and PATCHes the deterministic body without Compare/PR
+re-fetches. Shallow checkouts load the stdlib script with persisted credentials disabled.
 
-**Rationale**: FR-024 forbids inheriting broader grants and forbids `RELEASE_PLEASE_TOKEN`.
-Grounding: `release.yml` is a single `release:` job with top-level `{actions, contents,
-pull-requests: write}` and uses the `speckit-pro--release_created` component-scoped gating
-output already (lines 140+). GitHub Actions job-level permissions replace the workflow default
-for that job, so the minimal, surgical change satisfies the ceiling. **Guard-rail (record near
-the appendix-embedding code):** the appendix derives only from the `body` output and discovery
-is Compare-API-only, so the composer does **not** depend on release-please's
-`changelog-notes-type` — do not couple it to that setting.
+The workflow-level default is `permissions: {}`. Publishing retains the exact
+`{actions: write, contents: write, pull-requests: write}` map; capture gets only
+`contents: read`; composer gets only `contents: write`; PR validation independently gets only
+`contents: read`. Artifact upload/download uses the Actions runtime token and adds no repository
+grant.
 
-**Alternatives considered**: Add the composer as a step in the existing `release:` job —
-rejected: it would inherit `actions`/`pull-requests: write`, violating FR-024's ceiling.
+**Rationale**: `contents: read` covers capture-time Compare and PR reads;
+`contents: write` covers composer-time release lookup/update and is its complete map. All
+unspecified grants remain `none`. Job-level maps do not merge with another job's permissions,
+so capture/composer cannot inherit `actions: write` or `pull-requests: write`. FR-024 also
+forbids `RELEASE_PLEASE_TOKEN`.
+**Guard-rail:** the appendix derives only from the mapped `body` output and discovery is
+Compare-API-only, so the composer does **not** depend on release-please's
+`changelog-notes-type`.
+
+**Alternatives considered**: Add capture/composition as steps in the existing `release:` job —
+rejected: they would inherit `actions`/`pull-requests: write`, violating FR-024's ceiling.
 
 ---
 
-## D10. Composer discovery, idempotency, and the assumptions to confirm at implementation
+## D10. Composer discovery, immutable replay, fallback, and audit evidence
 
-**Decision**: Discovery walks the GitHub Compare API commit subjects for trailing `(#N)`
-(never the rendered release-body links), harvesting Release note blocks from **every** merged
-PR since the last tag (defensive CommonMark-fence parsing on each body), failing loud on a
-Compare API error / truncated-paginated response / a subject with no resolvable `(#N)`.
-Idempotency derives the appendix from the `body` output, never the live release body. Recorded
-assumptions to confirm during implementation (Clarify S3-Q5 flags): (a) **first-release**
-(no previous tag) is out of scope; (b) prev-tag resolution assumes today's **single release
-component**; (c) the exact **compare-endpoint-to-token-scope** mapping is verified at
-implementation (`GET /compare` and `GET /releases/tags` and `PATCH /releases/{id}` under
-`contents: write` + the built-in token).
+**Decision**: Discovery walks immutable GitHub Compare API commit subjects for trailing
+`(#N)` (never rendered release-body links), fetches every discovered PR, and runs one shared
+extract/sanitize/non-empty pipeline over every body. A block that becomes empty after raw HTML
+and image removal fails validation and defensive composition. Genuinely missing feat/fix notes,
+and all non-skipped entries when no usable blocks exist, fall back to the de-prefixed Compare
+commit subject — never mutable PR title — capped at 250 characters (249 and 250 unchanged;
+251 truncates to 247 plus `...`).
 
-**Rationale**: FR-023 and the Session-3 Clarifications pin these. Verified live in-repo:
-22/22 recent merged commits carry a trailing `(#N)`, so the subject-walk under-enumeration
-guard is the correct fail-loud surface.
+The capture job freezes canonical Compare/PR/raw-body JSON before composition and records both
+its own SHA-256 and the immutable artifact digest. A failed composer-job rerun in the same
+workflow run downloads those exact bytes, never re-fetches mutable PR metadata, and PATCHes the
+same body bytes. Missing, malformed, or digest-mismatched snapshots fail loud. Structured
+success output and the job summary record artifact identity/digest, snapshot digest,
+composed-body digest and byte count, tag range, release id, commit/PR count, and run attempt,
+without logging raw PR bodies. The immutable artifact preserves the exact source/body evidence;
+the published release can be re-hashed against the recorded composed-body digest.
 
-**Alternatives considered**: Parse the rendered `(#N)` release-body links — rejected
-(provably lossy: PRs with no `(#N)` in the rendered CHANGELOG are invisible).
+The unpaginated Compare contract also pins GitHub's 250-commit boundary: exactly 250 is accepted
+only when `total_commits` agrees; 251, a larger advertised total, or a pagination link fails
+loud. Implementation assumptions remain: (a) **first-release** (no previous tag) is out of
+scope; (b) previous-tag resolution assumes today's **single release component**; (c)
+capture-time Compare/PR reads and composer-time release lookup/PATCH use only the built-in token
+and the D9 per-job permission maps.
+
+**Rationale**: FR-023 and the Session-3 Clarifications pin Compare discovery. The implementation
+review closed four determinism gaps: raw non-empty text can sanitize to empty; PR titles and
+bodies remain mutable after merge; deriving only the appendix from a stable body does not make
+the whole composition idempotent; and a log that omits exact body bytes cannot audit a release
+edit. Verified live in-repo: 22/22 recent merged commits carry a trailing `(#N)`.
+
+**Alternatives considered**: Parse rendered release-body links — rejected as lossy. Use PR
+titles for fallback — rejected because titles remain mutable. Re-fetch API metadata during a
+failed-job retry — rejected because the same run could produce different bytes. Persist only a
+digest — rejected because a digest detects drift but cannot replay the original inputs.
 
 ---
 
@@ -266,7 +287,8 @@ documented version-triplet guard intent for two trivially portable files.
 
 ## D13. PR-stack ordering is fixed and each PR is independently CI-green
 
-**Decision**: Encode the ratified 14-PR order and dependencies (workflow file §Scope Budget):
+**Decision**: Encode the ratified 15-PR order and dependencies (13 numbered slices, with PR 3
+and PR 7 each split into a/b review units; workflow file §Scope Budget):
 PR 1 (orphan deletion + ledger) anytime; PR 2 (manifest + run-all.py + manifest-reading gate)
 before 3–10; PRs 3a/3b (20 mechanical L1) and 4 (MOC + codex/payload) after 2; PR 5 (L5 +
 toolchain + `pr-checks.yml:289` swap + `validate-pr-checks-sentinel` update + branch-protection
