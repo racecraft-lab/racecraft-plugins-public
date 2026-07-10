@@ -1,0 +1,17 @@
+001 judge returns EQUIVALENT JSON when shim emits canned EQUIVALENT
+002 judge returns EQUIVALENT JSON when shim emits canned EQUIVALENT
+003 judge returns EQUIVALENT JSON when shim emits canned EQUIVALENT
+004 judge returns NOT_EQUIVALENT JSON when shim emits NOT_EQUIVALENT
+005 judge returns NOT_EQUIVALENT JSON when shim emits NOT_EQUIVALENT
+006 judge rejects non-JSON stdout
+007 judge rejects JSON missing 'verdict'
+008 judge rejects JSON with unknown verdict value
+009 judge exits 1 when shim exits non-zero
+010 judge exits 1 when CLAUDE_BIN points to a missing executable
+011 judge exits 1 when shim exceeds L8_JUDGE_TIMEOUT_S
+012 shim sees the rationale + both values on stdin
+013 shim sees the rationale + both values on stdin
+014 shim sees the rationale + both values on stdin
+015 shim sees the rationale + both values on stdin
+016 shim sees the rationale + both values on stdin
+TOTAL: 16

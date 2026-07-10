@@ -2896,6 +2896,7 @@ class GateFoundationTests(unittest.TestCase):
             "layer-4": [sys.executable, "tests/speckit-pro/run-layer-scripts.py", "--layer", "4"],
             "layer-5": [sys.executable, "tests/speckit-pro/run-layer-scripts.py", "--layer", "5"],
             "layer-7": [sys.executable, "tests/speckit-pro/run-layer-scripts.py", "--layer", "7"],
+            "layer-8": [sys.executable, "tests/speckit-pro/run-layer-scripts.py", "--layer", "8"],
         }
         for result in results:
             argv = list(result.argv)
@@ -2940,13 +2941,14 @@ class GateFoundationTests(unittest.TestCase):
                 "tests/speckit-pro/layer4-scripts/test-transcript-helpers.py",
                 "tests/speckit-pro/layer4-scripts/test-transcript-tools.py",
                 "tests/speckit-pro/layer4-scripts/test-layer7-runners.py",
+                "tests/speckit-pro/layer4-scripts/test-layer8-runner.py",
                 "tests/speckit-pro/layer4-scripts/test-privacy-scan.sh",
                 "tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py",
                 "tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py",
                 "tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py",
                 "tests/speckit-pro/layer4-scripts/test-l6-codex-runner.sh",
-                "tests/speckit-pro/layer4-scripts/test-l8-extractors.sh",
-                "tests/speckit-pro/layer4-scripts/test-l8-judge.sh",
+                "tests/speckit-pro/layer4-scripts/test-l8-extractors.py",
+                "tests/speckit-pro/layer4-scripts/test-l8-judge.py",
                 "tests/speckit-pro/layer4-scripts/test-moc-lint-exit-codes.py",
             },
             set(layer4_scripts),
@@ -3053,6 +3055,42 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(0, completed.returncode, completed.stderr + completed.stdout)
         self.assertIn("layer-7 integration fixtures", completed.stdout)
         self.assertIn("PASS tests/speckit-pro/layer7-integration/run-all-fixtures.py", completed.stdout)
+
+    def test_layer8_parity_runner_uses_ported_python_module_only(self) -> None:
+        from speckit_pro_runner.gates import suite as suite_gate
+
+        manifest = json.loads((REPO_ROOT / "tests/speckit-pro/suite-manifest.json").read_text(encoding="utf-8"))
+        layer8 = next(layer for layer in manifest["layers"] if layer["id"] == "8")
+
+        self.assertEqual(layer8["dispatch"], "python-module")
+        self.assertEqual(
+            layer8["scripts"],
+            [
+                {
+                    "path": "tests/speckit-pro/layer8-parity/run-parity-fixtures.py",
+                    "label": "run-parity-fixtures",
+                    "baseline": "tests/speckit-pro/parity/xplat-010/run-parity-fixtures-baseline.txt",
+                }
+            ],
+        )
+        spec = suite_gate.default_command_spec("layer-8", {}, REPO_ROOT)
+        self.assertNotIsInstance(spec, dict)
+        self.assertFalse(spec.internal)
+        self.assertIn("run-layer-scripts.py", " ".join(spec.argv))
+        self.assertFalse(hasattr(suite_gate, "check_layer8"), "native check_layer8 must retire at the Layer-8 port boundary")
+
+        completed = subprocess.run(
+            [sys.executable, "tests/speckit-pro/run-layer-scripts.py", "--layer", "8"],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            env=runner_env(),
+            shell=False,
+            check=False,
+        )
+        self.assertEqual(0, completed.returncode, completed.stderr + completed.stdout)
+        self.assertIn("layer-8 parity fixtures", completed.stdout)
+        self.assertIn("PASS tests/speckit-pro/layer8-parity/run-parity-fixtures.py", completed.stdout)
 
     def test_suite_manifest_loader_fails_closed_when_absent_or_malformed(self) -> None:
         from speckit_pro_runner.gates import suite as suite_gate

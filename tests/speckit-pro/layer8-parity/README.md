@@ -61,35 +61,32 @@ Tolerance band:
   fixture pair).
 - **Opt-in for the developer running tests** (not user opt-in for the
   product) — Layer 8 must NOT run in CI default. It requires
-  developer opt-in via `bash tests/run-all.sh --parity` (proposed).
+  developer opt-in via
+  `python3 tests/speckit-pro/layer8-parity/run-parity-fixtures.py --live`.
 
-## Status — scaffolding only
+## Status
 
-This directory currently contains only this README. The runner script,
-fixture format, normalizing-diff helper, and at least one initial
-fixture (`01-post-impl-parity`) are follow-up work.
+The Python runner, extractor helpers, four fixture cases, and portable JSON
+environment contracts are implemented. Dry-run validation is deterministic
+and free. Live validation remains developer-triggered because it runs two
+budgeted `claude -p` processes per fixture.
 
-**Why scaffold now**: documenting the harness pattern lets the
-capability-driven post-impl design ship now without committing to
-immediate parity validation. The runner and fixture authoring belong
-in a dedicated PR where they can be reviewed and budgeted independently.
+## Fixture: `01-post-impl-parity`
 
-## Planned fixture: `01-post-impl-parity`
-
-The first parity fixture would test the capability-driven post-impl
+The first parity fixture tests the capability-driven post-impl
 group end-to-end:
 
 ```
 01-post-impl-parity/
 ├── README.md                  # Intent
 ├── workflow.md                # Tiny synthetic spec with all 7 phases pre-populated
-├── env-fallback.sh            # Unset env var, invoke autopilot
-├── env-teams.sh               # Set CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1, invoke
+├── env-fallback.json          # Environment values to set/unset for Path B
+├── env-teams.json             # Environment values to set/unset for Path A
 ├── tolerance.json             # Per-field tolerance config
 └── expected-equivalence.json  # Fields that must match byte-for-byte
 ```
 
-The runner would:
+The runner:
 
 1. Run autopilot with Agent Teams disabled → capture artifacts (Path B)
 2. Reset, run autopilot with Agent Teams enabled → capture (Path A)

@@ -18,9 +18,9 @@ return canned summaries.
 
 The test:
 
-1. **Path B run**: env-fallback.sh unsets `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`;
+1. **Path B run**: `env-fallback.json` unsets `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`;
    invokes autopilot; captures artifacts.
-2. **Path A run**: env-teams.sh sets `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
+2. **Path A run**: `env-teams.json` sets `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
    (live mode also requires Claude Code ≥ 2.1.32); invokes autopilot;
    captures artifacts.
 3. **Diff**: per `expected-equivalence.json` with tolerances from
@@ -42,7 +42,7 @@ This fixture is **live-mode only** — the whole point is to verify that
 two different real execution paths produce equivalent answers from the
 model. Replay mode is not meaningful.
 
-The dry-run validation (`bash run-parity-fixtures.sh --dry-run`)
+The dry-run validation (`python3 run-parity-fixtures.py --dry-run`)
 verifies the fixture structure (required files present, JSON
 well-formed) without invoking claude -p.
 
@@ -56,9 +56,7 @@ fixture invocation.
 
 ## Status
 
-**Scaffolded.** Live execution logic is intentionally deferred in
-`run-parity-fixtures.sh` — implementing it requires LLM token budget
-approval and tested infrastructure for `claude -p` invocation. The
-fixture structure validates today via dry-run, including packet/body
-artifact paths, validator evidence, explicit PR create argument parity,
-and the no post-create repair fallback invariant.
+**Ready.** The fixture structure validates via dry-run, including packet/body
+artifact paths, validator evidence, explicit PR create argument parity, and
+the no post-create repair fallback invariant. Live execution is explicit and
+budgeted; `semantic-equivalent` comparisons remain skipped with a warning.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Repo-side dispatcher for manifest-backed test layers 1, 4, 5, and 7.
+"""Repo-side dispatcher for manifest-backed test layers 1, 4, 5, 7, and 8.
 
 This script is intentionally NOT shipped in any plugin payload. It lives under
 ``tests/`` — a sibling of ``speckit-pro/`` that plugin install never copies and
@@ -9,9 +9,9 @@ rather than inside ``speckit_pro_runner``. Keeping it out of the runner package
 is what lets the shipped payload stay bash-free. The dependency is scheduled for
 removal when XPLAT-010 ports the remaining ``.sh`` tests to Python.
 
-Layers 5 and 7 are Python-authoritative; Layers 1 and 4 retain bounded Bash dispatch
+Layers 5, 7, and 8 are Python-authoritative; Layers 1 and 4 retain bounded Bash dispatch
 until their remaining XPLAT-010 ports land. The suite gate invokes this as an
-external argv command (``python tests/speckit-pro/run-layer-scripts.py --layer 1|4|5|7``) and
+external argv command (``python tests/speckit-pro/run-layer-scripts.py --layer 1|4|5|7|8``) and
 maps the process exit code to a runner status: 0 -> ok, 1 -> expected_failure,
 2 -> input_error, 3 -> missing_prerequisite, 4 -> subprocess_failure.
 """
@@ -32,6 +32,7 @@ LAYER_LABELS = {
     "4": "layer-4 python helper tests",
     "5": "layer-5 agent tool scoping",
     "7": "layer-7 integration fixtures",
+    "8": "layer-8 parity fixtures",
 }
 
 
@@ -119,7 +120,7 @@ def run_script_suite(label: str, tests: list[Path], repo_root: Path, bash_execut
 
 def main(argv: list[str]) -> int:
     if len(argv) != 2 or argv[0] != "--layer" or argv[1] not in LAYER_LABELS:
-        print("usage: run-layer-scripts.py --layer {1|4|5|7}", file=sys.stderr)
+        print("usage: run-layer-scripts.py --layer {1|4|5|7|8}", file=sys.stderr)
         return 2
     layer = argv[1]
 

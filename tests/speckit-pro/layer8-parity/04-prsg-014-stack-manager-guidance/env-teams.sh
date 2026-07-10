@@ -1,3 +1,0 @@
-export SPECKIT_AGENT_TEAMS=true
-export SPECKIT_PRSG_014_STACK_MANAGER=teams
-

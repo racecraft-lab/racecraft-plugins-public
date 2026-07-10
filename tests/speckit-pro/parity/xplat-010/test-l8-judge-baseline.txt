@@ -1,0 +1,17 @@
+001 current and retired judge inventories are explicit
+002 deterministic judge module imports
+003 local comparison arms are byte-identical exact tolerance-1
+004 byte-identical files pass
+005 byte-identical passing result is matched
+006 byte-identical files with different bytes fail
+007 exact values pass
+008 different exact values fail
+009 tolerance-1 difference of one passes
+010 tolerance-1 difference of two fails
+011 tolerance-1 rejects nonnumeric values
+012 semantic-equivalent returns skip
+013 semantic-equivalent result is marked skipped
+014 semantic-equivalent remains a supported skip-only tolerance
+015 semantic-equivalent CLI exits zero with warning
+016 CLI emits pass fail skip JSON without an LLM subprocess path
+TOTAL: 16

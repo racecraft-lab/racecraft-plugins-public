@@ -1,0 +1,11 @@
+{
+  "schema": "speckit.layer8.env.v1",
+  "mode": "fallback",
+  "environment": {
+    "set": {
+      "SPECKIT_AGENT_TEAMS": "false",
+      "SPECKIT_PRSG_014_STACK_MANAGER": "fallback"
+    },
+    "unset": []
+  }
+}

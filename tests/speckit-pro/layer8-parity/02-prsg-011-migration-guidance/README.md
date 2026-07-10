@@ -22,7 +22,7 @@ Dry-run mode validates fixture shape and JSON.
 Dry-run validates structure today:
 
 ```bash
-bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run --fixture 02-prsg-011-migration-guidance
+python3 tests/speckit-pro/layer8-parity/run-parity-fixtures.py --dry-run --fixture 02-prsg-011-migration-guidance
 ```
 
 Live mode is optional and token-costly, consistent with Layer 8.

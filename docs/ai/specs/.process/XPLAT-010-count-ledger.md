@@ -63,6 +63,12 @@ Columns:
 | PR 7b | port: `run-all-fixtures.sh` → `run-all-fixtures.py` | replay | 257 → 257 | yes | `tests/speckit-pro/parity/xplat-010/run-all-fixtures-baseline.txt` |
 | PR 7b | new replay/live runner contract | default | 0 → 31 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer7-runners-baseline.txt` |
 | PR 7b | shipped gate regression expansion | default | 57 → 58 | n/a | n/a |
+| PR 8 | port: `run-parity-fixtures.sh` → `run-parity-fixtures.py` | dry-run | 12 → 12 | yes | `tests/speckit-pro/parity/xplat-010/run-parity-fixtures-baseline.txt` |
+| PR 8 | port: `test-l8-extractors.sh` → `test-l8-extractors.py` | default | 19 → 19 | yes | `tests/speckit-pro/parity/xplat-010/test-l8-extractors-baseline.txt` |
+| PR 8 | replacement: `test-l8-judge.sh` → deterministic local judge contract | default | 16 → 16 | no (intentional removal of live-LLM judgment) | retired Bash: `tests/speckit-pro/parity/xplat-010/test-l8-judge-bash-baseline.txt`; current Python: `tests/speckit-pro/parity/xplat-010/test-l8-judge-baseline.txt` |
+| PR 8 | fixture environment inputs: 8 `env-*.sh` → 8 `env-*.json` | default | 0 → 0 (data-only inputs) | n/a | n/a |
+| PR 8 | new Layer-8 runner/portability contract | default | 0 → 29 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer8-runner-baseline.txt` |
+| PR 8 | shipped gate regression expansion | default | 58 → 59 | n/a | n/a |
 
 **PR 13 note (T121–T130):** The estimator Layer-4 test follows the
 Per-Port Protocol against historical predecessor commit
@@ -235,3 +241,15 @@ shell-free execution. Layer 7 now dispatches through the manifest-backed Python
 module path; the shipped native `check_layer7` is retired, which expands its
 gate regression suite from 57 to 58 methods. The three PR-7a transitional Bash
 dependencies are deleted with their last Bash consumers in this slice.
+
+**PR 8 note (T073–T080):** The dry-run Layer-8 fixture inventory and extractor
+test preserve exact ordered parity (`12 → 12` and `19 → 19`). The judge's
+`16 → 16` count is an intentional contract replacement: the retired Bash test
+proved a live Claude shim, while the Python test proves only deterministic
+`byte-identical`, `exact`, and `tolerance-1` arms and a skip-with-warning for
+`semantic-equivalent`; separate baselines prevent a false name-equality claim.
+The 29-check runner contract adds OS-neutral subprocess doubles, exact resolved
+`CLAUDE_BIN` invocation, platform temp-directory selection, raw-byte precedence
+over extractor configuration, and a live tracked-tree `.sh` absence check.
+Layer 8 now dispatches through the manifest-backed Python module path; retiring
+native `check_layer8` expands the shipped gate regression suite from 58 to 59.
