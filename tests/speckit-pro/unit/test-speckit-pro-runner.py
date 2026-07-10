@@ -525,6 +525,7 @@ class RunnerFoundationTests(unittest.TestCase):
             "dist/codex/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
             "dist/codex/speckit-pro/skills/speckit-autopilot/references/capability-discovery.md",
             "docs-site/src/content/docs/reference/source-vs-dist.md",
+            "docs/ai/research/tool-agnostic-capability-discovery-spike.md",
         }
         for path in changed:
             if (

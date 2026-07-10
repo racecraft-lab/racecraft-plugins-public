@@ -52,10 +52,10 @@ class Layer1ValidatorRegressionTests(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "unable to read.*xplat010-definitely-missing"):
             plugin_payload.load_json_file(missing)
 
-    def test_pr_checks_docstring_distinguishes_external_yaml_probe(self) -> None:
+    def test_pr_checks_docstring_describes_stdlib_yaml_sanity(self) -> None:
         doc = pr_checks_sentinel.__doc__ or ""
-        self.assertIn("module imports only the Python", doc)
-        self.assertIn("optional PyYAML/Ruby subprocess delegation", doc)
+        self.assertIn("does not invoke those probes", doc)
+        self.assertIn("stdlib-only", doc)
 
     def test_skill_pointer_paths_are_repo_relative(self) -> None:
         self.assertEqual(

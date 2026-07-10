@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """`validate-plugins` sentinel-job validation (port of validate-pr-checks-sentinel.sh).
 
-XPLAT-010 count-parity port (T032, US2). The module imports only the Python
-3.11+ standard library; YAML validation intentionally preserves the predecessor's
-optional PyYAML/Ruby subprocess delegation described below.
+XPLAT-010 count-parity port (T032, US2). Python 3.11+ standard library only.
 Verifies ``.github/workflows/pr-checks.yml`` defines the ``validate-plugins``
 sentinel with the correct triggers, dispatch inputs, Python-runner gate steps,
 and sentinel logic. XPLAT-010 PR 11 extends the same structural boundary to
@@ -12,11 +10,12 @@ detection, conditional heavy jobs, stable Linux required-check sentinels,
 configured Windows availability, and always-run evidence uploads. The validator
 then folds every ``.github/workflows/*.yml`` into one "valid YAML" outcome.
 
-YAML syntax: the shell predecessor used optional non-stdlib YAML parsers
-(``python -c import yaml`` or Ruby). This port is intentionally stdlib-only per
-XPLAT-010, so it applies a conservative GitHub-workflow YAML sanity check that
-guards indentation, mapping/sequence structure, and block-scalar boundaries
-without adding PyYAML/Ruby as runtime dependencies.
+YAML syntax: the deleted shell predecessor optionally probed non-stdlib YAML
+parsers (``python -c import yaml`` or Ruby) when they happened to be installed.
+This port does not invoke those probes. It keeps the current runtime stdlib-only
+by applying a conservative GitHub-workflow YAML sanity check that guards
+indentation, mapping/sequence structure, and block-scalar boundaries without
+adding PyYAML/Ruby as runtime dependencies.
 
 PR 5 updated this ported validator for the CI dispatch swap (task T049); PR 11
 adds the container-preflight contract checks (task T106).
@@ -42,9 +41,20 @@ from test_result import run_counted  # noqa: E402
 
 WORKFLOW_FILE = REPO_ROOT / ".github" / "workflows" / "pr-checks.yml"
 CONTAINER_WORKFLOW_FILE = REPO_ROOT / ".github" / "workflows" / "container-preflight.yml"
+WINDOWS_PREFLIGHT_HELPER_FILE = REPO_ROOT / "tests" / "speckit-pro" / "run-hosted-windows-preflight.py"
 WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
 
 CHECKOUT_PIN_RE = re.compile(r"uses: actions/checkout@[0-9a-f]{40}")
+UPLOAD_ARTIFACT_PIN = "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+CONTAINER_IMAGE_PIN = (
+    "ubuntu:24.04@sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06ba2cef9ebffbc7092d90"
+)
+SPEC_KIT_VERSION_PIN = "SPEC_KIT_VERSION: v0.8.13"
+SPEC_KIT_REF_PIN = (
+    "SPEC_KIT_GIT_REF: git+https://github.com/github/spec-kit.git@"
+    "b2314680fce898e0a9151b37ad2535d810c93eef"
+)
+UNIQUE_ARTIFACT_SUFFIX = "-${{ github.run_id }}-${{ github.run_attempt }}"
 
 TITLE_LITERAL = "TITLE: ${{ github.event_name == 'pull_request' && github.event.pull_request.title || inputs.pr_title }}"
 BASE_REF_LITERAL = "BASE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || inputs.base_ref }}"
@@ -256,6 +266,9 @@ jobs:
             block = _job_block(content, "changes")
             self.assertIn("run_preflight:", block)
             self.assertIn("steps.changes.outputs.run_preflight", block)
+            self.assertIn("persist-credentials: false", block)
+            self.assertIn('git merge-base "$BASE_SHA" "$HEAD_SHA"', block)
+            self.assertIn("merge-base.txt", block)
             for path in ("speckit-pro/speckit_pro_runner/", "tests/speckit-pro/", ".github/workflows/"):
                 self.assertIn(path, block)
 
@@ -263,12 +276,32 @@ jobs:
             block = _job_block(content, "linux-amd64-preflight")
             self.assertIn("needs.changes.outputs.run_preflight == 'true'", block)
             self.assertIn("container:", block)
+            self.assertIn(f"image: {CONTAINER_IMAGE_PIN}", block)
+            self.assertIn("ca-certificates", block)
+            self.assertIn("id: checkout", block)
+            self.assertIn("persist-credentials: false", block)
+            self.assertIn("if: steps.checkout.outcome == 'success'", block)
+            self.assertIn("EVIDENCE_DIR: /tmp/container-preflight-linux-amd64", block)
+            self.assertIn("path: ${{ env.EVIDENCE_DIR }}", block)
+            self.assertNotIn("RUNNER_TEMP", block)
+            self.assertNotIn("${{ runner.temp }}", block)
+            self.assertNotIn("- name: Checkout repository\n        if: always()", block)
 
         with self.subTest(msg="Linux arm64 heavy preflight is job-level conditional"):
             block = _job_block(content, "linux-arm64-preflight")
             self.assertIn("needs.changes.outputs.run_preflight == 'true'", block)
             self.assertIn("runs-on: ubuntu-24.04-arm", block)
             self.assertIn("container:", block)
+            self.assertIn(f"image: {CONTAINER_IMAGE_PIN}", block)
+            self.assertIn("ca-certificates", block)
+            self.assertIn("id: checkout", block)
+            self.assertIn("persist-credentials: false", block)
+            self.assertIn("if: steps.checkout.outcome == 'success'", block)
+            self.assertIn("EVIDENCE_DIR: /tmp/container-preflight-linux-arm64", block)
+            self.assertIn("path: ${{ env.EVIDENCE_DIR }}", block)
+            self.assertNotIn("RUNNER_TEMP", block)
+            self.assertNotIn("${{ runner.temp }}", block)
+            self.assertNotIn("- name: Checkout repository\n        if: always()", block)
 
         with self.subTest(msg="Linux amd64 runs current Python gate entrypoints"):
             block = _job_block(content, "linux-amd64-preflight")
@@ -349,14 +382,54 @@ jobs:
             self.assertIn("continue-on-error: true", block)
             self.assertIn("needs.windows-availability.outputs.x64_enabled == 'true'", block)
             self.assertIn("runs-on: windows-2025", block)
+            self.assertIn("id: checkout", block)
+            self.assertIn("persist-credentials: false", block)
+            self.assertIn("if: steps.checkout.outcome == 'success'", block)
+            self.assertIn("steps.checkout.outcome != 'success'", block)
+            self.assertNotIn("- name: Checkout repository\n        if: always()", block)
 
         with self.subTest(msg="Windows ARM64 smoke is advisory and conditionally queued"):
             block = _job_block(content, "windows-arm64-smoke")
             self.assertIn("continue-on-error: true", block)
             self.assertIn("needs.windows-availability.outputs.arm64_enabled == 'true'", block)
             self.assertIn("runs-on: windows-11-arm", block)
+            self.assertIn("id: checkout", block)
+            self.assertIn("persist-credentials: false", block)
+            self.assertIn("if: steps.checkout.outcome == 'success'", block)
+            self.assertIn("steps.checkout.outcome != 'success'", block)
+            self.assertNotIn("- name: Checkout repository\n        if: always()", block)
 
         with self.subTest(msg="Windows smoke runs interpreter discovery runtime-info and preflight"):
+            self.assertTrue(
+                WINDOWS_PREFLIGHT_HELPER_FILE.is_file(),
+                f"file not found: {WINDOWS_PREFLIGHT_HELPER_FILE}",
+            )
+            helper_content = (
+                WINDOWS_PREFLIGHT_HELPER_FILE.read_text(encoding="utf-8")
+                if WINDOWS_PREFLIGHT_HELPER_FILE.is_file()
+                else ""
+            )
+            compile(helper_content, str(WINDOWS_PREFLIGHT_HELPER_FILE), "exec")
+            for expected in (
+                '"operation": "runtime-info"',
+                '"operation": "preflight"',
+                "runtime-info.json",
+                "preflight.json",
+                "specify-version.txt",
+                "specify_version_compatible",
+                "runtime_info_diagnostics",
+                "preflight_diagnostics",
+                "preflight_metadata_status",
+                "runner_metadata_mismatch",
+                "IMMUTABLE_SPEC_KIT_REF_RE",
+                'f"pipx=={args.pipx_version}"',
+                "shell=False",
+            ):
+                self.assertIn(expected, helper_content)
+            self.assertIn('PIPX_VERSION: "1.15.0"', content)
+            self.assertIn(SPEC_KIT_VERSION_PIN, content)
+            self.assertIn(SPEC_KIT_REF_PIN, content)
+            self.assertNotIn("spec-kit.git@v0.8.13", content)
             for job_id in ("windows-x64-smoke", "windows-arm64-smoke"):
                 block = _job_block(content, job_id)
                 candidates = ('name = "py -V:3"', 'name = "py -3"', 'name = "python"', 'name = "python3"')
@@ -365,13 +438,15 @@ jobs:
                 self.assertEqual(sorted(positions), positions, "Python discovery order drifted")
                 self.assertIn("[int]$version.minor -ge 11", block)
                 self.assertIn("missing-python-3.11", block)
-                self.assertIn('operation = "runtime-info"', block)
-                self.assertIn('operation = "preflight"', block)
-                self.assertIn("runtime-info.stderr.txt", block)
-                self.assertIn("preflight.stderr.txt", block)
-                self.assertIn("1> $runtimeStdout 2> $runtimeStderr", block)
-                self.assertIn("1> $preflightStdout 2> $preflightStderr", block)
-                self.assertIn('$env:PYTHONUTF8 = "1"', block)
+                self.assertIn("tests/speckit-pro/run-hosted-windows-preflight.py", block)
+                self.assertIn("$env:SPEC_KIT_GIT_REF", block)
+                self.assertIn("$env:SPEC_KIT_VERSION", block)
+                self.assertIn("$env:PIPX_VERSION", block)
+                self.assertIn("PREFLIGHT_INTERPRETER_CANDIDATE", block)
+                self.assertNotIn("-m pipx", block)
+                self.assertNotIn('operation = "runtime-info"', block)
+                self.assertNotIn('operation = "preflight"', block)
+                self.assertNotIn("specifyCommand", block)
                 self.assertNotIn("2>&1", block)
                 self.assertNotIn("1> (Join-Path", block)
 
@@ -392,25 +467,38 @@ jobs:
 
         with self.subTest(msg="every container preflight job uploads evidence with always semantics"):
             failures = []
+            artifact_names = []
             for job_id, expected_count in EXPECTED_UPLOAD_COUNTS.items():
                 block = _job_block(content, job_id)
                 upload_steps = [
                     step
                     for step in re.split(r"(?m)(?=^      - name: )", block)
-                    if "actions/upload-artifact@v7" in step
+                    if UPLOAD_ARTIFACT_PIN in step
                 ]
+                artifact_names.extend(
+                    match.group(1)
+                    for step in upload_steps
+                    if (match := re.search(r"(?m)^\s+name: (container-preflight-[^\n]+)$", step))
+                )
                 if len(upload_steps) != expected_count or any(
                     "if: always()" not in step
                     or "continue-on-error: true" not in step
                     or "if-no-files-found: error" not in step
+                    or UNIQUE_ARTIFACT_SUFFIX not in step
+                    or "overwrite: true" in step
                     for step in upload_steps
                 ):
                     failures.append(job_id)
             self.assertEqual([], failures, f"jobs with incorrect evidence uploads: {failures}")
+            self.assertEqual(sum(EXPECTED_UPLOAD_COUNTS.values()), len(artifact_names))
+            self.assertEqual(len(artifact_names), len(set(artifact_names)))
 
         with self.subTest(msg="evidence uploads cannot mask or flip role verdicts"):
             upload_count = sum(EXPECTED_UPLOAD_COUNTS.values())
-            self.assertEqual(upload_count, content.count("uses: actions/upload-artifact@v7"))
+            self.assertEqual(upload_count, content.count(f"uses: {UPLOAD_ARTIFACT_PIN}"))
+            action_refs = re.findall(r"(?m)^\s+uses: ([^\s]+)", content)
+            self.assertTrue(action_refs)
+            self.assertTrue(all(re.search(r"@[0-9a-f]{40}$", ref) for ref in action_refs))
             self.assertEqual(
                 upload_count + 2,
                 content.count("continue-on-error: true"),
