@@ -50,10 +50,12 @@ XPLAT008_CHECK_IDS = {
     "update-proof",
     "version-sync",
     "zero-bash-guard",
+    "repo_bash_confinement",
 }
 XPLAT008_BLOCKER_CLASSES = {
     "active_shell_runtime_dependency",
     "active_zero_bash_dependency",
+    "active_repo_bash_dependency",
     "incomplete_payload",
     "incomplete_uat_evidence",
     "missing_bundled_agent",
@@ -296,6 +298,10 @@ def release_readiness_xplat008(entry: Any, request: Any, repo_root: Path) -> dic
                 "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/zero-bash-guard-cases.json",
                 XPLAT_009_INSTALLED_CACHE_PROOF,
             ],
+            "repo_bash_confinement": [
+                "tests/speckit-pro/layer4-scripts/fixtures/xplat-010-confinement/confinement-guard-cases.json",
+                "tests/speckit-pro/layer4-scripts/fixtures/xplat-010-confinement/allowlist.json",
+            ],
             "uat_matrix": "docs/ai/specs/.process/XPLAT-008-uat-matrix.md",
             "install_health": ["tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/install-health-repair-cases.json"],
             "public_claims": ["tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json"],
@@ -382,6 +388,36 @@ def live_xplat008_gate_evidence(repo_root: Path) -> dict[str, Any]:
             [
                 f"zero_bash_status={zero_bash_response.get('status', 'missing') if isinstance(zero_bash_response, dict) else 'missing'}",
                 f"zero_bash_blocking_count={zero_bash_count if isinstance(zero_bash_count, int) else 'unknown'}",
+            ],
+        )
+    )
+
+    repo_bash_response = active_path_guard.run_repo_bash_confinement(
+        SimpleNamespace(helper_id="active-path-guard"),
+        SimpleNamespace(
+            operation="repo-bash-confinement",
+            request_id="xplat-010-release-readiness:repo-bash-confinement",
+            mode="read_only",
+            inputs={
+                "allowlist_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-010-confinement/allowlist.json",
+            },
+        ),
+        repo_root,
+    )
+    repo_bash_data = repo_bash_response.get("data") if isinstance(repo_bash_response, dict) else {}
+    repo_bash_blocking = repo_bash_response.get("status") != "ok" if isinstance(repo_bash_response, dict) else True
+    repo_bash_count = repo_bash_data.get("blocking_count") if isinstance(repo_bash_data, dict) else None
+    repo_bash_allowlist = repo_bash_data.get("allowlist") if isinstance(repo_bash_data, dict) else {}
+    evidence["checks"].append(
+        xplat008_check(
+            "repo_bash_confinement",
+            "active_repo_bash_dependency",
+            not repo_bash_blocking and repo_bash_count == 0,
+            "Live XPLAT-010 repository Bash confinement completed for the tracked source tree.",
+            [
+                f"repo_bash_status={repo_bash_response.get('status', 'missing') if isinstance(repo_bash_response, dict) else 'missing'}",
+                f"repo_bash_blocking_count={repo_bash_count if isinstance(repo_bash_count, int) else 'unknown'}",
+                f"allowlist_release_readiness_excluded={repo_bash_allowlist.get('release_readiness_excluded') if isinstance(repo_bash_allowlist, dict) else 'unknown'}",
             ],
         )
     )

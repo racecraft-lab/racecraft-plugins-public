@@ -50,7 +50,7 @@ class TranscriptToolTests(unittest.TestCase):
                 {
                     "type": "assistant",
                     "cwd": "/" + "Users/alice/Documents/work/racecraft-plugins-public",
-                    "note": "Cache at C:\\Users\\alice\\repo\\private.json",
+                    "note": "Cache at C:\\" + "Users\\alice\\repo\\private.json",
                     "sessionId": "session-secret",
                     "message": {
                         "role": "assistant",

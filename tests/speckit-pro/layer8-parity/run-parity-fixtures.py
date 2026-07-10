@@ -25,6 +25,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 LIB_DIR = SCRIPT_DIR / "lib"
 ENV_SCHEMA = "speckit.layer8.env.v1"
 DEFAULT_BUDGET_USD = "20"
+CLAUDE_EXECUTABLE_NAMES = frozenset({"claude", "claude.exe", "claude.cmd", "claude.bat"})
 RULE = "────────────────────────────────────────"
 SUMMARY_RULE = "════════════════════════════════════════"
 MAX_DIFF_LINES = 50
@@ -223,6 +224,8 @@ def resolve_executable(command: str) -> str | None:
         executable = str(path.absolute()) if path.is_file() and (os.name == "nt" or os.access(path, os.X_OK)) else None
     else:
         executable = shutil.which(command)
+    if executable is None or Path(executable).name.casefold() not in CLAUDE_EXECUTABLE_NAMES:
+        return None
     return executable
 
 
@@ -257,13 +260,16 @@ def run_path(fixture_dir: Path, env_contract: Path, out_dir: Path, config: Confi
     stderr_path = out_dir / ".claude-stderr.log"
     exit_path = out_dir / ".claude-exit-code"
     argv = [
-        claude_executable,
+        "claude",
         "-p",
         "--max-budget-usd",
         config.budget_usd,
         "/speckit-pro:autopilot workflow.md",
     ]
     child_env = env_from_contract(env_contract)
+    selected_dir = str(Path(claude_executable).parent)
+    current_path = child_env.get("PATH", "")
+    child_env["PATH"] = selected_dir if not current_path else f"{selected_dir}{os.pathsep}{current_path}"
     with stdout_path.open("w", encoding="utf-8") as stdout, stderr_path.open("w", encoding="utf-8") as stderr:
         completed = subprocess.run(
             argv,

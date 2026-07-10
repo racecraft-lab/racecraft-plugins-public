@@ -44,7 +44,7 @@ CURRENT_INVENTORY = [
     "configured missing claude path reports configured-path reason",
     "live stub invoked Path A and Path B only",
     "live stub receives claude -p argv",
-    "live stub receives exact resolved CLAUDE_BIN path",
+    "live stub pins command resolution to the selected CLAUDE_BIN directory",
     "live stub receives configured budget",
     "JSON env set applies teams mode",
     "JSON env set applies fallback mode",
@@ -556,9 +556,9 @@ class Layer8RunnerTests(unittest.TestCase):
                 ),
                 (
                     CURRENT_INVENTORY[13],
-                    lambda: self.assertEqual(
-                        [entry["executable"] for entry in logs],
-                        [str(stub), str(stub)],
+                    lambda: (
+                        self.assertEqual([entry["executable"] for entry in logs], ["claude", "claude"]),
+                        self.assertEqual([entry["selected_dir"] for entry in logs], [str(stub.parent), str(stub.parent)]),
                     ),
                 ),
                 (

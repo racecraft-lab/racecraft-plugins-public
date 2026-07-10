@@ -427,10 +427,23 @@ def run_fixture_subprocess(spec: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(timeout, (int, float)) or timeout <= 0 or timeout > 5:
         return invalid_subprocess_result("subprocess_nonzero", argv=argv, timeout_seconds=1, stderr_is_failure=stderr_is_failure)
 
-    real_argv = [sys.executable if arg == "__PYTHON__" else arg for arg in argv]
+    real_argv = fixture_python_argv(argv)
+    if real_argv is None:
+        return invalid_subprocess_result(
+            "subprocess_nonzero",
+            argv=argv,
+            timeout_seconds=int(timeout),
+            stderr_is_failure=stderr_is_failure,
+        )
     started = time.monotonic()
     try:
-        completed = subprocess.run(real_argv, capture_output=True, shell=False, timeout=timeout, check=False)
+        completed = subprocess.run(
+            [sys.executable, *real_argv[1:]],
+            capture_output=True,
+            shell=False,
+            timeout=timeout,
+            check=False,
+        )
         duration_ms = int((time.monotonic() - started) * 1000)
         stdout = output_capture(completed.stdout)
         stderr = output_capture(completed.stderr)
@@ -465,6 +478,27 @@ def run_fixture_subprocess(spec: dict[str, Any]) -> dict[str, Any]:
             "stderr_is_failure": stderr_is_failure,
             "_diagnostic_code": "subprocess_timeout",
         }
+
+
+def fixture_python_argv(argv: list[str]) -> list[str] | None:
+    executable = argv[0]
+    if executable != "__PYTHON__" and not resolves_to_current_python(executable):
+        return None
+    return [
+        sys.executable,
+        *(sys.executable if arg == "__PYTHON__" else arg for arg in argv[1:]),
+    ]
+
+
+def resolves_to_current_python(executable: str) -> bool:
+    if executable == sys.executable:
+        return True
+    resolved = shutil.which(executable)
+    candidate = Path(resolved) if resolved is not None else Path(executable)
+    try:
+        return candidate.samefile(sys.executable)
+    except OSError:
+        return candidate.resolve(strict=False) == Path(sys.executable).resolve(strict=False)
 
 
 def invalid_subprocess_result(

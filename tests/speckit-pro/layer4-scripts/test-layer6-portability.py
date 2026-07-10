@@ -34,9 +34,9 @@ from test_result import run_counted  # noqa: E402
 CURRENT_INVENTORY = [
     "baseline inventory is truthful and ordered",
     "result timestamp is Windows-safe",
-    "explicit runtime path is not basename-restricted",
-    "Claude benchmark invokes the exact resolved executable",
-    "Codex benchmark invokes the exact resolved executable",
+    "generic path resolution works while configured runtime names are constrained",
+    "Claude benchmark pins command resolution to the selected directory",
+    "Codex benchmark pins command resolution to the selected directory",
     "Claude subprocess pins UTF-8 replacement decoding",
     "Codex subprocess pins UTF-8 replacement decoding",
     "Claude prompt strips command-substitution trailing newlines",
@@ -104,6 +104,10 @@ class Layer6PortabilityTests(unittest.TestCase):
                     stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH
                 )
             resolved = runner.resolve_executable(str(arbitrary_executable))
+            with contextlib.redirect_stdout(io.StringIO()):
+                rejected_runtime = runner.resolve_runtime_executable(
+                    runner.Config(runtime=runner.RUNTIME_CLAUDE, claude_bin=str(arbitrary_executable))
+                )
 
             claude_results = root / "claude-results.json"
             claude_writer = runner.ResultWriter(claude_results)
@@ -202,9 +206,33 @@ class Layer6PortabilityTests(unittest.TestCase):
             checks = [
                 (CURRENT_INVENTORY[0], lambda: self.assertEqual(baseline_inventory(BASELINE), CURRENT_INVENTORY)),
                 (CURRENT_INVENTORY[1], lambda: self.assertRegex(runner.timestamp(), r"^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z$")),
-                (CURRENT_INVENTORY[2], lambda: self.assertEqual(resolved, Path(os.path.abspath(arbitrary_executable)))),
-                (CURRENT_INVENTORY[3], lambda: self.assertEqual(claude_calls[0][0][0], str(arbitrary_executable))),
-                (CURRENT_INVENTORY[4], lambda: self.assertEqual(codex_calls[0][0][0], str(arbitrary_executable))),
+                (
+                    CURRENT_INVENTORY[2],
+                    lambda: (
+                        self.assertEqual(resolved, Path(os.path.abspath(arbitrary_executable))),
+                        self.assertIsNone(rejected_runtime),
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[3],
+                    lambda: (
+                        self.assertEqual(claude_calls[0][0][0], "claude"),
+                        self.assertEqual(
+                            str(claude_calls[0][1]["env"]["PATH"]).split(os.pathsep, 1)[0],
+                            str(arbitrary_executable.parent),
+                        ),
+                    ),
+                ),
+                (
+                    CURRENT_INVENTORY[4],
+                    lambda: (
+                        self.assertEqual(codex_calls[0][0][0], "codex"),
+                        self.assertEqual(
+                            str(codex_calls[0][1]["env"]["PATH"]).split(os.pathsep, 1)[0],
+                            str(arbitrary_executable.parent),
+                        ),
+                    ),
+                ),
                 (
                     CURRENT_INVENTORY[5],
                     lambda: self.assertEqual(

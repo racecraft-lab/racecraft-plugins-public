@@ -5,7 +5,7 @@ Reproduces the ``run-all.sh`` developer UX 1:1 (XPLAT-010 US1, FR-006, research
 §D5) with no Bash or ``jq`` dependency of its own:
 
   run-all.py               # Layers 1, 4, 5 + toolchain preflight (default)
-  run-all.py --live        # default layers, passing --live to the child tests
+  run-all.py --live        # default deterministic layers; no live Layer 7 selected
   run-all.py --layer 4     # a single layer
   run-all.py --integration # Layer 7 (integration fixtures)
   run-all.py --all         # every layer that has a runner block + live
@@ -20,9 +20,8 @@ Headline: ``speckit-pro test suite: X/Y passed`` (``X/Y passed (Z failed)`` on
 failure), where X/Y sums each child's ``<label>: X/Y passed`` line. Exit 0 iff
 no failures, 1 on any failure, 2 on an unknown flag.
 
-Transitional dispatch (until the ports land): ``.sh`` children run via ``bash``
-when it is available; on a Bash-absent platform each is skipped with an explicit
-diagnostic (never a silent green) per FR-006. ``.py`` children always run.
+Every executable manifest entry is Python-authoritative. A non-``.py`` entry
+fails closed instead of falling back to a platform shell (XPLAT-010 T097).
 """
 
 from __future__ import annotations
@@ -30,7 +29,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -41,9 +39,9 @@ SUMMARY_RE = re.compile(r"[0-9]+/[0-9]+ passed")
 COUNT_RE = re.compile(r"([0-9]+)/([0-9]+)")
 RULE = "────────────────────────────────────────"
 HEADER_RULE = "════════════════════════════════════════"
-# Child layers that honour the --live flag in run-all.sh (Layer 4 unit tests and
-# Layer 7 integration fixtures); Layers 1/5 ignore it.
-LIVE_AWARE_LAYERS = {"4", "7"}
+# Layer 7 owns the executable live mode. Layer 4 is deterministic unit coverage;
+# forwarding --live to unittest modules would corrupt their argument parsing.
+LIVE_AWARE_LAYERS = {"7"}
 TOOLCHAIN_TRIGGER_LAYERS = ("1", "4", "5", "7")
 
 
@@ -188,16 +186,12 @@ def dispatch_script(
     layer: dict,
     config: Config,
     root: Path,
-    bash_path: str | None,
-) -> tuple[str, int, bool]:
-    """Run one child test. Returns (merged_output, exit_code, bash_absent_skip)."""
+) -> tuple[str, int]:
+    """Run one Python child test and fail closed on a non-Python manifest entry."""
     pass_live = config.live and layer["id"] in LIVE_AWARE_LAYERS
-    if path.suffix == ".py":
-        argv = [sys.executable, str(path)]
-    else:
-        if bash_path is None:
-            return ("", 0, True)
-        argv = [bash_path, str(path)]
+    if path.suffix != ".py":
+        return (f"unsupported non-Python manifest entry: {path}\n", 2)
+    argv = [sys.executable, str(path)]
     if pass_live:
         argv.append("--live")
     completed = subprocess.run(
@@ -209,10 +203,10 @@ def dispatch_script(
         shell=False,
         check=False,
     )
-    return (completed.stdout + completed.stderr, completed.returncode, False)
+    return (completed.stdout + completed.stderr, completed.returncode)
 
 
-def run_execute_layer(layer: dict, config: Config, root: Path, bash_path: str | None) -> tuple[int, int]:
+def run_execute_layer(layer: dict, config: Config, root: Path) -> tuple[int, int]:
     print(f"\nLayer {layer['id']}: {layer['label']}")
     print(RULE)
     layer_pass = layer_fail = 0
@@ -220,20 +214,18 @@ def run_execute_layer(layer: dict, config: Config, root: Path, bash_path: str | 
         path = root / script["path"]
         label = Path(script["path"]).stem
         if not path.is_file():
-            print(f"  SKIP: {label} (not found)")
+            print(f"  FAIL: {label} (not found)")
+            layer_fail += 1
             continue
-        output, exit_code, bash_absent = dispatch_script(path, layer, config, root, bash_path)
-        if bash_absent:
-            # FR-006: a transitional .sh child on a Bash-absent platform is
-            # skipped with an explicit diagnostic, never a silent green.
-            print(f"  SKIP: {label} (bash unavailable — transitional .sh dispatch pending port)")
-            continue
+        output, exit_code = dispatch_script(path, layer, config, root)
         summary = sum_all_summaries(output) if layer["integration"] else parse_summary(output)
         disposition, passed, failed = classify_child(exit_code, summary)
         layer_pass += passed
         layer_fail += failed
         if disposition == "crash":
             print(f"  FAIL {label} (exit {exit_code}, no summary — child may have crashed)")
+        elif disposition == "failed-exit":
+            print(f"  FAIL {label} ({passed}/{passed} reported, exit {exit_code})")
         elif disposition == "no-summary-pass":
             print(f"  PASS {label} (no summary)")
         elif failed == 0:
@@ -306,8 +298,6 @@ def main(argv: list[str]) -> int:
 
     root = repo_root()
     manifest = load_manifest(root)
-    bash_path = shutil.which("bash")
-
     total_pass = total_fail = 0
     layer_results: list[str] = []
 
@@ -328,7 +318,7 @@ def main(argv: list[str]) -> int:
         if layer["execution"] == "print-commands":
             print_layer_commands(layer, root)
             continue
-        layer_pass, layer_fail = run_execute_layer(layer, config, root, bash_path)
+        layer_pass, layer_fail = run_execute_layer(layer, config, root)
         total_pass += layer_pass
         total_fail += layer_fail
         layer_results.append(f"L{layer['id']}: {layer_pass}/{layer_pass + layer_fail}")

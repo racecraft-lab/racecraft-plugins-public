@@ -32,6 +32,8 @@ RUNTIME_CLAUDE = "claude"
 RUNTIME_CODEX = "codex"
 SWEEP_CONFIGS = ("opus", "sonnet", "haiku")
 CODEX_SWEEP_CONFIGS = ("xhigh", "high", "medium", "low")
+CLAUDE_EXECUTABLE_NAMES = frozenset({"claude", "claude.exe", "claude.cmd", "claude.bat"})
+CODEX_EXECUTABLE_NAMES = frozenset({"codex", "codex.exe", "codex.cmd", "codex.bat"})
 
 
 def load_module(path: Path, name: str) -> ModuleType:
@@ -162,20 +164,23 @@ def resolve_dirs(runtime: str) -> tuple[Path, Path]:
     return fixtures, results
 
 
-def resolve_executable(command: str) -> Path | None:
+def resolve_executable(command: str, allowed_names: frozenset[str] | None = None) -> Path | None:
     has_separator = os.sep in command or (os.altsep is not None and os.altsep in command)
     if has_separator:
         candidate = Path(command).expanduser()
         if not candidate.is_file() or (os.name != "nt" and not os.access(candidate, os.X_OK)):
             return None
-        return Path(os.path.abspath(candidate))
+        executable = Path(os.path.abspath(candidate))
+        return executable if allowed_names is None or executable.name.casefold() in allowed_names else None
     executable = shutil.which(command)
-    return Path(os.path.abspath(executable)) if executable else None
+    resolved = Path(os.path.abspath(executable)) if executable else None
+    return resolved if resolved is not None and (allowed_names is None or resolved.name.casefold() in allowed_names) else None
 
 
 def resolve_runtime_executable(config: Config) -> Path | None:
     command = config.claude_bin if config.runtime == RUNTIME_CLAUDE else config.codex_bin
-    executable = resolve_executable(command)
+    allowed_names = CLAUDE_EXECUTABLE_NAMES if config.runtime == RUNTIME_CLAUDE else CODEX_EXECUTABLE_NAMES
+    executable = resolve_executable(command, allowed_names)
     if executable is not None:
         return executable
     if config.runtime == RUNTIME_CLAUDE:
@@ -183,6 +188,14 @@ def resolve_runtime_executable(config: Config) -> Path | None:
     else:
         print(f"ERROR: {command} CLI not found. Layer 6 (Codex) requires 'codex exec'.")
     return None
+
+
+def selected_executable_env(executable: Path) -> dict[str, str]:
+    env = os.environ.copy()
+    selected_dir = str(executable.parent)
+    current_path = env.get("PATH", "")
+    env["PATH"] = selected_dir if not current_path else f"{selected_dir}{os.pathsep}{current_path}"
+    return env
 
 
 def timestamp() -> str:
@@ -260,7 +273,7 @@ def run_benchmark(agent: str, model: str, fixtures_dir: Path, writer: ResultWrit
         return
 
     prompt = claude_prompt(agent, input_file.read_text(encoding="utf-8"))
-    argv = [str(claude_executable), "-p", "--output-format", "json"]
+    argv = ["claude", "-p", "--output-format", "json"]
     if model:
         argv.extend(["--model", model])
 
@@ -276,6 +289,7 @@ def run_benchmark(agent: str, model: str, fixtures_dir: Path, writer: ResultWrit
             encoding="utf-8",
             errors="replace",
             capture_output=True,
+            env=selected_executable_env(claude_executable),
             shell=False,
             check=False,
         )
@@ -365,7 +379,7 @@ def run_benchmark_codex(
     stderr_file.close()
     last_message_file.close()
 
-    argv = [str(codex_executable), "exec"]
+    argv = ["codex", "exec"]
     if effort:
         argv.extend(["-c", f"model_reasoning_effort={effort}"])
     argv.extend(["--json", "-o", str(last_message_path), "-"])
@@ -383,6 +397,7 @@ def run_benchmark_codex(
                     errors="replace",
                     stdout=stdout,
                     stderr=stderr,
+                    env=selected_executable_env(codex_executable),
                     shell=False,
                     check=False,
                 )

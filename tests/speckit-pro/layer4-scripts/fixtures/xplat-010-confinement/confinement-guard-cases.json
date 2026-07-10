@@ -1,0 +1,227 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "XPLAT-010",
+  "cases": [
+    {
+      "case_id": "clean-tree",
+      "expected_status": "pass",
+      "files": [
+        {"path": "tools/clean.py", "content": "import subprocess\nsubprocess.run(['python3', '--version'], shell=False)\n"}
+      ]
+    },
+    {
+      "case_id": "stray-shell-script",
+      "expected_status": "fail",
+      "expected_category": "script_file",
+      "files": [
+        {"path": "tools/stray.sh", "content": "#!/usr/bin/env bash\nexit 0\n"}
+      ]
+    },
+    {
+      "case_id": "nonallowlisted-specify-script",
+      "expected_status": "fail",
+      "expected_category": "script_file",
+      "files": [
+        {"path": ".specify/scripts/bash/unreviewed-helper.sh", "content": "#!/bin/sh\nexit 0\n"}
+      ]
+    },
+    {
+      "case_id": "prose-mentions-pass",
+      "expected_status": "pass",
+      "files": [
+        {"path": "README.md", "content": "This prose mentions bash, jq, and tools/old.sh without executing them.\n"},
+        {"path": "docs/example.yml", "content": "note: run bash only in historical documentation\n"},
+        {"path": "tests/speckit-pro/layer4-scripts/fixtures/example.py", "content": "import subprocess\nsubprocess.run(['bash', '-lc', 'true'])\n"}
+      ]
+    },
+    {
+      "case_id": "hooks-command-fails",
+      "expected_status": "fail",
+      "expected_category": "hooks_json_command",
+      "files": [
+        {"path": "speckit-pro/hooks/hooks.json", "content": "{\"hooks\": {\"PostToolUse\": [{\"command\": [\"bash\", \"tools/check\"]}]}}\n"}
+      ]
+    },
+    {
+      "case_id": "package-script-fails",
+      "expected_status": "fail",
+      "expected_category": "package_json_script",
+      "files": [
+        {"path": "package.json", "content": "{\"scripts\": {\"validate\": \"python3 check.py && jq -e . result.json\"}}\n"}
+      ]
+    },
+    {
+      "case_id": "nested-package-script-fails",
+      "expected_status": "fail",
+      "expected_category": "package_json_script",
+      "files": [
+        {"path": "package.json", "content": "{\"scripts\": {\"validate\": \"sh -c 'jq -e . result.json'\"}}\n"}
+      ]
+    },
+    {
+      "case_id": "nested-os-system-fails",
+      "expected_status": "fail",
+      "expected_category": "os_system",
+      "files": [
+        {"path": "tools/nested-os.py", "content": "import os\nos.system(\"sh -c 'jq -e . result.json'\")\n"}
+      ]
+    },
+    {
+      "case_id": "windows-cmd-payload-fails",
+      "expected_status": "fail",
+      "expected_category": "command_argv_subprocess",
+      "files": [
+        {"path": "tools/windows-cmd.py", "content": "import subprocess\nsubprocess.run(['cmd.exe', '/c', 'jq', '-e', '.', 'result.json'], shell=False)\n"}
+      ]
+    },
+    {
+      "case_id": "dynamic-python-command-fails",
+      "expected_status": "fail",
+      "expected_category": "command_argv_subprocess",
+      "files": [
+        {"path": "tools/dynamic.py", "content": "import shutil\nimport subprocess\n\ndef cmd_path(name):\n    return shutil.which(name) or ''\n\ndef run_command(argv):\n    return subprocess.run(argv, shell=False)\n\ndef check():\n    path = cmd_path('bash')\n    return run_command([path, '--version'])\n"}
+      ]
+    },
+    {
+      "case_id": "list-argv-concatenation-fails",
+      "expected_status": "fail",
+      "expected_category": "command_argv_subprocess",
+      "files": [
+        {"path": "tools/list-concat.py", "content": "import subprocess\n\nextra = ['--version']\nsubprocess.run(['bash'] + extra, shell=False)\n"}
+      ]
+    },
+    {
+      "case_id": "tuple-argv-concatenation-fails",
+      "expected_status": "fail",
+      "expected_category": "command_argv_subprocess",
+      "files": [
+        {"path": "tools/tuple-concat.py", "content": "from subprocess import check_call\n\nextra = ('--version',)\ncheck_call(('jq',) + extra)\n"}
+      ]
+    },
+    {
+      "case_id": "starred-argv-fails",
+      "expected_status": "fail",
+      "expected_category": "command_argv_subprocess",
+      "files": [
+        {"path": "tools/starred.py", "content": "import subprocess\n\nprefix = ['bash']\nsubprocess.Popen([*prefix, '--version'])\n"}
+      ]
+    },
+    {
+      "case_id": "subprocess-executable-override-fails",
+      "expected_status": "fail",
+      "expected_category": "command_argv_subprocess",
+      "files": [
+        {"path": "tools/executable-override.py", "content": "import shutil\nimport subprocess\n\noverride = shutil.which('bash')\nsubprocess.run(args=['python3', '--version'], executable=override)\n"}
+      ]
+    },
+    {
+      "case_id": "dynamic-executable-boundaries-fail-closed",
+      "expected_status": "fail",
+      "expected_category": "command_argv_subprocess",
+      "files": [
+        {"path": "tools/dynamic-boundaries.py", "content": "import subprocess\n\ndef resolve_tool():\n    return input('tool: ')\n\nsubprocess.run([resolve_tool(), '--version'])\nsubprocess.check_output(['python3', '--version'], executable=resolve_tool())\n"}
+      ]
+    },
+    {
+      "case_id": "subscript-argv-assignment-fails",
+      "expected_status": "fail",
+      "expected_category": "command_argv_subprocess",
+      "files": [
+        {"path": "tools/subscript-assignment.py", "content": "import subprocess\n\nargv = ['python3', '--version']\nargv[0] = 'bash'\nsubprocess.run(argv, shell=False)\n"}
+      ]
+    },
+    {
+      "case_id": "list-augassign-argv-fails",
+      "expected_status": "fail",
+      "expected_category": "command_argv_subprocess",
+      "files": [
+        {"path": "tools/list-augassign.py", "content": "import subprocess\n\nargv = []\nargv += ['bash', '--version']\nsubprocess.run(argv, shell=False)\n"}
+      ]
+    },
+    {
+      "case_id": "string-augassign-argv-fails",
+      "expected_status": "fail",
+      "expected_category": "command_argv_subprocess",
+      "files": [
+        {"path": "tools/string-augassign.py", "content": "import subprocess\n\nexecutable = 'ba'\nexecutable += 'sh'\nsubprocess.run([executable, '--version'], shell=False)\n"}
+      ]
+    },
+    {
+      "case_id": "insert-argv-mutation-fails",
+      "expected_status": "fail",
+      "expected_category": "command_argv_subprocess",
+      "files": [
+        {"path": "tools/insert-mutation.py", "content": "import subprocess\n\nargv = ['--version']\nargv.insert(0, 'bash')\nsubprocess.run(argv, shell=False)\n"}
+      ]
+    },
+    {
+      "case_id": "append-argv-mutation-fails",
+      "expected_status": "fail",
+      "expected_category": "command_argv_subprocess",
+      "files": [
+        {"path": "tools/append-mutation.py", "content": "import subprocess\n\nargv = []\nargv.append('bash')\nsubprocess.run(argv, shell=False)\n"}
+      ]
+    },
+    {
+      "case_id": "extend-argv-mutation-fails",
+      "expected_status": "fail",
+      "expected_category": "command_argv_subprocess",
+      "files": [
+        {"path": "tools/extend-mutation.py", "content": "import subprocess\n\nargv = []\nargv.extend(['jq', '--version'])\nsubprocess.run(argv, shell=False)\n"}
+      ]
+    },
+    {
+      "case_id": "safe-argv-mutations-pass",
+      "expected_status": "pass",
+      "files": [
+        {"path": "tools/safe-mutations.py", "content": "import subprocess\n\nargv = ['python', '--version']\nargv[0] = 'python3'\nargv += ['-I']\nargv.insert(1, '-B')\nargv.append('-E')\nargv.extend(['-s', '-S'])\nsubprocess.run(argv, shell=False)\n\nexecutable = 'python'\nexecutable += '3'\nsubprocess.run([executable, '--version'], shell=False)\n"}
+      ]
+    },
+    {
+      "case_id": "from-sys-executable-passes",
+      "expected_status": "pass",
+      "files": [
+        {"path": "tools/from-sys-executable.py", "content": "import subprocess\nfrom sys import executable\n\nsubprocess.run([executable, '--version'], shell=False)\n"}
+      ]
+    },
+    {
+      "case_id": "from-sys-executable-rebound-import-fails",
+      "expected_status": "fail",
+      "expected_category": "command_argv_subprocess",
+      "files": [
+        {"path": "tools/rebound-sys-executable.py", "content": "import subprocess\nfrom sys import executable\nfrom local_runtime import executable\n\nsubprocess.run([executable, '--version'], shell=False)\n"}
+      ]
+    },
+    {
+      "case_id": "sys-module-rebound-import-fails",
+      "expected_status": "fail",
+      "expected_category": "command_argv_subprocess",
+      "files": [
+        {"path": "tools/rebound-sys-module.py", "content": "import subprocess\nimport sys as runtime\nimport local_runtime as runtime\n\nsubprocess.run([runtime.executable, '--version'], shell=False)\n"}
+      ]
+    },
+    {
+      "case_id": "dynamic-sys-import-fails-closed",
+      "expected_status": "fail",
+      "expected_category": "command_argv_subprocess",
+      "files": [
+        {"path": "tools/dynamic-sys-import.py", "content": "import importlib\nimport subprocess\n\nexecutable = importlib.import_module('sys').executable\nsubprocess.run([executable, '--version'], shell=False)\n"}
+      ]
+    },
+    {
+      "case_id": "known-safe-executable-with-dynamic-tail-passes",
+      "expected_status": "pass",
+      "files": [
+        {"path": "tools/safe-dynamic-tail.py", "content": "import subprocess\n\ndef arguments():\n    return ['--version']\n\nnon_executable_example = ['bash'] + arguments()\nsubprocess.run(['python3', *arguments()], shell=False)\n"}
+      ]
+    },
+    {
+      "case_id": "workflow-boundary-pass",
+      "expected_status": "pass",
+      "files": [
+        {"path": ".github/workflows/dispatch.sh", "content": "#!/usr/bin/env bash\npython3 tests/speckit-pro/run-all.py\n"},
+        {"path": ".github/workflows/helper.py", "content": "import subprocess\nsubprocess.run(['jq', '-e', '.'])\n"}
+      ]
+    }
+  ]
+}

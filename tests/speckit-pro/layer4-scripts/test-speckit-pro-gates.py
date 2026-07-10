@@ -279,7 +279,7 @@ class GateFoundationTests(unittest.TestCase):
 
         report = gate_registry_report()
         self.assertEqual(report["schema_version"], "1.0")
-        self.assertEqual(report["feature_id"], "XPLAT-007+XPLAT-008+XPLAT-009")
+        self.assertEqual(report["feature_id"], "XPLAT-007+XPLAT-008+XPLAT-009+XPLAT-010")
         self.assertEqual(report["promotion_status"], "mixed")
         self.assertFalse(report["active_cutover"])
         self.assertEqual(
@@ -323,6 +323,7 @@ class GateFoundationTests(unittest.TestCase):
             "active-path-guard",
             "zero-bash-guard",
             "classify-shell-finding",
+            "repo-bash-confinement",
         }
         us4_operations = {
             "uat-matrix",
@@ -2927,35 +2928,10 @@ class GateFoundationTests(unittest.TestCase):
         self.assertGreaterEqual(len(layer4_scripts), 17)
         self.assertIn("tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.py", layer1_scripts)
         self.assertIn("tests/speckit-pro/layer1-structural/validate-release-workflow.py", layer1_scripts)
-        self.assertLessEqual(
-            {
-                "tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py",
-                "tests/speckit-pro/layer4-scripts/test-check-toolchain.py",
-                "tests/speckit-pro/layer4-scripts/test-post-implementation-reference.sh",
-                "tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh",
-                "tests/speckit-pro/layer4-scripts/test-eval-runner-skill-selection.py",
-                "tests/speckit-pro/layer4-scripts/test-layer2-trigger-runners.py",
-                "tests/speckit-pro/layer4-scripts/test-layer2-signal-restoration.py",
-                "tests/speckit-pro/layer4-scripts/test-refresh-local-plugin.py",
-                "tests/speckit-pro/layer4-scripts/test-sync-marketplace-versions.py",
-                "tests/speckit-pro/layer4-scripts/test-claude-hooks.py",
-                "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py",
-                "tests/speckit-pro/layer4-scripts/test-transcript-helpers.py",
-                "tests/speckit-pro/layer4-scripts/test-transcript-tools.py",
-                "tests/speckit-pro/layer4-scripts/test-layer7-runners.py",
-                "tests/speckit-pro/layer4-scripts/test-layer8-runner.py",
-                "tests/speckit-pro/layer4-scripts/test-privacy-scan.sh",
-                "tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py",
-                "tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py",
-                "tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py",
-                "tests/speckit-pro/layer4-scripts/test-l6-codex-runner.py",
-                "tests/speckit-pro/layer4-scripts/test-layer6-portability.py",
-                "tests/speckit-pro/layer4-scripts/test-l8-extractors.py",
-                "tests/speckit-pro/layer4-scripts/test-l8-judge.py",
-                "tests/speckit-pro/layer4-scripts/test-moc-lint-exit-codes.py",
-            },
-            set(layer4_scripts),
-        )
+        manifest = json.loads((REPO_ROOT / "tests/speckit-pro/suite-manifest.json").read_text(encoding="utf-8"))
+        manifest_layer4 = next(layer for layer in manifest["layers"] if layer["id"] == "4")
+        self.assertEqual(layer4_scripts, [script["path"] for script in manifest_layer4["scripts"]])
+        self.assertTrue(all(path.endswith(".py") for path in layer4_scripts))
 
     def test_default_suite_without_explicit_suite_uses_python_authoritative_default(self) -> None:
         from speckit_pro_runner.gates import suite as suite_gate
@@ -3261,6 +3237,24 @@ class GateFoundationTests(unittest.TestCase):
                     "unsafe_command_spec",
                 )
                 self.assertEqual(response["data"]["gate"]["operation"], "run-layer")
+
+    def test_suite_commands_are_pinned_to_the_active_python_interpreter(self) -> None:
+        from speckit_pro_runner.gates import suite as suite_gate
+
+        default_spec = suite_gate.default_command_spec("layer-4", {}, REPO_ROOT)
+        self.assertNotIsInstance(default_spec, dict)
+        self.assertEqual(default_spec.argv[0], sys.executable)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            foreign_python = Path(temporary) / ("python.exe" if os.name == "nt" else "python")
+            foreign_python.write_bytes(b"")
+            foreign_python.chmod(0o755)
+            command = suite_gate.CommandSpec("foreign-python", (str(foreign_python), "-c", "print('unsafe')"))
+            result = suite_gate.run_command(command, REPO_ROOT)
+
+        self.assertEqual(result["status"], "input_error")
+        self.assertEqual(result["exit_code"], 2)
+        self.assertIn("active Python interpreter", result["stderr"]["text"])
 
     def test_payload_evidence_modes_are_fixture_bound_and_cutover_safe(self) -> None:
         completed, response, stderr_records = run_runner(fixture_request("test-payload-evidence"))

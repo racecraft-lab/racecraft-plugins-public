@@ -117,19 +117,6 @@ def response_cwd(data: dict[str, object]) -> Path:
     return path if path.is_absolute() else REPO_ROOT / path
 
 
-def run_bash_reference(argv: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
-    real_argv = [str(REPO_ROOT / argv[0]), *argv[1:]]
-    return subprocess.run(
-        real_argv,
-        text=True,
-        capture_output=True,
-        cwd=cwd or REPO_ROOT,
-        env=runner_env(),
-        shell=False,
-        check=False,
-    )
-
-
 def command_stdin_fixture(command: str) -> Path:
     if "<" not in command:
         raise AssertionError(f"authoritative_command must include a stdin fixture: {command}")
@@ -448,8 +435,11 @@ class ReadOnlyHelperTests(unittest.TestCase):
         stdin_request = data["stdin_request"]
         self.assertEqual(stdin_request["helper_id"], "detect-commands")
         self.assertEqual(stdin_request["operation"], "detect-commands")
+        replay_argv = data["argv"]
+        self.assertIsInstance(replay_argv, list)
+        self.assertEqual(replay_argv[0], sys.executable)
         replay = subprocess.run(
-            data["argv"],
+            [sys.executable, *replay_argv[1:]],
             input=json.dumps(stdin_request),
             text=True,
             capture_output=True,

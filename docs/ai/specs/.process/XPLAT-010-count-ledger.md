@@ -77,6 +77,14 @@ Columns:
 | PR 9 | new Layer-2 signal-restoration contract | default | 0 → 7 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer2-signal-restoration-baseline.txt` |
 | PR 9 | new Layer-6 portability contract | default | 0 → 18 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer6-portability-baseline.txt` |
 | PR 9 | shipped gate manifest-reference strengthening | default | 59 → 59 (existing method strengthened) | n/a | n/a |
+| PR 10 | port: `test-post-implementation-reference.sh` → `.py` | default | 35 → 35 | yes | `tests/speckit-pro/parity/xplat-010/test-post-implementation-reference-baseline.txt` |
+| PR 10 | port: `test-reviewability-marker-guidance.sh` → `.py` | default | 52 → 52 | yes | `tests/speckit-pro/parity/xplat-010/test-reviewability-marker-guidance-baseline.txt` |
+| PR 10 | port: `test-privacy-scan.sh` → `.py` | default | 10 → 10 | yes | `tests/speckit-pro/parity/xplat-010/test-privacy-scan-baseline.txt` |
+| PR 10 | intentional replacement: terminal `test-check-toolchain.py` contract | tests/shell | 26 → 27 | no (Bash/`jq`/Unix-tool requirements replaced by Python 3.11+, Git, and Python-only dispatch; launch failures remain scored) | retired: `test-check-toolchain-baseline.txt`; current: `test-check-toolchain-pr10-baseline.txt` |
+| PR 10 | CLI boundary hardening: Layer 6/8 runtime command selection | default | 18 + 33 → 18 + 33 | no (configured runtime names constrained; selected executable directory pinned on `PATH`) | `test-layer6-portability-baseline.txt`; `test-layer8-runner-baseline.txt` |
+| PR 10 | new confinement guard contract | default | 0 → 47 | n/a | n/a |
+| PR 10 | orchestrator fail-closed expansion | default | 26 → 27 | n/a | n/a |
+| PR 10 | shipped gate current-interpreter expansion | default | 59 → 60 | n/a | n/a |
 
 **PR 13 note (T121–T130):** The estimator Layer-4 test follows the
 Per-Port Protocol against historical predecessor commit
@@ -279,3 +287,18 @@ and preserves the backup instead of silently ignoring the failed restoration.
 The shipped suite gate now derives AI runner references from manifest
 `scripts[]`; its 59-method count is unchanged because the existing dispatch
 test was strengthened rather than duplicated.
+
+**PR 10 note (T088–T099):** The final three Bash tests preserve exact ordered
+inventories (`35 → 35`, `52 → 52`, `10 → 10`) and consume their frozen runtime
+baselines. The terminal toolchain contract moves `26 → 27` while truthfully
+replacing Bash, `jq`, Unix text-tool, checksum, and optional YAML-runtime checks.
+The added assertion preserves fail-closed scoring when an allowed docs command
+cannot be launched.
+The live guard enumerates `git ls-files -z`, verifies that all 10 canonical
+vendored helpers still exist, detects nested `sh -c`/`cmd.exe /c` Bash or `jq`
+payloads, and passes the staged tree with 0 blockers plus 10 release-excluded
+vendored findings. Layer 6/8 configurable CLI execution is narrowed to known
+Claude/Codex names and resolves through the selected executable directory,
+closing the arbitrary-runtime escape while preserving cross-platform command
+selection. The shipped artifact regeneration completed twice, with the second
+run reporting no changes.

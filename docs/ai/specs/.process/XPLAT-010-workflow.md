@@ -762,7 +762,7 @@ Before starting any task:
 | PRs 7a/7b — L7 replay harness | T062–T072 | 11/11 | Complete |
 | PR 8 — L8 parity | T073–T080 | 8/8 | Complete; `2197/2197` default, `88/88` docs smoke, shipped artifacts regenerated idempotently |
 | PR 9 — live-eval runners | T081–T087 | 7/7 | Complete; `2250/2250` default, `88/88` docs smoke, exact shell scan empty, shipped artifacts idempotent |
-| PR 10 — confinement guard + bash deletion | | | |
+| PR 10 — confinement guard + bash deletion | T088–T099 | 12/12 | Complete; `2300/2300` deterministic, `60/60` gate contract, `88/88` docs smoke, live guard `0` blockers + `10` vendored exclusions, shipped artifacts regenerated idempotently |
 | PR 11 — container/Windows preflight CI | | | |
 | PR 12 — release-notes pipeline | | | |
 | PR 13 — spec-size estimator runner op | T121–T130 | 10/10 | Complete; landed early in stack order |

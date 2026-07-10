@@ -11,7 +11,7 @@
 011 configured missing claude path reports configured-path reason
 012 live stub invoked Path A and Path B only
 013 live stub receives claude -p argv
-014 live stub receives exact resolved CLAUDE_BIN path
+014 live stub pins command resolution to the selected CLAUDE_BIN directory
 015 live stub receives configured budget
 016 JSON env set applies teams mode
 017 JSON env set applies fallback mode

@@ -143,6 +143,7 @@
       "required": [
         "payload_results",
         "zero_bash_guard",
+        "repo_bash_confinement",
         "uat_matrix",
         "install_health",
         "public_claims",
@@ -157,6 +158,13 @@
           }
         },
         "zero_bash_guard": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "repo_bash_confinement": {
           "type": "array",
           "items": {
             "type": "string",
@@ -256,13 +264,15 @@
             "runner-invocations",
             "release-packet-traceability",
             "dist-determinism",
-            "zero-bash-guard"
+            "zero-bash-guard",
+            "repo_bash_confinement"
           ]
         },
         "blocker_class": {
           "enum": [
             "active_shell_runtime_dependency",
             "active_zero_bash_dependency",
+            "active_repo_bash_dependency",
             "incomplete_payload",
             "missing_bundled_agent",
             "missing_hook",

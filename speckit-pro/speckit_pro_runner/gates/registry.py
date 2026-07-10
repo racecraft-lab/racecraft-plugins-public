@@ -383,6 +383,19 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
     ),
     GateOperation(
         "active-path-guard",
+        "repo-bash-confinement",
+        "guard",
+        ("read_only",),
+        "speckit_pro_runner.gates.active_path_guard",
+        None,
+        "tests/speckit-pro/layer4-scripts/fixtures/xplat-010-confinement/requests/repo-bash-confinement.json",
+        "US3",
+        "active_repo_bash_confinement",
+        implemented=True,
+        promotion_status="python_authoritative",
+    ),
+    GateOperation(
+        "active-path-guard",
         "classify-shell-finding",
         "guard",
         ("read_only",),
@@ -416,7 +429,7 @@ def gate_registry_report() -> dict[str, Any]:
     groups = sorted({entry.group for entry in GATE_OPERATIONS})
     return {
         "schema_version": "1.0",
-        "feature_id": "XPLAT-007+XPLAT-008+XPLAT-009",
+        "feature_id": "XPLAT-007+XPLAT-008+XPLAT-009+XPLAT-010",
         "promotion_status": "mixed",
         "active_cutover": False,
         "groups": groups,

@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "request_id": "xplat-010-repo-bash-confinement",
+  "helper_id": "active-path-guard",
+  "operation": "repo-bash-confinement",
+  "mode": "read_only",
+  "inputs": {
+    "repo_root": ".",
+    "allowlist_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-010-confinement/allowlist.json"
+  }
+}

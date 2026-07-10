@@ -1,8 +1,8 @@
 001 baseline inventory is truthful and ordered
 002 result timestamp is Windows-safe
-003 explicit runtime path is not basename-restricted
-004 Claude benchmark invokes the exact resolved executable
-005 Codex benchmark invokes the exact resolved executable
+003 generic path resolution works while configured runtime names are constrained
+004 Claude benchmark pins command resolution to the selected directory
+005 Codex benchmark pins command resolution to the selected directory
 006 Claude subprocess pins UTF-8 replacement decoding
 007 Codex subprocess pins UTF-8 replacement decoding
 008 Claude prompt strips command-substitution trailing newlines
