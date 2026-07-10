@@ -16,7 +16,7 @@
 016 reduce keeps only replay events
 017 reduce assigns deterministic tool ids
 018 reduce clears prompts
-019 reduce preserves explicit boolean false agent fields
+019 reduce jq-coalesces null and false Agent/Skill fields
 020 reduce synthesizes expected response keywords
 021 reduce invalid usage exits 2
 022 reduce missing transcript exits 1

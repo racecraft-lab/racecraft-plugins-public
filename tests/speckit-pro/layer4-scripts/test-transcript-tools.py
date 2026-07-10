@@ -83,6 +83,12 @@ class TranscriptToolTests(unittest.TestCase):
                                 "name": "Agent",
                                 "input": {"subagent_type": False, "description": False, "prompt": False},
                             },
+                            {
+                                "type": "tool_use",
+                                "id": "original-false-skill-id",
+                                "name": "Skill",
+                                "input": {"skill": False, "args": False},
+                            },
                         ],
                     },
                 },
@@ -194,25 +200,28 @@ class TranscriptToolTests(unittest.TestCase):
                     "reduce clears prompts",
                     lambda: self.assertEqual(
                         (
-                            reduced_events()[0]["message"]["content"][0]["input"]["description"],
                             reduced_events()[0]["message"]["content"][0]["input"]["prompt"],
-                            reduced_events()[0]["message"]["content"][1]["input"]["skill"],
-                            reduced_events()[0]["message"]["content"][2]["input"]["subagent_type"],
-                            reduced_events()[0]["message"]["content"][2]["input"]["description"],
+                            reduced_events()[0]["message"]["content"][1]["input"]["args"],
+                            reduced_events()[0]["message"]["content"][4]["input"]["args"],
                         ),
-                        ("", "", "", "", ""),
+                        ("", "", ""),
                     ),
                 )
             )
             checks.append(
                 (
-                    "reduce preserves explicit boolean false agent fields",
+                    "reduce jq-coalesces null and false Agent/Skill fields",
                     lambda: self.assertEqual(
                         (
+                            reduced_events()[0]["message"]["content"][0]["input"]["description"],
+                            reduced_events()[0]["message"]["content"][1]["input"]["skill"],
+                            reduced_events()[0]["message"]["content"][2]["input"]["subagent_type"],
+                            reduced_events()[0]["message"]["content"][2]["input"]["description"],
                             reduced_events()[0]["message"]["content"][3]["input"]["subagent_type"],
                             reduced_events()[0]["message"]["content"][3]["input"]["description"],
+                            reduced_events()[0]["message"]["content"][4]["input"]["skill"],
                         ),
-                        (False, False),
+                        ("", "", "", "", "", "", ""),
                     ),
                 )
             )

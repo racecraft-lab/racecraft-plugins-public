@@ -30,8 +30,8 @@ def _blocks(event: JsonObject) -> list[JsonObject]:
     return [block for block in content if isinstance(block, dict)] if isinstance(content, list) else []
 
 
-def empty_if_none(value: Any) -> Any:
-    return "" if value is None else value
+def jq_coalesce_empty(value: Any) -> Any:
+    return "" if value is None or value is False else value
 
 
 def boolean_or_default(value: Any, default: bool = False) -> bool:
@@ -80,7 +80,7 @@ def reduce_transcript(events: list[JsonObject], expected: JsonObject) -> list[Js
                     id_map[old_id] = new_id
                 inputs = block.get("input") if isinstance(block.get("input"), dict) else {}
                 if block.get("name") == "Agent":
-                    subagent_type = empty_if_none(inputs.get("subagent_type", ""))
+                    subagent_type = jq_coalesce_empty(inputs.get("subagent_type", ""))
                     agent_for[new_id] = subagent_type
                     output_blocks.append(
                         {
@@ -89,7 +89,7 @@ def reduce_transcript(events: list[JsonObject], expected: JsonObject) -> list[Js
                             "name": "Agent",
                             "input": {
                                 "subagent_type": subagent_type,
-                                "description": empty_if_none(inputs.get("description", "")),
+                                "description": jq_coalesce_empty(inputs.get("description", "")),
                                 "prompt": "",
                             },
                         }
@@ -100,7 +100,7 @@ def reduce_transcript(events: list[JsonObject], expected: JsonObject) -> list[Js
                             "type": "tool_use",
                             "id": new_id,
                             "name": "Skill",
-                            "input": {"skill": empty_if_none(inputs.get("skill", "")), "args": ""},
+                            "input": {"skill": jq_coalesce_empty(inputs.get("skill", "")), "args": ""},
                         }
                     )
             if output_blocks:
