@@ -90,14 +90,22 @@ def cmd_path(cmd: str) -> str:
 
 
 def run_command(argv: list[str], *, input_text: str | None = None) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        argv,
-        input=input_text,
-        text=True,
-        capture_output=True,
-        shell=False,
-        check=False,
-    )
+    try:
+        return subprocess.run(
+            argv,
+            input=input_text,
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=False,
+        )
+    except OSError as exc:
+        return subprocess.CompletedProcess(
+            argv,
+            127,
+            "",
+            f"command invocation failed: {exc.__class__.__name__}: {exc}",
+        )
 
 
 def require_cmd(reporter: Reporter, label: str, cmd: str) -> None:

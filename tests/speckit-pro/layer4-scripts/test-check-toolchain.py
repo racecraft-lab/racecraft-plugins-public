@@ -3,6 +3,9 @@
 
 from __future__ import annotations
 
+import contextlib
+import importlib.util
+import io
 import os
 import shutil
 import subprocess
@@ -10,6 +13,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -161,6 +165,31 @@ def write_fake_jq(bin_dir: Path, version: str, expression_exit: int) -> None:
     )
 
 
+def load_checker_module():
+    spec = importlib.util.spec_from_file_location("check_toolchain", CHECKER)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def assert_oserror_is_scored_by_real_main(test: unittest.TestCase) -> None:
+    module = load_checker_module()
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    with (
+        mock.patch.object(module.subprocess, "run", side_effect=OSError("exec format error")),
+        contextlib.redirect_stdout(stdout),
+        contextlib.redirect_stderr(stderr),
+    ):
+        exit_code = module.main(["--mode", "docs"])
+    output = stdout.getvalue() + stderr.getvalue()
+    test.assertEqual(exit_code, 1)
+    test.assertIn("check-toolchain:", output)
+    test.assertIn("failed", output)
+
+
 class CheckToolchainTests(unittest.TestCase):
     def test_toolchain_checker_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -224,7 +253,13 @@ class CheckToolchainTests(unittest.TestCase):
                 (CURRENT_INVENTORY[22], lambda: self.assertIn("required command not found: python3", missing_python_output)),
                 (CURRENT_INVENTORY[23], lambda: self.assertEqual(missing_yaml_tests.returncode, 1, missing_yaml_output)),
                 (CURRENT_INVENTORY[24], lambda: self.assertIn("yaml validator", missing_yaml_output)),
-                (CURRENT_INVENTORY[25], lambda: self.assertEqual(missing_yaml_shell.returncode, 0, merged_output(missing_yaml_shell))),
+                (
+                    CURRENT_INVENTORY[25],
+                    lambda: (
+                        self.assertEqual(missing_yaml_shell.returncode, 0, merged_output(missing_yaml_shell)),
+                        assert_oserror_is_scored_by_real_main(self),
+                    ),
+                ),
             ]
 
             self.assertEqual([name for name, _check in checks], CURRENT_INVENTORY)
