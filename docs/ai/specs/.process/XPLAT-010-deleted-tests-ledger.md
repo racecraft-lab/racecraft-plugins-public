@@ -1,7 +1,9 @@
 # XPLAT-010 — Deleted Orphan Test Disposition Ledger
 
 **Slice:** PR 1 (orphan-test deletion + disposition ledger). **Requirement:** FR-016.
-**Scope:** `tests/speckit-pro/layer4-scripts/*.sh`. Deletion-only; no port, no run-all.sh edit.
+**Historical scope:** `tests/speckit-pro/layer4-scripts/*.sh` during the PR 1 deletion-only slice.
+**Current state:** Layer 4 is now manifest-backed Python (`tests/speckit-pro/suite-manifest.json`
+drives `tests/speckit-pro/run-layer-scripts.py`), so this ledger is historical evidence only.
 
 This ledger records, per file, the disposition of every Layer-4 Bash test script that was a
 candidate for deletion under FR-016. Deleted scripts are orphans: their subject-under-test — a
@@ -12,9 +14,10 @@ exercises nothing and is absent from the active suite list. Git history preserve
 
 A file was deleted only when **both** conditions held:
 
-1. **Absent from the active suite** — not referenced anywhere in `tests/speckit-pro/run-all.sh`
-   (whose layer lists reference exactly 17 test files: 3 `.py` + 14 `.sh`). `run-layer-scripts.py`
-   and the shipped default-suite gate dispatch that list, so a non-referenced script runs nowhere.
+1. **Absent from the active suite at the time** — not referenced anywhere in the then-authoritative
+   `tests/speckit-pro/run-all.sh` Layer-4 roster. In the current repo that historical roster has
+   been superseded by `tests/speckit-pro/suite-manifest.json`, and Layer 4 dispatch is now Python-only
+   through `tests/speckit-pro/run-layer-scripts.py`.
 2. **Subject-under-test removed** — the script targets a helper under `speckit-pro/**` that no
    longer exists. Confirmed live: `git ls-files 'speckit-pro/**/*.sh'` returns **0** files (the
    entire shipped-Bash tree was deleted by XPLAT-009). Each script's own `SCRIPT=`/`source` line
@@ -65,50 +68,61 @@ The "removed subject" path is under `speckit-pro/` and no longer exists.
 | 31 | `test-validate-uat-runbook.sh` | `speckit-pro/skills/speckit-autopilot/scripts/validate-uat-runbook.sh` |
 
 **Redundant-wrapper disposition (kind `redundant-wrapper`) — see retained note below.** The two
-seven-line wrapper shims FR-016 groups with the orphans are **not** deleted in this PR (they sit
-in run-all.sh's active list). Deleting them safely requires PR 2's manifest cutover, so they are
-retained here and their deletion is deferred.
+seven-line wrapper shims FR-016 groups with the orphans were retained in PR 1 because they still
+sat in the historical `run-all.sh` Layer-4 roster. They were deleted once the manifest-backed
+Python dispatch landed; no active Layer-4 `.sh` wrappers remain in the current repo.
 
 ## Retained candidates (disposition documented, not deleted)
 
-### Redundant wrappers — retained, deletion deferred to PR 2 (2 files)
+### Redundant wrappers — historical PR 1 retention, later deleted after manifest cutover (2 files)
 
 | retained test | kind | why not deleted now |
 |---|---|---|
-| `test-speckit-pro-runner.sh` | `redundant-wrapper` | 7-line shim that runs `test-speckit-pro-runner.py`. It **is** entry in `run-all.sh`'s active 17-entry layer-4 list. `run-layer-scripts.py` treats a listed-but-missing file as a hard **FAIL** (not a skip), so deleting the shim without editing run-all.sh turns the layer-4 gate red. Editing run-all.sh is out of scope for this deletion-only slice, and dropping the entry would lose the `.py`'s suite coverage. PR 2 replaces run-all.sh with `suite-manifest.json` (which lists the `.py` directly); the shim is deleted there. |
-| `test-speckit-pro-read-only-helpers.sh` | `redundant-wrapper` | Same as above, shimming `test-speckit-pro-read-only-helpers.py`. Retained; deleted in PR 2. |
+| `test-speckit-pro-runner.sh` | `redundant-wrapper` | Historical PR 1 note: this 7-line shim still sat in the old `run-all.sh` Layer-4 roster, so deleting it before the manifest cutover would have broken the active gate. The current repo dispatches `test-speckit-pro-runner.py` directly from `suite-manifest.json`, and the shim is gone. |
+| `test-speckit-pro-read-only-helpers.sh` | `redundant-wrapper` | Same historical PR 1 reasoning as above. The current repo dispatches `test-speckit-pro-read-only-helpers.py` directly from `suite-manifest.json`, and the shim is gone. |
 
 ### PR-13 restore carve-out (1 file)
 
 | retained test | kind | why not deleted now |
 |---|---|---|
-| `test-estimate-spec-size.sh` | `active-port-later` | Subject `speckit-pro/skills/speckit-coach/scripts/estimate-spec-size.sh` is currently absent, but XPLAT-010 **restores** the `estimate-spec-size` operation in PR 13 (FR-025). Per tasks.md T005 this is explicitly excluded from deletion; its test is ported/refreshed in PR 13 (T123). |
+| `test-estimate-spec-size.sh` | `active-port-later` | Historical PR 1 note: the Bash subject was temporarily absent, but XPLAT-010 later restored the `estimate-spec-size` operation in Python (FR-025). The current repo runs `test-estimate-spec-size.py`; the `.sh` test is gone. |
 
 ### Active-port-later (12 files, not candidates)
 
-Referenced in `run-all.sh`'s layer-4 list and ported in their own layer PRs, so never deletion
+Referenced in the historical Layer-4 roster and ported in their own layer PRs, so never deletion
 candidates: `test-check-toolchain.sh`, `test-eval-runner-skill-selection.sh`, `test-l6-codex-runner.sh`,
 `test-l8-extractors.sh`, `test-l8-judge.sh`, `test-moc-lint-exit-codes.sh`,
 `test-post-implementation-reference.sh`, `test-privacy-scan.sh`, `test-refresh-local-plugin.sh`,
 `test-reviewability-marker-guidance.sh`, `test-sync-marketplace-versions.sh`, `test-transcript-helpers.sh`.
+Those subjects are now part of the current Python-only Layer-4 roster.
 
-## Count reconciliation (FR-016 headline 34 → 31 deleted)
+## Count reconciliation (authoritative total: 31 true orphans + 2 wrappers = 33)
 
-`tests/speckit-pro/layer4-scripts/` holds 46 `.sh` files. Disposition: **31 deleted** + **15 retained**
-(12 active-port-later + 1 PR-13 carve-out + 2 redundant wrappers).
+At PR 1, `tests/speckit-pro/layer4-scripts/` held 46 `.sh` files. Its disposition
+was **31 deleted** and **15 retained** (12 active-port-later, 1 PR-13 carve-out,
+and 2 redundant wrappers).
 
-The FR-016 headline "34" = "32 orphans + 2 wrappers". The two adjustments, both explicitly sanctioned
-by tasks.md T005 and this PR's deletion-only / run-all.sh-untouched constraints:
+The superseded FR-016 headline "34" = "32 orphans + 2 wrappers". The two
+adjustments are explicitly sanctioned by tasks.md T005 and this PR's
+deletion-only / run-all.sh-untouched constraints:
 
 - **−1**: `test-estimate-spec-size.sh` is inside the "32 orphans" census (absent from run-all.sh, subject
   currently gone) but is the ratified PR-13 restore carve-out → not deleted. Real orphan count is 31.
-- **−2**: the 2 redundant wrappers are in run-all.sh's active list; deleting them requires the PR-2
-  manifest cutover (above) → deferred, not deleted here.
+- **−2**: the 2 redundant wrappers were in the historical `run-all.sh` active list; deleting them
+  required the PR-2 manifest cutover (above) → deferred in PR 1, then deleted once
+  `suite-manifest.json` became authoritative.
+
+Across PR 1 and PR 2, the authoritative FR-016 deletion set is **33 files**:
+31 true orphans plus 2 redundant wrappers. `test-estimate-spec-size.sh` is not
+an FR-016 orphan/wrapper deletion target; PR 13 restores its subject and ports
+its active test to Python.
 
 ## Suite evidence
 
-- **Before:** default-suite gate `status: ok`; layer-1 direct `24/24 passed`; layer-4 direct `17/17 passed`;
-  docs reference drift check `Reference pages are current`.
-- **After (this PR):** unchanged — the 31 deleted scripts were never in the suite list, so runner
-  headlines are identical; `docs-site` `tests.md` regenerated to drop the 31 script rows (reference
-  drift check green).
+- **Before (historical PR 1):** default-suite gate `status: ok`; layer-1 direct `24/24 passed`;
+  historical Layer-4 direct evidence remained green because the 31 deleted scripts were never in
+  the active roster.
+- **Current repo state:** Layer 4 is Python-authoritative and manifest-backed; the active ported
+  shell-subject roster is 18 Python tests/modules, no active Layer-4 `.sh` wrappers remain, and
+  stale `run-all.sh` dispatch references in this ledger have been superseded by
+  `suite-manifest.json` plus `run-layer-scripts.py`.
