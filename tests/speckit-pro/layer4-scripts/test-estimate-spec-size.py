@@ -94,6 +94,16 @@ def run_estimator(inputs: dict[str, object], request_id: str = "test-estimate-sp
     return completed.returncode, response
 
 
+def assert_estimator_exit(
+    test: unittest.TestCase,
+    returncode: int,
+    response: dict,
+    *,
+    context: str,
+) -> None:
+    test.assertEqual(returncode, 0, f"{context}: runner exit code; response={response!r}")
+
+
 def golden_pairs() -> list[tuple[str, dict[str, object], dict]]:
     pairs: list[tuple[str, dict[str, object], dict]] = []
     for args_file in sorted(FIXTURE_DIR.glob("*.args")):
@@ -239,41 +249,49 @@ class EstimateSpecSizeGoldenTests(unittest.TestCase):
 
         inputs = parse_args_to_inputs("--user-stories 2 --files 3 --frs 4")
         with self.subTest(msg=next_name("repeated identical inputs → byte-identical stdout")):
-            _rc1, first = run_estimator(inputs, request_id="determinism-a")
-            _rc2, second = run_estimator(inputs, request_id="determinism-b")
+            rc1, first = run_estimator(inputs, request_id="determinism-a")
+            rc2, second = run_estimator(inputs, request_id="determinism-b")
+            assert_estimator_exit(self, rc1, first, context="determinism-a")
+            assert_estimator_exit(self, rc2, second, context="determinism-b")
             self.assertEqual(first["data"]["stdout_json"], second["data"]["stdout_json"])
             self.assertEqual(first["data"]["stdout"]["text"], second["data"]["stdout"]["text"])
 
         over_ceiling_inputs = parse_args_to_inputs("--files 11")
         with self.subTest(msg=next_name("second determinism sample (over-ceiling) → byte-identical stdout")):
-            _rc1, first = run_estimator(over_ceiling_inputs, request_id="determinism-over-a")
-            _rc2, second = run_estimator(over_ceiling_inputs, request_id="determinism-over-b")
+            rc1, first = run_estimator(over_ceiling_inputs, request_id="determinism-over-a")
+            rc2, second = run_estimator(over_ceiling_inputs, request_id="determinism-over-b")
+            assert_estimator_exit(self, rc1, first, context="determinism-over-a")
+            assert_estimator_exit(self, rc2, second, context="determinism-over-b")
             self.assertEqual(first["data"]["stdout_json"], second["data"]["stdout_json"])
             self.assertEqual(first["data"]["stdout"]["text"], second["data"]["stdout"]["text"])
 
         with self.subTest(msg=next_name("estimated_loc == ceiling → status ok")):
-            _returncode, response = run_estimator(parse_args_to_inputs("--files 10"))
+            returncode, response = run_estimator(parse_args_to_inputs("--files 10"))
+            assert_estimator_exit(self, returncode, response, context="estimated_loc == ceiling")
             result = response["data"]["stdout_json"]
             self.assertEqual(result["estimated_loc"], 400)
             self.assertEqual(result["status"], "ok")
 
         with self.subTest(msg=next_name("strictly over ceiling → status warn")):
-            _returncode, response = run_estimator(parse_args_to_inputs("--files 11"))
+            returncode, response = run_estimator(parse_args_to_inputs("--files 11"))
+            assert_estimator_exit(self, returncode, response, context="strictly over ceiling")
             result = response["data"]["stdout_json"]
             self.assertEqual(result["estimated_loc"], 440)
             self.assertEqual(result["status"], "warn")
 
         with self.subTest(msg=next_name("--spike → {estimated_loc:0, suggested_slices:1, status:ok}")):
-            _returncode, response = run_estimator(parse_args_to_inputs("--spike"))
+            returncode, response = run_estimator(parse_args_to_inputs("--spike"))
+            assert_estimator_exit(self, returncode, response, context="--spike")
             self.assertEqual(
                 response["data"]["stdout_json"],
                 {"estimated_loc": 0, "suggested_slices": 1, "status": "ok"},
             )
 
         with self.subTest(msg=next_name("--spike overrides large signals (spike precedence)")):
-            _returncode, response = run_estimator(
+            returncode, response = run_estimator(
                 parse_args_to_inputs("--user-stories 99 --files 99 --frs 99 --spike")
             )
+            assert_estimator_exit(self, returncode, response, context="spike precedence")
             self.assertEqual(
                 response["data"]["stdout_json"],
                 {"estimated_loc": 0, "suggested_slices": 1, "status": "ok"},
@@ -313,7 +331,8 @@ class EstimateSpecSizeGoldenTests(unittest.TestCase):
                 "--user-stories abc --files -5 --frs 3.5",
                 "--user-stories 4 --files abc --frs -2",
             ):
-                _returncode, response = run_estimator(parse_args_to_inputs(arg_line))
+                returncode, response = run_estimator(parse_args_to_inputs(arg_line))
+                assert_estimator_exit(self, returncode, response, context=f"status sweep {arg_line or '<empty>'}")
                 status = response["data"]["stdout_json"].get("status", "")
                 if status not in {"ok", "warn"}:
                     status_violation = f"args='{arg_line}' status='{status}'"
@@ -321,15 +340,18 @@ class EstimateSpecSizeGoldenTests(unittest.TestCase):
             self.assertEqual(status_violation, "")
 
         with self.subTest(msg=next_name("under ceiling → 1 slice")):
-            _returncode, response = run_estimator(parse_args_to_inputs("--user-stories 2 --files 3 --frs 4"))
+            returncode, response = run_estimator(parse_args_to_inputs("--user-stories 2 --files 3 --frs 4"))
+            assert_estimator_exit(self, returncode, response, context="under ceiling")
             self.assertEqual(response["data"]["stdout_json"]["suggested_slices"], 1)
 
         with self.subTest(msg=next_name("440 LOC → 2 slices")):
-            _returncode, response = run_estimator(parse_args_to_inputs("--files 11"))
+            returncode, response = run_estimator(parse_args_to_inputs("--files 11"))
+            assert_estimator_exit(self, returncode, response, context="440 LOC")
             self.assertEqual(response["data"]["stdout_json"]["suggested_slices"], 2)
 
         with self.subTest(msg=next_name("800 LOC → 2 slices")):
-            _returncode, response = run_estimator(parse_args_to_inputs("--files 20"))
+            returncode, response = run_estimator(parse_args_to_inputs("--files 20"))
+            assert_estimator_exit(self, returncode, response, context="800 LOC")
             self.assertEqual(response["data"]["stdout_json"]["suggested_slices"], 2)
 
         self.assertEqual(list(names), [])
