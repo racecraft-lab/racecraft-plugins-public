@@ -51,11 +51,11 @@ and public release claims.
 - `speckit-pro/speckit_pro_runner/runtime.py`
 - `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json`
 - `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256`
-- `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py`
-- `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh`
-- `tests/speckit-pro/layer4-scripts/fixtures/speckit-pro-runner/contract-fixtures.json`
-- `tests/speckit-pro/layer4-scripts/fixtures/speckit-pro-runner/changed-files-xplat-004.txt`
-- `tests/speckit-pro/layer4-scripts/fixtures/speckit-pro-runner/platform-runbook-fixtures.md`
+- `tests/speckit-pro/unit/test-speckit-pro-runner.py`
+- `tests/speckit-pro/unit/test-speckit-pro-runner.sh`
+- `tests/speckit-pro/unit/fixtures/speckit-pro-runner/contract-fixtures.json`
+- `tests/speckit-pro/unit/fixtures/speckit-pro-runner/runner-foundation-changed-files.txt`
+- `tests/speckit-pro/unit/fixtures/speckit-pro-runner/platform-runbook-fixtures.md`
 - `docs/ai/specs/.process/XPLAT-004-workflow.md`
 - `docs/ai/specs/.process/XPLAT-004-design-concept.md`
 
@@ -89,9 +89,9 @@ git checkout cef3ed260dabf73833d3de82f82cacdb2c7758fa -- specs/xplat-004-cross-p
 | `docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md` | Marked XPLAT-004 archived and XPLAT-005 ready |
 | `docs/ai/specs/cross-platform-plugin-runtime-roadmap-MOC.md` | Replaced the active XPLAT-004 link with an archive pointer |
 | `docs/ai/specs/.process/autopilot-state.json` | Marked XPLAT-004 as post-merge archived state |
-| `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py` | Repointed runbook fixture lookup away from active `specs/**` |
-| `tests/speckit-pro/layer4-scripts/fixtures/speckit-pro-runner/changed-files-xplat-004.txt` | Preserved the XPLAT-004 changed-file fallback fixture for Layer 4 after spec cleanup |
-| `tests/speckit-pro/layer4-scripts/fixtures/speckit-pro-runner/platform-runbook-fixtures.md` | Preserved the XPLAT-004 runbook fixture contract for Layer 4 after spec cleanup |
+| `tests/speckit-pro/unit/test-speckit-pro-runner.py` | Repointed runbook fixture lookup away from active `specs/**` |
+| `tests/speckit-pro/unit/fixtures/speckit-pro-runner/runner-foundation-changed-files.txt` | Preserved the XPLAT-004 changed-file fallback fixture for Layer 4 after spec cleanup |
+| `tests/speckit-pro/unit/fixtures/speckit-pro-runner/platform-runbook-fixtures.md` | Preserved the XPLAT-004 runbook fixture contract for Layer 4 after spec cleanup |
 | `specs/xplat-004-cross-platform-runner-foundation/` | Removed from active `specs/**` after archive |
 
 ## Post-Cleanup Verification
@@ -101,7 +101,7 @@ git checkout cef3ed260dabf73833d3de82f82cacdb2c7758fa -- specs/xplat-004-cross-p
 - `node docs-site/scripts/generate-reference-pages.mjs`
 - `node docs-site/scripts/generate-reference-pages.mjs --check`
 - `find specs -mindepth 1 -maxdepth 4 -print`
-- `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh`
+- `tests/speckit-pro/unit/test-speckit-pro-runner.sh`
 - `git diff --check`
 - `bash tests/speckit-pro/run-all.sh --layer 1`
 - `bash tests/speckit-pro/run-all.sh --layer 4`

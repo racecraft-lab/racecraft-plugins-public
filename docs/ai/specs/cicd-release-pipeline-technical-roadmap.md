@@ -95,7 +95,7 @@ SPEC-001 (Repository Foundation)
 - Create `.release-please-manifest.json` at the repo root tracking the current version per plugin (`{ "speckit-pro": "1.0.0" }`)
 - Create `scripts/sync-marketplace-versions.sh` — a bash script that reads each plugin's `.claude-plugin/plugin.json` version field and updates the matching entry's `version` field in `.claude-plugin/marketplace.json`. Must follow existing script conventions: `#!/usr/bin/env bash`, `set -euo pipefail`, handle the case where a plugin exists in `marketplace.json` but has no `plugin.json` (skip with warning)
 - Fix version duplication: currently `version: "1.0.0"` is set in both `speckit-pro/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`. Per Anthropic docs, `plugin.json` always wins silently. Resolution: keep `version` in `plugin.json` as source of truth, and have the sync script manage the `marketplace.json` version field. The initial state should match (both `1.0.0`)
-- Add Layer 4 unit tests for `sync-marketplace-versions.sh` following the existing pattern in `speckit-pro/tests/layer4-scripts/` using the shared assertions library at `tests/lib/assertions.sh`. Tests should cover: single plugin sync, multi-plugin sync, missing plugin.json handling, and idempotency
+- Add Layer 4 unit tests for `sync-marketplace-versions.sh` following the existing pattern in `speckit-pro/tests/unit/` using the shared assertions library at `tests/lib/assertions.sh`. Tests should cover: single plugin sync, multi-plugin sync, missing plugin.json handling, and idempotency
 
 **Out of Scope:**
 - GitHub Actions workflows (handled by SPEC-002, SPEC-003)
@@ -116,7 +116,7 @@ Alternatives considered: `node` type (would require package.json, which doesn't 
 - `scripts/sync-marketplace-versions.sh` — New: reads plugin.json versions, updates marketplace.json
 - `.claude-plugin/marketplace.json` — Modified: version field now managed by sync script
 - `speckit-pro/.claude-plugin/plugin.json` — Unchanged (already correct as source of truth)
-- `tests/layer4-scripts/test-sync-marketplace-versions.sh` — New: unit tests for sync script
+- `tests/unit/test-sync-marketplace-versions.sh` — New: unit tests for sync script
 
 ---
 

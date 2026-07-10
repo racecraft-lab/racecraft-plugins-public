@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-mutation-foundation",
+  "helper_id": "mutation-foundation",
+  "operation": "mutation-foundation",
+  "mode": "dry_run",
+  "inputs": {
+    "operations": [
+      {
+        "operation_id": "fixture-write",
+        "kind": "write_file",
+        "target": "tests/speckit-pro/unit/fixtures/mutation-helpers/generated/fixture-write.md",
+        "content": "# Fixture\n"
+      }
+    ]
+  }
+}

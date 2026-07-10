@@ -21,7 +21,7 @@ headline, and exit codes.
 ```text
 python3 tests/speckit-pro/run-all.py
 python3 tests/speckit-pro/run-all.py --layer 1
-PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-toolchain-preflight.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-toolchain-preflight.json
 ```
 
 **Expected**: the no-flag command runs the deterministic default layers and ends with
@@ -46,9 +46,9 @@ an intentional live run. See `contracts/suite-manifest.schema.json`.
 ```text
 # capture the bash baseline for a script (pinned non-root env):
 python3 tests/speckit-pro/lib/capture_baseline.py <script>.sh \
-  > tests/speckit-pro/parity/xplat-010/<script>-baseline.txt
+  > tests/speckit-pro/parity/bash-to-python/<script>-baseline.txt
 # run the ported module and compare ordered names + total:
-python3 tests/speckit-pro/layer4-scripts/<module>.py
+python3 tests/speckit-pro/unit/<module>.py
 ```
 
 **Expected**: the committed baseline lists one `NNN <name>` line per executed `_pass`/`_fail`
@@ -72,8 +72,8 @@ PR 13 restores its subject and ports the active test to Python.
 
 ```text
 # live repo-wide scan (default-suite case) + release-readiness composition:
-PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-010-confinement/requests/repo-bash-confinement.json
-PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/repository-bash-confinement/requests/repo-bash-confinement.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json
 ```
 
 **Expected**: a clean tree passes; a tree with a stray new `.sh` outside the workflow boundary
@@ -123,7 +123,7 @@ conventional-commit appendix.
 python3 scripts/compose-release-notes.py \
   --tag speckit-pro-v2.19.0 \
   --dry-run \
-  --fixture tests/speckit-pro/layer4-scripts/fixtures/release-notes/quickstart.json
+  --fixture tests/speckit-pro/unit/fixtures/release-notes/quickstart.json
 ```
 
 **Expected**: the composed body opens with a plain-English Highlights section harvested from
@@ -162,8 +162,8 @@ hosted event behavior, and required-check registration remain pending. See
 **Goal**: `estimate-spec-size` returns a populated `{estimated_loc, suggested_slices, status}`.
 
 ```text
-python3 tests/speckit-pro/layer4-scripts/test-estimate-spec-size.py
-python3 -c 'import json,shlex,sys; t=shlex.split(open("tests/speckit-pro/layer4-scripts/fixtures/estimate-spec-size/typical-under.args", encoding="utf-8").read()); m={"--user-stories":"user_stories","--files":"files","--frs":"frs"}; inputs={m[t[i]]:int(t[i+1]) for i in range(0,len(t),2)}; json.dump({"schema_version":"1.0","request_id":"quickstart-typical-under","helper_id":"estimate-spec-size","operation":"estimate-spec-size","mode":"read_only","inputs":inputs},sys.stdout)' \
+python3 tests/speckit-pro/unit/test-estimate-spec-size.py
+python3 -c 'import json,shlex,sys; t=shlex.split(open("tests/speckit-pro/unit/fixtures/estimate-spec-size/typical-under.args", encoding="utf-8").read()); m={"--user-stories":"user_stories","--files":"files","--frs":"frs"}; inputs={m[t[i]]:int(t[i+1]) for i in range(0,len(t),2)}; json.dump({"schema_version":"1.0","request_id":"quickstart-typical-under","helper_id":"estimate-spec-size","operation":"estimate-spec-size","mode":"read_only","inputs":inputs},sys.stdout)' \
   | env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner
 ```
 
@@ -181,9 +181,9 @@ assumed. See `contracts/estimate-spec-size.schema.json`.
 ## Full-suite gate (before/after any change)
 
 ```text
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json
 pnpm --dir docs-site validate
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-010-confinement/requests/repo-bash-confinement.json
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/repository-bash-confinement/requests/repo-bash-confinement.json
 ```
 
 **Expected**: default-suite gate PASS; docs validation PASS; the confinement gate

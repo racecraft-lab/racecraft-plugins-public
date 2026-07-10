@@ -6,7 +6,7 @@ rather than carrying an inline expected-count integer.
 
 ## 1. Baseline file
 
-- **Path:** `tests/speckit-pro/parity/xplat-010/<script>-baseline.txt`
+- **Path:** `tests/speckit-pro/parity/bash-to-python/<script>-baseline.txt`
   (one file per `(script, invocation-mode)` pair — e.g. a script with an
   optional scan-root argument that changes its assertion count gets one baseline
   per mode).

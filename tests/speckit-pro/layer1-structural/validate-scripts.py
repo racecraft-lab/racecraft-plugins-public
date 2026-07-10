@@ -8,7 +8,7 @@ the roadmap/spec/plan templates. Every former ``assert_*``/``_pass``/``_fail``
 execution maps to one counted ``subTest`` unit; names reproduced verbatim via
 ``subTest(msg=...)`` for a 1:1 baseline match.
 
-Baseline: ``tests/speckit-pro/parity/xplat-010/validate-scripts-baseline.txt``
+Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-scripts-baseline.txt``
 (TOTAL: 37).
 """
 

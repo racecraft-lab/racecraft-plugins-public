@@ -110,13 +110,13 @@ unless a deliberate higher-priority override exists.
   `docs/ai/specs/.process/XPLAT-005-design-concept.md` and
   `docs/ai/specs/.process/XPLAT-005-workflow.md`
 - XPLAT-005 read-only helper fixtures:
-  `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/`
+  `tests/speckit-pro/unit/fixtures/read-only-helpers/`
 - XPLAT-005 runner helper registry:
   `speckit-pro/speckit_pro_runner/helpers/registry.py` and
   `speckit-pro/speckit_pro_runner/helpers/read_only.py`
 - Current Bash helper sources: `speckit-pro/skills/**/scripts/`,
   `speckit-pro/codex-skills/**/scripts/`, and `speckit-pro/scripts/`
-- Current mutation-helper tests under `tests/speckit-pro/layer4-scripts/`
+- Current mutation-helper tests under `tests/speckit-pro/unit/`
 - Project constitution: `.specify/memory/constitution.md`
 - Design concept source: `docs/ai/specs/.process/XPLAT-006-design-concept.md`
 
@@ -329,7 +329,7 @@ $speckit-clarify Focus on PR-emission, restack, migration, relocation, and appro
 | Check | Result | Evidence |
 |---|---|---|
 | G2 | Pass | `validate-gate.sh G2 specs/xplat-006-mutation-install-pr-emission-helper-port` returned 0 markers |
-| Autopilot phase coverage regression | Pass | `python3 tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py` returned 6/6 passed |
+| Autopilot phase coverage regression | Pass | `python3 tests/speckit-pro/unit/test-autopilot-phase-coverage.py` returned 6/6 passed |
 | Current workflow/state phase coverage | Pass | `validate-autopilot-phase-coverage.py --workflow docs/ai/specs/.process/XPLAT-006-workflow.md --state docs/ai/specs/.process/autopilot-state.json` returned `status: pass` with 37 plan steps |
 | Layer 4 suite | Pass | `bash tests/speckit-pro/run-all.sh --layer 4` returned 2141/2141 passed |
 | Layer 1 suite | Pass | `bash tests/speckit-pro/run-all.sh --layer 1` returned 1443/1443 passed |
@@ -659,8 +659,8 @@ For each helper or helper group:
 2. Verify clean worktree before each phase: `git status --short`.
 3. Run current baseline gates before helper changes:
    - `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"`
-   - `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh`
-   - `tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh`
+   - `tests/speckit-pro/unit/test-speckit-pro-runner.sh`
+   - `tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.sh`
    - `bash tests/speckit-pro/run-all.sh --layer 1`
    - `bash tests/speckit-pro/run-all.sh --layer 4`
 
@@ -695,10 +695,10 @@ For each helper or helper group:
 
 | Check | Result | Evidence |
 |---|---|---|
-| Mutation helper hardening red state | Failed before implementation | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py` initially failed 9/10 because mutation helper modes and dispatch were missing |
-| Mutation helper hardening green state | Pass | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py` passed 17/17 after remediation, including schema contract drift checks, dry-run no-write, apply write, dirty-worktree refusal, git-status fail-closed refusal, no-op apply, path/symlink/external escape rejection, batch conflict preflight, partial failure, fake-home boundary/traversal repair rejection, malformed inventory, PR body output, and deferred PR command-plan apply |
-| Runner compatibility | Pass | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py` passed 9/9 after manifest/checksum refresh |
-| Read-only compatibility | Pass | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py` passed 32/32; XPLAT-005 read-only registry still reports no mutation modes |
+| Mutation helper hardening red state | Failed before implementation | `python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` initially failed 9/10 because mutation helper modes and dispatch were missing |
+| Mutation helper hardening green state | Pass | `python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` passed 17/17 after remediation, including schema contract drift checks, dry-run no-write, apply write, dirty-worktree refusal, git-status fail-closed refusal, no-op apply, path/symlink/external escape rejection, batch conflict preflight, partial failure, fake-home boundary/traversal repair rejection, malformed inventory, PR body output, and deferred PR command-plan apply |
+| Runner compatibility | Pass | `python3 tests/speckit-pro/unit/test-speckit-pro-runner.py` passed 9/9 after manifest/checksum refresh |
+| Read-only compatibility | Pass | `python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py` passed 32/32; XPLAT-005 read-only registry still reports no mutation modes |
 | Layer 4 aggregate | Pass | `bash tests/speckit-pro/run-all.sh` passed 3803/3803 and now includes `test-speckit-pro-mutation-helpers (17/17)` |
 
 ### Promotion Boundary
@@ -737,13 +737,13 @@ each item is completed or explicitly skipped by its extension rule.
 - [x] Python mutation-helper tests pass for accepted helper ports.
 - [x] Bash-reference metadata is recorded; no Bash-backed helper is Python-authoritative in XPLAT-006.
 - [x] Source-checkout mutation proof and path-boundary fixtures are recorded.
-- [x] `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py` passes.
-- [x] `tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py` still passes.
+- [x] `tests/speckit-pro/unit/test-speckit-pro-runner.py` passes.
+- [x] `tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py` still passes.
 - [x] `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` passes.
 - [x] `bash tests/speckit-pro/run-all.sh --layer 1` passes.
 - [x] `bash tests/speckit-pro/run-all.sh --layer 4` passes.
 - [x] `bash tests/speckit-pro/run-all.sh` passes with 3803/3803.
-- [x] `python3 tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py` passes.
+- [x] `python3 tests/speckit-pro/unit/test-autopilot-phase-coverage.py` passes.
 - [x] `python3 speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py --workflow docs/ai/specs/.process/XPLAT-006-workflow.md --state docs/ai/specs/.process/autopilot-state.json` passes.
 - [x] No active Claude/Codex invocation-path, generated-payload
   selection/cutover, install behavior, public platform claim, repo-local Bash
@@ -765,8 +765,8 @@ speckit-pro/
   scripts/                        # Current plugin helper references
 tests/speckit-pro/
   layer1-structural/              # Structural validation
-  layer4-scripts/                 # Script/helper tests and fixtures
-  layer4-scripts/fixtures/read-only-helpers/
+  unit/                 # Script/helper tests and fixtures
+  unit/fixtures/read-only-helpers/
                                   # XPLAT-005 fixture and parity patterns
 docs/ai/specs/.process/
   XPLAT-006-design-concept.md

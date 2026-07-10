@@ -13,12 +13,12 @@ from typing import Any
 
 from ..envelope import diagnostic, response
 
-PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json"
-DEFAULT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/release-readiness-cases.json"
-XPLAT_008_RELEASE_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json"
-XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/promotion-records.json"
-XPLAT_008_UAT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/uat-matrix-cases.json"
-XPLAT_008_INSTALL_HEALTH_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/install-health-repair-cases.json"
+PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/runner-gates/promotion-records.json"
+DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/runner-gates/release-readiness-cases.json"
+XPLAT_008_RELEASE_CASE_FILE = "tests/speckit-pro/unit/fixtures/installed-plugin-release/release-readiness-cases.json"
+XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/installed-plugin-release/promotion-records.json"
+XPLAT_008_UAT_CASE_FILE = "tests/speckit-pro/unit/fixtures/installed-plugin-release/uat-matrix-cases.json"
+XPLAT_008_INSTALL_HEALTH_CASE_FILE = "tests/speckit-pro/unit/fixtures/installed-plugin-release/install-health-repair-cases.json"
 XPLAT_009_INSTALLED_CACHE_PROOF = "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json"
 REQUIRED_UAT_ROWS = (
     ("claude", "windows"),
@@ -293,19 +293,19 @@ def release_readiness_xplat008(entry: Any, request: Any, repo_root: Path) -> dic
         "public_claim_results": public_claim_results,
         "runner_invocations": runner_invocations,
         "evidence_refs": {
-            "payload_results": ["tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/payload-completeness-cases.json"],
+            "payload_results": ["tests/speckit-pro/unit/fixtures/installed-plugin-release/payload-completeness-cases.json"],
             "zero_bash_guard": [
-                "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/zero-bash-guard-cases.json",
+                "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/zero-bash-guard-cases.json",
                 XPLAT_009_INSTALLED_CACHE_PROOF,
             ],
             "repo_bash_confinement": [
-                "tests/speckit-pro/layer4-scripts/fixtures/xplat-010-confinement/confinement-guard-cases.json",
-                "tests/speckit-pro/layer4-scripts/fixtures/xplat-010-confinement/allowlist.json",
+                "tests/speckit-pro/unit/fixtures/repository-bash-confinement/confinement-guard-cases.json",
+                "tests/speckit-pro/unit/fixtures/repository-bash-confinement/allowlist.json",
             ],
             "uat_matrix": "docs/ai/specs/.process/XPLAT-008-uat-matrix.md",
-            "install_health": ["tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/install-health-repair-cases.json"],
-            "public_claims": ["tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json"],
-            "runner_invocations": ["tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json"],
+            "install_health": ["tests/speckit-pro/unit/fixtures/installed-plugin-release/install-health-repair-cases.json"],
+            "public_claims": ["tests/speckit-pro/unit/fixtures/installed-plugin-release/release-readiness-cases.json"],
+            "runner_invocations": ["tests/speckit-pro/unit/fixtures/installed-plugin-release/runner-invocation-cases.json"],
         },
         "traceability": traceability,
     }
@@ -341,7 +341,7 @@ def live_xplat008_gate_evidence(repo_root: Path) -> dict[str, Any]:
             request_id="xplat-008-release-readiness:active-runtime-guard",
             mode="read_only",
             inputs={
-                "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json",
+                "case_file": "tests/speckit-pro/unit/fixtures/installed-plugin-release/active-runtime-guard-cases.json",
                 "case_id": "final-current-implementation",
             },
         ),
@@ -370,7 +370,7 @@ def live_xplat008_gate_evidence(repo_root: Path) -> dict[str, Any]:
             request_id="xplat-009-release-readiness:zero-bash-guard",
             mode="read_only",
             inputs={
-                "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/zero-bash-guard-cases.json",
+                "case_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/zero-bash-guard-cases.json",
                 "case_id": "final-current-implementation",
             },
         ),
@@ -399,7 +399,7 @@ def live_xplat008_gate_evidence(repo_root: Path) -> dict[str, Any]:
             request_id="xplat-010-release-readiness:repo-bash-confinement",
             mode="read_only",
             inputs={
-                "allowlist_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-010-confinement/allowlist.json",
+                "allowlist_file": "tests/speckit-pro/unit/fixtures/repository-bash-confinement/allowlist.json",
             },
         ),
         repo_root,
@@ -429,7 +429,7 @@ def live_xplat008_gate_evidence(repo_root: Path) -> dict[str, Any]:
             request_id="xplat-008-release-readiness:payload-completeness",
             mode="read_only",
             inputs={
-                "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/payload-completeness-cases.json",
+                "case_file": "tests/speckit-pro/unit/fixtures/installed-plugin-release/payload-completeness-cases.json",
                 "case_id": "current-committed-dist",
             },
         ),
@@ -452,7 +452,7 @@ def live_xplat008_gate_evidence(repo_root: Path) -> dict[str, Any]:
     runner_case = install_helper.runner_invocation_case(
         repo_root,
         {
-            "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/runner-invocation-cases.json",
+            "case_file": "tests/speckit-pro/unit/fixtures/installed-plugin-release/runner-invocation-cases.json",
             "case_id": "live-host-runtime-info",
         },
     )

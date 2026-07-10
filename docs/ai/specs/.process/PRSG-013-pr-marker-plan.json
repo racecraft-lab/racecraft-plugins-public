@@ -142,8 +142,8 @@
         }
       ],
       "declared_tests": [
-        "tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh",
-        "tests/speckit-pro/layer4-scripts/test-plan-layers.sh"
+        "tests/speckit-pro/unit/test-final-reviewability-backstop.sh",
+        "tests/speckit-pro/unit/test-plan-layers.sh"
       ],
       "reviewability": {
         "status": "block",
@@ -176,7 +176,7 @@
         "summary": "Size-only task/final reviewability findings continue as marker input while malformed or stale evidence still stops.",
         "validation": [
           "bash -n speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh",
-          "bash tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh -> 55/55"
+          "bash tests/speckit-pro/unit/test-final-reviewability-backstop.sh -> 55/55"
         ]
       },
       "emission_mapping": {
@@ -225,7 +225,7 @@
         }
       ],
       "declared_tests": [
-        "tests/speckit-pro/layer4-scripts/test-plan-layers.sh"
+        "tests/speckit-pro/unit/test-plan-layers.sh"
       ],
       "reviewability": {
         "status": "block",
@@ -260,7 +260,7 @@
         "summary": "Durable marker planning derives Foundation/user-story scopes, source fingerprints, Polish folding, and safe subdivision warnings.",
         "validation": [
           "bash -n speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh",
-          "bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh -> 85/85"
+          "bash tests/speckit-pro/unit/test-plan-layers.sh -> 85/85"
         ]
       },
       "emission_mapping": {
@@ -356,7 +356,7 @@
       "declared_tests": [
         "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
         "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
-        "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh",
+        "tests/speckit-pro/unit/test-multi-pr-emission.sh",
         "tests/speckit-pro/run-all.sh"
       ],
       "reviewability": {
@@ -400,8 +400,8 @@
         "summary": "Marker-aware PR packets, hazard collapse, guidance parity, eval registration, and deterministic validation completed; Polish tasks folded into US3 marker evidence.",
         "validation": [
           "bash -n speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh",
-          "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh -> 116/116",
-          "bash tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh -> 45/45",
+          "bash tests/speckit-pro/unit/test-multi-pr-emission.sh -> 116/116",
+          "bash tests/speckit-pro/unit/test-reviewability-marker-guidance.sh -> 45/45",
           "bash tests/speckit-pro/run-all.sh --layer 3 -> 0/0 registration evidence",
           "bash tests/speckit-pro/run-all.sh --layer 1 -> 978/978",
           "bash tests/speckit-pro/run-all.sh -> 2574/2574"

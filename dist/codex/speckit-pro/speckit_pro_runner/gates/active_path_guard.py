@@ -15,16 +15,16 @@ from typing import Any
 
 from ..envelope import diagnostic, response
 
-PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json"
-DEFAULT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/active-path-guard-cases.json"
-XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/promotion-records.json"
-XPLAT_008_DEFAULT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json"
-XPLAT_009_PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/promotion-records.json"
-XPLAT_009_DEFAULT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/zero-bash-guard-cases.json"
-XPLAT_009_ALLOWLIST = "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/allowlist.json"
-XPLAT_009_INSTALLED_CACHE_PREFIX = "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache/"
-XPLAT_010_DEFAULT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-010-confinement/confinement-guard-cases.json"
-XPLAT_010_ALLOWLIST = "tests/speckit-pro/layer4-scripts/fixtures/xplat-010-confinement/allowlist.json"
+PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/runner-gates/promotion-records.json"
+DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/runner-gates/active-path-guard-cases.json"
+XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/installed-plugin-release/promotion-records.json"
+XPLAT_008_DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/installed-plugin-release/active-runtime-guard-cases.json"
+XPLAT_009_PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/promotion-records.json"
+XPLAT_009_DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/zero-bash-guard-cases.json"
+XPLAT_009_ALLOWLIST = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json"
+XPLAT_009_INSTALLED_CACHE_PREFIX = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/"
+XPLAT_010_DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/repository-bash-confinement/confinement-guard-cases.json"
+XPLAT_010_ALLOWLIST = "tests/speckit-pro/unit/fixtures/repository-bash-confinement/allowlist.json"
 XPLAT_010_CONTAINER_PREFLIGHT_WORKFLOW = ".github/workflows/container-preflight.yml"
 XPLAT_010_CANONICAL_ALLOWLIST_PATHS = frozenset(
     {
@@ -45,7 +45,7 @@ REPO_BASH_COMMAND_NAMES = frozenset({"bash", "bash.exe", "jq", "jq.exe"})
 REPO_BASH_SHEBANG_NAMES = frozenset({"bash", "bash.exe", "sh", "sh.exe"})
 REPO_BASH_WORKFLOW_PREFIX = ".github/workflows/"
 REPO_BASH_FIXTURE_PREFIXES = (
-    "tests/speckit-pro/layer4-scripts/fixtures/",
+    "tests/speckit-pro/unit/fixtures/",
     "tests/speckit-pro/parity/",
 )
 REPO_BASH_RESOLUTION_MAX_DEPTH = 12
@@ -2970,7 +2970,7 @@ def installed_cache_proof_findings(repo_root: Path, proof: dict[str, Any], allow
                     installed_cache_finding(
                         prefix,
                         "installed_root",
-                        f"installed-cache proof installed_root must be tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache/{declared_surface}/speckit-pro",
+                        f"installed-cache proof installed_root must be tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/{declared_surface}/speckit-pro",
                     )
                 )
             if not canonical_payload_root(source_root, declared_surface):
@@ -3086,7 +3086,7 @@ def canonical_installed_cache_root(root: str, product: str) -> bool:
     parts = normalized.split("/")
     if any(part in {"", ".", ".."} for part in parts):
         return False
-    return normalized == f"tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache/{product}/speckit-pro"
+    return normalized == f"tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/{product}/speckit-pro"
 
 
 def installed_cache_finding(path: str, category: str, reason: str) -> RawFinding:

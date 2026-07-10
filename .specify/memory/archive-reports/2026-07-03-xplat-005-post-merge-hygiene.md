@@ -53,12 +53,12 @@ claims.
 - `speckit-pro/speckit_pro_runner/runtime.py`
 - `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json`
 - `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256`
-- `tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py`
-- `tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh`
-- `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/fixture-manifest.json`
-- `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/bash-reference-manifest.json`
-- `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests/`
-- `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/xplat-005-feature/`
+- `tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py`
+- `tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.sh`
+- `tests/speckit-pro/unit/fixtures/read-only-helpers/fixture-manifest.json`
+- `tests/speckit-pro/unit/fixtures/read-only-helpers/bash-reference-manifest.json`
+- `tests/speckit-pro/unit/fixtures/read-only-helpers/requests/`
+- `tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/`
 - `docs/ai/specs/.process/XPLAT-005-workflow.md`
 - `docs/ai/specs/.process/XPLAT-005-design-concept.md`
 
@@ -102,10 +102,10 @@ git checkout c4642f50ae99172170798a49f0c8fd990891c0f9 -- specs/xplat-005-read-on
 | `speckit-pro/speckit_pro_runner/helpers/read_only.py` | Aligned the no-active-map `generate-spec-index --check` helper response with the Bash `--check` output |
 | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | Refreshed runner source metadata after the read-only helper edge-case fix |
 | `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | Refreshed runner source checksum after the read-only helper edge-case fix |
-| `tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py` | Repointed read-only helper parity tests away from active `specs/**` |
-| `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests/` | Repointed feature-dir request fixtures to the preserved XPLAT-005 fixture inputs |
-| `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/bash-reference-manifest.json` | Repointed Bash-reference comparisons to the preserved XPLAT-005 fixture inputs |
-| `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/xplat-005-feature/` | Preserved minimal XPLAT-005 spec inputs needed by Layer 4 helper parity coverage after cleanup |
+| `tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py` | Repointed read-only helper parity tests away from active `specs/**` |
+| `tests/speckit-pro/unit/fixtures/read-only-helpers/requests/` | Repointed feature-dir request fixtures to the preserved XPLAT-005 fixture inputs |
+| `tests/speckit-pro/unit/fixtures/read-only-helpers/bash-reference-manifest.json` | Repointed Bash-reference comparisons to the preserved XPLAT-005 fixture inputs |
+| `tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/` | Preserved minimal XPLAT-005 spec inputs needed by Layer 4 helper parity coverage after cleanup |
 | `specs/xplat-005-read-only-helper-port/` | Removed from active `specs/**` after archive |
 
 ## Post-Cleanup Verification
@@ -113,7 +113,7 @@ git checkout c4642f50ae99172170798a49f0c8fd990891c0f9 -- specs/xplat-005-read-on
 - `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh .`
 - `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .`
 - `find specs -mindepth 1 -maxdepth 4 -print`
-- `bash tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh`
+- `bash tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.sh`
 - `git diff --check`
 - `bash tests/speckit-pro/run-all.sh --layer 1`
 - `bash tests/speckit-pro/run-all.sh --layer 4`

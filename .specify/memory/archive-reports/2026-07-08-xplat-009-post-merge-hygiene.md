@@ -72,10 +72,10 @@ preserved XPLAT-008 UAT matrix.
 - `docs/ai/specs/.process/XPLAT-009-retrospective.md`
 - `docs/ai/specs/.process/XPLAT-009-pr-packet.json`
 - `docs/ai/specs/.process/XPLAT-009-pr-body.md`
-- `tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/`
-- `tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/contracts/`
-- `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py`
-- `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py`
+- `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/`
+- `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/contracts/`
+- `tests/speckit-pro/unit/test-speckit-pro-gates.py`
+- `tests/speckit-pro/unit/test-speckit-pro-runner.py`
 
 ## Recovery Commands
 ```text
@@ -110,9 +110,9 @@ git checkout 7bc6be1a9faaa3113f8db903188ddb49a445e7ce -- specs/xplat-009-plugin-
 | `docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md` | Marked XPLAT-009 complete/archived and XPLAT-010 in progress |
 | `docs/ai/specs/cross-platform-plugin-runtime-roadmap-MOC.md` | Replaced the active XPLAT-009 link with archive and preserved-evidence pointers; removed the archived entry from the generated index |
 | `docs/ai/specs/.process/autopilot-state.json` | Marked the XPLAT-009 run as post-merge archived state |
-| `tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/contracts/` | Preserved XPLAT-009 contract schemas needed by Layer 4 gate coverage after cleanup (git mv from the active spec dir) |
-| `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` | Repointed XPLAT-009 contract reads away from active `specs/**` |
-| `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py` | Removed the archived XPLAT-009 spec path from active-path allow-list coverage |
+| `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/contracts/` | Preserved XPLAT-009 contract schemas needed by Layer 4 gate coverage after cleanup (git mv from the active spec dir) |
+| `tests/speckit-pro/unit/test-speckit-pro-gates.py` | Repointed XPLAT-009 contract reads away from active `specs/**` |
+| `tests/speckit-pro/unit/test-speckit-pro-runner.py` | Removed the archived XPLAT-009 spec path from active-path allow-list coverage |
 | `specs/xplat-009-plugin-source-and-payload-bash-eradication/` | Removed from active `specs/**` after archive |
 
 ## Feature Status
@@ -131,11 +131,11 @@ limits, or any release gate behavior.
 ## Conflicts Resolved
 - Layer 4 gate tests read the XPLAT-009 contract schemas from the active spec
   directory (`XPLAT_009_CONTRACT_DIR` in
-  `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py`). The four
+  `tests/speckit-pro/unit/test-speckit-pro-gates.py`). The four
   schemas were moved to
-  `tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/contracts/`
+  `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/contracts/`
   and the test was repointed before removing the active spec folder.
-- `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py` allow-listed
+- `tests/speckit-pro/unit/test-speckit-pro-runner.py` allow-listed
   the active XPLAT-009 spec path in `allowed_xplat009_prefixes`; the archived
   path was removed from coverage, matching the XPLAT-008 archive precedent.
 - The roadmap and MOC still described XPLAT-009 as in progress and XPLAT-010 as

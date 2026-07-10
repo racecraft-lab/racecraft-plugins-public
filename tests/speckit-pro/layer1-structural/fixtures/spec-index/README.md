@@ -2,7 +2,7 @@
 
 Committed fixture spec trees consumed by the Layer 1 determinism fixture
 (`../validate-spec-index-determinism.sh`) and the Layer 4 unit test
-(`../../layer4-scripts/test-generate-spec-index.sh`). These are **test inputs
+(`../../unit/test-generate-spec-index.sh`). These are **test inputs
 only** — no production code lives here.
 
 The generated zones reproduce the byte framing from

@@ -3,7 +3,7 @@
 Running record of the `.sh` → `.py` count-parity ports in the XPLAT-010 stack
 (FR-013). Each port PR appends **one delta line** proving 1:1 name-and-count
 parity against its committed baseline under
-`tests/speckit-pro/parity/xplat-010/`. The cumulative roll-up lands in
+`tests/speckit-pro/parity/bash-to-python/`. The cumulative roll-up lands in
 `docs/ai/specs/.process/XPLAT-010-suite-parity-result.json` (Polish phase).
 
 Columns:
@@ -18,81 +18,83 @@ Columns:
 
 | PR | Script | Mode | bash → python | names_equal | baseline |
 |----|--------|------|---------------|-------------|----------|
-| PR 13 | port: `test-estimate-spec-size.sh` → `test-estimate-spec-size.py` | default | 33 → 33 | yes | `tests/speckit-pro/parity/xplat-010/test-estimate-spec-size-baseline.txt` |
+| PR 13 | port: `test-estimate-spec-size.sh` → `test-estimate-spec-size.py` | default | 33 → 33 | yes | `tests/speckit-pro/parity/bash-to-python/test-estimate-spec-size-baseline.txt` |
 | PR 2 | wrapper swap: `test-speckit-pro-runner.sh` → `test-speckit-pro-runner.py` | default | 0 → 0 (pure `python3 …` shim; no own assertions) | n/a | n/a |
 | PR 2 | wrapper swap: `test-speckit-pro-read-only-helpers.sh` → `test-speckit-pro-read-only-helpers.py` | default | 0 → 0 (pure `python3 …` shim; no own assertions) | n/a | n/a |
-| PR 3a | port: `validate-agents.sh` → `validate-agents.py` | default | 104 → 104 | yes | `tests/speckit-pro/parity/xplat-010/validate-agents-baseline.txt` |
-| PR 3a | port: `validate-capability-pointer.sh` → `validate-capability-pointer.py` | default | 52 → 52 | yes | `tests/speckit-pro/parity/xplat-010/validate-capability-pointer-baseline.txt` |
-| PR 3a | port: `validate-capability-resolution.sh` → `validate-capability-resolution.py` | default | 43 → 43 | yes | `tests/speckit-pro/parity/xplat-010/validate-capability-resolution-baseline.txt` |
-| PR 3a | port: `validate-codex-agents.sh` → `validate-codex-agents.py` | default | 148 → 148 | yes | `tests/speckit-pro/parity/xplat-010/validate-codex-agents-baseline.txt` |
-| PR 3a | port: `validate-codex-hooks.sh` → `validate-codex-hooks.py` | default | 9 → 9 | yes | `tests/speckit-pro/parity/xplat-010/validate-codex-hooks-baseline.txt` |
-| PR 3a | port: `validate-codex-marketplace.sh` → `validate-codex-marketplace.py` | default | 13 → 13 | yes | `tests/speckit-pro/parity/xplat-010/validate-codex-marketplace-baseline.txt` |
-| PR 3a | port: `validate-codex-parity.sh` → `validate-codex-parity.py` | default | 81 → 81 | yes | `tests/speckit-pro/parity/xplat-010/validate-codex-parity-baseline.txt` |
-| PR 3a | port: `validate-codex-plugin.sh` → `validate-codex-plugin.py` | default | 33 → 33 | yes | `tests/speckit-pro/parity/xplat-010/validate-codex-plugin-baseline.txt` |
-| PR 3a | port: `validate-curated-set.sh` → `validate-curated-set.py` | default | 58 → 58 | yes | `tests/speckit-pro/parity/xplat-010/validate-curated-set-baseline.txt` |
-| PR 3a | port: `validate-hooks.sh` → `validate-hooks.py` | default | 11 → 11 | yes | `tests/speckit-pro/parity/xplat-010/validate-hooks-baseline.txt` |
-| PR 3b | port: `validate-payload-completeness.sh` → `validate-payload-completeness.py` | default | 52 → 52 | yes | `tests/speckit-pro/parity/xplat-010/validate-payload-completeness-baseline.txt` |
-| PR 3b | port: `validate-plugin-payload.sh` → `validate-plugin-payload.py` | default | 23 → 23 | yes | `tests/speckit-pro/parity/xplat-010/validate-plugin-payload-baseline.txt` |
-| PR 3b | port: `validate-plugin.sh` → `validate-plugin.py` | default | 8 → 8 | yes | `tests/speckit-pro/parity/xplat-010/validate-plugin-baseline.txt` |
-| PR 3b | port: `validate-pr-checks-sentinel.sh` → `validate-pr-checks-sentinel.py` | default | 28 → 28 | yes | `tests/speckit-pro/parity/xplat-010/validate-pr-checks-sentinel-baseline.txt` |
-| PR 3b | port: `validate-process-gitattributes.sh` → `validate-process-gitattributes.py` | default | 6 → 6 | yes | `tests/speckit-pro/parity/xplat-010/validate-process-gitattributes-baseline.txt` |
-| PR 3b | port: `validate-release-workflow.sh` → `validate-release-workflow.py` | default | 24 → 24 | yes | `tests/speckit-pro/parity/xplat-010/validate-release-workflow-baseline.txt` |
-| PR 3b | port: `validate-scripts.sh` → `validate-scripts.py` | default | 37 → 37 | yes | `tests/speckit-pro/parity/xplat-010/validate-scripts-baseline.txt` |
-| PR 3b | port: `validate-skill-capability-pointers.sh` → `validate-skill-capability-pointers.py` | default | 55 → 55 | yes | `tests/speckit-pro/parity/xplat-010/validate-skill-capability-pointers-baseline.txt` |
-| PR 3b | port: `validate-skills.sh` → `validate-skills.py` | default | 124 → 124 | yes | `tests/speckit-pro/parity/xplat-010/validate-skills-baseline.txt` |
-| PR 3b | port: `validate-spec-index-determinism.sh` → `validate-spec-index-determinism.py` | default | 16 → 16 | yes | `tests/speckit-pro/parity/xplat-010/validate-spec-index-determinism-baseline.txt` |
-| PR 3b | new validator failure-path regression module | default | 0 → 5 | n/a (new regression coverage) | `tests/speckit-pro/layer4-scripts/test-layer1-validator-regressions.py` |
-| PR 4 | port: `validate-moc-orphan.sh` → `validate-moc-orphan.py` | default | 29 → 29 | yes | `tests/speckit-pro/parity/xplat-010/validate-moc-orphan-baseline.txt` |
-| PR 4 | port: `validate-moc-orphan.sh` → `validate-moc-orphan.py` | explicit scan-root | 0 → 0 | yes | `tests/speckit-pro/parity/xplat-010/validate-moc-orphan-scan-root-baseline.txt` |
-| PR 4 | port: `validate-moc-stale-index.sh` → `validate-moc-stale-index.py` | default | 11 → 11 | yes | `tests/speckit-pro/parity/xplat-010/validate-moc-stale-index-baseline.txt` |
-| PR 4 | port: `validate-codex-skills.sh` → `validate-codex-skills.py` | default | 161 → 161 | yes | `tests/speckit-pro/parity/xplat-010/validate-codex-skills-baseline.txt` |
-| PR 4 | port: `validate-payload-conformance.sh` → `validate-payload-conformance.py` | default | 209 → 209 | yes | `tests/speckit-pro/parity/xplat-010/validate-payload-conformance-baseline.txt` |
-| PR 4 | port: `test-moc-lint-exit-codes.sh` → `test-moc-lint-exit-codes.py` | default, non-root | 36 → 36 | yes | `tests/speckit-pro/parity/xplat-010/test-moc-lint-exit-codes-baseline.txt` |
-| PR 5 | port: `validate-tool-scoping.sh` → `validate-tool-scoping.py` | default | 186 → 186 | yes | `tests/speckit-pro/parity/xplat-010/validate-tool-scoping-baseline.txt` |
-| PR 5 | port: `test-check-toolchain.sh` → `test-check-toolchain.py` | default | 26 → 26 | yes | `tests/speckit-pro/parity/xplat-010/test-check-toolchain-baseline.txt` |
-| PR 5 | workflow self-validator update: `validate-pr-checks-sentinel.py` | default | 28 → 30 (intentional PR5 workflow-contract expansion) | n/a | `tests/speckit-pro/parity/xplat-010/validate-pr-checks-sentinel-baseline.txt` |
-| PR 6 | port: `test-refresh-local-plugin.sh` → `test-refresh-local-plugin.py` | default | 58 → 58 | yes | `tests/speckit-pro/parity/xplat-010/test-refresh-local-plugin-baseline.txt` |
-| PR 6 | port: `test-sync-marketplace-versions.sh` → `test-sync-marketplace-versions.py` | default | 49 → 49 | no (intentional `jq`-dependency replacement under T055) | retired Bash: `tests/speckit-pro/parity/xplat-010/test-sync-marketplace-versions-bash-baseline.txt`; current Python: `tests/speckit-pro/parity/xplat-010/test-sync-marketplace-versions-baseline.txt` |
-| PR 6 | new contract coverage: `.claude/hooks/*.py` | default | 0 → 22 | n/a | `tests/speckit-pro/parity/xplat-010/test-claude-hooks-baseline.txt` |
-| PR 7a | port: `test-transcript-helpers.sh` → `test-transcript-helpers.py` | default | 42 → 42 | yes | `tests/speckit-pro/parity/xplat-010/test-transcript-helpers-baseline.txt` |
-| PR 7a | new CLI contracts: `scrub-transcript.py` + `reduce-transcript-fixture.py` | default | 0 → 25 | n/a | `tests/speckit-pro/parity/xplat-010/test-transcript-tools-baseline.txt` |
-| PR 7b | port: `run-dispatch-fixtures.sh` → `run-dispatch-fixtures.py` | replay | 184 → 184 | yes | `tests/speckit-pro/parity/xplat-010/run-dispatch-fixtures-baseline.txt` |
-| PR 7b | port: `run-return-format-fixtures.sh` → `run-return-format-fixtures.py` | replay | 17 → 17 | yes | `tests/speckit-pro/parity/xplat-010/run-return-format-fixtures-baseline.txt` |
-| PR 7b | port: `run-e2e-fixtures.sh` → `run-e2e-fixtures.py` | replay | 23 → 23 | yes | `tests/speckit-pro/parity/xplat-010/run-e2e-fixtures-baseline.txt` |
-| PR 7b | port: `run-grounding-fixtures.sh` → `run-grounding-fixtures.py` | replay | 33 → 33 | yes | `tests/speckit-pro/parity/xplat-010/run-grounding-fixtures-baseline.txt` |
-| PR 7b | port: `run-all-fixtures.sh` → `run-all-fixtures.py` | replay | 257 → 257 | yes | `tests/speckit-pro/parity/xplat-010/run-all-fixtures-baseline.txt` |
-| PR 7b | new replay/live runner contract | default | 0 → 31 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer7-runners-baseline.txt` |
+| PR 3a | port: `validate-agents.sh` → `validate-agents.py` | default | 104 → 104 | yes | `tests/speckit-pro/parity/bash-to-python/validate-agents-baseline.txt` |
+| PR 3a | port: `validate-capability-pointer.sh` → `validate-capability-pointer.py` | default | 52 → 52 | yes | `tests/speckit-pro/parity/bash-to-python/validate-capability-pointer-baseline.txt` |
+| PR 3a | port: `validate-capability-resolution.sh` → `validate-capability-resolution.py` | default | 43 → 43 | yes | `tests/speckit-pro/parity/bash-to-python/validate-capability-resolution-baseline.txt` |
+| PR 3a | port: `validate-codex-agents.sh` → `validate-codex-agents.py` | default | 148 → 148 | yes | `tests/speckit-pro/parity/bash-to-python/validate-codex-agents-baseline.txt` |
+| PR 3a | port: `validate-codex-hooks.sh` → `validate-codex-hooks.py` | default | 9 → 9 | yes | `tests/speckit-pro/parity/bash-to-python/validate-codex-hooks-baseline.txt` |
+| PR 3a | port: `validate-codex-marketplace.sh` → `validate-codex-marketplace.py` | default | 13 → 13 | yes | `tests/speckit-pro/parity/bash-to-python/validate-codex-marketplace-baseline.txt` |
+| PR 3a | port: `validate-codex-parity.sh` → `validate-codex-parity.py` | default | 81 → 81 | yes | `tests/speckit-pro/parity/bash-to-python/validate-codex-parity-baseline.txt` |
+| PR 3a | port: `validate-codex-plugin.sh` → `validate-codex-plugin.py` | default | 33 → 33 | yes | `tests/speckit-pro/parity/bash-to-python/validate-codex-plugin-baseline.txt` |
+| PR 3a | port: `validate-curated-set.sh` → `validate-curated-set.py` | default | 58 → 58 | yes | `tests/speckit-pro/parity/bash-to-python/validate-curated-set-baseline.txt` |
+| PR 3a | port: `validate-hooks.sh` → `validate-hooks.py` | default | 11 → 11 | yes | `tests/speckit-pro/parity/bash-to-python/validate-hooks-baseline.txt` |
+| PR 3b | port: `validate-payload-completeness.sh` → `validate-payload-completeness.py` | default | 52 → 52 | yes | `tests/speckit-pro/parity/bash-to-python/validate-payload-completeness-baseline.txt` |
+| PR 3b | port: `validate-plugin-payload.sh` → `validate-plugin-payload.py` | default | 23 → 23 | yes | `tests/speckit-pro/parity/bash-to-python/validate-plugin-payload-baseline.txt` |
+| PR 3b | port: `validate-plugin.sh` → `validate-plugin.py` | default | 8 → 8 | yes | `tests/speckit-pro/parity/bash-to-python/validate-plugin-baseline.txt` |
+| PR 3b | port: `validate-pr-checks-sentinel.sh` → `validate-pr-checks-sentinel.py` | default | 28 → 28 | yes | `tests/speckit-pro/parity/bash-to-python/validate-pr-checks-sentinel-baseline.txt` |
+| PR 3b | port: `validate-process-gitattributes.sh` → `validate-process-gitattributes.py` | default | 6 → 6 | yes | `tests/speckit-pro/parity/bash-to-python/validate-process-gitattributes-baseline.txt` |
+| PR 3b | port: `validate-release-workflow.sh` → `validate-release-workflow.py` | default | 24 → 24 | yes | `tests/speckit-pro/parity/bash-to-python/validate-release-workflow-baseline.txt` |
+| PR 3b | port: `validate-scripts.sh` → `validate-scripts.py` | default | 37 → 37 | yes | `tests/speckit-pro/parity/bash-to-python/validate-scripts-baseline.txt` |
+| PR 3b | port: `validate-skill-capability-pointers.sh` → `validate-skill-capability-pointers.py` | default | 55 → 55 | yes | `tests/speckit-pro/parity/bash-to-python/validate-skill-capability-pointers-baseline.txt` |
+| PR 3b | port: `validate-skills.sh` → `validate-skills.py` | default | 124 → 124 | yes | `tests/speckit-pro/parity/bash-to-python/validate-skills-baseline.txt` |
+| PR 3b | port: `validate-spec-index-determinism.sh` → `validate-spec-index-determinism.py` | default | 16 → 16 | yes | `tests/speckit-pro/parity/bash-to-python/validate-spec-index-determinism-baseline.txt` |
+| PR 3b | new validator failure-path regression module | default | 0 → 5 | n/a (new regression coverage) | `tests/speckit-pro/unit/test-structural-validator-regressions.py` |
+| PR 4 | port: `validate-moc-orphan.sh` → `validate-moc-orphan.py` | default | 29 → 29 | yes | `tests/speckit-pro/parity/bash-to-python/validate-moc-orphan-baseline.txt` |
+| PR 4 | port: `validate-moc-orphan.sh` → `validate-moc-orphan.py` | explicit scan-root | 0 → 0 | yes | `tests/speckit-pro/parity/bash-to-python/validate-moc-orphan-scan-root-baseline.txt` |
+| PR 4 | port: `validate-moc-stale-index.sh` → `validate-moc-stale-index.py` | default | 11 → 11 | yes | `tests/speckit-pro/parity/bash-to-python/validate-moc-stale-index-baseline.txt` |
+| PR 4 | port: `validate-codex-skills.sh` → `validate-codex-skills.py` | default | 161 → 161 | yes | `tests/speckit-pro/parity/bash-to-python/validate-codex-skills-baseline.txt` |
+| PR 4 | port: `validate-payload-conformance.sh` → `validate-payload-conformance.py` | default | 209 → 209 | yes | `tests/speckit-pro/parity/bash-to-python/validate-payload-conformance-baseline.txt` |
+| PR 4 | port: `test-moc-lint-exit-codes.sh` → `test-moc-lint-exit-codes.py` | default, non-root | 36 → 36 | yes | `tests/speckit-pro/parity/bash-to-python/test-moc-lint-exit-codes-baseline.txt` |
+| PR 5 | port: `validate-tool-scoping.sh` → `validate-tool-scoping.py` | default | 186 → 186 | yes | `tests/speckit-pro/parity/bash-to-python/validate-tool-scoping-baseline.txt` |
+| PR 5 | port: `test-check-toolchain.sh` → `test-check-toolchain.py` | default | 26 → 26 | yes | `tests/speckit-pro/parity/bash-to-python/test-check-toolchain-bash-baseline.txt` |
+| PR 5 | workflow self-validator update: `validate-pr-checks-sentinel.py` | default | 28 → 30 (intentional PR5 workflow-contract expansion) | n/a | `tests/speckit-pro/parity/bash-to-python/validate-pr-checks-sentinel-baseline.txt` |
+| PR 6 | port: `test-refresh-local-plugin.sh` → `test-refresh-local-plugin.py` | default | 58 → 58 | yes | `tests/speckit-pro/parity/bash-to-python/test-refresh-local-plugin-baseline.txt` |
+| PR 6 | port: `test-sync-marketplace-versions.sh` → `test-sync-marketplace-versions.py` | default | 49 → 49 | no (intentional `jq`-dependency replacement under T055) | retired Bash: `tests/speckit-pro/parity/bash-to-python/test-sync-marketplace-versions-bash-baseline.txt`; current Python: `tests/speckit-pro/parity/bash-to-python/test-sync-marketplace-versions-baseline.txt` |
+| PR 6 | new contract coverage: `.claude/hooks/*.py` | default | 0 → 22 | n/a | `tests/speckit-pro/parity/bash-to-python/test-claude-hooks-baseline.txt` |
+| PR 7a | port: `test-transcript-helpers.sh` → `test-transcript-helpers.py` | default | 42 → 42 | yes | `tests/speckit-pro/parity/bash-to-python/test-transcript-helpers-baseline.txt` |
+| PR 7a | new CLI contracts: `scrub-transcript.py` + `reduce-transcript-fixture.py` | default | 0 → 25 | n/a | `tests/speckit-pro/parity/bash-to-python/test-transcript-tools-baseline.txt` |
+| PR 7b | port: `run-dispatch-fixtures.sh` → `run-dispatch-fixtures.py` | replay | 184 → 184 | yes | `tests/speckit-pro/parity/bash-to-python/run-dispatch-fixtures-baseline.txt` |
+| PR 7b | port: `run-return-format-fixtures.sh` → `run-return-format-fixtures.py` | replay | 17 → 17 | yes | `tests/speckit-pro/parity/bash-to-python/run-return-format-fixtures-baseline.txt` |
+| PR 7b | port: `run-e2e-fixtures.sh` → `run-e2e-fixtures.py` | replay | 23 → 23 | yes | `tests/speckit-pro/parity/bash-to-python/run-e2e-fixtures-baseline.txt` |
+| PR 7b | port: `run-grounding-fixtures.sh` → `run-grounding-fixtures.py` | replay | 33 → 33 | yes | `tests/speckit-pro/parity/bash-to-python/run-grounding-fixtures-baseline.txt` |
+| PR 7b | port: `run-all-fixtures.sh` → `run-all-fixtures.py` | replay | 257 → 257 | yes | `tests/speckit-pro/parity/bash-to-python/run-all-fixtures-baseline.txt` |
+| PR 7b | new replay/live runner contract | default | 0 → 31 | n/a | `tests/speckit-pro/parity/bash-to-python/test-integration-runners-baseline.txt` |
 | PR 7b | shipped gate regression expansion | default | 57 → 58 | n/a | n/a |
-| PR 8 | port: `run-parity-fixtures.sh` → `run-parity-fixtures.py` | dry-run | 12 → 12 | yes | `tests/speckit-pro/parity/xplat-010/run-parity-fixtures-baseline.txt` |
-| PR 8 | port: `test-l8-extractors.sh` → `test-l8-extractors.py` | default | 19 → 19 | yes | `tests/speckit-pro/parity/xplat-010/test-l8-extractors-baseline.txt` |
-| PR 8 | replacement: `test-l8-judge.sh` → deterministic local judge contract | default | 16 → 16 | no (intentional removal of live-LLM judgment) | retired Bash: `tests/speckit-pro/parity/xplat-010/test-l8-judge-bash-baseline.txt`; current Python: `tests/speckit-pro/parity/xplat-010/test-l8-judge-baseline.txt` |
+| PR 8 | port: `run-parity-fixtures.sh` → `run-parity-fixtures.py` | dry-run | 12 → 12 | yes | `tests/speckit-pro/parity/bash-to-python/run-parity-fixtures-baseline.txt` |
+| PR 8 | port: `test-parity-extractors.sh` → `test-parity-extractors.py` | default | 19 → 19 | yes | `tests/speckit-pro/parity/bash-to-python/test-parity-extractors-baseline.txt` |
+| PR 8 | replacement: `test-parity-judge.sh` → deterministic local judge contract | default | 16 → 16 | no (intentional removal of live-LLM judgment) | retired Bash: `tests/speckit-pro/parity/bash-to-python/test-parity-judge-bash-baseline.txt`; current Python: `tests/speckit-pro/parity/bash-to-python/test-parity-judge-baseline.txt` |
 | PR 8 | fixture environment inputs: 8 `env-*.sh` → 8 `env-*.json` | default | 0 → 0 (data-only inputs) | n/a | n/a |
-| PR 8 | new Layer-8 runner/portability contract | default | 0 → 33 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer8-runner-baseline.txt` |
+| PR 8 | new Layer-8 runner/portability contract | default | 0 → 33 | n/a | `tests/speckit-pro/parity/bash-to-python/test-parity-runner-baseline.txt` |
 | PR 8 | shipped gate regression expansion | default | 58 → 59 | n/a | n/a |
-| PR 9 | port: `test-eval-runner-skill-selection.sh` → `.py` | default | 13 → 13 | yes | `tests/speckit-pro/parity/xplat-010/test-eval-runner-skill-selection-baseline.txt` |
-| PR 9 | port: `test-l6-codex-runner.sh` → `.py` | default | 23 → 23 | yes | `tests/speckit-pro/parity/xplat-010/test-l6-codex-runner-baseline.txt` |
-| PR 9 | live runner/library swaps for Layers 2/3/6 | command-plan / live-only | 0 → 0 (predecessors emit no counted assertions) | n/a | eleven per-entrypoint baselines under `tests/speckit-pro/parity/xplat-010/` |
+| PR 9 | port: `test-eval-runner-skill-selection.sh` → `.py` | default | 13 → 13 | yes | `tests/speckit-pro/parity/bash-to-python/test-eval-runner-skill-selection-baseline.txt` |
+| PR 9 | port: `test-efficiency-codex-runner.sh` → `.py` | default | 23 → 23 | yes | `tests/speckit-pro/parity/bash-to-python/test-efficiency-codex-runner-baseline.txt` |
+| PR 9 | live runner/library swaps for Layers 2/3/6 | command-plan / live-only | 0 → 0 (predecessors emit no counted assertions) | n/a | eleven per-entrypoint baselines under `tests/speckit-pro/parity/bash-to-python/` |
 | PR 9 | `run-all.py` scope/command-plan contract expansion | default | 20 → 24 | n/a | n/a |
-| PR 9 | new Layer-2 runner/staging contract | default | 0 → 26 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer2-trigger-runners-baseline.txt` |
-| PR 9 | new Layer-2 signal-restoration contract | default | 0 → 7 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer2-signal-restoration-baseline.txt` |
-| PR 9 | new Layer-6 portability contract | default | 0 → 18 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer6-portability-baseline.txt` |
+| PR 9 | new Layer-2 runner/staging contract | default | 0 → 26 | n/a | `tests/speckit-pro/parity/bash-to-python/test-trigger-eval-runners-baseline.txt` |
+| PR 9 | new Layer-2 signal-restoration contract | default | 0 → 7 | n/a | `tests/speckit-pro/parity/bash-to-python/test-trigger-signal-restoration-baseline.txt` |
+| PR 9 | new Layer-6 portability contract | default | 0 → 18 | n/a | `tests/speckit-pro/parity/bash-to-python/test-efficiency-runner-portability-baseline.txt` |
 | PR 9 | shipped gate manifest-reference strengthening | default | 59 → 59 (existing method strengthened) | n/a | n/a |
-| PR 10 | port: `test-post-implementation-reference.sh` → `.py` | default | 35 → 35 | yes | `tests/speckit-pro/parity/xplat-010/test-post-implementation-reference-baseline.txt` |
-| PR 10 | port: `test-reviewability-marker-guidance.sh` → `.py` | default | 52 → 52 | yes | `tests/speckit-pro/parity/xplat-010/test-reviewability-marker-guidance-baseline.txt` |
-| PR 10 | port: `test-privacy-scan.sh` → `.py` | default | 10 → 10 | yes | `tests/speckit-pro/parity/xplat-010/test-privacy-scan-baseline.txt` |
-| PR 10 | intentional replacement: terminal `test-check-toolchain.py` contract | tests/shell | 26 → 27 | no (Bash/`jq`/Unix-tool requirements replaced by Python 3.11+, Git, and Python-only dispatch; launch failures remain scored) | retired: `test-check-toolchain-baseline.txt`; current: `test-check-toolchain-pr10-baseline.txt` |
-| PR 10 | CLI boundary hardening: Layer 6/8 runtime command selection | default | 18 + 33 → 18 + 33 | no (configured runtime names constrained; selected executable directory pinned on `PATH`) | `test-layer6-portability-baseline.txt`; `test-layer8-runner-baseline.txt` |
+| PR 10 | port: `test-post-implementation-reference.sh` → `.py` | default | 35 → 35 | yes | `tests/speckit-pro/parity/bash-to-python/test-post-implementation-reference-baseline.txt` |
+| PR 10 | port: `test-reviewability-marker-guidance.sh` → `.py` | default | 52 → 52 | yes | `tests/speckit-pro/parity/bash-to-python/test-reviewability-marker-guidance-baseline.txt` |
+| PR 10 | port: `test-privacy-scan.sh` → `.py` | default | 10 → 10 | yes | `tests/speckit-pro/parity/bash-to-python/test-privacy-scan-baseline.txt` |
+| PR 10 | intentional replacement: terminal `test-check-toolchain.py` contract | tests/shell | 26 → 27 | no (Bash/`jq`/Unix-tool requirements replaced by Python 3.11+, Git, and Python-only dispatch; launch failures remain scored) | retired: `test-check-toolchain-bash-baseline.txt`; current: `test-check-toolchain-baseline.txt` |
+| PR 10 | CLI boundary hardening: Layer 6/8 runtime command selection | default | 18 + 33 → 18 + 33 | no (configured runtime names constrained; selected executable directory pinned on `PATH`) | `test-efficiency-runner-portability-baseline.txt`; `test-parity-runner-baseline.txt` |
 | PR 10 | new confinement guard contract | default | 0 → 47 | n/a | n/a |
 | PR 10 | orchestrator fail-closed expansion | default | 26 → 28 | n/a | n/a |
 | PR 10 | shipped gate current-interpreter expansion | default | 59 → 60 | n/a | n/a |
+| PR 10 | purpose-based unit/fixture layout contract | default | 0 → 4 | n/a | n/a |
+| PR 10 | registered release-PR reconciliation contract | default | 0 → 9 | n/a | n/a |
 
 **PR 13 note (T121–T130):** The estimator Layer-4 test follows the
 Per-Port Protocol against historical predecessor commit
 `c9176902d98082415aac88954b2f66fa6c499506`. Six-item dual-run proof:
-(1) `VERBOSE=true bash tests/speckit-pro/layer4-scripts/test-estimate-spec-size.sh`
+(1) `VERBOSE=true bash tests/speckit-pro/unit/test-estimate-spec-size.sh`
 in that historical checkout, parsed by `tests/speckit-pro/lib/capture_baseline.py`;
-(2) `python3 tests/speckit-pro/layer4-scripts/test-estimate-spec-size.py`;
-(3) committed baseline `tests/speckit-pro/parity/xplat-010/test-estimate-spec-size-baseline.txt`;
+(2) `python3 tests/speckit-pro/unit/test-estimate-spec-size.py`;
+(3) committed baseline `tests/speckit-pro/parity/bash-to-python/test-estimate-spec-size-baseline.txt`;
 (4) ordered-name inventory diff: no differences, 1:1 preserved;
 (5) Bash `33` == Python `33`; (6) intentional change: none.
 

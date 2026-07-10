@@ -29,7 +29,7 @@ from types import ModuleType
 from capture_baseline import BaselineError, parse_verbose_lines, render_baseline
 from test_result import CountingTestResult
 
-BASELINE_DIR = "tests/speckit-pro/parity/xplat-010"
+BASELINE_DIR = "tests/speckit-pro/parity/bash-to-python"
 UNNAMED_SUBTEST = "<subtest>"
 
 

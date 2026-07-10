@@ -713,7 +713,7 @@ G7 output:
 | Verify Implementation | Complete | `$speckit-verify` contract executed manually because Codex could not invoke the command directly; 13/13 FRs, 4/4 user stories, 11/11 scenarios, 40/40 tasks covered, 0 critical/high findings. |
 | Verify Tasks Phantom Check | Complete | `specs/doc-010-search-accessibility-deep-links-docs-validation/.process/verify-tasks-report.md` written; 40/40 completed tasks verified, 0 partial/weak/not-found/skipped, no flagged items. |
 | Code Review | Skipped | `review` extension is not installed; no `.registry` review entry and no `.claude`/`.codex` `$speckit-review` command found. |
-| Integration Suite | Complete | `pnpm --dir docs-site validate` passed including 20 Playwright smoke tests; `bash tests/speckit-pro/layer4-scripts/test-privacy-scan.sh` passed 9/9; `bash tests/speckit-pro/run-all.sh` passed 3128/3128; `git diff --check` passed. |
+| Integration Suite | Complete | `pnpm --dir docs-site validate` passed including 20 Playwright smoke tests; `bash tests/speckit-pro/unit/test-privacy-scan.sh` passed 9/9; `bash tests/speckit-pro/run-all.sh` passed 3128/3128; `git diff --check` passed. |
 | Cleanup | Skipped | Cleanup extension is not installed; only archive-extension cleanup references were found, and archive cleanup is separate post-merge behavior. |
 | Reviewability Diff Gate | In progress | Pending final `final-reviewability-backstop.sh` run before PR packet or marker emission. |
 

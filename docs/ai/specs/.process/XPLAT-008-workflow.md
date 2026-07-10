@@ -110,16 +110,16 @@ unless a deliberate higher-priority override exists.
 - XPLAT-004 runner package: `speckit-pro/speckit_pro_runner/`
 - XPLAT-005 read-only helper registry and fixtures:
   `speckit-pro/speckit_pro_runner/helpers/` and
-  `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/`
+  `tests/speckit-pro/unit/fixtures/read-only-helpers/`
 - XPLAT-006 install inventory, doctor proof, mutation helper contracts, and
   deferred live-mutation boundaries:
   `speckit-pro/speckit_pro_runner/helpers/install.py`,
   `speckit-pro/speckit_pro_runner/install_inventory.json`, and
-  `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/`
+  `tests/speckit-pro/unit/fixtures/mutation-helpers/`
 - XPLAT-007 Python-authoritative gate handoff:
   `docs/ai/specs/.process/XPLAT-007-design-concept.md`,
   `speckit-pro/speckit_pro_runner/gates/`, and
-  `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/`
+  `tests/speckit-pro/unit/fixtures/runner-gates/`
 - Active Claude surfaces: `speckit-pro/skills/**`, `speckit-pro/agents/**`,
   `speckit-pro/hooks/hooks.json`, and `speckit-pro/README.md`
 - Active Codex surfaces: `speckit-pro/codex-skills/**`,
@@ -731,7 +731,7 @@ For each task, follow this cycle:
 2. Read `docs/ai/specs/.process/XPLAT-008-design-concept.md`, `spec.md`,
    `plan.md`, and `tasks.md`.
 3. Run the current Python gate baseline before editing:
-   `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json`.
+   `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json`.
 4. Use focused tests for each active runtime, payload, docs, UAT, update, and
    repair change before running the broader suite.
 
@@ -757,20 +757,20 @@ For each task, follow this cycle:
 
 ### Slice 2 Verification Evidence
 
-- `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` passed with 40/40 tests.
-- `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness.json` passed with `gate_status: pass`.
-- `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/release-readiness.json` now intentionally returns `expected_failure` for the current native-UAT-pending case; the ready fixture remains covered separately by focused tests.
+- `python3 tests/speckit-pro/unit/test-speckit-pro-gates.py` passed with 40/40 tests.
+- `python3 -m speckit_pro_runner < ../tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness.json` passed with `gate_status: pass`.
+- `python3 -m speckit_pro_runner < ../tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/release-readiness.json` now intentionally returns `expected_failure` for the current native-UAT-pending case; the ready fixture remains covered separately by focused tests.
 - `npx --yes pnpm@10.25.0 --dir docs-site validate` passed, including `88 passed` Playwright smoke tests.
 
 ### Slice 3 Verification Evidence
 
 - `python3 -m json.tool` passed for the UAT matrix, install-health repair, release-readiness, and new request fixtures.
-- `python3 -m py_compile speckit-pro/speckit_pro_runner/gates/release.py speckit-pro/speckit_pro_runner/helpers/install.py speckit-pro/speckit_pro_runner/gates/registry.py speckit-pro/speckit_pro_runner/helpers/registry.py tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` passed.
-- `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` passed with 43/43 tests.
-- `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness.json` passed with `gate_status: pass`.
-- `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/uat-matrix.json` passed with `gate_status: pass` against fixture evidence.
-- `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/install-health-repair.json` passed with trusted missing artifact autoheal refresh evidence.
-- `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/release-readiness.json` returned `expected_failure` against the current native-UAT-pending case, with the UAT matrix blocker preserved.
+- `python3 -m py_compile speckit-pro/speckit_pro_runner/gates/release.py speckit-pro/speckit_pro_runner/helpers/install.py speckit-pro/speckit_pro_runner/gates/registry.py speckit-pro/speckit_pro_runner/helpers/registry.py tests/speckit-pro/unit/test-speckit-pro-gates.py` passed.
+- `python3 tests/speckit-pro/unit/test-speckit-pro-gates.py` passed with 43/43 tests.
+- `python3 -m speckit_pro_runner < ../tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness.json` passed with `gate_status: pass`.
+- `python3 -m speckit_pro_runner < ../tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/uat-matrix.json` passed with `gate_status: pass` against fixture evidence.
+- `python3 -m speckit_pro_runner < ../tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/install-health-repair.json` passed with trusted missing artifact autoheal refresh evidence.
+- `python3 -m speckit_pro_runner < ../tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/release-readiness.json` returned `expected_failure` against the current native-UAT-pending case, with the UAT matrix blocker preserved.
 
 Native Windows/macOS/Linux Claude and Codex UAT is still pending. Fixture-backed
 gate proof does not satisfy T035-T041 or the release-ready support claim.
@@ -779,7 +779,7 @@ gate proof does not satisfy T035-T041 or the release-ready support claim.
 
 - `specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/release-readiness.md` records the blocked release decision, requirement traceability, success-criteria status, non-goal audit, known gaps, reviewer order, and release rule.
 - `bash tests/speckit-pro/run-all.sh --layer 1` passed with 1439/1439 structural checks.
-- `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` passed with 43/43 focused gate tests.
+- `python3 tests/speckit-pro/unit/test-speckit-pro-gates.py` passed with 43/43 focused gate tests.
 - XPLAT-008 active-runtime, payload-completeness, UAT-matrix fixture, install-health repair, and release-readiness runner requests passed from the repository root with `PYTHONPATH=speckit-pro`.
 - `npx --yes pnpm@10.25.0 --dir docs-site validate` passed, including 88 Playwright smoke checks.
 - `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/pr/speckit-pr-packet.json` passed and wrote a fresh packet validation result.
@@ -793,7 +793,7 @@ gate proof does not satisfy T035-T041 or the release-ready support claim.
 - [x] Spec index check passes:
   `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"`
 - [x] Python runner default suite passes:
-  `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json`
+  `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json`
 - [x] Active-runtime no-shell/no-jq guard passes
 - [x] Generated Claude and Codex payload completeness gates pass
 - [x] Release-readiness guard blocks current native-UAT-pending evidence as expected

@@ -7,7 +7,7 @@ capture support is retired at T097. This module retains the deterministic
 parser and renderer used by the test library: it keeps only lines matching
 ``^\\s*(.+?)\\s\\.\\.\\.\\s(PASS|FAIL)$`` (discarding all other, possibly
 interleaved, subprocess stdout), and writes the frozen format to
-``tests/speckit-pro/parity/xplat-010/<script>-baseline.txt``:
+``tests/speckit-pro/parity/bash-to-python/<script>-baseline.txt``:
 
     NNN <verbatim runtime name>   (one per executed _pass/_fail, in order)
     TOTAL: <N>

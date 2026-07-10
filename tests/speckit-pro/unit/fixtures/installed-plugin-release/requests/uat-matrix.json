@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "request_id": "xplat-008-uat-matrix",
+  "helper_id": "release-readiness",
+  "operation": "uat-matrix",
+  "mode": "read_only",
+  "inputs": {
+    "case_file": "tests/speckit-pro/unit/fixtures/installed-plugin-release/uat-matrix-cases.json",
+    "case_id": "ready"
+  }
+}

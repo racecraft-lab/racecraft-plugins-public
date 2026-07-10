@@ -26,7 +26,7 @@ bash tests/run-all.sh --layer 4   # Script unit tests (validate-gate, detect-com
 bash tests/run-all.sh --layer 5   # Agent tool scoping
 
 # Run a single layer-4 test directly
-bash tests/layer4-scripts/test-validate-gate.sh
+bash tests/unit/test-validate-gate.sh
 
 # Layers 2 & 3 require skill-creator plugin + claude -p (slow, AI-based — run manually)
 bash tests/layer2-trigger/run-trigger-evals.sh speckit-coach

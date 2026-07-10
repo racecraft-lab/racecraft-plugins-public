@@ -114,7 +114,7 @@ git checkout 4b8342f42db3223db6955a1390b30949b8caea8c -- specs/prsg-014-optional
 - `python3 -c 'import json; json.load(open("docs/ai/specs/.process/autopilot-state.json"))'`
   passed.
 - `find specs -mindepth 1 -maxdepth 2 -print` returned only `specs/.gitkeep`.
-- `bash tests/speckit-pro/layer4-scripts/test-detect-stack-manager.sh`
+- `bash tests/speckit-pro/unit/test-detect-stack-manager.sh`
   passed `18/18` after its PRSG-014 evidence writes were isolated to a temp
   repo root, and the active `specs` tree remained only `specs/.gitkeep`.
 - `git worktree prune --verbose` removed the stale, prunable PRSG-014 worktree
@@ -140,7 +140,7 @@ git checkout 4b8342f42db3223db6955a1390b30949b8caea8c -- specs/prsg-014-optional
 | `docs/ai/specs/interactive-documentation-roadmap-MOC.md` | Regenerated active SPEC index after cleanup |
 | `docs/ai/specs/.process/PRSG-014-workflow.md` | Recorded merged PR and archive outcome |
 | `docs/ai/specs/.process/autopilot-state.json` | Replaced stale active PRSG-014 state with completed archive state |
-| `tests/speckit-pro/layer4-scripts/test-detect-stack-manager.sh` | Isolated detector evidence writes to a temp repo root so post-archive tests do not recreate active spec artifacts |
+| `tests/speckit-pro/unit/test-detect-stack-manager.sh` | Isolated detector evidence writes to a temp repo root so post-archive tests do not recreate active spec artifacts |
 | `specs/prsg-014-optional-gh-stack-stack-manager-integration` | Removed completed active spec folder |
 
 ## Feature Status

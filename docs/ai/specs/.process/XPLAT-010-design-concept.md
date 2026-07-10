@@ -127,7 +127,7 @@ stop_reason: "natural"
 > Runtime counts (not static grep) catch loop-generated checks; same-PR swap
 > (port + manifest flip + `.sh` delete in one PR) leaves no window where a
 > layer runs zero coverage; committed VERBOSE=true baselines
-> (`tests/speckit-pro/parity/xplat-010/<script>-baseline.txt`) make the diff
+> (`tests/speckit-pro/parity/bash-to-python/<script>-baseline.txt`) make the diff
 > reviewable; running ledger `XPLAT-010-count-ledger.md`; final
 > `XPLAT-010-suite-parity-result.json`.
 

@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-doctor-repair",
+  "helper_id": "doctor-repair",
+  "operation": "doctor-repair",
+  "mode": "dry_run",
+  "inputs": {
+    "install_root": "tests/speckit-pro/unit/fixtures/mutation-helpers/fake-home",
+    "fake_home": true,
+    "inventory": {
+      "files": [
+        {
+          "path": "agents/a.md",
+          "content": "agent\n",
+          "sha256": "skip"
+        }
+      ]
+    }
+  }
+}

@@ -103,10 +103,10 @@ rather than all sixty.
 - NEW scripts/compose-release-notes.py
 - NEW .github/workflows/container-preflight.yml
 - NEW .github/pull_request_template.md
-- NEW tests/speckit-pro/layer4-scripts/fixtures/xplat-010-confinement/allowlist.json
-- NEW tests/speckit-pro/layer4-scripts/fixtures/xplat-010-confinement/confinement-guard-cases.json
-- NEW tests/speckit-pro/layer4-scripts/test-repo-bash-confinement.py
-- NEW tests/speckit-pro/layer4-scripts/test-compose-release-notes.py
+- NEW tests/speckit-pro/unit/fixtures/repository-bash-confinement/allowlist.json
+- NEW tests/speckit-pro/unit/fixtures/repository-bash-confinement/confinement-guard-cases.json
+- NEW tests/speckit-pro/unit/test-repo-bash-confinement.py
+- NEW tests/speckit-pro/unit/test-compose-release-notes.py
 - NEW .claude/hooks/guard-version-triplet.py
 - NEW .claude/hooks/validate-structural.py
 - NEW docs/ai/specs/.process/XPLAT-010-deleted-tests-ledger.md
@@ -120,7 +120,7 @@ rather than all sixty.
 - MODIFIED speckit-pro/speckit_pro_runner/helpers/read_only.py
 - MODIFIED speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json
 - MODIFIED tests/speckit-pro/run-layer-scripts.py
-- MODIFIED tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py
+- MODIFIED tests/speckit-pro/unit/test-speckit-pro-runner.py
 - MODIFIED .github/workflows/pr-checks.yml
 - MODIFIED .github/workflows/release.yml
 - MODIFIED release-please-config.json
@@ -276,7 +276,7 @@ racecraft-plugins-public/
 │   │   └── capture_baseline.py           # NEW (PR 2): VERBOSE PASS/FAIL → baseline capture tool
 │   ├── parity/xplat-010/                 # NEW (PR 2+): committed <script>-baseline.txt files
 │   ├── layer1-structural/                # PRs 3a/3b (20 mechanical) + 4 (MOC + codex/payload): 24 .sh→.py
-│   ├── layer4-scripts/                   # 12 active .sh ported across PRs; +confinement/composer/estimator tests
+│   ├── unit/                   # 12 active .sh ported across PRs; +confinement/composer/estimator tests
 │   ├── layer5-tool-scoping/              # PR 5: validate-tool-scoping.sh → .py
 │   ├── layer7-integration/               # PRs 7a/7b: transcript lib + replay runners → .py
 │   ├── layer8-parity/                    # PR 8: run-parity-fixtures.sh + lib + per-case env-*.sh → Python/data

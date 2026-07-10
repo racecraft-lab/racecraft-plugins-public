@@ -18,8 +18,8 @@ from .mutation import resolve_candidate_path, run_mutation_helper, validate_targ
 from .read_only import find_repo_root, is_relative_to, repo_relative
 
 INVENTORY_NAME = "install_inventory.json"
-FAKE_HOME_FIXTURE_ROOT = Path("tests") / "speckit-pro" / "layer4-scripts" / "fixtures"
-XPLAT_008_FIXTURE_ROOT = FAKE_HOME_FIXTURE_ROOT / "xplat-008-release"
+FAKE_HOME_FIXTURE_ROOT = Path("tests") / "speckit-pro" / "unit" / "fixtures"
+XPLAT_008_FIXTURE_ROOT = FAKE_HOME_FIXTURE_ROOT / "installed-plugin-release"
 DEFAULT_RUNNER_INVOCATION_CASES = XPLAT_008_FIXTURE_ROOT / "runner-invocation-cases.json"
 XPLAT_008_PROMOTION_RECORDS = XPLAT_008_FIXTURE_ROOT / "promotion-records.json"
 DEFAULT_INSTALL_HEALTH_CASES = XPLAT_008_FIXTURE_ROOT / "install-health-repair-cases.json"
@@ -139,7 +139,7 @@ def run_install_health_repair(entry: Any, request: Any, repo_root: Path) -> dict
         return response("input_error", request_id=request.request_id, diagnostics=[case_result])
     case = case_result
 
-    installed_cache_path = str(case.get("installed_cache_path") or "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/fake-home/speckit-pro")
+    installed_cache_path = str(case.get("installed_cache_path") or "tests/speckit-pro/unit/fixtures/installed-plugin-release/fake-home/speckit-pro")
     findings = normalize_install_health_findings(case.get("findings"))
     repair_actions = normalize_install_health_actions(case.get("repair_actions"), findings)
     failures = install_health_action_failures(repair_actions)
@@ -984,7 +984,7 @@ def fake_home_boundary_diagnostic(install_root: Path, repo_root: Path) -> dict[s
         details={"install_root": repo_relative(install_root, repo_root), "allowed_root": repo_relative(allowed_root, repo_root)},
         remediation_summary="Use fake_home only with repo fixture roots until active install cutover.",
         remediation_actions=[
-            "Move the install_root under tests/speckit-pro/layer4-scripts/fixtures.",
+            "Move the install_root under tests/speckit-pro/unit/fixtures.",
             "Use doctor-preflight without fake_home for real installs.",
         ],
     )

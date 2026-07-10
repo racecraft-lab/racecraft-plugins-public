@@ -10,7 +10,7 @@ maps to one counted ``subTest`` unit, with the bash check name reproduced
 verbatim via ``subTest(msg=...)`` for 1:1 baseline parity.
 
 Baseline:
-``tests/speckit-pro/parity/xplat-010/validate-payload-conformance-baseline.txt``
+``tests/speckit-pro/parity/bash-to-python/validate-payload-conformance-baseline.txt``
 (TOTAL: 209).
 """
 

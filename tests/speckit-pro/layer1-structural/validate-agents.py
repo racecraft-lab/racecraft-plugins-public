@@ -7,7 +7,7 @@ execution maps to exactly one counted ``subTest`` unit; each bash check name is
 reproduced verbatim via ``subTest(msg=...)`` so the ordered inventory matches the
 committed baseline 1:1.
 
-Baseline: ``tests/speckit-pro/parity/xplat-010/validate-agents-baseline.txt``
+Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-agents-baseline.txt``
 (TOTAL: 104). Run standalone::
 
     python3 tests/speckit-pro/layer1-structural/validate-agents.py

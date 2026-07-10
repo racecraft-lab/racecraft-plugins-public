@@ -65,10 +65,10 @@ install/full-use/update/autoheal release readiness.
 - `speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md`
 - `dist/codex/speckit-pro/skills/speckit-autopilot/`
 - `dist/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`
-- `tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py`
-- `tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py`
-- `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/`
-- `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/contracts/`
+- `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py`
+- `tests/speckit-pro/unit/test-autopilot-phase-coverage.py`
+- `tests/speckit-pro/unit/fixtures/mutation-helpers/`
+- `tests/speckit-pro/unit/fixtures/mutation-helpers/contracts/`
 - `docs/ai/specs/.process/XPLAT-006-workflow.md`
 - `docs/ai/specs/.process/XPLAT-006-design-concept.md`
 
@@ -112,9 +112,9 @@ git checkout 85e79cd4b5ccc0116a2c5cdd0f04ce274294075f -- specs/xplat-006-mutatio
 | `docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md` | Marked XPLAT-006 archived and XPLAT-007 ready |
 | `docs/ai/specs/cross-platform-plugin-runtime-roadmap-MOC.md` | Replaced the active XPLAT-006 link with an archive pointer and marked XPLAT-007 ready |
 | `docs/ai/specs/.process/autopilot-state.json` | Marked XPLAT-006 as post-merge archived state |
-| `tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py` | Repointed phase-coverage schema lookup away from active `specs/**` |
-| `tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py` | Repointed mutation-helper schema lookup away from active `specs/**` |
-| `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/contracts/` | Preserved XPLAT-006 contract schemas needed by Layer 4 helper coverage after cleanup |
+| `tests/speckit-pro/unit/test-autopilot-phase-coverage.py` | Repointed phase-coverage schema lookup away from active `specs/**` |
+| `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` | Repointed mutation-helper schema lookup away from active `specs/**` |
+| `tests/speckit-pro/unit/fixtures/mutation-helpers/contracts/` | Preserved XPLAT-006 contract schemas needed by Layer 4 helper coverage after cleanup |
 | `specs/xplat-006-mutation-install-pr-emission-helper-port/` | Removed from active `specs/**` after archive |
 
 ## Post-Cleanup Verification
@@ -122,8 +122,8 @@ git checkout 85e79cd4b5ccc0116a2c5cdd0f04ce274294075f -- specs/xplat-006-mutatio
 - `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh .`
 - `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .`
 - `find specs -mindepth 1 -maxdepth 4 -print`
-- `python3 tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py`
-- `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py`
+- `python3 tests/speckit-pro/unit/test-autopilot-phase-coverage.py`
+- `python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py`
 - `git diff --check`
 - `bash tests/speckit-pro/run-all.sh`
 
@@ -146,7 +146,7 @@ behavior, or public platform claims.
 ## Conflicts Resolved
 - The merged XPLAT-006 Layer 4 mutation and phase-coverage tests referenced
   contract schemas under the active spec directory. The schemas were copied to
-  `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/contracts/` and
+  `tests/speckit-pro/unit/fixtures/mutation-helpers/contracts/` and
   the tests were repointed before removing the active spec folder.
 - The roadmap and MOC still described XPLAT-006 as in progress after PR #281
   merged. This cleanup marks XPLAT-006 archived and XPLAT-007 ready.

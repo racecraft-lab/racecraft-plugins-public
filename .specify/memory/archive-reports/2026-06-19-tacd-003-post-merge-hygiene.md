@@ -48,8 +48,8 @@
   - `speckit-pro/skills/speckit-autopilot/SKILL.md`
   - `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`
   - `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh`
-  - `tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh`
-  - `tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh`
+  - `tests/speckit-pro/unit/test-check-prerequisites.sh`
+  - `tests/speckit-pro/unit/test-generate-spec-index.sh`
   - `dist/claude/speckit-pro/`
   - `dist/codex/speckit-pro/`
 - CI evidence:

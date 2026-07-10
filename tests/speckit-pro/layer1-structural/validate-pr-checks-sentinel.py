@@ -21,7 +21,7 @@ PR 5 later updates this ported validator for the CI dispatch swap (tasks T049).
 
 PR 5 extends the ported validator for the docs-toolchain CI dispatch swap.
 
-Baseline: ``tests/speckit-pro/parity/xplat-010/validate-pr-checks-sentinel-baseline.txt``
+Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-pr-checks-sentinel-baseline.txt``
 (TOTAL: 30).
 """
 

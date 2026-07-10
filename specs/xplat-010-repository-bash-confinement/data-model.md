@@ -29,7 +29,7 @@ Entities section + Clarifications; JSON/format contracts live under `contracts/`
 
 ## 2. Confinement Guard Allowlist
 
-- **File**: `tests/speckit-pro/layer4-scripts/fixtures/xplat-010-confinement/allowlist.json`
+- **File**: `tests/speckit-pro/unit/fixtures/repository-bash-confinement/allowlist.json`
   (NEW, PR 10). **Contract**: `contracts/confinement-allowlist.schema.json` (rhymes with the
   XPLAT-009 `historical-allowlist-entry.schema.json`).
 - **Purpose**: Fail-closed list of exactly the 10 vendored `.specify/**` upstream Spec Kit
@@ -48,7 +48,7 @@ Entities section + Clarifications; JSON/format contracts live under `contracts/`
 
 ## 3. Count-Parity Baseline
 
-- **Files**: `tests/speckit-pro/parity/xplat-010/<script>-baseline.txt` (NEW, PR 2+; one per
+- **Files**: `tests/speckit-pro/parity/bash-to-python/<script>-baseline.txt` (NEW, PR 2+; one per
   `(script, invocation-mode)` pair). **Contract**: `contracts/count-parity-baseline.contract.md`.
 - **Purpose**: Committed per-script capture of the ordered check-name inventory + runtime
   count, proving 1:1 preservation on each port.
@@ -115,7 +115,7 @@ Entities section + Clarifications; JSON/format contracts live under `contracts/`
 
 - **Runner op**: `estimate-spec-size` read-only helper (NEW, PR 13; `helpers/registry.py` +
   `read_only.py`). **Contract**: `contracts/estimate-spec-size.schema.json`. **Golden
-  fixtures**: `tests/speckit-pro/layer4-scripts/fixtures/estimate-spec-size/` (already present).
+  fixtures**: `tests/speckit-pro/unit/fixtures/estimate-spec-size/` (already present).
 - **Purpose**: Restore the scoping estimator the grill-me/speckit-prd skills call (FR-025/US7).
 - **Fields**: inputs = size signals `{user_stories, files, frs}` (lenient coercion of
   non-numeric/negative); result = `{estimated_loc (int ≥ 0), suggested_slices (int ≥ 1),

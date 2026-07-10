@@ -196,7 +196,7 @@ The racecraft-plugins-public marketplace repo has no automated versioning infras
 - release-please-config.json at repo root configures per-plugin release behavior
 - .release-please-manifest.json at repo root tracks current versions
 - scripts/sync-marketplace-versions.sh is a standalone script called by CI (SPEC-003) but testable independently
-- Layer 4 tests go in speckit-pro/tests/layer4-scripts/ following existing patterns
+- Layer 4 tests go in speckit-pro/tests/unit/ following existing patterns
 - The sync script must be robust: handle missing files, multiple plugins, idempotent execution
 
 ## Existing Infrastructure
@@ -309,8 +309,8 @@ Focus on Repository Foundation requirements:
 ## Constraints
 - Config files at repo root: release-please-config.json, .release-please-manifest.json
 - Script at: scripts/sync-marketplace-versions.sh
-- Tests at: speckit-pro/tests/layer4-scripts/test-sync-marketplace-versions.sh
-- Must follow existing test patterns in speckit-pro/tests/layer4-scripts/
+- Tests at: speckit-pro/tests/unit/test-sync-marketplace-versions.sh
+- Must follow existing test patterns in speckit-pro/tests/unit/
 ```
 
 ### Tasks Results
@@ -437,7 +437,7 @@ racecraft-plugins-public/
 │   │   └── plugin.json           # Version source of truth (managed by release-please)
 │   └── tests/
 │       ├── lib/assertions.sh     # Shared test assertions
-│       ├── layer4-scripts/       # Script unit tests
+│       ├── unit/       # Script unit tests
 │       │   └── test-sync-marketplace-versions.sh  # NEW
 │       └── run-all.sh            # Test orchestrator
 ├── release-please-config.json    # NEW: per-plugin release configuration

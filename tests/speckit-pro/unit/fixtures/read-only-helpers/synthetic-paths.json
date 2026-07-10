@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "cases": [
+    {
+      "case_id": "windows-style-repo-relative",
+      "input": "specs\\xplat-005-read-only-helper-port\\spec.md",
+      "expected": "accepted"
+    },
+    {
+      "case_id": "spaces-in-path",
+      "input": "tests/speckit-pro/unit/fixtures/read-only-helpers/path with spaces/spec.md",
+      "expected": "accepted"
+    },
+    {
+      "case_id": "traversal-escape",
+      "input": "../outside.md",
+      "expected": "unsupported_path"
+    },
+    {
+      "case_id": "symlink-escape",
+      "input": "tests/speckit-pro/unit/fixtures/read-only-helpers/symlink-outside.md",
+      "expected": "unsupported_path"
+    },
+    {
+      "case_id": "no-bash-substrate",
+      "input": "PATH without bash must fail as subprocess_launch_failed or missing_prerequisite, not mutate state",
+      "expected": "fail_closed"
+    }
+  ]
+}

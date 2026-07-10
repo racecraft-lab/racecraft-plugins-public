@@ -122,7 +122,7 @@ the 1:1 UX requirement).
 `{passed}/{total}` counts every executed assertion (loop-generated **and** non-loop grouped),
 reconciling names 1:1 via `subTest(msg=...)`; (2) `capture_baseline.py` — the baseline capture
 tool that runs a bash script under `VERBOSE=true`, parses only lines matching
-`^\s*(.+?)\s\.\.\.\s(PASS|FAIL)$`, and writes `tests/speckit-pro/parity/xplat-010/<script>-baseline.txt`
+`^\s*(.+?)\s\.\.\.\s(PASS|FAIL)$`, and writes `tests/speckit-pro/parity/bash-to-python/<script>-baseline.txt`
 in the frozen format (`NNN <name>` per outcome + `TOTAL: <N>`), failing loudly on an
 empty/stale name.
 
@@ -145,7 +145,7 @@ implementations, and bare `result.testsRun` silently under-counts subTests.
 comparison_mode, authoritative_command}`) implemented via `read_only.py`
 (`run_registered_helper`). Inputs carry the size signals the grill-me/speckit-prd skills send
 (`user_stories`, `files`, `frs`); output is `{estimated_loc, suggested_slices, status}`.
-Golden fixtures already exist at `tests/speckit-pro/layer4-scripts/fixtures/estimate-spec-size/`
+Golden fixtures already exist at `tests/speckit-pro/unit/fixtures/estimate-spec-size/`
 (`--files 20` → 800/2/warn; `--files 11` → 440/2/warn; bad input coerced to 0/1/ok) and pin
 the exact formula and thresholds. Distinct from the existing `estimate-reviewable-loc` helper.
 

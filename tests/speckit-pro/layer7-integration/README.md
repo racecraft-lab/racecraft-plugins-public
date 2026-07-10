@@ -306,7 +306,7 @@ Defaults:
 | L1 | File structure / frontmatter | Fast |
 | L2 | Trigger evals (does the right skill activate?) | Slow (AI) |
 | L3 | Functional evals (does each skill produce the right output?) | Slow (AI) |
-| L4 | Python-dispatched script unit tests (incl. `transcript_helpers.py`) | Fast |
+| L4 | Python unit and contract tests (incl. `transcript_helpers.py`) | Fast |
 | L5 | Agent tool-scoping | Fast |
 | L6 | Agent efficiency benchmarks | Slow (AI) |
 | **L7** | **Multi-agent dispatch graph** | **Fast (replay) / Slow (live)** |

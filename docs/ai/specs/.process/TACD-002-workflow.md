@@ -519,8 +519,8 @@ still blocking unrelated undeclared files.
 
 | Proof | Result |
 |-------|--------|
-| Focused marker emission tests | `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`: `181/181` passed |
-| Marker guidance regression tests | `bash tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh`: `52/52` passed |
+| Focused marker emission tests | `bash tests/speckit-pro/unit/test-multi-pr-emission.sh`: `181/181` passed |
+| Marker guidance regression tests | `bash tests/speckit-pro/unit/test-reviewability-marker-guidance.sh`: `52/52` passed |
 | Layer 3 eval fixture loading | Claude autopilot evals loaded `26`; Codex autopilot evals loaded `33` |
 | Full deterministic suite | `bash tests/speckit-pro/run-all.sh`: `3067/3067` passed |
 | Final reviewability backstop | Full diff remains size-blocked at `73` files with `5` primary surfaces and `0` reviewable LOC; valid marker plan, fingerprint matched, outcome `marker_split` |
@@ -568,8 +568,8 @@ still blocking unrelated undeclared files.
 
 - `git diff --check`: passed.
 - `bash tests/speckit-pro/run-all.sh --layer 1`: `1024/1024` passed.
-- `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`: `181/181` passed.
-- `bash tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh`: `52/52` passed.
+- `bash tests/speckit-pro/unit/test-multi-pr-emission.sh`: `181/181` passed.
+- `bash tests/speckit-pro/unit/test-reviewability-marker-guidance.sh`: `52/52` passed.
 - Layer 3 eval fixture helpers loaded Claude/Codex autopilot evals: `26` / `33`.
 - `bash tests/speckit-pro/run-all.sh`: `3067/3067` passed.
 - Marker emission dry validation: 6 marker slices validated without branch or PR mutation.

@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-validate-gate",
+  "helper_id": "validate-gate",
+  "operation": "validate-gate",
+  "mode": "read_only",
+  "inputs": {
+    "gate": "G7",
+    "feature_dir": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature"
+  }
+}

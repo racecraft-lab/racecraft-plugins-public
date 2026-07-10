@@ -30,7 +30,7 @@ the native UAT requirement by itself.
 | Active runtime surface cutover | Complete | `specs/.../.process/active-runtime-inventory.md`, source skill/agent/hook updates, active-runtime guard request |
 | Generated payload rebuild | Complete | `dist/claude/speckit-pro/**`, `dist/codex/speckit-pro/**`, payload completeness request |
 | Public docs and README claim alignment | Complete | Root README, plugin README, docs-site install/first-run/troubleshooting/security/update/contribute pages |
-| UAT matrix gate contract | Complete | `tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/uat-matrix-cases.json`, `requests/uat-matrix.json` |
+| UAT matrix gate contract | Complete | `tests/speckit-pro/unit/fixtures/installed-plugin-release/uat-matrix-cases.json`, `requests/uat-matrix.json` |
 | Install-health repair contract | Complete | `install-health-repair-cases.json`, `requests/install-health-repair.json`, `helpers/install.py` |
 | Native UAT evidence | Blocked | T035-T041 remain incomplete; `docs/ai/specs/.process/XPLAT-008-uat-claude-macos.md` and `docs/ai/specs/.process/XPLAT-008-uat-codex-macos.md` record local macOS partial passes, and the matrix remains non-release-ready |
 | Release decision | Blocked | Release-readiness gate must not be used to claim native support until real rows replace fixture evidence |
@@ -40,14 +40,14 @@ the native UAT requirement by itself.
 | Command | Result | Notes |
 |---|---|---|
 | `python3 -m json.tool` on XPLAT-008 fixture/request JSON | Pass | UAT matrix, install-health repair, release-readiness, and request fixtures parse |
-| `python3 -m py_compile speckit-pro/speckit_pro_runner/gates/release.py speckit-pro/speckit_pro_runner/helpers/install.py speckit-pro/speckit_pro_runner/gates/registry.py speckit-pro/speckit_pro_runner/helpers/registry.py tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` | Pass | Runner gate/helper code compiles |
+| `python3 -m py_compile speckit-pro/speckit_pro_runner/gates/release.py speckit-pro/speckit_pro_runner/helpers/install.py speckit-pro/speckit_pro_runner/gates/registry.py speckit-pro/speckit_pro_runner/helpers/registry.py tests/speckit-pro/unit/test-speckit-pro-gates.py` | Pass | Runner gate/helper code compiles |
 | `bash tests/speckit-pro/run-all.sh --layer 1` | Pass | 1439/1439 structural checks passed |
-| `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` | Pass | 47/47 focused Layer 4 gate tests |
-| `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/active-runtime-guard.json` | Pass | Active runtime no-shell/no-jq guard |
-| `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness.json` | Pass | Generated payload completeness for Claude and Codex payloads |
-| `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/uat-matrix.json` | Pass | Fixture UAT matrix validates the positive gate case only |
-| `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/install-health-repair.json` | Pass | Trusted missing artifact autoheal fixture passes |
-| `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/release-readiness.json` | Pass | Promoted ready fixture validates the passing release-readiness contract |
+| `python3 tests/speckit-pro/unit/test-speckit-pro-gates.py` | Pass | 47/47 focused Layer 4 gate tests |
+| `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/active-runtime-guard.json` | Pass | Active runtime no-shell/no-jq guard |
+| `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness.json` | Pass | Generated payload completeness for Claude and Codex payloads |
+| `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/uat-matrix.json` | Pass | Fixture UAT matrix validates the positive gate case only |
+| `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/install-health-repair.json` | Pass | Trusted missing artifact autoheal fixture passes |
+| `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/release-readiness.json` | Pass | Promoted ready fixture validates the passing release-readiness contract |
 | Direct `release-readiness-xplat008` request for case `current-native-uat-pending` | Expected failure | Current native UAT pending case blocks with `release_readiness.gate_status: fail`, `status: expected_failure`, and `uat-matrix rows=0` |
 | Isolated Claude/macOS installed-cache UAT | Partial pass | `HOME=/private/tmp/xplat008-claude-macos-uat.gFoutU` install/list/details, bundled skills/agents/hook, runner runtime-info, runner preflight, and plugin update passed; model-backed first use was policy-blocked; see `docs/ai/specs/.process/XPLAT-008-uat-claude-macos.md` |
 | Isolated Codex/macOS installed-cache UAT | Partial pass | `CODEX_HOME=/private/tmp/xplat008-codex-macos-uat.1F8LdV` install/list, bundled skills/agents, runner runtime-info, and preflight passed; isolated first use was auth-blocked; see `docs/ai/specs/.process/XPLAT-008-uat-codex-macos.md` |

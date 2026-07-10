@@ -33,7 +33,7 @@ line counts + per-skill guard-section size. Adding/removing a skill or editing a
 source ``SKILL.md`` heading/length changes the inventory and requires recapturing
 this baseline.
 
-Baseline: ``tests/speckit-pro/parity/xplat-010/validate-payload-completeness-baseline.txt``
+Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-payload-completeness-baseline.txt``
 (TOTAL: 52).
 """
 

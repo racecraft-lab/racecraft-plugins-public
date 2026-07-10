@@ -16,7 +16,7 @@ checkout paths into the skills-directory and built-payload-tree checks. As with
 the PR 3a pointer/resolution ports, the absolute repo-root prefix is environment
 noise and is normalized to repo-relative paths in both the port and baseline.
 
-Baseline: ``tests/speckit-pro/parity/xplat-010/validate-skill-capability-pointers-baseline.txt``
+Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-skill-capability-pointers-baseline.txt``
 (TOTAL: 55).
 """
 

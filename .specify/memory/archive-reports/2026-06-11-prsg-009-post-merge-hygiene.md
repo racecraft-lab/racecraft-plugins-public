@@ -26,10 +26,10 @@
 - Final PR head commit: `74fb0eecec0b3bda8c0c180dddc025cbdd2d2f4a`
 - Fixture-decoupling prerequisite: PRSG-009 contracts preserved under `speckit-pro/skills/speckit-autopilot/contracts/`, and `multi-pr-emission.sh` now reports payload-included contract paths.
 - Pre-cleanup guards:
-  - `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` passed `81/81`
-  - `bash tests/speckit-pro/layer4-scripts/test-restack.sh` passed `32/32`
-  - `bash tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh` passed `44/44`
-  - `bash tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh` passed `86/86`
+  - `bash tests/speckit-pro/unit/test-multi-pr-emission.sh` passed `81/81`
+  - `bash tests/speckit-pro/unit/test-restack.sh` passed `32/32`
+  - `bash tests/speckit-pro/unit/test-generate-pr-body.sh` passed `44/44`
+  - `bash tests/speckit-pro/unit/test-generate-spec-index.sh` passed `86/86`
 - Post-cleanup verification: `bash tests/speckit-pro/run-all.sh` passed `2300/2300`
 
 ## Excluded Current Spec

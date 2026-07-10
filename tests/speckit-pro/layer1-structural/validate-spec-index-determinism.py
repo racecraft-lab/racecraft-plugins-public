@@ -15,7 +15,7 @@ verbose mode the second appears as a bare ``PASS``. The port records both as
 counted subTests with the same name, preserving the true ``16/16`` assertion
 count instead of the malformed 15-line verbose capture.
 
-Baseline: ``tests/speckit-pro/parity/xplat-010/validate-spec-index-determinism-baseline.txt``
+Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-spec-index-determinism-baseline.txt``
 (TOTAL: 16).
 """
 

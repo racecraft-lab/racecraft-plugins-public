@@ -289,7 +289,7 @@ emission.
 
 The active spec folder was removed from `specs/**` cleanup on 2026-06-10 after
 the Layer 4 planner harness was decoupled from the live spec schema by vendoring
-`tests/speckit-pro/layer4-scripts/fixtures/plan-layers/contracts/plan-layers.schema.json`.
+`tests/speckit-pro/unit/fixtures/plan-layers/contracts/plan-layers.schema.json`.
 
 ---
 
@@ -955,7 +955,7 @@ Added deterministic UAT runbook generation and PR-body embedding: a script that
 extracts user stories, FR/SC coverage, rollback, clarification markers, and
 self-review context into a stable runbook, plus PR-body compatibility handling.
 The full-spec test dependency remains preserved in the vendored
-`tests/speckit-pro/layer4-scripts/fixtures/spec-full-snapshot.md` fixture.
+`tests/speckit-pro/unit/fixtures/uat-runbook-generation/full-spec.md` fixture.
 
 ### Cleanup Note
 
@@ -1059,7 +1059,7 @@ evidence dumps or patronizing labels from entering PR descriptions.
 
 The active spec folder was removed after PR stack #164-#168 merged. The PRSG-012
 feature and marker-plan test dependencies are preserved under
-`tests/speckit-pro/layer4-scripts/fixtures/`; recovery commands are recorded in
+`tests/speckit-pro/unit/fixtures/`; recovery commands are recorded in
 `.specify/memory/archive-reports/2026-06-13-merged-specs-post-merge-hygiene.md`.
 
 ---
@@ -1725,11 +1725,11 @@ detection, and runner source metadata checks.
 The runner records identity and integrity through
 `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` and
 `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256`. The Layer 4 runner
-test suite and fixtures live under `tests/speckit-pro/layer4-scripts/`,
+test suite and fixtures live under `tests/speckit-pro/unit/`,
 including the archived runbook fixture contract now preserved at
-`tests/speckit-pro/layer4-scripts/fixtures/speckit-pro-runner/platform-runbook-fixtures.md`
+`tests/speckit-pro/unit/fixtures/speckit-pro-runner/platform-runbook-fixtures.md`
 and the changed-files fallback fixture at
-`tests/speckit-pro/layer4-scripts/fixtures/speckit-pro-runner/changed-files-xplat-004.txt`.
+`tests/speckit-pro/unit/fixtures/speckit-pro-runner/runner-foundation-changed-files.txt`.
 
 ### Requirements Preserved
 
@@ -1808,7 +1808,7 @@ Archived into project memory on 2026-07-03 after PR #276 merged at
 `c4642f50ae99172170798a49f0c8fd990891c0f9`. The active
 `specs/xplat-005-read-only-helper-port/` folder was removed from `specs/**` in
 post-merge cleanup after preserving the helper parity spec inputs under
-`tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/xplat-005-feature/`.
+`tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/`.
 Recovery commands and provenance are recorded in
 `.specify/memory/archive-reports/2026-07-03-xplat-005-post-merge-hygiene.md`.
 
@@ -1866,7 +1866,7 @@ Archived into project memory on 2026-07-04 after PR #281 merged at
 `85e79cd4b5ccc0116a2c5cdd0f04ce274294075f`. The active
 `specs/xplat-006-mutation-install-pr-emission-helper-port/` folder was removed
 from `specs/**` in post-merge cleanup after preserving contract fixtures under
-`tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/contracts/`.
+`tests/speckit-pro/unit/fixtures/mutation-helpers/contracts/`.
 Recovery commands and provenance are recorded in
 `.specify/memory/archive-reports/2026-07-04-xplat-006-post-merge-hygiene.md`.
 
@@ -1920,7 +1920,7 @@ Archived into project memory on 2026-07-05 after the final XPLAT-007 PR #287
 merged at `0ff2d8d731698cde02b334cdc3b2a377216b5d45`. The active
 `specs/xplat-007-python-tooling-and-release-gate-migration/` folder was removed
 from `specs/**` in post-merge cleanup after preserving contract schemas under
-`tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/contracts/`.
+`tests/speckit-pro/unit/fixtures/runner-gates/contracts/`.
 Recovery commands and provenance are recorded in
 `.specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md`.
 
@@ -1975,7 +1975,7 @@ Archived into project memory on 2026-07-07 after PR #292 merged at
 `9507fd452a3e344c1912b449f3bb4f2c38437b38`. The active
 `specs/xplat-008-claude-codex-cutover-universal-install-release-gate/` folder
 was removed from `specs/**` in post-merge cleanup after preserving contract
-schemas under `tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/contracts/`
+schemas under `tests/speckit-pro/unit/fixtures/installed-plugin-release/contracts/`
 and release/UAT evidence under `docs/ai/specs/.process/`. Recovery commands and
 provenance are recorded in
 `.specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md`.
@@ -2032,7 +2032,7 @@ Archived into project memory on 2026-07-08 after PR #297 merged at
 `7bc6be1a9faaa3113f8db903188ddb49a445e7ce`. The active
 `specs/xplat-009-plugin-source-and-payload-bash-eradication/` folder was
 removed from `specs/**` in post-merge cleanup after preserving contract schemas
-under `tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/contracts/`;
+under `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/contracts/`;
 zero-Bash guard, payload-completeness, installed-cache proof, and
 release-readiness evidence was already preserved under
 `docs/ai/specs/.process/`. Recovery commands and provenance are recorded in

@@ -18,7 +18,7 @@ committed baseline records — the repo-relative form (``speckit-pro/agents``,
 normalized. The extracted path tokens themselves are already repo-relative
 (``speckit-pro/...``), so ``resolves under ...`` names are verbatim.
 
-Baseline: ``tests/speckit-pro/parity/xplat-010/validate-capability-resolution-baseline.txt``
+Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-capability-resolution-baseline.txt``
 (TOTAL: 43).
 """
 

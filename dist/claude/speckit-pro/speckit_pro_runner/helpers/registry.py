@@ -76,8 +76,8 @@ class MutationEntry:
 
 
 SCRIPT_BASE = "speckit-pro/skills/speckit-autopilot/scripts"
-REQUEST_FIXTURE_BASE = "tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests"
-MUTATION_REQUEST_FIXTURE_BASE = "tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/requests"
+REQUEST_FIXTURE_BASE = "tests/speckit-pro/unit/fixtures/read-only-helpers/requests"
+MUTATION_REQUEST_FIXTURE_BASE = "tests/speckit-pro/unit/fixtures/mutation-helpers/requests"
 
 
 def authoritative_request(helper_id: str) -> str:
@@ -285,7 +285,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         None,
         "golden_only",
         "fixture_semantic",
-        "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/install-health-repair.json",
+        "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/install-health-repair.json",
         ("trusted-missing", "trusted-stale", "unsafe-manual-remediation", "broad-reinstall-rejected"),
         rollback="Keep autoheal limited to checksum-backed fixture evidence until native install evidence is complete.",
     ),

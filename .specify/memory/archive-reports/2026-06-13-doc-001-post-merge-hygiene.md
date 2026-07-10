@@ -106,7 +106,7 @@ git checkout 4ddc1a5ce24de50d07695669fce34709c60147b3 -- specs/doc-001-static-do
 - Stale active-link scan found no DOC-001 generated MOC link, pending roadmap status, or `Blocked by DOC-001` text outside archive/recovery records.
 - `git diff --check` and `git diff --cached --check` passed.
 - Initial `bash tests/speckit-pro/run-all.sh` run reached `2914/2915`; only `test-plan-layers` failed its generated 200-task wall-clock threshold.
-- Focused `bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh` passed `85/85` after making the threshold configurable with a 2000ms default.
+- Focused `bash tests/speckit-pro/unit/test-plan-layers.sh` passed `85/85` after making the threshold configurable with a 2000ms default.
 - Final `bash tests/speckit-pro/run-all.sh` passed `2915/2915`.
   - Layer 1 structural: `549/549`.
   - Layer 1 Codex structural: `430/430`.
@@ -129,7 +129,7 @@ git checkout 4ddc1a5ce24de50d07695669fce34709c60147b3 -- specs/doc-001-static-do
 | `docs/ai/specs/.process/DOC-001-workflow.md` | Recorded post-merge archive cleanup |
 | `docs/ai/specs/.process/autopilot-state.json` | Recorded archive cleanup state |
 | `specs/doc-001-static-docs-framework-and-ia-spike` | Removed completed active spec folder |
-| `tests/speckit-pro/layer4-scripts/test-plan-layers.sh` | Kept the generated 200-task performance test as a sanity guard but made its wall-clock budget configurable to avoid false failures on slower local/CI runners |
+| `tests/speckit-pro/unit/test-plan-layers.sh` | Kept the generated 200-task performance test as a sanity guard but made its wall-clock budget configurable to avoid false failures on slower local/CI runners |
 
 ## Feature Status
 

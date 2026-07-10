@@ -21,8 +21,8 @@
 - Worktree state before archival edits: clean
 - Merge commit: `deccd8a2a9916e11edfad43df8ceef95a756dc04`
 - Tree reference: `c022c26fd113bfd366da53ef6c9b1fc6392f920e`
-- Pre-cleanup guard: `bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh` passed `66/66`
-- Fixture-decoupling prerequisite: planner schema copied to `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/contracts/plan-layers.schema.json`
+- Pre-cleanup guard: `bash tests/speckit-pro/unit/test-plan-layers.sh` passed `66/66`
+- Fixture-decoupling prerequisite: planner schema copied to `tests/speckit-pro/unit/fixtures/plan-layers/contracts/plan-layers.schema.json`
 
 ## Excluded Current Spec
 
@@ -66,8 +66,8 @@ git checkout deccd8a2a9916e11edfad43df8ceef95a756dc04 -- specs/prsg-008-layer-pl
 | `docs/ai/specs/.process/autopilot-state.json` | Recorded PRSG-008 archive cleanup completion |
 | `AGENTS.md` | Added PRSG-008 archive cleanup note |
 | `CLAUDE.md` | Removed stale active-spec plan pointer |
-| `tests/speckit-pro/layer4-scripts/test-plan-layers.sh` | Repointed schema validation to vendored fixture |
-| `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/` | Repointed fixtures to durable plugin files and added schema fixture |
+| `tests/speckit-pro/unit/test-plan-layers.sh` | Repointed schema validation to vendored fixture |
+| `tests/speckit-pro/unit/fixtures/plan-layers/` | Repointed fixtures to durable plugin files and added schema fixture |
 | `specs/prsg-008-layer-planner/` | Removed from active `specs/**`; recovery commands recorded above |
 
 ## Feature Status

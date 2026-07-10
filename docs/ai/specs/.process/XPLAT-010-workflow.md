@@ -141,7 +141,7 @@ Each phase requires **human review and approval** before proceeding:
 |------|-------|
 | check-prerequisites | all_pass=true (specify CLI 0.11.8; project init, constitution, commands, workflow file OK) |
 | Branch state | worktree=true; branch `xplat-010-repository-bash-confinement`; non-numeric namespace → `.specify/feature.json` pins `specs/xplat-010-repository-bash-confinement` (vendored scripts support the feature.json bypass) |
-| PROJECT_COMMANDS | detect-commands: stack unknown / all N/A. Effective commands (CLAUDE.md): FULL_VERIFY + UNIT_TEST = `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json`; TOOLCHAIN = same runner with `run-toolchain-preflight.json`; DOCS = `pnpm --dir docs-site validate`; BUILD/TYPECHECK/LINT = N/A |
+| PROJECT_COMMANDS | detect-commands: stack unknown / all N/A. Effective commands (CLAUDE.md): FULL_VERIFY + UNIT_TEST = `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json`; TOOLCHAIN = same runner with `run-toolchain-preflight.json`; DOCS = `pnpm --dir docs-site validate`; BUILD/TYPECHECK/LINT = N/A |
 | PRESET_CONVENTIONS | speckit-pro-reviewability v1.0.0 active; spec/plan/tasks templates resolve from `.specify/presets/speckit-pro-reviewability/templates/` |
 | CONFIDENCE_GATE_MODE | `advisory` (resolved at Step 0.6b; G6.5 reads this value, resolver not re-run) |
 | AGENT_TEAMS_AVAILABLE | `true` (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1; Claude Code 2.1.205 ≥ 2.1.32) |
@@ -169,7 +169,7 @@ are logged in this section as they surface.
 `7bc6be1a`, shipped in 2.18.0); current target excluded; apply mode with
 `safeToApplyCleanup=true`; commit `d3c95f73` (27 files, +546/−1704): spec dir
 removed with recovery commands recorded, 4 contract schemas relocated to
-`tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/contracts/`,
+`tests/speckit-pro/unit/fixtures/plugin-bash-confinement/contracts/`,
 memory/AGENTS/roadmap/MOC updated, archive report at
 `.specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md`.
 Post-commit verification by the sweep: gates test 54/54, runner test 10/10,
@@ -720,8 +720,8 @@ For each task, follow this cycle:
 Before starting any task:
 1. Run the toolchain preflight and default-suite gates from the repo root and
    confirm they pass before making changes:
-   PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-toolchain-preflight.json
-   PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json
+   PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-toolchain-preflight.json
+   PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json
 2. Verify you are on xplat-010-repository-bash-confinement (or the slice
    branch for the current PR), never main
 3. Set PYTHONDONTWRITEBYTECODE=1 for all runner invocations
@@ -730,9 +730,9 @@ Before starting any task:
 - House test convention: unittest, custom __main__ printing
   "<label>: {passed}/{total} passed", one test method per former set_test,
   counted subTest for loops. Match existing ported modules under
-  tests/speckit-pro/layer4-scripts/ for style.
+  tests/speckit-pro/unit/ for style.
 - Port protocol per slice: capture VERBOSE=true bash baseline into
-  tests/speckit-pro/parity/xplat-010/<script>-baseline.txt → port with names
+  tests/speckit-pro/parity/bash-to-python/<script>-baseline.txt → port with names
   preserved 1:1 → dual-run diff recorded in the PR body → manifest flip →
   .sh delete. All in one PR.
 - Shipped-runner changes (PRs 2, 7b, 8, 9, 10, and 13 only): after any

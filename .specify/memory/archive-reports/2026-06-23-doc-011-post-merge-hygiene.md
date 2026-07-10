@@ -52,7 +52,7 @@
   - `dist/claude/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh`
   - `dist/codex/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh`
   - `tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.sh`
-  - `tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh`
+  - `tests/speckit-pro/unit/test-generate-spec-index.sh`
 - CI evidence:
   - PR #243 checks passed: CodeQL, Analyze actions/javascript-typescript/python, detect, validate-pr-title, validate-workflows, validate-docs, test (speckit-pro), and validate-plugins.
   - PR Checks run: `https://github.com/racecraft-lab/racecraft-plugins-public/actions/runs/28051095171`

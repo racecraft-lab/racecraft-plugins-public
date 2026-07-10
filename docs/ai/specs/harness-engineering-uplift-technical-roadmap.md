@@ -327,7 +327,7 @@ Budget result: within budget
 
 - `speckit-pro/speckit_pro_runner/helpers/` - Python helper registry and helper
   records.
-- `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/` - Existing
+- `tests/speckit-pro/unit/fixtures/read-only-helpers/` - Existing
   helper fixture pattern.
 - `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md` -
   Capability-first guidance.
