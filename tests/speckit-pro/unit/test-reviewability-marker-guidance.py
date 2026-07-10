@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import json
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -34,6 +36,15 @@ SOURCE_PATHS = {
     / "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
 }
 BASELINE = REPO_ROOT / "tests/speckit-pro/parity/bash-to-python/test-reviewability-marker-guidance-baseline.txt"
+MARKER_PLAN_SCHEMA_PATHS = (
+    REPO_ROOT / "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
+    REPO_ROOT / "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
+    REPO_ROOT / "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
+    REPO_ROOT
+    / "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
+    REPO_ROOT
+    / "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
+)
 
 
 CHECKS = (
@@ -194,6 +205,27 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
         for name, body_key, expected in CHECKS:
             with self.subTest(msg=name):
                 self.assertIn(expected, self.bodies[body_key])
+
+    def test_pr_marker_plan_schema_accepts_polish_without_weakening_existing_markers(self) -> None:
+        schema_bodies = [path.read_bytes() for path in MARKER_PLAN_SCHEMA_PATHS]
+        self.assertTrue(all(body == schema_bodies[0] for body in schema_bodies[1:]))
+
+        schema = json.loads(schema_bodies[0])
+        marker_properties = schema["$defs"]["marker"]["properties"]
+        marker_id_pattern = re.compile(marker_properties["id"]["pattern"])
+        marker_kinds = marker_properties["kind"]["enum"]
+
+        for marker_id in ("foundation", "us1", "us12-part3", "full-spec", "polish"):
+            with self.subTest(marker_id=marker_id):
+                self.assertIsNotNone(marker_id_pattern.fullmatch(marker_id))
+        for marker_id in ("setup", "us", "us1-part", "full_spec", "polish-part1"):
+            with self.subTest(invalid_marker_id=marker_id):
+                self.assertIsNone(marker_id_pattern.fullmatch(marker_id))
+        for marker_kind in ("foundation", "user_story", "user_story_part", "full_spec", "polish"):
+            with self.subTest(marker_kind=marker_kind):
+                self.assertIn(marker_kind, marker_kinds)
+        with self.subTest(invalid_marker_kind="maintenance"):
+            self.assertNotIn("maintenance", marker_kinds)
 
 
 def build_suite() -> unittest.TestSuite:

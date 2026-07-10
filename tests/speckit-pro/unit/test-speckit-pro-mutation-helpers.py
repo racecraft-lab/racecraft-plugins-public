@@ -10,6 +10,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -85,6 +86,30 @@ class MutationHelperTests(unittest.TestCase):
         self.assertIsNone(response["legacy_exit_code"])
         self.assertIsInstance(response["diagnostics"], list)
         self.assertIsInstance(response["data"], dict)
+
+    def test_install_subprocess_dispatch_preserves_selected_python_candidate(self) -> None:
+        from speckit_pro_runner.helpers import install
+
+        cases = [
+            ("py -V:3", ["py", "-3", "-m", "speckit_pro_runner"], ["py", "-3", "-m", "speckit_pro_runner"]),
+            ("python3", ["python3", "-m", "speckit_pro_runner"], ["python3", "-m", "speckit_pro_runner"]),
+            ("python", ["python", "-m", "speckit_pro_runner"], ["python", "-m", "speckit_pro_runner"]),
+        ]
+        completed = subprocess.CompletedProcess(args=[], returncode=0, stdout="{}", stderr="")
+
+        for selected_candidate, argv, expected_argv in cases:
+            with self.subTest(selected_candidate=selected_candidate):
+                with patch.object(install.subprocess, "run", return_value=completed) as mocked_run:
+                    result = install.run_python_runner_subprocess(
+                        argv,
+                        selected_candidate=selected_candidate,
+                        input_text="{}",
+                        cwd=REPO_ROOT,
+                    )
+
+                self.assertIs(result, completed)
+                self.assertEqual(mocked_run.call_args.args[0], expected_argv)
+                self.assertIs(mocked_run.call_args.kwargs["shell"], False)
 
     def temp_repo_path(self, name: str) -> tuple[tempfile.TemporaryDirectory[str], Path, str]:
         tmp = tempfile.TemporaryDirectory(dir=FIXTURE_DIR)
