@@ -84,7 +84,11 @@ class CountingTestResult(unittest.TextTestResult):
 
     def stopTest(self, test: unittest.case.TestCase) -> None:
         super().stopTest(test)
-        if not self._current_has_subtests:
+        if self._current_has_subtests and self._current_method_failed:
+            # Successful subTests do not account for a later method-level
+            # failure, so represent that independent failure as one unit.
+            self.units_total += 1
+        elif not self._current_has_subtests:
             # A non-loop, non-grouped method is exactly one counted unit.
             self.units_total += 1
             if not self._current_method_failed:

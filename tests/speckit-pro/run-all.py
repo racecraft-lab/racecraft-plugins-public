@@ -145,7 +145,10 @@ def classify_child(exit_code: int, summary: tuple[int, int] | None) -> tuple[str
     """Return (disposition, passed_delta, failed_delta) per the FR-006 taxonomy."""
     if summary is not None:
         passed, total = summary
-        return ("counted", passed, total - passed)
+        failed = total - passed
+        if exit_code != 0 and failed == 0:
+            return ("failed-exit", passed, 1)
+        return ("counted", passed, failed)
     if exit_code == 0:
         # A zero-exit module with no summary line is a no-summary pass.
         return ("no-summary-pass", 0, 0)

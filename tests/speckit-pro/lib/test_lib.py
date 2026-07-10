@@ -77,6 +77,19 @@ class CountingTestResultTests(unittest.TestCase):
         self.assertEqual(exit_code, 1)  # a failing unit -> nonzero
         self.assertIn("sample: 3/5 passed", stream.getvalue())
 
+        class _FailsAfterSubtests(unittest.TestCase):
+            def test_failure_after_subtests(self) -> None:
+                for token in ("x", "y"):
+                    with self.subTest(msg=token):
+                        self.assertTrue(token)
+                self.fail("method-level failure after successful subtests")
+
+        stream = io.StringIO()
+        suite = unittest.defaultTestLoader.loadTestsFromTestCase(_FailsAfterSubtests)
+        exit_code = test_result.run_counted(suite, label="late-failure", stream=stream)
+        self.assertEqual(exit_code, 1)
+        self.assertIn("late-failure: 2/3 passed", stream.getvalue())
+
     def test_all_pass_suite_reports_zero_exit(self) -> None:
         import io
 

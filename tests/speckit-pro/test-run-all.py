@@ -14,8 +14,11 @@ The hyphenated ``run-all.py`` is loaded via importlib. Prints the house
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -142,6 +145,35 @@ class ChildDispositionTests(unittest.TestCase):
 
     def test_summary_present_uses_counts(self) -> None:
         self.assertEqual(run_all.classify_child(exit_code=0, summary=(4, 5)), ("counted", 4, 1))
+
+    def test_nonzero_exit_with_all_pass_summary_counts_as_failure(self) -> None:
+        self.assertEqual(run_all.classify_child(exit_code=1, summary=(4, 4)), ("failed-exit", 4, 1))
+
+    def test_real_nonzero_child_with_all_pass_summary_is_scored_failure(self) -> None:
+        layer = {
+            "id": "4",
+            "label": "Script unit tests",
+            "integration": False,
+            "scripts": [{"path": "tests/speckit-pro/failing-child.py"}],
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            child = root / "tests" / "speckit-pro" / "failing-child.py"
+            child.parent.mkdir(parents=True)
+            child.write_text(
+                "import sys\nprint('failing-child: 1/1 passed')\nraise SystemExit(9)\n",
+                encoding="utf-8",
+            )
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                passed, failed = run_all.run_execute_layer(
+                    layer,
+                    run_all.parse_args(["--layer", "4"]),
+                    root,
+                    None,
+                )
+        self.assertEqual((passed, failed), (1, 1))
+        self.assertIn("FAIL failing-child (1/2, 1 failed)", output.getvalue())
 
 
 def main() -> int:
