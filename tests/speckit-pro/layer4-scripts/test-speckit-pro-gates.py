@@ -2940,7 +2940,7 @@ class GateFoundationTests(unittest.TestCase):
                 "tests/speckit-pro/layer4-scripts/test-l6-codex-runner.sh",
                 "tests/speckit-pro/layer4-scripts/test-l8-extractors.sh",
                 "tests/speckit-pro/layer4-scripts/test-l8-judge.sh",
-                "tests/speckit-pro/layer4-scripts/test-moc-lint-exit-codes.sh",
+                "tests/speckit-pro/layer4-scripts/test-moc-lint-exit-codes.py",
             },
             set(layer4_scripts),
         )
