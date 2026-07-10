@@ -20,10 +20,12 @@
 020 latest jq job is deferred
 021 test job dispatches runner toolchain gate
 022 test job dispatches runner default suite gate
-023 sentinel checks detect_result for failure
-024 sentinel checks test_result for success or skipped
-025 sentinel exits 0 on success or skipped
-026 sentinel exits 1 on detect failure
-027 sentinel exits 1 on detect cancellation
-028 all GitHub workflow files are valid YAML
-TOTAL: 28
+023 docs validation dispatches runner toolchain preflight
+024 docs validation does not dispatch bash toolchain check
+025 sentinel checks detect_result for failure
+026 sentinel checks test_result for success or skipped
+027 sentinel exits 0 on success or skipped
+028 sentinel exits 1 on detect failure
+029 sentinel exits 1 on detect cancellation
+030 all GitHub workflow files are valid YAML
+TOTAL: 30

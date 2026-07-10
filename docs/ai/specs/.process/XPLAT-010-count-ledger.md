@@ -48,6 +48,9 @@ Columns:
 | PR 4 | port: `validate-codex-skills.sh` → `validate-codex-skills.py` | default | 161 → 161 | yes | `tests/speckit-pro/parity/xplat-010/validate-codex-skills-baseline.txt` |
 | PR 4 | port: `validate-payload-conformance.sh` → `validate-payload-conformance.py` | default | 209 → 209 | yes | `tests/speckit-pro/parity/xplat-010/validate-payload-conformance-baseline.txt` |
 | PR 4 | port: `test-moc-lint-exit-codes.sh` → `test-moc-lint-exit-codes.py` | default, non-root | 36 → 36 | yes | `tests/speckit-pro/parity/xplat-010/test-moc-lint-exit-codes-baseline.txt` |
+| PR 5 | port: `validate-tool-scoping.sh` → `validate-tool-scoping.py` | default | 186 → 186 | yes | `tests/speckit-pro/parity/xplat-010/validate-tool-scoping-baseline.txt` |
+| PR 5 | port: `test-check-toolchain.sh` → `test-check-toolchain.py` | default | 26 → 26 | yes | `tests/speckit-pro/parity/xplat-010/test-check-toolchain-baseline.txt` |
+| PR 5 | workflow self-validator update: `validate-pr-checks-sentinel.py` | default | 28 → 30 (intentional PR5 workflow-contract expansion) | n/a | `tests/speckit-pro/parity/xplat-010/validate-pr-checks-sentinel-baseline.txt` |
 
 **PR 13 note (T121–T130):** The estimator Layer-4 test follows the
 Per-Port Protocol against historical predecessor commit
@@ -177,3 +180,20 @@ the check identities and count.
 `test-moc-id-normalize.sh` and `test-generate-spec-index.sh` were already
 classified as deleted orphan-target tests in the PR-1 disposition ledger, so
 `test-moc-lint-exit-codes` is the only active Layer-4 MOC test ported here.
+
+**PR 5 note (T046–T053):** `validate-tool-scoping` is now Python-authoritative
+through the suite manifest (`dispatch=python-module`) and the shipped runner
+uses the manifest-backed `run-layer-scripts.py --layer 5` path instead of the
+retired native `check_layer5` shim. `test-check-toolchain` ports the active
+Layer-4 contract for the top-level `check-toolchain.py` port with exact
+`26 → 26` parity; the top-level checker preserves the predecessor modes
+(`tests`, `shell`, `docs`, `all`) but is covered through the Layer-4 contract
+rather than listed as a counted suite script. The `pr-checks.yml` docs-toolchain
+step now dispatches `speckit_pro_runner` directly with a docs-mode request
+fixture and no repo-local Bash script. `validate-pr-checks-sentinel` intentionally
+expands from `28` to `30` checks to lock that workflow swap: one positive
+docs-mode runner dispatch assertion and one negative Bash-dispatch assertion.
+PR-body branch-protection callout to carry forward: **PR 5 is
+required-check-neutral**; it changes a `run:` step inside the existing
+`validate-plugins` surface, renames no job/status check, and requires no manual
+branch-protection update (contrast PR 11 and PR 12).
