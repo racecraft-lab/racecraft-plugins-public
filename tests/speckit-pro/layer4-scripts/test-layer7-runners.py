@@ -4,6 +4,9 @@
 from __future__ import annotations
 
 import ast
+import contextlib
+import importlib.util
+import io
 import os
 import subprocess
 import sys
@@ -45,6 +48,15 @@ def run_runner(path: Path, *args: str) -> subprocess.CompletedProcess[str]:
         shell=False,
         check=False,
     )
+
+
+def load_script_module(path: Path, module_name: str) -> object:
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"unable to load module from {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 class Layer7RunnerTests(unittest.TestCase):
@@ -106,6 +118,54 @@ class Layer7RunnerTests(unittest.TestCase):
             checks.append(("live capture can refresh parser fixture", lambda: self.assertTrue(parser_fixture_written)))
             checks.append(("live capture preserves stream-json flags", lambda: self.assertLessEqual({"-p", "--output-format", "stream-json", "--include-partial-messages", "--verbose", "--no-session-persistence"}, set(claude_argv))))
             checks.append(("live capture preserves budget argument", lambda: self.assertEqual(claude_argv[claude_argv.index("--max-budget-usd") + 1], "1.25")))
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fixture = root / "fixture"
+            fixture.mkdir()
+            (fixture / "prompt.txt").write_text("test prompt\n", encoding="utf-8")
+            transcript_source = LAYER7 / "test-fixtures" / "single-dispatch.jsonl"
+            discovered_claude = str(root / "claude.cmd")
+            real_run = subprocess.run
+
+            def run_with_failed_scrub(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+                if argv[0] == discovered_claude:
+                    destination = kwargs["stdout"]
+                    destination.write(transcript_source.read_text(encoding="utf-8"))
+                    return subprocess.CompletedProcess(argv, 0)
+                if argv[:2] == [sys.executable, str(fixture_runner.SCRUBBER)]:
+                    return subprocess.CompletedProcess(argv, 1, "", "scrub failed")
+                return real_run(argv, **kwargs)
+
+            scrub_failure: Exception | None = None
+            with (
+                patch.object(fixture_runner.shutil, "which", return_value=discovered_claude),
+                patch.object(fixture_runner.subprocess, "run", side_effect=run_with_failed_scrub),
+            ):
+                try:
+                    fixture_runner.capture_live(fixture, "1.25")
+                except Exception as exc:  # pragma: no cover - exercised by assertions below
+                    scrub_failure = exc
+            checks.append(("scrub failure raises runtime error", lambda: self.assertIsInstance(scrub_failure, RuntimeError)))
+            checks.append(("scrub failure reports scrub stderr", lambda: self.assertEqual(str(scrub_failure), "scrub failed")))
+            checks.append(("scrub failure removes captured transcript", lambda: self.assertFalse((fixture / "transcript.jsonl").exists())))
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fixture = root / "bad-response-assertions"
+            fixture.mkdir()
+            (fixture / "expected.json").write_text('{"response_assertions":[false]}\n', encoding="utf-8")
+            (fixture / "parser-fixture.jsonl").write_text(
+                (LAYER7 / "test-fixtures" / "single-dispatch.jsonl").read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            module = load_script_module(LAYER7 / "run-return-format-fixtures.py", "run_return_format_fixtures_test")
+            module.FIXTURES = root
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                malformed_exit = module.main([fixture.name])
+            checks.append(("return-format runner rejects malformed response_assertions", lambda: self.assertEqual(malformed_exit, 2)))
+            checks.append(("return-format runner reports malformed response_assertions", lambda: self.assertIn("response_assertions[0]", stderr.getvalue())))
 
         tree = ast.parse((LAYER7 / "lib" / "fixture_runner.py").read_text(encoding="utf-8"))
         subprocess_calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "run"]

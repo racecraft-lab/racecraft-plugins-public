@@ -116,16 +116,25 @@ def capture_live(fixture: Path, budget_usd: str, *, announce_saved: bool = False
     if completed.returncode != 0:
         print("  WARN: claude -p exited non-zero - partial transcript may have been captured")
 
-    if transcript_file.stat().st_size > 0:
-        scrubbed = subprocess.run(
-            [sys.executable, str(SCRUBBER), str(transcript_file)],
-            text=True,
-            capture_output=True,
-            shell=False,
-            check=False,
-        )
-        if scrubbed.returncode != 0:
-            raise RuntimeError(scrubbed.stderr.strip() or "transcript scrub failed")
+    scrub_succeeded = transcript_file.stat().st_size == 0
+    try:
+        if transcript_file.stat().st_size > 0:
+            scrubbed = subprocess.run(
+                [sys.executable, str(SCRUBBER), str(transcript_file)],
+                text=True,
+                capture_output=True,
+                shell=False,
+                check=False,
+            )
+            if scrubbed.returncode != 0:
+                raise RuntimeError(scrubbed.stderr.strip() or "transcript scrub failed")
+            scrub_succeeded = True
+    finally:
+        if not scrub_succeeded:
+            try:
+                transcript_file.unlink()
+            except FileNotFoundError:
+                pass
     if announce_saved:
         print(f"  Saved scrubbed transient transcript to {transcript_file}")
 
