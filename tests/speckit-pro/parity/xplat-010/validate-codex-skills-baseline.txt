@@ -1,0 +1,162 @@
+001 speckit-archive-cleanup: shared and Codex variants both exist
+002 speckit-archive-cleanup: shared variant redirects when selected by Codex
+003 speckit-archive-cleanup: shared guard names the Codex variant path
+004 speckit-archive-cleanup: shared guard forbids Claude instructions in Codex
+005 speckit-autopilot: shared and Codex variants both exist
+006 speckit-autopilot: shared variant redirects when selected by Codex
+007 speckit-autopilot: shared guard names the Codex variant path
+008 speckit-autopilot: shared guard forbids Claude instructions in Codex
+009 speckit-coach: shared and Codex variants both exist
+010 speckit-coach: shared variant redirects when selected by Codex
+011 speckit-coach: shared guard names the Codex variant path
+012 speckit-coach: shared guard forbids Claude instructions in Codex
+013 grill-me: shared and Codex variants both exist
+014 grill-me: shared variant redirects when selected by Codex
+015 grill-me: shared guard names the Codex variant path
+016 grill-me: shared guard forbids Claude instructions in Codex
+017 speckit-prd: shared and Codex variants both exist
+018 speckit-prd: shared variant redirects when selected by Codex
+019 speckit-prd: shared guard names the Codex variant path
+020 speckit-prd: shared guard forbids Claude instructions in Codex
+021 speckit-archive-cleanup: SKILL.md exists
+022 speckit-archive-cleanup: YAML frontmatter present (starts with ---)
+023 speckit-archive-cleanup: has closing ---
+024 speckit-archive-cleanup: has name: field
+025 speckit-archive-cleanup: has description: field
+026 speckit-archive-cleanup: no Claude Code-only frontmatter keys
+027 speckit-archive-cleanup: agents/openai.yaml sidecar exists
+028 speckit-archive-cleanup: body word count between 500 and 8000
+029 speckit-archive-cleanup: agents/openai.yaml allow_implicit_invocation policy
+030 speckit-archive-cleanup: corresponding source artifact exists
+031 speckit-autopilot: SKILL.md exists
+032 speckit-autopilot: YAML frontmatter present (starts with ---)
+033 speckit-autopilot: has closing ---
+034 speckit-autopilot: has name: field
+035 speckit-autopilot: has description: field
+036 speckit-autopilot: no Claude Code-only frontmatter keys
+037 speckit-autopilot: agents/openai.yaml sidecar exists
+038 speckit-autopilot: body word count between 500 and 8000
+039 speckit-autopilot: requires update_plan as the progress contract
+040 speckit-autopilot: requires durable autopilot-state.json persistence
+041 speckit-autopilot: names Codex-native delegation tools
+042 speckit-autopilot: names real Codex follow-up tools
+043 speckit-autopilot: validates a single in_progress item before phase execution
+044 speckit-autopilot: requires all canonical phase families before execution
+045 speckit-autopilot: documents canonical PHASES order
+046 speckit-autopilot: prevents from-phase from dropping later phases
+047 speckit-autopilot: requires concrete Phase 7 tasks after G5
+048 speckit-autopilot: resumes into Post before reporting complete
+049 speckit-autopilot: blocks final answers while Post items remain incomplete
+050 speckit-autopilot: documents skill-local agents/openai.yaml metadata
+051 speckit-autopilot: validates installed Codex subagent paths
+052 speckit-autopilot: fails closed to the install skill when subagents are missing
+053 speckit-autopilot: documents the optional Spark helper
+054 speckit-autopilot: keeps the Spark helper advisory and parent-only
+055 speckit-autopilot: does not bundle skill-local TOML subagents
+056 speckit-autopilot: excludes Claude-only runtime primitives
+057 speckit-autopilot: Codex-specific references exist
+058 speckit-autopilot: Codex post-implementation reference exists
+059 speckit-autopilot: Codex SKILL.md names the plan-phase estimator helper
+060 speckit-autopilot: Codex SKILL.md carries the three-value status vocab
+061 speckit-autopilot: phase-execution-codex.md names the plan-phase estimator helper
+062 speckit-autopilot: phase-execution-codex.md documents the over_budget status
+063 speckit-autopilot: phase-execution-codex.md documents the not_estimated status
+064 speckit-autopilot: agents/openai.yaml allow_implicit_invocation policy
+065 speckit-autopilot: corresponding source artifact exists
+066 speckit-coach: SKILL.md exists
+067 speckit-coach: YAML frontmatter present (starts with ---)
+068 speckit-coach: has closing ---
+069 speckit-coach: has name: field
+070 speckit-coach: has description: field
+071 speckit-coach: no Claude Code-only frontmatter keys
+072 speckit-coach: agents/openai.yaml sidecar exists
+073 speckit-coach: body word count between 500 and 8000
+074 speckit-coach: agents/openai.yaml allow_implicit_invocation policy
+075 speckit-coach: corresponding source artifact exists
+076 speckit-scaffold-spec: SKILL.md exists
+077 speckit-scaffold-spec: YAML frontmatter present (starts with ---)
+078 speckit-scaffold-spec: has closing ---
+079 speckit-scaffold-spec: has name: field
+080 speckit-scaffold-spec: has description: field
+081 speckit-scaffold-spec: no Claude Code-only frontmatter keys
+082 speckit-scaffold-spec: agents/openai.yaml sidecar exists
+083 speckit-scaffold-spec: Codex picker metadata uses scaffold naming
+084 speckit-scaffold-spec: Codex skill heading uses scaffold naming
+085 speckit-scaffold-spec: body word count between 500 and 8000
+086 speckit-scaffold-spec: Codex Grill Me requires native picker config
+087 speckit-scaffold-spec: agents/openai.yaml allow_implicit_invocation policy
+088 speckit-scaffold-spec: corresponding source artifact exists
+089 speckit-scaffold-spec: referenced workflow template exists (skills/speckit-coach/templates/workflow-template.md)
+090 speckit-status: SKILL.md exists
+091 speckit-status: YAML frontmatter present (starts with ---)
+092 speckit-status: has closing ---
+093 speckit-status: has name: field
+094 speckit-status: has description: field
+095 speckit-status: no Claude Code-only frontmatter keys
+096 speckit-status: agents/openai.yaml sidecar exists
+097 speckit-status: body word count between 500 and 8000
+098 speckit-status: agents/openai.yaml allow_implicit_invocation policy
+099 speckit-status: corresponding source artifact exists
+100 speckit-resolve-pr: SKILL.md exists
+101 speckit-resolve-pr: YAML frontmatter present (starts with ---)
+102 speckit-resolve-pr: has closing ---
+103 speckit-resolve-pr: has name: field
+104 speckit-resolve-pr: has description: field
+105 speckit-resolve-pr: no Claude Code-only frontmatter keys
+106 speckit-resolve-pr: agents/openai.yaml sidecar exists
+107 speckit-resolve-pr: body word count between 500 and 8000
+108 speckit-resolve-pr: agents/openai.yaml allow_implicit_invocation policy
+109 speckit-resolve-pr: corresponding source artifact exists
+110 install: SKILL.md exists
+111 install: YAML frontmatter present (starts with ---)
+112 install: has closing ---
+113 install: has name: field
+114 install: has description: field
+115 install: no Claude Code-only frontmatter keys
+116 install: agents/openai.yaml sidecar exists
+117 install: body word count between 500 and 8000
+118 install: agents/openai.yaml allow_implicit_invocation policy
+119 install: corresponding source artifact exists
+120 install: installer helper is documented
+121 speckit-install: SKILL.md exists
+122 speckit-install: YAML frontmatter present (starts with ---)
+123 speckit-install: has closing ---
+124 speckit-install: has name: field
+125 speckit-install: has description: field
+126 speckit-install: no Claude Code-only frontmatter keys
+127 speckit-install: agents/openai.yaml sidecar exists
+128 speckit-install: body word count between 500 and 8000
+129 speckit-install: agents/openai.yaml allow_implicit_invocation policy
+130 speckit-install: corresponding source artifact exists
+131 speckit-upgrade: SKILL.md exists
+132 speckit-upgrade: YAML frontmatter present (starts with ---)
+133 speckit-upgrade: has closing ---
+134 speckit-upgrade: has name: field
+135 speckit-upgrade: has description: field
+136 speckit-upgrade: no Claude Code-only frontmatter keys
+137 speckit-upgrade: agents/openai.yaml sidecar exists
+138 speckit-upgrade: body word count between 500 and 8000
+139 speckit-upgrade: agents/openai.yaml allow_implicit_invocation policy
+140 speckit-upgrade: corresponding source artifact exists
+141 grill-me: SKILL.md exists
+142 grill-me: YAML frontmatter present (starts with ---)
+143 grill-me: has closing ---
+144 grill-me: has name: field
+145 grill-me: has description: field
+146 grill-me: no Claude Code-only frontmatter keys
+147 grill-me: agents/openai.yaml sidecar exists
+148 grill-me: body word count between 500 and 8000
+149 grill-me: Codex picker-first guard requires default-mode request_user_input
+150 grill-me: agents/openai.yaml allow_implicit_invocation policy
+151 grill-me: corresponding source artifact exists
+152 speckit-prd: SKILL.md exists
+153 speckit-prd: YAML frontmatter present (starts with ---)
+154 speckit-prd: has closing ---
+155 speckit-prd: has name: field
+156 speckit-prd: has description: field
+157 speckit-prd: no Claude Code-only frontmatter keys
+158 speckit-prd: agents/openai.yaml sidecar exists
+159 speckit-prd: body word count between 500 and 8000
+160 speckit-prd: agents/openai.yaml allow_implicit_invocation policy
+161 speckit-prd: corresponding source artifact exists
+TOTAL: 161

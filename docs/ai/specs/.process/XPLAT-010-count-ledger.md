@@ -42,6 +42,12 @@ Columns:
 | PR 3b | port: `validate-skills.sh` → `validate-skills.py` | default | 124 → 124 | yes | `tests/speckit-pro/parity/xplat-010/validate-skills-baseline.txt` |
 | PR 3b | port: `validate-spec-index-determinism.sh` → `validate-spec-index-determinism.py` | default | 16 → 16 | yes | `tests/speckit-pro/parity/xplat-010/validate-spec-index-determinism-baseline.txt` |
 | PR 3b | new validator failure-path regression module | default | 0 → 5 | n/a (new regression coverage) | `tests/speckit-pro/layer4-scripts/test-layer1-validator-regressions.py` |
+| PR 4 | port: `validate-moc-orphan.sh` → `validate-moc-orphan.py` | default | 29 → 29 | yes | `tests/speckit-pro/parity/xplat-010/validate-moc-orphan-baseline.txt` |
+| PR 4 | port: `validate-moc-orphan.sh` → `validate-moc-orphan.py` | explicit scan-root | 0 → 0 | yes | `tests/speckit-pro/parity/xplat-010/validate-moc-orphan-scan-root-baseline.txt` |
+| PR 4 | port: `validate-moc-stale-index.sh` → `validate-moc-stale-index.py` | default | 11 → 11 | yes | `tests/speckit-pro/parity/xplat-010/validate-moc-stale-index-baseline.txt` |
+| PR 4 | port: `validate-codex-skills.sh` → `validate-codex-skills.py` | default | 161 → 161 | yes | `tests/speckit-pro/parity/xplat-010/validate-codex-skills-baseline.txt` |
+| PR 4 | port: `validate-payload-conformance.sh` → `validate-payload-conformance.py` | default | 209 → 209 | yes | `tests/speckit-pro/parity/xplat-010/validate-payload-conformance-baseline.txt` |
+| PR 4 | port: `test-moc-lint-exit-codes.sh` → `test-moc-lint-exit-codes.py` | default, non-root | 36 → 36 | yes | `tests/speckit-pro/parity/xplat-010/test-moc-lint-exit-codes-baseline.txt` |
 
 **PR 13 note (T121–T130):** The estimator Layer-4 test follows the
 Per-Port Protocol against historical predecessor commit
@@ -153,3 +159,21 @@ Three baseline hygiene notes apply:
      release workflow content (`validate-release-workflow`), contract/template
      files (`validate-scripts`), and runner registry/template sentinel output
      (`validate-spec-index-determinism`).
+
+**PR 4 note (T040–T045):** The four heavier Layer-1 validators port with exact
+1:1 count parity against their committed baselines, including the
+`validate-moc-orphan` explicit scan-root invocation mode (`0 → 0`) recorded as a
+separate baseline per the count-parity contract. The active co-located Layer-4
+MOC subprocess test `test-moc-lint-exit-codes` is also ported in this slice with
+the pinned non-root count (`36 → 36`); the root-only `31` divergence remains
+documented as an environment caveat, not the count of record. Intentional
+change: `validate-moc-stale-index.py` now maps an unexpected no-arg harness
+exception to exit `2` and still removes the transient broken-symlink fixture,
+preserving the old three-way exit-class contract without shell utility stubs.
+Baseline hygiene: `validate-payload-conformance` normalizes four checkout-path
+check names to repo-relative payload paths (`dist/claude/...`, `dist/codex/...`),
+matching the PR-3a/3b privacy and CI-portability precedent while preserving
+the check identities and count.
+`test-moc-id-normalize.sh` and `test-generate-spec-index.sh` were already
+classified as deleted orphan-target tests in the PR-1 disposition ledger, so
+`test-moc-lint-exit-codes` is the only active Layer-4 MOC test ported here.
