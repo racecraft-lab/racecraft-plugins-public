@@ -61,7 +61,7 @@ Columns:
 | PR 7b | port: `run-e2e-fixtures.sh` → `run-e2e-fixtures.py` | replay | 23 → 23 | yes | `tests/speckit-pro/parity/xplat-010/run-e2e-fixtures-baseline.txt` |
 | PR 7b | port: `run-grounding-fixtures.sh` → `run-grounding-fixtures.py` | replay | 33 → 33 | yes | `tests/speckit-pro/parity/xplat-010/run-grounding-fixtures-baseline.txt` |
 | PR 7b | port: `run-all-fixtures.sh` → `run-all-fixtures.py` | replay | 257 → 257 | yes | `tests/speckit-pro/parity/xplat-010/run-all-fixtures-baseline.txt` |
-| PR 7b | new replay/live runner contract | default | 0 → 26 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer7-runners-baseline.txt` |
+| PR 7b | new replay/live runner contract | default | 0 → 31 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer7-runners-baseline.txt` |
 | PR 7b | shipped gate regression expansion | default | 57 → 58 | n/a | n/a |
 
 **PR 13 note (T121–T130):** The estimator Layer-4 test follows the
