@@ -9,6 +9,7 @@ compares configured artifacts with deterministic local tolerances.
 from __future__ import annotations
 
 import difflib
+import itertools
 import json
 import os
 import shutil
@@ -26,6 +27,8 @@ ENV_SCHEMA = "speckit.layer8.env.v1"
 DEFAULT_BUDGET_USD = "20"
 RULE = "────────────────────────────────────────"
 SUMMARY_RULE = "════════════════════════════════════════"
+MAX_DIFF_LINES = 50
+MAX_PREVIEW_CHARS = 4_096
 
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
@@ -181,7 +184,7 @@ def validate_fixture_structure(fixture_dir: Path, counts: Counts) -> None:
         try:
             validate_env_contract(path, expected_mode)
         except (json.JSONDecodeError, ValueError) as exc:
-            counts.fail(f"{fixture_id}: fixture structure complete", f"{file_name}: {exc}")
+            counts.fail(f"{fixture_id}: {file_name} invalid env contract", str(exc))
             ok = False
 
     if ok:
@@ -221,6 +224,19 @@ def resolve_executable(command: str) -> str | None:
     else:
         executable = shutil.which(command)
     return executable
+
+
+def claude_bin_missing_reason(command: str) -> str:
+    if os.sep in command or (os.altsep and os.altsep in command):
+        path = Path(command)
+        if not path.exists():
+            return f"configured CLAUDE_BIN path does not exist: {command}"
+        if not path.is_file():
+            return f"configured CLAUDE_BIN path is not a file: {command}"
+        if os.name != "nt" and not os.access(path, os.X_OK):
+            return f"configured CLAUDE_BIN path is not executable: {command}"
+        return f"configured CLAUDE_BIN path is not a supported Claude executable: {command}"
+    return f"{command} not on PATH"
 
 
 def env_from_contract(contract_path: Path) -> dict[str, str]:
@@ -279,6 +295,21 @@ def read_text_lossy(path: Path) -> list[str]:
     return path.read_text(encoding="utf-8", errors="replace").splitlines(keepends=True)
 
 
+def _write_bounded_diff(report: Any, diff: Any) -> None:
+    iterator = iter(diff)
+    for line in itertools.islice(iterator, MAX_DIFF_LINES):
+        report.write(line)
+    if next(iterator, None) is not None:
+        report.write(f"... diff truncated after {MAX_DIFF_LINES} lines\n")
+
+
+def _bounded_preview(text: str) -> str:
+    if len(text) <= MAX_PREVIEW_CHARS:
+        return text
+    remaining = len(text) - MAX_PREVIEW_CHARS
+    return f"{text[:MAX_PREVIEW_CHARS]}\n...[truncated {remaining} chars]\n"
+
+
 def append_file_diff(report_path: Path, file_a: Path, file_b: Path) -> None:
     diff = difflib.unified_diff(
         read_text_lossy(file_a),
@@ -287,7 +318,7 @@ def append_file_diff(report_path: Path, file_a: Path, file_b: Path) -> None:
         tofile=file_b.as_posix(),
     )
     with report_path.open("a", encoding="utf-8") as report:
-        report.writelines(list(diff)[:50])
+        _write_bounded_diff(report, diff)
 
 
 def append_value_diff(report_path: Path, field_name: str, extractor_name: str, value_a: str, value_b: str) -> None:
@@ -299,7 +330,7 @@ def append_value_diff(report_path: Path, field_name: str, extractor_name: str, v
     )
     with report_path.open("a", encoding="utf-8") as report:
         report.write(f"\n--- {field_name} (extractor={extractor_name}) ---\n")
-        report.writelines(list(diff)[:50])
+        _write_bounded_diff(report, diff)
 
 
 def append_semantic_skip(report_path: Path, field_name: str, value_a: str, value_b: str, reason: str) -> None:
@@ -307,9 +338,9 @@ def append_semantic_skip(report_path: Path, field_name: str, value_a: str, value
         report.write(f"\n--- {field_name} (semantic-equivalent skipped) ---\n")
         report.write(f"WARNING: {reason}\n")
         report.write("VALUE A:\n")
-        report.write(value_a)
+        report.write(_bounded_preview(value_a))
         report.write("\nVALUE B:\n")
-        report.write(value_b)
+        report.write(_bounded_preview(value_b))
         report.write("\n")
 
 
@@ -383,6 +414,27 @@ def compare_whole_file_bytes(
     return "fail"
 
 
+def pass_extracted_value_match(
+    counts: Counts,
+    fixture_id: str,
+    field_name: str,
+    tolerance_type: str,
+    extractor_name: str,
+    value_a: str,
+    value_b: str,
+) -> str:
+    if tolerance_type == "semantic-equivalent":
+        counts.pass_(f"{fixture_id}:{field_name} (semantic-equivalent, bytes match - judge skipped)")
+        return "pass"
+    if tolerance_type == "tolerance-1":
+        left = value_a.strip()
+        right = value_b.strip()
+        counts.pass_(f"{fixture_id}:{field_name} (tolerance-1, |{left} - {right}|=0)")
+        return "pass"
+    counts.pass_(f"{fixture_id}:{field_name} ({tolerance_type}, extractor={extractor_name})")
+    return "pass"
+
+
 def compare_field(
     fixture_id: str,
     path_a: Path,
@@ -425,10 +477,17 @@ def compare_field(
                 f"extractor '{extractor_name}' failed for section '## {section}' on one or both paths: {exc}",
             )
             return "fail"
+        if value_a.encode("utf-8") == value_b.encode("utf-8"):
+            return pass_extracted_value_match(
+                counts,
+                fixture_id,
+                field_name,
+                tolerance_type,
+                extractor_name,
+                value_a,
+                value_b,
+            )
         result = judge.judge_values(value_a, value_b, tolerance_type, field=field_name)
-        if tolerance_type == "semantic-equivalent" and value_a == value_b:
-            counts.pass_(f"{fixture_id}:{field_name} (semantic-equivalent, bytes match - judge skipped)")
-            return "pass"
         return emit_judge_result(
             counts,
             fixture_id,
@@ -473,7 +532,7 @@ def run_fixture_live(fixture_dir: Path, config: Config, counts: Counts) -> None:
     fixture_id = fixture_dir.name
     claude_executable = resolve_executable(config.claude_bin)
     if claude_executable is None:
-        counts.skip(f"{fixture_id}: live mode", f"{config.claude_bin} not on PATH")
+        counts.skip(f"{fixture_id}: live mode", claude_bin_missing_reason(config.claude_bin))
         return
 
     default_out = Path(tempfile.gettempdir()) / f"l8-parity-{os.getpid()}"

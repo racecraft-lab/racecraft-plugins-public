@@ -41,6 +41,7 @@ CURRENT_INVENTORY = [
     "help exits zero and prints usage",
     "unknown flag exits two with diagnostic",
     "missing CLAUDE_BIN skips live fixture",
+    "configured missing claude path reports configured-path reason",
     "live stub invoked Path A and Path B only",
     "live stub receives claude -p argv",
     "live stub receives exact resolved CLAUDE_BIN path",
@@ -51,8 +52,11 @@ CURRENT_INVENTORY = [
     "extractor exact passes despite whole-file drift",
     "extractor tolerance-1 passes numeric difference one",
     "byte-identical bypasses extractor configuration",
+    "extractor exact skips judge when extracted bytes match",
     "semantic-equivalent is skipped without failure",
     "semantic skip writes warning report",
+    "invalid env contract is labeled to the env file",
+    "diff reports truncate deterministically",
     "no-extractor exact fallback passes identical bytes",
     "no-extractor tolerance-1 fallback passes identical bytes",
     "no-extractor tolerance-1 fallback rejects numeric drift as byte diff",
@@ -186,6 +190,7 @@ def fake_claude_run(argv: list[str], **kwargs: object) -> subprocess.CompletedPr
             json.dumps(
                 {
                     "executable": argv[0],
+                    "selected_dir": str(child_env.get("PATH", "")).split(os.pathsep, 1)[0],
                     "argv": argv[1:],
                     "budget": argv[argv.index("--max-budget-usd") + 1],
                     "cwd": cwd.name,
@@ -334,7 +339,8 @@ class Layer8RunnerTests(unittest.TestCase):
             report = out_root / fixture.name / "diff-report.txt"
 
             missing_counts = runner.Counts()
-            with contextlib.redirect_stdout(io.StringIO()):
+            missing_stdout = io.StringIO()
+            with contextlib.redirect_stdout(missing_stdout):
                 runner.run_fixture_live(
                     fixture,
                     runner.Config(mode="live", budget_usd="3.50", claude_bin=str(root / "missing-claude")),
@@ -385,6 +391,33 @@ class Layer8RunnerTests(unittest.TestCase):
                     fail_fast_counts,
                 )
 
+            invalid_env_fixture = make_fixture(root, "invalid-env-live", LIVE_COMPARE, LIVE_TOLERANCES)
+            write_json(
+                invalid_env_fixture / "env-fallback.json",
+                {
+                    "schema": "broken.schema",
+                    "mode": "fallback",
+                    "environment": {
+                        "set": {"L8_MODE": "fallback"},
+                        "unset": ["L8_SHOULD_BE_UNSET"],
+                    },
+                },
+            )
+            invalid_env_counts = runner.Counts()
+            invalid_env_stdout = io.StringIO()
+            with contextlib.redirect_stdout(invalid_env_stdout):
+                runner.validate_fixture_structure(invalid_env_fixture, invalid_env_counts)
+
+            diff_report = root / "bounded-diff.txt"
+            runner.append_value_diff(
+                diff_report,
+                "bounded.field",
+                "table_column:Status",
+                "\n".join(f"alpha {index}" for index in range(200)),
+                "\n".join(f"beta {index}" for index in range(200)),
+            )
+            diff_report_text = diff_report.read_text(encoding="utf-8")
+
             drift_number_status = self._compare_direct(
                 runner,
                 path_a,
@@ -420,6 +453,20 @@ class Layer8RunnerTests(unittest.TestCase):
                 },
                 {"fields": {"whole_file.byte_first": {"tolerance": "byte-identical"}}},
             )
+            with patch.object(runner.judge, "judge_values", side_effect=AssertionError("judge should not run")):
+                extracted_fast_path_status = self._compare_direct(
+                    runner,
+                    path_a,
+                    path_b,
+                    {
+                        "field": "extractor.fast_path",
+                        "source": "artifact.md",
+                        "section_selector": "## Exact Section",
+                        "extractor": "table_column:Status",
+                        "tolerance_key": "extractor.fast_path",
+                    },
+                    {"fields": {"extractor.fast_path": {"tolerance": "exact"}}},
+                )
 
             checks = [
                 (
@@ -445,81 +492,118 @@ class Layer8RunnerTests(unittest.TestCase):
                 ),
                 (
                     CURRENT_INVENTORY[7],
-                    lambda: self.assertTrue(help_result.returncode == 0 and "Layer 8 - Parity Fixtures Runner" in help_result.stdout),
+                    lambda: self.assertTrue(
+                        help_result.returncode == 0 and "Layer 8 - Parity Fixtures Runner" in help_result.stdout
+                    ),
                 ),
                 (
                     CURRENT_INVENTORY[8],
-                    lambda: self.assertTrue(parse_error.returncode == 2 and "Unknown flag: --unknown" in parse_error.stderr),
+                    lambda: self.assertTrue(
+                        parse_error.returncode == 2 and "Unknown flag: --unknown" in parse_error.stderr
+                    ),
                 ),
                 (
                     CURRENT_INVENTORY[9],
                     lambda: self.assertEqual((missing_counts.skipped, missing_counts.failed), (1, 0)),
                 ),
-                (CURRENT_INVENTORY[10], lambda: self.assertEqual([entry["cwd"] for entry in logs], ["pathA", "pathB"])),
                 (
-                    CURRENT_INVENTORY[11],
+                    CURRENT_INVENTORY[10],
+                    lambda: self.assertIn(
+                        f"configured CLAUDE_BIN path does not exist: {root / 'missing-claude'}",
+                        missing_stdout.getvalue(),
+                    ),
+                ),
+                (CURRENT_INVENTORY[11], lambda: self.assertEqual([entry["cwd"] for entry in logs], ["pathA", "pathB"])),
+                (
+                    CURRENT_INVENTORY[12],
                     lambda: self.assertTrue(all(entry["argv"][0] == "-p" for entry in logs)),
                 ),
                 (
-                    CURRENT_INVENTORY[12],
-                    lambda: self.assertEqual([entry["executable"] for entry in logs], [str(stub), str(stub)]),
+                    CURRENT_INVENTORY[13],
+                    lambda: self.assertEqual(
+                        [entry["executable"] for entry in logs],
+                        [str(stub), str(stub)],
+                    ),
                 ),
                 (
-                    CURRENT_INVENTORY[13],
+                    CURRENT_INVENTORY[14],
                     lambda: self.assertEqual([entry["budget"] for entry in logs], ["3.50", "3.50"]),
                 ),
-                (CURRENT_INVENTORY[14], lambda: self.assertEqual(logs[0]["mode"], "teams")),
-                (CURRENT_INVENTORY[15], lambda: self.assertEqual(logs[1]["mode"], "fallback")),
+                (CURRENT_INVENTORY[15], lambda: self.assertEqual(logs[0]["mode"], "teams")),
+                (CURRENT_INVENTORY[16], lambda: self.assertEqual(logs[1]["mode"], "fallback")),
                 (
-                    CURRENT_INVENTORY[16],
+                    CURRENT_INVENTORY[17],
                     lambda: self.assertEqual([entry["unset_present"] for entry in logs], [False, False]),
                 ),
                 (
-                    CURRENT_INVENTORY[17],
-                    lambda: self.assertIn("PASS canonical-live:extractor.statuses (exact, extractor=table_column:Status)", output),
-                ),
-                (
                     CURRENT_INVENTORY[18],
-                    lambda: self.assertIn("PASS canonical-live:extractor.row_count (tolerance-1, |2 - 3|=1)", output),
+                    lambda: self.assertIn(
+                        "PASS canonical-live:extractor.statuses (exact, extractor=table_column:Status)",
+                        output,
+                    ),
                 ),
                 (
                     CURRENT_INVENTORY[19],
-                    lambda: self.assertEqual(byte_first_status, "pass"),
+                    lambda: self.assertIn("PASS canonical-live:extractor.row_count (tolerance-1, |2 - 3|=1)", output),
                 ),
                 (
                     CURRENT_INVENTORY[20],
-                    lambda: self.assertEqual((counts.failed, counts.skipped), (0, 1)),
+                    lambda: self.assertEqual(byte_first_status, "pass"),
                 ),
                 (
                     CURRENT_INVENTORY[21],
-                    lambda: self.assertIn("semantic-equivalent comparison skipped", report.read_text(encoding="utf-8")),
+                    lambda: self.assertEqual(extracted_fast_path_status, "pass"),
                 ),
                 (
                     CURRENT_INVENTORY[22],
-                    lambda: self.assertIn("PASS canonical-live:whole_file.exact (exact, whole-file)", output),
+                    lambda: self.assertEqual((counts.failed, counts.skipped), (0, 1)),
                 ),
                 (
                     CURRENT_INVENTORY[23],
-                    lambda: self.assertIn("PASS canonical-live:whole_file.tolerance_one (tolerance-1, whole-file)", output),
+                    lambda: self.assertIn("semantic-equivalent comparison skipped", report.read_text(encoding="utf-8")),
                 ),
                 (
                     CURRENT_INVENTORY[24],
-                    lambda: self.assertEqual(drift_number_status, "fail"),
+                    lambda: self.assertIn(
+                        "FAIL invalid-env-live: env-fallback.json invalid env contract",
+                        invalid_env_stdout.getvalue(),
+                    ),
                 ),
                 (
                     CURRENT_INVENTORY[25],
-                    lambda: self.assertEqual(drift_exact_status, "fail"),
+                    lambda: self.assertTrue(
+                        "... diff truncated after 50 lines" in diff_report_text and diff_report_text.count("\n") <= 60
+                    ),
                 ),
                 (
                     CURRENT_INVENTORY[26],
-                    lambda: self.assertEqual((fail_fast_counts.failed, fail_fast_counts.passed), (1, 0)),
+                    lambda: self.assertIn("PASS canonical-live:whole_file.exact (exact, whole-file)", output),
                 ),
                 (
                     CURRENT_INVENTORY[27],
-                    lambda: self.assertNotIn("after_failure", fail_fast_stdout.getvalue()),
+                    lambda: self.assertIn(
+                        "PASS canonical-live:whole_file.tolerance_one (tolerance-1, whole-file)",
+                        output,
+                    ),
                 ),
                 (
                     CURRENT_INVENTORY[28],
+                    lambda: self.assertEqual(drift_number_status, "fail"),
+                ),
+                (
+                    CURRENT_INVENTORY[29],
+                    lambda: self.assertEqual(drift_exact_status, "fail"),
+                ),
+                (
+                    CURRENT_INVENTORY[30],
+                    lambda: self.assertEqual((fail_fast_counts.failed, fail_fast_counts.passed), (1, 0)),
+                ),
+                (
+                    CURRENT_INVENTORY[31],
+                    lambda: self.assertNotIn("after_failure", fail_fast_stdout.getvalue()),
+                ),
+                (
+                    CURRENT_INVENTORY[32],
                     lambda: self.assertEqual(
                         [
                             (path_a / ".claude-exit-code").read_text(encoding="utf-8").strip(),

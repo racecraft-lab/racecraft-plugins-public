@@ -8,23 +8,27 @@
 008 help exits zero and prints usage
 009 unknown flag exits two with diagnostic
 010 missing CLAUDE_BIN skips live fixture
-011 live stub invoked Path A and Path B only
-012 live stub receives claude -p argv
-013 live stub receives exact resolved CLAUDE_BIN path
-014 live stub receives configured budget
-015 JSON env set applies teams mode
-016 JSON env set applies fallback mode
-017 JSON env unset removes inherited values
-018 extractor exact passes despite whole-file drift
-019 extractor tolerance-1 passes numeric difference one
-020 byte-identical bypasses extractor configuration
-021 semantic-equivalent is skipped without failure
-022 semantic skip writes warning report
-023 no-extractor exact fallback passes identical bytes
-024 no-extractor tolerance-1 fallback passes identical bytes
-025 no-extractor tolerance-1 fallback rejects numeric drift as byte diff
-026 no-extractor exact fallback rejects byte drift
-027 fail_fast stops after first failing comparison
-028 fail_fast omits later comparison label
-029 live mode writes claude exit code files
-TOTAL: 29
+011 configured missing claude path reports configured-path reason
+012 live stub invoked Path A and Path B only
+013 live stub receives claude -p argv
+014 live stub receives exact resolved CLAUDE_BIN path
+015 live stub receives configured budget
+016 JSON env set applies teams mode
+017 JSON env set applies fallback mode
+018 JSON env unset removes inherited values
+019 extractor exact passes despite whole-file drift
+020 extractor tolerance-1 passes numeric difference one
+021 byte-identical bypasses extractor configuration
+022 extractor exact skips judge when extracted bytes match
+023 semantic-equivalent is skipped without failure
+024 semantic skip writes warning report
+025 invalid env contract is labeled to the env file
+026 diff reports truncate deterministically
+027 no-extractor exact fallback passes identical bytes
+028 no-extractor tolerance-1 fallback passes identical bytes
+029 no-extractor tolerance-1 fallback rejects numeric drift as byte diff
+030 no-extractor exact fallback rejects byte drift
+031 fail_fast stops after first failing comparison
+032 fail_fast omits later comparison label
+033 live mode writes claude exit code files
+TOTAL: 33
