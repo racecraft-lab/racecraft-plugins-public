@@ -193,6 +193,14 @@ def run_counted(suite: unittest.TestSuite, *, label: str) -> int:
         resultclass=CountingTestResult,
         verbosity=0,
     ).run(suite)
+    expected = baseline_inventory(BASELINE)
+    if result.subtest_names != expected:
+        print(
+            f"{label} inventory mismatch: "
+            f"python={len(result.subtest_names)} baseline={len(expected)}",
+            file=sys.stderr,
+        )
+        return 1
     print(f"{label}: {result.units_passed}/{result.units_total} passed")
     return 0 if result.wasSuccessful() and result.units_passed == result.units_total else 1
 
@@ -312,7 +320,8 @@ class EstimateSpecSizeGoldenTests(unittest.TestCase):
             self.assertEqual(result["status"], "ok")
 
         with self.subTest(msg=next_name("mixed valid + bad keeps valid signals")):
-            _returncode, response = run_estimator(parse_args_to_inputs("--user-stories 4 --files abc --frs -2"))
+            returncode, response = run_estimator(parse_args_to_inputs("--user-stories 4 --files abc --frs -2"))
+            assert_estimator_exit(self, returncode, response, context="mixed valid + bad")
             result = response["data"]["stdout_json"]
             self.assertEqual(result["estimated_loc"], 100)
             self.assertEqual(result["status"], "ok")
@@ -358,13 +367,7 @@ class EstimateSpecSizeGoldenTests(unittest.TestCase):
 
 
 def main() -> int:
-    status = run_counted(build_suite(), label="test-estimate-spec-size")
-    try:
-        assert_subtest_inventory_matches_baseline()
-    except AssertionError as exc:
-        print(f"test-estimate-spec-size inventory mismatch: {exc}", file=sys.stderr)
-        return 1
-    return status
+    return run_counted(build_suite(), label="test-estimate-spec-size")
 
 
 if __name__ == "__main__":
