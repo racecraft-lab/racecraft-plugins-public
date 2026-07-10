@@ -414,27 +414,6 @@ def compare_whole_file_bytes(
     return "fail"
 
 
-def pass_extracted_value_match(
-    counts: Counts,
-    fixture_id: str,
-    field_name: str,
-    tolerance_type: str,
-    extractor_name: str,
-    value_a: str,
-    value_b: str,
-) -> str:
-    if tolerance_type == "semantic-equivalent":
-        counts.pass_(f"{fixture_id}:{field_name} (semantic-equivalent, bytes match - judge skipped)")
-        return "pass"
-    if tolerance_type == "tolerance-1":
-        left = value_a.strip()
-        right = value_b.strip()
-        counts.pass_(f"{fixture_id}:{field_name} (tolerance-1, |{left} - {right}|=0)")
-        return "pass"
-    counts.pass_(f"{fixture_id}:{field_name} ({tolerance_type}, extractor={extractor_name})")
-    return "pass"
-
-
 def compare_field(
     fixture_id: str,
     path_a: Path,
@@ -477,17 +456,14 @@ def compare_field(
                 f"extractor '{extractor_name}' failed for section '## {section}' on one or both paths: {exc}",
             )
             return "fail"
-        if value_a.encode("utf-8") == value_b.encode("utf-8"):
-            return pass_extracted_value_match(
-                counts,
-                fixture_id,
-                field_name,
-                tolerance_type,
-                extractor_name,
-                value_a,
-                value_b,
-            )
-        result = judge.judge_values(value_a, value_b, tolerance_type, field=field_name)
+        if tolerance_type == "semantic-equivalent" and value_a.encode("utf-8") == value_b.encode("utf-8"):
+            counts.pass_(f"{fixture_id}:{field_name} (semantic-equivalent, bytes match - judge skipped)")
+            return "pass"
+        try:
+            result = judge.judge_values(value_a, value_b, tolerance_type, field=field_name)
+        except ValueError as exc:
+            counts.fail(f"{fixture_id}:{field_name}", str(exc))
+            return "fail"
         return emit_judge_result(
             counts,
             fixture_id,

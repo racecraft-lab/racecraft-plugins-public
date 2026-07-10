@@ -19,11 +19,11 @@
 019 extractor exact passes despite whole-file drift
 020 extractor tolerance-1 passes numeric difference one
 021 byte-identical bypasses extractor configuration
-022 extractor exact skips judge when extracted bytes match
+022 extractor equal-value fast path is semantic-only
 023 semantic-equivalent is skipped without failure
 024 semantic skip writes warning report
 025 invalid env contract is labeled to the env file
-026 diff reports truncate deterministically
+026 diff reports consume bounded input and truncate deterministically
 027 no-extractor exact fallback passes identical bytes
 028 no-extractor tolerance-1 fallback passes identical bytes
 029 no-extractor tolerance-1 fallback rejects numeric drift as byte diff

@@ -52,11 +52,11 @@ CURRENT_INVENTORY = [
     "extractor exact passes despite whole-file drift",
     "extractor tolerance-1 passes numeric difference one",
     "byte-identical bypasses extractor configuration",
-    "extractor exact skips judge when extracted bytes match",
+    "extractor equal-value fast path is semantic-only",
     "semantic-equivalent is skipped without failure",
     "semantic skip writes warning report",
     "invalid env contract is labeled to the env file",
-    "diff reports truncate deterministically",
+    "diff reports consume bounded input and truncate deterministically",
     "no-extractor exact fallback passes identical bytes",
     "no-extractor tolerance-1 fallback passes identical bytes",
     "no-extractor tolerance-1 fallback rejects numeric drift as byte diff",
@@ -417,6 +417,16 @@ class Layer8RunnerTests(unittest.TestCase):
                 "\n".join(f"beta {index}" for index in range(200)),
             )
             diff_report_text = diff_report.read_text(encoding="utf-8")
+            bounded_diff_consumed = 0
+
+            def bounded_diff_lines() -> object:
+                nonlocal bounded_diff_consumed
+                for index in range(200):
+                    bounded_diff_consumed += 1
+                    yield f"line {index}\n"
+
+            bounded_diff_output = io.StringIO()
+            runner._write_bounded_diff(bounded_diff_output, bounded_diff_lines())
 
             drift_number_status = self._compare_direct(
                 runner,
@@ -454,19 +464,45 @@ class Layer8RunnerTests(unittest.TestCase):
                 {"fields": {"whole_file.byte_first": {"tolerance": "byte-identical"}}},
             )
             with patch.object(runner.judge, "judge_values", side_effect=AssertionError("judge should not run")):
-                extracted_fast_path_status = self._compare_direct(
+                semantic_fast_path_status = self._compare_direct(
                     runner,
                     path_a,
                     path_b,
                     {
-                        "field": "extractor.fast_path",
+                        "field": "extractor.semantic_fast_path",
                         "source": "artifact.md",
                         "section_selector": "## Exact Section",
                         "extractor": "table_column:Status",
-                        "tolerance_key": "extractor.fast_path",
+                        "tolerance_key": "extractor.semantic_fast_path",
                     },
-                    {"fields": {"extractor.fast_path": {"tolerance": "exact"}}},
+                    {"fields": {"extractor.semantic_fast_path": {"tolerance": "semantic-equivalent"}}},
                 )
+            nonnumeric_tolerance_status = self._compare_direct(
+                runner,
+                path_a,
+                path_b,
+                {
+                    "field": "extractor.equal_nonnumeric",
+                    "source": "artifact.md",
+                    "section_selector": "## Exact Section",
+                    "extractor": "table_column:Status",
+                    "tolerance_key": "extractor.equal_nonnumeric",
+                },
+                {"fields": {"extractor.equal_nonnumeric": {"tolerance": "tolerance-1"}}},
+            )
+            unsupported_tolerance_status = self._compare_direct(
+                runner,
+                path_a,
+                path_b,
+                {
+                    "field": "extractor.unsupported",
+                    "source": "artifact.md",
+                    "section_selector": "## Exact Section",
+                    "extractor": "table_column:Status",
+                    "tolerance_key": "extractor.unsupported",
+                },
+                {"fields": {"extractor.unsupported": {"tolerance": "unsupported"}}},
+            )
 
             checks = [
                 (
@@ -552,7 +588,10 @@ class Layer8RunnerTests(unittest.TestCase):
                 ),
                 (
                     CURRENT_INVENTORY[21],
-                    lambda: self.assertEqual(extracted_fast_path_status, "pass"),
+                    lambda: self.assertEqual(
+                        (semantic_fast_path_status, nonnumeric_tolerance_status, unsupported_tolerance_status),
+                        ("pass", "fail", "fail"),
+                    ),
                 ),
                 (
                     CURRENT_INVENTORY[22],
@@ -572,7 +611,12 @@ class Layer8RunnerTests(unittest.TestCase):
                 (
                     CURRENT_INVENTORY[25],
                     lambda: self.assertTrue(
-                        "... diff truncated after 50 lines" in diff_report_text and diff_report_text.count("\n") <= 60
+                        "... diff truncated after 50 lines" in diff_report_text
+                        and diff_report_text.count("\n") <= 60
+                        and bounded_diff_consumed == runner.MAX_DIFF_LINES + 1
+                        and bounded_diff_output.getvalue().endswith(
+                            f"... diff truncated after {runner.MAX_DIFF_LINES} lines\n"
+                        )
                     ),
                 ),
                 (
