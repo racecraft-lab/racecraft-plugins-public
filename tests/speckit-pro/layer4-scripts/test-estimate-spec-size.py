@@ -1,24 +1,22 @@
 #!/usr/bin/env python3
 """Golden-fixture tests for the restored estimate-spec-size runner operation.
 
-XPLAT-010 US7 / FR-025. The Bash predecessor
-(speckit-pro/skills/speckit-coach/scripts/estimate-spec-size.sh) was deleted by
-XPLAT-009 without a Python port; this suite pins the restored read-only runner
-operation against the frozen golden fixtures under
-``fixtures/estimate-spec-size/`` — ``<name>.args`` (one line of the deleted
-script's CLI flags) paired with ``<name>.json`` (its exact compact stdout).
+XPLAT-010 US7 / FR-025. The historical Bash predecessor was captured from
+commit ``c9176902`` and reported 33 named checks. This suite preserves that
+ordered inventory with ``subTest(msg=...)`` while exercising the restored
+read-only runner operation against the frozen golden fixtures under
+``fixtures/estimate-spec-size/``.
 
-This is a born-Python test: there is no live Bash baseline to capture (the
-subject was deleted), so the count-parity dual-run protocol does not apply. The
-golden ``(.args -> .json)`` pairs are the authoritative oracle. The runner is
-exercised end-to-end through the same request envelope the grill-me and
-speckit-prd skills send (``PYTHONPATH=speckit-pro python3 -m speckit_pro_runner``
-with a single JSON request on stdin).
+The runner is exercised end-to-end through the same request envelope the
+grill-me and speckit-prd skills send
+(``PYTHONPATH=speckit-pro python3 -m speckit_pro_runner`` with a single JSON
+request on stdin).
 """
 
 from __future__ import annotations
 
 import json
+import io
 import os
 import shlex
 import subprocess
@@ -29,6 +27,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "estimate-spec-size"
+BASELINE = REPO_ROOT / "tests" / "speckit-pro" / "parity" / "xplat-010" / "test-estimate-spec-size-baseline.txt"
 
 # Maps the deleted script's value-taking flags onto the runner's structured
 # input keys; --spike is a bare boolean flag handled separately.
@@ -106,95 +105,244 @@ def golden_pairs() -> list[tuple[str, dict[str, object], dict]]:
     return pairs
 
 
+def baseline_inventory(path: Path) -> list[str]:
+    names: list[str] = []
+    total: int | None = None
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("TOTAL: "):
+            total = int(line.removeprefix("TOTAL: "))
+            continue
+        _ordinal, name = line.split(" ", 1)
+        names.append(name)
+    if total != len(names):
+        raise AssertionError(f"baseline TOTAL {total} does not match {len(names)} names")
+    return names
+
+
+CURRENT_INVENTORY = [
+    "fixture 'all-absent' → exit 0",
+    "fixture 'all-absent' → expected JSON",
+    "fixture 'at-ceiling' → exit 0",
+    "fixture 'at-ceiling' → expected JSON",
+    "fixture 'bad-input' → exit 0",
+    "fixture 'bad-input' → expected JSON",
+    "fixture 'mixed-valid-bad' → exit 0",
+    "fixture 'mixed-valid-bad' → expected JSON",
+    "fixture 'modify-discount' → exit 0",
+    "fixture 'modify-discount' → expected JSON",
+    "fixture 'multi-slice' → exit 0",
+    "fixture 'multi-slice' → expected JSON",
+    "fixture 'over-ceiling' → exit 0",
+    "fixture 'over-ceiling' → expected JSON",
+    "fixture 'spike-precedence' → exit 0",
+    "fixture 'spike-precedence' → expected JSON",
+    "fixture 'spike' → exit 0",
+    "fixture 'spike' → expected JSON",
+    "fixture 'typical-under' → exit 0",
+    "fixture 'typical-under' → expected JSON",
+    "repeated identical inputs → byte-identical stdout",
+    "second determinism sample (over-ceiling) → byte-identical stdout",
+    "estimated_loc == ceiling → status ok",
+    "strictly over ceiling → status warn",
+    "--spike → {estimated_loc:0, suggested_slices:1, status:ok}",
+    "--spike overrides large signals (spike precedence)",
+    "no arguments → estimated_loc 0, status ok, exit 0",
+    "malformed/negative/decimal signals normalize to 0",
+    "mixed valid + bad keeps valid signals",
+    "status is always ok or warn across an input sweep",
+    "under ceiling → 1 slice",
+    "440 LOC → 2 slices",
+    "800 LOC → 2 slices",
+]
+
+
+def build_suite() -> unittest.TestSuite:
+    return unittest.defaultTestLoader.loadTestsFromTestCase(EstimateSpecSizeGoldenTests)
+
+
+class CountingTestResult(unittest.TextTestResult):
+    """Self-contained counter used before PR 2 introduces the shared helper."""
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        super().__init__(*args, **kwargs)
+        self.units_total = 0
+        self.units_passed = 0
+        self.subtest_names: list[str] = []
+
+    def addSubTest(self, test, subtest, outcome) -> None:  # type: ignore[no-untyped-def]
+        super().addSubTest(test, subtest, outcome)
+        self.units_total += 1
+        if outcome is None:
+            self.units_passed += 1
+        self.subtest_names.append(str(getattr(subtest, "_message", "<subtest>")))
+
+
+def run_counted(suite: unittest.TestSuite, *, label: str) -> int:
+    result = unittest.TextTestRunner(
+        stream=io.StringIO(),
+        resultclass=CountingTestResult,
+        verbosity=0,
+    ).run(suite)
+    print(f"{label}: {result.units_passed}/{result.units_total} passed")
+    return 0 if result.wasSuccessful() and result.units_passed == result.units_total else 1
+
+
+def assert_subtest_inventory_matches_baseline() -> None:
+    result = unittest.TextTestRunner(
+        stream=io.StringIO(),
+        resultclass=CountingTestResult,
+        verbosity=0,
+    ).run(build_suite())
+    expected = baseline_inventory(BASELINE)
+    if result.subtest_names != expected:
+        raise AssertionError(
+            "subTest inventory does not match baseline: "
+            f"python={len(result.subtest_names)} baseline={len(expected)}"
+        )
+
+
 class EstimateSpecSizeGoldenTests(unittest.TestCase):
-    def test_golden_fixtures_match_exactly(self) -> None:
+    def test_estimator_contract_matches_historical_predecessor(self) -> None:
+        self.assertEqual(baseline_inventory(BASELINE), CURRENT_INVENTORY)
+        expected_fixture_names = [
+            "all-absent",
+            "at-ceiling",
+            "bad-input",
+            "mixed-valid-bad",
+            "modify-discount",
+            "multi-slice",
+            "over-ceiling",
+            "spike-precedence",
+            "spike",
+            "typical-under",
+        ]
         pairs = golden_pairs()
         self.assertTrue(pairs, "no estimate-spec-size golden fixtures discovered")
+        self.assertEqual([name for name, _inputs, _expected in pairs], expected_fixture_names)
+
+        names = iter(CURRENT_INVENTORY)
+
+        def next_name(expected: str) -> str:
+            name = next(names)
+            self.assertEqual(name, expected)
+            return name
+
         for name, inputs, expected in pairs:
-            with self.subTest(fixture=name):
-                returncode, response = run_estimator(inputs, request_id=f"test-{name}")
+            returncode, response = run_estimator(inputs, request_id=f"test-{name}")
+            with self.subTest(msg=next_name(f"fixture '{name}' → exit 0")):
                 # Advisory-only: the runner never blocks on an estimate, even warn.
                 self.assertEqual(returncode, 0, f"{name}: runner exit code")
+            with self.subTest(msg=next_name(f"fixture '{name}' → expected JSON")):
                 self.assertEqual(response.get("status"), "ok", f"{name}: envelope status")
                 result = response["data"]["stdout_json"]
                 self.assertEqual(result, expected, f"{name}: estimator result triple")
 
-    def test_status_is_only_ok_or_warn(self) -> None:
-        for name, inputs, _expected in golden_pairs():
-            with self.subTest(fixture=name):
-                _returncode, response = run_estimator(inputs, request_id=f"test-status-{name}")
-                status = response["data"]["stdout_json"]["status"]
-                self.assertIn(status, {"ok", "warn"}, f"{name}: status enum")
-
-    def test_boundary_at_ceiling_ok_over_ceiling_warn(self) -> None:
-        cases = [
-            ("--files 10", {"estimated_loc": 400, "status": "ok"}),
-            ("--files 11", {"estimated_loc": 440, "status": "warn"}),
-        ]
-        for arg_line, expected in cases:
-            with self.subTest(args=arg_line):
-                _returncode, response = run_estimator(parse_args_to_inputs(arg_line))
-                result = response["data"]["stdout_json"]
-                self.assertEqual(result["estimated_loc"], expected["estimated_loc"])
-                self.assertEqual(result["status"], expected["status"])
-
-    def test_repeated_inputs_are_deterministic(self) -> None:
         inputs = parse_args_to_inputs("--user-stories 2 --files 3 --frs 4")
-        with self.subTest(sample="typical-under"):
+        with self.subTest(msg=next_name("repeated identical inputs → byte-identical stdout")):
             _rc1, first = run_estimator(inputs, request_id="determinism-a")
             _rc2, second = run_estimator(inputs, request_id="determinism-b")
             self.assertEqual(first["data"]["stdout_json"], second["data"]["stdout_json"])
             self.assertEqual(first["data"]["stdout"]["text"], second["data"]["stdout"]["text"])
 
+        over_ceiling_inputs = parse_args_to_inputs("--files 11")
+        with self.subTest(msg=next_name("second determinism sample (over-ceiling) → byte-identical stdout")):
+            _rc1, first = run_estimator(over_ceiling_inputs, request_id="determinism-over-a")
+            _rc2, second = run_estimator(over_ceiling_inputs, request_id="determinism-over-b")
+            self.assertEqual(first["data"]["stdout_json"], second["data"]["stdout_json"])
+            self.assertEqual(first["data"]["stdout"]["text"], second["data"]["stdout"]["text"])
 
-class CountingResult(unittest.TextTestResult):
-    """Counts each executed subTest (and each non-subTest method) as one unit.
+        with self.subTest(msg=next_name("estimated_loc == ceiling → status ok")):
+            _returncode, response = run_estimator(parse_args_to_inputs("--files 10"))
+            result = response["data"]["stdout_json"]
+            self.assertEqual(result["estimated_loc"], 400)
+            self.assertEqual(result["status"], "ok")
 
-    New XPLAT-010 ports must count assertion units rather than printing bare
-    ``result.testsRun``; this suite groups its checks into subTests, so the
-    denominator is the number of subTests executed, not the four method names.
-    """
+        with self.subTest(msg=next_name("strictly over ceiling → status warn")):
+            _returncode, response = run_estimator(parse_args_to_inputs("--files 11"))
+            result = response["data"]["stdout_json"]
+            self.assertEqual(result["estimated_loc"], 440)
+            self.assertEqual(result["status"], "warn")
 
-    def __init__(self, *args: object, **kwargs: object) -> None:
-        super().__init__(*args, **kwargs)
-        self.units_passed = 0
-        self.units_failed = 0
-        self._subtests_in_current = 0
+        with self.subTest(msg=next_name("--spike → {estimated_loc:0, suggested_slices:1, status:ok}")):
+            _returncode, response = run_estimator(parse_args_to_inputs("--spike"))
+            self.assertEqual(
+                response["data"]["stdout_json"],
+                {"estimated_loc": 0, "suggested_slices": 1, "status": "ok"},
+            )
 
-    def startTest(self, test: unittest.TestCase) -> None:
-        super().startTest(test)
-        self._subtests_in_current = 0
+        with self.subTest(msg=next_name("--spike overrides large signals (spike precedence)")):
+            _returncode, response = run_estimator(
+                parse_args_to_inputs("--user-stories 99 --files 99 --frs 99 --spike")
+            )
+            self.assertEqual(
+                response["data"]["stdout_json"],
+                {"estimated_loc": 0, "suggested_slices": 1, "status": "ok"},
+            )
 
-    def addSubTest(self, test, subtest, outcome) -> None:  # type: ignore[no-untyped-def]
-        super().addSubTest(test, subtest, outcome)
-        self._subtests_in_current += 1
-        if outcome is None:
-            self.units_passed += 1
-        else:
-            self.units_failed += 1
+        with self.subTest(msg=next_name("no arguments → estimated_loc 0, status ok, exit 0")):
+            returncode, response = run_estimator(parse_args_to_inputs(""))
+            result = response["data"]["stdout_json"]
+            self.assertEqual(returncode, 0)
+            self.assertEqual(result["estimated_loc"], 0)
+            self.assertEqual(result["status"], "ok")
 
-    def addSuccess(self, test: unittest.TestCase) -> None:
-        super().addSuccess(test)
-        if self._subtests_in_current == 0:
-            self.units_passed += 1
+        with self.subTest(msg=next_name("malformed/negative/decimal signals normalize to 0")):
+            returncode, response = run_estimator(parse_args_to_inputs("--user-stories abc --files -5 --frs 3.5"))
+            result = response["data"]["stdout_json"]
+            self.assertEqual(returncode, 0)
+            self.assertEqual(result["estimated_loc"], 0)
+            self.assertEqual(result["status"], "ok")
 
-    def addFailure(self, test, err) -> None:  # type: ignore[no-untyped-def]
-        super().addFailure(test, err)
-        if self._subtests_in_current == 0:
-            self.units_failed += 1
+        with self.subTest(msg=next_name("mixed valid + bad keeps valid signals")):
+            _returncode, response = run_estimator(parse_args_to_inputs("--user-stories 4 --files abc --frs -2"))
+            result = response["data"]["stdout_json"]
+            self.assertEqual(result["estimated_loc"], 100)
+            self.assertEqual(result["status"], "ok")
 
-    def addError(self, test, err) -> None:  # type: ignore[no-untyped-def]
-        super().addError(test, err)
-        if self._subtests_in_current == 0:
-            self.units_failed += 1
+        with self.subTest(msg=next_name("status is always ok or warn across an input sweep")):
+            status_violation = ""
+            for arg_line in (
+                "",
+                "--files 10",
+                "--files 11",
+                "--files 20",
+                "--user-stories 2 --files 3 --frs 4",
+                "--files 10 --new-vs-modify modify",
+                "--spike",
+                "--user-stories 99 --files 99 --frs 99 --spike",
+                "--user-stories abc --files -5 --frs 3.5",
+                "--user-stories 4 --files abc --frs -2",
+            ):
+                _returncode, response = run_estimator(parse_args_to_inputs(arg_line))
+                status = response["data"]["stdout_json"].get("status", "")
+                if status not in {"ok", "warn"}:
+                    status_violation = f"args='{arg_line}' status='{status}'"
+                    break
+            self.assertEqual(status_violation, "")
+
+        with self.subTest(msg=next_name("under ceiling → 1 slice")):
+            _returncode, response = run_estimator(parse_args_to_inputs("--user-stories 2 --files 3 --frs 4"))
+            self.assertEqual(response["data"]["stdout_json"]["suggested_slices"], 1)
+
+        with self.subTest(msg=next_name("440 LOC → 2 slices")):
+            _returncode, response = run_estimator(parse_args_to_inputs("--files 11"))
+            self.assertEqual(response["data"]["stdout_json"]["suggested_slices"], 2)
+
+        with self.subTest(msg=next_name("800 LOC → 2 slices")):
+            _returncode, response = run_estimator(parse_args_to_inputs("--files 20"))
+            self.assertEqual(response["data"]["stdout_json"]["suggested_slices"], 2)
+
+        self.assertEqual(list(names), [])
 
 
 def main() -> int:
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(EstimateSpecSizeGoldenTests)
-    result = unittest.TextTestRunner(resultclass=CountingResult, verbosity=1).run(suite)
-    total = result.units_passed + result.units_failed
-    print(f"test-estimate-spec-size: {result.units_passed}/{total} passed")
-    return 0 if result.wasSuccessful() else 1
+    status = run_counted(build_suite(), label="test-estimate-spec-size")
+    try:
+        assert_subtest_inventory_matches_baseline()
+    except AssertionError as exc:
+        print(f"test-estimate-spec-size inventory mismatch: {exc}", file=sys.stderr)
+        return 1
+    return status
 
 
 if __name__ == "__main__":
