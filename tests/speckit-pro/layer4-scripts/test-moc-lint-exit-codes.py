@@ -7,7 +7,6 @@ count-parity baseline is pinned at TOTAL: 36.
 
 from __future__ import annotations
 
-import os
 import stat
 import subprocess
 import sys
@@ -52,10 +51,6 @@ def run_lint(script: Path, root: Path | None = None) -> subprocess.CompletedProc
     )
 
 
-def is_root() -> bool:
-    return hasattr(os, "geteuid") and os.geteuid() == 0
-
-
 def chmod_tree(root: Path, mode: int) -> None:
     if not root.exists():
         return
@@ -68,15 +63,6 @@ def chmod_tree(root: Path, mode: int) -> None:
         root.chmod(mode)
     except OSError:
         pass
-
-
-def make_unreadable_dir(parent: Path) -> Path:
-    root = parent / "unreadable-root"
-    parent.mkdir(parents=True, exist_ok=True)
-    root.mkdir()
-    root.chmod(0)
-    return root
-
 
 def make_gated_spec(root: Path, name: str) -> Path:
     spec_dir = root / name
@@ -195,6 +181,113 @@ def force_stale_mode_b_internal_error() -> subprocess.CompletedProcess[str]:
     )
 
 
+def force_orphan_scan_root_internal_error(root: Path) -> subprocess.CompletedProcess[str]:
+    code = textwrap.dedent(
+        f"""\
+        import importlib.util
+        import pathlib
+        import sys
+
+        module_path = pathlib.Path({str(ORPHAN)!r})
+        scan_root = pathlib.Path({str(root)!r})
+        spec = importlib.util.spec_from_file_location("validate_moc_orphan_forced", module_path)
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+
+        def boom(_root):
+            raise PermissionError("forced unreadable root")
+
+        module.scan_root = boom
+        raise SystemExit(module.main([str(scan_root)]))
+        """
+    )
+    return subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        shell=False,
+        check=False,
+    )
+
+
+def force_stale_scan_root_internal_error(root: Path) -> subprocess.CompletedProcess[str]:
+    code = textwrap.dedent(
+        f"""\
+        import importlib.util
+        import pathlib
+        import sys
+
+        module_path = pathlib.Path({str(STALE)!r})
+        scan_root = pathlib.Path({str(root)!r})
+        spec = importlib.util.spec_from_file_location("validate_moc_stale_index_forced_root", module_path)
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+
+        def boom(_root, *, emit=False):
+            raise PermissionError("forced unreadable root")
+
+        module.scan_root = boom
+        sys.argv = [str(module_path), str(scan_root)]
+        raise SystemExit(module.main())
+        """
+    )
+    return subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        shell=False,
+        check=False,
+    )
+
+
+def force_unreadable_marker(script: Path, root: Path) -> subprocess.CompletedProcess[str]:
+    if script == ORPHAN:
+        entrypoint = "module.main([str(scan_root)])"
+        argv_patch = ""
+    else:
+        entrypoint = "module.main()"
+        argv_patch = "        sys.argv = [str(module_path), str(scan_root)]\n"
+    code = textwrap.dedent(
+        f"""\
+        import importlib.util
+        import os
+        import pathlib
+        import sys
+
+        module_path = pathlib.Path({str(script)!r})
+        scan_root = pathlib.Path({str(root)!r})
+        marker = scan_root / "unreadable-spec" / "SPEC-MOC.md"
+        spec = importlib.util.spec_from_file_location("forced_unreadable_marker", module_path)
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+
+        real_access = module.os.access
+
+        def fake_access(path, mode):
+            candidate = pathlib.Path(path)
+            if candidate == marker:
+                return False
+            return real_access(path, mode)
+
+        module.os.access = fake_access
+{argv_patch}        raise SystemExit({entrypoint})
+        """
+    )
+    return subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        shell=False,
+        check=False,
+    )
+
+
 class MocLintExitCodeTests(unittest.TestCase):
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
@@ -210,48 +303,40 @@ class MocLintExitCodeTests(unittest.TestCase):
         root_a = self.work / "a"
         make_gated_spec(root_a, "gated-spec")
 
-        unreadable_root_orphan = make_unreadable_dir(self.work / "internal-orphan")
-        with self.subTest(msg="orphan: broken scan-path basename -> exit 2"):
-            result = run_lint(ORPHAN, unreadable_root_orphan)
+        unreadable_root_orphan = self.work / "internal-orphan"
+        unreadable_root_orphan.mkdir()
+        with self.subTest(msg="orphan: forced unreadable scan root -> exit 2"):
+            result = force_orphan_scan_root_internal_error(unreadable_root_orphan)
             self.assertEqual(result.returncode, 2, result.stderr)
         with self.subTest(msg="orphan: internal-error exit (2) is distinct from content-violation exit (1)"):
             self.assertNotEqual(result.returncode, 1)
 
-        chmod_tree(unreadable_root_orphan, stat.S_IRWXU)
-        unreadable_root_stale = make_unreadable_dir(self.work / "internal-stale")
-        with self.subTest(msg="stale-index: broken scan-path dirname -> exit 2"):
-            result = run_lint(STALE, unreadable_root_stale)
+        unreadable_root_stale = self.work / "internal-stale"
+        unreadable_root_stale.mkdir()
+        with self.subTest(msg="stale-index: forced unreadable scan root -> exit 2"):
+            result = force_stale_scan_root_internal_error(unreadable_root_stale)
             self.assertEqual(result.returncode, 2, result.stderr)
         with self.subTest(msg="stale-index: internal-error exit (2) is distinct from content-violation exit (1)"):
             self.assertNotEqual(result.returncode, 1)
-        chmod_tree(unreadable_root_stale, stat.S_IRWXU)
 
-        if is_root():
-            with self.subTest(msg="unreadable-marker sub-case SKIPPED (running as root bypasses 000)"):
-                self.assertTrue(True)
-        else:
-            root_b = self.work / "b"
-            unreadable_spec = make_gated_spec(root_b, "unreadable-spec")
-            marker = unreadable_spec / "SPEC-MOC.md"
-            marker.chmod(0)
+        root_b = self.work / "b"
+        make_gated_spec(root_b, "unreadable-spec")
 
-            with self.subTest(msg="orphan: unreadable marker -> exit 0 (no content violation)"):
-                result = run_lint(ORPHAN, root_b)
-                self.assertEqual(result.returncode, 0, result.stderr)
-            with self.subTest(msg="orphan: unreadable marker -> stderr carries a warning"):
-                self.assertIn("unreadable marker", result.stderr)
-            with self.subTest(msg="orphan: unreadable marker -> no VIOLATION on stdout"):
-                self.assertNotIn("VIOLATION", result.stdout)
+        with self.subTest(msg="orphan: unreadable marker -> exit 0 (no content violation)"):
+            result = force_unreadable_marker(ORPHAN, root_b)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        with self.subTest(msg="orphan: unreadable marker -> stderr carries a warning"):
+            self.assertIn("unreadable marker", result.stderr)
+        with self.subTest(msg="orphan: unreadable marker -> no VIOLATION on stdout"):
+            self.assertNotIn("VIOLATION", result.stdout)
 
-            with self.subTest(msg="stale-index: unreadable marker -> exit 0 (no content violation)"):
-                result = run_lint(STALE, root_b)
-                self.assertEqual(result.returncode, 0, result.stderr)
-            with self.subTest(msg="stale-index: unreadable marker -> stderr carries a warning"):
-                self.assertIn("unreadable marker", result.stderr)
-            with self.subTest(msg="stale-index: unreadable marker -> no VIOLATION on stdout"):
-                self.assertNotIn("VIOLATION", result.stdout)
-
-            marker.chmod(stat.S_IRWXU)
+        with self.subTest(msg="stale-index: unreadable marker -> exit 0 (no content violation)"):
+            result = force_unreadable_marker(STALE, root_b)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        with self.subTest(msg="stale-index: unreadable marker -> stderr carries a warning"):
+            self.assertIn("unreadable marker", result.stderr)
+        with self.subTest(msg="stale-index: unreadable marker -> no VIOLATION on stdout"):
+            self.assertNotIn("VIOLATION", result.stdout)
 
         nonexistent = self.work / "does-not-exist-root"
         with self.subTest(msg="orphan: nonexistent scan root -> exit 0"):
@@ -311,25 +396,25 @@ class MocLintExitCodeTests(unittest.TestCase):
         with self.subTest(msg="stale-index: content violation -> nothing on STDERR (no internal-error line)"):
             self.assertNotIn("internal failure", result.stderr)
 
-        root_e_interr_orphan = make_unreadable_dir(self.work / "e-interr-orphan")
+        root_e_interr_orphan = self.work / "e-interr-orphan"
+        root_e_interr_orphan.mkdir()
         with self.subTest(msg="orphan: internal error -> exit 2 (not 1)"):
-            result = run_lint(ORPHAN, root_e_interr_orphan)
+            result = force_orphan_scan_root_internal_error(root_e_interr_orphan)
             self.assertEqual(result.returncode, 2, result.stderr)
         with self.subTest(msg="orphan: internal error -> message on STDERR"):
             self.assertIn("internal failure", result.stderr)
         with self.subTest(msg="orphan: internal error -> NO VIOLATION on STDOUT (classes not conflated)"):
             self.assertNotIn("VIOLATION", result.stdout)
-        chmod_tree(root_e_interr_orphan, stat.S_IRWXU)
 
-        root_e_interr_stale = make_unreadable_dir(self.work / "e-interr-stale")
+        root_e_interr_stale = self.work / "e-interr-stale"
+        root_e_interr_stale.mkdir()
         with self.subTest(msg="stale-index: internal error -> exit 2 (not 1)"):
-            result = run_lint(STALE, root_e_interr_stale)
+            result = force_stale_scan_root_internal_error(root_e_interr_stale)
             self.assertEqual(result.returncode, 2, result.stderr)
         with self.subTest(msg="stale-index: internal error -> message on STDERR"):
             self.assertIn("internal failure", result.stderr)
         with self.subTest(msg="stale-index: internal error -> NO VIOLATION on STDOUT (classes not conflated)"):
             self.assertNotIn("VIOLATION", result.stdout)
-        chmod_tree(root_e_interr_stale, stat.S_IRWXU)
 
         if STALE_RUNTIME_SYMLINK.exists() or STALE_RUNTIME_SYMLINK.is_symlink():
             STALE_RUNTIME_SYMLINK.unlink()
