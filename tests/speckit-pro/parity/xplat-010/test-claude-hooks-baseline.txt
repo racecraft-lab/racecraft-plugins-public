@@ -1,0 +1,23 @@
+001 guard-version-triplet.py exists
+002 validate-structural.py exists
+003 guard-version-triplet.py is executable
+004 validate-structural.py is executable
+005 guard blocks marketplace edit with exit 2
+006 guard warning names version-load-bearing file
+007 guard allows unrelated file
+008 guard unrelated file is quiet
+009 guard malformed JSON fails open
+010 structural malformed JSON fails open
+011 structural ignores unrelated file
+012 structural runs Python layer-1 dispatch for matching file
+013 structural failure exits 2
+014 structural failure message includes Layer 1
+015 structural validates command markdown trigger
+016 structural ignores non-trigger markdown
+017 guard-version-triplet.py does not call os.system
+018 guard-version-triplet.py does not use shell=True
+019 guard-version-triplet.py does not invoke jq
+020 validate-structural.py does not call os.system
+021 validate-structural.py does not use shell=True
+022 validate-structural.py does not invoke jq
+TOTAL: 22

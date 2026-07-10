@@ -1,0 +1,59 @@
+001 refresh helper exists
+002 refresh helper is executable
+003 help mentions Codex refresh
+004 help mentions Codex refresh
+005 dry-run default rebuilds, validates, and prints Claude dev command
+006 dry-run default rebuilds, validates, and prints Claude dev command
+007 dry-run default rebuilds, validates, and prints Claude dev command
+008 dry-run default rebuilds, validates, and prints Claude dev command
+009 dry-run default refreshes both installed plugin caches
+010 dry-run default refreshes both installed plugin caches
+011 dry-run opt-outs skip installed plugin cache refresh
+012 dry-run opt-outs skip installed plugin cache refresh
+013 dry-run opt-outs skip installed plugin cache refresh
+014 dry-run does not require generated payloads to exist
+015 dry-run does not require generated payloads to exist
+016 dry-run all prints refresh commands without requiring real CLI state
+017 dry-run all prints refresh commands without requiring real CLI state
+018 dry-run all prints refresh commands without requiring real CLI state
+019 dry-run all prints refresh commands without requiring real CLI state
+020 dry-run all prints refresh commands without requiring real CLI state
+021 Codex refresh removes and adds installed plugin
+022 Codex refresh removes and adds installed plugin
+023 Codex refresh removes and adds installed plugin
+024 Codex refresh removes and adds installed plugin
+025 Codex refresh removes and adds installed plugin
+026 Claude install refresh honors requested scope
+027 Claude install refresh honors requested scope
+028 Claude install refresh honors requested scope
+029 Claude install refresh honors requested scope
+030 Claude install refresh honors requested scope
+031 Claude launch uses generated Claude payload
+032 Claude launch uses generated Claude payload
+033 benign 'not found' uninstall still proceeds to install
+034 benign 'not found' uninstall still proceeds to install
+035 benign 'not found' uninstall still proceeds to install
+036 non-benign uninstall failure aborts with its output
+037 non-benign uninstall failure aborts with its output
+038 non-benign uninstall failure aborts with its output
+039 marketplace present as a non-local source aborts clearly
+040 marketplace present as a non-local source aborts clearly
+041 marketplace pointing at another checkout aborts
+042 marketplace pointing at another checkout aborts
+043 absent marketplace is added
+044 absent marketplace is added
+045 marketplace inspection failure aborts
+046 marketplace inspection failure aborts
+047 non-benign Codex remove failure aborts
+048 non-benign Codex remove failure aborts
+049 marketplace name with regex metacharacters matches its row literally
+050 marketplace name with regex metacharacters matches its row literally
+051 marketplace name with regex metacharacters matches its row literally
+052 missing claude skips validation instead of aborting a Codex-only run
+053 missing claude skips validation instead of aborting a Codex-only run
+054 missing claude skips validation instead of aborting a Codex-only run
+055 invalid scope exits with usage error
+056 invalid scope exits with usage error
+057 unknown option exits with usage error
+058 unknown option exits with usage error
+TOTAL: 58

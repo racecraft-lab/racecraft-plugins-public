@@ -153,23 +153,23 @@ Editability and responsibility map for source, generated payloads, tests, releas
 - **Purpose:** Root scripts used for generated payload and marketplace maintenance.
 - **Classification:** `release-infrastructure`
 - **Platform concept:** Source-vs-dist responsibility
-- **Claude Code:** scripts/build-plugin-payloads.py, scripts/sync-marketplace-versions.sh
-- **Codex:** scripts/build-plugin-payloads.py, scripts/sync-marketplace-versions.sh
+- **Claude Code:** scripts/build-plugin-payloads.py, scripts/sync-marketplace-versions.py
+- **Codex:** scripts/build-plugin-payloads.py, scripts/sync-marketplace-versions.py
 - **Runtime difference:** Release and payload scripts are shared maintenance infrastructure unless an individual script declares a runtime-specific target.
 
 #### Source Facts
 
-- Release And Payload Scripts is classified as release-infrastructure. Source refs: `scripts/build-plugin-payloads.py`, `scripts/sync-marketplace-versions.sh`.
+- Release And Payload Scripts is classified as release-infrastructure. Source refs: `scripts/build-plugin-payloads.py`, `scripts/sync-marketplace-versions.py`.
 
 #### Sources
 
 - [scripts/build-plugin-payloads.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/build-plugin-payloads.py)
-- [scripts/sync-marketplace-versions.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/sync-marketplace-versions.sh)
+- [scripts/sync-marketplace-versions.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/sync-marketplace-versions.py)
 
 #### Inferred Notes
 
 - Use this classification before deciding whether a future change should edit source directly, regenerate payloads, or update docs only.
-  - Based on: `scripts/build-plugin-payloads.py`, `scripts/sync-marketplace-versions.sh`
+  - Based on: `scripts/build-plugin-payloads.py`, `scripts/sync-marketplace-versions.py`
 
 ### SpecKit Integration Manifests
 
