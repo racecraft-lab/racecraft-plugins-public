@@ -67,7 +67,7 @@ Columns:
 | PR 8 | port: `test-l8-extractors.sh` → `test-l8-extractors.py` | default | 19 → 19 | yes | `tests/speckit-pro/parity/xplat-010/test-l8-extractors-baseline.txt` |
 | PR 8 | replacement: `test-l8-judge.sh` → deterministic local judge contract | default | 16 → 16 | no (intentional removal of live-LLM judgment) | retired Bash: `tests/speckit-pro/parity/xplat-010/test-l8-judge-bash-baseline.txt`; current Python: `tests/speckit-pro/parity/xplat-010/test-l8-judge-baseline.txt` |
 | PR 8 | fixture environment inputs: 8 `env-*.sh` → 8 `env-*.json` | default | 0 → 0 (data-only inputs) | n/a | n/a |
-| PR 8 | new Layer-8 runner/portability contract | default | 0 → 29 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer8-runner-baseline.txt` |
+| PR 8 | new Layer-8 runner/portability contract | default | 0 → 33 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer8-runner-baseline.txt` |
 | PR 8 | shipped gate regression expansion | default | 58 → 59 | n/a | n/a |
 
 **PR 13 note (T121–T130):** The estimator Layer-4 test follows the
