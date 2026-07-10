@@ -12,7 +12,7 @@ against its committed baseline under `tests/speckit-pro/parity/xplat-010/`.
 Protocol against the historical predecessor checkout at commit
 `c9176902d98082415aac88954b2f66fa6c499506`. Six-item dual-run proof:
 
-1. Bash capture command: `VERBOSE=true bash tests/speckit-pro/layer4-scripts/test-estimate-spec-size.sh` in the historical checkout, parsed by `tests/speckit-pro/lib/capture_baseline.py`.
+1. Bash capture command: `VERBOSE=true bash tests/speckit-pro/layer4-scripts/test-estimate-spec-size.sh` in the historical checkout.
 2. Port command: `python3 tests/speckit-pro/layer4-scripts/test-estimate-spec-size.py`.
 3. Committed baseline: `tests/speckit-pro/parity/xplat-010/test-estimate-spec-size-baseline.txt`.
 4. Ordered-name inventory diff: no differences, 1:1 preserved.
