@@ -73,7 +73,7 @@ Columns:
 | PR 9 | port: `test-l6-codex-runner.sh` → `.py` | default | 23 → 23 | yes | `tests/speckit-pro/parity/xplat-010/test-l6-codex-runner-baseline.txt` |
 | PR 9 | live runner/library swaps for Layers 2/3/6 | command-plan / live-only | 0 → 0 (predecessors emit no counted assertions) | n/a | eleven per-entrypoint baselines under `tests/speckit-pro/parity/xplat-010/` |
 | PR 9 | `run-all.py` scope/command-plan contract expansion | default | 20 → 24 | n/a | n/a |
-| PR 9 | new Layer-2 runner/staging contract | default | 0 → 24 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer2-trigger-runners-baseline.txt` |
+| PR 9 | new Layer-2 runner/staging contract | default | 0 → 26 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer2-trigger-runners-baseline.txt` |
 | PR 9 | new Layer-2 signal-restoration contract | default | 0 → 7 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer2-signal-restoration-baseline.txt` |
 | PR 9 | new Layer-6 portability contract | default | 0 → 18 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer6-portability-baseline.txt` |
 | PR 9 | shipped gate manifest-reference strengthening | default | 59 → 59 (existing method strengthened) | n/a | n/a |
