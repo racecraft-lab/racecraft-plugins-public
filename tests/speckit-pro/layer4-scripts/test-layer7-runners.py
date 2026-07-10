@@ -154,7 +154,7 @@ class Layer7RunnerTests(unittest.TestCase):
             root = Path(temporary)
             fixture = root / "bad-response-assertions"
             fixture.mkdir()
-            (fixture / "expected.json").write_text('{"response_assertions":[false]}\n', encoding="utf-8")
+            (fixture / "expected.json").write_text('{"response_assertions":false}\n', encoding="utf-8")
             (fixture / "parser-fixture.jsonl").write_text(
                 (LAYER7 / "test-fixtures" / "single-dispatch.jsonl").read_text(encoding="utf-8"),
                 encoding="utf-8",
@@ -164,8 +164,8 @@ class Layer7RunnerTests(unittest.TestCase):
             stderr = io.StringIO()
             with contextlib.redirect_stderr(stderr):
                 malformed_exit = module.main([fixture.name])
-            checks.append(("return-format runner rejects malformed response_assertions", lambda: self.assertEqual(malformed_exit, 2)))
-            checks.append(("return-format runner reports malformed response_assertions", lambda: self.assertIn("response_assertions[0]", stderr.getvalue())))
+            checks.append(("return-format runner rejects top-level false response_assertions", lambda: self.assertEqual(malformed_exit, 2)))
+            checks.append(("return-format runner reports response_assertions array requirement", lambda: self.assertIn("response_assertions must be an array", stderr.getvalue())))
 
         tree = ast.parse((LAYER7 / "lib" / "fixture_runner.py").read_text(encoding="utf-8"))
         subprocess_calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "run"]
