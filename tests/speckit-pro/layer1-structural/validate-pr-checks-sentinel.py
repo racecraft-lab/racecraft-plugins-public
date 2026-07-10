@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """`validate-plugins` sentinel-job validation (port of validate-pr-checks-sentinel.sh).
 
-XPLAT-010 count-parity port (T032, US2). Python 3.11+ standard library only.
+XPLAT-010 count-parity port (T032, US2). The module imports only the Python
+3.11+ standard library; YAML validation intentionally preserves the predecessor's
+optional PyYAML/Ruby subprocess delegation described below.
 Verifies ``.github/workflows/pr-checks.yml`` defines the ``validate-plugins``
 sentinel with the correct triggers, dispatch inputs, Python-runner gate steps,
 and sentinel logic, then folds a glob of every ``.github/workflows/*.yml`` into a

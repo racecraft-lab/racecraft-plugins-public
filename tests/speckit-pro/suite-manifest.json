@@ -62,6 +62,7 @@
         { "path": "tests/speckit-pro/lib/test_lib.py", "label": "test-lib", "baseline": null },
         { "path": "tests/speckit-pro/layer4-scripts/test-capture-python-baseline.py", "label": "test-capture-python-baseline", "baseline": null },
         { "path": "tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py", "label": "test-autopilot-phase-coverage", "baseline": null },
+        { "path": "tests/speckit-pro/layer4-scripts/test-layer1-validator-regressions.py", "label": "test-layer1-validator-regressions", "baseline": null },
         { "path": "tests/speckit-pro/layer4-scripts/test-check-toolchain.sh", "label": "test-check-toolchain", "baseline": null },
         { "path": "tests/speckit-pro/layer4-scripts/test-post-implementation-reference.sh", "label": "test-post-implementation-reference", "baseline": null },
         { "path": "tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh", "label": "test-reviewability-marker-guidance", "baseline": null },

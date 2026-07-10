@@ -60,6 +60,13 @@ def _rel(path: Path) -> str:
     return path.relative_to(REPO_ROOT).as_posix()
 
 
+def _display_path(path: Path) -> str:
+    try:
+        return _rel(path)
+    except ValueError:
+        return path.as_posix()
+
+
 def _skill_dirs(directory: Path) -> list[Path]:
     return sorted((p for p in directory.iterdir() if (p / "SKILL.md").is_file()), key=lambda p: p.name)
 
@@ -96,7 +103,10 @@ class ValidateSkillCapabilityPointers(unittest.TestCase):
             if not self._token_seen(token):
                 self.found_tokens.append(token)
         with self.subTest(msg=f"{runtime} skill '{skill}' {marker} reference yields a repo-root-relative path token"):
-            self.assertTrue(matches, f"skill references {marker} but no token matched {pattern.pattern} in {skill_file}")
+            self.assertTrue(
+                matches,
+                f"skill references {marker} but no token matched {pattern.pattern} in {_display_path(skill_file)}",
+            )
 
     def _check_runtime(self, runtime: str, directory: Path) -> None:
         with self.subTest(msg=f"{runtime}: skills directory exists ({_rel(directory)})"):
@@ -149,9 +159,9 @@ class ValidateSkillCapabilityPointers(unittest.TestCase):
             return
 
         with self.subTest(msg=f"built Claude payload tree exists ({_rel(DIST_CLAUDE)})"):
-            self.assertTrue(DIST_CLAUDE.is_dir(), f"missing built tree: {DIST_CLAUDE}")
+            self.assertTrue(DIST_CLAUDE.is_dir(), f"missing built tree: {_display_path(DIST_CLAUDE)}")
         with self.subTest(msg=f"built Codex payload tree exists ({_rel(DIST_CODEX)})"):
-            self.assertTrue(DIST_CODEX.is_dir(), f"missing built tree: {DIST_CODEX}")
+            self.assertTrue(DIST_CODEX.is_dir(), f"missing built tree: {_display_path(DIST_CODEX)}")
 
         for token in self.found_tokens:
             with self.subTest(msg=f"resolves under dist/claude: {token}"):

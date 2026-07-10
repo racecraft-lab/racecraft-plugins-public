@@ -59,9 +59,10 @@ def _yaml_syntax_sane(text: str) -> bool:
     for raw_line in text.splitlines():
         if not raw_line.strip() or raw_line.lstrip().startswith("#"):
             continue
-        leading = raw_line[: len(raw_line) - len(raw_line.lstrip(" "))]
-        if "\t" in leading:
+        indentation = raw_line[: len(raw_line) - len(raw_line.lstrip())]
+        if "\t" in indentation:
             return False
+        leading = raw_line[: len(raw_line) - len(raw_line.lstrip(" "))]
         indent = len(leading)
         if block_parent_indent is not None:
             if indent > block_parent_indent:
@@ -273,6 +274,11 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             self.assertEqual([], missed, f"main-push regex missed: {missed}")
 
         with self.subTest(msg="release.yml is valid YAML"):
+            tab_indented_step = "name: Invalid\njobs:\n\tbuild:\n\t  runs-on: ubuntu-latest\n"
+            self.assertFalse(
+                _yaml_syntax_sane(tab_indented_step),
+                "stdlib YAML sanity check accepted a tab-indented workflow line",
+            )
             self.assertTrue(_yaml_syntax_sane(content), "release.yml failed YAML syntax validation")
 
         with self.subTest(msg="release-please-config.json exists"):

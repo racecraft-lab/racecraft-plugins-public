@@ -41,6 +41,7 @@ Columns:
 | PR 3b | port: `validate-skill-capability-pointers.sh` → `validate-skill-capability-pointers.py` | default | 55 → 55 | yes | `tests/speckit-pro/parity/xplat-010/validate-skill-capability-pointers-baseline.txt` |
 | PR 3b | port: `validate-skills.sh` → `validate-skills.py` | default | 124 → 124 | yes | `tests/speckit-pro/parity/xplat-010/validate-skills-baseline.txt` |
 | PR 3b | port: `validate-spec-index-determinism.sh` → `validate-spec-index-determinism.py` | default | 16 → 16 | yes | `tests/speckit-pro/parity/xplat-010/validate-spec-index-determinism-baseline.txt` |
+| PR 3b | new validator failure-path regression module | default | 0 → 5 | n/a (new regression coverage) | `tests/speckit-pro/layer4-scripts/test-layer1-validator-regressions.py` |
 
 **PR 13 note (T121–T130):** The estimator Layer-4 test follows the
 Per-Port Protocol against historical predecessor commit

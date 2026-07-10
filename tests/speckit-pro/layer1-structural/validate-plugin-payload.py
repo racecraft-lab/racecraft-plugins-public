@@ -57,6 +57,29 @@ def run_builder() -> subprocess.CompletedProcess[str]:
     )
 
 
+def _display_path(path: Path) -> str:
+    try:
+        return path.relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def load_json_file(path: Path) -> dict:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise AssertionError(
+            f"unable to read {_display_path(path)}: {exc.__class__.__name__}: {exc}"
+        ) from exc
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise AssertionError(
+            f"malformed JSON in {_display_path(path)}: {exc.msg} "
+            f"(line {exc.lineno}, column {exc.colno})"
+        ) from exc
+
+
 def count_skill_entrypoints(root: Path) -> int:
     """Mirror `find <root> -mindepth 2 -maxdepth 2 -type f -name SKILL.md | wc -l`."""
     if not root.is_dir():
@@ -100,23 +123,31 @@ class ValidatePluginPayload(unittest.TestCase):
         with self.subTest(msg="Codex payload directory exists"):
             self.assertTrue(CODEX_PAYLOAD.is_dir(), f"missing {CODEX_PAYLOAD}")
 
-        claude_market = json.loads((REPO_ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
-        claude_source = claude_market["plugins"][0]["source"]
+        claude_source = ""
         with self.subTest(msg="Claude marketplace installs the Claude dist payload"):
+            claude_market = load_json_file(REPO_ROOT / ".claude-plugin" / "marketplace.json")
+            claude_source = claude_market["plugins"][0]["source"]
             self.assertEqual("./dist/claude/speckit-pro", claude_source, "Claude marketplace source")
 
-        codex_market = json.loads((REPO_ROOT / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
-        codex_source = codex_market["plugins"][0]["source"]["path"]
+        codex_source = ""
         with self.subTest(msg="Codex marketplace installs the Codex dist payload"):
+            codex_market = load_json_file(REPO_ROOT / ".agents" / "plugins" / "marketplace.json")
+            codex_source = codex_market["plugins"][0]["source"]["path"]
             self.assertEqual("./dist/codex/speckit-pro", codex_source, "Codex marketplace source.path")
 
         claude_rel = claude_source[2:] if claude_source.startswith("./") else claude_source
         with self.subTest(msg="Claude marketplace path resolves to a payload"):
-            self.assertTrue((REPO_ROOT / claude_rel).is_dir(), f"missing {REPO_ROOT / claude_rel}")
+            self.assertTrue(
+                bool(claude_rel) and (REPO_ROOT / claude_rel).is_dir(),
+                f"missing {_display_path(REPO_ROOT / claude_rel)}",
+            )
 
         codex_rel = codex_source[2:] if codex_source.startswith("./") else codex_source
         with self.subTest(msg="Codex marketplace path resolves to a payload"):
-            self.assertTrue((REPO_ROOT / codex_rel).is_dir(), f"missing {REPO_ROOT / codex_rel}")
+            self.assertTrue(
+                bool(codex_rel) and (REPO_ROOT / codex_rel).is_dir(),
+                f"missing {_display_path(REPO_ROOT / codex_rel)}",
+            )
 
         for forbidden in (".codex-plugin", "codex-skills", "codex-agents", "codex-hooks.json"):
             with self.subTest(msg=f"Claude payload excludes {forbidden}"):
@@ -141,7 +172,7 @@ class ValidatePluginPayload(unittest.TestCase):
             )
 
         with self.subTest(msg="Codex payload manifest exposes skills at ./skills/"):
-            codex_manifest = json.loads((CODEX_PAYLOAD / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+            codex_manifest = load_json_file(CODEX_PAYLOAD / ".codex-plugin" / "plugin.json")
             self.assertEqual("./skills/", codex_manifest["skills"], "Codex manifest skills")
 
         with self.subTest(msg="Codex payload has no duplicate nested skill entrypoints"):
@@ -176,7 +207,7 @@ class ValidatePluginPayload(unittest.TestCase):
             self.assertEqual(first_fingerprint, second_fingerprint, "payload fingerprint")
 
         with self.subTest(msg="release-please extra-files stay inside package paths"):
-            config = json.loads((REPO_ROOT / "release-please-config.json").read_text(encoding="utf-8"))
+            config = load_json_file(REPO_ROOT / "release-please-config.json")
             bad: list[str] = []
             for package, cfg in config.get("packages", {}).items():
                 for extra in cfg.get("extra-files", []):
