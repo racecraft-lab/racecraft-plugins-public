@@ -417,8 +417,9 @@ Budget result: re-estimate at scaffold; two role TOMLs plus evidence
 **Scope:**
 
 - Start with Terra, then screen the full eligible Pro catalog for
-  `checklist-executor` and `uat-runbook-author`; GPT-5.4 Mini is required when
-  exposed. Progressively descend supported effort for every candidate.
+  `checklist-executor` and `uat-runbook-author`; GPT-5.4 Mini is
+  required when exposed. Progressively descend supported effort for
+  every candidate.
 - Require complete all-severity checklist remediation and executable,
   non-circular, acceptance-criteria-linked UAT runbooks.
 - Pin independent winners while preserving workspace-write, error, and fail-open
