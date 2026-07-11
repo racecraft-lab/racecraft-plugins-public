@@ -268,6 +268,26 @@ class HostedWindowsPreflightTests(unittest.TestCase):
         self.assertEqual(summary["runtime_info_exit"], 4)
         self.assertEqual(summary["status"], "fail")
 
+    def test_specify_version_executes_resolved_command(self) -> None:
+        command = ["C:/pipx/specify.exe", "version"]
+        with tempfile.TemporaryDirectory() as temporary:
+            evidence_dir = Path(temporary) / "evidence"
+            with mock.patch.object(
+                helper.subprocess,
+                "run",
+                return_value=mock.Mock(returncode=0),
+            ) as run_mock:
+                exit_code = helper._run_command(
+                    "specify-version",
+                    command,
+                    evidence_dir,
+                    {"PATH": "C:/pipx"},
+                )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(run_mock.call_args.args[0], command)
+        self.assertFalse(run_mock.call_args.kwargs["shell"])
+
     def test_subprocess_timeout_writes_bounded_fail_closed_evidence(self) -> None:
         command = ["fake-command", "--version"]
         with tempfile.TemporaryDirectory() as temporary:

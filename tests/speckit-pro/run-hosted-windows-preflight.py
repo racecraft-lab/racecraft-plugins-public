@@ -84,7 +84,7 @@ def _run_command(
             try:
                 if name == "specify-version":
                     completed = subprocess.run(
-                        ["specify", "version"],
+                        command,
                         cwd=REPO_ROOT,
                         env=env,
                         input=encoded_input,
