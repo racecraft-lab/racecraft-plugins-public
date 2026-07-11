@@ -36,7 +36,7 @@ EXPECTED_FIXTURES = {
     "domain-researcher",
     "spec-context-analyst",
 }
-EXPECTED_AGENTS = {
+EXPECTED_SOURCE_AGENTS = {
     "analyze-executor.toml",
     "autopilot-fast-helper.toml",
     "checklist-executor.toml",
@@ -48,6 +48,7 @@ EXPECTED_AGENTS = {
     "spec-context-analyst.toml",
     "uat-runbook-author.toml",
 }
+EXPECTED_CORE_AGENTS = EXPECTED_SOURCE_AGENTS - {"autopilot-fast-helper.toml"}
 EXPECTED_SUPPORT_PLAN_KEYS = {
     "business_grandfathered_codex_seat",
     "business_standard",
@@ -58,10 +59,54 @@ EXPECTED_SUPPORT_PLAN_KEYS = {
     "enterprise_legacy_message",
     "free",
     "go",
+    "gov_managed",
+    "healthcare_managed",
+    "clinicians_managed",
     "plus",
     "pro_20x",
     "pro_5x",
+    "regulated_workspace_managed",
+    "teachers_managed",
 }
+EXPECTED_NAMED_SUPPORT_CATEGORIES = {
+    "chatgpt_fedramp",
+    "chatgpt_for_clinicians",
+    "chatgpt_for_healthcare",
+    "chatgpt_for_teachers",
+    "chatgpt_gov",
+    "enterprise_regulated_workspace",
+}
+EXPECTED_CATEGORY_ROW_MAPPINGS = {
+    "chatgpt_for_clinicians": "clinicians_managed",
+    "chatgpt_for_healthcare": "healthcare_managed",
+    "chatgpt_for_teachers": "teachers_managed",
+    "chatgpt_gov": "gov_managed",
+    "enterprise_regulated_workspace": "regulated_workspace_managed",
+}
+REQUIRED_CANONICAL_FIELDS = {
+    "canonical_baseline_deliverable",
+    "canonical_candidate_set_hash",
+    "canonical_lock_timestamp",
+    "canonical_row_key",
+    "canonical_selection_rationale",
+    "canonical_selection_rule_version",
+    "canonical_subscription_environment_id",
+}
+REQUIRED_ROW_COMPARATOR_FIELDS = {
+    "baseline_comparator_type",
+    "baseline_exact_treatment_evidence_hashes",
+    "baseline_policy_id",
+    "baseline_support_state",
+    "comparator_claim_boundary",
+    "row_reference_policy_id",
+    "target_population_weight",
+}
+COMPONENT_SPEC_IDS = ("G56R-007", "G56R-008", "G56R-009")
+FORBIDDEN_HELPER_STATE_PATTERNS = (
+    r"installed[-_ ]disabled",
+    r"copy\s+the\s+helper\s+toml\s+disabled",
+    r"optional\s+toml\s+disabled",
+)
 LIVE_CORPUS_PATHS = {
     "tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.py",
     "tests/speckit-pro/layer6-efficiency/lib/quality-scorer.py",
@@ -205,13 +250,43 @@ def normalized_title(value: str) -> str:
     return " ".join(word for word in words if word != "and")
 
 
-def mandatory_plan_keys(text: str) -> set[str]:
+def declared_code_list(text: str, label: str) -> set[str]:
     match = re.search(
-        r"`mandatory_plan_keys`\s*=\s*\[(.*?)\]",
+        rf"`{re.escape(label)}`\s*=\s*\[(.*?)\]",
         text,
         flags=re.DOTALL,
     )
     return set(re.findall(r"`([a-z0-9_]+)`", match.group(1))) if match else set()
+
+
+def declared_code_mappings(text: str, label: str) -> dict[str, str]:
+    match = re.search(
+        rf"`{re.escape(label)}`\s*=\s*\[(.*?)\]",
+        text,
+        flags=re.DOTALL,
+    )
+    if not match:
+        return {}
+    return {
+        source: destination
+        for source, destination in re.findall(
+            r"`([a-z0-9_]+)\s*->\s*([a-z0-9_]+)`",
+            match.group(1),
+        )
+    }
+
+
+def acceptance_criterion_section(text: str, ac_id: str) -> str:
+    match = re.search(
+        rf"^- \*\*{re.escape(ac_id)}(?:\s+[^*]+)?\*\*:.*?(?=^- \*\*AC-\d+\.\d+|^### |\Z)",
+        text,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+    return match.group(0) if match else ""
+
+
+def inline_code_fields(text: str) -> set[str]:
+    return set(re.findall(r"`([a-z][a-z0-9_]+)`", text))
 
 
 def expand_acceptance_criteria(value: str, defined: set[str] | None = None) -> set[str]:
@@ -337,7 +412,7 @@ class ValidateCodexRoutingDocs(unittest.TestCase):
 
         with self.subTest(msg="Codex source inventory has exactly ten agent TOMLs"):
             actual = {path.name for path in AGENT_ROOT.glob("*.toml")} if AGENT_ROOT.is_dir() else set()
-            self.assertEqual(actual, EXPECTED_AGENTS)
+            self.assertEqual(actual, EXPECTED_SOURCE_AGENTS)
 
         with self.subTest(msg="routing docs state the current three-fixture ten-agent inventory"):
             self.assertIn("three existing fixtures", prd_text)
@@ -347,8 +422,103 @@ class ValidateCodexRoutingDocs(unittest.TestCase):
             self.assertIn("All three current Codex fixtures", fixture_readme_text)
 
         with self.subTest(msg="PRD and roadmap freeze the same mandatory plan-support rows"):
-            self.assertEqual(mandatory_plan_keys(prd_text), EXPECTED_SUPPORT_PLAN_KEYS)
-            self.assertEqual(mandatory_plan_keys(roadmap_text), EXPECTED_SUPPORT_PLAN_KEYS)
+            self.assertEqual(declared_code_list(prd_text, "mandatory_plan_keys"), EXPECTED_SUPPORT_PLAN_KEYS)
+            self.assertEqual(declared_code_list(roadmap_text, "mandatory_plan_keys"), EXPECTED_SUPPORT_PLAN_KEYS)
+
+        with self.subTest(msg="every named managed-workspace category is mapped or explicitly excluded"):
+            for text in (prd_text, roadmap_text):
+                self.assertEqual(
+                    declared_code_list(text, "named_category_keys"),
+                    EXPECTED_NAMED_SUPPORT_CATEGORIES,
+                )
+                self.assertEqual(
+                    declared_code_mappings(text, "named_category_row_mappings"),
+                    EXPECTED_CATEGORY_ROW_MAPPINGS,
+                )
+            manifest_sections = (
+                acceptance_criterion_section(prd_text, "AC-1.6"),
+                roadmap_section(roadmap_text, "G56R-001"),
+            )
+            self.assertTrue(all("chatgpt_fedramp" in section and "named exclusion" in section for section in manifest_sections))
+
+        with self.subTest(msg="support manifest requires exactly one pre-outcome canonical row"):
+            manifest_sections = (
+                acceptance_criterion_section(prd_text, "AC-1.6"),
+                roadmap_section(roadmap_text, "G56R-001"),
+            )
+            self.assertTrue(all("exactly one canonical row" in section.casefold() for section in manifest_sections))
+            self.assertTrue(all("before screening" in section.casefold() for section in manifest_sections))
+
+        with self.subTest(msg="canonical row freezes environment rationale candidate set and treatment delivery"):
+            manifest_sections = (
+                acceptance_criterion_section(prd_text, "AC-1.6"),
+                roadmap_section(roadmap_text, "G56R-001"),
+            )
+            for section in manifest_sections:
+                self.assertTrue(REQUIRED_CANONICAL_FIELDS.issubset(inline_code_fields(section)))
+                self.assertIn("production", section.casefold())
+                self.assertIn("candidate", section.casefold())
+                self.assertIn("deliver", section.casefold())
+
+        with self.subTest(msg="every support row declares baseline or row-reference comparator behavior"):
+            manifest_sections = (
+                acceptance_criterion_section(prd_text, "AC-1.6"),
+                roadmap_section(roadmap_text, "G56R-001"),
+            )
+            for section in manifest_sections:
+                self.assertTrue(REQUIRED_ROW_COMPARATOR_FIELDS.issubset(inline_code_fields(section)))
+                self.assertIn("every row", section.casefold())
+            comparator_ac = acceptance_criterion_section(prd_text, "AC-2.13")
+            self.assertIn("row-reference", comparator_ac.casefold())
+            self.assertIsNotNone(
+                re.search(
+                    r"cannot claim\s+improvement over production",
+                    comparator_ac,
+                    flags=re.IGNORECASE,
+                )
+            )
+
+        with self.subTest(msg="optional helper uses only installed_enabled or not_installed states"):
+            combined = "\n".join((prd_text, roadmap_text, read_text(MOC)))
+            forbidden = [pattern for pattern in FORBIDDEN_HELPER_STATE_PATTERNS if re.search(pattern, combined, flags=re.IGNORECASE)]
+            self.assertEqual(forbidden, [])
+            self.assertIn("`installed_enabled`", combined)
+            self.assertIn("`not_installed`", combined)
+
+        with self.subTest(msg="documents distinguish ten source agents from nine required destination agents"):
+            self.assertEqual(len(EXPECTED_SOURCE_AGENTS), 10)
+            self.assertEqual(len(EXPECTED_CORE_AGENTS), 9)
+            self.assertIn("Source and generated payload inventory contain all ten agent TOMLs", prd_text)
+            self.assertIn("destination contains exactly the nine required core TOMLs", prd_text)
+            self.assertIn("exactly nine required destination TOMLs", roadmap_text)
+            self.assertIn("conditional tenth", roadmap_text)
+
+        with self.subTest(msg="component stages qualify or lock while only integrated release proof promotes"):
+            component_text = "\n".join(
+                [
+                    acceptance_criterion_section(prd_text, "AC-4.2"),
+                    acceptance_criterion_section(prd_text, "AC-5.3"),
+                    acceptance_criterion_section(prd_text, "AC-6.4"),
+                    *(roadmap_section(roadmap_text, spec_id) for spec_id in COMPONENT_SPEC_IDS),
+                    read_text(MOC),
+                ]
+            )
+            self.assertIsNone(re.search(r"\bpromot\w*", component_text, flags=re.IGNORECASE))
+            prd_without_gate = prd_text.replace(acceptance_criterion_section(prd_text, "AC-8.9"), "")
+            roadmap_without_release = roadmap_text.replace(roadmap_section(roadmap_text, "G56R-011"), "")
+            self.assertIsNone(re.search(r"\bpromot\w*", prd_without_gate, flags=re.IGNORECASE))
+            self.assertIsNone(re.search(r"\bpromot\w*", roadmap_without_release, flags=re.IGNORECASE))
+            self.assertIn("sole promotion decision", acceptance_criterion_section(prd_text, "AC-8.9"))
+
+        with self.subTest(msg="whole-core objective claims improvement not global assembled-policy optimality"):
+            problem = prd_text.split("## 2. Goals & Non-goals", 1)[0]
+            release_section = roadmap_section(roadmap_text, "G56R-011")
+            self.assertIn("improves canonical resource", problem)
+            self.assertIn("not materially dominated", problem)
+            self.assertIn("globally lowest-resource passing policy", prd_text)
+            self.assertIsNotNone(
+                re.search(r"does not\s+establish global optimality", release_section)
+            )
 
         section_002 = roadmap_section(roadmap_text, "G56R-002")
         section_003 = roadmap_section(roadmap_text, "G56R-003")

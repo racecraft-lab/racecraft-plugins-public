@@ -16,7 +16,8 @@ Navigation map for the evidence-first Codex model-routing roadmap.
 
 ### Evidence Baseline
 
-Why: Freeze the finite plan-support manifest, current harness truth, and the
+Why: Freeze the finite plan/workspace manifest, named-category resolutions,
+exactly one canonical row, per-row comparators, current harness truth, and the
 capability-probed universal candidate intersection before any route becomes a
 default.
 
@@ -35,15 +36,17 @@ measurable from objective to terminal outcome.
 
 ### Installer Policy
 
-Why: Implement the deferred Python installer, preserve independently pinned
-installable policies, and keep one atomic model-only compatibility override.
+Why: Implement the deferred Python installer, install exactly nine core agents
+plus a conditional proven helper, preserve independently pinned policies, and
+keep one atomic model-only compatibility override.
 
 - [G56R-006 Subscription-aware Installer Defaults and Explicit Override](codex-chatgpt-agent-routing-technical-roadmap.md#g56r-006-subscription-aware-installer-defaults-and-explicit-override)
 
 ### Role Cohorts
 
 Why: Route disjoint agent groups in parallel after shared evidence and install
-contracts stabilize, while keeping each promotion and rollback reviewable.
+contracts stabilize, while keeping each component qualification, cohort lock,
+and rollback reviewable.
 
 - [G56R-007 Quality-critical Executor Routing](codex-chatgpt-agent-routing-technical-roadmap.md#g56r-007-quality-critical-executor-routing)
 - [G56R-008 Structured-work Agent Routing](codex-chatgpt-agent-routing-technical-roadmap.md#g56r-008-structured-work-agent-routing)
@@ -53,8 +56,9 @@ contracts stabilize, while keeping each promotion and rollback reviewable.
 ### Release Proof
 
 Why: Regenerate one internally consistent payload and separately prove the
-nine-agent universal core, optional Spark helper, every frozen support row, and
-long-workflow boundary behavior before publishing release claims.
+component-wise assembled nine-agent core against its canonical production and
+per-row assigned comparators, the optional Spark helper, every frozen support
+row, and long-workflow boundary behavior before publishing release claims.
 
 - [G56R-011 Payload, Documentation, UAT, and Release Proof](codex-chatgpt-agent-routing-technical-roadmap.md#g56r-011-payload-documentation-uat-and-release-proof)
 

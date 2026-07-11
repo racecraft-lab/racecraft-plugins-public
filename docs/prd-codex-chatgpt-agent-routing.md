@@ -15,10 +15,11 @@ limits the model catalog or ChatGPT subscription plans in scope.
 
 ## 1. Problem
 
-> "Which efficient static installation defaults should SpecKit Pro use for
-> each Codex agent so ChatGPT subscription consumers complete accepted
-> end-to-end workflows with the lowest canonical resource consumption that
-> preserves quality, reliability, and completion time?"
+> "Which evidence-backed static installation defaults should SpecKit Pro use
+> so the component-wise assembled nine-agent core improves canonical resource
+> use over the immutable production core in one predeclared canonical
+> environment, clears every frozen plan-row qualification and non-inferiority
+> gate, and is not materially dominated by the named controls?"
 
 SpecKit Pro currently defines ten Codex custom agents. Nine source TOMLs pin
 `gpt-5.5`; the latency-first helper pins `gpt-5.3-codex-spark`. Effort is mostly
@@ -31,19 +32,24 @@ MCP servers, tool schema, parent overrides, or a controlled Codex profile.
 
 OpenAI positions `gpt-5.6-sol` for quality-critical work, `gpt-5.6-terra` as
 the everyday balance, and `gpt-5.6-luna` for lighter or high-volume work.
-SpecKit Pro consumers in scope authenticate Codex through any supported ChatGPT
-subscription plan, not an API key. OpenAI documents those as different
-accounting modes: ChatGPT sign-in uses subscription access and plan credits/
-limits, while API-key sign-in is usage-based at standard API rates. The objective
-therefore cannot be API dollars per isolated agent call.
+SpecKit Pro consumers in scope authenticate Codex through supported ChatGPT
+subscription and managed-workspace categories that provide ChatGPT-
+authenticated Codex Local and satisfy the frozen treatment contract, not
+through an API key. OpenAI documents those as different accounting modes:
+ChatGPT sign-in uses subscription access and plan credits/limits, while API-key
+sign-in is usage-based at standard API rates. The objective therefore cannot be
+API dollars per isolated agent call.
 
 OpenAI currently lists Codex for ChatGPT Free, Go, Plus, Pro, Business, Edu,
-and Enterprise. Availability, limits, workspace permissions, plugin policy,
-tools, and accounting can still differ by plan, workspace, role, surface, and
-rate-card regime. This PRD therefore freezes a finite
-`plan_support_manifest` before screening instead of allowing the release domain
-to expand whenever OpenAI adds or changes a plan. An unresolved plan may inform
-exploratory research but cannot prove support for a named manifest row.
+and Enterprise, while its current Codex rate card also names Health, Gov, and
+ChatGPT for Teachers. Healthcare, Regulated, Clinicians, Gov, and FedRAMP
+environments require explicit classification because their authentication,
+surface, admin, tool, and compliance contracts can differ even when an
+accounting schedule is shared. This PRD therefore freezes a finite
+`plan_support_manifest` and named-category resolution table before screening
+instead of allowing the release domain to expand whenever OpenAI adds or
+changes a category. An unresolved category may inform exploratory research but
+cannot prove support for a named manifest row.
 
 The primary cross-plan resource measure is a versioned canonical normalization
 of the raw input, cached-input, and output token vector. Observed included-limit
@@ -63,8 +69,9 @@ that the same ten-agent runtime policy is universally executable.
 The requested research passes did not find a complete public benchmark that
 compares the full subscription-available Codex catalog on SpecKit Pro's ten
 roles. Therefore this PRD does not treat a generation, marketing tier, or current
-default as a proven assignment. It defines an evidence-first promotion process
-and ships only role assignments that clear a consumer-focused quality floor.
+default as a proven assignment. It defines evidence-first component
+qualification followed by one integrated release decision and ships only role
+assignments that clear the consumer-focused gates.
 
 ## 2. Goals & Non-goals
 
@@ -73,17 +80,18 @@ and ships only role assignments that clear a consumer-focused quality floor.
 - Give every installed SpecKit Pro Codex agent an explicit, role-appropriate,
   immutable installable policy selected by measured evidence.
 - Preserve consumer-visible correctness, grounding, output contracts,
-  reliability, and completion time while minimizing canonical resource units
-  per assigned objective under a fixed terminal policy and acceptance gate.
+  reliability, and completion time while reducing canonical resource units per
+  assigned objective under a fixed terminal policy and acceptance gate.
 - Select one portability-first universal core from the model/capability
   intersection of a finite, versioned support manifest, while reporting the
   per-plan opportunity cost against the best measured plan-specific route.
 - Make controlled model-effort pair, prompt/context, and speed decisions
-  reproducible through exact treatment delivery, versioned fixtures, and a
-  documented promotion rule.
+  reproducible through exact treatment delivery, versioned fixtures, documented
+  component-qualification rules, and one integrated release-decision rule.
 - Keep installation predictable: role-pinned defaults, one explicit global
-  compatibility override, no silent downgrade, and complete verification of
-  all ten installed agents.
+  compatibility override, no silent downgrade, exactly nine installed core
+  agents, and a conditional tenth helper only where its invocation contract is
+  proven.
 - Rebuild and verify the Codex payload, active guidance, and installed-cache
   evidence before release.
 - Compare static role pins with an unpinned Codex-selected control and an
@@ -114,6 +122,10 @@ and ships only role assignments that clear a consumer-focused quality floor.
 - Claiming the universal core is individually optimal for every plan. Version 1
   optimizes portability across the frozen release domain; plan-specific
   profiles remain a later product decision.
+- Searching the complete nine-agent combination space or claiming that the
+  assembled core is the globally lowest-resource passing policy. Version 1
+  performs component-wise pair, prompt, and cohort selection, then confirms one
+  assembled core against its frozen comparators.
 - Treating GPT-5.6 Pro mode as the same concept as a consumer's ChatGPT
   subscription plan. The former remains out of scope; the latter defines the
   required authentication and accounting environment.
@@ -146,10 +158,28 @@ and ships only role assignments that clear a consumer-focused quality floor.
   `plus`, `pro_5x`, `pro_20x`, `business_standard`,
   `business_grandfathered_codex_seat`, `enterprise_flexible`,
   `enterprise_included_seat`, `enterprise_legacy_message`, `edu_flexible`,
-  `edu_included_seat`]. These rows distinguish included usage, optional
-  individual or workspace credits, grandfathered usage-based seats, and legacy
-  message accounting instead of assigning one scalar regime to a named plan.
-  Each row records `support_manifest_id`, `manifest_version`, `effective_as_of`,
+  `edu_included_seat`, `healthcare_managed`,
+  `regulated_workspace_managed`, `gov_managed`, `teachers_managed`,
+  `clinicians_managed`]. These rows distinguish included usage, optional
+  individual or workspace credits, grandfathered usage-based seats, legacy
+  message accounting, and managed-workspace treatment differences instead of
+  assigning one scalar regime to a named plan.
+  `named_category_keys` = [`chatgpt_for_healthcare`,
+  `enterprise_regulated_workspace`, `chatgpt_gov`, `chatgpt_fedramp`,
+  `chatgpt_for_teachers`, `chatgpt_for_clinicians`].
+  `named_category_row_mappings` =
+  [`chatgpt_for_healthcare -> healthcare_managed`,
+  `enterprise_regulated_workspace -> regulated_workspace_managed`,
+  `chatgpt_gov -> gov_managed`, `chatgpt_for_teachers -> teachers_managed`,
+  `chatgpt_for_clinicians -> clinicians_managed`]. Each remains a distinct
+  treatment row until full
+  authentication, client/surface, model catalog, plugin, permission, tool, and
+  boundary equivalence is proven. Rate-card inclusion is accounting evidence,
+  not treatment-delivery evidence. `chatgpt_fedramp` is a named exclusion from
+  this ChatGPT-authenticated release domain because current official guidance
+  supports Codex there only through a pinned API-key CLI configuration, not
+  ChatGPT sign-in.
+  Every row records `support_manifest_id`, `manifest_version`, `effective_as_of`,
   `plan_key`, `supported_plan_type`, `supported_subtier`, `workspace_type`,
   `authentication_mode`, `codex_client_range`, `codex_surface`,
   `accounting_regime_id`, `accounting_components`, `rate_card_revisions`,
@@ -157,23 +187,43 @@ and ships only role assignments that clear a consumer-focused quality floor.
   `workspace_role_admin_prerequisites`, `optional_capabilities`,
   `known_exclusions`, `equivalence_class_id` or null,
   `equivalence_evidence_hashes`, `uat_owner`, `support_state`,
-  `evidence_timestamp`, and `evidence_hashes`. Each row also freezes a versioned
+  `target_population_weight`, `baseline_policy_id`, `baseline_support_state`,
+  `baseline_exact_treatment_evidence_hashes`, `baseline_comparator_type`,
+  `row_reference_policy_id` or null, `comparator_claim_boundary`,
+  `evidence_timestamp`, and `evidence_hashes`. Each named-category resolution
+  records `named_plan_or_workspace`, `manifest_row`, `equivalence_class_id` or
+  null, `authentication_supported`, `codex_surface`, `workspace_tool_deltas`,
+  `support_claim`, and `evidence_hashes`. Each row also freezes a versioned
   `boundary_contract` containing the one-window completion expectation,
   limit-near threshold, active-turn and new-phase/child-start policy,
   limit-exhausted behavior, auto-top-up/overage state, durable artifacts,
   resume-or-rerun contract, recovery instructions, and graceful-termination
   criteria. `support_state` is
-  exactly `supported`, `conditional`, `unverified`, or `unsupported`. Every
+  exactly `supported`, `conditional`, `unverified`, or `unsupported`;
+  `baseline_support_state` is exactly `deliverable`, `not_deliverable`, or
+  `unverified`. Every
   mandatory row remains visible and must be `supported` for universal release;
   any other state blocks that claim. Additional plan or managed-workspace
   categories require a manifest revision and affected confirmation rerun.
+  The manifest records exactly one canonical row through `canonical_row_key`,
+  `canonical_subscription_environment_id`, `canonical_selection_rationale`,
+  `canonical_selection_rule_version`, `canonical_baseline_deliverable`,
+  `canonical_candidate_set_hash`, and `canonical_lock_timestamp`. Before
+  screening or outcome observation, it selects the exact-treatment-deliverable
+  row with the greatest frozen `target_population_weight` in the versioned
+  pre-campaign population snapshot; ties resolve by lexical `plan_key`. The
+  immutable production baseline and all frozen universal candidates must pass
+  treatment-delivery preflight there. Missing weights, failed delivery, or a
+  canonical-row change blocks the campaign and invalidates selection, cohort
+  locks, and integrated confirmation; observed benchmark outcomes never choose
+  the canonical row.
 - **AC-1.7 — Current harness baseline**: The research record states that the
   current Python Layer 6 runner uses prompt emulation, ambient Codex
   configuration, four hard-coded effort values, and only three current role
-  fixtures. Historical results are labeled `non_promotional` until replayed by
+  fixtures. Historical results are labeled `non_release_evidence` until replayed by
   G56R-003 with exact treatment delivery and frozen environment evidence.
 
-### 3.2 Model-Effort Benchmark and Promotion Harness *(-> G56R-002 through G56R-004)*
+### 3.2 Model-Effort Benchmark and Qualification Harness *(-> G56R-002 through G56R-004)*
 
 - **AC-2.1 — Controlled model-effort pair selection**: Stage A has three
   predeclared steps. A1 screens each eligible model at its documented default
@@ -197,7 +247,8 @@ and ships only role assignments that clear a consumer-focused quality floor.
   support-manifest row. Plan/subtier evidence comes from an authoritative field
   or archived entitlement record and is never inferred from capacity. An
   unresolved plan may contribute to exploratory plan-neutral research but may
-  not qualify a named release row, enter cross-plan promotion, or support an
+  not qualify a named release row, enter cross-plan qualification or the
+  integrated release decision, or support an
   availability, allowance, throughput, reset, or completion claim.
 - **AC-2.3 — Complete trace**: Every assigned objective binds
   `support_manifest_id`, `installable_agent_policy_id`,
@@ -210,12 +261,12 @@ and ships only role assignments that clear a consumer-focused quality floor.
   retries, repair, validation, steering, cancellation, abandonment, and outcome.
   Raw nulls are preserved and never invented.
 - **AC-2.4 — Primary-endpoint completeness**: A paired objective is eligible
-  for promotion analysis only when 100% of attributable model activity has
+  for qualification or release-decision analysis only when 100% of attributable model activity has
   returned-model identity, speed, input/cached-input/output token counts,
   canonical-rate revision, and parent-child attribution. A plan-native rate or
   quota field is additionally required only for a claim that uses it. Any
   missing required field invalidates and reruns the pair or marks it non-
-  comparable; a partial total can never support promotion. Production
+  comparable; a partial total can never support the release decision. Production
   validation belongs in the workflow total; benchmark-only judge/scorer
   consumption is reported separately.
 - **AC-2.5 — Distinct accounting measures**: The primary plan-neutral resource
@@ -234,7 +285,7 @@ and ships only role assignments that clear a consumer-focused quality floor.
   corpora. Screening performs capability/contract elimination; selection ranks
   a frozen shortlist; each Stage C cohort consumes only its preassigned lock
   partition once. Cohort locks remain inside the predeclared component-selection
-  multiplicity family and cannot support the release claim. Final promotion uses
+  multiplicity family and cannot support the release claim. The final release decision uses
   the untouched integrated release-confirmation corpus exactly once under the
   predeclared hierarchical gatekeeping or family-wise error strategy. Changing
   a candidate, prompt, endpoint, margin, guardrail, weighting, or stopping rule
@@ -251,14 +302,18 @@ and ships only role assignments that clear a consumer-focused quality floor.
   eligibility. Any pre-score consumption is reported separately.
   Independent harness or infrastructure misdelivery invalidates the arm and is
   rerun under the predeclared rule; recurrence blocks the harness. The primary
-  endpoint is paired mean `R_i` per assigned objective versus the immutable
-  production baseline; accepted-workflow rate is a separate quality gate.
-- **AC-2.8 — Promotion statistic**: Promotion requires the upper one-sided 95%
-  confidence bound for the task-level paired mean `R_i` difference to be below
-  predeclared `-delta`. The AC-8.9 integrated release-confirmation result—not
-  screening, selection, or a Stage C cohort lock—owns this decision. Critical
-  safety/grounding/contract/mutation gates and accepted-workflow non-inferiority
-  must pass first.
+  endpoint in the canonical row is paired mean `R_i` per assigned objective
+  versus the immutable production baseline. Every other row pairs against its
+  AC-2.13 assigned comparator; accepted-workflow rate is a separate quality
+  gate.
+- **AC-2.8 — Integrated release-decision statistic**: The AC-8.9 decision
+  requires the upper one-sided 95% confidence bound for the canonical-row
+  task-level paired mean `R_i` difference to be below predeclared `-delta`.
+  Every non-canonical row applies its predeclared non-inferiority bound against
+  its AC-2.13 assigned comparator. The AC-8.9 integrated release-confirmation
+  result—not screening, selection, or a Stage C cohort lock—owns this decision.
+  Critical safety/grounding/contract/mutation gates and accepted-workflow non-
+  inferiority must pass first.
 - **AC-2.9 — Statistical unit and weighting**: A unique workflow objective is
   the experimental unit; repeats are clustered within objective and inference
   is paired at task level using a predeclared task-cluster bootstrap or
@@ -269,7 +324,7 @@ and ships only role assignments that clear a consumer-focused quality floor.
 - **AC-2.10 — Guardrail registry**: Before candidate evaluation, every p95-
   canonical-resource, p95-duration, late-failure, retry, steering, and
   incomplete-workflow
-  guardrail declares its definition, unit/denominator, immutable baseline,
+  guardrail declares its definition, unit/denominator, frozen assigned comparator,
   direction, margin, confidence/interval method, missing-data treatment,
   gatekeeping position, and minimum unique-task count. All guardrails pass
   simultaneously. Late failure means failure after a predeclared budget share
@@ -287,15 +342,27 @@ and ships only role assignments that clear a consumer-focused quality floor.
   cohort lock, integrated confirmation, and release claim. It is an explicit
   environment prerequisite recorded by the installer and proven by treatment
   traces, not a field the current TOMLs or installer mutate. Any future speed
-  optimization must treat speed as an explicit policy dimension and promote
-  model + effort + prompt + speed together with the correct multiplier.
-- **AC-2.13 — Immutable baseline**: Before screening, the production comparator
-  is pinned by repository commit, plugin version, the nine-agent core policy,
-  each installable policy ID, support manifest, canonical rate schedule,
-  canonical subscription environment, Codex version, tool configuration, and
-  corpus snapshot. Runtime observations belong to execution traces, not the
-  installed baseline identity. A production or manifest change creates a
-  versioned new baseline and requires affected confirmation to be rerun.
+  optimization must treat model + effort + prompt + speed as one explicit
+  policy tuple with the correct multiplier.
+- **AC-2.13 — Immutable baseline and row comparators**: Before screening, the
+  canonical-row production comparator is pinned by repository commit, plugin
+  version, the nine-agent core policy, each installable policy ID, support
+  manifest, canonical rate schedule, canonical subscription environment,
+  Codex version, tool configuration, and corpus snapshot. The canonical row
+  must set `baseline_support_state = deliverable`,
+  `baseline_comparator_type = production_baseline`, and
+  `comparator_claim_boundary = production_superiority`. Every non-canonical row
+  freezes one exact-treatment-deliverable comparator before screening. It uses
+  the immutable production baseline when deliverable; otherwise it uses a
+  content-addressed `row_reference_policy_id` selected from capability-only
+  evidence before outcomes are observed. Its claim boundary is respectively
+  `production_noninferiority` or `row_reference_noninferiority`. A row-reference
+  result establishes support and non-regression only and cannot claim
+  improvement over production. If neither comparator is deliverable, the row
+  is not `supported` and blocks universal release. Runtime observations belong
+  to execution traces, not installed comparator identities. Any comparator,
+  production policy, or manifest change creates a versioned new baseline and
+  invalidates affected selection, cohort-lock, and confirmation evidence.
 - **AC-2.14 — Campaign budget**: The campaign fixes maximum canonical resource
   use, plan-native usage where applicable, wall-clock time, candidates reaching
   cohort lock or release confirmation, capability/contract screening, and
@@ -313,8 +380,10 @@ and ships only role assignments that clear a consumer-focused quality floor.
   versioned replay schema. It preserves the four evidence identities, three
   policy aggregates, raw
   telemetry, canonical and native formulas, nulls, rates, corpus partition,
-  task/stratum IDs, weights, campaign decisions, guardrail registry,
-  confirmation lock, failures, and selected/rejected routes. G56R-003 populates
+  task/stratum IDs, named-category resolution, canonical-row lock, per-row
+  comparator identity/delivery/claim boundary, weights, campaign decisions,
+  guardrail registry, confirmation lock, failures, and selected/rejected routes.
+  G56R-003 populates
   live artifacts only after exact treatment enforcement under AC-2.19.
 - **AC-2.17 — Static-control consequence**: A static policy may be called
   efficient only if it passes against production and is not materially dominated
@@ -324,13 +393,13 @@ and ships only role assignments that clear a consumer-focused quality floor.
   improvement over the previous static baseline and cannot claim best measured
   efficiency.
 - **AC-2.18 — Universal core and optional Spark helper**: The universal primary
-  endpoint covers exactly nine required agents with Spark disabled or provably
-  not invoked in both arms. Spark is an optional Pro-row capability with a
+  endpoint covers exactly nine required agents with Spark not installed or
+  provably not invoked in both arms. Spark is an optional Pro-row capability with a
   separate scorecard and never contributes to the universal canonical-resource
   claim. A Spark invocation invalidates a universal-core run. Every non-Spark
   support row must pass the no-helper product path unless a portable fallback is
   separately selected and validated.
-- **AC-2.19 — Exact treatment delivery**: Every promotion-scored run executes
+- **AC-2.19 — Exact treatment delivery**: Every scored run executes
   the installed custom-agent TOML or a generated configuration proven
   semantically equivalent to the complete candidate policy. Before scoring, the
   harness verifies the support manifest, installable policy, subscription
@@ -342,7 +411,7 @@ and ships only role assignments that clear a consumer-focused quality floor.
   Codex client/surface. Any unexpected resolution, missing tool, failed server,
   unavailable skill, or permission/configuration mismatch is treatment
   misdelivery—not candidate quality—and invalidates the arm. Bare prompt
-  emulation is non-promotional smoke or degradation evidence only. G56R-003
+  emulation is smoke-only degradation evidence and cannot support release. G56R-003
   classifies every pre-score delivery failure as candidate-attributable
   incompatibility or independent harness misdelivery and writes that
   classification to the AC-2.16 replay artifact. Candidate incompatibility at
@@ -361,15 +430,21 @@ and ships only role assignments that clear a consumer-focused quality floor.
   applies.
 - **AC-2.21 — Cross-plan decision rule**: A universal candidate must deliver its
   complete treatment and clear safety, quality, availability, and reliability
-  gates on every support-manifest row. Controlled selection uses the canonical
-  environment and canonical resource score. Integrated release confirmation
-  executes the same locked objective set in the canonical row and in every other
-  mandatory row or predeclared equivalence class under one multiplicity family.
-  The canonical row owns the primary superiority endpoint; every other stratum
-  owns predeclared safety, quality, reliability, and canonical-resource non-
-  inferiority gates. The winner is the lowest canonical-consumption candidate
-  satisfying every stratum, not a pooled cross-plan mean. Evidence reports each
-  row's opportunity cost against its best measured plan-specific candidate.
+  gates on every support-manifest row. Controlled component selection uses the
+  canonical environment and canonical resource score. The resulting component-
+  wise assembled `universal_core_policy_id` proceeds to AC-8.9 only when it
+  satisfies every row's treatment, safety, quality, reliability, and assigned-
+  comparator gates. Integrated release confirmation executes the same locked
+  objective set in the canonical row and every other mandatory row or
+  predeclared equivalence class under one multiplicity family. The canonical
+  row owns the production-superiority endpoint; every other stratum compares
+  the candidate with its AC-2.13 assigned comparator under predeclared safety,
+  quality, reliability, and canonical-resource non-inferiority gates. Passing
+  establishes canonical-row improvement over production and non-regression
+  within every other row's declared claim boundary. It does not establish the
+  lowest-resource complete nine-agent policy among alternative assemblies or a
+  pooled cross-plan mean. Evidence reports each row's opportunity cost against
+  its best measured plan-specific candidate.
   Legacy-rate observations, included-limit utilization, purchased credits, reset
   behavior, and throughput remain separate plan-stratified outcomes. Before
   screening, each support row
@@ -381,7 +456,8 @@ and ships only role assignments that clear a consumer-focused quality floor.
   is paired mean `R_i(universal) - R_i(row-specific challenger)`,
   reported with the primary analysis's task clustering, weights, confidence
   method, and multiplicity strategy. This contrast is plan-stratified and
-  descriptive; it cannot change the universal winner after confirmation lock.
+  descriptive; it cannot change the frozen assembled release candidate after
+  confirmation lock.
 
 ### 3.3 Subscription-aware Installer Defaults and Explicit Override *(-> G56R-006)*
 
@@ -405,7 +481,7 @@ and ships only role assignments that clear a consumer-focused quality floor.
   version, the ordered nine role-to-`installable_agent_policy_id` mapping, and
   the plugin-owned parent orchestration/retry-policy hash.
   `optional_helper_policy_id` hashes the helper's installable policy, allowed
-  manifest rows, installed-enabled/installed-disabled state, invocation rule,
+  manifest rows, `installed_enabled` or `not_installed` state, invocation rule,
   and no-helper/fallback contract. `release_policy_id` binds the core and helper
   aggregates plus the required environment-contract hash. Standard speed is an
   environment prerequisite, not an agent-TOML or installer-owned setting; the
@@ -434,19 +510,24 @@ and ships only role assignments that clear a consumer-focused quality floor.
   but authoritative account-entitlement preflight remains unavailable. There is
   no silent downgrade or partial install. Hard abort applies to all nine required
   agents and to the optional helper only when that helper is enabled for the
-  bound manifest row; known Spark unavailability on a non-Pro row produces the
-  installed-disabled helper state and validated no-helper path, not install
+  bound manifest row. Known or unresolved Spark availability on a non-Spark row
+  produces `not_installed` plus the validated no-helper path, not core-install
   failure.
-- **AC-3.4**: Source and destination inventory agree on all ten agent TOMLs,
-  including `uat-runbook-author.toml`; unrelated user agents are preserved. The
-  Spark TOML may be copied as installed-disabled on a non-Spark row, but it is
-  never treated as a required or invocable capability there.
-- **AC-3.5**: Install output reports all ten installed
+- **AC-3.4**: Source and generated payload inventory contain all ten agent TOMLs,
+  including `uat-runbook-author.toml`; unrelated user agents are preserved. A
+  destination contains exactly the nine required core TOMLs. The Spark TOML is
+  copied into the discoverable destination and registered only on a row where
+  its availability and invocation contract are proven; otherwise it is
+  `not_installed`, and helper resolution/spawn must fail closed to the no-helper
+  path. A future disabled-in-place state requires an official documented agent-
+  disable mechanism, a capability probe, and a pinned minimum client version.
+- **AC-3.5**: Install output reports the nine installed core
   `installable_agent_policy_id` values, `universal_core_policy_id`,
-  `optional_helper_policy_id`, `release_policy_id`, helper state, destination,
-  support-manifest compatibility evidence, override state, copied files, result,
-  and restart requirement. Returned-model and effective-speed proof are runtime/
-  canary evidence, not installer-owned claims.
+  `optional_helper_policy_id`, `release_policy_id`, helper state, the optional
+  tenth helper identity only when installed, destination, support-manifest
+  compatibility evidence, override state, copied files, result, and restart
+  requirement. Returned-model and effective-speed proof are runtime/canary
+  evidence, not installer-owned claims.
 - **AC-3.6**: The current Python `install-codex-agents` registry entry is
   deferred and has no active destination-copy implementation. G56R-006
   implements and activates the helper through `helpers/install.py` and
@@ -458,8 +539,8 @@ and ships only role assignments that clear a consumer-focused quality floor.
   start with Sol and Terra hypotheses but screen every model in the universal
   candidate intersection, including the GPT-5.5 baseline and GPT-5.4 family,
   through AC-2.1 and AC-2.11.
-- **AC-4.2**: Each committed installable policy clears the G56R-003 promotion
-  rule under its frozen subscription environment on role-specific planning,
+- **AC-4.2**: Each committed installable policy clears the G56R-003 role-
+  qualification rule under its frozen subscription environment on role-specific planning,
   TDD implementation, and analyze/remediation fixtures.
 - **AC-4.3**: Agent sandbox, TDD, grounding, artifact, and remediation contracts
   remain hard invariants across A1/A2/A3 pair selection, Stage B prompt interaction,
@@ -479,9 +560,9 @@ and ships only role assignments that clear a consumer-focused quality floor.
 - **AC-5.2**: Checklist remediation remains complete at every severity and UAT
   runbooks remain executable, plain-English, non-circular, and traceable to
   acceptance criteria.
-- **AC-5.3**: The selected routes clear the universal-core promotion rule and
-  preserve workspace-write boundaries and fail-open/fail-closed behavior
-  specific to each role.
+- **AC-5.3**: The selected routes clear the component-qualification and cohort-
+  lock rules and preserve workspace-write boundaries and fail-open/fail-closed
+  behavior specific to each role.
 - **AC-5.4**: The cohort follows A1/A2/A3 frozen-prompt pair selection, Stage B
   shortlisted prompt interaction, and one Stage C cohort lock; install and
   rollback evidence records the installable policy and tested environments.
@@ -497,9 +578,9 @@ and ships only role assignments that clear a consumer-focused quality floor.
   and retest the failing boundary to select the lowest stable ordinary effort.
 - **AC-6.3**: All outputs remain grounded in their assigned evidence domain,
   preserve citations/file locators, and perform no writes.
-- **AC-6.4**: The installable static policy that passes the universal staged
-  promotion rule is committed per role; one cohort model is not forced across
-  all four roles.
+- **AC-6.4**: The installable static policy that passes the staged component-
+  qualification and cohort-lock rules is committed per role; one cohort model
+  is not forced across all four roles.
 - **AC-6.5**: Exact-treatment pair selection, joint prompt/context tuning,
   one Stage C cohort lock, install proof, and rollback evidence obey the same
   cohort contract as G56R-007; release proof remains AC-8.9.
@@ -516,21 +597,23 @@ and ships only role assignments that clear a consumer-focused quality floor.
   spawn reliability, fallback behavior, and observed Spark quota. It does not
   claim shared or canonical-resource superiority while Spark lacks a comparable
   measure; omitted effort never selects an unmeasured default.
-- **AC-7.4**: Autopilot continues correctly when the helper is absent, disabled,
-  unavailable, quota-limited, or fails to spawn. That no-helper path is part of
-  universal product acceptance, not merely a fallback note.
+- **AC-7.4**: Autopilot continues correctly when the helper is not installed,
+  unavailable, quota-limited, not invoked, or fails to spawn. That no-helper
+  path is part of universal product acceptance, not merely a fallback note.
 - **AC-7.5**: Source, install, supported-row validation, no-helper validation,
   `optional_helper_policy_id`, installable/environment/trace identities, and
   rollback evidence are independently reviewable.
 
 ### 3.8 Payload, Documentation, UAT, and Release Proof *(-> G56R-011)*
 
-- **AC-8.1**: The Codex payload is rebuilt from source; all ten source TOMLs,
-  generated payloads, manifests/checksums, install inventory, the nine-agent
-  universal core, optional-helper policy, and release policy agree without hand-
-  editing generated artifacts.
+- **AC-8.1**: The Codex payload is rebuilt from source; all ten source and payload
+  TOMLs, manifests/checksums, the exactly nine-agent required destination
+  inventory, any conditionally installed tenth helper, the universal core,
+  optional-helper policy, and release policy agree without hand-editing
+  generated artifacts.
 - **AC-8.2**: Active Codex install/autopilot guidance explains the selected
-  routes, promotion evidence, explicit global override, restart requirement,
+  routes, component-qualification and integrated release-decision evidence,
+  explicit global override, restart requirement,
   support-manifest boundary, and optional capabilities without rewriting
   historical records.
 - **AC-8.3**: Structural, installer, benchmark-replay, payload, installed-cache,
@@ -567,19 +650,27 @@ and ships only role assignments that clear a consumer-focused quality floor.
 - **AC-8.8**: Before merge and release, deterministic documentation checks
   validate relative links, repository-local paths labeled current, fixture and
   agent counts, PRD-to-roadmap acceptance-criteria ownership, SPEC dependencies,
-  and current-versus-proposed path labels. They reject absent paths described as
-  current, obsolete Layer 6 shell paths, contradictory G56R-002/G56R-003
-  ownership, and collapsed canonical/native/legacy accounting terms.
-- **AC-8.9 — Integrated policy gate**: Before release, the assembled installed
-  nine-agent `universal_core_policy_id` is compared with the immutable nine-agent
-  production core on the untouched integrated release-confirmation corpus,
-  consumed as one multi-stratum campaign after every cohort lock. Both arms use
-  the same locked objectives in the canonical row and each mandatory row or
-  proven equivalence class, with the helper disabled. The canonical stratum
-  passes the primary endpoint; every other stratum passes the AC-2.21 non-
-  inferiority gates, and all strata pass safety/quality/acceptance and guardrail
-  gates simultaneously. A helper invocation invalidates the run. Failure reopens
-  route, prompt, environment, or orchestration selection and requires a new
+  current-versus-proposed path labels, named-category resolutions, canonical-row
+  invariants, per-row comparator contracts, source-versus-destination agent
+  inventory, helper absence semantics, component terminology, and the bounded
+  assembled-policy claim. They reject absent paths described as current,
+  obsolete Layer 6 shell paths, contradictory G56R-002/G56R-003 ownership,
+  collapsed canonical/native/legacy accounting terms, or any undocumented
+  discoverable-but-non-invocable helper state.
+- **AC-8.9 — Integrated policy promotion gate**: Before release, the frozen
+  component-wise assembled nine-agent `universal_core_policy_id` is evaluated
+  exactly once on the untouched integrated release-confirmation corpus as one
+  multi-stratum campaign after every cohort lock. In the canonical row it is
+  paired with the immutable production core and must pass the superiority
+  endpoint. In every other mandatory row or proven equivalence class it is
+  paired with the AC-2.13 assigned comparator and must pass that row's non-
+  inferiority, quality/safety, simultaneous guardrail, and qualification gates.
+  The helper is not installed or not invoked in both arms; any invocation
+  invalidates the run. This is the sole promotion decision. Passing proves
+  improvement over production only in the canonical row and support/non-
+  regression within every other row's declared claim boundary; it does not
+  prove global assembled-policy optimality. Failure reopens route, prompt,
+  environment, comparator, or orchestration selection and requires a new
   versioned release-confirmation corpus.
 - **AC-8.10 — Support claims**: Universal core support means the nine required
   agents install and deliver their tested treatment on every frozen manifest
@@ -592,8 +683,8 @@ and ships only role assignments that clear a consumer-focused quality floor.
 - **AC-8.11 — Optional-helper release gate**: G56R-010 and G56R-011 separately
   prove Spark functionality, latency, spawn reliability, observed quota, and
   fallback on supported Pro rows, plus the no-helper path on all other rows.
-  Evidence binds `optional_helper_policy_id` and the installed-enabled or
-  installed-disabled state. Spark results never enter the universal-core primary
+  Evidence binds `optional_helper_policy_id` and the `installed_enabled` or
+  `not_installed` state. Spark results never enter the universal-core primary
   statistic.
 - **AC-8.12 — Long-workflow canaries**: The controlled canary portfolio contains
   at least the minimum unique-task count from the risk/sample rule. Each long
@@ -746,13 +837,16 @@ and ships only role assignments that clear a consumer-focused quality floor.
 1. All acceptance criteria are traceable through G56R-001 through G56R-011;
    the cross-cutting workflow-budget contract is implemented in the shared
    harness and release-proof specs.
-2. The nine-agent universal core clears the untouched integrated release-
-   confirmation corpus in the canonical environment and every per-row treatment,
-   safety, quality, reliability, and non-regression qualification gate without
-   pooling incompatible accounting.
-3. A clean install verifies all ten installable identities plus the core,
-   optional-helper, and release-policy IDs; environment and execution evidence
-   separately prove effective speed, tools, permissions, and model resolution.
+2. The component-wise assembled nine-agent universal core improves over the
+   immutable production core in the canonical environment and clears every
+   other row's assigned-comparator, treatment, safety, quality, reliability,
+   and non-regression gate without pooling incompatible accounting or claiming
+   complete-policy global optimality.
+3. A clean install verifies exactly nine core installable identities plus the
+   core, optional-helper, and release-policy IDs; it verifies a conditional
+   tenth helper identity only on supported rows. Environment and execution
+   evidence separately prove effective speed, tools, permissions, and model
+   resolution.
 4. Source, generated payload, installed cache, guidance, tests, and UAT agree on
    the universal core and optional-helper split. Every mandatory manifest row
    is `supported`; any additional row has an explicit non-claiming state.
@@ -777,6 +871,9 @@ and ships only role assignments that clear a consumer-focused quality floor.
 - **Codex plans, credits, and limits:** [Codex pricing](https://learn.chatgpt.com/docs/pricing)
 - **ChatGPT plan access:** [Using Codex with your ChatGPT plan](https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan)
 - **Native and legacy accounting:** [Codex rate card](https://help.openai.com/en/articles/20001106-codex-rate-card)
+- **Healthcare, Regulated, Clinicians, and Codex Local:** [HIPAA-eligible products and functionality](https://help.openai.com/en/articles/20001069-chatgpt-healthcare-and-regulated-workspace-functionality)
+- **FedRAMP Codex authentication boundary:** [ChatGPT Enterprise and API Platform for FedRAMP](https://help.openai.com/en/articles/20001070-chatgpt-enterprise-and-api-platform-for-fedramp)
+- **ChatGPT Gov environment:** [Introducing ChatGPT Gov](https://openai.com/global-affairs/introducing-chatgpt-gov/)
 - **Individual-plan credits:** [Using credits for flexible usage](https://help.openai.com/en/articles/12642688-using-credits-for-flexible-usage-in-chatgpt-freegopluspro)
 - **Managed-plan accounting variants:** [Flexible managed-plan pricing](https://help.openai.com/en/articles/11487671-flexible-pricing-for-chatgpt-enterprise-plans)
 - **Codex native protocol/telemetry capability surface:** [App server](https://learn.chatgpt.com/docs/app-server)
