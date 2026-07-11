@@ -58,13 +58,13 @@
         "speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh"
       ],
       "declared_scoped_tests": [
-        "tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh",
-        "tests/speckit-pro/layer4-scripts/test-plan-layers.sh"
+        "tests/speckit-pro/unit/test-final-reviewability-backstop.sh",
+        "tests/speckit-pro/unit/test-plan-layers.sh"
       ],
       "scoped_verification": {
         "commands": [
           {
-            "command": "tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh",
+            "command": "tests/speckit-pro/unit/test-final-reviewability-backstop.sh",
             "gate_type": "SCRIPT_UNIT",
             "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
             "required": true,
@@ -74,7 +74,7 @@
             "finished_at": "2026-06-10T00:00:01Z"
           },
           {
-            "command": "tests/speckit-pro/layer4-scripts/test-plan-layers.sh",
+            "command": "tests/speckit-pro/unit/test-plan-layers.sh",
             "gate_type": "SCRIPT_UNIT",
             "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
             "required": true,
@@ -99,12 +99,12 @@
         "speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh"
       ],
       "declared_scoped_tests": [
-        "tests/speckit-pro/layer4-scripts/test-plan-layers.sh"
+        "tests/speckit-pro/unit/test-plan-layers.sh"
       ],
       "scoped_verification": {
         "commands": [
           {
-            "command": "tests/speckit-pro/layer4-scripts/test-plan-layers.sh",
+            "command": "tests/speckit-pro/unit/test-plan-layers.sh",
             "gate_type": "SCRIPT_UNIT",
             "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
             "required": true,
@@ -140,13 +140,13 @@
       "declared_scoped_tests": [
         "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
         "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
-        "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh",
+        "tests/speckit-pro/unit/test-multi-pr-emission.sh",
         "tests/speckit-pro/run-all.sh"
       ],
       "scoped_verification": {
         "commands": [
           {
-            "command": "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh",
+            "command": "tests/speckit-pro/unit/test-multi-pr-emission.sh",
             "gate_type": "SCRIPT_UNIT",
             "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
             "required": true,

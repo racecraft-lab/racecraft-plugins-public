@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-zero-bash-guard",
+  "helper_id": "active-path-guard",
+  "operation": "zero-bash-guard",
+  "mode": "read_only",
+  "inputs": {
+    "case_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/zero-bash-guard-cases.json",
+    "case_id": "clean-fixture"
+  }
+}

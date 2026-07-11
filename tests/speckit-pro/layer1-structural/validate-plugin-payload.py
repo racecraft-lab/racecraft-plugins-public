@@ -17,7 +17,7 @@ Behavior preserved from the bash predecessor: it invokes the real payload builde
 ``shell=False``). The builder is deterministic, so re-running it leaves ``dist/``
 byte-identical.
 
-Baseline: ``tests/speckit-pro/parity/xplat-010/validate-plugin-payload-baseline.txt``
+Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-plugin-payload-baseline.txt``
 (TOTAL: 23).
 """
 

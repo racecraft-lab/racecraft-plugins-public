@@ -81,9 +81,9 @@ is rerun against that evidence.
 - `docs/ai/specs/.process/XPLAT-008-release-readiness.md`
 - `docs/ai/specs/.process/XPLAT-008-uat-matrix.md`
 - `docs/ai/specs/.process/XPLAT-008-uat-codex-macos.md`
-- `tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/`
-- `tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/contracts/`
-- `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py`
+- `tests/speckit-pro/unit/fixtures/installed-plugin-release/`
+- `tests/speckit-pro/unit/fixtures/installed-plugin-release/contracts/`
+- `tests/speckit-pro/unit/test-speckit-pro-gates.py`
 
 ## Recovery Commands
 ```text
@@ -121,12 +121,12 @@ git checkout 9507fd452a3e344c1912b449f3bb4f2c38437b38 -- specs/xplat-008-claude-
 | `docs/ai/specs/.process/XPLAT-008-release-readiness.md` | Preserved release-readiness packet outside active `specs/**` |
 | `docs/ai/specs/.process/XPLAT-008-uat-matrix.md` | Preserved UAT matrix outside active `specs/**` |
 | `docs/ai/specs/.process/XPLAT-008-uat-codex-macos.md` | Preserved partial Codex/macOS UAT detail outside active `specs/**` |
-| `tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/contracts/` | Preserved XPLAT-008 contract schemas needed by Layer 4 gate coverage after cleanup |
-| `tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json` | Repointed release-readiness fixture evidence to preserved process paths |
-| `tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/uat-matrix-cases.json` | Repointed UAT matrix fixture evidence to preserved process paths |
-| `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` | Repointed XPLAT-008 contract reads away from active `specs/**` |
-| `tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py` | Added regression coverage for same-repo Git worktree metadata names during branch detection |
-| `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py` | Removed the archived XPLAT-008 spec path from active-path guard allow-list coverage |
+| `tests/speckit-pro/unit/fixtures/installed-plugin-release/contracts/` | Preserved XPLAT-008 contract schemas needed by Layer 4 gate coverage after cleanup |
+| `tests/speckit-pro/unit/fixtures/installed-plugin-release/release-readiness-cases.json` | Repointed release-readiness fixture evidence to preserved process paths |
+| `tests/speckit-pro/unit/fixtures/installed-plugin-release/uat-matrix-cases.json` | Repointed UAT matrix fixture evidence to preserved process paths |
+| `tests/speckit-pro/unit/test-speckit-pro-gates.py` | Repointed XPLAT-008 contract reads away from active `specs/**` |
+| `tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py` | Added regression coverage for same-repo Git worktree metadata names during branch detection |
+| `tests/speckit-pro/unit/test-speckit-pro-runner.py` | Removed the archived XPLAT-008 spec path from active-path guard allow-list coverage |
 | `speckit-pro/speckit_pro_runner/gates/release.py` | Repointed default XPLAT-008 UAT evidence references to preserved process files |
 | `speckit-pro/speckit_pro_runner/helpers/read_only.py` | Accepted same-repo `.git/worktrees/<id>` metadata when resolving read-only helper branch state |
 | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | Refreshed runner source metadata after helper branch-detection fix |
@@ -137,14 +137,14 @@ git checkout 9507fd452a3e344c1912b449f3bb4f2c38437b38 -- specs/xplat-008-claude-
 
 ## Post-Cleanup Verification
 - `python3 -m json.tool docs/ai/specs/.process/autopilot-state.json`
-- `python3 -m json.tool tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/release-readiness-cases.json`
-- `python3 -m json.tool tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/uat-matrix-cases.json`
+- `python3 -m json.tool tests/speckit-pro/unit/fixtures/installed-plugin-release/release-readiness-cases.json`
+- `python3 -m json.tool tests/speckit-pro/unit/fixtures/installed-plugin-release/uat-matrix-cases.json`
 - `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh .`
 - `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .`
 - `find specs -mindepth 1 -maxdepth 4 -print`
-- `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py`
-- `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py`
-- `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py --helper check-prerequisites`
+- `python3 tests/speckit-pro/unit/test-speckit-pro-gates.py`
+- `python3 tests/speckit-pro/unit/test-speckit-pro-runner.py`
+- `python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper check-prerequisites`
 - `node docs-site/scripts/generate-reference-pages.mjs --check`
 - `git diff --check`
 - `bash tests/speckit-pro/run-all.sh`
@@ -172,7 +172,7 @@ runtime contract, public claim limits, safe repair boundary, or UAT gate.
 ## Conflicts Resolved
 - Layer 4 gate tests referenced XPLAT-008 schemas under the active spec
   directory. The schemas were copied to
-  `tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/contracts/` and
+  `tests/speckit-pro/unit/fixtures/installed-plugin-release/contracts/` and
   tests were repointed before removing the active spec folder.
 - XPLAT-008 release-readiness defaults and fixtures referenced UAT evidence
   under the active spec folder. The release packet, UAT matrix, and partial

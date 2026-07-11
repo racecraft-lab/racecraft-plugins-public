@@ -16,7 +16,7 @@
 | `specs/002-pr-checks-workflow` | merged | cleanup applied | PR #2 is merged, provenance/recovery commands are recorded, and PR checks workflow behavior lives in `.github/workflows/pr-checks.yml` |
 | `specs/003-release-automation` | merged | cleanup applied | PR #3 is merged, provenance/recovery commands are recorded, and release workflow behavior lives in `.github/workflows/release.yml` |
 | `specs/004-integration-verification` | merged | cleanup applied | PR #5 is merged; its stale unchecked task ledger is recorded as historical inconsistency rather than retained as an active spec |
-| `specs/006a-uat-skeleton` | merged | cleanup applied | PR #99 is merged, the full-spec test dependency was already vendored as `tests/speckit-pro/layer4-scripts/fixtures/spec-full-snapshot.md`, and recovery commands are recorded |
+| `specs/006a-uat-skeleton` | merged | cleanup applied | PR #99 is merged, the full-spec test dependency was already vendored as `tests/speckit-pro/unit/fixtures/uat-runbook-generation/full-spec.md`, and recovery commands are recorded |
 | `specs/prsg-002-moc-templates` | merged | cleanup applied | PR #116 is merged, MOC lint dogfood assertions now use committed fixtures, and recovery commands are recorded |
 | `specs/prsg-003-spec-index` | merged | cleanup applied | PR #121 is merged, generator behavior is covered by committed fixtures, and recovery commands are recorded |
 | `specs/prsg-004-roadmap-moc-home-note` | merged | cleanup applied | PR #129 is merged, one PR-review-packet task remained unchecked but was not a merge blocker, and recovery commands are recorded |
@@ -36,10 +36,10 @@
 
 ## Fixture-Decoupling Prerequisites
 
-- `tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh` now seeds PRSG-012 packet-generation tests from `tests/speckit-pro/layer4-scripts/fixtures/prsg-012-feature/`.
-- `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` now reads PRSG-012 marker-plan regression fixtures from `tests/speckit-pro/layer4-scripts/fixtures/marker-plan/`.
+- `tests/speckit-pro/unit/test-generate-pr-body.sh` now seeds PRSG-012 packet-generation tests from `tests/speckit-pro/unit/fixtures/pr-packet-feature/`.
+- `tests/speckit-pro/unit/test-multi-pr-emission.sh` now reads PRSG-012 marker-plan regression fixtures from `tests/speckit-pro/unit/fixtures/marker-plan/`.
 - `tests/speckit-pro/layer1-structural/validate-moc-stale-index.sh` and `validate-moc-orphan.sh` now use committed MOC fixtures for the former PRSG-002 dogfood assertions.
-- The SPEC-006a UAT full-spec snapshot was already vendored at `tests/speckit-pro/layer4-scripts/fixtures/spec-full-snapshot.md`.
+- The SPEC-006a UAT full-spec snapshot was already vendored at `tests/speckit-pro/unit/fixtures/uat-runbook-generation/full-spec.md`.
 
 ## Provenance
 
@@ -68,8 +68,8 @@
 
 ## Pre-Cleanup Verification
 
-- `bash tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh` passed `85/85`.
-- `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` passed `156/156`.
+- `bash tests/speckit-pro/unit/test-generate-pr-body.sh` passed `85/85`.
+- `bash tests/speckit-pro/unit/test-multi-pr-emission.sh` passed `156/156`.
 - `bash tests/speckit-pro/layer1-structural/validate-moc-stale-index.sh` passed `11/11`.
 - `bash tests/speckit-pro/layer1-structural/validate-moc-orphan.sh` passed `29/29`.
 
@@ -194,10 +194,10 @@ git checkout 896ab42f443e330d095f1c08be681cc8c9bca995 -- specs/prsg-012-reviewer
 | `specs/.gitkeep` | Kept the active specs root present while containing no active spec folders |
 | `tests/speckit-pro/layer1-structural/validate-moc-orphan.sh` | Replaced live PRSG-002 dogfood dependency with committed fixture assertions |
 | `tests/speckit-pro/layer1-structural/validate-moc-stale-index.sh` | Replaced live PRSG-002 dogfood dependency with committed fixture assertions |
-| `tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh` | Replaced live PRSG-012 feature dependency with a committed fixture |
-| `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` | Replaced live PRSG-012 marker-plan dependency with committed fixtures |
-| `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh` | Replaced live PRSG-012 feature dependency with a committed fixture |
-| `tests/speckit-pro/layer4-scripts/fixtures/` | Added fixture-backed PRSG-012 feature and marker-plan snapshots |
+| `tests/speckit-pro/unit/test-generate-pr-body.sh` | Replaced live PRSG-012 feature dependency with a committed fixture |
+| `tests/speckit-pro/unit/test-multi-pr-emission.sh` | Replaced live PRSG-012 marker-plan dependency with committed fixtures |
+| `tests/speckit-pro/unit/test-validate-pr-packet.sh` | Replaced live PRSG-012 feature dependency with a committed fixture |
+| `tests/speckit-pro/unit/fixtures/` | Added fixture-backed PRSG-012 feature and marker-plan snapshots |
 | `specs/*` | Removed merged active spec folders listed in the sweep summary |
 
 ## Feature Status

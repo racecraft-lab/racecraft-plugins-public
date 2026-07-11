@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-count-markers",
+  "helper_id": "count-markers",
+  "operation": "count-markers",
+  "mode": "read_only",
+  "inputs": {
+    "type": "all",
+    "feature_dir": "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature"
+  }
+}

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://racecraft.dev/speckit-pro/xplat-010/estimate-spec-size.schema.json",
   "title": "XPLAT-010 estimate-spec-size Runner Operation",
-  "description": "Contract for the restored estimate-spec-size read-only runner helper (FR-025 / US7). Restores the scoping estimator whose Bash predecessor (speckit-pro/skills/speckit-autopilot/scripts/estimate-spec-size.sh) was deleted by XPLAT-009 without a Python port. Callers: the grill-me and speckit-prd skills. Golden fixtures already exist at tests/speckit-pro/layer4-scripts/fixtures/estimate-spec-size/.",
+  "description": "Contract for the restored estimate-spec-size read-only runner helper (FR-025 / US7). Restores the scoping estimator whose Bash predecessor (speckit-pro/skills/speckit-autopilot/scripts/estimate-spec-size.sh) was deleted by XPLAT-009 without a Python port. Callers: the grill-me and speckit-prd skills. Golden fixtures already exist at tests/speckit-pro/unit/fixtures/estimate-spec-size/.",
   "type": "object",
   "additionalProperties": false,
   "required": ["request", "result"],

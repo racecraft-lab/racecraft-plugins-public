@@ -1,0 +1,131 @@
+{
+  "schema_version": "1.0.0",
+  "packet_id": "valid-split",
+  "mode": "split",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "prsg-012-reviewer-ready-pr-packet-contract/01-packet-validation"
+  },
+  "source_feature_dir": "specs/prsg-012-reviewer-ready-pr-packet-contract",
+  "generated_title": {
+    "value": "feat(PRSG-012): Validate reviewer packet slices",
+    "type": "feat",
+    "scope": "PRSG-012",
+    "description": "Validate reviewer packet slices",
+    "source_evidence": {
+      "kind": "split_source_boundary",
+      "source": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/packet-validation/slice-packet.json",
+      "summary": "Split source boundary section normalized into a public action phrase."
+    },
+    "rejected_candidates": [
+      {
+        "value": "packet-validation",
+        "reason": "Uses the slice id instead of reviewer-facing prose."
+      },
+      {
+        "value": "prsg-012-reviewer-ready-pr-packet-contract/01-packet-validation",
+        "reason": "Uses the branch name instead of reviewer-facing prose."
+      }
+    ]
+  },
+  "body_file": "tests/speckit-pro/unit/fixtures/pr-packet/bodies/valid-split.md",
+  "required_headings": [
+    "Summary",
+    "What Changed",
+    "Why It Matters",
+    "How To Review",
+    "How To UAT",
+    "Verification",
+    "Scope",
+    "Known Gaps"
+  ],
+  "verification_evidence": [
+    {
+      "kind": "json_syntax",
+      "source": "tests/speckit-pro/unit/fixtures/pr-packet/valid-split.json",
+      "summary": "Fixture parses with jq empty.",
+      "result": "passed"
+    },
+    {
+      "kind": "split_packet_body",
+      "source": "tests/speckit-pro/unit/fixtures/pr-packet/bodies/valid-split.md",
+      "summary": "Rendered body carries split/source evidence, UAT compatibility, scope, verification, and known-gap sections.",
+      "result": "passed"
+    }
+  ],
+  "scope_evidence": {
+    "reviewable_loc": 0,
+    "production_files": 0,
+    "total_files": 2,
+    "budget_result": "within_budget",
+    "changed_files": [
+      "tests/speckit-pro/unit/fixtures/pr-packet/valid-split.json",
+      "tests/speckit-pro/unit/fixtures/pr-packet/bodies/valid-split.md"
+    ],
+    "non_goals": [
+      "Validator behavior is not implemented by this fixture task.",
+      "Split PR creation behavior is not implemented by this fixture task.",
+      "Partial-failure resume behavior is covered by a later fixture task."
+    ]
+  },
+  "uat": {
+    "how_to_uat": "Run the Layer 4 packet validation fixture once the validator task lands. Until then, inspect the split fixture shape, JSON syntax, and rendered body evidence.",
+    "uat_runbook_heading": "## UAT Runbook",
+    "uat_source": "tests/speckit-pro/unit/fixtures/pr-packet/bodies/valid-split.md"
+  },
+  "source_markers": [
+    {
+      "marker_id": "feature-spec",
+      "rendered_text": "Source: feature specification defines split packet validation before each PR create attempt.",
+      "source": "specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md"
+    },
+    {
+      "marker_id": "split-source-boundary",
+      "rendered_text": "Source: split source boundary section defines the public title description for this packet.",
+      "source": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/packet-validation/slice-packet.json"
+    },
+    {
+      "marker_id": "quickstart-verification",
+      "rendered_text": "Source: quickstart defines split-packet validation evidence.",
+      "source": "specs/prsg-012-reviewer-ready-pr-packet-contract/quickstart.md"
+    }
+  ],
+  "editable_fields": [
+    {
+      "field_id": "summary",
+      "heading": "Summary",
+      "start_marker": "<!-- speckit-pro-editable:summary:start -->",
+      "end_marker": "<!-- speckit-pro-editable:summary:end -->"
+    },
+    {
+      "field_id": "what_changed",
+      "heading": "What Changed",
+      "start_marker": "<!-- speckit-pro-editable:what_changed:start -->",
+      "end_marker": "<!-- speckit-pro-editable:what_changed:end -->"
+    },
+    {
+      "field_id": "why_it_matters",
+      "heading": "Why It Matters",
+      "start_marker": "<!-- speckit-pro-editable:why_it_matters:start -->",
+      "end_marker": "<!-- speckit-pro-editable:why_it_matters:end -->"
+    }
+  ],
+  "protected_body_fingerprint": {
+    "algorithm": "sha256",
+    "value": "88ac1944928acc784d80670614461b28b6df72a2a06ed793bc4cde9b0b6f8a14",
+    "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
+    "elided_fields": [
+      "summary",
+      "what_changed",
+      "why_it_matters"
+    ]
+  },
+  "split_slice": {
+    "slice_id": "packet-validation",
+    "source_boundary": {
+      "section": "Validate reviewer packet slices"
+    },
+    "source_packet": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/packet-validation/slice-packet.json"
+  },
+  "validation_result_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/pr-packets/valid-split/validation.json"
+}

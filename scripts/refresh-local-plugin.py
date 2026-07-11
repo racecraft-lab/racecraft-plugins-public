@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import os
-import re
 import shlex
 import shutil
 import subprocess
@@ -12,11 +11,11 @@ import sys
 from pathlib import Path
 
 
-SCRIPT_DIR = Path(__file__).absolute().parent
+SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
 
-PLUGIN_NAME = os.environ.get("SPECKIT_PLUGIN_NAME") or "speckit-pro"
-MARKETPLACE = os.environ.get("SPECKIT_MARKETPLACE") or "racecraft-plugins-public"
+PLUGIN_NAME = os.environ.get("SPECKIT_PLUGIN_NAME", "speckit-pro")
+MARKETPLACE = os.environ.get("SPECKIT_MARKETPLACE", "racecraft-plugins-public")
 CLAUDE_SCOPE = "user"
 
 RUN_BUILD = True
@@ -86,32 +85,41 @@ def run_known_command(
     args: list[str],
     *,
     cwd: Path | None = None,
-    capture_stdout: bool = False,
-    merge_stderr: bool = False,
+    capture_output: bool = False,
     check: bool,
 ) -> subprocess.CompletedProcess[str]:
     if not args:
         raise FatalError("command argv must not be empty")
 
     executable, *tail = args
+    if executable == "claude":
+        return subprocess.run(
+            ["claude", *tail],
+            cwd=cwd,
+            text=True,
+            capture_output=capture_output,
+            shell=False,
+            check=check,
+        )
+    if executable == "codex":
+        return subprocess.run(
+            ["codex", *tail],
+            cwd=cwd,
+            text=True,
+            capture_output=capture_output,
+            shell=False,
+            check=check,
+        )
     if executable == sys.executable:
-        resolved = sys.executable
-    elif executable in {"claude", "codex"}:
-        resolved = shutil.which(executable)
-        if resolved is None:
-            die(f"required command not found: {executable}")
-    else:
-        raise FatalError(f"unsupported command executable: {executable}")
-
-    return subprocess.run(
-        [resolved, *tail],
-        cwd=cwd,
-        text=True,
-        stdout=subprocess.PIPE if capture_stdout else None,
-        stderr=subprocess.STDOUT if merge_stderr else None,
-        shell=False,
-        check=check,
-    )
+        return subprocess.run(
+            [sys.executable, *tail],
+            cwd=cwd,
+            text=True,
+            capture_output=capture_output,
+            shell=False,
+            check=check,
+        )
+    raise FatalError(f"unsupported command executable: {executable}")
 
 
 def run_cmd(args: list[str]) -> subprocess.CompletedProcess[str] | None:
@@ -223,13 +231,8 @@ def validate_claude_payload() -> None:
 
 
 def command_output(args: list[str]) -> tuple[int, str]:
-    completed = run_known_command(args, capture_stdout=True, check=False)
-    return completed.returncode, completed.stdout or ""
-
-
-def normalize_marketplace_row(line: str) -> str:
-    """Match the Bash predecessor's leading marker and whitespace removal."""
-    return re.sub(r"^[^\w]*", "", line, flags=re.UNICODE).rstrip()
+    completed = run_known_command(args, capture_output=True, check=False)
+    return completed.returncode, completed.stdout
 
 
 def claude_marketplace_root() -> tuple[int, str]:
@@ -239,7 +242,7 @@ def claude_marketplace_root() -> tuple[int, str]:
 
     found = False
     for line in listing.splitlines():
-        row = normalize_marketplace_row(line)
+        row = line.lstrip(" \t>❯").rstrip()
         if not found and row == MARKETPLACE:
             found = True
             continue
@@ -283,14 +286,15 @@ def refresh_claude_install() -> None:
     if DRY_RUN:
         print(f"+ claude plugin uninstall {shlex.quote(plugin_selector())} --scope {shlex.quote(CLAUDE_SCOPE)} -y")
     else:
-        completed = run_known_command(
+        completed = subprocess.run(
             ["claude", "plugin", "uninstall", plugin_selector(), "--scope", CLAUDE_SCOPE, "-y"],
-            capture_stdout=True,
-            merge_stderr=True,
+            text=True,
+            capture_output=True,
+            shell=False,
             check=False,
         )
         if completed.returncode != 0:
-            output = completed.stdout or ""
+            output = completed.stdout + completed.stderr
             if "not installed" not in output and "not found" not in output:
                 print(output, file=sys.stderr, end="" if output.endswith("\n") else "\n")
                 die(f"failed to uninstall {plugin_selector()} from Claude Code")
@@ -334,14 +338,15 @@ def refresh_codex_install() -> None:
     if DRY_RUN:
         print(f"+ codex plugin remove {shlex.quote(plugin_selector())}")
     else:
-        completed = run_known_command(
+        completed = subprocess.run(
             ["codex", "plugin", "remove", plugin_selector()],
-            capture_stdout=True,
-            merge_stderr=True,
+            text=True,
+            capture_output=True,
+            shell=False,
             check=False,
         )
         if completed.returncode != 0:
-            output = completed.stdout or ""
+            output = completed.stdout + completed.stderr
             if "not installed" not in output and "not found" not in output:
                 print(output, file=sys.stderr, end="" if output.endswith("\n") else "\n")
                 die(f"failed to remove {plugin_selector()} from Codex")

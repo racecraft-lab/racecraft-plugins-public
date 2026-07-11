@@ -1,0 +1,34 @@
+001 baseline inventory is truthful and ordered
+002 Layer-8 runner module imports
+003 Layer-8 runner source has no shell=True
+004 Layer-8 runner source has no os.system
+005 tracked Layer-8 tree contains no shell scripts
+006 run_path subprocess call uses argv variable
+007 run_path subprocess call disables shell
+008 help exits zero and prints usage
+009 unknown flag exits two with diagnostic
+010 missing CLAUDE_BIN skips live fixture
+011 configured missing claude path reports configured-path reason
+012 live stub invoked Path A and Path B only
+013 live stub receives claude -p argv
+014 live stub pins command resolution to the selected CLAUDE_BIN directory
+015 live stub receives configured budget
+016 JSON env set applies teams mode
+017 JSON env set applies fallback mode
+018 JSON env unset removes inherited values
+019 extractor exact passes despite whole-file drift
+020 extractor tolerance-1 passes numeric difference one
+021 byte-identical bypasses extractor configuration
+022 extractor equal-value fast path is semantic-only
+023 semantic-equivalent is skipped without failure
+024 semantic skip writes warning report
+025 invalid env contract is labeled to the env file
+026 diff reports consume bounded input and truncate deterministically
+027 no-extractor exact fallback passes identical bytes
+028 no-extractor tolerance-1 fallback passes identical bytes
+029 no-extractor tolerance-1 fallback rejects numeric drift as byte diff
+030 no-extractor exact fallback rejects byte drift
+031 fail_fast stops after first failing comparison
+032 fail_fast omits later comparison label
+033 live mode writes claude exit code files
+TOTAL: 33

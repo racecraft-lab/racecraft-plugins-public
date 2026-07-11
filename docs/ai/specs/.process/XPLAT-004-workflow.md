@@ -562,7 +562,7 @@ Implement the tasks from `specs/xplat-004-cross-platform-runner-foundation/tasks
 
 Before PR creation, record:
 
-- **Tests executed:** `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh` (9/9), `bash tests/speckit-pro/run-all.sh --layer 1` (1438/1438), `bash tests/speckit-pro/run-all.sh --layer 4` (2075/2075), `bash tests/speckit-pro/run-all.sh` (3713/3713), G7, spec-index check, branch-range `git diff --check`, UAT validation, PR packet validation, and PR workflow title validation.
+- **Tests executed:** `tests/speckit-pro/unit/test-speckit-pro-runner.sh` (9/9), `bash tests/speckit-pro/run-all.sh --layer 1` (1438/1438), `bash tests/speckit-pro/run-all.sh --layer 4` (2075/2075), `bash tests/speckit-pro/run-all.sh` (3713/3713), G7, spec-index check, branch-range `git diff --check`, UAT validation, PR packet validation, and PR workflow title validation.
 - **Scope boundaries preserved:** No `dist/**` payload copy, active Claude/Codex skill or hook cutover, install behavior change, real helper port, or public native-platform support claim landed in XPLAT-004.
 - **Known gaps:** Installed-cache launch proof, generated payload propagation, native matrix UAT, release-readiness, and public claim audit remain XPLAT-007.
 - **Native Windows/Linux:** Not performed; XPLAT-004 provides deterministic source-checkout runbook fixture evidence only.
@@ -598,7 +598,7 @@ speckit-pro/
   scripts/
 tests/speckit-pro/
   layer1-structural/
-  layer4-scripts/
+  unit/
   layer7-integration/
   layer8-parity/
 docs/ai/specs/

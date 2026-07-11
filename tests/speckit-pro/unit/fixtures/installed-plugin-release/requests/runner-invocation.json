@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "request_id": "xplat-008-runner-invocation-live-host-runtime-info",
+  "helper_id": "runner-invocation",
+  "operation": "runner-invocation",
+  "mode": "read_only",
+  "inputs": {
+    "case_file": "tests/speckit-pro/unit/fixtures/installed-plugin-release/runner-invocation-cases.json",
+    "case_id": "live-host-runtime-info"
+  }
+}

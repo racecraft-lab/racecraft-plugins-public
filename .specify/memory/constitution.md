@@ -64,7 +64,7 @@ edits are prohibited except during initial plugin creation.
 ### IV. Test Coverage Before Merge
 
 All new bash scripts MUST have corresponding Layer 4 unit tests in
-`tests/layer4-scripts/`. All new plugin components (commands, agents,
+`tests/unit/`. All new plugin components (commands, agents,
 skills, hooks) MUST pass Layer 1 structural validation. No
 implementation is considered complete until `bash tests/run-all.sh`
 passes with zero failures.

@@ -17,7 +17,7 @@ the agent/skill directory inventories (count-parity contract §2, rule 4).
 Directory globs and the reference-path ``sort -u`` are reproduced with sorted
 inventories; the reference extraction mirrors the bash ``grep -oE`` per-line
 match. Baseline:
-``tests/speckit-pro/parity/xplat-010/validate-codex-parity-baseline.txt``
+``tests/speckit-pro/parity/bash-to-python/validate-codex-parity-baseline.txt``
 (TOTAL: 81).
 """
 

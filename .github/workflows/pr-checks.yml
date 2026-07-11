@@ -84,13 +84,13 @@ jobs:
       - name: Report test toolchain
         env:
           PLUGIN: ${{ matrix.plugin }}
-        run: PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-toolchain-preflight.json
+        run: PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-toolchain-preflight.json
 
       - name: Run test suite
         env:
           PLUGIN: ${{ matrix.plugin }}
           SPECKIT_SKIP_TOOLCHAIN_CHECK: "1"
-        run: PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json
+        run: PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json
 
   # ───────────────────────────────────────────────────────────────────
   # Job 3: Validate PR title against Conventional Commits format
@@ -110,7 +110,7 @@ jobs:
         env:
           TITLE: ${{ github.event_name == 'pull_request' && github.event.pull_request.title || inputs.pr_title }}
           BASE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || inputs.base_ref }}
-        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness-live-github.json
+        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness-live-github.json
 
   # ───────────────────────────────────────────────────────────────────
   # Job 4: Validate GitHub Actions workflow syntax and semantics
@@ -286,7 +286,7 @@ jobs:
 
       - name: Report docs toolchain
         if: steps.docs.outputs.should_validate_docs == 'true'
-        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-toolchain-preflight-docs.json
+        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-toolchain-preflight-docs.json
 
       - name: Install Playwright browsers
         if: steps.docs.outputs.validation_mode == 'full'

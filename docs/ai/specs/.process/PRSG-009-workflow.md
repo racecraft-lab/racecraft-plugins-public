@@ -523,14 +523,14 @@ For each task:
 RED focused fixture:
 
 ```text
-bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh
+bash tests/speckit-pro/unit/test-multi-pr-emission.sh
 test-multi-pr-emission: 13/36 passed (23 failed)
 ```
 
 GREEN focused fixture:
 
 ```text
-bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh
+bash tests/speckit-pro/unit/test-multi-pr-emission.sh
 test-multi-pr-emission: 36/36 passed
 ```
 
@@ -547,26 +547,26 @@ L4: 1086/1086
 RED focused fixtures:
 
 ```text
-bash tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh
+bash tests/speckit-pro/unit/test-generate-pr-body.sh
 test-generate-pr-body: 32/41 passed (9 failed)
 
-bash tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh
+bash tests/speckit-pro/unit/test-generate-spec-index.sh
 test-generate-spec-index: 85/86 passed (1 failed)
 
-bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh
+bash tests/speckit-pro/unit/test-multi-pr-emission.sh
 test-multi-pr-emission: 41/61 passed (20 failed)
 ```
 
 GREEN focused fixtures:
 
 ```text
-bash tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh
+bash tests/speckit-pro/unit/test-generate-pr-body.sh
 test-generate-pr-body: 41/41 passed
 
-bash tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh
+bash tests/speckit-pro/unit/test-generate-spec-index.sh
 test-generate-spec-index: 86/86 passed
 
-bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh
+bash tests/speckit-pro/unit/test-multi-pr-emission.sh
 test-multi-pr-emission: 61/61 passed
 ```
 
@@ -595,20 +595,20 @@ L4: 1125/1125
 RED focused fixtures:
 
 ```text
-bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh
+bash tests/speckit-pro/unit/test-multi-pr-emission.sh
 test-multi-pr-emission: 63/78 passed (15 failed)
 
-bash tests/speckit-pro/layer4-scripts/test-restack.sh
+bash tests/speckit-pro/unit/test-restack.sh
 test-restack: 12/30 passed (18 failed)
 ```
 
 GREEN focused fixtures:
 
 ```text
-bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh
+bash tests/speckit-pro/unit/test-multi-pr-emission.sh
 test-multi-pr-emission: 78/78 passed
 
-bash tests/speckit-pro/layer4-scripts/test-restack.sh
+bash tests/speckit-pro/unit/test-restack.sh
 test-restack: 30/30 passed
 ```
 
@@ -649,14 +649,14 @@ L4: 1163/1163
 RED focused reference contract:
 
 ```text
-bash tests/speckit-pro/layer4-scripts/test-post-implementation-reference.sh
+bash tests/speckit-pro/unit/test-post-implementation-reference.sh
 test-post-implementation-reference: 1/21 passed (20 failed)
 ```
 
 GREEN focused reference contract:
 
 ```text
-bash tests/speckit-pro/layer4-scripts/test-post-implementation-reference.sh
+bash tests/speckit-pro/unit/test-post-implementation-reference.sh
 test-post-implementation-reference: 24/24 passed
 ```
 
@@ -761,7 +761,7 @@ No scaffold-time review-routing, slice branch emission, or PRSG-010 backstop beh
 ### Self-Review
 
 1. **Tests executed?** PASS. This repo has no BUILD/TYPECHECK/LINT project commands; the shell verification that actually ran in this session is `bash tests/speckit-pro/run-all.sh` -> 2292/2292 passed, plus `bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run` -> 6/6 passed.
-2. **Edge cases?** PASS. Non-happy paths are covered by focused Layer 4 tests: invalid/input-error layer plans and duplicate state keys (`tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh:84`, `:97`, `:122`), invalid slice branches and undeclared changed files (`:148`, `:302`), single-slice no-flattening (`:269`), closed PR / PR-create / post-PR persistence recovery (`:540`, `:557`, `:611`), scoped verification no-op and failure blocking (`:619`, `:639`, `:719`), invalid slice packets (`tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh:154`), PRS v1/v2/head/merge behavior (`tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh:303`, `:311`, `:318`, `:320`, `:343`), and restack dry-run/apply/failure mapping (`tests/speckit-pro/layer4-scripts/test-restack.sh:209`, `:262`, `:287`, `:312`, `:330`, `:348`).
+2. **Edge cases?** PASS. Non-happy paths are covered by focused Layer 4 tests: invalid/input-error layer plans and duplicate state keys (`tests/speckit-pro/unit/test-multi-pr-emission.sh:84`, `:97`, `:122`), invalid slice branches and undeclared changed files (`:148`, `:302`), single-slice no-flattening (`:269`), closed PR / PR-create / post-PR persistence recovery (`:540`, `:557`, `:611`), scoped verification no-op and failure blocking (`:619`, `:639`, `:719`), invalid slice packets (`tests/speckit-pro/unit/test-generate-pr-body.sh:154`), PRS v1/v2/head/merge behavior (`tests/speckit-pro/unit/test-generate-spec-index.sh:303`, `:311`, `:318`, `:320`, `:343`), and restack dry-run/apply/failure mapping (`tests/speckit-pro/unit/test-restack.sh:209`, `:262`, `:287`, `:312`, `:330`, `:348`).
 3. **Requirements matched?** PASS. All FR-001 through FR-020 trace to completed tasks in `tasks.md`; `validate-gate.sh G7` reports all 47 tasks complete, and `verify-tasks-report.md` verified 47/47 with no phantom completions.
 4. **Follow-up?** PASS. No `TODO`, `DEFERRED`, or `OUT-OF-SCOPE` markers were found in `spec.md`, `plan.md`, `tasks.md`, or the workflow. Layer 3 live eval remains explicitly recorded as `DEV-LOCAL - not run here`; descriptor coverage was added for the case IDs.
 
@@ -839,7 +839,7 @@ racecraft-plugins-public/
 │   └── tests/
 ├── tests/speckit-pro/
 │   ├── layer1-structural/
-│   ├── layer4-scripts/
+│   ├── unit/
 │   └── layer8-codex-parity/
 ├── docs/ai/specs/
 │   ├── .process/PRSG-009-design-concept.md

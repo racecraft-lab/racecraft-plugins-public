@@ -205,7 +205,7 @@ Budget result: re-estimate at scaffold; split fixture expansion from runner work
 - `tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.sh` - current Codex benchmark entrypoint; use the active post-XPLAT-009 equivalent if migrated
 - `tests/speckit-pro/layer6-efficiency/fixtures-codex/` - ten role fixtures
 - `tests/speckit-pro/layer6-efficiency/lib/quality-scorer.sh` - layered scoring surface or active replacement
-- `tests/speckit-pro/layer4-scripts/test-l6-codex-runner.sh` - deterministic runner contract coverage or active replacement
+- `tests/speckit-pro/unit/test-efficiency-codex-runner.sh` - deterministic runner contract coverage or active replacement
 
 ---
 
@@ -251,7 +251,7 @@ Budget result: re-estimate at scaffold; within one installer-policy slice by con
 - `speckit-pro/codex-skills/install/SKILL.md` - active install contract
 - `speckit-pro/speckit_pro_runner/helpers/` - post-XPLAT-009 authoritative install/mutation implementation
 - `speckit-pro/codex-agents/*.toml` - source inventory
-- `tests/speckit-pro/layer4-scripts/` - active installer/mutation contract coverage after XPLAT-009
+- `tests/speckit-pro/unit/` - active installer/mutation contract coverage after XPLAT-009
 
 ---
 

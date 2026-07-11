@@ -15,7 +15,7 @@ XPLAT-010, so it applies a conservative GitHub-workflow YAML sanity check that
 guards indentation, mapping/sequence structure, and block-scalar boundaries
 without adding PyYAML/Ruby as runtime dependencies.
 
-Baseline: ``tests/speckit-pro/parity/xplat-010/validate-release-workflow-baseline.txt``
+Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-release-workflow-baseline.txt``
 (TOTAL: 24).
 """
 

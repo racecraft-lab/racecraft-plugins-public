@@ -97,7 +97,7 @@ This design concept extends the locked-in scope in the Reviewer Experience roadm
 **Branch:** test fixture stability / coupling
 
 **Recommended answer:** Vendor a snapshot under tests/fixtures/
-> Reading the live spec couples the unit test to a moving target — once the archive extension's `--apply-cleanup` runs against spec 004 (which is already complete and merged per the CI/CD roadmap), the test breaks. Vendoring a frozen snapshot at `speckit-pro/tests/layer4-scripts/fixtures/spec-full-snapshot.md` matches existing Layer 4 patterns where fixtures are either inline mktemp text or committed snapshot files. ~700 LOC of vendored markdown is fixture text, not executable code — the reviewability gate's LOC counter treats it accordingly.
+> Reading the live spec couples the unit test to a moving target — once the archive extension's `--apply-cleanup` runs against spec 004 (which is already complete and merged per the CI/CD roadmap), the test breaks. Vendoring a frozen snapshot at `speckit-pro/tests/unit/fixtures/uat-runbook-generation/full-spec.md` matches existing Layer 4 patterns where fixtures are either inline mktemp text or committed snapshot files. ~700 LOC of vendored markdown is fixture text, not executable code — the reviewability gate's LOC counter treats it accordingly.
 
 **Alternatives offered:**
 - Read live spec 004 at run time: smaller diff but breaks once spec 004 is archived/cleaned up. The archive extension installed in this same workstream makes this real, not hypothetical.

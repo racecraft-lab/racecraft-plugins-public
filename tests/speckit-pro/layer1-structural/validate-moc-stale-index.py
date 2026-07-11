@@ -5,7 +5,7 @@ XPLAT-010 count-parity port (T041, US2). Python 3.11+ standard library only.
 Every former ``set_test``/``_pass``/``_fail`` execution maps to one counted
 ``subTest`` unit with the bash check name reproduced verbatim.
 
-Baseline: ``tests/speckit-pro/parity/xplat-010/validate-moc-stale-index-baseline.txt``
+Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-moc-stale-index-baseline.txt``
 (TOTAL: 11).
 """
 

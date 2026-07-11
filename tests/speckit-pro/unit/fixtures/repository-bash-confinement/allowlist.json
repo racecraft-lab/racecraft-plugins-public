@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "XPLAT-010",
+  "entries": [
+    {
+      "path": ".specify/extensions/git/scripts/bash/auto-commit.sh",
+      "categories": ["script_file"],
+      "reason": "Vendored upstream Spec Kit Git extension helper.",
+      "scope": "vendored_specify_helper",
+      "release_readiness_excluded": true
+    },
+    {
+      "path": ".specify/extensions/git/scripts/bash/create-new-feature.sh",
+      "categories": ["script_file"],
+      "reason": "Vendored upstream Spec Kit Git extension helper.",
+      "scope": "vendored_specify_helper",
+      "release_readiness_excluded": true
+    },
+    {
+      "path": ".specify/extensions/git/scripts/bash/git-common.sh",
+      "categories": ["script_file"],
+      "reason": "Vendored upstream Spec Kit Git extension helper.",
+      "scope": "vendored_specify_helper",
+      "release_readiness_excluded": true
+    },
+    {
+      "path": ".specify/extensions/git/scripts/bash/initialize-repo.sh",
+      "categories": ["script_file"],
+      "reason": "Vendored upstream Spec Kit Git extension helper.",
+      "scope": "vendored_specify_helper",
+      "release_readiness_excluded": true
+    },
+    {
+      "path": ".specify/scripts/bash/check-prerequisites.sh",
+      "categories": ["script_file"],
+      "reason": "Vendored upstream Spec Kit repository helper.",
+      "scope": "vendored_specify_helper",
+      "release_readiness_excluded": true
+    },
+    {
+      "path": ".specify/scripts/bash/common.sh",
+      "categories": ["script_file"],
+      "reason": "Vendored upstream Spec Kit repository helper.",
+      "scope": "vendored_specify_helper",
+      "release_readiness_excluded": true
+    },
+    {
+      "path": ".specify/scripts/bash/create-new-feature.sh",
+      "categories": ["script_file"],
+      "reason": "Vendored upstream Spec Kit repository helper.",
+      "scope": "vendored_specify_helper",
+      "release_readiness_excluded": true
+    },
+    {
+      "path": ".specify/scripts/bash/setup-plan.sh",
+      "categories": ["script_file"],
+      "reason": "Vendored upstream Spec Kit repository helper.",
+      "scope": "vendored_specify_helper",
+      "release_readiness_excluded": true
+    },
+    {
+      "path": ".specify/scripts/bash/setup-tasks.sh",
+      "categories": ["script_file"],
+      "reason": "Vendored upstream Spec Kit repository helper.",
+      "scope": "vendored_specify_helper",
+      "release_readiness_excluded": true
+    },
+    {
+      "path": ".specify/scripts/bash/update-agent-context.sh",
+      "categories": ["script_file"],
+      "reason": "Vendored upstream Spec Kit repository helper.",
+      "scope": "vendored_specify_helper",
+      "release_readiness_excluded": true
+    }
+  ]
+}

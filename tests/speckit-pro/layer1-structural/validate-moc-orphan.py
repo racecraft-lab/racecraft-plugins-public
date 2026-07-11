@@ -8,9 +8,9 @@ former ``assert_*``/``_pass``/``_fail`` execution mapped to one counted
 predecessor's no-summary exit-code contract.
 
 Baselines:
-* ``tests/speckit-pro/parity/xplat-010/validate-moc-orphan-baseline.txt``
+* ``tests/speckit-pro/parity/bash-to-python/validate-moc-orphan-baseline.txt``
   (TOTAL: 29)
-* ``tests/speckit-pro/parity/xplat-010/validate-moc-orphan-scan-root-baseline.txt``
+* ``tests/speckit-pro/parity/bash-to-python/validate-moc-orphan-scan-root-baseline.txt``
   (TOTAL: 0)
 """
 

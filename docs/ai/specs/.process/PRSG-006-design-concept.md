@@ -336,7 +336,7 @@ single-copy (Recommended).
 
 - **Test coverage = L1, L3, L4, L8** (authoritative per the roadmap coverage table —
   **no L7**; PRSG-006 adds no new agent). L4: extend the existing
-  `tests/layer4-scripts/test-reviewability-gate.sh` for the reworked thresholds/metric/
+  `tests/unit/test-reviewability-gate.sh` for the reworked thresholds/metric/
   surface/exception behavior, and add a determinism fixture for
   `estimate-reviewable-loc.sh` (same inputs → byte-identical output). L3: a functional
   eval that the plan phase auto-approves under budget and surfaces/records when over.

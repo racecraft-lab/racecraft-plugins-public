@@ -118,7 +118,7 @@ git checkout 2686caa2a12dbaf460c33f37f054f40765fb2b35 -- specs/doc-009-maintaine
 | `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh` | Hardened empty active-spec discovery so roadmap-MOC regeneration succeeds when `specs/**` contains only `.gitkeep` |
 | `dist/claude/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh` | Mirrored the source generator hardening into the Claude payload copy |
 | `dist/codex/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh` | Mirrored the source generator hardening into the Codex payload copy |
-| `tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh` | Added regression coverage for roadmap-MOC regeneration with zero active spec directories |
+| `tests/speckit-pro/unit/test-generate-spec-index.sh` | Added regression coverage for roadmap-MOC regeneration with zero active spec directories |
 | `specs/doc-008-troubleshooting-security-trust-update-rollback` | Removed completed active spec folder |
 | `specs/doc-009-maintainer-contributor-release-workflow` | Removed completed active spec folder |
 
@@ -126,7 +126,7 @@ git checkout 2686caa2a12dbaf460c33f37f054f40765fb2b35 -- specs/doc-009-maintaine
 
 - `python3 -m json.tool docs/ai/specs/.process/autopilot-state.json`: passed
 - `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh .`: regenerated `interactive-documentation-roadmap-MOC.md` and `tool-agnostic-capability-discovery-roadmap-MOC.md`
-- `bash tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh`: 90/90 passed
+- `bash tests/speckit-pro/unit/test-generate-spec-index.sh`: 90/90 passed
 - `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .`: passed
 - `find specs -mindepth 1 -maxdepth 4 -print`: only `specs/.gitkeep` remains
 - `git diff --check`: passed

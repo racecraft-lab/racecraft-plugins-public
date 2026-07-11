@@ -915,7 +915,7 @@ def estimate_spec_size(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any
     # Restored advisory vertical-slice size estimator (XPLAT-010 US7 / FR-025):
     # a byte-for-byte port of the deleted
     # speckit-pro/skills/speckit-coach/scripts/estimate-spec-size.sh, pinned by the
-    # golden fixtures under tests/speckit-pro/layer4-scripts/fixtures/estimate-spec-size/.
+    # golden fixtures under tests/speckit-pro/unit/fixtures/estimate-spec-size/.
     # Callers (grill-me, speckit-prd) send the structured size signals; the output
     # is the compact {estimated_loc, suggested_slices, status} triple. Advisory-only:
     # this never blocks (exit 0 even when status is "warn").

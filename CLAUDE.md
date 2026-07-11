@@ -27,7 +27,7 @@ Four rules, in priority order. These exist because plugin/marketplace edits have
 - Match existing style in shell scripts, YAML, and Markdown even if you'd write it differently.
 
 ### 4. Verifiable success criteria
-- Translate every task into a check before coding: "edit X" → "after edit, `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json` passes" or "`gh pr view <N>` shows green".
+- Translate every task into a check before coding: "edit X" → "after edit, `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json` passes" or "`gh pr view <N>` shows green".
 - For workflow / release changes, the success check is "the next release PR from release-please reflects this" — say that out loud before editing.
 - For multi-step work, list the steps + their verification commands up front, then loop on them.
 
@@ -39,7 +39,7 @@ Tradeoff: these bias toward caution over speed. For a one-line `chore:` edit, us
 - **Release config:** `release-please-config.json` + `.release-please-manifest.json` (kept in sync; see "Adding a New Plugin to Release Automation" below)
 - **Pipeline verification runbook:** `docs/ai/specs/cicd-release-pipeline-verification.md` (authoritative for branch-protection, release-please, and docs deploy setup)
 - **Per-plugin entry:** `<plugin>/.claude-plugin/plugin.json` (name, version, description)
-- **Repo-local gate runner:** `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json` (see "Running Tests")
+- **Repo-local gate runner:** `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json` (see "Running Tests")
 
 ## What This Repo Is
 
@@ -91,21 +91,21 @@ runner. Run from the repository root:
 
 ```bash
 # Default deterministic suite gate
-PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json
 
 # Toolchain preflight
-PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-toolchain-preflight.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-toolchain-preflight.json
 
 # Single deterministic layer
-PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-layer.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-layer.json
 
 # Active no-shell/no-jq guard
-PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/active-path-guard.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/active-path-guard.json
 
 # Payload/install/release readiness fixture gates
-PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/test-payload-evidence.json
-PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/install-verification.json
-PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/test-payload-evidence.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/install-verification.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json
 ```
 
 Legacy shell scripts under `tests/speckit-pro/`, `scripts/`, and plugin skill

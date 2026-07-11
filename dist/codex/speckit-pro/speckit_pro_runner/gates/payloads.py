@@ -15,12 +15,12 @@ from typing import Any
 from .. import RUNNER_VERSION
 from ..envelope import diagnostic, response
 
-PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json"
-FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "layer4-scripts" / "fixtures" / "xplat-007-gates"
+PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/runner-gates/promotion-records.json"
+FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "unit" / "fixtures" / "runner-gates"
 DEFAULT_PAYLOAD_CASES = FIXTURE_BOUNDARY / "payload-evidence-cases.json"
 DEFAULT_INSTALL_CASES = FIXTURE_BOUNDARY / "install-verification-cases.json"
 INSTALL_INVENTORY = Path("speckit-pro") / "speckit_pro_runner" / "install_inventory.json"
-XPLAT_008_FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "layer4-scripts" / "fixtures" / "xplat-008-release"
+XPLAT_008_FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "unit" / "fixtures" / "installed-plugin-release"
 DEFAULT_XPLAT_008_PAYLOAD_CASES = XPLAT_008_FIXTURE_BOUNDARY / "payload-completeness-cases.json"
 XPLAT_008_PROMOTION_RECORD = XPLAT_008_FIXTURE_BOUNDARY / "promotion-records.json"
 PROHIBITED_SCRIPT_SUFFIXES = (".sh", ".bash", ".zsh", ".ps1", ".bat", ".cmd")
@@ -271,7 +271,7 @@ def xplat008_build_target(request: Any, repo_root: Path) -> Path | None | dict[s
             "XPLAT-008 payload output_root must stay inside fixture or temporary roots",
             details={"output_root": raw_output, "fixture_root": repo_relative(fixture_root, repo_root)},
             remediation_summary="Use a fixture or OS temp output root for dry-run/apply tests.",
-            remediation_actions=["Set output_root under tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release.", "Or use an OS temp directory."],
+            remediation_actions=["Set output_root under tests/speckit-pro/unit/fixtures/installed-plugin-release.", "Or use an OS temp directory."],
         )
 
     if request.mode == "apply" and request.inputs.get("apply_dist") is True:
@@ -863,7 +863,7 @@ def output_root_from_inputs(inputs: dict[str, Any], repo_root: Path) -> Path | d
         "payload evidence output_root must be fixture or temporary scoped",
         details={"output_root": raw, "fixture_root": repo_relative(fixture_root, repo_root)},
         remediation_summary="Keep payload evidence writes in fixture or temp roots only.",
-        remediation_actions=["Use tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/.", "Or use an OS temp directory."],
+        remediation_actions=["Use tests/speckit-pro/unit/fixtures/runner-gates/.", "Or use an OS temp directory."],
     )
 
 
@@ -881,7 +881,7 @@ def install_root_from_case(case: dict[str, Any], repo_root: Path) -> Path | dict
         "install verification refuses roots outside the XPLAT-007 fixture boundary",
         details={"install_root": normalize_path_text(raw), "fixture_root": repo_relative(boundary, repo_root)},
         remediation_summary="Use a fake-home install root under the XPLAT-007 fixture tree.",
-        remediation_actions=["Move install_root under tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates.", "Retry verify-install."],
+        remediation_actions=["Move install_root under tests/speckit-pro/unit/fixtures/runner-gates.", "Retry verify-install."],
         deferred_to="XPLAT-008",
     )
 

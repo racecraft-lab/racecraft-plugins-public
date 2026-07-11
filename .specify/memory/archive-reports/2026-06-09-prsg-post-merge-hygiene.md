@@ -21,7 +21,7 @@
 - Cleanup branch: `codex/archive-apply-cleanup`, based on updated `origin/main`
 - Worktree state before cleanup: clean
 - Fixture-decoupling prerequisite: PR #136 merged at `128e1927d0fa0ca6e7c0b1545d7b6547cdb4db9f`
-- Pre-cleanup guard: `bash tests/speckit-pro/layer4-scripts/test-atomicity-route.sh` passed `82/82`
+- Pre-cleanup guard: `bash tests/speckit-pro/unit/test-atomicity-route.sh` passed `82/82`
 
 ## Excluded Current Spec
 
@@ -88,4 +88,4 @@ git show 6916ec43d2d4e3972d7e12425a05158f0b48ae3b:specs/prsg-011-retro-migration
 
 - No docs-side `.process` files were deleted.
 - Only archived active `specs/**` folders for PRSG-007 and PRSG-011 were removed.
-- Fixture-backed Layer 4 dogfood/schema coverage remains under `tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/dogfood-prsg-007/`.
+- Fixture-backed Layer 4 dogfood/schema coverage remains under `tests/speckit-pro/unit/fixtures/atomicity-route/dogfood-atomicity-router/`.

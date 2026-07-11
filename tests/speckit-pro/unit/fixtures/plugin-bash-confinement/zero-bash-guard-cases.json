@@ -1,0 +1,414 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "XPLAT-009",
+  "coverage": [
+    "source, generated payload, and installed-cache proof roots are scanned by one Python runner request",
+    "active Bash, .sh, jq, shell interpolation, Git Bash, WSL, and PowerShell-specific command language block",
+    "negative policy and historical allowlist entries do not satisfy release readiness",
+    "mutable real user cache proof is rejected",
+    "empty, non-list, and malformed configured scan roots fail closed instead of falling back to default roots"
+  ],
+  "cases": [
+    {
+      "case_id": "clean-fixture",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "Use python -m speckit_pro_runner with one JSON request on stdin. Refer to `speckit_pro_runner` as a module.\n"
+        },
+        {
+          "path": "dist/codex/speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "Use python -m speckit_pro_runner with one JSON request on stdin.\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "blocking-active-source",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-status/scripts/install.sh",
+          "content": "#!/usr/bin/env bash\njq -n '{}'\n"
+        },
+        {
+          "path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "Run Bash, Git Bash, WSL, or jq before status.\n"
+        },
+        {
+          "path": "speckit-pro/codex-hooks.json",
+          "content": "{\n  \"note\": \"Do not use Bash.\",\n  \"hooks\": [\n    {\n      \"command\": [\n        \"/bin/sh\",\n        \"-e\",\n        \"-c\",\n        \"python -m speckit_pro_runner\"\n      ]\n    }\n  ]\n}\n"
+        },
+        {
+          "path": "speckit-pro/hooks/hooks.json",
+          "content": "{\"hooks\":[{\"command\":[\"/usr/bin/zsh\",\"-f\",\"-c\",\"python -m speckit_pro_runner\"]},{\"command\":[\"/bin/sh\",\"--noprofile\",\"--norc\",\"-c\",\"python -m speckit_pro_runner\"]},{\"command\":[\"/bin/zsh\",\"-o\",\"pipefail\",\"-c\",\"python -m speckit_pro_runner\"]},{\"command\":[\"/bin/sh\",\"runner\"]},{\"command\":[\"/usr/bin/env\",\"zsh\",\"runner\"]},{\"command\":[\"/usr/bin/env\",\"-i\",\"sh\",\"-c\",\"python -m speckit_pro_runner\"]},{\"command\":[\"env\",\"FOO=bar\",\"zsh\",\"-c\",\"python -m speckit_pro_runner\"]}]}\n"
+        },
+        {
+          "path": "speckit-pro/codex-agents/shell-wrapper.toml",
+          "content": "shell = true\n"
+        },
+        {
+          "path": "speckit-pro/codex-skills/speckit-status/agents/openai.yaml",
+          "content": "shell: true\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "blocking-active-allowlist-entry",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "Run Bash before status.\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist-active-path.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "blocking-missing-allowlist-fields",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "Use python -m speckit_pro_runner.\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist-missing-fields.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "blocking-unsupported-allowlist-field",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "Use python -m speckit_pro_runner.\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist-unsupported-field.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "blocking-traversal-allowlist-path",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "Use python -m speckit_pro_runner.\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist-traversal.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "blocking-invalid-allowlist-line-bounds",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "Use python -m speckit_pro_runner.\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist-line-bounds.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "blocking-python-shell-exec",
+      "files": [
+        {
+          "path": "speckit-pro/speckit_pro_runner/helpers/bad.py",
+        "content": "import os\nimport os as operating_system\nimport subprocess\nimport subprocess as sp\nfrom os import system as os_system\nfrom subprocess import run\n\nos.system('echo bad')\noperating_system.system('echo bad')\nos_system('echo bad')\nsubprocess.run('bash helper.sh', shell=True)\nsubprocess.check_output('jq -r . package.json')\nsp.run(['bash', 'helper.sh'])\nsp.run([r'C:\\Program Files\\Git\\bin\\bash.exe', '-lc', 'echo bad'])\nsp.run([r'C:\\tools\\jq.exe', '-r', '.', 'package.json'])\nsp.run([r'C:\\tmp\\helper.CMD'])\nsp.run(['/usr/bin/env', 'bash', '-lc', 'echo bad'])\nsp.run(['env', 'jq', '-r', '.', 'package.json'])\nsp.run(['/usr/bin/env', '-S', 'bash -lc echo bad'])\nsp.run(['/usr/bin/env', '-S bash -lc jq -r . package.json'])\nsp.run(['env', '--split-string=jq -r . package.json'])\nrun(['jq', '-r', '.', 'package.json'])\ncmd = ['bash', 'helper.sh']\nsubprocess.run(cmd)\nshell_cmd = ['sh', '-c', 'jq -r . package.json']\nsubprocess.run(shell_cmd)\nsubprocess.run(args=['sh', '-lc', 'jq -r . package.json'])\nsubprocess.run(['sh', '-c', 'python -m speckit_pro_runner'])\nsubprocess.Popen(args=['bash', 'helper.sh'])\nsp.run(args=['zsh', '-ec', './helper.sh'])\ncmd_string = 'bash helper.sh'\nsubprocess.run(cmd_string)\ncmd_fstring = f\"bash {'helper.sh'}\"\nsubprocess.run(cmd_fstring)\nordered_cmd = ['bash', 'helper.sh']\nsubprocess.run(ordered_cmd)\nordered_cmd = ['python3', '-m', 'speckit_pro_runner']\nsp.run(['/usr/bin/env', '-S', 'sh -c jq -r . package.json'])\nsp.run(['/usr/bin/env', '-S', 'sh -lc jq -r . package.json'])\nsp.run(['/usr/bin/env', '-S', 'sh -c python -m speckit_pro_runner'])\nsp.run(['/usr/bin/env', '-S sh -c python -m speckit_pro_runner'])\nsp.run(['env', '--split-string=sh -c ./helper.sh'])\nsp.run(['env', '--split-string=sh -lc ./helper.sh'])\nhelper_path = object()\ndynamic_command = object()\npartial_cmd = ['bash', helper_path]\nsubprocess.run(partial_cmd)\nsubprocess.run(['/bin/sh', '-c', dynamic_command])\nsubprocess.run(['python3', 'runner.py', 'scripts/install.sh', helper_path])\nsplit_payload = 'sh -c jq -r . package.json'\nsubprocess.run(['env', '-S', split_payload])\ndynamic_split_payload = object()\nsubprocess.run(['env', '-S', dynamic_split_payload])\nsp.run(['/usr/bin/env', '-i', 'sh', '-c', 'python -m speckit_pro_runner'])\nsp.run(['env', 'FOO=bar', 'zsh', '-c', 'python -m speckit_pro_runner'])\nconditional_cmd = ['bash', helper_path]\nconditional_cmd = ['python3', '-m', 'speckit_pro_runner']\nsubprocess.run(conditional_cmd)\n"
+        },
+        {
+          "path": "speckit-pro/speckit_pro_runner/helpers/dynamic_shell.py",
+          "content": "import os\nimport subprocess\nfrom os import popen as os_popen\nfrom subprocess import getoutput, getstatusoutput\n\nuse_shell = True\nsafe_shell = False\nsubprocess.run(['python3'], shell=use_shell)\nsubprocess.run(['python3'], shell=1)\nsubprocess.run(['python3'], shell=safe_shell)\nsubprocess.getoutput('jq -r . package.json')\nsubprocess.getstatusoutput('python -m speckit_pro_runner')\nos.popen('jq -r . package.json')\nos_popen('python -m speckit_pro_runner')\ngetoutput('jq -r . package.json')\ngetstatusoutput('python -m speckit_pro_runner')\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "blocking-uppercase-script-file",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-status/scripts/RUN.SH",
+          "content": "#!/usr/bin/env bash\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "blocking-suffixful-shell-script",
+      "files": [
+        {
+          "path": "speckit-pro/scripts/install.zsh",
+          "content": "#!/usr/bin/env zsh\npython -m speckit_pro_runner\n"
+        },
+        {
+          "path": "dist/claude/speckit-pro/scripts/install.bash",
+          "content": "#!/usr/bin/env bash\npython -m speckit_pro_runner\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "blocking-extensionless-script",
+      "files": [
+        {
+          "path": "speckit-pro/scripts/install",
+          "content": "#!/usr/bin/env bash\npython -m speckit_pro_runner\n"
+        },
+        {
+          "path": "speckit-pro/scripts/install-sh",
+          "content": "#!/bin/sh\npython -m speckit_pro_runner\n"
+        },
+        {
+          "path": "speckit-pro/scripts/install-zsh",
+          "content": "#!/usr/bin/env zsh\npython -m speckit_pro_runner\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "blocking-active-reference",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-autopilot/references/deleted-helper.md",
+          "content": "Run Bash and speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh before PR creation.\nUse WSL for the release gate.\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "blocking-active-source-tree-language",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-autopilot/references/source-tree.md",
+        "content": "Do not use Bash in plugin source.\nDo not run without Bash.\nDo not skip Bash; run it first.\nDo not use Bash but run jq before status.\nDo not use Bash; run jq before status.\nBefore continuing, run Bash in the source tree before release readiness.\nUse jq in source files to parse payload evidence.\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "blocking-active-guidance-categories",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-autopilot/references/bash-reference.md",
+          "content": "Run Bash before continuing.\n"
+        },
+        {
+          "path": "speckit-pro/skills/speckit-autopilot/templates/wsl-template.md",
+          "content": "Use WSL when preparing installed payloads.\n"
+        },
+        {
+          "path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "allowed-tools: Bash, Read\nRun (scripts/install.sh), [helper](scripts/setup.sh), PowerShell, jq, WSL, `bash helper.sh`, $SHELL, and $(jq -r . package.json) before status.\n"
+        },
+        {
+          "path": "speckit-pro/codex-agents/openai.yaml",
+          "content": "command:\n  - /bin/sh\n  - -e\n  - -c\n  - python -m speckit_pro_runner\nlong_command:\n  - /usr/bin/zsh\n  - --no-rcs\n  - -o\n  - pipefail\n  - -c\n  - python -m speckit_pro_runner\nruntime_command:\n  - /bin/sh\n  - runner\nbare_command:\n  - /bin/sh\ninline_command: [\"/usr/bin/zsh\"]\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "blocking-active-tool-declaration",
+      "files": [
+        {
+          "path": "speckit-pro/agents/phase-executor.md",
+          "content": "allowed-tools: Bash, sh, Read\ndisallowedTools: Write, Edit, Bash, Agent\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "missing-scan-root",
+      "scan_roots": ["dist/missing-zero-bash-root"],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "missing-required-scan-root",
+      "scan_roots": [
+        "speckit-pro",
+        "scripts/build-plugin-payloads.py",
+        "dist/claude/speckit-pro",
+        "README.md"
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "traversal-scan-root",
+      "scan_roots": ["../outside-zero-bash-root"],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "malformed-scan-root",
+      "scan_roots": ["speckit-pro", 123, ""],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "empty-scan-roots",
+      "scan_roots": [],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "non-list-scan-roots",
+      "scan_roots": "speckit-pro",
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+    },
+    {
+      "case_id": "missing-installed-cache-proof",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "Use python -m speckit_pro_runner.\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json"
+    },
+    {
+      "case_id": "mutable-installed-cache-proof",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "Use python -m speckit_pro_runner.\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-mutable.json"
+    },
+    {
+      "case_id": "stale-installed-cache-proof",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "Use python -m speckit_pro_runner.\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json"
+    },
+    {
+      "case_id": "single-product-installed-cache-proof",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "Use python -m speckit_pro_runner.\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-single-product.json"
+    },
+    {
+      "case_id": "missing-source-root-installed-cache-proof",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "Use python -m speckit_pro_runner.\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-source-root.json"
+    },
+    {
+      "case_id": "file-root-installed-cache-proof",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "Use python -m speckit_pro_runner.\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-file-root.json"
+    },
+    {
+      "case_id": "source-mismatch-installed-cache-proof",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "Use python -m speckit_pro_runner.\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-source-mismatch.json"
+    },
+    {
+      "case_id": "same-root-installed-cache-proof",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "Use python -m speckit_pro_runner.\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-same-root.json"
+    },
+    {
+      "case_id": "product-root-mismatch-installed-cache-proof",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "Use python -m speckit_pro_runner.\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-root-mismatch.json"
+    },
+    {
+      "case_id": "partial-root-installed-cache-proof",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "Use python -m speckit_pro_runner.\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-partial-root.json"
+    },
+    {
+      "case_id": "traversal-root-installed-cache-proof",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "Use python -m speckit_pro_runner.\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-traversal-root.json"
+    },
+    {
+      "case_id": "missing-mutable-installed-cache-proof",
+      "files": [
+        {
+          "path": "speckit-pro/skills/speckit-status/SKILL.md",
+          "content": "Use python -m speckit_pro_runner.\n"
+        }
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-mutable.json"
+    },
+    {
+      "case_id": "final-current-implementation",
+      "scan_roots": [
+        "speckit-pro",
+        "scripts/build-plugin-payloads.py",
+        "dist/claude/speckit-pro",
+        "dist/codex/speckit-pro",
+        "README.md"
+      ],
+      "allowlist_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
+      "installed_cache_proof": "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json"
+    }
+  ]
+}

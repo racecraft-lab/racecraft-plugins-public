@@ -25,11 +25,11 @@ Removes plugin-owned Bash source from SpecKit Pro, updates active Claude/Codex g
 
 ## Verification
 
-- `PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py` -> 33/33 passed
-- `PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py` -> 17/17 passed
-- `PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` -> 54/54 passed
-- `PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py` -> 10/10 passed
-- `bash tests/speckit-pro/layer4-scripts/test-privacy-scan.sh` -> 10/10 passed
+- `PYTHONPATH=speckit-pro python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py` -> 33/33 passed
+- `PYTHONPATH=speckit-pro python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` -> 17/17 passed
+- `PYTHONPATH=speckit-pro python3 tests/speckit-pro/unit/test-speckit-pro-gates.py` -> 54/54 passed
+- `PYTHONPATH=speckit-pro python3 tests/speckit-pro/unit/test-speckit-pro-runner.py` -> 10/10 passed
+- `bash tests/speckit-pro/unit/test-privacy-scan.sh` -> 10/10 passed
 - `python3 tests/speckit-pro/run-layer-scripts.py --layer 1` -> 24/24 passed; `--layer 4` -> 17/17 passed
 - `bash tests/speckit-pro/run-all.sh` -> 2014/2014 passed
 - Runner default-suite, zero-Bash guard, release-readiness, and payload drift requests all report `ok`

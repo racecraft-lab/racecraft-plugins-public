@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "allowlist": [
+    {
+      "case_id": "dot-current-directory",
+      "input": ".",
+      "normalized": "."
+    },
+    {
+      "case_id": "redundant-segments",
+      "input": "specs/./xplat-005-read-only-helper-port/spec.md",
+      "normalized": "specs/xplat-005-read-only-helper-port/spec.md"
+    },
+    {
+      "case_id": "backslash-normalization",
+      "input": "docs\\ai\\specs\\.process\\XPLAT-005-workflow.md",
+      "normalized": "docs/ai/specs/.process/XPLAT-005-workflow.md"
+    },
+    {
+      "case_id": "repo-relative-fixture",
+      "input": "tests/speckit-pro/unit/fixtures/read-only-helpers/fixture-manifest.json",
+      "normalized": "tests/speckit-pro/unit/fixtures/read-only-helpers/fixture-manifest.json"
+    }
+  ]
+}

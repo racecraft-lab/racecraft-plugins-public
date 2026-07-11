@@ -14,7 +14,7 @@ fixtures because ``rules_scoped`` read a file; the pure Python predicate here
 takes the rule text directly, so the same three cases run without touching the
 filesystem — behavior identical, one counted unit each.
 
-Baseline: ``tests/speckit-pro/parity/xplat-010/validate-process-gitattributes-baseline.txt``
+Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-process-gitattributes-baseline.txt``
 (TOTAL: 6).
 """
 

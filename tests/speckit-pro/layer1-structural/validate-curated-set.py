@@ -14,7 +14,7 @@ entries in file order, so this data file is a baseline regeneration trigger
 (count-parity contract §2, rule 4): adding/removing/reordering an entry changes
 the inventory and requires recapturing the baseline.
 
-Baseline: ``tests/speckit-pro/parity/xplat-010/validate-curated-set-baseline.txt``
+Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-curated-set-baseline.txt``
 (TOTAL: 58).
 """
 

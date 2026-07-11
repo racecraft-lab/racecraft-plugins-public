@@ -58,16 +58,16 @@ jobs:
 
       - name: Validate release PR readiness
         if: steps.release_prs.outputs.found == 'true'
-        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness.json
+        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json
 
       - name: Validate XPLAT-008 release gates
         if: steps.release_prs.outputs.found == 'true'
         run: |
           set -euo pipefail
-          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/runner-invocation.json
-          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/active-runtime-guard.json
-          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness.json
-          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/release-readiness.json
+          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/runner-invocation.json
+          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/active-runtime-guard.json
+          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness.json
+          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/release-readiness.json
 
       - name: Sync generated artifacts onto the release PR
         if: steps.release_prs.outputs.found == 'true'
@@ -138,20 +138,20 @@ jobs:
 
       - name: Verify generated test payload evidence
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
-        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/test-payload-evidence.json
+        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/test-payload-evidence.json
 
       - name: Validate post-release readiness
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
-        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness.json
+        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json
 
       - name: Validate post-release XPLAT-008 gates
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
         run: |
           set -euo pipefail
-          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/runner-invocation.json
-          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/active-runtime-guard.json
-          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness.json
-          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/release-readiness.json
+          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/runner-invocation.json
+          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/active-runtime-guard.json
+          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness.json
+          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/release-readiness.json
 
       - name: Set up Node
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'

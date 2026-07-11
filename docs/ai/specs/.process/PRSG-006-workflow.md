@@ -446,7 +446,7 @@ For each deterministic behavior:
 4. VERIFY: run `bash tests/run-all.sh --layer 1` and `--layer 4` from speckit-pro/.
 
 ### Implementation Notes
-- Extend the existing tests/layer4-scripts/test-reviewability-gate.sh for the reworked
+- Extend the existing tests/unit/test-reviewability-gate.sh for the reworked
   metric/surface/exception behavior; add a new determinism test for
   estimate-reviewable-loc.sh.
 - Keep `set -euo pipefail`; bash+jq only. Match the gate's existing style.
@@ -609,7 +609,7 @@ speckit-pro/
 ├── codex-skills/speckit-autopilot/          # mirror plan-phase change only (Q10)
 └── tests/
     ├── layer1-structural/                   # L1
-    ├── layer4-scripts/test-reviewability-gate.sh  # extend; + estimator test
+    ├── unit/test-reviewability-gate.sh  # extend; + estimator test
     └── layer8-parity/                       # L8
 ```
 

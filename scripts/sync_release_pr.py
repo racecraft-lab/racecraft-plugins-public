@@ -18,20 +18,62 @@ class SyncError(RuntimeError):
 
 
 class CommandRunner:
+    @staticmethod
+    def _execute(
+        argv: Sequence[str],
+        cwd: Path,
+        *,
+        capture_output: bool,
+    ) -> subprocess.CompletedProcess[str]:
+        if not argv:
+            raise SyncError("command argv must not be empty")
+
+        executable, *tail = argv
+        if executable == "git":
+            return subprocess.run(
+                ["git", *tail],
+                cwd=cwd,
+                text=True,
+                capture_output=capture_output,
+                shell=False,
+                check=False,
+            )
+        if executable == "corepack":
+            return subprocess.run(
+                ["corepack", *tail],
+                cwd=cwd,
+                text=True,
+                capture_output=capture_output,
+                shell=False,
+                check=False,
+            )
+        if executable == "pnpm":
+            return subprocess.run(
+                ["pnpm", *tail],
+                cwd=cwd,
+                text=True,
+                capture_output=capture_output,
+                shell=False,
+                check=False,
+            )
+        if executable == sys.executable:
+            return subprocess.run(
+                [sys.executable, *tail],
+                cwd=cwd,
+                text=True,
+                capture_output=capture_output,
+                shell=False,
+                check=False,
+            )
+        raise SyncError(f"unsupported command executable: {executable}")
+
     def run(self, argv: Sequence[str], cwd: Path) -> None:
-        completed = subprocess.run(list(argv), cwd=cwd, text=True, shell=False, check=False)
+        completed = self._execute(argv, cwd, capture_output=False)
         if completed.returncode != 0:
             raise SyncError(f"command failed ({completed.returncode}): {' '.join(argv)}")
 
     def output(self, argv: Sequence[str], cwd: Path) -> str:
-        completed = subprocess.run(
-            list(argv),
-            cwd=cwd,
-            text=True,
-            capture_output=True,
-            shell=False,
-            check=False,
-        )
+        completed = self._execute(argv, cwd, capture_output=True)
         if completed.returncode != 0:
             detail = (completed.stderr or completed.stdout or "").strip()
             raise SyncError(detail or f"command failed ({completed.returncode}): {' '.join(argv)}")

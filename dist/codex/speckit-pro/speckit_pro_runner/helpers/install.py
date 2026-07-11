@@ -6,7 +6,9 @@ import hashlib
 import json
 import platform as platform_module
 import re
+import shutil
 import subprocess
+import sys
 import copy
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -16,8 +18,8 @@ from .mutation import resolve_candidate_path, run_mutation_helper, validate_targ
 from .read_only import find_repo_root, is_relative_to, repo_relative
 
 INVENTORY_NAME = "install_inventory.json"
-FAKE_HOME_FIXTURE_ROOT = Path("tests") / "speckit-pro" / "layer4-scripts" / "fixtures"
-XPLAT_008_FIXTURE_ROOT = FAKE_HOME_FIXTURE_ROOT / "xplat-008-release"
+FAKE_HOME_FIXTURE_ROOT = Path("tests") / "speckit-pro" / "unit" / "fixtures"
+XPLAT_008_FIXTURE_ROOT = FAKE_HOME_FIXTURE_ROOT / "installed-plugin-release"
 DEFAULT_RUNNER_INVOCATION_CASES = XPLAT_008_FIXTURE_ROOT / "runner-invocation-cases.json"
 XPLAT_008_PROMOTION_RECORDS = XPLAT_008_FIXTURE_ROOT / "promotion-records.json"
 DEFAULT_INSTALL_HEALTH_CASES = XPLAT_008_FIXTURE_ROOT / "install-health-repair-cases.json"
@@ -137,7 +139,7 @@ def run_install_health_repair(entry: Any, request: Any, repo_root: Path) -> dict
         return response("input_error", request_id=request.request_id, diagnostics=[case_result])
     case = case_result
 
-    installed_cache_path = str(case.get("installed_cache_path") or "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/fake-home/speckit-pro")
+    installed_cache_path = str(case.get("installed_cache_path") or "tests/speckit-pro/unit/fixtures/installed-plugin-release/fake-home/speckit-pro")
     findings = normalize_install_health_findings(case.get("findings"))
     repair_actions = normalize_install_health_actions(case.get("repair_actions"), findings)
     failures = install_health_action_failures(repair_actions)
@@ -397,7 +399,13 @@ def runner_invocation_record(case: dict[str, Any], request_id: str | None, repo_
             },
         }
     elif accepted:
-        runner_response, execution_diag = execute_runner_runtime_info(invocation["argv"], runner_request, repo_root, cache_root)
+        runner_response, execution_diag = execute_runner_runtime_info(
+            invocation["argv"],
+            runner_request,
+            repo_root,
+            cache_root,
+            selected_candidate=resolution["attempted_candidates"][-1],
+        )
         if execution_diag is not None:
             diagnostics = [execution_diag]
     passed = accepted and not diagnostics
@@ -497,14 +505,7 @@ def probe_host_candidates(platform_name: str) -> list[dict[str, Any]]:
     for candidate in candidate_order(platform_name):
         argv = probe_argv_for_candidate(candidate)
         try:
-            completed = subprocess.run(
-                [*argv, "-c", "import platform, sys; print(platform.python_version()); print(sys.executable)"],
-                text=True,
-                capture_output=True,
-                timeout=5,
-                shell=False,
-                check=False,
-            )
+            completed = probe_python_candidate(candidate)
         except (OSError, subprocess.TimeoutExpired) as exc:
             records.append({"candidate": candidate, "returncode": 1, "stderr": f"{type(exc).__name__}: {exc}"})
             continue
@@ -520,6 +521,38 @@ def probe_host_candidates(platform_name: str) -> list[dict[str, Any]]:
             }
         )
     return records
+
+
+def probe_python_candidate(candidate: str) -> subprocess.CompletedProcess[str]:
+    probe_source = "import platform, sys; print(platform.python_version()); print(sys.executable)"
+    if candidate in {"py -V:3", "py -3"}:
+        return subprocess.run(
+            ["py", "-3", "-c", probe_source],
+            text=True,
+            capture_output=True,
+            timeout=5,
+            shell=False,
+            check=False,
+        )
+    if candidate == "python3":
+        return subprocess.run(
+            ["python3", "-c", probe_source],
+            text=True,
+            capture_output=True,
+            timeout=5,
+            shell=False,
+            check=False,
+        )
+    if candidate == "python":
+        return subprocess.run(
+            ["python", "-c", probe_source],
+            text=True,
+            capture_output=True,
+            timeout=5,
+            shell=False,
+            check=False,
+        )
+    raise OSError(f"unsupported Python probe candidate: {candidate}")
 
 
 def probe_argv_for_candidate(candidate: str) -> list[str]:
@@ -572,7 +605,7 @@ def invocation_prefix_for_live_probe(candidate: str, resolved_executable: str) -
     argv = candidate.split()
     if argv and argv[0].lower() == "py":
         return probe_argv_for_candidate(candidate)
-    return [resolved_executable]
+    return probe_argv_for_candidate(candidate) if argv else [resolved_executable]
 
 
 def invocation_prefix_for_candidate(platform_name: str, candidate: str, resolved_executable: str) -> list[str]:
@@ -593,6 +626,8 @@ def execute_runner_runtime_info(
     runner_request: dict[str, Any],
     repo_root: Path,
     cache_root: str,
+    *,
+    selected_candidate: str | None = None,
 ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
     cache_path = Path(cache_root.replace("\\", "/"))
     cwd = cache_path if cache_path.is_absolute() else repo_root / cache_path
@@ -613,15 +648,11 @@ def execute_runner_runtime_info(
             remediation_actions=["Rebuild generated Claude and Codex payloads.", "Verify speckit_pro_runner/__main__.py exists in the installed cache."],
         )
     try:
-        completed = subprocess.run(
+        completed = run_python_runner_subprocess(
             argv,
-            input=json.dumps(runner_request),
-            text=True,
-            capture_output=True,
-            timeout=10,
-            shell=False,
+            selected_candidate=selected_candidate,
+            input_text=json.dumps(runner_request),
             cwd=cwd,
-            check=False,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         return None, diagnostic(
@@ -668,6 +699,77 @@ def execute_runner_runtime_info(
         remediation_summary="Repair the installed runner payload before claiming invocation readiness.",
         remediation_actions=["Inspect runner_response for stdout/stderr diagnostics.", "Retry after reinstalling or repairing the plugin cache."],
     )
+
+
+def run_python_runner_subprocess(
+    argv: list[str],
+    *,
+    selected_candidate: str | None,
+    input_text: str,
+    cwd: Path,
+) -> subprocess.CompletedProcess[str]:
+    if selected_candidate in {"py -V:3", "py -3"}:
+        if len(argv) < 2 or program_name(argv[0]) != "py" or argv[1] != "-3":
+            raise OSError("selected py launcher invocation does not match its validated prefix")
+        return subprocess.run(
+            ["py", "-3", *argv[2:]],
+            input=input_text,
+            text=True,
+            capture_output=True,
+            timeout=10,
+            shell=False,
+            cwd=cwd,
+            check=False,
+        )
+    if selected_candidate == "python3":
+        if not argv or program_name(argv[0]) != "python3":
+            raise OSError("selected python3 invocation does not match its validated prefix")
+        return subprocess.run(
+            ["python3", *argv[1:]],
+            input=input_text,
+            text=True,
+            capture_output=True,
+            timeout=10,
+            shell=False,
+            cwd=cwd,
+            check=False,
+        )
+    if selected_candidate == "python":
+        if not argv or program_name(argv[0]) != "python":
+            raise OSError("selected python invocation does not match its validated prefix")
+        return subprocess.run(
+            ["python", *argv[1:]],
+            input=input_text,
+            text=True,
+            capture_output=True,
+            timeout=10,
+            shell=False,
+            cwd=cwd,
+            check=False,
+        )
+    if selected_candidate is not None or not argv or not resolves_to_current_python(argv[0]):
+        raise OSError("runner invocation executable is not the active Python interpreter")
+    return subprocess.run(
+        [sys.executable, *argv[1:]],
+        input=input_text,
+        text=True,
+        capture_output=True,
+        timeout=10,
+        shell=False,
+        cwd=cwd,
+        check=False,
+    )
+
+
+def resolves_to_current_python(executable: str) -> bool:
+    if executable == sys.executable:
+        return True
+    resolved = shutil.which(executable)
+    candidate = Path(resolved) if resolved is not None else Path(executable)
+    try:
+        return candidate.samefile(sys.executable)
+    except OSError:
+        return candidate.resolve(strict=False) == Path(sys.executable).resolve(strict=False)
 
 
 def malformed_runner_response(completed: subprocess.CompletedProcess[str], parsed_type: str) -> dict[str, Any]:
@@ -882,7 +984,7 @@ def fake_home_boundary_diagnostic(install_root: Path, repo_root: Path) -> dict[s
         details={"install_root": repo_relative(install_root, repo_root), "allowed_root": repo_relative(allowed_root, repo_root)},
         remediation_summary="Use fake_home only with repo fixture roots until active install cutover.",
         remediation_actions=[
-            "Move the install_root under tests/speckit-pro/layer4-scripts/fixtures.",
+            "Move the install_root under tests/speckit-pro/unit/fixtures.",
             "Use doctor-preflight without fake_home for real installs.",
         ],
     )

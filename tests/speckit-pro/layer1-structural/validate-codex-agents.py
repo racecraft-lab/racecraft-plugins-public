@@ -6,7 +6,7 @@ Port of validate-codex-agents.sh (XPLAT-010 count-parity port, T021, US2). Pytho
 execution maps to one counted ``subTest`` unit; bash check names reproduced
 verbatim via ``subTest(msg=...)`` for a 1:1 baseline match.
 
-Baseline: ``tests/speckit-pro/parity/xplat-010/validate-codex-agents-baseline.txt``
+Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-codex-agents-baseline.txt``
 (TOTAL: 148).
 """
 

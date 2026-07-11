@@ -600,9 +600,9 @@ here.
 **Canonical Shipped Artifacts:**
 
 - `speckit-pro/speckit_pro_runner/**`
-- `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py`
-- `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh`
-- `tests/speckit-pro/layer4-scripts/fixtures/speckit-pro-runner/**`
+- `tests/speckit-pro/unit/test-speckit-pro-runner.py`
+- `tests/speckit-pro/unit/test-speckit-pro-runner.sh`
+- `tests/speckit-pro/unit/fixtures/speckit-pro-runner/**`
 - `tests/speckit-pro/run-all.sh`
 - `docs/ai/specs/.process/XPLAT-004-workflow.md`
 - `docs/ai/specs/.process/XPLAT-004-design-concept.md`
@@ -795,7 +795,7 @@ PR #286, and PR #287 on 2026-07-05 and is archived in
 workflow file is `docs/ai/specs/.process/XPLAT-007-workflow.md`; design concept
 is `docs/ai/specs/.process/XPLAT-007-design-concept.md`. The active spec
 folder was removed from `specs/**` after preserving contract schemas under
-`tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/contracts/`.
+`tests/speckit-pro/unit/fixtures/runner-gates/contracts/`.
 
 **Goal:** Replace active repo-local Bash helpers, tests, evals, payload builders,
 install-verification scripts, and release-readiness gates with Python
@@ -968,7 +968,7 @@ split only if generated payload rebuilds make the review packet too large.
 speckit-pro 2.18.0, with a Windows interpreter/home-directory follow-up fix in
 PR #299. The active spec folder was archived on 2026-07-08 after preserving the
 contract schemas under
-`tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/contracts/`;
+`tests/speckit-pro/unit/fixtures/plugin-bash-confinement/contracts/`;
 guard, payload-completeness, installed-cache proof, and release-readiness
 evidence remains under `docs/ai/specs/.process/XPLAT-009-*`. The implementation
 removed the remaining live `.sh` files under `speckit-pro/`, replaced active
@@ -1027,7 +1027,7 @@ finds a clean helper-family boundary that avoids duplicated gate work.
 - `speckit-pro/speckit_pro_runner/gates/**`
 - `dist/claude/speckit-pro/**`
 - `dist/codex/speckit-pro/**`
-- `tests/speckit-pro/layer4-scripts/fixtures/**`
+- `tests/speckit-pro/unit/fixtures/**`
 
 **Done When:**
 

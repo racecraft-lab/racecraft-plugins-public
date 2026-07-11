@@ -529,7 +529,7 @@ For every deterministic behavior:
 ### Self-Review
 
 1. **Tests executed?** Applicable verification ran in this resumed session. `bash tests/speckit-pro/run-all.sh --layer 1` passed 978/978, `bash tests/speckit-pro/run-all.sh --layer 4` passed 1622/1622, and `bash tests/speckit-pro/run-all.sh` passed 2790/2790. The project command detector reports BUILD, TYPECHECK, LINT, UNIT_TEST, and INTEGRATION_TEST as `N/A` for this shell-only plugin repository, so no separate build/typecheck/lint commands were inferred as passing.
-2. **Edge cases?** Acceptance coverage is present for single and split packet title generation, stale/title-token rejection, canonical body order, UAT compatibility, missing evidence, banned labels, input-error packet paths, stale validation, split partial-failure resume, safe prose edits, protected evidence edits, and host-template coexistence. Evidence includes `tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh:385`, `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh:390`, `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh:530`, `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh:346`, `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh:1141`, and `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh:1445`.
+2. **Edge cases?** Acceptance coverage is present for single and split packet title generation, stale/title-token rejection, canonical body order, UAT compatibility, missing evidence, banned labels, input-error packet paths, stale validation, split partial-failure resume, safe prose edits, protected evidence edits, and host-template coexistence. Evidence includes `tests/speckit-pro/unit/test-generate-pr-body.sh:385`, `tests/speckit-pro/unit/test-validate-pr-packet.sh:390`, `tests/speckit-pro/unit/test-validate-pr-packet.sh:530`, `tests/speckit-pro/unit/test-multi-pr-emission.sh:346`, `tests/speckit-pro/unit/test-multi-pr-emission.sh:1141`, and `tests/speckit-pro/unit/test-multi-pr-emission.sh:1445`.
 3. **Requirements matched?** FR-001 through FR-004A map to checked title and PR-create tasks T010-T017; FR-005 through FR-015F map to checked validator, workflow-event, stale-result, and split-resume tasks T018-T034; FR-016 through FR-018 map to checked safe-edit and protected-fingerprint tasks T035-T041; FR-019 maps to checked mirrored guidance/parity tasks T042-T053. Verification tasks T054-T056 are checked and passed.
 4. **Follow-up?** No `[TODO]`, `[DEFERRED]`, or `[OUT-OF-SCOPE]` markers were found in `spec.md`, `plan.md`, or `tasks.md`, and branch commit subjects do not contain those markers. No self-review follow-up item is required.
 
@@ -548,7 +548,7 @@ speckit-pro/
     references/phase-execution.md
     templates/pr-description-template.md
 tests/speckit-pro/
-  layer4-scripts/
+  unit/
   layer3-functional/
   layer7-integration/
   layer8-parity/

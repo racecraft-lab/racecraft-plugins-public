@@ -1,0 +1,19 @@
+001 baseline inventory is truthful and ordered
+002 result timestamp is Windows-safe
+003 generic path resolution works while configured runtime names are constrained
+004 Claude benchmark pins command resolution to the selected directory
+005 Codex benchmark pins command resolution to the selected directory
+006 Claude subprocess pins UTF-8 replacement decoding
+007 Codex subprocess pins UTF-8 replacement decoding
+008 Claude prompt strips command-substitution trailing newlines
+009 Codex prompt bytes match command-substitution composition
+010 result writer initializes a valid empty JSON array
+011 result writer persists a valid record after append
+012 Codex spawn failure records exit 127
+013 Codex spawn failure removes all temporary files
+014 partial result JSON remains valid after spawn failure
+015 quality scorer ignores extra positional arguments like predecessor
+016 quality scorer missing arguments exits one like predecessor
+017 Layer-6 help remains an unknown flag with exit two
+018 Layer-6 missing agent value exits one
+TOTAL: 18

@@ -102,7 +102,7 @@ guidance, and repo-wide shell harnesses. These specs turn the stricter
   `.specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md`;
   preserved guard/proof evidence: `docs/ai/specs/.process/XPLAT-009-*` and
   contract schemas under
-  `tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/contracts/`)
+  `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/contracts/`)
 - XPLAT-010 Repository Bash Confinement and CI Dispatch Guard (in progress on
   `xplat-010-repository-bash-confinement`; confines repo Bash to GitHub CI/CD
   workflow dispatch glue only, adds Linux AMD64/ARM64 containerized preflight,

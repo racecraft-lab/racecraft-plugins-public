@@ -31,11 +31,11 @@
 - Final PR head commit: `569b0e4cb14f4e3b958d5261a1a8ffe06704bfe6`
 - Fixture-decoupling prerequisite: PRSG-010 contracts are preserved under `speckit-pro/skills/speckit-autopilot/contracts/`; final-backstop, contextual-router, O5, spec-index, and parity fixtures do not require the live spec folder.
 - Pre-cleanup guards:
-  - `bash tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh` passed `31/31`
-  - `bash tests/speckit-pro/layer4-scripts/test-atomicity-route.sh` passed `109/109`
-  - `bash tests/speckit-pro/layer4-scripts/test-o5-topology.sh` passed `25/25`
-  - `bash tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh` passed `87/87`
-  - `bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run --fixture 03-prsg-010-backstop-o5-routing` passed `3/3`
+  - `bash tests/speckit-pro/unit/test-final-reviewability-backstop.sh` passed `31/31`
+  - `bash tests/speckit-pro/unit/test-atomicity-route.sh` passed `109/109`
+  - `bash tests/speckit-pro/unit/test-o5-topology.sh` passed `25/25`
+  - `bash tests/speckit-pro/unit/test-generate-spec-index.sh` passed `87/87`
+  - `bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run --fixture 03-reviewability-backstop-parent-child-routing` passed `3/3`
 - Post-cleanup verification: `bash tests/speckit-pro/run-all.sh` passed `2451/2451`
 
 ## Excluded Current Spec

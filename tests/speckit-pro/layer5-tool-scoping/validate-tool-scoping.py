@@ -5,7 +5,7 @@ XPLAT-010 count-parity port (T046, US2). Python 3.11+ standard library only.
 Every former ``_pass``/``_fail`` execution maps to one counted ``subTest`` unit;
 names are reproduced via ``subTest(msg=...)`` for a 1:1 baseline match.
 
-Baseline: ``tests/speckit-pro/parity/xplat-010/validate-tool-scoping-baseline.txt``
+Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-tool-scoping-baseline.txt``
 (TOTAL: 186).
 """
 

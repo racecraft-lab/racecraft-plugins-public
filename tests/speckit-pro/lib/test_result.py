@@ -35,7 +35,9 @@ class CountingTestResult(unittest.TextTestResult):
     ``units_total`` / ``units_passed`` are the numbers a port reports as
     ``{total}`` / ``{passed}``. A method that emits ``subTest``s contributes one
     unit per executed subTest (and is not itself counted); a method with no
-    ``subTest``s contributes exactly one unit.
+    ``subTest``s contributes exactly one unit. If a method fails outside a
+    subTest after emitting subTests, that method-level failure contributes one
+    additional failed unit.
     """
 
     def __init__(self, stream: TextIO | None = None, descriptions: bool = False, verbosity: int = 0) -> None:

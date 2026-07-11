@@ -2,21 +2,21 @@
   "data": {
     "allowlist": {
       "entry_count": 1,
-      "path": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/allowlist.json",
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json",
       "release_readiness_excluded": true
     },
     "artifacts": [
       {
         "kind": "promotion_record",
-        "path": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/promotion-records.json"
+        "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/promotion-records.json"
       },
       {
         "kind": "fixture",
-        "path": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/zero-bash-guard-cases.json"
+        "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/zero-bash-guard-cases.json"
       },
       {
         "kind": "allowlist",
-        "path": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/allowlist.json"
+        "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json"
       }
     ],
     "blocking_count": 0,
@@ -310,7 +310,7 @@
       "gate_status": "pass",
       "operation": "zero-bash-guard",
       "promoted": true,
-      "promotion_record": "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/promotion-records.json"
+      "promotion_record": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/promotion-records.json"
     },
     "installed_cache_proof": {
       "mutable_user_cache": false,

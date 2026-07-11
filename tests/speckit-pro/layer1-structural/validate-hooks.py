@@ -8,7 +8,7 @@ plugin-scoping matcher and an intentionally empty command list — never a globa
 ``_fail`` execution maps to one counted ``subTest`` unit; names reproduced
 verbatim via ``subTest(msg=...)`` for a 1:1 baseline match.
 
-Baseline: ``tests/speckit-pro/parity/xplat-010/validate-hooks-baseline.txt``
+Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-hooks-baseline.txt``
 (TOTAL: 11).
 """
 

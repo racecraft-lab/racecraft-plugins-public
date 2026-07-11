@@ -1,0 +1,28 @@
+001 toolchain checker exists
+002 toolchain checker is executable
+003 help exits 0
+004 help lists supported modes
+005 help describes the Python entrypoint
+006 default tests mode exits 0
+007 default tests mode prints summary
+008 default tests mode labels output
+009 default tests mode validates the current Python runtime
+010 default tests mode requires git
+011 default tests mode does not require Bash
+012 default tests mode does not require jq
+013 shell compatibility mode exits 0
+014 shell compatibility mode labels output
+015 shell compatibility mode does not require Bash
+016 shell compatibility mode does not require jq
+017 missing --mode value exits 2
+018 missing --mode value prints a diagnostic
+019 invalid --mode value exits 2
+020 invalid --mode value prints a diagnostic
+021 unknown argument exits 2
+022 missing git exits 1
+023 missing git prints diagnostic
+024 missing git still prints summary
+025 toolchain source has no forbidden command resolution
+026 shell compatibility mode passes with a git-only PATH
+027 docs mode scores command launch OSError
+TOTAL: 27

@@ -67,7 +67,7 @@ body.
 ```bash
 bash tests/speckit-pro/check-toolchain.sh --mode tests
 cd speckit-pro
-python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness-apply.json
+python3 -m speckit_pro_runner < ../tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness-apply.json
 cd ..
 bash scripts/sync-marketplace-versions.sh
 bash tests/speckit-pro/run-all.sh
@@ -80,7 +80,7 @@ What each command proves:
 | Command | Use when | Evidence it provides |
 |---------|----------|----------------------|
 | `bash tests/speckit-pro/check-toolchain.sh --mode tests` | Before deterministic shell validation or when tool versions are in question | Reports Bash, `jq`, `git`, Python, checksum, YAML, and optional live-eval tools before failures appear deeper in the suite. |
-| `python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness-apply.json` from `speckit-pro/` | Plugin source or release payloads changed | Rebuilds isolated Claude and Codex install payloads under `dist/` and emits payload completeness evidence. |
+| `python3 -m speckit_pro_runner < ../tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness-apply.json` from `speckit-pro/` | Plugin source or release payloads changed | Rebuilds isolated Claude and Codex install payloads under `dist/` and emits payload completeness evidence. |
 | `bash scripts/sync-marketplace-versions.sh` | Marketplace versions or release sync are in scope | Syncs marketplace entry versions from platform plugin manifests. |
 | `bash tests/speckit-pro/run-all.sh` | Release readiness, especially plugin or release-affecting work | Runs the default deterministic shell suite. |
 | `pnpm --dir docs-site reference:check` | Generated reference drift is possible | Verifies generated reference pages match the generator. |

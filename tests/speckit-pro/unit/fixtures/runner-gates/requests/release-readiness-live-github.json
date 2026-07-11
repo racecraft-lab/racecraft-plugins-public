@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "request_id": "xplat-007-us3-release-readiness-live-github",
+  "helper_id": "release-readiness",
+  "operation": "release-readiness",
+  "mode": "read_only",
+  "inputs": {
+    "case_file": "tests/speckit-pro/unit/fixtures/runner-gates/release-readiness-cases.json",
+    "case_id": "ready",
+    "xplat_008_cutover_allowed": false,
+    "github_context": {
+      "enabled": true,
+      "title_env": "TITLE",
+      "base_ref_env": "BASE_REF",
+      "workflow_contract": {
+        "uses_runner": true,
+        "uses_shell": false,
+        "operations": [
+          "release-readiness"
+        ]
+      }
+    }
+  }
+}

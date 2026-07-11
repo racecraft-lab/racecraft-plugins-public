@@ -282,7 +282,7 @@ When changing the plugin:
 
    ```text
    cd speckit-pro
-   resolved_python -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness-apply.json
+   resolved_python -m speckit_pro_runner < ../tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness-apply.json
    ```
 
    Here `resolved_python` is the Python 3.11+ interpreter resolved by the

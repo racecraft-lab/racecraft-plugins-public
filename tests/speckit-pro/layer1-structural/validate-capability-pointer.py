@@ -14,7 +14,7 @@ would violate the privacy hard constraint if committed. The port emits — and t
 baseline records — the repo-relative directory (``speckit-pro/agents``). Count and
 check identity are preserved; only the environment-specific prefix is normalized.
 
-Baseline: ``tests/speckit-pro/parity/xplat-010/validate-capability-pointer-baseline.txt``
+Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-capability-pointer-baseline.txt``
 (TOTAL: 52).
 """
 

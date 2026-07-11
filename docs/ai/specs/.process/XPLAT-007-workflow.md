@@ -105,10 +105,10 @@ unless a deliberate higher-priority override exists.
 - XPLAT-004 runner package: `speckit-pro/speckit_pro_runner/`
 - XPLAT-005 read-only helper registry and fixtures:
   `speckit-pro/speckit_pro_runner/helpers/`,
-  `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/`
+  `tests/speckit-pro/unit/fixtures/read-only-helpers/`
 - XPLAT-006 mutation-helper contracts and fixtures:
-  `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/`,
-  `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/contracts/`
+  `tests/speckit-pro/unit/fixtures/mutation-helpers/`,
+  `tests/speckit-pro/unit/fixtures/mutation-helpers/contracts/`
 - Current active test/eval gates: `tests/speckit-pro/**`
 - Current payload/release helpers: `scripts/build-plugin-payloads.sh`,
   `scripts/refresh-local-plugin.sh`, and
@@ -746,10 +746,10 @@ scripts/
 tests/speckit-pro/
   run-all.sh                      # Top-level active test runner replacement candidate
   layer1-structural/              # Structural validation migration target
-  layer4-scripts/                 # Helper test migration target
-  layer4-scripts/fixtures/read-only-helpers/
+  unit/                 # Helper test migration target
+  unit/fixtures/read-only-helpers/
                                   # XPLAT-005 fixture and parity patterns
-  layer4-scripts/fixtures/mutation-helpers/
+  unit/fixtures/mutation-helpers/
                                   # XPLAT-006 mutation fixture and contract patterns
 docs/ai/specs/.process/
   XPLAT-007-design-concept.md

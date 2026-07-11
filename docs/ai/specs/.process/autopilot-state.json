@@ -25,7 +25,7 @@
     "cleanupApplied": true,
     "archived_spec": "specs/xplat-009-plugin-source-and-payload-bash-eradication",
     "archive_report": ".specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md",
-    "note": "XPLAT-010 pre-flight Archive Sweep archived XPLAT-009 after PR #297 merged (speckit-pro 2.18.0) with Windows follow-up fix PR #299; contract schemas were preserved under tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/contracts/ and guard/proof evidence remains under docs/ai/specs/.process/XPLAT-009-*."
+    "note": "XPLAT-010 pre-flight Archive Sweep archived XPLAT-009 after PR #297 merged (speckit-pro 2.18.0) with Windows follow-up fix PR #299; contract schemas were preserved under tests/speckit-pro/unit/fixtures/plugin-bash-confinement/contracts/ and guard/proof evidence remains under docs/ai/specs/.process/XPLAT-009-*."
   },
   "prerequisites": {
     "all_pass": true,
@@ -82,11 +82,11 @@
     "integration_suite": {
       "status": "completed",
       "evidence": [
-        "PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py -> 34/34 passed",
-        "PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py -> 17/17 passed",
-        "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py -> 51/51 passed",
-        "PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py -> 10/10 passed",
-        "bash tests/speckit-pro/layer4-scripts/test-privacy-scan.sh -> 10/10 passed",
+        "PYTHONPATH=speckit-pro python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py -> 34/34 passed",
+        "PYTHONPATH=speckit-pro python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py -> 17/17 passed",
+        "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=speckit-pro python3 tests/speckit-pro/unit/test-speckit-pro-gates.py -> 51/51 passed",
+        "PYTHONPATH=speckit-pro python3 tests/speckit-pro/unit/test-speckit-pro-runner.py -> 10/10 passed",
+        "bash tests/speckit-pro/unit/test-privacy-scan.sh -> 10/10 passed",
         "bash tests/speckit-pro/run-all.sh -> 2016/2016 passed after final clean-gate remediation",
         "git diff --check -> passed"
       ]

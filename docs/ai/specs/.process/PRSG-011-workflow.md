@@ -544,7 +544,7 @@ For each deterministic script behavior:
 ## Self-Review
 
 1. **Tests executed?** Build/typecheck/lint are N/A for this plugin marketplace repo. The required test commands did run and exit zero: Layer 1 887/887, Layer 4 881/881, default suite 1958/1958, affected Layer 3 discovery checks, Layer 8 dry-run 6 passed, and `git diff --check origin/main` passed on 2026-06-09T03:24:16Z after the EOF cleanup.
-2. **Edge cases?** Covered. Repository migration non-happy paths are in `tests/speckit-pro/layer4-scripts/test-migrate-structure.sh:312` through schema/dry-run checks, `:405` through dirty-tree apply blocking, and `:473` through marker/backfill assertions. Tier-2 relocation non-happy paths are in `tests/speckit-pro/layer4-scripts/test-relocate-process-artifacts.sh:162` through schema checks, `:217` through evidence normalization, `:245` through already-normalized no-op, `:469` through collision handling, `:496` through frozen/out-of-scope coverage, and `:572` through dirty-tree blocking. Suggestion-only behavior is covered by Layer 3 Claude/Codex fixtures and Layer 8 fixture `02-prsg-011-migration-guidance`.
+2. **Edge cases?** Covered. Repository migration non-happy paths are in `tests/speckit-pro/unit/test-migrate-structure.sh:312` through schema/dry-run checks, `:405` through dirty-tree apply blocking, and `:473` through marker/backfill assertions. Tier-2 relocation non-happy paths are in `tests/speckit-pro/unit/test-relocate-process-artifacts.sh:162` through schema checks, `:217` through evidence normalization, `:245` through already-normalized no-op, `:469` through collision handling, `:496` through frozen/out-of-scope coverage, and `:572` through dirty-tree blocking. Suggestion-only behavior is covered by Layer 3 Claude/Codex fixtures and Layer 8 fixture `02-repository-migration-guidance`.
 3. **Requirements matched?** Covered. `specs/prsg-011-retro-migration/tasks.md` maps US1 to FR-001 through FR-009, FR-021 through FR-024, FR-027 through FR-032; US2 to FR-010 through FR-018, FR-021, FR-022, FR-025, FR-027; US3 to FR-019, FR-020, FR-026, FR-027, FR-029; and polish to verification and PR evidence. All T001-T034 rows are checked and implementation evidence is committed through `1d6b151`.
 4. **Follow-up?** No silent follow-up markers found. `rg -n "\[TODO\]|\[DEFERRED\]|\[OUT-OF-SCOPE\]|TODO|DEFERRED|OUT-OF-SCOPE" specs/prsg-011-retro-migration docs/ai/specs/.process/PRSG-011-workflow.md` returned no matches.
 
@@ -609,7 +609,7 @@ speckit-pro/
 tests/speckit-pro/
   layer1-structural/
   layer3-functional/
-  layer4-scripts/
+  unit/
   layer8-parity/
 specs/prsg-011-retro-migration/
   SPEC-MOC.md

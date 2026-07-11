@@ -18,7 +18,7 @@ from ..envelope import diagnostic, response
 
 CAPTURE_LIMIT_BYTES = 16 * 1024
 DEFAULT_TIMEOUT_SECONDS = 300
-PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json"
+PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/runner-gates/promotion-records.json"
 LAYER_SCRIPT_DISPATCHER = "tests/speckit-pro/run-layer-scripts.py"
 LAYER_SCRIPT_TIMEOUT_SECONDS = 1800
 SUITE_MANIFEST_PATH = "tests/speckit-pro/suite-manifest.json"
@@ -419,6 +419,15 @@ def run_command(command: CommandSpec, repo_root: Path) -> dict[str, Any]:
     missing = missing_executable(command.argv[0], repo_root)
     if missing:
         return command_result(command, "missing_prerequisite", 3, "", f"missing executable: {command.argv[0]}\n", 0)
+    if not resolves_to_current_python(command.argv[0], repo_root):
+        return command_result(
+            command,
+            "input_error",
+            2,
+            "",
+            f"suite command executable must resolve to the active Python interpreter: {command.argv[0]}\n",
+            0,
+        )
     if LAYER_SCRIPT_DISPATCHER in command.argv and not (repo_root / LAYER_SCRIPT_DISPATCHER).is_file():
         return command_result(
             command,
@@ -431,7 +440,7 @@ def run_command(command: CommandSpec, repo_root: Path) -> dict[str, Any]:
     started = time.monotonic()
     try:
         completed = subprocess.run(
-            list(command.argv),
+            [sys.executable, *command.argv[1:]],
             cwd=repo_root,
             text=True,
             capture_output=True,
@@ -713,6 +722,24 @@ def missing_executable(executable: str, repo_root: Path) -> bool:
         candidate = path if path.is_absolute() else repo_root / path
         return not candidate.exists()
     return shutil.which(executable) is None
+
+
+def resolves_to_current_python(executable: str, repo_root: Path) -> bool:
+    path = Path(executable)
+    has_path_separator = os.sep in executable or (os.altsep is not None and os.altsep in executable)
+    if path.is_absolute():
+        candidate = path
+    elif has_path_separator:
+        candidate = repo_root / path
+    else:
+        resolved = shutil.which(executable)
+        if resolved is None:
+            return False
+        candidate = Path(resolved)
+    try:
+        return candidate.samefile(sys.executable)
+    except OSError:
+        return candidate.resolve(strict=False) == Path(sys.executable).resolve(strict=False)
 
 
 def available_ai_tools(inputs: dict[str, Any]) -> set[str]:

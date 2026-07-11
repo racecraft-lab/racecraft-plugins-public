@@ -89,7 +89,13 @@ def cmd_path(cmd: str) -> str:
     return shutil.which(cmd) or ""
 
 
-def run_command(argv: list[str], *, input_text: str | None = None) -> subprocess.CompletedProcess[str]:
+def run_command(tool: str, args: list[str], *, input_text: str | None = None) -> subprocess.CompletedProcess[str]:
+    if tool == "node":
+        argv = [shutil.which("node") or "node", *args]
+    elif tool == "pnpm":
+        argv = [shutil.which("pnpm") or "pnpm", *args]
+    else:
+        raise ValueError(f"unsupported command executable: {tool}")
     try:
         return subprocess.run(
             argv,
@@ -134,88 +140,18 @@ def version_at_least(version: str, min_major: int, min_minor: int) -> bool:
     return major > min_major or (major == min_major and minor >= min_minor)
 
 
-def check_bash(reporter: Reporter) -> None:
-    path = cmd_path("bash")
-    if not path:
-        reporter.fail("bash >= 4.3", "required command not found: bash")
-        return
-    completed = run_command([path, "--version"])
-    first_line = completed.stdout.splitlines()[0] if completed.stdout else ""
-    match = re.search(r"version\s+(\d+)\.(\d+)", first_line, flags=re.IGNORECASE)
-    if match and (int(match.group(1)), int(match.group(2))) >= (4, 3):
-        reporter.pass_("bash >= 4.3", f"{match.group(1)}.{match.group(2)} ({path})")
+def check_python_runtime(reporter: Reporter) -> None:
+    version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    if sys.version_info >= (3, 11):
+        reporter.pass_("python >= 3.11", f"{version} ({sys.executable})")
     else:
-        reporter.fail("bash >= 4.3", f"{first_line or 'unknown'}; install a newer Bash before running the shell suite")
+        reporter.fail("python >= 3.11", f"{version}; Python 3.11 or newer is required")
 
 
-def check_jq(reporter: Reporter) -> None:
-    path = cmd_path("jq")
-    if not path:
-        reporter.fail("jq >= 1.6", "required command not found: jq")
-        return
-    completed = run_command([path, "--version"])
-    version = completed.stdout.strip()
-    numeric = re.sub(r"^jq-?", "", version)
-    numeric = re.sub(r"[^0-9.].*$", "", numeric)
-    if not version_at_least(numeric, 1, 6):
-        reporter.fail("jq >= 1.6", f"{version or 'unknown'}; install jq 1.6 or newer")
-        return
-    expression = run_command([path, "-e", ".ok == true"], input_text='{"ok":true}\n')
-    if expression.returncode == 0:
-        reporter.pass_("jq >= 1.6", f"{version} ({path})")
-    else:
-        reporter.fail("jq expression", "jq --version succeeded but a minimal expression failed")
-
-
-def check_sort_version_semantics(reporter: Reporter) -> None:
-    path = cmd_path("sort")
-    if not path:
-        reporter.fail("sort -V", "version sort is required for semver-style plugin sync checks")
-        return
-    completed = run_command([path, "-V"], input_text="1.10.2\n1.9.10\n")
-    lines = completed.stdout.splitlines()
-    if completed.returncode == 0 and lines and lines[-1] == "1.10.2":
-        reporter.pass_("sort -V", "semver ordering available")
-    else:
-        newest = lines[-1] if lines else "missing"
-        reporter.fail("sort -V", f"expected 1.10.2 > 1.9.10, got {newest}")
-
-
-def check_checksum_tool(reporter: Reporter) -> None:
-    sha256sum = cmd_path("sha256sum")
-    shasum = cmd_path("shasum")
-    if sha256sum:
-        reporter.pass_("sha256", f"sha256sum ({sha256sum})")
-    elif shasum:
-        reporter.pass_("sha256", f"shasum ({shasum})")
-    else:
-        reporter.fail("sha256", "sha256sum or shasum is required for packet fingerprints")
-
-
-def check_yaml_validator(reporter: Reporter) -> None:
-    python3 = cmd_path("python3")
-    if python3 and run_command([python3, "-c", "import yaml"]).returncode == 0:
-        reporter.pass_("yaml validator", "python3 PyYAML")
-        return
-    ruby = cmd_path("ruby")
-    if ruby and run_command([ruby, "-e", "require 'yaml'"]).returncode == 0:
-        reporter.pass_("yaml validator", "ruby yaml")
-        return
-    reporter.fail("yaml validator", "python3 with PyYAML or ruby is required for workflow YAML checks")
-
-
-def check_shell_tools(reporter: Reporter, label: str) -> None:
+def check_repo_tools(reporter: Reporter, label: str) -> None:
     print(f"speckit-pro toolchain check ({label})")
-    check_bash(reporter)
-    check_jq(reporter)
+    check_python_runtime(reporter)
     require_cmd(reporter, "git", "git")
-    require_cmd(reporter, "python3", "python3")
-
-    for command in ("awk", "sed", "grep", "sort", "find", "mktemp", "wc", "head", "tail", "cut", "dirname", "basename", "pwd"):
-        require_cmd(reporter, command, command)
-
-    check_sort_version_semantics(reporter)
-    check_checksum_tool(reporter)
 
     optional_cmd(reporter, "gh", "gh", "PR creation, review-comment workflows, and live GitHub-backed checks")
     optional_cmd(reporter, "specify", "specify", "installed-plugin Spec Kit workflows")
@@ -224,8 +160,7 @@ def check_shell_tools(reporter: Reporter, label: str) -> None:
 
 
 def check_test_tools(reporter: Reporter) -> None:
-    check_shell_tools(reporter, "tests")
-    check_yaml_validator(reporter)
+    check_repo_tools(reporter, "tests")
 
 
 def check_docs_tools(reporter: Reporter) -> None:
@@ -236,7 +171,7 @@ def check_docs_tools(reporter: Reporter) -> None:
 
     node_path = cmd_path("node")
     if node_path:
-        completed = run_command([node_path, "--version"])
+        completed = run_command("node", ["--version"])
         node_version = completed.stdout.strip()
         numeric = re.sub(r"^v", "", node_version)
         numeric = re.sub(r"[^0-9.].*$", "", numeric)
@@ -247,7 +182,7 @@ def check_docs_tools(reporter: Reporter) -> None:
 
     pnpm_path = cmd_path("pnpm")
     if pnpm_path:
-        completed = run_command([pnpm_path, "--version"])
+        completed = run_command("pnpm", ["--version"])
         pnpm_version = completed.stdout.strip()
         if pnpm_version == "10.25.0":
             reporter.pass_("pnpm version", pnpm_version)
@@ -255,7 +190,7 @@ def check_docs_tools(reporter: Reporter) -> None:
             reporter.fail("pnpm version", f"{pnpm_version or 'unknown'}; expected 10.25.0")
 
     package_json = REPO_ROOT / "docs-site" / "package.json"
-    if package_json.is_file() and cmd_path("python3"):
+    if package_json.is_file():
         package_manager = json.loads(package_json.read_text(encoding="utf-8")).get("packageManager", "")
         if package_manager == "pnpm@10.25.0":
             reporter.pass_("docs packageManager", package_manager)
@@ -264,7 +199,10 @@ def check_docs_tools(reporter: Reporter) -> None:
 
     node_modules = REPO_ROOT / "docs-site" / "node_modules"
     if pnpm_path and node_modules.is_dir():
-        completed = run_command([pnpm_path, "--dir", str(REPO_ROOT / "docs-site"), "exec", "playwright", "--version"])
+        completed = run_command(
+            "pnpm",
+            ["--dir", str(REPO_ROOT / "docs-site"), "exec", "playwright", "--version"],
+        )
         if completed.returncode == 0:
             reporter.pass_("playwright package", completed.stdout.strip())
         else:
@@ -282,7 +220,7 @@ def main(argv: list[str]) -> int:
     if mode == "tests":
         check_test_tools(reporter)
     elif mode == "shell":
-        check_shell_tools(reporter, "shell")
+        check_repo_tools(reporter, "shell")
     elif mode == "docs":
         check_docs_tools(reporter)
     elif mode == "all":

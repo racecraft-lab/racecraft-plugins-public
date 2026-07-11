@@ -157,7 +157,7 @@ marketplace packaging.
 
    ```text
    cd speckit-pro
-   python3 -m speckit_pro_runner < ../tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/payload-completeness-apply.json
+   python3 -m speckit_pro_runner < ../tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness-apply.json
    ```
 
 3. Run the default validation suite:

@@ -234,7 +234,7 @@ planner returns exit 1.
 
 ## Tech Stack
 - Runtime: Bash scripts with jq for JSON.
-- Test framework: shell Layer 4 tests under `tests/speckit-pro/layer4-scripts/`.
+- Test framework: shell Layer 4 tests under `tests/speckit-pro/unit/`.
 - Structural gates: Layer 1 validation under `tests/speckit-pro/layer1-structural/`.
 - Plugin surfaces: `speckit-pro/skills/speckit-autopilot/` and Codex mirror prose where behavior changes are described.
 
@@ -507,7 +507,7 @@ markers. Schema JSON parses with `jq empty`.
 |---------|--------|
 | `bash -n speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh` | Passed |
 | `test -x speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh` | Passed |
-| `bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh` | Passed: `66/66` |
+| `bash tests/speckit-pro/unit/test-plan-layers.sh` | Passed: `66/66` |
 | `bash speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh specs/prsg-008-layer-planner` | Passed: `status=ok`, 6 increments, 45 tasks |
 | `bash tests/speckit-pro/run-all.sh --layer 4` | Passed: `1029/1029` |
 | `bash tests/speckit-pro/run-all.sh --layer 1` | Passed: `887/887` |
@@ -563,13 +563,13 @@ footprint for PRSG-008. The diff gate reports `reviewable_loc=0` and
 
 1. **Tests executed?** Yes. Repository build/typecheck/lint/unit/integration
    commands are not defined for this shell-test plugin repo. Executed and
-   passed: `bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
+   passed: `bash tests/speckit-pro/unit/test-plan-layers.sh`
    (`66/66`), direct live-feature planner run (`status=ok`, 6 increments,
    45 tasks), `bash tests/speckit-pro/run-all.sh --layer 4` (`1029/1029`),
    `bash tests/speckit-pro/run-all.sh --layer 1` (`887/887`), privacy scan
    (`9/9`), and `bash tests/speckit-pro/run-all.sh` (`2106/2106`).
 2. **Edge cases?** Covered. Schema and valid/read-only coverage is in
-   `tests/speckit-pro/layer4-scripts/test-plan-layers.sh:851`; checkbox and
+   `tests/speckit-pro/unit/test-plan-layers.sh:851`; checkbox and
    `[P]` metadata at `:890`; invalid-plan diagnostics at `:906`; warning
    diagnostics at `:961`; input errors at `:993`; script safety at `:1070`;
    determinism, generated 200-task performance, and read-only checks at
@@ -590,8 +590,8 @@ speckit-pro/
   skills/speckit-autopilot/scripts/plan-layers.sh
   skills/speckit-autopilot/SKILL.md
   codex-skills/speckit-autopilot/SKILL.md
-tests/speckit-pro/layer4-scripts/test-plan-layers.sh
-tests/speckit-pro/layer4-scripts/fixtures/plan-layers/
+tests/speckit-pro/unit/test-plan-layers.sh
+tests/speckit-pro/unit/fixtures/plan-layers/
 specs/prsg-008-layer-planner/
   SPEC-MOC.md
   spec.md

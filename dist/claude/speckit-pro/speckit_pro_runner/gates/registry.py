@@ -13,8 +13,8 @@ from .active_path_guard import run_active_path_guard
 from ..helpers.install import run_runner_invocation_gate
 
 
-REQUEST_BASE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests"
-XPLAT_008_REQUEST_BASE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests"
+REQUEST_BASE = "tests/speckit-pro/unit/fixtures/runner-gates/requests"
+XPLAT_008_REQUEST_BASE = "tests/speckit-pro/unit/fixtures/installed-plugin-release/requests"
 
 
 @dataclass(frozen=True)
@@ -375,9 +375,22 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         ("read_only",),
         "speckit_pro_runner.gates.active_path_guard",
         None,
-        "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/requests/zero-bash-guard.json",
+        "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/requests/zero-bash-guard.json",
         "US3",
         "active_zero_bash_guard",
+        implemented=True,
+        promotion_status="python_authoritative",
+    ),
+    GateOperation(
+        "active-path-guard",
+        "repo-bash-confinement",
+        "guard",
+        ("read_only",),
+        "speckit_pro_runner.gates.active_path_guard",
+        None,
+        "tests/speckit-pro/unit/fixtures/repository-bash-confinement/requests/repo-bash-confinement.json",
+        "US3",
+        "active_repo_bash_confinement",
         implemented=True,
         promotion_status="python_authoritative",
     ),
@@ -416,7 +429,7 @@ def gate_registry_report() -> dict[str, Any]:
     groups = sorted({entry.group for entry in GATE_OPERATIONS})
     return {
         "schema_version": "1.0",
-        "feature_id": "XPLAT-007+XPLAT-008+XPLAT-009",
+        "feature_id": "XPLAT-007+XPLAT-008+XPLAT-009+XPLAT-010",
         "promotion_status": "mixed",
         "active_cutover": False,
         "groups": groups,
@@ -540,7 +553,7 @@ def _gate_input_error(
 def _gate_error_data(request: Any, *, entry: GateOperation | None) -> dict[str, Any]:
     operation = entry.operation if entry is not None else request.operation
     gate_id = entry.helper_id if entry is not None and entry.helper_id == request.helper_id else request.helper_id
-    promotion_record = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json"
+    promotion_record = "tests/speckit-pro/unit/fixtures/runner-gates/promotion-records.json"
     return {
         "gate": {
             "gate_id": gate_id,
