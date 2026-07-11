@@ -68,8 +68,10 @@ consumer-focused quality floor.
   evidence before release.
 - Compare static role pins with an unpinned Codex-selected control and an
   explicit adaptive-policy control before claiming a static route is efficient.
-- Measure context and orchestration overhead during routing evaluation even
-  when prompt or caching changes remain out of scope.
+- Jointly evaluate routing and bounded prompt/context variants because model,
+  effort, instructions, handoffs, and tool context can interact. Preserve the
+  current prompt as a control rather than deferring prompt tuning until after a
+  route is selected.
 
 ### 2.2 Non-goals (out of scope)
 
@@ -77,9 +79,10 @@ consumer-focused quality floor.
   behavior.
 - Adopting GPT-5.6 Pro mode, persisted reasoning, Programmatic Tool Calling,
   explicit prompt caching, or the Responses API multi-agent beta.
-- Rewriting every agent prompt. Prompt cleanup is allowed only after an
-  unchanged-prompt baseline and only when a before/after evaluation proves
-  equal-or-better behavior with lower context cost or fixes a measured defect.
+- Unbounded or aesthetic rewriting of every agent prompt. Prompt tuning is in
+  scope when a variant targets measured instruction, handoff, tool-schema,
+  duplicated-context, or compaction overhead and is evaluated alongside route
+  candidates against an unchanged-prompt control.
 - Offering quality/balanced/economy install profiles or per-agent overrides in
   v1. The existing one-model compatibility override remains the KISS escape
   hatch.
@@ -163,6 +166,14 @@ consumer-focused quality floor.
   formulas, source-field definitions (including whether reasoning is included
   in output tokens), null behavior, rate-card revision, full traces, candidates,
   failures, selected/rejected policies, and promotion rationale.
+- **AC-2.10**: The candidate matrix includes a prompt/context dimension. For
+  each role it compares the unchanged prompt with bounded variants that reduce
+  duplicated instructions, oversized handoffs, repeated repository context,
+  unnecessary tool schemas/output, or post-compaction rereading. The harness
+  records prompt/configuration hashes, instruction and handoff tokens, stable-
+  prefix size, tool-context volume, and prompt-by-model interaction effects.
+  Promotion selects the passing route + effort + prompt policy as a unit; a
+  prompt variant is never generalized to other models or roles without data.
 
 ### 3.3 Tier-aware Installer Defaults and Explicit Override *(-> G56R-003)*
 
@@ -192,10 +203,11 @@ consumer-focused quality floor.
 - **AC-4.2**: Each committed model/effort clears the G56R-002 promotion rule on
   role-specific planning, TDD implementation, and analyze/remediation fixtures.
 - **AC-4.3**: Agent sandbox, TDD, grounding, artifact, and remediation contracts
-  remain unchanged unless a separately measured prompt cleanup is required.
-- **AC-4.4**: Any prompt cleanup is evaluated after the routing baseline and is
-  retained only when it preserves or improves quality while reducing context
-  cost or fixing a specific regression.
+  remain hard invariants while route + effort + bounded prompt variants are
+  evaluated jointly.
+- **AC-4.4**: Each role includes the unchanged prompt as a control and tests
+  targeted prompt/context variants in the same paired matrix. The committed
+  combination must clear the shared end-to-end promotion rule.
 - **AC-4.5**: Cohort-specific source, install, validation, and rollback evidence
   makes the route independently reviewable.
 
@@ -210,8 +222,9 @@ consumer-focused quality floor.
 - **AC-5.3**: The selected routes clear the shared promotion rule and preserve
   workspace-write boundaries and fail-open/fail-closed behavior specific to
   each role.
-- **AC-5.4**: Measured prompt cleanup follows the same baseline-first rule as
-  G56R-004, and cohort-specific install and rollback evidence is recorded.
+- **AC-5.4**: Prompt/context variants are evaluated jointly with model and
+  effort under the same control and promotion contract as G56R-004; cohort-
+  specific install and rollback evidence records the selected combination.
 
 ### 3.6 Read-only Reasoning Agent Routing *(-> G56R-006)*
 
@@ -226,8 +239,8 @@ consumer-focused quality floor.
   preserve citations/file locators, and perform no writes.
 - **AC-6.4**: The lowest-allowance passing static route is committed per agent;
   one cohort model is not forced across all four roles.
-- **AC-6.5**: Measured prompt cleanup, install proof, and rollback evidence obey
-  the same cohort contract as G56R-004.
+- **AC-6.5**: Joint prompt/context tuning, install proof, and rollback evidence
+  obey the same cohort contract as G56R-004.
 
 ### 3.7 Latency-first Helper Routing *(-> G56R-007)*
 

@@ -213,6 +213,11 @@ Budget result: re-estimate at scaffold; split fixture expansion from runner work
 - Compare static, unpinned, and adaptive policies. Encode phase credit, retry,
   subagent, context-growth, escalation/de-escalation, cancellation, and
   limit-near checkpoint/resume budgets.
+- Add a prompt/context dimension to the paired matrix: unchanged-prompt control
+  plus bounded variants for duplicated instructions, handoff size, repeated
+  repository context, tool schemas/output, and post-compaction rereading.
+  Record prompt/config hashes and interaction effects; promote route + effort +
+  prompt policy as one measured combination.
 - Keep live calls outside default CI.
 - INVEST/vertical-slice rationale: one executable benchmark path produces a
   complete promotion decision for any single agent before any route changes.
@@ -302,8 +307,8 @@ Budget result: re-estimate at scaffold; three disjoint TOMLs plus role evidence
   remediation contracts, not generic coding prompts.
 - Pin each winning model and effort independently in its TOML; update only
   cohort-specific descriptions, tests, and guidance required for truthfulness.
-- Establish unchanged-prompt results first. Apply a minimal prompt cleanup only
-  when its separate before/after record clears the same promotion bar.
+- Evaluate the unchanged prompt and targeted prompt/context variants alongside
+  model and effort candidates; promote only a jointly passing combination.
 - Prove default install, explicit override, unavailable-helper behavior, and
   rollback for this cohort without touching the other cohorts.
 - INVEST/vertical-slice rationale: the three highest-risk mutating roles share
@@ -347,8 +352,9 @@ Budget result: re-estimate at scaffold; two role TOMLs plus evidence
   non-circular, acceptance-criteria-linked UAT runbooks.
 - Pin independent winners while preserving workspace-write, error, and fail-open
   boundaries.
-- Use unchanged-prompt baselines before any measured prompt cleanup and prove
-  install, override, and rollback behavior for the cohort.
+- Include unchanged-prompt controls and targeted prompt/context variants in the
+  paired model/effort matrix, then prove install, override, and rollback for the
+  selected combination.
 - INVEST/vertical-slice rationale: two structured-output mutators share a
   measurable contract and ship independently of deep executors and analysts.
 
@@ -388,8 +394,8 @@ Budget result: re-estimate at scaffold; four TOMLs plus bounded role fixtures
   effort for current low roles. Never rely on GPT-5.6's omitted medium default.
 - Hard-gate read-only behavior, source-domain separation, citations/file
   locators, abstention, and structured return formats.
-- Pin the lowest-allowance passing static winner per agent, not one forced cohort model; baseline
-  before prompt cleanup and prove cohort install/override/rollback behavior.
+- Pin the lowest-allowance passing static route + effort + prompt combination
+  per agent, not one forced cohort policy, and prove install/override/rollback.
 - INVEST/vertical-slice rationale: one read-only evidence seam enables parallel
   evaluation without mutation conflicts while preserving four distinct
   perspective contracts.
@@ -430,8 +436,8 @@ Budget result: re-estimate at scaffold; single-agent vertical slice
 - Explicitly set the winning effort so omission cannot inherit GPT-5.6 medium.
 - Preserve autopilot's correct continuation when the optional helper cannot
   spawn; retain a non-Luna route when Luna fails the shared promotion rule.
-- Establish an unchanged-prompt baseline before measured cleanup and prove
-  install, override, and rollback behavior.
+- Evaluate unchanged and bounded prompt/context variants jointly with the route
+  and effort candidates, then prove install, override, and rollback behavior.
 - INVEST/vertical-slice rationale: one optional leaf helper can be evaluated,
   shipped, or rejected without changing any core executor.
 
