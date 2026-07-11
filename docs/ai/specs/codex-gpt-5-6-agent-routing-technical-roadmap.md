@@ -5,9 +5,9 @@ available to ChatGPT Pro that minimize
 Pro allowance consumption per accepted end-to-end workflow while preserving
 role quality, reliability, and completion time.**
 
-This document defines the SPEC catalog for Codex ChatGPT Pro agent routing. Each
-SPEC maps 1:1 to a Feature / Acceptance-Criteria group in the source PRD
-(`AC-N.*`) and is prepared for `$speckit-scaffold-spec G56R-NNN`.
+This document defines the SPEC catalog for Codex ChatGPT Pro agent routing.
+Each SPEC maps to an explicit acceptance-criteria subset in the source PRD and
+is prepared for `$speckit-scaffold-spec G56R-NNN`.
 
 **Source PRD:** [../../prd-codex-gpt-5-6-agent-routing.md](../../prd-codex-gpt-5-6-agent-routing.md)
 **Roadmap MOC:** [codex-gpt-5-6-agent-routing-roadmap-MOC.md](codex-gpt-5-6-agent-routing-roadmap-MOC.md)
@@ -19,30 +19,35 @@ SPEC maps 1:1 to a Feature / Acceptance-Criteria group in the source PRD
 
 ## Roadmap Overview
 
-The effort is decomposed into **8 specifications** across **5 dependency
+The effort is decomposed into **11 specifications** across **8 dependency
 tiers**.
 
 | Tier | Specs | Purpose | Parallelization |
 |---|---|---|---|
 | 1 | G56R-001 | Authoritative research baseline and candidate matrix | Sequential spike |
-| 2 | G56R-002 | Model x effort/policy benchmark, Pro allowance accounting, and promotion contract | Sequential foundation |
-| 3 | G56R-003 | Tier-aware installer defaults and explicit global override | Sequential; requires stable post-XPLAT-009 runtime |
-| 4 | G56R-004, G56R-005, G56R-006, G56R-007 | Route four disjoint agent cohorts | Parallel after G56R-003; serialize shared regeneration |
-| 5 | G56R-008 | Rebuild payload, reconcile shared assertions, run installed UAT, and prove release readiness | Sequential integration |
+| 2 | G56R-002 | Authentication, native telemetry, and replayable trace schema | Sequential foundation |
+| 3 | G56R-003 | Corpus runner, acceptance scoring, and deterministic statistics | Sequential foundation |
+| 4 | G56R-004 | Static/unpinned/adaptive policy comparison | Sequential foundation |
+| 5 | G56R-005 | Budgets, reset boundaries, checkpoint, and resume | Sequential foundation |
+| 6 | G56R-006 | Tier-aware installer defaults and explicit global override | Sequential; requires stable post-XPLAT-009 runtime |
+| 7 | G56R-007, G56R-008, G56R-009, G56R-010 | Route four disjoint agent cohorts | Parallel after G56R-006; serialize shared regeneration |
+| 8 | G56R-011 | Rebuild payload, reconcile shared assertions, run installed UAT, and prove release readiness | Sequential integration |
 
-**Execution order:** G56R-001 -> G56R-002 -> G56R-003 ->
-G56R-004 + G56R-005 + G56R-006 + G56R-007 -> G56R-008
+**Execution order:** G56R-001 -> G56R-002 -> G56R-003 -> G56R-004 ->
+G56R-005 -> G56R-006 -> G56R-007 + G56R-008 + G56R-009 + G56R-010 ->
+G56R-011
 
-**External prerequisite:** G56R-001 and G56R-002 may start immediately.
-G56R-003 must scaffold against the authoritative installer/runtime that exists
+**External prerequisite:** G56R-001 through G56R-005 may start immediately.
+G56R-006 must scaffold against the authoritative installer/runtime that exists
 after XPLAT-009 stabilizes; it must not reintroduce a deleted Bash helper.
 
 ### Research-backed starting hypotheses
 
 This table records starting hypotheses, not a complete candidate shortlist or
 pre-approved routing table. G56R-001 must capability-probe the entire model
-catalog exposed to the declared Pro tier and tested client. G56R-002 screens
-every role-eligible entry; evidence controls promotion.
+catalog exposed to the declared Pro tier and tested client. G56R-003 screens
+every role-eligible entry after G56R-002 establishes trustworthy telemetry;
+evidence controls promotion.
 
 | Agent | Current source baseline | Starting hypothesis | Initial effort comparison | Required catalog challengers |
 |---|---|---|---|---|
@@ -64,10 +69,14 @@ every role-eligible entry; evidence controls promotion.
 - A candidate must have zero critical contract, safety, grounding, or mutation
   failures, clear absolute floors for every semantic-quality dimension, and
   clear a confidence-bound non-inferiority margin against baseline.
-- Among passing candidates, prefer the route that lowers p50 or p95 observed or
-  estimated Pro allowance consumption per accepted end-to-end workflow without
-  materially increasing late failure, retries, rework, steering, incomplete
-  work, or completion time.
+- The predeclared primary endpoint is paired mean total token-derived credits-
+  to-acceptance versus the current production routing policy, including all
+  failed, cancelled, retried, repaired, compacted, and abandoned work. Promote
+  only when the upper one-sided 95% confidence bound for the paired difference
+  is below the predeclared `-delta` practical-improvement margin.
+- Accepted-workflow rate must be non-inferior; p95 credits/duration, late
+  failure, retries, and steering are mandatory guardrails, never alternative
+  post-hoc promotion endpoints.
 - Record rate-limit utilization delta and successful accepted workflows per
   five-hour window as direct Pro-plan outcomes. Keep API-dollar normalization
   as a separately labeled diagnostic only.
@@ -102,18 +111,27 @@ operation returns a warning.
 G56R-001 Research Baseline and Candidate Matrix
     |
     v
-G56R-002 Model-Effort Benchmark and Promotion Harness
+G56R-002 Authentication, Telemetry, and Trace Schema
     |
     v
-G56R-003 Tier-aware Installer Defaults and Explicit Override
+G56R-003 Corpus Runner, Scoring, and Statistics
     |
-    +--> G56R-004 Quality-critical Executor Routing --------+
-    +--> G56R-005 Structured-work Agent Routing ------------+
-    +--> G56R-006 Read-only Reasoning Agent Routing --------+
-    +--> G56R-007 Latency-first Helper Routing -------------+
+    v
+G56R-004 Policy Comparison
+    |
+    v
+G56R-005 Budgets, Reset Boundaries, Checkpoint, and Resume
+    |
+    v
+G56R-006 Tier-aware Installer Defaults and Explicit Override
+    |
+    +--> G56R-007 Quality-critical Executor Routing --------+
+    +--> G56R-008 Structured-work Agent Routing ------------+
+    +--> G56R-009 Read-only Reasoning Agent Routing --------+
+    +--> G56R-010 Latency-first Helper Routing -------------+
                                                               |
                                                               v
-                              G56R-008 Payload, Documentation, UAT, and Release Proof
+                              G56R-011 Payload, Documentation, UAT, and Release Proof
 ```
 
 ## Progress Tracking
@@ -121,13 +139,16 @@ G56R-003 Tier-aware Installer Defaults and Explicit Override
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
 | G56R-001 | Research Baseline and Candidate Matrix | Pending | - | Ready to scaffold |
-| G56R-002 | Model-Effort Benchmark and Promotion Harness | Pending | - | Blocked by G56R-001 |
-| G56R-003 | Tier-aware Installer Defaults and Explicit Override | Pending | - | Blocked by G56R-002 and stable XPLAT-009 runtime |
-| G56R-004 | Quality-critical Executor Routing | Pending | - | Blocked by G56R-003 |
-| G56R-005 | Structured-work Agent Routing | Pending | - | Blocked by G56R-003 |
-| G56R-006 | Read-only Reasoning Agent Routing | Pending | - | Blocked by G56R-003 |
-| G56R-007 | Latency-first Helper Routing | Pending | - | Blocked by G56R-003 |
-| G56R-008 | Payload, Documentation, UAT, and Release Proof | Pending | - | Blocked by G56R-004 through G56R-007 |
+| G56R-002 | Authentication, Telemetry, and Trace Schema | Pending | - | Blocked by G56R-001 |
+| G56R-003 | Corpus Runner, Acceptance Scoring, and Statistics | Pending | - | Blocked by G56R-002 |
+| G56R-004 | Static/Unpinned/Adaptive Policy Comparison | Pending | - | Blocked by G56R-003 |
+| G56R-005 | Budgets, Reset Boundaries, Checkpoint, and Resume | Pending | - | Blocked by G56R-004 |
+| G56R-006 | Tier-aware Installer Defaults and Explicit Override | Pending | - | Blocked by G56R-005 and stable XPLAT-009 runtime |
+| G56R-007 | Quality-critical Executor Routing | Pending | - | Blocked by G56R-006 |
+| G56R-008 | Structured-work Agent Routing | Pending | - | Blocked by G56R-006 |
+| G56R-009 | Read-only Reasoning Agent Routing | Pending | - | Blocked by G56R-006 |
+| G56R-010 | Latency-first Helper Routing | Pending | - | Blocked by G56R-006 |
+| G56R-011 | Payload, Documentation, UAT, and Release Proof | Pending | - | Blocked by G56R-007 through G56R-010 |
 
 **Status legend:** Pending | Ready | In Progress | In Review | Complete | Blocked
 
@@ -180,74 +201,118 @@ Budget result: research spike; time-boxed, LOC sizing not applicable
 
 ---
 
-### G56R-002: Model-Effort Benchmark and Promotion Harness
+### G56R-002: Authentication, Telemetry, and Trace Schema
 
-**Priority:** P1 | **Depends On:** G56R-001 | **Enables:** G56R-003 through G56R-007
+**Priority:** P1 | **Depends On:** G56R-001 | **Enables:** G56R-003
 
-**Goal:** Make role routing a replayable model x effort/policy decision based
-on end-to-end quality, reliability, latency, and ChatGPT Pro allowance impact.
+**Goal:** Produce privacy-safe, replayable native evidence before live
+experiments or routing decisions depend on derived allowance measures.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: unavailable (estimator operation absent) |
-Production files: approximately 4 |
-Total files: approximately 15 |
-Budget result: re-estimate at scaffold; split fixture expansion from runner work if warned
+Production files: approximately 3 | Total files: approximately 10 |
+Budget result: re-estimate at scaffold; synthetic traces precede live use
 
 **Scope:**
 
-- Extend the Codex Layer 6 runner so callers can override both `model` and
-  `model_reasoning_effort` without mutating agent TOMLs.
-- Fail closed unless native account evidence reports ChatGPT authentication and
-  `planType == "pro"`; capture Pro 5x/20x, workspace/account hash, Codex
-  version/configuration, speed mode, workload snapshot, cache state, and
-  before/after quota windows. Reject concurrent-account contamination.
-- Trace the full workflow graph from user objective through accepted artifact,
-  including parent/child turns, requested/returned model and effort, raw native
-  token fields, context growth, tool-result volume, compactions, spawns,
-  retries, escalation, validation, steering, checkpoints, and abandonment.
-- Preserve raw native telemetry and nulls. Version and label all derived credit,
-  allowance, rate-limit, API-dollar diagnostic, and token formulas; define
-  whether reasoning is already included in output tokens.
-- Add role contracts plus end-to-end workflows stratified across repository and
-  task size, ambiguity, cache state, context-compaction crossing, language,
-  tool topology, orchestration, interruption/resume, and failure modes. Keep a
-  held-out long-workflow canary set.
-- Add paired/randomized run controls, progressive effort descent, confidence-
-  driven sample sizing, per-dimension quality floors, blinded scoring, random
-  human audits, inter-rater agreement, p50/p95 reporting, and replayable output.
-- Compare static, unpinned, and adaptive policies. Encode phase credit, retry,
-  subagent, context-growth, escalation/de-escalation, cancellation, and
-  limit-near checkpoint/resume budgets.
-- Add a prompt/context dimension to the paired matrix: unchanged-prompt control
-  plus bounded variants for duplicated instructions, handoff size, repeated
-  repository context, tool schemas/output, and post-compaction rereading.
-  Record prompt/config hashes and interaction effects; promote route + effort +
-  prompt policy as one measured combination.
-- Keep live calls outside default CI.
-- INVEST/vertical-slice rationale: one executable benchmark path produces a
-  complete promotion decision for any single agent before any route changes.
+- Fail closed on non-ChatGPT or non-Pro auth. Record Pro 5x/20x only from an
+  authoritative entitlement field or archived entitlement evidence with source,
+  timestamp, and hash; never infer it from capacity. Allow explicitly tier-
+  unresolved, tier-neutral analysis while blocking tier-specific conclusions.
+- Define raw parent/child trace events, requested/returned model and effort,
+  tokens/context/tools/compaction/retry/validation/abandonment, null behavior,
+  version/configuration hashes, and synthetic replay fixtures.
+- Keep token-derived credits, every included-limit bucket, and purchased-credit
+  balances separate. Record limit ID, window duration, reset time, before/after
+  utilization, and reset crossing.
+- Use opaque aliases or keyed HMACs; redact emails, IDs, balances, and private
+  paths from public evidence.
 
-**Out of Scope:**
-
-- Selecting or changing agent defaults.
-- A general-purpose model benchmark unrelated to SpecKit Pro contracts.
-- A mandatory LLM judge for deterministic facts.
-- Claiming optimization across models absent from the declared Pro account or
-  tested client.
-
-**Key Files:**
-
-- `tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.sh` - current Codex benchmark entrypoint; use the active post-XPLAT-009 equivalent if migrated
-- `tests/speckit-pro/layer6-efficiency/fixtures-codex/` - ten role fixtures
-- `tests/speckit-pro/layer6-efficiency/lib/quality-scorer.sh` - layered scoring surface or active replacement
-- `tests/speckit-pro/layer4-scripts/test-l6-codex-runner.sh` - deterministic runner contract coverage or active replacement
+**Out of Scope:** corpus execution, statistical promotion, policy comparison,
+budgets, and route selection.
 
 ---
 
-### G56R-003: Tier-aware Installer Defaults and Explicit Override
+### G56R-003: Corpus Runner, Acceptance Scoring, and Statistics
 
-**Priority:** P1 | **Depends On:** G56R-002 and stable post-XPLAT-009 runtime |
-**Enables:** G56R-004 through G56R-007
+**Priority:** P1 | **Depends On:** G56R-002 | **Enables:** G56R-004
+
+**Goal:** Make the quality and efficiency decision deterministic on a paired,
+stratified, held-out corpus.
+
+**Reviewability Budget:** Primary surface: harness/adapter |
+Production files: approximately 4 | Total files: approximately 15 |
+Budget result: split corpus fixtures from statistics if the estimator warns
+
+**Scope:**
+
+- Add ten role contracts, stratified/held-out workflows, randomized paired run
+  order, controlled cache states, confidence-driven sample sizes, blinded
+  scoring, random audits, and inter-rater agreement.
+- For per-agent attribution freeze parent and non-candidate routes, prompts,
+  tools/MCP/skills, repository snapshot, validator, truncation, context/
+  compaction, retries, escalation, and acceptance checker.
+- Implement paired mean token-derived credits-to-acceptance versus current
+  production as the sole primary efficiency endpoint. Charge failures,
+  cancellations, retries, repairs, compaction, and abandonment; require the
+  upper one-sided 95% confidence bound below predeclared `-delta`.
+- Enforce accepted-workflow non-inferiority and p95 credits/duration, late-
+  failure, retry, and steering guardrails. Report included-limit and purchased-
+  credit measures separately as secondary outcomes.
+- Progressively descend every supported effort and retest the first failing
+  boundary; select the lowest stable passing effort.
+
+**Out of Scope:** unpinned/adaptive policy attribution, runtime budgets, and
+installation defaults.
+
+---
+
+### G56R-004: Static, Unpinned, and Adaptive Policy Comparison
+
+**Priority:** P1 | **Depends On:** G56R-003 | **Enables:** G56R-005
+
+**Goal:** Compare complete routing policies without misattributing policy-level
+effects to one agent.
+
+**Reviewability Budget:** Primary surface: harness/adapter |
+Production files: approximately 3 | Total files: approximately 10 |
+Budget result: bounded to policy orchestration and replay fixtures
+
+**Scope:**
+
+- Compare static pins, unpinned Codex selection, and explicit adaptive routes on
+  the same end-to-end corpus and deterministic promotion scorecard.
+- Log routing decisions and escalation/de-escalation signals. Keep these results
+  policy-level; never use them as causal evidence for one agent route.
+- Jointly test bounded prompt/context variants with route and effort while
+  preserving unchanged-prompt controls and configuration hashes.
+
+---
+
+### G56R-005: Budgets, Reset Boundaries, Checkpoint, and Resume
+
+**Priority:** P1 | **Depends On:** G56R-004 | **Enables:** G56R-006
+
+**Goal:** Prove allowance-aware behavior at phase budgets and quota boundaries.
+
+**Reviewability Budget:** Primary surface: scheduler/runtime |
+Production files: approximately 3 | Total files: approximately 10 |
+Budget result: synthetic boundary fixtures before live quota experiments
+
+**Scope:**
+
+- Enforce phase-credit, retry, subagent, context-growth, cancellation, and
+  escalation/de-escalation budgets.
+- Define limit-near/exhausted checkpoint, pause, reset-boundary resume, continue,
+  and cancel behavior with durable objectives and acceptance state.
+- Mark reset-crossing runs and exclude them from ordinary within-window
+  throughput inference while retaining all credits-to-acceptance.
+
+---
+
+### G56R-006: Tier-aware Installer Defaults and Explicit Override
+
+**Priority:** P1 | **Depends On:** G56R-005 and stable post-XPLAT-009 runtime |
+**Enables:** G56R-007 through G56R-010
 
 **Goal:** Install role-pinned defaults predictably while preserving one explicit
 global compatibility override and complete ten-agent verification.
@@ -290,9 +355,9 @@ Budget result: re-estimate at scaffold; within one installer-policy slice by con
 
 ---
 
-### G56R-004: Quality-critical Executor Routing
+### G56R-007: Quality-critical Executor Routing
 
-**Priority:** P1 | **Depends On:** G56R-003 | **Enables:** G56R-008
+**Priority:** P1 | **Depends On:** G56R-006 | **Enables:** G56R-011
 
 **Goal:** Route phase, implementation, and analyze/remediation work to the
 lowest-allowance passing static configuration, starting with Sol.
@@ -332,13 +397,13 @@ Budget result: re-estimate at scaffold; three disjoint TOMLs plus role evidence
 - `speckit-pro/codex-agents/implement-executor.toml`
 - `speckit-pro/codex-agents/analyze-executor.toml`
 - `tests/speckit-pro/layer6-efficiency/fixtures-codex/` - cohort fixtures/results
-- Cohort-specific structural/install assertions selected by G56R-003
+- Cohort-specific structural/install assertions selected by G56R-006
 
 ---
 
-### G56R-005: Structured-work Agent Routing
+### G56R-008: Structured-work Agent Routing
 
-**Priority:** P1 | **Depends On:** G56R-003 | **Enables:** G56R-008
+**Priority:** P1 | **Depends On:** G56R-006 | **Enables:** G56R-011
 
 **Goal:** Route checklist remediation and UAT runbook authoring to the
 lowest-allowance passing static configuration, starting with Terra.
@@ -373,13 +438,13 @@ Budget result: re-estimate at scaffold; two role TOMLs plus evidence
 - `speckit-pro/codex-agents/checklist-executor.toml`
 - `speckit-pro/codex-agents/uat-runbook-author.toml`
 - `tests/speckit-pro/layer6-efficiency/fixtures-codex/` - cohort fixtures/results
-- Cohort-specific structural/install assertions selected by G56R-003
+- Cohort-specific structural/install assertions selected by G56R-006
 
 ---
 
-### G56R-006: Read-only Reasoning Agent Routing
+### G56R-009: Read-only Reasoning Agent Routing
 
-**Priority:** P1 | **Depends On:** G56R-003 | **Enables:** G56R-008
+**Priority:** P1 | **Depends On:** G56R-006 | **Enables:** G56R-011
 
 **Goal:** Route clarification, external research, codebase analysis, and project
 context analysis independently across the full eligible Pro catalog while
@@ -420,9 +485,9 @@ Budget result: re-estimate at scaffold; four TOMLs plus bounded role fixtures
 
 ---
 
-### G56R-007: Latency-first Helper Routing
+### G56R-010: Latency-first Helper Routing
 
-**Priority:** P1 | **Depends On:** G56R-003 | **Enables:** G56R-008
+**Priority:** P1 | **Depends On:** G56R-006 | **Enables:** G56R-011
 
 **Goal:** Select the best bounded-helper route from the full eligible Pro
 catalog while preserving its advisory contract and graceful unavailability.
@@ -462,9 +527,9 @@ Budget result: re-estimate at scaffold; single-agent vertical slice
 
 ---
 
-### G56R-008: Payload, Documentation, UAT, and Release Proof
+### G56R-011: Payload, Documentation, UAT, and Release Proof
 
-**Priority:** P1 | **Depends On:** G56R-004, G56R-005, G56R-006, G56R-007 |
+**Priority:** P1 | **Depends On:** G56R-007, G56R-008, G56R-009, G56R-010 |
 **Enables:** Release
 
 **Goal:** Publish one internally consistent Codex payload whose ten-agent matrix

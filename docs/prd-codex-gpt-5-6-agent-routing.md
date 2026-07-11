@@ -126,31 +126,39 @@ and ships only role assignments that clear a consumer-focused quality floor.
 - **AC-1.5**: The time-boxed spike ends with a go/no-go decision and fixture
   requirements for G56R-002; it does not change installed defaults.
 
-### 3.2 Model-Effort Benchmark and Promotion Harness *(-> G56R-002)*
+### 3.2 Model-Effort Benchmark and Promotion Harness *(-> G56R-002 through G56R-004)*
 
 - **AC-2.1**: The Codex efficiency harness can run an explicit
   `model x model_reasoning_effort x agent` configuration instead of holding the
   TOML model constant. It evaluates static pins, an unpinned Codex-selected
   control, and an explicit adaptive-policy control on end-to-end workflows.
+  Static per-agent attribution and policy-level comparison are distinct modes:
+  unpinned/adaptive results may compare whole policies but may not be attributed
+  to one agent.
 - **AC-2.2**: The harness fails closed unless native account evidence reports
-  ChatGPT authentication and `planType == "pro"`. It records Pro 5x or 20x,
-  account/workspace identifier hash, Codex version, configuration hash, speed
-  mode, workload snapshot, cache condition, and quota/rate-limit state before
-  and after each controlled run. Runs use a dedicated account or a verified
-  no-concurrent-activity interval.
+  ChatGPT authentication and `planType == "pro"`. Pro 5x/20x is recorded only
+  from authoritative machine-readable entitlement data or archived account
+  entitlement evidence with source, timestamp, and hash. It is never inferred
+  from observed capacity. Tier-specific conclusions fail closed when that
+  evidence is unavailable; tier-neutral token/credit analysis may continue only
+  with `pro_tier = unresolved`. Runs also record an opaque run-local account
+  alias, Codex version/configuration, speed mode, workload snapshot, cache state,
+  and before/after quota windows under dedicated or no-concurrent usage.
 - **AC-2.3**: Every run emits a parent-child workflow trace from initial
   objective to final acceptance: workflow/turn/thread/agent identifiers,
   requested and returned model/effort, raw native token fields, start/end
   context, tool-result volume when measurable, compactions, spawn count/depth,
   retries/escalations, validation, steering, checkpoints, abandonment, and
   final acceptance. Missing native fields remain null and are never invented.
-- **AC-2.4**: Derived fields are explicitly labeled and versioned: observed or
-  estimated Codex credits per accepted workflow, rate-limit utilization delta,
-  accepted workflows per five-hour window, completion-before-reset
-  probability, p50/p95 credits and duration, cached-input ratio, retry/rework,
-  compaction, and subagent overhead. API-dollar normalization may be a dated
-  diagnostic cross-check only; it never determines promotion and is never
-  mixed into a generic `cost` field.
+- **AC-2.4**: Telemetry separates three non-interchangeable measures:
+  `token_derived_credits`, included-limit utilization for every applicable
+  `rate_limit_id` (before/after used percent, window duration, reset time), and
+  purchased-credit balance consumption (before/after when exposed). It records
+  `crossed_reset_boundary`; reset-crossing runs are excluded from within-window
+  throughput inference but retained in total credits-to-acceptance. Derived p50,
+  p95, duration, cache, retry/rework, compaction, and subagent fields remain
+  labeled/versioned. API dollars are diagnostic only and never share a generic
+  `cost` field with these measures.
 - **AC-2.5**: Deterministic contract, grounding/evidence, safety, and mutation
   boundaries are hard gates with zero critical failures. Each semantic-quality
   dimension has an absolute floor and a predeclared non-inferiority margin;
@@ -161,20 +169,37 @@ and ships only role assignments that clear a consumer-focused quality floor.
   held-out corpus stratified by repository/task size, ambiguity, language,
   tool topology, compaction crossing, single/multi-agent work, interruption,
   resume, and recoverable/unrecoverable failure. Pilot repeats may start at
-  three, but final sample sizes follow a predeclared confidence rule.
-- **AC-2.7**: A route is promotable only when it clears AC-2.5 and lowers p50
-  or p95 Pro allowance consumption per accepted end-to-end workflow without a
-  material increase in late failure, retries, rework, steering, incomplete
-  workflows, or completion time. Rate-limit utilization delta and successful
-  workflows per five-hour window are required user-facing outcomes.
+  three, but final sample sizes follow a predeclared confidence rule. For
+  per-agent attribution, the parent route, every non-candidate agent route,
+  prompts, tools/MCP/skills, repository snapshot, validation/acceptance policy,
+  tool-result truncation, context/compaction controls, retries, and escalation
+  policy are frozen; only that agent's model or effort varies.
+- **AC-2.7**: The predeclared primary endpoint is paired mean total
+  `token_derived_credits_to_acceptance` relative to the current production
+  routing policy. It charges all parent/child work, retries, failed attempts,
+  cancellations, abandoned branches, validation, repair, and compaction from
+  objective start through acceptance; unsuccessful workflows retain their full
+  consumption and receive the predeclared failure handling rule rather than
+  disappearing from the denominator. Promote only when the upper one-sided 95%
+  confidence bound for the paired mean difference is below `-delta`, where
+  `delta` is a predeclared minimum practically meaningful improvement. Accepted-
+  workflow rate must clear its non-inferiority gate; p95 credit consumption,
+  p95 duration, late failure, retries, and steering are mandatory guardrails.
+  Included-limit utilization and workflows per five-hour window are secondary
+  user-facing outcomes, not alternative promotion endpoints.
 - **AC-2.8**: Effort tuning uses progressive descent through every supported
-  lower effort while gates pass, then adds repetitions at the lowest passing
-  boundary. `max` is tested only for unresolved quality-first failure. Capability
-  probes, rather than assumed effort mappings, control the tested matrix.
+  lower effort while gates pass. After the first failing level is retested with
+  the predeclared boundary-validation sample rule, promotion selects the lowest
+  stable passing level. `max` is tested only for unresolved quality-first
+  failure. Capability probes, rather than assumed effort mappings, control the
+  tested matrix.
 - **AC-2.9**: A versioned, replayable artifact preserves raw telemetry,
   formulas, source-field definitions (including whether reasoning is included
   in output tokens), null behavior, rate-card revision, full traces, candidates,
   failures, selected/rejected policies, and promotion rationale.
+  Public artifacts use an opaque random benchmark-account alias or keyed HMAC
+  with a private rotating key; they redact email, raw account/workspace IDs,
+  quota/purchased-credit balances, and identifying private repository paths.
 - **AC-2.10**: The candidate matrix includes a prompt/context dimension. For
   each role it compares the unchanged prompt with bounded variants that reduce
   duplicated instructions, oversized handoffs, repeated repository context,
@@ -184,7 +209,7 @@ and ships only role assignments that clear a consumer-focused quality floor.
   Promotion selects the passing route + effort + prompt policy as a unit; a
   prompt variant is never generalized to other models or roles without data.
 
-### 3.3 Tier-aware Installer Defaults and Explicit Override *(-> G56R-003)*
+### 3.3 Tier-aware Installer Defaults and Explicit Override *(-> G56R-006)*
 
 - **AC-3.1**: A default install preserves each bundled agent TOML's validated
   role-specific model and effort instead of rewriting every non-helper agent to
@@ -203,13 +228,13 @@ and ships only role assignments that clear a consumer-focused quality floor.
 - **AC-3.6**: Implementation uses the post-XPLAT-009 Python runner/install path
   and does not restore a deleted active Bash helper.
 
-### 3.4 Quality-critical Executor Routing *(-> G56R-004)*
+### 3.4 Quality-critical Executor Routing *(-> G56R-007)*
 
 - **AC-4.1**: `phase-executor`, `implement-executor`, and `analyze-executor`
   start with Sol and Terra hypotheses but screen every eligible Pro-available
   model, including the GPT-5.5 baseline and GPT-5.4 family, through progressive
   effort descent. `max` is considered only after a measured quality failure.
-- **AC-4.2**: Each committed model/effort clears the G56R-002 promotion rule on
+- **AC-4.2**: Each committed model/effort clears the G56R-003 promotion rule on
   role-specific planning, TDD implementation, and analyze/remediation fixtures.
 - **AC-4.3**: Agent sandbox, TDD, grounding, artifact, and remediation contracts
   remain hard invariants while route + effort + bounded prompt variants are
@@ -220,7 +245,7 @@ and ships only role assignments that clear a consumer-focused quality floor.
 - **AC-4.5**: Cohort-specific source, install, validation, and rollback evidence
   makes the route independently reviewable.
 
-### 3.5 Structured-work Agent Routing *(-> G56R-005)*
+### 3.5 Structured-work Agent Routing *(-> G56R-008)*
 
 - **AC-5.1**: `checklist-executor` and `uat-runbook-author` start with Terra as
   a hypothesis but screen every eligible Pro-available model, including GPT-5.4
@@ -232,10 +257,10 @@ and ships only role assignments that clear a consumer-focused quality floor.
   workspace-write boundaries and fail-open/fail-closed behavior specific to
   each role.
 - **AC-5.4**: Prompt/context variants are evaluated jointly with model and
-  effort under the same control and promotion contract as G56R-004; cohort-
+  effort under the same control and promotion contract as G56R-007; cohort-
   specific install and rollback evidence records the selected combination.
 
-### 3.6 Read-only Reasoning Agent Routing *(-> G56R-006)*
+### 3.6 Read-only Reasoning Agent Routing *(-> G56R-009)*
 
 - **AC-6.1**: `clarify-executor`, `domain-researcher`, `codebase-analyst`, and
   `spec-context-analyst` start with Terra as a hypothesis but screen every
@@ -249,9 +274,9 @@ and ships only role assignments that clear a consumer-focused quality floor.
 - **AC-6.4**: The lowest-allowance passing static route is committed per agent;
   one cohort model is not forced across all four roles.
 - **AC-6.5**: Joint prompt/context tuning, install proof, and rollback evidence
-  obey the same cohort contract as G56R-004.
+  obey the same cohort contract as G56R-007.
 
-### 3.7 Latency-first Helper Routing *(-> G56R-007)*
+### 3.7 Latency-first Helper Routing *(-> G56R-010)*
 
 - **AC-7.1**: `autopilot-fast-helper` screens every eligible Pro-available
   model, explicitly including Luna, GPT-5.4 Mini, GPT-5.4, Terra, its current
@@ -268,7 +293,7 @@ and ships only role assignments that clear a consumer-focused quality floor.
 - **AC-7.5**: Source, install, validation, prompt-cleanup, and rollback evidence
   is independently reviewable.
 
-### 3.8 Payload, Documentation, UAT, and Release Proof *(-> G56R-008)*
+### 3.8 Payload, Documentation, UAT, and Release Proof *(-> G56R-011)*
 
 - **AC-8.1**: The Codex payload is rebuilt from source; source TOMLs, generated
   payloads, manifests/checksums, install inventory, and expected model/effort
@@ -293,8 +318,13 @@ and ships only role assignments that clear a consumer-focused quality floor.
   availability. Model, client, prompt, rate-card, entitlement, or agent-policy
   changes trigger rebenchmarking; production canaries watch accepted-workflow
   rate, p95 allowance use/duration, escalation, and late failure.
+- **AC-8.8**: Before merge and release, deterministic documentation checks
+  validate relative links, PRD-to-roadmap acceptance-criteria coverage, SPEC
+  dependencies/anchors, and terminology separation for token-derived credits,
+  included-limit utilization, purchased-credit consumption, and API-dollar
+  diagnostics.
 
-### 3.9 Workflow Budget and Adaptive-policy Contract *(-> G56R-002, G56R-008)*
+### 3.9 Workflow Budget and Adaptive-policy Contract *(-> G56R-004, G56R-005, G56R-011)*
 
 - **AC-9.1**: The evaluation contract declares maximum estimated credits per
   phase, retries, subagent threads/depth, context growth, and redundant work.
@@ -315,22 +345,22 @@ and ships only role assignments that clear a consumer-focused quality floor.
 - **Phase 1 (G56R-001) - Research baseline**: establish authoritative facts,
   current surfaces, candidate routes, and role contracts without changing
   defaults.
-- **Phase 2 (G56R-002) - Benchmark foundation**: make model x effort/policy
-  evaluation, end-to-end Pro allowance accounting, and layered promotion
-  reproducible.
-- **Phase 3 (G56R-003) - Installer policy**: preserve role-pinned defaults and
+- **Phase 2 (G56R-002 through G56R-005) - Evaluation foundation**: separately
+  implement telemetry/traces, corpus/statistics, policy comparison, and
+  allowance-boundary budgets.
+- **Phase 3 (G56R-006) - Installer policy**: preserve role-pinned defaults and
   keep one explicit global compatibility override on the Python runtime path.
-- **Phase 4 (G56R-004 through G56R-007) - Role cohorts**: evaluate and migrate
+- **Phase 4 (G56R-007 through G56R-010) - Role cohorts**: evaluate and migrate
   four independently reviewable cohorts in parallel after the shared contract
   is stable.
-- **Phase 5 (G56R-008) - Release proof**: regenerate payloads, reconcile shared
+- **Phase 5 (G56R-011) - Release proof**: regenerate payloads, reconcile shared
   assertions, run installed UAT, and publish only proven claims.
 
 ## 5. Constraints
 
 - Codex-only scope: `speckit-pro/codex-agents/`, Codex skills, the active Python
   runner/install path, Codex payloads, and directly related tests/evals/docs.
-- G56R-003 and later implementation must ground on the post-XPLAT-009 active
+- G56R-006 and later implementation must ground on the post-XPLAT-009 active
   installer/runtime surface; no deleted Bash helper may be restored.
 - Python 3.11+ standard library remains the installed runtime substrate; this
   PRD adds no runtime dependency.
@@ -357,15 +387,19 @@ and ships only role assignments that clear a consumer-focused quality floor.
   20x release-test account expose through the installed Codex client?
   Recommendation: snapshot the live catalog, probe every entry, and abstain
   from unverified routes.
+- **OQ-1A (G56R-001/G56R-002):** Which supported Codex or account interface
+  authoritatively exposes Pro 5x versus Pro 20x? Recommendation: require a
+  machine-readable entitlement field or archived account entitlement evidence;
+  leave the tier unresolved and block tier-specific claims until available.
 - **OQ-2 (G56R-002):** Which native app-server/client fields expose observed
   credits, token activity, account type/plan, and rate-limit buckets in the
   tested Codex version? Recommendation: capability-probe every field, preserve
   nulls, and derive estimates only with labeled/versioned formulas. Do not add a
   consumer-facing cache-write category unless native Pro telemetry exposes it.
-- **OQ-3 (G56R-003):** Which Python helper owns agent installation after
+- **OQ-3 (G56R-006):** Which Python helper owns agent installation after
   XPLAT-009 merges? Recommendation: bind to the live authoritative registry at
   scaffold time instead of naming a removed compatibility script.
-- **OQ-4 (G56R-004 through G56R-007):** Which adjacent-tier challengers survive
+- **OQ-4 (G56R-007 through G56R-010):** Which catalog challengers survive
   the research spike's availability and contract screen? Recommendation: keep
   the approved shortlist narrow and expand only unstable comparisons.
 - **OQ-5 (G56R-001/G56R-002):** Which catalog entries are ineligible for a role
@@ -381,24 +415,27 @@ and ships only role assignments that clear a consumer-focused quality floor.
 | Feature (§3) | Acceptance Criteria | SPEC | Depends on | Priority |
 |---|---|---|---|---|
 | Research Baseline and Candidate Matrix | AC-1.* | G56R-001 | - | P1 |
-| Model-Effort Benchmark and Promotion Harness | AC-2.* | G56R-002 | G56R-001 | P1 |
-| Tier-aware Installer Defaults and Explicit Override | AC-3.* | G56R-003 | G56R-002; XPLAT-009 runtime stable | P1 |
-| Quality-critical Executor Routing | AC-4.* | G56R-004 | G56R-003 | P1 |
-| Structured-work Agent Routing | AC-5.* | G56R-005 | G56R-003 | P1 |
-| Read-only Reasoning Agent Routing | AC-6.* | G56R-006 | G56R-003 | P1 |
-| Latency-first Helper Routing | AC-7.* | G56R-007 | G56R-003 | P1 |
-| Payload, Documentation, UAT, and Release Proof | AC-8.* | G56R-008 | G56R-004 through G56R-007 | P1 |
-| Workflow Budget and Adaptive-policy Contract | AC-9.* | G56R-002, G56R-008 | G56R-001 | P1 |
+| Authentication, Telemetry, and Trace Schema | AC-2.2 through AC-2.4, AC-2.9 | G56R-002 | G56R-001 | P1 |
+| Corpus Runner, Acceptance Scoring, and Statistics | AC-2.5 through AC-2.8 | G56R-003 | G56R-002 | P1 |
+| Static/Unpinned/Adaptive Policy Comparison | AC-2.1, AC-2.10, AC-9.2, AC-9.4 | G56R-004 | G56R-003 | P1 |
+| Budgets, Reset Boundaries, Checkpoint, and Resume | AC-9.1, AC-9.3 | G56R-005 | G56R-004 | P1 |
+| Tier-aware Installer Defaults and Explicit Override | AC-3.* | G56R-006 | G56R-005; XPLAT-009 runtime stable | P1 |
+| Quality-critical Executor Routing | AC-4.* | G56R-007 | G56R-006 | P1 |
+| Structured-work Agent Routing | AC-5.* | G56R-008 | G56R-006 | P1 |
+| Read-only Reasoning Agent Routing | AC-6.* | G56R-009 | G56R-006 | P1 |
+| Latency-first Helper Routing | AC-7.* | G56R-010 | G56R-006 | P1 |
+| Payload, Documentation, UAT, and Release Proof | AC-8.* | G56R-011 | G56R-007 through G56R-010 | P1 |
 
 ## 8. Success Criteria
 
-1. All acceptance criteria are traceable through G56R-001 through G56R-008;
+1. All acceptance criteria are traceable through G56R-001 through G56R-011;
    the cross-cutting workflow-budget contract is implemented in the shared
    harness and release-proof specs.
 2. Every shipped agent route has zero critical failures, clears per-dimension
-   quality floors and confidence-bound non-inferiority, and lowers p50 or p95
-   Pro allowance consumption per accepted end-to-end workflow without a
-   material reliability, steering, or completion-time regression.
+   quality and accepted-workflow non-inferiority, and has an upper one-sided 95%
+   confidence bound for paired mean token-derived credits-to-acceptance versus
+   the current production policy below the predeclared `-delta`; mandatory p95
+   credit/duration, late-failure, retry, and steering guardrails also pass.
 3. A clean install verifies all ten agents and reports the exact effective
    model/effort matrix with no silent fallback.
 4. Source, generated Codex payload, installed cache, guidance, tests, and UAT
