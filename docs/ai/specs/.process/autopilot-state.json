@@ -81,7 +81,7 @@
       "generated_at": "2026-07-10T19:28:06Z"
     },
     "marker_split_result": {
-      "path": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+      "path": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
       "sha": "c8af4ea0c3720ac95bad35cda150da366ec7f70460fc4c9fe8376a7316edbfd2",
       "generated_at": "2026-07-10T18:06:19Z"
     },
@@ -92,7 +92,7 @@
       "selected_manager": "gh-stack",
       "status": "planned"
     },
-    "stack_manager_evidence_path": "specs/xplat-010-repository-bash-confinement/.process/emission/stack-manager-decision.json",
+    "stack_manager_evidence_path": "docs/ai/specs/.process/XPLAT-010-emission/stack-manager-decision.json",
     "next_slice_id": null,
     "reconciled_at": "2026-07-11T17:01:20Z",
     "slices": [
@@ -106,7 +106,7 @@
           "f449623e5ced6d54e0cff8f443def80bf19615c9"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+        "marker_split_evidence": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
         "review_order": 1,
         "expected_branch": "xplat-010-review/00-process",
         "expected_base_branch": "main",
@@ -170,7 +170,7 @@
         ],
         "emission_mapping": {
           "status": "emitted",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/00-process/packet.json",
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/00-process/packet.json",
           "source_marker_ids": [
             "foundation"
           ],
@@ -198,7 +198,7 @@
           "33d03b053b931c8f625a702cabeac35e3461b305"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+        "marker_split_evidence": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
         "review_order": 2,
         "expected_branch": "xplat-010-review/01-foundation",
         "expected_base_branch": "xplat-010-review/00-process",
@@ -276,7 +276,7 @@
         ],
         "emission_mapping": {
           "status": "emitted",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/01-foundation/packet.json",
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/01-foundation/packet.json",
           "source_marker_ids": [
             "us1"
           ],
@@ -304,7 +304,7 @@
           "09cec1dc32ab79a468acd9bb1559ec94965f6047"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+        "marker_split_evidence": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
         "review_order": 3,
         "expected_branch": "xplat-010-review/02-us14",
         "expected_base_branch": "xplat-010-review/01-foundation",
@@ -389,7 +389,7 @@
         ],
         "emission_mapping": {
           "status": "emitted",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/02-us14/packet.json",
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/02-us14/packet.json",
           "source_marker_ids": [
             "us16"
           ],
@@ -417,7 +417,7 @@
           "dc5cf01b6f71c93ca95053fe14f445668cac6ab0"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+        "marker_split_evidence": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
         "review_order": 4,
         "expected_branch": "xplat-010-review/03-us1",
         "expected_base_branch": "xplat-010-review/02-us14",
@@ -506,7 +506,7 @@
         ],
         "emission_mapping": {
           "status": "emitted",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/03-us1/packet.json",
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/03-us1/packet.json",
           "source_marker_ids": [
             "us2"
           ],
@@ -534,7 +534,7 @@
           "edd01f9b00a6c57520586937517fb2240062cd34"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+        "marker_split_evidence": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
         "review_order": 5,
         "expected_branch": "xplat-010-review/04-us2",
         "expected_base_branch": "xplat-010-review/03-us1",
@@ -610,7 +610,7 @@
         ],
         "emission_mapping": {
           "status": "emitted",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/04-us2/packet.json",
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/04-us2/packet.json",
           "source_marker_ids": [
             "us3"
           ],
@@ -638,7 +638,7 @@
           "99ba3ff7ccbd47d7ef06e7135cfbe85029c9473b"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+        "marker_split_evidence": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
         "review_order": 6,
         "expected_branch": "xplat-010-review/05-us3",
         "expected_base_branch": "xplat-010-review/04-us2",
@@ -717,7 +717,7 @@
         ],
         "emission_mapping": {
           "status": "emitted",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/05-us3/packet.json",
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/05-us3/packet.json",
           "source_marker_ids": [
             "us4"
           ],
@@ -745,7 +745,7 @@
           "1e7909f039e032a8a692319834dfdeedcf5c15b7"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+        "marker_split_evidence": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
         "review_order": 7,
         "expected_branch": "xplat-010-review/06-us4",
         "expected_base_branch": "xplat-010-review/05-us3",
@@ -792,7 +792,7 @@
         ],
         "emission_mapping": {
           "status": "emitted",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/06-us4/packet.json",
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/06-us4/packet.json",
           "source_marker_ids": [
             "us5"
           ],
@@ -820,7 +820,7 @@
           "d99e7ca3e4048f57f01d0392e4d19b1eacf41f27"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+        "marker_split_evidence": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
         "review_order": 8,
         "expected_branch": "xplat-010-review/07-us5",
         "expected_base_branch": "xplat-010-review/06-us4",
@@ -908,7 +908,7 @@
         ],
         "emission_mapping": {
           "status": "emitted",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/07-us5/packet.json",
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/07-us5/packet.json",
           "source_marker_ids": [
             "us6"
           ],
@@ -936,7 +936,7 @@
           "b7370d0200d81a08e992dabc102e3083b4b17675"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+        "marker_split_evidence": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
         "review_order": 9,
         "expected_branch": "xplat-010-review/08-us6",
         "expected_base_branch": "xplat-010-review/07-us5",
@@ -982,7 +982,7 @@
         ],
         "emission_mapping": {
           "status": "emitted",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/08-us6/packet.json",
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/08-us6/packet.json",
           "source_marker_ids": [
             "us7"
           ],
@@ -1010,7 +1010,7 @@
           "2d0b12789db1a49a6bb60453165461a1f33890f3"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+        "marker_split_evidence": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
         "review_order": 10,
         "expected_branch": "xplat-010-review/09-us7",
         "expected_base_branch": "xplat-010-review/08-us6",
@@ -1044,7 +1044,7 @@
         ],
         "emission_mapping": {
           "status": "emitted",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/09-us7/packet.json",
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/09-us7/packet.json",
           "source_marker_ids": [
             "us8"
           ],
@@ -1072,7 +1072,7 @@
           "2c5a17edacc72f70777baded8bb43b995e71a078"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+        "marker_split_evidence": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
         "review_order": 11,
         "expected_branch": "xplat-010-review/10-us7b",
         "expected_base_branch": "xplat-010-review/09-us7",
@@ -1190,7 +1190,7 @@
         ],
         "emission_mapping": {
           "status": "emitted",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/10-us7b/packet.json",
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/10-us7b/packet.json",
           "source_marker_ids": [
             "us9"
           ],
@@ -1218,7 +1218,7 @@
           "965dceb1b3570134bdeb905a7bbdd52422f06bcc"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+        "marker_split_evidence": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
         "review_order": 12,
         "expected_branch": "xplat-010-review/11-us8",
         "expected_base_branch": "xplat-010-review/10-us7b",
@@ -1361,7 +1361,7 @@
         ],
         "emission_mapping": {
           "status": "emitted",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/11-us8/packet.json",
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/11-us8/packet.json",
           "source_marker_ids": [
             "us10"
           ],
@@ -1389,7 +1389,7 @@
           "1342e0179f241bfc7296b1f22dac7245f07f5bc0"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+        "marker_split_evidence": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
         "review_order": 13,
         "expected_branch": "xplat-010-review/12-us9",
         "expected_base_branch": "xplat-010-review/11-us8",
@@ -1536,7 +1536,7 @@
         ],
         "emission_mapping": {
           "status": "emitted",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/12-us9/packet.json",
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/12-us9/packet.json",
           "source_marker_ids": [
             "us11"
           ],
@@ -1564,7 +1564,7 @@
           "9ecdb036e979e95cb1bfb462526b05c88ee97d5e"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+        "marker_split_evidence": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
         "review_order": 14,
         "expected_branch": "xplat-010-review/13-us10",
         "expected_base_branch": "xplat-010-review/12-us9",
@@ -1738,7 +1738,7 @@
         ],
         "emission_mapping": {
           "status": "emitted",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/13-us10/packet.json",
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/13-us10/packet.json",
           "source_marker_ids": [
             "us12"
           ],
@@ -1766,7 +1766,7 @@
           "843ade885a3ba6b673e9803fddbf142e85c3e05a"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+        "marker_split_evidence": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
         "review_order": 15,
         "expected_branch": "xplat-010-review/14-us11",
         "expected_base_branch": "xplat-010-review/13-us10",
@@ -1796,7 +1796,7 @@
         ],
         "emission_mapping": {
           "status": "emitted",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/14-us11/packet.json",
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/14-us11/packet.json",
           "source_marker_ids": [
             "us13"
           ],
@@ -1824,7 +1824,7 @@
           "bcc98649024aa8317e1fb12604dcaf111d246295"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+        "marker_split_evidence": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
         "review_order": 16,
         "expected_branch": "xplat-010-review/15-release-contract",
         "expected_base_branch": "xplat-010-review/14-us11",
@@ -1843,7 +1843,7 @@
         ],
         "emission_mapping": {
           "status": "emitted",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/15-release-contract/packet.json",
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/15-release-contract/packet.json",
           "source_marker_ids": [
             "us14"
           ],
@@ -1871,7 +1871,7 @@
           "14cba0adc5d25b6b097fb539b8cc2b7271513910"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+        "marker_split_evidence": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
         "review_order": 17,
         "expected_branch": "xplat-010-review/16-release-composition",
         "expected_base_branch": "xplat-010-review/15-release-contract",
@@ -1906,7 +1906,7 @@
         ],
         "emission_mapping": {
           "status": "emitted",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/16-release-composition/packet.json",
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/16-release-composition/packet.json",
           "source_marker_ids": [
             "us15"
           ],
@@ -1934,7 +1934,7 @@
           "349c9f2ba1a667cd88621f5e0f862d5212411ee6"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+        "marker_split_evidence": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
         "review_order": 18,
         "expected_branch": "xplat-010-review/17-polish",
         "expected_base_branch": "xplat-010-review/16-release-composition",
@@ -2101,7 +2101,7 @@
         ],
         "emission_mapping": {
           "status": "emitted",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/17-polish/packet.json",
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/17-polish/packet.json",
           "source_marker_ids": [
             "polish"
           ],
@@ -2597,8 +2597,8 @@
       "evidence": {
         "summary": "The canonical planner reports 136 tasks in 18 increments; all 136 are complete after hosted T108 and branch-protection T117 evidence.",
         "repo_paths": [
-          "specs/xplat-010-repository-bash-confinement/tasks.md",
-          "specs/xplat-010-repository-bash-confinement/.process/emission/layer-plan.json"
+          "tests/speckit-pro/unit/fixtures/plan-layers/repository-bash-confinement-plan/tasks.md",
+          "docs/ai/specs/.process/XPLAT-010-emission/layer-plan.json"
         ]
       }
     },
@@ -2607,7 +2607,7 @@
       "evidence": {
         "summary": "All 18 PRs were reviewed and the final GraphQL audit found zero unresolved review threads.",
         "repo_paths": [
-          "specs/xplat-010-repository-bash-confinement/.process/emission/final-reviewability-gate.json",
+          "docs/ai/specs/.process/XPLAT-010-emission/final-reviewability-gate.json",
           "docs/ai/specs/.process/XPLAT-010-pr-packet.json"
         ]
       }
@@ -2627,8 +2627,8 @@
       "evidence": {
         "summary": "The aggregate diff is routed through the verified 18-slice review topology with no merge commits.",
         "repo_paths": [
-          "specs/xplat-010-repository-bash-confinement/.process/emission/final-reviewability-gate.json",
-          "specs/xplat-010-repository-bash-confinement/.process/emission/stack-manager-decision.json"
+          "docs/ai/specs/.process/XPLAT-010-emission/final-reviewability-gate.json",
+          "docs/ai/specs/.process/XPLAT-010-emission/stack-manager-decision.json"
         ]
       }
     },
@@ -2647,7 +2647,7 @@
       "evidence": {
         "summary": "The seven-story UAT runbook records executable local proof; hosted T108/T117 evidence is complete and native UAT remains XPLAT-008-owned.",
         "repo_paths": [
-          "specs/xplat-010-repository-bash-confinement/.process/uat-runbook.md"
+          "docs/ai/specs/.process/XPLAT-010-uat-runbook.md"
         ]
       }
     },
@@ -2658,7 +2658,7 @@
         "repo_paths": [
           "docs/ai/specs/.process/XPLAT-010-pr-body.md",
           "docs/ai/specs/.process/XPLAT-010-pr-packet.json",
-          "specs/xplat-010-repository-bash-confinement/.process/pr-packets"
+          "docs/ai/specs/.process/XPLAT-010-pr-packets"
         ]
       }
     },
@@ -2667,7 +2667,7 @@
       "evidence": {
         "summary": "PRs 311 through 328 merged in review order; final tree identity and deletion of all 18 review branches were audited.",
         "repo_paths": [
-          "specs/xplat-010-repository-bash-confinement/.process/prs.json",
+          "docs/ai/specs/.process/XPLAT-010-prs.json",
           "docs/ai/specs/.process/XPLAT-010-pr-packet.json"
         ]
       }
@@ -2678,7 +2678,7 @@
         "summary": "Actionable review and CI findings were repaired; hosted trigger, sentinel, failure-propagation, and advisory Windows evidence is complete.",
         "repo_paths": [
           "docs/ai/specs/.process/XPLAT-010-retrospective.md",
-          "specs/xplat-010-repository-bash-confinement/.process/emission/final-reviewability-gate.json"
+          "docs/ai/specs/.process/XPLAT-010-emission/final-reviewability-gate.json"
         ]
       }
     },
@@ -2926,7 +2926,7 @@
           "status": "exception",
           "mode": "final-marker",
           "scope": "origin/main..xplat-010-review/00-process",
-          "evidence_path": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+          "evidence_path": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
           "head_sha": "f449623e5ced6d54e0cff8f443def80bf19615c9",
           "commit_sha": "f449623e5ced6d54e0cff8f443def80bf19615c9",
           "metrics": {
@@ -2957,7 +2957,7 @@
         "emission_mapping": {
           "status": "marker_split",
           "head_branch": "xplat-010-review/00-process",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/00-process/packet.json"
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/00-process/packet.json"
         },
         "warnings": []
       },
@@ -3160,7 +3160,7 @@
           "status": "pass",
           "mode": "final-marker",
           "scope": "xplat-010-review/00-process..xplat-010-review/01-foundation",
-          "evidence_path": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+          "evidence_path": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
           "head_sha": "33d03b053b931c8f625a702cabeac35e3461b305",
           "commit_sha": "33d03b053b931c8f625a702cabeac35e3461b305",
           "metrics": {
@@ -3193,7 +3193,7 @@
         "emission_mapping": {
           "status": "marker_split",
           "head_branch": "xplat-010-review/01-foundation",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/01-foundation/packet.json"
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/01-foundation/packet.json"
         },
         "warnings": []
       },
@@ -3443,7 +3443,7 @@
           "status": "pass",
           "mode": "final-marker",
           "scope": "xplat-010-review/01-foundation..xplat-010-review/02-us14",
-          "evidence_path": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+          "evidence_path": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
           "head_sha": "09cec1dc32ab79a468acd9bb1559ec94965f6047",
           "commit_sha": "09cec1dc32ab79a468acd9bb1559ec94965f6047",
           "metrics": {
@@ -3476,7 +3476,7 @@
         "emission_mapping": {
           "status": "marker_split",
           "head_branch": "xplat-010-review/02-us14",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/02-us14/packet.json"
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/02-us14/packet.json"
         },
         "warnings": []
       },
@@ -3733,7 +3733,7 @@
           "status": "pass",
           "mode": "final-marker",
           "scope": "xplat-010-review/02-us14..xplat-010-review/03-us1",
-          "evidence_path": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+          "evidence_path": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
           "head_sha": "dc5cf01b6f71c93ca95053fe14f445668cac6ab0",
           "commit_sha": "dc5cf01b6f71c93ca95053fe14f445668cac6ab0",
           "metrics": {
@@ -3766,7 +3766,7 @@
         "emission_mapping": {
           "status": "marker_split",
           "head_branch": "xplat-010-review/03-us1",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/03-us1/packet.json"
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/03-us1/packet.json"
         },
         "warnings": []
       },
@@ -3972,7 +3972,7 @@
           "status": "pass",
           "mode": "final-marker",
           "scope": "xplat-010-review/03-us1..xplat-010-review/04-us2",
-          "evidence_path": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+          "evidence_path": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
           "head_sha": "edd01f9b00a6c57520586937517fb2240062cd34",
           "commit_sha": "edd01f9b00a6c57520586937517fb2240062cd34",
           "metrics": {
@@ -4005,7 +4005,7 @@
         "emission_mapping": {
           "status": "marker_split",
           "head_branch": "xplat-010-review/04-us2",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/04-us2/packet.json"
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/04-us2/packet.json"
         },
         "warnings": []
       },
@@ -4220,7 +4220,7 @@
           "status": "pass",
           "mode": "final-marker",
           "scope": "xplat-010-review/04-us2..xplat-010-review/05-us3",
-          "evidence_path": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+          "evidence_path": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
           "head_sha": "99ba3ff7ccbd47d7ef06e7135cfbe85029c9473b",
           "commit_sha": "99ba3ff7ccbd47d7ef06e7135cfbe85029c9473b",
           "metrics": {
@@ -4253,7 +4253,7 @@
         "emission_mapping": {
           "status": "marker_split",
           "head_branch": "xplat-010-review/05-us3",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/05-us3/packet.json"
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/05-us3/packet.json"
         },
         "warnings": []
       },
@@ -4380,7 +4380,7 @@
           "status": "pass",
           "mode": "final-marker",
           "scope": "xplat-010-review/05-us3..xplat-010-review/06-us4",
-          "evidence_path": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+          "evidence_path": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
           "head_sha": "1e7909f039e032a8a692319834dfdeedcf5c15b7",
           "commit_sha": "1e7909f039e032a8a692319834dfdeedcf5c15b7",
           "metrics": {
@@ -4413,7 +4413,7 @@
         "emission_mapping": {
           "status": "marker_split",
           "head_branch": "xplat-010-review/06-us4",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/06-us4/packet.json"
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/06-us4/packet.json"
         },
         "warnings": []
       },
@@ -4664,7 +4664,7 @@
           "status": "pass",
           "mode": "final-marker",
           "scope": "xplat-010-review/06-us4..xplat-010-review/07-us5",
-          "evidence_path": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+          "evidence_path": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
           "head_sha": "d99e7ca3e4048f57f01d0392e4d19b1eacf41f27",
           "commit_sha": "d99e7ca3e4048f57f01d0392e4d19b1eacf41f27",
           "metrics": {
@@ -4697,7 +4697,7 @@
         "emission_mapping": {
           "status": "marker_split",
           "head_branch": "xplat-010-review/07-us5",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/07-us5/packet.json"
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/07-us5/packet.json"
         },
         "warnings": []
       },
@@ -4840,7 +4840,7 @@
           "status": "exception",
           "mode": "final-marker",
           "scope": "xplat-010-review/07-us5..xplat-010-review/08-us6",
-          "evidence_path": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+          "evidence_path": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
           "head_sha": "b7370d0200d81a08e992dabc102e3083b4b17675",
           "commit_sha": "b7370d0200d81a08e992dabc102e3083b4b17675",
           "metrics": {
@@ -4873,7 +4873,7 @@
         "emission_mapping": {
           "status": "marker_split",
           "head_branch": "xplat-010-review/08-us6",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/08-us6/packet.json"
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/08-us6/packet.json"
         },
         "warnings": []
       },
@@ -4968,7 +4968,7 @@
           "status": "pass",
           "mode": "final-marker",
           "scope": "xplat-010-review/08-us6..xplat-010-review/09-us7",
-          "evidence_path": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+          "evidence_path": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
           "head_sha": "2d0b12789db1a49a6bb60453165461a1f33890f3",
           "commit_sha": "2d0b12789db1a49a6bb60453165461a1f33890f3",
           "metrics": {
@@ -5001,7 +5001,7 @@
         "emission_mapping": {
           "status": "marker_split",
           "head_branch": "xplat-010-review/09-us7",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/09-us7/packet.json"
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/09-us7/packet.json"
         },
         "warnings": []
       },
@@ -5334,7 +5334,7 @@
           "status": "pass",
           "mode": "final-marker",
           "scope": "xplat-010-review/09-us7..xplat-010-review/10-us7b",
-          "evidence_path": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+          "evidence_path": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
           "head_sha": "2c5a17edacc72f70777baded8bb43b995e71a078",
           "commit_sha": "2c5a17edacc72f70777baded8bb43b995e71a078",
           "metrics": {
@@ -5367,7 +5367,7 @@
         "emission_mapping": {
           "status": "marker_split",
           "head_branch": "xplat-010-review/10-us7b",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/10-us7b/packet.json"
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/10-us7b/packet.json"
         },
         "warnings": []
       },
@@ -5763,7 +5763,7 @@
           "status": "pass",
           "mode": "final-marker",
           "scope": "xplat-010-review/10-us7b..xplat-010-review/11-us8",
-          "evidence_path": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+          "evidence_path": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
           "head_sha": "965dceb1b3570134bdeb905a7bbdd52422f06bcc",
           "commit_sha": "965dceb1b3570134bdeb905a7bbdd52422f06bcc",
           "metrics": {
@@ -5796,7 +5796,7 @@
         "emission_mapping": {
           "status": "marker_split",
           "head_branch": "xplat-010-review/11-us8",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/11-us8/packet.json"
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/11-us8/packet.json"
         },
         "warnings": []
       },
@@ -6201,7 +6201,7 @@
           "status": "pass",
           "mode": "final-marker",
           "scope": "xplat-010-review/11-us8..xplat-010-review/12-us9",
-          "evidence_path": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+          "evidence_path": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
           "head_sha": "1342e0179f241bfc7296b1f22dac7245f07f5bc0",
           "commit_sha": "1342e0179f241bfc7296b1f22dac7245f07f5bc0",
           "metrics": {
@@ -6234,7 +6234,7 @@
         "emission_mapping": {
           "status": "marker_split",
           "head_branch": "xplat-010-review/12-us9",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/12-us9/packet.json"
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/12-us9/packet.json"
         },
         "warnings": []
       },
@@ -6731,7 +6731,7 @@
           "status": "exception",
           "mode": "final-marker",
           "scope": "xplat-010-review/12-us9..xplat-010-review/13-us10",
-          "evidence_path": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+          "evidence_path": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
           "head_sha": "9ecdb036e979e95cb1bfb462526b05c88ee97d5e",
           "commit_sha": "9ecdb036e979e95cb1bfb462526b05c88ee97d5e",
           "metrics": {
@@ -6764,7 +6764,7 @@
         "emission_mapping": {
           "status": "marker_split",
           "head_branch": "xplat-010-review/13-us10",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/13-us10/packet.json"
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/13-us10/packet.json"
         },
         "warnings": []
       },
@@ -6868,7 +6868,7 @@
           "status": "pass",
           "mode": "final-marker",
           "scope": "xplat-010-review/13-us10..xplat-010-review/14-us11",
-          "evidence_path": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+          "evidence_path": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
           "head_sha": "843ade885a3ba6b673e9803fddbf142e85c3e05a",
           "commit_sha": "843ade885a3ba6b673e9803fddbf142e85c3e05a",
           "metrics": {
@@ -6901,7 +6901,7 @@
         "emission_mapping": {
           "status": "marker_split",
           "head_branch": "xplat-010-review/14-us11",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/14-us11/packet.json"
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/14-us11/packet.json"
         },
         "warnings": []
       },
@@ -6956,7 +6956,7 @@
           "status": "warn",
           "mode": "final-marker",
           "scope": "xplat-010-review/14-us11..xplat-010-review/15-release-contract",
-          "evidence_path": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+          "evidence_path": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
           "head_sha": "bcc98649024aa8317e1fb12604dcaf111d246295",
           "commit_sha": "bcc98649024aa8317e1fb12604dcaf111d246295",
           "metrics": {
@@ -6994,7 +6994,7 @@
         "emission_mapping": {
           "status": "marker_split",
           "head_branch": "xplat-010-review/15-release-contract",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/15-release-contract/packet.json"
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/15-release-contract/packet.json"
         },
         "warnings": []
       },
@@ -7108,7 +7108,7 @@
           "status": "warn",
           "mode": "final-marker",
           "scope": "xplat-010-review/15-release-contract..xplat-010-review/16-release-composition",
-          "evidence_path": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+          "evidence_path": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
           "head_sha": "14cba0adc5d25b6b097fb539b8cc2b7271513910",
           "commit_sha": "14cba0adc5d25b6b097fb539b8cc2b7271513910",
           "metrics": {
@@ -7146,7 +7146,7 @@
         "emission_mapping": {
           "status": "marker_split",
           "head_branch": "xplat-010-review/16-release-composition",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/16-release-composition/packet.json"
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/16-release-composition/packet.json"
         },
         "warnings": []
       },
@@ -7493,7 +7493,7 @@
           "status": "exception",
           "mode": "final-marker",
           "scope": "xplat-010-review/16-release-composition..xplat-010-review/17-polish",
-          "evidence_path": "specs/xplat-010-repository-bash-confinement/.process/emission/marker-split-result.json",
+          "evidence_path": "docs/ai/specs/.process/XPLAT-010-emission/marker-split-result.json",
           "head_sha": "349c9f2ba1a667cd88621f5e0f862d5212411ee6",
           "commit_sha": "349c9f2ba1a667cd88621f5e0f862d5212411ee6",
           "metrics": {
@@ -7526,7 +7526,7 @@
         "emission_mapping": {
           "status": "marker_split",
           "head_branch": "xplat-010-review/17-polish",
-          "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/17-polish/packet.json"
+          "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/17-polish/packet.json"
         },
         "warnings": []
       }
@@ -7613,7 +7613,7 @@
     "resolved": "speckit-pro/skills/speckit-autopilot/scripts"
   },
   "spec_id": null,
-  "updated_at": "2026-07-11T18:54:17Z",
+  "updated_at": "2026-07-11T19:11:52Z",
   "workflow_file": "docs/ai/specs/.process/XPLAT-010-workflow.md",
   "status": "completed_archived",
   "archive_cleanup": {

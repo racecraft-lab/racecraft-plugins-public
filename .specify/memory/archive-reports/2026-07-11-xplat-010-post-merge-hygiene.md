@@ -212,7 +212,7 @@ git checkout ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29 -- specs/xplat-010-reposit
 | `docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md` | Marked XPLAT-010 completed/archived and retained the T108, constitution, release, and XPLAT-008 UAT boundaries |
 | `docs/ai/specs/cross-platform-plugin-runtime-roadmap-MOC.md` | Replaced the active XPLAT-010 entry with archive and preserved-evidence pointers |
 | `docs/prd-cross-platform-plugin-runtime.md` | Reconciled completed XPLAT-009/XPLAT-010 proof while retaining the XPLAT-008 native-UAT boundary |
-| `docs/ai/specs/.process/autopilot-state.json` | Recorded all 18 merged PRs and post-merge archive state |
+| `docs/ai/specs/.process/autopilot-state.json` | Recorded all 18 merged PRs, post-merge archive state, and 83 live-pointer repairs to preserved evidence paths |
 | `docs/ai/specs/.process/XPLAT-010-workflow.md` | Reconciled merged-stack, completed T108/T117 evidence, and remaining release boundary |
 | `docs/ai/specs/.process/XPLAT-010-retrospective.md` | Reconciled merge outcome and follow-up boundaries |
 | `docs/ai/specs/.process/XPLAT-010-done-when-traceability.md` | Reconciled merge, completed T108, and branch-protection evidence |
@@ -220,7 +220,7 @@ git checkout ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29 -- specs/xplat-010-reposit
 | `docs/ai/specs/.process/XPLAT-010-pr-packets/` | Preserved all 18 immutable packet/body/validation triplets so archive links remain self-contained |
 | `docs/ai/specs/.process/XPLAT-010-prs.json` | Preserved the generated no-gap stack manifest and repointed its verification evidence to archived packet copies |
 | `docs/ai/specs/.process/XPLAT-010-emission/` | Preserved all six planner, route, split, stack-manager, and reviewability emission records |
-| `docs/ai/specs/.process/XPLAT-010-publication-tail.json` | Preserved and repointed the publication-tail inventory to archived process paths |
+| `docs/ai/specs/.process/XPLAT-010-publication-tail.json` | Preserved the publication-tail inventory, repointed mutable process entries, and retained four historical spec-only allowlist entries backed by exact recovery commands |
 | `tests/speckit-pro/unit/fixtures/` | Preserved purpose-based contract and planner inputs required after active-spec cleanup |
 | `tests/speckit-pro/unit/test-repo-bash-confinement.py` | Repointed live schema reads away from active `specs/**` |
 | `tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py` | Repointed and purpose-renamed the repository Bash confinement planner fixture test |
@@ -249,6 +249,8 @@ git checkout ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29 -- specs/xplat-010-reposit
 - All `54` links in `XPLAT-010-pr-body.md` resolve to preserved packet files.
 - Archive-state assertions: PASS (18/18 merged PR records, `main` bases,
   merge SHAs, empty active inventory, T108 complete, exact five-check rule)
+- Live archive-pointer audit: PASS (`83` active evidence pointers repointed;
+  `96` live pointers resolve; `161` frozen historical inventory paths retained).
 - `git diff --check`: PASS
 - Spec-index write mode: PASS (`status: ok`, no-op because all five rendered
   maps were current); immediate check mode: PASS (`exit_code: 0`).
@@ -288,6 +290,14 @@ runtime, test, path, subprocess, JSON, and Bash-confinement boundaries.
 - Surviving workflow and PR-body evidence linked to packet and emission files
   under the removed active spec. All 62 stack-emission files were preserved
   under explicit XPLAT process paths, and the live archive pointers now resolve.
+- Immutable per-PR packet records, phase-time reviewability records, and the
+  aggregate pre-merge PR snapshots retain their historical path and status
+  values. Current merged provenance and recovery commands are recorded in this
+  report; mutable aggregate pointers are repointed to preserved archive paths.
+- The publication-tail allowlist retains four implementation-head paths for the
+  archived UAT runbook, `SPEC-MOC.md`, `quickstart.md`, and `tasks.md`. They are
+  historical allowlist values, not live repository pointers; the exact
+  `git show` recovery commands above remain their source of truth.
 - Roadmap, workflow, project guidance, and autopilot state still described an
   open stack. They now record the merged 18-PR chain and deleted branches.
 - `GEMINI.md` still advertised the removed shell suite, Bash validators, and

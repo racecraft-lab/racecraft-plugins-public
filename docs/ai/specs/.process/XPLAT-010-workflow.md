@@ -850,7 +850,11 @@ canonical Post state above.
 
 ---
 
-## Project Structure Reference
+## Historical Project Structure Reference
+
+This tree records the implementation-time layout. The active XPLAT-010 spec
+directory was removed by post-merge archive cleanup; its recovery source and
+preserved evidence paths are recorded in the archive report.
 
 ```
 racecraft-plugins-public/
@@ -866,7 +870,7 @@ racecraft-plugins-public/
 ├── .specify/                       # Vendored upstream (allowlisted, never ported)
 ├── .github/workflows/              # Dispatch glue only + container-preflight.yml (PR 11)
 ├── docs/ai/specs/.process/         # Workflow state, ledgers, evidence
-└── specs/xplat-010-repository-bash-confinement/  # This spec's CONTRACT artifacts
+└── .specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md  # Recovery record for removed XPLAT-010 contract artifacts
 ```
 
 ---

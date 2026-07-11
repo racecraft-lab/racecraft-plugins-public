@@ -345,7 +345,7 @@ When a new plugin directory is added to the repository, two files must be update
 
 The key in `.release-please-manifest.json` MUST match the key in `release-please-config.json` exactly. The initial version is typically `0.1.0` for a new plugin.
 
-**Also update the marketplace sync script** (`scripts/sync-marketplace-versions.sh`) if it needs to sync the new plugin's version to `.claude-plugin/marketplace.json`. Verify the script handles the new plugin name, then add the plugin to `.claude-plugin/marketplace.json` as well.
+**Also update the marketplace sync script** (`scripts/sync-marketplace-versions.py`) if it needs to sync the new plugin's version to `.claude-plugin/marketplace.json`. Verify the script handles the new plugin name, then add the plugin to `.claude-plugin/marketplace.json` as well.
 
 Note: CI will test the new plugin on PRs (if files changed), but release-please will not create a release entry until the plugin is added to `release-please-config.json`. This gap is silent — there is no automated check that validates alignment between plugin directories and release-please config.
 

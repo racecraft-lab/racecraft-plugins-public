@@ -84,7 +84,10 @@ boundaries.
   `validate-release-note`, `container-preflight-linux-amd64`, and
   `container-preflight-linux-arm64`.
 - The separate constitution amendment completed through PR #331 at
-  `b537e3b43ca20d8f6e8b6e9430d797444462f2e9` before archive cleanup. The index-tooling
-  defect is repaired in a separate isolated branch before archive.
+  `b537e3b43ca20d8f6e8b6e9430d797444462f2e9` before archive cleanup. The
+  SpecKit index-tooling defect was repaired through PR #332, merged as
+  `c754d9afafda0f222401f2ac4a7ce86d67b48347` on `2026-07-11T18:51:29Z`;
+  the verified PR head was
+  `64417dc3680c26d23ddedd0659f823b1105dbe74`.
 - The first real release Highlights rewrite remains release-publication
   evidence, and public native-platform claims remain blocked by XPLAT-008 UAT.
