@@ -180,7 +180,16 @@ class HostedWindowsPreflightTests(unittest.TestCase):
         specify_call = next(
             call for call in command_mock.call_args_list if call.args[0] == "specify-version"
         )
-        self.assertEqual(specify_call.args[1], ["C:/pipx/specify.exe", "version"])
+        self.assertEqual(
+            specify_call.args[1],
+            [sys.executable, "-c", helper.SPECIFY_VERSION_CODE],
+        )
+        specify_pythonpath = specify_call.args[3]["PYTHONPATH"].split(os.pathsep)
+        self.assertTrue(
+            specify_pythonpath[0].endswith(
+                "windows-x64-pipx/home/venvs/specify-cli/Lib/site-packages"
+            )
+        )
 
     def test_non_windows_platform_is_rejected_before_subprocesses(self) -> None:
         return_code, summary, command_mock = self.run_scenario(
@@ -268,8 +277,8 @@ class HostedWindowsPreflightTests(unittest.TestCase):
         self.assertEqual(summary["runtime_info_exit"], 4)
         self.assertEqual(summary["status"], "fail")
 
-    def test_specify_version_executes_resolved_command(self) -> None:
-        command = ["C:/pipx/specify.exe", "version"]
+    def test_specify_version_executes_installed_module_with_active_python(self) -> None:
+        command = [sys.executable, "-c", helper.SPECIFY_VERSION_CODE]
         with tempfile.TemporaryDirectory() as temporary:
             evidence_dir = Path(temporary) / "evidence"
             with mock.patch.object(

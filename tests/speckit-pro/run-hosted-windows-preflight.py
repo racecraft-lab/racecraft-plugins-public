@@ -46,6 +46,10 @@ ROLE_ARCHITECTURE_FAMILIES = {
 }
 SUBPROCESS_TIMEOUT_SECONDS = 300
 SUBPROCESS_TIMEOUT_EXIT_CODE = 124
+SPECIFY_VERSION_CODE = (
+    "import sys; from specify_cli import main; "
+    "sys.argv = ['specify', 'version']; raise SystemExit(main())"
+)
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -82,30 +86,17 @@ def _run_command(
     try:
         with stdout_path.open("wb") as stdout_stream, stderr_path.open("wb") as stderr_stream:
             try:
-                if name == "specify-version":
-                    completed = subprocess.run(
-                        command,
-                        cwd=REPO_ROOT,
-                        env=env,
-                        input=encoded_input,
-                        stdout=stdout_stream,
-                        stderr=stderr_stream,
-                        check=False,
-                        shell=False,
-                        timeout=SUBPROCESS_TIMEOUT_SECONDS,
-                    )
-                else:
-                    completed = subprocess.run(
-                        [sys.executable, *command[1:]],
-                        cwd=REPO_ROOT,
-                        env=env,
-                        input=encoded_input,
-                        stdout=stdout_stream,
-                        stderr=stderr_stream,
-                        check=False,
-                        shell=False,
-                        timeout=SUBPROCESS_TIMEOUT_SECONDS,
-                    )
+                completed = subprocess.run(
+                    [sys.executable, *command[1:]],
+                    cwd=REPO_ROOT,
+                    env=env,
+                    input=encoded_input,
+                    stdout=stdout_stream,
+                    stderr=stderr_stream,
+                    check=False,
+                    shell=False,
+                    timeout=SUBPROCESS_TIMEOUT_SECONDS,
+                )
                 return_code = completed.returncode
             except subprocess.TimeoutExpired:
                 return_code = SUBPROCESS_TIMEOUT_EXIT_CODE
@@ -378,11 +369,20 @@ def _run(args: argparse.Namespace) -> int:
         with Path(github_path).open("a", encoding="utf-8", newline="\n") as path_stream:
             path_stream.write(f"{pipx_bin_dir}\n")
 
+    specify_site_packages = (
+        pipx_root / "home" / "venvs" / "specify-cli" / "Lib" / "site-packages"
+    )
+    specify_env = child_env.copy()
+    specify_env["PYTHONPATH"] = os.pathsep.join(
+        [str(specify_site_packages), child_env["PYTHONPATH"]]
+    )
+    summary["specify_site_packages"] = str(specify_site_packages)
+
     specify_version_exit = _run_command(
         "specify-version",
-        [specify_command, "version"],
+        [sys.executable, "-c", SPECIFY_VERSION_CODE],
         evidence_dir,
-        child_env,
+        specify_env,
         stdout_name="specify-version.txt",
     )
     specify_version_output = _read_text(evidence_dir / "specify-version.txt")
