@@ -1,5 +1,35 @@
 # Repository Guidelines
 
+## Working in This Repo
+
+Four rules, in priority order. These exist because plugin/marketplace edits have high blast radius (every install consumer gets the change on `/plugin marketplace update`) and most defects here come from doing too much, not too little.
+
+### 1. Surface assumptions before editing
+- State them in chat before touching files. If a plugin manifest, release config, or CI workflow change is ambiguous, ask — don't infer.
+- If a request has multiple reasonable interpretations (e.g., "fix the release" could mean bump version, re-trigger workflow, or patch the script), list them and let the user pick.
+- If a simpler approach exists (e.g., a `chore:` empty commit vs. a code change), say so before implementing the larger one.
+- If something is unclear, stop and name what's confusing — don't push through on a guess.
+
+### 2. Simplest change that solves it
+- No features beyond what was asked. No new abstractions for one-call-site code. No new test layers, scripts, or helpers unless a second use exists or is explicitly asked for.
+- No flags/options "for future flexibility" — add them when a second caller actually appears. No error handling for scenarios that cannot occur.
+- For repo-local gates, prefer `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < <request.json>` over new shell or `jq` logic. Do not add active repository Bash outside the bounded workflow-dispatch and fixed vendored `.specify/**` boundaries.
+- If you write 200 lines where 50 would do, rewrite it. The test: "Would a senior engineer say this is overcomplicated?"
+
+### 3. Surgical edits
+- Touch only what the request requires. Don't reformat adjacent JSON, reorder keys in `plugin.json` / `marketplace.json`, or "clean up" comments you didn't author.
+- When editing one plugin's files, don't drift into another plugin's files unless the task explicitly spans them.
+- Remove only the imports/blocks your change orphans — leave pre-existing dead code alone (mention it, don't delete it).
+- Match existing style in shell scripts, YAML, and Markdown even if you'd write it differently.
+- The test: every changed line should trace directly to the user's request.
+
+### 4. Verifiable success criteria
+- Translate every task into a check before coding: "edit X" → "after edit, `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json` passes" or "`gh pr view <N>` shows green".
+- For workflow / release changes, the success check is "the next release PR from release-please reflects this" — say that out loud before editing.
+- For multi-step work, list the steps + their verification commands up front, then loop on them.
+
+Tradeoff: these bias toward caution over speed. For a one-line `chore:` edit, use judgment.
+
 ## Project Structure & Module Organization
 
 This repository is a Claude Code and Codex plugin marketplace. The Claude Code
@@ -45,7 +75,9 @@ standard library, `#!/usr/bin/env python3` for executable Python files, argument
 arrays and `shell=False` for subprocesses, and 2-space indentation in Markdown
 lists/tables where needed. Repository-local Bash is confined to bounded workflow
 dispatch glue and the fixed vendored `.specify/**` allowlist; do not introduce a
-new Bash or `jq` runtime dependency.
+new Bash or `jq` runtime dependency. `.specify/**` is vendored upstream
+SpecKit content — refresh it through the SpecKit install/upgrade tooling rather
+than hand-editing it.
 
 Name plugins and skill directories in kebab-case, for example `speckit-autopilot`. Keep command filenames aligned with command names, for example `commands/autopilot.md`. Command docs must start and end frontmatter with `---` and include `description:` and `allowed-tools:`.
 

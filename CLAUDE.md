@@ -1,40 +1,12 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository. Shared agent guidance — including the four working rules — lives in [AGENTS.md](AGENTS.md) and is imported below; this file adds the Claude-Code-specific depth.
+
+@AGENTS.md
 
 <!-- SPECKIT START -->
 No active SpecKit implementation plan is selected. XPLAT-010 merged through PRs #311-#328 and is archived in `.specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md`. Repository validation is Python 3.11+ and manifest-driven; Bash is confined to bounded GitHub workflow dispatch glue and the fixed release-excluded vendored `.specify/**` allowlist. T108/T117 hosted evidence is complete. Public native Windows/macOS/Linux claims remain blocked by the preserved XPLAT-008 operator UAT matrix.
 <!-- SPECKIT END -->
-
-## Working in This Repo
-
-Four rules, in priority order. These exist because plugin/marketplace edits have high blast radius (every install consumer gets the change on `/plugin marketplace update`) and most defects here come from doing too much, not too little.
-
-### 1. Surface assumptions before editing
-- State them in chat before touching files. If a plugin manifest, release config, or CI workflow change is ambiguous, ask — don't infer.
-- If a request has multiple reasonable interpretations (e.g., "fix the release" could mean bump version, re-trigger workflow, or patch the script), list them and let the user pick.
-- If a simpler approach exists (e.g., a `chore:` empty commit vs. a code change), say so before implementing the larger one.
-- If something is unclear, stop and name what's confusing — don't push through on a guess.
-
-### 2. Simplest change that solves it
-- No features beyond what was asked. No new abstractions for one-call-site code. No new test layers, scripts, or helpers unless a second use exists or is explicitly asked for.
-- No flags/options "for future flexibility" — add them when a second caller actually appears. No error handling for scenarios that cannot occur.
-- For repo-local gates, prefer `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < <request.json>` over new shell or `jq` logic. Do not add active repository Bash outside the bounded workflow-dispatch and fixed vendored `.specify/**` boundaries.
-- If you write 200 lines where 50 would do, rewrite it. The test: "Would a senior engineer say this is overcomplicated?"
-
-### 3. Surgical edits
-- Touch only what the request requires. Don't reformat adjacent JSON, reorder keys in `plugin.json` / `marketplace.json`, or "clean up" comments you didn't author.
-- When editing one plugin's files, don't drift into another plugin's files unless the task explicitly spans them.
-- Remove only the imports/blocks your change orphans — leave pre-existing dead code alone (mention it, don't delete it).
-- Match existing style in shell scripts, YAML, and Markdown even if you'd write it differently.
-- The test: every changed line should trace directly to the user's request.
-
-### 4. Verifiable success criteria
-- Translate every task into a check before coding: "edit X" → "after edit, `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json` passes" or "`gh pr view <N>` shows green".
-- For workflow / release changes, the success check is "the next release PR from release-please reflects this" — say that out loud before editing.
-- For multi-step work, list the steps + their verification commands up front, then loop on them.
-
-Tradeoff: these bias toward caution over speed. For a one-line `chore:` edit, use judgment.
 
 ## Start Here
 
