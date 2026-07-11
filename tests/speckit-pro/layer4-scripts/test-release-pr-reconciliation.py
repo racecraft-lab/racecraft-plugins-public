@@ -35,6 +35,7 @@ class FakeGuard:
     HASHES = {
         "dist/claude/speckit-pro": "c" * 64,
         "dist/codex/speckit-pro": "d" * 64,
+        "dist/claude/speckit-pro/speckit_pro_runner": "e" * 64,
     }
 
     @classmethod
@@ -129,6 +130,35 @@ class ReleasePrReconciliationTests(unittest.TestCase):
             self.assertEqual(
                 refresh.canonical_proof_hash_replacements(repo_root, FakeGuard),
                 {old_claude: "c" * 64, old_codex: "d" * 64},
+            )
+
+    def test_canonical_mapping_refreshes_partial_root_without_extra_category(self) -> None:
+        old_claude = "a" * 64
+        old_codex = "b" * 64
+        old_partial = "f" * 64
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            evidence = repo_root / refresh.EVIDENCE_PROOF
+            partial = repo_root / refresh.PARTIAL_ROOT_PROOF
+            evidence.parent.mkdir(parents=True)
+            partial.parent.mkdir(parents=True, exist_ok=True)
+            evidence.write_text(
+                proof([row("claude", old_claude), row("codex", old_codex)]),
+                encoding="utf-8",
+            )
+            partial_row = row("claude", old_partial)
+            partial_row["source_payload_root"] = (
+                "dist/claude/speckit-pro/speckit_pro_runner"
+            )
+            partial.write_text(proof([partial_row]), encoding="utf-8")
+
+            self.assertEqual(
+                refresh.canonical_proof_hash_replacements(repo_root, FakeGuard),
+                {
+                    old_claude: "c" * 64,
+                    old_codex: "d" * 64,
+                    old_partial: "e" * 64,
+                },
             )
 
     def test_missing_canonical_proof_fails_with_targeted_diagnostic(self) -> None:

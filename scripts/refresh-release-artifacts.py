@@ -52,6 +52,7 @@ INSTALLED_CACHE_ROOT = "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero
 
 PROOF_GLOB_DIR = "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash"
 EVIDENCE_PROOF = "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json"
+PARTIAL_ROOT_PROOF = f"{PROOF_GLOB_DIR}/installed-cache-proof-partial-root.json"
 
 PAYLOAD_COMPLETENESS_REQUEST = (
     "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/requests/payload-completeness-apply.json"
@@ -269,40 +270,45 @@ def snapshot_proof_recomputes(repo_root: Path, proof_files: list[Path], guard: A
 def canonical_proof_hash_replacements(repo_root: Path, guard: Any) -> dict[str, str]:
     """Map trusted recorded hashes to rebuilt hashes for legacy partial bumps.
 
-    The committed evidence proof is the canonical positive case. Its recorded
-    hashes are trusted even when a legacy release commit already changed a
-    payload manifest before this refresh started. Replacing those exact hashes
-    across the fixture family preserves intentional cross-product mismatches and
-    all-zero stale sentinels while updating every positive hash consistently.
+    The committed evidence proof is the canonical full-root positive case. The
+    partial-root fixture is also trusted when present because its negative case
+    must isolate root-boundary findings without adding a stale-hash finding.
+    Replacing those exact hashes across the fixture family preserves intentional
+    cross-product mismatches and all-zero stale sentinels while updating every
+    positive hash consistently.
     """
 
-    proof_file = repo_root / EVIDENCE_PROOF
-    try:
-        proof_text = proof_file.read_text(encoding="utf-8")
-    except (OSError, UnicodeError) as exc:
-        fail(f"unable to read canonical installed-cache proof at {EVIDENCE_PROOF}: {exc}")
-        raise  # unreachable; fail() exits
-    try:
-        document = json.loads(proof_text)
-    except json.JSONDecodeError as exc:
-        fail(
-            f"canonical installed-cache proof at {EVIDENCE_PROOF} is malformed JSON: "
-            f"{exc.msg} (line {exc.lineno}, column {exc.colno})"
-        )
-        raise  # unreachable; fail() exits
-    rows = document.get("proofs") if isinstance(document.get("proofs"), list) else []
     replacements: dict[str, str] = {}
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        current = row.get("source_payload_tree_hash")
-        rebuilt = recompute_tree_hash(repo_root, guard, row)
-        if not isinstance(current, str) or rebuilt is None or current == rebuilt:
-            continue
-        existing = replacements.get(current)
-        if existing is not None and existing != rebuilt:
-            fail("canonical installed-cache proof maps one recorded hash to multiple rebuilt hashes")
-        replacements[current] = rebuilt
+    proof_paths = [EVIDENCE_PROOF]
+    if (repo_root / PARTIAL_ROOT_PROOF).is_file():
+        proof_paths.append(PARTIAL_ROOT_PROOF)
+    for proof_rel in proof_paths:
+        proof_file = repo_root / proof_rel
+        try:
+            proof_text = proof_file.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as exc:
+            fail(f"unable to read canonical installed-cache proof at {proof_rel}: {exc}")
+            raise  # unreachable; fail() exits
+        try:
+            document = json.loads(proof_text)
+        except json.JSONDecodeError as exc:
+            fail(
+                f"canonical installed-cache proof at {proof_rel} is malformed JSON: "
+                f"{exc.msg} (line {exc.lineno}, column {exc.colno})"
+            )
+            raise  # unreachable; fail() exits
+        rows = document.get("proofs") if isinstance(document.get("proofs"), list) else []
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            current = row.get("source_payload_tree_hash")
+            rebuilt = recompute_tree_hash(repo_root, guard, row)
+            if not isinstance(current, str) or rebuilt is None or current == rebuilt:
+                continue
+            existing = replacements.get(current)
+            if existing is not None and existing != rebuilt:
+                fail("canonical installed-cache proof maps one recorded hash to multiple rebuilt hashes")
+            replacements[current] = rebuilt
     return replacements
 
 
