@@ -54,7 +54,7 @@
       "required": ["path", "entry_count", "release_readiness_excluded"],
       "properties": {
         "path": { "type": "string", "minLength": 1 },
-        "entry_count": { "const": 10 },
+        "entry_count": { "const": 9 },
         "release_readiness_excluded": {
           "const": true,
           "description": "True iff every allowlist entry carries release_readiness_excluded: true."
