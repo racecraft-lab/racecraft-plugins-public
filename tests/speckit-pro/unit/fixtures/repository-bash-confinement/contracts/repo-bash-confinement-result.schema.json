@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/speckit-pro/xplat-010/repo-bash-confinement-result.schema.json",
+  "title": "XPLAT-010 Repository Bash Confinement Guard Result",
+  "description": "data payload of the runner response for the new active-path-guard operation 'repo-bash-confinement'. Mirrors the XPLAT-009 zero-bash-guard result shape. status pass iff blocking_count == 0. Allowlisted vendored entries are surfaced under release_readiness_excluded and excluded from the positive Bash-free evidence set (FR-004).",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "feature_id",
+    "status",
+    "blocking_count",
+    "classified_counts",
+    "findings",
+    "enumeration",
+    "allowlist"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "feature_id": { "const": "XPLAT-010" },
+    "status": { "enum": ["pass", "fail"] },
+    "blocking_count": { "type": "integer", "minimum": 0 },
+    "classified_counts": {
+      "type": "object",
+      "description": "Count of findings by classification (e.g. blocking_repo_bash, vendored_specify_helper).",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    },
+    "total_finding_count": { "type": "integer", "minimum": 0 },
+    "truncated_finding_count": { "type": "integer", "minimum": 0 },
+    "script_file_count": { "type": "integer", "minimum": 0 },
+    "enumeration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "workflow_exclusion"],
+      "properties": {
+        "source": {
+          "const": "git ls-files -z",
+          "description": "Live repository-wide enumeration via the argv list [\"git\", \"ls-files\", \"-z\"] from the repo root (never a command string, never shell=True, never a fixed file list)."
+        },
+        "workflow_exclusion": {
+          "const": ".github/workflows/",
+          "description": "The sanctioned Bash dispatch-glue boundary, applied as a post-enumeration Python filter."
+        },
+        "tracked_file_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "allowlist": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "entry_count", "release_readiness_excluded"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "entry_count": { "const": 10 },
+        "release_readiness_excluded": {
+          "const": true,
+          "description": "True iff every allowlist entry carries release_readiness_excluded: true."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["path", "category", "classification"],
+      "properties": {
+        "path": { "type": "string" },
+        "line": { "type": ["integer", "null"] },
+        "category": {
+          "type": "string",
+          "description": "One of: script_file (.sh/.bash suffix or bash/POSIX-sh shebang), command_argv_subprocess / os_system / shell_true (Python AST), hooks_json_command, package_json_script."
+        },
+        "classification": {
+          "type": "string",
+          "description": "blocking_repo_bash for a violation; vendored_specify_helper for an allowlisted (release-readiness-excluded) vendored file."
+        },
+        "reason": { "type": "string" }
+      }
+    }
+  }
+}
