@@ -362,10 +362,8 @@ def command_spec_from_override(command_id: str, raw: Any) -> CommandSpec | dict[
 def default_command_spec(command_id: str, inputs: dict[str, Any], repo_root: Path) -> CommandSpec | dict[str, Any]:
     if command_id == "toolchain":
         return toolchain_command_spec(command_id, inputs, repo_root)
-    if command_id in {"layer-1", "layer-4", "layer-5", "layer-7"}:
+    if command_id in {"layer-1", "layer-4", "layer-5", "layer-7", "layer-8"}:
         return external_layer_script_spec(command_id)
-    if command_id == "layer-8":
-        return internal_command_spec(command_id)
     return unsafe_command_diagnostic(command_id, "unknown suite command id")
 
 
@@ -457,8 +455,6 @@ def run_internal_command(command: CommandSpec, repo_root: Path) -> dict[str, Any
 def run_internal_suite_check(command_id: str, repo_root: Path) -> int:
     if command_id == "toolchain":
         return check_toolchain(repo_root)
-    if command_id == "layer-8":
-        return check_layer8(repo_root)
     print(f"unknown internal suite command: {command_id}", file=sys.stderr)
     return 2
 
@@ -486,28 +482,8 @@ def check_toolchain(repo_root: Path) -> int:
     return emit_checks("toolchain preflight", checks)
 
 
-def check_layer8(repo_root: Path) -> int:
-    parity_dir = repo_root / "tests" / "speckit-pro" / "layer8-parity"
-    case_dirs = sorted(path for path in parity_dir.iterdir() if path.is_dir() and path.name[:2].isdigit()) if parity_dir.is_dir() else []
-    checks: list[tuple[str, bool, str]] = [(rel(parity_dir, repo_root), parity_dir.is_dir(), "parity directory exists")]
-    checks.append(("layer8 case count", len(case_dirs) >= 4, f"{len(case_dirs)} cases"))
-    for case_dir in case_dirs:
-        checks.append((rel(case_dir / "workflow.md", repo_root), (case_dir / "workflow.md").is_file(), "workflow fixture exists"))
-        checks.append((rel(case_dir / "expected-equivalence.json", repo_root), json_file_ok(case_dir / "expected-equivalence.json"), "expected equivalence JSON"))
-        checks.append((rel(case_dir / "tolerance.json", repo_root), json_file_ok(case_dir / "tolerance.json"), "tolerance JSON"))
-    return emit_checks("layer-8 parity fixtures", checks)
-
-
 def platform_python() -> str:
     return f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-
-
-def json_file_ok(path: Path) -> bool:
-    try:
-        parsed = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
-        return False
-    return isinstance(parsed, dict)
 
 
 def command_result(

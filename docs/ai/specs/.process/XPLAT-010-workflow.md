@@ -441,7 +441,7 @@ window, and the unavailable tasks-mode gate (recorded fallback chain).
   Budget and Split Decision section of this workflow file). Plan tasks so
   each PR is independently CI-green.
 - Shipped-runner changes (suite gate manifest read, confinement guard op) are
-  confined to PRs 2, 7b, 10, and 13; each triggers the payload rebuild + proof-hash
+  confined to PRs 2, 7b, 8, 10, and 13; each triggers the payload rebuild + proof-hash
   regeneration ritual and must regenerate release-readiness evidence LAST
   with home-directory sanitization.
 - pr-checks.yml job renames require matching branch-protection updates —
@@ -592,7 +592,7 @@ When checklist identifies `[Gap]` items:
 ## Constraints
 - Repo-side Python lives under tests/speckit-pro/, scripts/, .claude/hooks/ —
   never under speckit-pro/ (the payload guard fails if tests reappear there)
-- Shipped-runner tasks (PRs 2, 7b, 10, and 13) must include the payload rebuild +
+- Shipped-runner tasks (PRs 2, 7b, 8, 10, and 13) must include the payload rebuild +
   proof-hash regeneration ritual as explicit tasks, release-readiness last
 - Bound task generation with the design concept Non-goals: no .specify/**
   ports, no AI release notes, no L8 semantic judge, no UAT-matrix work —
@@ -735,7 +735,7 @@ Before starting any task:
   tests/speckit-pro/parity/xplat-010/<script>-baseline.txt → port with names
   preserved 1:1 → dual-run diff recorded in the PR body → manifest flip →
   .sh delete. All in one PR.
-- Shipped-runner changes (PRs 2, 7b, 10, and 13 only): after any
+- Shipped-runner changes (PRs 2, 7b, 8, 10, and 13 only): after any
   speckit_pro_runner byte change, run the payload/proof regeneration ritual —
   manifest sha256 recompute, scripts/build-plugin-payloads.py, checksum-based
   fixture sync, per-row proof hash recompute, evidence regeneration in gate
@@ -753,19 +753,19 @@ Before starting any task:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| PR 1 — orphan deletion + ledger | | | |
-| PR 2 — suite manifest + run-all.py | | | |
-| PRs 3a/3b — L1 validator ports | | | |
-| PR 4 — MOC lints + codex validators | | | |
-| PR 5 — L5 + toolchain + CI dispatch swap | | | |
-| PR 6 — scripts + hooks ports | | | |
-| PRs 7a/7b — L7 replay harness | | | |
-| PR 8 — L8 parity | | | |
+| PR 1 — orphan deletion + ledger | T005–T007 | 3/3 | Complete |
+| PR 2 — suite manifest + run-all.py | T008–T017 | 10/10 | Complete |
+| PRs 3a/3b — L1 validator ports | T018–T039 | 22/22 | Complete |
+| PR 4 — MOC lints + codex validators | T040–T045 | 6/6 | Complete |
+| PR 5 — L5 + toolchain + CI dispatch swap | T046–T053 | 8/8 | Complete |
+| PR 6 — scripts + hooks ports | T054–T061 | 8/8 | Complete |
+| PRs 7a/7b — L7 replay harness | T062–T072 | 11/11 | Complete |
+| PR 8 — L8 parity | T073–T080 | 8/8 | Complete; `2197/2197` default, `88/88` docs smoke, shipped artifacts regenerated idempotently |
 | PR 9 — live-eval runners | | | |
 | PR 10 — confinement guard + bash deletion | | | |
 | PR 11 — container/Windows preflight CI | | | |
 | PR 12 — release-notes pipeline | | | |
-| PR 13 — spec-size estimator runner op | | | |
+| PR 13 — spec-size estimator runner op | T121–T130 | 10/10 | Complete; landed early in stack order |
 
 ---
 

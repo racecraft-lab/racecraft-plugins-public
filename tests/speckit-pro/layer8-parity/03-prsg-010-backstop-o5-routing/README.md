@@ -24,7 +24,7 @@ Dry-run mode validates fixture shape and JSON.
 ## Mode
 
 ```bash
-bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run --fixture 03-prsg-010-backstop-o5-routing
+python3 tests/speckit-pro/layer8-parity/run-parity-fixtures.py --dry-run --fixture 03-prsg-010-backstop-o5-routing
 ```
 
 Live mode is optional and token-costly, consistent with Layer 8.

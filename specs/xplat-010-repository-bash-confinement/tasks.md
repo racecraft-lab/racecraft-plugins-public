@@ -207,14 +207,14 @@ Baseline capture AND the port-side parity comparison MUST run in the SAME pinned
 
 **Slice goal (US2)**: Port the Layer-8 parity runner + its `jq`-dependent libs and convert the 8 per-case `env-*.sh` fixture scripts to Python/data so PR 10's guard finds zero non-allowlisted `.sh` (research §D11). Retire native `check_layer8`.
 
-- [ ] T073 [P] [US2] Port `tests/speckit-pro/layer8-parity/lib/extractors.sh` → `.py` (Per-Port Protocol via active Layer-4 test `test-l8-extractors.sh`).
-- [ ] T074 [P] [US2] Port `tests/speckit-pro/layer8-parity/lib/judge.sh` → `.py` (Per-Port Protocol via active Layer-4 test `test-l8-judge.sh`). **Boundary guard**: keep the existing tolerance arms (`byte-identical`, `exact`, `tolerance-1`) only — the `semantic-equivalent` LLM judge stays skipped-with-warning (design-concept Non-goal; see Boundary Guards).
-- [ ] T075 [US2] Port `tests/speckit-pro/layer8-parity/run-parity-fixtures.sh` → `.py`, dropping the `jq` dependency (Per-Port Protocol); preserve `--dry-run` (free structural validation) and `--live --budget-usd` semantics.
-- [ ] T076 [P] [US2] Convert the 8 per-case `env-fallback.sh`/`env-teams.sh` fixture scripts under `layer8-parity/0{1,2,3,4}-*/` to Python/data (the environment-selection inputs the real validator requires); delete the 8 `.sh`.
-- [ ] T077 [US2] Port the active Layer-4 tests `test-l8-extractors.sh` and `test-l8-judge.sh` → `.py`; delete their `.sh`.
-- [ ] T078 [US2] Retire the native `check_layer8` in `gates/suite.py` at this boundary (it covered only 3 of 6 required files; no equivalence shim — FR-008); flip Layer-8 to `python-module` in `suite-manifest.json` + baseline pointers.
-- [ ] T079 [US2] Append the Layer-8 delta lines to `docs/ai/specs/.process/XPLAT-010-count-ledger.md`; confirm default-suite gate + drift-guard test green.
-- [ ] T080 [US2] Confirm `git ls-files 'tests/speckit-pro/layer8-parity/**/*.sh'` returns empty (all Layer-8 `.sh` converted/deleted) — the PR-10 guard precondition for this surface.
+- [x] T073 [P] [US2] Port `tests/speckit-pro/layer8-parity/lib/extractors.sh` → `.py` (Per-Port Protocol via active Layer-4 test `test-l8-extractors.sh`).
+- [x] T074 [P] [US2] Port `tests/speckit-pro/layer8-parity/lib/judge.sh` → `.py` (Per-Port Protocol via active Layer-4 test `test-l8-judge.sh`). **Boundary guard**: keep the existing tolerance arms (`byte-identical`, `exact`, `tolerance-1`) only — the `semantic-equivalent` LLM judge stays skipped-with-warning (design-concept Non-goal; see Boundary Guards).
+- [x] T075 [US2] Port `tests/speckit-pro/layer8-parity/run-parity-fixtures.sh` → `.py`, dropping the `jq` dependency (Per-Port Protocol); preserve `--dry-run` (free structural validation) and `--live --budget-usd` semantics.
+- [x] T076 [P] [US2] Convert the 8 per-case `env-fallback.sh`/`env-teams.sh` fixture scripts under `layer8-parity/0{1,2,3,4}-*/` to Python/data (the environment-selection inputs the real validator requires); delete the 8 `.sh`.
+- [x] T077 [US2] Port the active Layer-4 tests `test-l8-extractors.sh` and `test-l8-judge.sh` → `.py`; delete their `.sh`.
+- [x] T078 [US2] Retire the native `check_layer8` in `gates/suite.py` at this boundary (it covered only 3 of 6 required files; no equivalence shim — FR-008); flip Layer-8 to `python-module` in `suite-manifest.json` + baseline pointers. **Shipped-runner regeneration ritual (PR 8)**: because this changes `gates/suite.py`, rebuild manifests/payloads/cache proofs and regenerate evidence in gate order with release-readiness LAST and `<home>` sanitization.
+- [x] T079 [US2] Append the Layer-8 delta lines to `docs/ai/specs/.process/XPLAT-010-count-ledger.md`; confirm default-suite gate + drift-guard test green.
+- [x] T080 [US2] Confirm `git ls-files -- ':(glob)tests/speckit-pro/layer8-parity/**/*.sh'` returns empty (all Layer-8 `.sh` converted/deleted) — the PR-10 guard precondition for this surface.
 
 **Checkpoint**: Layer-8 parity harness is Python; all Layer-8 `.sh` gone; native `check_layer8` retired.
 
@@ -361,9 +361,9 @@ No task in this file crosses these boundaries.
 - **PR 12** (T109–T120): independent — no hard dep on the confinement stack.
 - **PR 13** (T121–T130): independent, **land early** so scoping tooling works for future scaffolds. Review-ordering preference.
 
-### Shipped-runner concurrency rule (PRs 2, 7b, 10, 13)
+### Shipped-runner concurrency rule (PRs 2, 7b, 8, 10, 13)
 
-All four rewrite `speckit-pro-runner.manifest.json` sha256 proof rows + `dist/**`. When more than one is in flight, the **later-merging one rebases onto the merged one and re-runs the full payload/proof regeneration ritual** (T016/T071/T098/T126); conflicting proof rows and payload bytes MUST NOT be hand-merged (plan §Constraints).
+All five rewrite `speckit-pro-runner.manifest.json` sha256 proof rows + `dist/**`. When more than one is in flight, the **later-merging one rebases onto the merged one and re-runs the full payload/proof regeneration ritual** (T016/T071/T078/T098/T126); conflicting proof rows and payload bytes MUST NOT be hand-merged (plan §Constraints).
 
 ### Within each port slice
 
@@ -403,5 +403,5 @@ After PR 2 merges: Contributor A takes PRs 3a/3b/4 (Layer-1), B takes PRs 5/6 (t
 - `[USn]` maps each task to its user story for 1:1 traceability; Setup/PR-1-cleanup/Polish carry no label.
 - Every port PR proves 1:1 name-and-count parity against a committed baseline (SC-003); a silent rename/drop yields a non-empty diff and flags the PR as a regression.
 - Privacy: no absolute `/Users` or `/home` paths in any authored artifact — repo-relative only.
-- Shipped-runner byte changes are confined to PRs 2/7b/10/13, each running the regeneration ritual with release-readiness LAST and `<home>` sanitization.
+- Shipped-runner byte changes are confined to PRs 2/7b/8/10/13, each running the regeneration ritual with release-readiness LAST and `<home>` sanitization.
 - Verify each slice with the default-suite gate + `pnpm --dir docs-site validate` before opening its PR; workflow-editing PRs (5/11/12) update their self-referential validators in the same PR.

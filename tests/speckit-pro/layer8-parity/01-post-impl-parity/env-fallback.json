@@ -1,0 +1,10 @@
+{
+  "schema": "speckit.layer8.env.v1",
+  "mode": "fallback",
+  "environment": {
+    "set": {},
+    "unset": [
+      "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"
+    ]
+  }
+}

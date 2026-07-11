@@ -1,0 +1,10 @@
+{
+  "schema": "speckit.layer8.env.v1",
+  "mode": "teams",
+  "environment": {
+    "set": {
+      "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    },
+    "unset": []
+  }
+}
