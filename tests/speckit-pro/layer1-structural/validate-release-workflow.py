@@ -22,9 +22,12 @@ Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-release-workflow-ba
 from __future__ import annotations
 
 import json
+import os
 import posixpath
 import re
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -122,6 +125,24 @@ def _inline_list(value: str) -> tuple[str, ...]:
     if not value.startswith("[") or not value.endswith("]"):
         return ()
     return tuple(item.strip() for item in value[1:-1].split(",") if item.strip())
+
+
+def _inline_python_program(step_block: str) -> str:
+    """Extract one indentation-bounded Python heredoc from a workflow step."""
+    lines = step_block.splitlines()
+    for index, line in enumerate(lines):
+        if line.lstrip() != "python3 - <<'PY'":
+            continue
+        prefix = line[: len(line) - len(line.lstrip())]
+        body: list[str] = []
+        for candidate in lines[index + 1 :]:
+            if candidate == f"{prefix}PY":
+                return "\n".join(body) + "\n"
+            if candidate and not candidate.startswith(prefix):
+                return ""
+            body.append(candidate[len(prefix) :] if candidate else "")
+        return ""
+    return ""
 
 
 class ValidateReleaseWorkflow(unittest.TestCase):
@@ -415,7 +436,7 @@ class ValidateReleaseWorkflow(unittest.TestCase):
                 )
             )
 
-        with self.subTest(msg="composer needs publishing and successful capture"):
+        with self.subTest(msg="composer audits all non-cancelled post-publication capture outcomes"):
             self.assertIn("compose-release-notes:", composer_job)
             self.assertEqual(
                 ["[release, capture-release-note-inputs]"],
@@ -423,9 +444,8 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             )
             self.assertEqual(
                 [
-                    "${{ always() && needs.release.outputs.release_created == 'true' && "
-                    "needs.capture-release-note-inputs.result == 'success' && "
-                    "needs.capture-release-note-inputs.outputs.snapshot_artifact_id != '' }}"
+                    "${{ always() && !cancelled() && "
+                    "needs.release.outputs.release_created == 'true' }}"
                 ],
                 _scalar_values(composer_job, "if", 4),
             )
@@ -443,6 +463,8 @@ class ValidateReleaseWorkflow(unittest.TestCase):
                 _contains_all(
                     snapshot_download_step,
                     (
+                        "id: download_release_snapshot",
+                        "if: ${{ always() && !cancelled() }}",
                         "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
                         "artifact-ids: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_id }}",
                         "path: release-note-input",
@@ -451,13 +473,21 @@ class ValidateReleaseWorkflow(unittest.TestCase):
                 )
             )
 
-        with self.subTest(msg="composer verifies snapshot provenance and both artifact digests"):
+        with self.subTest(msg="composer audits capture download and digest failures"):
             self.assertTrue(
                 _contains_all(
                     compose_step,
                     (
+                        "if: ${{ always() && !cancelled() }}",
+                        "CAPTURE_RESULT: ${{ needs.capture-release-note-inputs.result }}",
                         "EXPECTED_SNAPSHOT_SHA256: ${{ needs.capture-release-note-inputs.outputs.snapshot_sha256 }}",
                         "SNAPSHOT_ARTIFACT_DIGEST: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_digest }}",
+                        "SNAPSHOT_DOWNLOAD_OUTCOME: ${{ steps.download_release_snapshot.outcome }}",
+                        'failure_outcome = "release_note_composition_failed"',
+                        '"capture_result": capture_result',
+                        '"snapshot_download_outcome": download_outcome',
+                        'if capture_result != "success":',
+                        'if download_outcome != "success":',
                         'snapshot_sha256 != expected_sha256',
                         'snapshot["repository"] != os.environ["GITHUB_REPOSITORY"]',
                         '"compare_headers"',
@@ -467,6 +497,72 @@ class ValidateReleaseWorkflow(unittest.TestCase):
                     ),
                 )
             )
+            self.assertEqual(1, compose_step.count('"release_note_composition_failed"'))
+            self.assertNotIn("release_note_audit_failed", compose_step)
+            failure_branch = compose_step.find("if completed.returncode != 0:")
+            wrapper_fail = compose_step.find("fail(message, completed.returncode)", failure_branch)
+            forwarded_stderr = compose_step.find("sys.stderr.write(completed.stderr)")
+            self.assertGreater(failure_branch, -1)
+            self.assertGreater(wrapper_fail, failure_branch)
+            self.assertGreater(forwarded_stderr, failure_branch)
+            self.assertLess(wrapper_fail, forwarded_stderr)
+
+            audit_program = _inline_python_program(compose_step)
+            self.assertTrue(audit_program, "expected executable inline release-note audit program")
+            failure_cases = (
+                ("failure", "skipped", None, "release input capture did not succeed: failure"),
+                ("success", "failure", None, "release snapshot download did not succeed: failure"),
+                ("success", "success", b"{}\n", "release snapshot SHA-256 mismatch"),
+            )
+            for capture_result, download_outcome, snapshot_bytes, expected_error in failure_cases:
+                with tempfile.TemporaryDirectory() as tmp_dir:
+                    tmp_path = Path(tmp_dir)
+                    if snapshot_bytes is not None:
+                        snapshot_path = tmp_path / "release-note-input" / "release-note-snapshot.json"
+                        snapshot_path.parent.mkdir()
+                        snapshot_path.write_bytes(snapshot_bytes)
+                    environment = os.environ.copy()
+                    environment.update(
+                        {
+                            "CAPTURE_RESULT": capture_result,
+                            "EXPECTED_SNAPSHOT_SHA256": "0" * 64,
+                            "GITHUB_API_URL": "https://api.github.test",
+                            "GITHUB_OUTPUT": str(tmp_path / "github-output.txt"),
+                            "GITHUB_REPOSITORY": "racecraft-lab/repo",
+                            "GITHUB_STEP_SUMMARY": str(tmp_path / "summary.md"),
+                            "GITHUB_TOKEN": "test-token",
+                            "SNAPSHOT_ARTIFACT_DIGEST": "",
+                            "SNAPSHOT_ARTIFACT_ID": "",
+                            "SNAPSHOT_ARTIFACT_URL": "",
+                            "SNAPSHOT_DOWNLOAD_OUTCOME": download_outcome,
+                            "WORKFLOW_RUN_ATTEMPT": "2",
+                            "WORKFLOW_RUN_ID": "123",
+                        }
+                    )
+                    completed = subprocess.run(
+                        [sys.executable, "-c", audit_program],
+                        cwd=tmp_path,
+                        env=environment,
+                        text=True,
+                        capture_output=True,
+                        check=False,
+                    )
+                    self.assertEqual(1, completed.returncode, completed.stderr)
+                    self.assertEqual("", completed.stdout)
+                    self.assertEqual(1, completed.stderr.count("release_note_composition_failed"))
+                    diagnostic = json.loads(completed.stderr)
+                    self.assertEqual(expected_error, diagnostic["error"])
+                    self.assertEqual("release_note_composition_failed", diagnostic["outcome"])
+                    audit_bytes = (tmp_path / "release-note-audit.json").read_bytes()
+                    audit = json.loads(audit_bytes)
+                    self.assertEqual(expected_error, audit["error"])
+                    self.assertEqual("release_note_composition_failed", audit["outcome"])
+                    self.assertEqual(capture_result, audit["capture_result"])
+                    self.assertEqual(download_outcome, audit["snapshot_download_outcome"])
+                    self.assertEqual(
+                        (json.dumps(audit, sort_keys=True, separators=(",", ":")) + "\n").encode(),
+                        audit_bytes,
+                    )
 
         with self.subTest(msg="composer rejects highlights emptied by sanitization"):
             validation_function = _python_function_block(policy_content, "validate_release_note")

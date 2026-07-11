@@ -231,7 +231,7 @@ jobs:
 
   compose-release-notes:
     needs: [release, capture-release-note-inputs]
-    if: ${{ always() && needs.release.outputs.release_created == 'true' && needs.capture-release-note-inputs.result == 'success' && needs.capture-release-note-inputs.outputs.snapshot_artifact_id != '' }}
+    if: ${{ always() && !cancelled() && needs.release.outputs.release_created == 'true' }}
     permissions:
       contents: write
     outputs:
@@ -248,6 +248,8 @@ jobs:
           persist-credentials: false
 
       - name: Download immutable release input snapshot
+        id: download_release_snapshot
+        if: ${{ always() && !cancelled() }}
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           artifact-ids: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_id }}
@@ -256,7 +258,9 @@ jobs:
 
       - name: Compose and verify public release notes
         id: compose
+        if: ${{ always() && !cancelled() }}
         env:
+          CAPTURE_RESULT: ${{ needs.capture-release-note-inputs.result }}
           EXPECTED_SNAPSHOT_SHA256: ${{ needs.capture-release-note-inputs.outputs.snapshot_sha256 }}
           GITHUB_API_URL: ${{ github.api_url }}
           GITHUB_TOKEN: ${{ github.token }}
@@ -264,6 +268,7 @@ jobs:
           SNAPSHOT_ARTIFACT_DIGEST: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_digest }}
           SNAPSHOT_ARTIFACT_ID: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_id }}
           SNAPSHOT_ARTIFACT_URL: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_url }}
+          SNAPSHOT_DOWNLOAD_OUTCOME: ${{ steps.download_release_snapshot.outcome }}
           WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
           WORKFLOW_RUN_ID: ${{ github.run_id }}
         run: |
@@ -281,10 +286,15 @@ jobs:
           snapshot_path = Path("release-note-input/release-note-snapshot.json")
           audit_path = Path("release-note-audit.json")
           composer_path = Path("scripts/compose-release-notes.py")
+          failure_outcome = "release_note_composition_failed"
+          capture_result = os.environ["CAPTURE_RESULT"]
+          download_outcome = os.environ["SNAPSHOT_DOWNLOAD_OUTCOME"]
           audit = {
+              "capture_result": capture_result,
               "composer_run_attempt": int(os.environ["WORKFLOW_RUN_ATTEMPT"]),
-              "outcome": "release_note_audit_failed",
+              "outcome": failure_outcome,
               "schema_version": 1,
+              "snapshot_download_outcome": download_outcome,
               "workflow_run_id": int(os.environ["WORKFLOW_RUN_ID"]),
           }
 
@@ -313,7 +323,7 @@ jobs:
               audit_digest = write_audit()
               append_summary(
                   [
-                      "### Release note audit failed",
+                      "### Release note composition failed",
                       "",
                       f"- Audit SHA-256: `{audit_digest}`",
                       f"- Reason: `{message}`",
@@ -321,7 +331,7 @@ jobs:
               )
               print(
                   json.dumps(
-                      {"error": message, "outcome": "release_note_audit_failed"},
+                      {"error": message, "outcome": failure_outcome},
                       sort_keys=True,
                       separators=(",", ":"),
                   ),
@@ -330,6 +340,11 @@ jobs:
               raise SystemExit(returncode or 1)
 
           try:
+              if capture_result != "success":
+                  fail(f"release input capture did not succeed: {capture_result or 'missing'}")
+              if download_outcome != "success":
+                  fail(f"release snapshot download did not succeed: {download_outcome or 'missing'}")
+
               snapshot_bytes = snapshot_path.read_bytes()
               snapshot_sha256 = sha256(snapshot_bytes)
               expected_sha256 = os.environ["EXPECTED_SNAPSHOT_SHA256"]
@@ -388,11 +403,22 @@ jobs:
                   check=False,
               )
               sys.stdout.write(completed.stdout)
-              sys.stderr.write(completed.stderr)
               audit["composer_returncode"] = completed.returncode
               if completed.returncode != 0:
                   audit["composer_diagnostic_sha256"] = sha256(completed.stderr.encode())
-                  fail("release-note composer failed", completed.returncode)
+                  message = "release-note composer failed"
+                  try:
+                      diagnostic = json.loads(completed.stderr)
+                      if (
+                          isinstance(diagnostic, dict)
+                          and diagnostic.get("outcome") == failure_outcome
+                          and isinstance(diagnostic.get("error"), str)
+                      ):
+                          message = f"{message}: {diagnostic['error']}"
+                  except json.JSONDecodeError:
+                      pass
+                  fail(message, completed.returncode)
+              sys.stderr.write(completed.stderr)
 
               composer_result = json.loads(completed.stdout)
               expected_result_keys = {

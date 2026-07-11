@@ -25,10 +25,10 @@
 025 release job exports raw component release inputs
 026 capture is an own read-only dependent job
 027 capture uploads complete canonical Compare and PR inputs
-028 composer needs publishing and successful capture
+028 composer audits all non-cancelled post-publication capture outcomes
 029 composer has exact minimum endpoint permissions
 030 composer downloads the exact immutable snapshot by artifact id
-031 composer verifies snapshot provenance and both artifact digests
+031 composer audits capture download and digest failures
 032 composer rejects highlights emptied by sanitization
 033 composer defends enclosing release-note fence boundaries
 034 capture owns Compare and PR reads while compose does not refetch
