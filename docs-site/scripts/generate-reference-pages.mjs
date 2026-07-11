@@ -536,7 +536,7 @@ async function buildTestsPage() {
   }
   return page('tests', 'Tests Reference', 'SpecKit Pro validation layers and test-only files.', records, [
     await citation('tests/speckit-pro/run-all.py'),
-    await citation('tests/speckit-pro/layer1-structural/validate-codex-plugin.sh'),
+    await citation('tests/speckit-pro/layer1-structural/validate-codex-plugin.py'),
   ]);
 }
 async function buildSourceVsDistPage() {

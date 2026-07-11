@@ -1,0 +1,149 @@
+001 autopilot-fast-helper: TOML file exists
+002 autopilot-fast-helper: legacy Markdown file removed
+003 autopilot-fast-helper: has name field
+004 autopilot-fast-helper: name matches filename
+005 autopilot-fast-helper: has description field
+006 autopilot-fast-helper: has model field
+007 autopilot-fast-helper: model is an officially documented Codex GPT model
+008 autopilot-fast-helper: model_reasoning_effort field is absent (Spark does not support reasoning fields)
+009 autopilot-fast-helper: has sandbox_mode field
+010 autopilot-fast-helper: sandbox_mode uses supported values
+011 autopilot-fast-helper: has developer_instructions block
+012 autopilot-fast-helper: developer_instructions body is non-empty
+013 autopilot-fast-helper: no Claude Code-only fields
+014 autopilot-fast-helper: intentionally Codex-only
+015 autopilot-fast-helper: uses Spark read-only (no reasoning effort — Spark does not support reasoning fields per OpenAI docs)
+016 clarify-executor: TOML file exists
+017 clarify-executor: legacy Markdown file removed
+018 clarify-executor: has name field
+019 clarify-executor: name matches filename
+020 clarify-executor: has description field
+021 clarify-executor: has model field
+022 clarify-executor: model is an officially documented Codex GPT model
+023 clarify-executor: has model_reasoning_effort field
+024 clarify-executor: reasoning effort uses supported values
+025 clarify-executor: has sandbox_mode field
+026 clarify-executor: sandbox_mode uses supported values
+027 clarify-executor: has developer_instructions block
+028 clarify-executor: developer_instructions body is non-empty
+029 clarify-executor: no Claude Code-only fields
+030 clarify-executor: corresponding Claude agent exists in agents/
+031 clarify-executor: uses xhigh GPT-5.5 read-only question-prep profile
+032 clarify-executor: returns questions to parent
+033 clarify-executor: does not claim to be the user
+034 clarify-executor: does not invoke interactive clarify skill
+035 checklist-executor: TOML file exists
+036 checklist-executor: legacy Markdown file removed
+037 checklist-executor: has name field
+038 checklist-executor: name matches filename
+039 checklist-executor: has description field
+040 checklist-executor: has model field
+041 checklist-executor: model is an officially documented Codex GPT model
+042 checklist-executor: has model_reasoning_effort field
+043 checklist-executor: reasoning effort uses supported values
+044 checklist-executor: has sandbox_mode field
+045 checklist-executor: sandbox_mode uses supported values
+046 checklist-executor: has developer_instructions block
+047 checklist-executor: developer_instructions body is non-empty
+048 checklist-executor: no Claude Code-only fields
+049 checklist-executor: corresponding Claude agent exists in agents/
+050 checklist-executor: uses xhigh GPT-5.5 executor profile
+051 analyze-executor: TOML file exists
+052 analyze-executor: legacy Markdown file removed
+053 analyze-executor: has name field
+054 analyze-executor: name matches filename
+055 analyze-executor: has description field
+056 analyze-executor: has model field
+057 analyze-executor: model is an officially documented Codex GPT model
+058 analyze-executor: has model_reasoning_effort field
+059 analyze-executor: reasoning effort uses supported values
+060 analyze-executor: has sandbox_mode field
+061 analyze-executor: sandbox_mode uses supported values
+062 analyze-executor: has developer_instructions block
+063 analyze-executor: developer_instructions body is non-empty
+064 analyze-executor: no Claude Code-only fields
+065 analyze-executor: corresponding Claude agent exists in agents/
+066 analyze-executor: uses xhigh GPT-5.5 executor profile
+067 implement-executor: TOML file exists
+068 implement-executor: legacy Markdown file removed
+069 implement-executor: has name field
+070 implement-executor: name matches filename
+071 implement-executor: has description field
+072 implement-executor: has model field
+073 implement-executor: model is an officially documented Codex GPT model
+074 implement-executor: has model_reasoning_effort field
+075 implement-executor: reasoning effort uses supported values
+076 implement-executor: has sandbox_mode field
+077 implement-executor: sandbox_mode uses supported values
+078 implement-executor: has developer_instructions block
+079 implement-executor: developer_instructions body is non-empty
+080 implement-executor: no Claude Code-only fields
+081 implement-executor: corresponding Claude agent exists in agents/
+082 implement-executor: uses xhigh GPT-5.5 TDD profile
+083 phase-executor: TOML file exists
+084 phase-executor: legacy Markdown file removed
+085 phase-executor: has name field
+086 phase-executor: name matches filename
+087 phase-executor: has description field
+088 phase-executor: has model field
+089 phase-executor: model is an officially documented Codex GPT model
+090 phase-executor: has model_reasoning_effort field
+091 phase-executor: reasoning effort uses supported values
+092 phase-executor: has sandbox_mode field
+093 phase-executor: sandbox_mode uses supported values
+094 phase-executor: has developer_instructions block
+095 phase-executor: developer_instructions body is non-empty
+096 phase-executor: no Claude Code-only fields
+097 phase-executor: corresponding Claude agent exists in agents/
+098 phase-executor: uses xhigh GPT-5.5 executor profile
+099 codebase-analyst: TOML file exists
+100 codebase-analyst: legacy Markdown file removed
+101 codebase-analyst: has name field
+102 codebase-analyst: name matches filename
+103 codebase-analyst: has description field
+104 codebase-analyst: has model field
+105 codebase-analyst: model is an officially documented Codex GPT model
+106 codebase-analyst: has model_reasoning_effort field
+107 codebase-analyst: reasoning effort uses supported values
+108 codebase-analyst: has sandbox_mode field
+109 codebase-analyst: sandbox_mode uses supported values
+110 codebase-analyst: has developer_instructions block
+111 codebase-analyst: developer_instructions body is non-empty
+112 codebase-analyst: no Claude Code-only fields
+113 codebase-analyst: corresponding Claude agent exists in agents/
+114 codebase-analyst: uses GPT-5.5 read-only consensus profile (L6-validated effort)
+115 spec-context-analyst: TOML file exists
+116 spec-context-analyst: legacy Markdown file removed
+117 spec-context-analyst: has name field
+118 spec-context-analyst: name matches filename
+119 spec-context-analyst: has description field
+120 spec-context-analyst: has model field
+121 spec-context-analyst: model is an officially documented Codex GPT model
+122 spec-context-analyst: has model_reasoning_effort field
+123 spec-context-analyst: reasoning effort uses supported values
+124 spec-context-analyst: has sandbox_mode field
+125 spec-context-analyst: sandbox_mode uses supported values
+126 spec-context-analyst: has developer_instructions block
+127 spec-context-analyst: developer_instructions body is non-empty
+128 spec-context-analyst: no Claude Code-only fields
+129 spec-context-analyst: corresponding Claude agent exists in agents/
+130 spec-context-analyst: uses GPT-5.5 read-only consensus profile (L6-validated effort)
+131 domain-researcher: TOML file exists
+132 domain-researcher: legacy Markdown file removed
+133 domain-researcher: has name field
+134 domain-researcher: name matches filename
+135 domain-researcher: has description field
+136 domain-researcher: has model field
+137 domain-researcher: model is an officially documented Codex GPT model
+138 domain-researcher: has model_reasoning_effort field
+139 domain-researcher: reasoning effort uses supported values
+140 domain-researcher: has sandbox_mode field
+141 domain-researcher: sandbox_mode uses supported values
+142 domain-researcher: has developer_instructions block
+143 domain-researcher: developer_instructions body is non-empty
+144 domain-researcher: no Claude Code-only fields
+145 domain-researcher: corresponding Claude agent exists in agents/
+146 domain-researcher: uses xhigh read-only GPT-5.5 consensus profile (L6 has not validated lower effort)
+147 codex-agents/openai.yaml removed
+148 codex-agents directory contains TOML files only
+TOTAL: 148

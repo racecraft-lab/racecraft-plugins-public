@@ -1,0 +1,34 @@
+001 .codex-plugin/plugin.json exists
+002 .codex-plugin/plugin.json is valid JSON
+003 name field exists
+004 name matches speckit-pro
+005 version is semver X.Y.Z
+006 description is non-empty
+007 description uses scaffold naming for spec preparation
+008 homepage field exists
+009 skills field equals ./codex-skills/
+010 interface.displayName exists
+011 interface.category exists
+012 interface.defaultPrompt exists
+013 interface.defaultPrompt uses scaffold naming for spec preparation
+014 codex-skills/ directory exists
+015 codex-skills/speckit-archive-cleanup/ directory exists
+016 codex-skills/speckit-archive-cleanup/SKILL.md exists
+017 codex-skills/speckit-autopilot/ directory exists
+018 codex-skills/speckit-autopilot/SKILL.md exists
+019 codex-skills/speckit-coach/ directory exists
+020 codex-skills/speckit-coach/SKILL.md exists
+021 codex-skills/speckit-scaffold-spec/ directory exists
+022 codex-skills/speckit-scaffold-spec/SKILL.md exists
+023 codex-skills/speckit-status/ directory exists
+024 codex-skills/speckit-status/SKILL.md exists
+025 codex-skills/speckit-resolve-pr/ directory exists
+026 codex-skills/speckit-resolve-pr/SKILL.md exists
+027 codex-skills/install/ directory exists
+028 codex-skills/install/SKILL.md exists
+029 codex-skills/grill-me/ directory exists
+030 codex-skills/grill-me/SKILL.md exists
+031 codex-skills/speckit-prd/ directory exists
+032 codex-skills/speckit-prd/SKILL.md exists
+033 version matches .claude-plugin/plugin.json
+TOTAL: 33

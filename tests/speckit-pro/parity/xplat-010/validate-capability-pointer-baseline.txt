@@ -1,0 +1,53 @@
+001 claude: agents directory exists (speckit-pro/agents)
+002 claude: active-agent glob matched at least one agent
+003 claude: in-scope agent 'analyze-executor' references capability-discovery.md (or approved equivalent)
+004 claude: in-scope agent 'analyze-executor' references grounding.md
+005 claude: in-scope agent 'analyze-executor' output requires the grounding evidence note
+006 claude: in-scope agent 'checklist-executor' references capability-discovery.md (or approved equivalent)
+007 claude: in-scope agent 'checklist-executor' references grounding.md
+008 claude: in-scope agent 'checklist-executor' output requires the grounding evidence note
+009 claude: in-scope agent 'clarify-executor' references capability-discovery.md (or approved equivalent)
+010 claude: in-scope agent 'clarify-executor' references grounding.md
+011 claude: in-scope agent 'clarify-executor' output requires the grounding evidence note
+012 claude: in-scope agent 'codebase-analyst' references capability-discovery.md (or approved equivalent)
+013 claude: in-scope agent 'codebase-analyst' references grounding.md
+014 claude: in-scope agent 'codebase-analyst' output requires the grounding evidence note
+015 claude: in-scope agent 'domain-researcher' references capability-discovery.md (or approved equivalent)
+016 claude: in-scope agent 'domain-researcher' references grounding.md
+017 claude: in-scope agent 'domain-researcher' output requires the grounding evidence note
+018 claude: in-scope agent 'implement-executor' references capability-discovery.md (or approved equivalent)
+019 claude: in-scope agent 'implement-executor' references grounding.md
+020 claude: in-scope agent 'implement-executor' output requires the grounding evidence note
+021 claude: in-scope agent 'spec-context-analyst' references capability-discovery.md (or approved equivalent)
+022 claude: in-scope agent 'spec-context-analyst' references grounding.md
+023 claude: in-scope agent 'spec-context-analyst' output requires the grounding evidence note
+024 claude: in-scope agent 'uat-runbook-author' references capability-discovery.md (or approved equivalent)
+025 claude: in-scope agent 'uat-runbook-author' references grounding.md
+026 claude: in-scope agent 'uat-runbook-author' output requires the grounding evidence note
+027 codex: agents directory exists (speckit-pro/codex-agents)
+028 codex: active-agent glob matched at least one agent
+029 codex: in-scope agent 'analyze-executor' references capability-discovery.md (or approved equivalent)
+030 codex: in-scope agent 'analyze-executor' references grounding.md
+031 codex: in-scope agent 'analyze-executor' output requires the grounding evidence note
+032 codex: in-scope agent 'checklist-executor' references capability-discovery.md (or approved equivalent)
+033 codex: in-scope agent 'checklist-executor' references grounding.md
+034 codex: in-scope agent 'checklist-executor' output requires the grounding evidence note
+035 codex: in-scope agent 'clarify-executor' references capability-discovery.md (or approved equivalent)
+036 codex: in-scope agent 'clarify-executor' references grounding.md
+037 codex: in-scope agent 'clarify-executor' output requires the grounding evidence note
+038 codex: in-scope agent 'codebase-analyst' references capability-discovery.md (or approved equivalent)
+039 codex: in-scope agent 'codebase-analyst' references grounding.md
+040 codex: in-scope agent 'codebase-analyst' output requires the grounding evidence note
+041 codex: in-scope agent 'domain-researcher' references capability-discovery.md (or approved equivalent)
+042 codex: in-scope agent 'domain-researcher' references grounding.md
+043 codex: in-scope agent 'domain-researcher' output requires the grounding evidence note
+044 codex: in-scope agent 'implement-executor' references capability-discovery.md (or approved equivalent)
+045 codex: in-scope agent 'implement-executor' references grounding.md
+046 codex: in-scope agent 'implement-executor' output requires the grounding evidence note
+047 codex: in-scope agent 'spec-context-analyst' references capability-discovery.md (or approved equivalent)
+048 codex: in-scope agent 'spec-context-analyst' references grounding.md
+049 codex: in-scope agent 'spec-context-analyst' output requires the grounding evidence note
+050 codex: in-scope agent 'uat-runbook-author' references capability-discovery.md (or approved equivalent)
+051 codex: in-scope agent 'uat-runbook-author' references grounding.md
+052 codex: in-scope agent 'uat-runbook-author' output requires the grounding evidence note
+TOTAL: 52
