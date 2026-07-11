@@ -12,7 +12,7 @@
       "specs/xplat-010-repository-bash-confinement"
     ],
     "excluded_current_spec": null,
-    "note": "Post-merge cleanup archived XPLAT-010 after PRs #311-#328 merged; all ten XPLAT-010 process evidence files remain under docs/ai/specs/.process/, live schema and planner inputs were decoupled into purpose-based fixtures, and T108/T117 hosted evidence is complete.",
+    "note": "Post-merge cleanup archived XPLAT-010 after PRs #311-#328 merged; all eleven XPLAT-010 process evidence files remain under docs/ai/specs/.process/, live schema, parity contract, planner input, and UAT evidence were preserved under purpose-based paths, and T108/T117 hosted evidence is complete.",
     "safeToApplyCleanup": true,
     "status": "completed_archived"
   },
@@ -7612,7 +7612,7 @@
     "requested": "installed-cache:speckit-pro/skills/speckit-autopilot/scripts",
     "resolved": "speckit-pro/skills/speckit-autopilot/scripts"
   },
-  "spec_id": "XPLAT-010",
+  "spec_id": null,
   "updated_at": "2026-07-11T17:01:20Z",
   "workflow_file": "docs/ai/specs/.process/XPLAT-010-workflow.md",
   "status": "completed_archived",
@@ -7637,6 +7637,7 @@
       "docs/ai/specs/.process/XPLAT-010-pr-packet.json",
       "docs/ai/specs/.process/XPLAT-010-retrospective.md",
       "docs/ai/specs/.process/XPLAT-010-suite-parity-result.json",
+      "docs/ai/specs/.process/XPLAT-010-uat-runbook.md",
       "docs/ai/specs/.process/XPLAT-010-workflow.md"
     ],
     "merge_commits": {

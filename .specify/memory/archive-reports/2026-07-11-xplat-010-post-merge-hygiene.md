@@ -41,7 +41,8 @@
 - **Source spec path**: `specs/xplat-010-repository-bash-confinement/`
 - **Workflow file**: `docs/ai/specs/.process/XPLAT-010-workflow.md`
 - **Design concept**: `docs/ai/specs/.process/XPLAT-010-design-concept.md`
-- **Preserved evidence**: all ten `docs/ai/specs/.process/XPLAT-010-*` files
+- **Preserved evidence**: all eleven `docs/ai/specs/.process/XPLAT-010-*` files,
+  including the reconciled UAT runbook
 - **Base branch**: `main`
 - **Final stack merge commit**: `ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29`
 - **Final stack tree**: `0d5a46bfa28efbca13d7f49539369705bd58d76f`
@@ -159,6 +160,8 @@ tree matches the stack tip exactly.
 - `docs/ai/specs/.process/XPLAT-010-pr-packet.json`
 - `docs/ai/specs/.process/XPLAT-010-retrospective.md`
 - `docs/ai/specs/.process/XPLAT-010-suite-parity-result.json`
+- `docs/ai/specs/.process/XPLAT-010-uat-runbook.md`
+- `tests/speckit-pro/parity/bash-to-python/count-parity-baseline.contract.md`
 - Purpose-based repository-confinement and planner fixtures preserved under
   `tests/speckit-pro/unit/fixtures/`
 
@@ -198,6 +201,7 @@ git checkout ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29 -- specs/xplat-010-reposit
 | `CLAUDE.md` | Replaced the active-plan pointer and reconciled current Python/CI/branch-protection guidance |
 | `docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md` | Marked XPLAT-010 completed/archived and retained the T108, constitution, release, and XPLAT-008 UAT boundaries |
 | `docs/ai/specs/cross-platform-plugin-runtime-roadmap-MOC.md` | Replaced the active XPLAT-010 entry with archive and preserved-evidence pointers |
+| `docs/prd-cross-platform-plugin-runtime.md` | Reconciled completed XPLAT-009/XPLAT-010 proof while retaining the XPLAT-008 native-UAT boundary |
 | `docs/ai/specs/.process/autopilot-state.json` | Recorded all 18 merged PRs and post-merge archive state |
 | `docs/ai/specs/.process/XPLAT-010-workflow.md` | Reconciled merged-stack, completed T108/T117 evidence, and remaining release boundary |
 | `docs/ai/specs/.process/XPLAT-010-retrospective.md` | Reconciled merge outcome and follow-up boundaries |
@@ -206,6 +210,8 @@ git checkout ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29 -- specs/xplat-010-reposit
 | `tests/speckit-pro/unit/fixtures/` | Preserved purpose-based contract and planner inputs required after active-spec cleanup |
 | `tests/speckit-pro/unit/test-repo-bash-confinement.py` | Repointed live schema reads away from active `specs/**` |
 | `tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py` | Repointed and purpose-renamed the large migration planner fixture test |
+| `tests/speckit-pro/parity/bash-to-python/count-parity-baseline.contract.md` | Preserved the cumulative Bash-to-Python parity contract outside the archived spec |
+| `docs/ai/specs/.process/XPLAT-010-uat-runbook.md` | Preserved and reconciled final T108/T117 acceptance evidence |
 | `docs-site/src/content/docs/reference/tests.md` | Regenerated after fixture relocation |
 | `specs/xplat-010-repository-bash-confinement/` | Removed from active `specs/**` after dependency decoupling |
 

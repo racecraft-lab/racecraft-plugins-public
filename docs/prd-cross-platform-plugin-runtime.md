@@ -39,8 +39,9 @@ Windows, macOS, and Linux:
 - Python stdlib runner behavior after launch: high confidence, approximately
   85-90%.
 - Public Bash-free release readiness today: medium confidence, approximately
-  65-75%, because the XPLAT-008 native operator UAT matrix and the
-  XPLAT-009/XPLAT-010 zero-Bash cleanup gates still need proof.
+  65-75%, because the XPLAT-008 native operator UAT matrix remains pending;
+  XPLAT-009 plugin/payload proof and XPLAT-010 repository-confinement proof are
+  complete.
 
 These confidence levels are planning inputs, not public support evidence.
 Native Windows/macOS/Linux claims remain blocked until downstream specs prove
