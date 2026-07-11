@@ -11,7 +11,7 @@ SpecKit Pro validation layers and test-only files.
 
 - **Public path:** `/racecraft-plugins-public/reference/tests/`
 - **Generated output:** `docs-site/src/content/docs/reference/tests.md`
-- **Records:** 14
+- **Records:** 15
 
 ## Navigation Summary
 
@@ -25,6 +25,7 @@ SpecKit Pro validation layers and test-only files.
 - tests/speckit-pro/layer8-parity
 - tests/speckit-pro/lib
 - tests/speckit-pro/run-all.py
+- tests/speckit-pro/run-container-preflight.py
 - tests/speckit-pro/run-hosted-windows-preflight.py
 - tests/speckit-pro/run-layer-scripts.py
 - tests/speckit-pro/test-run-all.py
@@ -636,6 +637,28 @@ SpecKit Pro validation layers and test-only files.
 
 - These files are validation evidence only; DOC-007 does not change test semantics unless a docs-site validation need explicitly requires it.
   - Based on: `tests/speckit-pro/run-all.py`
+
+### tests/speckit-pro/run-container-preflight.py
+
+- **Purpose:** Validation files in run-container-preflight.py.
+- **Classification:** `test-only`
+- **Platform concept:** SpecKit Pro validation layer
+- **Claude Code:** tests/speckit-pro/run-container-preflight.py
+- **Codex:** tests/speckit-pro/run-container-preflight.py
+- **Runtime difference:** Layer 1 includes separate Claude Code and Codex structural checks where the repository has runtime-specific plugin surfaces.
+
+#### Source Facts
+
+- tests/speckit-pro/run-container-preflight.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/run-container-preflight.py`.
+
+#### Sources
+
+- [tests/speckit-pro/run-container-preflight.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/run-container-preflight.py)
+
+#### Inferred Notes
+
+- These files are validation evidence only; DOC-007 does not change test semantics unless a docs-site validation need explicitly requires it.
+  - Based on: `tests/speckit-pro/run-container-preflight.py`
 
 ### tests/speckit-pro/run-hosted-windows-preflight.py
 

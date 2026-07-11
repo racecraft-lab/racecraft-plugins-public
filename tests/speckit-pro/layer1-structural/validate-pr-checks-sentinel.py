@@ -42,12 +42,20 @@ from test_result import run_counted  # noqa: E402
 WORKFLOW_FILE = REPO_ROOT / ".github" / "workflows" / "pr-checks.yml"
 CONTAINER_WORKFLOW_FILE = REPO_ROOT / ".github" / "workflows" / "container-preflight.yml"
 WINDOWS_PREFLIGHT_HELPER_FILE = REPO_ROOT / "tests" / "speckit-pro" / "run-hosted-windows-preflight.py"
+CONTAINER_DISPATCH_HELPER_FILE = REPO_ROOT / "tests" / "speckit-pro" / "run-container-preflight.py"
 WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
 
 CHECKOUT_PIN_RE = re.compile(r"uses: actions/checkout@[0-9a-f]{40}")
 UPLOAD_ARTIFACT_PIN = "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+SETUP_PYTHON_PIN = "actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405"
+HOSTED_PYTHON_VERSION = 'HOSTED_PYTHON_VERSION: "3.13.14"'
 CONTAINER_IMAGE_PIN = (
-    "ubuntu:24.04@sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06ba2cef9ebffbc7092d90"
+    "python:3.11.15-bookworm@sha256:"
+    "b7ae8a4dcc0ab327e333c5e46a3eaa6c1b0ff585bed77e01cd6de4be1325837e"
+)
+CONTAINER_DISPATCH = (
+    'run: import runpy; runpy.run_path("tests/speckit-pro/'
+    'run-container-preflight.py", run_name="__main__")'
 )
 SPEC_KIT_VERSION_PIN = "SPEC_KIT_VERSION: v0.8.13"
 SPEC_KIT_REF_PIN = (
@@ -129,6 +137,9 @@ LINUX_REQUESTS = (
     "run-default-suite.json",
     "repository-bash-confinement/requests/repo-bash-confinement.json",
     "runner-gates/requests/release-readiness.json",
+    "installed-plugin-release/requests/runner-invocation.json",
+    "installed-plugin-release/requests/active-runtime-guard.json",
+    "installed-plugin-release/requests/payload-completeness.json",
     "installed-plugin-release/requests/release-readiness.json",
 )
 
@@ -136,11 +147,11 @@ EXPECTED_PERMISSIONS = {
     "changes": "contents: read",
     "linux-amd64-preflight": "contents: read",
     "linux-arm64-preflight": "contents: read",
-    "windows-availability": "{}",
+    "windows-availability": "contents: read",
     "windows-x64-smoke": "contents: read",
     "windows-arm64-smoke": "contents: read",
-    "linux-amd64": "{}",
-    "linux-arm64": "{}",
+    "linux-amd64": "contents: read",
+    "linux-arm64": "contents: read",
 }
 
 EXPECTED_UPLOAD_COUNTS = {
@@ -250,6 +261,11 @@ jobs:
             if CONTAINER_WORKFLOW_FILE.is_file()
             else ""
         )
+        dispatch_content = (
+            CONTAINER_DISPATCH_HELPER_FILE.read_text(encoding="utf-8")
+            if CONTAINER_DISPATCH_HELPER_FILE.is_file()
+            else ""
+        )
         trigger_block = content.split("permissions:", 1)[0]
 
         with self.subTest(msg="container preflight always reports on pull requests"):
@@ -266,21 +282,39 @@ jobs:
             block = _job_block(content, "changes")
             self.assertIn("run_preflight:", block)
             self.assertIn("steps.changes.outputs.run_preflight", block)
+            self.assertIn("fetch-depth: 0", block)
             self.assertIn("persist-credentials: false", block)
-            self.assertIn('git merge-base "$BASE_SHA" "$HEAD_SHA"', block)
-            self.assertIn("merge-base.txt", block)
+            self.assertIn("PREFLIGHT_OPERATION: detect-changes", block)
+            self.assertIn("shell: python", block)
+            self.assertIn(CONTAINER_DISPATCH, block)
+            self.assertTrue(
+                CONTAINER_DISPATCH_HELPER_FILE.is_file(),
+                f"file not found: {CONTAINER_DISPATCH_HELPER_FILE}",
+            )
+            compile(dispatch_content, str(CONTAINER_DISPATCH_HELPER_FILE), "exec")
+            self.assertIn('["merge-base", base_sha, head_sha]', dispatch_content)
+            self.assertIn('["diff", "--no-renames", "--name-only", merge_base, head_sha]', dispatch_content)
+            self.assertIn("merge-base.txt", dispatch_content)
             for path in ("speckit-pro/speckit_pro_runner/", "tests/speckit-pro/", ".github/workflows/"):
-                self.assertIn(path, block)
+                self.assertIn(path, dispatch_content)
 
         with self.subTest(msg="Linux amd64 heavy preflight is job-level conditional"):
             block = _job_block(content, "linux-amd64-preflight")
             self.assertIn("needs.changes.outputs.run_preflight == 'true'", block)
             self.assertIn("container:", block)
             self.assertIn(f"image: {CONTAINER_IMAGE_PIN}", block)
-            self.assertIn("ca-certificates", block)
+            self.assertIn("runs-on: ubuntu-24.04", block)
+            self.assertIn("4d216ad3beb5b697c4049071c82fc375acb8abad", content)
+            self.assertIn("the job userland is Debian", content)
+            self.assertNotIn(SETUP_PYTHON_PIN, block)
+            self.assertNotIn("apt-get", block)
             self.assertIn("id: checkout", block)
             self.assertIn("persist-credentials: false", block)
             self.assertIn("if: steps.checkout.outcome == 'success'", block)
+            self.assertIn("PREFLIGHT_OPERATION: linux-gates", block)
+            self.assertIn("PREFLIGHT_ROLE: linux-amd64", block)
+            self.assertIn("shell: python", block)
+            self.assertIn(CONTAINER_DISPATCH, block)
             self.assertIn("EVIDENCE_DIR: /tmp/container-preflight-linux-amd64", block)
             self.assertIn("path: ${{ env.EVIDENCE_DIR }}", block)
             self.assertNotIn("RUNNER_TEMP", block)
@@ -293,10 +327,15 @@ jobs:
             self.assertIn("runs-on: ubuntu-24.04-arm", block)
             self.assertIn("container:", block)
             self.assertIn(f"image: {CONTAINER_IMAGE_PIN}", block)
-            self.assertIn("ca-certificates", block)
+            self.assertNotIn(SETUP_PYTHON_PIN, block)
+            self.assertNotIn("apt-get", block)
             self.assertIn("id: checkout", block)
             self.assertIn("persist-credentials: false", block)
             self.assertIn("if: steps.checkout.outcome == 'success'", block)
+            self.assertIn("PREFLIGHT_OPERATION: linux-gates", block)
+            self.assertIn("PREFLIGHT_ROLE: linux-arm64", block)
+            self.assertIn("shell: python", block)
+            self.assertIn(CONTAINER_DISPATCH, block)
             self.assertIn("EVIDENCE_DIR: /tmp/container-preflight-linux-arm64", block)
             self.assertIn("path: ${{ env.EVIDENCE_DIR }}", block)
             self.assertNotIn("RUNNER_TEMP", block)
@@ -305,27 +344,38 @@ jobs:
 
         with self.subTest(msg="Linux amd64 runs current Python gate entrypoints"):
             block = _job_block(content, "linux-amd64-preflight")
-            self.assertIn("python3 -m speckit_pro_runner", block)
+            self.assertIn("PREFLIGHT_ROLE: linux-amd64", block)
+            self.assertIn('[sys.executable, "-m", "speckit_pro_runner"]', dispatch_content)
             for request in LINUX_REQUESTS:
-                self.assertIn(request, block)
+                self.assertIn(request, dispatch_content)
+            request_positions = [dispatch_content.index(request) for request in LINUX_REQUESTS]
+            self.assertEqual(request_positions, sorted(request_positions))
+            self.assertIn('child_env["SPECKIT_SKIP_TOOLCHAIN_CHECK"] = "1"', dispatch_content)
 
         with self.subTest(msg="Linux arm64 runs current Python gate entrypoints"):
             block = _job_block(content, "linux-arm64-preflight")
-            self.assertIn("python3 -m speckit_pro_runner", block)
+            self.assertIn("PREFLIGHT_ROLE: linux-arm64", block)
+            self.assertIn('[sys.executable, "-m", "speckit_pro_runner"]', dispatch_content)
             for request in LINUX_REQUESTS:
-                self.assertIn(request, block)
+                self.assertIn(request, dispatch_content)
+            self.assertIn('"container_userland": "Debian Bookworm"', dispatch_content)
 
         with self.subTest(msg="Linux amd64 required check is an always sentinel"):
             block = _job_block(content, "linux-amd64")
             self.assertIn("name: container-preflight-linux-amd64", block)
             self.assertIn("if: always()", block)
             self.assertIn("needs.linux-amd64-preflight.result", block)
+            self.assertIn("PREFLIGHT_OPERATION: sentinel", block)
+            self.assertIn("PREFLIGHT_ROLE: linux-amd64-required", block)
+            self.assertIn("shell: python", block)
+            self.assertIn(CONTAINER_DISPATCH, block)
             for condition in (
-                '[[ "$CHANGES_RESULT" != "success" ]]',
-                '[[ "$RUN_PREFLIGHT" == "true" && "$PREFLIGHT_RESULT" != "success" ]]',
-                '[[ "$RUN_PREFLIGHT" != "true" && "$PREFLIGHT_RESULT" != "skipped" ]]',
+                'if changes_result != "success":',
+                'if run_preflight == "true":',
+                'return heavy_result == "success"',
+                'return run_preflight == "false" and heavy_result == "skipped"',
             ):
-                self.assertIn(condition, block)
+                self.assertIn(condition, dispatch_content)
             self.assertEqual(
                 [True, False, False, True, False, False, False],
                 [
@@ -344,12 +394,11 @@ jobs:
             self.assertIn("name: container-preflight-linux-arm64", block)
             self.assertIn("if: always()", block)
             self.assertIn("needs.linux-arm64-preflight.result", block)
-            for condition in (
-                '[[ "$CHANGES_RESULT" != "success" ]]',
-                '[[ "$RUN_PREFLIGHT" == "true" && "$PREFLIGHT_RESULT" != "success" ]]',
-                '[[ "$RUN_PREFLIGHT" != "true" && "$PREFLIGHT_RESULT" != "skipped" ]]',
-            ):
-                self.assertIn(condition, block)
+            self.assertIn("PREFLIGHT_OPERATION: sentinel", block)
+            self.assertIn("PREFLIGHT_ROLE: linux-arm64-required", block)
+            self.assertIn("shell: python", block)
+            self.assertIn(CONTAINER_DISPATCH, block)
+            self.assertIn('"verdict": "pass" if passed else "fail"', dispatch_content)
 
         with self.subTest(msg="Windows availability is configured on an Ubuntu control job"):
             block = _job_block(content, "windows-availability")
@@ -357,22 +406,27 @@ jobs:
             self.assertIn("XPLAT_WINDOWS_X64_ENABLED", block)
             self.assertIn("XPLAT_WINDOWS_ARM64_ENABLED", block)
             self.assertNotIn("XPLAT_WINDOWS_ARM64_AVAILABLE", block)
+            self.assertIn(SETUP_PYTHON_PIN, block)
+            self.assertIn("persist-credentials: false", block)
+            self.assertIn("PREFLIGHT_OPERATION: windows-availability", block)
+            self.assertIn("shell: python", block)
+            self.assertIn(CONTAINER_DISPATCH, block)
             self.assertEqual(1, trigger_block.count("default: true"))
             self.assertEqual(1, trigger_block.count("default: false"))
             for label in ("windows-2025", "windows-11-arm"):
-                self.assertIn(f'"runner_label":"{label}"', block)
-            self.assertIn('"hosted_label_status":"stable"', block)
-            self.assertIn('"hosted_label_status":"public_preview"', block)
-            self.assertEqual(2, block.count('"available":true'))
-            self.assertIn('x64_source="stable_label_default"', block)
-            self.assertIn('arm64_source="public_preview_default"', block)
-            self.assertIn('arm64_enabled="false"', block)
-            self.assertEqual(2, block.count('source="repository_variable_disable"'))
-            self.assertIn('"$x64_enabled" "$x64_source"', block)
-            self.assertIn('"$arm64_enabled" "$arm64_source"', block)
+                self.assertIn(f'"runner_label": "{label}"', dispatch_content)
+            self.assertIn('"hosted_label_status": "stable"', dispatch_content)
+            self.assertIn('"hosted_label_status": "public_preview"', dispatch_content)
+            self.assertIn('"available": True', dispatch_content)
+            self.assertIn('x64_source = "stable_label_default"', dispatch_content)
+            self.assertIn('arm64_source = "public_preview_default"', dispatch_content)
+            self.assertIn('arm64_enabled = "false"', dispatch_content)
+            self.assertEqual(2, dispatch_content.count('= "repository_variable_disable"'))
+            self.assertIn('"x64_enabled": x64_enabled', dispatch_content)
+            self.assertIn('"arm64_enabled": arm64_enabled', dispatch_content)
             self.assertLess(
-                block.index('if [[ "$EVENT_NAME" == "workflow_dispatch" ]]'),
-                block.index('if [[ "$REPO_X64_ENABLED" == "false" ]]'),
+                dispatch_content.index('if event_name == "workflow_dispatch":'),
+                dispatch_content.index('if repo_x64 == "false":'),
             )
             self.assertIn("windows_x64_enabled", trigger_block)
             self.assertIn("windows_arm64_enabled", trigger_block)
@@ -382,10 +436,15 @@ jobs:
             self.assertIn("continue-on-error: true", block)
             self.assertIn("needs.windows-availability.outputs.x64_enabled == 'true'", block)
             self.assertIn("runs-on: windows-2025", block)
+            self.assertIn(SETUP_PYTHON_PIN, block)
+            self.assertIn("python-version: ${{ env.HOSTED_PYTHON_VERSION }}", block)
             self.assertIn("id: checkout", block)
             self.assertIn("persist-credentials: false", block)
-            self.assertIn("if: steps.checkout.outcome == 'success'", block)
-            self.assertIn("steps.checkout.outcome != 'success'", block)
+            self.assertIn("if: always() && steps.checkout.outcome == 'success'", block)
+            self.assertIn("PREFLIGHT_OPERATION: windows-smoke", block)
+            self.assertIn("PREFLIGHT_ROLE: windows-x64", block)
+            self.assertIn("shell: python", block)
+            self.assertIn(CONTAINER_DISPATCH, block)
             self.assertNotIn("- name: Checkout repository\n        if: always()", block)
 
         with self.subTest(msg="Windows ARM64 smoke is advisory and conditionally queued"):
@@ -393,10 +452,15 @@ jobs:
             self.assertIn("continue-on-error: true", block)
             self.assertIn("needs.windows-availability.outputs.arm64_enabled == 'true'", block)
             self.assertIn("runs-on: windows-11-arm", block)
+            self.assertIn(SETUP_PYTHON_PIN, block)
+            self.assertIn("python-version: ${{ env.HOSTED_PYTHON_VERSION }}", block)
             self.assertIn("id: checkout", block)
             self.assertIn("persist-credentials: false", block)
-            self.assertIn("if: steps.checkout.outcome == 'success'", block)
-            self.assertIn("steps.checkout.outcome != 'success'", block)
+            self.assertIn("if: always() && steps.checkout.outcome == 'success'", block)
+            self.assertIn("PREFLIGHT_OPERATION: windows-smoke", block)
+            self.assertIn("PREFLIGHT_ROLE: windows-arm64", block)
+            self.assertIn("shell: python", block)
+            self.assertIn(CONTAINER_DISPATCH, block)
             self.assertNotIn("- name: Checkout repository\n        if: always()", block)
 
         with self.subTest(msg="Windows smoke runs interpreter discovery runtime-info and preflight"):
@@ -426,29 +490,36 @@ jobs:
                 "shell=False",
             ):
                 self.assertIn(expected, helper_content)
+            self.assertIn(HOSTED_PYTHON_VERSION, content)
+            self.assertIn(SETUP_PYTHON_PIN, content)
+            self.assertIn("3.13.14-27320626148", content)
             self.assertIn('PIPX_VERSION: "1.15.0"', content)
             self.assertIn(SPEC_KIT_VERSION_PIN, content)
             self.assertIn(SPEC_KIT_REF_PIN, content)
             self.assertNotIn("spec-kit.git@v0.8.13", content)
             for job_id in ("windows-x64-smoke", "windows-arm64-smoke"):
                 block = _job_block(content, job_id)
-                candidates = ('name = "py -V:3"', 'name = "py -3"', 'name = "python"', 'name = "python3"')
-                positions = [block.find(candidate) for candidate in candidates]
-                self.assertTrue(all(position >= 0 for position in positions))
-                self.assertEqual(sorted(positions), positions, "Python discovery order drifted")
-                self.assertIn("[int]$version.minor -ge 11", block)
-                self.assertIn("missing-python-3.11", block)
-                self.assertIn("tests/speckit-pro/run-hosted-windows-preflight.py", block)
-                self.assertIn("$env:SPEC_KIT_GIT_REF", block)
-                self.assertIn("$env:SPEC_KIT_VERSION", block)
-                self.assertIn("$env:PIPX_VERSION", block)
-                self.assertIn("PREFLIGHT_INTERPRETER_CANDIDATE", block)
+                self.assertIn(SETUP_PYTHON_PIN, block)
+                self.assertNotIn("PREFLIGHT_INTERPRETER_CANDIDATE", block)
+                self.assertIn("PREFLIGHT_OPERATION: windows-smoke", block)
+                self.assertIn(CONTAINER_DISPATCH, block)
                 self.assertNotIn("-m pipx", block)
                 self.assertNotIn('operation = "runtime-info"', block)
                 self.assertNotIn('operation = "preflight"', block)
                 self.assertNotIn("specifyCommand", block)
-                self.assertNotIn("2>&1", block)
-                self.assertNotIn("1> (Join-Path", block)
+            candidates = ('"py -V:3"', '"py -3"', '"python"', '"python3"')
+            candidate_positions = [dispatch_content.index(candidate) for candidate in candidates]
+            self.assertEqual(candidate_positions, sorted(candidate_positions))
+            self.assertIn("interpreter-probes.json", dispatch_content)
+            self.assertIn("architecture_emulated", dispatch_content)
+            self.assertIn('child_env["PREFLIGHT_INTERPRETER_CANDIDATE"] = selected', dispatch_content)
+            for expected in (
+                "run-hosted-windows-preflight.py",
+                '"--pipx-version"',
+                '"--spec-kit-version"',
+                '"--spec-kit-ref"',
+            ):
+                self.assertIn(expected, dispatch_content)
 
         with self.subTest(msg="every container preflight job declares minimal permissions"):
             failures = []
@@ -496,6 +567,9 @@ jobs:
         with self.subTest(msg="evidence uploads cannot mask or flip role verdicts"):
             upload_count = sum(EXPECTED_UPLOAD_COUNTS.values())
             self.assertEqual(upload_count, content.count(f"uses: {UPLOAD_ARTIFACT_PIN}"))
+            self.assertEqual(6, content.count(f"uses: {SETUP_PYTHON_PIN}"))
+            self.assertEqual(6, content.count("# v6.2.0"))
+            self.assertEqual(2, content.count(f"image: {CONTAINER_IMAGE_PIN}"))
             action_refs = re.findall(r"(?m)^\s+uses: ([^\s]+)", content)
             self.assertTrue(action_refs)
             self.assertTrue(all(re.search(r"@[0-9a-f]{40}$", ref) for ref in action_refs))
@@ -510,6 +584,14 @@ jobs:
                 re.search(r"(?i)(?:scripts|tests|speckit-pro)/[^\s\"']+\.(?:sh|bash|zsh|ps1|bat|cmd)\b", content)
             )
             self.assertNotRegex(content, r"(?i)(?<![\w-])jq(?![\w-])")
+            self.assertNotRegex(content, r"(?m)^\s*shell:\s*(?:bash|pwsh)\s*$")
+            self.assertNotIn("apt-get", content)
+            self.assertNotIn("run: |", content)
+            self.assertNotIn("$(", content)
+            self.assertEqual(len(CONTAINER_JOBS), content.count("shell: python"))
+            self.assertEqual(len(CONTAINER_JOBS), content.count(CONTAINER_DISPATCH))
+            self.assertIn("shell=False", dispatch_content)
+            self.assertNotIn("shell=True", dispatch_content)
 
 def build_suite() -> unittest.TestSuite:
     return unittest.TestSuite(

@@ -82,17 +82,30 @@ def _run_command(
     try:
         with stdout_path.open("wb") as stdout_stream, stderr_path.open("wb") as stderr_stream:
             try:
-                completed = subprocess.run(
-                    command,
-                    cwd=REPO_ROOT,
-                    env=env,
-                    input=encoded_input,
-                    stdout=stdout_stream,
-                    stderr=stderr_stream,
-                    check=False,
-                    shell=False,
-                    timeout=SUBPROCESS_TIMEOUT_SECONDS,
-                )
+                if name == "specify-version":
+                    completed = subprocess.run(
+                        ["specify", "version"],
+                        cwd=REPO_ROOT,
+                        env=env,
+                        input=encoded_input,
+                        stdout=stdout_stream,
+                        stderr=stderr_stream,
+                        check=False,
+                        shell=False,
+                        timeout=SUBPROCESS_TIMEOUT_SECONDS,
+                    )
+                else:
+                    completed = subprocess.run(
+                        [sys.executable, *command[1:]],
+                        cwd=REPO_ROOT,
+                        env=env,
+                        input=encoded_input,
+                        stdout=stdout_stream,
+                        stderr=stderr_stream,
+                        check=False,
+                        shell=False,
+                        timeout=SUBPROCESS_TIMEOUT_SECONDS,
+                    )
                 return_code = completed.returncode
             except subprocess.TimeoutExpired:
                 return_code = SUBPROCESS_TIMEOUT_EXIT_CODE
@@ -367,7 +380,7 @@ def _run(args: argparse.Namespace) -> int:
 
     specify_version_exit = _run_command(
         "specify-version",
-        [specify_command, "version"],
+        ["specify", "version"],
         evidence_dir,
         child_env,
         stdout_name="specify-version.txt",
