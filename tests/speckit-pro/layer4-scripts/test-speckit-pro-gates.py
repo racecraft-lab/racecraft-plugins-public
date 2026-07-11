@@ -2920,8 +2920,8 @@ class GateFoundationTests(unittest.TestCase):
         layer4_scripts = [self.repo_rel(path) for path in dispatcher.canonical_test_scripts(REPO_ROOT, "4")]
         self.assertGreaterEqual(len(layer1_scripts), 20)
         self.assertGreaterEqual(len(layer4_scripts), 17)
-        self.assertIn("tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.sh", layer1_scripts)
-        self.assertIn("tests/speckit-pro/layer1-structural/validate-release-workflow.sh", layer1_scripts)
+        self.assertIn("tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.py", layer1_scripts)
+        self.assertIn("tests/speckit-pro/layer1-structural/validate-release-workflow.py", layer1_scripts)
         self.assertLessEqual(
             {
                 "tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py",
