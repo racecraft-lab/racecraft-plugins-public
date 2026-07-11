@@ -16,17 +16,22 @@ guards indentation, mapping/sequence structure, and block-scalar boundaries
 without adding PyYAML/Ruby as runtime dependencies.
 
 Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-release-workflow-baseline.txt``
-(TOTAL: 24).
+(TOTAL: 41).
 """
 
 from __future__ import annotations
 
 import json
+import os
 import posixpath
 import re
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+
+from workflow_yaml_sanity import yaml_syntax_sane as _yaml_syntax_sane
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
@@ -35,65 +40,109 @@ if str(LIB_DIR) not in sys.path:
 from test_result import run_counted  # noqa: E402
 
 WORKFLOW_FILE = REPO_ROOT / ".github" / "workflows" / "release.yml"
+PR_CHECKS_WORKFLOW_FILE = REPO_ROOT / ".github" / "workflows" / "pr-checks.yml"
+COMPOSER_FILE = REPO_ROOT / "scripts" / "compose-release-notes.py"
+POLICY_FILE = REPO_ROOT / "scripts" / "release_note_policy.py"
 RESOLVER_FILE = REPO_ROOT / "scripts" / "resolve_release_prs.py"
 SYNC_HELPER_FILE = REPO_ROOT / "scripts" / "sync_release_pr.py"
 RELEASE_CONFIG_FILE = REPO_ROOT / "release-please-config.json"
 CHECKOUT_PIN_RE = re.compile(r"actions/checkout@[0-9a-f]{40}")
+UPLOAD_ARTIFACT_PIN_RE = re.compile(r"actions/upload-artifact@[0-9a-f]{40}")
+DOWNLOAD_ARTIFACT_PIN_RE = re.compile(r"actions/download-artifact@[0-9a-f]{40}")
 MAIN_PUSH_RE = re.compile(r"^\s*git push(\s|$).*(\s|\"|'|:|/)main(\s|\"|'|:|$)", re.MULTILINE)
+RELEASE_NOTE_EVENTS = (
+    "opened",
+    "reopened",
+    "synchronize",
+    "edited",
+    "labeled",
+    "unlabeled",
+    "ready_for_review",
+)
 
 
 def _contains_all(text: str, needles: tuple[str, ...]) -> bool:
     return all(needle in text for needle in needles)
 
 
-def _yaml_syntax_sane(text: str) -> bool:
-    """Validate the workflow's YAML surface without a non-stdlib YAML parser.
+def _mapping_block(text: str, key: str, indent: int) -> str:
+    """Return one indentation-delimited YAML mapping block."""
+    prefix = " " * indent
+    match = re.search(rf"(?m)^{re.escape(prefix + key)}:\s*$", text)
+    if match is None:
+        return ""
+    end = len(text)
+    for candidate in re.finditer(rf"(?m)^{re.escape(prefix)}[A-Za-z0-9_-]+:\s*", text[match.end() :]):
+        end = match.end() + candidate.start()
+        break
+    return text[match.start() : end]
 
-    This is not a general YAML loader. It catches the syntax regressions this
-    structural test is meant to catch: tabs in indentation, non-mapping top-level
-    lines, empty mapping keys, unterminated quote/bracket pairs on scalar lines,
-    and malformed sequence items. Literal block bodies are skipped until the
-    indentation returns to the parent mapping level.
-    """
-    block_parent_indent: int | None = None
-    for raw_line in text.splitlines():
-        if not raw_line.strip() or raw_line.lstrip().startswith("#"):
+
+def _permission_map(job_block: str) -> dict[str, str]:
+    permissions = _mapping_block(job_block, "permissions", 4)
+    return {
+        match.group("name"): match.group("access")
+        for match in re.finditer(
+            r"(?m)^\s{6}(?P<name>[a-z-]+):\s*(?P<access>read|write|none)\s*$",
+            permissions,
+        )
+    }
+
+
+def _scalar_values(text: str, key: str, indent: int) -> list[str]:
+    prefix = " " * indent
+    return [
+        match.group("value").strip()
+        for match in re.finditer(
+            rf"(?m)^{re.escape(prefix + key)}:[ \t]*(?P<value>[^\r\n]*)$",
+            text,
+        )
+    ]
+
+
+def _named_step_block(job_block: str, name: str) -> str:
+    """Return one named workflow step, including its nested mappings."""
+    match = re.search(rf"(?m)^      - name:\s*{re.escape(name)}\s*$", job_block)
+    if match is None:
+        return ""
+    next_step = re.search(r"(?m)^      - ", job_block[match.end() :])
+    end = len(job_block) if next_step is None else match.end() + next_step.start()
+    return job_block[match.start() : end]
+
+
+def _python_function_block(text: str, name: str) -> str:
+    """Return one top-level Python function for structural contract checks."""
+    match = re.search(rf"(?m)^def {re.escape(name)}\(", text)
+    if match is None:
+        return ""
+    next_symbol = re.search(r"(?m)^(?:def|class) [A-Za-z_]", text[match.end() :])
+    end = len(text) if next_symbol is None else match.end() + next_symbol.start()
+    return text[match.start() : end]
+
+
+def _inline_list(value: str) -> tuple[str, ...]:
+    """Parse the workflow's intentionally simple inline event list."""
+    if not value.startswith("[") or not value.endswith("]"):
+        return ()
+    return tuple(item.strip() for item in value[1:-1].split(",") if item.strip())
+
+
+def _inline_python_program(step_block: str) -> str:
+    """Extract one indentation-bounded Python heredoc from a workflow step."""
+    lines = step_block.splitlines()
+    for index, line in enumerate(lines):
+        if line.lstrip() != "python3 - <<'PY'":
             continue
-        indentation = raw_line[: len(raw_line) - len(raw_line.lstrip())]
-        if "\t" in indentation:
-            return False
-        leading = raw_line[: len(raw_line) - len(raw_line.lstrip(" "))]
-        indent = len(leading)
-        if block_parent_indent is not None:
-            if indent > block_parent_indent:
-                continue
-            block_parent_indent = None
-
-        stripped = raw_line.strip()
-        if stripped.startswith("- "):
-            item = stripped[2:].strip()
-            if not item:
-                continue
-            if ":" not in item:
-                return False
-            key, value = item.split(":", 1)
-        else:
-            if ":" not in stripped:
-                return False
-            key, value = stripped.split(":", 1)
-
-        if not key.strip():
-            return False
-        scalar = value.strip()
-        if scalar in {"|", ">", "|-", ">-", "|+", ">+"}:
-            block_parent_indent = indent
-        if scalar.count("[") != scalar.count("]"):
-            return False
-        if scalar.count("{") != scalar.count("}"):
-            return False
-        if scalar.startswith(("'", '"')) and not scalar.endswith(scalar[0]):
-            return False
-    return True
+        prefix = line[: len(line) - len(line.lstrip())]
+        body: list[str] = []
+        for candidate in lines[index + 1 :]:
+            if candidate == f"{prefix}PY":
+                return "\n".join(body) + "\n"
+            if candidate and not candidate.startswith(prefix):
+                return ""
+            body.append(candidate[len(prefix) :] if candidate else "")
+        return ""
+    return ""
 
 
 class ValidateReleaseWorkflow(unittest.TestCase):
@@ -102,12 +151,34 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             self.assertTrue(WORKFLOW_FILE.is_file(), f"file not found: {WORKFLOW_FILE}")
 
         content = WORKFLOW_FILE.read_text(encoding="utf-8") if WORKFLOW_FILE.is_file() else ""
+        pr_checks_content = (
+            PR_CHECKS_WORKFLOW_FILE.read_text(encoding="utf-8")
+            if PR_CHECKS_WORKFLOW_FILE.is_file()
+            else ""
+        )
+        composer_content = COMPOSER_FILE.read_text(encoding="utf-8") if COMPOSER_FILE.is_file() else ""
+        policy_content = POLICY_FILE.read_text(encoding="utf-8") if POLICY_FILE.is_file() else ""
+        resolver_content = RESOLVER_FILE.read_text(encoding="utf-8") if RESOLVER_FILE.is_file() else ""
+        sync_helper_content = SYNC_HELPER_FILE.read_text(encoding="utf-8") if SYNC_HELPER_FILE.is_file() else ""
 
         with self.subTest(msg="release workflow uses release-please"):
             self.assertIn("googleapis/release-please-action@v5", content)
 
         with self.subTest(msg="release workflow pins checkout actions"):
-            self.assertEqual(2, len(CHECKOUT_PIN_RE.findall(content)), "release workflow pinned checkout count")
+            self.assertEqual(4, len(CHECKOUT_PIN_RE.findall(content)), "release workflow pinned checkout count")
+
+        release_job = _mapping_block(content, "release", 2)
+        capture_job = _mapping_block(content, "capture-release-note-inputs", 2)
+        composer_job = _mapping_block(content, "compose-release-notes", 2)
+        capture_step = _named_step_block(capture_job, "Capture complete immutable release inputs")
+        snapshot_upload_step = _named_step_block(capture_job, "Upload immutable release input snapshot")
+        snapshot_download_step = _named_step_block(
+            composer_job,
+            "Download immutable release input snapshot",
+        )
+        compose_step = _named_step_block(composer_job, "Compose and verify public release notes")
+        audit_upload_step = _named_step_block(composer_job, "Upload immutable release note audit")
+        audit_record_step = _named_step_block(composer_job, "Record immutable audit artifact")
 
         with self.subTest(msg="release workflow can dispatch PR checks"):
             self.assertTrue(
@@ -127,9 +198,6 @@ class ValidateReleaseWorkflow(unittest.TestCase):
                 ),
                 "expected release workflow to dispatch PR Checks for release-please PR branches",
             )
-
-        resolver_content = RESOLVER_FILE.read_text(encoding="utf-8") if RESOLVER_FILE.is_file() else ""
-        sync_helper_content = SYNC_HELPER_FILE.read_text(encoding="utf-8") if SYNC_HELPER_FILE.is_file() else ""
 
         with self.subTest(msg="release workflow resolves new or unchanged release PRs for payload sync"):
             self.assertTrue(
@@ -208,13 +276,13 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             )
 
         with self.subTest(msg="release workflow merges current main before regenerating an existing release PR"):
-            merge_index = sync_helper_content.find('["git", "merge", "--no-edit", base_sha]')
-            refresh_index = sync_helper_content.find('[sys.executable, "scripts/refresh-release-artifacts.py"]')
+            merge_line = sync_helper_content.find('["git", "merge", "--no-edit", base_sha]')
+            refresh_line = sync_helper_content.find('[sys.executable, "scripts/refresh-release-artifacts.py"]')
             self.assertTrue(
                 "BASE_REF: main" in content
-                and merge_index >= 0
-                and refresh_index >= 0
-                and merge_index < refresh_index,
+                and merge_line >= 0
+                and refresh_line >= 0
+                and merge_line < refresh_line,
                 "expected release branch to merge current main before artifact refresh",
             )
 
@@ -273,11 +341,398 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             missed = [sample for sample in samples if MAIN_PUSH_RE.search(sample) is None]
             self.assertEqual([], missed, f"main-push regex missed: {missed}")
 
+        with self.subTest(msg="release note validation covers all seven pull request events"):
+            pull_request_trigger = _mapping_block(pr_checks_content, "pull_request", 2)
+            event_values = _scalar_values(pull_request_trigger, "types", 4)
+            self.assertEqual(1, len(event_values), "expected one pull_request event list")
+            self.assertEqual(RELEASE_NOTE_EVENTS, _inline_list(event_values[0]))
+
+        with self.subTest(msg="release workflow defaults permissions to none"):
+            self.assertRegex(content, r"(?m)^permissions:\s*\{\}\s*$")
+
+        with self.subTest(msg="release job declares publishing permissions"):
+            self.assertEqual(
+                {"actions": "write", "contents": "write", "pull-requests": "write"},
+                _permission_map(release_job),
+            )
+
+        with self.subTest(msg="release job exports raw component release inputs"):
+            self.assertTrue(
+                _contains_all(
+                    release_job,
+                    (
+                        "release_created: ${{ steps.release.outputs['speckit-pro--release_created'] }}",
+                        "tag_name: ${{ steps.release.outputs['speckit-pro--tag_name'] }}",
+                        "body: ${{ steps.release.outputs['speckit-pro--body'] }}",
+                    ),
+                )
+            )
+            outputs_block = _mapping_block(release_job, "outputs", 4)
+            self.assertNotIn("snapshot_", outputs_block)
+
+        with self.subTest(msg="capture is an own read-only dependent job"):
+            self.assertIn("capture-release-note-inputs:", capture_job)
+            self.assertEqual(["release"], _scalar_values(capture_job, "needs", 4))
+            self.assertEqual(
+                ["${{ always() && needs.release.outputs.release_created == 'true' }}"],
+                _scalar_values(capture_job, "if", 4),
+            )
+            self.assertEqual({"contents": "read"}, _permission_map(capture_job))
+            self.assertTrue(
+                _contains_all(
+                    _mapping_block(capture_job, "outputs", 4),
+                    (
+                        "snapshot_artifact_id: ${{ steps.upload_release_snapshot.outputs['artifact-id'] }}",
+                        "snapshot_artifact_digest: ${{ steps.upload_release_snapshot.outputs['artifact-digest'] }}",
+                        "snapshot_artifact_url: ${{ steps.upload_release_snapshot.outputs['artifact-url'] }}",
+                        "snapshot_sha256: ${{ steps.capture_snapshot.outputs.snapshot_sha256 }}",
+                    ),
+                )
+            )
+            self.assertNotIn("RELEASE_PLEASE_TOKEN", capture_job)
+            self.assertNotIn("actions: write", capture_job)
+            self.assertNotIn("pull-requests: write", capture_job)
+
+        with self.subTest(msg="capture uploads complete canonical Compare and PR inputs"):
+            self.assertEqual(2, len(UPLOAD_ARTIFACT_PIN_RE.findall(content)))
+            self.assertLess(capture_job.find("actions/checkout@"), capture_job.find("--capture-snapshot"))
+            self.assertTrue(
+                _contains_all(
+                    capture_step + snapshot_upload_step,
+                    (
+                        "GITHUB_TOKEN: ${{ github.token }}",
+                        "GITHUB_REPOSITORY: ${{ github.repository }}",
+                        "RELEASE_BODY: ${{ needs.release.outputs.body }}",
+                        "RELEASE_TAG: ${{ needs.release.outputs.tag_name }}",
+                        "python3 scripts/compose-release-notes.py --capture-snapshot ",
+                        "--snapshot-output release-note-snapshot.json",
+                        "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+                        "name: release-note-input-${{ github.run_id }}-${{ github.run_attempt }}",
+                        "path: release-note-snapshot.json",
+                        "if-no-files-found: error",
+                        "retention-days: 90",
+                    ),
+                )
+            )
+            self.assertNotIn("overwrite: true", snapshot_upload_step)
+            capture_function = _python_function_block(composer_content, "capture_release_input_snapshot")
+            canonical_function = _python_function_block(composer_content, "canonical_snapshot_bytes")
+            loader_function = _python_function_block(composer_content, "load_release_input_snapshot")
+            self.assertTrue(
+                _contains_all(
+                    capture_function + canonical_function + loader_function,
+                    (
+                        'f"/repos/{client.repository}/compare/{base}...{head}"',
+                        'f"/repos/{client.repository}/pulls/{commit.pr_number}"',
+                        '"body": body',
+                        '"labels": sorted(_label_names(pr))',
+                        '"release_body": raw_body',
+                        '"compare": compare',
+                        '"pulls": pulls',
+                        "raw != canonical_snapshot_bytes(value)",
+                        "digest != expected_sha256",
+                        "set(pulls_value) != expected_pull_keys",
+                    ),
+                )
+            )
+
+        with self.subTest(msg="composer audits all non-cancelled post-publication capture outcomes"):
+            self.assertIn("compose-release-notes:", composer_job)
+            self.assertEqual(
+                ["[release, capture-release-note-inputs]"],
+                _scalar_values(composer_job, "needs", 4),
+            )
+            self.assertEqual(
+                [
+                    "${{ always() && !cancelled() && "
+                    "needs.release.outputs.release_created == 'true' }}"
+                ],
+                _scalar_values(composer_job, "if", 4),
+            )
+            self.assertNotIn("needs.release.result", composer_job)
+
+        with self.subTest(msg="composer has exact minimum endpoint permissions"):
+            self.assertEqual(
+                {"contents": "write"},
+                _permission_map(composer_job),
+            )
+
+        with self.subTest(msg="composer downloads the exact immutable snapshot by artifact id"):
+            self.assertEqual(1, len(DOWNLOAD_ARTIFACT_PIN_RE.findall(content)))
+            self.assertTrue(
+                _contains_all(
+                    snapshot_download_step,
+                    (
+                        "id: download_release_snapshot",
+                        "if: ${{ always() && !cancelled() }}",
+                        "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
+                        "artifact-ids: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_id }}",
+                        "path: release-note-input",
+                        "digest-mismatch: error",
+                    ),
+                )
+            )
+
+        with self.subTest(msg="composer audits capture download and digest failures"):
+            self.assertTrue(
+                _contains_all(
+                    compose_step,
+                    (
+                        "if: ${{ always() && !cancelled() }}",
+                        "CAPTURE_RESULT: ${{ needs.capture-release-note-inputs.result }}",
+                        "EXPECTED_SNAPSHOT_SHA256: ${{ needs.capture-release-note-inputs.outputs.snapshot_sha256 }}",
+                        "SNAPSHOT_ARTIFACT_DIGEST: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_digest }}",
+                        "SNAPSHOT_DOWNLOAD_OUTCOME: ${{ steps.download_release_snapshot.outcome }}",
+                        'failure_outcome = "release_note_composition_failed"',
+                        '"capture_result": capture_result',
+                        '"snapshot_download_outcome": download_outcome',
+                        'if capture_result != "success":',
+                        'if download_outcome != "success":',
+                        'snapshot_sha256 != expected_sha256',
+                        'snapshot["repository"] != os.environ["GITHUB_REPOSITORY"]',
+                        '"compare_headers"',
+                        '"release_body"',
+                        '"pulls"',
+                        'not re.fullmatch(r"[0-9a-f]{64}", artifact_digest)',
+                    ),
+                )
+            )
+            self.assertEqual(1, compose_step.count('"release_note_composition_failed"'))
+            self.assertNotIn("release_note_audit_failed", compose_step)
+            failure_branch = compose_step.find("if completed.returncode != 0:")
+            wrapper_fail = compose_step.find("fail(message, completed.returncode)", failure_branch)
+            forwarded_stderr = compose_step.find("sys.stderr.write(completed.stderr)")
+            self.assertGreater(failure_branch, -1)
+            self.assertGreater(wrapper_fail, failure_branch)
+            self.assertGreater(forwarded_stderr, failure_branch)
+            self.assertLess(wrapper_fail, forwarded_stderr)
+
+            audit_program = _inline_python_program(compose_step)
+            self.assertTrue(audit_program, "expected executable inline release-note audit program")
+            failure_cases = (
+                ("failure", "skipped", None, "release input capture did not succeed: failure"),
+                ("success", "failure", None, "release snapshot download did not succeed: failure"),
+                ("success", "success", b"{}\n", "release snapshot SHA-256 mismatch"),
+            )
+            for capture_result, download_outcome, snapshot_bytes, expected_error in failure_cases:
+                with tempfile.TemporaryDirectory() as tmp_dir:
+                    tmp_path = Path(tmp_dir)
+                    if snapshot_bytes is not None:
+                        snapshot_path = tmp_path / "release-note-input" / "release-note-snapshot.json"
+                        snapshot_path.parent.mkdir()
+                        snapshot_path.write_bytes(snapshot_bytes)
+                    environment = os.environ.copy()
+                    environment.update(
+                        {
+                            "CAPTURE_RESULT": capture_result,
+                            "EXPECTED_SNAPSHOT_SHA256": "0" * 64,
+                            "GITHUB_API_URL": "https://api.github.test",
+                            "GITHUB_OUTPUT": str(tmp_path / "github-output.txt"),
+                            "GITHUB_REPOSITORY": "racecraft-lab/repo",
+                            "GITHUB_STEP_SUMMARY": str(tmp_path / "summary.md"),
+                            "GITHUB_TOKEN": "test-token",
+                            "SNAPSHOT_ARTIFACT_DIGEST": "",
+                            "SNAPSHOT_ARTIFACT_ID": "",
+                            "SNAPSHOT_ARTIFACT_URL": "",
+                            "SNAPSHOT_DOWNLOAD_OUTCOME": download_outcome,
+                            "WORKFLOW_RUN_ATTEMPT": "2",
+                            "WORKFLOW_RUN_ID": "123",
+                        }
+                    )
+                    completed = subprocess.run(
+                        [sys.executable, "-c", audit_program],
+                        cwd=tmp_path,
+                        env=environment,
+                        text=True,
+                        capture_output=True,
+                        check=False,
+                    )
+                    self.assertEqual(1, completed.returncode, completed.stderr)
+                    self.assertEqual("", completed.stdout)
+                    self.assertEqual(1, completed.stderr.count("release_note_composition_failed"))
+                    diagnostic = json.loads(completed.stderr)
+                    self.assertEqual(expected_error, diagnostic["error"])
+                    self.assertEqual("release_note_composition_failed", diagnostic["outcome"])
+                    audit_bytes = (tmp_path / "release-note-audit.json").read_bytes()
+                    audit = json.loads(audit_bytes)
+                    self.assertEqual(expected_error, audit["error"])
+                    self.assertEqual("release_note_composition_failed", audit["outcome"])
+                    self.assertEqual(capture_result, audit["capture_result"])
+                    self.assertEqual(download_outcome, audit["snapshot_download_outcome"])
+                    self.assertEqual(
+                        (json.dumps(audit, sort_keys=True, separators=(",", ":")) + "\n").encode(),
+                        audit_bytes,
+                    )
+
+        with self.subTest(msg="composer rejects highlights emptied by sanitization"):
+            validation_function = _python_function_block(policy_content, "validate_release_note")
+            compose_body_function = _python_function_block(composer_content, "compose_release_body")
+            self.assertTrue(
+                _contains_all(
+                    validation_function + compose_body_function,
+                    (
+                        "extracted = extract_release_note(body)",
+                        "if not sanitize_release_note(extracted):",
+                        'return False, "release-note fence is empty after sanitization"',
+                        "note = sanitize_release_note(extracted)",
+                        "if extracted is not None and not note:",
+                        "release-note block is empty after sanitization",
+                        "if note is not None and not skipped:",
+                    ),
+                )
+            )
+
+        with self.subTest(msg="composer defends enclosing release-note fence boundaries"):
+            opening_function = _python_function_block(policy_content, "_opening_fence")
+            closing_function = _python_function_block(policy_content, "_is_closing_fence")
+            extraction_function = _python_function_block(policy_content, "extract_release_note")
+            self.assertTrue(
+                _contains_all(
+                    opening_function + closing_function + extraction_function,
+                    (
+                        "FENCE_RE.fullmatch(rest)",
+                        "_strip_quote_prefix(line, opening.quote_depth)",
+                        "re.escape(opening.character)",
+                        "opening.length",
+                        "_is_closing_fence(candidate, opening)",
+                        'if opening.info == "release-note":',
+                        "An unclosed enclosing fence owns the remainder of the document",
+                        "index = close_index + 1",
+                        "malformed or len(matches) != 1",
+                    ),
+                )
+            )
+
+        with self.subTest(msg="capture owns Compare and PR reads while compose does not refetch"):
+            request_methods = re.findall(
+                r'client\.request_json\(\s*"(?P<method>GET|PATCH|POST|PUT|DELETE)"',
+                composer_content,
+            )
+            self.assertEqual(["GET", "GET", "GET", "PATCH"], request_methods)
+            capture_function = _python_function_block(composer_content, "capture_release_input_snapshot")
+            resolve_release_function = _python_function_block(composer_content, "_resolve_release")
+            run_function = _python_function_block(composer_content, "run")
+            self.assertIn("if not args.snapshot:", run_function)
+            live_composition = run_function.split("if not args.snapshot:", 1)[1]
+            self.assertTrue(
+                _contains_all(
+                    capture_function,
+                    (
+                        'f"/repos/{client.repository}/compare/{base}...{head}"',
+                        'f"/repos/{client.repository}/pulls/{commit.pr_number}"',
+                    ),
+                )
+            )
+            self.assertTrue(
+                _contains_all(
+                    resolve_release_function + live_composition,
+                    (
+                        "load_release_input_snapshot(",
+                        "_resolve_release(client, args.tag)",
+                        'f"/repos/{client.repository}/releases/tags/{quoted_tag}"',
+                        'f"/repos/{client.repository}/releases/{release_id}"',
+                        '{"body": composed}',
+                    ),
+                )
+            )
+            self.assertNotIn("/compare/", live_composition)
+            self.assertNotIn("/pulls/", live_composition)
+            self.assertNotIn("capture_release_input_snapshot", live_composition)
+
+        with self.subTest(msg="raw tag and body outputs flow only through capture environment"):
+            self.assertNotIn("needs.release.outputs.body", composer_job)
+            self.assertNotIn("needs.release.outputs.tag_name", composer_job)
+            self.assertNotRegex(composer_job, r"RELEASE_BODY:\s*\$\{\{")
+            self.assertIn("RELEASE_BODY: ${{ needs.release.outputs.body }}", capture_step)
+            self.assertIn("RELEASE_TAG: ${{ needs.release.outputs.tag_name }}", capture_step)
+            self.assertIn('composer_environment["RELEASE_TAG"] = snapshot["tag"]', compose_step)
+            self.assertNotIn('composer_environment["RELEASE_BODY"]', compose_step)
+
+        with self.subTest(msg="composer emits a verified digest-bound audit record"):
+            self.assertTrue(
+                _contains_all(
+                    compose_step,
+                    (
+                        '"release_note_composed_and_verified"',
+                        'published_body.startswith("## Highlights\\n\\n")',
+                        'published_body.count(marker) != 1',
+                        "payload.endswith(expected_suffix)",
+                        '"body_byte_count"',
+                        '"commit_count"',
+                        '"snapshot_byte_count"',
+                        'composer_result["body_sha256"] != published_body_sha256',
+                        'composer_result["body_byte_count"] != len(published_body.encode())',
+                        'composer_result["snapshot_payload_sha256"] != sha256(payload.encode())',
+                        'composer_result["snapshot_source_sha256"] != snapshot_sha256',
+                        'snapshot_byte_count != len(snapshot_bytes)',
+                        '"release_body_sha256": published_body_sha256',
+                        'output.write(f"audit_sha256={digest}\\n")',
+                        'output.write(f"release_body_sha256={audit[\'release_body_sha256\']}\\n")',
+                    ),
+                )
+            )
+
+        with self.subTest(msg="composer uploads and summarizes an immutable audit artifact"):
+            self.assertTrue(
+                _contains_all(
+                    audit_upload_step + audit_record_step,
+                    (
+                        "if: ${{ always() }}",
+                        "name: release-note-audit-${{ github.run_id }}-${{ github.run_attempt }}",
+                        "path: release-note-audit.json",
+                        "if-no-files-found: error",
+                        "AUDIT_ARTIFACT_DIGEST: ${{ steps.upload_release_audit.outputs['artifact-digest'] }}",
+                        "AUDIT_ARTIFACT_ID: ${{ steps.upload_release_audit.outputs['artifact-id'] }}",
+                        "AUDIT_ARTIFACT_URL: ${{ steps.upload_release_audit.outputs['artifact-url'] }}",
+                        "Immutable audit artifact",
+                    ),
+                )
+            )
+            self.assertNotIn("overwrite: true", audit_upload_step)
+
+        with self.subTest(msg="composer invokes Python without elevated release token"):
+            self.assertIn(
+                '[sys.executable, str(composer_path), "--snapshot", str(snapshot_path)]',
+                compose_step,
+            )
+            self.assertIn("EXPECTED_SNAPSHOT_SHA256:", compose_step)
+            self.assertIn("GITHUB_TOKEN: ${{ github.token }}", compose_step)
+            self.assertNotIn("actions: write", composer_job)
+            self.assertNotIn("pull-requests: write", composer_job)
+            self.assertNotIn("pull-requests: read", composer_job)
+            self.assertNotIn("RELEASE_PLEASE_TOKEN", composer_job)
+
         with self.subTest(msg="release.yml is valid YAML"):
             tab_indented_step = "name: Invalid\njobs:\n\tbuild:\n\t  runs-on: ubuntu-latest\n"
+            valid_nested_step = """\
+name: Valid
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish
+        run: echo valid
+"""
+            under_indented_step = """\
+name: Invalid
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish
+      run: echo invalid
+"""
             self.assertFalse(
                 _yaml_syntax_sane(tab_indented_step),
                 "stdlib YAML sanity check accepted a tab-indented workflow line",
+            )
+            self.assertTrue(
+                _yaml_syntax_sane(valid_nested_step),
+                "stdlib YAML sanity check rejected a valid nested workflow step",
+            )
+            self.assertFalse(
+                _yaml_syntax_sane(under_indented_step),
+                "stdlib YAML sanity check accepted an under-indented step child",
             )
             self.assertTrue(_yaml_syntax_sane(content), "release.yml failed YAML syntax validation")
 
@@ -285,16 +740,21 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             self.assertTrue(RELEASE_CONFIG_FILE.is_file(), f"file not found: {RELEASE_CONFIG_FILE}")
 
         with self.subTest(msg="release-please extra-files never pre-bump proof-covered trees"):
-            config = json.loads(RELEASE_CONFIG_FILE.read_text(encoding="utf-8")) if RELEASE_CONFIG_FILE.is_file() else {}
             forbidden: list[str] = []
-            for package in (config.get("packages") or {}).values():
-                if not isinstance(package, dict):
-                    continue
-                for entry in package.get("extra-files") or []:
-                    raw = entry.get("path", "") if isinstance(entry, dict) else str(entry)
-                    normalized = posixpath.normpath(raw.lstrip("/")).lstrip("./")
-                    if normalized == "dist" or normalized.startswith("dist/") or "installed-cache" in normalized:
-                        forbidden.append(raw)
+            if RELEASE_CONFIG_FILE.is_file():
+                config = json.loads(RELEASE_CONFIG_FILE.read_text(encoding="utf-8"))
+                for package in (config.get("packages") or {}).values():
+                    if not isinstance(package, dict):
+                        continue
+                    for entry in package.get("extra-files") or []:
+                        raw = entry.get("path", "") if isinstance(entry, dict) else str(entry)
+                        normalized = posixpath.normpath(raw.lstrip("/")).lstrip("./")
+                        if (
+                            normalized == "dist"
+                            or normalized.startswith("dist/")
+                            or "installed-cache" in normalized
+                        ):
+                            forbidden.append(raw)
             self.assertEqual(
                 [],
                 forbidden,

@@ -19,7 +19,24 @@
 019 release workflow sync commit does not skip required PR checks
 020 release workflow does not direct-push generated sync changes to main
 021 release workflow main-push regex catches common protected-branch pushes
-022 release.yml is valid YAML
-023 release-please-config.json exists
-024 release-please extra-files never pre-bump proof-covered trees
-TOTAL: 24
+022 release note validation covers all seven pull request events
+023 release workflow defaults permissions to none
+024 release job declares publishing permissions
+025 release job exports raw component release inputs
+026 capture is an own read-only dependent job
+027 capture uploads complete canonical Compare and PR inputs
+028 composer audits all non-cancelled post-publication capture outcomes
+029 composer has exact minimum endpoint permissions
+030 composer downloads the exact immutable snapshot by artifact id
+031 composer audits capture download and digest failures
+032 composer rejects highlights emptied by sanitization
+033 composer defends enclosing release-note fence boundaries
+034 capture owns Compare and PR reads while compose does not refetch
+035 raw tag and body outputs flow only through capture environment
+036 composer emits a verified digest-bound audit record
+037 composer uploads and summarizes an immutable audit artifact
+038 composer invokes Python without elevated release token
+039 release.yml is valid YAML
+040 release-please-config.json exists
+041 release-please extra-files never pre-bump proof-covered trees
+TOTAL: 41

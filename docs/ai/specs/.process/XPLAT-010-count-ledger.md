@@ -90,6 +90,8 @@ Columns:
 | PR 11 | workflow self-validator expansion: `validate-pr-checks-sentinel.py` | default | 30 → 49 | n/a (new container-preflight contract) | `tests/speckit-pro/parity/bash-to-python/validate-pr-checks-sentinel-baseline.txt` |
 | PR 11 | hosted Windows and container preflight helper contract | default | 0 → 29 | n/a | n/a |
 | PR 12a | consumer release-note policy contract | default | 0 → 30 | n/a | `tests/speckit-pro/parity/bash-to-python/test-release-note-policy-baseline.txt` |
+| PR 12b | consumer release-note composition contract | default | 0 → 46 | n/a | `tests/speckit-pro/parity/bash-to-python/test-compose-release-notes-baseline.txt` |
+| PR 12b | release-workflow validator expansion | default | 24 → 41 | n/a (new capture/composition contract) | `tests/speckit-pro/parity/bash-to-python/validate-release-workflow-baseline.txt` |
 
 **PR 13 note (T121–T130):** The estimator Layer-4 test follows the
 Per-Port Protocol against historical predecessor commit

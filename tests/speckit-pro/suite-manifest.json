@@ -83,6 +83,7 @@
         { "path": "tests/speckit-pro/unit/test-parity-runner.py", "label": "test-parity-runner", "baseline": "tests/speckit-pro/parity/bash-to-python/test-parity-runner-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-privacy-scan.py", "label": "test-privacy-scan", "baseline": "tests/speckit-pro/parity/bash-to-python/test-privacy-scan-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-release-note-policy.py", "label": "test-release-note-policy", "baseline": "tests/speckit-pro/parity/bash-to-python/test-release-note-policy-baseline.txt" },
+        { "path": "tests/speckit-pro/unit/test-compose-release-notes.py", "label": "test-compose-release-notes", "baseline": "tests/speckit-pro/parity/bash-to-python/test-compose-release-notes-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-speckit-pro-runner.py", "label": "test-speckit-pro-runner", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py", "label": "test-speckit-pro-read-only-helpers", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-estimate-spec-size.py", "label": "test-estimate-spec-size", "baseline": "tests/speckit-pro/parity/bash-to-python/test-estimate-spec-size-baseline.txt" },

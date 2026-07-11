@@ -257,9 +257,9 @@ Releases are fully automated via [release-please](https://github.com/googleapis/
 
 1. **Conventional commit analysis:** After a PR is squash-merged to `main`, the Release workflow (`.github/workflows/release.yml`) runs. release-please scans new conventional commits and determines whether a release is warranted. Only `fix:`, `feat:`, and breaking-change commits trigger a release PR — `chore:` and `docs:` commits alone do not.
 
-2. **Release PR creation:** When releasable commits exist, release-please opens or updates a PR that bumps `CHANGELOG.md` and the version fields in `speckit-pro/.claude-plugin/plugin.json` and `speckit-pro/.codex-plugin/plugin.json`. During XPLAT-007, plugin validation and release-readiness workflow steps dispatch Python runner gates. Generated release payload cutover, public release notes, update, autoheal, installed-cache UAT, and native platform UAT remain XPLAT-008 handoff work.
+2. **Release PR creation:** When releasable commits exist, release-please opens or updates a PR that bumps `CHANGELOG.md` and the version fields in `speckit-pro/.claude-plugin/plugin.json` and `speckit-pro/.codex-plugin/plugin.json`. Plugin validation, release-readiness, payload synchronization, install-health checks, and active-path guards dispatch Python runner gates.
 
-3. **GitHub Release publication:** When the release PR is merged, release-please creates a GitHub Release with a version tag (e.g., `speckit-pro-v1.2.0`).
+3. **GitHub Release publication:** When the release PR is merged, release-please creates a GitHub Release with a version tag (e.g., `speckit-pro-v1.2.0`). The workflow captures the raw body and merged-PR metadata in an immutable artifact, then deterministically rewrites the release with consumer Highlights plus the original commit appendix. `CHANGELOG.md` remains release-please's machine ledger.
 
 4. **Post-release consistency check:** After the release publishes (`steps.release.outputs['speckit-pro--release_created'] == 'true'`), the workflow rebuilds `dist/**`, re-syncs marketplace versions, and regenerates the docs reference, then **verifies** that `main` is already consistent — because the release PR (step 2) carried the full sync. It does **not** open a separate sync PR. If it ever detects drift, it fails the workflow so a maintainer can re-run the Release workflow to re-sync the release PR.
 
