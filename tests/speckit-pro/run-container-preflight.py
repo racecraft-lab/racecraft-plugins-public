@@ -620,7 +620,8 @@ def _probe_interpreter(
             not architecture_emulated,
         )
     )
-    supported = version_supported and architecture_supported
+    interpreter = str(payload.get("executable") or "")
+    supported = version_supported and architecture_supported and bool(interpreter)
     record.update(
         {
             "status": "supported" if supported else "rejected",
@@ -630,7 +631,7 @@ def _probe_interpreter(
                 if all(type(item) is int for item in (major, minor, micro))
                 else ""
             ),
-            "interpreter": str(payload.get("executable") or ""),
+            "interpreter": interpreter,
             "architecture": process_architecture,
             "architecture_family": process_family,
             "native_architecture": native_architecture,
@@ -645,64 +646,48 @@ def _probe_interpreter(
 def _probe_interpreters(
     role: str,
     evidence_dir: Path,
-) -> tuple[str | None, list[dict[str, Any]]]:
+) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
     expected_architecture = WINDOWS_ROLE_ARCHITECTURES[role]
     records = [
         _probe_interpreter(candidate, expected_architecture, evidence_dir)
         for candidate in INTERPRETER_CANDIDATES
     ]
     selected = next(
-        (record["candidate"] for record in records if record["supported"]),
+        (
+            record
+            for record in records
+            if record["supported"]
+            and _same_executable(str(record["interpreter"]), sys.executable)
+        ),
         None,
     )
     for record in records:
-        record["selected"] = record["candidate"] == selected
+        record["selected"] = record is selected
     _write_json(evidence_dir / "interpreter-probes.json", records)
     return selected, records
 
 
+def _same_executable(left: str, right: str) -> bool:
+    return os.path.normcase(os.path.abspath(left)) == os.path.normcase(
+        os.path.abspath(right)
+    )
+
+
 def _run_selected_windows_helper(
-    selected: str,
+    interpreter: str,
     arguments: list[str],
     child_env: dict[str, str],
 ) -> subprocess.CompletedProcess[Any]:
-    if selected == "py -V:3":
-        return subprocess.run(
-            ["py", "-V:3", *arguments],
-            cwd=REPO_ROOT,
-            env=child_env,
-            check=False,
-            shell=False,
-            timeout=WINDOWS_TIMEOUT_SECONDS,
-        )
-    if selected == "py -3":
-        return subprocess.run(
-            ["py", "-3", *arguments],
-            cwd=REPO_ROOT,
-            env=child_env,
-            check=False,
-            shell=False,
-            timeout=WINDOWS_TIMEOUT_SECONDS,
-        )
-    if selected == "python":
-        return subprocess.run(
-            ["python", *arguments],
-            cwd=REPO_ROOT,
-            env=child_env,
-            check=False,
-            shell=False,
-            timeout=WINDOWS_TIMEOUT_SECONDS,
-        )
-    if selected == "python3":
-        return subprocess.run(
-            ["python3", *arguments],
-            cwd=REPO_ROOT,
-            env=child_env,
-            check=False,
-            shell=False,
-            timeout=WINDOWS_TIMEOUT_SECONDS,
-        )
-    raise PreflightError(f"unsupported selected interpreter: {selected}")
+    if not _same_executable(interpreter, sys.executable):
+        raise PreflightError("probed interpreter does not match the active Python")
+    return subprocess.run(
+        [sys.executable, *arguments],
+        cwd=REPO_ROOT,
+        env=child_env,
+        check=False,
+        shell=False,
+        timeout=WINDOWS_TIMEOUT_SECONDS,
+    )
 
 
 def _windows_smoke() -> int:
@@ -712,8 +697,8 @@ def _windows_smoke() -> int:
         raise PreflightError(f"unsupported Windows role: {role}")
     evidence_dir = _evidence_dir()
     evidence_dir.mkdir(parents=True, exist_ok=True)
-    selected, probe_records = _probe_interpreters(role, evidence_dir)
-    if selected is None:
+    selected_record, probe_records = _probe_interpreters(role, evidence_dir)
+    if selected_record is None:
         _write_json(
             evidence_dir / "summary.json",
             {
@@ -746,10 +731,12 @@ def _windows_smoke() -> int:
         _required_env("SPEC_KIT_GIT_REF"),
     ]
     child_env = os.environ.copy()
-    child_env["PREFLIGHT_INTERPRETER_CANDIDATE"] = selected
+    selected_candidate = str(selected_record["candidate"])
+    selected_interpreter = str(selected_record["interpreter"])
+    child_env["PREFLIGHT_INTERPRETER_CANDIDATE"] = selected_candidate
     try:
         completed = _run_selected_windows_helper(
-            selected,
+            selected_interpreter,
             arguments,
             child_env,
         )
@@ -765,7 +752,8 @@ def _windows_smoke() -> int:
                 "role": role,
                 "status": "fail",
                 "error": "windows_helper_dispatch_failed",
-                "interpreter_candidate": selected,
+                "interpreter_candidate": selected_candidate,
+                "interpreter": selected_interpreter,
                 "native_installed_uat": False,
             },
         )

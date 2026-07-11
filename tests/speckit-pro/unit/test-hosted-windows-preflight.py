@@ -664,7 +664,7 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
         self.assertEqual(return_code, 1)
         runner_mock.assert_not_called()
 
-    def test_windows_interpreter_probes_are_ordered_and_select_first_native_supported(self) -> None:
+    def test_windows_interpreter_probes_are_ordered_and_select_active_native_python(self) -> None:
         commands: list[list[str]] = []
 
         def run_probe(command: list[str], **_kwargs: object) -> SimpleNamespace:
@@ -712,6 +712,11 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
                     "run",
                     side_effect=run_probe,
                 ),
+                mock.patch.object(
+                    dispatch_helper.sys,
+                    "executable",
+                    "C:/Python/python.exe",
+                ),
             ):
                 selected, records = dispatch_helper._probe_interpreters(
                     "windows-arm64",
@@ -723,7 +728,10 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
                 )
             )
 
-        self.assertEqual(selected, "python")
+        self.assertIsNotNone(selected)
+        assert selected is not None
+        self.assertEqual(selected["candidate"], "python")
+        self.assertEqual(selected["interpreter"], "C:/Python/python.exe")
         self.assertEqual(
             [record["candidate"] for record in records],
             list(dispatch_helper.INTERPRETER_CANDIDATES),
@@ -788,6 +796,7 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
             probe_records = [
                 {
                     "candidate": "py -3",
+                    "interpreter": "C:/hostedtoolcache/Python/3.14.6/python.exe",
                     "supported": True,
                     "selected": True,
                 }
@@ -802,7 +811,7 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
                 mock.patch.object(
                     dispatch_helper,
                     "_probe_interpreters",
-                    return_value=("py -3", probe_records),
+                    return_value=(probe_records[0], probe_records),
                 ),
                 mock.patch.object(
                     dispatch_helper,
@@ -813,8 +822,11 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
                 return_code = dispatch_helper._windows_smoke()
 
         self.assertEqual(return_code, 0)
-        selected, arguments, child_env = dispatch_mock.call_args.args
-        self.assertEqual(selected, "py -3")
+        interpreter, arguments, child_env = dispatch_mock.call_args.args
+        self.assertEqual(
+            interpreter,
+            "C:/hostedtoolcache/Python/3.14.6/python.exe",
+        )
         self.assertEqual(
             Path(arguments[0]),
             DISPATCH_HELPER_PATH.parent / "run-hosted-windows-preflight.py",
@@ -822,6 +834,53 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
         self.assertIn("--spec-kit-ref", arguments)
         self.assertIn(IMMUTABLE_SPEC_KIT_REF, arguments)
         self.assertEqual(child_env["PREFLIGHT_INTERPRETER_CANDIDATE"], "py -3")
+
+    def test_windows_helper_dispatch_does_not_reresolve_selected_launcher(self) -> None:
+        completed = SimpleNamespace(returncode=0)
+        interpreter = "C:/hostedtoolcache/Python/3.14.6/python.exe"
+        arguments = ["run-hosted-windows-preflight.py", "--role", "windows-x64"]
+        child_env = {"PREFLIGHT_INTERPRETER_CANDIDATE": "py -V:3"}
+        with mock.patch.object(
+            dispatch_helper.subprocess,
+            "run",
+            return_value=completed,
+        ) as run_mock, mock.patch.object(
+            dispatch_helper.sys,
+            "executable",
+            interpreter,
+        ):
+            result = dispatch_helper._run_selected_windows_helper(
+                interpreter, arguments, child_env
+            )
+
+        self.assertIs(result, completed)
+        self.assertEqual(
+            run_mock.call_args.args[0],
+            [interpreter, *arguments],
+        )
+        self.assertEqual(run_mock.call_args.kwargs["env"], child_env)
+        self.assertFalse(run_mock.call_args.kwargs["shell"])
+
+    def test_windows_helper_dispatch_rejects_a_different_probed_interpreter(self) -> None:
+        with (
+            mock.patch.object(
+                dispatch_helper.sys,
+                "executable",
+                "C:/hostedtoolcache/Python/3.13.14/python.exe",
+            ),
+            mock.patch.object(dispatch_helper.subprocess, "run") as run_mock,
+        ):
+            with self.assertRaisesRegex(
+                dispatch_helper.PreflightError,
+                "does not match the active Python",
+            ):
+                dispatch_helper._run_selected_windows_helper(
+                    "C:/hostedtoolcache/Python/3.14.6/python.exe",
+                    ["run-hosted-windows-preflight.py"],
+                    {},
+                )
+
+        run_mock.assert_not_called()
 
     def test_dispatch_helper_uses_argv_subprocesses_and_current_runner_module(self) -> None:
         content = DISPATCH_HELPER_PATH.read_text(encoding="utf-8")
