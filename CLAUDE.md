@@ -410,7 +410,12 @@ gh run view <run-id> --log-failed
 
 Look for the `Verify release artifacts are consistent` step; its error prints the drifting paths. This usually means the release-PR payload-sync step did not run on the release PR before it was merged (e.g., a release PR created by an older workflow).
 
-**Recovery:** Fix forward — push a sync commit through a normal PR that runs `bash scripts/build-plugin-payloads.sh`, `bash scripts/sync-marketplace-versions.sh`, and `pnpm --dir docs-site reference:generate`, then commits `dist/`, both `marketplace.json` files, and `docs-site/src/content/docs/reference/**`. For future releases the release PR carries this sync automatically; use Scenario 1 to re-sync a release PR before merge.
+**Recovery:** Fix forward — push a sync commit through a normal PR that runs
+`python3 scripts/refresh-release-artifacts.py` and
+`pnpm --dir docs-site reference:generate`, then commits the generated payload,
+marketplace, proof, evidence, and docs-reference changes. For future releases
+the release PR carries this sync automatically; use Scenario 1 to re-sync a
+release PR before merge.
 
 ---
 
@@ -464,8 +469,7 @@ gh api /repos/racecraft-lab/racecraft-plugins-public/contents/.claude-plugin/mar
 Compare the version values against the GitHub Release tags. If they do not match, re-trigger the sync (Scenario 1). If re-triggering also fails, manually rebuild payloads, sync marketplace files, and open a PR:
 
 ```bash
-bash scripts/build-plugin-payloads.sh
-bash scripts/sync-marketplace-versions.sh
+python3 scripts/refresh-release-artifacts.py
 pnpm --dir docs-site reference:generate
 git add dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json docs-site/src/content/docs/reference
 git commit -m "chore: sync plugin payloads, marketplace versions, and docs reference"
@@ -475,27 +479,34 @@ gh pr create --base main --head <sync-branch> --title "chore: sync plugin payloa
 
 ---
 
-### Scenario 7: The `test latest jq` leg blocks PRs for upstream reasons
+### Scenario 7: A required Linux container preflight blocks PRs
 
-**Symptom:** Open speckit-pro PRs show `validate-plugins` failing (and a red `test latest jq (speckit-pro)` check) even though the PR's own code is fine. Because the latest-`jq` leg is wired into the `validate-plugins` sentinel, an upstream or infrastructure failure here blocks **every** speckit-pro PR, not just one.
+**Symptom:** Open speckit-pro PRs show a red
+`container-preflight-linux-amd64` or `container-preflight-linux-arm64` required
+check. The corresponding heavy job runs the Python toolchain preflight, default
+suite, release readiness, and artifact capture inside the pinned container.
 
 **Detection:**
 ```bash
 gh run view <run-id> --log-failed
 ```
-Look at the `Install latest jq release` step. Common upstream causes:
-- `jqlang/jq` renamed or dropped the `jq-linux-amd64` release asset (`latest jq release did not include jq-linux-amd64`).
-- The latest release asset has no `digest` field (`latest jq release asset is missing a sha256 digest`).
-- `api.github.com` was unreachable or rate-limited at run time.
+Inspect the failed heavy-job step and its uploaded artifact. Distinguish a
+deterministic suite/release-readiness failure from a transient image or Actions
+infrastructure failure before changing code.
 
 **Recovery:**
-1. **Transient (network/API):** re-run the failed jobs — `gh run rerun <run-id> --failed`. No code change needed.
-2. **Upstream asset/digest change:** this is a real workflow fix, not a per-PR fix. Update the `test-latest-jq` job in `.github/workflows/pr-checks.yml` to the new asset name (and the `validate-pr-checks-sentinel.sh` assertions if the digest handling changes), land it through a normal PR, then re-run the blocked PRs' checks.
-3. **Emergency unblock:** if a maintainer must merge before the upstream fix lands, temporarily relax the sentinel — drop `test-latest-jq` from `needs:` and the `latest_jq_result` check in `validate-plugins` — or merge via admin override, then restore the gate in a follow-up. Treat this as a stopgap, not a permanent state, so drift between `pr-checks.yml` and the required-check name does not accumulate (see the **Maintenance warning** above).
-
-If this leg proves flaky enough to disrupt the merge queue, consider demoting it to advisory (`continue-on-error: true` and out of the sentinel `needs:`) so it still surfaces `jq` drift without gating merges.
+1. **Transient infrastructure failure:** re-run failed jobs with
+   `gh run rerun <run-id> --failed`; no source change is needed.
+2. **Deterministic suite or readiness failure:** reproduce the named Python
+   command locally, fix the source or generated-artifact drift, and land it
+   through a normal PR.
+3. **Runner-image contract change:** update the pinned container workflow and
+   its Python validators together. Do not demote either required sentinel or
+   use an admin override as a routine workaround.
 
 ## Active Technologies
+The entries below are historical spec snapshots. They do not override the
+current Python 3.11+ commands and Bash-confinement rules at the top of this file.
 - Bash 4+ shell scripts, Markdown skills, YAML manifests, JSON Schema 2020-12 contracts, and `bash`, `jq`, `git`, `gh` at PR-emission boundaries (prsg-010-harden-the-hatch)
 - Repository files only: feature artifacts, contract schemas, workflow state JSON, and generated re-slicing packets (prsg-010-harden-the-hatch)
 - Bash 4+ shell scripts, Markdown skill guidance, JSON Schema 2020-12 + `bash`, `jq`, `git`, `gh` at PR-emission boundaries, existing SpecKit Pro shell harness (prsg-013-reviewability-markers)
@@ -505,7 +516,7 @@ If this leg proves flaky enough to disrupt the merge queue, consider demoting it
 - Markdown/MDX content plus Astro/Starlight docs site metadata + Astro 6.4.6, Starlight 0.40.0, pnpm 10.25.0 (doc-004-codex-marketplace-installation-path)
 - Docs-site JavaScript ESM on Node; Astro 6.4.6 and Starlight 0.40.0 for docs rendering; Node built-ins (`node:fs`, `node:path`, `node:url`) plus existing docs-site pnpm scripts and `starlight-links-validator`; no new runtime dependency planned. (doc-007-command-workflow-manifest-and-file-layout-reference)
 - Checked-in Markdown files under `docs-site/src/content/docs/reference/`; no database or browser storage. (doc-007-command-workflow-manifest-and-file-layout-reference)
-- Markdown runtime guidance, TOML Codex agent templates, YAML metadata, generated payload files, and Bash validation scripts in the existing repository; existing SpecKit Pro plugin structure, payload builder `bash scripts/build-plugin-payloads.sh`, and deterministic verification `bash tests/speckit-pro/run-all.sh`; no new runtime dependency planned. (tacd-002-capability-discovery-directive-and-agent-updates)
+- Historical pre-XPLAT snapshot: Markdown runtime guidance, TOML Codex agent templates, YAML metadata, generated payload files, and the then-current Bash validation and payload tooling. Those commands were retired by XPLAT-009/XPLAT-010. (tacd-002-capability-discovery-directive-and-agent-updates)
 - Repository files only. Source guidance under `speckit-pro/`, generated payload copies under `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/`, and Plan-phase artifacts under `specs/tacd-002-capability-discovery-directive-and-agent-updates/`. (tacd-002-capability-discovery-directive-and-agent-updates)
 - Docs-site JavaScript ESM on Node, with Markdown/MDX content under `docs-site/src/content/docs/` + Astro 6.4.6, Starlight 0.40.0, existing `starlight-links-validator` (doc-008-troubleshooting-security-trust-update-rollback)
 - Checked-in Markdown/MDX files only; no database, browser storage, or runtime state (doc-008-troubleshooting-security-trust-update-rollback)

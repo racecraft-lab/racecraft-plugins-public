@@ -64,8 +64,10 @@ confinement PRs; 12 and 13 independent (13 preferred early).
 predecessor. The count differs from the original implementation plan for three
 explicit reasons: Foundation and Polish are emitted aggregate review units, and
 the blocked 1,267-production-LOC release-notes slice was split into PR 12a and
-PR 12b without a waiver. PR 13 was emitted early as #313. The generated source
-of truth is `specs/xplat-010-repository-bash-confinement/.process/prs.json`.
+PR 12b without a waiver. PR 13 was emitted early as #313. The archived generated
+source of truth is `docs/ai/specs/.process/XPLAT-010-prs.json`; its 18 immutable
+packet triplets are preserved under
+`docs/ai/specs/.process/XPLAT-010-pr-packets/`.
 
 ---
 
@@ -788,8 +790,9 @@ Before starting any task:
 | #327 PR 12b / `16-release-composition` | T113–T120 | 8/8 | Complete; composer/workflow contracts pass and the five-check non-strict branch rule satisfies T117 |
 | #328 Polish / `17-polish` | T131–T136 | 6/6 | T131 parity, T132 focused quickstart, T133 neutral-PATH no-Bash proof, T134 packets, T135 final suite/docs, and T136 traceability complete |
 
-All 18 packet directories contain `body.md`, `packet.json`, and a passing
-`validation.json` for their exact adjacent diffs. The frozen implementation tip
+All 18 packet directories preserved under
+`docs/ai/specs/.process/XPLAT-010-pr-packets/` contain `body.md`, `packet.json`,
+and a passing `validation.json` for their exact adjacent diffs. The frozen implementation tip
 is `a7b2d27b12fdc5051dfa4829c94f92752e2f5146`, with tree
 `a1c42735d35619bbd0a4a90a42c57ab9e578848e`; publication metadata remains a
 separate bounded tail and must not be presented as an implementation boundary.

@@ -1,0 +1,188 @@
+{
+  "body_file": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/17-polish/body.md",
+  "editable_fields": [
+    {
+      "end_marker": "<!-- speckit-pro-editable:summary:end -->",
+      "field_id": "summary",
+      "heading": "Summary",
+      "start_marker": "<!-- speckit-pro-editable:summary:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:what_changed:end -->",
+      "field_id": "what_changed",
+      "heading": "What Changed",
+      "start_marker": "<!-- speckit-pro-editable:what_changed:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:why_it_matters:end -->",
+      "field_id": "why_it_matters",
+      "heading": "Why It Matters",
+      "start_marker": "<!-- speckit-pro-editable:why_it_matters:start -->"
+    }
+  ],
+  "generated_title": {
+    "description": "finalize integrated verification evidence",
+    "rejected_candidates": [
+      {
+        "reason": "A branch name is not reviewer-facing Conventional Commit prose.",
+        "value": "xplat-010-review/17-polish"
+      }
+    ],
+    "scope": "xplat-010",
+    "source_evidence": {
+      "kind": "split_source_boundary",
+      "result": "observed",
+      "source": "docs/ai/specs/.process/autopilot-state.json",
+      "summary": "The canonical marker supplies the exact adjacent stack target."
+    },
+    "type": "chore",
+    "value": "chore(xplat-010): finalize integrated verification evidence"
+  },
+  "mode": "split",
+  "packet_id": "17-polish",
+  "protected_body_fingerprint": {
+    "algorithm": "sha256",
+    "elided_fields": [
+      "summary",
+      "what_changed",
+      "why_it_matters"
+    ],
+    "normalization": "LF line endings; trailing spaces, tabs, and CR trimmed per line; slice from ## Summary through the first nonblank Known Gaps body paragraph; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256; packet-source comment and Release note excluded.",
+    "value": "2e8f3a9a318677c38994b9ff0401a69cfe4f50f3b2f0dd08ba5872e22057911c"
+  },
+  "required_headings": [
+    "Summary",
+    "What Changed",
+    "Why It Matters",
+    "How To Review",
+    "How To UAT",
+    "Verification",
+    "Scope",
+    "Known Gaps"
+  ],
+  "schema_version": "1.0.0",
+  "scope_evidence": {
+    "budget_result": "warning",
+    "changed_files": [
+      ".github/copilot-instructions.md",
+      "AGENTS.md",
+      "CLAUDE.md",
+      "GEMINI.md",
+      "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
+      "dist/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py",
+      "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation-codex.md",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/references/task-list-canonical-codex.md",
+      "dist/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py",
+      "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "docs-site/src/content/docs/contribute-and-release.md",
+      "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json",
+      "docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json",
+      "docs/ai/specs/.process/XPLAT-009-release-readiness-result.json",
+      "docs/prd-interactive-documentation.md",
+      "docs/prd-pr-size-governance.md",
+      "docs/prd-tool-agnostic-capability-discovery.md",
+      "docs/roadmap-interactive-documentation.md",
+      "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+      "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md",
+      "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",
+      "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
+      "speckit-pro/speckit_pro_runner/helpers/read_only.py",
+      "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-file-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-mutable.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-source-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-mutable.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-partial-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-root-mismatch.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-same-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-single-product.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-source-mismatch.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-traversal-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation-codex.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/references/task-list-canonical-codex.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "tests/speckit-pro/unit/test-reviewability-marker-guidance.py",
+      "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py",
+      "tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py",
+      "tests/speckit-pro/unit/test-speckit-pro-runner.py"
+    ],
+    "non_goals": [
+      "No later stack slice is included in this adjacent branch diff.",
+      "No hosted-check, merge, or release-publication result is claimed."
+    ],
+    "production_files": 4,
+    "reviewable_loc": 640,
+    "total_files": 57
+  },
+  "source_feature_dir": "specs/xplat-010-repository-bash-confinement",
+  "source_markers": [
+    {
+      "marker_id": "task-boundary",
+      "rendered_text": "Source: canonical marker `polish` maps this packet to T131-T136.",
+      "source": "specs/xplat-010-repository-bash-confinement/tasks.md"
+    },
+    {
+      "marker_id": "adjacent-diff",
+      "rendered_text": "Source: adjacent diff `xplat-010-review/16-release-composition (b5ab3cac69013207a47f431f490231a9b2d5441e)..xplat-010-review/17-polish (a7b2d27b12fdc5051dfa4829c94f92752e2f5146)` contains 57 files, 3335 insertions, 701 deletions, and 640 reviewable LOC.",
+      "source": "git diff b5ab3cac69013207a47f431f490231a9b2d5441e..a7b2d27b12fdc5051dfa4829c94f92752e2f5146"
+    },
+    {
+      "marker_id": "uat-runbook",
+      "rendered_text": "Source: `specs/xplat-010-repository-bash-confinement/.process/uat-runbook.md` is the acceptance procedure. This packet does not promote local evidence to hosted, merged, or published evidence.",
+      "source": "specs/xplat-010-repository-bash-confinement/.process/uat-runbook.md"
+    }
+  ],
+  "split_slice": {
+    "slice_id": "17-polish",
+    "source_boundary": {
+      "section": "## Phase 18: Polish - Aggregate closeout evidence and review packets"
+    },
+    "source_packet": "docs/ai/specs/.process/autopilot-state.json"
+  },
+  "target": {
+    "base_branch": "xplat-010-review/16-release-composition",
+    "head_branch": "xplat-010-review/17-polish"
+  },
+  "uat": {
+    "how_to_uat": "Use the committed feature UAT runbook on this exact candidate branch and record command, exit-code, and observable-result evidence.",
+    "uat_runbook_heading": "## UAT Runbook",
+    "uat_source": "specs/xplat-010-repository-bash-confinement/.process/uat-runbook.md"
+  },
+  "validation_result_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/17-polish/validation.json",
+  "verification_evidence": [
+    {
+      "kind": "immediate_branch_diff",
+      "result": "passed",
+      "source": "git diff b5ab3cac69013207a47f431f490231a9b2d5441e..a7b2d27b12fdc5051dfa4829c94f92752e2f5146",
+      "summary": "Observed 57 paths, 3335 insertions, and 701 deletions."
+    },
+    {
+      "kind": "task_traceability",
+      "result": "passed",
+      "source": "specs/xplat-010-repository-bash-confinement/tasks.md",
+      "summary": "Marker polish maps this packet to T131-T136."
+    },
+    {
+      "kind": "stack_shape",
+      "result": "passed",
+      "source": "git rev-list b5ab3cac69013207a47f431f490231a9b2d5441e..a7b2d27b12fdc5051dfa4829c94f92752e2f5146",
+      "summary": "Observed 5 commits and 0 merge commits."
+    }
+  ]
+}

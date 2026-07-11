@@ -6,12 +6,12 @@
   "status": "open_non_draft_with_local_packet_validation",
   "aggregate_body": "docs/ai/specs/.process/XPLAT-010-pr-body.md",
   "source_manifest": {
-    "path": "specs/xplat-010-repository-bash-confinement/.process/prs.json",
+    "path": "docs/ai/specs/.process/XPLAT-010-prs.json",
     "schema_version": 2,
     "reconciled_at": "2026-07-11T05:40:56Z"
   },
   "packet_set": {
-    "root": "specs/xplat-010-repository-bash-confinement/.process/pr-packets",
+    "root": "docs/ai/specs/.process/XPLAT-010-pr-packets",
     "triplet_count": 18,
     "reconciled_at": "2026-07-11T05:40:56Z"
   },
@@ -26,11 +26,11 @@
       "branch": "xplat-010-review/17-polish",
       "head_sha": "a7b2d27b12fdc5051dfa4829c94f92752e2f5146",
       "tree_sha": "a1c42735d35619bbd0a4a90a42c57ab9e578848e",
-      "packet_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/17-polish/packet.json"
+      "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/17-polish/packet.json"
     },
     "metadata_publication_tail": {
       "status": "unresolved_until_publication",
-      "contract_path": "specs/xplat-010-repository-bash-confinement/.process/publication-tail.json",
+      "contract_path": "docs/ai/specs/.process/XPLAT-010-publication-tail.json",
       "publication_head_sha": null,
       "resolution_rule": "A future metadata-only head must be resolved and bounded by the publication-tail contract; it does not replace the frozen implementation snapshot."
     },
@@ -70,9 +70,9 @@
     "counting_note": "Metric sums come from the 18 disjoint adjacent packet ranges. Files and production_files are per-slice observations, not unique full-stack path counts."
   },
   "artifact_path_templates": {
-    "packet": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/{slice_id}/packet.json",
-    "body": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/{slice_id}/body.md",
-    "validation": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/{slice_id}/validation.json"
+    "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/{slice_id}/packet.json",
+    "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/{slice_id}/body.md",
+    "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/{slice_id}/validation.json"
   },
   "pull_requests": [
     {
@@ -86,9 +86,9 @@
       "base_snapshot_sha": "f0a788c2b39a2c1656fcc61709fef54840062780",
       "implementation_snapshot_sha": "da15f705d92973bf741e9728cf68e24e3a91807c",
       "artifacts": {
-        "packet": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/00-process/packet.json",
-        "body": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/00-process/body.md",
-        "validation": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/00-process/validation.json"
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/00-process/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/00-process/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/00-process/validation.json"
       },
       "validation_status": "passed",
       "traceability": {"marker": "foundation", "tasks": "T001-T004"},
@@ -106,9 +106,9 @@
       "base_snapshot_sha": "da15f705d92973bf741e9728cf68e24e3a91807c",
       "implementation_snapshot_sha": "1304d5a1fdbee4329d16385369a535bc2fc7a448",
       "artifacts": {
-        "packet": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/01-foundation/packet.json",
-        "body": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/01-foundation/body.md",
-        "validation": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/01-foundation/validation.json"
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/01-foundation/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/01-foundation/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/01-foundation/validation.json"
       },
       "validation_status": "passed",
       "traceability": {"marker": "us1", "tasks": "T005-T007"},
@@ -126,9 +126,9 @@
       "base_snapshot_sha": "1304d5a1fdbee4329d16385369a535bc2fc7a448",
       "implementation_snapshot_sha": "c2d3b0c7bde975c1d7f864ce43256c60e00e44d2",
       "artifacts": {
-        "packet": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/02-us14/packet.json",
-        "body": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/02-us14/body.md",
-        "validation": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/02-us14/validation.json"
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/02-us14/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/02-us14/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/02-us14/validation.json"
       },
       "validation_status": "passed",
       "traceability": {"marker": "us16", "tasks": "T121-T130"},
@@ -146,9 +146,9 @@
       "base_snapshot_sha": "c2d3b0c7bde975c1d7f864ce43256c60e00e44d2",
       "implementation_snapshot_sha": "9f9684fa6fa48d70dc0053f96e2b253435ecdf57",
       "artifacts": {
-        "packet": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/03-us1/packet.json",
-        "body": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/03-us1/body.md",
-        "validation": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/03-us1/validation.json"
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/03-us1/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/03-us1/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/03-us1/validation.json"
       },
       "validation_status": "passed",
       "traceability": {"marker": "us2", "tasks": "T008-T017"},
@@ -166,9 +166,9 @@
       "base_snapshot_sha": "9f9684fa6fa48d70dc0053f96e2b253435ecdf57",
       "implementation_snapshot_sha": "7d6a6d115b6832e3f61e7e25701292679b9079d3",
       "artifacts": {
-        "packet": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/04-us2/packet.json",
-        "body": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/04-us2/body.md",
-        "validation": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/04-us2/validation.json"
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/04-us2/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/04-us2/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/04-us2/validation.json"
       },
       "validation_status": "passed",
       "traceability": {"marker": "us3", "tasks": "T018-T028"},
@@ -186,9 +186,9 @@
       "base_snapshot_sha": "7d6a6d115b6832e3f61e7e25701292679b9079d3",
       "implementation_snapshot_sha": "9b249ddd0ed0b8518006cfd404141142f7507018",
       "artifacts": {
-        "packet": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/05-us3/packet.json",
-        "body": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/05-us3/body.md",
-        "validation": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/05-us3/validation.json"
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/05-us3/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/05-us3/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/05-us3/validation.json"
       },
       "validation_status": "passed",
       "traceability": {"marker": "us4", "tasks": "T029-T039"},
@@ -206,9 +206,9 @@
       "base_snapshot_sha": "9b249ddd0ed0b8518006cfd404141142f7507018",
       "implementation_snapshot_sha": "cf352fbc355b30245baaf6b013166066ac4401ad",
       "artifacts": {
-        "packet": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/06-us4/packet.json",
-        "body": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/06-us4/body.md",
-        "validation": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/06-us4/validation.json"
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/06-us4/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/06-us4/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/06-us4/validation.json"
       },
       "validation_status": "passed",
       "traceability": {"marker": "us5", "tasks": "T040-T045"},
@@ -226,9 +226,9 @@
       "base_snapshot_sha": "cf352fbc355b30245baaf6b013166066ac4401ad",
       "implementation_snapshot_sha": "c1d5e51c8ade2284629092309894b1a4a8fdb10c",
       "artifacts": {
-        "packet": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/07-us5/packet.json",
-        "body": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/07-us5/body.md",
-        "validation": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/07-us5/validation.json"
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/07-us5/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/07-us5/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/07-us5/validation.json"
       },
       "validation_status": "passed",
       "traceability": {"marker": "us6", "tasks": "T046-T053"},
@@ -246,9 +246,9 @@
       "base_snapshot_sha": "c1d5e51c8ade2284629092309894b1a4a8fdb10c",
       "implementation_snapshot_sha": "790b9e230de1381fda2010a22480e8594ac6628a",
       "artifacts": {
-        "packet": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/08-us6/packet.json",
-        "body": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/08-us6/body.md",
-        "validation": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/08-us6/validation.json"
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/08-us6/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/08-us6/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/08-us6/validation.json"
       },
       "validation_status": "passed",
       "traceability": {"marker": "us7", "tasks": "T054-T061"},
@@ -266,9 +266,9 @@
       "base_snapshot_sha": "790b9e230de1381fda2010a22480e8594ac6628a",
       "implementation_snapshot_sha": "7584c468cbef81d60fe8bc2b911df0359c7ea243",
       "artifacts": {
-        "packet": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/09-us7/packet.json",
-        "body": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/09-us7/body.md",
-        "validation": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/09-us7/validation.json"
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/09-us7/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/09-us7/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/09-us7/validation.json"
       },
       "validation_status": "passed",
       "traceability": {"marker": "us8", "tasks": "T062-T066"},
@@ -286,9 +286,9 @@
       "base_snapshot_sha": "7584c468cbef81d60fe8bc2b911df0359c7ea243",
       "implementation_snapshot_sha": "511746913f0c9bc99bd1a3245d473a029662af73",
       "artifacts": {
-        "packet": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/10-us7b/packet.json",
-        "body": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/10-us7b/body.md",
-        "validation": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/10-us7b/validation.json"
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/10-us7b/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/10-us7b/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/10-us7b/validation.json"
       },
       "validation_status": "passed",
       "traceability": {"marker": "us9", "tasks": "T067-T072"},
@@ -306,9 +306,9 @@
       "base_snapshot_sha": "511746913f0c9bc99bd1a3245d473a029662af73",
       "implementation_snapshot_sha": "15fac7807df11f4d8b49f9b15bbde17d304b17bf",
       "artifacts": {
-        "packet": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/11-us8/packet.json",
-        "body": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/11-us8/body.md",
-        "validation": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/11-us8/validation.json"
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/11-us8/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/11-us8/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/11-us8/validation.json"
       },
       "validation_status": "passed",
       "traceability": {"marker": "us10", "tasks": "T073-T080"},
@@ -326,9 +326,9 @@
       "base_snapshot_sha": "15fac7807df11f4d8b49f9b15bbde17d304b17bf",
       "implementation_snapshot_sha": "3348aa4fbb80373b39fedbd18003c63f5c33862d",
       "artifacts": {
-        "packet": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/12-us9/packet.json",
-        "body": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/12-us9/body.md",
-        "validation": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/12-us9/validation.json"
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/12-us9/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/12-us9/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/12-us9/validation.json"
       },
       "validation_status": "passed",
       "traceability": {"marker": "us11", "tasks": "T081-T087"},
@@ -346,9 +346,9 @@
       "base_snapshot_sha": "3348aa4fbb80373b39fedbd18003c63f5c33862d",
       "implementation_snapshot_sha": "93aaddd09d04a89b60bdc0085073a732b95e705c",
       "artifacts": {
-        "packet": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/13-us10/packet.json",
-        "body": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/13-us10/body.md",
-        "validation": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/13-us10/validation.json"
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/13-us10/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/13-us10/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/13-us10/validation.json"
       },
       "validation_status": "passed",
       "traceability": {"marker": "us12", "tasks": "T088-T099"},
@@ -366,9 +366,9 @@
       "base_snapshot_sha": "93aaddd09d04a89b60bdc0085073a732b95e705c",
       "implementation_snapshot_sha": "c6b47a6d8587f4a1b841f3d52bc8ba933794ac98",
       "artifacts": {
-        "packet": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/14-us11/packet.json",
-        "body": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/14-us11/body.md",
-        "validation": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/14-us11/validation.json"
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/14-us11/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/14-us11/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/14-us11/validation.json"
       },
       "validation_status": "passed",
       "traceability": {"marker": "us13", "tasks": "T100-T108"},
@@ -386,9 +386,9 @@
       "base_snapshot_sha": "c6b47a6d8587f4a1b841f3d52bc8ba933794ac98",
       "implementation_snapshot_sha": "b3c81e25fae0e00b52a4cc95c681322630af592f",
       "artifacts": {
-        "packet": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/15-release-contract/packet.json",
-        "body": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/15-release-contract/body.md",
-        "validation": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/15-release-contract/validation.json"
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/15-release-contract/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/15-release-contract/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/15-release-contract/validation.json"
       },
       "validation_status": "passed",
       "traceability": {"marker": "us14", "tasks": "T109-T112"},
@@ -406,9 +406,9 @@
       "base_snapshot_sha": "b3c81e25fae0e00b52a4cc95c681322630af592f",
       "implementation_snapshot_sha": "b5ab3cac69013207a47f431f490231a9b2d5441e",
       "artifacts": {
-        "packet": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/16-release-composition/packet.json",
-        "body": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/16-release-composition/body.md",
-        "validation": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/16-release-composition/validation.json"
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/16-release-composition/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/16-release-composition/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/16-release-composition/validation.json"
       },
       "validation_status": "passed",
       "traceability": {"marker": "us15", "tasks": "T113-T120"},
@@ -426,9 +426,9 @@
       "base_snapshot_sha": "b5ab3cac69013207a47f431f490231a9b2d5441e",
       "implementation_snapshot_sha": "a7b2d27b12fdc5051dfa4829c94f92752e2f5146",
       "artifacts": {
-        "packet": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/17-polish/packet.json",
-        "body": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/17-polish/body.md",
-        "validation": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/17-polish/validation.json"
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/17-polish/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/17-polish/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/17-polish/validation.json"
       },
       "validation_status": "passed",
       "traceability": {"marker": "polish", "tasks": "T131-T136"},

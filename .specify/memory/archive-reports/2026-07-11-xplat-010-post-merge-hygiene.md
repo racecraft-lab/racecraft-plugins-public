@@ -41,8 +41,9 @@
 - **Source spec path**: `specs/xplat-010-repository-bash-confinement/`
 - **Workflow file**: `docs/ai/specs/.process/XPLAT-010-workflow.md`
 - **Design concept**: `docs/ai/specs/.process/XPLAT-010-design-concept.md`
-- **Preserved evidence**: all eleven `docs/ai/specs/.process/XPLAT-010-*` files,
-  including the reconciled UAT runbook
+- **Preserved evidence**: all 73 `docs/ai/specs/.process/XPLAT-010-*`
+  files, including the reconciled UAT runbook, all 18 PR packet triplets, all
+  six emission records, the PR manifest, and the publication-tail inventory
 - **Base branch**: `main`
 - **Final stack merge commit**: `ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29`
 - **Final stack tree**: `0d5a46bfa28efbca13d7f49539369705bd58d76f`
@@ -121,8 +122,11 @@ tree matches the stack tip exactly.
   `b537e3b43ca20d8f6e8b6e9430d797444462f2e9` on
   `2026-07-11T17:42:37Z` before this archive cleanup; this archive branch does
   not edit `.specify/memory/constitution.md`.
-- The SpecKit index-tooling defect is repaired in a separate isolated branch
-  before this archive cleanup runs.
+- The SpecKit index-tooling defect was repaired through
+  [PR #332](https://github.com/racecraft-lab/racecraft-plugins-public/pull/332),
+  merged as `c754d9afafda0f222401f2ac4a7ce86d67b48347` on
+  `2026-07-11T18:51:29Z` before this archive cleanup. The verified PR head was
+  `64417dc3680c26d23ddedd0659f823b1105dbe74`.
 - Public native Windows/macOS/Linux claims remain blocked solely by the
   preserved XPLAT-008 operator UAT matrix. XPLAT-010 preflight evidence is not
   native installed-plugin UAT.
@@ -158,12 +162,16 @@ tree matches the stack tip exactly.
 - `docs/ai/specs/.process/XPLAT-010-no-gap-result.json`
 - `docs/ai/specs/.process/XPLAT-010-pr-body.md`
 - `docs/ai/specs/.process/XPLAT-010-pr-packet.json`
+- `docs/ai/specs/.process/XPLAT-010-pr-packets/`
+- `docs/ai/specs/.process/XPLAT-010-prs.json`
+- `docs/ai/specs/.process/XPLAT-010-emission/`
+- `docs/ai/specs/.process/XPLAT-010-publication-tail.json`
 - `docs/ai/specs/.process/XPLAT-010-retrospective.md`
 - `docs/ai/specs/.process/XPLAT-010-suite-parity-result.json`
 - `docs/ai/specs/.process/XPLAT-010-uat-runbook.md`
 - `tests/speckit-pro/parity/bash-to-python/count-parity-baseline.contract.md`
-- Purpose-based repository-confinement and planner fixtures preserved under
-  `tests/speckit-pro/unit/fixtures/`
+- `tests/speckit-pro/unit/fixtures/repository-bash-confinement/`
+- `tests/speckit-pro/unit/fixtures/plan-layers/repository-bash-confinement-plan/`
 
 ## Recovery Commands
 ```text
@@ -198,7 +206,9 @@ git checkout ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29 -- specs/xplat-010-reposit
 | `.specify/memory/plan.md` | Appended the technical approach, verification strategy, and cleanup note |
 | `.specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md` | This report |
 | `AGENTS.md` | Added XPLAT-010 archive, technology, and recent-change notes |
+| `README.md` | Reconciled the Codex installer inventory to all ten shipped custom-agent TOML files |
 | `CLAUDE.md` | Replaced the active-plan pointer and reconciled current Python/CI/branch-protection guidance |
+| `GEMINI.md` | Replaced retired Bash, jq, shell-suite, and validator guidance with the current Python-authoritative commands and boundaries |
 | `docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md` | Marked XPLAT-010 completed/archived and retained the T108, constitution, release, and XPLAT-008 UAT boundaries |
 | `docs/ai/specs/cross-platform-plugin-runtime-roadmap-MOC.md` | Replaced the active XPLAT-010 entry with archive and preserved-evidence pointers |
 | `docs/prd-cross-platform-plugin-runtime.md` | Reconciled completed XPLAT-009/XPLAT-010 proof while retaining the XPLAT-008 native-UAT boundary |
@@ -207,9 +217,13 @@ git checkout ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29 -- specs/xplat-010-reposit
 | `docs/ai/specs/.process/XPLAT-010-retrospective.md` | Reconciled merge outcome and follow-up boundaries |
 | `docs/ai/specs/.process/XPLAT-010-done-when-traceability.md` | Reconciled merge, completed T108, and branch-protection evidence |
 | `docs/ai/specs/.process/XPLAT-010-count-ledger.md` | Added final merge and branch-protection facts |
+| `docs/ai/specs/.process/XPLAT-010-pr-packets/` | Preserved all 18 immutable packet/body/validation triplets so archive links remain self-contained |
+| `docs/ai/specs/.process/XPLAT-010-prs.json` | Preserved the generated no-gap stack manifest and repointed its verification evidence to archived packet copies |
+| `docs/ai/specs/.process/XPLAT-010-emission/` | Preserved all six planner, route, split, stack-manager, and reviewability emission records |
+| `docs/ai/specs/.process/XPLAT-010-publication-tail.json` | Preserved and repointed the publication-tail inventory to archived process paths |
 | `tests/speckit-pro/unit/fixtures/` | Preserved purpose-based contract and planner inputs required after active-spec cleanup |
 | `tests/speckit-pro/unit/test-repo-bash-confinement.py` | Repointed live schema reads away from active `specs/**` |
-| `tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py` | Repointed and purpose-renamed the large migration planner fixture test |
+| `tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py` | Repointed and purpose-renamed the repository Bash confinement planner fixture test |
 | `tests/speckit-pro/parity/bash-to-python/count-parity-baseline.contract.md` | Preserved the cumulative Bash-to-Python parity contract outside the archived spec |
 | `docs/ai/specs/.process/XPLAT-010-uat-runbook.md` | Preserved and reconciled final T108/T117 acceptance evidence |
 | `docs-site/src/content/docs/reference/tests.md` | Regenerated after fixture relocation |
@@ -228,17 +242,27 @@ git checkout ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29 -- specs/xplat-010-reposit
 ## Scoped Metadata Verification
 
 - `python3 -m json.tool docs/ai/specs/.process/autopilot-state.json`: PASS
+- All relocated PR-packet, emission, stack-manifest, publication-tail, and
+  archive-summary JSON files parse successfully.
+- Preserved process inventory: PASS (`73` XPLAT-010 files, including `54`
+  packet/body/validation files and `6` emission records).
+- All `54` links in `XPLAT-010-pr-body.md` resolve to preserved packet files.
 - Archive-state assertions: PASS (18/18 merged PR records, `main` bases,
   merge SHAs, empty active inventory, T108 complete, exact five-check rule)
-- Markdown fence/newline sanity across all 12 edited Markdown files: PASS
 - `git diff --check`: PASS
-- `PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/run-all.py --layer 1`:
-  PASS (`1373/1373`; toolchain preflight ok)
-
-The parent must rerun fixture-specific tests, index write/check, docs-reference
-generation/check, and the full default suite after integrating the separate
-fixture relocation, active-spec deletion, constitution PR, and index-tooling
-repair.
+- Spec-index write mode: PASS (`status: ok`, no-op because all five rendered
+  maps were current); immediate check mode: PASS (`exit_code: 0`).
+- `python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py`:
+  PASS (`42/42`).
+- `python3 tests/speckit-pro/unit/test-repo-bash-confinement.py`:
+  PASS (`47/47`).
+- `python3 tests/speckit-pro/unit/test-unit-layout.py`: PASS (`5/5`).
+- `python3 tests/speckit-pro/run-all.py --layer 1`: PASS (`1373/1373`).
+- `python3 tests/speckit-pro/run-all.py`: PASS (`2522/2522`; Layer 1
+  `1373/1373`, Layer 4 `963/963`, Layer 5 `186/186`).
+- `node docs-site/scripts/generate-reference-pages.mjs --check`: PASS.
+- `pnpm --dir docs-site validate`: PASS, including Playwright `88/88` after
+  running the localhost preview with the required host permission.
 
 ## Feature Status
 `Completed / Archived`. T108 and T117 are complete. The active spec folder is
@@ -261,8 +285,13 @@ runtime, test, path, subprocess, JSON, and Bash-confinement boundaries.
 - Live tests depended on the active spec's result schema and planner `tasks.md`.
   Purpose-based fixture copies and test path updates decouple those readers
   before the active spec is removed.
+- Surviving workflow and PR-body evidence linked to packet and emission files
+  under the removed active spec. All 62 stack-emission files were preserved
+  under explicit XPLAT process paths, and the live archive pointers now resolve.
 - Roadmap, workflow, project guidance, and autopilot state still described an
   open stack. They now record the merged 18-PR chain and deleted branches.
+- `GEMINI.md` still advertised the removed shell suite, Bash validators, and
+  `jq`; its live guidance now matches the Python-authoritative repository.
 - T117 documentation lagged live repository configuration. Project evidence now
   records the exact five required status checks on `main`.
 
@@ -275,11 +304,11 @@ runtime, test, path, subprocess, JSON, and Bash-confinement boundaries.
 
 ## Defaults Applied
 - Only the merged XPLAT-010 active spec was eligible for cleanup.
-- Historical XPLAT-010 process evidence under `docs/ai/specs/.process/` remains
-  committed.
+- All 73 historical XPLAT-010 process files remain committed under
+  `docs/ai/specs/.process/`.
 - `.specify/feature.json` was absent and was not created.
-- Historical packet paths and object IDs remain frozen snapshots rather than
-  being rewritten to post-merge paths.
+- Immutable packet contents and object IDs remain frozen snapshots; archive
+  manifests and Markdown links point to their preserved process paths.
 - The fixed vendored `.specify/**` Bash allowlist remains release-excluded.
 
 ## Scoping

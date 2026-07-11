@@ -1,0 +1,182 @@
+{
+  "body_file": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/00-process/body.md",
+  "editable_fields": [
+    {
+      "end_marker": "<!-- speckit-pro-editable:summary:end -->",
+      "field_id": "summary",
+      "heading": "Summary",
+      "start_marker": "<!-- speckit-pro-editable:summary:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:what_changed:end -->",
+      "field_id": "what_changed",
+      "heading": "What Changed",
+      "start_marker": "<!-- speckit-pro-editable:what_changed:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:why_it_matters:end -->",
+      "field_id": "why_it_matters",
+      "heading": "Why It Matters",
+      "start_marker": "<!-- speckit-pro-editable:why_it_matters:start -->"
+    }
+  ],
+  "generated_title": {
+    "description": "record confinement design and process evidence",
+    "rejected_candidates": [
+      {
+        "reason": "A branch name is not reviewer-facing Conventional Commit prose.",
+        "value": "xplat-010-review/00-process"
+      }
+    ],
+    "scope": "xplat-010",
+    "source_evidence": {
+      "kind": "split_source_boundary",
+      "result": "observed",
+      "source": "docs/ai/specs/.process/autopilot-state.json",
+      "summary": "The canonical marker supplies the exact adjacent stack target."
+    },
+    "type": "docs",
+    "value": "docs(xplat-010): record confinement design and process evidence"
+  },
+  "mode": "split",
+  "packet_id": "00-process",
+  "protected_body_fingerprint": {
+    "algorithm": "sha256",
+    "elided_fields": [
+      "summary",
+      "what_changed",
+      "why_it_matters"
+    ],
+    "normalization": "LF line endings; trailing spaces, tabs, and CR trimmed per line; slice from ## Summary through the first nonblank Known Gaps body paragraph; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256; packet-source comment and Release note excluded.",
+    "value": "a94b6bf282cfcb239eab8651a5e69ae1502dcf1d41eef1a0e8b13a48577a420f"
+  },
+  "required_headings": [
+    "Summary",
+    "What Changed",
+    "Why It Matters",
+    "How To Review",
+    "How To UAT",
+    "Verification",
+    "Scope",
+    "Known Gaps"
+  ],
+  "schema_version": "1.0.0",
+  "scope_evidence": {
+    "budget_result": "within_budget",
+    "changed_files": [
+      ".specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md",
+      ".specify/memory/changelog.md",
+      ".specify/memory/plan.md",
+      ".specify/memory/spec.md",
+      "AGENTS.md",
+      "CLAUDE.md",
+      "docs/ai/specs/.process/XPLAT-010-design-concept.md",
+      "docs/ai/specs/.process/XPLAT-010-workflow.md",
+      "docs/ai/specs/.process/autopilot-state.json",
+      "docs/ai/specs/cross-platform-plugin-runtime-roadmap-MOC.md",
+      "docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md",
+      "specs/xplat-009-plugin-source-and-payload-bash-eradication/.process/final-reviewability/gate-state.json",
+      "specs/xplat-009-plugin-source-and-payload-bash-eradication/.process/uat-runbook.md",
+      "specs/xplat-009-plugin-source-and-payload-bash-eradication/SPEC-MOC.md",
+      "specs/xplat-009-plugin-source-and-payload-bash-eradication/checklists/integration.md",
+      "specs/xplat-009-plugin-source-and-payload-bash-eradication/checklists/reliability.md",
+      "specs/xplat-009-plugin-source-and-payload-bash-eradication/checklists/requirements.md",
+      "specs/xplat-009-plugin-source-and-payload-bash-eradication/checklists/security.md",
+      "specs/xplat-009-plugin-source-and-payload-bash-eradication/contracts/historical-allowlist-entry.schema.json",
+      "specs/xplat-009-plugin-source-and-payload-bash-eradication/contracts/installed-cache-proof.schema.json",
+      "specs/xplat-009-plugin-source-and-payload-bash-eradication/contracts/zero-bash-guard-request.schema.json",
+      "specs/xplat-009-plugin-source-and-payload-bash-eradication/contracts/zero-bash-guard-result.schema.json",
+      "specs/xplat-009-plugin-source-and-payload-bash-eradication/data-model.md",
+      "specs/xplat-009-plugin-source-and-payload-bash-eradication/plan.md",
+      "specs/xplat-009-plugin-source-and-payload-bash-eradication/quickstart.md",
+      "specs/xplat-009-plugin-source-and-payload-bash-eradication/research.md",
+      "specs/xplat-009-plugin-source-and-payload-bash-eradication/spec.md",
+      "specs/xplat-009-plugin-source-and-payload-bash-eradication/tasks.md",
+      "specs/xplat-010-repository-bash-confinement/SPEC-MOC.md",
+      "specs/xplat-010-repository-bash-confinement/checklists/integration.md",
+      "specs/xplat-010-repository-bash-confinement/checklists/reliability.md",
+      "specs/xplat-010-repository-bash-confinement/checklists/requirements.md",
+      "specs/xplat-010-repository-bash-confinement/checklists/security.md",
+      "specs/xplat-010-repository-bash-confinement/contracts/confinement-allowlist.schema.json",
+      "specs/xplat-010-repository-bash-confinement/contracts/count-parity-baseline.contract.md",
+      "specs/xplat-010-repository-bash-confinement/contracts/estimate-spec-size.schema.json",
+      "specs/xplat-010-repository-bash-confinement/contracts/release-note-block.contract.md",
+      "specs/xplat-010-repository-bash-confinement/contracts/repo-bash-confinement-result.schema.json",
+      "specs/xplat-010-repository-bash-confinement/contracts/suite-manifest.schema.json",
+      "specs/xplat-010-repository-bash-confinement/data-model.md",
+      "specs/xplat-010-repository-bash-confinement/plan.md",
+      "specs/xplat-010-repository-bash-confinement/quickstart.md",
+      "specs/xplat-010-repository-bash-confinement/research.md",
+      "specs/xplat-010-repository-bash-confinement/spec.md",
+      "specs/xplat-010-repository-bash-confinement/tasks.md",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/contracts/historical-allowlist-entry.schema.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/contracts/installed-cache-proof.schema.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/contracts/zero-bash-guard-request.schema.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/contracts/zero-bash-guard-result.schema.json",
+      "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py",
+      "tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py"
+    ],
+    "non_goals": [
+      "No later stack slice is included in this adjacent branch diff.",
+      "No hosted-check, merge, or release-publication result is claimed."
+    ],
+    "production_files": 0,
+    "reviewable_loc": 0,
+    "total_files": 51
+  },
+  "source_feature_dir": "specs/xplat-010-repository-bash-confinement",
+  "source_markers": [
+    {
+      "marker_id": "task-boundary",
+      "rendered_text": "Source: canonical marker `foundation` maps this packet to T001-T004.",
+      "source": "specs/xplat-010-repository-bash-confinement/tasks.md"
+    },
+    {
+      "marker_id": "adjacent-diff",
+      "rendered_text": "Source: adjacent diff `main (f0a788c2b39a2c1656fcc61709fef54840062780)..xplat-010-review/00-process (da15f705d92973bf741e9728cf68e24e3a91807c)` contains 51 files, 4387 insertions, 1968 deletions, and 0 reviewable LOC.",
+      "source": "git diff f0a788c2b39a2c1656fcc61709fef54840062780..da15f705d92973bf741e9728cf68e24e3a91807c"
+    },
+    {
+      "marker_id": "uat-runbook",
+      "rendered_text": "Source: `specs/xplat-010-repository-bash-confinement/.process/uat-runbook.md` is the acceptance procedure. This packet does not promote local evidence to hosted, merged, or published evidence.",
+      "source": "specs/xplat-010-repository-bash-confinement/.process/uat-runbook.md"
+    }
+  ],
+  "split_slice": {
+    "slice_id": "00-process",
+    "source_boundary": {
+      "section": "## Phase 1: Foundation - Process, archive hygiene, setup, and confidence evidence"
+    },
+    "source_packet": "docs/ai/specs/.process/autopilot-state.json"
+  },
+  "target": {
+    "base_branch": "main",
+    "head_branch": "xplat-010-review/00-process"
+  },
+  "uat": {
+    "how_to_uat": "Use the committed feature UAT runbook on this exact candidate branch and record command, exit-code, and observable-result evidence.",
+    "uat_runbook_heading": "## UAT Runbook",
+    "uat_source": "specs/xplat-010-repository-bash-confinement/.process/uat-runbook.md"
+  },
+  "validation_result_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/00-process/validation.json",
+  "verification_evidence": [
+    {
+      "kind": "immediate_branch_diff",
+      "result": "passed",
+      "source": "git diff f0a788c2b39a2c1656fcc61709fef54840062780..da15f705d92973bf741e9728cf68e24e3a91807c",
+      "summary": "Observed 51 paths, 4387 insertions, and 1968 deletions."
+    },
+    {
+      "kind": "task_traceability",
+      "result": "passed",
+      "source": "specs/xplat-010-repository-bash-confinement/tasks.md",
+      "summary": "Marker foundation maps this packet to T001-T004."
+    },
+    {
+      "kind": "stack_shape",
+      "result": "passed",
+      "source": "git rev-list f0a788c2b39a2c1656fcc61709fef54840062780..da15f705d92973bf741e9728cf68e24e3a91807c",
+      "summary": "Observed 18 commits and 0 merge commits."
+    }
+  ]
+}

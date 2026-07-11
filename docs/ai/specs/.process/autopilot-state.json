@@ -12,7 +12,7 @@
       "specs/xplat-010-repository-bash-confinement"
     ],
     "excluded_current_spec": null,
-    "note": "Post-merge cleanup archived XPLAT-010 after PRs #311-#328 merged; all eleven XPLAT-010 process evidence files remain under docs/ai/specs/.process/, live schema, parity contract, planner input, and UAT evidence were preserved under purpose-based paths, and T108/T117 hosted evidence is complete.",
+    "note": "Post-merge cleanup archived XPLAT-010 after PRs #311-#328 merged; 73 XPLAT-010 process evidence files remain under docs/ai/specs/.process/, including all 18 PR packet triplets and six emission records; live schema, parity contract, planner input, and UAT evidence were preserved under purpose-based paths, and T108/T117 hosted evidence is complete.",
     "safeToApplyCleanup": true,
     "status": "completed_archived"
   },
@@ -36,7 +36,7 @@
     "reviewability_sha": "aac98cea1dba75ad0070d8502194f6c64932119ee00e3f550af2840b9a90f53f",
     "hazard_route_sha": "c7c08338753a4fec5c3d90e40271af962c4334f9e3d56b0dde2ab4281563ec71"
   },
-  "feature_dir": "specs/xplat-010-repository-bash-confinement",
+  "feature_dir": null,
   "layer_plan": {
     "status": "skipped",
     "reason": "Phase-time atomicity route was single-atomic-PR, so automatic split-route planner persistence was skipped.",
@@ -7613,7 +7613,7 @@
     "resolved": "speckit-pro/skills/speckit-autopilot/scripts"
   },
   "spec_id": null,
-  "updated_at": "2026-07-11T17:01:20Z",
+  "updated_at": "2026-07-11T18:54:17Z",
   "workflow_file": "docs/ai/specs/.process/XPLAT-010-workflow.md",
   "status": "completed_archived",
   "archive_cleanup": {
@@ -7635,6 +7635,10 @@
       "docs/ai/specs/.process/XPLAT-010-no-gap-result.json",
       "docs/ai/specs/.process/XPLAT-010-pr-body.md",
       "docs/ai/specs/.process/XPLAT-010-pr-packet.json",
+      "docs/ai/specs/.process/XPLAT-010-pr-packets/",
+      "docs/ai/specs/.process/XPLAT-010-prs.json",
+      "docs/ai/specs/.process/XPLAT-010-emission/",
+      "docs/ai/specs/.process/XPLAT-010-publication-tail.json",
       "docs/ai/specs/.process/XPLAT-010-retrospective.md",
       "docs/ai/specs/.process/XPLAT-010-suite-parity-result.json",
       "docs/ai/specs/.process/XPLAT-010-uat-runbook.md",
@@ -7697,8 +7701,11 @@
       "merged_at": "2026-07-11T17:42:37Z"
     },
     "index_tooling_repair": {
-      "status": "completed_before_archive",
-      "scope": "separate_isolated_branch"
+      "pr_number": 332,
+      "status": "merged_before_archive",
+      "merge_sha": "c754d9afafda0f222401f2ac4a7ce86d67b48347",
+      "merged_at": "2026-07-11T18:51:29Z",
+      "verified_head": "64417dc3680c26d23ddedd0659f823b1105dbe74"
     }
   }
 }

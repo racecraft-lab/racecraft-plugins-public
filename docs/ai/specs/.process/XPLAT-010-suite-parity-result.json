@@ -11,7 +11,7 @@
     "suite_manifest": "tests/speckit-pro/suite-manifest.json",
     "baseline_directory": "tests/speckit-pro/parity/bash-to-python",
     "count_ledger": "docs/ai/specs/.process/XPLAT-010-count-ledger.md",
-    "tasks": "tests/speckit-pro/unit/fixtures/plan-layers/large-cross-platform-migration/tasks.md",
+    "tasks": "tests/speckit-pro/unit/fixtures/plan-layers/repository-bash-confinement-plan/tasks.md",
     "evidence_scope": "Historical Git is used only for frozen at-port counts and classifications. Every live path, baseline TOTAL, purpose-based name, and current test result is reconciled to the verified tree head."
   },
   "clean_port_rows": [

@@ -1,10 +1,10 @@
 ---
-description: "Large cross-platform migration fixture with 18 reviewable increments"
+description: "Repository Bash confinement planner fixture with 18 reviewable increments"
 ---
 
 # Tasks: Repository Bash Confinement and CI Dispatch Guard
 
-**Input**: Self-contained large-migration fixture documents.
+**Input**: Self-contained repository Bash confinement planning fixture.
 
 **Prerequisites**: plan.md, spec.md (27 FRs / 7 US / 8 SCs / 16 Clarifications), research.md (13 decisions), data-model.md (8 entities), contracts/ (6), quickstart.md (7 scenarios)
 
@@ -58,7 +58,7 @@ Baseline capture AND the port-side parity comparison MUST run in the SAME pinned
 ## Phase 1: Foundation - Process, archive hygiene, setup, and confidence evidence
 
 - [x] T001 Verify the repo baseline is green before any change: run the toolchain preflight and default-suite gates from the repo root — `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-toolchain-preflight.json` and `.../run-default-suite.json` — and `pnpm --dir docs-site validate`. Record the pre-change `X/Y passed` headline as the parity reference.
-- [x] T002 Confirm the working branch is `large-cross-platform-migration` (or the active slice branch), never `main`; confirm the feature pointer selects this self-contained fixture; export `PYTHONDONTWRITEBYTECODE=1` for all runner invocations.
+- [x] T002 Confirm the working branch is `repository-bash-confinement-plan` (or the active slice branch), never `main`; confirm the feature pointer selects this self-contained fixture; export `PYTHONDONTWRITEBYTECODE=1` for all runner invocations.
 - [x] T003 **Reviewability checkpoint (mandatory — transition exception)**: record in the PR review packet that this fixture is delivered as the canonical no-gap 18-PR stack, using the fixture's scope-budget and split-decision record; confirm each planned implementation slice stays within the 400–800 reviewable-LOC / 15–25 total-file budget and does not silently exceed the 800/8/25 block thresholds. The former combined PR 12 is an exact 1,267-production-LOC block and has no waiver; STOP and re-split it into PR 12a/12b. Foundation and Polish are aggregate-history review units, not implementation scope expansion.
 - [x] T004 Confirm the 6 contracts under `contracts/` are the frozen schemas the ports/guard/composer/estimator validate against (`suite-manifest.schema.json`, `confinement-allowlist.schema.json`, `repo-bash-confinement-result.schema.json`, `estimate-spec-size.schema.json`, `release-note-block.contract.md`, `count-parity-baseline.contract.md`).
 
