@@ -304,6 +304,7 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-privacy-scan.sh"
     "$TESTS_DIR/layer4-scripts/test-speckit-pro-runner.sh"
     "$TESTS_DIR/layer4-scripts/test-speckit-pro-read-only-helpers.sh"
+    "$TESTS_DIR/layer4-scripts/test-estimate-spec-size.py"
     "$TESTS_DIR/layer4-scripts/test-speckit-pro-mutation-helpers.py"
     "$TESTS_DIR/layer4-scripts/test-l6-codex-runner.sh"
     "$TESTS_DIR/layer4-scripts/test-l8-extractors.sh"

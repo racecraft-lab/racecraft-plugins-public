@@ -25,6 +25,11 @@
           "type": "json",
           "path": "/.agents/plugins/marketplace.json",
           "jsonpath": "$.plugins[0].version"
+        },
+        {
+          "type": "json",
+          "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
+          "jsonpath": "$.plugin_version"
         }
       ]
     }

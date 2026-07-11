@@ -157,6 +157,14 @@ HELPERS: dict[str, HelperEntry] = {
         "bash_reference",
         authoritative_request("estimate-reviewable-loc"),
     ),
+    "estimate-spec-size": HelperEntry(
+        "estimate-spec-size",
+        "estimate-spec-size",
+        None,
+        "python_authoritative",
+        "bash_reference",
+        authoritative_request("estimate-spec-size"),
+    ),
     "resolve-confidence-mode": HelperEntry(
         "resolve-confidence-mode",
         "resolve-confidence-mode",

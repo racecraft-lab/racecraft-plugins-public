@@ -289,6 +289,10 @@ def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: 
         return required_args(inputs, ["mode_name", "target"], helper_id, repo_root, path_keys={"target"})
     if helper_id == "estimate-reviewable-loc":
         return required_args(inputs, ["plan_file"], helper_id, repo_root, path_keys={"plan_file"})
+    if helper_id == "estimate-spec-size":
+        # Pure in-process computation from structured size signals — no derived
+        # CLI args and no path inputs (like detect-commands/detect-presets).
+        return []
     if helper_id == "resolve-confidence-mode":
         argv: list[str] = []
         config_path = inputs.get("config_path")
@@ -896,6 +900,45 @@ def estimate_reviewable_loc(inputs: dict[str, Any], repo_root: Path) -> dict[str
         "thresholds": {"warn": warn, "block": block, "greenfield_multiplier": 1.5, "base_warn": 400, "base_block": 800},
     }
     return make_result(json_text(obj))
+
+
+def normalize_size_signal(value: Any) -> int:
+    # Coerce a pre-implementation size signal to a non-negative integer, mirroring
+    # the deleted estimate-spec-size.sh normalize_count: a bare non-negative
+    # integer (or its string form) passes through; anything missing, negative,
+    # decimal, or non-numeric normalizes to 0. Single shared path, no error branch.
+    text = "" if value is None else str(value)
+    return int(text) if re.fullmatch(r"[0-9]+", text) else 0
+
+
+def estimate_spec_size(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    # Restored advisory vertical-slice size estimator (XPLAT-010 US7 / FR-025):
+    # a byte-for-byte port of the deleted
+    # speckit-pro/skills/speckit-coach/scripts/estimate-spec-size.sh, pinned by the
+    # golden fixtures under tests/speckit-pro/layer4-scripts/fixtures/estimate-spec-size/.
+    # Callers (grill-me, speckit-prd) send the structured size signals; the output
+    # is the compact {estimated_loc, suggested_slices, status} triple. Advisory-only:
+    # this never blocks (exit 0 even when status is "warn").
+    ceiling = 400
+    if inputs.get("spike"):
+        # A spike is sized by timebox, not LOC: skip the threshold comparison and
+        # return the fixed triple. "ok" here means "LOC sizing not applicable".
+        # Spike takes precedence over every size signal.
+        return make_result(json_text({"estimated_loc": 0, "suggested_slices": 1, "status": "ok"}))
+    user_stories = normalize_size_signal(inputs.get("user_stories"))
+    files = normalize_size_signal(inputs.get("files"))
+    frs = normalize_size_signal(inputs.get("frs"))
+    estimated_loc = user_stories * 25 + files * 40 + frs * 15
+    # Modify discount: modifying existing code is a smaller reviewable surface than
+    # net-new, so halve the estimate (integer division). Any value other than the
+    # literal "modify" keeps the net-new estimate.
+    if inputs.get("new_vs_modify") == "modify":
+        estimated_loc //= 2
+    # suggested_slices = ceil(estimated_loc / ceiling), minimum 1.
+    suggested_slices = 1 if estimated_loc <= 0 else (estimated_loc + ceiling - 1) // ceiling
+    # At-ceiling boundary: ok at exactly the ceiling; warn only when strictly over.
+    status = "warn" if estimated_loc > ceiling else "ok"
+    return make_result(json_text({"estimated_loc": estimated_loc, "suggested_slices": suggested_slices, "status": status}))
 
 
 def resolve_confidence_mode(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
@@ -1849,6 +1892,7 @@ PY_HELPERS: dict[str, Callable[[dict[str, Any], Path], dict[str, Any]]] = {
     "validate-gate": validate_gate,
     "reviewability-gate": reviewability_gate,
     "estimate-reviewable-loc": estimate_reviewable_loc,
+    "estimate-spec-size": estimate_spec_size,
     "resolve-confidence-mode": resolve_confidence_mode,
     "confidence-gate": confidence_gate,
     "generate-spec-index-check": generate_spec_index_check,

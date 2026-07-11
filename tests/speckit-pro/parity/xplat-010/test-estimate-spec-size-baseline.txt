@@ -1,0 +1,34 @@
+001 fixture 'all-absent' → exit 0
+002 fixture 'all-absent' → expected JSON
+003 fixture 'at-ceiling' → exit 0
+004 fixture 'at-ceiling' → expected JSON
+005 fixture 'bad-input' → exit 0
+006 fixture 'bad-input' → expected JSON
+007 fixture 'mixed-valid-bad' → exit 0
+008 fixture 'mixed-valid-bad' → expected JSON
+009 fixture 'modify-discount' → exit 0
+010 fixture 'modify-discount' → expected JSON
+011 fixture 'multi-slice' → exit 0
+012 fixture 'multi-slice' → expected JSON
+013 fixture 'over-ceiling' → exit 0
+014 fixture 'over-ceiling' → expected JSON
+015 fixture 'spike-precedence' → exit 0
+016 fixture 'spike-precedence' → expected JSON
+017 fixture 'spike' → exit 0
+018 fixture 'spike' → expected JSON
+019 fixture 'typical-under' → exit 0
+020 fixture 'typical-under' → expected JSON
+021 repeated identical inputs → byte-identical stdout
+022 second determinism sample (over-ceiling) → byte-identical stdout
+023 estimated_loc == ceiling → status ok
+024 strictly over ceiling → status warn
+025 --spike → {estimated_loc:0, suggested_slices:1, status:ok}
+026 --spike overrides large signals (spike precedence)
+027 no arguments → estimated_loc 0, status ok, exit 0
+028 malformed/negative/decimal signals normalize to 0
+029 mixed valid + bad keeps valid signals
+030 status is always ok or warn across an input sweep
+031 under ceiling → 1 slice
+032 440 LOC → 2 slices
+033 800 LOC → 2 slices
+TOTAL: 33

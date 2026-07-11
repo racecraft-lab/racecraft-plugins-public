@@ -201,6 +201,18 @@
       "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests/validate-pr-packet-read-only.json",
       "rollback": "Use validate-pr-packet.sh directly for existing workflow behavior.",
       "out_of_scope": ["persistence", "workflow-event-upserts", "pr-body-generation", "pr-emission", "restack"]
+    },
+    {
+      "helper_id": "estimate-spec-size",
+      "operation": "estimate-spec-size",
+      "promotion_status": "python_authoritative",
+      "failure_classes": [],
+      "rejected_stdout_schema": {"estimated_loc": "integer", "suggested_slices": "integer", "status": "ok|warn"},
+      "deterministic_remediation": {"summary": "Advisory-only estimator: non-numeric, negative, or missing size signals normalize to 0 (never rejected).", "actions": ["Send user_stories, files, and frs counts.", "Read the estimated_loc/suggested_slices/status triple."]},
+      "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
+      "path_boundary_policy": {"boundary": "not_applicable", "rejects": []},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests/estimate-spec-size.json",
+      "rollback": "Advisory estimator restored from the deleted estimate-spec-size.sh; pinned by golden fixtures under fixtures/estimate-spec-size/."
     }
   ]
 }
