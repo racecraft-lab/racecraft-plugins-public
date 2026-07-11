@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic contracts for XPLAT-010 repository Bash confinement."""
+"""Deterministic contracts for repository Bash confinement."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "repository-bash-confinement"
 ALLOWLIST_FILE = FIXTURE_DIR / "allowlist.json"
 CASES_FILE = FIXTURE_DIR / "confinement-guard-cases.json"
-RESULT_CONTRACT = REPO_ROOT / "specs" / "xplat-010-repository-bash-confinement" / "contracts" / "repo-bash-confinement-result.schema.json"
+RESULT_CONTRACT = FIXTURE_DIR / "contracts" / "repo-bash-confinement-result.schema.json"
 TEMP_ALLOWLIST = "tests/speckit-pro/unit/fixtures/repository-bash-confinement/allowlist.json"
 
 for path in (PLUGIN_ROOT, LIB_DIR):

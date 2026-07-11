@@ -1,25 +1,25 @@
-# UAT Runbook: xplat-010-repository-bash-confinement
+# UAT Runbook: Repository Bash Confinement and CI Dispatch Guard
 
 | Field | Value |
 |-------|-------|
-| Spec | `xplat-010-repository-bash-confinement` |
-| Review stack | PRs #311 through #328 (18 open stacked PRs, fact-checked 2026-07-10) |
-| Stack topology | #311 targets `main`; each later PR targets its predecessor; #328 is the integration tip |
-| Current hosted state | Dynamic; inspect live checks and record their actual conclusions rather than freezing a transient result here |
+| Spec | `XPLAT-010` (archived) |
+| Review stack | PRs #311 through #328, all merged on 2026-07-11 |
+| Stack topology | #311-#313 were squash-merged; #314-#328 form a contiguous bottom-to-top merge chain ending at `ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29` |
+| Current hosted state | T108 and T117 complete; durable evidence is recorded below and in the post-merge archive report |
 | Generated packet set | 18/18 packet/body/validation triplets pass at frozen implementation head `a7b2d27b12fdc5051dfa4829c94f92752e2f5146` |
-| Source | Current `spec.md`, `tasks.md`, `quickstart.md`, suite manifest, purpose-based fixtures, and live GitHub PR metadata |
+| Source | Preserved XPLAT-010 process evidence, suite manifest, purpose-based fixtures, immutable merge provenance, and GitHub run metadata |
 
-Do not replace the hosted-state row with a green claim unless the live checks support it.
-Recheck the stack at review time:
+Recheck immutable merge and hosted evidence when auditing this runbook:
 
 ```console
-gh pr view 311 --repo racecraft-lab/racecraft-plugins-public --json number,state,baseRefName,headRefName,url
-gh pr view 328 --repo racecraft-lab/racecraft-plugins-public --json number,state,baseRefName,headRefName,mergeStateStatus,url
-gh pr checks 328 --repo racecraft-lab/racecraft-plugins-public
+gh pr view 311 --repo racecraft-lab/racecraft-plugins-public --json number,state,mergedAt,mergeCommit,url
+gh pr view 328 --repo racecraft-lab/racecraft-plugins-public --json number,state,mergedAt,mergeCommit,url
+gh run view 29161090549 --repo racecraft-lab/racecraft-plugins-public --json status,conclusion,headSha,jobs,url
+gh api repos/racecraft-lab/racecraft-plugins-public/branches/main/protection/required_status_checks
 ```
 
-`gh pr checks` returns nonzero while a check is failing. Record that result rather than
-masking it.
+The recorded acceptance requires the exact run and branch-rule facts below; a future
+failure does not rewrite this historical result.
 
 ## Environment setup
 
@@ -30,7 +30,7 @@ path. Local focused validation requires Python 3.11+ and Git. Hosted inspection 
 
 ```console
 git rev-parse --show-toplevel
-python3 -c 'from pathlib import Path; required=(Path("tests/speckit-pro/suite-manifest.json"), Path("specs/xplat-010-repository-bash-confinement/quickstart.md")); missing=[str(p) for p in required if not p.is_file()]; assert not missing, missing; print("repository-relative UAT paths resolved")'
+python3 -c 'from pathlib import Path; required=(Path("tests/speckit-pro/suite-manifest.json"), Path("docs/ai/specs/.process/XPLAT-010-workflow.md")); missing=[str(p) for p in required if not p.is_file()]; assert not missing, missing; print("repository-relative UAT paths resolved")'
 ```
 
 The parent integration owner runs `python3 tests/speckit-pro/run-all.py` and
@@ -134,48 +134,38 @@ below.
    syntax and routing contracts only. It does not prove GitHub triggers, hosted runner
    availability, uploaded artifacts, or branch-protection contexts.
 
-2. Inspect the available pre-merge hosted `pull_request` evidence:
+2. Inspect the accepted hosted `pull_request` evidence:
 
    ```console
-   gh pr checks 325 --repo racecraft-lab/racecraft-plugins-public
-   gh pr checks 328 --repo racecraft-lab/racecraft-plugins-public
+   gh run view 29159969108 --repo racecraft-lab/racecraft-plugins-public
+   gh run view 29161055742 --repo racecraft-lab/racecraft-plugins-public
+   gh run view 29159559914 --repo racecraft-lab/racecraft-plugins-public
    ```
 
-   Expected now: actual conclusions are printed, including failures or skips. Do not
-   mark T108 complete from local tests or from a partially green hosted run.
+   Expected: the relevant-path run executes both Linux heavy jobs and Windows x64;
+   the docs-only run skips heavy execution while both sentinels pass; and the failure
+   run propagates detector failure to both sentinels while retaining evidence.
 
-3. Apply the official `workflow_dispatch` boundary.
-
-   GitHub documents that `workflow_dispatch` runs only when the workflow file exists on
-   the default branch. See
-   [`workflow_dispatch`](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_dispatch).
-   `.github/workflows/container-preflight.yml` is not yet on default branch `main`, so
-   pre-merge hosted evidence is `pull_request` only. Manual dispatch is deferred until
-   after merge; a branch `--ref` cannot bypass the default-branch requirement.
-
-4. After the stack merges and the workflow exists on `main`, run the deferred manual
-   acceptance:
+3. Inspect the completed post-merge manual acceptance:
 
    ```console
-   gh workflow run container-preflight.yml --repo racecraft-lab/racecraft-plugins-public --ref main -f windows_x64_enabled=true -f windows_arm64_enabled=false
-   gh run list --repo racecraft-lab/racecraft-plugins-public --workflow container-preflight.yml --event workflow_dispatch --limit 1
+   gh run view 29161090549 --repo racecraft-lab/racecraft-plugins-public --json status,conclusion,headSha,jobs,url
+   gh api repos/racecraft-lab/racecraft-plugins-public/actions/runs/29161090549/artifacts --jq '.artifacts[] | [.name,.expired,.expires_at] | @tsv'
    ```
 
-   Expected post-merge: a manual run appears. Its artifacts show Linux role outcomes,
-   Windows x64 advisory behavior, and ARM64-disabled control evidence without queueing
-   the ARM64 label.
+   Expected: success at `main@ad89f453`, eight artifacts, both Linux heavy jobs and
+   sentinels passing, native Windows x64 smoke passing, and Windows ARM64 recorded as
+   available but explicitly disabled without queueing its label.
 
-5. T108 is complete only when hosted evidence includes all of these observations:
-   relevant changes run both Linux heavy jobs; docs-only changes skip heavy jobs while
-   both Linux sentinels succeed; Linux failures propagate to sentinels; Windows roles do
-   not block; each executed role uploads evidence; ARM64-disabled control evidence is
-   present; the configured `opened`, `reopened`, `synchronize`, and `ready_for_review`
-   PR triggers behave as declared; and post-merge manual dispatch is recorded.
+4. Inspect PR #331 trigger canaries: `opened` run `29161598122`, `synchronize`
+   run `29161613608`, `ready_for_review` run `29161619193`, and `reopened` run
+   `29161647866`. Each passed both Linux sentinels and retained five artifacts.
 
 - [x] Local US4 structure/helper contract accepted: 33/33 helper and 49/49 sentinel checks passed.
-- [ ] Pre-merge relevant-change `pull_request` evidence accepted.
-- [ ] Pre-merge docs-only `pull_request` evidence accepted.
-- [ ] Post-merge `workflow_dispatch` and artifact evidence accepted (T108).
+- [x] Relevant-change and docs-only `pull_request` evidence accepted.
+- [x] Failure propagation and Windows advisory behavior accepted.
+- [x] All four declared PR trigger actions accepted through PR #331 canaries.
+- [x] Post-merge `workflow_dispatch` and artifact evidence accepted (T108).
 
 ### User Story 5 - Public release highlights
 
@@ -215,9 +205,7 @@ always-run immutable audit upload.
    gh pr checks 328 --repo racecraft-lab/racecraft-plugins-public
    ```
 
-   Expected for acceptance: `validate-release-note` appears with its actual conclusion.
-   A missing check is missing evidence, not a pass. Other failed PR checks may make either
-   command return nonzero.
+   Expected: `validate-release-note` appears and passes on the accepted hosted runs.
 
 3. After merge, inspect `main` branch protection:
 
@@ -225,16 +213,14 @@ always-run immutable audit upload.
    gh api repos/racecraft-lab/racecraft-plugins-public/branches/main/protection/required_status_checks
    ```
 
-   Expected for T117 completion: the returned required contexts include
-   `validate-release-note`, and the operator records the response. Missing context,
-   `null`, HTTP 404, or insufficient authorization does not prove configuration.
-   The 2026-07-10 fact-check returned only `validate-plugins` and `validate-pr-title`;
-   therefore T117 is open. This runbook does not claim the new required check is already
-   configured.
+   Expected: non-strict protection requires exactly `validate-plugins`,
+   `validate-pr-title`, `validate-release-note`,
+   `container-preflight-linux-amd64`, and
+   `container-preflight-linux-arm64`, all from GitHub Actions.
 
 - [x] Local US6 policy/template contract accepted: release-note policy 30/30.
-- [ ] Hosted `validate-release-note` behavior accepted.
-- [ ] Post-merge branch-protection context recorded (T117).
+- [x] Hosted `validate-release-note` behavior accepted.
+- [x] Post-merge five-check branch-protection rule recorded (T117).
 
 ### User Story 7 - Restored spec-size estimator
 
@@ -284,10 +270,9 @@ pin totals that will drift as coverage grows.
 
 ## Sign-off blockers
 
-The only remaining integrated-stack blockers are:
-
-- T108 lacks relevant-change, docs-only, and post-merge manual-dispatch hosted evidence.
-- T117 lacks recorded `main` branch-protection evidence for `validate-release-note`.
+No XPLAT-010 acceptance blocker remains. Public native-platform release claims remain
+separately blocked by the preserved XPLAT-008 operator UAT matrix; XPLAT-010 hosted
+preflight evidence does not substitute for that native installed-plugin UAT.
 
 ## Sign-off
 
@@ -295,11 +280,11 @@ The only remaining integrated-stack blockers are:
 - [x] T131 parity and T134 18-packet evidence are complete for frozen implementation head `a7b2d27b12fdc5051dfa4829c94f92752e2f5146`.
 - [x] T133 final neutral-PATH Bash-absent, `jq`-absent Python 3.11+ evidence is complete at frozen implementation head `a7b2d27b12fdc5051dfa4829c94f92752e2f5146` (tree `a1c42735d35619bbd0a4a90a42c57ab9e578848e`): read-only helpers 42/42 and ARM64 exact pinned-container overlay with hydrated `tasks.md` 42/42.
 - [x] T135 final neutral-PATH deterministic suite and docs evidence is complete at the same frozen implementation head: 2512/2512 total, Layer 1 1373/1373, Layer 4 953/953, Layer 5 186/186; `pnpm --dir docs-site validate` passed.
-- [ ] T108 and T117 hosted/post-merge evidence is complete.
+- [x] T108 and T117 hosted/post-merge evidence is complete.
 
 ## Rollback
 
-Revert the affected stack slice rather than editing unrelated files, then rerun its focused
-commands from this runbook. The parent integration owner reruns the default suite and docs
-validation after the stack is restacked. There is no database, browser storage, or external
-service state to migrate.
+Use the immutable recovery commands in
+`.specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md`, then rerun
+the focused commands, default suite, and docs validation. There is no database, browser
+storage, or external service state to migrate.

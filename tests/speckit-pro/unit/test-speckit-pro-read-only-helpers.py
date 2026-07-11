@@ -23,7 +23,9 @@ FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "read-only-helpers"
 PLAN_LAYERS_FIXTURE_DIR = "tests/speckit-pro/unit/fixtures/plan-layers"
 FEATURE_DIR = "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature"
 ARCHIVED_FEATURE_DIR = "specs/xplat-005-read-only-helper-port"
-XPLAT_010_FEATURE_DIR = "specs/xplat-010-repository-bash-confinement"
+REPOSITORY_BASH_CONFINEMENT_PLAN_DIR = (
+    "tests/speckit-pro/unit/fixtures/plan-layers/repository-bash-confinement-plan"
+)
 WORKFLOW_FILE = "docs/ai/specs/.process/XPLAT-005-workflow.md"
 
 if str(PLUGIN_ROOT) not in sys.path:
@@ -891,11 +893,14 @@ class ReadOnlyHelperTests(unittest.TestCase):
             {"duplicate_task_id", "duplicate_increment_id", "malformed_task"},
         )
 
-    def test_plan_layers_xplat_010_dogfood_does_not_collapse_to_foundation(self) -> None:
+    def test_plan_layers_repository_bash_confinement_preserves_increment_contract(self) -> None:
         if self.helper_filter and self.helper_filter != "plan-layers-feature-dir":
-            self.skipTest("plan-layers XPLAT-010 dogfood case")
+            self.skipTest("plan-layers repository Bash confinement case")
         completed, response, stderr_records = run_runner(
-            helper_request("plan-layers-feature-dir", {"feature_dir": XPLAT_010_FEATURE_DIR})
+            helper_request(
+                "plan-layers-feature-dir",
+                {"feature_dir": REPOSITORY_BASH_CONFINEMENT_PLAN_DIR},
+            )
         )
         self.assertEqual(completed.returncode, 0)
         self.assert_response(response, "ok", 0)

@@ -9,23 +9,26 @@ task IDs, purpose-based implementation paths, and verification evidence.
 
 - Frozen implementation head: `a7b2d27b12fdc5051dfa4829c94f92752e2f5146`
   (tree `a1c42735d35619bbd0a4a90a42c57ab9e578848e`).
+- Final merged `main`: `ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29`, tree
+  `0d5a46bfa28efbca13d7f49539369705bd58d76f`; the tree is byte-identical
+  to the verified published stack tip, and all 18 review branches are deleted.
 - Verified date: 2026-07-11 (America/Chicago).
-- Stack record:
-  `specs/xplat-010-repository-bash-confinement/.process/prs.json`, containing
-  18 open records for PRs #311 through #328 with exact adjacent bases.
+- Stack record: PRs #311 through #328 merged in review order. Exact titles,
+  timestamps, merge commits, head branches, and recovery commands are in
+  `.specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md`.
 - Packet evidence:
-  `specs/xplat-010-repository-bash-confinement/.process/pr-packets/`, containing
-  18 directories and exactly one `body.md`, `packet.json`, and passing
-  `validation.json` in each directory.
+  `docs/ai/specs/.process/XPLAT-010-pr-packet.json` preserves the aggregate
+  snapshot; the 18 source packet directories are recoverable from the final
+  merge commit and each contained one `body.md`, `packet.json`, and passing
+  `validation.json`.
 - Cumulative parity evidence:
   `docs/ai/specs/.process/XPLAT-010-suite-parity-result.json`, status `passed`,
   verified at the emitted stack tip against the purpose-based baseline and
   current test paths.
 
-This snapshot records local and generated evidence only. It does not configure
-branch protection, merge PRs, or promote local checks into hosted evidence.
-If the parent closeout changes a branch OID, it must regenerate the affected
-packet before final synchronization.
+This snapshot includes merged-stack, hosted preflight, and live branch-rule
+evidence. Historical packet paths and object IDs remain frozen snapshots; they
+are not rewritten to post-merge paths.
 
 ## Source Reconciliation
 
@@ -72,9 +75,6 @@ Status meanings:
 
 - **Verified**: current implementation and direct local evidence satisfy the
   outcome.
-- **Local contract verified; hosted pending**: repository behavior is covered
-  locally, but the outcome explicitly requires GitHub-hosted evidence or
-  configuration that is not yet recorded.
 - **Partial**: material implementation evidence exists, but a required final
   environment or aggregate check is still missing.
 
@@ -190,10 +190,16 @@ release-gate entrypoints as CI and gate relevant pull requests.
   relevant-change selection, docs-only no-op behavior, shared runner requests,
   least-privilege permissions, and non-masking uploads. The ARM64 exact
   pinned-container overlay with hydrated `tasks.md` passed 42/42.
-- Hosted gap: T108 remains open. Actual Linux container jobs, uploaded
-  artifacts, required-context behavior, all configured PR events, and the
-  post-merge manual dispatch are not established by local tests.
-- Status: **Local contract verified; hosted pending**.
+- Hosted evidence: relevant-path run `29159969108` passed both Linux heavy
+  jobs; docs-only run `29161055742` skipped heavy jobs and passed both
+  sentinels; intentional failure run `29159559914` failed both sentinels;
+  supplemental run `29141599499` propagated an actual Linux default-suite
+  failure through both sentinels with all eight artifacts. Manual `main` run
+  `29161090549` passed both heavy jobs and sentinels at the final merge commit.
+  PR #331 canaries passed `opened`, `synchronize`, `ready_for_review`, and
+  `reopened` triggers. T108 is complete.
+- Branch rule: non-strict `main` protection requires both Linux sentinels.
+- Status: **Verified**.
 
 ### DW-06 - Advisory Windows smoke evidence
 
@@ -210,10 +216,14 @@ availability, and are never represented as native installed-plugin UAT.
   defaults disabled, repository/manual override handling, `continue-on-error`
   advisory jobs, interpreter discovery, and `native_installed_uat: false`
   evidence records.
-- Hosted gap: T108 remains open. Live runner-label availability, Windows job
-  execution, uploaded evidence, and the ARM64 disabled/no-queue outcome still
-  require hosted observation.
-- Status: **Local contract verified; hosted pending**.
+- Hosted evidence: manual `main` run `29161090549` passed Windows x64 and
+  recorded Windows ARM64 `available:true` / `enabled:false` without queueing
+  the label. Run `29140365960` proves Windows x64 failure remains advisory while
+  the overall workflow succeeds. Each PR #331 trigger canary retained five
+  artifacts. T108 is complete.
+- Boundary: this is preflight evidence, not XPLAT-008 native installed-plugin
+  UAT.
+- Status: **Verified**.
 
 ### DW-07 - CI blocks Bash and jq reintroduction
 
@@ -260,11 +270,12 @@ while preserving the conventional-commit appendix.
   permission. This also covers fence parsing, sanitization, skip semantics,
   immutable capture, Compare pagination boundaries, digest replay,
   Highlights/appendix output, and least-privilege release mutation.
-- Hosted gaps: T117 remains open because `validate-release-note` still needs
-  recorded branch-protection configuration. The workflow checklist also lacks
-  proof from the first real release rewritten by the composer. Local fixtures
-  do not prove either hosted outcome.
-- Status: **Local contract verified; hosted pending**.
+- Hosted evidence: T117 is complete. Non-strict `main` protection requires
+  `validate-release-note` alongside `validate-plugins`, `validate-pr-title`,
+  and both Linux sentinels. The first real release rewritten by the composer
+  remains separate release-publication evidence.
+- Status: **Partial** (required-check enforcement verified; first real release
+  rewrite pending).
 
 ### DW-09 - Restored spec-size estimator
 
@@ -312,10 +323,12 @@ container and smoke evidence cannot substitute for it.
   `tests/speckit-pro/layer8-parity/lib/judge.py` keeps deterministic
   byte-identical, exact, and tolerance-1 behavior plus skip-with-warning. The
   parity result records the replacement instead of claiming false name parity.
-- Windows ARM64 is configured advisory behavior, disabled by default. Live
-  hosted-runner execution and post-merge evidence remain pending under T108.
-- T117 branch-protection evidence remains pending; workflow implementation is
-  not equivalent to a required context on `main`.
+- Windows ARM64 remains advisory and disabled by default. Hosted evidence
+  records it available but disabled and not queued; T108 is complete.
+- T117 is complete. Non-strict `main` protection requires exactly five GitHub
+  Actions contexts: `validate-plugins`, `validate-pr-title`,
+  `validate-release-note`, `container-preflight-linux-amd64`, and
+  `container-preflight-linux-arm64`.
 - T133 is complete: the Bash-absent, `jq`-absent neutral-PATH deterministic
   suite passed 2512/2512 at the frozen implementation head.
 - T134 is complete for the emitted stack tip: all 18 packet/body/validation
@@ -348,3 +361,6 @@ container and smoke evidence cannot substitute for it.
 | PR packet generation | 18/18 triplets present; 18/18 `validation.json` records passed for the frozen implementation tree |
 | `pnpm --dir docs-site validate` | Exit 0; references current; Astro clean; links and quality clean; Playwright 88/88 |
 | Parent final suite/docs closeout | Passed under T135: neutral-PATH deterministic suite 2512/2512 (Layer 1 1373, Layer 4 953, Layer 5 186); final docs validation green |
+| T108 hosted preflight | Relevant `29159969108`, docs-only `29161055742`, failure `29159559914`, supplemental Linux failure `29141599499`, advisory Windows failure `29140365960`, and manual-main `29161090549` establish heavy/no-op/failure/advisory behavior; four PR #331 trigger canaries passed |
+| T117 branch protection | Non-strict `main` rule requires exactly the three PR checks and both Linux sentinels |
+| Evidence boundary | Hosted records are preflight only and cannot satisfy XPLAT-008 native installed-plugin UAT |

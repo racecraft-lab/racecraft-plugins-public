@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 <!-- SPECKIT START -->
-Active SpecKit plan: **XPLAT-010 — Repository Bash Confinement and CI Dispatch Guard** (`specs/xplat-010-repository-bash-confinement/plan.md`). Confines repository-local Bash to `.github/workflows/` dispatch glue only: ports the test harness (~101 `.sh`), `scripts/**`, `.claude/hooks/**`, and the Layers 2/3/6 eval runners to Python 3.11+ stdlib; makes `tests/speckit-pro/suite-manifest.json` the single per-layer source of truth that `run-all.py` and the shipped suite gate read; adds a bash-scoped repository-confinement guard (live `git ls-files -z`, fail-closed 10-file `.specify/**` allowlist) to `active_path_guard.py`, composed into CI and release readiness; adds container/runner preflight CI; adds a stdlib release-notes composer + `validate-release-note` check; and restores the `estimate-spec-size` runner op. Delivered as a dependency-ordered 15-PR stack (13 numbered slices, with slices 3 and 7 split into a/b; operator-ratified typed-split transition exception). Python 3.11+ stdlib only; shipped-runner byte changes (PRs 2/7b/8/9/10/13) carry the payload/proof regeneration ritual.
+No active SpecKit implementation plan is selected. XPLAT-010 merged through PRs #311-#328 and is archived in `.specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md`. Repository validation is Python 3.11+ and manifest-driven; Bash is confined to bounded GitHub workflow dispatch glue and the fixed release-excluded vendored `.specify/**` allowlist. T108/T117 hosted evidence is complete. Public native Windows/macOS/Linux claims remain blocked by the preserved XPLAT-008 operator UAT matrix.
 <!-- SPECKIT END -->
 
 ## Working in This Repo
@@ -18,7 +18,7 @@ Four rules, in priority order. These exist because plugin/marketplace edits have
 ### 2. Simplest change that solves it
 - No new abstractions for one-call-site code. No new test layers, scripts, or helpers unless a second use exists or is explicitly asked for.
 - No flags/options "for future flexibility" — add them when a second caller actually appears.
-- For XPLAT-007 repo-local gates, prefer `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < <request.json>` over new shell or `jq` logic. Retained shell scripts are inactive parity evidence until XPLAT-008 cutover work.
+- For repo-local gates, prefer `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < <request.json>` over new shell or `jq` logic. Do not add active repository Bash outside the bounded workflow-dispatch and fixed vendored `.specify/**` boundaries.
 
 ### 3. Surgical edits
 - Touch only what the request requires. Don't reformat adjacent JSON, reorder keys in `plugin.json` / `marketplace.json`, or "clean up" comments you didn't author.
@@ -86,8 +86,8 @@ Skills live under `skills/<skill-name>/` with a `SKILL.md` entry point. Supporti
 
 ## Running Tests
 
-The repo-local XPLAT-007 gate entrypoints use the Python 3.11+ standard-library
-runner. Run from the repository root:
+The repo-local gate entrypoints use the Python 3.11+ standard-library runner.
+Run from the repository root:
 
 ```bash
 # Default deterministic suite gate
@@ -108,10 +108,9 @@ PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fi
 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json
 ```
 
-Legacy shell scripts under `tests/speckit-pro/`, `scripts/`, and plugin skill
-script directories remain checked in as inactive parity or XPLAT-008 handoff
-evidence. Do not present them as the active repo-local release gates for
-XPLAT-007.
+Historical Bash behavior is preserved as data-only baselines and git history,
+not executable repository tooling. Tracked `.sh` files are limited to the fixed
+vendored `.specify/**` allowlist and are excluded from release readiness.
 
 ### Test Layers
 | Layer | What it tests | Cost |
@@ -166,9 +165,9 @@ The SessionStart hook warns if `specify` is not found.
 
 ## Tooling
 
-- **Runtime:** Python 3.11+ standard-library runner for XPLAT-007 repo-local gates; retained Bash/`jq` paths are inactive parity evidence until XPLAT-008
+- **Runtime:** Python 3.11+ standard-library runner and manifest-driven repository test tooling; no active Bash or `jq` runtime dependency
 - **Release automation:** `googleapis/release-please-action@v5`
-- **CI:** GitHub Actions (`actions/checkout@v4`, inline Bash)
+- **CI:** GitHub Actions with bounded shell dispatch that invokes Python gates
 - **PR / repo ops:** GitHub CLI (`gh`) v2+
 
 For per-feature history, see `git log` and `CHANGELOG.md` — don't maintain a duplicate list here.
@@ -213,7 +212,7 @@ If a PR ever lands on `main` with a non-public-readable title (squash merges use
 
 ## CI/CD Workflow
 
-The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-draft PR and can also be dispatched by release automation for release-please PR branches created with `GITHUB_TOKEN`. It contains seven jobs:
+The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-draft PR and can also be dispatched by release automation for release-please PR branches created with `GITHUB_TOKEN`. It contains eight jobs:
 
 | Job | Description |
 |-----|-------------|
@@ -221,19 +220,20 @@ The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-dra
 | `test (<plugin>)` | Dispatches the Python runner toolchain and default-suite gates for each plugin in the matrix. |
 | `validate-plugins` | Sentinel/aggregator job. Always runs. Passes when the plugin test matrix passed or was skipped; fails when it failed or was cancelled. Provides the stable check name that branch protection requires. |
 | `validate-pr-title` | Validates the PR title against the Conventional Commits pattern. |
+| `validate-release-note` | Requires a valid consumer release-note block for releasable feat/fix PRs unless `release-note/skip` applies. |
 | `validate-workflows` | Installs pinned actionlint and validates every GitHub Actions workflow. |
 | `validate-docs` | Detects docs-site, generated-reference, release metadata, and docs-validation contract changes. Runs full docs validation for rendered docs or docs-contract changes, and reference plus quality validation for generated-reference changes. |
 | `artifact-consistency` | Regenerates release artifacts and fails when the checked-in payload, registry, fixture, or evidence mirrors drift from source. |
 
 **Why a sentinel job?** The `test` matrix job name is dynamic (`test (speckit-pro)`, `test (other-plugin)`, etc.) and cannot be registered as a stable required check name. The `validate-plugins` sentinel aggregates matrix results into one stable name that branch protection can require.
 
-**Docs-only PRs:** During XPLAT-007, `detect` emits `["speckit-pro"]` for every non-draft PR, so docs-only PRs still run the Python-dispatched plugin gate suite. If the changed documentation is part of the docs-site, generated-reference, or docs-validation contract surfaces, `validate-docs` also runs the matching docs validation mode.
+**Docs-only PRs:** `detect` emits `["speckit-pro"]` for every non-draft PR, so docs-only PRs still run the Python-dispatched plugin gate suite. If the changed documentation is part of the docs-site, generated-reference, or docs-validation contract surfaces, `validate-docs` also runs the matching docs validation mode.
 
 **Release-please PRs:** GitHub suppresses normal `pull_request` workflow runs for PRs created or updated by `GITHUB_TOKEN`, so the Release workflow dispatches `PR Checks` manually after it syncs generated `dist/**` payloads onto the release PR branch. Those dispatched (`workflow_dispatch`) check runs are visible on the PR but live in a check suite that is **not associated with the PR**, so branch protection does not count them — which is why a `GITHUB_TOKEN`-authored release PR shows `BLOCKED` even with everything green. When the optional `RELEASE_PLEASE_TOKEN` secret is configured (see **Release Process → Release token**), the release PR is authored by that identity instead, its `pull_request` checks run un-gated and satisfy branch protection directly, and the manual dispatch becomes a fallback. Without the secret the workflow falls back to `GITHUB_TOKEN` and behaves as before.
 
 **Container preflight:** `.github/workflows/container-preflight.yml` starts on every PR and manual dispatch so required contexts are never stranded by workflow-level path filters. A lightweight Ubuntu job limits heavy execution to runner, gate, and workflow changes. The stable `container-preflight-linux-amd64` and `container-preflight-linux-arm64` sentinels report success for intentional no-op runs and fail when their matching heavy container job fails. The official GitHub-hosted runners reference lists `windows-2025` as stable and the ARM64 row containing `windows-11-arm` as Public Preview. Windows smoke remains advisory: x64 defaults enabled, ARM64 defaults disabled, and `XPLAT_WINDOWS_X64_ENABLED` / `XPLAT_WINDOWS_ARM64_ENABLED` or manual inputs provide explicit overrides. Uploaded evidence is diagnostic preflight data, not native installed-plugin UAT.
 
-**Maintenance warning:** If a required job in `pr-checks.yml` or `container-preflight.yml` is renamed, the corresponding required status check name in branch protection MUST be updated manually — GitHub does NOT automatically track job renames. The live rule currently requires `validate-plugins` and `validate-pr-title`; add `container-preflight-linux-amd64` and `container-preflight-linux-arm64` after both report on PR 11.
+**Maintenance warning:** If a required job in `pr-checks.yml` or `container-preflight.yml` is renamed, the corresponding required status check name in branch protection MUST be updated manually — GitHub does NOT automatically track job renames. The live non-strict rule requires exactly `validate-plugins`, `validate-pr-title`, `validate-release-note`, `container-preflight-linux-amd64`, and `container-preflight-linux-arm64` from GitHub Actions.
 
 To detect drift, run:
 ```bash
@@ -345,7 +345,7 @@ When a new plugin directory is added to the repository, two files must be update
 
 The key in `.release-please-manifest.json` MUST match the key in `release-please-config.json` exactly. The initial version is typically `0.1.0` for a new plugin.
 
-**Also update the marketplace sync script** (`scripts/sync-marketplace-versions.sh`) if it needs to sync the new plugin's version to `.claude-plugin/marketplace.json`. Verify the script handles the new plugin name, then add the plugin to `.claude-plugin/marketplace.json` as well.
+**Also update the marketplace sync script** (`scripts/sync-marketplace-versions.py`) if it needs to sync the new plugin's version to `.claude-plugin/marketplace.json`. Verify the script handles the new plugin name, then add the plugin to `.claude-plugin/marketplace.json` as well.
 
 Note: CI will test the new plugin on PRs (if files changed), but release-please will not create a release entry until the plugin is added to `release-please-config.json`. This gap is silent — there is no automated check that validates alignment between plugin directories and release-please config.
 
@@ -410,7 +410,12 @@ gh run view <run-id> --log-failed
 
 Look for the `Verify release artifacts are consistent` step; its error prints the drifting paths. This usually means the release-PR payload-sync step did not run on the release PR before it was merged (e.g., a release PR created by an older workflow).
 
-**Recovery:** Fix forward — push a sync commit through a normal PR that runs `bash scripts/build-plugin-payloads.sh`, `bash scripts/sync-marketplace-versions.sh`, and `pnpm --dir docs-site reference:generate`, then commits `dist/`, both `marketplace.json` files, and `docs-site/src/content/docs/reference/**`. For future releases the release PR carries this sync automatically; use Scenario 1 to re-sync a release PR before merge.
+**Recovery:** Fix forward — push a sync commit through a normal PR that runs
+`python3 scripts/refresh-release-artifacts.py` and
+`pnpm --dir docs-site reference:generate`, then commits the generated payload,
+marketplace, proof, evidence, and docs-reference changes. For future releases
+the release PR carries this sync automatically; use Scenario 1 to re-sync a
+release PR before merge.
 
 ---
 
@@ -464,8 +469,7 @@ gh api /repos/racecraft-lab/racecraft-plugins-public/contents/.claude-plugin/mar
 Compare the version values against the GitHub Release tags. If they do not match, re-trigger the sync (Scenario 1). If re-triggering also fails, manually rebuild payloads, sync marketplace files, and open a PR:
 
 ```bash
-bash scripts/build-plugin-payloads.sh
-bash scripts/sync-marketplace-versions.sh
+python3 scripts/refresh-release-artifacts.py
 pnpm --dir docs-site reference:generate
 git add dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json docs-site/src/content/docs/reference
 git commit -m "chore: sync plugin payloads, marketplace versions, and docs reference"
@@ -475,27 +479,34 @@ gh pr create --base main --head <sync-branch> --title "chore: sync plugin payloa
 
 ---
 
-### Scenario 7: The `test latest jq` leg blocks PRs for upstream reasons
+### Scenario 7: A required Linux container preflight blocks PRs
 
-**Symptom:** Open speckit-pro PRs show `validate-plugins` failing (and a red `test latest jq (speckit-pro)` check) even though the PR's own code is fine. Because the latest-`jq` leg is wired into the `validate-plugins` sentinel, an upstream or infrastructure failure here blocks **every** speckit-pro PR, not just one.
+**Symptom:** Open speckit-pro PRs show a red
+`container-preflight-linux-amd64` or `container-preflight-linux-arm64` required
+check. The corresponding heavy job runs the Python toolchain preflight, default
+suite, release readiness, and artifact capture inside the pinned container.
 
 **Detection:**
 ```bash
 gh run view <run-id> --log-failed
 ```
-Look at the `Install latest jq release` step. Common upstream causes:
-- `jqlang/jq` renamed or dropped the `jq-linux-amd64` release asset (`latest jq release did not include jq-linux-amd64`).
-- The latest release asset has no `digest` field (`latest jq release asset is missing a sha256 digest`).
-- `api.github.com` was unreachable or rate-limited at run time.
+Inspect the failed heavy-job step and its uploaded artifact. Distinguish a
+deterministic suite/release-readiness failure from a transient image or Actions
+infrastructure failure before changing code.
 
 **Recovery:**
-1. **Transient (network/API):** re-run the failed jobs — `gh run rerun <run-id> --failed`. No code change needed.
-2. **Upstream asset/digest change:** this is a real workflow fix, not a per-PR fix. Update the `test-latest-jq` job in `.github/workflows/pr-checks.yml` to the new asset name (and the `validate-pr-checks-sentinel.sh` assertions if the digest handling changes), land it through a normal PR, then re-run the blocked PRs' checks.
-3. **Emergency unblock:** if a maintainer must merge before the upstream fix lands, temporarily relax the sentinel — drop `test-latest-jq` from `needs:` and the `latest_jq_result` check in `validate-plugins` — or merge via admin override, then restore the gate in a follow-up. Treat this as a stopgap, not a permanent state, so drift between `pr-checks.yml` and the required-check name does not accumulate (see the **Maintenance warning** above).
-
-If this leg proves flaky enough to disrupt the merge queue, consider demoting it to advisory (`continue-on-error: true` and out of the sentinel `needs:`) so it still surfaces `jq` drift without gating merges.
+1. **Transient infrastructure failure:** re-run failed jobs with
+   `gh run rerun <run-id> --failed`; no source change is needed.
+2. **Deterministic suite or readiness failure:** reproduce the named Python
+   command locally, fix the source or generated-artifact drift, and land it
+   through a normal PR.
+3. **Runner-image contract change:** update the pinned container workflow and
+   its Python validators together. Do not demote either required sentinel or
+   use an admin override as a routine workaround.
 
 ## Active Technologies
+The entries below are historical spec snapshots. They do not override the
+current Python 3.11+ commands and Bash-confinement rules at the top of this file.
 - Bash 4+ shell scripts, Markdown skills, YAML manifests, JSON Schema 2020-12 contracts, and `bash`, `jq`, `git`, `gh` at PR-emission boundaries (prsg-010-harden-the-hatch)
 - Repository files only: feature artifacts, contract schemas, workflow state JSON, and generated re-slicing packets (prsg-010-harden-the-hatch)
 - Bash 4+ shell scripts, Markdown skill guidance, JSON Schema 2020-12 + `bash`, `jq`, `git`, `gh` at PR-emission boundaries, existing SpecKit Pro shell harness (prsg-013-reviewability-markers)
@@ -505,7 +516,7 @@ If this leg proves flaky enough to disrupt the merge queue, consider demoting it
 - Markdown/MDX content plus Astro/Starlight docs site metadata + Astro 6.4.6, Starlight 0.40.0, pnpm 10.25.0 (doc-004-codex-marketplace-installation-path)
 - Docs-site JavaScript ESM on Node; Astro 6.4.6 and Starlight 0.40.0 for docs rendering; Node built-ins (`node:fs`, `node:path`, `node:url`) plus existing docs-site pnpm scripts and `starlight-links-validator`; no new runtime dependency planned. (doc-007-command-workflow-manifest-and-file-layout-reference)
 - Checked-in Markdown files under `docs-site/src/content/docs/reference/`; no database or browser storage. (doc-007-command-workflow-manifest-and-file-layout-reference)
-- Markdown runtime guidance, TOML Codex agent templates, YAML metadata, generated payload files, and Bash validation scripts in the existing repository; existing SpecKit Pro plugin structure, payload builder `bash scripts/build-plugin-payloads.sh`, and deterministic verification `bash tests/speckit-pro/run-all.sh`; no new runtime dependency planned. (tacd-002-capability-discovery-directive-and-agent-updates)
+- Historical pre-XPLAT snapshot: Markdown runtime guidance, TOML Codex agent templates, YAML metadata, generated payload files, and the then-current Bash validation and payload tooling. Those commands were retired by XPLAT-009/XPLAT-010. (tacd-002-capability-discovery-directive-and-agent-updates)
 - Repository files only. Source guidance under `speckit-pro/`, generated payload copies under `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/`, and Plan-phase artifacts under `specs/tacd-002-capability-discovery-directive-and-agent-updates/`. (tacd-002-capability-discovery-directive-and-agent-updates)
 - Docs-site JavaScript ESM on Node, with Markdown/MDX content under `docs-site/src/content/docs/` + Astro 6.4.6, Starlight 0.40.0, existing `starlight-links-validator` (doc-008-troubleshooting-security-trust-update-rollback)
 - Checked-in Markdown/MDX files only; no database, browser storage, or runtime state (doc-008-troubleshooting-security-trust-update-rollback)
