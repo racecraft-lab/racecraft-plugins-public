@@ -1,10 +1,11 @@
-# Codex GPT-5.6 Agent Routing Implementation Roadmap
+# Codex ChatGPT Pro Agent Routing Optimization Roadmap
 
-**Select efficient static GPT-5.6 installation defaults that minimize ChatGPT
+**Select efficient static installation defaults across the full model catalog
+available to ChatGPT Pro that minimize
 Pro allowance consumption per accepted end-to-end workflow while preserving
 role quality, reliability, and completion time.**
 
-This document defines the SPEC catalog for Codex GPT-5.6 agent routing. Each
+This document defines the SPEC catalog for Codex ChatGPT Pro agent routing. Each
 SPEC maps 1:1 to a Feature / Acceptance-Criteria group in the source PRD
 (`AC-N.*`) and is prepared for `$speckit-scaffold-spec G56R-NNN`.
 
@@ -36,23 +37,25 @@ G56R-004 + G56R-005 + G56R-006 + G56R-007 -> G56R-008
 G56R-003 must scaffold against the authoritative installer/runtime that exists
 after XPLAT-009 stabilizes; it must not reintroduce a deleted Bash helper.
 
-### Research-backed starting matrix
+### Research-backed starting hypotheses
 
-This is a **candidate shortlist**, not a pre-approved final routing table.
-G56R-002 evidence controls promotion.
+This table records starting hypotheses, not a complete candidate shortlist or
+pre-approved routing table. G56R-001 must capability-probe the entire model
+catalog exposed to the declared Pro tier and tested client. G56R-002 screens
+every role-eligible entry; evidence controls promotion.
 
-| Agent | Current source baseline | Primary GPT-5.6 candidate | Initial effort comparison | Adjacent challenger |
+| Agent | Current source baseline | Starting hypothesis | Initial effort comparison | Required catalog challengers |
 |---|---|---|---|---|
-| `phase-executor` | GPT-5.5 / xhigh | Sol | xhigh vs high | Terra |
-| `implement-executor` | GPT-5.5 / xhigh | Sol | xhigh vs high | Terra |
-| `analyze-executor` | GPT-5.5 / xhigh | Sol | xhigh vs high; max only after a measured failure | Terra |
-| `checklist-executor` | GPT-5.5 / xhigh | Terra | xhigh vs high | Sol; Luna only if contract-safe |
-| `uat-runbook-author` | GPT-5.5 / xhigh | Terra | xhigh vs high | Sol; Luna only if contract-safe |
-| `clarify-executor` | GPT-5.5 / xhigh | Terra | xhigh vs high | Sol |
-| `domain-researcher` | GPT-5.5 / xhigh | Terra | xhigh vs high | Sol |
-| `codebase-analyst` | GPT-5.5 / low | Terra | low vs next supported lower effort | Luna for bounded scans |
-| `spec-context-analyst` | GPT-5.5 / low | Terra | low vs next supported lower effort | Luna for bounded scans |
-| `autopilot-fast-helper` | GPT-5.3 Codex Spark / effort omitted | Luna | low vs none when supported | Terra; retain current behavior if no 5.6 route passes |
+| `phase-executor` | GPT-5.5 / xhigh | Sol | progressive descent | Every eligible catalog model, including baseline and GPT-5.4 |
+| `implement-executor` | GPT-5.5 / xhigh | Sol | progressive descent | Every eligible catalog model, including baseline and GPT-5.4 |
+| `analyze-executor` | GPT-5.5 / xhigh | Sol | progressive descent; max only after measured failure | Every eligible catalog model, including baseline and GPT-5.4 |
+| `checklist-executor` | GPT-5.5 / xhigh | Terra | progressive descent | Full eligible catalog; GPT-5.4 Mini required when exposed |
+| `uat-runbook-author` | GPT-5.5 / xhigh | Terra | progressive descent | Full eligible catalog; GPT-5.4 Mini required when exposed |
+| `clarify-executor` | GPT-5.5 / xhigh | Terra | progressive descent | Every eligible catalog model |
+| `domain-researcher` | GPT-5.5 / xhigh | Terra | progressive descent | Every eligible catalog model |
+| `codebase-analyst` | GPT-5.5 / low | Terra | progressive descent | Full eligible catalog, including lighter bounded-work models |
+| `spec-context-analyst` | GPT-5.5 / low | Terra | progressive descent | Full eligible catalog, including lighter bounded-work models |
+| `autopilot-fast-helper` | GPT-5.3 Codex Spark / effort omitted | Luna | progressive descent | Full eligible catalog; Spark reported separately |
 
 ### Promotion rule
 
@@ -76,7 +79,8 @@ G56R-002 evidence controls promotion.
   confidence rule. Three repeats are a pilot floor, not the final design.
 - Benchmark static pins against unpinned Codex selection and an explicit
   adaptive escalation policy.
-- Evidence wins: Sol, Terra, or Luna is not forced into a role when it fails.
+- Evidence wins: no generation, tier, preview, or current default is forced into
+  a role when it fails.
 
 ## Reviewability Contract
 
@@ -151,8 +155,9 @@ Budget result: research spike; time-boxed, LOC sizing not applicable
   and user-documentation policy surfaces.
 - Record current model/effort, role boundary, output contract, mutation class,
   expected tool use, and representative task for each agent.
-- Create a primary-source fact table from current OpenAI latest-model, Sol,
-  Terra, Luna, pricing, migration, prompt-guidance, and Codex subagent pages.
+- Create a primary-source fact table from current Codex plan/model availability,
+  live client catalog/capability probes, model pages, pricing/limits, migration,
+  prompt guidance, and Codex subagent pages.
 - Reconcile research conflicts explicitly. Current canonical model pages take
   precedence over secondary claims about context size, availability, or effort
   support.
@@ -169,7 +174,7 @@ Budget result: research spike; time-boxed, LOC sizing not applicable
 
 **Key Files:**
 
-- `docs/ai/research/` - dated GPT-5.6 research and candidate matrix
+- `docs/ai/research/` - dated Pro model-catalog research and candidate matrix
 - `speckit-pro/codex-agents/*.toml` - read-only inventory source
 - `tests/speckit-pro/layer6-efficiency/` - fixture-gap inventory source
 
@@ -227,7 +232,8 @@ Budget result: re-estimate at scaffold; split fixture expansion from runner work
 - Selecting or changing agent defaults.
 - A general-purpose model benchmark unrelated to SpecKit Pro contracts.
 - A mandatory LLM judge for deterministic facts.
-- Claiming global long-horizon optimization from a GPT-5.6-only static search.
+- Claiming optimization across models absent from the declared Pro account or
+  tested client.
 
 **Key Files:**
 
@@ -299,10 +305,10 @@ Budget result: re-estimate at scaffold; three disjoint TOMLs plus role evidence
 
 **Scope:**
 
-- Run the approved Sol baseline and progressive-effort descent plus Terra
-  challenger matrix for `phase-executor`, `implement-executor`, and
-  `analyze-executor`; test `max` only for a measured unresolved failure and only
-  when supported.
+- Start with Sol/Terra hypotheses, then screen every eligible model exposed by
+  the declared Pro tier/client for `phase-executor`, `implement-executor`, and
+  `analyze-executor`, including GPT-5.5 baseline and GPT-5.4; progressively
+  descend effort and test `max` only for a measured unresolved failure.
 - Score real Specify/Plan/Tasks, strict TDD implementation, and full Analyze
   remediation contracts, not generic coding prompts.
 - Pin each winning model and effort independently in its TOML; update only
@@ -345,9 +351,9 @@ Budget result: re-estimate at scaffold; two role TOMLs plus evidence
 
 **Scope:**
 
-- Evaluate `checklist-executor` and `uat-runbook-author` on Terra at the current
-  effort through progressively lower supported efforts; add Sol or Luna only when the role fixture makes
-  the adjacent comparison credible.
+- Start with Terra, then screen the full eligible Pro catalog for
+  `checklist-executor` and `uat-runbook-author`; GPT-5.4 Mini is required when
+  exposed. Progressively descend supported effort for every candidate.
 - Require complete all-severity checklist remediation and executable,
   non-circular, acceptance-criteria-linked UAT runbooks.
 - Pin independent winners while preserving workspace-write, error, and fail-open
@@ -376,8 +382,8 @@ Budget result: re-estimate at scaffold; two role TOMLs plus evidence
 **Priority:** P1 | **Depends On:** G56R-003 | **Enables:** G56R-008
 
 **Goal:** Route clarification, external research, codebase analysis, and project
-context analysis independently, starting with Terra and preserving evidence
-boundaries.
+context analysis independently across the full eligible Pro catalog while
+preserving evidence boundaries.
 
 **Reviewability Budget:** Primary surface: seed/config |
 Projected reviewable LOC: unavailable (estimator operation absent) |
@@ -387,11 +393,11 @@ Budget result: re-estimate at scaffold; four TOMLs plus bounded role fixtures
 
 **Scope:**
 
-- Evaluate Terra for `clarify-executor`, `domain-researcher`,
-  `codebase-analyst`, and `spec-context-analyst`; use Sol for harder synthesis
-  and Luna only for bounded scans that preserve the contract.
-- Compare xhigh/high for current xhigh roles and low/the next supported lower
-  effort for current low roles. Never rely on GPT-5.6's omitted medium default.
+- Start with Terra, then screen every eligible model exposed by the declared Pro
+  tier/client for all four roles; retain lighter models for bounded scans only
+  when they preserve the contract.
+- Progressively descend every candidate's supported effort levels. Never rely
+  on an omitted or model-specific default effort.
 - Hard-gate read-only behavior, source-domain separation, citations/file
   locators, abstention, and structured return formats.
 - Pin the lowest-allowance passing static route + effort + prompt combination
@@ -418,8 +424,8 @@ Budget result: re-estimate at scaffold; four TOMLs plus bounded role fixtures
 
 **Priority:** P1 | **Depends On:** G56R-003 | **Enables:** G56R-008
 
-**Goal:** Decide whether Luna can replace the Spark helper while preserving its
-bounded advisory contract and graceful unavailability behavior.
+**Goal:** Select the best bounded-helper route from the full eligible Pro
+catalog while preserving its advisory contract and graceful unavailability.
 
 **Reviewability Budget:** Primary surface: seed/config |
 Projected reviewable LOC: unavailable (estimator operation absent) |
@@ -429,13 +435,15 @@ Budget result: re-estimate at scaffold; single-agent vertical slice
 
 **Scope:**
 
-- Benchmark Luna low/none when supported against current Spark behavior and a
-  Terra challenger on compression, triage, and query-drafting fixtures.
+- Screen Luna, GPT-5.4 Mini, GPT-5.4, Terra, current Spark behavior, and every
+  other eligible exposed model on compression, triage, and query drafting;
+  report Spark separately until its preview quota is comparable.
 - Hard-gate read-only/advisory scope, concise return format, and prohibition on
   SDD reasoning or mutation.
-- Explicitly set the winning effort so omission cannot inherit GPT-5.6 medium.
+- Explicitly set the winning effort so omission cannot inherit an unmeasured
+  model default.
 - Preserve autopilot's correct continuation when the optional helper cannot
-  spawn; retain a non-Luna route when Luna fails the shared promotion rule.
+  spawn; do not force any named model when it fails the shared promotion rule.
 - Evaluate unchanged and bounded prompt/context variants jointly with the route
   and effort candidates, then prove install, override, and rollback behavior.
 - INVEST/vertical-slice rationale: one optional leaf helper can be evaluated,

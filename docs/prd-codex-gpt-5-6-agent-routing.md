@@ -1,4 +1,4 @@
-# PRD: Codex GPT-5.6 Agent Routing
+# PRD: Codex ChatGPT Pro Agent Routing Optimization
 
 **Status**: Active - not yet implemented
 **Source**: Maintainer request plus official OpenAI documentation, `$research`,
@@ -21,8 +21,8 @@ SpecKit Pro currently defines ten Codex custom agents. Nine source TOMLs pin
 `gpt-5.5`; the latency-first helper pins `gpt-5.3-codex-spark`. Effort is mostly
 `xhigh`, with two read-only analysts at `low` and the Spark helper omitting an
 effort field. The installer and structural tests also encode a mostly uniform
-model policy. That policy cannot take advantage of the GPT-5.6 family's
-role-specific price/capability tiers, and the current Layer 6 Codex harness
+model policy. That policy cannot optimize across the full model catalog
+available to ChatGPT Pro, and the current Layer 6 Codex harness
 sweeps effort while holding the TOML model constant.
 
 OpenAI positions `gpt-5.6-sol` for quality-critical work, `gpt-5.6-terra` as
@@ -40,13 +40,17 @@ limits. Model choice, context, reasoning, tools, retrieval, and caching all
 affect consumption. The benchmark must therefore account from the initial user
 objective through the final accepted artifact, including parent and child
 agents, retries, validation, compaction, escalation, repair, steering, and
-abandoned work.
+abandoned work. The current published Pro rate-limit table also includes
+GPT-5.5, GPT-5.4, and GPT-5.4 Mini, while Pro separately exposes
+GPT-5.3-Codex-Spark as a research preview. The evaluated catalog must be
+discovered from the declared Pro account and current Codex client at benchmark
+time rather than frozen to the models named in this document.
 
 The requested research passes did not find a complete public benchmark that
-compares all three GPT-5.6 tiers on SpecKit Pro's ten roles. Therefore this PRD
-does not treat a marketing tier as a proven assignment. It defines an
-evidence-first promotion process and ships only role assignments that clear a
-consumer-focused quality floor.
+compares the full Pro-available Codex catalog on SpecKit Pro's ten roles.
+Therefore this PRD does not treat a generation, marketing tier, or current
+default as a proven assignment. It defines an evidence-first promotion process
+and ships only role assignments that clear a consumer-focused quality floor.
 
 ## 2. Goals & Non-goals
 
@@ -57,8 +61,10 @@ consumer-focused quality floor.
 - Preserve consumer-visible correctness, grounding, output contracts,
   reliability, and completion time while minimizing observed or estimated Pro
   allowance consumption per accepted end-to-end workflow.
-- Evaluate Sol, Terra, and Luna without forcing any tier into production when
-  it fails the promotion bar.
+- Evaluate every model exposed to the declared ChatGPT Pro tier and tested
+  Codex client, including current GPT-5.6, GPT-5.5, GPT-5.4, GPT-5.4 Mini, and
+  separately accounted preview models; do not force any generation or tier
+  into production when it fails the promotion bar.
 - Make the model x effort decision reproducible through role fixtures,
   versioned results, and a documented promotion rule.
 - Keep installation predictable: role-pinned defaults, one explicit global
@@ -86,13 +92,14 @@ consumer-focused quality floor.
 - Offering quality/balanced/economy install profiles or per-agent overrides in
   v1. The existing one-model compatibility override remains the KISS escape
   hatch.
-- Claiming universal GPT-5.6 availability across accounts, operating systems,
+- Claiming universal model availability across accounts, operating systems,
   or Codex surfaces.
 - Replacing historical model references, archived evidence, or old eval
   baselines solely to make repository-wide search results uniform.
-- Claiming global optimization of long-horizon token use. Version 1 selects
-  efficient static installation defaults within the GPT-5.6 family; broader
-  cross-generation or runtime-adaptive optimization requires separate evidence.
+- Claiming global optimization across unavailable, undocumented, or future
+  models. Version 1 selects efficient static defaults across the full catalog
+  actually exposed to the declared Pro tier and tested client; runtime-adaptive
+  optimization still requires separate evidence.
 - Treating GPT-5.6 Pro mode as the same concept as the consumer's ChatGPT Pro
   subscription. The former remains out of scope; the latter defines the
   required authentication and accounting environment.
@@ -108,9 +115,11 @@ consumer-focused quality floor.
   positioning, pricing, context/tool support, Codex custom-agent fields, and
   reasoning-effort guidance; conflicting secondary claims are rejected or
   labeled unresolved.
-- **AC-1.3**: Every agent has a current baseline, a primary GPT-5.6 candidate,
-  at least one adjacent cheaper challenger where supported, an effort baseline,
-  and a role-specific quality contract.
+- **AC-1.3**: Every agent has a current baseline, capability-probed entries for
+  every model exposed to the declared Pro tier/client, supported effort values,
+  a role-eligibility rationale, and a role-specific quality contract. The
+  initial shortlist includes every eligible model; exclusion requires recorded
+  incompatibility, contract failure, or predeclared dominance evidence.
 - **AC-1.4**: Facts, inferences, and unverified assumptions are visibly
   separated, and no public head-to-head benchmark is claimed where none was
   located.
@@ -197,9 +206,9 @@ consumer-focused quality floor.
 ### 3.4 Quality-critical Executor Routing *(-> G56R-004)*
 
 - **AC-4.1**: `phase-executor`, `implement-executor`, and `analyze-executor`
-  evaluate Sol through progressive effort descent, with Terra as the adjacent
-  lower-consumption challenger and `max` considered only after a measured
-  quality failure.
+  start with Sol and Terra hypotheses but screen every eligible Pro-available
+  model, including the GPT-5.5 baseline and GPT-5.4 family, through progressive
+  effort descent. `max` is considered only after a measured quality failure.
 - **AC-4.2**: Each committed model/effort clears the G56R-002 promotion rule on
   role-specific planning, TDD implementation, and analyze/remediation fixtures.
 - **AC-4.3**: Agent sandbox, TDD, grounding, artifact, and remediation contracts
@@ -213,9 +222,9 @@ consumer-focused quality floor.
 
 ### 3.5 Structured-work Agent Routing *(-> G56R-005)*
 
-- **AC-5.1**: `checklist-executor` and `uat-runbook-author` evaluate Terra at
-  their current effort and progressively lower supported efforts, with Sol and Luna included only
-  where the role fixture makes them credible adjacent candidates.
+- **AC-5.1**: `checklist-executor` and `uat-runbook-author` start with Terra as
+  a hypothesis but screen every eligible Pro-available model, including GPT-5.4
+  Mini for bounded structured work, through progressively lower efforts.
 - **AC-5.2**: Checklist remediation remains complete at every severity and UAT
   runbooks remain executable, plain-English, non-circular, and traceable to
   acceptance criteria.
@@ -229,12 +238,12 @@ consumer-focused quality floor.
 ### 3.6 Read-only Reasoning Agent Routing *(-> G56R-006)*
 
 - **AC-6.1**: `clarify-executor`, `domain-researcher`, `codebase-analyst`, and
-  `spec-context-analyst` evaluate Terra as the primary candidate; Sol is a
-  quality challenger for harder synthesis, and Luna is tested only for bounded
-  scans where its output contract can be preserved.
+  `spec-context-analyst` start with Terra as a hypothesis but screen every
+  eligible Pro-available model; lighter models are retained for bounded scans
+  only when their grounding and output contracts pass.
 - **AC-6.2**: Each role progressively descends from its current effort through
   supported lower efforts until a quality boundary is found, without relying
-  on an omitted GPT-5.6 default.
+  on any model's omitted/default effort.
 - **AC-6.3**: All outputs remain grounded in their assigned evidence domain,
   preserve citations/file locators, and perform no writes.
 - **AC-6.4**: The lowest-allowance passing static route is committed per agent;
@@ -244,15 +253,16 @@ consumer-focused quality floor.
 
 ### 3.7 Latency-first Helper Routing *(-> G56R-007)*
 
-- **AC-7.1**: `autopilot-fast-helper` evaluates Luna at `low` and `none` when
-  both are accepted by the installed Codex version, against its current Spark
-  behavior and Terra as a fallback candidate.
+- **AC-7.1**: `autopilot-fast-helper` screens every eligible Pro-available
+  model, explicitly including Luna, GPT-5.4 Mini, GPT-5.4, Terra, its current
+  Spark behavior, and any newly exposed bounded-work model. Spark remains on a
+  separate quota scorecard until a common attributable measure exists.
 - **AC-7.2**: The helper remains read-only, advisory, bounded to compression,
   triage, and query drafting, and never performs SpecKit reasoning or mutation.
 - **AC-7.3**: The committed route clears the shared end-to-end promotion rule
   and improves or preserves latency and allowance consumption without causing
-  downstream rework; GPT-5.6 omission must not accidentally select its default
-  `medium` effort.
+  downstream rework; omitted effort must not accidentally select an unmeasured
+  model default.
 - **AC-7.4**: Autopilot continues correctly when the helper is unavailable, and
   evidence wins over a requirement to use Luna.
 - **AC-7.5**: Source, install, validation, prompt-cleanup, and rollback evidence
@@ -290,14 +300,15 @@ consumer-focused quality floor.
   phase, retries, subagent threads/depth, context growth, and redundant work.
 - **AC-9.2**: Adaptive-policy fixtures define observable escalation signals
   (for example repeated validation failure, high ambiguity, or cross-cutting
-  dependency impact), Luna -> Terra -> Sol escalation, post-phase
-  de-escalation, and cancellation of redundant child work.
+  dependency impact), catalog-derived escalation/de-escalation paths based on
+  measured quality and allowance use, and cancellation of redundant child work.
 - **AC-9.3**: Limit-near and limit-exhausted behavior is explicit: checkpoint,
   pause/resume across reset, continue, or cancel decisions preserve a durable
   objective, verifiable stopping condition, validation loop, and progress log.
 - **AC-9.4**: Version 1 may still ship static defaults, but its release claim is
-  limited to efficient static GPT-5.6 installation defaults unless the adaptive
-  policy independently clears all promotion gates.
+  limited to efficient static defaults across the capability-probed
+  Pro-available catalog unless the adaptive policy independently clears all
+  promotion gates.
 
 ## 4. Migration Path (phased - one phase per SPEC)
 
@@ -342,9 +353,10 @@ consumer-focused quality floor.
 
 ## 6. Open Questions
 
-- **OQ-1 (G56R-001):** Does the declared Pro 5x or Pro 20x release-test account expose all three
-  GPT-5.6 tiers and every candidate effort through the installed Codex client?
-  Recommendation: record capability probes and abstain from unverified routes.
+- **OQ-1 (G56R-001):** Which models and efforts does the declared Pro 5x or Pro
+  20x release-test account expose through the installed Codex client?
+  Recommendation: snapshot the live catalog, probe every entry, and abstain
+  from unverified routes.
 - **OQ-2 (G56R-002):** Which native app-server/client fields expose observed
   credits, token activity, account type/plan, and rate-limit buckets in the
   tested Codex version? Recommendation: capability-probe every field, preserve
@@ -356,10 +368,10 @@ consumer-focused quality floor.
 - **OQ-4 (G56R-004 through G56R-007):** Which adjacent-tier challengers survive
   the research spike's availability and contract screen? Recommendation: keep
   the approved shortlist narrow and expand only unstable comparisons.
-- **OQ-5 (G56R-001/G56R-002):** Should bounded helper tasks include a GPT-5.4
-  Mini control? Recommendation: either test it as a cross-generation control or
-  record cross-generation optimization as explicitly deferred; do not imply a
-  GPT-5.6-only search minimizes all Codex consumption.
+- **OQ-5 (G56R-001/G56R-002):** Which catalog entries are ineligible for a role
+  because of missing custom-agent/tool/effort support? Recommendation: exclude
+  only after a recorded capability or contract failure; GPT-5.4 Mini is a
+  required bounded-work candidate when exposed.
 - **OQ-6 (G56R-002):** How can Spark's separate, demand-sensitive research
   preview limit be compared with shared Pro allowance? Recommendation: report
   Spark on a separate scorecard until an attributable common measure exists.

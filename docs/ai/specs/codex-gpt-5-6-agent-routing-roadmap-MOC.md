@@ -1,14 +1,14 @@
 ---
-up: "[Codex GPT-5.6 Agent Routing Roadmap](codex-gpt-5-6-agent-routing-technical-roadmap.md)"
+up: "[Codex ChatGPT Pro Agent Routing Roadmap](codex-gpt-5-6-agent-routing-technical-roadmap.md)"
 related:
-  - "[Codex GPT-5.6 Agent Routing PRD](../../prd-codex-gpt-5-6-agent-routing.md)"
+  - "[Codex ChatGPT Pro Agent Routing PRD](../../prd-codex-gpt-5-6-agent-routing.md)"
 status: "Draft; G56R-001 ready to scaffold"
 rank:
 spec_id: "codex-gpt-5-6-agent-routing"
 structureVersion: 1
 ---
 
-# Codex GPT-5.6 Agent Routing - Map of Content
+# Codex ChatGPT Pro Agent Routing - Map of Content
 
 Navigation map for the evidence-first Codex model-routing roadmap.
 
@@ -16,8 +16,8 @@ Navigation map for the evidence-first Codex model-routing roadmap.
 
 ### Evidence Baseline
 
-Why: Establish current source truth and authoritative GPT-5.6 facts before a
-marketing tier becomes an installed default.
+Why: Establish current source truth and the full capability-probed model catalog
+available to the declared ChatGPT Pro tier before any route becomes a default.
 
 - [G56R-001 Research Baseline and Candidate Matrix](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-001-research-baseline-and-candidate-matrix)
 
