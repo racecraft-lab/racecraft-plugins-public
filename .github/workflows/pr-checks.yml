@@ -286,7 +286,7 @@ jobs:
 
       - name: Report docs toolchain
         if: steps.docs.outputs.should_validate_docs == 'true'
-        run: bash tests/speckit-pro/check-toolchain.sh --mode docs
+        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-toolchain-preflight-docs.json
 
       - name: Install Playwright browsers
         if: steps.docs.outputs.validation_mode == 'full'

@@ -22,6 +22,8 @@ PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/pr
 LAYER_SCRIPT_DISPATCHER = "tests/speckit-pro/run-layer-scripts.py"
 LAYER_SCRIPT_TIMEOUT_SECONDS = 1800
 SUITE_MANIFEST_PATH = "tests/speckit-pro/suite-manifest.json"
+TOOLCHAIN_CHECKER = "tests/speckit-pro/check-toolchain.py"
+TOOLCHAIN_MODES = {"tests", "shell", "docs", "all"}
 
 
 class SuiteManifestError(Exception):
@@ -200,7 +202,7 @@ def run_layer(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
 
 def run_toolchain_preflight(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
     mode = request.inputs.get("mode", "tests")
-    if not isinstance(mode, str) or mode not in {"tests", "shell", "docs", "all"}:
+    if not isinstance(mode, str) or mode not in TOOLCHAIN_MODES:
         diag = diagnostic(
             "invalid_toolchain_mode",
             "run-toolchain-preflight requires a supported toolchain mode",
@@ -359,11 +361,9 @@ def command_spec_from_override(command_id: str, raw: Any) -> CommandSpec | dict[
 
 def default_command_spec(command_id: str, inputs: dict[str, Any], repo_root: Path) -> CommandSpec | dict[str, Any]:
     if command_id == "toolchain":
-        return internal_command_spec(command_id)
-    if command_id in {"layer-1", "layer-4"}:
+        return toolchain_command_spec(command_id, inputs, repo_root)
+    if command_id in {"layer-1", "layer-4", "layer-5"}:
         return external_layer_script_spec(command_id)
-    if command_id == "layer-5":
-        return internal_command_spec(command_id)
     if command_id == "layer-7":
         return internal_command_spec(command_id)
     if command_id == "layer-8":
@@ -377,6 +377,19 @@ def internal_command_spec(command_id: str) -> CommandSpec:
         argv=(sys.executable, "-m", "speckit_pro_runner"),
         internal=True,
     )
+
+
+def toolchain_command_spec(command_id: str, inputs: dict[str, Any], repo_root: Path) -> CommandSpec | dict[str, Any]:
+    mode = inputs.get("mode", "tests")
+    if not isinstance(mode, str) or mode not in TOOLCHAIN_MODES:
+        return unsafe_command_diagnostic(command_id, "toolchain mode must be one of all, docs, shell, or tests")
+    checker = repo_root / TOOLCHAIN_CHECKER
+    if checker.is_file():
+        return CommandSpec(
+            command_id=command_id,
+            argv=(sys.executable, TOOLCHAIN_CHECKER, "--mode", mode),
+        )
+    return internal_command_spec(command_id)
 
 
 def external_layer_script_spec(command_id: str) -> CommandSpec:
@@ -446,8 +459,6 @@ def run_internal_command(command: CommandSpec, repo_root: Path) -> dict[str, Any
 def run_internal_suite_check(command_id: str, repo_root: Path) -> int:
     if command_id == "toolchain":
         return check_toolchain(repo_root)
-    if command_id == "layer-5":
-        return check_layer5(repo_root)
     if command_id == "layer-7":
         return check_layer7(repo_root)
     if command_id == "layer-8":
@@ -477,23 +488,6 @@ def check_toolchain(repo_root: Path) -> int:
         ("json parser", True, "stdlib json"),
     ]
     return emit_checks("toolchain preflight", checks)
-
-
-def check_layer5(repo_root: Path) -> int:
-    agents_dir = repo_root / "speckit-pro" / "agents"
-    required_absent = {
-        "clarify-executor.md": {"Write", "Edit", "Skill", "ToolSearch"},
-        "codebase-analyst.md": {"Write", "Edit", "Skill"},
-        "domain-researcher.md": {"Write", "Edit", "Skill"},
-        "spec-context-analyst.md": {"Write", "Edit", "Skill"},
-    }
-    checks: list[tuple[str, bool, str]] = []
-    for agent_file, forbidden in required_absent.items():
-        path = agents_dir / agent_file
-        tools = frontmatter_tools(path)
-        checks.append((rel(path, repo_root), path.is_file(), "agent file exists"))
-        checks.append((f"{rel(path, repo_root)} forbidden tools", not (tools & forbidden), f"absent={sorted(forbidden)}"))
-    return emit_checks("layer-5 agent tool scoping", checks)
 
 
 def check_layer7(repo_root: Path) -> int:
@@ -538,28 +532,6 @@ def jsonl_file_ok(path: Path) -> bool:
     except (OSError, json.JSONDecodeError, UnicodeDecodeError):
         return False
     return bool(lines)
-
-
-def frontmatter_tools(path: Path) -> set[str]:
-    if not path.is_file():
-        return set()
-    text = path.read_text(encoding="utf-8", errors="replace")
-    if not text.startswith("---\n"):
-        return set()
-    end = text.find("\n---\n", 4)
-    if end == -1:
-        return set()
-    tools: set[str] = set()
-    in_tools = False
-    for line in text[4:end].splitlines():
-        if line.startswith("tools:"):
-            in_tools = True
-            continue
-        if in_tools and line and not line.startswith(" ") and not line.startswith("-"):
-            break
-        if in_tools and line.strip().startswith("- "):
-            tools.add(line.strip()[2:])
-    return tools
 
 
 def command_result(

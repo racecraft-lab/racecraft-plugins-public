@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "request_id": "xplat-010-pr5-run-toolchain-preflight-docs",
+  "helper_id": "suite-gate",
+  "operation": "run-toolchain-preflight",
+  "mode": "read_only",
+  "inputs": {
+    "repo_root": ".",
+    "mode": "docs",
+    "xplat_008_cutover_allowed": false
+  }
+}

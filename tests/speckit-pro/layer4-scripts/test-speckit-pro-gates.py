@@ -368,6 +368,7 @@ class GateFoundationTests(unittest.TestCase):
             "run-default-suite.json",
             "run-layer.json",
             "run-toolchain-preflight.json",
+            "run-toolchain-preflight-docs.json",
             "run-ai-evals.json",
             "run-integration-suite.json",
             "run-parity-suite.json",
@@ -2890,8 +2891,10 @@ class GateFoundationTests(unittest.TestCase):
             ["toolchain", "layer-1", "layer-4", "layer-5", "layer-7", "layer-8"],
         )
         external_layer_argv = {
+            "toolchain": [sys.executable, "tests/speckit-pro/check-toolchain.py", "--mode", "tests"],
             "layer-1": [sys.executable, "tests/speckit-pro/run-layer-scripts.py", "--layer", "1"],
             "layer-4": [sys.executable, "tests/speckit-pro/run-layer-scripts.py", "--layer", "4"],
+            "layer-5": [sys.executable, "tests/speckit-pro/run-layer-scripts.py", "--layer", "5"],
         }
         for result in results:
             argv = list(result.argv)
@@ -2925,7 +2928,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertLessEqual(
             {
                 "tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py",
-                "tests/speckit-pro/layer4-scripts/test-check-toolchain.sh",
+                "tests/speckit-pro/layer4-scripts/test-check-toolchain.py",
                 "tests/speckit-pro/layer4-scripts/test-post-implementation-reference.sh",
                 "tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh",
                 "tests/speckit-pro/layer4-scripts/test-eval-runner-skill-selection.sh",
@@ -2987,7 +2990,10 @@ class GateFoundationTests(unittest.TestCase):
             with self.subTest(layer=item):
                 spec = suite_gate.default_command_spec(suite_gate.suite_item_to_command_id(item), {}, REPO_ROOT)
                 self.assertNotIsInstance(spec, dict, item)
-                if dispatch_by_id[item] == "internal-check":
+                if item == "toolchain":
+                    self.assertFalse(spec.internal)
+                    self.assertIn("check-toolchain.py", " ".join(spec.argv))
+                elif dispatch_by_id[item] == "internal-check":
                     self.assertTrue(spec.internal)
                 elif dispatch_by_id[item] == "python-module":
                     self.assertFalse(spec.internal)

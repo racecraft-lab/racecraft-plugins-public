@@ -19,8 +19,10 @@ folding. ``python3``/``ruby`` are outside the bash-scoped confinement vocabulary
 
 PR 5 later updates this ported validator for the CI dispatch swap (tasks T049).
 
+PR 5 extends the ported validator for the docs-toolchain CI dispatch swap.
+
 Baseline: ``tests/speckit-pro/parity/xplat-010/validate-pr-checks-sentinel-baseline.txt``
-(TOTAL: 28).
+(TOTAL: 30).
 """
 
 from __future__ import annotations
@@ -87,6 +89,10 @@ CONTENT_CHECKS: list[tuple[str, str, list[str]]] = [
      ["run-toolchain-preflight.json", 'PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner']),
     ("all", "test job dispatches runner default suite gate",
      ["run-default-suite.json", 'PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner']),
+    ("all", "docs validation dispatches runner toolchain preflight",
+     ["Report docs toolchain", "run-toolchain-preflight-docs.json"]),
+    ("absent", "docs validation does not dispatch bash toolchain check",
+     ["bash tests/speckit-pro/check-toolchain.sh --mode docs"]),
     ("all", "sentinel checks detect_result for failure", ["detect_result"]),
     ("all", "sentinel checks test_result for success or skipped", ["test_result"]),
     ("all", "sentinel exits 0 on success or skipped", ['"success" || "$test_result" == "skipped"']),
