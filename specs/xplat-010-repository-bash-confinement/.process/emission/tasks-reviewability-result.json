@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "kind": "tasks_reviewability_result",
+  "feature_id": "XPLAT-010",
+  "mode": "tasks",
+  "status": "block",
+  "gate_exit_code": 1,
+  "blocking_reason": "aggregate_size_only",
+  "correctness_findings": [],
+  "aggregate_metrics": {
+    "changed_files": 434,
+    "insertions": 49539,
+    "deletions": 30408,
+    "reviewable_loc": 6062
+  },
+  "warn_threshold": 400,
+  "block_threshold": 800,
+  "required_route": "marker_split",
+  "marker_count": 18,
+  "marker_order": [
+    "foundation",
+    "us1",
+    "us16",
+    "us2",
+    "us3",
+    "us4",
+    "us5",
+    "us6",
+    "us7",
+    "us8",
+    "us9",
+    "us10",
+    "us11",
+    "us12",
+    "us13",
+    "us14",
+    "us15",
+    "polish"
+  ],
+  "task_count": 136,
+  "planner_error_count": 0,
+  "planner_warning_count": 116,
+  "source_paths": {
+    "tasks": "specs/xplat-010-repository-bash-confinement/tasks.md",
+    "layer_plan": "specs/xplat-010-repository-bash-confinement/.process/emission/layer-plan.json"
+  },
+  "evaluated_at": "2026-07-10T18:06:19Z"
+}

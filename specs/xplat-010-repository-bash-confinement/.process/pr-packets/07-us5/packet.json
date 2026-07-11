@@ -1,0 +1,178 @@
+{
+  "body_file": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/07-us5/body.md",
+  "editable_fields": [
+    {
+      "end_marker": "<!-- speckit-pro-editable:summary:end -->",
+      "field_id": "summary",
+      "heading": "Summary",
+      "start_marker": "<!-- speckit-pro-editable:summary:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:what_changed:end -->",
+      "field_id": "what_changed",
+      "heading": "What Changed",
+      "start_marker": "<!-- speckit-pro-editable:what_changed:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:why_it_matters:end -->",
+      "field_id": "why_it_matters",
+      "heading": "Why It Matters",
+      "start_marker": "<!-- speckit-pro-editable:why_it_matters:start -->"
+    }
+  ],
+  "generated_title": {
+    "description": "port toolchain and Layer 5 dispatch",
+    "rejected_candidates": [
+      {
+        "reason": "A branch name is not reviewer-facing Conventional Commit prose.",
+        "value": "xplat-010-review/07-us5"
+      }
+    ],
+    "scope": "xplat-010",
+    "source_evidence": {
+      "kind": "split_source_boundary",
+      "result": "observed",
+      "source": "docs/ai/specs/.process/autopilot-state.json",
+      "summary": "The canonical marker supplies the exact adjacent stack target."
+    },
+    "type": "test",
+    "value": "test(xplat-010): port toolchain and Layer 5 dispatch"
+  },
+  "mode": "split",
+  "packet_id": "07-us5",
+  "protected_body_fingerprint": {
+    "algorithm": "sha256",
+    "elided_fields": [
+      "summary",
+      "what_changed",
+      "why_it_matters"
+    ],
+    "normalization": "LF line endings; trailing spaces, tabs, and CR trimmed per line; slice from ## Summary through the first nonblank Known Gaps body paragraph; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256; packet-source comment and Release note excluded.",
+    "value": "4adb0dd02abba047c89990876e3754b4a3d2ebfbea1b4e411fc03918f9693f36"
+  },
+  "required_headings": [
+    "Summary",
+    "What Changed",
+    "Why It Matters",
+    "How To Review",
+    "How To UAT",
+    "Verification",
+    "Scope",
+    "Known Gaps"
+  ],
+  "schema_version": "1.0.0",
+  "scope_evidence": {
+    "budget_result": "within_budget",
+    "changed_files": [
+      ".github/workflows/pr-checks.yml",
+      "dist/claude/speckit-pro/speckit_pro_runner/gates/suite.py",
+      "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "dist/codex/speckit-pro/speckit_pro_runner/gates/suite.py",
+      "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "docs-site/src/content/docs/reference/tests.md",
+      "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json",
+      "docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json",
+      "docs/ai/specs/.process/XPLAT-009-release-readiness-result.json",
+      "docs/ai/specs/.process/XPLAT-010-count-ledger.md",
+      "speckit-pro/speckit_pro_runner/gates/suite.py",
+      "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "tests/speckit-pro/check-toolchain.py",
+      "tests/speckit-pro/check-toolchain.sh",
+      "tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.py",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-toolchain-preflight-docs.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache-proof-file-root.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache-proof-missing-mutable.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache-proof-missing-source-root.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache-proof-mutable.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache-proof-partial-root.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache-proof-root-mismatch.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache-proof-same-root.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache-proof-single-product.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache-proof-source-mismatch.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache-proof-stale-hash.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache-proof-traversal-root.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache-proof.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache/claude/speckit-pro/speckit_pro_runner/gates/suite.py",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache/codex/speckit-pro/speckit_pro_runner/gates/suite.py",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "tests/speckit-pro/layer4-scripts/test-check-toolchain.py",
+      "tests/speckit-pro/layer4-scripts/test-check-toolchain.sh",
+      "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py",
+      "tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py",
+      "tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.sh",
+      "tests/speckit-pro/parity/xplat-010/test-check-toolchain-baseline.txt",
+      "tests/speckit-pro/parity/xplat-010/validate-pr-checks-sentinel-baseline.txt",
+      "tests/speckit-pro/parity/xplat-010/validate-tool-scoping-baseline.txt",
+      "tests/speckit-pro/run-layer-scripts.py",
+      "tests/speckit-pro/suite-manifest.json"
+    ],
+    "non_goals": [
+      "No later stack slice is included in this adjacent branch diff.",
+      "No hosted-check, merge, or release-publication result is claimed."
+    ],
+    "production_files": 3,
+    "reviewable_loc": 68,
+    "total_files": 47
+  },
+  "source_feature_dir": "specs/xplat-010-repository-bash-confinement",
+  "source_markers": [
+    {
+      "marker_id": "task-boundary",
+      "rendered_text": "Source: canonical marker `us6` maps this packet to T046-T053.",
+      "source": "specs/xplat-010-repository-bash-confinement/tasks.md"
+    },
+    {
+      "marker_id": "adjacent-diff",
+      "rendered_text": "Source: adjacent diff `xplat-010-review/06-us4 (cf352fbc355b30245baaf6b013166066ac4401ad)..xplat-010-review/07-us5 (c1d5e51c8ade2284629092309894b1a4a8fdb10c)` contains 47 files, 1398 insertions, 1356 deletions, and 68 reviewable LOC.",
+      "source": "git diff cf352fbc355b30245baaf6b013166066ac4401ad..c1d5e51c8ade2284629092309894b1a4a8fdb10c"
+    },
+    {
+      "marker_id": "uat-runbook",
+      "rendered_text": "Source: `specs/xplat-010-repository-bash-confinement/.process/uat-runbook.md` is the acceptance procedure. This packet does not promote local evidence to hosted, merged, or published evidence.",
+      "source": "specs/xplat-010-repository-bash-confinement/.process/uat-runbook.md"
+    }
+  ],
+  "split_slice": {
+    "slice_id": "07-us5",
+    "source_boundary": {
+      "section": "## Phase 7: User Story 6 - PR 5 - Layer-5 tool scoping + toolchain check + `pr-checks.yml` dispatch swap (after PR 3b)"
+    },
+    "source_packet": "docs/ai/specs/.process/autopilot-state.json"
+  },
+  "target": {
+    "base_branch": "xplat-010-review/06-us4",
+    "head_branch": "xplat-010-review/07-us5"
+  },
+  "uat": {
+    "how_to_uat": "Use the committed feature UAT runbook on this exact candidate branch and record command, exit-code, and observable-result evidence.",
+    "uat_runbook_heading": "## UAT Runbook",
+    "uat_source": "specs/xplat-010-repository-bash-confinement/.process/uat-runbook.md"
+  },
+  "validation_result_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/07-us5/validation.json",
+  "verification_evidence": [
+    {
+      "kind": "immediate_branch_diff",
+      "result": "passed",
+      "source": "git diff cf352fbc355b30245baaf6b013166066ac4401ad..c1d5e51c8ade2284629092309894b1a4a8fdb10c",
+      "summary": "Observed 47 paths, 1398 insertions, and 1356 deletions."
+    },
+    {
+      "kind": "task_traceability",
+      "result": "passed",
+      "source": "specs/xplat-010-repository-bash-confinement/tasks.md",
+      "summary": "Marker us6 maps this packet to T046-T053."
+    },
+    {
+      "kind": "stack_shape",
+      "result": "passed",
+      "source": "git rev-list cf352fbc355b30245baaf6b013166066ac4401ad..c1d5e51c8ade2284629092309894b1a4a8fdb10c",
+      "summary": "Observed 4 commits and 0 merge commits."
+    }
+  ]
+}

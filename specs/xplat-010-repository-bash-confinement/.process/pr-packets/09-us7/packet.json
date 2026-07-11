@@ -1,0 +1,144 @@
+{
+  "body_file": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/09-us7/body.md",
+  "editable_fields": [
+    {
+      "end_marker": "<!-- speckit-pro-editable:summary:end -->",
+      "field_id": "summary",
+      "heading": "Summary",
+      "start_marker": "<!-- speckit-pro-editable:summary:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:what_changed:end -->",
+      "field_id": "what_changed",
+      "heading": "What Changed",
+      "start_marker": "<!-- speckit-pro-editable:what_changed:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:why_it_matters:end -->",
+      "field_id": "why_it_matters",
+      "heading": "Why It Matters",
+      "start_marker": "<!-- speckit-pro-editable:why_it_matters:start -->"
+    }
+  ],
+  "generated_title": {
+    "description": "port transcript helpers and tools",
+    "rejected_candidates": [
+      {
+        "reason": "A branch name is not reviewer-facing Conventional Commit prose.",
+        "value": "xplat-010-review/09-us7"
+      }
+    ],
+    "scope": "xplat-010",
+    "source_evidence": {
+      "kind": "split_source_boundary",
+      "result": "observed",
+      "source": "docs/ai/specs/.process/autopilot-state.json",
+      "summary": "The canonical marker supplies the exact adjacent stack target."
+    },
+    "type": "test",
+    "value": "test(xplat-010): port transcript helpers and tools"
+  },
+  "mode": "split",
+  "packet_id": "09-us7",
+  "protected_body_fingerprint": {
+    "algorithm": "sha256",
+    "elided_fields": [
+      "summary",
+      "what_changed",
+      "why_it_matters"
+    ],
+    "normalization": "LF line endings; trailing spaces, tabs, and CR trimmed per line; slice from ## Summary through the first nonblank Known Gaps body paragraph; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256; packet-source comment and Release note excluded.",
+    "value": "0980a43f8cf8e8411e3bc9f7fc504a1d6cce259986d14cab8ab741081ca760ae"
+  },
+  "required_headings": [
+    "Summary",
+    "What Changed",
+    "Why It Matters",
+    "How To Review",
+    "How To UAT",
+    "Verification",
+    "Scope",
+    "Known Gaps"
+  ],
+  "schema_version": "1.0.0",
+  "scope_evidence": {
+    "budget_result": "within_budget",
+    "changed_files": [
+      ".claude/claude-security-guidance.md",
+      "docs-site/src/content/docs/reference/tests.md",
+      "docs/ai/specs/.process/XPLAT-010-count-ledger.md",
+      "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py",
+      "tests/speckit-pro/layer4-scripts/test-transcript-helpers.py",
+      "tests/speckit-pro/layer4-scripts/test-transcript-helpers.sh",
+      "tests/speckit-pro/layer4-scripts/test-transcript-tools.py",
+      "tests/speckit-pro/layer7-integration/lib/transcript_helpers.py",
+      "tests/speckit-pro/layer7-integration/reduce-transcript-fixture.py",
+      "tests/speckit-pro/layer7-integration/scrub-transcript.py",
+      "tests/speckit-pro/parity/xplat-010/test-transcript-helpers-baseline.txt",
+      "tests/speckit-pro/parity/xplat-010/test-transcript-tools-baseline.txt",
+      "tests/speckit-pro/suite-manifest.json"
+    ],
+    "non_goals": [
+      "No later stack slice is included in this adjacent branch diff.",
+      "No hosted-check, merge, or release-publication result is claimed."
+    ],
+    "production_files": 0,
+    "reviewable_loc": 0,
+    "total_files": 13
+  },
+  "source_feature_dir": "specs/xplat-010-repository-bash-confinement",
+  "source_markers": [
+    {
+      "marker_id": "task-boundary",
+      "rendered_text": "Source: canonical marker `us8` maps this packet to T062-T066.",
+      "source": "specs/xplat-010-repository-bash-confinement/tasks.md"
+    },
+    {
+      "marker_id": "adjacent-diff",
+      "rendered_text": "Source: adjacent diff `xplat-010-review/08-us6 (790b9e230de1381fda2010a22480e8594ac6628a)..xplat-010-review/09-us7 (7584c468cbef81d60fe8bc2b911df0359c7ea243)` contains 13 files, 1262 insertions, 211 deletions, and 0 reviewable LOC.",
+      "source": "git diff 790b9e230de1381fda2010a22480e8594ac6628a..7584c468cbef81d60fe8bc2b911df0359c7ea243"
+    },
+    {
+      "marker_id": "uat-runbook",
+      "rendered_text": "Source: `specs/xplat-010-repository-bash-confinement/.process/uat-runbook.md` is the acceptance procedure. This packet does not promote local evidence to hosted, merged, or published evidence.",
+      "source": "specs/xplat-010-repository-bash-confinement/.process/uat-runbook.md"
+    }
+  ],
+  "split_slice": {
+    "slice_id": "09-us7",
+    "source_boundary": {
+      "section": "## Phase 9: User Story 8 - PR 7a - Layer-7 shared transcript library (after PR 2; before PR 7b)"
+    },
+    "source_packet": "docs/ai/specs/.process/autopilot-state.json"
+  },
+  "target": {
+    "base_branch": "xplat-010-review/08-us6",
+    "head_branch": "xplat-010-review/09-us7"
+  },
+  "uat": {
+    "how_to_uat": "Use the committed feature UAT runbook on this exact candidate branch and record command, exit-code, and observable-result evidence.",
+    "uat_runbook_heading": "## UAT Runbook",
+    "uat_source": "specs/xplat-010-repository-bash-confinement/.process/uat-runbook.md"
+  },
+  "validation_result_path": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/09-us7/validation.json",
+  "verification_evidence": [
+    {
+      "kind": "immediate_branch_diff",
+      "result": "passed",
+      "source": "git diff 790b9e230de1381fda2010a22480e8594ac6628a..7584c468cbef81d60fe8bc2b911df0359c7ea243",
+      "summary": "Observed 13 paths, 1262 insertions, and 211 deletions."
+    },
+    {
+      "kind": "task_traceability",
+      "result": "passed",
+      "source": "specs/xplat-010-repository-bash-confinement/tasks.md",
+      "summary": "Marker us8 maps this packet to T062-T066."
+    },
+    {
+      "kind": "stack_shape",
+      "result": "passed",
+      "source": "git rev-list 790b9e230de1381fda2010a22480e8594ac6628a..7584c468cbef81d60fe8bc2b911df0359c7ea243",
+      "summary": "Observed 5 commits and 0 merge commits."
+    }
+  ]
+}
