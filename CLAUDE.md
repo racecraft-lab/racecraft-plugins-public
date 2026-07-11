@@ -179,19 +179,19 @@ For per-feature history, see `git log` and `CHANGELOG.md` — don't maintain a d
 
 Feature branches use the naming convention `NNN-feature-name` where `NNN` is a zero-padded three-digit spec number (e.g., `004-integration-verification`).
 
-**PR title requirements:** All PR titles MUST follow the [Conventional Commits](https://www.conventionalcommits.org/) format:
+**PR title requirements:** All PR titles MUST follow the [Conventional Commits](https://www.conventionalcommits.org/) format, with a required scope — the release-readiness gate rejects scope-less titles:
 
 ```
-<type>(<optional scope>): <description>
+<type>(<scope>): <description>
 ```
 
-Valid types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`
+Valid types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`. Scopes are lowercase letters, digits, and hyphens.
 
 Examples:
 - `feat(speckit-pro): add new coaching command`
-- `fix: resolve session timeout`
-- `docs: update CLAUDE.md CI/CD sections`
-- `chore: sync marketplace.json versions`
+- `fix(speckit-pro): resolve session timeout`
+- `docs(claude-md): update CI/CD sections`
+- `chore(release): sync marketplace.json versions`
 
 The `validate-pr-title` CI check enforces this format and will block the PR if the title does not match.
 
@@ -377,11 +377,11 @@ To override release-please's inferred version bump and pin a specific version:
 ```bash
 # Touch a file in the target component to scope the footer to that component,
 # then add the Release-As footer to the commit message.
-git commit -m "chore: force speckit-pro version
+git commit -m "chore(speckit-pro): force version
 
 Release-As: 1.2.0" speckit-pro/.claude-plugin/plugin.json
 git push origin <release-as-branch>
-gh pr create --base main --head <release-as-branch> --title "chore: force speckit-pro version"
+gh pr create --base main --head <release-as-branch> --title "chore(speckit-pro): force version"
 ```
 
 The `Release-As: X.Y.Z` footer MUST appear in the git commit trailer (separated from the subject by a blank line). The commit MUST touch at least one file under `speckit-pro/` — a commit that touches no component files will not target any component. The footer overrides the inferred version in the next release-please PR.
@@ -449,9 +449,9 @@ Check whether release-please ran but found no releasable commits: navigate to Ac
 
 **Recovery:**
 ```bash
-git commit --allow-empty -m "fix: trigger release for speckit-pro"
+git commit --allow-empty -m "fix(speckit-pro): trigger release"
 git push origin <release-trigger-branch>
-gh pr create --base main --head <release-trigger-branch> --title "fix: trigger release for speckit-pro"
+gh pr create --base main --head <release-trigger-branch> --title "fix(speckit-pro): trigger release"
 ```
 
 This can be combined with `Release-As:` if a specific version is needed (see Scenario 2).
@@ -471,9 +471,9 @@ python3 scripts/build-plugin-payloads.py
 python3 scripts/sync-marketplace-versions.py
 pnpm --dir docs-site reference:generate
 git add dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json docs-site/src/content/docs/reference
-git commit -m "chore: sync plugin payloads, marketplace versions, and docs reference"
+git commit -m "chore(release): sync plugin payloads, marketplace versions, and docs reference"
 git push origin <sync-branch>
-gh pr create --base main --head <sync-branch> --title "chore: sync plugin payloads and marketplace versions"
+gh pr create --base main --head <sync-branch> --title "chore(release): sync plugin payloads and marketplace versions"
 ```
 
 ## Active Technologies
