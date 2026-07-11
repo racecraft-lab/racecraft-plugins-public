@@ -1,11 +1,13 @@
 ---
+name: speckit-validate
 description: Verify spec-to-task traceability and check that completed tasks produced
   expected files
+compatibility: Requires spec-kit project structure with .specify/ directory
+metadata:
+  author: github-spec-kit
+  source: speckit-utils:commands/validate.md
 ---
 
-
-<!-- Extension: speckit-utils -->
-<!-- Config: .specify/extensions/speckit-utils/ -->
 ## User Input
 
 ```text

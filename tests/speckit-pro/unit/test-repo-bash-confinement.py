@@ -104,7 +104,7 @@ class RepoBashConfinementTests(unittest.TestCase):
         schema = json.loads(RESULT_CONTRACT.read_text(encoding="utf-8"))
         self.assertEqual(schema["properties"]["feature_id"]["const"], "XPLAT-010")
         self.assertEqual(schema["properties"]["enumeration"]["properties"]["source"]["const"], "git ls-files -z")
-        self.assertEqual(schema["properties"]["allowlist"]["properties"]["entry_count"]["const"], 10)
+        self.assertEqual(schema["properties"]["allowlist"]["properties"]["entry_count"]["const"], 9)
         for field in schema["required"]:
             self.assertIn(field, data)
         self.assertEqual(data["schema_version"], schema["properties"]["schema_version"]["const"])
@@ -136,7 +136,7 @@ class RepoBashConfinementTests(unittest.TestCase):
         self.assertEqual(set(allowlist), {"path", "entry_count", "release_readiness_excluded"})
         self.assertIsInstance(allowlist["path"], str)
         self.assertTrue(allowlist["path"])
-        self.assertEqual(allowlist["entry_count"], 10)
+        self.assertEqual(allowlist["entry_count"], 9)
         self.assertIs(allowlist["release_readiness_excluded"], True)
 
         self.assertEqual(data["total_finding_count"], len(data["findings"]))
@@ -169,9 +169,9 @@ class RepoBashConfinementTests(unittest.TestCase):
         allowlisted = [item for item in findings if item["classification"] == "vendored_specify_helper"]
         self.assertEqual(result["status"], "ok")
         self.assertEqual(result["data"]["blocking_count"], 0)
-        self.assertEqual(len(allowlisted), 10)
+        self.assertEqual(len(allowlisted), 9)
         self.assertTrue(all(item["release_readiness_excluded"] is True for item in allowlisted))
-        self.assertEqual(result["data"]["classified_counts"], {"vendored_specify_helper": 10})
+        self.assertEqual(result["data"]["classified_counts"], {"vendored_specify_helper": 9})
         self.assertNotIn("bash_free", result["data"]["classified_counts"])
         self.assertTrue(result["data"]["allowlist"]["release_readiness_excluded"])
 

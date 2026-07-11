@@ -1,12 +1,12 @@
 ---
-id: speckit.checkpoint.commit
-name: Checkpoint Commit
+name: speckit-checkpoint-commit
 description: Commit changes at meaningful checkpoints throughout the workflow
+compatibility: Requires spec-kit project structure with .specify/ directory
+metadata:
+  author: github-spec-kit
+  source: checkpoint:commands/commit.md
 ---
 
-
-<!-- Extension: checkpoint -->
-<!-- Config: .specify/extensions/checkpoint/ -->
 # /speckit.checkpoint.commit
 
 ## Description

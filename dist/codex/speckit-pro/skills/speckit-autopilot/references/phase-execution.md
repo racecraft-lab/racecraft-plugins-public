@@ -68,7 +68,6 @@ commands and scripts:
 | `create-new-feature` | `/speckit-specify` | Creates git branch, `specs/` dir, copies spec template. Supports `--json`, `--short-name`, `--number` |
 | `setup-plan` | `/speckit-plan` | Copies plan template to feature dir. Outputs `FEATURE_SPEC`, `IMPL_PLAN`, `SPECS_DIR`, `BRANCH` |
 | `check-prerequisites` | `/speckit-clarify`, `.checklist`, `.tasks`, `.analyze`, `.implement` | Validates feature dir + required files exist. Supports `--json`, `--require-tasks`, `--include-tasks`, `--paths-only` |
-| `update-agent-context` | `/speckit-plan` | Updates CLAUDE.md with tech stack extracted from plan.md |
 
 ## Subagent Delegation
 

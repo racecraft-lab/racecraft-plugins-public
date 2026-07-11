@@ -477,31 +477,3 @@ infrastructure failure before changing code.
 3. **Runner-image contract change:** update the pinned container workflow and
    its Python validators together. Do not demote either required sentinel or
    use an admin override as a routine workaround.
-
-## Active Technologies
-The entries below are historical spec snapshots. They do not override the
-current Python 3.11+ commands and Bash-confinement rules at the top of this file.
-- Bash 4+ shell scripts, Markdown skills, YAML manifests, JSON Schema 2020-12 contracts, and `bash`, `jq`, `git`, `gh` at PR-emission boundaries (prsg-010-harden-the-hatch)
-- Repository files only: feature artifacts, contract schemas, workflow state JSON, and generated re-slicing packets (prsg-010-harden-the-hatch)
-- Bash 4+ shell scripts, Markdown skill guidance, JSON Schema 2020-12 + `bash`, `jq`, `git`, `gh` at PR-emission boundaries, existing SpecKit Pro shell harness (prsg-013-reviewability-markers)
-- Repository files only: `autopilot-state.json`, workflow evidence blocks, JSON contract schemas, and generated PR packet artifacts (prsg-013-reviewability-markers)
-- Bash scripts with Markdown skill/operator guidance + `bash`, `jq`, `git`, `gh`; optional `gh stack` GitHub CLI extension via `github/gh-stack` (prsg-014-optional-gh-stack-stack-manager-integration)
-- JSON evidence under feature `.process/` directories, `.process/prs.json`, `autopilot-state.json`, command logs, PR packet artifacts, and local `gh-stack` metadata outside the repo when the extension is used (prsg-014-optional-gh-stack-stack-manager-integration)
-- Markdown/MDX content plus Astro/Starlight docs site metadata + Astro 6.4.6, Starlight 0.40.0, pnpm 10.25.0 (doc-004-codex-marketplace-installation-path)
-- Docs-site JavaScript ESM on Node; Astro 6.4.6 and Starlight 0.40.0 for docs rendering; Node built-ins (`node:fs`, `node:path`, `node:url`) plus existing docs-site pnpm scripts and `starlight-links-validator`; no new runtime dependency planned. (doc-007-command-workflow-manifest-and-file-layout-reference)
-- Checked-in Markdown files under `docs-site/src/content/docs/reference/`; no database or browser storage. (doc-007-command-workflow-manifest-and-file-layout-reference)
-- Historical pre-XPLAT snapshot: Markdown runtime guidance, TOML Codex agent templates, YAML metadata, generated payload files, and the then-current Bash validation and payload tooling. Those commands were retired by XPLAT-009/XPLAT-010. (tacd-002-capability-discovery-directive-and-agent-updates)
-- Repository files only. Source guidance under `speckit-pro/`, generated payload copies under `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/`, and Plan-phase artifacts under `specs/tacd-002-capability-discovery-directive-and-agent-updates/`. (tacd-002-capability-discovery-directive-and-agent-updates)
-- Docs-site JavaScript ESM on Node, with Markdown/MDX content under `docs-site/src/content/docs/` + Astro 6.4.6, Starlight 0.40.0, existing `starlight-links-validator` (doc-008-troubleshooting-security-trust-update-rollback)
-- Checked-in Markdown/MDX files only; no database, browser storage, or runtime state (doc-008-troubleshooting-security-trust-update-rollback)
-- JavaScript ESM on Node.js for docs-site scripts; Astro 6.4.6 and Starlight 0.40.0 in `docs-site/`; pnpm 10.25.0 scoped with `pnpm --dir docs-site ...` + Existing `astro`, `@astrojs/starlight`, `@astrojs/check`, `starlight-links-validator`; add minimal Playwright dev dependency only for `validate:smoke` (doc-010-search-accessibility-deep-links-docs-validation)
-- Checked-in Markdown, Astro components, package scripts, generated reference files, and CI artifacts only; no database or browser storage (doc-010-search-accessibility-deep-links-docs-validation)
-- Docs-site JavaScript ESM on Node >=22.12; GitHub Actions YAML; Markdown operator guidance + Astro 6.4.6, Starlight 0.40.0, `@astrojs/check`, `starlight-links-validator`, Playwright 1.61.0, pnpm 10.25.0 via Corepack, standard GitHub Pages Actions (doc-011-github-pages-build-and-deploy-pipeline)
-- Checked-in repository files only; GitHub Pages stores the uploaded `docs-site/dist` static artifact outside repository source control (doc-011-github-pages-build-and-deploy-pipeline)
-- Python 3.11+ standard library through `speckit-pro/speckit_pro_runner/` + Existing XPLAT-004 runner envelope, diagnostics, typed path, runtime-info, and preflight primitives; current Bash helper scripts remain temporary source-checkout references only (xplat-005-read-only-helper-port)
-- Checked-in fixture, contract, and evidence files only; ported helpers must not write repository or user-local state (xplat-005-read-only-helper-port)
-- Python 3.11+ standard library through `speckit-pro/speckit_pro_runner/` + Existing runner envelope, diagnostics, typed path, subprocess fixture, helper registry, XPLAT-005 read-only helper records, and XPLAT-006 mutation/install/PR-emission contracts; no new runtime dependency (codex/xplat-007-python-tooling-and-release-gate-migration)
-- Checked-in source files, fixtures, JSON schemas, runner metadata, test payload evidence under fixture or temporary output roots; no database (codex/xplat-007-python-tooling-and-release-gate-migration)
-
-## Recent Changes
-- prsg-010-harden-the-hatch: Added PRSG-010 foundation artifacts, contract schemas, workflow state updates, and planning docs for the split PR stack.

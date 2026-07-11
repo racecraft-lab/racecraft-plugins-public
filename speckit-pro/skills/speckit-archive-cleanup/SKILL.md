@@ -84,8 +84,13 @@ Then update the project state in this order:
    `.specify/memory/plan.md`, and `.specify/memory/changelog.md`. These records
    should summarize what shipped, where canonical artifacts live now, why the
    active spec folder can be removed, and where the detailed archive report is.
-3. Update roadmap, traceability, AGENTS, or MOC files that still describe the
-   merged spec as pending, in progress, or blocking downstream work.
+3. Update roadmap, traceability, agent context (AGENTS/CLAUDE/GEMINI), or MOC
+   files ONLY to remove or correct references that still describe the merged
+   spec as pending, in progress, or blocking downstream work. Never append
+   per-spec history entries (archive notes, Active Technologies bullets, or
+   Recent Changes bullets) to agent context files — the archive report and
+   `.specify/memory/` records are the system of record for history, and agent
+   context files must stay small (Codex reads AGENTS.md under a 32 KiB budget).
 4. Update `docs/ai/specs/.process/autopilot-state.json` only if it exists and
    still points at the completed spec. The status should become an archived or
    completed archive state, with the cleanup applied and post-merge archive

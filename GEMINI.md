@@ -2,18 +2,6 @@
 
 Auto-generated from feature plans on archival. Last updated: 2026-07-11
 
-## Active Technologies
-- Docs-site JavaScript ESM on Node; Astro 6.4.6 and Starlight 0.40.0 for docs rendering; Node built-ins (`node:fs`, `node:path`, `node:url`) plus existing docs-site pnpm scripts and `starlight-links-validator`; no new runtime dependency planned. (doc-007-command-workflow-manifest-and-file-layout-reference)
-- Checked-in Markdown files under `docs-site/src/content/docs/reference/`; no database or browser storage. (doc-007-command-workflow-manifest-and-file-layout-reference)
-
-- Python 3.11+ standard-library tooling is authoritative for repository tests,
-  helpers, release gates, and installed plugin runtime behavior.
-- Repository-local Bash is confined to bounded GitHub workflow dispatch glue and
-  the fixed release-excluded vendored `.specify/**` allowlist. Do not add a Bash
-  or `jq` runtime dependency.
-- `git` + GitHub linguist (`linguist-generated` collapse mechanism reads each
-  repository's own root `.gitattributes`).
-
 ## Project Structure
 
 ```text
@@ -40,15 +28,6 @@ specs/<NNN>/                        # per-feature spec dirs; per-feature exhaust
   inside the manifest-driven Python surface.
 - Every prose redirect in a Claude skill MUST be mirrored identically into its
   Codex counterpart (parity is enforced by `validate-codex-skills.py` + Layer 8).
-
-## Recent Changes
-- doc-007-command-workflow-manifest-and-file-layout-reference: Planned a docs-site reference generator that emits committed Markdown pages using Node built-ins and existing Astro/Starlight validation; no new runtime dependency planned.
-
-- **007 Artifact relocation — tiering, .process/, collapse** [Source: specs/007-artifact-relocation]:
-  CONTRACT-vs-EXHAUST taxonomy; redirected speckit-pro-authored exhaust
-  (design-concept doc, workflow file, UAT runbook) into `.process/`; repo-root +
-  consumer `linguist-generated` collapse rule for `.process/`; gate excludes
-  `/.process/` from diff-mode reviewable-LOC; Layer-1 lint guards collapse scope.
 
 ## Gotchas
 
