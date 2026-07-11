@@ -1,0 +1,5 @@
+# Keeps tests/speckit-pro/parity/xplat-010/ under version control before its first baseline lands.
+# XPLAT-010 count-parity baselines (<script>-baseline.txt) are written here during the .sh -> .py
+# ports (Per-Port Protocol). Baselines are .txt, so this directory never affects the generated
+# docs reference (docs-site tests.md globs .sh/.py/.md only).
+# Contract: specs/xplat-010-repository-bash-confinement/contracts/count-parity-baseline.contract.md

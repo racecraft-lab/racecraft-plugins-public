@@ -100,8 +100,8 @@ a heavy phase orchestrator-direct.
 | Plan | `/speckit-plan` | ✅ Complete | 13 research decisions; 8 entities; 6 contracts; constitution 6/6; G3 PASS; advisory LOC estimator: pass (40 projected) |
 | Checklist | `/speckit-checklist` | ✅ Complete | 104 items / 21 gaps → 0 across 4 domains; G4 PASS; zero consensus escalations |
 | Tasks | `/speckit-tasks` | ✅ Complete | 136 tasks / 17 phases / 53 [P]; G5 PASS; route single-atomic-PR (advisory, superseded by ratified split); layer plan skipped; tasks-mode reviewability gate unavailable (defect logged) |
-| Analyze | `/speckit-analyze` | 🔄 In Progress | |
-| Implement | `/speckit-implement` | ⏳ Pending | |
+| Analyze | `/speckit-analyze` | ✅ Complete | 7 findings (1 CRITICAL after consensus relabel, 4 MEDIUM, 2 LOW) all remediated; G6 PASS; canonical 13-slice/15-PR count; constitution amendment recorded as post-PR-10 follow-up |
+| Implement | `/speckit-implement` | 🔄 In Progress | G6.5 advisory PASS: composite 0.98 ≥ 0.9, proceed |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -389,6 +389,24 @@ validate-release-note check + release-note/skip label semantics.
 | 6 | Clarify | S3-security: composer content-sanitization + token scope | [security] | 1 (mandatory all-3) | [HUMAN REVIEW] → operator RATIFIED as drafted (2026-07-08) | 3/3 unanimous draft applied: own-job contents:write only; HTML+image strip; structural-char neutralization; 2,000-char cap; CommonMark fence defense; harvest-all-types provenance bound; RELEASE_PLEASE_TOKEN forbidden; run-log as durable record. FR-021/023/024 + Key Entity + Clarifications updated | codebase-analyst, spec-context-analyst, domain-researcher |
 | 7 | Clarify | S3-Q2: composer PR-discovery algorithm | [codebase, domain] | 1→2 | 2/3 | Compare-API commit-subject walk for discovery (body-regex provably lossy in-repo: PRs #210/#192 carry no `(#N)` in CHANGELOG); appendix stays verbatim body output; domain's fail-loud re-targeted at the compare/subject surface; FR-023 + Clarifications updated | codebase-analyst, domain-researcher (R1) + spec-context-analyst (R2 tie-breaker) |
 | 8 | Finding | Analyze D1: constitution amendment severity + timing | [spec] | 1 | high-confidence | Severity corrected HIGH→CRITICAL (rule is unconditional; intent-preservation selects the resolution path, not the label); out-of-stack timing RATIFIED with corrected facts (no automated consumer; staleness starts PR 2; roadmap-narrative tracking per the PR #299 follow-up pattern); plan.md/tasks.md/roadmap/workflow updated. Synthesizer step collapsed — the N=1 analyst supplied exact verified edits | spec-context-analyst |
+
+### Pre-Implement Confidence (Phase 6.5 emit, 2026-07-09)
+
+📊 Confidence: 0.98
+
+- Task understanding: 0.97
+- Approach clarity: 0.96
+- Requirements alignment: 0.95
+- Risk assessment: 1.00
+- Completeness: 1.00
+
+Synthesizer verified by direct read at `b432eb66`: 27/27 FRs grep-traced into
+tasks.md; US task counts reconcile to 136 exactly; zero TBD/TODO markers; all
+rubric artifacts present and substantive; zero OPEN CRITICAL/HIGH (D1 is
+CRITICAL-labeled but remediated via the sanctioned separate-update path).
+Residuals noted: a Clarifications tally nit (16 Q/A bullets vs "12" in two
+summary rows — documentation count only), the deferred constitution amendment
+window, and the unavailable tasks-mode gate (recorded fallback chain).
 
 ---
 
