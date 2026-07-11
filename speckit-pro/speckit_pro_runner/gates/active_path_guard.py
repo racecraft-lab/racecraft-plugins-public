@@ -37,7 +37,6 @@ XPLAT_010_CANONICAL_ALLOWLIST_PATHS = frozenset(
         ".specify/scripts/bash/create-new-feature.sh",
         ".specify/scripts/bash/setup-plan.sh",
         ".specify/scripts/bash/setup-tasks.sh",
-        ".specify/scripts/bash/update-agent-context.sh",
     }
 )
 REPO_BASH_SCRIPT_SUFFIXES = (".sh", ".bash")
