@@ -1,5 +1,5 @@
 {
-  "fixture_id": "02-prsg-011-migration-guidance",
+  "fixture_id": "02-repository-migration-guidance",
   "description": "Fields that MUST match between Path A (Agent Teams) and Path B (parallel-subagents fallback) for PRSG-011 migration guidance.",
   "compare": [
     {

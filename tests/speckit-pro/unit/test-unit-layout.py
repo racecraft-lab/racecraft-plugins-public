@@ -74,6 +74,31 @@ class UnitLayoutTests(unittest.TestCase):
                         break
         self.assertEqual(violations, [])
 
+    def test_support_fixture_ids_follow_purpose_directories(self) -> None:
+        violations: list[str] = []
+        for root in PURPOSE_NAMED_ROOTS:
+            for path in root.rglob("*.json"):
+                relative = path.relative_to(root)
+                if "specs" in relative.parts:
+                    continue
+                try:
+                    payload = json.loads(path.read_text(encoding="utf-8"))
+                except json.JSONDecodeError:
+                    # Negative fixtures intentionally include malformed JSON.
+                    continue
+                if not isinstance(payload, dict):
+                    continue
+                fixture_id = payload.get("fixture_id")
+                if not isinstance(fixture_id, str):
+                    continue
+                purpose = path.parent.name
+                purpose_aligned = fixture_id == purpose or fixture_id.startswith(f"{purpose}-")
+                if SPEC_ID_NAME.search(fixture_id) or not purpose_aligned:
+                    violations.append(
+                        f"{path.relative_to(TEST_ROOT)}: {fixture_id!r} does not match {purpose!r}"
+                    )
+        self.assertEqual(violations, [])
+
     def test_tracked_paths_have_no_legacy_layout_names(self) -> None:
         completed = subprocess.run(
             ["git", "ls-files"],

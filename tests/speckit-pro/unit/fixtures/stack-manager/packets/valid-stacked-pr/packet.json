@@ -1,5 +1,5 @@
 {
-  "fixture_id": "valid-prsg-014-packet",
+  "fixture_id": "valid-stacked-pr-packet",
   "base_branch": "main",
   "head_branch": "prsg-014-stack-01",
   "title": "feat(PRSG-014): add stack manager detection",

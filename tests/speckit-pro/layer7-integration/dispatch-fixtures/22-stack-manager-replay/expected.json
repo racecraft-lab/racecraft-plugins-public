@@ -1,5 +1,5 @@
 {
-  "fixture_id": "22-prsg-014-stack-manager-replay",
+  "fixture_id": "22-stack-manager-replay",
   "purpose": "Verify PRSG-014 replay routes through analyze/implement agents, avoids grill-me/live gh, and exposes stack-manager evidence terms.",
   "must_dispatch_to": [
     "speckit-pro:analyze-executor",
