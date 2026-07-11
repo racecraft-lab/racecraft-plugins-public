@@ -65,7 +65,10 @@ zero-Bash backstop gates are complete. Updated again on 2026-07-07 after
 XPLAT-009 scaffold started on
 `codex/xplat-009-plugin-source-and-payload-bash-eradication`; the setup accepted
 one workflow with two vertical slices for plugin-source Bash removal and
-payload/cache zero-Bash proof.
+payload/cache zero-Bash proof. Updated 2026-07-08 after XPLAT-009 merged via
+PR #297 (shipped in speckit-pro 2.18.0, Windows interpreter follow-up in PR
+#299) and the active spec folder was archived; plugin source and generated
+payloads are now zero-Bash, and repository-wide confinement moves to XPLAT-010.
 
 ---
 
@@ -84,8 +87,8 @@ dependency tiers**:
 | 6 | XPLAT-006 | Port mutation, install, and PR-emission helpers | Complete / archived after PR #281 |
 | 7 | XPLAT-007 | Replace active repo-local Bash helpers, tests, evals, payload builders, release checks, install verification, and release-readiness gates with Python commands | Complete / archived after PRs #284-#287 |
 | 8 | XPLAT-008 | Cut over Claude/Codex surfaces, rebuild payloads, and prove universal install/full-use/update/autoheal release readiness | Complete / archived after PRs #289-#292; public native-platform claims remain blocked by pending operator UAT |
-| 9 | XPLAT-009 | Remove remaining Bash script files and active Bash instructions from plugin source and generated payloads | In Progress; scaffolded on `codex/xplat-009-plugin-source-and-payload-bash-eradication` with a two-slice workflow |
-| 10 | XPLAT-010 | Confine repository Bash usage to GitHub CI/CD workflow dispatch glue only | Blocked until XPLAT-009 completes |
+| 9 | XPLAT-009 | Remove remaining Bash script files and active Bash instructions from plugin source and generated payloads | Complete / archived after PR #297 (speckit-pro 2.18.0); Windows interpreter follow-up in PR #299 |
+| 10 | XPLAT-010 | Confine repository Bash usage to GitHub CI/CD workflow dispatch glue only | In Progress on `xplat-010-repository-bash-confinement` after XPLAT-009 completed |
 
 **Execution Order:** XPLAT-001 -> XPLAT-002 -> XPLAT-003 -> XPLAT-004 -> XPLAT-005 -> XPLAT-006 -> XPLAT-007 -> XPLAT-008 -> XPLAT-009 -> XPLAT-010
 
@@ -111,11 +114,13 @@ dependency tiers**:
   plugin-runtime helper and release gate had a Python path. It is now complete
   and archived after PRs #289-#292; public native-platform claims still require
   passing operator UAT rows in `docs/ai/specs/.process/XPLAT-008-uat-matrix.md`.
-- XPLAT-009 requires XPLAT-008 because the plugin source/payload cleanup must
+- XPLAT-009 required XPLAT-008 because the plugin source/payload cleanup had to
   preserve the installed Claude/Codex cutover contract and release-readiness
-  gates that XPLAT-008 established.
+  gates that XPLAT-008 established. It is now complete and archived after PR
+  #297.
 - XPLAT-010 requires XPLAT-009 because repository-wide Bash confinement should
-  not start until plugin source and generated payloads are already Bash-free.
+  not start until plugin source and generated payloads are already Bash-free;
+  that prerequisite is now satisfied.
 
 ## Reviewability Contract
 
@@ -279,8 +284,8 @@ PUBLIC RELEASE HELD BY XPLAT-008 UAT MATRIX AND ZERO-BASH BACKSTOP GATES
 | XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | Complete / Archived | `.process/XPLAT-006-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-04-xplat-006-post-merge-hygiene.md`; mutation primitives, install inventory/doctor proof, PR-body/command-plan fixtures, phase-coverage hardening, and Layer 4 mutation-helper gates landed in PR #281 |
 | XPLAT-007 | Python Tooling and Release-Gate Migration | Complete / Archived | `.process/XPLAT-007-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md`; Python gate package, CI dispatch, promotion records, and Layer 4 gate tests landed across PRs #284-#287 |
 | XPLAT-008 | Claude/Codex Cutover and Universal Install Release Gate | Complete / Archived | `.process/XPLAT-008-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md`; active Claude/Codex cutover, payload rebuild, public docs claim alignment, release-readiness gates, and safe repair controls landed across PRs #289-#292; public native-platform claims remain blocked by `docs/ai/specs/.process/XPLAT-008-uat-matrix.md` |
-| XPLAT-009 | Plugin Source and Payload Bash Eradication | In Progress | `.process/XPLAT-009-workflow.md` | Resume with `$speckit-autopilot` against `docs/ai/specs/.process/XPLAT-009-workflow.md`; two accepted slices remove active plugin-source Bash first, then rebuild payloads and prove generated/installed-cache zero-Bash guards |
-| XPLAT-010 | Repository Bash Confinement and CI Dispatch Guard | Blocked | — | Scaffold after XPLAT-009; enforce repository-wide Bash confinement to GitHub CI/CD workflow dispatch glue only |
+| XPLAT-009 | Plugin Source and Payload Bash Eradication | Complete / Archived | `.process/XPLAT-009-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md`; plugin-source Bash removal, payload rebuilds, zero-Bash guard, installed-cache proof, and historical allowlist landed in PR #297 (speckit-pro 2.18.0) with Windows interpreter follow-up in PR #299 |
+| XPLAT-010 | Repository Bash Confinement and CI Dispatch Guard | In Progress | `.process/XPLAT-010-workflow.md` | Run `$speckit-autopilot` against `docs/ai/specs/.process/XPLAT-010-workflow.md`; scaffolded 2026-07-08 on branch `xplat-010-repository-bash-confinement` with an accepted 13-PR split and a public-release-notes scope addition (design concept Q9/Q10) |
 
 **Status Legend:** Pending | Ready | In Progress | In Review | Complete | Complete / Archived | Blocked
 
@@ -959,15 +964,18 @@ split only if generated payload rebuilds make the review packet too large.
 
 **Priority:** P1 | **Depends On:** XPLAT-008 | **Enables:** XPLAT-010, public Bash-free release readiness
 
-**Status:** In Progress. Scaffolded on 2026-07-07 in branch
-`codex/xplat-009-plugin-source-and-payload-bash-eradication`; workflow file is
-`docs/ai/specs/.process/XPLAT-009-workflow.md`; design concept is
-`docs/ai/specs/.process/XPLAT-009-design-concept.md`. A 2026-07-07
-post-XPLAT-008 audit found that generated payloads and the installed Codex cache
-contain zero `.sh` files, but `speckit-pro/` still contains 35 Bash scripts and
-active generated/source agent instructions still reference Bash. The accepted
-setup uses one workflow with two vertical slices: active plugin-source Bash
-removal first, then payload rebuild, installed-cache proof, and zero-Bash guards.
+**Status:** Complete / Archived. XPLAT-009 merged via PR #297 and shipped in
+speckit-pro 2.18.0, with a Windows interpreter/home-directory follow-up fix in
+PR #299. The active spec folder was archived on 2026-07-08 after preserving the
+contract schemas under
+`tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/contracts/`;
+guard, payload-completeness, installed-cache proof, and release-readiness
+evidence remains under `docs/ai/specs/.process/XPLAT-009-*`. The implementation
+removed the remaining live `.sh` files under `speckit-pro/`, replaced active
+Bash instructions, rebuilt Claude/Codex payloads from source, and proved
+source, payloads, and a bounded installed-cache artifact pass the Python-backed
+zero-Bash guard with a reviewable historical allowlist. See
+`.specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md`.
 
 **Goal:** Remove every remaining Bash script file and active Bash/`jq`
 instruction from plugin source and generated Claude/Codex payloads while
@@ -1039,9 +1047,24 @@ finds a clean helper-family boundary that avoids duplicated gate work.
 
 **Priority:** P1 | **Depends On:** XPLAT-009 | **Enables:** public Bash-free release readiness
 
-**Status:** Blocked until XPLAT-009 completes. The current repo-wide scan still
-finds many `.sh` files outside `.github/workflows/`, including active test
-harnesses, top-level helper scripts, hooks, and SpecKit process helpers.
+**Status:** In Progress. Scaffolded 2026-07-08 on branch
+`xplat-010-repository-bash-confinement` (XPLAT-009 merged via PR #297 and
+released in speckit-pro 2.18.0). The repo-wide scan still finds many `.sh`
+files outside `.github/workflows/`, including active test harnesses, top-level
+helper scripts, hooks, and SpecKit process helpers. Design concept and workflow
+file live under `docs/ai/specs/.process/`; an operator scope addition covers
+public-readable GitHub Release notes (design concept Q10/Q11).
+
+**Follow-up (required, post-PR-10):** a constitution amendment updating
+Principles I/II/IV and the Quality Gates table's literal bash commands
+(`run-all.sh`, `validate-scripts.sh`, `tests/lib/assertions.sh`) to their
+Python equivalents — a CRITICAL constitution conflict recorded (not
+reinterpreted) during this spec's Analyze phase, resolved via the
+separate-explicit-constitution-update path per the constitution's own 4-step
+Amendment procedure. Lands as its own small PR after the final Bash-deletion
+slice merges (cf. the "Windows interpreter follow-up in PR #299" pattern). No
+automated gate parses the constitution's literal commands, so deferral carries
+documentation-fidelity cost only.
 
 **Goal:** Enforce the strict repository policy that Bash may remain only as
 GitHub CI/CD workflow dispatch glue. All active repo-local validation,
@@ -1081,6 +1104,17 @@ current test harness and process helper scripts are broad.
 - Document that GitHub job containers are Linux-runner only, Windows containers
   have host/image compatibility constraints, and any Windows container
   experiment is preflight-only rather than native installed-plugin UAT.
+- Compose public-readable GitHub Release notes: each feat/fix PR carries a
+  consumer-facing release-note block (required CI check with a skip label for
+  changes with no consumer-visible effect), and a Python stdlib composer
+  rewrites the GitHub Release body with plain-English Highlights while keeping
+  the conventional-commit list as an appendix and `CHANGELOG.md` as the
+  machine ledger (operator scope addition, 2026-07-08).
+- Restore the `estimate-spec-size` runner operation that the grill-me and
+  speckit-prd skills invoke for slice sizing; its Bash predecessor was deleted
+  by XPLAT-009 without a Python port, a defect surfaced while dogfooding the
+  XPLAT-010 scaffold on speckit-pro 2.18.0 (operator scope addition,
+  2026-07-08).
 
 **Out of Scope:**
 
@@ -1122,6 +1156,12 @@ current test harness and process helper scripts are broad.
   outside the workflow dispatch boundary.
 - The XPLAT-008 native UAT matrix still remains the only release-satisfying
   evidence for full Claude/Codex installed-plugin journeys on native hosts.
+- GitHub Releases published after this spec open with composed plain-English
+  Highlights sourced from PR release-note blocks, and feat/fix PRs missing
+  both the block and the skip label fail a required check.
+- The `estimate-spec-size` runner operation exists again and returns
+  `{estimated_loc, suggested_slices, status}` for the size signals the
+  grill-me and speckit-prd skills send it.
 
 ---
 

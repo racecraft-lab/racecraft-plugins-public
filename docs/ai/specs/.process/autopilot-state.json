@@ -1,9 +1,9 @@
 {
-  "workflow_file": "docs/ai/specs/.process/XPLAT-009-workflow.md",
-  "feature_dir": "specs/xplat-009-plugin-source-and-payload-bash-eradication",
-  "spec_id": "XPLAT-009",
-  "updated_at": "2026-07-08T07:10:34Z",
-  "active_step": "Complete",
+  "workflow_file": "docs/ai/specs/.process/XPLAT-010-workflow.md",
+  "feature_dir": "specs/xplat-010-repository-bash-confinement",
+  "spec_id": "XPLAT-010",
+  "updated_at": "2026-07-09T05:39:59Z",
+  "active_step": "Tasks phase complete (G5 pass, 136 tasks); atomicity route recorded; entering Analyze",
   "skill_scripts": {
     "requested": "installed-cache:speckit-pro/skills/speckit-autopilot/scripts",
     "resolved": "speckit-pro/skills/speckit-autopilot/scripts",
@@ -12,12 +12,20 @@
   "archive_sweep": {
     "status": "completed",
     "archive_extension_installed": true,
-    "cleanup_mode": "apply",
-    "current_target": "specs/xplat-009-plugin-source-and-payload-bash-eradication",
-    "excluded_current_spec": "specs/xplat-009-plugin-source-and-payload-bash-eradication",
-    "eligible_previous_specs": [],
+    "cleanup_mode": "post-merge-apply",
+    "current_target": "specs/xplat-010-repository-bash-confinement",
+    "excluded_current_spec": "specs/xplat-010-repository-bash-confinement",
+    "eligible_previous_specs": [
+      "specs/xplat-009-plugin-source-and-payload-bash-eradication"
+    ],
+    "active_specs_inventory": [
+      "specs/xplat-010-repository-bash-confinement"
+    ],
     "safeToApplyCleanup": true,
-    "note": "Only the current target exists under active specs/** in this worktree; no previous active spec cleanup was needed."
+    "cleanupApplied": true,
+    "archived_spec": "specs/xplat-009-plugin-source-and-payload-bash-eradication",
+    "archive_report": ".specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md",
+    "note": "XPLAT-010 pre-flight Archive Sweep archived XPLAT-009 after PR #297 merged (speckit-pro 2.18.0) with Windows follow-up fix PR #299; contract schemas were preserved under tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/contracts/ and guard/proof evidence remains under docs/ai/specs/.process/XPLAT-009-*."
   },
   "prerequisites": {
     "all_pass": true,
@@ -40,7 +48,11 @@
     "preset_conventions": {
       "preset": "speckit-pro-reviewability",
       "version": "1.0.0",
-      "templates": ["spec", "plan", "tasks"]
+      "templates": [
+        "spec",
+        "plan",
+        "tasks"
+      ]
     },
     "project_implementation_agent": "implement-executor"
   },
@@ -113,38 +125,171 @@
     }
   },
   "plan": [
-    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
-    {"step": "Phase 0: Prerequisites", "status": "completed"},
-    {"step": "Phase 1: Specify", "status": "completed"},
-    {"step": "Phase 2: Clarify - Active Helper and Instruction Inventory", "status": "completed"},
-    {"step": "Phase 2: Clarify - Active Helper and Instruction Inventory Consensus", "status": "completed"},
-    {"step": "Phase 2: Clarify - Guard and Allowlist Contract", "status": "completed"},
-    {"step": "Phase 2: Clarify - Guard and Allowlist Contract Consensus", "status": "completed"},
-    {"step": "Phase 2: Clarify - Payload Rebuild and Installed-Cache Proof", "status": "completed"},
-    {"step": "Phase 2: Clarify - Payload Rebuild and Installed-Cache Proof Consensus", "status": "completed"},
-    {"step": "Phase 3: Plan", "status": "completed"},
-    {"step": "Phase 4: Checklist - integration", "status": "completed"},
-    {"step": "Phase 4: Checklist - integration Consensus", "status": "completed"},
-    {"step": "Phase 4: Checklist - reliability", "status": "completed"},
-    {"step": "Phase 4: Checklist - reliability Consensus", "status": "completed"},
-    {"step": "Phase 4: Checklist - security", "status": "completed"},
-    {"step": "Phase 4: Checklist - security Consensus", "status": "completed"},
-    {"step": "Phase 5: Tasks", "status": "completed"},
-    {"step": "Phase 6: Analyze", "status": "completed"},
-    {"step": "Phase 6: Analyze - Consensus", "status": "completed"},
-    {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
-    {"step": "Phase 7: Implement - T001", "status": "completed"},
-    {"step": "Post: Doctor Extension Check", "status": "completed"},
-    {"step": "Post: Verify Implementation", "status": "completed"},
-    {"step": "Post: Verify Tasks Phantom Check", "status": "completed"},
-    {"step": "Post: Code Review", "status": "completed"},
-    {"step": "Post: Integration Suite", "status": "completed"},
-    {"step": "Post: Reviewability Diff Gate", "status": "completed"},
-    {"step": "Post: Self-Review", "status": "completed"},
-    {"step": "Post: UAT Runbook Generation", "status": "completed"},
-    {"step": "Post: PR Body Generation", "status": "completed"},
-    {"step": "Post: PR Creation", "status": "completed"},
-    {"step": "Post: Review Remediation", "status": "completed"},
-    {"step": "Post: Retrospective", "status": "completed"}
-  ]
+    {
+      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 0: Prerequisites",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 1: Specify",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Active Helper and Instruction Inventory",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Active Helper and Instruction Inventory Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Guard and Allowlist Contract",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Guard and Allowlist Contract Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Payload Rebuild and Installed-Cache Proof",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Payload Rebuild and Installed-Cache Proof Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 3: Plan",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - integration",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - integration Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - reliability",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - reliability Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - security",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - security Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 5: Tasks",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 6: Analyze",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 6: Analyze - Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 6.5: Confidence Gate",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: Implement - T001",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Doctor Extension Check",
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md"
+    },
+    {
+      "step": "Post: Verify Implementation",
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md"
+    },
+    {
+      "step": "Post: Verify Tasks Phantom Check",
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md"
+    },
+    {
+      "step": "Post: Code Review",
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md"
+    },
+    {
+      "step": "Post: Integration Suite",
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md"
+    },
+    {
+      "step": "Post: Reviewability Diff Gate",
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md"
+    },
+    {
+      "step": "Post: Self-Review",
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md"
+    },
+    {
+      "step": "Post: UAT Runbook Generation",
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md"
+    },
+    {
+      "step": "Post: PR Body Generation",
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md"
+    },
+    {
+      "step": "Post: PR Creation",
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md"
+    },
+    {
+      "step": "Post: Review Remediation",
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md"
+    },
+    {
+      "step": "Post: Retrospective",
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md"
+    }
+  ],
+  "atomicity_route": {
+    "route": "single-atomic-PR",
+    "releasable": false,
+    "signals": [
+      "hard-atomic:destructive-migration",
+      "change-shape:modify-heavy",
+      "releasability:destructive-migration"
+    ],
+    "warnings": [
+      "destructive migration: a passing CI run does not prove this change is releasable (CI-green != releasable)"
+    ],
+    "note": "Advisory classifier reading of the feature as ONE unit. Operator-ratified delivery is the typed 14-PR stack (transition exception, design concept Q9); implementation proceeds slice-by-slice with each PR independently CI-green, which supersedes the single-unit reading as an operator decision. Tension recorded for Analyze."
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "atomicity route is single-atomic-PR (planner runs only on split-PR); PR slicing is operator-ratified in the workflow file Scope Budget section and encoded in tasks.md phase grouping"
+  },
+  "reviewability_tasks_gate": {
+    "status": "unavailable",
+    "reason": "runner read-only reviewability-gate supports setup mode only (2.18.0); tasks/pre-PR modes not ported by XPLAT-009 - recorded as dogfood defect; degradation per deferred-helper pattern",
+    "fallback_evidence": "setup-mode gate warn ratified at scaffold; plan-phase estimate-reviewable-loc pass (projected 40); operator-ratified typed split"
+  }
 }

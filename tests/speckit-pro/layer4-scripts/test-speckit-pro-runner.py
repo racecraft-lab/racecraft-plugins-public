@@ -495,7 +495,6 @@ class RunnerFoundationTests(unittest.TestCase):
             "speckit-pro/skills/",
             "speckit-pro/speckit_pro_runner/",
             "docs/ai/specs/.process/XPLAT-009",
-            "specs/xplat-009-plugin-source-and-payload-bash-eradication/",
             "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/",
         )
         allowed_tool_surface_exact = {

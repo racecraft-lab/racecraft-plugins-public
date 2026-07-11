@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/speckit-pro/xplat-010/confinement-allowlist.schema.json",
+  "title": "XPLAT-010 Confinement Guard Allowlist",
+  "description": "Fail-closed allowlist for the repository Bash confinement guard. Rhymes with the XPLAT-009 historical-allowlist schema but replaces the historical-path predicate with a vendored_specify_helper path scope. Pins exactly the 10 vendored upstream Spec Kit helper .sh files as individual per-file entries (no globs) so the set cannot broaden silently. Any .sh or Bash-shebang file under .specify/** not on this list is a fail-closed blocking finding.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "feature_id", "entries"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "feature_id": { "const": "XPLAT-010" },
+    "entries": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "categories", "reason", "scope", "release_readiness_excluded"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Repo-relative path to a vendored upstream helper. Must sit under .specify/scripts/bash/** or .specify/extensions/**/scripts/bash/** (the vendored_specify_helper scope).",
+          "pattern": "^\\.specify/(scripts/bash/|extensions/[^/]+/scripts/bash/)[^/]+\\.sh$"
+        },
+        "categories": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "reason": { "type": "string", "minLength": 1 },
+        "scope": {
+          "const": "vendored_specify_helper",
+          "description": "The only path scope the loader accepts; permits only .specify/scripts/bash/** and .specify/extensions/**/scripts/bash/** paths."
+        },
+        "release_readiness_excluded": {
+          "const": true,
+          "description": "Required true on every entry so allowlisted files are excluded from the positive Bash-free evidence set and can never satisfy release readiness (FR-004)."
+        }
+      }
+    }
+  }
+}
