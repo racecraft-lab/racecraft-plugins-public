@@ -1770,7 +1770,6 @@ class GateFoundationTests(unittest.TestCase):
             "partial-root-installed-cache-proof": {
                 "installed_root",
                 "source_payload_root",
-                "source_payload_tree_hash",
             },
             "traversal-root-installed-cache-proof": {"installed_root", "source_payload_root"},
             "missing-mutable-installed-cache-proof": {"mutable_user_cache"},
