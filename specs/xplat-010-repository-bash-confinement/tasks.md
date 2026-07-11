@@ -224,13 +224,13 @@ Baseline capture AND the port-side parity comparison MUST run in the SAME pinned
 
 **Slice goal (US2 port + FR-015)**: Port the live-AI eval runners preserving their CLI argument contracts and codex staging semantics. These are `live_only` (not in the default deterministic suite).
 
-- [ ] T081 [P] [US2] Port `tests/speckit-pro/layer2-trigger/run-trigger-evals.sh`, `run-trigger-evals-codex.sh`, `run-trigger-loop.sh` → `.py`, preserving CLI args + codex staging (FR-015; Per-Port Protocol where `_pass`/`_fail` output exists, else CLI/exit parity).
-- [ ] T082 [P] [US2] Port `tests/speckit-pro/layer3-functional/run-functional-evals.sh`, `run-functional-evals-codex.sh` → `.py`, preserving CLI args + codex staging (FR-015).
-- [ ] T083 [P] [US2] Port `tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.sh` and `lib/quality-scorer.sh`, `lib/token-counter.sh` → `.py` (FR-015).
-- [ ] T084 [US2] Port the active Layer-4 tests `test-l6-codex-runner.sh` and `test-eval-runner-skill-selection.sh` → `.py` (Per-Port Protocol); delete their `.sh`.
-- [ ] T085 [US2] Register Layers 2/3/6 as `python-module` + `live_only:true` in `suite-manifest.json` per §D3 (not in the default deterministic suite); append count-ledger delta lines.
-- [ ] T086 [US2] Confirm `run-all.py --live` selects Layers 2/3/6 with parity to `run-all.sh --live` (scope + headline), and the default deterministic gate is unaffected.
-- [ ] T087 [US2] Confirm `git ls-files 'tests/speckit-pro/layer{2,3,6}-*/**/*.sh'` returns empty — the PR-10 guard precondition for these surfaces.
+- [x] T081 [P] [US2] Port `tests/speckit-pro/layer2-trigger/run-trigger-evals.sh`, `run-trigger-evals-codex.sh`, `run-trigger-loop.sh` → `.py`, preserving CLI args + codex staging (FR-015; Per-Port Protocol where `_pass`/`_fail` output exists, else CLI/exit parity). Preserve the Bash `EXIT`-trap restoration guarantee under `SIGHUP`/`SIGTERM`; the safer Python restore-collision path intentionally exits `2` while preserving the backup and must be recorded as an intentional change.
+- [x] T082 [P] [US2] Port `tests/speckit-pro/layer3-functional/run-functional-evals.sh`, `run-functional-evals-codex.sh` → `.py`, preserving CLI args + codex staging (FR-015).
+- [x] T083 [P] [US2] Port `tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.sh` and `lib/quality-scorer.sh`, `lib/token-counter.sh` → `.py` (FR-015), invoking exact resolved Claude/Codex paths, using Windows-safe result filenames and explicit UTF-8 subprocess decoding, preserving command-substitution prompt bytes, and keeping partial result JSON valid with temporary-file cleanup on spawn failure.
+- [x] T084 [US2] Port the active Layer-4 tests `test-l6-codex-runner.sh` and `test-eval-runner-skill-selection.sh` → `.py` (Per-Port Protocol); delete their `.sh`. Add separate Layer-2 signal-restoration and Layer-6 portability contracts so supplemental cross-platform coverage is not misrepresented as predecessor name parity.
+- [x] T085 [US2] Register Layers 2/3/6 as `python-module` + `live_only:true` in `suite-manifest.json` per §D3 (not in the default deterministic suite); append count-ledger delta lines. Replace the shipped suite gate's hardcoded AI runner paths with the manifest `scripts[]` entries, then run the full shipped-runner regeneration ritual with release-readiness LAST and `<home>` sanitization.
+- [x] T086 [US2] Confirm predecessor scope exactly: bare `run-all.py --live` keeps default Layers 1/4/5, while `run-all.py --all` selects Layers 2/3/6 (and enables live mode) alongside the other runner blocks; each live-only layer emits Python command plans and the default deterministic gate is unaffected.
+- [x] T087 [US2] Confirm `git ls-files -- ':(glob)tests/speckit-pro/layer2-trigger/**/*.sh' ':(glob)tests/speckit-pro/layer3-functional/**/*.sh' ':(glob)tests/speckit-pro/layer6-efficiency/**/*.sh'` returns empty — the PR-10 guard precondition for these surfaces.
 
 **Checkpoint**: Live-AI eval runners are Python; all Layers 2–8 ported. PRs 3–9 complete → PR 10 can proceed.
 
@@ -361,9 +361,9 @@ No task in this file crosses these boundaries.
 - **PR 12** (T109–T120): independent — no hard dep on the confinement stack.
 - **PR 13** (T121–T130): independent, **land early** so scoping tooling works for future scaffolds. Review-ordering preference.
 
-### Shipped-runner concurrency rule (PRs 2, 7b, 8, 10, 13)
+### Shipped-runner concurrency rule (PRs 2, 7b, 8, 9, 10, 13)
 
-All five rewrite `speckit-pro-runner.manifest.json` sha256 proof rows + `dist/**`. When more than one is in flight, the **later-merging one rebases onto the merged one and re-runs the full payload/proof regeneration ritual** (T016/T071/T078/T098/T126); conflicting proof rows and payload bytes MUST NOT be hand-merged (plan §Constraints).
+All six rewrite `speckit-pro-runner.manifest.json` sha256 proof rows + `dist/**`. When more than one is in flight, the **later-merging one rebases onto the merged one and re-runs the full payload/proof regeneration ritual** (T016/T071/T078/T085/T098/T126); conflicting proof rows and payload bytes MUST NOT be hand-merged (plan §Constraints).
 
 ### Within each port slice
 
@@ -403,5 +403,5 @@ After PR 2 merges: Contributor A takes PRs 3a/3b/4 (Layer-1), B takes PRs 5/6 (t
 - `[USn]` maps each task to its user story for 1:1 traceability; Setup/PR-1-cleanup/Polish carry no label.
 - Every port PR proves 1:1 name-and-count parity against a committed baseline (SC-003); a silent rename/drop yields a non-empty diff and flags the PR as a regression.
 - Privacy: no absolute `/Users` or `/home` paths in any authored artifact — repo-relative only.
-- Shipped-runner byte changes are confined to PRs 2/7b/8/10/13, each running the regeneration ritual with release-readiness LAST and `<home>` sanitization.
+- Shipped-runner byte changes are confined to PRs 2/7b/8/9/10/13, each running the regeneration ritual with release-readiness LAST and `<home>` sanitization.
 - Verify each slice with the default-suite gate + `pnpm --dir docs-site validate` before opening its PR; workflow-editing PRs (5/11/12) update their self-referential validators in the same PR.

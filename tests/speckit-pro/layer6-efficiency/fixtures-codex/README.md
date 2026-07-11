@@ -15,13 +15,13 @@ file at `codex-agents/<name>.toml`) and contains:
 
 ## How the benchmark uses these
 
-```bash
+```console
 # Single agent across all 4 effort levels (xhigh / high / medium / low)
-bash tests/layer6-efficiency/run-efficiency-benchmarks.sh \
+python3 tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.py \
   --codex --agent codebase-analyst --sweep
 
 # All Codex agents at default effort
-bash tests/layer6-efficiency/run-efficiency-benchmarks.sh --codex
+python3 tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.py --codex
 ```
 
 Results land in `../results-codex/`. Per-run timestamped JSONs are
@@ -36,7 +36,7 @@ the committed reference.
    one prompt.
 3. Write `expected-output.md` following the exact section structure the
    agent's `## Output Format` section prescribes.
-4. Smoke-test: `bash run-efficiency-benchmarks.sh --codex --agent <name>`.
+4. Smoke-test: `python3 run-efficiency-benchmarks.py --codex --agent <name>`.
    The output should produce 70%+ quality at xhigh — if not, the
    `expected-output.md` is over-specified (too prescriptive about prose)
    rather than the agent being broken.

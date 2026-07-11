@@ -220,7 +220,23 @@ def run_ai_evals(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
         return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[layers_result])
     layers = layers_result
     available_tools = available_ai_tools(request.inputs)
-    planned_dispatch = [ai_dispatch_plan(layer, repo_root, available_tools) for layer in layers]
+    try:
+        manifest = load_suite_manifest(repo_root)
+    except SuiteManifestError as exc:
+        diag = diagnostic(
+            "suite_manifest_unavailable",
+            "AI eval dispatch cannot resolve manifest-backed runner references",
+            details={"manifest_path": SUITE_MANIFEST_PATH, "error": str(exc)},
+            remediation_summary="Restore the suite manifest in the source checkout.",
+            remediation_actions=[f"Restore {SUITE_MANIFEST_PATH}.", "Retry run-ai-evals."],
+        )
+        return response(
+            "missing_prerequisite",
+            request_id=request.request_id,
+            data=base_data(entry, request.operation, "missing_prerequisite"),
+            diagnostics=[diag],
+        )
+    planned_dispatch = [ai_dispatch_plan(layer, repo_root, available_tools, manifest) for layer in layers]
     missing_by_layer = {
         plan["layer"]: plan["missing_tools"]
         for plan in planned_dispatch
@@ -706,7 +722,12 @@ def available_ai_tools(inputs: dict[str, Any]) -> set[str]:
     return {tool for tool in ("claude", "codex") if shutil.which(tool) is not None}
 
 
-def ai_dispatch_plan(layer: str, repo_root: Path, available_tools: set[str]) -> dict[str, Any]:
+def ai_dispatch_plan(
+    layer: str,
+    repo_root: Path,
+    available_tools: set[str],
+    manifest: dict[str, Any],
+) -> dict[str, Any]:
     required = ai_required_tools(layer)
     missing = [tool for tool in required if tool not in available_tools]
     return {
@@ -714,7 +735,8 @@ def ai_dispatch_plan(layer: str, repo_root: Path, available_tools: set[str]) -> 
         "command_id": f"layer-{layer}",
         "required_tools": required,
         "missing_tools": missing,
-        "bash_references": ai_bash_references(layer),
+        "bash_references": [],
+        "runner_references": manifest_runner_references(layer, manifest),
         "python_entrypoint": "python -m speckit_pro_runner",
         "repo_root": rel(repo_root, repo_root) or ".",
     }
@@ -726,18 +748,12 @@ def ai_required_tools(layer: str) -> list[str]:
     return ["claude"]
 
 
-def ai_bash_references(layer: str) -> list[str]:
-    if layer == "2":
-        return [
-            "tests/speckit-pro/layer2-trigger/run-trigger-evals.sh",
-            "tests/speckit-pro/layer2-trigger/run-trigger-evals-codex.sh",
-        ]
-    if layer == "3":
-        return [
-            "tests/speckit-pro/layer3-functional/run-functional-evals.sh",
-            "tests/speckit-pro/layer3-functional/run-functional-evals-codex.sh",
-        ]
-    return ["tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.sh"]
+def manifest_runner_references(layer: str, manifest: dict[str, Any]) -> list[str]:
+    for entry in manifest["layers"]:
+        if entry["id"] != layer:
+            continue
+        return [script["path"] for script in entry["scripts"]]
+    return []
 
 
 __all__ = ("run_suite_gate",)

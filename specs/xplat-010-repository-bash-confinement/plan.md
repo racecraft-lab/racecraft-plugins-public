@@ -58,9 +58,9 @@ the payload/proof regeneration ritual).
 **Performance Goals**: N/A — deterministic gates complete in seconds; no throughput target.
 
 **Constraints**: No absolute `/Users` or `/home` paths in any authored artifact
-(repo-relative only). Shipped-runner byte changes are confined to PRs 2, 7b, 8, 10, and 13, each
+(repo-relative only). Shipped-runner byte changes are confined to PRs 2, 7b, 8, 9, 10, and 13, each
 carrying the payload rebuild + proof-hash regeneration ritual with release-readiness
-evidence regenerated LAST and home-directory sanitization (`<home>`). Because PRs 2, 7b, 8, 10, and 13
+evidence regenerated LAST and home-directory sanitization (`<home>`). Because PRs 2, 7b, 8, 9, 10, and 13
 all rewrite the `speckit-pro-runner.manifest.json` sha256 proof rows and the generated `dist/**`
 payloads, when more than one of them is in flight simultaneously (for example PR 13 landing early
 while PR 2 is still open) their proof rows conflict on merge: the later-merging PR MUST rebase onto
@@ -265,7 +265,7 @@ racecraft-plugins-public/
 │   ├── helpers/
 │   │   ├── registry.py                   # PR 13: register estimate-spec-size HelperEntry
 │   │   └── read_only.py                  # PR 13: implement estimate-spec-size
-│   └── speckit-pro-runner.manifest.json  # PRs 2/7b/8/10/13: sha256 rows; PR 13: plugin_version fix
+│   └── speckit-pro-runner.manifest.json  # PRs 2/7b/8/9/10/13: sha256 rows; PR 13: plugin_version fix
 ├── dist/{claude,codex}/speckit-pro/      # Generated payloads (regen ritual on runner changes)
 ├── tests/speckit-pro/                    # PRIMARY port surface (never shipped)
 │   ├── suite-manifest.json               # NEW (PR 2): single source of truth per layer
@@ -298,7 +298,7 @@ racecraft-plugins-public/
 
 **Structure Decision**: Single project, two seams. Repo-side Python (`tests/speckit-pro/`,
 `scripts/`, `.claude/hooks/`, `.github/workflows/`) is never shipped; the shipped runner
-(`speckit-pro/speckit_pro_runner/`) changes only in PRs 2/7b/8/10/13 and each such change runs the
+(`speckit-pro/speckit_pro_runner/`) changes only in PRs 2/7b/8/9/10/13 and each such change runs the
 payload/proof regeneration ritual. The suite manifest decouples test-list churn from
 shipped-runner rebuilds so ordinary layer edits are manifest-only.
 

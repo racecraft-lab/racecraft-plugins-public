@@ -2933,7 +2933,9 @@ class GateFoundationTests(unittest.TestCase):
                 "tests/speckit-pro/layer4-scripts/test-check-toolchain.py",
                 "tests/speckit-pro/layer4-scripts/test-post-implementation-reference.sh",
                 "tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh",
-                "tests/speckit-pro/layer4-scripts/test-eval-runner-skill-selection.sh",
+                "tests/speckit-pro/layer4-scripts/test-eval-runner-skill-selection.py",
+                "tests/speckit-pro/layer4-scripts/test-layer2-trigger-runners.py",
+                "tests/speckit-pro/layer4-scripts/test-layer2-signal-restoration.py",
                 "tests/speckit-pro/layer4-scripts/test-refresh-local-plugin.py",
                 "tests/speckit-pro/layer4-scripts/test-sync-marketplace-versions.py",
                 "tests/speckit-pro/layer4-scripts/test-claude-hooks.py",
@@ -2946,7 +2948,8 @@ class GateFoundationTests(unittest.TestCase):
                 "tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py",
                 "tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py",
                 "tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py",
-                "tests/speckit-pro/layer4-scripts/test-l6-codex-runner.sh",
+                "tests/speckit-pro/layer4-scripts/test-l6-codex-runner.py",
+                "tests/speckit-pro/layer4-scripts/test-layer6-portability.py",
                 "tests/speckit-pro/layer4-scripts/test-l8-extractors.py",
                 "tests/speckit-pro/layer4-scripts/test-l8-judge.py",
                 "tests/speckit-pro/layer4-scripts/test-moc-lint-exit-codes.py",
@@ -3215,7 +3218,18 @@ class GateFoundationTests(unittest.TestCase):
         self.assert_response(response, "ok")
         self.assert_status_exit_mapping(completed, response)
         self.assertEqual(stderr_records, [])
-        self.assertEqual([plan["layer"] for plan in response["data"]["suite"]["planned_dispatch"]], ["2", "3", "6"])
+        planned_dispatch = response["data"]["suite"]["planned_dispatch"]
+        self.assertEqual([plan["layer"] for plan in planned_dispatch], ["2", "3", "6"])
+        manifest = json.loads((REPO_ROOT / "tests/speckit-pro/suite-manifest.json").read_text(encoding="utf-8"))
+        manifest_paths = {
+            layer["id"]: [script["path"] for script in layer["scripts"]]
+            for layer in manifest["layers"]
+            if layer["id"] in {"2", "3", "6"}
+        }
+        for plan in planned_dispatch:
+            self.assertEqual(plan["runner_references"], manifest_paths[plan["layer"]])
+            self.assertEqual(plan["bash_references"], [])
+            self.assertTrue(all(path.endswith(".py") for path in plan["runner_references"]))
 
         missing = gate_request(
             "suite-gate",

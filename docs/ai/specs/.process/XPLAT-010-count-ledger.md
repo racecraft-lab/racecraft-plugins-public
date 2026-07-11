@@ -69,6 +69,14 @@ Columns:
 | PR 8 | fixture environment inputs: 8 `env-*.sh` → 8 `env-*.json` | default | 0 → 0 (data-only inputs) | n/a | n/a |
 | PR 8 | new Layer-8 runner/portability contract | default | 0 → 33 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer8-runner-baseline.txt` |
 | PR 8 | shipped gate regression expansion | default | 58 → 59 | n/a | n/a |
+| PR 9 | port: `test-eval-runner-skill-selection.sh` → `.py` | default | 13 → 13 | yes | `tests/speckit-pro/parity/xplat-010/test-eval-runner-skill-selection-baseline.txt` |
+| PR 9 | port: `test-l6-codex-runner.sh` → `.py` | default | 23 → 23 | yes | `tests/speckit-pro/parity/xplat-010/test-l6-codex-runner-baseline.txt` |
+| PR 9 | live runner/library swaps for Layers 2/3/6 | command-plan / live-only | 0 → 0 (predecessors emit no counted assertions) | n/a | eleven per-entrypoint baselines under `tests/speckit-pro/parity/xplat-010/` |
+| PR 9 | `run-all.py` scope/command-plan contract expansion | default | 20 → 24 | n/a | n/a |
+| PR 9 | new Layer-2 runner/staging contract | default | 0 → 26 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer2-trigger-runners-baseline.txt` |
+| PR 9 | new Layer-2 signal-restoration contract | default | 0 → 7 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer2-signal-restoration-baseline.txt` |
+| PR 9 | new Layer-6 portability contract | default | 0 → 18 | n/a | `tests/speckit-pro/parity/xplat-010/test-layer6-portability-baseline.txt` |
+| PR 9 | shipped gate manifest-reference strengthening | default | 59 → 59 (existing method strengthened) | n/a | n/a |
 
 **PR 13 note (T121–T130):** The estimator Layer-4 test follows the
 Per-Port Protocol against historical predecessor commit
@@ -253,3 +261,21 @@ The 29-check runner contract adds OS-neutral subprocess doubles, exact resolved
 over extractor configuration, and a live tracked-tree `.sh` absence check.
 Layer 8 now dispatches through the manifest-backed Python module path; retiring
 native `check_layer8` expands the shipped gate regression suite from 58 to 59.
+
+**PR 9 note (T081–T087):** The two active predecessor tests retain exact
+`13 → 13` and `23 → 23` ordered inventories. The live entrypoints themselves
+had no counted assertion protocol, so their `0 → 0` baselines are inventory
+markers only; behavior is instead locked by 25 supplemental Layer-2 signal and
+Layer-6 portability checks plus the existing 24-check staging contract. Bare
+`--live` preserves the predecessor's default Layers 1/4/5 scope, while `--all`
+continues to select Layers 2/3/6 and enable live mode; command plans now name
+Python entrypoints. Layer 6 invokes exact resolved executable paths, uses
+Windows-safe timestamps and explicit UTF-8 decoding, strips trailing prompt
+newlines like shell command substitution, atomically persists partial JSON,
+and cleans temporary files after spawn errors. Layer 2 converts `SIGHUP` and
+`SIGTERM` into controlled unwinding so moved skills restore before exit. One
+intentional safety change is explicit: a restore collision returns exit `2`
+and preserves the backup instead of silently ignoring the failed restoration.
+The shipped suite gate now derives AI runner references from manifest
+`scripts[]`; its 59-method count is unchanged because the existing dispatch
+test was strengthened rather than duplicated.
