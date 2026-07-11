@@ -20,13 +20,14 @@ class of bugs that only surface when agents are composed:
 
 These are all **dispatch graph** failures. Layer 7 exists to catch them.
 
-## Three fixture classes
+## Four fixture classes
 
 | Class | Goal | Runner |
 |-------|------|--------|
-| **1 — Dispatch fixtures** | Verify the orchestrator routes specific inputs to the right subagent(s) | `run-dispatch-fixtures.sh` |
-| **2 — Return-format fixtures** | Verify cross-agent parsing — one agent's output is parseable by its consumer | `run-return-format-fixtures.sh` |
-| **3 — End-to-end fixtures** | Verify the dispatch graph for a real autopilot run has the expected shape | `run-e2e-fixtures.sh` |
+| **1 — Dispatch fixtures** | Verify the orchestrator routes specific inputs to the right subagent(s) | `run-dispatch-fixtures.py` |
+| **2 — Return-format fixtures** | Verify cross-agent parsing — one agent's output is parseable by its consumer | `run-return-format-fixtures.py` |
+| **3 — End-to-end fixtures** | Verify the dispatch graph for a real autopilot run has the expected shape | `run-e2e-fixtures.py` |
+| **4 — Grounding fixtures** | Verify capability citations correspond to completed tool calls | `run-grounding-fixtures.py` |
 
 ## Coverage matrix
 
@@ -136,19 +137,19 @@ intend to refresh the committed reduced replay fixture.
 
 ```bash
 # Replay all fixtures (free)
-bash tests/layer7-integration/run-all-fixtures.sh
+python3 tests/speckit-pro/layer7-integration/run-all-fixtures.py
 
 # Replay just Class 1
-bash tests/layer7-integration/run-dispatch-fixtures.sh
+python3 tests/speckit-pro/layer7-integration/run-dispatch-fixtures.py
 
 # Replay one fixture, verbose
-VERBOSE=true bash tests/layer7-integration/run-dispatch-fixtures.sh 03-redelegation-chain
+VERBOSE=true python3 tests/speckit-pro/layer7-integration/run-dispatch-fixtures.py 03-redelegation-chain
 
 # Live capture for one fixture (costs LLM tokens)
-bash tests/layer7-integration/run-dispatch-fixtures.sh --live 01-clarify-codebase-only
+python3 tests/speckit-pro/layer7-integration/run-dispatch-fixtures.py --live 01-clarify-codebase-only
 
 # Live capture across the whole layer
-bash tests/layer7-integration/run-all-fixtures.sh --live
+python3 tests/speckit-pro/layer7-integration/run-all-fixtures.py --live
 ```
 
 ## Fixture format
@@ -219,7 +220,7 @@ developer-machine information.
 
 No full captured transcript should be committed. The committed replay
 artifact is `parser-fixture.jsonl`, generated from a scrubbed transcript
-with `reduce-transcript-fixture.sh`. The runners invoke the scrubber
+with `reduce-transcript-fixture.py`. The runners invoke the scrubber
 **automatically** after every `--live` capture, so a live run only leaves
 an ignored scrubbed `transcript.jsonl` on disk unless you explicitly opt
 in to refreshing the reduced fixture.
@@ -246,14 +247,14 @@ What the scrubber strips/replaces:
 To manually scrub a transcript:
 
 ```bash
-bash tests/layer7-integration/scrub-transcript.sh path/to/transcript.jsonl
+python3 tests/speckit-pro/layer7-integration/scrub-transcript.py path/to/transcript.jsonl
 # in-place; or pass nothing to read stdin → stdout
 ```
 
 To manually regenerate a reduced replay fixture:
 
 ```bash
-bash tests/layer7-integration/reduce-transcript-fixture.sh \
+python3 tests/speckit-pro/layer7-integration/reduce-transcript-fixture.py \
   path/to/transcript.jsonl \
   path/to/expected.json \
   > path/to/parser-fixture.jsonl
@@ -305,14 +306,14 @@ Defaults:
 | L1 | File structure / frontmatter | Fast |
 | L2 | Trigger evals (does the right skill activate?) | Slow (AI) |
 | L3 | Functional evals (does each skill produce the right output?) | Slow (AI) |
-| L4 | Shell script unit tests (incl. `transcript-helpers.sh`) | Fast |
+| L4 | Python-dispatched script unit tests (incl. `transcript_helpers.py`) | Fast |
 | L5 | Agent tool-scoping | Fast |
 | L6 | Agent efficiency benchmarks | Slow (AI) |
 | **L7** | **Multi-agent dispatch graph** | **Fast (replay) / Slow (live)** |
 
-L7 replay is fast enough to run with the default test suite. L7 live
-is developer-local and runs only when explicitly requested via
-`run-all.sh --integration --live`.
+L7 replay is deterministic and runs through the integration suite. L7 live is
+developer-local and runs only when explicitly requested via
+`python3 tests/speckit-pro/run-all.py --integration --live`.
 
 ## Codex side
 

@@ -23,7 +23,7 @@ description: "Task list for XPLAT-010 — Repository Bash Confinement and CI Dis
 ## Path Conventions
 
 - **Repo-side tooling (never shipped)**: `tests/speckit-pro/`, `scripts/`, `.claude/hooks/`, `.github/workflows/`. Repo-side Python MUST live under these roots — never under `speckit-pro/` (the `validate-plugin-payload` guard fails if `tests/`, `specs/`, or `.process/` reappear under the plugin dir).
-- **Shipped runner (byte change → regeneration ritual)**: `speckit-pro/speckit_pro_runner/`. Touched only in PR 2, PR 10, PR 13.
+- **Shipped runner (byte change → regeneration ritual)**: `speckit-pro/speckit_pro_runner/`. Touched only in PR 2, PR 7b, PR 10, PR 13.
 
 ---
 
@@ -196,7 +196,7 @@ Baseline capture AND the port-side parity comparison MUST run in the SAME pinned
 - [ ] T068 [P] [US2] Port `tests/speckit-pro/layer7-integration/run-return-format-fixtures.sh` → `.py` (Per-Port Protocol; replay mode).
 - [ ] T069 [P] [US2] Port `tests/speckit-pro/layer7-integration/run-grounding-fixtures.sh` → `.py` (Per-Port Protocol; replay mode).
 - [ ] T070 [P] [US2] Port `tests/speckit-pro/layer7-integration/run-e2e-fixtures.sh` and `run-all-fixtures.sh` → `.py` (Per-Port Protocol; replay mode). Preserve `--live` semantics as a code path (live mode still invokes `claude -p`; replay stays free).
-- [ ] T071 [US2] Retire the native `check_layer7` in `gates/suite.py` at this boundary (it validated an orphaned fixture directory; no equivalence shim — FR-008); flip Layer-7 to `python-module` in `suite-manifest.json` + baseline pointers; append count-ledger delta lines.
+- [ ] T071 [US2] Retire the native `check_layer7` in `gates/suite.py` at this boundary (it validated an orphaned fixture directory; no equivalence shim — FR-008); flip Layer-7 to `python-module` in `suite-manifest.json` + baseline pointers; append count-ledger delta lines; run the shipped-runner payload/proof regeneration ritual with release-readiness LAST and `<home>` sanitization.
 - [ ] T072 [US2] Confirm default-suite gate + drift-guard test green; replay-mode Layer-7 runs Python-only.
 
 **Checkpoint**: Layer-7 replay harness is Python; native `check_layer7` retired.
@@ -361,9 +361,9 @@ No task in this file crosses these boundaries.
 - **PR 12** (T109–T120): independent — no hard dep on the confinement stack.
 - **PR 13** (T121–T130): independent, **land early** so scoping tooling works for future scaffolds. Review-ordering preference.
 
-### Shipped-runner concurrency rule (PRs 2, 10, 13)
+### Shipped-runner concurrency rule (PRs 2, 7b, 10, 13)
 
-All three rewrite `speckit-pro-runner.manifest.json` sha256 proof rows + `dist/**`. When more than one is in flight, the **later-merging one rebases onto the merged one and re-runs the full payload/proof regeneration ritual** (T016/T098/T126); conflicting proof rows and payload bytes MUST NOT be hand-merged (plan §Constraints).
+All four rewrite `speckit-pro-runner.manifest.json` sha256 proof rows + `dist/**`. When more than one is in flight, the **later-merging one rebases onto the merged one and re-runs the full payload/proof regeneration ritual** (T016/T071/T098/T126); conflicting proof rows and payload bytes MUST NOT be hand-merged (plan §Constraints).
 
 ### Within each port slice
 
@@ -403,5 +403,5 @@ After PR 2 merges: Contributor A takes PRs 3a/3b/4 (Layer-1), B takes PRs 5/6 (t
 - `[USn]` maps each task to its user story for 1:1 traceability; Setup/PR-1-cleanup/Polish carry no label.
 - Every port PR proves 1:1 name-and-count parity against a committed baseline (SC-003); a silent rename/drop yields a non-empty diff and flags the PR as a regression.
 - Privacy: no absolute `/Users` or `/home` paths in any authored artifact — repo-relative only.
-- Shipped-runner byte changes are confined to PRs 2/10/13, each running the regeneration ritual with release-readiness LAST and `<home>` sanitization.
+- Shipped-runner byte changes are confined to PRs 2/7b/10/13, each running the regeneration ritual with release-readiness LAST and `<home>` sanitization.
 - Verify each slice with the default-suite gate + `pnpm --dir docs-site validate` before opening its PR; workflow-editing PRs (5/11/12) update their self-referential validators in the same PR.

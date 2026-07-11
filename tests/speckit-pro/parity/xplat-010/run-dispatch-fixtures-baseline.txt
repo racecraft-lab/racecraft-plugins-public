@@ -1,0 +1,185 @@
+001 01-clarify-codebase-only: dispatched to speckit-pro:codebase-analyst
+002 01-clarify-codebase-only: never dispatched to speckit-pro:domain-researcher
+003 01-clarify-codebase-only: never dispatched to speckit-pro:spec-context-analyst
+004 01-clarify-codebase-only: never dispatched to speckit-pro:grill-me
+005 01-clarify-codebase-only: no subagent spawned an Agent()
+006 01-clarify-codebase-only: skill never invoked: grill-me (any scope)
+007 01-clarify-codebase-only: dispatch count >= 1 (got 1)
+008 01-clarify-codebase-only: dispatch count <= 2 (got 1)
+009 02-clarify-multi-category: dispatched to speckit-pro:codebase-analyst
+010 02-clarify-multi-category: dispatched to speckit-pro:domain-researcher
+011 02-clarify-multi-category: never dispatched to speckit-pro:spec-context-analyst
+012 02-clarify-multi-category: never dispatched to speckit-pro:grill-me
+013 02-clarify-multi-category: no subagent spawned an Agent()
+014 02-clarify-multi-category: skill never invoked: grill-me (any scope)
+015 02-clarify-multi-category: dispatch count >= 2 (got 2)
+016 02-clarify-multi-category: dispatch count <= 3 (got 2)
+017 03-redelegation-chain: dispatched to speckit-pro:clarify-executor
+018 03-redelegation-chain: dispatched to at least one of allowed set
+019 03-redelegation-chain: never dispatched to speckit-pro:grill-me
+020 03-redelegation-chain: no subagent spawned an Agent()
+021 03-redelegation-chain: skill never invoked: grill-me (any scope)
+022 03-redelegation-chain: dispatch count >= 2 (got 3)
+023 03-redelegation-chain: speckit-pro:clarify-executor precedes speckit-pro:codebase-analyst
+024 04-clarify-domain-only: dispatched to speckit-pro:domain-researcher
+025 04-clarify-domain-only: never dispatched to speckit-pro:codebase-analyst
+026 04-clarify-domain-only: never dispatched to speckit-pro:spec-context-analyst
+027 04-clarify-domain-only: never dispatched to speckit-pro:grill-me
+028 04-clarify-domain-only: no subagent spawned an Agent()
+029 04-clarify-domain-only: skill never invoked: grill-me (any scope)
+030 04-clarify-domain-only: dispatch count >= 1 (got 1)
+031 04-clarify-domain-only: dispatch count <= 2 (got 1)
+032 05-clarify-spec-only: dispatched to speckit-pro:spec-context-analyst
+033 05-clarify-spec-only: never dispatched to speckit-pro:codebase-analyst
+034 05-clarify-spec-only: never dispatched to speckit-pro:domain-researcher
+035 05-clarify-spec-only: never dispatched to speckit-pro:grill-me
+036 05-clarify-spec-only: no subagent spawned an Agent()
+037 05-clarify-spec-only: skill never invoked: grill-me (any scope)
+038 05-clarify-spec-only: dispatch count >= 1 (got 1)
+039 05-clarify-spec-only: dispatch count <= 2 (got 1)
+040 06-clarify-security-fanout: dispatched to speckit-pro:codebase-analyst
+041 06-clarify-security-fanout: dispatched to speckit-pro:domain-researcher
+042 06-clarify-security-fanout: dispatched to speckit-pro:spec-context-analyst
+043 06-clarify-security-fanout: never dispatched to speckit-pro:grill-me
+044 06-clarify-security-fanout: no subagent spawned an Agent()
+045 06-clarify-security-fanout: skill never invoked: grill-me (any scope)
+046 06-clarify-security-fanout: dispatch count >= 3 (got 3)
+047 06-clarify-security-fanout: dispatch count <= 4 (got 3)
+048 07-clarify-ambiguous-fanout: dispatched to speckit-pro:codebase-analyst
+049 07-clarify-ambiguous-fanout: dispatched to speckit-pro:domain-researcher
+050 07-clarify-ambiguous-fanout: dispatched to speckit-pro:spec-context-analyst
+051 07-clarify-ambiguous-fanout: never dispatched to speckit-pro:grill-me
+052 07-clarify-ambiguous-fanout: no subagent spawned an Agent()
+053 07-clarify-ambiguous-fanout: skill never invoked: grill-me (any scope)
+054 07-clarify-ambiguous-fanout: dispatch count >= 3 (got 3)
+055 07-clarify-ambiguous-fanout: dispatch count <= 4 (got 3)
+056 08-clarify-codebase-spec: dispatched to speckit-pro:codebase-analyst
+057 08-clarify-codebase-spec: dispatched to speckit-pro:spec-context-analyst
+058 08-clarify-codebase-spec: never dispatched to speckit-pro:domain-researcher
+059 08-clarify-codebase-spec: never dispatched to speckit-pro:grill-me
+060 08-clarify-codebase-spec: no subagent spawned an Agent()
+061 08-clarify-codebase-spec: skill never invoked: grill-me (any scope)
+062 08-clarify-codebase-spec: dispatch count >= 2 (got 2)
+063 08-clarify-codebase-spec: dispatch count <= 3 (got 2)
+064 09-clarify-domain-spec: dispatched to speckit-pro:domain-researcher
+065 09-clarify-domain-spec: dispatched to speckit-pro:spec-context-analyst
+066 09-clarify-domain-spec: never dispatched to speckit-pro:codebase-analyst
+067 09-clarify-domain-spec: never dispatched to speckit-pro:grill-me
+068 09-clarify-domain-spec: no subagent spawned an Agent()
+069 09-clarify-domain-spec: skill never invoked: grill-me (any scope)
+070 09-clarify-domain-spec: dispatch count >= 2 (got 2)
+071 09-clarify-domain-spec: dispatch count <= 3 (got 2)
+072 10-clarify-all-three: dispatched to speckit-pro:codebase-analyst
+073 10-clarify-all-three: dispatched to speckit-pro:domain-researcher
+074 10-clarify-all-three: dispatched to speckit-pro:spec-context-analyst
+075 10-clarify-all-three: never dispatched to speckit-pro:grill-me
+076 10-clarify-all-three: no subagent spawned an Agent()
+077 10-clarify-all-three: skill never invoked: grill-me (any scope)
+078 10-clarify-all-three: dispatch count >= 3 (got 3)
+079 10-clarify-all-three: dispatch count <= 4 (got 3)
+080 11-clarify-round2-escape: dispatched to speckit-pro:domain-researcher
+081 11-clarify-round2-escape: dispatched to speckit-pro:spec-context-analyst
+082 11-clarify-round2-escape: never dispatched to speckit-pro:grill-me
+083 11-clarify-round2-escape: no subagent spawned an Agent()
+084 11-clarify-round2-escape: skill never invoked: grill-me (any scope)
+085 11-clarify-round2-escape: dispatch count >= 2 (got 2)
+086 11-clarify-round2-escape: dispatch count <= 3 (got 2)
+087 12-tasks-phase: dispatched to speckit-pro:phase-executor
+088 12-tasks-phase: never dispatched to speckit-pro:clarify-executor
+089 12-tasks-phase: never dispatched to speckit-pro:checklist-executor
+090 12-tasks-phase: never dispatched to speckit-pro:analyze-executor
+091 12-tasks-phase: never dispatched to speckit-pro:implement-executor
+092 12-tasks-phase: never dispatched to speckit-pro:grill-me
+093 12-tasks-phase: no subagent spawned an Agent()
+094 12-tasks-phase: skill never invoked: grill-me (any scope)
+095 12-tasks-phase: dispatch count >= 1 (got 1)
+096 12-tasks-phase: dispatch count <= 2 (got 1)
+097 13-implement-task: dispatched to speckit-pro:implement-executor
+098 13-implement-task: never dispatched to speckit-pro:phase-executor
+099 13-implement-task: never dispatched to speckit-pro:clarify-executor
+100 13-implement-task: never dispatched to speckit-pro:checklist-executor
+101 13-implement-task: never dispatched to speckit-pro:analyze-executor
+102 13-implement-task: never dispatched to speckit-pro:grill-me
+103 13-implement-task: no subagent spawned an Agent()
+104 13-implement-task: skill never invoked: grill-me (any scope)
+105 13-implement-task: dispatch count >= 1 (got 1)
+106 13-implement-task: dispatch count <= 2 (got 1)
+107 14-analyze-phase: dispatched to speckit-pro:analyze-executor
+108 14-analyze-phase: never dispatched to speckit-pro:phase-executor
+109 14-analyze-phase: never dispatched to speckit-pro:implement-executor
+110 14-analyze-phase: never dispatched to speckit-pro:checklist-executor
+111 14-analyze-phase: never dispatched to speckit-pro:grill-me
+112 14-analyze-phase: no subagent spawned an Agent()
+113 14-analyze-phase: skill never invoked: grill-me (any scope)
+114 14-analyze-phase: dispatch count >= 1 (got 1)
+115 14-analyze-phase: dispatch count <= 2 (got 1)
+116 15-checklist-phase: dispatched to speckit-pro:checklist-executor
+117 15-checklist-phase: never dispatched to speckit-pro:phase-executor
+118 15-checklist-phase: never dispatched to speckit-pro:implement-executor
+119 15-checklist-phase: never dispatched to speckit-pro:analyze-executor
+120 15-checklist-phase: never dispatched to speckit-pro:grill-me
+121 15-checklist-phase: no subagent spawned an Agent()
+122 15-checklist-phase: skill never invoked: grill-me (any scope)
+123 15-checklist-phase: dispatch count >= 1 (got 1)
+124 15-checklist-phase: dispatch count <= 2 (got 1)
+125 16-gate-validator: dispatched to speckit-pro:gate-validator
+126 16-gate-validator: never dispatched to speckit-pro:phase-executor
+127 16-gate-validator: never dispatched to speckit-pro:clarify-executor
+128 16-gate-validator: never dispatched to speckit-pro:grill-me
+129 16-gate-validator: no subagent spawned an Agent()
+130 16-gate-validator: skill never invoked: grill-me (any scope)
+131 16-gate-validator: dispatch count >= 1 (got 1)
+132 16-gate-validator: dispatch count <= 2 (got 1)
+133 17-phase-error-handling: never dispatched to speckit-pro:grill-me
+134 17-phase-error-handling: no subagent spawned an Agent()
+135 17-phase-error-handling: skill never invoked: grill-me (any scope)
+136 17-phase-error-handling: dispatch count >= 0 (got 1)
+137 17-phase-error-handling: dispatch count <= 2 (got 1)
+138 18-post-impl-parallel-subagents: dispatched to at least one of allowed set
+139 18-post-impl-parallel-subagents: never dispatched to speckit-pro:grill-me
+140 18-post-impl-parallel-subagents: never dispatched to speckit-pro:clarify-executor
+141 18-post-impl-parallel-subagents: no subagent spawned an Agent()
+142 18-post-impl-parallel-subagents: skill never invoked: grill-me (any scope)
+143 18-post-impl-parallel-subagents: dispatch count >= 3 (got 3)
+144 18-post-impl-parallel-subagents: dispatch count <= 5 (got 3)
+145 19-implement-parallel-p-tasks: dispatched to speckit-pro:implement-executor
+146 19-implement-parallel-p-tasks: never dispatched to speckit-pro:grill-me
+147 19-implement-parallel-p-tasks: never dispatched to speckit-pro:clarify-executor
+148 19-implement-parallel-p-tasks: never dispatched to speckit-pro:phase-executor
+149 19-implement-parallel-p-tasks: never dispatched to speckit-pro:domain-researcher
+150 19-implement-parallel-p-tasks: no subagent spawned an Agent()
+151 19-implement-parallel-p-tasks: skill never invoked: grill-me (any scope)
+152 19-implement-parallel-p-tasks: dispatch count >= 3 (got 3)
+153 19-implement-parallel-p-tasks: dispatch count <= 3 (got 3)
+154 20-consensus-multi-item-batch: dispatched to speckit-pro:codebase-analyst
+155 20-consensus-multi-item-batch: dispatched to speckit-pro:spec-context-analyst
+156 20-consensus-multi-item-batch: dispatched to speckit-pro:domain-researcher
+157 20-consensus-multi-item-batch: never dispatched to speckit-pro:grill-me
+158 20-consensus-multi-item-batch: never dispatched to speckit-pro:phase-executor
+159 20-consensus-multi-item-batch: no subagent spawned an Agent()
+160 20-consensus-multi-item-batch: skill never invoked: grill-me (any scope)
+161 20-consensus-multi-item-batch: dispatch count >= 9 (got 9)
+162 20-consensus-multi-item-batch: dispatch count <= 9 (got 9)
+163 21-resolve-pr-parallel-files: dispatched to general-purpose
+164 21-resolve-pr-parallel-files: never dispatched to speckit-pro:grill-me
+165 21-resolve-pr-parallel-files: never dispatched to speckit-pro:phase-executor
+166 21-resolve-pr-parallel-files: never dispatched to speckit-pro:clarify-executor
+167 21-resolve-pr-parallel-files: no subagent spawned an Agent()
+168 21-resolve-pr-parallel-files: skill never invoked: grill-me (any scope)
+169 21-resolve-pr-parallel-files: dispatch count >= 3 (got 3)
+170 21-resolve-pr-parallel-files: dispatch count <= 6 (got 3)
+171 22-prsg-014-stack-manager-replay: dispatched to speckit-pro:analyze-executor
+172 22-prsg-014-stack-manager-replay: dispatched to speckit-pro:implement-executor
+173 22-prsg-014-stack-manager-replay: never dispatched to speckit-pro:grill-me
+174 22-prsg-014-stack-manager-replay: no subagent spawned an Agent()
+175 22-prsg-014-stack-manager-replay: skill never invoked: grill-me (any scope)
+176 22-prsg-014-stack-manager-replay: transcript includes term: stack_manager_decision
+177 22-prsg-014-stack-manager-replay: transcript includes term: fallback_reason
+178 22-prsg-014-stack-manager-replay: transcript includes term: command_plan
+179 22-prsg-014-stack-manager-replay: transcript includes term: topology_compatibility
+180 22-prsg-014-stack-manager-replay: transcript includes term: mutation_boundary
+181 22-prsg-014-stack-manager-replay: transcript excludes term: gh pr create --live
+182 22-prsg-014-stack-manager-replay: transcript excludes term: gh stack link --live
+183 22-prsg-014-stack-manager-replay: dispatch count >= 2 (got 2)
+184 22-prsg-014-stack-manager-replay: dispatch count <= 4 (got 2)
+TOTAL: 184
