@@ -185,10 +185,16 @@ class HostedWindowsPreflightTests(unittest.TestCase):
             [sys.executable, "-c", helper.SPECIFY_VERSION_CODE],
         )
         specify_pythonpath = specify_call.args[3]["PYTHONPATH"].split(os.pathsep)
-        self.assertTrue(
-            specify_pythonpath[0].endswith(
-                "windows-x64-pipx/home/venvs/specify-cli/Lib/site-packages"
-            )
+        self.assertEqual(
+            Path(specify_pythonpath[0]).parts[-6:],
+            (
+                "windows-x64-pipx",
+                "home",
+                "venvs",
+                "specify-cli",
+                "Lib",
+                "site-packages",
+            ),
         )
 
     def test_non_windows_platform_is_rejected_before_subprocesses(self) -> None:
