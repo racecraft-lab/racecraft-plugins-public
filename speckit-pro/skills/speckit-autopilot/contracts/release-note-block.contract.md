@@ -50,7 +50,8 @@ Example:
   or HTML-plus-image block MUST fail validation for feat/fix PRs and MUST fail
   composition if it somehow reaches the release range.
 - Intake is env-var / JSON-only via stdlib `urllib` against the GitHub API; PR
-  body text is **never** shell-interpolated or git-log parsed.
+  body text is passed as structured API data and is never evaluated as a
+  command or parsed from git log.
 
 ## 3. Composer discovery + write (FR-023)
 
@@ -152,7 +153,7 @@ removed and apply the same boundary. Tests MUST pin 249-, 250-, and
   `autorelease:` label; title from `inputs.pr_title` under the dispatch path,
   which carries no body).
 - All untrusted event text, including PR body and dispatch-path title, is passed
-  through environment variables, never shell-interpolated.
+  through process environment mappings rather than command-string expansion.
 - The workflow-level default remains `permissions: {}`. This check's job grants
   only `contents: read` for checkout, and checkout uses
   `persist-credentials: false`; the validator performs no API mutation.
