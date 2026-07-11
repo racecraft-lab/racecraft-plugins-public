@@ -247,9 +247,10 @@ and ships only role assignments that clear a consumer-focused quality floor.
 
 ### 3.5 Structured-work Agent Routing *(-> G56R-008)*
 
-- **AC-5.1**: `checklist-executor` and `uat-runbook-author` start with Terra as
-  a hypothesis but screen every eligible Pro-available model, including GPT-5.4
-  Mini for bounded structured work, through progressively lower efforts.
+- **AC-5.1**: `checklist-executor` and `uat-runbook-author`
+  start with Terra as a hypothesis but screen every eligible Pro-available
+  model, including GPT-5.4 Mini for bounded structured work, through
+  progressively lower efforts.
 - **AC-5.2**: Checklist remediation remains complete at every severity and UAT
   runbooks remain executable, plain-English, non-circular, and traceable to
   acceptance criteria.
@@ -383,8 +384,9 @@ and ships only role assignments that clear a consumer-focused quality floor.
 
 ## 6. Open Questions
 
-- **OQ-1 (G56R-001):** Which models and efforts does the declared Pro 5x or Pro
-  20x release-test account expose through the installed Codex client?
+- **OQ-1 (G56R-001):** Which models and efforts does the declared
+  Pro 5x or Pro 20x release-test account expose through the installed Codex
+  client?
   Recommendation: snapshot the live catalog, probe every entry, and abstain
   from unverified routes.
 - **OQ-1A (G56R-001/G56R-002):** Which supported Codex or account interface
