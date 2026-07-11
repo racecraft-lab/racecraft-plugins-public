@@ -173,6 +173,20 @@ tree matches the stack tip exactly.
 - `tests/speckit-pro/unit/fixtures/repository-bash-confinement/`
 - `tests/speckit-pro/unit/fixtures/plan-layers/repository-bash-confinement-plan/`
 
+## Historical Publication-Tail Disposition
+
+`XPLAT-010-publication-tail.json` is the byte-identical publication-scope
+contract from the final implementation commit (blob
+`22c6c8ade7d9dd793de89e80344349c51f09c6aa`). Its `allowed_paths` values are
+historical and must not be rewritten as a current file-existence manifest.
+
+| Historical Entry | Archive Disposition |
+|------------------|---------------------|
+| `.process/uat-runbook.md` | Reconciled successor at `docs/ai/specs/.process/XPLAT-010-uat-runbook.md`; raw source remains recoverable below |
+| `SPEC-MOC.md` | The roadmap MOC is the current navigation successor, not an exact copy; raw source remains recoverable below |
+| `quickstart.md` | No live successor is required; raw source remains recoverable below |
+| `tasks.md` | The 136-task planner fixture is a derived test input, not the original artifact; raw source remains recoverable below |
+
 ## Recovery Commands
 ```text
 git show ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29:specs/xplat-010-repository-bash-confinement/spec.md
@@ -220,7 +234,7 @@ git checkout ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29 -- specs/xplat-010-reposit
 | `docs/ai/specs/.process/XPLAT-010-pr-packets/` | Preserved all 18 immutable packet/body/validation triplets so archive links remain self-contained |
 | `docs/ai/specs/.process/XPLAT-010-prs.json` | Preserved the generated no-gap stack manifest and repointed its verification evidence to archived packet copies |
 | `docs/ai/specs/.process/XPLAT-010-emission/` | Preserved all six planner, route, split, stack-manager, and reviewability emission records |
-| `docs/ai/specs/.process/XPLAT-010-publication-tail.json` | Preserved the publication-tail inventory, repointed mutable process entries, and retained four historical spec-only allowlist entries backed by exact recovery commands |
+| `docs/ai/specs/.process/XPLAT-010-publication-tail.json` | Preserved the byte-identical historical publication-scope contract; current successors and exact raw-source recovery are documented above |
 | `tests/speckit-pro/unit/fixtures/` | Preserved purpose-based contract and planner inputs required after active-spec cleanup |
 | `tests/speckit-pro/unit/test-repo-bash-confinement.py` | Repointed live schema reads away from active `specs/**` |
 | `tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py` | Repointed and purpose-renamed the repository Bash confinement planner fixture test |
@@ -244,6 +258,8 @@ git checkout ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29 -- specs/xplat-010-reposit
 - `python3 -m json.tool docs/ai/specs/.process/autopilot-state.json`: PASS
 - All relocated PR-packet, emission, stack-manifest, publication-tail, and
   archive-summary JSON files parse successfully.
+- Publication-tail historical blob identity: PASS
+  (`22c6c8ade7d9dd793de89e80344349c51f09c6aa`).
 - Preserved process inventory: PASS (`73` XPLAT-010 files, including `54`
   packet/body/validation files and `6` emission records).
 - All `54` links in `XPLAT-010-pr-body.md` resolve to preserved packet files.
@@ -294,10 +310,10 @@ runtime, test, path, subprocess, JSON, and Bash-confinement boundaries.
   aggregate pre-merge PR snapshots retain their historical path and status
   values. Current merged provenance and recovery commands are recorded in this
   report; mutable aggregate pointers are repointed to preserved archive paths.
-- The publication-tail allowlist retains four implementation-head paths for the
-  archived UAT runbook, `SPEC-MOC.md`, `quickstart.md`, and `tasks.md`. They are
-  historical allowlist values, not live repository pointers; the exact
-  `git show` recovery commands above remain their source of truth.
+- The publication-tail `allowed_paths` contract remains byte-identical to the
+  final implementation commit. Those values are historical publication scope,
+  not live repository pointers; the disposition table and exact `git show`
+  commands above remain their archive source of truth.
 - Roadmap, workflow, project guidance, and autopilot state still described an
   open stack. They now record the merged 18-PR chain and deleted branches.
 - `GEMINI.md` still advertised the removed shell suite, Bash validators, and
