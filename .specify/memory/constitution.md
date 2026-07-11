@@ -1,9 +1,12 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 1.0.0 → 1.1.0
+  Version change: 1.1.0 → 1.2.0
   Modified principles:
-    - VI. Simplicity & YAGNI → VI. KISS, Simplicity & YAGNI (expanded)
+    - I. Plugin Structure Compliance (repository-only tests clarified)
+    - II. Script Safety → Cross-Platform Runtime & Script Safety
+    - IV. Test Coverage Before Merge (Python-authoritative suite)
+    - VI. KISS, Simplicity & YAGNI (structured JSON guidance)
   Added sections: None
   Removed sections: None
   Templates requiring updates:
@@ -31,21 +34,30 @@ Every plugin MUST follow the standard Claude Code plugin directory layout:
 - `agents/` — subagent definitions as `.md` files
 - `skills/` — skill directories with `SKILL.md` entry points
 - `hooks/` — event hooks with valid `hooks.json`
-- `tests/` — test suite with `run-all.sh` orchestrator
+- repository-only tests MUST live under top-level `tests/<plugin>/`, outside the
+  install-facing plugin directory
 
 Plugin names MUST be kebab-case matching the pattern
 `^[a-z][a-z0-9]*(-[a-z0-9]+)*$`.
 
-**Quality gate**: `bash tests/run-all.sh --layer 1`
+**Quality gate**: `python3 tests/speckit-pro/run-all.py --layer 1`
 
-### II. Script Safety
+### II. Cross-Platform Runtime & Script Safety
 
-All bash scripts MUST begin with `#!/usr/bin/env bash` and include
-`set -euo pipefail` as the first executable line. No unquoted
-variables. No unchecked command results. All scripts MUST be
-executable (`chmod +x`). Script syntax MUST pass `bash -n` validation.
+Active repository tooling MUST run on Python 3.11+ without requiring Bash,
+`jq`, PowerShell helper scripts, or package installation. Python entry points
+MUST use structured parsers, platform-safe path APIs, argument arrays,
+`shell=False`, explicit return-code handling, and deterministic UTF-8 I/O.
 
-**Quality gate**: `validate-scripts.sh`
+Repository-authored Bash is permitted only as bounded GitHub Actions dispatch
+or sentinel control-flow glue under `.github/workflows/`; it MUST NOT implement
+domain validation, packaging, installation, release, or plugin runtime behavior.
+The fixed vendored
+`.specify/**` allowlist is historical upstream tooling, MUST remain excluded
+from release-readiness evidence, and MUST NOT be broadened or substituted.
+
+**Quality gate**: repository Bash-confinement and active-path guards through
+`python3 tests/speckit-pro/run-all.py --layer 4`
 
 ### III. Semantic Versioning
 
@@ -59,21 +71,19 @@ MUST bump MINOR. Bug fixes MUST bump PATCH.
 Version management is automated via release-please. Manual version
 edits are prohibited except during initial plugin creation.
 
-**Quality gate**: `validate-plugin.sh` semver regex check
+**Quality gate**: Layer 1 `validate-plugin` semantic-version check
 
 ### IV. Test Coverage Before Merge
 
-All new bash scripts MUST have corresponding Layer 4 unit tests in
-`tests/unit/`. All new plugin components (commands, agents,
-skills, hooks) MUST pass Layer 1 structural validation. No
-implementation is considered complete until `bash tests/run-all.sh`
+All new Python helpers, gates, and repository tools MUST have corresponding
+Layer 4 unit coverage under `tests/speckit-pro/unit/`. All new plugin
+components (commands, agents, skills, hooks, manifests, and generated
+payloads) MUST pass Layer 1 structural validation. Layer membership and
+dispatch MUST remain declared in `tests/speckit-pro/suite-manifest.json`.
+No implementation is complete until the Python-authoritative default suite
 passes with zero failures.
 
-Test files MUST use the shared assertions library at
-`tests/lib/assertions.sh` and follow existing naming conventions:
-`test-<script-name>.sh`.
-
-**Quality gate**: `bash tests/run-all.sh` (Layers 1, 4, 5 — zero failures)
+**Quality gate**: `python3 tests/speckit-pro/run-all.py` (Layers 1, 4, 5 — zero failures)
 
 ### V. Conventional Commits
 
@@ -96,10 +106,10 @@ uses the PR title as the commit message on `main`.
 **KISS (Keep It Simple):** Every solution MUST use the simplest
 approach that solves the problem. Prefer flat over nested, explicit
 over implicit, and readable over clever. If a reviewer cannot
-understand the code in 30 seconds, it is too complex. Shell scripts
-MUST prefer straightforward sequential logic over clever one-liners.
-JSON manipulation MUST use `jq` with clear filters, not chained
-`sed`/`awk` hacks.
+understand the code in 30 seconds, it is too complex. Tooling MUST prefer
+straightforward sequential logic over clever one-liners. JSON manipulation
+MUST use a structured parser such as Python's standard-library `json` module,
+not `jq` or chained text-processing substitutions.
 
 **YAGNI (You Aren't Gonna Need It):** No speculative features. No
 abstractions for one-time operations. No wrapper layers unless
@@ -120,17 +130,22 @@ code review for complexity justification
 
 | Gate | Principle | Command |
 |------|-----------|---------|
-| Structural validation | I. Plugin Structure | `bash tests/run-all.sh --layer 1` |
-| Script safety | II. Script Safety | `validate-scripts.sh` |
-| Version format | III. Semantic Versioning | `validate-plugin.sh` |
-| Test coverage | IV. Test Coverage | `bash tests/run-all.sh` |
+| Structural validation | I. Plugin Structure | `python3 tests/speckit-pro/run-all.py --layer 1` |
+| Runtime and script safety | II. Cross-Platform Safety | `python3 tests/speckit-pro/run-all.py --layer 4` |
+| Version format | III. Semantic Versioning | Layer 1 `validate-plugin` |
+| Test coverage | IV. Test Coverage | `python3 tests/speckit-pro/run-all.py` |
 | Commit format | V. Conventional Commits | CI `validate-pr-title` |
 | KISS + scope justification | VI. KISS/Simplicity | Master plan review + code review |
 
 ## Development Workflow
 
-- All changes arrive on `main` via PR with squash merge
-- Branch protection requires: CI pass, Copilot review, squash-only
+- All changes arrive on `main` via PR; normal integration uses squash merge
+- A temporary merge-commit exception for a dependent PR stack MUST be explicitly
+  authorized, preserve bottom-to-top ancestry, and restore squash-only settings
+  immediately after the stack lands
+- Branch protection requires `validate-plugins`, `validate-pr-title`,
+  `validate-release-note`, `container-preflight-linux-amd64`, and
+  `container-preflight-linux-arm64`; required checks are non-strict
 - Layers 2/3 (AI evals) are run locally before merge, not in CI
 - Release-please automates version bumps and changelog generation
 - `marketplace.json` versions are synced from `plugin.json` by CI
@@ -156,4 +171,4 @@ with the principles above.
 document it in the plan's Complexity Tracking table with the
 violation, rationale, and why the simpler alternative was rejected.
 
-**Version**: 1.1.0 | **Ratified**: 2026-03-24 | **Last Amended**: 2026-03-24
+**Version**: 1.2.0 | **Ratified**: 2026-03-24 | **Last Amended**: 2026-07-11
