@@ -1,11 +1,13 @@
 ---
+name: speckit-resume
 description: Resume an interrupted session by detecting feature state and suggesting
   the next command
+compatibility: Requires spec-kit project structure with .specify/ directory
+metadata:
+  author: github-spec-kit
+  source: speckit-utils:commands/resume.md
 ---
 
-
-<!-- Extension: speckit-utils -->
-<!-- Config: .specify/extensions/speckit-utils/ -->
 ## User Input
 
 ```text

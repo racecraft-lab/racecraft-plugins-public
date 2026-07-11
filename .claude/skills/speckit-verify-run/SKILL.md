@@ -1,21 +1,13 @@
 ---
+name: speckit-verify-run
 description: Perform a non-destructive post-implementation verification gate validating
   the implementation against spec.md, plan.md, tasks.md, and constitution.md.
-scripts:
-  sh: scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks
-  ps: scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks
-handoffs:
-- label: Address findings and re-implement
-  agent: speckit.implement
-  prompt: Address the verification findings and re-run implementation to resolve issues
-- label: Re-analyze specification consistency
-  agent: speckit.analyze
-  prompt: Re-analyze specification consistency based on verification findings
+compatibility: Requires spec-kit project structure with .specify/ directory
+metadata:
+  author: github-spec-kit
+  source: verify:commands/verify.md
 ---
 
-
-<!-- Extension: verify -->
-<!-- Config: .specify/extensions/verify/ -->
 ## User Input
 
 ```text
@@ -38,7 +30,7 @@ Validate the implementation against its specification artifacts (`spec.md`, `pla
 
 ### 1. Initialize Verification Context
 
-Run `{SCRIPT}` once from repo root and parse JSON for FEATURE_DIR and AVAILABLE_DOCS. Derive absolute paths:
+Run `.specify/extensions/verify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks` once from repo root and parse JSON for FEATURE_DIR and AVAILABLE_DOCS. Derive absolute paths:
 
 - SPEC = FEATURE_DIR/spec.md
 - PLAN = FEATURE_DIR/plan.md

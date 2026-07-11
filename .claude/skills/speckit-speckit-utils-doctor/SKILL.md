@@ -1,11 +1,13 @@
 ---
+name: speckit-speckit-utils-doctor
 description: 'Validate project health: templates, agent config, scripts, constitution,
   and feature artifacts'
+compatibility: Requires spec-kit project structure with .specify/ directory
+metadata:
+  author: github-spec-kit
+  source: speckit-utils:commands/doctor.md
 ---
 
-
-<!-- Extension: speckit-utils -->
-<!-- Config: .specify/extensions/speckit-utils/ -->
 ## User Input
 
 ```text
@@ -22,7 +24,7 @@ Locate the `.specify/` directory. If not found, error: "No spec-kit project foun
 
 ### Step 2: Check templates
 
-Verify these template files exist in `templates/` and are non-empty:
+Verify these template files exist in `.specify/templates/` and are non-empty:
 - `spec-template.md`
 - `plan-template.md`
 - `tasks-template.md`
@@ -51,15 +53,15 @@ If an agent is configured (e.g., `"ai_assistant": "claude"`):
 
 ### Step 4: Check scripts
 
-Scan `scripts/bash/` and `scripts/powershell/` for script files.
+Scan `.specify/extensions/speckit-utils/scripts/bash/` and `.specify/extensions/speckit-utils/scripts/powershell/` for script files.
 
 - No scripts directory: WARN ("no scripts directory found")
 - Scripts exist and are executable: PASS
-- Scripts exist but not executable (missing +x on .sh files): WARN ("scripts not executable - run `chmod +x scripts/bash/*.sh`")
+- Scripts exist but not executable (missing +x on .sh files): WARN ("scripts not executable - run `chmod +x .specify/extensions/speckit-utils/scripts/bash/*.sh`")
 
 ### Step 5: Check constitution
 
-Look for `constitution.md` or `memory/constitution.md` in the project root.
+Look for `constitution.md` or `.specify/memory/constitution.md` in the project root.
 
 - Exists and has content (>10 words): PASS (show word count)
 - Exists but empty: WARN ("constitution is empty")

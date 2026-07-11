@@ -1,27 +1,13 @@
 ---
+name: speckit-retrospective-analyze
 description: Perform a post-implementation retrospective analysis measuring spec adherence,
   implementation deviations, and lessons learned.
-handoffs:
-- label: Update Constitution
-  agent: speckit.constitution
-  prompt: Update constitution based on retrospective learnings
-  send: true
-- label: Create New Feature
-  agent: speckit.specify
-  prompt: Create a new feature incorporating learnings from retrospective
-  send: true
-- label: Create Checklist
-  agent: speckit.checklist
-  prompt: Create checklist based on retrospective findings
-  send: true
-scripts:
-  sh: .specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks
-  ps: .specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks
+compatibility: Requires spec-kit project structure with .specify/ directory
+metadata:
+  author: github-spec-kit
+  source: retrospective:commands/retrospective.md
 ---
 
-
-<!-- Extension: retrospective -->
-<!-- Config: .specify/extensions/retrospective/ -->
 ## User Input
 
 ```text
@@ -45,7 +31,7 @@ Analyze completed implementation against `spec.md`, `plan.md`, and `tasks.md` to
 
 ### 1. Initialize Context
 
-Run `{SCRIPT}` from repo root. Parse JSON for FEATURE_DIR and AVAILABLE_DOCS. Derive paths: SPEC, PLAN, TASKS = FEATURE_DIR/{spec,plan,tasks}.md. Abort if missing.
+Run `.specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks` from repo root. Parse JSON for FEATURE_DIR and AVAILABLE_DOCS. Derive paths: SPEC, PLAN, TASKS = FEATURE_DIR/{spec,plan,tasks}.md. Abort if missing.
 
 For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
@@ -70,7 +56,7 @@ Completion thresholds:
 - `spec.md`: FR-XXX, NFR-XXX, SC-XXX, user stories, assumptions, edge cases
 - `plan.md`: Architecture, data model, phases, constraints, dependencies
 - `tasks.md`: All tasks with status, file paths, blockers
-- constitution: `/memory/constitution.md` (if exists)
+- constitution: `.specify/memory/constitution.md` (if exists)
 
 ### 4. Discover Implementation
 
