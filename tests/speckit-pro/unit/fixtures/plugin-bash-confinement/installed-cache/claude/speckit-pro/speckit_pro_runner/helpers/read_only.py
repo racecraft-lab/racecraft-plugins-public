@@ -16,6 +16,7 @@ from typing import Any, Callable
 from ..envelope import diagnostic, response
 
 CAPTURE_LIMIT_BYTES = 16 * 1024
+PLAN_LAYERS_CAPTURE_LIMIT_BYTES = 256 * 1024
 SUBPROCESS_TIMEOUT_SECONDS = 30
 BOUNDED_TEXT_INPUT_BYTES = 32 * 1024
 WINDOWS_DRIVE_RE = re.compile(r"^[A-Za-z]:[\\/]")
@@ -86,7 +87,12 @@ def run_registered_helper(entry: Any, request: Any) -> dict[str, Any]:
     started = time.monotonic()
     result = PY_HELPERS[entry.helper_id](inputs, repo_root)
     duration_ms = int((time.monotonic() - started) * 1000)
-    stdout = output_capture(result["stdout"])
+    stdout_limit = (
+        PLAN_LAYERS_CAPTURE_LIMIT_BYTES
+        if entry.helper_id == "plan-layers-feature-dir"
+        else CAPTURE_LIMIT_BYTES
+    )
+    stdout = output_capture(result["stdout"], limit_bytes=stdout_limit)
     stderr = output_capture(result["stderr"])
     exit_code = int(result["exit_code"])
     status = EXIT_STATUS.get(exit_code, "subprocess_failure")
@@ -1132,11 +1138,18 @@ def plan_layers_feature_dir(inputs: dict[str, Any], repo_root: Path) -> dict[str
     raw = request_path_display(inputs.get("feature_dir") or "", repo_root)
     feature = resolve_input_path(raw, repo_root)
     tasks_file = feature / "tasks.md"
-    if not trusted_dir_exists(feature, repo_root):
+    if not feature.exists():
         return plan_layers_error("feature_dir_not_found", f"Feature directory not found: {raw}", raw, "", {"feature_dir": raw})
-    if not trusted_file_exists(tasks_file, repo_root):
-        return plan_layers_error("tasks_file_missing", f"tasks.md missing: {raw}/tasks.md", raw, f"{raw}/tasks.md", {"tasks_file": f"{raw}/tasks.md"})
-    stdout, warning_count = plan_layers_json(raw, tasks_file, repo_root)
+    if not trusted_dir_exists(feature, repo_root) or not os.access(feature, os.R_OK | os.X_OK):
+        return plan_layers_error("feature_dir_unreadable", f"Feature directory unreadable: {raw}", raw, "", {"feature_dir": raw})
+    tasks_rel = repo_relative(tasks_file, repo_root)
+    if not tasks_file.exists():
+        return plan_layers_error("tasks_file_missing", f"tasks.md missing: {tasks_rel}", raw, tasks_rel, {"tasks_file": tasks_rel})
+    if not trusted_file_exists(tasks_file, repo_root) or not os.access(tasks_file, os.R_OK) or trusted_text(tasks_file, repo_root) is None:
+        return plan_layers_error("tasks_file_unreadable", f"tasks.md unreadable: {tasks_rel}", raw, tasks_rel, {"tasks_file": tasks_rel})
+    stdout, warning_count, error_count = plan_layers_json(raw, tasks_file, repo_root)
+    if error_count:
+        return make_result(stdout, f"plan-layers: invalid_plan: {error_count} error(s)\n", 1)
     stderr = f"plan-layers: ok with {warning_count} warning(s)\n" if warning_count else ""
     return make_result(stdout, stderr)
 
@@ -1351,160 +1364,602 @@ def plan_layers_error(code: str, message: str, feature: str, tasks: str, details
     return make_result(json_text(obj), f"plan-layers: input_error: {message}\n", 2)
 
 
-def plan_layers_json(feature_rel: str, tasks_file: Path, repo_root: Path) -> tuple[str, int]:
+def plan_layers_json(feature_rel: str, tasks_file: Path, repo_root: Path) -> tuple[str, int, int]:
     tasks_rel = repo_relative(tasks_file, repo_root)
     lines = trusted_lines(tasks_file, repo_root)
-    current = False
-    section_line = 0
-    section_heading = ""
-    tasks = []
-    warnings = []
+    sections: dict[str, dict[str, Any]] = {}
+    section_order: list[str] = []
+    task_records: dict[str, dict[str, Any]] = {}
+    task_sources: dict[str, dict[str, Any]] = {}
+    dependencies: dict[str, list[str]] = {}
+    warnings: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
+    current_section: str | None = None
+
     for line_no, line in enumerate(lines, start=1):
         phase = re.match(r"^##\s+Phase\s+[0-9]+:\s+(.+)$", line)
         if phase:
-            title = phase.group(1).strip()
-            lower = title.lower()
-            if re.match(r"^(foundation|foundational|setup)(\s.*)?$", lower):
-                current = True
-                if not section_line:
-                    section_line = line_no
-                    section_heading = line
+            current_section = None
+            section = plan_layers_section(phase.group(1).strip(), line_no, line)
+            if section is None:
                 continue
-            current = False
+            increment_id = section["id"]
+            if increment_id in sections:
+                existing = sections[increment_id]
+                if increment_id == "foundation" and (
+                    existing["mode"] == "foundation_alias" or section["mode"] == "foundation_alias"
+                ):
+                    existing["mode"] = "foundation_alias"
+                    current_section = increment_id
+                    continue
+                errors.append(
+                    plan_layers_diagnostic(
+                        "duplicate_increment_id",
+                        "error",
+                        f"Increment {increment_id} is duplicated.",
+                        tasks_rel,
+                        line_no,
+                        {
+                            "increment_id": increment_id,
+                            "first_source": plan_layers_source(
+                                tasks_rel,
+                                existing["line"],
+                                existing["heading"],
+                            ),
+                            "duplicate_source": plan_layers_source(tasks_rel, line_no, line),
+                        },
+                    )
+                )
+                continue
+            sections[increment_id] = section
+            section_order.append(increment_id)
+            dependencies[increment_id] = []
+            current_section = increment_id
             continue
         if line.startswith("## "):
-            current = False
+            current_section = None
             continue
-        if not current:
+        if current_section is None:
             continue
-        parsed = parse_task_line(line, line_no, tasks_rel, repo_root)
-        if parsed:
-            tasks.append(parsed)
-            if not parsed["files"] and not parsed["tests"]:
-                warnings.append({
-                    "code": "task_without_references",
-                    "severity": "warning",
-                    "message": f"Task {parsed['id']} has no file or test references.",
-                    "source": {"path": tasks_rel, "line": line_no},
-                    "details": {"task_id": parsed["id"], "increment_id": "foundation"},
-                })
-    file_values = sorted({path for task in tasks for path in task["files"]})
-    test_values = sorted({path for task in tasks for path in task["tests"]})
-    increment = {
-        "id": "foundation",
-        "name": "Foundation",
-        "kind": "foundation",
-        "order": 0,
-        "depends_on": [],
-        "source": {"path": tasks_rel, "line": section_line, "heading": section_heading},
-        "tasks": tasks,
-        "files": file_values,
-        "tests": test_values,
-        "advisory_size": {
-            "task_count": len(tasks),
-            "file_reference_count": sum(len(task["files"]) for task in tasks),
-            "distinct_file_count": len(file_values),
-            "test_reference_count": sum(len(task["tests"]) for task in tasks),
-            "distinct_test_count": len(test_values),
-        },
-    }
+        task = parse_task_line(
+            line,
+            line_no,
+            tasks_rel,
+            repo_root,
+            current_section,
+            sections[current_section]["kind"],
+            task_sources,
+            warnings,
+            errors,
+        )
+        if task is not None:
+            task_records[task["id"]] = task
+            sections[current_section]["task_ids"].append(task["id"])
+
+    if "## Dependencies & Execution Order" not in lines:
+        errors.append(
+            plan_layers_diagnostic(
+                "missing_required_heading",
+                "error",
+                "Missing required dependency heading.",
+                tasks_rel,
+                None,
+                {"required_heading": "## Dependencies & Execution Order"},
+            )
+        )
+    if not any(is_plan_layers_delivery_heading(line) for line in lines):
+        errors.append(
+            plan_layers_diagnostic(
+                "missing_required_heading",
+                "error",
+                "Missing required incremental delivery heading.",
+                tasks_rel,
+                None,
+                {"required_heading": "### Incremental Delivery"},
+            )
+        )
+
+    delivery_order: list[str] = []
+    in_delivery = False
+    for line_no, line in enumerate(lines, start=1):
+        if is_plan_layers_delivery_heading(line):
+            in_delivery = True
+            continue
+        if in_delivery and line.startswith("### "):
+            in_delivery = False
+        if not in_delivery:
+            continue
+        delivery = re.match(r"^\s*[0-9]+\.\s+Complete\s+([^:]+):", line)
+        if delivery is None:
+            continue
+        increment_id = plan_layers_label_to_id(delivery.group(1))
+        if increment_id is None:
+            continue
+        if increment_id not in delivery_order:
+            delivery_order.append(increment_id)
+        if increment_id not in sections:
+            errors.append(
+                plan_layers_diagnostic(
+                    "unknown_increment",
+                    "error",
+                    f"Delivery order references unknown increment {increment_id}.",
+                    tasks_rel,
+                    line_no,
+                    {"increment_id": increment_id},
+                )
+            )
+    if not delivery_order:
+        delivery_order = list(section_order)
+
+    for increment_id in section_order:
+        section = sections[increment_id]
+        if section["task_ids"]:
+            continue
+        errors.append(
+            plan_layers_diagnostic(
+                "empty_increment",
+                "error",
+                f"Increment {increment_id} has no parseable tasks.",
+                tasks_rel,
+                section["line"],
+                {"increment_id": increment_id},
+            )
+        )
+
+    dependency_pattern = re.compile(r"^\s*-\s+\*\*([^*]+)\*\*:\s+Depends\s+on\s+(.+)$")
+    for line_no, line in enumerate(lines, start=1):
+        dependency = dependency_pattern.match(line)
+        if dependency is None:
+            continue
+        increment_id = plan_layers_label_to_id(dependency.group(1))
+        if increment_id is None:
+            continue
+        declared = dependency.group(2).strip()
+        if declared.endswith("."):
+            declared = declared[:-1]
+        if re.search(r"no\s+prerequisites|foundation\s+only", declared, re.IGNORECASE):
+            continue
+        found_dependencies: list[str] = []
+        if re.search(r"foundation", declared, re.IGNORECASE):
+            found_dependencies.append("foundation")
+        found_dependencies.extend(
+            f"us{match.group(2)}"
+            for match in re.finditer(r"(US|User\s+Story)\s*([1-9][0-9]*)", declared)
+        )
+        if re.search(r"polish", declared, re.IGNORECASE):
+            found_dependencies.append("polish")
+        declared_dependencies = dependencies.setdefault(increment_id, [])
+        for dependency_id in found_dependencies:
+            if dependency_id not in sections:
+                errors.append(
+                    plan_layers_diagnostic(
+                        "unknown_increment",
+                        "error",
+                        f"Dependency references unknown increment {dependency_id}.",
+                        tasks_rel,
+                        line_no,
+                        {"increment_id": dependency_id},
+                    )
+                )
+            if dependency_id not in declared_dependencies:
+                declared_dependencies.append(dependency_id)
+
+    known_order = [increment_id for increment_id in delivery_order if increment_id in sections]
+    known_order.extend(increment_id for increment_id in section_order if increment_id not in known_order)
+    known_positions = {increment_id: index for index, increment_id in enumerate(known_order)}
+
+    expected_order: list[str] = []
+    topo_visiting: set[str] = set()
+    topo_visited: set[str] = set()
+
+    def topo_visit(increment_id: str) -> None:
+        if increment_id in topo_visited or increment_id in topo_visiting:
+            return
+        topo_visiting.add(increment_id)
+        for dependency_id in dependencies.get(increment_id, []):
+            if dependency_id in sections:
+                topo_visit(dependency_id)
+        topo_visiting.remove(increment_id)
+        topo_visited.add(increment_id)
+        expected_order.append(increment_id)
+
+    for increment_id in known_order:
+        topo_visit(increment_id)
+
+    for increment_id in section_order:
+        for dependency_id in dependencies.get(increment_id, []):
+            if dependency_id not in sections:
+                continue
+            if known_positions[dependency_id] <= known_positions[increment_id]:
+                continue
+            errors.append(
+                plan_layers_diagnostic(
+                    "contradictory_increment_order",
+                    "error",
+                    f"Increment {increment_id} is ordered before dependency {dependency_id}.",
+                    tasks_rel,
+                    sections[increment_id]["line"],
+                    {"expected_order": list(expected_order), "observed_order": list(known_order)},
+                )
+            )
+            break
+
+    cycle_stack: list[str] = []
+    cycle_visiting: set[str] = set()
+    cycle_visited: set[str] = set()
+
+    def find_cycle_from(increment_id: str) -> list[str] | None:
+        if increment_id in cycle_visiting:
+            start = cycle_stack.index(increment_id)
+            return [*cycle_stack[start:], increment_id]
+        if increment_id in cycle_visited:
+            return None
+        cycle_visiting.add(increment_id)
+        cycle_stack.append(increment_id)
+        for dependency_id in dependencies.get(increment_id, []):
+            if dependency_id not in sections:
+                continue
+            cycle = find_cycle_from(dependency_id)
+            if cycle is not None:
+                return cycle
+        cycle_stack.pop()
+        cycle_visiting.remove(increment_id)
+        cycle_visited.add(increment_id)
+        return None
+
+    cycle: list[str] | None = None
+    for increment_id in known_order:
+        cycle_stack.clear()
+        cycle = find_cycle_from(increment_id)
+        if cycle is not None:
+            break
+    if cycle is not None:
+        errors.append(
+            plan_layers_diagnostic(
+                "dependency_cycle",
+                "error",
+                "Dependency graph contains a cycle.",
+                tasks_rel,
+                sections[cycle[0]]["line"],
+                {"cycle": cycle},
+            )
+        )
+
+    increments: list[dict[str, Any]] = []
+    for increment_id in known_order:
+        section = sections[increment_id]
+        tasks = [task_records[task_id] for task_id in section["task_ids"]]
+        all_files = [reference for task in tasks for reference in task["files"]]
+        all_tests = [reference for task in tasks for reference in task["tests"]]
+        files = sorted(set(all_files))
+        tests = sorted(set(all_tests))
+        depends_on = sorted(
+            {
+                dependency_id
+                for dependency_id in dependencies.get(increment_id, [])
+                if dependency_id in sections
+                and known_positions[dependency_id] < known_positions[increment_id]
+            }
+        )
+        increments.append(
+            {
+                "id": increment_id,
+                "name": section["name"],
+                "kind": section["kind"],
+                "order": len(increments),
+                "depends_on": depends_on,
+                "source": plan_layers_source(tasks_rel, section["line"], section["heading"]),
+                "tasks": tasks,
+                "files": files,
+                "tests": tests,
+                "advisory_size": {
+                    "task_count": len(tasks),
+                    "file_reference_count": len(all_files),
+                    "distinct_file_count": len(files),
+                    "test_reference_count": len(all_tests),
+                    "distinct_test_count": len(tests),
+                },
+            }
+        )
+
+    task_count = sum(len(increment["tasks"]) for increment in increments)
+    error_count = len(errors)
+    status = "invalid_plan" if error_count else "ok"
+    message = (
+        f"Layer plan invalid: {error_count} error(s)."
+        if error_count
+        else f"Planned {len(increments)} increment(s) with {task_count} task(s)."
+    )
     obj = {
         "tool": "plan-layers",
         "contract_version": 1,
-        "status": "ok",
+        "status": status,
         "feature_dir": feature_rel,
         "tasks_file": tasks_rel,
-        "increments": [increment],
+        "increments": increments,
         "warnings": warnings,
-        "errors": [],
+        "errors": errors,
         "summary": {
-            "increment_count": 1,
-            "task_count": len(tasks),
+            "increment_count": len(increments),
+            "task_count": task_count,
             "warning_count": len(warnings),
-            "error_count": 0,
-            "message": f"Planned 1 increment(s) with {len(tasks)} task(s).",
+            "error_count": error_count,
+            "message": message,
         },
     }
-    return json_text(obj), len(warnings)
+    return json_text(obj), len(warnings), error_count
 
 
-def parse_task_line(line: str, line_no: int, tasks_rel: str, repo_root: Path) -> dict[str, Any] | None:
+def plan_layers_section(title: str, line_no: int, heading: str) -> dict[str, Any] | None:
+    lower = title.lower()
+    if re.match(r"^foundation(?:\s.*)?$", lower):
+        return {
+            "id": "foundation",
+            "name": "Foundation",
+            "kind": "foundation",
+            "line": line_no,
+            "heading": heading,
+            "mode": "foundation_canonical",
+            "task_ids": [],
+        }
+    if re.match(r"^(?:setup|foundational)(?:\s.*)?$", lower):
+        return {
+            "id": "foundation",
+            "name": "Foundation",
+            "kind": "foundation",
+            "line": line_no,
+            "heading": heading,
+            "mode": "foundation_alias",
+            "task_ids": [],
+        }
+    story = re.match(r"^User\s+Story\s+([1-9][0-9]*)\s+-\s+(.+)$", title)
+    if story is not None:
+        story_number = story.group(1)
+        story_title = re.sub(r"\s+\((?:Priority|P):.*\)$", "", story.group(2)).strip()
+        return {
+            "id": f"us{story_number}",
+            "name": f"User Story {story_number} - {story_title}",
+            "kind": "story",
+            "line": line_no,
+            "heading": heading,
+            "mode": "canonical",
+            "task_ids": [],
+        }
+    if re.search(r"polish", title, re.IGNORECASE):
+        return {
+            "id": "polish",
+            "name": title,
+            "kind": "polish",
+            "line": line_no,
+            "heading": heading,
+            "mode": "canonical",
+            "task_ids": [],
+        }
+    return None
+
+
+def is_plan_layers_delivery_heading(line: str) -> bool:
+    return re.fullmatch(r"###\s+Incremental\s+Delivery", line, re.IGNORECASE) is not None
+
+
+def plan_layers_label_to_id(label: str) -> str | None:
+    cleaned = label.replace("`", "").replace("*", "").strip().replace("unknown", "").strip()
+    if re.match(r"^(?:foundation|foundational|setup)(?:\s.*)?$", cleaned.lower()):
+        return "foundation"
+    if re.search(r"polish", cleaned, re.IGNORECASE):
+        return "polish"
+    story = re.search(r"(?:US|User\s+Story)\s*([1-9][0-9]*)", cleaned)
+    return f"us{story.group(1)}" if story is not None else None
+
+
+def plan_layers_source(path: str, line: int | None, heading: str | None = None) -> dict[str, Any]:
+    source: dict[str, Any] = {"path": path, "line": line}
+    if heading is not None:
+        source["heading"] = heading
+    return source
+
+
+def plan_layers_diagnostic(
+    code: str,
+    severity: str,
+    message: str,
+    tasks_rel: str,
+    line_no: int | None,
+    details: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "code": code,
+        "severity": severity,
+        "message": message,
+        "source": plan_layers_source(tasks_rel, line_no),
+        "details": details,
+    }
+
+
+def parse_task_line(
+    line: str,
+    line_no: int,
+    tasks_rel: str,
+    repo_root: Path,
+    increment_id: str,
+    increment_kind: str,
+    task_sources: dict[str, dict[str, Any]],
+    warnings: list[dict[str, Any]],
+    errors: list[dict[str, Any]],
+) -> dict[str, Any] | None:
     match = re.match(r"^\s*-\s+\[([ xX])\]\s+(T[0-9]{3,})(.*)$", line)
-    if not match:
+    if match is None:
+        if re.match(r"^\s*-\s+\[[^]]+\]\s+T[0-9]{3,}", line):
+            errors.append(
+                plan_layers_diagnostic(
+                    "malformed_task",
+                    "error",
+                    "Task-like checkbox line uses unsupported syntax.",
+                    tasks_rel,
+                    line_no,
+                    {"line_text": line.strip()},
+                )
+            )
         return None
     marker, task_id, rest = match.groups()
-    rest = rest.strip()
+    rest = rest.lstrip()
     parallel = False
-    story = None
+    story: str | None = None
     while True:
         if rest.startswith("[P]"):
             parallel = True
-            rest = rest[3:].strip()
+            rest = rest[3:].lstrip()
             continue
         story_match = re.match(r"^\[US([1-9][0-9]*)\]\s*(.*)$", rest)
-        if story_match:
+        if story_match is not None:
             story = f"us{story_match.group(1)}"
             rest = story_match.group(2)
             continue
         break
-    files, tests = extract_refs(rest, repo_root)
+    if increment_kind == "story" and story is None:
+        story = increment_id
+
+    files, tests, reference_warnings = extract_refs(
+        rest,
+        task_id,
+        increment_id,
+        line_no,
+        tasks_rel,
+        repo_root,
+    )
+    warnings.extend(reference_warnings)
+    source = plan_layers_source(tasks_rel, line_no)
+    if task_id in task_sources:
+        errors.append(
+            plan_layers_diagnostic(
+                "duplicate_task_id",
+                "error",
+                f"Task ID {task_id} is duplicated.",
+                tasks_rel,
+                line_no,
+                {
+                    "task_id": task_id,
+                    "first_source": task_sources[task_id],
+                    "duplicate_source": source,
+                },
+            )
+        )
+    else:
+        task_sources[task_id] = source
     return {
         "id": task_id,
         "title": rest,
         "story": story,
-        "increment_id": "foundation",
+        "increment_id": increment_id,
         "status": "done" if marker in {"x", "X"} else "todo",
         "parallel": parallel,
-        "source": {"path": tasks_rel, "line": line_no},
+        "source": source,
         "files": files,
         "tests": tests,
     }
 
 
-def extract_refs(title: str, repo_root: Path) -> tuple[list[str], list[str]]:
+def extract_refs(
+    title: str,
+    task_id: str,
+    increment_id: str,
+    line_no: int,
+    tasks_rel: str,
+    repo_root: Path,
+) -> tuple[list[str], list[str], list[dict[str, Any]]]:
     files: list[str] = []
     tests: list[str] = []
+    warnings: list[dict[str, Any]] = []
     for word in title.split():
         token = clean_token(word)
         if not re.search(r"^(\./|\.\./|/|[A-Za-z0-9_.-]+/)", token) or not re.search(r"\.[A-Za-z0-9]+$", token):
             continue
-        normalized = normalize_reference(token, repo_root)
-        kind = "test" if normalized.startswith("tests/") or "/tests/" in normalized or re.search(r"(^|/)test-[^/]+\.sh$", normalized) else "file"
-        if kind == "test":
-            if normalized not in tests:
-                tests.append(normalized)
-        elif normalized not in files:
-            files.append(normalized)
-    return files, tests
+        normalized, inside_root = normalize_reference_info(token, repo_root)
+        comparable = normalized.removeprefix("./")
+        kind = (
+            "test"
+            if comparable.startswith("tests/")
+            or "/tests/" in comparable
+            or re.search(r"(^|/)test-[^/]+\.sh$", comparable)
+            else "file"
+        )
+        if not inside_root:
+            warnings.append(
+                plan_layers_diagnostic(
+                    "reference_not_found",
+                    "warning",
+                    f"{kind} reference is outside the worktree: {token}",
+                    tasks_rel,
+                    line_no,
+                    {"kind": kind, "reference": token, "task_id": task_id},
+                )
+            )
+            continue
+        if not (repo_root / normalized).exists():
+            warnings.append(
+                plan_layers_diagnostic(
+                    "reference_not_found",
+                    "warning",
+                    f"{kind} reference not found: {normalized}",
+                    tasks_rel,
+                    line_no,
+                    {"kind": kind, "reference": normalized, "task_id": task_id},
+                )
+            )
+        target = tests if kind == "test" else files
+        if normalized not in target:
+            target.append(normalized)
+    if not files and not tests:
+        warnings.append(
+            plan_layers_diagnostic(
+                "task_without_references",
+                "warning",
+                f"Task {task_id} has no file or test references.",
+                tasks_rel,
+                line_no,
+                {"task_id": task_id, "increment_id": increment_id},
+            )
+        )
+    return sorted(files), sorted(tests), warnings
 
 
 def clean_token(token: str) -> str:
     token = token.replace("`", "")
-    for char in ('"', "'", "(", ")", "[", "]", "<", ">", ",", ";", ":", "."):
-        token = token.strip(char)
+    for prefix, suffix in (("\"", "\""), ("'", "'"), ("(", ")"), ("[", "]"), ("<", ">")):
+        if token.startswith(prefix):
+            token = token[len(prefix):]
+        if token.endswith(suffix):
+            token = token[:-len(suffix)]
+    for suffix in (",", ";", ":", "."):
+        if token.endswith(suffix):
+            token = token[:-1]
     return token
 
 
-def normalize_reference(raw: str, repo_root: Path) -> str:
+def normalize_reference_info(raw: str, repo_root: Path) -> tuple[str, bool]:
     if not raw.startswith("/") and ".." not in raw and "/./" not in raw:
-        return raw.removeprefix("./")
+        return raw.removeprefix("./"), True
     path = Path(raw)
     if not path.is_absolute():
         path = repo_root / path
     try:
-        return path.resolve(strict=False).relative_to(repo_root).as_posix()
+        return path.resolve(strict=False).relative_to(repo_root.resolve(strict=False)).as_posix(), True
     except ValueError:
-        return raw
+        return raw, False
 
 
-def output_capture(raw: bytes | str) -> dict[str, Any]:
+def normalize_reference(raw: str, repo_root: Path) -> str:
+    return normalize_reference_info(raw, repo_root)[0]
+
+
+def output_capture(raw: bytes | str, limit_bytes: int = CAPTURE_LIMIT_BYTES) -> dict[str, Any]:
     raw_bytes = raw.encode("utf-8", errors="replace") if isinstance(raw, str) else raw
-    truncated = len(raw_bytes) > CAPTURE_LIMIT_BYTES
-    bounded = raw_bytes[:CAPTURE_LIMIT_BYTES]
+    truncated = len(raw_bytes) > limit_bytes
+    bounded = raw_bytes[:limit_bytes]
     return {
         "text": bounded.decode("utf-8", errors="replace"),
         "byte_count": len(raw_bytes),
-        "limit_bytes": CAPTURE_LIMIT_BYTES,
+        "limit_bytes": limit_bytes,
         "truncated": truncated,
     }
 

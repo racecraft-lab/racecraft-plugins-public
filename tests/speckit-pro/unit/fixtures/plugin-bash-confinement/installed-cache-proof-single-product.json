@@ -7,7 +7,7 @@
       "surface": "claude_payload_fixture",
       "installed_root": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro",
       "source_payload_root": "dist/claude/speckit-pro",
-      "source_payload_tree_hash": "a1b68814556c627301e7184340669e54d81d55205b81f5a9c0d7e4bc24d91631",
+      "source_payload_tree_hash": "0ecfc9529979c5f486b194f1cb092571bdb2474ecfedd53bdfeef64ab21ea51f",
       "source_derived": true,
       "mutable_user_cache": false,
       "script_file_count": 0,

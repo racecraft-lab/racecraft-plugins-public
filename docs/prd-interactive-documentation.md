@@ -201,7 +201,7 @@ Users can install and use `speckit-pro`, but the current documentation makes the
 - **Required behavior:** Provide contributor docs for source edits, payload rebuilds, both marketplace files, version sync, tests, release-please, PR title/body expectations, and release readiness.
 - **Acceptance criteria:**
   - **AC-9.1:** The workflow lists required checks for docs-only, plugin source, dist payload, marketplace, and release automation changes.
-  - **AC-9.2:** The docs explain `python3 scripts/build-plugin-payloads.py`, `bash scripts/sync-marketplace-versions.sh`, and `bash tests/speckit-pro/run-all.sh`.
+  - **AC-9.2:** The docs explain `python3 scripts/build-plugin-payloads.py`, `python3 scripts/sync-marketplace-versions.py`, and `python3 tests/speckit-pro/run-all.py`.
   - **AC-9.3:** The docs state which changes should or should not manually edit version fields.
   - **AC-9.4:** The release checklist covers source/dist parity, Claude/Codex marketplace parity, manifest version consistency, and generated payload validation.
   - **AC-9.5:** Contributor docs include Conventional Commit and public-readable PR title/body expectations.

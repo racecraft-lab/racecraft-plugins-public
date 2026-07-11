@@ -17,9 +17,13 @@ from unittest.mock import patch
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
+GENERIC_CAPTURE_LIMIT_BYTES = 16 * 1024
+PLAN_LAYERS_CAPTURE_LIMIT_BYTES = 256 * 1024
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "read-only-helpers"
+PLAN_LAYERS_FIXTURE_DIR = "tests/speckit-pro/unit/fixtures/plan-layers"
 FEATURE_DIR = "tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature"
 ARCHIVED_FEATURE_DIR = "specs/xplat-005-read-only-helper-port"
+XPLAT_010_FEATURE_DIR = "specs/xplat-010-repository-bash-confinement"
 WORKFLOW_FILE = "docs/ai/specs/.process/XPLAT-005-workflow.md"
 
 if str(PLUGIN_ROOT) not in sys.path:
@@ -168,6 +172,23 @@ class ReadOnlyHelperTests(unittest.TestCase):
             expected_json,
             f"FAIL detail: {helper_id} JSON stdout mismatch: actual_json={actual_json!r}; expected_json={expected_json!r}; actual={actual!r}; expected={expected!r}",
         )
+
+    def run_plan_layers(
+        self,
+        feature_dir: str,
+    ) -> tuple[subprocess.CompletedProcess[str], dict[str, object], dict[str, object]]:
+        completed, response, stderr_records = run_runner(
+            helper_request("plan-layers-feature-dir", {"feature_dir": feature_dir})
+        )
+        self.assertEqual(completed.returncode, response["exit_code"])
+        self.assertEqual(
+            [diag["code"] for diag in stderr_records],
+            [diag["code"] for diag in response["diagnostics"]],
+        )
+        planner = response["data"]["stdout_json"]
+        self.assertEqual(planner["tool"], "plan-layers")
+        self.assertEqual(planner["contract_version"], 1)
+        return completed, response, planner
 
     def test_registry_dispatch_lists_only_read_only_helpers(self) -> None:
         if self.helper_filter and self.helper_filter != "helper-registry-dispatch":
@@ -824,6 +845,79 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     {"gate": gate, "feature_dir": FEATURE_DIR},
                 )
 
+    def test_plan_layers_valid_real_preserves_legacy_increment_contract(self) -> None:
+        if self.helper_filter and self.helper_filter != "plan-layers-feature-dir":
+            self.skipTest("plan-layers valid fixture case")
+        completed, response, planner = self.run_plan_layers(f"{PLAN_LAYERS_FIXTURE_DIR}/valid-real")
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok", 0)
+        self.assertEqual(planner["status"], "ok")
+        self.assertEqual(planner["summary"]["increment_count"], 4)
+        self.assertEqual(planner["summary"]["task_count"], 8)
+        increments = planner["increments"]
+        self.assertEqual([increment["id"] for increment in increments], ["foundation", "us1", "us2", "polish"])
+        self.assertEqual([increment["order"] for increment in increments], [0, 1, 2, 3])
+        self.assertEqual(
+            [increment["depends_on"] for increment in increments],
+            [[], ["foundation"], ["us1"], ["us2"]],
+        )
+        tasks = {task["id"]: task for increment in increments for task in increment["tasks"]}
+        self.assertEqual(len(tasks), 8)
+        self.assertEqual(tasks["T003"]["status"], "done")
+        self.assertTrue(tasks["T004"]["parallel"])
+        self.assertEqual(tasks["T004"]["story"], "us1")
+        self.assertEqual(tasks["T004"]["increment_id"], "us1")
+
+    def test_plan_layers_dependency_cycle_is_invalid_plan(self) -> None:
+        if self.helper_filter and self.helper_filter != "plan-layers-feature-dir":
+            self.skipTest("plan-layers dependency-cycle case")
+        completed, response, planner = self.run_plan_layers(f"{PLAN_LAYERS_FIXTURE_DIR}/dependency-cycle")
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure", 1)
+        self.assertEqual(planner["status"], "invalid_plan")
+        cycle_errors = [error for error in planner["errors"] if error["code"] == "dependency_cycle"]
+        self.assertEqual(len(cycle_errors), 1)
+        self.assertEqual(cycle_errors[0]["details"]["cycle"], ["us1", "us2", "us3", "us1"])
+
+    def test_plan_layers_malformed_task_is_invalid_plan(self) -> None:
+        if self.helper_filter and self.helper_filter != "plan-layers-feature-dir":
+            self.skipTest("plan-layers malformed-task case")
+        completed, response, planner = self.run_plan_layers(f"{PLAN_LAYERS_FIXTURE_DIR}/malformed-task")
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure", 1)
+        self.assertEqual(planner["status"], "invalid_plan")
+        self.assertEqual(
+            {error["code"] for error in planner["errors"]},
+            {"duplicate_task_id", "duplicate_increment_id", "malformed_task"},
+        )
+
+    def test_plan_layers_xplat_010_dogfood_does_not_collapse_to_foundation(self) -> None:
+        if self.helper_filter and self.helper_filter != "plan-layers-feature-dir":
+            self.skipTest("plan-layers XPLAT-010 dogfood case")
+        completed, response, stderr_records = run_runner(
+            helper_request("plan-layers-feature-dir", {"feature_dir": XPLAT_010_FEATURE_DIR})
+        )
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok", 0)
+        self.assertEqual(stderr_records, [])
+        data = response["data"]
+        stdout = data["stdout"]
+        self.assertFalse(stdout["truncated"])
+        self.assertEqual(stdout["limit_bytes"], PLAN_LAYERS_CAPTURE_LIMIT_BYTES)
+        self.assertLessEqual(stdout["byte_count"], stdout["limit_bytes"])
+        self.assertIn("stdout_json", data)
+        planner = data["stdout_json"]
+        self.assertEqual(planner["status"], "ok")
+        self.assertEqual(planner["summary"]["increment_count"], 18)
+        self.assertEqual(planner["summary"]["task_count"], 136)
+        self.assertEqual(
+            [increment["id"] for increment in planner["increments"]],
+            ["foundation", "us1", "us16", *[f"us{number}" for number in range(2, 16)], "polish"],
+        )
+        self.assertEqual(planner["increments"][0]["depends_on"], [])
+        self.assertEqual(planner["increments"][1]["depends_on"], ["foundation"])
+        self.assertEqual(planner["increments"][2]["depends_on"], ["us1"])
+
     def test_helper_python_authoritative_records(self) -> None:
         for helper_id in self.filtered_helpers():
             if helper_id == "helper-registry-dispatch":
@@ -835,6 +929,13 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 self.assertEqual(data["argv"][-2:], ["-m", "speckit_pro_runner"])
                 self.assertEqual(data["python_operation"], helper_id)
                 self.assertEqual(data["authoritative_command"].split(" < ", 1)[0], "python -m speckit_pro_runner")
+                expected_stdout_limit = (
+                    PLAN_LAYERS_CAPTURE_LIMIT_BYTES
+                    if helper_id == "plan-layers-feature-dir"
+                    else GENERIC_CAPTURE_LIMIT_BYTES
+                )
+                self.assertEqual(data["stdout"]["limit_bytes"], expected_stdout_limit)
+                self.assertEqual(data["stderr"]["limit_bytes"], GENERIC_CAPTURE_LIMIT_BYTES)
                 self.assertEqual(completed.returncode, response["exit_code"])
                 self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
                 if data["exit_code"] == 0:

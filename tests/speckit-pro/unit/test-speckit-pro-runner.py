@@ -178,6 +178,25 @@ class RunnerFoundationTests(unittest.TestCase):
         self.assertIsInstance(response["diagnostics"], list)
         self.assertIsInstance(response["data"], dict)
 
+    def test_runner_subprocess_executables_are_statically_bash_free(self) -> None:
+        from speckit_pro_runner.gates.active_path_guard import repo_bash_python_findings
+
+        paths = [
+            PLUGIN_ROOT / "speckit_pro_runner" / "gates" / "suite.py",
+            PLUGIN_ROOT / "speckit_pro_runner" / "helpers" / "install.py",
+            PLUGIN_ROOT / "speckit_pro_runner" / "runtime.py",
+        ]
+        findings = [
+            (path.relative_to(REPO_ROOT).as_posix(), finding.line, finding.pattern)
+            for path in paths
+            for finding in repo_bash_python_findings(
+                path.relative_to(REPO_ROOT).as_posix(),
+                path.read_text(encoding="utf-8"),
+            )
+        ]
+
+        self.assertEqual(findings, [])
+
     def test_runtime_info_reports_source_checkout_identity(self) -> None:
         completed, response, stderr_records = run_runner(base_request("runtime-info"))
         self.assertEqual(completed.returncode, 0)

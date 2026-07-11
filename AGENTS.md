@@ -14,36 +14,63 @@ Inside `speckit-pro/`:
 - `skills/` contains skill folders such as `speckit-autopilot/` and `speckit-coach/`, each with a `SKILL.md` entry point plus optional `references/` and `scripts/`.
 - `agents/` contains sub-agent definitions.
 - `hooks/` contains plugin hook configuration.
-- `tests/` contains the 5-layer shell test suite.
+- `speckit_pro_runner/` contains the Python 3.11+ installed runtime and gates.
+
+Repository-only validation lives under `tests/speckit-pro/`, outside the shipped
+plugin. `tests/speckit-pro/suite-manifest.json` is the source of truth for layer
+membership, dispatch, execution mode, and default selection.
 
 ## Build, Test, and Development Commands
 
-There is no compiled build step. Work is validated through the Python test suite and repository structure checks.
+There is no compiled build step. Work is validated through Python 3.11+
+standard-library tooling and repository structure checks. Run commands from the
+repository root.
 
-- `python3 tests/speckit-pro/run-all.py` runs the default deterministic layers: 1, 4, and 5.
+- `python3 tests/speckit-pro/run-all.py` runs the toolchain preflight and default deterministic Layers 1, 4, and 5.
 - `python3 tests/speckit-pro/run-all.py --layer 1` runs structural validation only.
-- `python3 tests/speckit-pro/run-all.py --layer 4` runs unit and contract tests.
-- `python3 tests/speckit-pro/run-all.py --all` includes AI-eval layers when prerequisites are installed.
+- `python3 tests/speckit-pro/run-all.py --layer 4` runs the `Unit Tests` layer under `tests/speckit-pro/unit/`.
+- `python3 tests/speckit-pro/run-all.py --integration` runs Layer 7 replay fixtures; add `--live` only for an intentional live integration run.
+- `python3 tests/speckit-pro/check-toolchain.py --mode tests` prints the direct test-toolchain report; `docs` and `all` modes cover docs tooling.
+
+`--all` implies live mode: it executes Layers 1, 4, 5, and live Layer 7,
+prints manual command plans for live-only Layers 2, 3, and 6, and does not select
+gate-only Layer 8. Do not describe it as the full deterministic suite.
 
 For marketplace updates, commit and push changes, then refresh the marketplace in Claude Code with `/plugin marketplace update racecraft-plugins-public`.
 
 ## Coding Style & Naming Conventions
 
-Use Python and Markdown consistently with the existing codebase: 2-space indentation in Markdown lists/tables where needed, and Python entrypoints starting with `#!/usr/bin/env python3`.
+Use Python and Markdown consistently with the existing codebase: Python 3.11+
+standard library, `#!/usr/bin/env python3` for executable Python files, argument
+arrays and `shell=False` for subprocesses, and 2-space indentation in Markdown
+lists/tables where needed. Repository-local Bash is confined to bounded workflow
+dispatch glue and the fixed vendored `.specify/**` allowlist; do not introduce a
+new Bash or `jq` runtime dependency.
 
 Name plugins and skill directories in kebab-case, for example `speckit-autopilot`. Keep command filenames aligned with command names, for example `commands/autopilot.md`. Command docs must start and end frontmatter with `---` and include `description:` and `allowed-tools:`.
 
 ## Testing Guidelines
 
-Tests are shell-based. Structural tests verify manifests, command frontmatter, hooks, skills, and agents. Script tests cover helper scripts such as `skills/.../scripts/validate-gate.sh`.
+The suite is manifest-driven and Python-authoritative. Layer 1 verifies
+manifests, command frontmatter, hooks, skills, agents, payloads, and workflow
+contracts. The `Unit Tests` layer uses `tests/speckit-pro/unit/` for repository
+helpers and runner behavior; Layer 5 verifies agent tool scoping.
 
-Add or update tests when changing command schemas, hook config, skill layout, or script behavior. Prefer the smallest relevant layer during development, then rerun `bash tests/speckit-pro/run-all.sh` before opening a PR.
+Add or update tests when changing command schemas, hook config, skill layout, or
+helper behavior. Prefer the smallest relevant layer during development, then
+rerun `python3 tests/speckit-pro/run-all.py` before opening a PR.
 
 ## Commit & Pull Request Guidelines
 
 Follow the repo’s existing Conventional Commit pattern: `feat(skills): ...`, `fix(agents): ...`, `chore(evals): ...`. Keep scopes specific to the area changed.
 
 PRs should include a brief summary, affected plugin paths, test commands run, and sample output or screenshots when user-facing command behavior changes.
+
+Use the repository PR template. `feat` and `fix` PRs require exactly one
+non-empty fenced `release-note` block unless `release-note/skip` applies. The
+Release workflow refreshes generated release artifacts on the release PR branch;
+do not hand-edit generated payloads, installed-cache proofs, or generated
+reference pages.
 
 ## Recent SpecKit Archive Notes
 

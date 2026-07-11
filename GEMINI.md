@@ -1,6 +1,6 @@
 # Racecraft Plugins Public Development Guidelines
 
-Auto-generated from feature plans on archival. Last updated: 2026-06-17
+Auto-generated from feature plans on archival. Last updated: 2026-07-10
 
 ## Active Technologies
 - Docs-site JavaScript ESM on Node; Astro 6.4.6 and Starlight 0.40.0 for docs rendering; Node built-ins (`node:fs`, `node:path`, `node:url`) plus existing docs-site pnpm scripts and `starlight-links-validator`; no new runtime dependency planned. (doc-007-command-workflow-manifest-and-file-layout-reference)

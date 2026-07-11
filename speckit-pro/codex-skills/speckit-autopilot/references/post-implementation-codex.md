@@ -11,6 +11,7 @@ and continue with the first incomplete Post item.
 ## Contents
 
 - [Canonical Post Items (10-19)](#canonical-post-items-10-19) — full numbered table with runtime + command per row
+- [Combined Durable Plan](#combined-durable-plan) — four supporting rows that remain visible beside the numbered gates
 - [How Extension Commands Become Available](#how-extension-commands-become-available) — `$speckit-*` installation via `specify extension add`
 - [Parallel Group (Items 10-14)](#parallel-group-items-10-14) — Codex always uses parallel `spawn_agent` (no Agent Teams primitive)
 - [Rules](#rules) — extension dispatch, parent-session ownership, PR body, missing-extension behavior
@@ -35,13 +36,32 @@ in order; do not collapse or defer.
 | 18 | Review Remediation | (none) | parent session loop — inspect PR feedback, dispatch fixes as needed |
 | 19 | Retrospective | retrospective ext | `$speckit-retrospective-analyze` (FINAL STEP) |
 
+## Combined Durable Plan
+
+The numbered 10-19 gates and the supporting task-list rows are both
+authoritative. Codex materializes **14 distinct Post rows** in `update_plan` and
+`autopilot-state.json`: every numbered gate above, plus these four supporting
+evidence steps:
+
+```text
+Post: Reviewability Diff Gate
+Post: Self-Review
+Post: UAT Runbook Generation
+Post: PR Body Generation
+```
+
+The diff gate, self-review, and UAT rows feed numbered Post 15; the body row
+feeds numbered Post 16. Never delete the supporting rows because the numbered
+table groups their ownership, and never delete `Final Reviewability Backstop`
+or `PR Packet/Body Generation` because the supporting rows expose their work.
+
 Extension items (10 Doctor, 11 Verify, 12 Verify-Tasks, 19
 Retrospective): Spawn `phase-executor` with instructions to run the
 `$speckit-*` extension skill for SPEC-XXX and return a summary.
 Code Review (13) is built-in — no extension; it runs as the
 parallel-group Track B subagent (see below), reviewing the diff and
 reporting findings by severity.
-Non-extension items 15, 16, 17, 18: execute directly in the parent
+Non-extension items 15, 16, 17, 18 and all four supporting rows: execute directly in the parent
 session. (Item 14 Integration Suite is also non-extension but runs in
 the parallel group's Track C verify-chain subagent — see below — not the
 parent session.)

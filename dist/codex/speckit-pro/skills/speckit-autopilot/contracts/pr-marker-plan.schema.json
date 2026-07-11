@@ -116,7 +116,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "pattern": "^(foundation|us[0-9]+(-part[0-9]+)?|full-spec)$"
+          "pattern": "^(foundation|us[0-9]+(-part[0-9]+)?|full-spec|polish)$"
         },
         "review_order": {
           "type": "integer",
@@ -127,7 +127,8 @@
             "foundation",
             "user_story",
             "user_story_part",
-            "full_spec"
+            "full_spec",
+            "polish"
           ]
         },
         "parent_marker_id": {

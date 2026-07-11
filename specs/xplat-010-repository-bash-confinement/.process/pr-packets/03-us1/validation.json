@@ -1,0 +1,46 @@
+{
+  "body_file": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/03-us1/body.md",
+  "error_class": "none",
+  "exit_code": 0,
+  "failures": [],
+  "mode": "split",
+  "packet_id": "03-us1",
+  "pr_blocked": false,
+  "remediation_evidence": [],
+  "rule_outcomes": [
+    {
+      "evidence": "exact adjacent base",
+      "rule": "topology.linear",
+      "status": "passed"
+    },
+    {
+      "evidence": "zero merges",
+      "rule": "commits.no_merges",
+      "status": "passed"
+    },
+    {
+      "evidence": "Git object diff",
+      "rule": "diff.actual",
+      "status": "passed"
+    },
+    {
+      "evidence": "claims match diff",
+      "rule": "body.numeric_claims",
+      "status": "passed"
+    },
+    {
+      "evidence": "exact adjacent-diff inventory with final-path coverage",
+      "rule": "packets.exact_union",
+      "status": "passed"
+    }
+  ],
+  "schema_version": "1.0.0",
+  "status": "passed",
+  "stderr_line": "",
+  "target": {
+    "base_branch": "xplat-010-review/02-us14",
+    "head_branch": "xplat-010-review/03-us1"
+  },
+  "timestamp": "2026-07-11T05:40:56Z",
+  "title_value": "feat(xplat-010): replace Bash suite orchestration with Python"
+}

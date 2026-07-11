@@ -2,38 +2,47 @@
 
 ## What This Repository Is
 
-A **Claude Code plugin marketplace**. Plugins are installed by end-users via:
+A **Claude Code and Codex plugin marketplace**. Claude Code plugins are installed
+by end-users via:
 ```bash
 /plugin marketplace add racecraft-lab/racecraft-plugins-public
 /plugin install speckit-pro@racecraft-public-plugins
 ```
 
-There is no compiled build step. The repository is pure Bash + Markdown.
+There is no compiled build step. Repository tooling is Python 3.11+
+standard-library code; plugin content is primarily Markdown, JSON, and YAML, and
+the docs site uses Node and pnpm.
 
 ---
 
 ## Testing
 
-All tests are shell scripts. Run from the **`speckit-pro/` directory**:
+Run repository tests from the **repository root**. The layer roster and dispatch
+mode come from `tests/speckit-pro/suite-manifest.json`; do not maintain a second
+suite list in prose.
 
-```bash
-# Default: Layers 1, 4, 5 (fast, deterministic — run these during development)
-bash tests/run-all.sh
+```text
+# Default: toolchain preflight plus Layers 1, 4, and 5
+python3 tests/speckit-pro/run-all.py
 
 # Single layer (fastest during development)
-bash tests/run-all.sh --layer 1   # Structural: file existence, JSON, frontmatter
-bash tests/run-all.sh --layer 4   # Script unit tests (validate-gate, detect-commands, etc.)
-bash tests/run-all.sh --layer 5   # Agent tool scoping
+python3 tests/speckit-pro/run-all.py --layer 1   # Structural validation
+python3 tests/speckit-pro/run-all.py --layer 4   # Unit Tests (tests/speckit-pro/unit)
+python3 tests/speckit-pro/run-all.py --layer 5   # Agent tool scoping
 
-# Run a single layer-4 test directly
-bash tests/unit/test-validate-gate.sh
+# Layer 7 integration fixtures: replay by default, live only when requested
+python3 tests/speckit-pro/run-all.py --integration
+python3 tests/speckit-pro/run-all.py --integration --live
 
-# Layers 2 & 3 require skill-creator plugin + claude -p (slow, AI-based — run manually)
-bash tests/layer2-trigger/run-trigger-evals.sh speckit-coach
-bash tests/layer2-trigger/run-trigger-evals.sh speckit-autopilot
+# Direct toolchain report; use --mode docs or --mode all when relevant
+python3 tests/speckit-pro/check-toolchain.py --mode tests
 ```
 
-During development, prefer the smallest relevant layer (e.g., layer 4 when editing a script, layer 1 when adding a command file).
+`--all` is not a synonym for a larger deterministic gate. It implies live mode,
+executes Layers 1, 4, 5, and live Layer 7, prints manual command plans for
+live-only Layers 2, 3, and 6, and does not select gate-only Layer 8. During
+development, prefer the smallest relevant layer, then run the default suite
+before opening a PR.
 
 ---
 
@@ -44,19 +53,24 @@ Each plugin lives in a top-level directory with this structure:
 ```
 plugin-name/
 ├── .claude-plugin/plugin.json       ← Manifest (name, version, description, author)
+├── .codex-plugin/plugin.json        ← Codex manifest
 ├── commands/                        ← Slash commands (.md with YAML frontmatter)
 ├── agents/                          ← Sub-agent definitions (.md with YAML frontmatter)
 ├── hooks/hooks.json                 ← Event hooks (e.g., SessionStart)
+├── speckit_pro_runner/              ← Python 3.11+ installed runtime and gates
 ├── skills/
 │   └── skill-name/
 │       ├── SKILL.md                 ← Entry point (required)
 │       ├── references/              ← Supporting reference docs
-│       ├── scripts/                 ← Helper shell scripts
+│       ├── scripts/                 ← Python helper scripts
 │       └── templates/               ← Workflow/plan templates
-└── tests/                           ← 5-layer test suite
+└── codex-skills/                    ← Codex skill mirrors
 ```
 
-The marketplace registry lives at `.claude-plugin/marketplace.json` (root-level). **Adding a new plugin requires updating this file.**
+Repository-only validation lives under `tests/speckit-pro/`, outside the shipped
+plugin. The Claude marketplace registry lives at
+`.claude-plugin/marketplace.json`; adding a new plugin also requires the matching
+Codex marketplace entry under `.agents/plugins/marketplace.json`.
 
 ---
 
@@ -85,20 +99,23 @@ Every file in `agents/` must have YAML frontmatter with `name:`, `description:`,
 
 Every skill's `SKILL.md` must have frontmatter including `name:`, `description:`, and `user-invokable:`.
 
-### Shell Scripts
+### Python Scripts
 
-All scripts use:
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
+Repo-owned executable helpers use Python 3.11+ and the standard library:
+
+```python
+#!/usr/bin/env python3
 ```
 
-Scripts that are referenced by agents or hooks must be **executable** (`chmod +x`). Layer 1 validates this.
+Use argument arrays with `subprocess` and `shell=False`. Do not add a required
+Bash or `jq` dependency to repository tests, release tools, hooks, or shipped
+plugin runtime. Workflow YAML may retain bounded shell dispatch glue, and the
+tracked `.specify/**` shell files are a fixed vendored allowlist.
 
 ### Naming
 
 - Plugin/skill directories: `kebab-case`
-- Shell script variables: `snake_case`
+- Python modules and identifiers: `snake_case`
 - Conventional Commits for git messages: `feat(skills):`, `fix(agents):`, `chore(evals):`
 
 ---
@@ -139,9 +156,11 @@ Agents function without MCP tools — they degrade gracefully.
 
 ### Publishing Changes
 
-After committing and pushing:
-```bash
-git add . && git commit -m "feat(skills): ..." && git push
-# Then in Claude Code:
-/plugin marketplace update racecraft-public-plugins
-```
+Open a PR with a Conventional Commit title and public-readable body. A `feat` or
+`fix` PR must contain exactly one non-empty fenced `release-note` block unless
+the `release-note/skip` label applies. Do not hand-edit generated payloads,
+installed-cache proofs, or generated reference pages; run their Python
+generator or let the Release workflow synchronize them onto the release PR.
+
+After the release PR is merged and published, Claude Code consumers refresh with
+`/plugin marketplace update racecraft-plugins-public`.

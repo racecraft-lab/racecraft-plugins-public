@@ -91,7 +91,7 @@ runner. Run from the repository root:
 
 ```bash
 # Default deterministic suite gate
-PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json
+python3 tests/speckit-pro/run-all.py
 
 # Toolchain preflight
 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-toolchain-preflight.json
@@ -119,20 +119,20 @@ XPLAT-007.
 | 1 – Structural | File existence, JSON validity, frontmatter format | Fast |
 | 2 – Trigger | Skill trigger accuracy via eval harness | Slow (AI) |
 | 3 – Functional | End-to-end skill behavior evals | Slow (AI) |
-| 4 – Script unit | Shell script logic (validate-gate, detect-commands, etc.) | Fast |
+| 4 – Unit Tests | Python unit and contract tests for repository helpers, validators, and runner behavior | Fast |
 | 5 – Tool scoping | Agent tool list restrictions | Fast |
 | 6 – Efficiency | Agent model/effort cost-quality benchmarks | Slow (AI) |
 | 7 – Integration | Multi-agent dispatch graph (Class 1 dispatch / Class 2 return-format / Class 3 e2e). Replay mode is free; live mode runs `claude -p` and costs LLM tokens. | Fast (replay) / Slow (live) |
 
 Layer 2/3 evals require `skill-creator` plugin at `$SKILL_CREATOR_ROOT` (default: `~/.claude/plugins/marketplaces/claude-plugins-official/plugins/skill-creator/skills/skill-creator`). Layers 2, 3, and 6 all require `claude -p` and are developer-local only.
 
-Layer 6 evals use `tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.sh` and require `claude -p`.
+Layer 6 evals use `python3 tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.py` and require `claude -p`.
 
 Layer 7 fixtures live under `tests/speckit-pro/layer7-integration/`. Replay mode parses committed `transcript.jsonl` files (parser regression test); `--live` mode invokes `claude -p` and captures fresh transcripts (real routing test). See `tests/speckit-pro/layer7-integration/README.md` for fixture format and assertion philosophy.
 
 Layer 8 parity fixtures (`tests/speckit-pro/layer8-parity/`) verify Path A (Agent Teams) vs Path B (parallel-subagents fallback) produce equivalent outcomes. Run modes:
-- `bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run` — validates fixture structure only; free.
-- `bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --live --budget-usd 25` — invokes `claude -p` twice per fixture (once per env) with budget cap and runs tolerance comparison (`byte-identical`, `exact`, `tolerance-1`). `semantic-equivalent` tolerance currently skips with a warning (needs LLM judge in a follow-up). Cost: ~$10-30 per fixture pair.
+- `python3 tests/speckit-pro/layer8-parity/run-parity-fixtures.py --dry-run` — validates fixture structure only; free.
+- `python3 tests/speckit-pro/layer8-parity/run-parity-fixtures.py --live --budget-usd 25` — invokes `claude -p` twice per fixture (once per env) with budget cap and runs tolerance comparison (`byte-identical`, `exact`, `tolerance-1`). `semantic-equivalent` tolerance currently skips with a warning (needs LLM judge in a follow-up). Cost: ~$10-30 per fixture pair.
 
 ## speckit-pro Plugin
 
@@ -159,8 +159,8 @@ The SessionStart hook warns if `specify` is not found.
 ### Adding a Skill to speckit-pro
 
 1. Create `speckit-pro/skills/<skill-name>/SKILL.md` with YAML frontmatter (`name`, `description`, `license`). Add `references/` and `scripts/` only if needed.
-2. If the skill has a Codex counterpart, mirror it under `speckit-pro/codex-skills/<skill-name>/SKILL.md` and ensure `tests/speckit-pro/layer1-structural/validate-codex-skills.sh` still passes.
-3. Run `bash tests/speckit-pro/run-all.sh --layer 1` to confirm structural validation passes.
+2. If the skill has a Codex counterpart, mirror it under `speckit-pro/codex-skills/<skill-name>/SKILL.md` and ensure `python3 tests/speckit-pro/layer1-structural/validate-codex-skills.py` still passes.
+3. Run `python3 tests/speckit-pro/run-all.py --layer 1` to confirm structural validation passes.
 4. No `marketplace.json` or `release-please-config.json` edits are required for a new skill within an existing plugin — those files track plugins, not skills.
 5. Commit as `feat(speckit-pro): add <skill-name> skill` so release-please promotes it on the next release PR.
 

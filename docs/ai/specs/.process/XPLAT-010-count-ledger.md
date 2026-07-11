@@ -92,6 +92,24 @@ Columns:
 | PR 12a | consumer release-note policy contract | default | 0 → 30 | n/a | `tests/speckit-pro/parity/bash-to-python/test-release-note-policy-baseline.txt` |
 | PR 12b | consumer release-note composition contract | default | 0 → 46 | n/a | `tests/speckit-pro/parity/bash-to-python/test-compose-release-notes-baseline.txt` |
 | PR 12b | release-workflow validator expansion | default | 24 → 41 | n/a (new capture/composition contract) | `tests/speckit-pro/parity/bash-to-python/validate-release-workflow-baseline.txt` |
+| Polish | durable marker guidance contract expansion | default | 52 → 68 | n/a | `tests/speckit-pro/parity/bash-to-python/test-reviewability-marker-guidance-baseline.txt` |
+| Polish | mutation-helper marker-plan contract expansion | default | 17 → 18 | n/a | n/a |
+| Polish | read-only planner dogfood contract expansion | default | 38 → 42 | n/a | n/a |
+| Polish | runner subprocess-confinement contract expansion | default | 10 → 11 | n/a | n/a |
+| Polish | purpose-based unit/fixture layout contract expansion | default | 4 → 5 | n/a | n/a |
+| Polish | release-PR reconciliation contract expansion | default | 9 → 10 | n/a | n/a |
+| Polish | hosted Windows and container preflight helper contract expansion | default | 29 → 33 | n/a | n/a |
+| Polish | release-workflow validator audit-failure naming correction | default | 41 → 41 | no (intentional renames of checks 028 and 031; count preserved) | `tests/speckit-pro/parity/bash-to-python/validate-release-workflow-baseline.txt` |
+
+**Final closeout verification note:** On frozen implementation head
+`a7b2d27b12fdc5051dfa4829c94f92752e2f5146` (tree
+`a1c42735d35619bbd0a4a90a42c57ab9e578848e`), the neutral-PATH deterministic
+suite passed `2512/2512`: Layer 1 `1373/1373`, Layer 4 `953/953`, and Layer 5
+`186/186`. The hosted Windows helper passed `33/33`, the read-only helpers
+passed `42/42`, and the ARM64 exact pinned-container overlay with hydrated
+`tasks.md` passed `42/42`. This completes T133 and T135. T108 hosted
+observation and T117 branch-protection/release evidence remain separate factual
+post-merge/operator gaps.
 
 **PR 13 note (T121–T130):** The estimator Layer-4 test follows the
 Per-Port Protocol against historical predecessor commit

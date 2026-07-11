@@ -35,9 +35,9 @@ reviewable LOC 400, production files 6, total files 15, primary surfaces 2
 (`docs/process`, `harness/adapter`) against warn thresholds 400/6/15/1. The
 roadmap budget projects 400–800 reviewable LOC and 15–25 total files.
 
-**Split decision (accepted in design-concept Q9/Q10):** one spec delivered as a
-15-PR stack, each PR independently CI-green and sized to the 400–800
-reviewable-LOC budget:
+**Split decision (accepted in design-concept Q9/Q10):** the implementation plan
+started as 15 PRs, each intended to be independently CI-green and sized to the
+400–800 reviewable-LOC budget:
 
 1. Orphaned-test deletion + disposition ledger (deletion-only)
 2. Suite manifest + `run-all.py` orchestrator + manifest-reading suite gate
@@ -58,6 +58,14 @@ reviewable-LOC budget:
 
 Ordering constraints: 1 anytime; 2 before 3–10; 10 after 3–9; 11 last among
 confinement PRs; 12 and 13 independent (13 preferred early).
+
+**Emitted topology (current):** the review stack contains 18 no-gap PRs,
+#311 through #328. #311 targets `main`; each later PR targets its immediate
+predecessor. The count differs from the original implementation plan for three
+explicit reasons: Foundation and Polish are emitted aggregate review units, and
+the blocked 1,267-production-LOC release-notes slice was split into PR 12a and
+PR 12b without a waiver. PR 13 was emitted early as #313. The generated source
+of truth is `specs/xplat-010-repository-bash-confinement/.process/prs.json`.
 
 ---
 
@@ -99,9 +107,11 @@ a heavy phase orchestrator-direct.
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions total; 7 consensus items (6× Round 1, 1× Round 2 tie-break; 1 [security] all-3 operator-ratified); 12 Clarifications bullets in spec.md; G2 PASS (0 markers) |
 | Plan | `/speckit-plan` | ✅ Complete | 13 research decisions; 8 entities; 6 contracts; constitution 6/6; G3 PASS; advisory LOC estimator: pass (40 projected) |
 | Checklist | `/speckit-checklist` | ✅ Complete | 104 items / 21 gaps → 0 across 4 domains; G4 PASS; zero consensus escalations |
-| Tasks | `/speckit-tasks` | ✅ Complete | 136 tasks / 17 phases / 53 [P]; G5 PASS; route single-atomic-PR (advisory, superseded by ratified split); layer plan skipped; tasks-mode reviewability gate unavailable (defect logged) |
-| Analyze | `/speckit-analyze` | ✅ Complete | 7 findings (1 CRITICAL after consensus relabel, 4 MEDIUM, 2 LOW) all remediated; G6 PASS; canonical 13-slice/15-PR count; constitution amendment recorded as post-PR-10 follow-up |
-| Implement | `/speckit-implement` | 🔄 In Progress | G6.5 advisory PASS: composite 0.98 ≥ 0.9, proceed |
+| Tasks | `/speckit-tasks` | ✅ Complete | 136 tasks / 18 phases / 53 [P]; G5 PASS; route single-atomic-PR (advisory, superseded by ratified split); layer plan skipped; tasks-mode reviewability gate unavailable (defect logged) |
+| Analyze | `/speckit-analyze` | ✅ Complete | 7 findings (1 CRITICAL after consensus relabel, 4 MEDIUM, 2 LOW) all remediated; G6 PASS; historical 13-slice/15-PR implementation plan reconciled to the emitted 18-PR review topology; constitution amendment recorded as post-PR-10 follow-up |
+| Confidence Gate | G6.5 | ✅ Complete | Advisory composite confidence 0.98; implementation authorized |
+| Implement | `/speckit-implement` | 🔄 In Progress | All 18 PRs are open; local implementation and final suite/docs proof are complete; only hosted/operator T108/T117 remain open |
+| Post | Canonical 12-item closeout | ✅ Complete | All 12 Post items are hydrated with repository evidence; T108/T117 remain explicit post-merge/operator follow-ups rather than hidden closeout claims |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -117,6 +127,7 @@ Each phase requires **human review and approval** before proceeding:
 | G4 | After Checklist | All `[Gap]` markers addressed |
 | G5 | After Tasks | Task coverage verified, dependencies ordered |
 | G6 | After Analyze | No `CRITICAL` issues, `WARNING` items reviewed |
+| G6.5 | Before Implement | Composite confidence meets the autonomous implementation threshold |
 | G7 | After Each Implementation Phase | Tests pass, manual verification complete |
 
 ---
@@ -316,7 +327,7 @@ concept Q10; the speckit-pro v2.18.0 release body is the exemplar).
 | Acceptance Criteria | 20 Given/When/Then scenarios; 8 success criteria (SC-001–SC-008); 8 edge cases; 8 key entities |
 | Markers | 0 `[NEEDS CLARIFICATION]`; privacy scan clean (0 absolute paths) |
 | Gate G1 | PASS — runner validate-gate: `spec.md exists with 0 markers`; spec.md 24,605 bytes |
-| Reviewability budget | transition exception (canonical 13-slice/15-PR split, operator-ratified) |
+| Reviewability budget | transition exception (historical 13-slice/15-PR implementation plan; emitted 18-PR review topology, operator-ratified) |
 
 ### Files Generated
 
@@ -392,7 +403,9 @@ validate-release-note check + release-note/skip label semantics.
 | 7 | Clarify | S3-Q2: composer PR-discovery algorithm | [codebase, domain] | 1→2 | 2/3 | Compare-API commit-subject walk for discovery (body-regex provably lossy in-repo: PRs #210/#192 carry no `(#N)` in CHANGELOG); appendix stays verbatim body output; domain's fail-loud re-targeted at the compare/subject surface; FR-023 + Clarifications updated | codebase-analyst, domain-researcher (R1) + spec-context-analyst (R2 tie-breaker) |
 | 8 | Finding | Analyze D1: constitution amendment severity + timing | [spec] | 1 | high-confidence | Severity corrected HIGH→CRITICAL (rule is unconditional; intent-preservation selects the resolution path, not the label); out-of-stack timing RATIFIED with corrected facts (no automated consumer; staleness starts PR 2; roadmap-narrative tracking per the PR #299 follow-up pattern); plan.md/tasks.md/roadmap/workflow updated. Synthesizer step collapsed — the N=1 analyst supplied exact verified edits | spec-context-analyst |
 
-### Pre-Implement Confidence (Phase 6.5 emit, 2026-07-09)
+## Phase 6.5: Confidence Gate
+
+### Pre-Implement Confidence (emit, 2026-07-09)
 
 📊 Confidence: 0.98
 
@@ -439,9 +452,10 @@ window, and the unavailable tasks-mode gate (recorded fallback chain).
   it records the 11 accepted decisions (triage, suite architecture, count
   parity, hooks, live evals, CI triggers/gating, .specify allowlist, 15-PR
   split, release-notes mechanism and enforcement).
-- The 15-PR stack and its ordering constraints are fixed (see the Scope
-  Budget and Split Decision section of this workflow file). Plan tasks so
-  each PR is independently CI-green.
+- The historical 15-PR implementation order remains the design input. The
+  emitted review topology is the 18-PR #311–#328 stack recorded in the Scope
+  Budget section and `prs.json`; each adjacent PR must remain independently
+  reviewable and CI-green.
 - Shipped-runner changes (suite gate manifest read, confinement guard op) are
   confined to PRs 2, 7b, 8, 9, 10, and 13; each triggers the payload rebuild + proof-hash
   regeneration ritual and must regenerate release-readiness evidence LAST
@@ -501,7 +515,8 @@ Why: 8 success criteria spanning four subsystems (harness port, guard, CI prefli
 /speckit-checklist requirements
 
 Focus on Repository Bash Confinement and CI Dispatch Guard requirements:
-- Every "Done When" bullet maps to at least one FR and one PR in the 15-PR stack
+- Every "Done When" bullet maps to at least one FR and one emitted PR in the
+  final 18-PR topology (the checklist originally referenced the 15-PR plan)
 - Count-parity requirements are stated per layer, not just globally
 - Release-notes requirements cover authoring, enforcement, composition, and skip paths
 - Pay special attention to: the boundary between XPLAT-010 scope and XPLAT-008 UAT / XPLAT-009 completed work
@@ -606,7 +621,7 @@ When checklist identifies `[Gap]` items:
 | Metric | Value |
 |--------|-------|
 | **Total Tasks** | 136 (T001–T136, contiguous) |
-| **Phases** | 17 (Setup + 15 emitted PRs + Polish) |
+| **Phases** | 18 (Foundation + 16 implementation review units + Polish) |
 | **Parallel Opportunities** | 53 `[P]` tasks (primary fan-out: 20 mechanical L1 validator ports) |
 | **User Stories Covered** | US1–US7 all mapped (8/72/12/9/7/5/10 tasks respectively + 13 setup/cleanup/polish) |
 | **Gate G5** | PASS — runner-verified: 136 tasks found, 0 markers |
@@ -634,7 +649,7 @@ it; recording it now wires no PR creation or branch splitting on its own.
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | `single-atomic-PR` | Advisory classifier reading of the feature as ONE unit (mass `.sh` deletion = destructive migration). The operator-ratified typed 15-PR stack supersedes as the delivery model — implementation proceeds slice-by-slice, each PR independently CI-green. Tension recorded for Analyze. |
+| **Route** | `single-atomic-PR` | Advisory classifier reading of the feature as ONE unit (mass `.sh` deletion = destructive migration). The operator-ratified typed split supersedes as the delivery model; its historical 15 implementation PRs became the emitted 18-PR review topology after adding Foundation/Polish and splitting release-note contract from composition. Tension recorded for Analyze. |
 | **Releasable** | `false` | Destructive-migration releasability: CI-green ≠ releasable for the aggregate change; per-slice same-PR-swap discipline (FR-012) is the mitigating control. |
 | **Signals** | `hard-atomic:destructive-migration`, `change-shape:modify-heavy`, `releasability:destructive-migration` | Decisive detector findings. |
 | **Warnings** | "destructive migration: a passing CI run does not prove this change is releasable (CI-green ≠ releasable)" | Carried into the implementation context. |
@@ -755,32 +770,59 @@ Before starting any task:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| PR 1 — orphan deletion + ledger | T005–T007 | 3/3 | Complete |
-| PR 2 — suite manifest + run-all.py | T008–T017 | 10/10 | Complete |
-| PRs 3a/3b — L1 validator ports | T018–T039 | 22/22 | Complete |
-| PR 4 — MOC lints + codex validators | T040–T045 | 6/6 | Complete |
-| PR 5 — L5 + toolchain + CI dispatch swap | T046–T053 | 8/8 | Complete |
-| PR 6 — scripts + hooks ports | T054–T061 | 8/8 | Complete |
-| PRs 7a/7b — L7 replay harness | T062–T072 | 11/11 | Complete |
-| PR 8 — L8 parity | T073–T080 | 8/8 | Complete; `2197/2197` default, `88/88` docs smoke, shipped artifacts regenerated idempotently |
-| PR 9 — live-eval runners | T081–T087 | 7/7 | Complete; `2250/2250` default, `88/88` docs smoke, exact shell scan empty, shipped artifacts idempotent |
-| PR 10 — confinement guard + bash deletion | T088–T099 | 12/12 | Complete; `2300/2300` deterministic, `60/60` gate contract, `88/88` docs smoke, live guard `0` blockers + `10` vendored exclusions, shipped artifacts regenerated idempotently |
-| PR 11 — container/Windows preflight CI | T100–T108 | 7/9 | Local implementation and validators complete (`1356/1356` Layer 1, `49/49` sentinel, actionlint clean); T105 PR-body publication and T108 hosted trigger/artifact proof pending |
-| PR 12 — release-notes pipeline | | | |
-| PR 13 — spec-size estimator runner op | T121–T130 | 10/10 | Complete; landed early in stack order |
+| #311 Foundation / `00-process` | T001–T004 | 4/4 | Complete; design and process boundary emitted |
+| #312 PR 1 / `01-foundation` | T005–T007 | 3/3 | Complete; orphan deletion + disposition ledger |
+| #313 PR 13 / `02-us14` | T121–T130 | 10/10 | Complete; estimator restored early in stack order |
+| #314 PR 2 / `03-us1` | T008–T017 | 10/10 | Complete; suite manifest + `run-all.py` |
+| #315–#316 PRs 3a/3b / `04-us2`, `05-us3` | T018–T039 | 22/22 | Complete; Layer 1 validator ports |
+| #317 PR 4 / `06-us4` | T040–T045 | 6/6 | Complete; remaining structural checks |
+| #318 PR 5 / `07-us5` | T046–T053 | 8/8 | Complete; Layer 5, toolchain, and CI dispatch |
+| #319 PR 6 / `08-us6` | T054–T061 | 8/8 | Complete; repository helpers and hooks |
+| #320–#321 PRs 7a/7b / `09-us7`, `10-us7b` | T062–T072 | 11/11 | Complete; Layer 7 transcript and replay runners |
+| #322 PR 8 / `11-us8` | T073–T080 | 8/8 | Complete; Layer 8 parity harness |
+| #323 PR 9 / `12-us9` | T081–T087 | 7/7 | Complete; live-evaluation runners |
+| #324 PR 10 / `13-us10` | T088–T099 | 12/12 | Complete; live guard has 0 blockers and 10 release-excluded vendored findings |
+| #325 PR 11 / `14-us11` | T100–T108 | 8/9 | Local helper 33/33 and sentinel 49/49 pass; only T108 hosted/post-merge evidence remains open |
+| #326 PR 12a / `15-release-contract` | T109–T112 | 4/4 | Complete; release-note policy 30/30 and packet validation pass |
+| #327 PR 12b / `16-release-composition` | T113–T120 | 7/8 | Composer 46/46 and release workflow 41/41 pass; only T117 post-merge branch-protection evidence remains open |
+| #328 Polish / `17-polish` | T131–T136 | 6/6 | T131 parity, T132 focused quickstart, T133 neutral-PATH no-Bash proof, T134 packets, T135 final suite/docs, and T136 traceability complete |
+
+All 18 packet directories contain `body.md`, `packet.json`, and a passing
+`validation.json` for their exact adjacent diffs. The frozen implementation tip
+is `a7b2d27b12fdc5051dfa4829c94f92752e2f5146`, with tree
+`a1c42735d35619bbd0a4a90a42c57ab9e578848e`; publication metadata remains a
+separate bounded tail and must not be presented as an implementation boundary.
 
 ---
 
 ## Post-Implementation Checklist
 
+| Canonical Item | Status | Evidence |
+|----------------|--------|----------|
+| Post: Doctor Extension Check | Complete | Installed speckit-utils Doctor passed; optional PowerShell-directory and extensions.yml registry-lag warnings recorded |
+| Post: Verify Implementation | Complete | Current implementation paths and focused contracts reconciled to the emitted stack |
+| Post: Verify Tasks Phantom Check | Complete | Exact T001–T136 inventory; 134 complete and only T108/T117 remain open |
+| Post: Code Review | Complete | All 18 PRs were reviewed; the final GraphQL audit found zero unresolved review threads |
+| Post: Integration Suite | Complete | Final neutral-PATH deterministic suite passed 2512/2512: Layer 1 1373, Layer 4 953, Layer 5 186; final docs validation also passed |
+| Post: Reviewability Diff Gate | Complete | Final reviewability evidence validates the merge-free 18-slice topology and bounded publication tail |
+| Post: Self-Review | Complete | Done-when coverage, hosted boundaries, and closeout evidence were reconciled without suppressing T108/T117 |
+| Post: UAT Runbook Generation | Complete | Repository-relative seven-story runbook records local proof and hosted boundaries |
+| Post: PR Body Generation | Complete | 18/18 packet/body/validation triplets exist and validate at the generated stack tip |
+| Post: PR Creation | Complete | PRs #311-#328 are open, non-draft, linearly based, and mapped to all 18 canonical slices |
+| Post: Review Remediation | Complete | Actionable review and CI findings were repaired; publication-tail CI is the final remote confirmation |
+| Post: Retrospective | Complete | Final lessons and factual post-merge/operator gaps are recorded in `XPLAT-010-retrospective.md` |
+
+Legacy completion criteria below remain outcome checks; they do not replace the
+canonical Post state above.
+
 - [ ] All tasks marked complete in tasks.md
-- [ ] Full deterministic suite passes: `python3 tests/speckit-pro/run-all.py` headline equals the ledger-predicted total
-- [ ] Runner gates pass: toolchain preflight, default suite, active-path guard, repo-bash-confinement guard, payload evidence, install verification, release readiness
-- [ ] `git ls-files '*.sh'` returns only `.github/workflows/`-adjacent zero results plus allowlisted `.specify/**`
-- [ ] Docs validation passes: `pnpm --dir docs-site validate`
+- [x] Full deterministic suite passes: final neutral-PATH run passed 2512/2512 (Layer 1 1373, Layer 4 953, Layer 5 186)
+- [x] Runner gates pass: toolchain preflight, default suite, active-path guard, repo-bash-confinement guard, payload evidence, install verification, release readiness
+- [x] `git ls-files '*.sh'` returns only the exact allowlisted vendored `.specify/**` helpers
+- [x] Docs validation passes: final closeout validation passed
 - [ ] Container preflight + Windows smoke evidence artifacts recorded
 - [ ] Release-notes composer proven on a real release (first release after PR 12 merges shows Highlights)
-- [ ] PRs created and reviewed (15-PR stack, each independently green)
+- [ ] PRs created and reviewed (18-PR #311–#328 stack, each independently green)
 - [ ] Merged to main branch (humans merge; autopilot never merges)
 
 ---
@@ -789,15 +831,18 @@ Before starting any task:
 
 ### What Worked Well
 
--
+- Purpose-based test and fixture names made the final parity and no-gap audits reviewable without relying on buried spec history.
+- Frozen implementation packets plus a bounded metadata-only publication tail kept implementation claims stable while closeout evidence was hydrated.
 
 ### Challenges Encountered
 
--
+- Repeated upper-stack restacks exposed a Windows command-discovery defect and a clean-head Layer planner gap that local dirty-tree runs could mask.
+- Long container checks required exact-head CI snapshots so superseded runs were not mistaken for current failures.
 
 ### Patterns to Reuse
 
--
+- Reproduce hosted failures in the exact pinned image and preserve the failing assertion instead of adding platform-specific exceptions.
+- Verify source-to-candidate path coverage from commit objects, then publish only an allowlisted, merge-free closeout tail.
 
 ---
 
@@ -811,7 +856,7 @@ racecraft-plugins-public/
 ├── tests/speckit-pro/              # Repo-side harness (primary port surface; never shipped)
 │   ├── suite-manifest.json         # NEW: single source of truth per layer (PR 2)
 │   ├── run-all.py                  # NEW: developer orchestrator (PR 2)
-│   └── parity/xplat-010/           # NEW: committed VERBOSE baselines
+│   └── parity/bash-to-python/      # Frozen historical inventories for Python parity
 ├── scripts/                        # Helper ports (PR 6) + compose-release-notes.py (PR 12)
 ├── .claude/hooks/                  # Hook ports (PR 6)
 ├── .specify/                       # Vendored upstream (allowlisted, never ported)
