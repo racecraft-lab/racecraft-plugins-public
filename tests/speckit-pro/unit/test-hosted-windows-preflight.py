@@ -664,6 +664,49 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
         self.assertEqual(return_code, 1)
         runner_mock.assert_not_called()
 
+    def test_runner_request_scopes_safe_directory_to_child_process(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            repo_root = root / 'repo with "quotes"'
+            request_path = root / "request.json"
+            evidence_dir = root / "evidence"
+            request_path.write_text("{}\n", encoding="utf-8")
+            completed = SimpleNamespace(returncode=0)
+            environment = {"GIT_CONFIG_GLOBAL": str(root / "parent.config")}
+            with (
+                mock.patch.dict(os.environ, environment, clear=True),
+                mock.patch.object(dispatch_helper, "REPO_ROOT", repo_root),
+                mock.patch.object(
+                    dispatch_helper.subprocess,
+                    "run",
+                    return_value=completed,
+                ) as run_mock,
+            ):
+                return_code = dispatch_helper._run_runner_request(
+                    "repository-bash-confinement",
+                    request_path,
+                    evidence_dir,
+                    skip_toolchain=False,
+                )
+                child_env = run_mock.call_args.kwargs["env"]
+                git_config_path = Path(child_env["GIT_CONFIG_GLOBAL"])
+                git_config_text = git_config_path.read_text(encoding="utf-8")
+                parent_git_config = os.environ["GIT_CONFIG_GLOBAL"]
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(
+            git_config_path,
+            evidence_dir / "git-safe-directory.config",
+        )
+        self.assertEqual(
+            git_config_text,
+            "[safe]\n"
+            f"\tdirectory = {json.dumps(str(repo_root.resolve()), ensure_ascii=False)}\n",
+        )
+        self.assertEqual(parent_git_config, str(root / "parent.config"))
+        self.assertEqual(run_mock.call_args.kwargs["cwd"], repo_root)
+        self.assertFalse(run_mock.call_args.kwargs["shell"])
+
     def test_windows_interpreter_probes_are_ordered_and_select_active_native_python(self) -> None:
         commands: list[list[str]] = []
 

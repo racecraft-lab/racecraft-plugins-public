@@ -262,9 +262,16 @@ def _run_runner_request(
     skip_toolchain: bool,
 ) -> int:
     command = [sys.executable, "-m", "speckit_pro_runner"]
+    git_config_path = evidence_dir / "git-safe-directory.config"
+    _write_text(
+        git_config_path,
+        "[safe]\n"
+        f"\tdirectory = {json.dumps(str(REPO_ROOT.resolve()), ensure_ascii=False)}\n",
+    )
     child_env = os.environ.copy()
     child_env.update(
         {
+            "GIT_CONFIG_GLOBAL": str(git_config_path),
             "PYTHONDONTWRITEBYTECODE": "1",
             "PYTHONUTF8": "1",
             "PYTHONPATH": str(REPO_ROOT / "speckit-pro"),
