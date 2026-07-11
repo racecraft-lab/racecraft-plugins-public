@@ -1,0 +1,36 @@
+001 Claude reference routes split-PR post-impl through multi-pr-emission
+002 Claude reference consumes the PRSG-008 layer plan without new slicing heuristics
+003 Claude reference consumes the PRSG-008 layer plan without new slicing heuristics
+004 Claude reference records durable PRS rows and resume state
+005 Claude reference records durable PRS rows and resume state
+006 Claude reference blocks failed slices before PR creation
+007 Claude reference blocks failed slices before PR creation
+008 Claude reference requires reslicing continuation before final response
+009 Claude reference requires reslicing continuation before final response
+010 Claude reference documents explicit stack PR creation and restack
+011 Claude reference documents explicit stack PR creation and restack
+012 Claude reference keeps scoped CI as evidence, not workflow YAML changes
+013 Codex mirror carries equivalent multi-PR emission behavior
+014 Codex mirror carries equivalent multi-PR emission behavior
+015 Codex mirror carries equivalent multi-PR emission behavior
+016 Codex mirror carries equivalent multi-PR emission behavior
+017 Codex mirror carries equivalent multi-PR emission behavior
+018 Codex mirror carries equivalent multi-PR emission behavior
+019 Codex mirror carries equivalent multi-PR emission behavior
+020 Codex mirror carries equivalent multi-PR emission behavior
+021 Codex mirror carries equivalent multi-PR emission behavior
+022 Codex mirror carries equivalent multi-PR emission behavior
+023 Codex mirror carries equivalent multi-PR emission behavior
+024 Claude reference blocks skeleton-quality UAT before PR creation
+025 Claude reference blocks skeleton-quality UAT before PR creation
+026 Claude reference blocks skeleton-quality UAT before PR creation
+027 Codex reference blocks skeleton-quality UAT before PR creation
+028 Codex reference blocks skeleton-quality UAT before PR creation
+029 Codex reference blocks skeleton-quality UAT before PR creation
+030 Claude dist reference mirrors source
+031 Codex dist reference carries multi-PR contract
+032 Codex dist reference carries multi-PR contract
+033 Codex dist reference carries multi-PR contract
+034 Codex dist reference carries multi-PR contract
+035 Codex dist reference carries multi-PR contract
+TOTAL: 35

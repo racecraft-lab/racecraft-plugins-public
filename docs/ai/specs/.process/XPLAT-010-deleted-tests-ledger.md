@@ -1,7 +1,7 @@
 # XPLAT-010 — Deleted Orphan Test Disposition Ledger
 
 **Slice:** PR 1 (orphan-test deletion + disposition ledger). **Requirement:** FR-016.
-**Historical scope:** `tests/speckit-pro/layer4-scripts/*.sh` during the PR 1 deletion-only slice.
+**Historical scope:** `tests/speckit-pro/unit/*.sh` during the PR 1 deletion-only slice.
 **Current state:** Layer 4 is now manifest-backed Python (`tests/speckit-pro/suite-manifest.json`
 drives `tests/speckit-pro/run-layer-scripts.py`), so this ledger is historical evidence only.
 
@@ -30,7 +30,7 @@ wired into any CI workflow (only historical mentions in `docs/**` roadmaps and
 
 ## Deleted — orphan-target-deleted (31 files)
 
-Kind for every row below: `orphan-target-deleted`. Paths are under `tests/speckit-pro/layer4-scripts/`.
+Kind for every row below: `orphan-target-deleted`. Paths are under `tests/speckit-pro/unit/`.
 The "removed subject" path is under `speckit-pro/` and no longer exists.
 
 | # | deleted test | removed subject-under-test (XPLAT-009) |
@@ -90,15 +90,15 @@ Python dispatch landed; no active Layer-4 `.sh` wrappers remain in the current r
 ### Active-port-later (12 files, not candidates)
 
 Referenced in the historical Layer-4 roster and ported in their own layer PRs, so never deletion
-candidates: `test-check-toolchain.sh`, `test-eval-runner-skill-selection.sh`, `test-l6-codex-runner.sh`,
-`test-l8-extractors.sh`, `test-l8-judge.sh`, `test-moc-lint-exit-codes.sh`,
+candidates: `test-check-toolchain.sh`, `test-eval-runner-skill-selection.sh`, `test-efficiency-codex-runner.sh`,
+`test-parity-extractors.sh`, `test-parity-judge.sh`, `test-moc-lint-exit-codes.sh`,
 `test-post-implementation-reference.sh`, `test-privacy-scan.sh`, `test-refresh-local-plugin.sh`,
 `test-reviewability-marker-guidance.sh`, `test-sync-marketplace-versions.sh`, `test-transcript-helpers.sh`.
 Those subjects are now part of the current Python-only Layer-4 roster.
 
 ## Count reconciliation (authoritative total: 31 true orphans + 2 wrappers = 33)
 
-At PR 1, `tests/speckit-pro/layer4-scripts/` held 46 `.sh` files. Its disposition
+At PR 1, `tests/speckit-pro/unit/` held 46 `.sh` files. Its disposition
 was **31 deleted** and **15 retained** (12 active-port-later, 1 PR-13 carve-out,
 and 2 redundant wrappers).
 

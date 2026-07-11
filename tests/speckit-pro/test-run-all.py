@@ -5,8 +5,8 @@ Exercises the manifest-driven flag/scope/headline/exit-code contract that
 reproduces run-all.sh 1:1 (research §D5): argument parsing (including unknown
 flags -> exit 2), per-layer scope selection from suite-manifest.json, the
 summary-line parser, the ``speckit-pro test suite: X/Y passed`` headline
-formatting, and the child-outcome disposition taxonomy (crash vs no-summary
-pass vs Bash-absent transitional skip).
+formatting, and the child-outcome disposition taxonomy (crash, failed exit,
+missing child, and no-summary pass).
 
 The hyphenated ``run-all.py`` is loaded via importlib. Prints the house
 ``test-run-all: {passed}/{total} passed`` summary.
@@ -21,6 +21,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
@@ -84,12 +85,18 @@ class ScopeSelectionTests(unittest.TestCase):
             if layer["id"] != "toolchain" and run_all.layer_should_run(layer, config)
         }
 
+    def _ordered_runs(self, config):
+        return [layer["id"] for layer in run_all.execution_layers(self.manifest) if run_all.layer_should_run(layer, config)]
+
     def test_default_runs_only_1_4_5(self) -> None:
         self.assertEqual(self._runs(run_all.parse_args([])), {"1", "4", "5"})
 
+    def test_live_preserves_default_1_4_5_scope(self) -> None:
+        self.assertEqual(self._ordered_runs(run_all.parse_args(["--live"])), ["1", "4", "5"])
+
     def test_all_runs_every_runner_block_but_not_layer_8(self) -> None:
-        runs = self._runs(run_all.parse_args(["--all"]))
-        self.assertEqual(runs, {"1", "2", "3", "4", "5", "6", "7"})
+        runs = self._ordered_runs(run_all.parse_args(["--all"]))
+        self.assertEqual(runs, ["1", "2", "3", "4", "5", "6", "7"])
         self.assertNotIn("8", runs)
 
     def test_layer_selection_is_exact(self) -> None:
@@ -102,6 +109,18 @@ class ScopeSelectionTests(unittest.TestCase):
         self.assertTrue(run_all.toolchain_should_run(self.manifest, run_all.parse_args([])))
         self.assertTrue(run_all.toolchain_should_run(self.manifest, run_all.parse_args(["--integration"])))
         self.assertFalse(run_all.toolchain_should_run(self.manifest, run_all.parse_args(["--layer", "2"])))
+
+    def test_live_eval_layers_print_python_command_plans(self) -> None:
+        for layer_id in ("2", "3", "6"):
+            with self.subTest(msg=f"Layer {layer_id} uses Python command plans"):
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    run_all.print_layer_commands(self.by_id[layer_id], REPO_ROOT)
+                text = output.getvalue()
+                self.assertEqual(self._ordered_runs(run_all.parse_args(["--layer", layer_id])), [layer_id])
+                self.assertIn("python3 tests/speckit-pro/", text)
+                self.assertNotIn("    bash ", text)
+                self.assertTrue(all(script["path"].endswith(".py") for script in self.by_id[layer_id]["scripts"]))
 
 
 class SummaryParsingTests(unittest.TestCase):
@@ -170,16 +189,82 @@ class ChildDispositionTests(unittest.TestCase):
                     layer,
                     run_all.parse_args(["--layer", "4"]),
                     root,
-                    None,
                 )
         self.assertEqual((passed, failed), (1, 1))
-        self.assertIn("FAIL failing-child (1/2, 1 failed)", output.getvalue())
+        self.assertIn("FAIL failing-child (1/1 reported, exit 9)", output.getvalue())
+
+
+class LayerExecutionRegressionTests(unittest.TestCase):
+    def test_selected_layer_with_missing_script_fails_closed(self) -> None:
+        manifest = {
+            "layers": [
+                {
+                    "id": "4",
+                    "label": "Script unit tests",
+                    "default": True,
+                    "live_only": False,
+                    "integration": False,
+                    "execution": "execute",
+                    "scripts": [{"path": "tests/speckit-pro/missing-child.py"}],
+                }
+            ]
+        }
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as temp_root:
+            with (
+                mock.patch.object(run_all, "repo_root", return_value=Path(temp_root)),
+                mock.patch.object(run_all, "load_manifest", return_value=manifest),
+                mock.patch.dict(run_all.os.environ, {"SPECKIT_SKIP_TOOLCHAIN_CHECK": "1"}),
+                contextlib.redirect_stdout(output),
+            ):
+                exit_code = run_all.main(["--layer", "4"])
+        self.assertEqual(exit_code, 1)
+        self.assertIn("FAIL: missing-child (not found)", output.getvalue())
+        self.assertIn("speckit-pro test suite: 0/1 passed (1 failed)", output.getvalue())
+
+    def test_non_python_manifest_entry_is_counted_failure_not_crash(self) -> None:
+        manifest = {
+            "layers": [
+                {
+                    "id": "4",
+                    "label": "Script unit tests",
+                    "default": True,
+                    "live_only": False,
+                    "integration": False,
+                    "execution": "execute",
+                    "scripts": [{"path": "tests/speckit-pro/not-python.sh"}],
+                }
+            ]
+        }
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as temp_root:
+            root = Path(temp_root)
+            script = root / "tests" / "speckit-pro" / "not-python.sh"
+            script.parent.mkdir(parents=True, exist_ok=True)
+            script.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            with (
+                mock.patch.object(run_all, "repo_root", return_value=root),
+                mock.patch.object(run_all, "load_manifest", return_value=manifest),
+                mock.patch.dict(run_all.os.environ, {"SPECKIT_SKIP_TOOLCHAIN_CHECK": "1"}),
+                contextlib.redirect_stdout(output),
+            ):
+                exit_code = run_all.main(["--layer", "4"])
+        self.assertEqual(exit_code, 1)
+        self.assertIn("FAIL not-python (0/1, 1 failed)", output.getvalue())
+        self.assertIn("speckit-pro test suite: 0/1 passed (1 failed)", output.getvalue())
 
 
 def main() -> int:
     loader = unittest.defaultTestLoader
     suite = unittest.TestSuite()
-    for case in (ArgParsingTests, ScopeSelectionTests, SummaryParsingTests, HeadlineTests, ChildDispositionTests):
+    for case in (
+        ArgParsingTests,
+        ScopeSelectionTests,
+        SummaryParsingTests,
+        HeadlineTests,
+        ChildDispositionTests,
+        LayerExecutionRegressionTests,
+    ):
         suite.addTests(loader.loadTestsFromTestCase(case))
     return test_result.run_counted(suite, label="test-run-all")
 

@@ -108,7 +108,7 @@ git checkout 6c24f56885f09755dd85e0a451deb923e5ef437a -- specs/doc-014-seo-and-a
 | `docs/ai/specs/interactive-documentation-technical-roadmap.md` | Marked DOC-014 archived and updated downstream production-readiness status |
 | `docs/ai/specs/interactive-documentation-roadmap-MOC.md` | Replaced active DOC-014 link with archive pointer |
 | `docs/roadmap-interactive-documentation.md` | Updated product companion snapshot to show DOC-014 shipped/archived |
-| `tests/speckit-pro/layer4-scripts/test-privacy-scan.sh` | Allowed only approved DOC-014 public schema identity evidence to satisfy the dynamic local-term privacy guard |
+| `tests/speckit-pro/unit/test-privacy-scan.sh` | Allowed only approved DOC-014 public schema identity evidence to satisfy the dynamic local-term privacy guard |
 | `specs/xplat-001-runtime-inventory-constraints/` | Removed from active `specs/**` after archive |
 | `specs/xplat-002-runtime-implementation-options-contract-decision/` | Removed from active `specs/**` after archive |
 | `specs/doc-014-seo-and-ai-discoverability/` | Removed from active `specs/**` after archive |
@@ -119,7 +119,7 @@ git checkout 6c24f56885f09755dd85e0a451deb923e5ef437a -- specs/doc-014-seo-and-a
 - `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .` -> pass
 - `find specs -mindepth 1 -maxdepth 4 -print` -> `specs/.gitkeep`
 - `git diff --check` -> pass
-- `bash tests/speckit-pro/layer4-scripts/test-privacy-scan.sh` -> 9/9 passed
+- `bash tests/speckit-pro/unit/test-privacy-scan.sh` -> 9/9 passed
 - `bash tests/speckit-pro/run-all.sh` -> 3697/3697 passed
 
 ## Feature Status

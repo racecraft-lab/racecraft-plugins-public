@@ -41,7 +41,7 @@ stop_reason: "natural"
   readiness and CI, failing on any new Bash script, active Bash invocation, or
   `jq` dependency outside the workflow dispatch boundary.
 - Add container/runner preflight CI: Linux amd64/arm64 container jobs (gating,
-  path-filtered) and Windows x64/ARM64 direct-runner smoke (advisory,
+  internally path-filtered behind always-reporting sentinels) and Windows x64/ARM64 direct-runner smoke (advisory,
   continue-on-error, availability recorded) — Q6/Q7. Preflight-only; never
   substitutes XPLAT-008 native operator UAT.
 - Make every GitHub Release readable by the world: each feat/fix PR carries a
@@ -127,7 +127,7 @@ stop_reason: "natural"
 > Runtime counts (not static grep) catch loop-generated checks; same-PR swap
 > (port + manifest flip + `.sh` delete in one PR) leaves no window where a
 > layer runs zero coverage; committed VERBOSE=true baselines
-> (`tests/speckit-pro/parity/xplat-010/<script>-baseline.txt`) make the diff
+> (`tests/speckit-pro/parity/bash-to-python/<script>-baseline.txt`) make the diff
 > reviewable; running ledger `XPLAT-010-count-ledger.md`; final
 > `XPLAT-010-suite-parity-result.json`.
 
@@ -192,6 +192,13 @@ stop_reason: "natural"
 
 **User's answer:** Path-filtered PR + manual (Recommended)
 
+**Implementation correction (2026-07-10):** Required status checks cannot be
+workflow-level path-filtered safely because an excluded workflow never creates
+the required context. PR 11 preserves the accepted cost boundary by starting
+the workflow on every PR, running path detection in a lightweight job, and
+skipping only the heavy jobs. Two always-run Linux sentinels report explicit
+success for docs-only no-op runs.
+
 ---
 
 ### Q7. Should the container-preflight jobs gate PR merges or run as advisory evidence?
@@ -249,7 +256,7 @@ stop_reason: "natural"
 - Split into 2–3 separate specs: adds scaffold/workflow overhead without shrinking any single PR.
 - Fewer, larger PRs (4–5): each blows past the 800-LOC block threshold.
 
-**User's answer:** Accept the 12-PR stack (Recommended)
+**User's answer:** Accept the typed stack (Recommended). The finalized task plan is 13 numbered slices / 15 PRs because slices 3 and 7 each require independently reviewable a/b ports.
 
 ---
 
@@ -266,7 +273,9 @@ stop_reason: "natural"
 > narrative up top, the conventional-commit list kept below as an appendix.
 > Deterministic, testable, no new secrets — the Kubernetes/Rust
 > release-notes-from-PR-metadata pattern. CHANGELOG.md stays the machine
-> ledger.
+> ledger. Implementation fact-grounding adds an immutable workflow-artifact
+> snapshot before composition so failed-job reruns cannot drift when PR metadata
+> changes after merge; fallback text comes from captured commit subjects.
 
 **Alternatives offered:**
 - AI-generated summary in CI: zero authoring burden but nondeterministic output in a deterministic-gates repo, plus a new secret and per-release cost.
@@ -306,12 +315,12 @@ stop_reason: "natural"
   **Why deferred:** Pre-existing known gap; PR 8 ports the harness as-is.
   **Suggested next step:** Follow-up spec after XPLAT-010; the port must
   preserve the skip-with-warning behavior, not silently drop the tolerance.
-- **What:** Windows ARM64 (`windows-11-arm`) runner availability at
-  implementation time.
-  **Why deferred:** External to the repo; roadmap already requires recording
-  unavailable/public-preview behavior rather than blocking on it.
-  **Suggested next step:** PR 11 records per-label availability in the
-  evidence artifact.
+- **Resolved fact (2026-07-10):** The official GitHub-hosted runners reference
+  lists x64 `windows-2025` as stable and the ARM64 row containing
+  `windows-11-arm` as Public Preview. The `actions/runner-images` table lists
+  the ARM64 image without a preview badge, so PR 11 records the product
+  reference's conservative support tier independently on Ubuntu, defaults x64
+  enabled and ARM64 disabled, and supports explicit configuration overrides.
 
 ## Recommended Next Step
 

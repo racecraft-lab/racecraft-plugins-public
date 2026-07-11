@@ -1,0 +1,82 @@
+001 both plugin.json files exist
+002 CC and Codex plugin.json versions match (2.18.0)
+003 both marketplace.json files exist
+004 CC and Codex marketplace names match (racecraft-plugins-public)
+005 codex-agents/analyze-executor.toml exists for CC agent
+006 codex-agents/checklist-executor.toml exists for CC agent
+007 codex-agents/clarify-executor.toml exists for CC agent
+008 codex-agents/codebase-analyst.toml exists for CC agent
+009 codex-agents/domain-researcher.toml exists for CC agent
+010 codex-agents/implement-executor.toml exists for CC agent
+011 codex-agents/phase-executor.toml exists for CC agent
+012 codex-agents/spec-context-analyst.toml exists for CC agent
+013 codex-agents/uat-runbook-author.toml exists for CC agent
+014 agents/analyze-executor.md exists for Codex agent
+015 agents/checklist-executor.md exists for Codex agent
+016 agents/clarify-executor.md exists for Codex agent
+017 agents/codebase-analyst.md exists for Codex agent
+018 agents/domain-researcher.md exists for Codex agent
+019 agents/implement-executor.md exists for Codex agent
+020 agents/phase-executor.md exists for Codex agent
+021 agents/spec-context-analyst.md exists for Codex agent
+022 agents/uat-runbook-author.md exists for Codex agent
+023 skills/grill-me/SKILL.md exists
+024 codex-skills/grill-me/SKILL.md exists for CC skill
+025 skills/speckit-archive-cleanup/SKILL.md exists
+026 codex-skills/speckit-archive-cleanup/SKILL.md exists for CC skill
+027 skills/speckit-autopilot/SKILL.md exists
+028 codex-skills/speckit-autopilot/SKILL.md exists for CC skill
+029 skills/speckit-coach/SKILL.md exists
+030 codex-skills/speckit-coach/SKILL.md exists for CC skill
+031 skills/speckit-install/SKILL.md exists
+032 codex-skills/speckit-install/SKILL.md exists for CC skill
+033 skills/speckit-prd/SKILL.md exists
+034 codex-skills/speckit-prd/SKILL.md exists for CC skill
+035 skills/speckit-resolve-pr/SKILL.md exists
+036 codex-skills/speckit-resolve-pr/SKILL.md exists for CC skill
+037 skills/speckit-scaffold-spec/SKILL.md exists
+038 codex-skills/speckit-scaffold-spec/SKILL.md exists for CC skill
+039 skills/speckit-status/SKILL.md exists
+040 codex-skills/speckit-status/SKILL.md exists for CC skill
+041 skills/speckit-upgrade/SKILL.md exists
+042 codex-skills/speckit-upgrade/SKILL.md exists for CC skill
+043 codex-skills/grill-me/agents/openai.yaml exists
+044 codex-skills/install/agents/openai.yaml exists
+045 codex-skills/speckit-archive-cleanup/agents/openai.yaml exists
+046 codex-skills/speckit-autopilot/agents/openai.yaml exists
+047 codex-skills/speckit-coach/agents/openai.yaml exists
+048 codex-skills/speckit-install/agents/openai.yaml exists
+049 codex-skills/speckit-prd/agents/openai.yaml exists
+050 codex-skills/speckit-resolve-pr/agents/openai.yaml exists
+051 codex-skills/speckit-scaffold-spec/agents/openai.yaml exists
+052 codex-skills/speckit-status/agents/openai.yaml exists
+053 codex-skills/speckit-upgrade/agents/openai.yaml exists
+054 grill-me: CC skill references/ has at least one file
+055 grill-me: referenced file exists (skills/speckit-coach/references/checklist-domains-guide.md)
+056 grill-me: referenced file exists (skills/speckit-coach/references/slicing-heuristics.md)
+057 speckit-autopilot: CC skill references/ has at least one file
+058 speckit-autopilot: referenced file exists (skills/speckit-autopilot/references/consensus-protocol.md)
+059 speckit-autopilot: referenced file exists (skills/speckit-autopilot/references/gate-validation.md)
+060 speckit-autopilot: referenced file exists (skills/speckit-autopilot/references/plugin-limitations.md)
+061 speckit-autopilot: referenced file exists (skills/speckit-autopilot/references/tdd-protocol.md)
+062 speckit-autopilot: referenced file exists (skills/speckit-autopilot/references/token-discipline.md)
+063 speckit-coach: CC skill references/ has at least one file
+064 speckit-coach: referenced file exists (skills/speckit-coach/references/autopilot-guide.md)
+065 speckit-coach: referenced file exists (skills/speckit-coach/references/best-practices.md)
+066 speckit-coach: referenced file exists (skills/speckit-coach/references/checklist-domains-guide.md)
+067 speckit-coach: referenced file exists (skills/speckit-coach/references/command-guide.md)
+068 speckit-coach: referenced file exists (skills/speckit-coach/references/constitution-guide.md)
+069 speckit-coach: referenced file exists (skills/speckit-coach/references/getting-started.md)
+070 speckit-coach: referenced file exists (skills/speckit-coach/references/presets-extensions-guide.md)
+071 speckit-coach: referenced file exists (skills/speckit-coach/references/roadmap-moc-guide.md)
+072 speckit-coach: referenced file exists (skills/speckit-coach/references/sdd-methodology.md)
+073 speckit-coach: referenced file exists (skills/speckit-coach/templates/prd-template.md)
+074 speckit-coach: referenced file exists (skills/speckit-coach/templates/technical-roadmap-template.md)
+075 speckit-coach: referenced file exists (skills/speckit-coach/templates/workflow-template.md)
+076 speckit-prd: CC skill references/ has at least one file
+077 speckit-prd: referenced file exists (skills/speckit-coach/references/slicing-heuristics.md)
+078 speckit-prd: referenced file exists (skills/speckit-coach/templates/prd-template.md)
+079 speckit-prd: referenced file exists (skills/speckit-coach/templates/roadmap-moc-template.md)
+080 speckit-prd: referenced file exists (skills/speckit-coach/templates/technical-roadmap-template.md)
+081 speckit-prd: referenced file exists (skills/speckit-prd/references/prd-authoring-protocol.md)
+TOTAL: 81

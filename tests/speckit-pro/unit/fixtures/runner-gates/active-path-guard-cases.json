@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "XPLAT-007",
+  "coverage": [
+    "active Bash",
+    ".sh",
+    "jq",
+    "Git Bash",
+    "WSL",
+    "PowerShell helper",
+    "shell parsing",
+    "shell interpolation",
+    "shell=True",
+    "os.system",
+    "command-string subprocess",
+    "archive provenance",
+    "temporary parity evidence",
+    "consumer Spec Kit helper",
+    "generated payload mirror",
+    "docs out of scope",
+    "CI dispatch glue",
+    "XPLAT-008 cutover surface"
+  ],
+  "cases": [
+    {
+      "case_id": "blocking-active-patterns",
+      "expected_status": "expected_failure",
+      "files": [
+        {
+          "path": "tests/speckit-pro/run-all.sh",
+          "content": "#!/usr/bin/env bash\nbash tests/speckit-pro/layer1-structural/validate-plugin.sh\njq -r '.status' tests/speckit-pro/evidence.json\ngit bash --login\nwsl.exe true\npwsh -File helper.ps1\ncat results.json | grep status | sed 's/pass/ok/' | awk '{print $1}'\nversion=$(jq -r '.version' package.json)\npython3 - <<'PY'\nimport os\nimport subprocess\nos.system('echo unsafe')\nsubprocess.run('bash scripts/build-plugin-payloads.sh', shell=True)\nsubprocess.check_output('jq -r .version package.json')\nPY\n"
+        }
+      ]
+    },
+    {
+      "case_id": "nonblocking-classifications",
+      "expected_status": "ok",
+      "files": [
+        {
+          "path": ".specify/memory/archive-reports/2026-07-04-xplat-007.md",
+          "content": "Historical evidence: bash tests/speckit-pro/run-all.sh | jq -r '.status'\n"
+        },
+        {
+          "path": "tests/speckit-pro/unit/fixtures/runner-gates/bash-reference-manifest.json",
+          "content": "{\"command\":\"bash tests/speckit-pro/run-all.sh --layer 4\",\"jq\":\".status\"}\n"
+        },
+        {
+          "path": ".specify/scripts/bash/create-new-feature.sh",
+          "content": "#!/usr/bin/env bash\nset -euo pipefail\n"
+        },
+        {
+          "path": "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/generated-payload-mirror.sh",
+          "content": "#!/usr/bin/env bash\njq -r '.version' manifest.json\n"
+        },
+        {
+          "path": "docs-site/src/content/docs/contribute-and-release.md",
+          "content": "Maintainer history may mention `bash tests/speckit-pro/run-all.sh` and `jq` in prose.\n"
+        },
+        {
+          "path": ".github/workflows/pr-checks.yml",
+          "content": "jobs:\n  validate:\n    steps:\n      - run: python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json\n"
+        },
+        {
+          "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+          "content": "XPLAT-008 will cut over active Claude/Codex invocation surfaces that still reference bash helpers.\n"
+        }
+      ]
+    },
+    {
+      "case_id": "workflow-dispatch-good",
+      "expected_status": "ok",
+      "files": [
+        {
+          "path": ".github/workflows/pr-checks.yml",
+          "content": "jobs:\n  validate:\n    steps:\n      - name: Dispatch Python gate\n        run: python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/active-path-guard.json\n"
+        }
+      ]
+    },
+    {
+      "case_id": "workflow-dispatch-with-plugin-logic",
+      "expected_status": "expected_failure",
+      "files": [
+        {
+          "path": ".github/workflows/release.yml",
+          "content": "jobs:\n  release:\n    steps:\n      - name: Release plugin logic\n        run: |\n          set -euo pipefail\n          for manifest in */.claude-plugin/plugin.json; do\n            jq -r '.version' \"$manifest\"\n          done\n          bash scripts/build-plugin-payloads.sh\n"
+        }
+      ]
+    },
+    {
+      "case_id": "final-current-implementation",
+      "expected_status": "ok",
+      "scan_repo": true
+    }
+  ]
+}

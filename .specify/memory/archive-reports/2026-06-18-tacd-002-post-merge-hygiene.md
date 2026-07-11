@@ -50,8 +50,8 @@
   - `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`
   - `speckit-pro/skills/speckit-autopilot/references/post-implementation.md`
   - `speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md`
-  - `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
-  - `tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh`
+  - `tests/speckit-pro/unit/test-multi-pr-emission.sh`
+  - `tests/speckit-pro/unit/test-reviewability-marker-guidance.sh`
   - `dist/claude/speckit-pro/`
   - `dist/codex/speckit-pro/`
 - CI evidence:

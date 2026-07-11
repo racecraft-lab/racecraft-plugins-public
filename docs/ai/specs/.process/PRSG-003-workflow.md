@@ -608,7 +608,7 @@ speckit-pro/
 └── tests/
     ├── lib/moc-id-normalize.sh                            # REUSE (PRSG-002)
     ├── layer1-structural/  (determinism fixture, wired in run-all.sh)
-    └── layer4-scripts/     (generator unit tests)
+    └── unit/     (generator unit tests)
 ```
 
 ---

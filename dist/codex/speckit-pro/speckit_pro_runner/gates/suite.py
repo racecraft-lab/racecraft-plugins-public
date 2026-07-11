@@ -18,10 +18,12 @@ from ..envelope import diagnostic, response
 
 CAPTURE_LIMIT_BYTES = 16 * 1024
 DEFAULT_TIMEOUT_SECONDS = 300
-PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json"
+PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/runner-gates/promotion-records.json"
 LAYER_SCRIPT_DISPATCHER = "tests/speckit-pro/run-layer-scripts.py"
 LAYER_SCRIPT_TIMEOUT_SECONDS = 1800
 SUITE_MANIFEST_PATH = "tests/speckit-pro/suite-manifest.json"
+TOOLCHAIN_CHECKER = "tests/speckit-pro/check-toolchain.py"
+TOOLCHAIN_MODES = {"tests", "shell", "docs", "all"}
 
 
 class SuiteManifestError(Exception):
@@ -200,7 +202,7 @@ def run_layer(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
 
 def run_toolchain_preflight(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
     mode = request.inputs.get("mode", "tests")
-    if not isinstance(mode, str) or mode not in {"tests", "shell", "docs", "all"}:
+    if not isinstance(mode, str) or mode not in TOOLCHAIN_MODES:
         diag = diagnostic(
             "invalid_toolchain_mode",
             "run-toolchain-preflight requires a supported toolchain mode",
@@ -218,7 +220,23 @@ def run_ai_evals(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
         return response("input_error", request_id=request.request_id, data=base_data(entry, request.operation, "input_error"), diagnostics=[layers_result])
     layers = layers_result
     available_tools = available_ai_tools(request.inputs)
-    planned_dispatch = [ai_dispatch_plan(layer, repo_root, available_tools) for layer in layers]
+    try:
+        manifest = load_suite_manifest(repo_root)
+    except SuiteManifestError as exc:
+        diag = diagnostic(
+            "suite_manifest_unavailable",
+            "AI eval dispatch cannot resolve manifest-backed runner references",
+            details={"manifest_path": SUITE_MANIFEST_PATH, "error": str(exc)},
+            remediation_summary="Restore the suite manifest in the source checkout.",
+            remediation_actions=[f"Restore {SUITE_MANIFEST_PATH}.", "Retry run-ai-evals."],
+        )
+        return response(
+            "missing_prerequisite",
+            request_id=request.request_id,
+            data=base_data(entry, request.operation, "missing_prerequisite"),
+            diagnostics=[diag],
+        )
+    planned_dispatch = [ai_dispatch_plan(layer, repo_root, available_tools, manifest) for layer in layers]
     missing_by_layer = {
         plan["layer"]: plan["missing_tools"]
         for plan in planned_dispatch
@@ -359,15 +377,9 @@ def command_spec_from_override(command_id: str, raw: Any) -> CommandSpec | dict[
 
 def default_command_spec(command_id: str, inputs: dict[str, Any], repo_root: Path) -> CommandSpec | dict[str, Any]:
     if command_id == "toolchain":
-        return internal_command_spec(command_id)
-    if command_id in {"layer-1", "layer-4"}:
+        return toolchain_command_spec(command_id, inputs, repo_root)
+    if command_id in {"layer-1", "layer-4", "layer-5", "layer-7", "layer-8"}:
         return external_layer_script_spec(command_id)
-    if command_id == "layer-5":
-        return internal_command_spec(command_id)
-    if command_id == "layer-7":
-        return internal_command_spec(command_id)
-    if command_id == "layer-8":
-        return internal_command_spec(command_id)
     return unsafe_command_diagnostic(command_id, "unknown suite command id")
 
 
@@ -377,6 +389,19 @@ def internal_command_spec(command_id: str) -> CommandSpec:
         argv=(sys.executable, "-m", "speckit_pro_runner"),
         internal=True,
     )
+
+
+def toolchain_command_spec(command_id: str, inputs: dict[str, Any], repo_root: Path) -> CommandSpec | dict[str, Any]:
+    mode = inputs.get("mode", "tests")
+    if not isinstance(mode, str) or mode not in TOOLCHAIN_MODES:
+        return unsafe_command_diagnostic(command_id, "toolchain mode must be one of all, docs, shell, or tests")
+    checker = repo_root / TOOLCHAIN_CHECKER
+    if checker.is_file():
+        return CommandSpec(
+            command_id=command_id,
+            argv=(sys.executable, TOOLCHAIN_CHECKER, "--mode", mode),
+        )
+    return internal_command_spec(command_id)
 
 
 def external_layer_script_spec(command_id: str) -> CommandSpec:
@@ -394,6 +419,15 @@ def run_command(command: CommandSpec, repo_root: Path) -> dict[str, Any]:
     missing = missing_executable(command.argv[0], repo_root)
     if missing:
         return command_result(command, "missing_prerequisite", 3, "", f"missing executable: {command.argv[0]}\n", 0)
+    if not resolves_to_current_python(command.argv[0], repo_root):
+        return command_result(
+            command,
+            "input_error",
+            2,
+            "",
+            f"suite command executable must resolve to the active Python interpreter: {command.argv[0]}\n",
+            0,
+        )
     if LAYER_SCRIPT_DISPATCHER in command.argv and not (repo_root / LAYER_SCRIPT_DISPATCHER).is_file():
         return command_result(
             command,
@@ -406,7 +440,7 @@ def run_command(command: CommandSpec, repo_root: Path) -> dict[str, Any]:
     started = time.monotonic()
     try:
         completed = subprocess.run(
-            list(command.argv),
+            [sys.executable, *command.argv[1:]],
             cwd=repo_root,
             text=True,
             capture_output=True,
@@ -446,12 +480,6 @@ def run_internal_command(command: CommandSpec, repo_root: Path) -> dict[str, Any
 def run_internal_suite_check(command_id: str, repo_root: Path) -> int:
     if command_id == "toolchain":
         return check_toolchain(repo_root)
-    if command_id == "layer-5":
-        return check_layer5(repo_root)
-    if command_id == "layer-7":
-        return check_layer7(repo_root)
-    if command_id == "layer-8":
-        return check_layer8(repo_root)
     print(f"unknown internal suite command: {command_id}", file=sys.stderr)
     return 2
 
@@ -479,87 +507,8 @@ def check_toolchain(repo_root: Path) -> int:
     return emit_checks("toolchain preflight", checks)
 
 
-def check_layer5(repo_root: Path) -> int:
-    agents_dir = repo_root / "speckit-pro" / "agents"
-    required_absent = {
-        "clarify-executor.md": {"Write", "Edit", "Skill", "ToolSearch"},
-        "codebase-analyst.md": {"Write", "Edit", "Skill"},
-        "domain-researcher.md": {"Write", "Edit", "Skill"},
-        "spec-context-analyst.md": {"Write", "Edit", "Skill"},
-    }
-    checks: list[tuple[str, bool, str]] = []
-    for agent_file, forbidden in required_absent.items():
-        path = agents_dir / agent_file
-        tools = frontmatter_tools(path)
-        checks.append((rel(path, repo_root), path.is_file(), "agent file exists"))
-        checks.append((f"{rel(path, repo_root)} forbidden tools", not (tools & forbidden), f"absent={sorted(forbidden)}"))
-    return emit_checks("layer-5 agent tool scoping", checks)
-
-
-def check_layer7(repo_root: Path) -> int:
-    fixture_dir = repo_root / "tests" / "speckit-pro" / "layer7-integration" / "test-fixtures"
-    checks: list[tuple[str, bool, str]] = [(rel(fixture_dir, repo_root), fixture_dir.is_dir(), "fixture directory exists")]
-    fixture_paths = sorted(fixture_dir.glob("*.jsonl")) if fixture_dir.is_dir() else []
-    checks.append(("layer7 fixture count", len(fixture_paths) >= 6, f"{len(fixture_paths)} jsonl fixtures"))
-    for path in fixture_paths:
-        checks.append((rel(path, repo_root), jsonl_file_ok(path), "valid JSONL"))
-    return emit_checks("layer-7 integration fixtures", checks)
-
-
-def check_layer8(repo_root: Path) -> int:
-    parity_dir = repo_root / "tests" / "speckit-pro" / "layer8-parity"
-    case_dirs = sorted(path for path in parity_dir.iterdir() if path.is_dir() and path.name[:2].isdigit()) if parity_dir.is_dir() else []
-    checks: list[tuple[str, bool, str]] = [(rel(parity_dir, repo_root), parity_dir.is_dir(), "parity directory exists")]
-    checks.append(("layer8 case count", len(case_dirs) >= 4, f"{len(case_dirs)} cases"))
-    for case_dir in case_dirs:
-        checks.append((rel(case_dir / "workflow.md", repo_root), (case_dir / "workflow.md").is_file(), "workflow fixture exists"))
-        checks.append((rel(case_dir / "expected-equivalence.json", repo_root), json_file_ok(case_dir / "expected-equivalence.json"), "expected equivalence JSON"))
-        checks.append((rel(case_dir / "tolerance.json", repo_root), json_file_ok(case_dir / "tolerance.json"), "tolerance JSON"))
-    return emit_checks("layer-8 parity fixtures", checks)
-
-
 def platform_python() -> str:
     return f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-
-
-def json_file_ok(path: Path) -> bool:
-    try:
-        parsed = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
-        return False
-    return isinstance(parsed, dict)
-
-
-def jsonl_file_ok(path: Path) -> bool:
-    try:
-        lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
-        for line in lines:
-            json.loads(line)
-    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
-        return False
-    return bool(lines)
-
-
-def frontmatter_tools(path: Path) -> set[str]:
-    if not path.is_file():
-        return set()
-    text = path.read_text(encoding="utf-8", errors="replace")
-    if not text.startswith("---\n"):
-        return set()
-    end = text.find("\n---\n", 4)
-    if end == -1:
-        return set()
-    tools: set[str] = set()
-    in_tools = False
-    for line in text[4:end].splitlines():
-        if line.startswith("tools:"):
-            in_tools = True
-            continue
-        if in_tools and line and not line.startswith(" ") and not line.startswith("-"):
-            break
-        if in_tools and line.strip().startswith("- "):
-            tools.add(line.strip()[2:])
-    return tools
 
 
 def command_result(
@@ -775,6 +724,24 @@ def missing_executable(executable: str, repo_root: Path) -> bool:
     return shutil.which(executable) is None
 
 
+def resolves_to_current_python(executable: str, repo_root: Path) -> bool:
+    path = Path(executable)
+    has_path_separator = os.sep in executable or (os.altsep is not None and os.altsep in executable)
+    if path.is_absolute():
+        candidate = path
+    elif has_path_separator:
+        candidate = repo_root / path
+    else:
+        resolved = shutil.which(executable)
+        if resolved is None:
+            return False
+        candidate = Path(resolved)
+    try:
+        return candidate.samefile(sys.executable)
+    except OSError:
+        return candidate.resolve(strict=False) == Path(sys.executable).resolve(strict=False)
+
+
 def available_ai_tools(inputs: dict[str, Any]) -> set[str]:
     overrides = inputs.get("test_overrides", {})
     if isinstance(overrides, dict) and isinstance(overrides.get("available_tools"), list):
@@ -782,7 +749,12 @@ def available_ai_tools(inputs: dict[str, Any]) -> set[str]:
     return {tool for tool in ("claude", "codex") if shutil.which(tool) is not None}
 
 
-def ai_dispatch_plan(layer: str, repo_root: Path, available_tools: set[str]) -> dict[str, Any]:
+def ai_dispatch_plan(
+    layer: str,
+    repo_root: Path,
+    available_tools: set[str],
+    manifest: dict[str, Any],
+) -> dict[str, Any]:
     required = ai_required_tools(layer)
     missing = [tool for tool in required if tool not in available_tools]
     return {
@@ -790,7 +762,8 @@ def ai_dispatch_plan(layer: str, repo_root: Path, available_tools: set[str]) -> 
         "command_id": f"layer-{layer}",
         "required_tools": required,
         "missing_tools": missing,
-        "bash_references": ai_bash_references(layer),
+        "bash_references": [],
+        "runner_references": manifest_runner_references(layer, manifest),
         "python_entrypoint": "python -m speckit_pro_runner",
         "repo_root": rel(repo_root, repo_root) or ".",
     }
@@ -802,18 +775,12 @@ def ai_required_tools(layer: str) -> list[str]:
     return ["claude"]
 
 
-def ai_bash_references(layer: str) -> list[str]:
-    if layer == "2":
-        return [
-            "tests/speckit-pro/layer2-trigger/run-trigger-evals.sh",
-            "tests/speckit-pro/layer2-trigger/run-trigger-evals-codex.sh",
-        ]
-    if layer == "3":
-        return [
-            "tests/speckit-pro/layer3-functional/run-functional-evals.sh",
-            "tests/speckit-pro/layer3-functional/run-functional-evals-codex.sh",
-        ]
-    return ["tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.sh"]
+def manifest_runner_references(layer: str, manifest: dict[str, Any]) -> list[str]:
+    for entry in manifest["layers"]:
+        if entry["id"] != layer:
+            continue
+        return [script["path"] for script in entry["scripts"]]
+    return []
 
 
 __all__ = ("run_suite_gate",)

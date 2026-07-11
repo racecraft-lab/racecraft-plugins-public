@@ -36,7 +36,7 @@ stop_reason: "natural"
 - **Independent** of `reviewability-gate.sh` — no internal call; the two are complementary (splittability vs sizing) and the autopilot combines their outputs (Q9).
 - Provide generic path/surface classification by **duplicating a small matcher** (the few `surface_for_path` / `is_production_file` cases the router needs), **not** by extracting a shared lib — avoids touching the shipped, well-tested gate (Q12, constitution VI "three similar lines beat a premature abstraction").
 - Document the post-Tasks router step in **both** the Claude `speckit-autopilot/SKILL.md` (+ the relevant `references/` doc — gate-validation or phase-execution) **and** the Codex mirror `codex-skills/speckit-autopilot/SKILL.md`, keeping `validate-codex-skills.sh` (L1) green. The script is shared (single `scripts/` dir); only the prose is mirrored (Q13).
-- **Tests:** a Layer-4 unit test `tests/speckit-pro/layer4-scripts/test-atomicity-route.sh` with **one fixture per change class**, plus Layer-1 structural validation.
+- **Tests:** a Layer-4 unit test `tests/speckit-pro/unit/test-atomicity-route.sh` with **one fixture per change class**, plus Layer-1 structural validation.
 - Keep PRSG-007 as **one spec** (Q14): the estimator's `warn` (≈515 LOC, suggested 2 slices) is inflated by prose/doc files — 4 of 6 counted files are markdown (SKILL / Codex mirror / template / references); only `atomicity-route.sh` is production code. Recorded as an advisory note; the diff-mode reviewability gate enforces real size at PR time.
 
 ## Non-goals

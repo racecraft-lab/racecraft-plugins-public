@@ -1,0 +1,9 @@
+001 plugin.json exists
+002 plugin.json is valid JSON
+003 name field exists
+004 name matches speckit-pro
+005 name is kebab-case
+006 version field exists and is semver
+007 description field exists and is non-empty
+008 author field exists
+TOTAL: 8

@@ -48,21 +48,21 @@ MARKETPLACES = (
     (".agents/plugins/marketplace.json", ".codex-plugin/plugin.json"),
 )
 
-INSTALLED_CACHE_ROOT = "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache"
+INSTALLED_CACHE_ROOT = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache"
 
-PROOF_GLOB_DIR = "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash"
+PROOF_GLOB_DIR = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement"
 EVIDENCE_PROOF = "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json"
 PARTIAL_ROOT_PROOF = f"{PROOF_GLOB_DIR}/installed-cache-proof-partial-root.json"
 
 PAYLOAD_COMPLETENESS_REQUEST = (
-    "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/requests/payload-completeness-apply.json"
+    "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/requests/payload-completeness-apply.json"
 )
 PAYLOAD_COMPLETENESS_RESULT = "docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json"
 ZERO_BASH_FINAL_REQUEST = (
-    "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/requests/zero-bash-guard-final.json"
+    "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/requests/zero-bash-guard-final.json"
 )
 ZERO_BASH_RESULT = "docs/ai/specs/.process/XPLAT-009-zero-bash-guard-result.json"
-RELEASE_READINESS_REQUEST = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/release-readiness.json"
+RELEASE_READINESS_REQUEST = "tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/release-readiness.json"
 RELEASE_READINESS_RESULT = "docs/ai/specs/.process/XPLAT-009-release-readiness-result.json"
 RELEASE_READINESS_REQUEST_ID = "xplat-008-release-readiness-ready"
 

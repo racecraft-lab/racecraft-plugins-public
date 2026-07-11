@@ -23,8 +23,8 @@ and signals dispatch protocol drift.
 
 ```bash
 # Replay against committed transcript (parser regression test)
-bash tests/layer7-integration/run-dispatch-fixtures.sh --replay 01-clarify-codebase-only
+python3 tests/speckit-pro/layer7-integration/run-dispatch-fixtures.py --replay 01-clarify-codebase-only
 
 # Live capture (real routing test, costs ~$0.10–0.50)
-bash tests/layer7-integration/run-dispatch-fixtures.sh --live 01-clarify-codebase-only
+python3 tests/speckit-pro/layer7-integration/run-dispatch-fixtures.py --live 01-clarify-codebase-only
 ```

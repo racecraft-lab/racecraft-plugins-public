@@ -1,0 +1,394 @@
+# Container and runner preflight for XPLAT-010.
+#
+# Pull requests always start this workflow so the two branch-protection
+# sentinels always report. The changes job decides whether the heavyweight
+# platform jobs are relevant; unrelated changes receive explicit successful
+# sentinel conclusions instead of missing required-check contexts.
+#
+# Hosted interpreter source: actions/python-versions release
+# 3.13.14-27320626148 supplies exact Windows x64 and ARM64 artifacts.
+# setup-python v6.2.0 immutable commit:
+# a309ff8b426b58ec0e2a45f0f869d46889d02405.
+# Linux container source: docker-library/python revision
+# 4d216ad3beb5b697c4049071c82fc375acb8abad, Python 3.11.15 on Debian
+# Bookworm. The pinned OCI index contains native linux/amd64 and linux/arm64/v8
+# manifests. The runner labels remain Ubuntu hosts; the job userland is Debian.
+
+name: Container Preflight
+
+env:
+  HOSTED_PYTHON_VERSION: "3.13.14"
+  PIPX_VERSION: "1.15.0"
+  SPEC_KIT_VERSION: v0.8.13
+  SPEC_KIT_GIT_REF: git+https://github.com/github/spec-kit.git@b2314680fce898e0a9151b37ad2535d810c93eef # v0.8.13
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      windows_x64_enabled:
+        description: Run the Windows x64 advisory smoke
+        required: true
+        type: boolean
+        default: true
+      windows_arm64_enabled:
+        description: Run the Windows ARM64 public-preview advisory smoke
+        required: true
+        type: boolean
+        default: false
+
+permissions: {}
+
+jobs:
+  changes:
+    name: Detect container preflight changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      run_preflight: ${{ steps.changes.outputs.run_preflight }}
+
+    steps:
+      - name: Checkout repository history
+        id: checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up exact hosted Python
+        id: setup-python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.HOSTED_PYTHON_VERSION }}
+          check-latest: false
+
+      - name: Detect runner, gate, and workflow changes
+        id: changes
+        if: always() && steps.checkout.outcome == 'success'
+        shell: python
+        env:
+          PREFLIGHT_OPERATION: detect-changes
+          EVIDENCE_DIR: ${{ runner.temp }}/container-preflight-changes
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: import runpy; runpy.run_path("tests/speckit-pro/run-container-preflight.py", run_name="__main__")
+
+      - name: Upload change-detection evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: container-preflight-change-detection-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/container-preflight-changes
+          if-no-files-found: error
+          retention-days: 14
+
+  linux-amd64-preflight:
+    name: Linux amd64 heavy preflight
+    needs: [changes]
+    if: needs.changes.result == 'success' && needs.changes.outputs.run_preflight == 'true'
+    runs-on: ubuntu-24.04
+    container:
+      image: python:3.11.15-bookworm@sha256:b7ae8a4dcc0ab327e333c5e46a3eaa6c1b0ff585bed77e01cd6de4be1325837e
+    permissions:
+      contents: read
+    env:
+      EVIDENCE_DIR: /tmp/container-preflight-linux-amd64
+
+    steps:
+      - name: Checkout repository
+        id: checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Dispatch current Python preflight entrypoints
+        id: entrypoints
+        if: steps.checkout.outcome == 'success'
+        shell: python
+        env:
+          PREFLIGHT_OPERATION: linux-gates
+          PREFLIGHT_ROLE: linux-amd64
+        run: import runpy; runpy.run_path("tests/speckit-pro/run-container-preflight.py", run_name="__main__")
+
+      - name: Upload Linux amd64 heavy evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: container-preflight-linux-amd64-heavy-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.EVIDENCE_DIR }}
+          if-no-files-found: error
+          retention-days: 14
+
+  linux-arm64-preflight:
+    name: Linux arm64 heavy preflight
+    needs: [changes]
+    if: needs.changes.result == 'success' && needs.changes.outputs.run_preflight == 'true'
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: python:3.11.15-bookworm@sha256:b7ae8a4dcc0ab327e333c5e46a3eaa6c1b0ff585bed77e01cd6de4be1325837e
+    permissions:
+      contents: read
+    env:
+      EVIDENCE_DIR: /tmp/container-preflight-linux-arm64
+
+    steps:
+      - name: Checkout repository
+        id: checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Dispatch current Python preflight entrypoints
+        id: entrypoints
+        if: steps.checkout.outcome == 'success'
+        shell: python
+        env:
+          PREFLIGHT_OPERATION: linux-gates
+          PREFLIGHT_ROLE: linux-arm64
+        run: import runpy; runpy.run_path("tests/speckit-pro/run-container-preflight.py", run_name="__main__")
+
+      - name: Upload Linux arm64 heavy evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: container-preflight-linux-arm64-heavy-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.EVIDENCE_DIR }}
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-availability:
+    name: Record Windows hosted-label enablement
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      x64_enabled: ${{ steps.availability.outputs.x64_enabled }}
+      arm64_enabled: ${{ steps.availability.outputs.arm64_enabled }}
+
+    steps:
+      - name: Checkout preflight helper
+        id: checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up exact hosted Python
+        id: setup-python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.HOSTED_PYTHON_VERSION }}
+          check-latest: false
+
+      - name: Resolve Windows smoke enablement
+        id: availability
+        if: always() && steps.checkout.outcome == 'success'
+        shell: python
+        env:
+          PREFLIGHT_OPERATION: windows-availability
+          EVIDENCE_DIR: ${{ runner.temp }}/container-preflight-windows-availability
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_X64_ENABLED: ${{ inputs.windows_x64_enabled }}
+          DISPATCH_ARM64_ENABLED: ${{ inputs.windows_arm64_enabled }}
+          REPO_X64_ENABLED: ${{ vars.XPLAT_WINDOWS_X64_ENABLED }}
+          REPO_ARM64_ENABLED: ${{ vars.XPLAT_WINDOWS_ARM64_ENABLED }}
+        run: import runpy; runpy.run_path("tests/speckit-pro/run-container-preflight.py", run_name="__main__")
+
+      - name: Upload Windows x64 availability evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: container-preflight-windows-x64-availability-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/container-preflight-windows-availability/x64
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Windows ARM64 availability evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: container-preflight-windows-arm64-availability-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/container-preflight-windows-availability/arm64
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-x64-smoke:
+    name: Windows x64 advisory smoke
+    needs: [changes, windows-availability]
+    if: needs.changes.result == 'success' && needs.changes.outputs.run_preflight == 'true' && needs.windows-availability.outputs.x64_enabled == 'true'
+    continue-on-error: true
+    runs-on: windows-2025
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        id: checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up exact hosted Python
+        id: setup-python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.HOSTED_PYTHON_VERSION }}
+          check-latest: false
+
+      - name: Dispatch hosted Windows preflight helper
+        id: smoke
+        if: always() && steps.checkout.outcome == 'success'
+        shell: python
+        env:
+          PREFLIGHT_OPERATION: windows-smoke
+          PREFLIGHT_ROLE: windows-x64
+          EVIDENCE_DIR: ${{ runner.temp }}/container-preflight-windows-x64
+        run: import runpy; runpy.run_path("tests/speckit-pro/run-container-preflight.py", run_name="__main__")
+
+      - name: Upload Windows x64 smoke evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: container-preflight-windows-x64-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/container-preflight-windows-x64
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-arm64-smoke:
+    name: Windows ARM64 advisory smoke
+    needs: [changes, windows-availability]
+    if: needs.changes.result == 'success' && needs.changes.outputs.run_preflight == 'true' && needs.windows-availability.outputs.arm64_enabled == 'true'
+    continue-on-error: true
+    runs-on: windows-11-arm
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        id: checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up exact hosted Python
+        id: setup-python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.HOSTED_PYTHON_VERSION }}
+          check-latest: false
+
+      - name: Dispatch hosted Windows preflight helper
+        id: smoke
+        if: always() && steps.checkout.outcome == 'success'
+        shell: python
+        env:
+          PREFLIGHT_OPERATION: windows-smoke
+          PREFLIGHT_ROLE: windows-arm64
+          EVIDENCE_DIR: ${{ runner.temp }}/container-preflight-windows-arm64
+        run: import runpy; runpy.run_path("tests/speckit-pro/run-container-preflight.py", run_name="__main__")
+
+      - name: Upload Windows ARM64 smoke evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: container-preflight-windows-arm64-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/container-preflight-windows-arm64
+          if-no-files-found: error
+          retention-days: 14
+
+  linux-amd64:
+    name: container-preflight-linux-amd64
+    needs: [changes, linux-amd64-preflight]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout preflight helper
+        id: checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up exact hosted Python
+        id: setup-python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.HOSTED_PYTHON_VERSION }}
+          check-latest: false
+
+      - name: Report Linux amd64 required-check verdict
+        if: always() && steps.checkout.outcome == 'success'
+        shell: python
+        env:
+          PREFLIGHT_OPERATION: sentinel
+          PREFLIGHT_ROLE: linux-amd64-required
+          EVIDENCE_DIR: ${{ runner.temp }}/container-preflight-linux-amd64-sentinel
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          RUN_PREFLIGHT: ${{ needs.changes.outputs.run_preflight }}
+          PREFLIGHT_RESULT: ${{ needs.linux-amd64-preflight.result }}
+        run: import runpy; runpy.run_path("tests/speckit-pro/run-container-preflight.py", run_name="__main__")
+
+      - name: Upload Linux amd64 required-check evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: container-preflight-linux-amd64-required-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/container-preflight-linux-amd64-sentinel
+          if-no-files-found: error
+          retention-days: 14
+
+  linux-arm64:
+    name: container-preflight-linux-arm64
+    needs: [changes, linux-arm64-preflight]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout preflight helper
+        id: checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up exact hosted Python
+        id: setup-python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ env.HOSTED_PYTHON_VERSION }}
+          check-latest: false
+
+      - name: Report Linux arm64 required-check verdict
+        if: always() && steps.checkout.outcome == 'success'
+        shell: python
+        env:
+          PREFLIGHT_OPERATION: sentinel
+          PREFLIGHT_ROLE: linux-arm64-required
+          EVIDENCE_DIR: ${{ runner.temp }}/container-preflight-linux-arm64-sentinel
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          RUN_PREFLIGHT: ${{ needs.changes.outputs.run_preflight }}
+          PREFLIGHT_RESULT: ${{ needs.linux-arm64-preflight.result }}
+        run: import runpy; runpy.run_path("tests/speckit-pro/run-container-preflight.py", run_name="__main__")
+
+      - name: Upload Linux arm64 required-check evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: container-preflight-linux-arm64-required-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/container-preflight-linux-arm64-sentinel
+          if-no-files-found: error
+          retention-days: 14

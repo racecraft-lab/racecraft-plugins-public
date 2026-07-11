@@ -65,7 +65,7 @@ The user-facing behavior should shift from "these named optional MCPs improve th
 - **AC-4.1**: Deterministic tests fail if active runtime guidance reintroduces a hardcoded named-tool contract outside the spike-approved historical allowlist.
 - **AC-4.2**: Structural or tool-scoping tests verify that relevant Claude and Codex agents point to the approved capability-discovery directive or carry its approved equivalent.
 - **AC-4.3**: Functional evals prove that SpecKit Pro answers optional-tool questions in vendor-neutral terms and describes installed-capability discovery plus fallback behavior.
-- **AC-4.4**: The default deterministic suite passes: `bash tests/speckit-pro/run-all.sh`.
+- **AC-4.4**: The default deterministic suite passes: `python3 tests/speckit-pro/run-all.py`.
 
 ## 4. Migration Path (phased - one phase per SPEC)
 

@@ -1,0 +1,26 @@
+001 scrub helper exists
+002 reduce helper exists
+003 transcript library exists
+004 scrub stdin exits 0
+005 scrub replaces machine paths
+006 scrub replaces session metadata
+007 scrub applies extra identity regex
+008 scrub reduces system inventory events
+009 scrub reduces stream events
+010 scrub malformed JSON exits 1
+011 scrub in-place exits 0
+012 scrub in-place reports path
+013 scrub in-place writes valid JSONL
+014 scrub missing file exits 1
+015 reduce transcript exits 0
+016 reduce keeps only replay events
+017 reduce assigns deterministic tool ids
+018 reduce clears prompts
+019 reduce jq-coalesces null and false Agent/Skill fields
+020 reduce synthesizes expected response keywords
+021 reduce invalid usage exits 2
+022 reduce missing transcript exits 1
+023 transcript CLI extract exits 0
+024 transcript CLI emits JSON dispatches
+025 transcript CLI assertions preserve exit signals
+TOTAL: 25

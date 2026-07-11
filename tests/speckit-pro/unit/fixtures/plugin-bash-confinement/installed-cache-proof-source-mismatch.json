@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "XPLAT-009",
+  "proofs": [
+    {
+      "product": "claude",
+      "surface": "claude_payload_fixture",
+      "installed_root": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro",
+      "source_payload_root": "dist/claude/speckit-pro",
+      "source_payload_tree_hash": "bb25e4b64c7ad97c124b17de400311b7ccac32beb955b12f239e6d9a5f0f68e1",
+      "source_derived": true,
+      "mutable_user_cache": false,
+      "script_file_count": 0,
+      "active_guidance_findings": [],
+      "allowlist_release_readiness_excluded": true
+    },
+    {
+      "product": "codex",
+      "surface": "codex_payload_fixture",
+      "installed_root": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro",
+      "source_payload_root": "dist/codex/speckit-pro",
+      "source_payload_tree_hash": "bb25e4b64c7ad97c124b17de400311b7ccac32beb955b12f239e6d9a5f0f68e1",
+      "source_derived": true,
+      "mutable_user_cache": false,
+      "script_file_count": 0,
+      "active_guidance_findings": [],
+      "allowlist_release_readiness_excluded": true
+    }
+  ]
+}

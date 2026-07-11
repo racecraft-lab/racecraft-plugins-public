@@ -98,7 +98,7 @@ Each phase requires **human review and approval** before proceeding:
 - [ ] Generic path/surface classification (TS/SQL/UI/migrations/config/docs), via a **small duplicated matcher** — the shipped `reviewability-gate.sh` is NOT edited.
 - [ ] A new `## Atomicity Route` section added to `speckit-pro/skills/speckit-coach/templates/workflow-template.md`.
 - [ ] The post-Tasks router step documented in the Claude `speckit-autopilot/SKILL.md` + the relevant `references/` doc AND mirrored into `codex-skills/speckit-autopilot/SKILL.md`; `validate-codex-skills.sh` (L1) stays green.
-- [ ] Layer-4 unit test `tests/speckit-pro/layer4-scripts/test-atomicity-route.sh` with **one fixture per change class**; Layer-1 structural validation passes.
+- [ ] Layer-4 unit test `tests/speckit-pro/unit/test-atomicity-route.sh` with **one fixture per change class**; Layer-1 structural validation passes.
 
 ---
 
@@ -229,8 +229,8 @@ in tasks.md / plan.md / spec.md does each probe read?
     tasks.md/plan.md/spec.md). JSON to stdout. Mirrors the reviewability-gate.sh interface family.
   - Edge cases: missing/empty tasks.md → route out-of-scope (exit 0); unreadable/absent
     feature dir or usage error → exit 2 with {"error": ...}.
-- Tests: tests/speckit-pro/layer4-scripts/test-atomicity-route.sh + one fixture per
-  change class under tests/speckit-pro/layer4-scripts/fixtures/.
+- Tests: tests/speckit-pro/unit/test-atomicity-route.sh + one fixture per
+  change class under tests/speckit-pro/unit/fixtures/.
 
 ## Architecture Notes / Constraints
 - INDEPENDENT of reviewability-gate.sh — no shell-out, no shared lib. DUPLICATE the

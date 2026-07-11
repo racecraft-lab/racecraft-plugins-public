@@ -1,0 +1,1217 @@
+{
+  "schema_version": "1.2",
+  "feature_id": "XPLAT-010",
+  "task": "T131",
+  "status": "passed",
+  "contract": "tests/speckit-pro/parity/bash-to-python/count-parity-baseline.contract.md",
+  "provenance": {
+    "historical_template_commit": "349c9f2ba1a667cd88621f5e0f862d5212411ee6",
+    "verified_tree_head": "a7b2d27b12fdc5051dfa4829c94f92752e2f5146",
+    "verified_at_utc": "2026-07-11T05:42:15Z",
+    "suite_manifest": "tests/speckit-pro/suite-manifest.json",
+    "baseline_directory": "tests/speckit-pro/parity/bash-to-python",
+    "count_ledger": "docs/ai/specs/.process/XPLAT-010-count-ledger.md",
+    "tasks": "tests/speckit-pro/unit/fixtures/plan-layers/repository-bash-confinement-plan/tasks.md",
+    "evidence_scope": "Historical Git is used only for frozen at-port counts and classifications. Every live path, baseline TOTAL, purpose-based name, and current test result is reconciled to the verified tree head."
+  },
+  "clean_port_rows": [
+    {
+      "script": "validate-agents.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-agents.py",
+      "mode": "default",
+      "pr": "PR 3a",
+      "port_snapshot": {
+        "bash_count": 104,
+        "python_count": 104,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-agents-baseline.txt",
+      "evidence_baseline_total": 104,
+      "current_test_result_count": 104,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-capability-pointer.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-capability-pointer.py",
+      "mode": "default",
+      "pr": "PR 3a",
+      "port_snapshot": {
+        "bash_count": 52,
+        "python_count": 52,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-capability-pointer-baseline.txt",
+      "evidence_baseline_total": 52,
+      "current_test_result_count": 52,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-capability-resolution.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-capability-resolution.py",
+      "mode": "default",
+      "pr": "PR 3a",
+      "port_snapshot": {
+        "bash_count": 43,
+        "python_count": 43,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-capability-resolution-baseline.txt",
+      "evidence_baseline_total": 43,
+      "current_test_result_count": 43,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-codex-agents.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-codex-agents.py",
+      "mode": "default",
+      "pr": "PR 3a",
+      "port_snapshot": {
+        "bash_count": 148,
+        "python_count": 148,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-codex-agents-baseline.txt",
+      "evidence_baseline_total": 148,
+      "current_test_result_count": 148,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-codex-hooks.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-codex-hooks.py",
+      "mode": "default",
+      "pr": "PR 3a",
+      "port_snapshot": {
+        "bash_count": 9,
+        "python_count": 9,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-codex-hooks-baseline.txt",
+      "evidence_baseline_total": 9,
+      "current_test_result_count": 9,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-codex-marketplace.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-codex-marketplace.py",
+      "mode": "default",
+      "pr": "PR 3a",
+      "port_snapshot": {
+        "bash_count": 13,
+        "python_count": 13,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-codex-marketplace-baseline.txt",
+      "evidence_baseline_total": 13,
+      "current_test_result_count": 13,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-codex-parity.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-codex-parity.py",
+      "mode": "default",
+      "pr": "PR 3a",
+      "port_snapshot": {
+        "bash_count": 81,
+        "python_count": 81,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-codex-parity-baseline.txt",
+      "evidence_baseline_total": 81,
+      "current_test_result_count": 81,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-codex-plugin.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-codex-plugin.py",
+      "mode": "default",
+      "pr": "PR 3a",
+      "port_snapshot": {
+        "bash_count": 33,
+        "python_count": 33,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-codex-plugin-baseline.txt",
+      "evidence_baseline_total": 33,
+      "current_test_result_count": 33,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-curated-set.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-curated-set.py",
+      "mode": "default",
+      "pr": "PR 3a",
+      "port_snapshot": {
+        "bash_count": 58,
+        "python_count": 58,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-curated-set-baseline.txt",
+      "evidence_baseline_total": 58,
+      "current_test_result_count": 58,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-hooks.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-hooks.py",
+      "mode": "default",
+      "pr": "PR 3a",
+      "port_snapshot": {
+        "bash_count": 11,
+        "python_count": 11,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-hooks-baseline.txt",
+      "evidence_baseline_total": 11,
+      "current_test_result_count": 11,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-payload-completeness.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-payload-completeness.py",
+      "mode": "default",
+      "pr": "PR 3b",
+      "port_snapshot": {
+        "bash_count": 52,
+        "python_count": 52,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-payload-completeness-baseline.txt",
+      "evidence_baseline_total": 52,
+      "current_test_result_count": 52,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-plugin-payload.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-plugin-payload.py",
+      "mode": "default",
+      "pr": "PR 3b",
+      "port_snapshot": {
+        "bash_count": 23,
+        "python_count": 23,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-plugin-payload-baseline.txt",
+      "evidence_baseline_total": 23,
+      "current_test_result_count": 23,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-plugin.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-plugin.py",
+      "mode": "default",
+      "pr": "PR 3b",
+      "port_snapshot": {
+        "bash_count": 8,
+        "python_count": 8,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-plugin-baseline.txt",
+      "evidence_baseline_total": 8,
+      "current_test_result_count": 8,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-pr-checks-sentinel.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.py",
+      "mode": "default",
+      "pr": "PR 3b",
+      "port_snapshot": {
+        "bash_count": 28,
+        "python_count": 28,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-pr-checks-sentinel-baseline.txt",
+      "evidence_baseline_total": 49,
+      "current_test_result_count": 49,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-process-gitattributes.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-process-gitattributes.py",
+      "mode": "default",
+      "pr": "PR 3b",
+      "port_snapshot": {
+        "bash_count": 6,
+        "python_count": 6,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-process-gitattributes-baseline.txt",
+      "evidence_baseline_total": 6,
+      "current_test_result_count": 6,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-release-workflow.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-release-workflow.py",
+      "mode": "default",
+      "pr": "PR 3b",
+      "port_snapshot": {
+        "bash_count": 24,
+        "python_count": 24,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-release-workflow-baseline.txt",
+      "evidence_baseline_total": 41,
+      "current_test_result_count": 41,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-scripts.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-scripts.py",
+      "mode": "default",
+      "pr": "PR 3b",
+      "port_snapshot": {
+        "bash_count": 37,
+        "python_count": 37,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-scripts-baseline.txt",
+      "evidence_baseline_total": 37,
+      "current_test_result_count": 37,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-skill-capability-pointers.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-skill-capability-pointers.py",
+      "mode": "default",
+      "pr": "PR 3b",
+      "port_snapshot": {
+        "bash_count": 55,
+        "python_count": 55,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-skill-capability-pointers-baseline.txt",
+      "evidence_baseline_total": 55,
+      "current_test_result_count": 55,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-skills.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-skills.py",
+      "mode": "default",
+      "pr": "PR 3b",
+      "port_snapshot": {
+        "bash_count": 124,
+        "python_count": 124,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-skills-baseline.txt",
+      "evidence_baseline_total": 124,
+      "current_test_result_count": 124,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-spec-index-determinism.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-spec-index-determinism.py",
+      "mode": "default",
+      "pr": "PR 3b",
+      "port_snapshot": {
+        "bash_count": 16,
+        "python_count": 16,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-spec-index-determinism-baseline.txt",
+      "evidence_baseline_total": 16,
+      "current_test_result_count": 16,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-moc-orphan.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-moc-orphan.py",
+      "mode": "default",
+      "pr": "PR 4",
+      "port_snapshot": {
+        "bash_count": 29,
+        "python_count": 29,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-moc-orphan-baseline.txt",
+      "evidence_baseline_total": 29,
+      "current_test_result_count": 29,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-moc-orphan.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-moc-orphan.py",
+      "mode": "explicit scan-root",
+      "pr": "PR 4",
+      "port_snapshot": {
+        "bash_count": 0,
+        "python_count": 0,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-moc-orphan-scan-root-baseline.txt",
+      "evidence_baseline_total": 0,
+      "current_test_result_count": 0,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-moc-stale-index.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-moc-stale-index.py",
+      "mode": "default",
+      "pr": "PR 4",
+      "port_snapshot": {
+        "bash_count": 11,
+        "python_count": 11,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-moc-stale-index-baseline.txt",
+      "evidence_baseline_total": 11,
+      "current_test_result_count": 11,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-codex-skills.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-codex-skills.py",
+      "mode": "default",
+      "pr": "PR 4",
+      "port_snapshot": {
+        "bash_count": 161,
+        "python_count": 161,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-codex-skills-baseline.txt",
+      "evidence_baseline_total": 161,
+      "current_test_result_count": 161,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-payload-conformance.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-payload-conformance.py",
+      "mode": "default",
+      "pr": "PR 4",
+      "port_snapshot": {
+        "bash_count": 209,
+        "python_count": 209,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-payload-conformance-baseline.txt",
+      "evidence_baseline_total": 209,
+      "current_test_result_count": 209,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "test-moc-lint-exit-codes.py",
+      "test_path": "tests/speckit-pro/unit/test-moc-lint-exit-codes.py",
+      "mode": "default, non-root",
+      "pr": "PR 4",
+      "port_snapshot": {
+        "bash_count": 36,
+        "python_count": 36,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/test-moc-lint-exit-codes-baseline.txt",
+      "evidence_baseline_total": 36,
+      "current_test_result_count": 36,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "validate-tool-scoping.py",
+      "test_path": "tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py",
+      "mode": "default",
+      "pr": "PR 5",
+      "port_snapshot": {
+        "bash_count": 186,
+        "python_count": 186,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/validate-tool-scoping-baseline.txt",
+      "evidence_baseline_total": 186,
+      "current_test_result_count": 186,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "test-check-toolchain.py",
+      "test_path": "tests/speckit-pro/unit/test-check-toolchain.py",
+      "mode": "default",
+      "pr": "PR 5",
+      "port_snapshot": {
+        "bash_count": 26,
+        "python_count": 26,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/test-check-toolchain-bash-baseline.txt",
+      "evidence_baseline_total": 26,
+      "current_test_result_count": 27,
+      "current_relation": "superseded by the documented terminal replacement"
+    },
+    {
+      "script": "test-refresh-local-plugin.py",
+      "test_path": "tests/speckit-pro/unit/test-refresh-local-plugin.py",
+      "mode": "default",
+      "pr": "PR 6",
+      "port_snapshot": {
+        "bash_count": 58,
+        "python_count": 58,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/test-refresh-local-plugin-baseline.txt",
+      "evidence_baseline_total": 58,
+      "current_test_result_count": 58,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "test-transcript-helpers.py",
+      "test_path": "tests/speckit-pro/unit/test-transcript-helpers.py",
+      "mode": "default",
+      "pr": "PR 7a",
+      "port_snapshot": {
+        "bash_count": 42,
+        "python_count": 42,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/test-transcript-helpers-baseline.txt",
+      "evidence_baseline_total": 42,
+      "current_test_result_count": 42,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "run-dispatch-fixtures.py",
+      "test_path": "tests/speckit-pro/layer7-integration/run-dispatch-fixtures.py",
+      "mode": "replay",
+      "pr": "PR 7b",
+      "port_snapshot": {
+        "bash_count": 184,
+        "python_count": 184,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/run-dispatch-fixtures-baseline.txt",
+      "evidence_baseline_total": 184,
+      "current_test_result_count": 184,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "run-return-format-fixtures.py",
+      "test_path": "tests/speckit-pro/layer7-integration/run-return-format-fixtures.py",
+      "mode": "replay",
+      "pr": "PR 7b",
+      "port_snapshot": {
+        "bash_count": 17,
+        "python_count": 17,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/run-return-format-fixtures-baseline.txt",
+      "evidence_baseline_total": 17,
+      "current_test_result_count": 17,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "run-e2e-fixtures.py",
+      "test_path": "tests/speckit-pro/layer7-integration/run-e2e-fixtures.py",
+      "mode": "replay",
+      "pr": "PR 7b",
+      "port_snapshot": {
+        "bash_count": 23,
+        "python_count": 23,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/run-e2e-fixtures-baseline.txt",
+      "evidence_baseline_total": 23,
+      "current_test_result_count": 23,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "run-grounding-fixtures.py",
+      "test_path": "tests/speckit-pro/layer7-integration/run-grounding-fixtures.py",
+      "mode": "replay",
+      "pr": "PR 7b",
+      "port_snapshot": {
+        "bash_count": 33,
+        "python_count": 33,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/run-grounding-fixtures-baseline.txt",
+      "evidence_baseline_total": 33,
+      "current_test_result_count": 33,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "run-all-fixtures.py",
+      "test_path": "tests/speckit-pro/layer7-integration/run-all-fixtures.py",
+      "mode": "replay",
+      "pr": "PR 7b",
+      "port_snapshot": {
+        "bash_count": 257,
+        "python_count": 257,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/run-all-fixtures-baseline.txt",
+      "evidence_baseline_total": 257,
+      "current_test_result_count": 257,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "run-parity-fixtures.py",
+      "test_path": "tests/speckit-pro/layer8-parity/run-parity-fixtures.py",
+      "mode": "dry-run",
+      "pr": "PR 8",
+      "port_snapshot": {
+        "bash_count": 12,
+        "python_count": 12,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/run-parity-fixtures-baseline.txt",
+      "evidence_baseline_total": 12,
+      "current_test_result_count": 12,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "test-parity-extractors.py",
+      "test_path": "tests/speckit-pro/unit/test-parity-extractors.py",
+      "mode": "default",
+      "pr": "PR 8",
+      "port_snapshot": {
+        "bash_count": 19,
+        "python_count": 19,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/test-parity-extractors-baseline.txt",
+      "evidence_baseline_total": 19,
+      "current_test_result_count": 19,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "run-trigger-evals.py",
+      "test_path": "tests/speckit-pro/layer2-trigger/run-trigger-evals.py",
+      "mode": "CLI/exit contract",
+      "pr": "PR 9",
+      "port_snapshot": {
+        "bash_count": 0,
+        "python_count": 0,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/run-trigger-evals-baseline.txt",
+      "evidence_baseline_total": 0,
+      "current_test_result_count": 0,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "run-trigger-evals-codex.py",
+      "test_path": "tests/speckit-pro/layer2-trigger/run-trigger-evals-codex.py",
+      "mode": "CLI/exit contract",
+      "pr": "PR 9",
+      "port_snapshot": {
+        "bash_count": 0,
+        "python_count": 0,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/run-trigger-evals-codex-baseline.txt",
+      "evidence_baseline_total": 0,
+      "current_test_result_count": 0,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "run-trigger-loop.py",
+      "test_path": "tests/speckit-pro/layer2-trigger/run-trigger-loop.py",
+      "mode": "CLI/exit contract",
+      "pr": "PR 9",
+      "port_snapshot": {
+        "bash_count": 0,
+        "python_count": 0,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/run-trigger-loop-baseline.txt",
+      "evidence_baseline_total": 0,
+      "current_test_result_count": 0,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "run-functional-evals.py",
+      "test_path": "tests/speckit-pro/layer3-functional/run-functional-evals.py",
+      "mode": "CLI/exit contract",
+      "pr": "PR 9",
+      "port_snapshot": {
+        "bash_count": 0,
+        "python_count": 0,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/run-functional-evals-baseline.txt",
+      "evidence_baseline_total": 0,
+      "current_test_result_count": 0,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "run-functional-evals-codex.py",
+      "test_path": "tests/speckit-pro/layer3-functional/run-functional-evals-codex.py",
+      "mode": "CLI/exit contract",
+      "pr": "PR 9",
+      "port_snapshot": {
+        "bash_count": 0,
+        "python_count": 0,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/run-functional-evals-codex-baseline.txt",
+      "evidence_baseline_total": 0,
+      "current_test_result_count": 0,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "run-efficiency-benchmarks.py",
+      "test_path": "tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.py",
+      "mode": "CLI/exit contract",
+      "pr": "PR 9",
+      "port_snapshot": {
+        "bash_count": 0,
+        "python_count": 0,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/run-efficiency-benchmarks-baseline.txt",
+      "evidence_baseline_total": 0,
+      "current_test_result_count": 0,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "quality-scorer.py",
+      "test_path": "tests/speckit-pro/layer6-efficiency/lib/quality-scorer.py",
+      "mode": "CLI/exit contract",
+      "pr": "PR 9",
+      "port_snapshot": {
+        "bash_count": 0,
+        "python_count": 0,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/quality-scorer-baseline.txt",
+      "evidence_baseline_total": 0,
+      "current_test_result_count": 0,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "token-counter.py",
+      "test_path": "tests/speckit-pro/layer6-efficiency/lib/token-counter.py",
+      "mode": "CLI/exit contract",
+      "pr": "PR 9",
+      "port_snapshot": {
+        "bash_count": 0,
+        "python_count": 0,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/token-counter-baseline.txt",
+      "evidence_baseline_total": 0,
+      "current_test_result_count": 0,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "test-eval-runner-skill-selection.py",
+      "test_path": "tests/speckit-pro/unit/test-eval-runner-skill-selection.py",
+      "mode": "default",
+      "pr": "PR 9",
+      "port_snapshot": {
+        "bash_count": 13,
+        "python_count": 13,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/test-eval-runner-skill-selection-baseline.txt",
+      "evidence_baseline_total": 13,
+      "current_test_result_count": 13,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "test-efficiency-codex-runner.py",
+      "test_path": "tests/speckit-pro/unit/test-efficiency-codex-runner.py",
+      "mode": "default",
+      "pr": "PR 9",
+      "port_snapshot": {
+        "bash_count": 23,
+        "python_count": 23,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/test-efficiency-codex-runner-baseline.txt",
+      "evidence_baseline_total": 23,
+      "current_test_result_count": 23,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "test-post-implementation-reference.py",
+      "test_path": "tests/speckit-pro/unit/test-post-implementation-reference.py",
+      "mode": "default",
+      "pr": "PR 10",
+      "port_snapshot": {
+        "bash_count": 35,
+        "python_count": 35,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/test-post-implementation-reference-baseline.txt",
+      "evidence_baseline_total": 35,
+      "current_test_result_count": 35,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "test-reviewability-marker-guidance.py",
+      "test_path": "tests/speckit-pro/unit/test-reviewability-marker-guidance.py",
+      "mode": "default",
+      "pr": "PR 10",
+      "port_snapshot": {
+        "bash_count": 52,
+        "python_count": 52,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/test-reviewability-marker-guidance-baseline.txt",
+      "evidence_baseline_total": 52,
+      "current_test_result_count": 68,
+      "current_relation": "port inventory preserved; current test adds 16 documented checks"
+    },
+    {
+      "script": "test-privacy-scan.py",
+      "test_path": "tests/speckit-pro/unit/test-privacy-scan.py",
+      "mode": "default",
+      "pr": "PR 10",
+      "port_snapshot": {
+        "bash_count": 10,
+        "python_count": 10,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/test-privacy-scan-baseline.txt",
+      "evidence_baseline_total": 10,
+      "current_test_result_count": 10,
+      "current_relation": "exact inventory match to current baseline"
+    },
+    {
+      "script": "test-estimate-spec-size.py",
+      "test_path": "tests/speckit-pro/unit/test-estimate-spec-size.py",
+      "mode": "default",
+      "pr": "PR 13",
+      "port_snapshot": {
+        "bash_count": 33,
+        "python_count": 33,
+        "count_delta": 0,
+        "names_equal": true,
+        "intentional_change": null
+      },
+      "evidence_baseline": "tests/speckit-pro/parity/bash-to-python/test-estimate-spec-size-baseline.txt",
+      "evidence_baseline_total": 33,
+      "current_test_result_count": 33,
+      "current_relation": "exact inventory match to current baseline"
+    }
+  ],
+  "intentional_replacements": [
+    {
+      "script": "test-sync-marketplace-versions.py",
+      "test_path": "tests/speckit-pro/unit/test-sync-marketplace-versions.py",
+      "mode": "default",
+      "pr": "PR 6",
+      "bash_count": 49,
+      "python_count": 49,
+      "count_delta": 0,
+      "names_equal": false,
+      "intentional_change": "T055: preserve all 49 assertion positions while replacing the retired jq-prerequisite names with Python-standard-library JSON behavior and an explicit no-jq dependency check.",
+      "baseline": "tests/speckit-pro/parity/bash-to-python/test-sync-marketplace-versions-baseline.txt",
+      "baseline_total": 49,
+      "retired_baseline": "tests/speckit-pro/parity/bash-to-python/test-sync-marketplace-versions-bash-baseline.txt",
+      "retired_baseline_total": 49,
+      "current_test_result_count": 49,
+      "current_result_matches_baseline": true
+    },
+    {
+      "script": "test-parity-judge.py",
+      "test_path": "tests/speckit-pro/unit/test-parity-judge.py",
+      "mode": "default",
+      "pr": "PR 8",
+      "bash_count": 16,
+      "python_count": 16,
+      "count_delta": 0,
+      "names_equal": false,
+      "intentional_change": "T074 / design Non-goal / T136: retire the semantic-equivalent LLM shim while preserving byte-identical, exact, tolerance-1, and skip-with-warning coverage under truthful replacement names.",
+      "baseline": "tests/speckit-pro/parity/bash-to-python/test-parity-judge-baseline.txt",
+      "baseline_total": 16,
+      "retired_baseline": "tests/speckit-pro/parity/bash-to-python/test-parity-judge-bash-baseline.txt",
+      "retired_baseline_total": 16,
+      "current_test_result_count": 16,
+      "current_result_matches_baseline": true
+    },
+    {
+      "script": "test-check-toolchain.py",
+      "test_path": "tests/speckit-pro/unit/test-check-toolchain.py",
+      "mode": "tests/shell",
+      "pr": "PR 10",
+      "bash_count": 26,
+      "python_count": 27,
+      "count_delta": 1,
+      "names_equal": false,
+      "intentional_change": "T097 terminal replacement retires Bash, jq, Unix text-tool, external checksum, and optional YAML-runtime requirements; it pins Python 3.11+, Git, Python-only dispatch, and one scored launcher-failure check. The documented 26 -> 27 change is coverage growth, not a drop.",
+      "baseline": "tests/speckit-pro/parity/bash-to-python/test-check-toolchain-baseline.txt",
+      "baseline_total": 27,
+      "retired_baseline": "tests/speckit-pro/parity/bash-to-python/test-check-toolchain-bash-baseline.txt",
+      "retired_baseline_total": 26,
+      "current_test_result_count": 27,
+      "current_result_matches_baseline": true
+    }
+  ],
+  "additional_baseline_backed_coverage": [
+    {
+      "script": "test-claude-hooks.py",
+      "test_path": "tests/speckit-pro/unit/test-claude-hooks.py",
+      "pr": "PR 6",
+      "classification": "new Claude hook contract coverage",
+      "baseline": "tests/speckit-pro/parity/bash-to-python/test-claude-hooks-baseline.txt",
+      "baseline_total": 22,
+      "current_test_result_count": 22,
+      "current_result_matches_baseline": true,
+      "excluded_from_true_port_rollup": true
+    },
+    {
+      "script": "test-transcript-tools.py",
+      "test_path": "tests/speckit-pro/unit/test-transcript-tools.py",
+      "pr": "PR 7a",
+      "classification": "new transcript CLI contract coverage",
+      "baseline": "tests/speckit-pro/parity/bash-to-python/test-transcript-tools-baseline.txt",
+      "baseline_total": 25,
+      "current_test_result_count": 25,
+      "current_result_matches_baseline": true,
+      "excluded_from_true_port_rollup": true
+    },
+    {
+      "script": "test-integration-runners.py",
+      "test_path": "tests/speckit-pro/unit/test-integration-runners.py",
+      "pr": "PR 7b",
+      "classification": "new replay and live runner contract coverage",
+      "baseline": "tests/speckit-pro/parity/bash-to-python/test-integration-runners-baseline.txt",
+      "baseline_total": 31,
+      "current_test_result_count": 31,
+      "current_result_matches_baseline": true,
+      "excluded_from_true_port_rollup": true
+    },
+    {
+      "script": "test-parity-runner.py",
+      "test_path": "tests/speckit-pro/unit/test-parity-runner.py",
+      "pr": "PR 8",
+      "classification": "new Layer 8 runner portability coverage",
+      "baseline": "tests/speckit-pro/parity/bash-to-python/test-parity-runner-baseline.txt",
+      "baseline_total": 33,
+      "current_test_result_count": 33,
+      "current_result_matches_baseline": true,
+      "excluded_from_true_port_rollup": true
+    },
+    {
+      "script": "test-trigger-eval-runners.py",
+      "test_path": "tests/speckit-pro/unit/test-trigger-eval-runners.py",
+      "pr": "PR 9",
+      "classification": "new Layer 2 runner and staging coverage",
+      "baseline": "tests/speckit-pro/parity/bash-to-python/test-trigger-eval-runners-baseline.txt",
+      "baseline_total": 26,
+      "current_test_result_count": 26,
+      "current_result_matches_baseline": true,
+      "excluded_from_true_port_rollup": true
+    },
+    {
+      "script": "test-trigger-signal-restoration.py",
+      "test_path": "tests/speckit-pro/unit/test-trigger-signal-restoration.py",
+      "pr": "PR 9",
+      "classification": "new Layer 2 signal-restoration coverage",
+      "baseline": "tests/speckit-pro/parity/bash-to-python/test-trigger-signal-restoration-baseline.txt",
+      "baseline_total": 7,
+      "current_test_result_count": 7,
+      "current_result_matches_baseline": true,
+      "excluded_from_true_port_rollup": true
+    },
+    {
+      "script": "test-efficiency-runner-portability.py",
+      "test_path": "tests/speckit-pro/unit/test-efficiency-runner-portability.py",
+      "pr": "PR 9",
+      "classification": "new Layer 6 portability coverage",
+      "baseline": "tests/speckit-pro/parity/bash-to-python/test-efficiency-runner-portability-baseline.txt",
+      "baseline_total": 18,
+      "current_test_result_count": 18,
+      "current_result_matches_baseline": true,
+      "excluded_from_true_port_rollup": true
+    },
+    {
+      "script": "test-release-note-policy.py",
+      "test_path": "tests/speckit-pro/unit/test-release-note-policy.py",
+      "pr": "PR 12a",
+      "classification": "new consumer release-note policy coverage",
+      "baseline": "tests/speckit-pro/parity/bash-to-python/test-release-note-policy-baseline.txt",
+      "baseline_total": 30,
+      "current_test_result_count": 30,
+      "current_result_matches_baseline": true,
+      "excluded_from_true_port_rollup": true
+    },
+    {
+      "script": "test-compose-release-notes.py",
+      "test_path": "tests/speckit-pro/unit/test-compose-release-notes.py",
+      "pr": "PR 12b",
+      "classification": "new release-note composition coverage",
+      "baseline": "tests/speckit-pro/parity/bash-to-python/test-compose-release-notes-baseline.txt",
+      "baseline_total": 46,
+      "current_test_result_count": 46,
+      "current_result_matches_baseline": true,
+      "excluded_from_true_port_rollup": true
+    }
+  ],
+  "baseline_evolution": [
+    {
+      "script": "validate-pr-checks-sentinel.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.py",
+      "baseline": "tests/speckit-pro/parity/bash-to-python/validate-pr-checks-sentinel-baseline.txt",
+      "exact_port_count": 28,
+      "current_baseline_count": 49,
+      "current_test_result_count": 49,
+      "classification": "Exact 28 -> 28 port followed by documented PR 5 and PR 11 workflow-contract growth."
+    },
+    {
+      "script": "validate-release-workflow.py",
+      "test_path": "tests/speckit-pro/layer1-structural/validate-release-workflow.py",
+      "baseline": "tests/speckit-pro/parity/bash-to-python/validate-release-workflow-baseline.txt",
+      "exact_port_count": 24,
+      "current_baseline_count": 41,
+      "current_test_result_count": 41,
+      "intentional_renamed_check_ordinals": [
+        28,
+        31
+      ],
+      "classification": "Exact 24 -> 24 port followed by documented PR 12b release capture/composition growth. Polish keeps 41 checks while intentionally renaming checks 028 and 031 to describe audited capture, download, and digest failure outcomes."
+    },
+    {
+      "script": "test-reviewability-marker-guidance.py",
+      "test_path": "tests/speckit-pro/unit/test-reviewability-marker-guidance.py",
+      "baseline": "tests/speckit-pro/parity/bash-to-python/test-reviewability-marker-guidance-baseline.txt",
+      "exact_port_count": 52,
+      "current_baseline_count": 52,
+      "current_test_result_count": 68,
+      "classification": "The frozen 52-check port inventory remains baseline-backed; durable-marker work adds 16 separately counted checks."
+    },
+    {
+      "scripts": [
+        "run-dispatch-fixtures.py",
+        "run-all-fixtures.py"
+      ],
+      "baselines": [
+        "tests/speckit-pro/parity/bash-to-python/run-dispatch-fixtures-baseline.txt",
+        "tests/speckit-pro/parity/bash-to-python/run-all-fixtures-baseline.txt"
+      ],
+      "counts": [
+        184,
+        257
+      ],
+      "purpose_rename_commit": "9532816a3170efd477921a514128db9a5f912b7a",
+      "renamed_check_names_per_baseline": 14,
+      "classification": "The prior spec-coded fixture identifier became 22-stack-manager-replay; counts are unchanged and current results exactly match the purpose-named baselines."
+    },
+    {
+      "script": "run-parity-fixtures.py",
+      "baseline": "tests/speckit-pro/parity/bash-to-python/run-parity-fixtures-baseline.txt",
+      "count": 12,
+      "purpose_rename_commit": "9532816a3170efd477921a514128db9a5f912b7a",
+      "renamed_check_names": 9,
+      "classification": "Three spec-coded Layer 8 fixture identifiers became purpose names; count is unchanged and the current result exactly matches the purpose-named baseline."
+    }
+  ],
+  "rollups": {
+    "clean_ports": {
+      "row_count": 51,
+      "bash_count": 2394,
+      "python_count": 2394,
+      "count_delta": 0,
+      "count_drop_rows": 0,
+      "names_equal_rows": 51
+    },
+    "intentional_replacements": {
+      "row_count": 3,
+      "bash_count": 91,
+      "python_count": 92,
+      "count_delta": 1,
+      "count_drop_rows": 0,
+      "documented_count_growth_rows": 1,
+      "documented_name_change_rows": 3
+    },
+    "true_ports": {
+      "row_count": 54,
+      "bash_count": 2485,
+      "python_count": 2486,
+      "count_delta": 1,
+      "count_drop_rows": 0,
+      "zero_count_drops": true,
+      "name_mismatch_rows": 3,
+      "documented_name_change_rows": 3,
+      "silent_rename_rows": 0,
+      "zero_silent_renames": true,
+      "undocumented_mismatch_rows": 0,
+      "zero_undocumented_mismatches": true
+    },
+    "baseline_fixture_inventory": {
+      "file_count": 65,
+      "assertion_count": 2827,
+      "active_result_file_count": 62,
+      "active_baseline_assertion_count": 2736,
+      "current_result_assertion_count": 2752,
+      "current_result_count_delta": 16,
+      "current_result_count_drop_rows": 0,
+      "documented_current_growth_rows": 1,
+      "retired_bash_snapshot_file_count": 3,
+      "retired_bash_snapshot_assertion_count": 91,
+      "invalid_format_rows": 0,
+      "missing_path_rows": 0,
+      "legacy_spec_coded_path_rows": 0
+    },
+    "additional_baseline_backed_coverage": {
+      "row_count": 9,
+      "baseline_count": 238,
+      "current_result_count": 238,
+      "count_drop_rows": 0,
+      "excluded_from_true_port_rollup": true
+    }
+  },
+  "focused_validation": {
+    "layer_1": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/run-layer-scripts.py --layer 1",
+      "result": "24/24 manifest entries passed; 1373/1373 counted assertions passed"
+    },
+    "baseline_bearing_unit_modules": {
+      "module_count": 22,
+      "result": "22/22 modules passed; 667/667 counted assertions passed"
+    },
+    "layer_5": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/run-layer-scripts.py --layer 5",
+      "result": "1/1 manifest entry passed; validate-tool-scoping 186/186 passed"
+    },
+    "layer_7": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 VERBOSE=true python3 tests/speckit-pro/layer7-integration/run-all-fixtures.py",
+      "result": "184/184 + 17/17 + 23/23 + 33/33 passed (257 total)"
+    },
+    "layer_8": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/run-layer-scripts.py --layer 8",
+      "result": "1/1 manifest entry passed; run-parity-fixtures 12/12 passed"
+    },
+    "capture_contract": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-capture-python-baseline.py",
+      "result": "8/8 passed"
+    },
+    "purpose_named_layout": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-unit-layout.py",
+      "result": "5/5 passed"
+    },
+    "release_pr_reconciliation": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-release-pr-reconciliation.py",
+      "result": "10/10 passed"
+    },
+    "hosted_preflight_helper": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-hosted-windows-preflight.py",
+      "result": "33/33 passed"
+    },
+    "read_only_helpers": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py",
+      "result": "42/42 passed"
+    },
+    "arm64_pinned_container_overlay": {
+      "result": "42/42 passed; exact pinned-container overlay with hydrated tasks.md"
+    },
+    "release_workflow_validator": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/layer1-structural/validate-release-workflow.py",
+      "result": "41/41 passed; checks 028 and 031 intentionally renamed with no count change"
+    },
+    "deterministic_suite": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/run-all.py",
+      "status": "passed",
+      "total": 2512,
+      "layer_counts": {
+        "layer_1": 1373,
+        "layer_4": 953,
+        "layer_5": 186
+      },
+      "result": "2512/2512 passed: Layer 1 1373/1373, Layer 4 953/953, Layer 5 186/186",
+      "note": "Final neutral-PATH deterministic-suite evidence at the frozen implementation head."
+    },
+    "artifact_invariant_check": {
+      "result": "PASS: 54 true-port rows; 65 baselines; 62 active results; 0 drops; 0 silent renames; 0 undocumented mismatches"
+    }
+  }
+}

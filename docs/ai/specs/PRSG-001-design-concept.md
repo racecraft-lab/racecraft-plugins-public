@@ -259,7 +259,7 @@ workflow file's Specify/Plan/Tasks prompts don't have to re-derive it.
   doesn't exist). Mention, do not delete (CLAUDE.md rule 3).
 
 **Tests:**
-- **L4** (extend the already-wired `tests/layer4-scripts/test-reviewability-gate.sh`):
+- **L4** (extend the already-wired `tests/unit/test-reviewability-gate.sh`):
   diff-mode only — build a git repo, add N lines to `specs/001-foo/.process/workflow.md`
   AND N lines to `specs/001-foo/spec.md`, assert `reviewable_loc == N` (process lines
   excluded, spec lines counted) + a negative control. A tasks-mode/production_files

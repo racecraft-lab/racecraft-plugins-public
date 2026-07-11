@@ -15,14 +15,42 @@ from typing import Any
 
 from ..envelope import diagnostic, response
 
-PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json"
-DEFAULT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/active-path-guard-cases.json"
-XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/promotion-records.json"
-XPLAT_008_DEFAULT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/active-runtime-guard-cases.json"
-XPLAT_009_PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/promotion-records.json"
-XPLAT_009_DEFAULT_CASE_FILE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/zero-bash-guard-cases.json"
-XPLAT_009_ALLOWLIST = "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/allowlist.json"
-XPLAT_009_INSTALLED_CACHE_PREFIX = "tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache/"
+PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/runner-gates/promotion-records.json"
+DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/runner-gates/active-path-guard-cases.json"
+XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/installed-plugin-release/promotion-records.json"
+XPLAT_008_DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/installed-plugin-release/active-runtime-guard-cases.json"
+XPLAT_009_PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/promotion-records.json"
+XPLAT_009_DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/zero-bash-guard-cases.json"
+XPLAT_009_ALLOWLIST = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/allowlist.json"
+XPLAT_009_INSTALLED_CACHE_PREFIX = "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/"
+XPLAT_010_DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/repository-bash-confinement/confinement-guard-cases.json"
+XPLAT_010_ALLOWLIST = "tests/speckit-pro/unit/fixtures/repository-bash-confinement/allowlist.json"
+XPLAT_010_CONTAINER_PREFLIGHT_WORKFLOW = ".github/workflows/container-preflight.yml"
+XPLAT_010_CANONICAL_ALLOWLIST_PATHS = frozenset(
+    {
+        ".specify/extensions/git/scripts/bash/auto-commit.sh",
+        ".specify/extensions/git/scripts/bash/create-new-feature.sh",
+        ".specify/extensions/git/scripts/bash/git-common.sh",
+        ".specify/extensions/git/scripts/bash/initialize-repo.sh",
+        ".specify/scripts/bash/check-prerequisites.sh",
+        ".specify/scripts/bash/common.sh",
+        ".specify/scripts/bash/create-new-feature.sh",
+        ".specify/scripts/bash/setup-plan.sh",
+        ".specify/scripts/bash/setup-tasks.sh",
+        ".specify/scripts/bash/update-agent-context.sh",
+    }
+)
+REPO_BASH_SCRIPT_SUFFIXES = (".sh", ".bash")
+REPO_BASH_COMMAND_NAMES = frozenset({"bash", "bash.exe", "jq", "jq.exe"})
+REPO_BASH_SHEBANG_NAMES = frozenset({"bash", "bash.exe", "sh", "sh.exe"})
+REPO_BASH_WORKFLOW_PREFIX = ".github/workflows/"
+REPO_BASH_FIXTURE_PREFIXES = (
+    "tests/speckit-pro/unit/fixtures/",
+    "tests/speckit-pro/parity/",
+)
+REPO_BASH_RESOLUTION_MAX_DEPTH = 12
+REPO_BASH_RESOLUTION_MAX_ITEMS = 64
+REPO_BASH_RESOLUTION_MAX_STRING = 4096
 XPLAT_009_REQUIRED_SCAN_ROOTS = frozenset(
     {
         "speckit-pro",
@@ -265,6 +293,26 @@ class RawFinding:
         }
 
 
+@dataclass(frozen=True)
+class RepoBashStaticResolution:
+    kind: str
+    scalar: str | None = None
+    argv: tuple[str | None, ...] = ()
+
+
+@dataclass(frozen=True)
+class RepoBashBindingEvent:
+    kind: str
+    line: int
+    column: int
+    context: ast.AST
+    arguments: tuple[ast.AST, ...]
+
+
+REPO_BASH_UNKNOWN_RESOLUTION = RepoBashStaticResolution("unknown")
+REPO_BASH_NONE_RESOLUTION = RepoBashStaticResolution("none")
+
+
 def run_active_path_guard(entry: Any, request: Any) -> dict[str, Any]:
     repo_root_result = resolve_repo_root(request.inputs)
     if isinstance(repo_root_result, dict):
@@ -274,6 +322,8 @@ def run_active_path_guard(entry: Any, request: Any) -> dict[str, Any]:
             if request.operation == "active-runtime-guard"
             else zero_bash_base_data(entry, request.operation, status)
             if request.operation == "zero-bash-guard"
+            else repo_bash_base_data(entry, request.operation, status)
+            if request.operation == "repo-bash-confinement"
             else base_data(entry, request.operation, status)
         )
         return response(status, request_id=request.request_id, data=data, diagnostics=[repo_root_result])
@@ -284,6 +334,9 @@ def run_active_path_guard(entry: Any, request: Any) -> dict[str, Any]:
 
     if request.operation == "zero-bash-guard":
         return run_zero_bash_guard(entry, request, repo_root)
+
+    if request.operation == "repo-bash-confinement":
+        return run_repo_bash_confinement(entry, request, repo_root)
 
     if request.inputs.get("xplat_008_cutover_allowed") is not False:
         diag = diagnostic(
@@ -496,6 +549,1222 @@ def run_zero_bash_guard(entry: Any, request: Any, repo_root: Path) -> dict[str, 
         ],
     )
     return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diag])
+
+
+def run_repo_bash_confinement(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:
+    """Run the XPLAT-010 live tracked-file confinement scan."""
+    allowlist_result = load_repo_bash_allowlist(repo_root, request.inputs)
+    if is_diagnostic(allowlist_result):
+        return response(
+            "input_error",
+            request_id=request.request_id,
+            data=repo_bash_base_data(entry, request.operation, "input_error"),
+            diagnostics=[allowlist_result],
+        )
+    allowlist = allowlist_result
+
+    tracked_result = repo_bash_tracked_paths(repo_root)
+    if is_diagnostic(tracked_result):
+        data = repo_bash_base_data(entry, request.operation, "missing_prerequisite")
+        data["allowlist"] = repo_bash_allowlist_summary(request.inputs, allowlist)
+        return response(
+            "missing_prerequisite",
+            request_id=request.request_id,
+            data=data,
+            diagnostics=[tracked_result],
+        )
+
+    tracked_paths = tracked_result
+    tracked_path_set = set(tracked_paths)
+    missing_allowlisted_paths = sorted(XPLAT_010_CANONICAL_ALLOWLIST_PATHS - tracked_path_set)
+    if missing_allowlisted_paths:
+        data = repo_bash_base_data(entry, request.operation, "input_error")
+        data.update(
+            {
+                "allowlist": repo_bash_allowlist_summary(request.inputs, allowlist),
+                "enumeration": {
+                    "source": "git ls-files -z",
+                    "workflow_exclusion": REPO_BASH_WORKFLOW_PREFIX,
+                    "tracked_file_count": len(tracked_paths),
+                },
+            }
+        )
+        return response(
+            "input_error",
+            request_id=request.request_id,
+            data=data,
+            diagnostics=[
+                diagnostic(
+                    "invalid_allowlist",
+                    "repository Bash allowlist references canonical paths missing from the tracked tree",
+                    details={"missing": missing_allowlisted_paths},
+                    remediation_summary="Restore the canonical vendored Spec Kit helpers or update the specification first.",
+                    remediation_actions=[
+                        "Restore every missing canonical helper from the pinned Spec Kit source.",
+                        "Do not use a stale allowlist to represent files absent from the tracked tree.",
+                    ],
+                )
+            ],
+        )
+
+    findings: list[RawFinding] = []
+    for path in tracked_paths:
+        if path.startswith(REPO_BASH_WORKFLOW_PREFIX):
+            continue
+        findings.extend(repo_bash_path_findings(repo_root, path, allowlist))
+
+    blocking = [finding for finding in findings if finding.classification == "blocking_repo_bash"]
+    status = "expected_failure" if blocking else "ok"
+    data = repo_bash_base_data(entry, request.operation, status)
+    data.update(
+        {
+            "schema_version": "1.0",
+            "feature_id": "XPLAT-010",
+            "status": "fail" if blocking else "pass",
+            "blocking_count": len(blocking),
+            "classified_counts": classified_counts(findings),
+            "findings": [repo_bash_finding_record(finding) for finding in findings],
+            "total_finding_count": len(findings),
+            "truncated_finding_count": 0,
+            "script_file_count": sum(
+                finding.category == "script_file" and finding.classification == "blocking_repo_bash"
+                for finding in findings
+            ),
+            "enumeration": {
+                "source": "git ls-files -z",
+                "workflow_exclusion": REPO_BASH_WORKFLOW_PREFIX,
+                "tracked_file_count": len(tracked_paths),
+            },
+            "allowlist": repo_bash_allowlist_summary(request.inputs, allowlist),
+        }
+    )
+    if not blocking:
+        return response("ok", request_id=request.request_id, data=data)
+
+    diag = diagnostic(
+        "repo_bash_confinement_blocked",
+        "repository Bash confinement found non-allowlisted Bash behavior",
+        details={
+            "blocking_count": len(blocking),
+            "categories": sorted({finding.category for finding in blocking}),
+            "paths": sorted({finding.path for finding in blocking})[:20],
+        },
+        remediation_summary="Remove repo-local Bash behavior or restore the exact vendored Spec Kit allowlist.",
+        remediation_actions=[
+            "Inspect data.findings for blocking_repo_bash entries.",
+            "Port executable behavior to Python or keep workflow-only dispatch under .github/workflows/.",
+            "Do not broaden or substitute the canonical XPLAT-010 allowlist.",
+        ],
+    )
+    return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diag])
+
+
+def load_repo_bash_allowlist(repo_root: Path, inputs: dict[str, Any]) -> list[dict[str, Any]] | dict[str, Any]:
+    raw = inputs.get("allowlist_file", XPLAT_010_ALLOWLIST)
+    if not isinstance(raw, str) or not raw:
+        return diagnostic("invalid_allowlist", "repository Bash allowlist path must be a non-empty string")
+    path = resolve_path(raw, repo_root)
+    root = repo_root.resolve(strict=False)
+    if not is_relative_to(path.resolve(strict=False), root):
+        return diagnostic("invalid_allowlist", "repository Bash allowlist must stay inside the repository")
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return diagnostic(
+            "invalid_allowlist",
+            "repository Bash allowlist could not be loaded",
+            details={"allowlist_file": raw, "error": type(exc).__name__},
+        )
+    if not isinstance(document, dict) or set(document) != {"schema_version", "feature_id", "entries"}:
+        return diagnostic("invalid_allowlist", "repository Bash allowlist has unsupported top-level fields")
+    if document.get("schema_version") != "1.0" or document.get("feature_id") != "XPLAT-010":
+        return diagnostic("invalid_allowlist", "repository Bash allowlist identity must be XPLAT-010 schema 1.0")
+    entries = document.get("entries")
+    if not isinstance(entries, list) or len(entries) != len(XPLAT_010_CANONICAL_ALLOWLIST_PATHS):
+        return diagnostic("invalid_allowlist", "repository Bash allowlist must contain exactly 10 entries")
+
+    expected_fields = {"path", "categories", "reason", "scope", "release_readiness_excluded"}
+    normalized_entries: list[dict[str, Any]] = []
+    for entry in entries:
+        if not isinstance(entry, dict) or set(entry) != expected_fields:
+            return diagnostic("invalid_allowlist", "repository Bash allowlist entries have unsupported fields")
+        path_value = entry.get("path")
+        categories = entry.get("categories")
+        reason = entry.get("reason")
+        if not isinstance(path_value, str) or invalid_scan_root_reason(path_value) is not None:
+            return diagnostic("invalid_allowlist", "repository Bash allowlist paths must be repository-relative")
+        normalized_path = normalize_path(path_value)
+        if (
+            entry.get("scope") != "vendored_specify_helper"
+            or entry.get("release_readiness_excluded") is not True
+            or not isinstance(categories, list)
+            or not categories
+            or any(not isinstance(category, str) or not category for category in categories)
+            or len(set(categories)) != len(categories)
+            or not isinstance(reason, str)
+            or not reason.strip()
+        ):
+            return diagnostic("invalid_allowlist", "repository Bash allowlist entry contract is invalid")
+        normalized_entry = dict(entry)
+        normalized_entry["path"] = normalized_path
+        normalized_entries.append(normalized_entry)
+
+    actual_paths = [entry["path"] for entry in normalized_entries]
+    if len(set(actual_paths)) != len(actual_paths) or set(actual_paths) != XPLAT_010_CANONICAL_ALLOWLIST_PATHS:
+        return diagnostic(
+            "invalid_allowlist",
+            "repository Bash allowlist must equal the exact canonical 10-path set",
+            details={
+                "missing": sorted(XPLAT_010_CANONICAL_ALLOWLIST_PATHS - set(actual_paths)),
+                "unexpected": sorted(set(actual_paths) - XPLAT_010_CANONICAL_ALLOWLIST_PATHS),
+            },
+        )
+    return normalized_entries
+
+
+def repo_bash_allowlist_summary(inputs: dict[str, Any], allowlist: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "path": inputs.get("allowlist_file", XPLAT_010_ALLOWLIST),
+        "entry_count": len(allowlist),
+        "release_readiness_excluded": bool(allowlist)
+        and all(entry.get("release_readiness_excluded") is True for entry in allowlist),
+    }
+
+
+def repo_bash_tracked_paths(repo_root: Path) -> list[str] | dict[str, Any]:
+    argv = ["git", "ls-files", "-z"]
+    try:
+        completed = subprocess.run(
+            argv,
+            cwd=repo_root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=False,
+            check=False,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return diagnostic(
+            "missing_prerequisite",
+            "repository Bash confinement could not run git ls-files",
+            details={"argv": argv, "error": type(exc).__name__},
+            remediation_summary="Install Git and run the guard from a source checkout.",
+            remediation_actions=["Make git available on PATH.", "Retry from the repository root."],
+        )
+    if completed.returncode != 0:
+        stderr = completed.stderr.decode("utf-8", errors="replace").strip() if isinstance(completed.stderr, bytes) else str(completed.stderr).strip()
+        return diagnostic(
+            "missing_prerequisite",
+            "repository Bash confinement requires a readable Git index",
+            details={"argv": argv, "returncode": completed.returncode, "stderr": stderr[:240]},
+            remediation_summary="Run the guard from a Git source checkout with a readable index.",
+            remediation_actions=["Confirm git status succeeds.", "Retry the same guard request."],
+        )
+    stdout = completed.stdout if isinstance(completed.stdout, bytes) else str(completed.stdout).encode()
+    return [normalize_path(item.decode("utf-8", errors="surrogateescape")) for item in stdout.split(b"\0") if item]
+
+
+def repo_bash_path_findings(repo_root: Path, tracked_path: str, allowlist: list[dict[str, Any]]) -> list[RawFinding]:
+    path = normalize_path(tracked_path)
+    if invalid_scan_root_reason(path) is not None:
+        return [
+            repo_bash_raw_finding(
+                path,
+                None,
+                "path_confinement",
+                path,
+                "tracked path is not confined to the repository",
+                allowlisted=False,
+            )
+        ]
+
+    allowlisted = path in {entry["path"] for entry in allowlist}
+    suffix = Path(path).suffix.lower()
+    if suffix in REPO_BASH_SCRIPT_SUFFIXES:
+        return [
+            repo_bash_raw_finding(
+                path,
+                1,
+                "script_file",
+                suffix,
+                "tracked Bash-family script suffix",
+                allowlisted=allowlisted,
+            )
+        ]
+
+    content_path = repo_bash_content_path(repo_root, path)
+    if content_path is None:
+        return []
+    first_line = read_first_line(content_path)
+    if repo_bash_shebang(first_line):
+        return [
+            repo_bash_raw_finding(
+                path,
+                1,
+                "script_file",
+                first_line.strip()[:120],
+                "tracked file has a Bash/POSIX-sh shebang",
+                allowlisted=allowlisted,
+            )
+        ]
+
+    if not repo_bash_invocation_scan_path(path):
+        return []
+    try:
+        content = content_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return []
+    if Path(path).suffix.lower() == ".py":
+        return repo_bash_python_findings(path, content)
+    if Path(path).name.lower() in {"hooks.json", "package.json"}:
+        return repo_bash_json_findings(path, content)
+    return []
+
+
+def repo_bash_content_path(repo_root: Path, tracked_path: str) -> Path | None:
+    root = repo_root.resolve(strict=False)
+    candidate = repo_root / tracked_path
+    try:
+        resolved = candidate.resolve(strict=False)
+    except (OSError, RuntimeError):
+        return None
+    if not is_relative_to(resolved, root) or not resolved.is_file():
+        return None
+    return resolved
+
+
+def repo_bash_invocation_scan_path(path: str) -> bool:
+    normalized = normalize_path(path)
+    if normalized.startswith(REPO_BASH_FIXTURE_PREFIXES) or "/fixtures/" in normalized:
+        return False
+    if Path(normalized).name.lower().endswith("-baseline.txt"):
+        return False
+    return Path(normalized).suffix.lower() == ".py" or Path(normalized).name.lower() in {"hooks.json", "package.json"}
+
+
+def repo_bash_shebang(content: str) -> bool:
+    try:
+        first_line = content.splitlines()[0].strip()
+    except IndexError:
+        return False
+    if not first_line.startswith("#!"):
+        return False
+    try:
+        argv = shlex.split(first_line[2:].strip())
+    except ValueError:
+        argv = first_line[2:].strip().split()
+    if not argv:
+        return False
+    if executable_basename(argv[0]) == "env":
+        return any(
+            delegated and executable_basename(delegated[0]) in REPO_BASH_SHEBANG_NAMES
+            for delegated in env_delegated_argvs(["env", *argv[1:]])
+        )
+    return executable_basename(argv[0]) in REPO_BASH_SHEBANG_NAMES
+
+
+def repo_bash_raw_finding(
+    path: str,
+    line: int | None,
+    category: str,
+    pattern: str,
+    reason: str,
+    *,
+    allowlisted: bool = False,
+) -> RawFinding:
+    return RawFinding(
+        path=path,
+        line=line,
+        category=category,
+        pattern=pattern,
+        reason=reason,
+        active_role="vendored_specify_helper" if allowlisted else "repository",
+        classification="vendored_specify_helper" if allowlisted else "blocking_repo_bash",
+        remediation=(
+            "Keep this exact vendored helper release-readiness excluded."
+            if allowlisted
+            else "Remove the Bash-family file or active bash/jq invocation."
+        ),
+    )
+
+
+def repo_bash_finding_record(finding: RawFinding) -> dict[str, Any]:
+    record = finding.as_record()
+    if finding.classification == "vendored_specify_helper":
+        record["release_readiness_excluded"] = True
+    return record
+
+
+def repo_bash_python_findings(path: str, content: str) -> list[RawFinding]:
+    try:
+        tree = ast.parse(content)
+    except SyntaxError:
+        return []
+    aliases = python_shell_aliases(tree)
+    imported_which_aliases = repo_bash_which_aliases(tree)
+    imported_sys_aliases = repo_bash_sys_aliases(tree)
+    wrappers = repo_bash_subprocess_wrappers(tree, aliases)
+    findings: list[RawFinding] = []
+    for scope in repo_bash_scopes(tree):
+        nodes = list(repo_bash_scope_nodes(scope))
+        assignments = repo_bash_assignment_nodes(nodes)
+        shadowed = repo_bash_shadowed_names(scope)
+        which_aliases = tuple(aliases - shadowed for aliases in imported_which_aliases)
+        sys_aliases = tuple(aliases - shadowed for aliases in imported_sys_aliases)
+        for node in nodes:
+            if not isinstance(node, ast.Call):
+                continue
+            category: str | None = None
+            args_node: ast.AST | None = None
+            direct_subprocess = False
+            if is_os_system_call(node.func, aliases):
+                category = "os_system"
+                args_node = subprocess_args_node(node)
+            elif is_shell_backed_subprocess_call(node.func, aliases) or is_subprocess_call(node.func, aliases):
+                direct_subprocess = is_subprocess_call(node.func, aliases)
+                category = "shell_true" if call_has_shell_enabled(node) else "command_argv_subprocess"
+                args_node = subprocess_args_node(node)
+            else:
+                wrapper = repo_bash_call_name(node.func)
+                parameter_index = wrappers.get(wrapper) if wrapper else None
+                if parameter_index is not None and len(node.args) > parameter_index:
+                    category = "command_argv_subprocess"
+                    args_node = node.args[parameter_index]
+            if category is None or args_node is None:
+                continue
+
+            pattern: str | None
+            if direct_subprocess:
+                executable_node = repo_bash_subprocess_executable_node(node)
+                if executable_node is not None:
+                    executable = repo_bash_static_resolution(
+                        executable_node,
+                        assignments,
+                        node,
+                        which_aliases,
+                        sys_aliases,
+                        set(),
+                    )
+                    if executable.kind != "none":
+                        pattern = repo_bash_executable_override_pattern(executable)
+                        if pattern is None:
+                            continue
+                    else:
+                        pattern = None
+                else:
+                    pattern = None
+            else:
+                pattern = None
+
+            if pattern is None:
+                value = repo_bash_static_resolution(
+                    args_node,
+                    assignments,
+                    node,
+                    which_aliases,
+                    sys_aliases,
+                    set(),
+                )
+                pattern = repo_bash_subprocess_resolution_pattern(value, fail_closed=category != "os_system")
+            if pattern is None:
+                continue
+            unresolved = "<dynamic" in pattern
+            findings.append(
+                repo_bash_raw_finding(
+                    path,
+                    getattr(node, "lineno", None),
+                    category,
+                    pattern,
+                    (
+                        "Python subprocess executable cannot be statically resolved Bash-free"
+                        if unresolved
+                        else "Python execution path invokes bash or jq"
+                    ),
+                )
+            )
+    return findings
+
+
+def repo_bash_scopes(tree: ast.AST) -> list[ast.AST]:
+    return [tree, *[node for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda))]]
+
+
+def repo_bash_scope_nodes(scope: ast.AST):
+    stack = [scope]
+    while stack:
+        node = stack.pop()
+        yield node
+        children = list(ast.iter_child_nodes(node))
+        for child in reversed(children):
+            if child is not scope and isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+                continue
+            stack.append(child)
+
+
+def repo_bash_assignment_nodes(nodes: list[ast.AST]) -> dict[str, list[RepoBashBindingEvent]]:
+    assignments: dict[str, list[RepoBashBindingEvent]] = {}
+
+    def add_event(name: str, kind: str, context: ast.AST, *arguments: ast.AST) -> None:
+        assignments.setdefault(name, []).append(
+            RepoBashBindingEvent(
+                kind=kind,
+                line=getattr(context, "lineno", 0),
+                column=getattr(context, "col_offset", 0),
+                context=context,
+                arguments=tuple(arguments),
+            )
+        )
+
+    for node in nodes:
+        targets: list[ast.expr] = []
+        value: ast.AST | None = None
+        if isinstance(node, ast.Assign):
+            targets = list(node.targets)
+            value = node.value
+        elif isinstance(node, ast.AnnAssign):
+            targets = [node.target]
+            value = node.value
+        if value is not None:
+            for target in targets:
+                if isinstance(target, ast.Name):
+                    add_event(target.id, "assign", node, value)
+                elif isinstance(target, ast.Subscript) and isinstance(target.value, ast.Name):
+                    add_event(target.value.id, "setitem", node, target.slice, value)
+        if isinstance(node, ast.AugAssign):
+            kind = "augadd" if isinstance(node.op, ast.Add) else "unknown"
+            if isinstance(node.target, ast.Name):
+                add_event(node.target.id, kind, node, node.value)
+            elif isinstance(node.target, ast.Subscript) and isinstance(node.target.value, ast.Name):
+                subscript_kind = "setitem_augadd" if isinstance(node.op, ast.Add) else "unknown"
+                add_event(node.target.value.id, subscript_kind, node, node.target.slice, node.value)
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+            and node.func.attr in {"append", "clear", "extend", "insert", "pop", "remove", "reverse", "sort"}
+        ):
+            kind = node.func.attr if not node.keywords else "unknown"
+            add_event(node.func.value.id, kind, node, *node.args)
+    for events in assignments.values():
+        events.sort(key=lambda event: (event.line, event.column))
+    return assignments
+
+
+def repo_bash_resolve_value(
+    node: ast.AST,
+    assignments: dict[str, list[RepoBashBindingEvent]],
+    context: ast.AST,
+    which_aliases: tuple[set[str], set[str]],
+    resolving: set[str],
+    sys_aliases: tuple[set[str], set[str]] | None = None,
+) -> str | list[str | None] | None:
+    resolution = repo_bash_static_resolution(
+        node,
+        assignments,
+        context,
+        which_aliases,
+        sys_aliases or (set(), set()),
+        resolving,
+    )
+    if resolution.kind == "scalar":
+        return resolution.scalar
+    if resolution.kind == "argv":
+        return list(resolution.argv)
+    return None
+
+
+def repo_bash_static_resolution(
+    node: ast.AST,
+    assignments: dict[str, list[RepoBashBindingEvent]],
+    context: ast.AST,
+    which_aliases: tuple[set[str], set[str]],
+    sys_aliases: tuple[set[str], set[str]],
+    resolving: set[str],
+    depth: int = 0,
+) -> RepoBashStaticResolution:
+    if depth >= REPO_BASH_RESOLUTION_MAX_DEPTH or len(resolving) >= REPO_BASH_RESOLUTION_MAX_DEPTH:
+        return REPO_BASH_UNKNOWN_RESOLUTION
+
+    literal = static_string_literal(node)
+    if literal is not None:
+        if len(literal) > REPO_BASH_RESOLUTION_MAX_STRING:
+            return REPO_BASH_UNKNOWN_RESOLUTION
+        return RepoBashStaticResolution("scalar", scalar=literal)
+    if isinstance(node, ast.Constant) and node.value is None:
+        return REPO_BASH_NONE_RESOLUTION
+    if (
+        isinstance(node, ast.Attribute)
+        and node.attr == "executable"
+        and isinstance(node.value, ast.Name)
+        and node.value.id in sys_aliases[0]
+    ):
+        return RepoBashStaticResolution("scalar", scalar="python")
+    if isinstance(node, ast.NamedExpr):
+        return repo_bash_static_resolution(
+            node.value,
+            assignments,
+            context,
+            which_aliases,
+            sys_aliases,
+            resolving,
+            depth + 1,
+        )
+    if isinstance(node, ast.Starred):
+        return repo_bash_static_resolution(
+            node.value,
+            assignments,
+            context,
+            which_aliases,
+            sys_aliases,
+            resolving,
+            depth + 1,
+        )
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left = repo_bash_static_resolution(
+            node.left,
+            assignments,
+            context,
+            which_aliases,
+            sys_aliases,
+            resolving,
+            depth + 1,
+        )
+        right = repo_bash_static_resolution(
+            node.right,
+            assignments,
+            context,
+            which_aliases,
+            sys_aliases,
+            resolving,
+            depth + 1,
+        )
+        return repo_bash_add_resolutions(left, right)
+    if isinstance(node, (ast.List, ast.Tuple)):
+        values: list[str | None] = []
+        for element in node.elts:
+            if len(values) >= REPO_BASH_RESOLUTION_MAX_ITEMS:
+                values[-1:] = [None]
+                break
+            value = repo_bash_static_resolution(
+                element.value if isinstance(element, ast.Starred) else element,
+                assignments,
+                context,
+                which_aliases,
+                sys_aliases,
+                resolving,
+                depth + 1,
+            )
+            if isinstance(element, ast.Starred):
+                if value.kind == "argv":
+                    values.extend(value.argv)
+                elif value.kind == "scalar" and value.scalar is not None:
+                    values.extend(value.scalar)
+                else:
+                    values.append(None)
+            else:
+                values.append(value.scalar if value.kind == "scalar" else None)
+            values = list(repo_bash_bounded_argv(values))
+        return RepoBashStaticResolution("argv", argv=tuple(values))
+    if isinstance(node, ast.Name):
+        if node.id in resolving:
+            return REPO_BASH_UNKNOWN_RESOLUTION
+        return repo_bash_name_resolution(
+            node.id,
+            assignments,
+            context,
+            which_aliases,
+            sys_aliases,
+            resolving | {node.id},
+            depth + 1,
+        )
+    if isinstance(node, ast.Call):
+        if repo_bash_command_source_call(node.func, which_aliases) and node.args:
+            value = repo_bash_static_resolution(
+                node.args[0],
+                assignments,
+                context,
+                which_aliases,
+                sys_aliases,
+                resolving,
+                depth + 1,
+            )
+            if value.kind == "scalar" and value.scalar is not None:
+                if (
+                    repo_bash_trusted_which_call(node.func, which_aliases)
+                    or executable_basename(value.scalar) in REPO_BASH_COMMAND_NAMES
+                ):
+                    return value
+            return REPO_BASH_UNKNOWN_RESOLUTION
+        if isinstance(node.func, ast.Name) and node.func.id in {"list", "tuple"} and len(node.args) == 1:
+            value = repo_bash_static_resolution(
+                node.args[0],
+                assignments,
+                context,
+                which_aliases,
+                sys_aliases,
+                resolving,
+                depth + 1,
+            )
+            if value.kind == "argv":
+                return value
+            if value.kind == "scalar" and value.scalar is not None:
+                return RepoBashStaticResolution("argv", argv=repo_bash_bounded_argv(value.scalar))
+        if isinstance(node.func, ast.Name) and node.func.id == "str" and len(node.args) == 1:
+            value = repo_bash_static_resolution(
+                node.args[0],
+                assignments,
+                context,
+                which_aliases,
+                sys_aliases,
+                resolving,
+                depth + 1,
+            )
+            if value.kind == "scalar":
+                return value
+        return REPO_BASH_UNKNOWN_RESOLUTION
+    if isinstance(node, ast.Subscript):
+        value = repo_bash_static_resolution(
+            node.value,
+            assignments,
+            context,
+            which_aliases,
+            sys_aliases,
+            resolving,
+            depth + 1,
+        )
+        index = node.slice.value if isinstance(node.slice, ast.Constant) else None
+        if value.kind == "argv" and isinstance(index, int) and -len(value.argv) <= index < len(value.argv):
+            item = value.argv[index]
+            return RepoBashStaticResolution("scalar", scalar=item) if item is not None else REPO_BASH_UNKNOWN_RESOLUTION
+        return REPO_BASH_UNKNOWN_RESOLUTION
+    if isinstance(node, ast.IfExp):
+        return repo_bash_merge_alternative_resolutions(
+            [
+                repo_bash_static_resolution(
+                    branch,
+                    assignments,
+                    context,
+                    which_aliases,
+                    sys_aliases,
+                    resolving,
+                    depth + 1,
+                )
+                for branch in (node.body, node.orelse)
+            ]
+        )
+    if isinstance(node, ast.BoolOp):
+        return repo_bash_merge_alternative_resolutions(
+            [
+                repo_bash_static_resolution(
+                    value,
+                    assignments,
+                    context,
+                    which_aliases,
+                    sys_aliases,
+                    resolving,
+                    depth + 1,
+                )
+                for value in node.values[:REPO_BASH_RESOLUTION_MAX_ITEMS]
+            ]
+        )
+    return REPO_BASH_UNKNOWN_RESOLUTION
+
+
+def repo_bash_name_resolution(
+    name: str,
+    assignments: dict[str, list[RepoBashBindingEvent]],
+    context: ast.AST,
+    which_aliases: tuple[set[str], set[str]],
+    sys_aliases: tuple[set[str], set[str]],
+    resolving: set[str],
+    depth: int,
+) -> RepoBashStaticResolution:
+    position = (getattr(context, "lineno", 0), getattr(context, "col_offset", 0))
+    events = [event for event in assignments.get(name, []) if (event.line, event.column) <= position]
+    assignment_indexes = [index for index, event in enumerate(events) if event.kind == "assign"]
+    if not assignment_indexes:
+        if name in sys_aliases[1]:
+            return RepoBashStaticResolution("scalar", scalar="python")
+        return REPO_BASH_UNKNOWN_RESOLUTION
+
+    assignment_index = assignment_indexes[-1]
+    assignment = events[assignment_index]
+    current = repo_bash_static_resolution(
+        assignment.arguments[0],
+        assignments,
+        assignment.context,
+        which_aliases,
+        sys_aliases,
+        resolving,
+        depth + 1,
+    )
+    for event in events[assignment_index + 1 :]:
+        current = repo_bash_apply_binding_event(
+            current,
+            event,
+            assignments,
+            which_aliases,
+            sys_aliases,
+            resolving,
+            depth + 1,
+        )
+    return current
+
+
+def repo_bash_apply_binding_event(
+    current: RepoBashStaticResolution,
+    event: RepoBashBindingEvent,
+    assignments: dict[str, list[RepoBashBindingEvent]],
+    which_aliases: tuple[set[str], set[str]],
+    sys_aliases: tuple[set[str], set[str]],
+    resolving: set[str],
+    depth: int,
+) -> RepoBashStaticResolution:
+    def resolve(node: ast.AST) -> RepoBashStaticResolution:
+        return repo_bash_static_resolution(
+            node,
+            assignments,
+            event.context,
+            which_aliases,
+            sys_aliases,
+            resolving,
+            depth + 1,
+        )
+
+    if event.kind == "augadd" and len(event.arguments) == 1:
+        return repo_bash_add_resolutions(current, resolve(event.arguments[0]))
+    if event.kind in {"setitem", "setitem_augadd"} and len(event.arguments) == 2:
+        if current.kind != "argv":
+            return REPO_BASH_UNKNOWN_RESOLUTION
+        index = repo_bash_static_integer(event.arguments[0])
+        values = list(current.argv)
+        if index is None or not -len(values) <= index < len(values):
+            return REPO_BASH_UNKNOWN_RESOLUTION
+        normalized_index = index % len(values)
+        replacement = resolve(event.arguments[1])
+        if event.kind == "setitem_augadd":
+            existing = values[normalized_index]
+            left = (
+                RepoBashStaticResolution("scalar", scalar=existing)
+                if existing is not None
+                else REPO_BASH_UNKNOWN_RESOLUTION
+            )
+            replacement = repo_bash_add_resolutions(left, replacement)
+        values[normalized_index] = replacement.scalar if replacement.kind == "scalar" else None
+        return RepoBashStaticResolution("argv", argv=repo_bash_bounded_argv(values))
+    if current.kind != "argv":
+        return REPO_BASH_UNKNOWN_RESOLUTION
+
+    values = list(current.argv)
+    if event.kind == "append" and len(event.arguments) == 1:
+        item = resolve(event.arguments[0])
+        values.append(item.scalar if item.kind == "scalar" else None)
+    elif event.kind == "extend" and len(event.arguments) == 1:
+        extension = resolve(event.arguments[0])
+        if extension.kind == "argv":
+            values.extend(extension.argv)
+        elif extension.kind == "scalar" and extension.scalar is not None:
+            values.extend(extension.scalar)
+        else:
+            values.append(None)
+    elif event.kind == "insert" and len(event.arguments) == 2:
+        index = repo_bash_static_integer(event.arguments[0])
+        if index is None:
+            return REPO_BASH_UNKNOWN_RESOLUTION
+        item = resolve(event.arguments[1])
+        values.insert(index, item.scalar if item.kind == "scalar" else None)
+    elif event.kind == "clear" and not event.arguments:
+        values.clear()
+    elif event.kind == "pop" and len(event.arguments) <= 1:
+        index = -1 if not event.arguments else repo_bash_static_integer(event.arguments[0])
+        if index is None or not -len(values) <= index < len(values):
+            return REPO_BASH_UNKNOWN_RESOLUTION
+        values.pop(index)
+    elif event.kind == "remove" and len(event.arguments) == 1:
+        item = resolve(event.arguments[0])
+        if item.kind != "scalar" or item.scalar not in values:
+            return REPO_BASH_UNKNOWN_RESOLUTION
+        values.remove(item.scalar)
+    elif event.kind == "reverse" and not event.arguments:
+        values.reverse()
+    elif event.kind == "sort" and not event.arguments and None not in values:
+        values.sort()
+    else:
+        return REPO_BASH_UNKNOWN_RESOLUTION
+    return RepoBashStaticResolution("argv", argv=repo_bash_bounded_argv(values))
+
+
+def repo_bash_static_integer(node: ast.AST) -> int | None:
+    if isinstance(node, ast.Constant) and type(node.value) is int:
+        return node.value
+    if (
+        isinstance(node, ast.UnaryOp)
+        and isinstance(node.op, (ast.UAdd, ast.USub))
+        and isinstance(node.operand, ast.Constant)
+        and type(node.operand.value) is int
+    ):
+        return node.operand.value if isinstance(node.op, ast.UAdd) else -node.operand.value
+    return None
+
+
+def repo_bash_add_resolutions(
+    left: RepoBashStaticResolution,
+    right: RepoBashStaticResolution,
+) -> RepoBashStaticResolution:
+    if left.kind == "scalar" and right.kind == "scalar":
+        value = (left.scalar or "") + (right.scalar or "")
+        if len(value) <= REPO_BASH_RESOLUTION_MAX_STRING:
+            return RepoBashStaticResolution("scalar", scalar=value)
+        return REPO_BASH_UNKNOWN_RESOLUTION
+    if left.kind == "argv" and right.kind == "argv":
+        return RepoBashStaticResolution("argv", argv=repo_bash_bounded_argv((*left.argv, *right.argv)))
+    if left.kind == "argv" and right.kind == "unknown":
+        return RepoBashStaticResolution("argv", argv=repo_bash_bounded_argv((*left.argv, None)))
+    if left.kind == "unknown" and right.kind == "argv":
+        return RepoBashStaticResolution("argv", argv=repo_bash_bounded_argv((None, *right.argv)))
+    return REPO_BASH_UNKNOWN_RESOLUTION
+
+
+def repo_bash_bounded_argv(values: Any) -> tuple[str | None, ...]:
+    argv = tuple(values)
+    if len(argv) <= REPO_BASH_RESOLUTION_MAX_ITEMS:
+        return argv
+    return (*argv[: REPO_BASH_RESOLUTION_MAX_ITEMS - 1], None)
+
+
+def repo_bash_merge_alternative_resolutions(
+    resolutions: list[RepoBashStaticResolution],
+) -> RepoBashStaticResolution:
+    if not resolutions:
+        return REPO_BASH_UNKNOWN_RESOLUTION
+    for resolution in resolutions:
+        if resolution.kind == "scalar" and resolution.scalar is not None:
+            if repo_bash_command_text_contains_forbidden(resolution.scalar):
+                return resolution
+        elif resolution.kind == "argv" and None not in resolution.argv:
+            if repo_bash_argv_contains_forbidden(list(resolution.argv)):
+                return resolution
+    if all(resolution == resolutions[0] for resolution in resolutions[1:]):
+        return resolutions[0]
+    if all(resolution.kind == "scalar" for resolution in resolutions):
+        return resolutions[0]
+    if all(resolution.kind == "argv" and None not in resolution.argv for resolution in resolutions):
+        return resolutions[0]
+    return REPO_BASH_UNKNOWN_RESOLUTION
+
+
+def repo_bash_subprocess_executable_node(node: ast.Call) -> ast.AST | None:
+    for keyword in node.keywords:
+        if keyword.arg == "executable":
+            return keyword.value
+    return None
+
+
+def repo_bash_executable_override_pattern(resolution: RepoBashStaticResolution) -> str | None:
+    if resolution.kind == "unknown":
+        return "<dynamic executable>"
+    if resolution.kind != "scalar" or resolution.scalar is None:
+        return None
+    if executable_basename(resolution.scalar) in REPO_BASH_COMMAND_NAMES:
+        return f"executable={resolution.scalar}"[:120]
+    return None
+
+
+def repo_bash_subprocess_resolution_pattern(
+    resolution: RepoBashStaticResolution,
+    *,
+    fail_closed: bool,
+) -> str | None:
+    if resolution.kind == "unknown":
+        return "<dynamic executable>" if fail_closed else None
+    if resolution.kind == "scalar" and resolution.scalar is not None:
+        if repo_bash_command_text_contains_forbidden(resolution.scalar):
+            return resolution.scalar[:120]
+        return None
+    if resolution.kind == "argv" and repo_bash_argv_contains_forbidden(list(resolution.argv)):
+        return " ".join(item if item is not None else "<dynamic>" for item in resolution.argv)[:120]
+    return None
+
+
+def repo_bash_which_aliases(tree: ast.AST) -> tuple[set[str], set[str]]:
+    modules: set[str] = set()
+    functions: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "shutil":
+                    modules.add(alias.asname or alias.name)
+        elif isinstance(node, ast.ImportFrom) and node.module == "shutil":
+            for alias in node.names:
+                if alias.name == "which":
+                    functions.add(alias.asname or alias.name)
+    imports = repo_bash_import_bindings(tree)
+    modules = {name for name in modules if imports.get(name) == [("shutil", None)]}
+    functions = {name for name in functions if imports.get(name) == [("shutil", "which")]}
+    return modules, functions
+
+
+def repo_bash_sys_aliases(tree: ast.AST) -> tuple[set[str], set[str]]:
+    modules: set[str] = set()
+    executables: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "sys":
+                    modules.add(alias.asname or alias.name)
+        elif isinstance(node, ast.ImportFrom) and node.module == "sys":
+            for alias in node.names:
+                if alias.name == "executable":
+                    executables.add(alias.asname or alias.name)
+    imports = repo_bash_import_bindings(tree)
+    modules = {name for name in modules if imports.get(name) == [("sys", None)]}
+    executables = {name for name in executables if imports.get(name) == [("sys", "executable")]}
+    return modules, executables
+
+
+def repo_bash_import_bindings(tree: ast.AST) -> dict[str, list[tuple[str | None, str | None]]]:
+    """Return every import binding per local name in source order.
+
+    A trusted sys/shutil alias is safe only when it has exactly one import
+    binding. Any competing import remains fail-closed instead of inheriting
+    trust from an earlier binding.
+    """
+    bindings: dict[str, list[tuple[str | None, str | None]]] = {}
+    nodes = sorted(
+        (node for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom))),
+        key=lambda node: (getattr(node, "lineno", 0), getattr(node, "col_offset", 0)),
+    )
+    for node in nodes:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                local_name = alias.asname or alias.name.split(".", 1)[0]
+                bindings.setdefault(local_name, []).append((alias.name, None))
+        else:
+            for alias in node.names:
+                if alias.name == "*":
+                    continue
+                local_name = alias.asname or alias.name
+                bindings.setdefault(local_name, []).append((node.module, alias.name))
+    return bindings
+
+
+def repo_bash_shadowed_names(scope: ast.AST) -> set[str]:
+    nodes = list(repo_bash_scope_nodes(scope))
+    names = {
+        node.id
+        for node in nodes
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store)
+    }
+    if isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+        names.update(argument.arg for argument in [*scope.args.posonlyargs, *scope.args.args, *scope.args.kwonlyargs])
+        if scope.args.vararg is not None:
+            names.add(scope.args.vararg.arg)
+        if scope.args.kwarg is not None:
+            names.add(scope.args.kwarg.arg)
+    for node in nodes:
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                names.add(child.name)
+    return names
+
+
+def repo_bash_command_source_call(func: ast.expr, which_aliases: tuple[set[str], set[str]]) -> bool:
+    modules, functions = which_aliases
+    if isinstance(func, ast.Name):
+        return func.id in functions or func.id == "cmd_path"
+    return (
+        isinstance(func, ast.Attribute)
+        and func.attr == "which"
+        and isinstance(func.value, ast.Name)
+        and func.value.id in modules
+    )
+
+
+def repo_bash_trusted_which_call(func: ast.expr, which_aliases: tuple[set[str], set[str]]) -> bool:
+    modules, functions = which_aliases
+    if isinstance(func, ast.Name):
+        return func.id in functions
+    return (
+        isinstance(func, ast.Attribute)
+        and func.attr == "which"
+        and isinstance(func.value, ast.Name)
+        and func.value.id in modules
+    )
+
+
+def repo_bash_subprocess_wrappers(tree: ast.AST, aliases: dict[str, set[str]]) -> dict[str, int]:
+    wrappers: dict[str, int] = {}
+    for function in ast.walk(tree):
+        if not isinstance(function, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        parameter_names = [argument.arg for argument in function.args.args]
+        for node in repo_bash_scope_nodes(function):
+            if not isinstance(node, ast.Call):
+                continue
+            if not (
+                is_subprocess_call(node.func, aliases)
+                or is_shell_backed_subprocess_call(node.func, aliases)
+                or is_os_system_call(node.func, aliases)
+            ):
+                continue
+            args_node = subprocess_args_node(node)
+            if isinstance(args_node, ast.Name) and args_node.id in parameter_names:
+                wrappers[function.name] = parameter_names.index(args_node.id)
+                break
+    return wrappers
+
+
+def repo_bash_call_name(func: ast.expr) -> str | None:
+    if isinstance(func, ast.Name):
+        return func.id
+    return None
+
+
+def repo_bash_argv_contains_forbidden(argv: list[str | None]) -> bool:
+    if not argv:
+        return False
+    if argv[0] is None:
+        return True
+    executable = executable_basename(argv[0])
+    if executable in REPO_BASH_COMMAND_NAMES:
+        return True
+    if executable == "env":
+        return repo_bash_env_argv_contains_forbidden(argv)
+    if executable in {"command", "exec"}:
+        return repo_bash_argv_contains_forbidden(argv[1:])
+    if executable in {"sh", "sh.exe", "zsh", "zsh.exe", "powershell", "powershell.exe", "pwsh", "pwsh.exe"}:
+        for index, item in enumerate(argv[1:], start=1):
+            if item is not None and shell_command_payload_flag(item):
+                if index + 1 >= len(argv) or argv[index + 1] is None:
+                    return True
+                return repo_bash_command_text_contains_forbidden(argv[index + 1])
+    if executable in {"cmd", "cmd.exe"}:
+        for index, item in enumerate(argv[1:], start=1):
+            if item is not None and item.lower() in {"/c", "/k"}:
+                payload = argv[index + 1 :]
+                if not payload or any(part is None for part in payload):
+                    return True
+                return repo_bash_command_text_contains_forbidden(" ".join(part for part in payload if part is not None))
+    return False
+
+
+def repo_bash_env_argv_contains_forbidden(argv: list[str | None]) -> bool:
+    index = 1
+    while index < len(argv):
+        item = argv[index]
+        if item is None:
+            return True
+        if item in {"-S", "--split-string"}:
+            if index + 1 >= len(argv) or argv[index + 1] is None:
+                return True
+            return any(repo_bash_argv_contains_forbidden(delegated) for delegated in env_split_string_argvs(argv[index + 1]))
+        if item.startswith("-S") and item != "-S":
+            return any(repo_bash_argv_contains_forbidden(delegated) for delegated in env_split_string_argvs(item[2:].strip()))
+        if item.startswith("--split-string="):
+            return any(
+                repo_bash_argv_contains_forbidden(delegated)
+                for delegated in env_split_string_argvs(item.split("=", 1)[1])
+            )
+        if item in {"-u", "--unset", "-C", "--chdir"}:
+            index += 2
+            continue
+        if item.startswith("--unset=") or item.startswith("--chdir="):
+            index += 1
+            continue
+        if item.startswith("-") or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", item):
+            index += 1
+            continue
+        return repo_bash_argv_contains_forbidden(argv[index:])
+    return False
+
+
+def repo_bash_command_text_contains_forbidden(command: str) -> bool:
+    try:
+        lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|()")
+        lexer.whitespace_split = True
+        lexer.commenters = ""
+        tokens = list(lexer)
+    except ValueError:
+        tokens = command.split()
+    segment: list[str] = []
+    for token in [*tokens, ";"]:
+        if token in {";", "&&", "||", "|", "&", "(", ")"}:
+            if repo_bash_command_segment_contains_forbidden(segment):
+                return True
+            segment = []
+        else:
+            segment.append(token)
+    return False
+
+
+def repo_bash_command_segment_contains_forbidden(segment: list[str]) -> bool:
+    index = 0
+    while index < len(segment) and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", segment[index]):
+        index += 1
+    while index < len(segment) and executable_basename(segment[index]) in {"env", "command", "exec"}:
+        command = executable_basename(segment[index])
+        index += 1
+        while index < len(segment) and (
+            segment[index].startswith("-")
+            or (command == "env" and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", segment[index]))
+        ):
+            index += 1
+    return index < len(segment) and repo_bash_argv_contains_forbidden(segment[index:])
+
+
+def repo_bash_json_findings(path: str, content: str) -> list[RawFinding]:
+    try:
+        document = json.loads(content)
+    except json.JSONDecodeError:
+        return []
+    named_values: list[tuple[str, Any]] = []
+    name = Path(path).name.lower()
+    if name == "hooks.json":
+        named_values.extend(repo_bash_hook_command_values(document))
+        category = "hooks_json_command"
+    elif name == "package.json":
+        scripts = document.get("scripts") if isinstance(document, dict) else None
+        if isinstance(scripts, dict):
+            named_values.extend((str(key), value) for key, value in scripts.items())
+        category = "package_json_script"
+    else:
+        return []
+    findings: list[RawFinding] = []
+    for key, value in named_values:
+        if not repo_bash_json_command_contains_forbidden(value):
+            continue
+        findings.append(
+            repo_bash_raw_finding(
+                path,
+                None,
+                category,
+                f"{key}: {value}"[:120],
+                "structural JSON command invokes bash or jq",
+            )
+        )
+    return findings
+
+
+def repo_bash_hook_command_values(value: Any) -> list[tuple[str, Any]]:
+    found: list[tuple[str, Any]] = []
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if key == "command":
+                found.append((key, child))
+            else:
+                found.extend(repo_bash_hook_command_values(child))
+    elif isinstance(value, list):
+        for child in value:
+            found.extend(repo_bash_hook_command_values(child))
+    return found
+
+
+def repo_bash_json_command_contains_forbidden(value: Any) -> bool:
+    if isinstance(value, str):
+        return repo_bash_command_text_contains_forbidden(value)
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return repo_bash_argv_contains_forbidden(list(value))
+    return False
 
 
 def zero_bash_source_findings(sources: list[SourceFile], allowlist: list[dict[str, Any]]) -> list[RawFinding]:
@@ -1701,7 +2970,7 @@ def installed_cache_proof_findings(repo_root: Path, proof: dict[str, Any], allow
                     installed_cache_finding(
                         prefix,
                         "installed_root",
-                        f"installed-cache proof installed_root must be tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache/{declared_surface}/speckit-pro",
+                        f"installed-cache proof installed_root must be tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/{declared_surface}/speckit-pro",
                     )
                 )
             if not canonical_payload_root(source_root, declared_surface):
@@ -1817,7 +3086,7 @@ def canonical_installed_cache_root(root: str, product: str) -> bool:
     parts = normalized.split("/")
     if any(part in {"", ".", ".."} for part in parts):
         return False
-    return normalized == f"tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/installed-cache/{product}/speckit-pro"
+    return normalized == f"tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/{product}/speckit-pro"
 
 
 def installed_cache_finding(path: str, category: str, reason: str) -> RawFinding:
@@ -1949,6 +3218,8 @@ def scan_sources(sources: list[SourceFile], repo_root: Path) -> list[RawFinding]
             for match in pattern.finditer(source.content):
                 line_number = line_number_for_offset(source.content, match.start())
                 context = workflow_context_for_line(workflow_contexts, line_number) or line_context(lines, line_number)
+                if path == XPLAT_010_CONTAINER_PREFLIGHT_WORKFLOW:
+                    context = source.content
                 add_finding(
                     findings,
                     seen,
@@ -1963,6 +3234,8 @@ def scan_sources(sources: list[SourceFile], repo_root: Path) -> list[RawFinding]
                 if match is None:
                     continue
                 context = workflow_context_for_line(workflow_contexts, number) or line
+                if path == XPLAT_010_CONTAINER_PREFLIGHT_WORKFLOW:
+                    context = source.content
                 add_finding(
                     findings,
                     seen,
@@ -2011,6 +3284,8 @@ def scan_sources_xplat008(sources: list[SourceFile], repo_root: Path) -> list[Ra
             for match in pattern.finditer(source.content):
                 line_number = line_number_for_offset(source.content, match.start())
                 context = workflow_context_for_line(workflow_contexts, line_number) or line_context(lines, line_number)
+                if path == XPLAT_010_CONTAINER_PREFLIGHT_WORKFLOW:
+                    context = source.content
                 add_finding(
                     findings,
                     seen,
@@ -2025,6 +3300,8 @@ def scan_sources_xplat008(sources: list[SourceFile], repo_root: Path) -> list[Ra
                 if match is None:
                     continue
                 context = workflow_context_for_line(workflow_contexts, number) or line_context(lines, number)
+                if path == XPLAT_010_CONTAINER_PREFLIGHT_WORKFLOW:
+                    context = source.content
                 if xplat008_agent_tool_declaration(path, line):
                     context = line
                 add_finding(
@@ -2105,6 +3382,8 @@ def classify_path(path: str, category: str, pattern: str, content: str, source_k
     if path.startswith(".github/workflows/"):
         if path == ".github/workflows/deploy-docs.yml":
             return "docs_out_of_scope"
+        if xplat010_container_preflight_dispatch_glue(path, content):
+            return "ci_dispatch_glue"
         if category == "bash" and pattern.startswith("run:") and is_direct_python_gate_dispatch(content):
             return "ci_dispatch_glue"
         if is_docs_or_workflow_tooling(content):
@@ -2131,6 +3410,8 @@ def classify_xplat008_path(path: str, category: str, pattern: str, content: str,
     if path.startswith(".github/workflows/"):
         if path == ".github/workflows/deploy-docs.yml" or is_docs_or_workflow_tooling(content):
             return "docs_non_runtime"
+        if xplat010_container_preflight_dispatch_glue(path, content):
+            return "ci_dispatch_glue"
         if category == "bash" and pattern.startswith("run:") and is_direct_python_gate_dispatch(content):
             return "ci_dispatch_glue"
         return "blocking_active_runtime"
@@ -2269,6 +3550,31 @@ def xplat008_repo_surface_exception(category: str, pattern: str, content: str) -
     return has_negative_context
 
 
+def xplat010_container_preflight_dispatch_glue(path: str, content: str) -> bool:
+    """Recognize the exact CI-only workflow without allowing shell helpers back in."""
+    if path != XPLAT_010_CONTAINER_PREFLIGHT_WORKFLOW:
+        return False
+    required_markers = (
+        "permissions: {}",
+        "container-preflight-linux-amd64",
+        "container-preflight-linux-arm64",
+        "python3 -m speckit_pro_runner",
+        "-m speckit_pro_runner",
+        "actions/upload-artifact@v7",
+    )
+    if not all(marker in content for marker in required_markers):
+        return False
+    if re.search(r"(?i)(?<![\w-])jq(?![\w-])", content):
+        return False
+    if re.search(r"(?i)\.(?:sh|bash|zsh|ps1|bat|cmd)\b", content):
+        return False
+    return re.search(
+        r"(?im)(?:^|[;&|])[ \t]*(?:bash|bash\.exe|sh|sh\.exe|zsh|zsh\.exe|"
+        r"powershell|powershell\.exe|pwsh|pwsh\.exe)\b[ \t]+",
+        content,
+    ) is None
+
+
 def xplat008_install_guidance_requires_shell(category: str, pattern: str, content: str) -> bool:
     return not xplat008_repo_surface_exception(category, pattern, content)
 
@@ -2343,6 +3649,8 @@ def xplat008_source_checkout_helper_reference(path: str, content: str) -> bool:
         "zero_bash_guard",
         "zero_bash_status",
         "zero_bash_blocking_count",
+        "repo-bash-confinement",
+        "repo_bash_confinement",
         "xplat-009-zero-bash",
         "required_absent",
         "claude_plugin_root",
@@ -2555,6 +3863,8 @@ def xplat008_baseline_source_checkout_helper_reference(path: str, content: str) 
         "zero_bash_guard",
         "zero_bash_status",
         "zero_bash_blocking_count",
+        "repo-bash-confinement",
+        "repo_bash_confinement",
         "xplat-009-zero-bash",
         "required_absent",
         "claude_plugin_root",
@@ -2877,7 +4187,7 @@ def review_base_ref(repo_root: Path) -> str | None:
     for candidate in candidates:
         if not git_ref_exists(repo_root, candidate):
             continue
-        merge_base = git_stdout(repo_root, ["git", "merge-base", "HEAD", candidate])
+        merge_base = git_stdout(repo_root, ["merge-base", "HEAD", candidate])
         return merge_base or candidate
     return None
 
@@ -2898,10 +4208,10 @@ def git_ref_exists(repo_root: Path, ref: str) -> bool:
     return completed.returncode == 0
 
 
-def git_stdout(repo_root: Path, argv: list[str]) -> str:
+def git_stdout(repo_root: Path, args: list[str]) -> str:
     try:
         completed = subprocess.run(
-            argv,
+            ["git", *args],
             cwd=repo_root,
             text=True,
             capture_output=True,
@@ -3106,6 +4416,44 @@ def zero_bash_base_data(entry: Any, operation: str, status: str) -> dict[str, An
             "source_derived": False,
             "mutable_user_cache": None,
             "script_file_count": None,
+        },
+    }
+
+
+def repo_bash_base_data(entry: Any, operation: str, status: str) -> dict[str, Any]:
+    passing = status == "ok"
+    return {
+        "gate": {
+            "gate_id": entry.helper_id,
+            "operation": operation,
+            "gate_status": "pass" if passing else "fail" if status == "expected_failure" else status,
+            "promoted": status not in {"input_error", "missing_prerequisite"},
+            "blocking": not passing,
+            "comparison_ids": ["xplat-010-repo-bash-confinement"],
+            "promotion_record": None,
+        },
+        "artifacts": [
+            {"path": XPLAT_010_DEFAULT_CASE_FILE, "kind": "fixture"},
+            {"path": XPLAT_010_ALLOWLIST, "kind": "allowlist"},
+        ],
+        "schema_version": "1.0",
+        "feature_id": "XPLAT-010",
+        "status": "pass" if passing else "fail",
+        "blocking_count": 0 if passing else 1,
+        "classified_counts": {},
+        "findings": [],
+        "total_finding_count": 0,
+        "truncated_finding_count": 0,
+        "script_file_count": 0,
+        "enumeration": {
+            "source": "git ls-files -z",
+            "workflow_exclusion": REPO_BASH_WORKFLOW_PREFIX,
+            "tracked_file_count": 0,
+        },
+        "allowlist": {
+            "path": XPLAT_010_ALLOWLIST,
+            "entry_count": 0,
+            "release_readiness_excluded": False,
         },
     }
 

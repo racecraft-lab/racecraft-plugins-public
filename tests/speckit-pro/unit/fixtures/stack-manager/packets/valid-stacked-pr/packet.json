@@ -1,0 +1,8 @@
+{
+  "fixture_id": "valid-stacked-pr-packet",
+  "base_branch": "main",
+  "head_branch": "prsg-014-stack-01",
+  "title": "feat(PRSG-014): add stack manager detection",
+  "body_file": "tests/speckit-pro/unit/fixtures/stack-manager/packets/valid-stacked-pr/pr-body.md",
+  "validation_status": "passed"
+}

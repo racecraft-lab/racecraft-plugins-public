@@ -75,21 +75,33 @@ Root scripts and SpecKit Pro helper scripts with repository-role classification.
 - **Purpose:** Root scripts used for payload building and marketplace version synchronization.
 - **Classification:** `release-infrastructure`
 - **Platform concept:** Repository script group
-- **Claude Code:** scripts/refresh-local-plugin.sh, scripts/sync-marketplace-versions.sh
-- **Codex:** scripts/refresh-local-plugin.sh, scripts/sync-marketplace-versions.sh
+- **Claude Code:** scripts/build-plugin-payloads.py, scripts/compose-release-notes.py, scripts/refresh-local-plugin.py, scripts/refresh-release-artifacts.py, scripts/release_note_policy.py, scripts/resolve_release_prs.py, scripts/sync_release_pr.py, scripts/sync-marketplace-versions.py
+- **Codex:** scripts/build-plugin-payloads.py, scripts/compose-release-notes.py, scripts/refresh-local-plugin.py, scripts/refresh-release-artifacts.py, scripts/release_note_policy.py, scripts/resolve_release_prs.py, scripts/sync_release_pr.py, scripts/sync-marketplace-versions.py
 - **Runtime difference:** Script groups are repository role inventories; paths are shared unless an individual script name or source file declares a runtime-specific purpose.
 
 #### Source Facts
 
-- scripts/refresh-local-plugin.sh is a checked-in release-infrastructure file. Source refs: `scripts/refresh-local-plugin.sh`.
-- scripts/sync-marketplace-versions.sh is a checked-in release-infrastructure file. Source refs: `scripts/sync-marketplace-versions.sh`.
+- scripts/build-plugin-payloads.py is a checked-in release-infrastructure file. Source refs: `scripts/build-plugin-payloads.py`.
+- scripts/compose-release-notes.py is a checked-in release-infrastructure file. Source refs: `scripts/compose-release-notes.py`.
+- scripts/refresh-local-plugin.py is a checked-in release-infrastructure file. Source refs: `scripts/refresh-local-plugin.py`.
+- scripts/refresh-release-artifacts.py is a checked-in release-infrastructure file. Source refs: `scripts/refresh-release-artifacts.py`.
+- scripts/release_note_policy.py is a checked-in release-infrastructure file. Source refs: `scripts/release_note_policy.py`.
+- scripts/resolve_release_prs.py is a checked-in release-infrastructure file. Source refs: `scripts/resolve_release_prs.py`.
+- scripts/sync_release_pr.py is a checked-in release-infrastructure file. Source refs: `scripts/sync_release_pr.py`.
+- scripts/sync-marketplace-versions.py is a checked-in release-infrastructure file. Source refs: `scripts/sync-marketplace-versions.py`.
 
 #### Sources
 
-- [scripts/refresh-local-plugin.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/refresh-local-plugin.sh)
-- [scripts/sync-marketplace-versions.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/sync-marketplace-versions.sh)
+- [scripts/build-plugin-payloads.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/build-plugin-payloads.py)
+- [scripts/compose-release-notes.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/compose-release-notes.py)
+- [scripts/refresh-local-plugin.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/refresh-local-plugin.py)
+- [scripts/refresh-release-artifacts.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/refresh-release-artifacts.py)
+- [scripts/release_note_policy.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/release_note_policy.py)
+- [scripts/resolve_release_prs.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/resolve_release_prs.py)
+- [scripts/sync_release_pr.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/sync_release_pr.py)
+- [scripts/sync-marketplace-versions.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/sync-marketplace-versions.py)
 
 #### Inferred Notes
 
 - Review script behavior in its owning source files before changing generated docs that describe the group.
-  - Based on: `scripts/refresh-local-plugin.sh`, `scripts/sync-marketplace-versions.sh`
+  - Based on: `scripts/build-plugin-payloads.py`, `scripts/compose-release-notes.py`, `scripts/refresh-local-plugin.py`, `scripts/refresh-release-artifacts.py`, `scripts/release_note_policy.py`, `scripts/resolve_release_prs.py`, `scripts/sync_release_pr.py`, `scripts/sync-marketplace-versions.py`

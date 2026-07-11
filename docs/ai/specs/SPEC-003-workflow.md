@@ -475,7 +475,7 @@ racecraft-plugins-public/
 │   │   └── plugin.json                # Version source of truth (bumped by release-please)
 │   └── tests/
 │       ├── lib/assertions.sh          # Shared test assertions
-│       ├── layer4-scripts/            # Script unit tests
+│       ├── unit/            # Script unit tests
 │       └── run-all.sh                 # Test orchestrator (Layers 1, 4, 5)
 ├── release-please-config.json         # From SPEC-001 (read by release-please-action)
 ├── .release-please-manifest.json      # From SPEC-001 (updated by release-please)

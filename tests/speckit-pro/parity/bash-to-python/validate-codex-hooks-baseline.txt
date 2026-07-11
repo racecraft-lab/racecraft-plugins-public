@@ -1,0 +1,10 @@
+001 codex-hooks.json exists
+002 .codex-plugin/plugin.json declares hooks pointer
+003 codex-hooks.json is valid JSON
+004 has top-level hooks key
+005 UserPromptSubmit event exists under hooks
+006 NO SessionStart hook (would fire on every session — regression guard)
+007 UserPromptSubmit has non-empty hooks array
+008 Hook entry has hooks array
+009 Hook entry has an empty command list
+TOTAL: 9

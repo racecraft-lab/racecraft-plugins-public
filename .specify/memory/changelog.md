@@ -170,7 +170,7 @@ git checkout 6916ec43d2d4e3972d7e12425a05158f0b48ae3b -- specs/prsg-011-retro-mi
 
 The removed source folders were already archived in project memory. PR #136
 vendored the PRSG-007 dogfood/schema fixture under
-`tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/dogfood-prsg-007/`,
+`tests/speckit-pro/unit/fixtures/atomicity-route/dogfood-atomicity-router/`,
 so Layer 4 no longer depends on the live archived spec directory.
 
 ---
@@ -232,14 +232,14 @@ git checkout deccd8a2a9916e11edfad43df8ceef95a756dc04 -- specs/prsg-008-layer-pl
 - **Cleanup applied**: 2026-06-10
 - **Cleanup branch**: `codex/archive-prsg-008-hygiene`
 - **Cleanup command**: `git rm -r specs/prsg-008-layer-planner`
-- **Fixture-decoupling prerequisite**: `test-plan-layers.sh` now reads the vendored schema fixture at `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/contracts/plan-layers.schema.json`
+- **Fixture-decoupling prerequisite**: `test-plan-layers.sh` now reads the vendored schema fixture at `tests/speckit-pro/unit/fixtures/plan-layers/contracts/plan-layers.schema.json`
 - **safeToApplyCleanup**: `true`
 - **Removed from active specs**: `specs/prsg-008-layer-planner`
 - **Recovery**: use the PRSG-008 `git show` / `git checkout` commands recorded above.
 
 The removed source folder was already archived in project memory. Layer 4
 planner coverage remains active through fixture task files and the vendored
-schema contract fixture under `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/`.
+schema contract fixture under `tests/speckit-pro/unit/fixtures/plan-layers/`.
 
 ---
 
@@ -311,7 +311,7 @@ git checkout a3361d50e3dfc5463fb2d5dbb2737a3525637a32 -- specs/prsg-009-multi-pr
 
 The removed source folder was already archived in project memory. Layer 4
 multi-PR emission coverage remains active through payload-included contract
-schemas and test fixtures under `tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/`.
+schemas and test fixtures under `tests/speckit-pro/unit/fixtures/multi-pr-emission/`.
 
 ---
 
@@ -390,7 +390,7 @@ git checkout 8b59fe55128ee2a835c64003662ce0674cac4edf -- specs/prsg-010-harden-t
 
 The removed source folder was already archived in project memory. Layer 4
 coverage remains active through payload-included contract schemas and fixtures
-under `tests/speckit-pro/layer4-scripts/fixtures/`.
+under `tests/speckit-pro/unit/fixtures/`.
 
 ---
 
@@ -552,9 +552,9 @@ The detailed per-file `git show` recovery commands are recorded in
 ### Fixture Decoupling
 
 - PRSG-012 PR body generation now reads a committed feature fixture under
-  `tests/speckit-pro/layer4-scripts/fixtures/prsg-012-feature/`.
+  `tests/speckit-pro/unit/fixtures/pr-packet-feature/`.
 - PRSG-012 marker-emission regression now reads committed marker-plan fixtures
-  under `tests/speckit-pro/layer4-scripts/fixtures/marker-plan/`.
+  under `tests/speckit-pro/unit/fixtures/marker-plan/`.
 - MOC orphan/stale-index lints now use committed MOC fixtures for former
   PRSG-002 dogfood assertions.
 
@@ -976,8 +976,8 @@ messaging.
 - `speckit-pro/agents/*.md`
 - `speckit-pro/codex-agents/*.toml`
 - `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`
-- `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
-- `tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh`
+- `tests/speckit-pro/unit/test-multi-pr-emission.sh`
+- `tests/speckit-pro/unit/test-reviewability-marker-guidance.sh`
 - `dist/claude/speckit-pro/`
 - `dist/codex/speckit-pro/`
 
@@ -1094,7 +1094,7 @@ unblocked for deterministic static enforcement and eval coverage.
 - `speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md`
 - `speckit-pro/skills/speckit-autopilot/references/plugin-limitations.md`
 - `speckit-pro/skills/speckit-coach/references/autopilot-guide.md`
-- `tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh`
+- `tests/speckit-pro/unit/test-check-prerequisites.sh`
 - `dist/claude/speckit-pro/`
 - `dist/codex/speckit-pro/`
 
@@ -1250,7 +1250,7 @@ operator prerequisite, not a committed-source cleanup blocker.
 - `dist/claude/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh`
 - `dist/codex/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh`
 - `tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.sh`
-- `tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh`
+- `tests/speckit-pro/unit/test-generate-spec-index.sh`
 
 ### Recovery Commands
 
@@ -1486,11 +1486,11 @@ Windows/macOS/Linux installed-plugin UAT.
 - `speckit-pro/speckit_pro_runner/runtime.py`
 - `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json`
 - `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256`
-- `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py`
-- `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh`
-- `tests/speckit-pro/layer4-scripts/fixtures/speckit-pro-runner/contract-fixtures.json`
-- `tests/speckit-pro/layer4-scripts/fixtures/speckit-pro-runner/changed-files-xplat-004.txt`
-- `tests/speckit-pro/layer4-scripts/fixtures/speckit-pro-runner/platform-runbook-fixtures.md`
+- `tests/speckit-pro/unit/test-speckit-pro-runner.py`
+- `tests/speckit-pro/unit/test-speckit-pro-runner.sh`
+- `tests/speckit-pro/unit/fixtures/speckit-pro-runner/contract-fixtures.json`
+- `tests/speckit-pro/unit/fixtures/speckit-pro-runner/runner-foundation-changed-files.txt`
+- `tests/speckit-pro/unit/fixtures/speckit-pro-runner/platform-runbook-fixtures.md`
 - `docs/ai/specs/.process/XPLAT-004-workflow.md`
 - `docs/ai/specs/.process/XPLAT-004-design-concept.md`
 
@@ -1547,10 +1547,10 @@ update/autoheal proof, and public release claims.
 - `speckit-pro/speckit_pro_runner/runtime.py`
 - `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json`
 - `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256`
-- `tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py`
-- `tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh`
-- `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/`
-- `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/xplat-005-feature/`
+- `tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py`
+- `tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.sh`
+- `tests/speckit-pro/unit/fixtures/read-only-helpers/`
+- `tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature/`
 - `docs/ai/specs/.process/XPLAT-005-workflow.md`
 - `docs/ai/specs/.process/XPLAT-005-design-concept.md`
 
@@ -1616,10 +1616,10 @@ readiness.
 - `speckit-pro/codex-skills/speckit-autopilot/`
 - `dist/codex/speckit-pro/skills/speckit-autopilot/`
 - `dist/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`
-- `tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py`
-- `tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py`
-- `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/`
-- `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/contracts/`
+- `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py`
+- `tests/speckit-pro/unit/test-autopilot-phase-coverage.py`
+- `tests/speckit-pro/unit/fixtures/mutation-helpers/`
+- `tests/speckit-pro/unit/fixtures/mutation-helpers/contracts/`
 - `docs/ai/specs/.process/XPLAT-006-workflow.md`
 - `docs/ai/specs/.process/XPLAT-006-design-concept.md`
 
@@ -1688,8 +1688,8 @@ release gates.
 - `tests/speckit-pro/run-all.sh`
 - `tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.sh`
 - `tests/speckit-pro/layer1-structural/validate-release-workflow.sh`
-- `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py`
-- `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/`
+- `tests/speckit-pro/unit/test-speckit-pro-gates.py`
+- `tests/speckit-pro/unit/fixtures/runner-gates/`
 - `docs/ai/specs/.process/XPLAT-007-workflow.md`
 - `docs/ai/specs/.process/XPLAT-007-design-concept.md`
 
@@ -1761,7 +1761,7 @@ claims remain blocked until all six operator UAT rows pass in
 - `docs/ai/specs/.process/XPLAT-008-release-readiness.md`
 - `docs/ai/specs/.process/XPLAT-008-uat-matrix.md`
 - `docs/ai/specs/.process/XPLAT-008-uat-codex-macos.md`
-- `tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/`
+- `tests/speckit-pro/unit/fixtures/installed-plugin-release/`
 
 ### Recovery Commands
 
@@ -1804,7 +1804,7 @@ payloads from source, and proved source, generated payloads, and a bounded
 installed-cache artifact pass one Python-backed zero-Bash guard with a
 reviewable historical allowlist. It shipped in speckit-pro 2.18.0; PR #299
 followed up with a Windows interpreter/home-directory resolution fix. Repo-wide
-Bash confinement outside the plugin package remains XPLAT-010.
+Bash confinement outside the plugin package was completed by XPLAT-010.
 
 ### Canonical Artifacts
 
@@ -1824,8 +1824,8 @@ Bash confinement outside the plugin package remains XPLAT-010.
 - `docs/ai/specs/.process/XPLAT-009-zero-bash-guard-result.json`
 - `docs/ai/specs/.process/XPLAT-009-release-readiness-result.json`
 - `docs/ai/specs/.process/XPLAT-009-retrospective.md`
-- `tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/`
-- `tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/contracts/`
+- `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/`
+- `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/contracts/`
 
 ### Recovery Commands
 
@@ -1848,3 +1848,64 @@ git checkout 7bc6be1a9faaa3113f8db903188ddb49a445e7ce -- specs/xplat-009-plugin-
 
 The detailed archive and verification record is stored in
 `.specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md`.
+
+---
+
+## XPLAT-010 Repository Bash Confinement and CI Dispatch Guard
+
+### Provenance
+
+XPLAT-010 merged as the complete no-gap PR stack #311 through #328 on
+2026-07-11. The final merge commit and complete recovery source is
+`ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29`; all 18 review branches were
+deleted. Exact PR titles, merged-at timestamps, merge commits, and head branches
+are recorded in
+`.specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md`.
+
+### Summary
+
+XPLAT-010 replaced active repository Bash orchestration, validators, helpers,
+hooks, replay/parity/evaluation runners, and release tooling with Python 3.11+
+standard-library entrypoints. It made the suite manifest authoritative, added
+the repository Bash-confinement gate and fixed release-excluded vendored
+`.specify/**` allowlist, restored `estimate-spec-size`, added Linux container
+and advisory Windows preflight, and shipped deterministic consumer release-note
+validation and Highlights composition.
+
+The final neutral-PATH deterministic suite passed `2512/2512`. T108 completed
+with hosted relevant-path, docs-only, failure-propagation, manual-main, and four
+PR-trigger canaries. T117 completed when non-strict `main` branch protection
+required exactly the three PR checks plus both Linux container sentinels.
+Public native-platform claims remain blocked by the XPLAT-008 operator UAT
+matrix, not by XPLAT-010.
+
+### Canonical Artifacts
+
+- `tests/speckit-pro/suite-manifest.json`
+- `tests/speckit-pro/run-all.py`
+- `tests/speckit-pro/run-layer-scripts.py`
+- `tests/speckit-pro/unit/`
+- `tests/speckit-pro/parity/bash-to-python/`
+- `speckit-pro/speckit_pro_runner/gates/active_path_guard.py`
+- `speckit-pro/speckit_pro_runner/gates/release.py`
+- `scripts/release_note_policy.py`
+- `scripts/compose-release-notes.py`
+- `.github/workflows/pr-checks.yml`
+- `.github/workflows/container-preflight.yml`
+- `.github/workflows/release.yml`
+- `docs/ai/specs/.process/XPLAT-010-*`
+
+### Recovery Commands
+
+```text
+git show ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29:specs/xplat-010-repository-bash-confinement/spec.md
+git show ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29:specs/xplat-010-repository-bash-confinement/plan.md
+git show ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29:specs/xplat-010-repository-bash-confinement/tasks.md
+git show ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29:specs/xplat-010-repository-bash-confinement/research.md
+git show ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29:specs/xplat-010-repository-bash-confinement/data-model.md
+git show ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29:specs/xplat-010-repository-bash-confinement/quickstart.md
+git checkout ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29 -- specs/xplat-010-repository-bash-confinement
+```
+
+The detailed archive and verification record is stored in
+`.specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md`.

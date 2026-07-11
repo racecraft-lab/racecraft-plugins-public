@@ -429,7 +429,7 @@ When checklist identifies `[Gap]` items:
 ## Constraints
 - Source changes stay in `speckit-pro/skills/speckit-autopilot/` and mirrored `speckit-pro/codex-skills/speckit-autopilot/` when guidance changes.
 - Deterministic logic belongs in Bash scripts under `speckit-pro/skills/speckit-autopilot/scripts/`.
-- Layer 4 fixtures belong under `tests/speckit-pro/layer4-scripts/`.
+- Layer 4 fixtures belong under `tests/speckit-pro/unit/`.
 - Do not create authoritative marker comments in `tasks.md`.
 - Do not implement PRSG-012 PR packet validation in this spec.
 ```
@@ -589,10 +589,10 @@ Before starting any task:
 | `jq empty docs/ai/specs/.process/PRSG-013-*.json` | ✅ Passed |
 | `jq empty specs/prsg-013-reviewability-markers/contracts/*.schema.json speckit-pro/skills/speckit-autopilot/contracts/*.schema.json` | ✅ Passed |
 | `bash -n` on touched autopilot scripts | ✅ Passed |
-| `bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh` | ✅ 85/85 |
-| `bash tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh` | ✅ 55/55 |
-| `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` | ✅ 129/129 |
-| `bash tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh` | ✅ 45/45 |
+| `bash tests/speckit-pro/unit/test-plan-layers.sh` | ✅ 85/85 |
+| `bash tests/speckit-pro/unit/test-final-reviewability-backstop.sh` | ✅ 55/55 |
+| `bash tests/speckit-pro/unit/test-multi-pr-emission.sh` | ✅ 129/129 |
+| `bash tests/speckit-pro/unit/test-reviewability-marker-guidance.sh` | ✅ 45/45 |
 | `final-reviewability-backstop.sh` with current `pr_marker_plan` | ✅ Committed full diff is size-blocked (`117` files) but returns `marker_split`; no PR side effects |
 | `multi-pr-emission.sh` marker dry-run | ✅ 4 marker packets: `foundation`, `us1`, `us2`, `us3`; `mutation.branches=false`, `mutation.pull_requests=false` |
 | `multi-pr-emission.sh --live` with current `pr_marker_plan` | ✅ Fails closed before branch/PR mutation: `--live requires checkpoint_sha for slice foundation` |
@@ -667,7 +667,7 @@ speckit-pro/
 tests/
 └── speckit-pro/
     ├── layer1-structural/
-    └── layer4-scripts/
+    └── unit/
 docs/ai/specs/
 ├── pr-size-governance-technical-roadmap.md
 └── .process/PRSG-013-workflow.md

@@ -74,10 +74,10 @@ Generated during the XPLAT-009 autopilot implementation run on 2026-07-07.
 ## Verification
 
 - `python3 -m py_compile speckit-pro/speckit_pro_runner/gates/active_path_guard.py speckit-pro/speckit_pro_runner/gates/release.py`
-- `PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py` -> `33/33 passed`
-- `PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py` -> `17/17 passed`
-- `PYTHONPATH=speckit-pro python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` -> `48/48 passed`
-- `bash tests/speckit-pro/layer4-scripts/test-privacy-scan.sh` -> `10/10 passed`
+- `PYTHONPATH=speckit-pro python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py` -> `33/33 passed`
+- `PYTHONPATH=speckit-pro python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` -> `17/17 passed`
+- `PYTHONPATH=speckit-pro python3 tests/speckit-pro/unit/test-speckit-pro-gates.py` -> `48/48 passed`
+- `bash tests/speckit-pro/unit/test-privacy-scan.sh` -> `10/10 passed`
 - `bash tests/speckit-pro/run-all.sh --layer 1` -> `1326/1326 passed`
 - `bash tests/speckit-pro/run-all.sh` -> `2021/2021 passed`
 

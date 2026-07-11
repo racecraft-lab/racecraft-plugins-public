@@ -1,0 +1,105 @@
+001 phase-executor: file exists
+002 phase-executor: starts with --- (YAML frontmatter)
+003 phase-executor: has closing ---
+004 phase-executor: has name: field
+005 phase-executor: name is valid format (alphanumeric + hyphens, 3-50 chars)
+006 phase-executor: has description: field
+007 phase-executor: has model: field
+008 phase-executor: model is valid (opus|sonnet|haiku|inherit)
+009 phase-executor: system prompt body exists (after frontmatter)
+010 phase-executor: system prompt length > 20 chars
+011 clarify-executor: file exists
+012 clarify-executor: starts with --- (YAML frontmatter)
+013 clarify-executor: has closing ---
+014 clarify-executor: has name: field
+015 clarify-executor: name is valid format (alphanumeric + hyphens, 3-50 chars)
+016 clarify-executor: has description: field
+017 clarify-executor: has model: field
+018 clarify-executor: model is valid (opus|sonnet|haiku|inherit)
+019 clarify-executor: system prompt body exists (after frontmatter)
+020 clarify-executor: system prompt length > 20 chars
+021 clarify-executor: returns questions to parent
+022 clarify-executor: does not claim to be the user
+023 clarify-executor: does not forbid returning questions
+024 clarify-executor: does not invoke interactive clarify skill
+025 checklist-executor: file exists
+026 checklist-executor: starts with --- (YAML frontmatter)
+027 checklist-executor: has closing ---
+028 checklist-executor: has name: field
+029 checklist-executor: name is valid format (alphanumeric + hyphens, 3-50 chars)
+030 checklist-executor: has description: field
+031 checklist-executor: has model: field
+032 checklist-executor: model is valid (opus|sonnet|haiku|inherit)
+033 checklist-executor: system prompt body exists (after frontmatter)
+034 checklist-executor: system prompt length > 20 chars
+035 analyze-executor: file exists
+036 analyze-executor: starts with --- (YAML frontmatter)
+037 analyze-executor: has closing ---
+038 analyze-executor: has name: field
+039 analyze-executor: name is valid format (alphanumeric + hyphens, 3-50 chars)
+040 analyze-executor: has description: field
+041 analyze-executor: has model: field
+042 analyze-executor: model is valid (opus|sonnet|haiku|inherit)
+043 analyze-executor: system prompt body exists (after frontmatter)
+044 analyze-executor: system prompt length > 20 chars
+045 implement-executor: file exists
+046 implement-executor: starts with --- (YAML frontmatter)
+047 implement-executor: has closing ---
+048 implement-executor: has name: field
+049 implement-executor: name is valid format (alphanumeric + hyphens, 3-50 chars)
+050 implement-executor: has description: field
+051 implement-executor: has model: field
+052 implement-executor: model is valid (opus|sonnet|haiku|inherit)
+053 implement-executor: system prompt body exists (after frontmatter)
+054 implement-executor: system prompt length > 20 chars
+055 codebase-analyst: file exists
+056 codebase-analyst: starts with --- (YAML frontmatter)
+057 codebase-analyst: has closing ---
+058 codebase-analyst: has name: field
+059 codebase-analyst: name is valid format (alphanumeric + hyphens, 3-50 chars)
+060 codebase-analyst: has description: field
+061 codebase-analyst: has model: field
+062 codebase-analyst: model is valid (opus|sonnet|haiku|inherit)
+063 codebase-analyst: system prompt body exists (after frontmatter)
+064 codebase-analyst: system prompt length > 20 chars
+065 spec-context-analyst: file exists
+066 spec-context-analyst: starts with --- (YAML frontmatter)
+067 spec-context-analyst: has closing ---
+068 spec-context-analyst: has name: field
+069 spec-context-analyst: name is valid format (alphanumeric + hyphens, 3-50 chars)
+070 spec-context-analyst: has description: field
+071 spec-context-analyst: has model: field
+072 spec-context-analyst: model is valid (opus|sonnet|haiku|inherit)
+073 spec-context-analyst: system prompt body exists (after frontmatter)
+074 spec-context-analyst: system prompt length > 20 chars
+075 domain-researcher: file exists
+076 domain-researcher: starts with --- (YAML frontmatter)
+077 domain-researcher: has closing ---
+078 domain-researcher: has name: field
+079 domain-researcher: name is valid format (alphanumeric + hyphens, 3-50 chars)
+080 domain-researcher: has description: field
+081 domain-researcher: has model: field
+082 domain-researcher: model is valid (opus|sonnet|haiku|inherit)
+083 domain-researcher: system prompt body exists (after frontmatter)
+084 domain-researcher: system prompt length > 20 chars
+085 gate-validator: file exists
+086 gate-validator: starts with --- (YAML frontmatter)
+087 gate-validator: has closing ---
+088 gate-validator: has name: field
+089 gate-validator: name is valid format (alphanumeric + hyphens, 3-50 chars)
+090 gate-validator: has description: field
+091 gate-validator: has model: field
+092 gate-validator: model is valid (opus|sonnet|haiku|inherit)
+093 gate-validator: system prompt body exists (after frontmatter)
+094 gate-validator: system prompt length > 20 chars
+095 consensus-synthesizer: file exists
+096 consensus-synthesizer: starts with --- (YAML frontmatter)
+097 consensus-synthesizer: has closing ---
+098 consensus-synthesizer: has name: field
+099 consensus-synthesizer: name is valid format (alphanumeric + hyphens, 3-50 chars)
+100 consensus-synthesizer: has description: field
+101 consensus-synthesizer: has model: field
+102 consensus-synthesizer: model is valid (opus|sonnet|haiku|inherit)
+103 consensus-synthesizer: system prompt body exists (after frontmatter)
+104 consensus-synthesizer: system prompt length > 20 chars
+TOTAL: 104

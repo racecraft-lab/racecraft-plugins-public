@@ -515,7 +515,7 @@ Flag drift between:
   - Fix: Changed the error classification rules so stack-manager planning/read-only/topology failures may fall back only when packets are valid, while PRSG-012 packet-validation failures hard-block before `gh stack`, explicit `gh pr create/edit`, or manager switching; added matching quickstart and task coverage.
   - Source: `docs/ai/specs/pr-size-governance-technical-roadmap.md` PRSG-012 packet contract; `research.md` Decisions 3-4; local `gh stack link --help` confirms branch args can push/create PRs.
 - F2 [MEDIUM]: `plan.md` declared stale Layer 7/8 fixture paths that did not match generated tasks or existing test harness layout.
-  - Fix: Updated declared file operations and project structure to use `tests/speckit-pro/layer7-integration/dispatch-fixtures/22-prsg-014-stack-manager-replay/` and `tests/speckit-pro/layer8-parity/04-prsg-014-stack-manager-guidance/`.
+  - Fix: Updated declared file operations and project structure to use `tests/speckit-pro/layer7-integration/dispatch-fixtures/22-stack-manager-replay/` and `tests/speckit-pro/layer8-parity/04-stack-manager-guidance/`.
   - Source: existing `tests/speckit-pro/layer7-integration/dispatch-fixtures/*` and `tests/speckit-pro/layer8-parity/*` layout.
 - F3 [MEDIUM]: Checklist artifacts still had unchecked items after the workflow/state recorded 13 gaps fixed and G4 clean.
   - Fix: Marked verified checklist items complete with task/source citations in integration, error-handling, and security checklists.

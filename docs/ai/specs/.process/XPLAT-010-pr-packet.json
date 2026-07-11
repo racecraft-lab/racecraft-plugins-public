@@ -1,0 +1,458 @@
+{
+  "schema_version": "1.0.0",
+  "kind": "xplat_010_pr_stack_aggregate",
+  "spec_id": "XPLAT-010",
+  "generated_at": "2026-07-11T05:42:15Z",
+  "status": "open_non_draft_with_local_packet_validation",
+  "aggregate_body": "docs/ai/specs/.process/XPLAT-010-pr-body.md",
+  "source_manifest": {
+    "path": "docs/ai/specs/.process/XPLAT-010-prs.json",
+    "schema_version": 2,
+    "reconciled_at": "2026-07-11T05:40:56Z"
+  },
+  "packet_set": {
+    "root": "docs/ai/specs/.process/XPLAT-010-pr-packets",
+    "triplet_count": 18,
+    "reconciled_at": "2026-07-11T05:40:56Z"
+  },
+  "topology": {
+    "mode": "split",
+    "integration_base": {
+      "branch": "main",
+      "sha": "f0a788c2b39a2c1656fcc61709fef54840062780"
+    },
+    "implementation_snapshot": {
+      "top_pull_request": 328,
+      "branch": "xplat-010-review/17-polish",
+      "head_sha": "a7b2d27b12fdc5051dfa4829c94f92752e2f5146",
+      "tree_sha": "a1c42735d35619bbd0a4a90a42c57ab9e578848e",
+      "packet_path": "docs/ai/specs/.process/XPLAT-010-pr-packets/17-polish/packet.json"
+    },
+    "metadata_publication_tail": {
+      "status": "unresolved_until_publication",
+      "contract_path": "docs/ai/specs/.process/XPLAT-010-publication-tail.json",
+      "publication_head_sha": null,
+      "resolution_rule": "A future metadata-only head must be resolved and bounded by the publication-tail contract; it does not replace the frozen implementation snapshot."
+    },
+    "pull_request_count": 18,
+    "first_pull_request": 311,
+    "last_pull_request": 328,
+    "contiguous_adjacent_bases": true
+  },
+  "live_pull_request_check": {
+    "verified_at": "2026-07-11T05:42:15Z",
+    "source": "GitHub CLI pull-request query for #311 through #328",
+    "count": 18,
+    "open": 18,
+    "draft": 0,
+    "all_open_non_draft": true,
+    "head_oids_match_implementation_snapshots": true
+  },
+  "validation_rollup": {
+    "status": "passed",
+    "packet_count": 18,
+    "passed": 18,
+    "blocked": 0,
+    "budget_results": {
+      "within_budget": 13,
+      "exception": 2,
+      "warning": 3
+    },
+    "metric_sums": {
+      "commit_count": 101,
+      "merge_commits": 0,
+      "files": 2101,
+      "insertions": 149201,
+      "deletions": 132605,
+      "production_files": 54,
+      "reviewable_loc": 5635
+    },
+    "counting_note": "Metric sums come from the 18 disjoint adjacent packet ranges. Files and production_files are per-slice observations, not unique full-stack path counts."
+  },
+  "artifact_path_templates": {
+    "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/{slice_id}/packet.json",
+    "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/{slice_id}/body.md",
+    "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/{slice_id}/validation.json"
+  },
+  "pull_requests": [
+    {
+      "review_order": 1,
+      "slice_id": "00-process",
+      "pr_number": 311,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/311",
+      "title": "docs(xplat-010): record confinement design and process evidence",
+      "base_branch": "main",
+      "head_branch": "xplat-010-review/00-process",
+      "base_snapshot_sha": "f0a788c2b39a2c1656fcc61709fef54840062780",
+      "implementation_snapshot_sha": "da15f705d92973bf741e9728cf68e24e3a91807c",
+      "artifacts": {
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/00-process/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/00-process/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/00-process/validation.json"
+      },
+      "validation_status": "passed",
+      "traceability": {"marker": "foundation", "tasks": "T001-T004"},
+      "live": {"state": "OPEN", "is_draft": false},
+      "metrics": {"commit_count": 18, "merge_commits": 0, "files": 51, "insertions": 4387, "deletions": 1968, "production_files": 0, "reviewable_loc": 0, "budget_result": "within_budget"}
+    },
+    {
+      "review_order": 2,
+      "slice_id": "01-foundation",
+      "pr_number": 312,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/312",
+      "title": "chore(xplat-010): remove orphaned Bash test scripts",
+      "base_branch": "xplat-010-review/00-process",
+      "head_branch": "xplat-010-review/01-foundation",
+      "base_snapshot_sha": "da15f705d92973bf741e9728cf68e24e3a91807c",
+      "implementation_snapshot_sha": "1304d5a1fdbee4329d16385369a535bc2fc7a448",
+      "artifacts": {
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/01-foundation/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/01-foundation/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/01-foundation/validation.json"
+      },
+      "validation_status": "passed",
+      "traceability": {"marker": "us1", "tasks": "T005-T007"},
+      "live": {"state": "OPEN", "is_draft": false},
+      "metrics": {"commit_count": 5, "merge_commits": 0, "files": 35, "insertions": 150, "deletions": 13747, "production_files": 0, "reviewable_loc": 0, "budget_result": "within_budget"}
+    },
+    {
+      "review_order": 3,
+      "slice_id": "02-us14",
+      "pr_number": 313,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/313",
+      "title": "fix(xplat-010): restore spec-size estimation",
+      "base_branch": "xplat-010-review/01-foundation",
+      "head_branch": "xplat-010-review/02-us14",
+      "base_snapshot_sha": "1304d5a1fdbee4329d16385369a535bc2fc7a448",
+      "implementation_snapshot_sha": "c2d3b0c7bde975c1d7f864ce43256c60e00e44d2",
+      "artifacts": {
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/02-us14/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/02-us14/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/02-us14/validation.json"
+      },
+      "validation_status": "passed",
+      "traceability": {"marker": "us16", "tasks": "T121-T130"},
+      "live": {"state": "OPEN", "is_draft": false},
+      "metrics": {"commit_count": 7, "merge_commits": 0, "files": 49, "insertions": 914, "deletions": 302, "production_files": 6, "reviewable_loc": 135, "budget_result": "within_budget"}
+    },
+    {
+      "review_order": 4,
+      "slice_id": "03-us1",
+      "pr_number": 314,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/314",
+      "title": "feat(xplat-010): replace Bash suite orchestration with Python",
+      "base_branch": "xplat-010-review/02-us14",
+      "head_branch": "xplat-010-review/03-us1",
+      "base_snapshot_sha": "c2d3b0c7bde975c1d7f864ce43256c60e00e44d2",
+      "implementation_snapshot_sha": "9f9684fa6fa48d70dc0053f96e2b253435ecdf57",
+      "artifacts": {
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/03-us1/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/03-us1/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/03-us1/validation.json"
+      },
+      "validation_status": "passed",
+      "traceability": {"marker": "us2", "tasks": "T008-T017"},
+      "live": {"state": "OPEN", "is_draft": false},
+      "metrics": {"commit_count": 6, "merge_commits": 0, "files": 49, "insertions": 2439, "deletions": 694, "production_files": 4, "reviewable_loc": 105, "budget_result": "within_budget"}
+    },
+    {
+      "review_order": 5,
+      "slice_id": "04-us2",
+      "pr_number": 315,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/315",
+      "title": "test(xplat-010): port structural validator batch one",
+      "base_branch": "xplat-010-review/03-us1",
+      "head_branch": "xplat-010-review/04-us2",
+      "base_snapshot_sha": "9f9684fa6fa48d70dc0053f96e2b253435ecdf57",
+      "implementation_snapshot_sha": "7d6a6d115b6832e3f61e7e25701292679b9079d3",
+      "artifacts": {
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/04-us2/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/04-us2/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/04-us2/validation.json"
+      },
+      "validation_status": "passed",
+      "traceability": {"marker": "us3", "tasks": "T018-T028"},
+      "live": {"state": "OPEN", "is_draft": false},
+      "metrics": {"commit_count": 2, "merge_commits": 0, "files": 34, "insertions": 2110, "deletions": 1468, "production_files": 1, "reviewable_loc": 2, "budget_result": "within_budget"}
+    },
+    {
+      "review_order": 6,
+      "slice_id": "05-us3",
+      "pr_number": 316,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/316",
+      "title": "test(xplat-010): port structural validator batch two",
+      "base_branch": "xplat-010-review/04-us2",
+      "head_branch": "xplat-010-review/05-us3",
+      "base_snapshot_sha": "7d6a6d115b6832e3f61e7e25701292679b9079d3",
+      "implementation_snapshot_sha": "9b249ddd0ed0b8518006cfd404141142f7507018",
+      "artifacts": {
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/05-us3/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/05-us3/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/05-us3/validation.json"
+      },
+      "validation_status": "passed",
+      "traceability": {"marker": "us4", "tasks": "T029-T039"},
+      "live": {"state": "OPEN", "is_draft": false},
+      "metrics": {"commit_count": 4, "merge_commits": 0, "files": 37, "insertions": 2429, "deletions": 1597, "production_files": 1, "reviewable_loc": 2, "budget_result": "within_budget"}
+    },
+    {
+      "review_order": 7,
+      "slice_id": "06-us4",
+      "pr_number": 317,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/317",
+      "title": "test(xplat-010): port remaining structural checks",
+      "base_branch": "xplat-010-review/05-us3",
+      "head_branch": "xplat-010-review/06-us4",
+      "base_snapshot_sha": "9b249ddd0ed0b8518006cfd404141142f7507018",
+      "implementation_snapshot_sha": "cf352fbc355b30245baaf6b013166066ac4401ad",
+      "artifacts": {
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/06-us4/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/06-us4/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/06-us4/validation.json"
+      },
+      "validation_status": "passed",
+      "traceability": {"marker": "us5", "tasks": "T040-T045"},
+      "live": {"state": "OPEN", "is_draft": false},
+      "metrics": {"commit_count": 4, "merge_commits": 0, "files": 20, "insertions": 2243, "deletions": 1873, "production_files": 0, "reviewable_loc": 0, "budget_result": "within_budget"}
+    },
+    {
+      "review_order": 8,
+      "slice_id": "07-us5",
+      "pr_number": 318,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/318",
+      "title": "test(xplat-010): port toolchain and Layer 5 dispatch",
+      "base_branch": "xplat-010-review/06-us4",
+      "head_branch": "xplat-010-review/07-us5",
+      "base_snapshot_sha": "cf352fbc355b30245baaf6b013166066ac4401ad",
+      "implementation_snapshot_sha": "c1d5e51c8ade2284629092309894b1a4a8fdb10c",
+      "artifacts": {
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/07-us5/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/07-us5/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/07-us5/validation.json"
+      },
+      "validation_status": "passed",
+      "traceability": {"marker": "us6", "tasks": "T046-T053"},
+      "live": {"state": "OPEN", "is_draft": false},
+      "metrics": {"commit_count": 4, "merge_commits": 0, "files": 47, "insertions": 1398, "deletions": 1356, "production_files": 3, "reviewable_loc": 68, "budget_result": "within_budget"}
+    },
+    {
+      "review_order": 9,
+      "slice_id": "08-us6",
+      "pr_number": 319,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/319",
+      "title": "refactor(xplat-010): port repository helpers and hooks",
+      "base_branch": "xplat-010-review/07-us5",
+      "head_branch": "xplat-010-review/08-us6",
+      "base_snapshot_sha": "c1d5e51c8ade2284629092309894b1a4a8fdb10c",
+      "implementation_snapshot_sha": "790b9e230de1381fda2010a22480e8594ac6628a",
+      "artifacts": {
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/08-us6/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/08-us6/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/08-us6/validation.json"
+      },
+      "validation_status": "passed",
+      "traceability": {"marker": "us7", "tasks": "T054-T061"},
+      "live": {"state": "OPEN", "is_draft": false},
+      "metrics": {"commit_count": 2, "merge_commits": 0, "files": 24, "insertions": 1917, "deletions": 1511, "production_files": 9, "reviewable_loc": 1392, "budget_result": "exception"}
+    },
+    {
+      "review_order": 10,
+      "slice_id": "09-us7",
+      "pr_number": 320,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/320",
+      "title": "test(xplat-010): port transcript helpers and tools",
+      "base_branch": "xplat-010-review/08-us6",
+      "head_branch": "xplat-010-review/09-us7",
+      "base_snapshot_sha": "790b9e230de1381fda2010a22480e8594ac6628a",
+      "implementation_snapshot_sha": "7584c468cbef81d60fe8bc2b911df0359c7ea243",
+      "artifacts": {
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/09-us7/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/09-us7/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/09-us7/validation.json"
+      },
+      "validation_status": "passed",
+      "traceability": {"marker": "us8", "tasks": "T062-T066"},
+      "live": {"state": "OPEN", "is_draft": false},
+      "metrics": {"commit_count": 5, "merge_commits": 0, "files": 13, "insertions": 1262, "deletions": 211, "production_files": 0, "reviewable_loc": 0, "budget_result": "within_budget"}
+    },
+    {
+      "review_order": 11,
+      "slice_id": "10-us7b",
+      "pr_number": 321,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/321",
+      "title": "test(xplat-010): port Layer 7 replay runners",
+      "base_branch": "xplat-010-review/09-us7",
+      "head_branch": "xplat-010-review/10-us7b",
+      "base_snapshot_sha": "7584c468cbef81d60fe8bc2b911df0359c7ea243",
+      "implementation_snapshot_sha": "511746913f0c9bc99bd1a3245d473a029662af73",
+      "artifacts": {
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/10-us7b/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/10-us7b/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/10-us7b/validation.json"
+      },
+      "validation_status": "passed",
+      "traceability": {"marker": "us9", "tasks": "T067-T072"},
+      "live": {"state": "OPEN", "is_draft": false},
+      "metrics": {"commit_count": 6, "merge_commits": 0, "files": 64, "insertions": 1668, "deletions": 1870, "production_files": 3, "reviewable_loc": 30, "budget_result": "within_budget"}
+    },
+    {
+      "review_order": 12,
+      "slice_id": "11-us8",
+      "pr_number": 322,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/322",
+      "title": "test(xplat-010): port Layer 8 parity harness",
+      "base_branch": "xplat-010-review/10-us7b",
+      "head_branch": "xplat-010-review/11-us8",
+      "base_snapshot_sha": "511746913f0c9bc99bd1a3245d473a029662af73",
+      "implementation_snapshot_sha": "15fac7807df11f4d8b49f9b15bbde17d304b17bf",
+      "artifacts": {
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/11-us8/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/11-us8/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/11-us8/validation.json"
+      },
+      "validation_status": "passed",
+      "traceability": {"marker": "us10", "tasks": "T073-T080"},
+      "live": {"state": "OPEN", "is_draft": false},
+      "metrics": {"commit_count": 6, "merge_commits": 0, "files": 76, "insertions": 2345, "deletions": 1246, "production_files": 3, "reviewable_loc": 30, "budget_result": "within_budget"}
+    },
+    {
+      "review_order": 13,
+      "slice_id": "12-us9",
+      "pr_number": 323,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/323",
+      "title": "test(xplat-010): port live evaluation runners",
+      "base_branch": "xplat-010-review/11-us8",
+      "head_branch": "xplat-010-review/12-us9",
+      "base_snapshot_sha": "15fac7807df11f4d8b49f9b15bbde17d304b17bf",
+      "implementation_snapshot_sha": "3348aa4fbb80373b39fedbd18003c63f5c33862d",
+      "artifacts": {
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/12-us9/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/12-us9/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/12-us9/validation.json"
+      },
+      "validation_status": "passed",
+      "traceability": {"marker": "us11", "tasks": "T081-T087"},
+      "live": {"state": "OPEN", "is_draft": false},
+      "metrics": {"commit_count": 4, "merge_commits": 0, "files": 78, "insertions": 3326, "deletions": 1659, "production_files": 3, "reviewable_loc": 50, "budget_result": "within_budget"}
+    },
+    {
+      "review_order": 14,
+      "slice_id": "13-us10",
+      "pr_number": 324,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/324",
+      "title": "feat(xplat-010): enforce repository Bash confinement",
+      "base_branch": "xplat-010-review/12-us9",
+      "head_branch": "xplat-010-review/13-us10",
+      "base_snapshot_sha": "3348aa4fbb80373b39fedbd18003c63f5c33862d",
+      "implementation_snapshot_sha": "93aaddd09d04a89b60bdc0085073a732b95e705c",
+      "artifacts": {
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/13-us10/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/13-us10/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/13-us10/validation.json"
+      },
+      "validation_status": "passed",
+      "traceability": {"marker": "us12", "tasks": "T088-T099"},
+      "live": {"state": "OPEN", "is_draft": false},
+      "metrics": {"commit_count": 5, "merge_commits": 0, "files": 1401, "insertions": 110937, "deletions": 102119, "production_files": 14, "reviewable_loc": 1885, "budget_result": "exception"}
+    },
+    {
+      "review_order": 15,
+      "slice_id": "14-us11",
+      "pr_number": 325,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/325",
+      "title": "test(xplat-010): add Linux and Windows runner checks",
+      "base_branch": "xplat-010-review/13-us10",
+      "head_branch": "xplat-010-review/14-us11",
+      "base_snapshot_sha": "93aaddd09d04a89b60bdc0085073a732b95e705c",
+      "implementation_snapshot_sha": "c6b47a6d8587f4a1b841f3d52bc8ba933794ac98",
+      "artifacts": {
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/14-us11/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/14-us11/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/14-us11/validation.json"
+      },
+      "validation_status": "passed",
+      "traceability": {"marker": "us13", "tasks": "T100-T108"},
+      "live": {"state": "OPEN", "is_draft": false},
+      "metrics": {"commit_count": 10, "merge_commits": 0, "files": 22, "insertions": 3632, "deletions": 114, "production_files": 1, "reviewable_loc": 1, "budget_result": "within_budget"}
+    },
+    {
+      "review_order": 16,
+      "slice_id": "15-release-contract",
+      "pr_number": 326,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/326",
+      "title": "feat(xplat-010): validate consumer release-note blocks",
+      "base_branch": "xplat-010-review/14-us11",
+      "head_branch": "xplat-010-review/15-release-contract",
+      "base_snapshot_sha": "c6b47a6d8587f4a1b841f3d52bc8ba933794ac98",
+      "implementation_snapshot_sha": "b3c81e25fae0e00b52a4cc95c681322630af592f",
+      "artifacts": {
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/15-release-contract/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/15-release-contract/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/15-release-contract/validation.json"
+      },
+      "validation_status": "passed",
+      "traceability": {"marker": "us14", "tasks": "T109-T112"},
+      "live": {"state": "OPEN", "is_draft": false},
+      "metrics": {"commit_count": 5, "merge_commits": 0, "files": 26, "insertions": 1831, "deletions": 31, "production_files": 1, "reviewable_loc": 546, "budget_result": "warning"}
+    },
+    {
+      "review_order": 17,
+      "slice_id": "16-release-composition",
+      "pr_number": 327,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/327",
+      "title": "feat(xplat-010): compose consumer-facing release highlights",
+      "base_branch": "xplat-010-review/15-release-contract",
+      "head_branch": "xplat-010-review/16-release-composition",
+      "base_snapshot_sha": "b3c81e25fae0e00b52a4cc95c681322630af592f",
+      "implementation_snapshot_sha": "b5ab3cac69013207a47f431f490231a9b2d5441e",
+      "artifacts": {
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/16-release-composition/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/16-release-composition/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/16-release-composition/validation.json"
+      },
+      "validation_status": "passed",
+      "traceability": {"marker": "us15", "tasks": "T113-T120"},
+      "live": {"state": "OPEN", "is_draft": false},
+      "metrics": {"commit_count": 3, "merge_commits": 0, "files": 18, "insertions": 2878, "deletions": 138, "production_files": 1, "reviewable_loc": 749, "budget_result": "warning"}
+    },
+    {
+      "review_order": 18,
+      "slice_id": "17-polish",
+      "pr_number": 328,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/328",
+      "title": "chore(xplat-010): finalize integrated verification evidence",
+      "base_branch": "xplat-010-review/16-release-composition",
+      "head_branch": "xplat-010-review/17-polish",
+      "base_snapshot_sha": "b5ab3cac69013207a47f431f490231a9b2d5441e",
+      "implementation_snapshot_sha": "a7b2d27b12fdc5051dfa4829c94f92752e2f5146",
+      "artifacts": {
+        "packet": "docs/ai/specs/.process/XPLAT-010-pr-packets/17-polish/packet.json",
+        "body": "docs/ai/specs/.process/XPLAT-010-pr-packets/17-polish/body.md",
+        "validation": "docs/ai/specs/.process/XPLAT-010-pr-packets/17-polish/validation.json"
+      },
+      "validation_status": "passed",
+      "traceability": {"marker": "polish", "tasks": "T131-T136"},
+      "live": {"state": "OPEN", "is_draft": false},
+      "metrics": {"commit_count": 5, "merge_commits": 0, "files": 57, "insertions": 3335, "deletions": 701, "production_files": 4, "reviewable_loc": 640, "budget_result": "warning"}
+    }
+  ],
+  "claims_boundary": [
+    "A live GitHub query at 2026-07-11T05:42:15Z confirmed all 18 pull requests were open and non-draft and their heads matched the packet implementation snapshots.",
+    "Packet validation is local evidence for exact adjacent implementation diffs; it is not hosted CI evidence.",
+    "The future metadata publication head is intentionally unresolved here and must be bounded by the publication-tail contract.",
+    "No merge, release publication, branch-protection update, or post-merge workflow dispatch is claimed."
+  ],
+  "known_gaps": [
+    {
+      "task_id": "T108",
+      "status": "open",
+      "reason": "After the workflow exists on main, an operator must run workflow_dispatch and record Linux, advisory Windows, ARM64-disabled, sentinel, and artifact results; pre-merge checks do not prove that post-merge path."
+    },
+    {
+      "task_id": "T117",
+      "status": "open",
+      "reason": "Branch protection does not currently require validate-release-note; after the workflow lands, a repository administrator must add that exact check and record the resulting configuration evidence."
+    }
+  ],
+  "rollback": "Reverse the stack from PR #328 toward PR #311 one adjacent slice at a time; keep each Python replacement, manifest entry, parity record, generated proof, and confinement rule coupled to the Bash path it replaces."
+}

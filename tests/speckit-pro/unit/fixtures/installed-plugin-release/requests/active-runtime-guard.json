@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "request_id": "xplat-008-active-runtime-guard-current",
+  "helper_id": "active-path-guard",
+  "operation": "active-runtime-guard",
+  "mode": "read_only",
+  "inputs": {
+    "case_file": "tests/speckit-pro/unit/fixtures/installed-plugin-release/active-runtime-guard-cases.json",
+    "case_id": "final-current-implementation"
+  }
+}

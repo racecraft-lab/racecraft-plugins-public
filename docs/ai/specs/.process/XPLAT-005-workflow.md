@@ -101,9 +101,9 @@ higher-priority override exists.
 - Runtime inventory: `docs/ai/research/cross-platform-runtime-inventory.md`
 - XPLAT-004 archive report: `.specify/memory/archive-reports/2026-07-01-xplat-004-post-merge-hygiene.md`
 - XPLAT-004 runner package: `speckit-pro/speckit_pro_runner/`
-- XPLAT-004 runner tests and fixtures: `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py` and `tests/speckit-pro/layer4-scripts/fixtures/speckit-pro-runner/`
+- XPLAT-004 runner tests and fixtures: `tests/speckit-pro/unit/test-speckit-pro-runner.py` and `tests/speckit-pro/unit/fixtures/speckit-pro-runner/`
 - Current Bash helper sources: `speckit-pro/skills/**/scripts/`, `speckit-pro/codex-skills/**/scripts/`, and `speckit-pro/scripts/`
-- Current deterministic shell gates: `tests/speckit-pro/run-all.sh`, `tests/speckit-pro/layer1-structural/`, and `tests/speckit-pro/layer4-scripts/`
+- Current deterministic shell gates: `tests/speckit-pro/run-all.sh`, `tests/speckit-pro/layer1-structural/`, and `tests/speckit-pro/unit/`
 - Project constitution: `.specify/memory/constitution.md`
 - Design concept source: `docs/ai/specs/.process/XPLAT-005-design-concept.md`
 
@@ -545,7 +545,7 @@ For each helper or helper group:
 2. Verify clean worktree before each phase: `git status --short`.
 3. Run current baseline gates before helper changes:
    - `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"`
-   - `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh`
+   - `tests/speckit-pro/unit/test-speckit-pro-runner.sh`
    - `bash tests/speckit-pro/run-all.sh --layer 1`
    - `bash tests/speckit-pro/run-all.sh --layer 4`
 
@@ -577,7 +577,7 @@ For each helper or helper group:
 - [x] All tasks marked complete in `tasks.md`.
 - [x] Python helper tests pass for accepted helper ports.
 - [x] Bash-reference comparison passes for helpers requiring direct comparison.
-- [x] `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh` passes.
+- [x] `tests/speckit-pro/unit/test-speckit-pro-runner.sh` passes.
 - [x] `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` passes.
 - [x] `bash tests/speckit-pro/run-all.sh --layer 1` passes.
 - [x] `bash tests/speckit-pro/run-all.sh --layer 4` passes.
@@ -592,8 +592,8 @@ For each helper or helper group:
 
 Recorded `2026-07-02T16:59:00Z`:
 
-- `bash tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh` -> `7/7 passed`
-- `bash tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh` -> `9/9 passed`
+- `bash tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.sh` -> `7/7 passed`
+- `bash tests/speckit-pro/unit/test-speckit-pro-runner.sh` -> `9/9 passed`
 - `speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G5 specs/xplat-005-read-only-helper-port` -> `pass: true`, `task_count: 85`
 - `speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G7 specs/xplat-005-read-only-helper-port` -> `pass: true`, `done: 85`
 - `bash tests/speckit-pro/run-all.sh --layer 4` -> `2108/2108 passed`
@@ -611,7 +611,7 @@ speckit-pro/
   codex-skills/**/scripts/        # Current Codex helper references
 tests/speckit-pro/
   layer1-structural/              # Structural validation
-  layer4-scripts/                 # Script/helper tests and fixtures
+  unit/                 # Script/helper tests and fixtures
 docs/ai/specs/.process/
   XPLAT-005-design-concept.md
   XPLAT-005-workflow.md

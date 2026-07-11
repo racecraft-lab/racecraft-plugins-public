@@ -139,7 +139,7 @@ Fallback if static pointer coverage or eval-plan coverage cannot be proven: use 
 | deterministic/eval expectation | blocked after TACD-004 | Tests or evals that assert vendor-specific optional-tool wording. | `tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json:107-116` | Update after active behavior changes, not before. |
 | generated source-derived duplicate | allowed if source-derived | Generated payload copies of active source content. | `dist/claude/speckit-pro/agents/codebase-analyst.md:52-67` | Do not hand-edit generated payloads. Regenerate from changed source. |
 | historical/provenance | allowed | PRD, roadmap, changelog, archive, or fixture text documenting past decisions. | `docs/ai/specs/tool-agnostic-capability-discovery-design-concept.md:20-27` | Require clear archival/planning context. |
-| fixture/test-only | review | Test fixture content that may intentionally contain named examples. | `tests/speckit-pro/layer4-scripts/fixtures/**` | Enforce only when fixture represents active expected behavior. |
+| fixture/test-only | review | Test fixture content that may intentionally contain named examples. | `tests/speckit-pro/unit/fixtures/**` | Enforce only when fixture represents active expected behavior. |
 | ambiguous/requires-review | review | Reference cannot be confidently classified. | N/A | Must name candidate categories, missing evidence, confidence, and owner. |
 | out-of-scope | allowed | Unrelated project names or examples not part of SpecKit Pro capability guidance. | Trigger fixtures mentioning unrelated MCP project names | Avoid broad string bans on generic `mcp` vocabulary. |
 

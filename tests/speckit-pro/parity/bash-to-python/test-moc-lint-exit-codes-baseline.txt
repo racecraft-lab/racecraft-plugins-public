@@ -1,0 +1,37 @@
+001 orphan: broken scan-path basename -> exit 2
+002 orphan: internal-error exit (2) is distinct from content-violation exit (1)
+003 stale-index: broken scan-path dirname -> exit 2
+004 stale-index: internal-error exit (2) is distinct from content-violation exit (1)
+005 orphan: unreadable marker -> exit 0 (no content violation)
+006 orphan: unreadable marker -> stderr carries a warning
+007 orphan: unreadable marker -> no VIOLATION on stdout
+008 stale-index: unreadable marker -> exit 0 (no content violation)
+009 stale-index: unreadable marker -> stderr carries a warning
+010 stale-index: unreadable marker -> no VIOLATION on stdout
+011 orphan: nonexistent scan root -> exit 0
+012 stale-index: nonexistent scan root -> exit 0
+013 orphan: empty scan root -> exit 0
+014 stale-index: empty scan root -> exit 0
+015 orphan: markerless tree (no SPEC-MOC.md) -> exit 0
+016 stale-index: markerless tree (no SPEC-MOC.md) -> exit 0
+017 orphan: non-gated marker with broken body -> exit 0 (skipped before read)
+018 orphan: non-gated marker -> no VIOLATION emitted
+019 stale-index: non-gated marker with broken body -> exit 0 (skipped before read)
+020 stale-index: non-gated marker -> no VIOLATION emitted
+021 orphan: content violation -> exit 1
+022 orphan: content violation -> path + rule on STDOUT
+023 orphan: content violation -> offending path named on STDOUT
+024 orphan: content violation -> nothing on STDERR (no internal-error line)
+025 stale-index: content violation -> exit 1
+026 stale-index: content violation -> path + rule on STDOUT
+027 stale-index: content violation -> the unresolved link named on STDOUT
+028 stale-index: content violation -> nothing on STDERR (no internal-error line)
+029 orphan: internal error -> exit 2 (not 1)
+030 orphan: internal error -> message on STDERR
+031 orphan: internal error -> NO VIOLATION on STDOUT (classes not conflated)
+032 stale-index: internal error -> exit 2 (not 1)
+033 stale-index: internal error -> message on STDERR
+034 stale-index: internal error -> NO VIOLATION on STDOUT (classes not conflated)
+035 stale-index: Mode-B internal error (no arg) -> exit 2
+036 stale-index: Mode-B internal error -> runtime broken symlink cleaned up (tree left clean)
+TOTAL: 36

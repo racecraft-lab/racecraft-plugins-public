@@ -229,10 +229,10 @@ construction, not by a gate.
   rebase:false`). Split PRs must be **independent slices off `main`**, not a naive stack
   squash would break.
 - **Codex parity is mandatory.** Every mirrored `skills/<name>/SKILL.md` change must be
-  mirrored under `codex-skills/`, keeping Layer-1 `validate-codex-skills.sh` and the
+  mirrored under `codex-skills/`, keeping Layer-1 `validate-codex-skills.py` and the
   Layer-8 parity fixtures green.
-- **Scripts-first.** Deterministic logic ships as `bash`+`jq` scripts (the router,
-  layer-planner, migration runner, codemod), not LLM reasoning — for determinism,
+- **Runner-first.** Deterministic logic ships as Python standard-library runner
+  operations and repo-local Python checks, not LLM reasoning — for determinism,
   token savings, and a smaller AI-eval surface.
 - **Tests AND evals are non-negotiable per change.** Skill behavior → Layer-3;
   trigger/description → Layer-2; deterministic logic → Layer-4 determinism fixture; new
@@ -240,7 +240,8 @@ construction, not by a gate.
 - **Reviewability budget.** ~800-LOC whole-PR reviewable budget (code + tests, artifacts
   collapsed) is the headline target; ~400 production-LOC per slice is the supporting
   per-slice ceiling.
-- **No new runtime dependency.** Plain `bash` + `jq`, per CLAUDE.md.
+- **No new runtime dependency.** Use the existing Python 3.11+ standard-library and repo toolchain;
+  do not reintroduce a Bash or `jq` runtime dependency.
 - **Neutral reviewer language.** Generated reviewer-facing headings and labels must be
   direct and non-patronizing. Avoid labels that imply the reviewer needs simplified
   treatment; use concrete task-oriented sections instead.
@@ -305,7 +306,7 @@ The 2026-06-11 grill-me pass resolved PRSG-012's purpose:
    go stale (AC-3.*, AC-4.*).
 4. The router correctly classifies a destructive-migration fixture as atomic and warns
    that CI-green ≠ releasable (AC-7.*).
-5. `bash tests/run-all.sh --layer 1` passes on **both** a freshly-scaffolded
+5. `python3 tests/speckit-pro/run-all.py --layer 1` passes on **both** a freshly-scaffolded
    new-structure project and a grandfathered legacy project (lints suppressed by
    marker-absence); the migration dry-run mutates nothing and the relocate codemod is
    idempotent (AC-11.*).

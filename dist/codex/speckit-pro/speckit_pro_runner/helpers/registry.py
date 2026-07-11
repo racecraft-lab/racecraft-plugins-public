@@ -7,7 +7,7 @@ from typing import Any
 
 from ..envelope import diagnostic, response
 from .install import run_install_helper
-from .mutation import run_mutation_helper
+from .mutation import run_mutation_helper, run_spec_index_write
 from .pr_emission import run_pr_emission_helper
 from .promotion import promotion_record
 from .read_only import registry_report, run_registered_helper
@@ -76,8 +76,8 @@ class MutationEntry:
 
 
 SCRIPT_BASE = "speckit-pro/skills/speckit-autopilot/scripts"
-REQUEST_FIXTURE_BASE = "tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests"
-MUTATION_REQUEST_FIXTURE_BASE = "tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/requests"
+REQUEST_FIXTURE_BASE = "tests/speckit-pro/unit/fixtures/read-only-helpers/requests"
+MUTATION_REQUEST_FIXTURE_BASE = "tests/speckit-pro/unit/fixtures/mutation-helpers/requests"
 
 
 def authoritative_request(helper_id: str) -> str:
@@ -285,7 +285,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         None,
         "golden_only",
         "fixture_semantic",
-        "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/requests/install-health-repair.json",
+        "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/install-health-repair.json",
         ("trusted-missing", "trusted-stale", "unsafe-manual-remediation", "broad-reinstall-rejected"),
         rollback="Keep autoheal limited to checksum-backed fixture evidence until native install evidence is complete.",
     ),
@@ -420,9 +420,11 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "generate-spec-index-write",
         ("dry_run", "apply"),
         f"{SCRIPT_BASE}/generate-spec-index.sh",
-        "deferred",
+        "golden_only",
         "golden_fixture",
-        deferred_authoritative_request(),
+        mutation_authoritative_request("generate-spec-index-write"),
+        ("current", "stale", "error", "write", "idempotence", "marker-safety"),
+        rollback="Restore touched SPEC-MOC.md and roadmap-MOC files from version control before retrying.",
     ),
     "plan-layers-marker-plan": MutationEntry(
         "plan-layers-marker-plan",
@@ -562,6 +564,9 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
     if entry.helper_id == "mutation-registry-dispatch":
         return response("ok", request_id=request.request_id, data=mutation_registry_report())
 
+    if entry.helper_id == "generate-spec-index-write":
+        return run_spec_index_write(entry, request)
+
     if entry.helper_id in {"doctor-preflight", "doctor-repair", "install-health-repair"}:
         return run_install_helper(entry, request)
 
@@ -574,7 +579,6 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
         "multi-pr-emission",
         "restack",
         "relocate-process-artifacts",
-        "generate-spec-index-write",
         "plan-layers-marker-plan",
         "validate-pr-packet-write",
         "detect-stack-manager-plan",

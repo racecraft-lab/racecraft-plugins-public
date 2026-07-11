@@ -444,7 +444,7 @@ async function buildManifestsPage() {
 }
 async function buildScriptsPage() {
   const scriptFiles = [
-    ...(await listFiles('scripts', (rel) => /\.(sh|mjs|js)$/.test(rel))),
+    ...(await listFiles('scripts', (rel) => /\.(sh|py|mjs|js)$/.test(rel))),
     ...(await listFiles('speckit-pro/scripts', (rel) => /\.(sh|json|mjs|js)$/.test(rel))),
     ...(await listFiles('speckit-pro/skills/speckit-autopilot/scripts', (rel) => /\.(sh|py|json|mjs|js)$/.test(rel))),
   ].sort((a, b) => a.localeCompare(b));
@@ -536,7 +536,7 @@ async function buildTestsPage() {
   }
   return page('tests', 'Tests Reference', 'SpecKit Pro validation layers and test-only files.', records, [
     await citation('tests/speckit-pro/run-all.py'),
-    await citation('tests/speckit-pro/layer1-structural/validate-codex-plugin.sh'),
+    await citation('tests/speckit-pro/layer1-structural/validate-codex-plugin.py'),
   ]);
 }
 async function buildSourceVsDistPage() {
@@ -545,8 +545,8 @@ async function buildSourceVsDistPage() {
     ['claude-generated-payload', 'Claude Code Generated Payload', 'Generated Claude Code install payload inventory under dist/claude.', ['dist/claude/speckit-pro/README.md', 'dist/claude/speckit-pro/.claude-plugin/plugin.json'], 'generated-payload'],
     ['codex-generated-payload', 'Codex Generated Payload', 'Generated Codex install payload inventory under dist/codex.', ['dist/codex/speckit-pro/README.md', 'dist/codex/speckit-pro/.codex-plugin/plugin.json'], 'generated-payload'],
     ['marketplace-registries', 'Marketplace Registries', 'Repository marketplace catalogs that point to generated payloads.', ['.claude-plugin/marketplace.json', '.agents/plugins/marketplace.json'], 'source'],
-    ['release-scripts', 'Release And Payload Scripts', 'Root scripts used for generated payload and marketplace maintenance.', ['scripts/build-plugin-payloads.py', 'scripts/sync-marketplace-versions.sh'], 'release-infrastructure'],
-    ['test-suite', 'Validation Test Suite', 'Layered validation files for plugin structure, scripts, parity, and integration fixtures.', ['tests/speckit-pro/run-all.py', 'tests/speckit-pro/layer1-structural/validate-plugin.sh'], 'test-only'],
+    ['release-scripts', 'Release And Payload Scripts', 'Root scripts used for generated payload and marketplace maintenance.', ['scripts/build-plugin-payloads.py', 'scripts/sync-marketplace-versions.py'], 'release-infrastructure'],
+    ['test-suite', 'Validation Test Suite', 'Layered validation files for plugin structure, scripts, parity, and integration fixtures.', ['tests/speckit-pro/run-all.py', 'tests/speckit-pro/layer1-structural/validate-plugin.py'], 'test-only'],
     ['docs-site', 'Documentation Site', 'Astro/Starlight documentation source and local validation scripts.', ['docs-site/package.json', 'docs-site/astro.config.mjs', 'docs-site/src/content/docs/reference.md'], 'documentation-infrastructure'],
     ['speckit-integration-manifests', 'SpecKit Integration Manifests', 'SpecKit project integration manifest evidence recorded under .specify.', ['.specify/integrations/claude.manifest.json', '.specify/integrations/speckit.manifest.json'], 'source'],
   ].map(([id, heading, purpose, paths, classification]) => ({ id, heading, purpose, paths, classification }));

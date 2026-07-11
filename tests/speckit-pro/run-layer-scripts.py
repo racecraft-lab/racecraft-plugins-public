@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
-"""Repo-side shell dispatcher for the legacy bash-backed test layers 1 and 4.
+"""Repo-side dispatcher for manifest-backed test layers 1, 4, 5, 7, and 8.
 
-This script is intentionally NOT shipped in any plugin payload. It lives under
-``tests/`` — a sibling of ``speckit-pro/`` that plugin install never copies and
-the zero-bash payload guard never scans — so the literal ``bash`` dependency for
-the remaining ``.sh`` structural (layer 1) and unit (layer 4) tests can live here
-rather than inside ``speckit_pro_runner``. Keeping it out of the runner package
-is what lets the shipped payload stay bash-free. The dependency is scheduled for
-removal when XPLAT-010 ports the remaining ``.sh`` tests to Python.
+This script is intentionally NOT shipped in any plugin payload. Every manifest
+entry it dispatches is Python-authoritative; non-Python entries fail closed.
 
 The suite gate (``speckit_pro_runner.gates.suite``) invokes this as an external
-argv command (``python tests/speckit-pro/run-layer-scripts.py --layer 1|4``) and
+argv command (``python tests/speckit-pro/run-layer-scripts.py --layer 1|4|5|7|8``) and
 maps the process exit code to a runner status: 0 -> ok, 1 -> expected_failure,
 2 -> input_error, 3 -> missing_prerequisite, 4 -> subprocess_failure.
 """
@@ -19,7 +14,6 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
 import subprocess
 import sys
 import traceback
@@ -29,6 +23,9 @@ SUITE_MANIFEST = "tests/speckit-pro/suite-manifest.json"
 LAYER_LABELS = {
     "1": "layer-1 structural validation",
     "4": "layer-4 python helper tests",
+    "5": "layer-5 agent tool scoping",
+    "7": "layer-7 integration fixtures",
+    "8": "layer-8 parity fixtures",
 }
 
 
@@ -43,7 +40,7 @@ def canonical_test_scripts(repo_root: Path, layer: str) -> list[Path]:
     """Return the layer's dispatch roster from suite-manifest.json (not run-all.sh).
 
     The manifest's per-layer ``scripts[]`` is the single source of truth for the
-    Layer-1/Layer-4 dispatch set (XPLAT-010 FR-007, research §D4), replacing the
+    manifest-backed dispatch set (XPLAT-010 FR-007, research §D4), replacing the
     former ``re.findall`` text-parse of ``run-all.sh``.
     """
     manifest_path = repo_root / SUITE_MANIFEST
@@ -90,15 +87,17 @@ def emit_checks(label: str, checks: list[tuple[str, bool, str]]) -> int:
     return 0 if passed == len(checks) else 1
 
 
-def run_script_suite(label: str, tests: list[Path], repo_root: Path, bash_executable: str) -> int:
+def run_script_suite(label: str, tests: list[Path], repo_root: Path) -> int:
     checks: list[tuple[str, bool, str]] = []
     for test_path in tests:
         if not test_path.is_file():
             checks.append((rel(test_path, repo_root), False, "test file missing"))
             continue
+        if test_path.suffix != ".py":
+            checks.append((rel(test_path, repo_root), False, "non-Python manifest entry"))
+            continue
         env = python_child_env(repo_root)
-        # Sanctioned repo-side shell dispatch of legacy .sh tests (XPLAT-010 scope).
-        argv = [sys.executable, rel(test_path, repo_root)] if test_path.suffix == ".py" else [bash_executable, rel(test_path, repo_root)]
+        argv = [sys.executable, rel(test_path, repo_root)]
         completed = subprocess.run(
             argv,
             cwd=repo_root,
@@ -116,7 +115,7 @@ def run_script_suite(label: str, tests: list[Path], repo_root: Path, bash_execut
 
 def main(argv: list[str]) -> int:
     if len(argv) != 2 or argv[0] != "--layer" or argv[1] not in LAYER_LABELS:
-        print("usage: run-layer-scripts.py --layer {1|4}", file=sys.stderr)
+        print("usage: run-layer-scripts.py --layer {1|4|5|7|8}", file=sys.stderr)
         return 2
     layer = argv[1]
 
@@ -135,16 +134,7 @@ def main(argv: list[str]) -> int:
         print(f"missing prerequisite: no layer {layer} test entries in {SUITE_MANIFEST}", file=sys.stderr)
         return 3
 
-    # Sanctioned repo-side shell dispatch: bash runs the legacy .sh layers until
-    # XPLAT-010 ports them to Python. Report a missing prerequisite instead of
-    # failing opaquely when .sh entries exist but no bash is available.
-    found_bash = shutil.which("bash")
-    bash_executable = found_bash or "/bin/bash"
-    if any(test_path.suffix != ".py" for test_path in tests) and found_bash is None and not Path("/bin/bash").is_file():
-        print("missing prerequisite: bash not found for legacy .sh test layers", file=sys.stderr)
-        return 3
-
-    return run_script_suite(LAYER_LABELS[layer], tests, repo_root, bash_executable)
+    return run_script_suite(LAYER_LABELS[layer], tests, repo_root)
 
 
 if __name__ == "__main__":

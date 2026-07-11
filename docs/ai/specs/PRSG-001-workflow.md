@@ -539,7 +539,7 @@ speckit-pro/
 ├── codex-skills/speckit-scaffold-spec/SKILL.md # parity mirror
 └── tests/
     ├── layer1-structural/validate-process-gitattributes.sh # NEW (US2)
-    └── layer4-scripts/test-reviewability-gate.sh           # extend (US2)
+    └── unit/test-reviewability-gate.sh           # extend (US2)
 .gitattributes                                # NEW repo-root (US2)
 ```
 

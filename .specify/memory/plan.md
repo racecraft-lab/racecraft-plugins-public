@@ -78,9 +78,9 @@ script/abstraction (constitution Principle VI).
 - NEW Layer-1 lint: `tests/layer1-structural/validate-process-gitattributes.sh`
   (modeled on `validate-pr-checks-sentinel.sh`), registered in the run-all.sh L1
   array — proves SC-005.
-- EXTENDED `tests/layer4-scripts/test-reviewability-gate.sh` — diff-mode:
+- EXTENDED `tests/unit/test-reviewability-gate.sh` — diff-mode:
   `.process/` excluded, spec counted (SC-003).
-- EXTENDED `tests/layer4-scripts/test-ensure-reviewability-preset.sh` —
+- EXTENDED `tests/unit/test-ensure-reviewability-preset.sh` —
   idempotency + safe-write of the consumer append (SC-004).
 - Codex parity covered by the existing `validate-codex-skills.sh` + Layer-8 parity
   fixtures (SC-006).
@@ -211,7 +211,7 @@ directory and the cleanup gate recorded `safeToApplyCleanup=true`.
 
 ### Test Strategy
 
-- `bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh` covers planner
+- `bash tests/speckit-pro/unit/test-plan-layers.sh` covers planner
   contract behavior and passed `66/66`.
 - `bash tests/speckit-pro/run-all.sh --layer 4` passed `1029/1029`.
 - `bash tests/speckit-pro/run-all.sh --layer 1` passed `887/887`.
@@ -223,7 +223,7 @@ directory and the cleanup gate recorded `safeToApplyCleanup=true`.
 
 `specs/prsg-008-layer-planner` was removed from active `specs/**` cleanup on
 2026-06-10 after the planner schema was vendored under
-`tests/speckit-pro/layer4-scripts/fixtures/plan-layers/contracts/` and focused
+`tests/speckit-pro/unit/fixtures/plan-layers/contracts/` and focused
 planner tests passed from the fixture-backed schema.
 
 ---
@@ -264,10 +264,10 @@ planner tests passed from the fixture-backed schema.
 
 ### Test Strategy
 
-- `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` passed `81/81`.
-- `bash tests/speckit-pro/layer4-scripts/test-restack.sh` passed `32/32`.
-- `bash tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh` passed `44/44`.
-- `bash tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh` passed `86/86`.
+- `bash tests/speckit-pro/unit/test-multi-pr-emission.sh` passed `81/81`.
+- `bash tests/speckit-pro/unit/test-restack.sh` passed `32/32`.
+- `bash tests/speckit-pro/unit/test-generate-pr-body.sh` passed `44/44`.
+- `bash tests/speckit-pro/unit/test-generate-spec-index.sh` passed `86/86`.
 - `bash tests/speckit-pro/run-all.sh` passed `2300/2300` after active spec cleanup.
 - PR #145 CI recorded successful PR Checks, CodeQL, Release, `test(speckit-pro)`,
   `validate-plugins`, `validate-pr-title`, and `detect` for merge commit
@@ -313,14 +313,14 @@ reporting was repointed to payload-included contracts.
 
 ### Test Strategy
 
-- `bash tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh`
+- `bash tests/speckit-pro/unit/test-final-reviewability-backstop.sh`
   passed `31/31`.
-- `bash tests/speckit-pro/layer4-scripts/test-atomicity-route.sh` passed
+- `bash tests/speckit-pro/unit/test-atomicity-route.sh` passed
   `109/109`.
-- `bash tests/speckit-pro/layer4-scripts/test-o5-topology.sh` passed `25/25`.
-- `bash tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh` passed
+- `bash tests/speckit-pro/unit/test-o5-topology.sh` passed `25/25`.
+- `bash tests/speckit-pro/unit/test-generate-spec-index.sh` passed
   `87/87`.
-- `bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run --fixture 03-prsg-010-backstop-o5-routing`
+- `bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run --fixture 03-reviewability-backstop-parent-child-routing`
   passed `3/3`.
 - Post-cleanup `bash tests/speckit-pro/run-all.sh` verification is recorded in
   `.specify/memory/archive-reports/2026-06-11-prsg-010-post-merge-hygiene.md`.
@@ -438,7 +438,7 @@ implementation had already merged:
   - MOC lints now use committed fixture-backed dogfood assertions instead of
     reading `specs/prsg-002-moc-templates/SPEC-MOC.md`.
   - PRSG-012 PR body and marker-emission regression tests now read vendored
-    fixtures under `tests/speckit-pro/layer4-scripts/fixtures/`.
+    fixtures under `tests/speckit-pro/unit/fixtures/`.
   - SPEC-006a already used the vendored full-spec snapshot fixture.
 - Regenerate generated roadmap-MOC INDEX content after active spec removal so
   generated links do not point to archived spec folders.
@@ -446,9 +446,9 @@ implementation had already merged:
 ### Test Strategy
 
 - Pre-cleanup fixture verification:
-  - `bash tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh` passed
+  - `bash tests/speckit-pro/unit/test-generate-pr-body.sh` passed
     `85/85`.
-  - `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` passed
+  - `bash tests/speckit-pro/unit/test-multi-pr-emission.sh` passed
     `156/156`.
   - `bash tests/speckit-pro/layer1-structural/validate-moc-stale-index.sh`
     passed `11/11`.
@@ -1285,13 +1285,13 @@ invocation surfaces.
   persistence, and PR-body generation remain downstream.
 - Refresh runner manifest/checksum metadata for the new helper source files.
 - Preserve fixture inputs under
-  `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/` so Layer 4
+  `tests/speckit-pro/unit/fixtures/read-only-helpers/` so Layer 4
   remains runnable after the active XPLAT-005 spec folder is archived.
 
 ### Testing Strategy
 
 XPLAT-005 verification uses the read-only helper Layer 4 entrypoint,
-`bash tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh`,
+`bash tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.sh`,
 the runner Layer 4 entrypoint, `bash tests/speckit-pro/run-all.sh --layer 4`,
 Layer 1 structural validation, spec-index checks, JSON validation, diff
 hygiene, PR-packet validation, workflow-contract validation, and a local macOS
@@ -1315,7 +1315,7 @@ cleanup.
 XPLAT-006 implemented the mutation-capable runner helper substrate on top of
 the XPLAT-004 runner and XPLAT-005 read-only registry. The production surface
 lives under `speckit-pro/speckit_pro_runner/helpers/`, with contract and parity
-evidence under `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/`.
+evidence under `tests/speckit-pro/unit/fixtures/mutation-helpers/`.
 
 ### Technical Approach
 
@@ -1341,8 +1341,8 @@ evidence under `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/`.
 ### Testing Strategy
 
 XPLAT-006 verification uses Python standard-library focused tests,
-`python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py`,
-`python3 tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py`,
+`python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py`,
+`python3 tests/speckit-pro/unit/test-autopilot-phase-coverage.py`,
 the runner and read-only helper Layer 4 suites, spec-index checks, JSON
 validation, diff hygiene, PR-packet validation, workflow-contract validation,
 reviewability gates, and the default deterministic suite. Native installed
@@ -1367,7 +1367,7 @@ XPLAT-004 runner, XPLAT-005 read-only helper records, and XPLAT-006
 mutation/install/PR-emission contracts. The production surface lives under
 `speckit-pro/speckit_pro_runner/gates/`, with gate request, case, promotion,
 and contract evidence under
-`tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/`.
+`tests/speckit-pro/unit/fixtures/runner-gates/`.
 
 ### Technical Approach
 
@@ -1390,7 +1390,7 @@ and contract evidence under
 ### Testing Strategy
 
 XPLAT-007 verification uses Python standard-library focused tests,
-`python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py`, runner
+`python3 tests/speckit-pro/unit/test-speckit-pro-gates.py`, runner
 request fixtures for default suite, layer, AI-eval, integration, parity,
 payload evidence, install verification, release readiness, live release
 readiness, and active-path guard behavior, plus the default deterministic
@@ -1433,7 +1433,7 @@ install helpers, and XPLAT-007 gate substrate.
   installed-cache UAT evidence under `docs/ai/specs/.process/` after active
   spec cleanup.
 - Preserve XPLAT-008 contract schemas under
-  `tests/speckit-pro/layer4-scripts/fixtures/xplat-008-release/contracts/` so
+  `tests/speckit-pro/unit/fixtures/installed-plugin-release/contracts/` so
   Layer 4 gates no longer depend on active `specs/**` content.
 
 ### Testing Strategy
@@ -1479,7 +1479,7 @@ proof, and zero-Bash guards.
   one Python-backed zero-Bash guard, with committed evidence under
   `docs/ai/specs/.process/XPLAT-009-*`.
 - Preserve XPLAT-009 contract schemas under
-  `tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/contracts/` so
+  `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/contracts/` so
   Layer 4 gates no longer depend on active `specs/**` content.
 
 ### Testing Strategy
@@ -1497,6 +1497,52 @@ default deterministic suite.
 active `specs/**` in the post-merge cleanup after PR #297 merged and shipped in
 speckit-pro 2.18.0. Recovery commands and provenance are recorded in the
 XPLAT-009 archive report. Repository-wide Bash confinement and the CI dispatch
-guard remain XPLAT-010, and public native Windows/macOS/Linux release claims
-remain blocked until the preserved XPLAT-008 UAT matrix has six passing
-operator rows.
+guard were completed by XPLAT-010, and public native Windows/macOS/Linux
+release claims remain blocked until the preserved XPLAT-008 UAT matrix has six
+passing operator rows.
+
+## XPLAT-010 Repository Bash Confinement and CI Dispatch Guard
+
+### Technical Approach
+
+XPLAT-010 used a manifest-driven Python 3.11+ standard-library architecture for
+repository-only validation. `tests/speckit-pro/suite-manifest.json` defines the
+layers and Python dispatch; shared test-result and baseline helpers preserve
+per-check identities; runner gates enumerate tracked files and structurally
+inspect executable surfaces; subprocesses use argv arrays and `shell=False`;
+and workflow shell remains bounded dispatch glue.
+
+The implementation also added a Docker/QEMU-backed Linux amd64/arm64 preflight
+path, direct hosted Windows advisory smoke, stable always-reporting Linux
+sentinels, deterministic release-note parsing/composition, immutable release
+audit evidence, and the restored `estimate-spec-size` helper operation. The
+review topology was an 18-PR no-gap stack with frozen adjacent packets and a
+bounded publication tail.
+
+### Testing Strategy
+
+- Preserve exact Bash-to-Python outcome names and counts in purpose-based
+  parity baselines and a cumulative count ledger.
+- Run focused Python unit/contract suites for each port before the default
+  deterministic Layers 1, 4, and 5 suite.
+- Run the default suite with Bash and `jq` absent from PATH; final result:
+  `2512/2512` (`1373`, `953`, `186`).
+- Prove repository confinement with tracked-file enumeration, fixed vendored
+  allowlist checks, release-readiness composition, and seeded regressions.
+- Prove hosted preflight behavior with relevant-path, docs-only,
+  failure-propagation, manual-main, and all four owned PR-trigger canaries.
+- Keep Windows preflight explicitly advisory and retain XPLAT-008 operator UAT
+  as the only native-platform release-claim gate.
+- Validate every adjacent review slice and audit the final merged tree against
+  the verified stack tip.
+
+### Cleanup Notes
+
+PRs #311-#328 merged on 2026-07-11, ending at
+`ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29`. Live test dependencies were
+decoupled into purpose-based fixtures before removing the active XPLAT-010 spec
+folder. Process evidence remains under `docs/ai/specs/.process/XPLAT-010-*`,
+and raw spec artifacts remain recoverable from the final merge commit. The
+separate constitution amendment completed through PR #331 at
+`b537e3b43ca20d8f6e8b6e9430d797444462f2e9` before archive cleanup. Public native
+claims remain blocked by the XPLAT-008 UAT matrix.

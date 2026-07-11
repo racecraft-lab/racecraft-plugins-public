@@ -19,7 +19,7 @@ run-name: "PR Checks #${{ github.event_name == 'workflow_dispatch' && inputs.pr_
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize, edited, ready_for_review]
+    types: [opened, reopened, synchronize, edited, labeled, unlabeled, ready_for_review]
   workflow_dispatch:
     inputs:
       pr_number:
@@ -84,13 +84,13 @@ jobs:
       - name: Report test toolchain
         env:
           PLUGIN: ${{ matrix.plugin }}
-        run: PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-toolchain-preflight.json
+        run: PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-toolchain-preflight.json
 
       - name: Run test suite
         env:
           PLUGIN: ${{ matrix.plugin }}
           SPECKIT_SKIP_TOOLCHAIN_CHECK: "1"
-        run: PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json
+        run: PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json
 
   # ───────────────────────────────────────────────────────────────────
   # Job 3: Validate PR title against Conventional Commits format
@@ -110,7 +110,30 @@ jobs:
         env:
           TITLE: ${{ github.event_name == 'pull_request' && github.event.pull_request.title || inputs.pr_title }}
           BASE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || inputs.base_ref }}
-        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness-live-github.json
+        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness-live-github.json
+
+  # Required release-note contract. All event text enters through env values;
+  # the Python validator never evaluates PR-controlled text as shell syntax.
+  validate-release-note:
+    name: validate-release-note
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Validate release note block
+        env:
+          PR_TITLE: ${{ github.event_name == 'pull_request' && github.event.pull_request.title || inputs.pr_title }}
+          PR_BODY: ${{ github.event_name == 'pull_request' && github.event.pull_request.body || '' }}
+          PR_LABELS_JSON: ${{ github.event_name == 'pull_request' && toJSON(github.event.pull_request.labels.*.name) || '[]' }}
+          PR_DRAFT: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft || false }}
+        run: python3 scripts/compose-release-notes.py --validate-pr
 
   # ───────────────────────────────────────────────────────────────────
   # Job 4: Validate GitHub Actions workflow syntax and semantics
@@ -286,7 +309,7 @@ jobs:
 
       - name: Report docs toolchain
         if: steps.docs.outputs.should_validate_docs == 'true'
-        run: bash tests/speckit-pro/check-toolchain.sh --mode docs
+        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-toolchain-preflight-docs.json
 
       - name: Install Playwright browsers
         if: steps.docs.outputs.validation_mode == 'full'

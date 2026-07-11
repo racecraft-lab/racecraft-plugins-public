@@ -35,9 +35,9 @@ reviewable LOC 400, production files 6, total files 15, primary surfaces 2
 (`docs/process`, `harness/adapter`) against warn thresholds 400/6/15/1. The
 roadmap budget projects 400–800 reviewable LOC and 15–25 total files.
 
-**Split decision (accepted in design-concept Q9/Q10):** one spec delivered as a
-~14-PR stack, each PR independently CI-green and sized to the 400–800
-reviewable-LOC budget:
+**Split decision (accepted in design-concept Q9/Q10):** the implementation plan
+started as 15 PRs, each intended to be independently CI-green and sized to the
+400–800 reviewable-LOC budget:
 
 1. Orphaned-test deletion + disposition ledger (deletion-only)
 2. Suite manifest + `run-all.py` orchestrator + manifest-reading suite gate
@@ -58,6 +58,16 @@ reviewable-LOC budget:
 
 Ordering constraints: 1 anytime; 2 before 3–10; 10 after 3–9; 11 last among
 confinement PRs; 12 and 13 independent (13 preferred early).
+
+**Emitted topology (current):** the review stack contains 18 no-gap PRs,
+#311 through #328. #311 targets `main`; each later PR targets its immediate
+predecessor. The count differs from the original implementation plan for three
+explicit reasons: Foundation and Polish are emitted aggregate review units, and
+the blocked 1,267-production-LOC release-notes slice was split into PR 12a and
+PR 12b without a waiver. PR 13 was emitted early as #313. The archived generated
+source of truth is `docs/ai/specs/.process/XPLAT-010-prs.json`; its 18 immutable
+packet triplets are preserved under
+`docs/ai/specs/.process/XPLAT-010-pr-packets/`.
 
 ---
 
@@ -99,9 +109,11 @@ a heavy phase orchestrator-direct.
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions total; 7 consensus items (6× Round 1, 1× Round 2 tie-break; 1 [security] all-3 operator-ratified); 12 Clarifications bullets in spec.md; G2 PASS (0 markers) |
 | Plan | `/speckit-plan` | ✅ Complete | 13 research decisions; 8 entities; 6 contracts; constitution 6/6; G3 PASS; advisory LOC estimator: pass (40 projected) |
 | Checklist | `/speckit-checklist` | ✅ Complete | 104 items / 21 gaps → 0 across 4 domains; G4 PASS; zero consensus escalations |
-| Tasks | `/speckit-tasks` | ✅ Complete | 136 tasks / 17 phases / 53 [P]; G5 PASS; route single-atomic-PR (advisory, superseded by ratified split); layer plan skipped; tasks-mode reviewability gate unavailable (defect logged) |
-| Analyze | `/speckit-analyze` | ✅ Complete | 7 findings (1 CRITICAL after consensus relabel, 4 MEDIUM, 2 LOW) all remediated; G6 PASS; canonical 13-slice/15-PR count; constitution amendment recorded as post-PR-10 follow-up |
-| Implement | `/speckit-implement` | 🔄 In Progress | G6.5 advisory PASS: composite 0.98 ≥ 0.9, proceed |
+| Tasks | `/speckit-tasks` | ✅ Complete | 136 tasks / 18 phases / 53 [P]; G5 PASS; route single-atomic-PR (advisory, superseded by ratified split); layer plan skipped; tasks-mode reviewability gate unavailable (defect logged) |
+| Analyze | `/speckit-analyze` | ✅ Complete | 7 findings (1 CRITICAL after consensus relabel, 4 MEDIUM, 2 LOW) all remediated; G6 PASS; historical 13-slice/15-PR implementation plan reconciled to the emitted 18-PR review topology; constitution amendment recorded as post-PR-10 follow-up |
+| Confidence Gate | G6.5 | ✅ Complete | Advisory composite confidence 0.98; implementation authorized |
+| Implement | `/speckit-implement` | ✅ Complete | PRs #311-#328 merged; final `main` tree matches the verified stack tip; all 18 review branches deleted |
+| Post | Canonical 12-item closeout | ✅ Complete | All 12 Post items are hydrated; T108 hosted evidence and T117 required-check configuration are complete |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -117,6 +129,7 @@ Each phase requires **human review and approval** before proceeding:
 | G4 | After Checklist | All `[Gap]` markers addressed |
 | G5 | After Tasks | Task coverage verified, dependencies ordered |
 | G6 | After Analyze | No `CRITICAL` issues, `WARNING` items reviewed |
+| G6.5 | Before Implement | Composite confidence meets the autonomous implementation threshold |
 | G7 | After Each Implementation Phase | Tests pass, manual verification complete |
 
 ---
@@ -141,7 +154,7 @@ Each phase requires **human review and approval** before proceeding:
 |------|-------|
 | check-prerequisites | all_pass=true (specify CLI 0.11.8; project init, constitution, commands, workflow file OK) |
 | Branch state | worktree=true; branch `xplat-010-repository-bash-confinement`; non-numeric namespace → `.specify/feature.json` pins `specs/xplat-010-repository-bash-confinement` (vendored scripts support the feature.json bypass) |
-| PROJECT_COMMANDS | detect-commands: stack unknown / all N/A. Effective commands (CLAUDE.md): FULL_VERIFY + UNIT_TEST = `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json`; TOOLCHAIN = same runner with `run-toolchain-preflight.json`; DOCS = `pnpm --dir docs-site validate`; BUILD/TYPECHECK/LINT = N/A |
+| PROJECT_COMMANDS | detect-commands: stack unknown / all N/A. Effective commands (CLAUDE.md): FULL_VERIFY + UNIT_TEST = `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json`; TOOLCHAIN = same runner with `run-toolchain-preflight.json`; DOCS = `pnpm --dir docs-site validate`; BUILD/TYPECHECK/LINT = N/A |
 | PRESET_CONVENTIONS | speckit-pro-reviewability v1.0.0 active; spec/plan/tasks templates resolve from `.specify/presets/speckit-pro-reviewability/templates/` |
 | CONFIDENCE_GATE_MODE | `advisory` (resolved at Step 0.6b; G6.5 reads this value, resolver not re-run) |
 | AGENT_TEAMS_AVAILABLE | `true` (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1; Claude Code 2.1.205 ≥ 2.1.32) |
@@ -169,7 +182,7 @@ are logged in this section as they surface.
 `7bc6be1a`, shipped in 2.18.0); current target excluded; apply mode with
 `safeToApplyCleanup=true`; commit `d3c95f73` (27 files, +546/−1704): spec dir
 removed with recovery commands recorded, 4 contract schemas relocated to
-`tests/speckit-pro/layer4-scripts/fixtures/xplat-009-zero-bash/contracts/`,
+`tests/speckit-pro/unit/fixtures/plugin-bash-confinement/contracts/`,
 memory/AGENTS/roadmap/MOC updated, archive report at
 `.specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md`.
 Post-commit verification by the sweep: gates test 54/54, runner test 10/10,
@@ -203,16 +216,17 @@ overlap live-scan gate runs with worktree-mutating subagents.
 
 From the roadmap's Done When plus the design-concept scope addition:
 
-- [ ] A repo-wide scan excluding `.github/workflows/` finds zero `.sh` files and zero Bash-shebang scripts (including extensionless executables); vendored `.specify/**` exceptions are documented, allowlisted, and excluded from release readiness
-- [ ] GitHub workflow shell snippets contain only dispatch glue — no embedded validation, packaging, install, release, or runtime logic
-- [ ] Active tests, evals, payload builders, release-readiness checks, install-verification paths, hooks, and helper tools run without Bash or `jq`
-- [ ] Per-layer runtime check counts match committed VERBOSE=true baselines 1:1 (names and counts) — zero regressions across the port
-- [ ] Linux container preflight evidence exists for `linux/amd64` and `linux/arm64` using the same runner/release-gate entrypoints CI uses; Linux jobs gate PRs on runner/gate paths
-- [ ] Windows x64 and ARM64 direct-runner smoke evidence exists where runner labels are available, advisory (`continue-on-error`) with availability recorded; container evidence is never presented as native UAT
-- [ ] CI fails on new Bash scripts, active Bash invocations, or `jq` dependencies outside the workflow dispatch boundary
-- [ ] Every feat/fix PR carries a consumer-facing Release note block (required check with `release-note/skip` label escape), and the GitHub Release body is composed into plain-English Highlights with the conventional-commit list preserved as an appendix
-- [ ] The `estimate-spec-size` runner operation exists and returns `{estimated_loc, suggested_slices, status}` for the size signals grill-me and speckit-prd send it — closing the dogfood defect where the skill references an operation whose bash predecessor was deleted by XPLAT-009 without a Python port
-- [ ] The XPLAT-008 native UAT matrix remains the only release-satisfying evidence for native installed-plugin journeys
+- [x] A repo-wide scan excluding `.github/workflows/` finds zero `.sh` files and zero Bash-shebang scripts (including extensionless executables); vendored `.specify/**` exceptions are documented, allowlisted, and excluded from release readiness
+- [x] GitHub workflow shell snippets contain only dispatch glue — no embedded validation, packaging, install, release, or runtime logic
+- [x] Active tests, evals, payload builders, release-readiness checks, install-verification paths, hooks, and helper tools run without Bash or `jq`
+- [x] Per-layer runtime check counts match committed VERBOSE=true baselines 1:1 (names and counts) — zero regressions across the port
+- [x] Linux container preflight evidence exists for `linux/amd64` and `linux/arm64` using the same runner/release-gate entrypoints CI uses; Linux jobs gate PRs on runner/gate paths
+- [x] Windows x64 and ARM64 direct-runner smoke evidence exists where runner labels are available, advisory (`continue-on-error`) with availability recorded; container evidence is never presented as native UAT
+- [x] CI fails on new Bash scripts, active Bash invocations, or `jq` dependencies outside the workflow dispatch boundary
+- [x] Every feat/fix PR carries a consumer-facing Release note block enforced by the required `validate-release-note` check, with `release-note/skip` as the explicit escape
+- [ ] The first published GitHub Release body is proven to contain composed plain-English Highlights with the conventional-commit list preserved as an appendix
+- [x] The `estimate-spec-size` runner operation exists and returns `{estimated_loc, suggested_slices, status}` for the size signals grill-me and speckit-prd send it — closing the dogfood defect where the skill references an operation whose bash predecessor was deleted by XPLAT-009 without a Python port
+- [x] The XPLAT-008 native UAT matrix remains the only release-satisfying evidence for native installed-plugin journeys
 
 ---
 
@@ -288,8 +302,10 @@ concept Q10; the speckit-pro v2.18.0 release body is the exemplar).
   hook contract (design concept Q4).
 - Live-AI eval runners (Layers 2/3/6) are ported preserving CLI arg contracts
   and codex staging semantics (design concept Q5).
-- Container preflight triggers: path-filtered pull_request + workflow_dispatch;
-  Linux jobs gate, Windows jobs are continue-on-error advisory (Q6/Q7).
+- Container preflight always reports on pull requests plus workflow_dispatch;
+  an internal path detector skips heavy work for docs-only changes, stable Linux
+  sentinels gate, and Windows jobs are continue-on-error advisory (Q6/Q7,
+  implementation correction for required-context reporting).
 - Release-notes composer is deterministic Python stdlib run inside the Release
   workflow; no LLM calls, no new secrets; CHANGELOG.md stays the machine
   ledger (Q10/Q11).
@@ -314,7 +330,7 @@ concept Q10; the speckit-pro v2.18.0 release body is the exemplar).
 | Acceptance Criteria | 20 Given/When/Then scenarios; 8 success criteria (SC-001–SC-008); 8 edge cases; 8 key entities |
 | Markers | 0 `[NEEDS CLARIFICATION]`; privacy scan clean (0 absolute paths) |
 | Gate G1 | PASS — runner validate-gate: `spec.md exists with 0 markers`; spec.md 24,605 bytes |
-| Reviewability budget | transition exception (typed ~13/14-PR split, operator-ratified) |
+| Reviewability budget | transition exception (historical 13-slice/15-PR implementation plan; emitted 18-PR review topology, operator-ratified) |
 
 ### Files Generated
 
@@ -390,7 +406,9 @@ validate-release-note check + release-note/skip label semantics.
 | 7 | Clarify | S3-Q2: composer PR-discovery algorithm | [codebase, domain] | 1→2 | 2/3 | Compare-API commit-subject walk for discovery (body-regex provably lossy in-repo: PRs #210/#192 carry no `(#N)` in CHANGELOG); appendix stays verbatim body output; domain's fail-loud re-targeted at the compare/subject surface; FR-023 + Clarifications updated | codebase-analyst, domain-researcher (R1) + spec-context-analyst (R2 tie-breaker) |
 | 8 | Finding | Analyze D1: constitution amendment severity + timing | [spec] | 1 | high-confidence | Severity corrected HIGH→CRITICAL (rule is unconditional; intent-preservation selects the resolution path, not the label); out-of-stack timing RATIFIED with corrected facts (no automated consumer; staleness starts PR 2; roadmap-narrative tracking per the PR #299 follow-up pattern); plan.md/tasks.md/roadmap/workflow updated. Synthesizer step collapsed — the N=1 analyst supplied exact verified edits | spec-context-analyst |
 
-### Pre-Implement Confidence (Phase 6.5 emit, 2026-07-09)
+## Phase 6.5: Confidence Gate
+
+### Pre-Implement Confidence (emit, 2026-07-09)
 
 📊 Confidence: 0.98
 
@@ -435,13 +453,14 @@ window, and the unavailable tasks-mode gate (recorded fallback chain).
 ## Constraints
 - Read docs/ai/specs/.process/XPLAT-010-design-concept.md before planning —
   it records the 11 accepted decisions (triage, suite architecture, count
-  parity, hooks, live evals, CI triggers/gating, .specify allowlist, 14-PR
+  parity, hooks, live evals, CI triggers/gating, .specify allowlist, 15-PR
   split, release-notes mechanism and enforcement).
-- The 14-PR stack and its ordering constraints are fixed (see the Scope
-  Budget and Split Decision section of this workflow file). Plan tasks so
-  each PR is independently CI-green.
+- The historical 15-PR implementation order remains the design input. The
+  emitted review topology is the 18-PR #311–#328 stack recorded in the Scope
+  Budget section and `prs.json`; each adjacent PR must remain independently
+  reviewable and CI-green.
 - Shipped-runner changes (suite gate manifest read, confinement guard op) are
-  confined to PRs 2, 10, and 13; each triggers the payload rebuild + proof-hash
+  confined to PRs 2, 7b, 8, 9, 10, and 13; each triggers the payload rebuild + proof-hash
   regeneration ritual and must regenerate release-readiness evidence LAST
   with home-directory sanitization.
 - pr-checks.yml job renames require matching branch-protection updates —
@@ -499,7 +518,8 @@ Why: 8 success criteria spanning four subsystems (harness port, guard, CI prefli
 /speckit-checklist requirements
 
 Focus on Repository Bash Confinement and CI Dispatch Guard requirements:
-- Every "Done When" bullet maps to at least one FR and one PR in the 14-PR stack
+- Every "Done When" bullet maps to at least one FR and one emitted PR in the
+  final 18-PR topology (the checklist originally referenced the 15-PR plan)
 - Count-parity requirements are stated per layer, not just globally
 - Release-notes requirements cover authoring, enforcement, composition, and skip paths
 - Pay special attention to: the boundary between XPLAT-010 scope and XPLAT-008 UAT / XPLAT-009 completed work
@@ -551,7 +571,7 @@ Focus on Repository Bash Confinement and CI Dispatch Guard requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| requirements | 32 | 2 found → 0 (1 loop) | +FR-026 (workflow shell = dispatch glue only), +FR-027 (preflight entrypoint fidelity); 13-vs-14 PR headline nuance noted for Analyze |
+| requirements | 32 | 2 found → 0 (1 loop) | +FR-026 (workflow shell = dispatch glue only), +FR-027 (preflight entrypoint fidelity); canonical 13-slice/15-PR headline normalized |
 | integration | 28 | 6 found → 0 (1 loop) | FR-006/SC-002 scoped to end-state w/ transitional-skip diagnostics; ordering enforcement decomposed (CI-self-enforcing vs review-preference); concurrent shipped-runner PR rebase+re-ritual rule (plan.md); branch-protection-change ledger (FR-018/FR-026); composer post-publish partial-failure recovery (FR-023 + Edge Case); manifest-integrity invariants (FR-007) |
 | reliability | 24 | 7 found → 0 (1 loop) | FR-002(e) binary/unreadable classification; FR-006 crash-vs-fail exit taxonomy; FR-023 transient-API fail-loud no-retry; FR-019 label-unavailability positive recording; FR-020 always-run evidence upload; Count-Parity entity environment-pin on capture AND comparison |
 | security | 20 | 6 found → 0 (1 loop) | FR-003 allowlist path-identity assertion; FR-004 negative-control exclusion test; FR-005 backstop-durability test; FR-022 dispatch-path env-var intake; FR-017 preflight least-privilege permissions; FR-014 hooks stdlib-json intake |
@@ -580,7 +600,7 @@ When checklist identifies `[Gap]` items:
 ## Task Structure
 - Small, testable chunks (1-2 hours each)
 - Clear acceptance criteria referencing FR-xxx
-- Group tasks by PR-stack slice (the 14-PR split in this workflow file's
+- Group tasks by PR-stack slice (the 15-PR split in this workflow file's
   Scope Budget section), honoring the ordering constraints:
   1 anytime; 2 before 3-10; 10 after 3-9; 11 last among confinement PRs;
   12 and 13 independent (13 early)
@@ -592,7 +612,7 @@ When checklist identifies `[Gap]` items:
 ## Constraints
 - Repo-side Python lives under tests/speckit-pro/, scripts/, .claude/hooks/ —
   never under speckit-pro/ (the payload guard fails if tests reappear there)
-- Shipped-runner tasks (PRs 2, 10, and 13) must include the payload rebuild +
+- Shipped-runner tasks (PRs 2, 7b, 8, 9, 10, and 13) must include the payload rebuild +
   proof-hash regeneration ritual as explicit tasks, release-readiness last
 - Bound task generation with the design concept Non-goals: no .specify/**
   ports, no AI release notes, no L8 semantic judge, no UAT-matrix work —
@@ -604,7 +624,7 @@ When checklist identifies `[Gap]` items:
 | Metric | Value |
 |--------|-------|
 | **Total Tasks** | 136 (T001–T136, contiguous) |
-| **Phases** | 17 (Setup + 14 PR slices + Polish) |
+| **Phases** | 18 (Foundation + 16 implementation review units + Polish) |
 | **Parallel Opportunities** | 53 `[P]` tasks (primary fan-out: 20 mechanical L1 validator ports) |
 | **User Stories Covered** | US1–US7 all mapped (8/72/12/9/7/5/10 tasks respectively + 13 setup/cleanup/polish) |
 | **Gate G5** | PASS — runner-verified: 136 tasks found, 0 markers |
@@ -632,7 +652,7 @@ it; recording it now wires no PR creation or branch splitting on its own.
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | `single-atomic-PR` | Advisory classifier reading of the feature as ONE unit (mass `.sh` deletion = destructive migration). The operator-ratified typed 14-PR stack supersedes as the delivery model — implementation proceeds slice-by-slice, each PR independently CI-green. Tension recorded for Analyze. |
+| **Route** | `single-atomic-PR` | Advisory classifier reading of the feature as ONE unit (mass `.sh` deletion = destructive migration). The operator-ratified typed split supersedes as the delivery model; its historical 15 implementation PRs became the emitted 18-PR review topology after adding Foundation/Polish and splitting release-note contract from composition. Tension recorded for Analyze. |
 | **Releasable** | `false` | Destructive-migration releasability: CI-green ≠ releasable for the aggregate change; per-slice same-PR-swap discipline (FR-012) is the mitigating control. |
 | **Signals** | `hard-atomic:destructive-migration`, `change-shape:modify-heavy`, `releasability:destructive-migration` | Decisive detector findings. |
 | **Warnings** | "destructive migration: a passing CI run does not prove this change is releasable (CI-green ≠ releasable)" | Carried into the implementation context. |
@@ -671,7 +691,7 @@ Focus on:
    wrong unless it carries an explicit revision note
 4. Consistency between task file paths and the actual repo structure
    (tests/speckit-pro/, scripts/, .claude/hooks/, .github/workflows/)
-5. Verify the 14-PR ordering constraints are encoded in task dependencies
+5. Verify the 15-PR ordering constraints are encoded in task dependencies
 ```
 
 ### Analyze Severity Levels
@@ -720,8 +740,8 @@ For each task, follow this cycle:
 Before starting any task:
 1. Run the toolchain preflight and default-suite gates from the repo root and
    confirm they pass before making changes:
-   PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-toolchain-preflight.json
-   PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json
+   PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-toolchain-preflight.json
+   PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json
 2. Verify you are on xplat-010-repository-bash-confinement (or the slice
    branch for the current PR), never main
 3. Set PYTHONDONTWRITEBYTECODE=1 for all runner invocations
@@ -730,12 +750,12 @@ Before starting any task:
 - House test convention: unittest, custom __main__ printing
   "<label>: {passed}/{total} passed", one test method per former set_test,
   counted subTest for loops. Match existing ported modules under
-  tests/speckit-pro/layer4-scripts/ for style.
+  tests/speckit-pro/unit/ for style.
 - Port protocol per slice: capture VERBOSE=true bash baseline into
-  tests/speckit-pro/parity/xplat-010/<script>-baseline.txt → port with names
+  tests/speckit-pro/parity/bash-to-python/<script>-baseline.txt → port with names
   preserved 1:1 → dual-run diff recorded in the PR body → manifest flip →
   .sh delete. All in one PR.
-- Shipped-runner changes (PRs 2, 10, and 13 only): after any
+- Shipped-runner changes (PRs 2, 7b, 8, 9, 10, and 13 only): after any
   speckit_pro_runner byte change, run the payload/proof regeneration ritual —
   manifest sha256 recompute, scripts/build-plugin-payloads.py, checksum-based
   fixture sync, per-row proof hash recompute, evidence regeneration in gate
@@ -753,33 +773,61 @@ Before starting any task:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| PR 1 — orphan deletion + ledger | | | |
-| PR 2 — suite manifest + run-all.py | | | |
-| PRs 3a/3b — L1 validator ports | | | |
-| PR 4 — MOC lints + codex validators | | | |
-| PR 5 — L5 + toolchain + CI dispatch swap | | | |
-| PR 6 — scripts + hooks ports | | | |
-| PRs 7a/7b — L7 replay harness | | | |
-| PR 8 — L8 parity | | | |
-| PR 9 — live-eval runners | | | |
-| PR 10 — confinement guard + bash deletion | | | |
-| PR 11 — container/Windows preflight CI | | | |
-| PR 12 — release-notes pipeline | | | |
-| PR 13 — spec-size estimator runner op | | | |
+| #311 Foundation / `00-process` | T001–T004 | 4/4 | Complete; design and process boundary emitted |
+| #312 PR 1 / `01-foundation` | T005–T007 | 3/3 | Complete; orphan deletion + disposition ledger |
+| #313 PR 13 / `02-us14` | T121–T130 | 10/10 | Complete; estimator restored early in stack order |
+| #314 PR 2 / `03-us1` | T008–T017 | 10/10 | Complete; suite manifest + `run-all.py` |
+| #315–#316 PRs 3a/3b / `04-us2`, `05-us3` | T018–T039 | 22/22 | Complete; Layer 1 validator ports |
+| #317 PR 4 / `06-us4` | T040–T045 | 6/6 | Complete; remaining structural checks |
+| #318 PR 5 / `07-us5` | T046–T053 | 8/8 | Complete; Layer 5, toolchain, and CI dispatch |
+| #319 PR 6 / `08-us6` | T054–T061 | 8/8 | Complete; repository helpers and hooks |
+| #320–#321 PRs 7a/7b / `09-us7`, `10-us7b` | T062–T072 | 11/11 | Complete; Layer 7 transcript and replay runners |
+| #322 PR 8 / `11-us8` | T073–T080 | 8/8 | Complete; Layer 8 parity harness |
+| #323 PR 9 / `12-us9` | T081–T087 | 7/7 | Complete; live-evaluation runners |
+| #324 PR 10 / `13-us10` | T088–T099 | 12/12 | Complete; live guard has 0 blockers and 10 release-excluded vendored findings |
+| #325 PR 11 / `14-us11` | T100–T108 | 9/9 | Complete; hosted relevant, docs-only, failure, manual-main, and four trigger-canary runs satisfy T108 |
+| #326 PR 12a / `15-release-contract` | T109–T112 | 4/4 | Complete; release-note policy 30/30 and packet validation pass |
+| #327 PR 12b / `16-release-composition` | T113–T120 | 8/8 | Complete; composer/workflow contracts pass and the five-check non-strict branch rule satisfies T117 |
+| #328 Polish / `17-polish` | T131–T136 | 6/6 | T131 parity, T132 focused quickstart, T133 neutral-PATH no-Bash proof, T134 packets, T135 final suite/docs, and T136 traceability complete |
+
+All 18 packet directories preserved under
+`docs/ai/specs/.process/XPLAT-010-pr-packets/` contain `body.md`, `packet.json`,
+and a passing `validation.json` for their exact adjacent diffs. The frozen implementation tip
+is `a7b2d27b12fdc5051dfa4829c94f92752e2f5146`, with tree
+`a1c42735d35619bbd0a4a90a42c57ab9e578848e`; publication metadata remains a
+separate bounded tail and must not be presented as an implementation boundary.
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in tasks.md
-- [ ] Full deterministic suite passes: `python3 tests/speckit-pro/run-all.py` headline equals the ledger-predicted total
-- [ ] Runner gates pass: toolchain preflight, default suite, active-path guard, repo-bash-confinement guard, payload evidence, install verification, release readiness
-- [ ] `git ls-files '*.sh'` returns only `.github/workflows/`-adjacent zero results plus allowlisted `.specify/**`
-- [ ] Docs validation passes: `pnpm --dir docs-site validate`
-- [ ] Container preflight + Windows smoke evidence artifacts recorded
+| Canonical Item | Status | Evidence |
+|----------------|--------|----------|
+| Post: Doctor Extension Check | Complete | Installed speckit-utils Doctor passed; optional PowerShell-directory and extensions.yml registry-lag warnings recorded |
+| Post: Verify Implementation | Complete | Current implementation paths and focused contracts reconciled to the emitted stack |
+| Post: Verify Tasks Phantom Check | Complete | Exact T001–T136 inventory; all 136 tasks complete after hosted T108 and branch-protection T117 evidence |
+| Post: Code Review | Complete | All 18 PRs were reviewed; the final GraphQL audit found zero unresolved review threads |
+| Post: Integration Suite | Complete | Final neutral-PATH deterministic suite passed 2512/2512: Layer 1 1373, Layer 4 953, Layer 5 186; final docs validation also passed |
+| Post: Reviewability Diff Gate | Complete | Final reviewability evidence validates the merge-free 18-slice topology and bounded publication tail |
+| Post: Self-Review | Complete | Done-when coverage, hosted evidence, merge provenance, and remaining release/UAT boundaries are reconciled |
+| Post: UAT Runbook Generation | Complete | Repository-relative seven-story runbook records local proof and hosted boundaries |
+| Post: PR Body Generation | Complete | 18/18 packet/body/validation triplets exist and validate at the generated stack tip |
+| Post: PR Creation | Complete | PRs #311-#328 merged in review order; final tree identity and branch deletion audited |
+| Post: Review Remediation | Complete | Actionable review and CI findings were repaired; hosted trigger and sentinel evidence is complete |
+| Post: Retrospective | Complete | Merge, hosted evidence, branch-protection, release, and UAT boundaries are recorded in `XPLAT-010-retrospective.md` |
+
+Legacy completion criteria below remain outcome checks; they do not replace the
+canonical Post state above.
+
+- [x] All tasks complete, including hosted T108 and branch-protection T117 evidence
+- [x] Full deterministic suite passes: final neutral-PATH run passed 2512/2512 (Layer 1 1373, Layer 4 953, Layer 5 186)
+- [x] Runner gates pass: toolchain preflight, default suite, active-path guard, repo-bash-confinement guard, payload evidence, install verification, release readiness
+- [x] `git ls-files '*.sh'` returns only the exact allowlisted vendored `.specify/**` helpers
+- [x] Docs validation passes: final closeout validation passed
+- [x] Container preflight + Windows smoke evidence artifacts recorded
 - [ ] Release-notes composer proven on a real release (first release after PR 12 merges shows Highlights)
-- [ ] PRs created and reviewed (14-PR stack, each independently green)
-- [ ] Merged to main branch (humans merge; autopilot never merges)
+- [x] PRs created and reviewed (18-PR #311–#328 stack, each independently green)
+- [x] Merged to main branch; final tree identity and deleted review branches audited
 
 ---
 
@@ -787,19 +835,26 @@ Before starting any task:
 
 ### What Worked Well
 
--
+- Purpose-based test and fixture names made the final parity and no-gap audits reviewable without relying on buried spec history.
+- Frozen implementation packets plus a bounded metadata-only publication tail kept implementation claims stable while closeout evidence was hydrated.
 
 ### Challenges Encountered
 
--
+- Repeated upper-stack restacks exposed a Windows command-discovery defect and a clean-head Layer planner gap that local dirty-tree runs could mask.
+- Long container checks required exact-head CI snapshots so superseded runs were not mistaken for current failures.
 
 ### Patterns to Reuse
 
--
+- Reproduce hosted failures in the exact pinned image and preserve the failing assertion instead of adding platform-specific exceptions.
+- Verify source-to-candidate path coverage from commit objects, then publish only an allowlisted, merge-free closeout tail.
 
 ---
 
-## Project Structure Reference
+## Historical Project Structure Reference
+
+This tree records the implementation-time layout. The active XPLAT-010 spec
+directory was removed by post-merge archive cleanup; its recovery source and
+preserved evidence paths are recorded in the archive report.
 
 ```
 racecraft-plugins-public/
@@ -809,13 +864,13 @@ racecraft-plugins-public/
 ├── tests/speckit-pro/              # Repo-side harness (primary port surface; never shipped)
 │   ├── suite-manifest.json         # NEW: single source of truth per layer (PR 2)
 │   ├── run-all.py                  # NEW: developer orchestrator (PR 2)
-│   └── parity/xplat-010/           # NEW: committed VERBOSE baselines
+│   └── parity/bash-to-python/      # Frozen historical inventories for Python parity
 ├── scripts/                        # Helper ports (PR 6) + compose-release-notes.py (PR 12)
 ├── .claude/hooks/                  # Hook ports (PR 6)
 ├── .specify/                       # Vendored upstream (allowlisted, never ported)
 ├── .github/workflows/              # Dispatch glue only + container-preflight.yml (PR 11)
 ├── docs/ai/specs/.process/         # Workflow state, ledgers, evidence
-└── specs/xplat-010-repository-bash-confinement/  # This spec's CONTRACT artifacts
+└── .specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md  # Recovery record for removed XPLAT-010 contract artifacts
 ```
 
 ---

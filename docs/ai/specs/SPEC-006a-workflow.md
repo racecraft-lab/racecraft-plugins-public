@@ -138,7 +138,7 @@ This spec adds the deterministic infrastructure half of that artifact: a heading
 - **FR-012:** The Rollback section MUST extract a `## Rollback` heading from `spec.md` (or `plan.md` as fallback) when present; otherwise emit a synthesized stanza `git revert <SHA>; see plan.md for data-migration considerations`.
 - **FR-013:** `generate-pr-body.sh` MUST add `"UAT Runbook"` to the heading list at line 171 AND add a corresponding section to the `review_packet` heredoc that reads `<feature-dir>/uat-runbook.md`. When the runbook is under 50_000 chars, embed full content via `extract_heading_section`; otherwise embed the first ~60 lines and append a relative link.
 - **FR-014:** The Claude Code autopilot (`speckit-pro/skills/speckit-autopilot/`) and the Codex variant (`speckit-pro/codex-skills/speckit-autopilot/`) MUST be edited in lockstep — same content, runtime-appropriate primitives. No new agent files are introduced in this spec.
-- **FR-015:** A new Layer 4 unit test `speckit-pro/tests/layer4-scripts/test-generate-uat-skeleton.sh` MUST cover five fixtures: vendored full-spec snapshot (under `speckit-pro/tests/layer4-scripts/fixtures/spec-full-snapshot.md`), synthetic zero-stories, synthetic duplicate-FR, synthetic `[NEEDS CLARIFICATION]`, and missing-spec error case.
+- **FR-015:** A new Layer 4 unit test `speckit-pro/tests/unit/test-generate-uat-skeleton.sh` MUST cover five fixtures: vendored full-spec snapshot (under `speckit-pro/tests/unit/fixtures/uat-runbook-generation/full-spec.md`), synthetic zero-stories, synthetic duplicate-FR, synthetic `[NEEDS CLARIFICATION]`, and missing-spec error case.
 
 ### Measurable Outcomes
 
@@ -244,7 +244,7 @@ This spec adds the deterministic infrastructure half of that artifact: a heading
 - No new agent files (Layer 1 parity invariant — see design concept Goals)
 - Codex variant edits in lockstep (no semantic divergence between speckit-pro/skills/ and speckit-pro/codex-skills/)
 - All scripts pass shellcheck (existing CI gate)
-- The vendored Layer 4 fixture (`speckit-pro/tests/layer4-scripts/fixtures/spec-full-snapshot.md`) is a frozen copy of specs/004-integration-verification/spec.md as of merge — design concept Q4 ratified vendoring over live read
+- The vendored Layer 4 fixture (`speckit-pro/tests/unit/fixtures/uat-runbook-generation/full-spec.md`) is a frozen copy of specs/004-integration-verification/spec.md as of merge — design concept Q4 ratified vendoring over live read
 
 ## Architecture Notes
 - Reuse, don't reimplement: `extract_heading_section()` awk function is the existing battle-tested heading-bounded extractor; the new script sources it via `source "$(dirname "$0")/generate-pr-body.sh"` (if it exports it) or copies the function verbatim. Plan should decide which.
@@ -385,7 +385,7 @@ Focus on SPEC-006a requirements:
 ## Constraints
 - All scripts pass shellcheck
 - Codex variant edits land in the same commit as Claude Code edits (Layer 1 parity)
-- Vendored fixture lives under `speckit-pro/tests/layer4-scripts/fixtures/` — verify the dir exists or create it
+- Vendored fixture lives under `speckit-pro/tests/unit/fixtures/` — verify the dir exists or create it
 - No new agent files; no edits to `agents/` or `codex-agents/`
 - Conventional commits prefix on every commit (e.g., `feat(speckit-pro): add UAT skeleton extractor`)
 ```
@@ -450,7 +450,7 @@ Focus on:
 
 For each task touching `generate-uat-skeleton.sh`:
 
-1. **RED:** Add a new assertion to `tests/layer4-scripts/test-generate-uat-skeleton.sh` that exercises the behavior. Run the test — it must FAIL (script not yet implemented or fixture mismatch).
+1. **RED:** Add a new assertion to `tests/unit/test-generate-uat-skeleton.sh` that exercises the behavior. Run the test — it must FAIL (script not yet implemented or fixture mismatch).
 2. **GREEN:** Add the minimum script logic to make the assertion pass. Run `bash speckit-pro/tests/run-all.sh --layer 4` and confirm green.
 3. **REFACTOR:** Tidy the new code while tests stay green. No new abstractions unless a second call site exists.
 4. **VERIFY:** Run a manual smoke test against the vendored Layer 4 fixture and against `specs/004-integration-verification/spec.md` from the parent repo, comparing output sanity.
@@ -546,9 +546,9 @@ racecraft-plugins-public/
 │   │       ├── post-implementation.md            ← Modified: new §3.1b
 │   │       └── task-list-canonical.md            ← Modified: 12 → 13 tasks
 │   ├── codex-skills/speckit-autopilot/           ← Parallel edits to all four files above
-│   └── tests/layer4-scripts/
+│   └── tests/unit/
 │       ├── test-generate-uat-skeleton.sh         ← NEW
-│       └── fixtures/spec-full-snapshot.md        ← NEW (vendored)
+│       └── fixtures/uat-runbook-generation/full-spec.md        ← NEW (vendored)
 └── docs/ai/specs/
     ├── reviewer-experience-technical-roadmap.md  ← Read-only reference
     ├── SPEC-006a-design-concept.md               ← Source of truth for grill-me decisions

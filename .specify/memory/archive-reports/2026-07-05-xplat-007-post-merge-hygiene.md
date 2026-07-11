@@ -66,9 +66,9 @@ gates.
 - `tests/speckit-pro/run-all.sh`
 - `tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.sh`
 - `tests/speckit-pro/layer1-structural/validate-release-workflow.sh`
-- `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py`
-- `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/`
-- `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/contracts/`
+- `tests/speckit-pro/unit/test-speckit-pro-gates.py`
+- `tests/speckit-pro/unit/fixtures/runner-gates/`
+- `tests/speckit-pro/unit/fixtures/runner-gates/contracts/`
 - `docs/ai/specs/.process/XPLAT-007-workflow.md`
 - `docs/ai/specs/.process/XPLAT-007-design-concept.md`
 
@@ -113,9 +113,9 @@ git checkout 0ff2d8d731698cde02b334cdc3b2a377216b5d45 -- specs/xplat-007-python-
 | `docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md` | Marked XPLAT-007 archived and XPLAT-008 ready |
 | `docs/ai/specs/cross-platform-plugin-runtime-roadmap-MOC.md` | Replaced the active XPLAT-007 link with an archive pointer and marked XPLAT-008 ready |
 | `docs/ai/specs/.process/autopilot-state.json` | Marked XPLAT-007 as post-merge archived state |
-| `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` | Repointed XPLAT-007 schema lookup away from active `specs/**` |
-| `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/release-readiness-cases.json` | Repointed a synthetic changed-files fixture away from the removed active spec folder |
-| `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/contracts/` | Preserved XPLAT-007 contract schemas needed by Layer 4 gate coverage after cleanup |
+| `tests/speckit-pro/unit/test-speckit-pro-gates.py` | Repointed XPLAT-007 schema lookup away from active `specs/**` |
+| `tests/speckit-pro/unit/fixtures/runner-gates/release-readiness-cases.json` | Repointed a synthetic changed-files fixture away from the removed active spec folder |
+| `tests/speckit-pro/unit/fixtures/runner-gates/contracts/` | Preserved XPLAT-007 contract schemas needed by Layer 4 gate coverage after cleanup |
 | `specs/xplat-007-python-tooling-and-release-gate-migration/` | Removed from active `specs/**` after archive |
 
 ## Post-Cleanup Verification
@@ -123,7 +123,7 @@ git checkout 0ff2d8d731698cde02b334cdc3b2a377216b5d45 -- specs/xplat-007-python-
 - `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh .`
 - `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .`
 - `find specs -mindepth 1 -maxdepth 4 -print`
-- `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py`
+- `python3 tests/speckit-pro/unit/test-speckit-pro-gates.py`
 - `git diff --check`
 - `node docs-site/scripts/generate-reference-pages.mjs --check`
 - `bash tests/speckit-pro/run-all.sh`
@@ -153,7 +153,7 @@ autoheal readiness.
 ## Conflicts Resolved
 - The merged XPLAT-007 Layer 4 gate tests referenced contract schemas under the
   active spec directory. The schemas were copied to
-  `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/contracts/` and
+  `tests/speckit-pro/unit/fixtures/runner-gates/contracts/` and
   the tests were repointed before removing the active spec folder.
 - The roadmap, MOC, and active autopilot state still described XPLAT-007 as in
   progress after PR #287 merged. This cleanup marks XPLAT-007 archived and

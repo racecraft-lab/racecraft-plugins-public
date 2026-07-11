@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "request_id": "xplat-007-us2-test-payload-evidence",
+  "helper_id": "payload-gate",
+  "operation": "build-test-payload-evidence",
+  "mode": "read_only",
+  "inputs": {
+    "case_file": "tests/speckit-pro/unit/fixtures/runner-gates/payload-evidence-cases.json",
+    "case_id": "claude-codex-test-payloads",
+    "output_root": "tests/speckit-pro/unit/fixtures/runner-gates/generated/payload-evidence",
+    "release_payload_cutover": false,
+    "xplat_008_cutover_allowed": false
+  }
+}
