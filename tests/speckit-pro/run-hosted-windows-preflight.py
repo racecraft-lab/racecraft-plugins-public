@@ -380,7 +380,7 @@ def _run(args: argparse.Namespace) -> int:
 
     specify_version_exit = _run_command(
         "specify-version",
-        ["specify", "version"],
+        [specify_command, "version"],
         evidence_dir,
         child_env,
         stdout_name="specify-version.txt",

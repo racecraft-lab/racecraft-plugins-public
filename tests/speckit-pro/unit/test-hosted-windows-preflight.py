@@ -165,7 +165,7 @@ class HostedWindowsPreflightTests(unittest.TestCase):
         return return_code, summary, command_mock
 
     def test_success_requires_exact_version_and_valid_ok_envelopes(self) -> None:
-        return_code, summary, _ = self.run_scenario(HostedPreflightScenario())
+        return_code, summary, command_mock = self.run_scenario(HostedPreflightScenario())
         self.assertEqual(return_code, 0)
         self.assertEqual(summary["status"], "pass")
         self.assertEqual(summary["specify_version_installed"], "0.8.13")
@@ -177,6 +177,10 @@ class HostedWindowsPreflightTests(unittest.TestCase):
         self.assertEqual(summary["platform"], "Windows")
         self.assertEqual(summary["architecture_family"], "x64")
         self.assertEqual(summary["python_version"], "3.13.14")
+        specify_call = next(
+            call for call in command_mock.call_args_list if call.args[0] == "specify-version"
+        )
+        self.assertEqual(specify_call.args[1], ["C:/pipx/specify.exe", "version"])
 
     def test_non_windows_platform_is_rejected_before_subprocesses(self) -> None:
         return_code, summary, command_mock = self.run_scenario(
