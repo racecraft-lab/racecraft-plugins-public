@@ -1,16 +1,13 @@
 ---
+name: speckit-verify-tasks-run
 description: Verify tasks marked [X] in tasks.md are implemented, not phantom completions
   (marked done but backed by missing or dead code).
-handoffs:
-- label: Re-implement Flagged Tasks
-  agent: speckit.implement
-  prompt: Re-implement the flagged tasks from the verify-tasks-report
-  send: true
+compatibility: Requires spec-kit project structure with .specify/ directory
+metadata:
+  author: github-spec-kit
+  source: verify-tasks:commands/speckit.verify-tasks.md
 ---
 
-
-<!-- Extension: verify-tasks -->
-<!-- Config: .specify/extensions/verify-tasks/ -->
 ## User Input
 
 ```text

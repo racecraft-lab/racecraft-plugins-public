@@ -64,13 +64,6 @@
       "reason": "Vendored upstream Spec Kit repository helper.",
       "scope": "vendored_specify_helper",
       "release_readiness_excluded": true
-    },
-    {
-      "path": ".specify/scripts/bash/update-agent-context.sh",
-      "categories": ["script_file"],
-      "reason": "Vendored upstream Spec Kit repository helper.",
-      "scope": "vendored_specify_helper",
-      "release_readiness_excluded": true
     }
   ]
 }
