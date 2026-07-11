@@ -1,7 +1,8 @@
 # Codex GPT-5.6 Agent Routing Implementation Roadmap
 
-**Route SpecKit Pro's Codex agents to the lowest-cost GPT-5.6 model and
-reasoning effort that preserves their role-specific quality contract.**
+**Select efficient static GPT-5.6 installation defaults that minimize ChatGPT
+Pro allowance consumption per accepted end-to-end workflow while preserving
+role quality, reliability, and completion time.**
 
 This document defines the SPEC catalog for Codex GPT-5.6 agent routing. Each
 SPEC maps 1:1 to a Feature / Acceptance-Criteria group in the source PRD
@@ -23,7 +24,7 @@ tiers**.
 | Tier | Specs | Purpose | Parallelization |
 |---|---|---|---|
 | 1 | G56R-001 | Authoritative research baseline and candidate matrix | Sequential spike |
-| 2 | G56R-002 | Model x effort benchmark, cost accounting, and promotion contract | Sequential foundation |
+| 2 | G56R-002 | Model x effort/policy benchmark, Pro allowance accounting, and promotion contract | Sequential foundation |
 | 3 | G56R-003 | Tier-aware installer defaults and explicit global override | Sequential; requires stable post-XPLAT-009 runtime |
 | 4 | G56R-004, G56R-005, G56R-006, G56R-007 | Route four disjoint agent cohorts | Parallel after G56R-003; serialize shared regeneration |
 | 5 | G56R-008 | Rebuild payload, reconcile shared assertions, run installed UAT, and prove release readiness | Sequential integration |
@@ -57,14 +58,24 @@ G56R-002 evidence controls promotion.
 
 - Deterministic role contract, grounding/evidence, and safety checks are hard
   gates.
-- A candidate must have zero critical regressions and at least 95% of the
-  current role-quality baseline.
-- Among passing candidates, choose the lowest normalized cost per successful
-  run; use latency as the tie-breaker.
-- Start at the current effort and one level lower. Test `max` only for an
-  unresolved quality-first failure.
-- Run three live repeats per shortlisted configuration and expand only close or
-  unstable comparisons.
+- A candidate must have zero critical contract, safety, grounding, or mutation
+  failures, clear absolute floors for every semantic-quality dimension, and
+  clear a confidence-bound non-inferiority margin against baseline.
+- Among passing candidates, prefer the route that lowers p50 or p95 observed or
+  estimated Pro allowance consumption per accepted end-to-end workflow without
+  materially increasing late failure, retries, rework, steering, incomplete
+  work, or completion time.
+- Record rate-limit utilization delta and successful accepted workflows per
+  five-hour window as direct Pro-plan outcomes. Keep API-dollar normalization
+  as a separately labeled diagnostic only.
+- Progressively descend through supported efforts while gates pass, then
+  retest the lowest passing boundary. Test `max` only for an unresolved
+  quality-first failure.
+- Use paired runs on identical snapshots, randomized order, controlled cache
+  states, a stratified and held-out workflow corpus, and a predeclared
+  confidence rule. Three repeats are a pilot floor, not the final design.
+- Benchmark static pins against unpinned Codex selection and an explicit
+  adaptive escalation policy.
 - Evidence wins: Sol, Terra, or Luna is not forced into a role when it fails.
 
 ## Reviewability Contract
@@ -168,8 +179,8 @@ Budget result: research spike; time-boxed, LOC sizing not applicable
 
 **Priority:** P1 | **Depends On:** G56R-001 | **Enables:** G56R-003 through G56R-007
 
-**Goal:** Make role routing a replayable model x effort decision based on
-quality, evidence, latency, tokens, credits, and normalized cost per success.
+**Goal:** Make role routing a replayable model x effort/policy decision based
+on end-to-end quality, reliability, latency, and ChatGPT Pro allowance impact.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
 Projected reviewable LOC: unavailable (estimator operation absent) |
@@ -181,16 +192,28 @@ Budget result: re-estimate at scaffold; split fixture expansion from runner work
 
 - Extend the Codex Layer 6 runner so callers can override both `model` and
   `model_reasoning_effort` without mutating agent TOMLs.
-- Store requested/returned model, effort, environment, native token categories,
-  credits when exposed, wall time, exit/completion state, and dated pricing
-  inputs; calculate normalized cost per successful run without collapsing
-  cached input and output into one misleading total.
-- Add one role-specific fixture contract for each of the ten agents, with
-  deterministic output/grounding/safety gates and a blinded semantic rubric.
-- Add staged-run controls: three repeats per shortlist, bounded expansion for
-  instability, live-mode budget, and a replayable consolidated result schema.
-- Implement the approved non-inferiority promotion report and keep live calls
-  outside default CI.
+- Fail closed unless native account evidence reports ChatGPT authentication and
+  `planType == "pro"`; capture Pro 5x/20x, workspace/account hash, Codex
+  version/configuration, speed mode, workload snapshot, cache state, and
+  before/after quota windows. Reject concurrent-account contamination.
+- Trace the full workflow graph from user objective through accepted artifact,
+  including parent/child turns, requested/returned model and effort, raw native
+  token fields, context growth, tool-result volume, compactions, spawns,
+  retries, escalation, validation, steering, checkpoints, and abandonment.
+- Preserve raw native telemetry and nulls. Version and label all derived credit,
+  allowance, rate-limit, API-dollar diagnostic, and token formulas; define
+  whether reasoning is already included in output tokens.
+- Add role contracts plus end-to-end workflows stratified across repository and
+  task size, ambiguity, cache state, context-compaction crossing, language,
+  tool topology, orchestration, interruption/resume, and failure modes. Keep a
+  held-out long-workflow canary set.
+- Add paired/randomized run controls, progressive effort descent, confidence-
+  driven sample sizing, per-dimension quality floors, blinded scoring, random
+  human audits, inter-rater agreement, p50/p95 reporting, and replayable output.
+- Compare static, unpinned, and adaptive policies. Encode phase credit, retry,
+  subagent, context-growth, escalation/de-escalation, cancellation, and
+  limit-near checkpoint/resume budgets.
+- Keep live calls outside default CI.
 - INVEST/vertical-slice rationale: one executable benchmark path produces a
   complete promotion decision for any single agent before any route changes.
 
@@ -199,6 +222,7 @@ Budget result: re-estimate at scaffold; split fixture expansion from runner work
 - Selecting or changing agent defaults.
 - A general-purpose model benchmark unrelated to SpecKit Pro contracts.
 - A mandatory LLM judge for deterministic facts.
+- Claiming global long-horizon optimization from a GPT-5.6-only static search.
 
 **Key Files:**
 
@@ -260,7 +284,7 @@ Budget result: re-estimate at scaffold; within one installer-policy slice by con
 **Priority:** P1 | **Depends On:** G56R-003 | **Enables:** G56R-008
 
 **Goal:** Route phase, implementation, and analyze/remediation work to the
-lowest-cost passing configuration, starting with Sol.
+lowest-allowance passing static configuration, starting with Sol.
 
 **Reviewability Budget:** Primary surface: seed/config |
 Projected reviewable LOC: unavailable (estimator operation absent) |
@@ -270,9 +294,10 @@ Budget result: re-estimate at scaffold; three disjoint TOMLs plus role evidence
 
 **Scope:**
 
-- Run the approved Sol xhigh/high baseline and Terra challenger matrix for
-  `phase-executor`, `implement-executor`, and `analyze-executor`; test `max` only
-  for a measured unresolved failure and only when supported.
+- Run the approved Sol baseline and progressive-effort descent plus Terra
+  challenger matrix for `phase-executor`, `implement-executor`, and
+  `analyze-executor`; test `max` only for a measured unresolved failure and only
+  when supported.
 - Score real Specify/Plan/Tasks, strict TDD implementation, and full Analyze
   remediation contracts, not generic coding prompts.
 - Pin each winning model and effort independently in its TOML; update only
@@ -305,7 +330,7 @@ Budget result: re-estimate at scaffold; three disjoint TOMLs plus role evidence
 **Priority:** P1 | **Depends On:** G56R-003 | **Enables:** G56R-008
 
 **Goal:** Route checklist remediation and UAT runbook authoring to the
-lowest-cost passing configuration, starting with Terra.
+lowest-allowance passing static configuration, starting with Terra.
 
 **Reviewability Budget:** Primary surface: seed/config |
 Projected reviewable LOC: unavailable (estimator operation absent) |
@@ -316,7 +341,7 @@ Budget result: re-estimate at scaffold; two role TOMLs plus evidence
 **Scope:**
 
 - Evaluate `checklist-executor` and `uat-runbook-author` on Terra at the current
-  effort and one level lower; add Sol or Luna only when the role fixture makes
+  effort through progressively lower supported efforts; add Sol or Luna only when the role fixture makes
   the adjacent comparison credible.
 - Require complete all-severity checklist remediation and executable,
   non-circular, acceptance-criteria-linked UAT runbooks.
@@ -363,7 +388,7 @@ Budget result: re-estimate at scaffold; four TOMLs plus bounded role fixtures
   effort for current low roles. Never rely on GPT-5.6's omitted medium default.
 - Hard-gate read-only behavior, source-domain separation, citations/file
   locators, abstention, and structured return formats.
-- Pin the lowest-cost winner per agent, not one forced cohort model; baseline
+- Pin the lowest-allowance passing static winner per agent, not one forced cohort model; baseline
   before prompt cleanup and prove cohort install/override/rollback behavior.
 - INVEST/vertical-slice rationale: one read-only evidence seam enables parallel
   evaluation without mutation conflicts while preserving four distinct
@@ -429,7 +454,8 @@ Budget result: re-estimate at scaffold; single-agent vertical slice
 **Enables:** Release
 
 **Goal:** Publish one internally consistent Codex payload whose ten-agent matrix
-is proven in source, generated artifacts, install verification, and live UAT.
+is proven in source, generated artifacts, install verification, controlled
+ChatGPT Pro canaries, and live UAT.
 
 **Reviewability Budget:** Primary surface: docs/process |
 Projected reviewable LOC: unavailable (estimator operation absent) |
@@ -448,9 +474,14 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
   boundaries while preserving historical records.
 - Run deterministic source, payload, installed-cache, default-suite,
   active-path, benchmark replay, and install verification gates.
-- On an entitled account, install the generated payload and complete at least
-  one live representative workflow per cohort, recording returned model,
-  effort, quality, wall time, token/credit cost, and safeguards.
+- On an isolated ChatGPT Pro 5x or 20x account, complete one installed workflow
+  per cohort as a smoke gate, then run multiple held-out long workflows with
+  the full workflow trace and allowance scorecard.
+- Pin minimum/tested Codex versions, capability probes, tier, configuration,
+  and rate-card revision. Define rebenchmark triggers for model, client,
+  prompt, rate-card, entitlement, or policy changes and production drift alerts
+  for accepted-workflow rate, p95 allowance/duration, escalation, and late
+  failure.
 - Produce a public-readable PR packet with selected and rejected candidates,
   known gaps, review order, rollback, and release evidence.
 - INVEST/vertical-slice rationale: this final integration slice turns four
@@ -493,7 +524,7 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
 | Change | Where | Detail |
 |---|---|---|
 | Research record | `docs/ai/research/` | Dated official facts, conflicts, candidate matrix, role contracts |
-| Model x effort evaluation | Layer 6 active Codex harness | Explicit model override, token categories, cost per success, all ten fixtures |
+| Model x effort/policy evaluation | Layer 6 active Codex harness | Pro-auth fail-close, workflow trace, allowance scorecard, stratified/held-out corpus, all ten role contracts |
 | Installer policy | Post-XPLAT-009 Python install/mutation surface | Preserve role pins; one explicit global override; ten-agent verification |
 | Agent routes | `speckit-pro/codex-agents/*.toml` | Independent evidence-backed model/effort pins |
 | Generated payload | `dist/codex/` | Rebuild from source and refresh integrity evidence |
@@ -506,7 +537,7 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
 | Python | Python 3.11+ standard library runner already required by SpecKit Pro |
 | Codex | Current client with custom-agent TOML support and access to shortlisted models |
 | Live eval budget | Explicit developer-local budget; never required by default CI |
-| Official pricing | Snapshot and date the current OpenAI pricing page for normalized comparisons |
+| Official accounting | Snapshot Codex plan/credit/limit documentation; API pricing is diagnostic only |
 
 ## References
 
@@ -518,5 +549,10 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
 - **OpenAI migration guide:** [Upgrading to GPT-5.6 Sol](https://developers.openai.com/api/docs/guides/upgrading-to-gpt-5p6-sol)
 - **Codex model routing:** [Choosing models and reasoning](https://developers.openai.com/codex/concepts/subagents#choosing-models-and-reasoning)
 - **Model details:** [Sol](https://developers.openai.com/api/docs/models/gpt-5.6-sol), [Terra](https://developers.openai.com/api/docs/models/gpt-5.6-terra), [Luna](https://developers.openai.com/api/docs/models/gpt-5.6-luna)
-- **Pricing:** [OpenAI API pricing](https://developers.openai.com/api/docs/pricing)
+- **Codex authentication:** [ChatGPT subscription access versus API-key usage](https://learn.chatgpt.com/docs/auth)
+- **Codex plans, credits, and limits:** [Codex pricing](https://learn.chatgpt.com/docs/pricing)
+- **Codex telemetry capability surface:** [App server](https://learn.chatgpt.com/docs/app-server)
+- **Speed modes and Spark:** [Codex speed](https://learn.chatgpt.com/docs/agent-configuration/speed)
+- **Long-workflow controls:** [Long-running work](https://learn.chatgpt.com/docs/long-running-work)
+- **API-price diagnostic only:** [OpenAI API pricing](https://developers.openai.com/api/docs/pricing)
 - **Prompt guidance:** [GPT-5.6 prompting best practices](https://developers.openai.com/api/docs/guides/latest-model#prompting-best-practices)

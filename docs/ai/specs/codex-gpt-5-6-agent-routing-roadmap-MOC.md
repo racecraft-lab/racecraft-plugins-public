@@ -23,8 +23,8 @@ marketing tier becomes an installed default.
 
 ### Promotion Harness
 
-Why: Make model x effort quality, evidence, latency, tokens, credits, and cost
-per success measurable for every role.
+Why: Make model x effort/policy quality, reliability, latency, context, and Pro
+allowance consumption measurable from user objective to accepted workflow.
 
 - [G56R-002 Model-Effort Benchmark and Promotion Harness](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-002-model-effort-benchmark-and-promotion-harness)
 
@@ -47,8 +47,9 @@ contracts stabilize, while keeping each promotion and rollback reviewable.
 
 ### Release Proof
 
-Why: Regenerate one internally consistent payload and require installed,
-consumer-visible UAT before publishing the selected ten-agent matrix.
+Why: Regenerate one internally consistent payload and require installed smoke
+UAT plus controlled, held-out ChatGPT Pro long-workflow canaries before
+publishing the selected ten-agent matrix.
 
 - [G56R-008 Payload, Documentation, UAT, and Release Proof](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-008-payload-documentation-uat-and-release-proof)
 

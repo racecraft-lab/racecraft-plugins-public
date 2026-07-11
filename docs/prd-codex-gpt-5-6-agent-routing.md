@@ -4,7 +4,7 @@
 **Source**: Maintainer request plus official OpenAI documentation, `$research`,
 and `$tavily-research` passes completed 2026-07-09
 **Created**: 2026-07-09
-**Last updated**: 2026-07-09
+**Last updated**: 2026-07-11
 **Target window**: Next SpecKit Pro minor release after the active XPLAT-009
 installer/runtime surface is stable
 
@@ -12,9 +12,10 @@ installer/runtime surface is stable
 
 ## 1. Problem
 
-> "How should SpecKit Pro route each Codex agent to GPT-5.6 Sol, Terra, or
-> Luna - and to which reasoning effort - so consumers get the best reliable
-> result at the lowest measured cost?"
+> "Which efficient static installation defaults should SpecKit Pro use for
+> each Codex agent so ChatGPT Pro consumers complete accepted end-to-end
+> workflows with the lowest measured allowance consumption that preserves
+> quality, reliability, and completion time?"
 
 SpecKit Pro currently defines ten Codex custom agents. Nine source TOMLs pin
 `gpt-5.5`; the latency-first helper pins `gpt-5.3-codex-spark`. Effort is mostly
@@ -24,14 +25,22 @@ model policy. That policy cannot take advantage of the GPT-5.6 family's
 role-specific price/capability tiers, and the current Layer 6 Codex harness
 sweeps effort while holding the TOML model constant.
 
-OpenAI positions `gpt-5.6-sol` as the flagship tier,
-`gpt-5.6-terra` as the intelligence/cost balance, and `gpt-5.6-luna` for
-cost-sensitive, high-volume work. Current standard API rates per 1M tokens are
-Sol `$5 / $0.50 / $6.25 / $30`, Terra
-`$2.50 / $0.25 / $3.125 / $15`, and Luna
-`$1 / $0.10 / $1.25 / $6` for uncached input / cached input / cache write /
-output. OpenAI also recommends preserving the current reasoning effort as a
-migration baseline and testing one level lower on representative work.
+OpenAI positions `gpt-5.6-sol` for quality-critical work, `gpt-5.6-terra` as
+the everyday balance, and `gpt-5.6-luna` for lighter or high-volume work.
+SpecKit Pro consumers in scope authenticate Codex through a ChatGPT Pro
+subscription, not an API key. OpenAI documents those as different accounting
+modes: ChatGPT sign-in uses subscription access and plan credits/limits, while
+API-key sign-in is usage-based at standard API rates. The production objective
+therefore cannot be API dollars per isolated agent call.
+
+This PRD targets both declared Pro tiers (`5x` and `20x`) but requires every
+benchmark and release claim to name exactly one tier. Local messages share a
+five-hour allowance window with other covered activity and may also face weekly
+limits. Model choice, context, reasoning, tools, retrieval, and caching all
+affect consumption. The benchmark must therefore account from the initial user
+objective through the final accepted artifact, including parent and child
+agents, retries, validation, compaction, escalation, repair, steering, and
+abandoned work.
 
 The requested research passes did not find a complete public benchmark that
 compares all three GPT-5.6 tiers on SpecKit Pro's ten roles. Therefore this PRD
@@ -45,8 +54,9 @@ consumer-focused quality floor.
 
 - Give every installed SpecKit Pro Codex agent an explicit, role-appropriate
   model and reasoning-effort default selected by measured evidence.
-- Preserve consumer-visible correctness, grounding, output contracts, and
-  workflow completion while minimizing measured cost per successful run.
+- Preserve consumer-visible correctness, grounding, output contracts,
+  reliability, and completion time while minimizing observed or estimated Pro
+  allowance consumption per accepted end-to-end workflow.
 - Evaluate Sol, Terra, and Luna without forcing any tier into production when
   it fails the promotion bar.
 - Make the model x effort decision reproducible through role fixtures,
@@ -56,6 +66,10 @@ consumer-focused quality floor.
   all ten installed agents.
 - Rebuild and verify the Codex payload, active guidance, and installed-cache
   evidence before release.
+- Compare static role pins with an unpinned Codex-selected control and an
+  explicit adaptive-policy control before claiming a static route is efficient.
+- Measure context and orchestration overhead during routing evaluation even
+  when prompt or caching changes remain out of scope.
 
 ### 2.2 Non-goals (out of scope)
 
@@ -73,6 +87,12 @@ consumer-focused quality floor.
   or Codex surfaces.
 - Replacing historical model references, archived evidence, or old eval
   baselines solely to make repository-wide search results uniform.
+- Claiming global optimization of long-horizon token use. Version 1 selects
+  efficient static installation defaults within the GPT-5.6 family; broader
+  cross-generation or runtime-adaptive optimization requires separate evidence.
+- Treating GPT-5.6 Pro mode as the same concept as the consumer's ChatGPT Pro
+  subscription. The former remains out of scope; the latter defines the
+  required authentication and accounting environment.
 
 ## 3. Acceptance Criteria
 
@@ -98,29 +118,51 @@ consumer-focused quality floor.
 
 - **AC-2.1**: The Codex efficiency harness can run an explicit
   `model x model_reasoning_effort x agent` configuration instead of holding the
-  TOML model constant, and it has a representative contract fixture for all ten
-  agents.
-- **AC-2.2**: Each result records the requested and returned model, effort,
-  environment, wall time, input tokens, cached input, cache writes when exposed,
-  output/reasoning tokens, actual Codex credits when exposed, and normalized
-  cost using a dated official-pricing snapshot.
-- **AC-2.3**: Deterministic contract, grounding/evidence, and safety checks are
-  hard gates. Semantic quality uses a blinded role-specific rubric, with human
-  review only for close or disputed outcomes.
-- **AC-2.4**: Live evaluation is staged: three repeats per shortlisted
-  configuration, expanded only when results are close or unstable, followed by
-  installed-workflow UAT on the winners. Live runs are never part of the free
-  default CI suite.
-- **AC-2.5**: A configuration is promotable only with zero critical contract
-  regressions and at least 95% of the current role-quality baseline. Among
-  promotable configurations, the lowest measured cost per successful run wins;
-  latency breaks ties.
-- **AC-2.6**: Effort tuning starts with the current effort and one level lower.
-  `max` is tested only for an unresolved quality-first failure, and no effort is
-  committed until the installed Codex version accepts it for that model.
-- **AC-2.7**: A versioned, replayable result artifact records candidates,
-  failures, selected routes, rejected routes, pricing date, and promotion
-  rationale.
+  TOML model constant. It evaluates static pins, an unpinned Codex-selected
+  control, and an explicit adaptive-policy control on end-to-end workflows.
+- **AC-2.2**: The harness fails closed unless native account evidence reports
+  ChatGPT authentication and `planType == "pro"`. It records Pro 5x or 20x,
+  account/workspace identifier hash, Codex version, configuration hash, speed
+  mode, workload snapshot, cache condition, and quota/rate-limit state before
+  and after each controlled run. Runs use a dedicated account or a verified
+  no-concurrent-activity interval.
+- **AC-2.3**: Every run emits a parent-child workflow trace from initial
+  objective to final acceptance: workflow/turn/thread/agent identifiers,
+  requested and returned model/effort, raw native token fields, start/end
+  context, tool-result volume when measurable, compactions, spawn count/depth,
+  retries/escalations, validation, steering, checkpoints, abandonment, and
+  final acceptance. Missing native fields remain null and are never invented.
+- **AC-2.4**: Derived fields are explicitly labeled and versioned: observed or
+  estimated Codex credits per accepted workflow, rate-limit utilization delta,
+  accepted workflows per five-hour window, completion-before-reset
+  probability, p50/p95 credits and duration, cached-input ratio, retry/rework,
+  compaction, and subagent overhead. API-dollar normalization may be a dated
+  diagnostic cross-check only; it never determines promotion and is never
+  mixed into a generic `cost` field.
+- **AC-2.5**: Deterministic contract, grounding/evidence, safety, and mutation
+  boundaries are hard gates with zero critical failures. Each semantic-quality
+  dimension has an absolute floor and a predeclared non-inferiority margin;
+  confidence or bootstrap bounds must clear that margin. Blinded scoring adds
+  random human audits, disputed-case review, and inter-rater agreement.
+- **AC-2.6**: Evaluation uses paired candidates on identical clean repository
+  snapshots, randomized run order, controlled warm/cold cache states, and a
+  held-out corpus stratified by repository/task size, ambiguity, language,
+  tool topology, compaction crossing, single/multi-agent work, interruption,
+  resume, and recoverable/unrecoverable failure. Pilot repeats may start at
+  three, but final sample sizes follow a predeclared confidence rule.
+- **AC-2.7**: A route is promotable only when it clears AC-2.5 and lowers p50
+  or p95 Pro allowance consumption per accepted end-to-end workflow without a
+  material increase in late failure, retries, rework, steering, incomplete
+  workflows, or completion time. Rate-limit utilization delta and successful
+  workflows per five-hour window are required user-facing outcomes.
+- **AC-2.8**: Effort tuning uses progressive descent through every supported
+  lower effort while gates pass, then adds repetitions at the lowest passing
+  boundary. `max` is tested only for unresolved quality-first failure. Capability
+  probes, rather than assumed effort mappings, control the tested matrix.
+- **AC-2.9**: A versioned, replayable artifact preserves raw telemetry,
+  formulas, source-field definitions (including whether reasoning is included
+  in output tokens), null behavior, rate-card revision, full traces, candidates,
+  failures, selected/rejected policies, and promotion rationale.
 
 ### 3.3 Tier-aware Installer Defaults and Explicit Override *(-> G56R-003)*
 
@@ -144,8 +186,8 @@ consumer-focused quality floor.
 ### 3.4 Quality-critical Executor Routing *(-> G56R-004)*
 
 - **AC-4.1**: `phase-executor`, `implement-executor`, and `analyze-executor`
-  evaluate Sol at their current effort and one level lower, with Terra as the
-  adjacent lower-cost challenger and `max` considered only after a measured
+  evaluate Sol through progressive effort descent, with Terra as the adjacent
+  lower-consumption challenger and `max` considered only after a measured
   quality failure.
 - **AC-4.2**: Each committed model/effort clears the G56R-002 promotion rule on
   role-specific planning, TDD implementation, and analyze/remediation fixtures.
@@ -160,7 +202,7 @@ consumer-focused quality floor.
 ### 3.5 Structured-work Agent Routing *(-> G56R-005)*
 
 - **AC-5.1**: `checklist-executor` and `uat-runbook-author` evaluate Terra at
-  their current effort and one level lower, with Sol and Luna included only
+  their current effort and progressively lower supported efforts, with Sol and Luna included only
   where the role fixture makes them credible adjacent candidates.
 - **AC-5.2**: Checklist remediation remains complete at every severity and UAT
   runbooks remain executable, plain-English, non-circular, and traceable to
@@ -177,13 +219,13 @@ consumer-focused quality floor.
   `spec-context-analyst` evaluate Terra as the primary candidate; Sol is a
   quality challenger for harder synthesis, and Luna is tested only for bounded
   scans where its output contract can be preserved.
-- **AC-6.2**: The two current `xhigh` roles compare `xhigh` and `high`; the two
-  current `low` analysts compare `low` and the next supported lower effort
-  without relying on an omitted GPT-5.6 default.
+- **AC-6.2**: Each role progressively descends from its current effort through
+  supported lower efforts until a quality boundary is found, without relying
+  on an omitted GPT-5.6 default.
 - **AC-6.3**: All outputs remain grounded in their assigned evidence domain,
   preserve citations/file locators, and perform no writes.
-- **AC-6.4**: The lowest-cost passing route is committed per agent; one cohort
-  model is not forced across all four roles.
+- **AC-6.4**: The lowest-allowance passing static route is committed per agent;
+  one cohort model is not forced across all four roles.
 - **AC-6.5**: Measured prompt cleanup, install proof, and rollback evidence obey
   the same cohort contract as G56R-004.
 
@@ -194,9 +236,10 @@ consumer-focused quality floor.
   behavior and Terra as a fallback candidate.
 - **AC-7.2**: The helper remains read-only, advisory, bounded to compression,
   triage, and query drafting, and never performs SpecKit reasoning or mutation.
-- **AC-7.3**: The committed route clears the shared promotion rule and improves
-  or preserves latency and cost per successful helper result; GPT-5.6 omission
-  must not accidentally select its default `medium` effort.
+- **AC-7.3**: The committed route clears the shared end-to-end promotion rule
+  and improves or preserves latency and allowance consumption without causing
+  downstream rework; GPT-5.6 omission must not accidentally select its default
+  `medium` effort.
 - **AC-7.4**: Autopilot continues correctly when the helper is unavailable, and
   evidence wins over a requirement to use Luna.
 - **AC-7.5**: Source, install, validation, prompt-cleanup, and rollback evidence
@@ -213,22 +256,44 @@ consumer-focused quality floor.
 - **AC-8.3**: Structural, installer, benchmark-replay, payload, installed-cache,
   default-suite, and active-path gates pass on the final source tree.
 - **AC-8.4**: A live entitled Codex account completes at least one installed
-  representative workflow per routed cohort, and the evidence records returned
-  model, effort, quality result, latency, token/credit usage, and any safeguard
-  intervention.
+  representative workflow per routed cohort as an installation smoke gate.
+  Separately, a controlled canary suite completes multiple held-out,
+  end-to-end long workflows on the declared ChatGPT Pro tier and records the
+  full AC-2 trace and scorecard.
 - **AC-8.5**: Release messaging makes only progressively proven claims and
   includes rollback through an explicit global override or previous plugin
   release.
 - **AC-8.6**: The PR packet lists the final ten-agent matrix, rejected
   candidates, verification evidence, known availability gaps, and review order.
+- **AC-8.7**: Release evidence pins minimum/tested Codex versions, capability
+  probes, Pro tier, client configuration, rate-card revision, and tested model
+  availability. Model, client, prompt, rate-card, entitlement, or agent-policy
+  changes trigger rebenchmarking; production canaries watch accepted-workflow
+  rate, p95 allowance use/duration, escalation, and late failure.
+
+### 3.9 Workflow Budget and Adaptive-policy Contract *(-> G56R-002, G56R-008)*
+
+- **AC-9.1**: The evaluation contract declares maximum estimated credits per
+  phase, retries, subagent threads/depth, context growth, and redundant work.
+- **AC-9.2**: Adaptive-policy fixtures define observable escalation signals
+  (for example repeated validation failure, high ambiguity, or cross-cutting
+  dependency impact), Luna -> Terra -> Sol escalation, post-phase
+  de-escalation, and cancellation of redundant child work.
+- **AC-9.3**: Limit-near and limit-exhausted behavior is explicit: checkpoint,
+  pause/resume across reset, continue, or cancel decisions preserve a durable
+  objective, verifiable stopping condition, validation loop, and progress log.
+- **AC-9.4**: Version 1 may still ship static defaults, but its release claim is
+  limited to efficient static GPT-5.6 installation defaults unless the adaptive
+  policy independently clears all promotion gates.
 
 ## 4. Migration Path (phased - one phase per SPEC)
 
 - **Phase 1 (G56R-001) - Research baseline**: establish authoritative facts,
   current surfaces, candidate routes, and role contracts without changing
   defaults.
-- **Phase 2 (G56R-002) - Benchmark foundation**: make model x effort evaluation,
-  cost-per-success accounting, and layered promotion reproducible.
+- **Phase 2 (G56R-002) - Benchmark foundation**: make model x effort/policy
+  evaluation, end-to-end Pro allowance accounting, and layered promotion
+  reproducible.
 - **Phase 3 (G56R-003) - Installer policy**: preserve role-pinned defaults and
   keep one explicit global compatibility override on the Python runtime path.
 - **Phase 4 (G56R-004 through G56R-007) - Role cohorts**: evaluate and migrate
@@ -253,6 +318,10 @@ consumer-focused quality floor.
   sandbox/mutation boundary.
 - Live AI evals remain developer-local and budgeted; deterministic and replay
   checks remain the default CI path.
+- Benchmark accounts must be ChatGPT-authenticated Pro accounts. API-key runs
+  are rejected as non-comparable production evidence.
+- Shared-account activity invalidates allowance-delta attribution unless the
+  run is isolated and the before/after quota state is captured.
 - Release-please owns version changes; implementation does not manually bump
   plugin versions.
 - Every implementation slice stays within the repository reviewability
@@ -260,18 +329,27 @@ consumer-focused quality floor.
 
 ## 6. Open Questions
 
-- **OQ-1 (G56R-001):** Does the entitled release-test account expose all three
+- **OQ-1 (G56R-001):** Does the declared Pro 5x or Pro 20x release-test account expose all three
   GPT-5.6 tiers and every candidate effort through the installed Codex client?
   Recommendation: record capability probes and abstain from unverified routes.
-- **OQ-2 (G56R-002):** Does current Codex telemetry expose cache-write tokens and
-  actual credit usage separately? Recommendation: record native fields when
-  present and use dated API-rate normalization as a clearly labeled fallback.
+- **OQ-2 (G56R-002):** Which native app-server/client fields expose observed
+  credits, token activity, account type/plan, and rate-limit buckets in the
+  tested Codex version? Recommendation: capability-probe every field, preserve
+  nulls, and derive estimates only with labeled/versioned formulas. Do not add a
+  consumer-facing cache-write category unless native Pro telemetry exposes it.
 - **OQ-3 (G56R-003):** Which Python helper owns agent installation after
   XPLAT-009 merges? Recommendation: bind to the live authoritative registry at
   scaffold time instead of naming a removed compatibility script.
 - **OQ-4 (G56R-004 through G56R-007):** Which adjacent-tier challengers survive
   the research spike's availability and contract screen? Recommendation: keep
   the approved shortlist narrow and expand only unstable comparisons.
+- **OQ-5 (G56R-001/G56R-002):** Should bounded helper tasks include a GPT-5.4
+  Mini control? Recommendation: either test it as a cross-generation control or
+  record cross-generation optimization as explicitly deferred; do not imply a
+  GPT-5.6-only search minimizes all Codex consumption.
+- **OQ-6 (G56R-002):** How can Spark's separate, demand-sensitive research
+  preview limit be compared with shared Pro allowance? Recommendation: report
+  Spark on a separate scorecard until an attributable common measure exists.
 
 ## 7. SPEC Catalog Crosswalk
 
@@ -285,14 +363,17 @@ consumer-focused quality floor.
 | Read-only Reasoning Agent Routing | AC-6.* | G56R-006 | G56R-003 | P1 |
 | Latency-first Helper Routing | AC-7.* | G56R-007 | G56R-003 | P1 |
 | Payload, Documentation, UAT, and Release Proof | AC-8.* | G56R-008 | G56R-004 through G56R-007 | P1 |
+| Workflow Budget and Adaptive-policy Contract | AC-9.* | G56R-002, G56R-008 | G56R-001 | P1 |
 
 ## 8. Success Criteria
 
-1. All eight Features map 1:1 to G56R-001 through G56R-008 and all acceptance
-   criteria are traceable through roadmap, implementation, and release evidence.
-2. Every shipped agent route has zero critical contract regressions, at least
-   95% of its current quality baseline, and the lowest measured cost per
-   successful run among passing candidates, with latency used as tie-breaker.
+1. All acceptance criteria are traceable through G56R-001 through G56R-008;
+   the cross-cutting workflow-budget contract is implemented in the shared
+   harness and release-proof specs.
+2. Every shipped agent route has zero critical failures, clears per-dimension
+   quality floors and confidence-bound non-inferiority, and lowers p50 or p95
+   Pro allowance consumption per accepted end-to-end workflow without a
+   material reliability, steering, or completion-time regression.
 3. A clean install verifies all ten agents and reports the exact effective
    model/effort matrix with no silent fallback.
 4. Source, generated Codex payload, installed cache, guidance, tests, and UAT
@@ -310,5 +391,10 @@ consumer-focused quality floor.
 - **Migration guidance:** [Upgrading to GPT-5.6 Sol](https://developers.openai.com/api/docs/guides/upgrading-to-gpt-5p6-sol)
 - **Codex subagents:** [Choosing models and reasoning](https://developers.openai.com/codex/concepts/subagents#choosing-models-and-reasoning)
 - **Model pages:** [Sol](https://developers.openai.com/api/docs/models/gpt-5.6-sol), [Terra](https://developers.openai.com/api/docs/models/gpt-5.6-terra), [Luna](https://developers.openai.com/api/docs/models/gpt-5.6-luna)
-- **Pricing:** [OpenAI API pricing](https://developers.openai.com/api/docs/pricing)
+- **Codex authentication:** [ChatGPT subscription access versus API-key usage](https://learn.chatgpt.com/docs/auth)
+- **Codex plans, credits, and limits:** [Codex pricing](https://learn.chatgpt.com/docs/pricing)
+- **Codex native protocol/telemetry capability surface:** [App server](https://learn.chatgpt.com/docs/app-server)
+- **Speed modes and Spark limits:** [Codex speed](https://learn.chatgpt.com/docs/agent-configuration/speed)
+- **Long-workflow controls:** [Long-running work](https://learn.chatgpt.com/docs/long-running-work)
+- **API-price diagnostic only:** [OpenAI API pricing](https://developers.openai.com/api/docs/pricing)
 - **Prompt guidance:** [GPT-5.6 prompting best practices](https://developers.openai.com/api/docs/guides/latest-model#prompting-best-practices)
