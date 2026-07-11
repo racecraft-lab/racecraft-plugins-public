@@ -84,7 +84,8 @@ assignments that clear the consumer-focused gates.
   assigned objective under a fixed terminal policy and acceptance gate.
 - Select one portability-first universal core from the model/capability
   intersection of a finite, versioned support manifest, while reporting the
-  per-plan opportunity cost against the best measured plan-specific route.
+  per-plan opportunity cost against the best measured component-wise assembled
+  plan-specific challenger.
 - Make controlled model-effort pair, prompt/context, and speed decisions
   reproducible through exact treatment delivery, versioned fixtures, documented
   component-qualification rules, and one integrated release-decision rule.
@@ -187,9 +188,15 @@ assignments that clear the consumer-focused gates.
   `workspace_role_admin_prerequisites`, `optional_capabilities`,
   `known_exclusions`, `equivalence_class_id` or null,
   `equivalence_evidence_hashes`, `uat_owner`, `support_state`,
-  `target_population_weight`, `baseline_policy_id`, `baseline_support_state`,
+  `target_population_weight`, the shared `target_population_snapshot_id`,
+  `baseline_policy_id`, `baseline_support_state`,
   `baseline_exact_treatment_evidence_hashes`, `baseline_comparator_type`,
-  `row_reference_policy_id` or null, `comparator_claim_boundary`,
+  `row_reference_policy_id` or null, `row_reference_selection_rule_id`,
+  `eligible_reference_policy_set`, `required_quality_and_contract_floors`,
+  `relationship_to_production_policy`, `compatibility_projection_rules`,
+  `selection_metric`, `selection_precedence`, `tie_break_rule`,
+  `selection_evidence_hash`, `reference_qualification_evidence_id`,
+  `comparator_claim_boundary`,
   `evidence_timestamp`, and `evidence_hashes`. Each named-category resolution
   records `named_plan_or_workspace`, `manifest_row`, `equivalence_class_id` or
   null, `authentication_supported`, `codex_surface`, `workspace_tool_deltas`,
@@ -205,18 +212,39 @@ assignments that clear the consumer-focused gates.
   mandatory row remains visible and must be `supported` for universal release;
   any other state blocks that claim. Additional plan or managed-workspace
   categories require a manifest revision and affected confirmation rerun.
+  At manifest level, exactly one `target_population_snapshot` object records
+  `target_population_snapshot_id`, `snapshot_source`,
+  `query_or_derivation_version`, `measurement_start`, `measurement_end`,
+  `population_definition`, `inclusion_and_exclusion_rules`,
+  `unknown_plan_handling`, `coverage_numerator`, `coverage_denominator`,
+  `minimum_coverage_threshold`, `weight_normalization_rule`,
+  `fallback_canonical_row_rule`, and `snapshot_hash`.
   The manifest records exactly one canonical row through `canonical_row_key`,
   `canonical_subscription_environment_id`, `canonical_selection_rationale`,
   `canonical_selection_rule_version`, `canonical_baseline_deliverable`,
   `canonical_candidate_set_hash`, and `canonical_lock_timestamp`. Before
   screening or outcome observation, it selects the exact-treatment-deliverable
-  row with the greatest frozen `target_population_weight` in the versioned
-  pre-campaign population snapshot; ties resolve by lexical `plan_key`. The
-  immutable production baseline and all frozen universal candidates must pass
-  treatment-delivery preflight there. Missing weights, failed delivery, or a
-  canonical-row change blocks the campaign and invalidates selection, cohort
-  locks, and integrated confirmation; observed benchmark outcomes never choose
-  the canonical row.
+  row with the greatest frozen `target_population_weight`; ties resolve by
+  lexical `plan_key`. The weight source is a locked snapshot of all non-test,
+  ChatGPT-authenticated SpecKit Pro objectives assigned to the current
+  production core and reaching a recorded terminal state during the trailing
+  90 complete UTC days immediately before snapshot lock. Benchmark, canary,
+  synthetic, and developer-test objectives are excluded. `coverage_denominator`
+  counts every eligible objective; `coverage_numerator` counts the subset whose
+  support-manifest row is authoritatively resolved. Unknown rows remain in the
+  denominator, receive no imputed weight, and are excluded from normalization.
+  The snapshot is representative only when `coverage_numerator /
+  coverage_denominator >= 0.95`; resolved-row counts are normalized to sum to
+  one. Exactly one predeclared `fallback_canonical_row_rule` applies when an
+  authorized representative source is unavailable, the denominator is zero, or
+  coverage is below 0.95: use `plus`; estimated weights and alternate fallbacks
+  are prohibited. The fallback is valid only when the immutable production
+  baseline and every frozen universal candidate pass exact-treatment preflight
+  there; otherwise the campaign is blocked. Changing the snapshot, source,
+  derivation, measurement window, population definition, coverage or
+  normalization rule, fallback, or resulting canonical row invalidates
+  selection, cohort locks, and integrated confirmation. Observed benchmark
+  outcomes never choose the canonical row.
 - **AC-1.7 — Current harness baseline**: The research record states that the
   current Python Layer 6 runner uses prompt emulation, ambient Codex
   configuration, four hard-coded effort values, and only three current role
@@ -253,8 +281,9 @@ assignments that clear the consumer-focused gates.
 - **AC-2.3 — Complete trace**: Every assigned objective binds
   `support_manifest_id`, `installable_agent_policy_id`,
   `subscription_environment_id`, `execution_trace_id`,
-  `universal_core_policy_id`, `optional_helper_policy_id`, and
-  `release_policy_id`, then emits a parent-child trace through acceptance or the
+  `universal_core_policy_id`, `optional_helper_policy_id`, the bound row's
+  `helper_installation_state_id`, and `release_policy_id`, then emits a
+  parent-child trace through acceptance or the
   terminal stop. The trace records
   requested/returned model and effort, speed, input/cached-input/output tokens,
   rate revision, parent attribution, effective context/tools, compaction,
@@ -281,10 +310,12 @@ assignments that clear the consumer-focused gates.
   objective totals but not ordinary within-window throughput estimates. API
   dollars remain a separately labeled diagnostic.
 - **AC-2.6 — Data partitions and multiplicity**: The campaign uses disjoint
-  screening, selection, cohort-lock, and integrated release-confirmation
-  corpora. Screening performs capability/contract elimination; selection ranks
-  a frozen shortlist; each Stage C cohort consumes only its preassigned lock
-  partition once. Cohort locks remain inside the predeclared component-selection
+  reference-qualification, screening, selection, cohort-lock, and integrated
+  release-confirmation corpora. Reference qualification runs before candidate
+  screening only when comparable frozen evidence is unavailable and cannot be
+  reused by a candidate. Screening performs capability/contract elimination;
+  selection ranks a frozen shortlist; each Stage C cohort consumes only its
+  preassigned lock partition once. Cohort locks remain inside the predeclared component-selection
   multiplicity family and cannot support the release claim. The final release decision uses
   the untouched integrated release-confirmation corpus exactly once under the
   predeclared hierarchical gatekeeping or family-wise error strategy. Changing
@@ -300,6 +331,13 @@ assignments that clear the consumer-focused gates.
   at any treatment-delivery stage is a hard support-row qualification failure
   under AC-2.21; it is not an `R_i` observation and cannot be rerun into
   eligibility. Any pre-score consumption is reported separately.
+  A successfully assigned arm that attempts to resolve, spawn, or invoke the
+  optional helper during universal-core evaluation is a candidate-caused core-
+  policy contract failure: `A_i = 0`, all measurable universal-core `R_i`
+  through the terminal stop is retained, and the arm cannot be rerun into
+  eligibility. Any separately metered helper activity is reported outside
+  `R_i`. Only independently proven harness contamination may invalidate and
+  rerun that arm.
   Independent harness or infrastructure misdelivery invalidates the arm and is
   rerun under the predeclared rule; recurrence blocks the harness. The primary
   endpoint in the canonical row is paired mean `R_i` per assigned objective
@@ -354,8 +392,36 @@ assignments that clear the consumer-focused gates.
   `comparator_claim_boundary = production_superiority`. Every non-canonical row
   freezes one exact-treatment-deliverable comparator before screening. It uses
   the immutable production baseline when deliverable; otherwise it uses a
-  content-addressed `row_reference_policy_id` selected from capability-only
-  evidence before outcomes are observed. Its claim boundary is respectively
+  content-addressed `row_reference_policy_id` selected before candidate
+  screening under its frozen `row_reference_selection_rule_id`. The
+  rule serializes `eligible_reference_policy_set`,
+  `required_quality_and_contract_floors`,
+  `relationship_to_production_policy`, `compatibility_projection_rules`,
+  `selection_metric`, `selection_precedence`, `tie_break_rule`, and
+  `selection_evidence_hash`. The `reference_qualification_evidence_id`
+  content-addresses either previously frozen evidence produced under the same
+  task, validator, environment, and acceptance contracts or a dedicated pre-
+  screen reference-qualification corpus disjoint from every candidate and
+  confirmation partition. G56R-003 executes that corpus before candidate
+  screening when prior comparable evidence is unavailable. Any evidence or
+  corpus change invalidates the reference and final support-manifest lock. The
+  `eligible_reference_policy_set` contains only
+  exact-treatment-deliverable
+  compatibility projections of the immutable production core. Each projection
+  preserves every production-policy field not independently proven
+  incompatible, may change only fields independently proven incompatible, and
+  clears the frozen `required_quality_and_contract_floors`, including every
+  absolute safety, quality, grounding, contract, mutation, and reliability
+  floor. The frozen `selection_metric` and `compatibility_projection_rules` rank projections first by
+  ascending changed-agent count, then ascending changed-field count, then by
+  `selection_precedence`; `tie_break_rule` resolves any remainder by lexical
+  content-addressed policy ID. Candidate outcomes, resource measurements, and
+  shortlist membership cannot affect reference generation or selection. If no
+  eligible projection passes exact treatment and the absolute floors, the row
+  is not `supported` and blocks universal release. Changing the eligible set,
+  projection rules, floor registry, precedence, tie-break, evidence hash, or
+  selected reference invalidates affected evidence. Its claim boundary is
+  respectively
   `production_noninferiority` or `row_reference_noninferiority`. A row-reference
   result establishes support and non-regression only and cannot claim
   improvement over production. If neither comparator is deliverable, the row
@@ -380,25 +446,40 @@ assignments that clear the consumer-focused gates.
   versioned replay schema. It preserves the four evidence identities, three
   policy aggregates, raw
   telemetry, canonical and native formulas, nulls, rates, corpus partition,
-  task/stratum IDs, named-category resolution, canonical-row lock, per-row
-  comparator identity/delivery/claim boundary, weights, campaign decisions,
+  task/stratum IDs, named-category resolution, population snapshot and fallback,
+  canonical-row lock, per-row comparator selection rule/qualification evidence/
+  identity/delivery/claim boundary, weights, campaign decisions,
   guardrail registry, confirmation lock, failures, and selected/rejected routes.
   G56R-003 populates
   live artifacts only after exact treatment enforcement under AC-2.19.
-- **AC-2.17 — Static-control consequence**: A static policy may be called
-  efficient only if it passes against production and is not materially dominated
-  by a tested unpinned or adaptive control on quality, reliability, canonical
-  resource use, and duration. If a non-shipped control dominates, v1 may still
-  ship static for declared operational simplicity, but messaging is limited to
-  improvement over the previous static baseline and cannot claim best measured
-  efficiency.
+- **AC-2.17 — Frozen policy controls and dominance rule**: Before cohort
+  selection, G56R-004 defines, exact-treatment validates, and content-addresses
+  the unpinned, adaptive, and Ultra control policies. It freezes every adaptive
+  signal, threshold, escalation/de-escalation path, and Ultra topology, plus
+  control-eligibility gates, dominance metrics and margins, confidence method,
+  multiplicity position, and integrated-confirmation arm assignment. G56R-004
+  does not assess whether the future release policy is dominated. A control
+  materially dominates only when it clears every mandatory safety, quality,
+  reliability, availability, and support-row gate; meets the frozen quality,
+  reliability, guardrail, and duration non-inferiority margins; and clears the
+  predeclared canonical-resource superiority margin. G56R-011 compares the
+  final frozen `universal_core_policy_id` with these controls under AC-8.9.
+  Changing any control content hash, adaptive parameter, dominance margin,
+  confidence method, multiplicity assignment, or arm assignment invalidates the
+  affected control comparison and bounded efficiency claim.
 - **AC-2.18 — Universal core and optional Spark helper**: The universal primary
-  endpoint covers exactly nine required agents with Spark not installed or
-  provably not invoked in both arms. Spark is an optional Pro-row capability with a
-  separate scorecard and never contributes to the universal canonical-resource
-  claim. A Spark invocation invalidates a universal-core run. Every non-Spark
-  support row must pass the no-helper product path unless a portable fallback is
-  separately selected and validated.
+  endpoint covers exactly nine required agents. During every qualification or
+  cohort lock for the nine-agent core and in every primary and secondary arm of
+  integrated confirmation, Spark is
+  `not_installed` and absent from the agent registry and effective tool surface
+  on every row, including Pro rows. An attempted resolution, spawn,
+  or invocation after successful assignment follows AC-2.7 and hard-fails the
+  universal-core contract. Independently proven harness contamination that
+  makes Spark available may invalidate and rerun the arm; candidate-caused
+  behavior may not. The separate optional-helper campaign may install Spark on
+  supported Pro rows and never contributes to the universal canonical-resource
+  claim. Every support row must pass the no-helper product path unless a
+  portable fallback is separately selected and validated.
 - **AC-2.19 — Exact treatment delivery**: Every scored run executes
   the installed custom-agent TOML or a generated configuration proven
   semantically equivalent to the complete candidate policy. Before scoring, the
@@ -419,7 +500,9 @@ assignments that clear the consumer-focused gates.
   cannot be rerun into eligibility; its pre-score consumption is reported as
   separate treatment-delivery resource use, outside `R_i`. Only independent
   misdelivery is rerun. Successfully delivered treatments alone reach quality
-  scoring, and later failures follow AC-2.7.
+  scoring, and later failures follow AC-2.7. After assignment, AC-2.18's
+  optional-helper attempt rule overrides generic unexpected-resolution
+  classification.
 - **AC-2.20 — Blinded fixture and scorer governance**: Every fixture and scorer
   has an immutable version and content hash before screening. Disputed results
   are adjudicated blind to candidate identity into exactly one of: candidate-
@@ -444,15 +527,16 @@ assignments that clear the consumer-focused gates.
   within every other row's declared claim boundary. It does not establish the
   lowest-resource complete nine-agent policy among alternative assemblies or a
   pooled cross-plan mean. Evidence reports each row's opportunity cost against
-  its best measured plan-specific candidate.
+  its best measured component-wise assembled plan-specific challenger.
   Legacy-rate observations, included-limit utilization, purchased credits, reset
   behavior, and throughput remain separate plan-stratified outcomes. Before
   screening, each support row
   freezes its eligible plan-specific candidate set and
   `subscription_environment_id`; plan-only models may enter that row-specific
   set but never the universal set. The selection and cohort-lock partitions
-  identify one best row-specific challenger and freeze it before integrated
-  confirmation. Opportunity cost on the integrated release-confirmation corpus
+  identify one component-wise assembled row-specific challenger under the
+  frozen rule and freeze it before integrated confirmation. Opportunity cost on
+  the integrated release-confirmation corpus
   is paired mean `R_i(universal) - R_i(row-specific challenger)`,
   reported with the primary analysis's task clustering, weights, confidence
   method, and multiplicity strategy. This contrast is plan-stratified and
@@ -480,9 +564,11 @@ assignments that clear the consumer-focused gates.
   hashes a versioned plugin-owned core-policy manifest containing its schema
   version, the ordered nine role-to-`installable_agent_policy_id` mapping, and
   the plugin-owned parent orchestration/retry-policy hash.
-  `optional_helper_policy_id` hashes the helper's installable policy, allowed
-  manifest rows, `installed_enabled` or `not_installed` state, invocation rule,
-  and no-helper/fallback contract. `release_policy_id` binds the core and helper
+  `optional_helper_policy_id` hashes the helper definition plus the complete,
+  ordered `plan_key -> helper_installation_state_id` mapping. Each row-specific
+  `helper_installation_state_id` hashes `installed_enabled` or `not_installed`,
+  the resolved helper policy or null, invocation rule, no-helper/fallback
+  contract, and supporting capability evidence. `release_policy_id` binds the core and helper
   aggregates plus the required environment-contract hash. Standard speed is an
   environment prerequisite, not an agent-TOML or installer-owned setting; the
   environment contract requires it and AC-2.19 verifies its effective value.
@@ -514,16 +600,19 @@ assignments that clear the consumer-focused gates.
   produces `not_installed` plus the validated no-helper path, not core-install
   failure.
 - **AC-3.4**: Source and generated payload inventory contain all ten agent TOMLs,
-  including `uat-runbook-author.toml`; unrelated user agents are preserved. A
-  destination contains exactly the nine required core TOMLs. The Spark TOML is
-  copied into the discoverable destination and registered only on a row where
-  its availability and invocation contract are proven; otherwise it is
-  `not_installed`, and helper resolution/spawn must fail closed to the no-helper
-  path. A future disabled-in-place state requires an official documented agent-
-  disable mechanism, a capability probe, and a pinned minimum client version.
+  including `uat-runbook-author.toml`. The plugin-managed destination set
+  contains exactly nine required core TOMLs plus the helper only when its row-
+  specific state is `installed_enabled`. Unrelated user-owned files are excluded
+  from this count and preserved byte-for-byte. Any reinstall whose bound
+  `helper_installation_state_id` is `not_installed` atomically removes any stale
+  plugin-managed Spark TOML and registry entry, then proves helper resolution
+  and spawning fail closed to the no-helper path.
+  A future disabled-in-place state requires an official documented agent-disable
+  mechanism, a capability probe, and a pinned minimum client version.
 - **AC-3.5**: Install output reports the nine installed core
   `installable_agent_policy_id` values, `universal_core_policy_id`,
-  `optional_helper_policy_id`, `release_policy_id`, helper state, the optional
+  `optional_helper_policy_id`, the bound row's `helper_installation_state_id`,
+  `release_policy_id`, helper state, the optional
   tenth helper identity only when installed, destination, support-manifest
   compatibility evidence, override state, copied files, result, and restart
   requirement. Returned-model and effective-speed proof are runtime/canary
@@ -601,15 +690,16 @@ assignments that clear the consumer-focused gates.
   unavailable, quota-limited, not invoked, or fails to spawn. That no-helper
   path is part of universal product acceptance, not merely a fallback note.
 - **AC-7.5**: Source, install, supported-row validation, no-helper validation,
-  `optional_helper_policy_id`, installable/environment/trace identities, and
-  rollback evidence are independently reviewable.
+  `optional_helper_policy_id`, each `helper_installation_state_id`, installable/
+  environment/trace identities, and rollback evidence are independently
+  reviewable.
 
 ### 3.8 Payload, Documentation, UAT, and Release Proof *(-> G56R-011)*
 
 - **AC-8.1**: The Codex payload is rebuilt from source; all ten source and payload
-  TOMLs, manifests/checksums, the exactly nine-agent required destination
-  inventory, any conditionally installed tenth helper, the universal core,
-  optional-helper policy, and release policy agree without hand-editing
+  TOMLs, manifests/checksums, the exactly nine-agent required plugin-managed
+  destination inventory, any conditionally installed tenth helper, the universal
+  core, optional-helper policy, and release policy agree without hand-editing
   generated artifacts.
 - **AC-8.2**: Active Codex install/autopilot guidance explains the selected
   routes, component-qualification and integrated release-decision evidence,
@@ -639,21 +729,24 @@ assignments that clear the consumer-focused gates.
   includes rollback through an explicit global override or previous plugin
   release.
 - **AC-8.6**: The PR packet lists `universal_core_policy_id`,
-  `optional_helper_policy_id`, `release_policy_id`, per-row qualification and opportunity-cost results,
+  `optional_helper_policy_id`, every row's `helper_installation_state_id`,
+  `release_policy_id`, per-row qualification and opportunity-cost results,
   rejected candidates, verification evidence, gaps, and review order.
 - **AC-8.7**: Release evidence pins the support manifest, canonical rate
   schedule, minimum/tested Codex versions, per-row capability probes,
   environment IDs, rate regimes, and tested model availability. Model, client,
-  prompt, rate-card, entitlement, manifest, installable-policy, helper-policy, or
-  release-policy changes trigger the predeclared scope of requalification or
-  rebenchmarking.
+  prompt, rate-card, entitlement, manifest, installable-policy, helper-policy,
+  helper-installation-state, or release-policy changes trigger the predeclared
+  scope of requalification or rebenchmarking.
 - **AC-8.8**: Before merge and release, deterministic documentation checks
   validate relative links, repository-local paths labeled current, fixture and
   agent counts, PRD-to-roadmap acceptance-criteria ownership, SPEC dependencies,
   current-versus-proposed path labels, named-category resolutions, canonical-row
-  invariants, per-row comparator contracts, source-versus-destination agent
-  inventory, helper absence semantics, component terminology, and the bounded
-  assembled-policy claim. They reject absent paths described as current,
+  invariants and population-snapshot provenance, deterministic per-row
+  comparator selection, source-versus-destination agent inventory, row-aware
+  helper identity and absence semantics, final-static-versus-control ownership,
+  component terminology, and the bounded assembled-policy claim. They reject
+  absent paths described as current,
   obsolete Layer 6 shell paths, contradictory G56R-002/G56R-003 ownership,
   collapsed canonical/native/legacy accounting terms, or any undocumented
   discoverable-but-non-invocable helper state.
@@ -665,8 +758,22 @@ assignments that clear the consumer-focused gates.
   endpoint. In every other mandatory row or proven equivalence class it is
   paired with the AC-2.13 assigned comparator and must pass that row's non-
   inferiority, quality/safety, simultaneous guardrail, and qualification gates.
-  The helper is not installed or not invoked in both arms; any invocation
-  invalidates the run. This is the sole promotion decision. Passing proves
+  Spark is `not_installed` in every primary and secondary arm. An attempted
+  helper resolution, spawn, or invocation is a candidate-caused hard contract
+  failure under AC-2.7 with
+  `A_i = 0` and retained measurable universal-core `R_i`, not a rerunnable
+  invalid observation. Only independently proven harness contamination permits
+  invalidation and rerun. The AC-2.17 frozen controls run as predeclared
+  secondary arms on the same untouched locked objectives in the canonical row
+  and every mandatory row or proven equivalence class under the frozen
+  multiplicity strategy. G56R-011 compares those controls with the final frozen
+  `universal_core_policy_id`, not an earlier static prototype. Control parameters
+  cannot change after G56R-004; the secondary arms do not select or modify the
+  frozen core or replace the primary comparison. They determine whether release
+  may carry the bounded efficiency claim under AC-9.4. The candidate-versus-
+  assigned-comparator primary family remains the sole promotion decision; the
+  secondary control arms gate only the bounded efficiency wording under AC-9.4.
+  Passing proves
   improvement over production only in the canonical row and support/non-
   regression within every other row's declared claim boundary; it does not
   prove global assembled-policy optimality. Failure reopens route, prompt,
@@ -683,8 +790,9 @@ assignments that clear the consumer-focused gates.
 - **AC-8.11 — Optional-helper release gate**: G56R-010 and G56R-011 separately
   prove Spark functionality, latency, spawn reliability, observed quota, and
   fallback on supported Pro rows, plus the no-helper path on all other rows.
-  Evidence binds `optional_helper_policy_id` and the `installed_enabled` or
-  `not_installed` state. Spark results never enter the universal-core primary
+  Evidence binds `optional_helper_policy_id`, the row-specific
+  `helper_installation_state_id`, and its `installed_enabled` or `not_installed`
+  state. Spark results never enter the universal-core primary
   statistic.
 - **AC-8.12 — Long-workflow canaries**: The controlled canary portfolio contains
   at least the minimum unique-task count from the risk/sample rule. Each long
@@ -711,10 +819,12 @@ assignments that clear the consumer-focused gates.
   timeout, continue, and cancel outcomes under a fixed terminal policy. Product
   checkpoint/resume features are a separate follow-up and do not block static
   installer work.
-- **AC-9.4**: Version 1 may ship static defaults for operational simplicity only
-  under AC-2.17. If a control dominates, release language is limited to measured
-  improvement over the previous static baseline and cannot claim optimal or
-  best measured efficiency.
+- **AC-9.4**: Before cohort selection, G56R-004 freezes this consequence: if
+  G56R-011 later finds under AC-8.9 that an eligible control materially dominates
+  the final `universal_core_policy_id`, version 1 may still ship static defaults
+  for declared operational simplicity, but release language is limited to
+  measured improvement over the previous static baseline and cannot claim
+  efficient, optimal, or best measured routing.
 - **AC-9.5 — Allowance-boundary support semantics**: Every support-manifest row
   declares whether one-window long-horizon completion is expected or unproven,
   observable limit-near/exhausted signals, the platform's active-turn and new-
@@ -747,8 +857,8 @@ assignments that clear the consumer-focused gates.
   current surfaces, candidate routes, and role contracts without changing
   defaults.
 - **Phase 2 (G56R-002 through G56R-005) - Evaluation foundation**: separately
-  implement telemetry/traces, corpus/statistics, policy comparison, and
-  allowance-boundary budgets.
+  implement telemetry/traces, corpus/statistics, frozen policy-control
+  definitions, and allowance-boundary budgets.
 - **Phase 3 (G56R-006) - Installer policy**: preserve role-pinned defaults and
   keep one explicit global compatibility override on the Python runtime path.
 - **Phase 4 (G56R-007 through G56R-010) - Role cohorts**: evaluate and migrate
@@ -823,7 +933,7 @@ assignments that clear the consumer-focused gates.
 | Research Baseline and Candidate Matrix | AC-1.* | G56R-001 | - | P1 |
 | Authentication, Telemetry, Treatment, and Trace Schema | AC-2.2 through AC-2.5, AC-2.15, AC-2.16 | G56R-002 | G56R-001 | P1 |
 | Corpus Runner, Acceptance Scoring, and Statistics | AC-2.1, AC-2.6 through AC-2.14, AC-2.19 through AC-2.21 | G56R-003 | G56R-002 | P1 |
-| Static/Unpinned/Adaptive Policy Comparison | AC-2.17, AC-9.2, AC-9.4 | G56R-004 | G56R-003 | P1 |
+| Policy Control Definition and Dominance Contract | AC-2.17, AC-9.2, AC-9.4 | G56R-004 | G56R-003 | P1 |
 | Harness Budgets and Boundary Simulation | AC-9.1, AC-9.3, AC-9.5 | G56R-005 | G56R-004 | P1 |
 | Subscription-aware Installer Defaults and Explicit Override | AC-3.* | G56R-006 | G56R-005 | P1 |
 | Quality-critical Executor Routing | AC-4.* | G56R-007 | G56R-006 | P1 |
@@ -841,12 +951,15 @@ assignments that clear the consumer-focused gates.
    immutable production core in the canonical environment and clears every
    other row's assigned-comparator, treatment, safety, quality, reliability,
    and non-regression gate without pooling incompatible accounting or claiming
-   complete-policy global optimality.
-3. A clean install verifies exactly nine core installable identities plus the
-   core, optional-helper, and release-policy IDs; it verifies a conditional
-   tenth helper identity only on supported rows. Environment and execution
-   evidence separately prove effective speed, tools, permissions, and model
-   resolution.
+   complete-policy global optimality. The bounded efficiency claim additionally
+   requires that no eligible frozen control materially dominate the final core
+   under AC-2.17 and AC-8.9; otherwise only AC-9.4's restricted release claim is
+   permitted.
+3. A clean install verifies exactly nine plugin-managed core installable
+   identities plus the core, row-aware optional-helper, helper-installation-
+   state, and release-policy IDs; it verifies a conditional tenth helper identity
+   only on supported rows. Environment and execution evidence separately prove
+   effective speed, tools, permissions, and model resolution.
 4. Source, generated payload, installed cache, guidance, tests, and UAT agree on
    the universal core and optional-helper split. Every mandatory manifest row
    is `supported`; any additional row has an explicit non-claiming state.

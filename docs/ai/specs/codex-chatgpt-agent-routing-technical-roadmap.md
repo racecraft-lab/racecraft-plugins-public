@@ -30,7 +30,7 @@ tiers**.
 | 1 | G56R-001 | Authoritative research baseline and candidate matrix | Sequential spike |
 | 2 | G56R-002 | Authentication, native telemetry, treatment proof, and replayable trace schema | Sequential foundation |
 | 3 | G56R-003 | Corpus runner, acceptance scoring, and deterministic statistics | Sequential foundation |
-| 4 | G56R-004 | Static/unpinned/adaptive policy comparison | Sequential foundation |
+| 4 | G56R-004 | Policy control definition and dominance contract | Sequential foundation |
 | 5 | G56R-005 | Harness budgets and boundary simulation | Sequential foundation |
 | 6 | G56R-006 | Subscription-aware installer defaults and explicit global override | Sequential; implements the deferred Python helper |
 | 7 | G56R-007, G56R-008, G56R-009, G56R-010 | Route four disjoint agent cohorts | Parallel after G56R-006; serialize shared regeneration |
@@ -86,7 +86,8 @@ after G56R-002 establishes trustworthy telemetry; evidence controls qualificatio
   plan-stratified; never pool incompatible regimes.
 - Use A1 capability/treatment screening, A2 within-model effort search, A3
   frozen pair comparison, Stage B prompt interaction, and Stage C cohort locks
-  across disjoint component-selection partitions. Reserve a separate untouched
+  across disjoint component-selection partitions. Qualify any row-reference
+  projections on a separate pre-screen partition, then reserve an untouched
   integrated release-confirmation corpus for G56R-011.
 - Run integrated confirmation as one multi-stratum campaign over the same locked
   objectives: the canonical row owns production superiority, every other
@@ -101,8 +102,9 @@ after G56R-002 establishes trustworthy telemetry; evidence controls qualificatio
 - Start ordinary effort search at the documented default, ascend to a stable
   pass when needed, then descend and retest the boundary. Freeze Standard speed.
   Evaluate orchestration-changing Ultra only at policy level.
-- Benchmark static pins against unpinned Codex selection and an explicit
-  adaptive escalation policy.
+- Define and freeze unpinned, adaptive, and Ultra controls before cohort
+  selection, then compare them with the final frozen static core during
+  integrated confirmation.
 - Evidence wins: no generation, tier, preview, or current default is forced into
   a role when it fails.
 
@@ -135,7 +137,7 @@ G56R-002 Authentication, Telemetry, Treatment, and Trace Schema
 G56R-003 Corpus Runner, Scoring, and Statistics
     |
     v
-G56R-004 Policy Comparison
+G56R-004 Policy Control Definition and Dominance Contract
     |
     v
 G56R-005 Harness Budgets and Boundary Simulation
@@ -159,7 +161,7 @@ G56R-006 Subscription-aware Installer Defaults and Explicit Override
 | G56R-001 | Research Baseline and Candidate Matrix | Pending | - | Ready to scaffold |
 | G56R-002 | Authentication, Telemetry, Treatment, and Trace Schema | Pending | - | Blocked by G56R-001 |
 | G56R-003 | Corpus Runner, Acceptance Scoring, and Statistics | Pending | - | Blocked by G56R-002 |
-| G56R-004 | Static/Unpinned/Adaptive Policy Comparison | Pending | - | Blocked by G56R-003 |
+| G56R-004 | Policy Control Definition and Dominance Contract | Pending | - | Blocked by G56R-003 |
 | G56R-005 | Harness Budgets and Boundary Simulation | Pending | - | Blocked by G56R-004 |
 | G56R-006 | Subscription-aware Installer Defaults and Explicit Override | Pending | - | Blocked by G56R-005 |
 | G56R-007 | Quality-critical Executor Routing | Pending | - | Blocked by G56R-006 |
@@ -218,16 +220,59 @@ Budget result: research spike; time-boxed, LOC sizing not applicable
   capabilities, exclusions, support state, equivalence evidence/UAT owner, and
   the versioned allowance-boundary contract, including auto-top-up/overage
   state, for every row before screening. Every row also freezes
-  `target_population_weight`, `baseline_policy_id`, `baseline_support_state`,
+  `target_population_weight`, the shared `target_population_snapshot_id`,
+  `baseline_policy_id`, `baseline_support_state`,
   `baseline_exact_treatment_evidence_hashes`, `baseline_comparator_type`,
-  `row_reference_policy_id` or null, and `comparator_claim_boundary`. Before
-  screening, select exactly one canonical row using the greatest frozen target-
-  population weight with lexical `plan_key` tie-breaking, then bind
+  `row_reference_policy_id` or null, `row_reference_selection_rule_id`,
+  `eligible_reference_policy_set`, `required_quality_and_contract_floors`,
+  `relationship_to_production_policy`, `compatibility_projection_rules`,
+  `selection_metric`, `selection_precedence`, `tie_break_rule`,
+  `selection_evidence_hash`, `reference_qualification_evidence_id`, and
+  `comparator_claim_boundary`. At manifest level,
+  freeze exactly one `target_population_snapshot` object containing
+  `target_population_snapshot_id`, `snapshot_source`,
+  `query_or_derivation_version`, `measurement_start`, `measurement_end`,
+  `population_definition`, `inclusion_and_exclusion_rules`,
+  `unknown_plan_handling`, `coverage_numerator`, `coverage_denominator`,
+  `minimum_coverage_threshold`, `weight_normalization_rule`,
+  `fallback_canonical_row_rule`, and `snapshot_hash`. Derive that snapshot from
+  non-test, ChatGPT-authenticated production-core
+  objectives reaching a terminal state in the trailing 90 complete UTC days.
+  Count unresolved rows in the coverage denominator without imputing them, set
+  the minimum coverage threshold to 0.95, and normalize resolved-row weights.
+  Exactly one predeclared `fallback_canonical_row_rule` applies when the source
+  is unavailable, the denominator is zero, or coverage is below threshold: use
+  `plus`; estimated weights and alternate fallbacks are prohibited. Before
+  screening, select exactly one canonical row using the greatest valid frozen
+  target-population weight with lexical `plan_key` tie-breaking, or the sole
+  fallback, then bind
   `canonical_row_key`, `canonical_subscription_environment_id`,
   `canonical_selection_rationale`, `canonical_selection_rule_version`,
   `canonical_baseline_deliverable`, `canonical_candidate_set_hash`, and
-  `canonical_lock_timestamp`. Prove production and candidate delivery there and
-  invalidate downstream evidence if that lock changes.
+  `canonical_lock_timestamp`. Prove production and candidate delivery there.
+  Changing the population snapshot, source, derivation, window, population,
+  coverage/normalization rule, fallback, or canonical lock invalidates
+  downstream evidence.
+- Freeze a versioned deterministic row-reference rule for every row where the
+  production baseline is not deliverable. Its fields are
+  `row_reference_selection_rule_id`, `eligible_reference_policy_set`,
+  `required_quality_and_contract_floors`, `relationship_to_production_policy`,
+  `compatibility_projection_rules`, `selection_metric`,
+  `selection_precedence`, `tie_break_rule`, `selection_evidence_hash`, and
+  `reference_qualification_evidence_id`.
+  Eligible references are exact-treatment-deliverable projections of the
+  immutable production core that preserve every compatible field and may change
+  only fields independently proven incompatible.
+  Rank them by changed-agent count, changed-field count, frozen precedence, then
+  lexical content-addressed policy ID; require every absolute floor. Candidate
+  outcomes cannot affect the rule. If no projection passes, the row is blocked;
+  a rule or selected-reference change invalidates affected evidence.
+- Reserve a content-addressed `reference_qualification_evidence_id` for each
+  row-reference decision. It points to previously frozen comparable evidence or
+  a dedicated pre-screen reference-qualification corpus disjoint from all
+  candidate and confirmation partitions. G56R-003 executes that corpus before
+  candidate screening when comparable evidence is unavailable; an evidence or
+  corpus change invalidates the selected reference and final manifest lock.
 - Create a primary-source fact table from current Codex plan/model availability,
   live client catalog/capability probes, model pages, pricing/limits, migration,
   prompt guidance, and Codex subagent pages.
@@ -275,12 +320,15 @@ Budget result: re-estimate at scaffold; synthetic traces precede live use
 - Define trace fields and canonical serialization for `support_manifest_id`,
   `installable_agent_policy_id`, `subscription_environment_id`, and
   `execution_trace_id`, plus `universal_core_policy_id`,
-  `optional_helper_policy_id`, and `release_policy_id`; G56R-001 and G56R-006
-  own the manifest and policy identities that populate those fields.
+  `optional_helper_policy_id`, the bound row's
+  `helper_installation_state_id`, and `release_policy_id`; G56R-001 and
+  G56R-006 own the manifest and policy identities that populate those fields.
 - Serialize named-category resolution, the exactly-one canonical-row lock, and
-  each row's production/reference comparator identity, delivery evidence, and
-  claim boundary. G56R-001 owns the frozen values; G56R-003 owns live
-  enforcement and population.
+  the complete population snapshot/fallback contract, plus each row's
+  production/reference comparator selection rule, qualification evidence,
+  identity, delivery evidence, and claim boundary. G56R-001 owns the frozen
+  rules; G56R-003 owns reference qualification, live enforcement, and
+  population.
 - Define raw parent/child trace events, requested/returned model/effort, speed,
   tokens/context/tools/compaction/retry/validation/abandonment, null behavior,
   and synthetic replay fixtures.
@@ -301,7 +349,8 @@ Budget result: re-estimate at scaffold; synthetic traces precede live use
 
 **Out of Scope:**
 
-- Corpus execution, statistical qualification, policy comparison, budgets, and
+- Corpus execution, statistical qualification, policy-control definition,
+  budgets, and
   route selection.
 
 **Key Files:**
@@ -327,9 +376,11 @@ fixture/scorer governance, and seven-role corpus expansion
 
 **Scope:**
 
-- Add disjoint screening, selection, per-cohort lock, and integrated release-
-  confirmation corpora. G56R-003 owns only the first three; it reserves the last
-  untouched for G56R-011. Apply randomized paired order, cache isolation,
+- Add disjoint reference-qualification, screening, selection, per-cohort lock,
+  and integrated release-confirmation corpora. G56R-003 owns only the first four;
+  it reserves the last untouched for G56R-011. Reference qualification runs
+  before candidate screening only when comparable frozen evidence is unavailable
+  and its objectives cannot be reused by candidates. Apply randomized paired order, cache isolation,
   unique-task sample sizing, blinded scoring, audits, inter-rater agreement, and
   multiplicity gatekeeping.
 - Execute the installed custom-agent TOML or a generated semantically equivalent
@@ -342,8 +393,10 @@ fixture/scorer governance, and seven-role corpus expansion
 - Implement `R_i` canonical units through acceptance/terminal stop and `A_i`
   acceptance per assigned objective after successful assignment. Candidate
   incompatibility is a hard row-qualification failure; rerun only preclassified
-  independent harness/infrastructure misdelivery. Use task-level paired
-  inference and frozen weights.
+  independent harness/infrastructure misdelivery. During universal-core work,
+  Spark is `not_installed` in both arms; a candidate attempt to resolve, spawn,
+  or invoke it sets `A_i = 0`, retains measurable core `R_i`, and cannot be
+  rerun into eligibility. Use task-level paired inference and frozen weights.
 - Implement the one-sided bound, accepted-workflow non-inferiority, and a fully
   specified simultaneous guardrail registry. Cohort locks apply component gates;
   G56R-011 alone executes the final below-`-delta` release decision.
@@ -359,20 +412,25 @@ fixture/scorer governance, and seven-role corpus expansion
 - Apply the cross-plan decision rule: enforce the pre-outcome canonical-row
   lock, production superiority only there, assigned-comparator non-inferiority
   on every other manifest row, no pooled native accounting, and per-row
-  opportunity-cost reporting. Freeze each row's candidate set, environment,
-  production delivery state, comparator identity/claim boundary, and one
-  selected challenger before integrated release confirmation. If production is
-  not deliverable outside the canonical row, use only the predeclared content-
-  addressed row reference; if neither comparator is deliverable, the row blocks
-  release. A canonical-row or comparator change invalidates affected evidence;
-  use the primary task-level estimator and confidence method for the descriptive
-  universal-versus-row-specific contrast. Plan-only models never enter the
-  universal candidate set.
+  component-wise challenger opportunity-cost reporting. Freeze each row's
+  candidate set, environment, production delivery state, comparator identity/
+  claim boundary, and one selected challenger before integrated release
+  confirmation. If production is not deliverable outside the canonical row,
+  enforce the predeclared row-reference rule: consider only exact-treatment-
+  deliverable minimum-change projections of production, require every absolute
+  quality and contract floor, and rank by changed agents, changed fields, frozen
+  precedence, then lexical policy ID. Candidate outcomes cannot influence the
+  reference. Bind the content-addressed qualification evidence before candidate
+  screening. If no projection passes, the row blocks release. A population-
+  snapshot, canonical-row, reference-rule, or comparator change invalidates
+  affected evidence; use the primary task-level estimator and confidence method
+  for the descriptive universal-versus-row-specific contrast. Plan-only models
+  never enter the universal candidate set.
 - Pin the immutable canonical production policy, every non-canonical assigned
   comparator, and the total campaign budget, racing method, futility/dominance
   thresholds, and maximum cohort-lock and release candidates.
 
-**Out of Scope:** unpinned/adaptive policy comparison, runtime budgets, and
+**Out of Scope:** policy-control definition, runtime budgets, and
 installation defaults.
 
 **Key Files:**
@@ -385,12 +443,12 @@ installation defaults.
 
 ---
 
-### G56R-004: Static, Unpinned, and Adaptive Policy Comparison
+### G56R-004: Policy Control Definition and Dominance Contract
 
 **Priority:** P1 | **Depends On:** G56R-003 | **Enables:** G56R-005
 
-**Goal:** Compare complete routing policies without misattributing policy-level
-effects to one agent.
+**Goal:** Define, exact-treatment validate, and freeze policy-level controls and
+their dominance rule before the final static core exists.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
 Projected reviewable LOC: 235 | Suggested slices: 1 | Status: ok |
@@ -399,13 +457,22 @@ Budget result: bounded to policy orchestration and replay fixtures
 
 **Scope:**
 
-- Compare static pins, unpinned Codex selection, adaptive routes, and Ultra on
-  the same policy-level scorecard; Ultra includes all spawned child work.
-- Log routing decisions and escalation/de-escalation signals. Keep these results
-  policy-level; never use them as causal evidence for one agent route.
-- Apply the static dominance consequence: if a control materially dominates but
-  is not shipped, messaging may claim improvement only over the old static
-  baseline, not best measured efficiency.
+- Define, exact-treatment validate, content-address, and freeze the unpinned,
+  adaptive, and Ultra controls; Ultra includes all automatically spawned work.
+- Freeze every control parameter and adaptive signal/threshold/escalation path,
+  plus quality eligibility, dominance metrics and margins, confidence method,
+  multiplicity position, and integrated-confirmation arm assignment. Validate
+  control execution and telemetry with smoke and replay fixtures.
+- Define material dominance to require every mandatory safety, quality,
+  reliability, availability, and support-row gate; frozen quality, reliability,
+  duration, and guardrail non-inferiority margins; and the predeclared canonical-
+  resource superiority margin.
+- Keep every result policy-level and never use it as causal evidence for one
+  agent route. G56R-004 does not compare with or conclude whether the future
+  `universal_core_policy_id` is dominated; G56R-011 owns that comparison.
+- Freeze the messaging consequence: a materially dominated static release may
+  ship for declared operational simplicity but cannot claim efficient, optimal,
+  or best measured routing.
 
 ---
 
@@ -460,10 +527,13 @@ Budget result: re-estimate at scaffold; within one installer-policy slice by con
   installer.
 - Define `universal_core_policy_id` as the versioned ordered mapping from nine
   core roles to plugin-owned `installable_agent_policy_id` values plus the
-  plugin-owned orchestration/retry hash. Define `optional_helper_policy_id` from
-  the helper policy, allowed rows, `installed_enabled` or `not_installed` state,
-  invocation rule, and no-helper contract; bind both into `release_policy_id` with the required
-  environment-contract hash.
+  plugin-owned orchestration/retry hash. Define `optional_helper_policy_id` as a
+  hash of the helper definition plus the complete ordered `plan_key ->
+  helper_installation_state_id` mapping. Each row-specific state ID hashes only
+  `installed_enabled` or `not_installed`, the resolved helper policy or null,
+  invocation rule, no-helper contract, and capability evidence. Bind both
+  aggregates into `release_policy_id` with the required environment-contract
+  hash.
 - Install and verify each plugin-owned `installable_agent_policy_id` plus the
   three aggregate IDs. Standard speed remains an environment-contract
   prerequisite verified by treatment traces; the installer neither claims nor
@@ -483,9 +553,13 @@ Budget result: re-estimate at scaffold; within one installer-policy slice by con
   a non-Spark row leaves the optional TOML out of the discoverable destination
   and requires the no-helper path instead.
 - Reconcile the active install skill's expected set with all ten source agents,
-  including `uat-runbook-author.toml`, preserve unrelated user agents, install
-  exactly nine required destination TOMLs, install the conditional tenth only
-  on proven Spark rows, verify destination content, and require restart.
+  including `uat-runbook-author.toml`. The plugin-managed destination set
+  contains exactly nine required core TOMLs plus the conditional helper only on
+  proven Spark rows. Exclude unrelated user-owned files from that count and
+  preserve them byte-for-byte. Any reinstall whose bound
+  `helper_installation_state_id` is `not_installed` atomically removes a stale
+  plugin-managed Spark TOML and registry entry, proves the no-helper path,
+  verifies destination content, and requires restart.
 - INVEST/vertical-slice rationale: a consumer can install any later cohort's
   role-pinned TOMLs end-to-end without another installer redesign.
 
@@ -534,7 +608,7 @@ Budget result: re-estimate at scaffold; three disjoint TOMLs plus role evidence
 - Keep prompts frozen in A1/A2/A3; vary candidate prompt/context only for the A3
   shortlist in Stage B; freeze the joint policy in its Stage C cohort lock
   without consuming integrated release-confirmation data.
-- Prove default install, explicit override, unavailable-helper behavior, and
+- Prove default install, explicit override, model-availability handling, and
   rollback for this cohort without touching the other cohorts.
 - INVEST/vertical-slice rationale: the three highest-risk mutating roles share
   one quality-first evaluation seam and become installable with complete
@@ -662,9 +736,11 @@ Budget result: re-estimate at scaffold; single-agent vertical slice
 - Retain Spark only on support-manifest rows where availability is proven.
   Explore Luna, GPT-5.4 Mini, GPT-5.4, Terra, and other candidates on a separate
   helper scorecard until Spark has a comparable resource measure.
-- Create and reconcile `optional_helper_policy_id`, including allowed rows,
-  `installed_enabled` or `not_installed` state, invocation rule, and no-helper
-  contract. On a non-Spark row, retain the helper in source and payload but do
+- Create and reconcile `optional_helper_policy_id` as the helper-definition hash
+  plus the complete ordered `plan_key -> helper_installation_state_id` mapping.
+  Each row state records `installed_enabled` or `not_installed`, the resolved
+  helper policy or null, invocation rule, no-helper contract, and capability
+  evidence. On a non-Spark row, retain the helper in source and payload but do
   not copy it into the discoverable destination or installed registry; Spark
   unavailability is not a core-install failure.
 - Hard-gate read-only/advisory scope, concise return format, and prohibition on
@@ -674,9 +750,15 @@ Budget result: re-estimate at scaffold; single-agent vertical slice
 - Measure functionality, latency, spawn reliability, fallback, and observed
   Spark quota separately. Preserve autopilot continuation when the helper is
   not installed, unavailable, quota-limited, not invoked, or cannot spawn.
-- Prove the no-helper path on every non-Spark support row. Spark is not installed
-  or not invoked for universal-core confirmation and never enters its primary
-  statistic.
+- Prove the no-helper path on every support row. For every qualification or
+  cohort lock for the nine-agent core and in every primary and secondary arm of
+  integrated confirmation, Spark is `not_installed`, including on Pro rows, and
+  never enters the core statistic. An
+  attempted resolution, spawn, or invocation after assignment is a candidate-
+  caused hard contract failure with `A_i = 0` and retained measurable core
+  `R_i`; it cannot be rerun into eligibility. Only independent harness
+  contamination permits invalidation and rerun. Install and test Spark solely in
+  the separate optional-helper campaign.
 - INVEST/vertical-slice rationale: one optional leaf helper can be evaluated,
   shipped, or rejected without changing any core executor.
 
@@ -699,7 +781,8 @@ Budget result: re-estimate at scaffold; single-agent vertical slice
 **Enables:** Release
 
 **Goal:** Publish one internally consistent Codex payload whose nine-agent
-universal core and optional helper are proven through separate release gates.
+universal core is confirmed against production, row comparators, and frozen
+policy controls, while the optional helper is proven through a separate gate.
 
 **Reviewability Budget:** Primary surface: docs/process |
 Projected reviewable LOC: 395 | Suggested slices: 1 | Status: ok |
@@ -713,11 +796,15 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
   regenerate integrity metadata; never hand-edit generated agent files.
 - Reconcile source, payload, install, benchmark, canary, rollback, and PR packet
   using `support_manifest_id`, `universal_core_policy_id`,
-  `optional_helper_policy_id`, `release_policy_id`, each
+  `optional_helper_policy_id`, every row's `helper_installation_state_id`,
+  `release_policy_id`, each
   `installable_agent_policy_id`, each tested `subscription_environment_id`, and
   linked `execution_trace_id` values. Source and payload retain ten definitions;
-  every destination has exactly nine core agents and only a proven Spark row has
-  the conditional tenth.
+  the plugin-managed destination set has exactly nine core agents plus the
+  conditional helper only on a proven Spark row. Unrelated user-owned files are
+  outside that count and remain byte-for-byte intact. Any reinstall whose bound
+  `helper_installation_state_id` is `not_installed` removes any stale plugin-
+  managed Spark TOML and registry entry.
 - Update active Codex install/autopilot/public docs with the evidence-backed
   universal-core/optional-helper policy, global override, restart, entitlement,
   progressive-claim, and rollback boundaries while preserving historical
@@ -744,20 +831,39 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
 - Evaluate the component-wise assembled installed nine-agent core exactly once
   on the untouched integrated release-confirmation corpus after cohort locks.
   Pair it with the immutable production core in the canonical row and each
-  non-canonical row's frozen assigned comparator elsewhere, with Spark not
-  installed or not invoked in both arms. This is the sole promotion decision.
+  non-canonical row's frozen assigned comparator elsewhere, with Spark
+  `not_installed` in every primary and secondary arm. A candidate attempt to
+  resolve, spawn, or invoke the absent helper is a hard contract failure with
+  `A_i = 0` and retained measurable core `R_i`, not a rerunnable invalid
+  observation. Only independently proven harness contamination permits
+  invalidation and rerun. This candidate-versus-assigned-comparator primary
+  family is the sole promotion decision; the secondary controls only gate
+  efficiency wording.
   It must pass canonical production superiority plus every other stratum's
   assigned-comparator non-inferiority, acceptance, safety/quality, guardrail,
   and manifest-row qualification without pooling regimes. Passing does not
   establish global optimality among alternative complete assemblies. Failure
   reopens selection and requires a new versioned release-confirmation corpus.
+- Run the controls frozen by G56R-004 as predeclared secondary arms on the same
+  untouched locked objectives in the canonical row and every mandatory row or
+  proven equivalence class under the frozen multiplicity strategy. Compare each
+  eligible control with the final `universal_core_policy_id`, not an earlier
+  static prototype. Control parameters cannot change after G56R-004, and a
+  control that misses any mandatory safety, quality, reliability, availability,
+  support-row, or non-inferiority gate cannot materially dominate. These arms do
+  not alter the frozen core or replace the candidate-versus-assigned-comparator
+  primary promotion family; they determine whether AC-9.4 permits the bounded
+  efficiency claim. A control hash, adaptive parameter, margin, confidence
+  method, multiplicity, or arm-assignment change invalidates the affected
+  control comparison and efficiency claim.
 - Separately gate Spark on supported Pro rows and the no-helper path everywhere
-  else. A Spark invocation invalidates a universal-core run.
+  else through the optional-helper campaign.
 - Pin the support manifest, named-category resolutions, canonical schedule,
-  canonical row/environment/rationale/candidate hash/lock timestamp, per-row
-  comparator identities and claim boundaries, minimum/tested Codex versions,
-  capability probes, environments, and rate regimes. Define affected-evidence
-  rerun triggers and production drift alerts.
+  complete population snapshot and fallback, canonical row/environment/
+  rationale/candidate hash/lock timestamp, per-row comparator-selection rules,
+  identities, and claim boundaries, minimum/tested Codex versions, capability
+  probes, environments, and rate regimes. Define affected-evidence rerun
+  triggers and production drift alerts.
 - Produce a public-readable PR packet with selected and rejected candidates,
   known gaps, review order, rollback, and release evidence.
 - INVEST/vertical-slice rationale: this final integration slice tests whether
@@ -802,9 +908,9 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
 | Change | Where | Detail |
 |---|---|---|
 | Research record | `docs/ai/research/` | Dated official facts, conflicts, candidate matrix, role contracts |
-| Support manifest | `docs/ai/research/` | Finite plan/accounting variants, named-category resolutions, one canonical row, per-row comparators, boundary contracts, evidence hashes, support states, and equivalence classes |
+| Support manifest | `docs/ai/research/` | Finite plan/accounting variants, named-category resolutions, population-snapshot/fallback contract, one canonical row, deterministic per-row comparators, boundary contracts, evidence hashes, support states, and equivalence classes |
 | Model-effort pair evaluation | Layer 6 Python Codex harness | Exact treatment, canonical score, per-plan qualification, disjoint corpora, task-level statistics, ten role contracts |
-| Installer policy | Python install helper and registry | Activate deferred copy helper; core/helper/release IDs; nine required destination agents plus conditional tenth helper; model-only atomic override |
+| Installer policy | Python install helper and registry | Activate deferred copy helper; core/row-aware-helper/release IDs; nine-agent plugin-managed destination set plus conditional helper; model-only atomic override |
 | Agent routes | `speckit-pro/codex-agents/*.toml` | Nine-agent universal core plus separately gated optional helper |
 | Generated payload | `dist/codex/` | Rebuild from source and refresh integrity evidence |
 | Consumer guidance | Codex install/autopilot/docs surfaces | Core/helper policy, fallback, restart, availability, rollback |

@@ -19,7 +19,8 @@ Navigation map for the evidence-first Codex model-routing roadmap.
 Why: Freeze the finite plan/workspace manifest, named-category resolutions,
 exactly one canonical row, per-row comparators, current harness truth, and the
 capability-probed universal candidate intersection before any route becomes a
-default.
+default. Population-snapshot provenance, a single canonical fallback, and
+minimum-change production projections make those choices deterministic.
 
 - [G56R-001 Research Baseline and Candidate Matrix](codex-chatgpt-agent-routing-technical-roadmap.md#g56r-001-research-baseline-and-candidate-matrix)
 
@@ -31,14 +32,15 @@ measurable from objective to terminal outcome.
 
 - [G56R-002 Authentication, Telemetry, Treatment, and Trace Schema](codex-chatgpt-agent-routing-technical-roadmap.md#g56r-002-authentication-telemetry-treatment-and-trace-schema)
 - [G56R-003 Corpus Runner, Acceptance Scoring, and Statistics](codex-chatgpt-agent-routing-technical-roadmap.md#g56r-003-corpus-runner-acceptance-scoring-and-statistics)
-- [G56R-004 Static, Unpinned, and Adaptive Policy Comparison](codex-chatgpt-agent-routing-technical-roadmap.md#g56r-004-static-unpinned-and-adaptive-policy-comparison)
+- [G56R-004 Policy Control Definition and Dominance Contract](codex-chatgpt-agent-routing-technical-roadmap.md#g56r-004-policy-control-definition-and-dominance-contract)
 - [G56R-005 Harness Budgets and Boundary Simulation](codex-chatgpt-agent-routing-technical-roadmap.md#g56r-005-harness-budgets-and-boundary-simulation)
 
 ### Installer Policy
 
-Why: Implement the deferred Python installer, install exactly nine core agents
-plus a conditional proven helper, preserve independently pinned policies, and
-keep one atomic model-only compatibility override.
+Why: Implement the deferred Python installer, keep exactly nine core agents in
+the plugin-managed destination set plus a conditional proven helper, preserve
+unrelated user-owned files, and keep one atomic model-only compatibility
+override.
 
 - [G56R-006 Subscription-aware Installer Defaults and Explicit Override](codex-chatgpt-agent-routing-technical-roadmap.md#g56r-006-subscription-aware-installer-defaults-and-explicit-override)
 
@@ -57,8 +59,10 @@ and rollback reviewable.
 
 Why: Regenerate one internally consistent payload and separately prove the
 component-wise assembled nine-agent core against its canonical production and
-per-row assigned comparators, the optional Spark helper, every frozen support
-row, and long-workflow boundary behavior before publishing release claims.
+per-row assigned comparators, compare that final static core with the controls
+frozen before cohort selection, and separately prove the optional Spark helper,
+every frozen support row, and long-workflow boundary behavior before publishing
+release claims.
 
 - [G56R-011 Payload, Documentation, UAT, and Release Proof](codex-chatgpt-agent-routing-technical-roadmap.md#g56r-011-payload-documentation-uat-and-release-proof)
 

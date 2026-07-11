@@ -101,6 +101,34 @@ REQUIRED_ROW_COMPARATOR_FIELDS = {
     "row_reference_policy_id",
     "target_population_weight",
 }
+REQUIRED_POPULATION_SNAPSHOT_FIELDS = {
+    "target_population_snapshot_id",
+    "snapshot_source",
+    "query_or_derivation_version",
+    "measurement_start",
+    "measurement_end",
+    "population_definition",
+    "inclusion_and_exclusion_rules",
+    "unknown_plan_handling",
+    "coverage_numerator",
+    "coverage_denominator",
+    "minimum_coverage_threshold",
+    "weight_normalization_rule",
+    "fallback_canonical_row_rule",
+    "snapshot_hash",
+}
+REQUIRED_ROW_REFERENCE_SELECTION_FIELDS = {
+    "row_reference_selection_rule_id",
+    "eligible_reference_policy_set",
+    "required_quality_and_contract_floors",
+    "relationship_to_production_policy",
+    "compatibility_projection_rules",
+    "selection_metric",
+    "selection_precedence",
+    "tie_break_rule",
+    "selection_evidence_hash",
+    "reference_qualification_evidence_id",
+}
 COMPONENT_SPEC_IDS = ("G56R-007", "G56R-008", "G56R-009")
 FORBIDDEN_HELPER_STATE_PATTERNS = (
     r"installed[-_ ]disabled",
@@ -460,6 +488,25 @@ class ValidateCodexRoutingDocs(unittest.TestCase):
                 self.assertIn("candidate", section.casefold())
                 self.assertIn("deliver", section.casefold())
 
+        with self.subTest(msg="canonical weights have a complete frozen population snapshot and one fallback"):
+            manifest_sections = (
+                acceptance_criterion_section(prd_text, "AC-1.6"),
+                roadmap_section(roadmap_text, "G56R-001"),
+            )
+            for section in manifest_sections:
+                fields = inline_code_fields(section)
+                self.assertTrue(REQUIRED_POPULATION_SNAPSHOT_FIELDS.issubset(fields))
+                self.assertIn("exactly one `target_population_snapshot` object", section.casefold())
+                self.assertIn("shared `target_population_snapshot_id`", section.casefold())
+                self.assertIn("exactly one predeclared `fallback_canonical_row_rule`", section.casefold())
+                self.assertIsNotNone(re.search(r"use\s+`plus`", section, flags=re.IGNORECASE))
+                self.assertIn("90 complete utc days", section.casefold())
+                self.assertIn("0.95", section)
+                self.assertIsNotNone(
+                    re.search(r"alternate\s+fallbacks\s+are\s+prohibited", section, flags=re.IGNORECASE)
+                )
+                self.assertIn("invalidates", section.casefold())
+
         with self.subTest(msg="every support row declares baseline or row-reference comparator behavior"):
             manifest_sections = (
                 acceptance_criterion_section(prd_text, "AC-1.6"),
@@ -478,6 +525,36 @@ class ValidateCodexRoutingDocs(unittest.TestCase):
                 )
             )
 
+        with self.subTest(msg="row-reference selection is deterministic and production-derived"):
+            reference_sections = (
+                acceptance_criterion_section(prd_text, "AC-2.13"),
+                roadmap_section(roadmap_text, "G56R-001"),
+            )
+            for section in reference_sections:
+                fields = inline_code_fields(section)
+                self.assertTrue(REQUIRED_ROW_REFERENCE_SELECTION_FIELDS.issubset(fields))
+                self.assertIsNotNone(
+                    re.search(
+                        r"exact-treatment-deliverable\s+(?:compatibility\s+)?projections?\s+of\s+(?:the\s+)?immutable\s+production\s+core",
+                        section,
+                        flags=re.IGNORECASE,
+                    )
+                )
+                self.assertIn("changed-agent count", section.casefold())
+                self.assertIn("changed-field count", section.casefold())
+                self.assertIsNotNone(
+                    re.search(r"candidate\s+outcomes?.{0,80}cannot\s+(?:affect|influence)", section, flags=re.IGNORECASE | re.DOTALL)
+                )
+                self.assertIsNotNone(
+                    re.search(r"absolute.{0,40}floors?", section, flags=re.IGNORECASE | re.DOTALL)
+                )
+                self.assertIsNotNone(
+                    re.search(r"(?:changing|change).{0,120}invalidates", section, flags=re.IGNORECASE | re.DOTALL)
+                )
+                self.assertIn("reference_qualification_evidence_id", section)
+                self.assertIn("reference-qualification corpus", section.casefold())
+                self.assertIn("disjoint", section.casefold())
+
         with self.subTest(msg="optional helper uses only installed_enabled or not_installed states"):
             combined = "\n".join((prd_text, roadmap_text, read_text(MOC)))
             forbidden = [pattern for pattern in FORBIDDEN_HELPER_STATE_PATTERNS if re.search(pattern, combined, flags=re.IGNORECASE)]
@@ -485,13 +562,87 @@ class ValidateCodexRoutingDocs(unittest.TestCase):
             self.assertIn("`installed_enabled`", combined)
             self.assertIn("`not_installed`", combined)
 
+        with self.subTest(msg="Spark attempts are hard core-policy failures not invalidated observations"):
+            core_sections = (
+                acceptance_criterion_section(prd_text, "AC-2.18"),
+                acceptance_criterion_section(prd_text, "AC-8.9"),
+                roadmap_section(roadmap_text, "G56R-010"),
+                roadmap_section(roadmap_text, "G56R-011"),
+            )
+            for section in core_sections:
+                self.assertIn("`not_installed`", section)
+                self.assertIsNotNone(
+                    re.search(
+                        r"every\s+primary\s+and\s+secondary\s+arm",
+                        section,
+                        flags=re.IGNORECASE,
+                    )
+                )
+            failure_contract = "\n".join(
+                (
+                    acceptance_criterion_section(prd_text, "AC-2.18"),
+                    acceptance_criterion_section(prd_text, "AC-8.9"),
+                    roadmap_section(roadmap_text, "G56R-010"),
+                    roadmap_section(roadmap_text, "G56R-011"),
+                )
+            )
+            self.assertIn("candidate-caused", failure_contract.casefold())
+            self.assertIn("`A_i = 0`", failure_contract)
+            self.assertIn("hard contract failure", failure_contract.casefold())
+            self.assertIn("cannot be rerun", failure_contract.casefold())
+            stale = re.search(
+                r"(?:spark|any) invocation invalidates",
+                "\n".join((prd_text, roadmap_text)),
+                flags=re.IGNORECASE,
+            )
+            self.assertIsNone(stale)
+
+        with self.subTest(msg="optional helper identity hashes a row-aware installation-state mapping"):
+            identity_sections = (
+                acceptance_criterion_section(prd_text, "AC-3.1"),
+                roadmap_section(roadmap_text, "G56R-006"),
+                roadmap_section(roadmap_text, "G56R-010"),
+            )
+            for section in identity_sections:
+                self.assertIn("optional_helper_policy_id", section)
+                self.assertIn("helper_installation_state_id", section)
+                self.assertIsNotNone(
+                    re.search(r"plan_key\s*->\s*helper_installation_state_id", section)
+                )
+                self.assertIn("`installed_enabled`", section)
+                self.assertIn("`not_installed`", section)
+
         with self.subTest(msg="documents distinguish ten source agents from nine required destination agents"):
             self.assertEqual(len(EXPECTED_SOURCE_AGENTS), 10)
             self.assertEqual(len(EXPECTED_CORE_AGENTS), 9)
             self.assertIn("Source and generated payload inventory contain all ten agent TOMLs", prd_text)
-            self.assertIn("destination contains exactly the nine required core TOMLs", prd_text)
-            self.assertIn("exactly nine required destination TOMLs", roadmap_text)
-            self.assertIn("conditional tenth", roadmap_text)
+            self.assertIn("plugin-managed destination set", prd_text)
+            self.assertIn("exactly nine required core TOMLs", prd_text)
+            self.assertIn("plugin-managed destination set", roadmap_text)
+            self.assertIn("conditional helper", roadmap_text)
+
+        with self.subTest(msg="destination counts only plugin-managed agents and removes stale Spark"):
+            destination_sections = (
+                acceptance_criterion_section(prd_text, "AC-3.4"),
+                roadmap_section(roadmap_text, "G56R-006"),
+                roadmap_section(roadmap_text, "G56R-011"),
+            )
+            for section in destination_sections:
+                folded = section.casefold()
+                self.assertIn("plugin-managed destination set", folded)
+                self.assertIn("nine", folded)
+                self.assertIn("user-owned", folded)
+                self.assertIn("byte-for-byte", folded)
+                self.assertIn("stale", folded)
+                self.assertIn("spark", folded)
+            combined = "\n".join((prd_text, roadmap_text))
+            self.assertIsNone(
+                re.search(
+                    r"\b(?:a|every) destination (?:contains|has) exactly\s+(?:the\s+)?nine\b",
+                    combined,
+                    flags=re.IGNORECASE,
+                )
+            )
 
         with self.subTest(msg="component stages qualify or lock while only integrated release proof promotes"):
             component_text = "\n".join(
@@ -508,7 +659,33 @@ class ValidateCodexRoutingDocs(unittest.TestCase):
             roadmap_without_release = roadmap_text.replace(roadmap_section(roadmap_text, "G56R-011"), "")
             self.assertIsNone(re.search(r"\bpromot\w*", prd_without_gate, flags=re.IGNORECASE))
             self.assertIsNone(re.search(r"\bpromot\w*", roadmap_without_release, flags=re.IGNORECASE))
-            self.assertIn("sole promotion decision", acceptance_criterion_section(prd_text, "AC-8.9"))
+            self.assertIsNotNone(
+                re.search(
+                    r"sole\s+promotion\s+decision",
+                    acceptance_criterion_section(prd_text, "AC-8.9"),
+                )
+            )
+
+        with self.subTest(msg="G56R-004 freezes controls and G56R-011 compares the final core"):
+            control_contract = roadmap_section(roadmap_text, "G56R-004")
+            release_contract = "\n".join(
+                (
+                    acceptance_criterion_section(prd_text, "AC-8.9"),
+                    roadmap_section(roadmap_text, "G56R-011"),
+                )
+            )
+            folded_control = control_contract.casefold()
+            self.assertIn("content-address", folded_control)
+            self.assertIn("freeze every control parameter", folded_control)
+            self.assertIn("dominance metrics and margins", folded_control)
+            self.assertIn("quality eligibility", folded_control)
+            self.assertIn("does not compare", folded_control)
+            folded_release = release_contract.casefold()
+            self.assertIn("final `universal_core_policy_id`", folded_release)
+            self.assertIn("secondary arms", folded_release)
+            self.assertIn("untouched", folded_release)
+            self.assertIn("multiplicity", folded_release)
+            self.assertIn("cannot change after g56r-004", folded_release)
 
         with self.subTest(msg="whole-core objective claims improvement not global assembled-policy optimality"):
             problem = prd_text.split("## 2. Goals & Non-goals", 1)[0]
