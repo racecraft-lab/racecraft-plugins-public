@@ -32,7 +32,7 @@ The authoritative catalog of every DOC spec (DOC-001 through DOC-021), the depen
 - Marketplace JSON validity and source-path checks using existing repo validation where possible.
 - Plugin manifest consistency checks across source, `dist/claude`, `dist/codex`, and both marketplace files.
 - Generated payload consistency checks with `python3 scripts/build-plugin-payloads.py` when source/plugin docs change.
-- Existing shell suite: `bash tests/speckit-pro/run-all.sh` for plugin-impacting changes; layer-specific runs for narrow edits.
+- Existing deterministic suite: `python3 tests/speckit-pro/run-all.py` for plugin-impacting changes; layer-specific runs for narrow edits.
 - Accessibility checks for keyboard focus, labels, contrast, static fallback, and no JS-required critical path.
 - Responsive viewport checks after static site exists.
 - Manual smoke test for Claude Code install path.
