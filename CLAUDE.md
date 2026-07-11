@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 <!-- SPECKIT START -->
-Active SpecKit plan: **XPLAT-010 — Repository Bash Confinement and CI Dispatch Guard** (`specs/xplat-010-repository-bash-confinement/plan.md`). Confines repository-local Bash to `.github/workflows/` dispatch glue only: ports the test harness (~101 `.sh`), `scripts/**`, `.claude/hooks/**`, and the Layers 2/3/6 eval runners to Python 3.11+ stdlib; makes `tests/speckit-pro/suite-manifest.json` the single per-layer source of truth that `run-all.py` and the shipped suite gate read; adds a bash-scoped repository-confinement guard (live `git ls-files -z`, fail-closed 10-file `.specify/**` allowlist) to `active_path_guard.py`, composed into CI and release readiness; adds container/runner preflight CI; adds a stdlib release-notes composer + `validate-release-note` check; and restores the `estimate-spec-size` runner op. Delivered as a dependency-ordered 15-PR stack (13 numbered slices, with slices 3 and 7 split into a/b; operator-ratified typed-split transition exception). Python 3.11+ stdlib only; shipped-runner byte changes (PRs 2/7b/8/9/10/13) carry the payload/proof regeneration ritual.
+No active SpecKit implementation plan is selected. XPLAT-010 merged through PRs #311-#328 and is archived in `.specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md`. Repository validation is Python 3.11+ and manifest-driven; Bash is confined to bounded GitHub workflow dispatch glue and the fixed release-excluded vendored `.specify/**` allowlist. T108/T117 hosted evidence is complete. Public native Windows/macOS/Linux claims remain blocked by the preserved XPLAT-008 operator UAT matrix.
 <!-- SPECKIT END -->
 
 ## Working in This Repo
@@ -18,7 +18,7 @@ Four rules, in priority order. These exist because plugin/marketplace edits have
 ### 2. Simplest change that solves it
 - No new abstractions for one-call-site code. No new test layers, scripts, or helpers unless a second use exists or is explicitly asked for.
 - No flags/options "for future flexibility" — add them when a second caller actually appears.
-- For XPLAT-007 repo-local gates, prefer `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < <request.json>` over new shell or `jq` logic. Retained shell scripts are inactive parity evidence until XPLAT-008 cutover work.
+- For repo-local gates, prefer `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < <request.json>` over new shell or `jq` logic. Do not add active repository Bash outside the bounded workflow-dispatch and fixed vendored `.specify/**` boundaries.
 
 ### 3. Surgical edits
 - Touch only what the request requires. Don't reformat adjacent JSON, reorder keys in `plugin.json` / `marketplace.json`, or "clean up" comments you didn't author.
@@ -86,8 +86,8 @@ Skills live under `skills/<skill-name>/` with a `SKILL.md` entry point. Supporti
 
 ## Running Tests
 
-The repo-local XPLAT-007 gate entrypoints use the Python 3.11+ standard-library
-runner. Run from the repository root:
+The repo-local gate entrypoints use the Python 3.11+ standard-library runner.
+Run from the repository root:
 
 ```bash
 # Default deterministic suite gate
@@ -108,10 +108,9 @@ PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fi
 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json
 ```
 
-Legacy shell scripts under `tests/speckit-pro/`, `scripts/`, and plugin skill
-script directories remain checked in as inactive parity or XPLAT-008 handoff
-evidence. Do not present them as the active repo-local release gates for
-XPLAT-007.
+Historical Bash behavior is preserved as data-only baselines and git history,
+not executable repository tooling. Tracked `.sh` files are limited to the fixed
+vendored `.specify/**` allowlist and are excluded from release readiness.
 
 ### Test Layers
 | Layer | What it tests | Cost |
@@ -166,9 +165,9 @@ The SessionStart hook warns if `specify` is not found.
 
 ## Tooling
 
-- **Runtime:** Python 3.11+ standard-library runner for XPLAT-007 repo-local gates; retained Bash/`jq` paths are inactive parity evidence until XPLAT-008
+- **Runtime:** Python 3.11+ standard-library runner and manifest-driven repository test tooling; no active Bash or `jq` runtime dependency
 - **Release automation:** `googleapis/release-please-action@v5`
-- **CI:** GitHub Actions (`actions/checkout@v4`, inline Bash)
+- **CI:** GitHub Actions with bounded shell dispatch that invokes Python gates
 - **PR / repo ops:** GitHub CLI (`gh`) v2+
 
 For per-feature history, see `git log` and `CHANGELOG.md` — don't maintain a duplicate list here.
@@ -213,7 +212,7 @@ If a PR ever lands on `main` with a non-public-readable title (squash merges use
 
 ## CI/CD Workflow
 
-The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-draft PR and can also be dispatched by release automation for release-please PR branches created with `GITHUB_TOKEN`. It contains seven jobs:
+The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-draft PR and can also be dispatched by release automation for release-please PR branches created with `GITHUB_TOKEN`. It contains eight jobs:
 
 | Job | Description |
 |-----|-------------|
@@ -221,19 +220,20 @@ The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-dra
 | `test (<plugin>)` | Dispatches the Python runner toolchain and default-suite gates for each plugin in the matrix. |
 | `validate-plugins` | Sentinel/aggregator job. Always runs. Passes when the plugin test matrix passed or was skipped; fails when it failed or was cancelled. Provides the stable check name that branch protection requires. |
 | `validate-pr-title` | Validates the PR title against the Conventional Commits pattern. |
+| `validate-release-note` | Requires a valid consumer release-note block for releasable feat/fix PRs unless `release-note/skip` applies. |
 | `validate-workflows` | Installs pinned actionlint and validates every GitHub Actions workflow. |
 | `validate-docs` | Detects docs-site, generated-reference, release metadata, and docs-validation contract changes. Runs full docs validation for rendered docs or docs-contract changes, and reference plus quality validation for generated-reference changes. |
 | `artifact-consistency` | Regenerates release artifacts and fails when the checked-in payload, registry, fixture, or evidence mirrors drift from source. |
 
 **Why a sentinel job?** The `test` matrix job name is dynamic (`test (speckit-pro)`, `test (other-plugin)`, etc.) and cannot be registered as a stable required check name. The `validate-plugins` sentinel aggregates matrix results into one stable name that branch protection can require.
 
-**Docs-only PRs:** During XPLAT-007, `detect` emits `["speckit-pro"]` for every non-draft PR, so docs-only PRs still run the Python-dispatched plugin gate suite. If the changed documentation is part of the docs-site, generated-reference, or docs-validation contract surfaces, `validate-docs` also runs the matching docs validation mode.
+**Docs-only PRs:** `detect` emits `["speckit-pro"]` for every non-draft PR, so docs-only PRs still run the Python-dispatched plugin gate suite. If the changed documentation is part of the docs-site, generated-reference, or docs-validation contract surfaces, `validate-docs` also runs the matching docs validation mode.
 
 **Release-please PRs:** GitHub suppresses normal `pull_request` workflow runs for PRs created or updated by `GITHUB_TOKEN`, so the Release workflow dispatches `PR Checks` manually after it syncs generated `dist/**` payloads onto the release PR branch. Those dispatched (`workflow_dispatch`) check runs are visible on the PR but live in a check suite that is **not associated with the PR**, so branch protection does not count them — which is why a `GITHUB_TOKEN`-authored release PR shows `BLOCKED` even with everything green. When the optional `RELEASE_PLEASE_TOKEN` secret is configured (see **Release Process → Release token**), the release PR is authored by that identity instead, its `pull_request` checks run un-gated and satisfy branch protection directly, and the manual dispatch becomes a fallback. Without the secret the workflow falls back to `GITHUB_TOKEN` and behaves as before.
 
 **Container preflight:** `.github/workflows/container-preflight.yml` starts on every PR and manual dispatch so required contexts are never stranded by workflow-level path filters. A lightweight Ubuntu job limits heavy execution to runner, gate, and workflow changes. The stable `container-preflight-linux-amd64` and `container-preflight-linux-arm64` sentinels report success for intentional no-op runs and fail when their matching heavy container job fails. The official GitHub-hosted runners reference lists `windows-2025` as stable and the ARM64 row containing `windows-11-arm` as Public Preview. Windows smoke remains advisory: x64 defaults enabled, ARM64 defaults disabled, and `XPLAT_WINDOWS_X64_ENABLED` / `XPLAT_WINDOWS_ARM64_ENABLED` or manual inputs provide explicit overrides. Uploaded evidence is diagnostic preflight data, not native installed-plugin UAT.
 
-**Maintenance warning:** If a required job in `pr-checks.yml` or `container-preflight.yml` is renamed, the corresponding required status check name in branch protection MUST be updated manually — GitHub does NOT automatically track job renames. The live rule currently requires `validate-plugins` and `validate-pr-title`; add `container-preflight-linux-amd64` and `container-preflight-linux-arm64` after both report on PR 11.
+**Maintenance warning:** If a required job in `pr-checks.yml` or `container-preflight.yml` is renamed, the corresponding required status check name in branch protection MUST be updated manually — GitHub does NOT automatically track job renames. The live non-strict rule requires exactly `validate-plugins`, `validate-pr-title`, `validate-release-note`, `container-preflight-linux-amd64`, and `container-preflight-linux-arm64` from GitHub Actions.
 
 To detect drift, run:
 ```bash

@@ -2,15 +2,18 @@
 
 ## Outcome
 
-XPLAT-010 produced an 18-PR linear stack, #311 through #328. The generated
-packet/body/validation triplets cover every adjacent branch boundary and all 18
-validations report `passed`. Its frozen implementation head is
+XPLAT-010 produced and merged an 18-PR no-gap stack, #311 through #328. The
+generated packet/body/validation triplets cover every adjacent review boundary
+and all 18 validations report `passed`. Its frozen implementation head is
 `a7b2d27b12fdc5051dfa4829c94f92752e2f5146`, with tree
-`a1c42735d35619bbd0a4a90a42c57ab9e578848e`. The final neutral-PATH deterministic
-suite passed 2512/2512 checks (Layer 1 1373, Layer 4 953, Layer 5 186). The
-stack remains open; this retrospective does not claim merge, release
-publication, branch-protection configuration, or completion of hosted-only
-acceptance.
+`a1c42735d35619bbd0a4a90a42c57ab9e578848e`; final `main` merge commit
+`ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29` has tree
+`0d5a46bfa28efbca13d7f49539369705bd58d76f`, byte-identical to the verified
+published stack tip. The final neutral-PATH deterministic suite passed 2512/2512 checks
+(Layer 1 1373, Layer 4 953, Layer 5 186). All 18 review branches were deleted.
+T108 hosted preflight evidence and T117 branch-protection configuration are
+complete. Release publication and XPLAT-008 native operator UAT remain separate
+boundaries.
 
 ## What Worked
 
@@ -27,7 +30,9 @@ acceptance.
   Windows dispatches to the Python module, which iterates privacy-safe fixtures.
   The completed local helper evidence is 33/33, and the final source-head
   Windows x64 advisory jobs passed. Windows ARM64 remained deliberately disabled;
-  neither result substitutes for the post-merge evidence still required by T108.
+  hosted follow-up then proved ARM64 available-but-disabled/no-queue behavior
+  and advisory Windows failure handling. None of this preflight evidence
+  substitutes for XPLAT-008 native installed-plugin UAT.
 
 ## What Needed Correction
 
@@ -59,15 +64,27 @@ acceptance.
   retrospective as a publication tail. Schema-v2 PR rows explicitly describe
   open-PR SHAs as evidence snapshots, so later metadata commits do not pretend to
   be a fixed point or rewrite the implementation boundaries.
+- Squash-merging #311-#313 discarded stack ancestry and made each next
+  dependent PR conflict. Exact restacks repaired those heads. A temporary,
+  operator-approved merge-commit window for #314-#328 then preserved each
+  reviewed head as the exact second parent; the repository's normal squash-only
+  policy was restored after the stack merged.
 
 ## Follow-Up Boundaries
 
-- `T108` remains open until hosted evidence covers all declared PR triggers,
-  relevant and docs-only paths, Linux failure propagation and sentinels, Windows
-  advisory behavior, ARM64-disabled evidence, artifact uploads, and post-merge
-  `workflow_dispatch` after the workflow exists on `main`.
-- `T117` remains open because branch protection does not yet require
-  `validate-release-note`. The #326 packet/body already contains the required
-  callout; a repository administrator must still configure that exact required
-  check and record the resulting rule state. The callout is not configuration
-  evidence.
+- `T108` is complete. Manual `main` run `29161090549` succeeded at
+  `ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29` with all eight artifacts, both
+  Linux heavy jobs and sentinels passing, Windows x64 passing, and Windows ARM64
+  available but disabled and not queued. Relevant run `29159969108`, docs-only
+  run `29161055742`, and intentional failure run `29159559914` prove heavy,
+  no-op sentinel, and failure-propagation behavior. PR #331 canaries prove
+  `opened`, `synchronize`, `ready_for_review`, and `reopened` triggers.
+- `T117` is complete. Non-strict `main` protection requires exactly five GitHub
+  Actions checks: `validate-plugins`, `validate-pr-title`,
+  `validate-release-note`, `container-preflight-linux-amd64`, and
+  `container-preflight-linux-arm64`.
+- The separate constitution amendment completed through PR #331 at
+  `b537e3b43ca20d8f6e8b6e9430d797444462f2e9` before archive cleanup. The index-tooling
+  defect is repaired in a separate isolated branch before archive.
+- The first real release Highlights rewrite remains release-publication
+  evidence, and public native-platform claims remain blocked by XPLAT-008 UAT.
