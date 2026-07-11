@@ -3,7 +3,7 @@
   "feature_id": "XPLAT-010",
   "task": "T131",
   "status": "passed",
-  "contract": "specs/xplat-010-repository-bash-confinement/contracts/count-parity-baseline.contract.md",
+  "contract": "tests/speckit-pro/parity/bash-to-python/count-parity-baseline.contract.md",
   "provenance": {
     "historical_template_commit": "349c9f2ba1a667cd88621f5e0f862d5212411ee6",
     "verified_tree_head": "a7b2d27b12fdc5051dfa4829c94f92752e2f5146",
@@ -11,7 +11,7 @@
     "suite_manifest": "tests/speckit-pro/suite-manifest.json",
     "baseline_directory": "tests/speckit-pro/parity/bash-to-python",
     "count_ledger": "docs/ai/specs/.process/XPLAT-010-count-ledger.md",
-    "tasks": "specs/xplat-010-repository-bash-confinement/tasks.md",
+    "tasks": "tests/speckit-pro/unit/fixtures/plan-layers/repository-bash-confinement-plan/tasks.md",
     "evidence_scope": "Historical Git is used only for frozen at-port counts and classifications. Every live path, baseline TOTAL, purpose-based name, and current test result is reconciled to the verified tree head."
   },
   "clean_port_rows": [

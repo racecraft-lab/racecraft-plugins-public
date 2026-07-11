@@ -107,9 +107,10 @@ Columns:
 suite passed `2512/2512`: Layer 1 `1373/1373`, Layer 4 `953/953`, and Layer 5
 `186/186`. The hosted Windows helper passed `33/33`, the read-only helpers
 passed `42/42`, and the ARM64 exact pinned-container overlay with hydrated
-`tasks.md` passed `42/42`. This completes T133 and T135. T108 hosted
-observation and T117 branch-protection/release evidence remain separate factual
-post-merge/operator gaps.
+`tasks.md` passed `42/42`. This completes T133 and T135. Post-merge T108 hosted
+evidence is complete across relevant, docs-only, Linux-failure, advisory
+Windows-failure, manual-main, and four PR-trigger runs. T117 is complete with
+the exact five-check non-strict `main` branch rule.
 
 **PR 13 note (T121–T130):** The estimator Layer-4 test follows the
 Per-Port Protocol against historical predecessor commit
@@ -335,3 +336,9 @@ families, exact least-privilege job maps, current hosted runner labels, ordered
 Python 3.11+ Windows discovery, separated stdout/stderr evidence, and nine
 non-masking always-run uploads. This is new workflow-contract coverage, not a
 port parity claim.
+
+**Post-merge note:** PRs #311-#328 merged in review order through final merge
+commit `ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29`; the final `main` tree matches
+the verified stack tip and all 18 review branches are deleted. T108/T117 are
+complete. Container and Windows records are preflight evidence only and do not
+replace the XPLAT-008 native installed-plugin UAT matrix.

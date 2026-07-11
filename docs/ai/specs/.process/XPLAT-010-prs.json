@@ -65,7 +65,7 @@
       "slice_id": "00-process",
       "status": "opened",
       "title": "docs(xplat-010): record confinement design and process evidence",
-      "verification_evidence": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/00-process/validation.json"
+      "verification_evidence": "docs/ai/specs/.process/XPLAT-010-pr-packets/00-process/validation.json"
     },
     {
       "base_branch": "xplat-010-review/00-process",
@@ -115,7 +115,7 @@
       "slice_id": "01-foundation",
       "status": "opened",
       "title": "chore(xplat-010): remove orphaned Bash test scripts",
-      "verification_evidence": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/01-foundation/validation.json"
+      "verification_evidence": "docs/ai/specs/.process/XPLAT-010-pr-packets/01-foundation/validation.json"
     },
     {
       "base_branch": "xplat-010-review/01-foundation",
@@ -179,7 +179,7 @@
       "slice_id": "02-us14",
       "status": "opened",
       "title": "fix(xplat-010): restore spec-size estimation",
-      "verification_evidence": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/02-us14/validation.json"
+      "verification_evidence": "docs/ai/specs/.process/XPLAT-010-pr-packets/02-us14/validation.json"
     },
     {
       "base_branch": "xplat-010-review/02-us14",
@@ -243,7 +243,7 @@
       "slice_id": "03-us1",
       "status": "opened",
       "title": "feat(xplat-010): replace Bash suite orchestration with Python",
-      "verification_evidence": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/03-us1/validation.json"
+      "verification_evidence": "docs/ai/specs/.process/XPLAT-010-pr-packets/03-us1/validation.json"
     },
     {
       "base_branch": "xplat-010-review/03-us1",
@@ -292,7 +292,7 @@
       "slice_id": "04-us2",
       "status": "opened",
       "title": "test(xplat-010): port structural validator batch one",
-      "verification_evidence": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/04-us2/validation.json"
+      "verification_evidence": "docs/ai/specs/.process/XPLAT-010-pr-packets/04-us2/validation.json"
     },
     {
       "base_branch": "xplat-010-review/04-us2",
@@ -344,7 +344,7 @@
       "slice_id": "05-us3",
       "status": "opened",
       "title": "test(xplat-010): port structural validator batch two",
-      "verification_evidence": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/05-us3/validation.json"
+      "verification_evidence": "docs/ai/specs/.process/XPLAT-010-pr-packets/05-us3/validation.json"
     },
     {
       "base_branch": "xplat-010-review/05-us3",
@@ -379,7 +379,7 @@
       "slice_id": "06-us4",
       "status": "opened",
       "title": "test(xplat-010): port remaining structural checks",
-      "verification_evidence": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/06-us4/validation.json"
+      "verification_evidence": "docs/ai/specs/.process/XPLAT-010-pr-packets/06-us4/validation.json"
     },
     {
       "base_branch": "xplat-010-review/06-us4",
@@ -441,7 +441,7 @@
       "slice_id": "07-us5",
       "status": "opened",
       "title": "test(xplat-010): port toolchain and Layer 5 dispatch",
-      "verification_evidence": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/07-us5/validation.json"
+      "verification_evidence": "docs/ai/specs/.process/XPLAT-010-pr-packets/07-us5/validation.json"
     },
     {
       "base_branch": "xplat-010-review/07-us5",
@@ -480,7 +480,7 @@
       "slice_id": "08-us6",
       "status": "opened",
       "title": "refactor(xplat-010): port repository helpers and hooks",
-      "verification_evidence": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/08-us6/validation.json"
+      "verification_evidence": "docs/ai/specs/.process/XPLAT-010-pr-packets/08-us6/validation.json"
     },
     {
       "base_branch": "xplat-010-review/08-us6",
@@ -508,7 +508,7 @@
       "slice_id": "09-us7",
       "status": "opened",
       "title": "test(xplat-010): port transcript helpers and tools",
-      "verification_evidence": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/09-us7/validation.json"
+      "verification_evidence": "docs/ai/specs/.process/XPLAT-010-pr-packets/09-us7/validation.json"
     },
     {
       "base_branch": "xplat-010-review/09-us7",
@@ -587,7 +587,7 @@
       "slice_id": "10-us7b",
       "status": "opened",
       "title": "test(xplat-010): port Layer 7 replay runners",
-      "verification_evidence": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/10-us7b/validation.json"
+      "verification_evidence": "docs/ai/specs/.process/XPLAT-010-pr-packets/10-us7b/validation.json"
     },
     {
       "base_branch": "xplat-010-review/10-us7b",
@@ -678,7 +678,7 @@
       "slice_id": "11-us8",
       "status": "opened",
       "title": "test(xplat-010): port Layer 8 parity harness",
-      "verification_evidence": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/11-us8/validation.json"
+      "verification_evidence": "docs/ai/specs/.process/XPLAT-010-pr-packets/11-us8/validation.json"
     },
     {
       "base_branch": "xplat-010-review/11-us8",
@@ -771,7 +771,7 @@
       "slice_id": "12-us9",
       "status": "opened",
       "title": "test(xplat-010): port live evaluation runners",
-      "verification_evidence": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/12-us9/validation.json"
+      "verification_evidence": "docs/ai/specs/.process/XPLAT-010-pr-packets/12-us9/validation.json"
     },
     {
       "base_branch": "xplat-010-review/12-us9",
@@ -2187,7 +2187,7 @@
       "slice_id": "13-us10",
       "status": "opened",
       "title": "feat(xplat-010): enforce repository Bash confinement",
-      "verification_evidence": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/13-us10/validation.json"
+      "verification_evidence": "docs/ai/specs/.process/XPLAT-010-pr-packets/13-us10/validation.json"
     },
     {
       "base_branch": "xplat-010-review/13-us10",
@@ -2224,7 +2224,7 @@
       "slice_id": "14-us11",
       "status": "opened",
       "title": "test(xplat-010): add Linux and Windows runner checks",
-      "verification_evidence": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/14-us11/validation.json"
+      "verification_evidence": "docs/ai/specs/.process/XPLAT-010-pr-packets/14-us11/validation.json"
     },
     {
       "base_branch": "xplat-010-review/14-us11",
@@ -2265,7 +2265,7 @@
       "slice_id": "15-release-contract",
       "status": "opened",
       "title": "feat(xplat-010): validate consumer release-note blocks",
-      "verification_evidence": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/15-release-contract/validation.json"
+      "verification_evidence": "docs/ai/specs/.process/XPLAT-010-pr-packets/15-release-contract/validation.json"
     },
     {
       "base_branch": "xplat-010-review/15-release-contract",
@@ -2298,7 +2298,7 @@
       "slice_id": "16-release-composition",
       "status": "opened",
       "title": "feat(xplat-010): compose consumer-facing release highlights",
-      "verification_evidence": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/16-release-composition/validation.json"
+      "verification_evidence": "docs/ai/specs/.process/XPLAT-010-pr-packets/16-release-composition/validation.json"
     },
     {
       "base_branch": "xplat-010-review/16-release-composition",
@@ -2370,7 +2370,7 @@
       "slice_id": "17-polish",
       "status": "opened",
       "title": "chore(xplat-010): finalize integrated verification evidence",
-      "verification_evidence": "specs/xplat-010-repository-bash-confinement/.process/pr-packets/17-polish/validation.json"
+      "verification_evidence": "docs/ai/specs/.process/XPLAT-010-pr-packets/17-polish/validation.json"
     }
   ],
   "schemaVersion": 2

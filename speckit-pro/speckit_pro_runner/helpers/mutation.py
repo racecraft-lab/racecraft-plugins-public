@@ -3,21 +3,253 @@
 from __future__ import annotations
 
 import os
+import stat
 from pathlib import Path
 from typing import Any
 
 from ..envelope import diagnostic, response
 from .read_only import (
+    RenderedSpecIndexMap,
+    SpecIndexRenderError,
     find_repo_root,
     is_relative_to,
     looks_like_windows_absolute_path,
     normalize_display,
     normalize_path_input,
     path_diagnostic,
+    render_spec_index,
     repo_relative,
+    resolve_input_path,
+    resolve_repo_root,
+    trusted_dir_exists,
 )
 
 DEFAULT_ROLLBACK = "Review touched_paths and restore the previous file content before retrying."
+
+
+def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
+    invocation_root_result = resolve_repo_root(request.inputs)
+    if isinstance(invocation_root_result, dict):
+        status = "missing_prerequisite" if invocation_root_result["code"] == "missing_prerequisite" else "input_error"
+        return response(status, request_id=request.request_id, diagnostics=[invocation_root_result])
+    invocation_root = invocation_root_result
+    target_root = resolve_input_path(request.inputs.get("repo_root") or ".", invocation_root).resolve(strict=False)
+    if not trusted_dir_exists(target_root, invocation_root):
+        diag = diagnostic(
+            "invalid_input",
+            "repo_root must be a directory inside the runner trust boundary",
+            details={"helper_id": entry.helper_id, "repo_root": normalize_display(target_root)},
+            remediation_summary="Use an existing consumer repository root.",
+            remediation_actions=["Set inputs.repo_root to the repository being regenerated.", "Retry the request."],
+        )
+        return response("input_error", request_id=request.request_id, diagnostics=[diag])
+
+    try:
+        rendered, specs_present = render_spec_index(target_root)
+    except SpecIndexRenderError as exc:
+        diag = diagnostic(
+            "invalid_spec_index",
+            str(exc),
+            details={"helper_id": entry.helper_id, "repo_root": repo_relative(target_root, invocation_root)},
+            remediation_summary="Repair the reported generated-zone marker or PRS manifest before writing.",
+            remediation_actions=["Correct the malformed source file.", "Run generate-spec-index-check again."],
+        )
+        return response("input_error", request_id=request.request_id, diagnostics=[diag])
+
+    changed = [record for record in rendered if record.changed]
+    operations = _spec_index_write_operations(changed, target_root)
+    mutation = empty_mutation(request.mode)
+    mutation["planned_operations"] = operation_records(operations)
+    mutation["planned_paths"] = [repo_relative(record.path, target_root) for record in changed]
+    mutation["live_mutation"] = request.mode == "apply" and bool(changed)
+
+    if request.mode == "dry_run":
+        mutation["mutation_status"] = "planned" if changed else "no_op"
+        return response(
+            "ok",
+            request_id=request.request_id,
+            data=_spec_index_write_data(
+                entry,
+                request,
+                mutation,
+                specs_present=specs_present,
+                rendered=rendered,
+                writes_state=False,
+            ),
+        )
+
+    if request.mode != "apply":
+        diag = diagnostic(
+            "unsupported_mode",
+            "generate-spec-index-write requires dry_run or apply mode",
+            details={"helper_id": entry.helper_id, "mode": request.mode},
+            remediation_summary="Choose a registered mutation mode.",
+            remediation_actions=["Use dry_run to inspect planned paths.", "Use apply to regenerate stale maps."],
+        )
+        return response("input_error", request_id=request.request_id, diagnostics=[diag])
+
+    conflict = _spec_index_source_conflict(changed, target_root)
+    if conflict is not None:
+        mutation["mutation_status"] = "blocked"
+        return response(
+            "expected_failure",
+            request_id=request.request_id,
+            data=_spec_index_write_data(
+                entry,
+                request,
+                mutation,
+                specs_present=specs_present,
+                rendered=rendered,
+                writes_state=False,
+            ),
+            diagnostics=[conflict],
+        )
+
+    for record, operation in zip(changed, operations):
+        try:
+            write_file_atomic(record.path, record.rendered, trust_root=target_root)
+        except OSError as exc:
+            mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
+            mutation["failure_operation"] = operation_record(operation)
+            mutation["manual_remediation"] = [
+                "Inspect touched_paths and the failed map.",
+                "Restore any already-written maps before retrying.",
+            ]
+            diag = diagnostic(
+                "write_failure",
+                "generate-spec-index-write could not complete an atomic map update",
+                details={
+                    "helper_id": entry.helper_id,
+                    "target": repo_relative(record.path, target_root),
+                    "error": type(exc).__name__,
+                },
+                remediation_summary="Reconcile any applied map writes and fix the target path before retrying.",
+                remediation_actions=mutation["manual_remediation"],
+            )
+            return response(
+                "expected_failure",
+                request_id=request.request_id,
+                data=_spec_index_write_data(
+                    entry,
+                    request,
+                    mutation,
+                    specs_present=specs_present,
+                    rendered=rendered,
+                    writes_state=bool(mutation["applied_operations"]),
+                ),
+                diagnostics=[diag],
+            )
+        mutation["applied_operations"].append(operation_record(operation))
+        mutation["touched_paths"].append(repo_relative(record.path, target_root))
+
+    mutation["mutation_status"] = "applied" if changed else "no_op"
+    return response(
+        "ok",
+        request_id=request.request_id,
+        data=_spec_index_write_data(
+            entry,
+            request,
+            mutation,
+            specs_present=specs_present,
+            rendered=rendered,
+            writes_state=bool(changed),
+        ),
+    )
+
+
+def _spec_index_write_operations(
+    rendered: list[RenderedSpecIndexMap],
+    target_root: Path,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "operation_id": f"generate-spec-index:{index}",
+            "kind": "write_file",
+            "target": repo_relative(record.path, target_root),
+            "content": record.rendered,
+        }
+        for index, record in enumerate(rendered, start=1)
+    ]
+
+
+def _spec_index_source_conflict(
+    rendered: list[RenderedSpecIndexMap],
+    target_root: Path,
+) -> dict[str, Any] | None:
+    for record in rendered:
+        if not _spec_index_target_chain_is_safe(record.path, target_root):
+            return diagnostic(
+                "source_changed",
+                "a rendered spec-index target is no longer a regular in-repository file",
+                details={"target": record.path.as_posix()},
+                remediation_summary="Do not write through replaced or redirected map paths.",
+                remediation_actions=["Inspect the target path.", "Retry from a stable repository tree."],
+            )
+        try:
+            current = record.path.read_bytes().decode("utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            return diagnostic(
+                "source_changed",
+                "a rendered spec-index source could not be re-read before apply",
+                details={"target": record.path.as_posix(), "error": type(exc).__name__},
+                remediation_summary="Re-run from a stable set of source files.",
+                remediation_actions=["Inspect the target file.", "Retry generate-spec-index-write."],
+            )
+        if current != record.original:
+            return diagnostic(
+                "source_changed",
+                "a spec-index source changed after the in-memory render",
+                details={"target": record.path.as_posix()},
+                remediation_summary="Do not overwrite concurrent edits with a stale render plan.",
+                remediation_actions=["Review the concurrent edit.", "Retry to render from current bytes."],
+            )
+    return None
+
+
+def _spec_index_target_chain_is_safe(target: Path, trust_root: Path) -> bool:
+    if not is_relative_to(target, trust_root):
+        return False
+    try:
+        root_mode = trust_root.lstat().st_mode
+        relative = target.relative_to(trust_root)
+    except (OSError, ValueError):
+        return False
+    if stat.S_ISLNK(root_mode) or not stat.S_ISDIR(root_mode) or not relative.parts:
+        return False
+    current = trust_root
+    try:
+        for part in relative.parts[:-1]:
+            current = current / part
+            mode = current.lstat().st_mode
+            if stat.S_ISLNK(mode) or not stat.S_ISDIR(mode):
+                return False
+        target_mode = target.lstat().st_mode
+    except OSError:
+        return False
+    return not stat.S_ISLNK(target_mode) and stat.S_ISREG(target_mode)
+
+
+def _spec_index_write_data(
+    entry: Any,
+    request: Any,
+    mutation: dict[str, Any],
+    *,
+    specs_present: bool,
+    rendered: list[RenderedSpecIndexMap],
+    writes_state: bool,
+) -> dict[str, Any]:
+    return {
+        "helper_id": entry.helper_id,
+        "operation": entry.operation,
+        "mode": request.mode,
+        "promotion_status": entry.promotion_status,
+        "comparison_mode": entry.comparison_mode,
+        "writes_state": writes_state,
+        "specs_present": specs_present,
+        "rendered_map_count": len(rendered),
+        "stale_map_count": sum(record.changed for record in rendered),
+        "mutation": mutation,
+    }
 
 
 def run_mutation_helper(
@@ -404,7 +636,9 @@ def git_worktree_status(repo_root: Path) -> bool | dict[str, Any]:
     return bool(completed.stdout.strip())
 
 
-def write_file_atomic(target: Path, content: str) -> None:
+def write_file_atomic(target: Path, content: str, *, trust_root: Path | None = None) -> None:
+    if trust_root is not None and not _spec_index_target_chain_is_safe(target, trust_root):
+        raise OSError("unsafe target path")
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp = target.with_name(f".{target.name}.tmp-{os.getpid()}")
     try:
@@ -412,6 +646,8 @@ def write_file_atomic(target: Path, content: str) -> None:
             fh.write(ensure_final_newline(content))
             fh.flush()
             os.fsync(fh.fileno())
+        if trust_root is not None and not _spec_index_target_chain_is_safe(target, trust_root):
+            raise OSError("target path changed before replace")
         os.replace(tmp, target)
     finally:
         if tmp.exists():

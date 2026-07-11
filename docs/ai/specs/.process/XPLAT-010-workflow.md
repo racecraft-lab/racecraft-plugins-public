@@ -64,8 +64,10 @@ confinement PRs; 12 and 13 independent (13 preferred early).
 predecessor. The count differs from the original implementation plan for three
 explicit reasons: Foundation and Polish are emitted aggregate review units, and
 the blocked 1,267-production-LOC release-notes slice was split into PR 12a and
-PR 12b without a waiver. PR 13 was emitted early as #313. The generated source
-of truth is `specs/xplat-010-repository-bash-confinement/.process/prs.json`.
+PR 12b without a waiver. PR 13 was emitted early as #313. The archived generated
+source of truth is `docs/ai/specs/.process/XPLAT-010-prs.json`; its 18 immutable
+packet triplets are preserved under
+`docs/ai/specs/.process/XPLAT-010-pr-packets/`.
 
 ---
 
@@ -110,8 +112,8 @@ a heavy phase orchestrator-direct.
 | Tasks | `/speckit-tasks` | ✅ Complete | 136 tasks / 18 phases / 53 [P]; G5 PASS; route single-atomic-PR (advisory, superseded by ratified split); layer plan skipped; tasks-mode reviewability gate unavailable (defect logged) |
 | Analyze | `/speckit-analyze` | ✅ Complete | 7 findings (1 CRITICAL after consensus relabel, 4 MEDIUM, 2 LOW) all remediated; G6 PASS; historical 13-slice/15-PR implementation plan reconciled to the emitted 18-PR review topology; constitution amendment recorded as post-PR-10 follow-up |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory composite confidence 0.98; implementation authorized |
-| Implement | `/speckit-implement` | 🔄 In Progress | All 18 PRs are open; local implementation and final suite/docs proof are complete; only hosted/operator T108/T117 remain open |
-| Post | Canonical 12-item closeout | ✅ Complete | All 12 Post items are hydrated with repository evidence; T108/T117 remain explicit post-merge/operator follow-ups rather than hidden closeout claims |
+| Implement | `/speckit-implement` | ✅ Complete | PRs #311-#328 merged; final `main` tree matches the verified stack tip; all 18 review branches deleted |
+| Post | Canonical 12-item closeout | ✅ Complete | All 12 Post items are hydrated; T108 hosted evidence and T117 required-check configuration are complete |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -214,16 +216,17 @@ overlap live-scan gate runs with worktree-mutating subagents.
 
 From the roadmap's Done When plus the design-concept scope addition:
 
-- [ ] A repo-wide scan excluding `.github/workflows/` finds zero `.sh` files and zero Bash-shebang scripts (including extensionless executables); vendored `.specify/**` exceptions are documented, allowlisted, and excluded from release readiness
-- [ ] GitHub workflow shell snippets contain only dispatch glue — no embedded validation, packaging, install, release, or runtime logic
-- [ ] Active tests, evals, payload builders, release-readiness checks, install-verification paths, hooks, and helper tools run without Bash or `jq`
-- [ ] Per-layer runtime check counts match committed VERBOSE=true baselines 1:1 (names and counts) — zero regressions across the port
-- [ ] Linux container preflight evidence exists for `linux/amd64` and `linux/arm64` using the same runner/release-gate entrypoints CI uses; Linux jobs gate PRs on runner/gate paths
-- [ ] Windows x64 and ARM64 direct-runner smoke evidence exists where runner labels are available, advisory (`continue-on-error`) with availability recorded; container evidence is never presented as native UAT
-- [ ] CI fails on new Bash scripts, active Bash invocations, or `jq` dependencies outside the workflow dispatch boundary
-- [ ] Every feat/fix PR carries a consumer-facing Release note block (required check with `release-note/skip` label escape), and the GitHub Release body is composed into plain-English Highlights with the conventional-commit list preserved as an appendix
-- [ ] The `estimate-spec-size` runner operation exists and returns `{estimated_loc, suggested_slices, status}` for the size signals grill-me and speckit-prd send it — closing the dogfood defect where the skill references an operation whose bash predecessor was deleted by XPLAT-009 without a Python port
-- [ ] The XPLAT-008 native UAT matrix remains the only release-satisfying evidence for native installed-plugin journeys
+- [x] A repo-wide scan excluding `.github/workflows/` finds zero `.sh` files and zero Bash-shebang scripts (including extensionless executables); vendored `.specify/**` exceptions are documented, allowlisted, and excluded from release readiness
+- [x] GitHub workflow shell snippets contain only dispatch glue — no embedded validation, packaging, install, release, or runtime logic
+- [x] Active tests, evals, payload builders, release-readiness checks, install-verification paths, hooks, and helper tools run without Bash or `jq`
+- [x] Per-layer runtime check counts match committed VERBOSE=true baselines 1:1 (names and counts) — zero regressions across the port
+- [x] Linux container preflight evidence exists for `linux/amd64` and `linux/arm64` using the same runner/release-gate entrypoints CI uses; Linux jobs gate PRs on runner/gate paths
+- [x] Windows x64 and ARM64 direct-runner smoke evidence exists where runner labels are available, advisory (`continue-on-error`) with availability recorded; container evidence is never presented as native UAT
+- [x] CI fails on new Bash scripts, active Bash invocations, or `jq` dependencies outside the workflow dispatch boundary
+- [x] Every feat/fix PR carries a consumer-facing Release note block enforced by the required `validate-release-note` check, with `release-note/skip` as the explicit escape
+- [ ] The first published GitHub Release body is proven to contain composed plain-English Highlights with the conventional-commit list preserved as an appendix
+- [x] The `estimate-spec-size` runner operation exists and returns `{estimated_loc, suggested_slices, status}` for the size signals grill-me and speckit-prd send it — closing the dogfood defect where the skill references an operation whose bash predecessor was deleted by XPLAT-009 without a Python port
+- [x] The XPLAT-008 native UAT matrix remains the only release-satisfying evidence for native installed-plugin journeys
 
 ---
 
@@ -782,13 +785,14 @@ Before starting any task:
 | #322 PR 8 / `11-us8` | T073–T080 | 8/8 | Complete; Layer 8 parity harness |
 | #323 PR 9 / `12-us9` | T081–T087 | 7/7 | Complete; live-evaluation runners |
 | #324 PR 10 / `13-us10` | T088–T099 | 12/12 | Complete; live guard has 0 blockers and 10 release-excluded vendored findings |
-| #325 PR 11 / `14-us11` | T100–T108 | 8/9 | Local helper 33/33 and sentinel 49/49 pass; only T108 hosted/post-merge evidence remains open |
+| #325 PR 11 / `14-us11` | T100–T108 | 9/9 | Complete; hosted relevant, docs-only, failure, manual-main, and four trigger-canary runs satisfy T108 |
 | #326 PR 12a / `15-release-contract` | T109–T112 | 4/4 | Complete; release-note policy 30/30 and packet validation pass |
-| #327 PR 12b / `16-release-composition` | T113–T120 | 7/8 | Composer 46/46 and release workflow 41/41 pass; only T117 post-merge branch-protection evidence remains open |
+| #327 PR 12b / `16-release-composition` | T113–T120 | 8/8 | Complete; composer/workflow contracts pass and the five-check non-strict branch rule satisfies T117 |
 | #328 Polish / `17-polish` | T131–T136 | 6/6 | T131 parity, T132 focused quickstart, T133 neutral-PATH no-Bash proof, T134 packets, T135 final suite/docs, and T136 traceability complete |
 
-All 18 packet directories contain `body.md`, `packet.json`, and a passing
-`validation.json` for their exact adjacent diffs. The frozen implementation tip
+All 18 packet directories preserved under
+`docs/ai/specs/.process/XPLAT-010-pr-packets/` contain `body.md`, `packet.json`,
+and a passing `validation.json` for their exact adjacent diffs. The frozen implementation tip
 is `a7b2d27b12fdc5051dfa4829c94f92752e2f5146`, with tree
 `a1c42735d35619bbd0a4a90a42c57ab9e578848e`; publication metadata remains a
 separate bounded tail and must not be presented as an implementation boundary.
@@ -801,29 +805,29 @@ separate bounded tail and must not be presented as an implementation boundary.
 |----------------|--------|----------|
 | Post: Doctor Extension Check | Complete | Installed speckit-utils Doctor passed; optional PowerShell-directory and extensions.yml registry-lag warnings recorded |
 | Post: Verify Implementation | Complete | Current implementation paths and focused contracts reconciled to the emitted stack |
-| Post: Verify Tasks Phantom Check | Complete | Exact T001–T136 inventory; 134 complete and only T108/T117 remain open |
+| Post: Verify Tasks Phantom Check | Complete | Exact T001–T136 inventory; all 136 tasks complete after hosted T108 and branch-protection T117 evidence |
 | Post: Code Review | Complete | All 18 PRs were reviewed; the final GraphQL audit found zero unresolved review threads |
 | Post: Integration Suite | Complete | Final neutral-PATH deterministic suite passed 2512/2512: Layer 1 1373, Layer 4 953, Layer 5 186; final docs validation also passed |
 | Post: Reviewability Diff Gate | Complete | Final reviewability evidence validates the merge-free 18-slice topology and bounded publication tail |
-| Post: Self-Review | Complete | Done-when coverage, hosted boundaries, and closeout evidence were reconciled without suppressing T108/T117 |
+| Post: Self-Review | Complete | Done-when coverage, hosted evidence, merge provenance, and remaining release/UAT boundaries are reconciled |
 | Post: UAT Runbook Generation | Complete | Repository-relative seven-story runbook records local proof and hosted boundaries |
 | Post: PR Body Generation | Complete | 18/18 packet/body/validation triplets exist and validate at the generated stack tip |
-| Post: PR Creation | Complete | PRs #311-#328 are open, non-draft, linearly based, and mapped to all 18 canonical slices |
-| Post: Review Remediation | Complete | Actionable review and CI findings were repaired; publication-tail CI is the final remote confirmation |
-| Post: Retrospective | Complete | Final lessons and factual post-merge/operator gaps are recorded in `XPLAT-010-retrospective.md` |
+| Post: PR Creation | Complete | PRs #311-#328 merged in review order; final tree identity and branch deletion audited |
+| Post: Review Remediation | Complete | Actionable review and CI findings were repaired; hosted trigger and sentinel evidence is complete |
+| Post: Retrospective | Complete | Merge, hosted evidence, branch-protection, release, and UAT boundaries are recorded in `XPLAT-010-retrospective.md` |
 
 Legacy completion criteria below remain outcome checks; they do not replace the
 canonical Post state above.
 
-- [ ] All tasks marked complete in tasks.md
+- [x] All tasks complete, including hosted T108 and branch-protection T117 evidence
 - [x] Full deterministic suite passes: final neutral-PATH run passed 2512/2512 (Layer 1 1373, Layer 4 953, Layer 5 186)
 - [x] Runner gates pass: toolchain preflight, default suite, active-path guard, repo-bash-confinement guard, payload evidence, install verification, release readiness
 - [x] `git ls-files '*.sh'` returns only the exact allowlisted vendored `.specify/**` helpers
 - [x] Docs validation passes: final closeout validation passed
-- [ ] Container preflight + Windows smoke evidence artifacts recorded
+- [x] Container preflight + Windows smoke evidence artifacts recorded
 - [ ] Release-notes composer proven on a real release (first release after PR 12 merges shows Highlights)
-- [ ] PRs created and reviewed (18-PR #311–#328 stack, each independently green)
-- [ ] Merged to main branch (humans merge; autopilot never merges)
+- [x] PRs created and reviewed (18-PR #311–#328 stack, each independently green)
+- [x] Merged to main branch; final tree identity and deleted review branches audited
 
 ---
 
@@ -846,7 +850,11 @@ canonical Post state above.
 
 ---
 
-## Project Structure Reference
+## Historical Project Structure Reference
+
+This tree records the implementation-time layout. The active XPLAT-010 spec
+directory was removed by post-merge archive cleanup; its recovery source and
+preserved evidence paths are recorded in the archive report.
 
 ```
 racecraft-plugins-public/
@@ -862,7 +870,7 @@ racecraft-plugins-public/
 ├── .specify/                       # Vendored upstream (allowlisted, never ported)
 ├── .github/workflows/              # Dispatch glue only + container-preflight.yml (PR 11)
 ├── docs/ai/specs/.process/         # Workflow state, ledgers, evidence
-└── specs/xplat-010-repository-bash-confinement/  # This spec's CONTRACT artifacts
+└── .specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md  # Recovery record for removed XPLAT-010 contract artifacts
 ```
 
 ---

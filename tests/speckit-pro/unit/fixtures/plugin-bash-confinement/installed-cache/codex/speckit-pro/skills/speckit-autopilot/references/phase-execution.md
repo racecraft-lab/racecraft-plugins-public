@@ -873,7 +873,7 @@ map-affecting boundary — that is the failure this ordering avoids.
 # REPO_ROOT. In a cached-plugin run the default resolves to the plugin
 # cache's parent, not the user's project, so the explicit arg is required
 # (same path-prefix + "$PWD" convention as generate-pr-body below).
-runner helper generate-spec-index "$PWD"
+runner helper generate-spec-index-write with repo root "$PWD" and mode apply
 ```
 
 **Act on the result:**

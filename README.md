@@ -85,7 +85,7 @@ $install
 ```
 
 The default destination is `~/.codex/agents/`; choose `.codex/agents/` only when
-you intentionally want project-scoped custom agents. Verify these nine
+you intentionally want project-scoped custom agents. Verify these ten
 installer-copied TOML files only:
 
 - `autopilot-fast-helper.toml`
@@ -97,6 +97,7 @@ installer-copied TOML files only:
 - `codebase-analyst.toml`
 - `spec-context-analyst.toml`
 - `domain-researcher.toml`
+- `uat-runbook-author.toml`
 
 Then restart Codex. Also restart Codex after plugin enablement changes,
 custom-agent refreshes, or relevant Codex config edits.

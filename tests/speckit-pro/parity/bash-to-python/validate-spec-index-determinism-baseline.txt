@@ -3,9 +3,9 @@
 003 generate-spec-index-check is registered
 004 generate-spec-index-check is Python-authoritative
 005 mutation registry dispatch succeeds
-006 generate-spec-index-write is registered as deferred
-007 generate-spec-index-write is registered as deferred
-008 generate-spec-index-check request succeeds
+006 generate-spec-index-write is registered
+007 generate-spec-index-write is promoted with an authoritative request
+008 generate-spec-index-check detects stale rendered output with exit 1
 009 generate-spec-index-check reports the helper id
 010 generate-spec-index-check uses shell:false
 011 generate-spec-index-check records writes_state:false
