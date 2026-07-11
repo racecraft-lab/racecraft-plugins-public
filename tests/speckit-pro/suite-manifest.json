@@ -1,0 +1,165 @@
+{
+  "schema_version": "1.0",
+  "layers": [
+    {
+      "id": "toolchain",
+      "label": "Toolchain Preflight",
+      "default": true,
+      "execution": "execute",
+      "live_only": false,
+      "integration": false,
+      "counted_in_total": false,
+      "dispatch": "internal-check",
+      "scripts": []
+    },
+    {
+      "id": "1",
+      "label": "Structural Validation",
+      "default": true,
+      "execution": "execute",
+      "live_only": false,
+      "integration": false,
+      "counted_in_total": true,
+      "dispatch": "python-module",
+      "scripts": [
+        { "path": "tests/speckit-pro/layer1-structural/validate-plugin.sh", "label": "validate-plugin", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-plugin-payload.sh", "label": "validate-plugin-payload", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-agents.sh", "label": "validate-agents", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-skills.sh", "label": "validate-skills", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-hooks.sh", "label": "validate-hooks", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-scripts.sh", "label": "validate-scripts", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-curated-set.sh", "label": "validate-curated-set", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.sh", "label": "validate-pr-checks-sentinel", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-release-workflow.sh", "label": "validate-release-workflow", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-process-gitattributes.sh", "label": "validate-process-gitattributes", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-moc-orphan.sh", "label": "validate-moc-orphan", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-moc-stale-index.sh", "label": "validate-moc-stale-index", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-spec-index-determinism.sh", "label": "validate-spec-index-determinism", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-capability-pointer.sh", "label": "validate-capability-pointer", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-capability-resolution.sh", "label": "validate-capability-resolution", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-skill-capability-pointers.sh", "label": "validate-skill-capability-pointers", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-payload-completeness.sh", "label": "validate-payload-completeness", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-payload-conformance.sh", "label": "validate-payload-conformance", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-codex-plugin.sh", "label": "validate-codex-plugin", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-codex-marketplace.sh", "label": "validate-codex-marketplace", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-codex-agents.sh", "label": "validate-codex-agents", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-codex-skills.sh", "label": "validate-codex-skills", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-codex-hooks.sh", "label": "validate-codex-hooks", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-codex-parity.sh", "label": "validate-codex-parity", "baseline": null }
+      ]
+    },
+    {
+      "id": "4",
+      "label": "Script Unit Tests",
+      "default": true,
+      "execution": "execute",
+      "live_only": false,
+      "integration": false,
+      "counted_in_total": true,
+      "dispatch": "python-module",
+      "scripts": [
+        { "path": "tests/speckit-pro/test-run-all.py", "label": "test-run-all", "baseline": null },
+        { "path": "tests/speckit-pro/lib/test_lib.py", "label": "test-lib", "baseline": null },
+        { "path": "tests/speckit-pro/layer4-scripts/test-capture-python-baseline.py", "label": "test-capture-python-baseline", "baseline": null },
+        { "path": "tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py", "label": "test-autopilot-phase-coverage", "baseline": null },
+        { "path": "tests/speckit-pro/layer4-scripts/test-check-toolchain.sh", "label": "test-check-toolchain", "baseline": null },
+        { "path": "tests/speckit-pro/layer4-scripts/test-post-implementation-reference.sh", "label": "test-post-implementation-reference", "baseline": null },
+        { "path": "tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh", "label": "test-reviewability-marker-guidance", "baseline": null },
+        { "path": "tests/speckit-pro/layer4-scripts/test-eval-runner-skill-selection.sh", "label": "test-eval-runner-skill-selection", "baseline": null },
+        { "path": "tests/speckit-pro/layer4-scripts/test-refresh-local-plugin.sh", "label": "test-refresh-local-plugin", "baseline": null },
+        { "path": "tests/speckit-pro/layer4-scripts/test-sync-marketplace-versions.sh", "label": "test-sync-marketplace-versions", "baseline": null },
+        { "path": "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py", "label": "test-speckit-pro-gates", "baseline": null },
+        { "path": "tests/speckit-pro/layer4-scripts/test-transcript-helpers.sh", "label": "test-transcript-helpers", "baseline": null },
+        { "path": "tests/speckit-pro/layer4-scripts/test-privacy-scan.sh", "label": "test-privacy-scan", "baseline": null },
+        { "path": "tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py", "label": "test-speckit-pro-runner", "baseline": null },
+        { "path": "tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py", "label": "test-speckit-pro-read-only-helpers", "baseline": null },
+        { "path": "tests/speckit-pro/layer4-scripts/test-estimate-spec-size.py", "label": "test-estimate-spec-size", "baseline": "tests/speckit-pro/parity/xplat-010/test-estimate-spec-size-baseline.txt" },
+        { "path": "tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py", "label": "test-speckit-pro-mutation-helpers", "baseline": null },
+        { "path": "tests/speckit-pro/layer4-scripts/test-l6-codex-runner.sh", "label": "test-l6-codex-runner", "baseline": null },
+        { "path": "tests/speckit-pro/layer4-scripts/test-l8-extractors.sh", "label": "test-l8-extractors", "baseline": null },
+        { "path": "tests/speckit-pro/layer4-scripts/test-l8-judge.sh", "label": "test-l8-judge", "baseline": null },
+        { "path": "tests/speckit-pro/layer4-scripts/test-moc-lint-exit-codes.sh", "label": "test-moc-lint-exit-codes", "baseline": null }
+      ]
+    },
+    {
+      "id": "5",
+      "label": "Agent Tool Scoping",
+      "default": true,
+      "execution": "execute",
+      "live_only": false,
+      "integration": false,
+      "counted_in_total": true,
+      "dispatch": "internal-check",
+      "scripts": [
+        { "path": "tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.sh", "label": "validate-tool-scoping", "baseline": null }
+      ]
+    },
+    {
+      "id": "7",
+      "label": "Integration Fixtures",
+      "default": false,
+      "execution": "execute",
+      "live_only": false,
+      "integration": true,
+      "counted_in_total": true,
+      "dispatch": "internal-check",
+      "scripts": [
+        { "path": "tests/speckit-pro/layer7-integration/run-all-fixtures.sh", "label": "run-all-fixtures", "baseline": null }
+      ]
+    },
+    {
+      "id": "8",
+      "label": "Parity Fixtures",
+      "default": false,
+      "execution": "execute",
+      "live_only": false,
+      "integration": false,
+      "counted_in_total": true,
+      "dispatch": "internal-check",
+      "scripts": [
+        { "path": "tests/speckit-pro/layer8-parity/run-parity-fixtures.sh", "label": "run-parity-fixtures", "baseline": null }
+      ]
+    },
+    {
+      "id": "2",
+      "label": "Trigger Evaluation",
+      "default": false,
+      "execution": "print-commands",
+      "live_only": true,
+      "integration": false,
+      "counted_in_total": true,
+      "dispatch": "python-module",
+      "scripts": [
+        { "path": "tests/speckit-pro/layer2-trigger/run-trigger-evals.sh", "label": "run-trigger-evals", "baseline": null },
+        { "path": "tests/speckit-pro/layer2-trigger/run-trigger-evals-codex.sh", "label": "run-trigger-evals-codex", "baseline": null }
+      ]
+    },
+    {
+      "id": "3",
+      "label": "Functional Evaluation",
+      "default": false,
+      "execution": "print-commands",
+      "live_only": true,
+      "integration": false,
+      "counted_in_total": true,
+      "dispatch": "python-module",
+      "scripts": [
+        { "path": "tests/speckit-pro/layer3-functional/run-functional-evals.sh", "label": "run-functional-evals", "baseline": null },
+        { "path": "tests/speckit-pro/layer3-functional/run-functional-evals-codex.sh", "label": "run-functional-evals-codex", "baseline": null }
+      ]
+    },
+    {
+      "id": "6",
+      "label": "Agent Efficiency Benchmarks",
+      "default": false,
+      "execution": "print-commands",
+      "live_only": true,
+      "integration": false,
+      "counted_in_total": true,
+      "dispatch": "python-module",
+      "scripts": [
+        { "path": "tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.sh", "label": "run-efficiency-benchmarks", "baseline": null }
+      ]
+    }
+  ]
+}

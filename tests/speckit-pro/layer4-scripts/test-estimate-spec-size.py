@@ -16,7 +16,6 @@ request on stdin).
 from __future__ import annotations
 
 import json
-import io
 import os
 import shlex
 import subprocess
@@ -28,6 +27,11 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "estimate-spec-size"
 BASELINE = REPO_ROOT / "tests" / "speckit-pro" / "parity" / "xplat-010" / "test-estimate-spec-size-baseline.txt"
+SHARED_LIB = REPO_ROOT / "tests" / "speckit-pro" / "lib"
+if str(SHARED_LIB) not in sys.path:
+    sys.path.insert(0, str(SHARED_LIB))
+
+from test_result import CountingTestResult, run_counted  # noqa: E402
 
 # Maps the deleted script's value-taking flags onto the runner's structured
 # input keys; --spike is a bare boolean flag handled separately.
@@ -170,47 +174,9 @@ def build_suite() -> unittest.TestSuite:
     return unittest.defaultTestLoader.loadTestsFromTestCase(EstimateSpecSizeGoldenTests)
 
 
-class CountingTestResult(unittest.TextTestResult):
-    """Self-contained counter used before PR 2 introduces the shared helper."""
-
-    def __init__(self, *args: object, **kwargs: object) -> None:
-        super().__init__(*args, **kwargs)
-        self.units_total = 0
-        self.units_passed = 0
-        self.subtest_names: list[str] = []
-
-    def addSubTest(self, test, subtest, outcome) -> None:  # type: ignore[no-untyped-def]
-        super().addSubTest(test, subtest, outcome)
-        self.units_total += 1
-        if outcome is None:
-            self.units_passed += 1
-        self.subtest_names.append(str(getattr(subtest, "_message", "<subtest>")))
-
-
-def run_counted(suite: unittest.TestSuite, *, label: str) -> int:
-    result = unittest.TextTestRunner(
-        stream=io.StringIO(),
-        resultclass=CountingTestResult,
-        verbosity=0,
-    ).run(suite)
-    expected = baseline_inventory(BASELINE)
-    if result.subtest_names != expected:
-        print(
-            f"{label} inventory mismatch: "
-            f"python={len(result.subtest_names)} baseline={len(expected)}",
-            file=sys.stderr,
-        )
-        return 1
-    print(f"{label}: {result.units_passed}/{result.units_total} passed")
-    return 0 if result.wasSuccessful() and result.units_passed == result.units_total else 1
-
-
 def assert_subtest_inventory_matches_baseline() -> None:
-    result = unittest.TextTestRunner(
-        stream=io.StringIO(),
-        resultclass=CountingTestResult,
-        verbosity=0,
-    ).run(build_suite())
+    result = CountingTestResult(stream=None, descriptions=False, verbosity=0)
+    build_suite().run(result)
     expected = baseline_inventory(BASELINE)
     if result.subtest_names != expected:
         raise AssertionError(
@@ -367,6 +333,11 @@ class EstimateSpecSizeGoldenTests(unittest.TestCase):
 
 
 def main() -> int:
+    try:
+        assert_subtest_inventory_matches_baseline()
+    except AssertionError as exc:
+        print(f"test-estimate-spec-size inventory mismatch: {exc}", file=sys.stderr)
+        return 1
     return run_counted(build_suite(), label="test-estimate-spec-size")
 
 

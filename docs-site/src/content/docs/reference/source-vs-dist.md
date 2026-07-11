@@ -199,20 +199,20 @@ Editability and responsibility map for source, generated payloads, tests, releas
 - **Purpose:** Layered validation files for plugin structure, scripts, parity, and integration fixtures.
 - **Classification:** `test-only`
 - **Platform concept:** Source-vs-dist responsibility
-- **Claude Code:** tests/speckit-pro/run-all.sh, tests/speckit-pro/layer1-structural/validate-plugin.sh
-- **Codex:** tests/speckit-pro/run-all.sh, tests/speckit-pro/layer1-structural/validate-plugin.sh
+- **Claude Code:** tests/speckit-pro/run-all.py, tests/speckit-pro/layer1-structural/validate-plugin.sh
+- **Codex:** tests/speckit-pro/run-all.py, tests/speckit-pro/layer1-structural/validate-plugin.sh
 - **Runtime difference:** Validation files are shared repository checks; runtime-specific assertions live inside the referenced test files.
 
 #### Source Facts
 
-- Validation Test Suite is classified as test-only. Source refs: `tests/speckit-pro/run-all.sh`, `tests/speckit-pro/layer1-structural/validate-plugin.sh`.
+- Validation Test Suite is classified as test-only. Source refs: `tests/speckit-pro/run-all.py`, `tests/speckit-pro/layer1-structural/validate-plugin.sh`.
 
 #### Sources
 
-- [tests/speckit-pro/run-all.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/run-all.sh)
+- [tests/speckit-pro/run-all.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/run-all.py)
 - [tests/speckit-pro/layer1-structural/validate-plugin.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/layer1-structural/validate-plugin.sh)
 
 #### Inferred Notes
 
 - Use this classification before deciding whether a future change should edit source directly, regenerate payloads, or update docs only.
-  - Based on: `tests/speckit-pro/run-all.sh`, `tests/speckit-pro/layer1-structural/validate-plugin.sh`
+  - Based on: `tests/speckit-pro/run-all.py`, `tests/speckit-pro/layer1-structural/validate-plugin.sh`

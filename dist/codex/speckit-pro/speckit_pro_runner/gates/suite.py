@@ -21,10 +21,84 @@ DEFAULT_TIMEOUT_SECONDS = 300
 PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json"
 LAYER_SCRIPT_DISPATCHER = "tests/speckit-pro/run-layer-scripts.py"
 LAYER_SCRIPT_TIMEOUT_SECONDS = 1800
-DEFAULT_SUITE = ("toolchain", "1", "4", "5")
-EXTENDED_SUITE = ("toolchain", "1", "4", "5", "7", "8")
-ALLOWED_LAYERS = frozenset({"1", "4", "5", "7", "8"})
-AI_EVAL_LAYERS = frozenset({"2", "3", "6"})
+SUITE_MANIFEST_PATH = "tests/speckit-pro/suite-manifest.json"
+
+
+class SuiteManifestError(Exception):
+    """Raised when tests/speckit-pro/suite-manifest.json is absent/unreadable/invalid.
+
+    The suite manifest is the single per-layer source of truth for suite
+    composition (XPLAT-010 FR-007/FR-008). The gate derives its roster from it
+    and fails closed — never falling back to a hardcoded default — when it
+    cannot be loaded.
+    """
+
+
+def load_suite_manifest(repo_root: Path) -> dict[str, Any]:
+    """Load and shape-check the suite manifest; raise SuiteManifestError on failure."""
+    path = repo_root / SUITE_MANIFEST_PATH
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise SuiteManifestError(f"suite manifest not found: {SUITE_MANIFEST_PATH}") from exc
+    try:
+        data = json.loads(raw)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise SuiteManifestError(f"suite manifest is not valid JSON: {SUITE_MANIFEST_PATH}") from exc
+    if not isinstance(data, dict) or data.get("schema_version") != "1.0":
+        raise SuiteManifestError("suite manifest schema_version must be '1.0'")
+    layers = data.get("layers")
+    if not isinstance(layers, list) or not layers:
+        raise SuiteManifestError("suite manifest must carry a non-empty layers array")
+    for layer in layers:
+        if not isinstance(layer, dict) or not all(
+            field in layer for field in ("id", "default", "live_only", "dispatch", "scripts")
+        ):
+            raise SuiteManifestError("suite manifest layer is missing a required field")
+    return data
+
+
+def manifest_default_suite(manifest: dict[str, Any]) -> tuple[str, ...]:
+    return tuple(layer["id"] for layer in manifest["layers"] if layer["default"])
+
+
+def manifest_extended_suite(manifest: dict[str, Any]) -> tuple[str, ...]:
+    return tuple(layer["id"] for layer in manifest["layers"] if not layer["live_only"])
+
+
+def manifest_allowed_layers(manifest: dict[str, Any]) -> frozenset[str]:
+    return frozenset(
+        layer["id"] for layer in manifest["layers"] if not layer["live_only"] and layer["id"] != "toolchain"
+    )
+
+
+def manifest_ai_eval_layers(manifest: dict[str, Any]) -> frozenset[str]:
+    return frozenset(layer["id"] for layer in manifest["layers"] if layer["live_only"])
+
+
+def _runner_repo_root() -> Path:
+    # gates/suite.py -> gates -> speckit_pro_runner -> speckit-pro -> repo root.
+    return Path(__file__).resolve().parents[3]
+
+
+def _derive_module_roster() -> tuple[tuple[str, ...], tuple[str, ...], frozenset[str], frozenset[str], str | None]:
+    try:
+        manifest = load_suite_manifest(_runner_repo_root())
+    except SuiteManifestError as exc:
+        return (), (), frozenset(), frozenset(), str(exc)
+    return (
+        manifest_default_suite(manifest),
+        manifest_extended_suite(manifest),
+        manifest_allowed_layers(manifest),
+        manifest_ai_eval_layers(manifest),
+        None,
+    )
+
+
+# Derived solely from the manifest at import; the gate fails closed when the
+# manifest is unavailable (SUITE_MANIFEST_ERROR set) rather than using a
+# hardcoded default suite.
+DEFAULT_SUITE, EXTENDED_SUITE, ALLOWED_LAYERS, AI_EVAL_LAYERS, SUITE_MANIFEST_ERROR = _derive_module_roster()
 STATUS_BY_EXIT_CODE = {
     0: "ok",
     1: "expected_failure",
@@ -59,6 +133,21 @@ def run_suite_gate(entry: Any, request: Any) -> dict[str, Any]:
         status = "missing_prerequisite" if repo_root_result["code"] == "missing_prerequisite" else "input_error"
         return response(status, request_id=request.request_id, data=base_data(entry, request.operation, status), diagnostics=[repo_root_result])
     repo_root = repo_root_result
+
+    if SUITE_MANIFEST_ERROR is not None:
+        diag = diagnostic(
+            "suite_manifest_unavailable",
+            "suite gate cannot resolve its layer roster because the suite manifest is unavailable",
+            details={"manifest_path": SUITE_MANIFEST_PATH, "error": SUITE_MANIFEST_ERROR},
+            remediation_summary="Restore the suite manifest in the source checkout.",
+            remediation_actions=[f"Restore {SUITE_MANIFEST_PATH}.", "Retry the suite-gate request."],
+        )
+        return response(
+            "missing_prerequisite",
+            request_id=request.request_id,
+            data=base_data(entry, request.operation, "missing_prerequisite"),
+            diagnostics=[diag],
+        )
 
     operation = request.operation
     if operation == "run-default-suite":
