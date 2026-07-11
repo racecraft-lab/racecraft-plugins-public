@@ -51,6 +51,9 @@ Columns:
 | PR 5 | port: `validate-tool-scoping.sh` → `validate-tool-scoping.py` | default | 186 → 186 | yes | `tests/speckit-pro/parity/xplat-010/validate-tool-scoping-baseline.txt` |
 | PR 5 | port: `test-check-toolchain.sh` → `test-check-toolchain.py` | default | 26 → 26 | yes | `tests/speckit-pro/parity/xplat-010/test-check-toolchain-baseline.txt` |
 | PR 5 | workflow self-validator update: `validate-pr-checks-sentinel.py` | default | 28 → 30 (intentional PR5 workflow-contract expansion) | n/a | `tests/speckit-pro/parity/xplat-010/validate-pr-checks-sentinel-baseline.txt` |
+| PR 6 | port: `test-refresh-local-plugin.sh` → `test-refresh-local-plugin.py` | default | 58 → 58 | yes | `tests/speckit-pro/parity/xplat-010/test-refresh-local-plugin-baseline.txt` |
+| PR 6 | port: `test-sync-marketplace-versions.sh` → `test-sync-marketplace-versions.py` | default | 49 → 49 | no (intentional `jq`-dependency replacement under T055) | retired Bash: `tests/speckit-pro/parity/xplat-010/test-sync-marketplace-versions-bash-baseline.txt`; current Python: `tests/speckit-pro/parity/xplat-010/test-sync-marketplace-versions-baseline.txt` |
+| PR 6 | new contract coverage: `.claude/hooks/*.py` | default | 0 → 22 | n/a | `tests/speckit-pro/parity/xplat-010/test-claude-hooks-baseline.txt` |
 
 **PR 13 note (T121–T130):** The estimator Layer-4 test follows the
 Per-Port Protocol against historical predecessor commit
@@ -197,3 +200,12 @@ PR-body branch-protection callout to carry forward: **PR 5 is
 required-check-neutral**; it changes a `run:` step inside the existing
 `validate-plugins` surface, renames no job/status check, and requires no manual
 branch-protection update (contrast PR 11 and PR 12).
+
+**PR 6 note (T054–T061):** The refresh helper preserves the predecessor's true
+`58 → 58` ordered check-name inventory. The marketplace-sync helper preserves
+all 49 predecessor assertion positions, with 47 behavior-preserving names and
+two explicit replacements for the retired `jq` prerequisite; separate retired
+Bash and current Python baselines make that intentional T055 change reviewable
+instead of claiming false name equality. The new 22-check hook contract locks
+stdin-JSON handling, exit `0`/`2`, Python Layer-1 dispatch, and the absence of
+`os.system`, `shell=True`, and `jq` execution.
