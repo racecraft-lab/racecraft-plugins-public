@@ -88,6 +88,7 @@
         { "path": "tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py", "label": "test-speckit-pro-read-only-helpers", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-estimate-spec-size.py", "label": "test-estimate-spec-size", "baseline": "tests/speckit-pro/parity/bash-to-python/test-estimate-spec-size-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py", "label": "test-speckit-pro-mutation-helpers", "baseline": null },
+        { "path": "tests/speckit-pro/unit/test-generate-spec-index.py", "label": "test-generate-spec-index", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-efficiency-codex-runner.py", "label": "test-efficiency-codex-runner", "baseline": "tests/speckit-pro/parity/bash-to-python/test-efficiency-codex-runner-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-efficiency-runner-portability.py", "label": "test-efficiency-runner-portability", "baseline": "tests/speckit-pro/parity/bash-to-python/test-efficiency-runner-portability-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-parity-extractors.py", "label": "test-parity-extractors", "baseline": "tests/speckit-pro/parity/bash-to-python/test-parity-extractors-baseline.txt" },

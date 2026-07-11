@@ -2,18 +2,11 @@
 """Spec-index helper contract check (port of validate-spec-index-determinism.sh).
 
 XPLAT-010 count-parity port (T038, US2). Python 3.11+ standard library only.
-Validates that the Python runner owns read-only spec-index checking, that write
-mode remains explicitly deferred, that invoking the read-only helper leaves the
-fixture tree unchanged, and that the roadmap-MOC template still exposes the
-INDEX sentinels. Every former ``assert_*``/``_pass``/``_fail`` execution maps to
-one counted ``subTest`` unit; names are reproduced via ``subTest(msg=...)`` for
-a 1:1 baseline match.
-
-The shell predecessor executes two assertions under the same
-``generate-spec-index-write is registered as deferred`` current-test name; in
-verbose mode the second appears as a bare ``PASS``. The port records both as
-counted subTests with the same name, preserving the true ``16/16`` assertion
-count instead of the malformed 15-line verbose capture.
+Validates that the Python runner owns real spec-index checking and writing, that
+the intentionally stale fixture is detected without mutation, and that the
+roadmap-MOC template still exposes the INDEX sentinels. The validator preserves
+the historical 16-unit count while replacing the superseded deferred-write and
+false-current assertions with the active Python contract.
 
 Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-spec-index-determinism-baseline.txt``
 (TOTAL: 16).
@@ -121,17 +114,25 @@ class ValidateSpecIndexDeterminism(unittest.TestCase):
         mutation_registry_json = _runner_request(MUTATION_REGISTRY_REQ)
         with self.subTest(msg="mutation registry dispatch succeeds"):
             self.assertIn('"status":"ok"', mutation_registry_json)
-        with self.subTest(msg="generate-spec-index-write is registered as deferred"):
+        mutation_registry = json.loads(mutation_registry_json)
+        write_entry = next(
+            record
+            for record in mutation_registry["data"]["helpers"]
+            if record["helper_id"] == "generate-spec-index-write"
+        )
+        with self.subTest(msg="generate-spec-index-write is registered"):
             self.assertIn('"helper_id":"generate-spec-index-write"', mutation_registry_json)
-        with self.subTest(msg="generate-spec-index-write is registered as deferred"):
-            self.assertIn('"promotion_status":"deferred"', mutation_registry_json)
+        with self.subTest(msg="generate-spec-index-write is promoted with an authoritative request"):
+            self.assertEqual(write_entry["promotion_status"], "golden_only")
+            self.assertTrue(write_entry["authoritative_command"])
 
         snap_before = _snapshot(FIXTURE_ROOT)
         check_json = _runner_request(CHECK_REQ)
         snap_after = _snapshot(FIXTURE_ROOT)
 
-        with self.subTest(msg="generate-spec-index-check request succeeds"):
-            self.assertIn('"status":"ok"', check_json)
+        with self.subTest(msg="generate-spec-index-check detects stale rendered output with exit 1"):
+            self.assertIn('"status":"expected_failure"', check_json)
+            self.assertIn('"exit_code":1', check_json)
         with self.subTest(msg="generate-spec-index-check reports the helper id"):
             self.assertIn('"helper_id":"generate-spec-index-check"', check_json)
         with self.subTest(msg="generate-spec-index-check uses shell:false"):
