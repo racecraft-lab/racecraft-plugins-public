@@ -91,10 +91,13 @@ prompt-injection instructions that alter eval outcomes or exfiltrate context.
   `<local-command-caveat>` tags.
 - When reviewing fixture PRs, check that new `"query"` fields look like genuine
   user queries, not multi-paragraph instruction blocks.
-- The `scrub-transcript.sh` `TRANSCRIPT_SCRUB_EXTRA_REGEX` env var is passed to
-  `jq`'s `gsub()`. Malicious regex in this variable can crash the scrubber or
-  strip assertions the parser depends on. Treat it as untrusted if set outside
-  the test environment.
+- The Python `scrub-transcript.py` port compiles
+  `TRANSCRIPT_SCRUB_EXTRA_REGEX` with the standard-library `re` engine and
+  applies it with `Pattern.sub()`. Invalid or malicious expressions can still
+  abort the scrubber or strip assertions the parser depends on, and Python's
+  regex dialect is not identical to jq's. Treat the value as untrusted outside
+  the test environment. The Bash/jq predecessor remains only as a transitional
+  dependency of the unported PR-7b replay runners.
 
 ---
 
