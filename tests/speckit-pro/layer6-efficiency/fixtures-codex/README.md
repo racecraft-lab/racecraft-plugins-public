@@ -2,7 +2,7 @@
 
 This directory holds Codex-specific fixtures for the L6 cost-quality
 benchmark. Each subdirectory is named after a Codex agent (matching the
-file at `codex-agents/<name>.toml`) and contains:
+file at `speckit-pro/codex-agents/<name>.toml`) and contains:
 
 - `input-prompt.md` — a representative task for that agent, framed as one
   of the agent's enumerated input types (Clarify question / Checklist
@@ -20,7 +20,7 @@ file at `codex-agents/<name>.toml`) and contains:
 python3 tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.py \
   --codex --agent codebase-analyst --sweep
 
-# All Codex agents at default effort
+# All three current Codex fixtures at ambient/default effort
 python3 tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.py --codex
 ```
 
@@ -30,24 +30,28 @@ the committed reference.
 
 ## Authoring a new Codex fixture
 
-1. Create `fixtures-codex/<agent-name>/` (must match `codex-agents/<agent-name>.toml`).
+1. Create `tests/speckit-pro/layer6-efficiency/fixtures-codex/<agent-name>/`
+   (must match `speckit-pro/codex-agents/<agent-name>.toml`).
 2. Write `input-prompt.md` posing **one** of the input types listed in
    the agent's `developer_instructions`. Don't combine input types in
    one prompt.
 3. Write `expected-output.md` following the exact section structure the
    agent's `## Output Format` section prescribes.
-4. Smoke-test: `python3 run-efficiency-benchmarks.py --codex --agent <name>`.
-   The output should produce 70%+ quality at xhigh — if not, the
-   `expected-output.md` is over-specified (too prescriptive about prose)
-   rather than the agent being broken.
+4. Smoke-test:
+   `python3 tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.py --codex --agent <name>`.
+   Treat the score as non-promotional legacy smoke evidence. Never infer the
+   cause of a low score from the score alone.
+5. Adjudicate a disputed result blind to the candidate model and effort as one
+   of: candidate-quality failure, treatment-delivery failure, invalid fixture,
+   invalid scorer, or infrastructure failure. Version and replay every affected
+   result after a fixture or scorer change.
 
 ## What this benchmark does NOT cover
 
-- Tool availability. `codex exec` does not bring MCP tools (tavily,
-  context7, RepoPrompt) into the subprocess by default. An agent whose
-  `developer_instructions` direct it to use those tools will perform
-  worse here than it does in the full Codex CLI, because it has to fall
-  back to its training data. This is a real effect — visible in the
-  `domain-researcher` fixture, which scores ~65% across all effort
-  levels — and a limitation of the bare `codex exec` invocation, not the
-  fixture or the agent.
+- Exact treatment delivery. The current runner prepends only
+  `developer_instructions` to the fixture and invokes bare `codex exec` while
+  inheriting ambient configuration. It neither provisions nor disables the
+  TOML model, sandbox, skills, MCP servers, tools, or parent overrides. A
+  missing or ambient capability can therefore change the result. Current
+  scores—including the historical `domain-researcher` result—cannot support
+  routing promotion until replayed with frozen environment and treatment proof.

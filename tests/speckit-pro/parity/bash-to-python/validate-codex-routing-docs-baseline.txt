@@ -1,0 +1,18 @@
+001 Codex routing PRD and technical roadmap exist
+002 current roadmap Key Files paths exist or are explicitly proposed
+003 current Layer 6 Key Files paths do not use obsolete shell entrypoints
+004 routing docs have no broken current paths or obsolete Layer 6 names
+005 routing docs have no broken relative Markdown links
+006 Layer 6 has exactly the three current Codex fixture directories
+007 Codex source inventory has exactly ten agent TOMLs
+008 routing docs state the current three-fixture ten-agent inventory
+009 PRD and roadmap freeze the same mandatory plan-support rows
+010 G56R-002 owns telemetry and trace-schema files, not live corpus files
+011 G56R-003 owns the active Python corpus runner scorer fixtures and tests
+012 live corpus and scoring paths are owned only by G56R-003
+013 PRD crosswalk and roadmap define all eleven G56R specs
+014 PRD crosswalk feature ownership matches roadmap section titles
+015 every PRD acceptance criterion has exactly one SPEC owner
+016 PRD crosswalk dependencies match roadmap section dependencies
+017 G56R-002 and G56R-003 acceptance-criteria ownership is exact and disjoint
+TOTAL: 17
