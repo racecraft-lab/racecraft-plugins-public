@@ -326,9 +326,31 @@ class RunnerFoundationTests(unittest.TestCase):
         self.assertEqual(manifest["checksum_algorithm"], "sha256")
 
         expected = {}
-        for path in sorted(path for path in RUNNER_DIR.rglob("*.py") if "__pycache__" not in path.parts):
+        runner_sources = sorted(path for path in RUNNER_DIR.rglob("*.py") if "__pycache__" not in path.parts)
+        for path in runner_sources:
             digest = hashlib.sha256(path.read_bytes()).hexdigest()
             expected[path.relative_to(PLUGIN_ROOT).as_posix()] = digest
+
+        checkout_attributes = subprocess.run(
+            [
+                "git",
+                "check-attr",
+                "eol",
+                "--",
+                *(path.relative_to(REPO_ROOT).as_posix() for path in runner_sources),
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(checkout_attributes.returncode, 0, checkout_attributes.stderr)
+        self.assertTrue(checkout_attributes.stdout.strip())
+        for line in checkout_attributes.stdout.splitlines():
+            path, attribute, value = line.rsplit(": ", 2)
+            self.assertEqual(attribute, "eol")
+            self.assertEqual(value, "lf", f"runner trust metadata requires LF checkout: {path}")
+
         manifest_records = {
             record["path"]["value"]: record["sha256"]
             for record in manifest["runner_files"]
@@ -525,6 +547,7 @@ class RunnerFoundationTests(unittest.TestCase):
             "dist/codex/speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
             "dist/codex/speckit-pro/skills/speckit-autopilot/references/capability-discovery.md",
             "docs-site/src/content/docs/reference/source-vs-dist.md",
+            "docs/ai/research/tool-agnostic-capability-discovery-spike.md",
         }
         for path in changed:
             if (

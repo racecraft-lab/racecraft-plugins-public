@@ -52,7 +52,7 @@
 ## Domain Checklist: Requirements Quality — Repository Bash Confinement and CI Dispatch Guard
 
 **Generated**: 2026-07-08 by `/speckit-checklist requirements` (autopilot Phase 4)
-**Domain focus** (from the workflow prompt): (1) every roadmap "Done When" bullet maps to ≥1 FR and ≥1 PR in the ~14-PR stack; (2) count-parity requirements stated per layer, not just globally; (3) release-notes requirements cover authoring, enforcement, composition, and skip paths; (4) the boundary between XPLAT-010 scope and XPLAT-008 UAT / XPLAT-009 completed work.
+**Domain focus** (from the workflow prompt): (1) every roadmap "Done When" bullet maps to ≥1 FR and ≥1 PR in the canonical 15-PR stack; (2) count-parity requirements stated per layer, not just globally; (3) release-notes requirements cover authoring, enforcement, composition, and skip paths; (4) the boundary between XPLAT-010 scope and XPLAT-008 UAT / XPLAT-009 completed work.
 **Validates**: spec.md + plan.md together (post-Plan). This is a requirements-quality checklist ("unit tests for the requirements"), distinct from the Specify-phase spec-quality checklist above; both coexist per the `/speckit-checklist` append convention.
 
 ### A. Done When → FR + PR Traceability
@@ -67,11 +67,11 @@
 
 ### B. Container / Runner Preflight (Done When bullets 4–5, 7)
 
-- [ ] CHK008 Are the preflight-workflow trigger conditions (path-filtered PR + manual dispatch; never docs-only) specified? [Completeness, Spec §FR-017]
+- [x] CHK008 Are the preflight-workflow trigger conditions (always-reporting PR + manual dispatch, with internal path detection that skips heavy docs-only work) specified? [Verified → Spec §FR-017]
 - [x] CHK009 Is there a requirement that the Linux container preflight exercises the *same* Python runner and release-gate entrypoints CI uses (not a divergent or reduced code path)? [Resolved → Spec §FR-027] (Previously gap-marked: Done When bullet 4 requires "using the same Python runner/release-gate entrypoints used by CI", but FR-017/018/020 and US4 stated only triggers, gating, and evidence — never the entrypoint-fidelity constraint. Remediated by adding FR-027; maps to the container-preflight PR, PR 11.)
-- [ ] CHK010 Is the Linux-gating vs Windows-advisory (`continue-on-error`) distinction unambiguously specified? [Clarity, Spec §FR-018, §FR-019, §SC-008]
-- [ ] CHK011 Is Windows runner-label unavailability / public-preview behavior specified as recorded-not-blocking? [Edge Case, Spec §FR-019, §Edge Cases]
-- [ ] CHK012 Is the preflight evidence-upload requirement, and the "results MUST NOT be treated as native UAT" bound, defined? [Completeness, Spec §FR-020]
+- [x] CHK010 Is the Linux-gating vs Windows-advisory (`continue-on-error`) distinction unambiguously specified? [Verified → Spec §FR-018, §FR-019, §SC-008]
+- [x] CHK011 Is runner-independent Windows hosted-label status and explicit disablement specified as recorded-not-blocking? [Verified → Spec §FR-019, §Edge Cases]
+- [x] CHK012 Is the preflight evidence-upload requirement, and the "results MUST NOT be treated as native UAT" bound, defined? [Verified → Spec §FR-020]
 
 ### C. Count-Parity Requirements (per layer, not just globally)
 
@@ -97,12 +97,12 @@
 ### E. Scope Boundary: XPLAT-010 ↔ XPLAT-008 UAT / XPLAT-009 Completed
 
 - [ ] CHK028 Is the XPLAT-009-completed work (plugin source + generated-payload Bash removal) explicitly excluded from XPLAT-010's port scope? [Coverage, Spec §Assumptions]
-- [ ] CHK029 Is the requirement that XPLAT-008 native UAT remains the sole release-satisfying evidence — and that preflight never substitutes for it — stated? [Coverage, Spec §FR-020, §Assumptions]
+- [x] CHK029 Is the requirement that XPLAT-008 native UAT remains the sole release-satisfying evidence — and that preflight never substitutes for it — stated? [Verified → Spec §FR-020, §Assumptions]
 - [ ] CHK030 Are the vendored `.specify/**` upstream helpers bounded as allowlisted-not-ported and `release_readiness_excluded`? [Consistency, Spec §FR-003, §FR-004]
 
 ### F. Cross-Cutting Requirement Quality
 
-- [ ] CHK031 Is the PR-stack size described consistently across spec, plan, and design concept (the "13-PR" vs "14-PR" headline)? [Consistency, Spec §Reviewability Budget, plan.md §Summary] — Observation (non-blocking): spec §Reviewability Budget says "~13-PR stack", plan §Summary and the workflow file say "14-PR stack"; the divergence is a headline-count nuance (12 base numbered slices, with the 3a/3b and 7a/7b splits and the estimator counted differently), not a mapping error — the enumerated PR slices are identical across artifacts. Not a missing requirement; recorded for author awareness only.
+- [x] CHK031 Is the PR-stack size described consistently across spec, plan, design concept, and workflow? [Verified → 13 numbered slices / 15 emitted PRs, with slices 3 and 7 split a/b; Spec §Reviewability Budget, plan.md §Summary]
 - [ ] CHK032 Is the guard's detection vocabulary internally consistent (bash-scoped `.sh`/`.bash` + Bash-family shebang; `.ps1`/`.bat`/`.cmd`/`.zsh` out of scope; fixed 10-file allowlist)? [Consistency, Spec §FR-001, §FR-003, §SC-001]
 
 ### Domain Checklist Notes

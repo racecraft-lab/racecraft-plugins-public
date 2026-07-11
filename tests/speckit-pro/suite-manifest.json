@@ -72,6 +72,7 @@
         { "path": "tests/speckit-pro/unit/test-trigger-signal-restoration.py", "label": "test-trigger-signal-restoration", "baseline": "tests/speckit-pro/parity/bash-to-python/test-trigger-signal-restoration-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-refresh-local-plugin.py", "label": "test-refresh-local-plugin", "baseline": "tests/speckit-pro/parity/bash-to-python/test-refresh-local-plugin-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-release-pr-reconciliation.py", "label": "test-release-pr-reconciliation", "baseline": null },
+        { "path": "tests/speckit-pro/unit/test-hosted-windows-preflight.py", "label": "test-hosted-windows-preflight", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-sync-marketplace-versions.py", "label": "test-sync-marketplace-versions", "baseline": "tests/speckit-pro/parity/bash-to-python/test-sync-marketplace-versions-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-claude-hooks.py", "label": "test-claude-hooks", "baseline": "tests/speckit-pro/parity/bash-to-python/test-claude-hooks-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-repo-bash-confinement.py", "label": "test-repo-bash-confinement", "baseline": null },

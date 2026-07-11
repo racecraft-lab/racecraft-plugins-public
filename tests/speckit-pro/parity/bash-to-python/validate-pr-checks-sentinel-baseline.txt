@@ -28,4 +28,23 @@
 028 sentinel exits 1 on detect failure
 029 sentinel exits 1 on detect cancellation
 030 all GitHub workflow files are valid YAML
-TOTAL: 30
+031 container-preflight.yml exists
+032 container preflight always reports on pull requests
+033 container preflight supports manual dispatch
+034 container preflight has workflow permissions empty
+035 change detector owns the heavy preflight decision
+036 Linux amd64 heavy preflight is job-level conditional
+037 Linux arm64 heavy preflight is job-level conditional
+038 Linux amd64 runs current Python gate entrypoints
+039 Linux arm64 runs current Python gate entrypoints
+040 Linux amd64 required check is an always sentinel
+041 Linux arm64 required check is an always sentinel
+042 Windows availability is configured on an Ubuntu control job
+043 Windows x64 smoke is advisory and conditionally queued
+044 Windows ARM64 smoke is advisory and conditionally queued
+045 Windows smoke runs interpreter discovery runtime-info and preflight
+046 every container preflight job declares minimal permissions
+047 every container preflight job uploads evidence with always semantics
+048 evidence uploads cannot mask or flip role verdicts
+049 container preflight dispatches no repo-local shell helper
+TOTAL: 49

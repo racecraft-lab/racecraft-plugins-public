@@ -36,7 +36,7 @@ reviewable LOC 400, production files 6, total files 15, primary surfaces 2
 roadmap budget projects 400–800 reviewable LOC and 15–25 total files.
 
 **Split decision (accepted in design-concept Q9/Q10):** one spec delivered as a
-~14-PR stack, each PR independently CI-green and sized to the 400–800
+15-PR stack, each PR independently CI-green and sized to the 400–800
 reviewable-LOC budget:
 
 1. Orphaned-test deletion + disposition ledger (deletion-only)
@@ -288,8 +288,10 @@ concept Q10; the speckit-pro v2.18.0 release body is the exemplar).
   hook contract (design concept Q4).
 - Live-AI eval runners (Layers 2/3/6) are ported preserving CLI arg contracts
   and codex staging semantics (design concept Q5).
-- Container preflight triggers: path-filtered pull_request + workflow_dispatch;
-  Linux jobs gate, Windows jobs are continue-on-error advisory (Q6/Q7).
+- Container preflight always reports on pull requests plus workflow_dispatch;
+  an internal path detector skips heavy work for docs-only changes, stable Linux
+  sentinels gate, and Windows jobs are continue-on-error advisory (Q6/Q7,
+  implementation correction for required-context reporting).
 - Release-notes composer is deterministic Python stdlib run inside the Release
   workflow; no LLM calls, no new secrets; CHANGELOG.md stays the machine
   ledger (Q10/Q11).
@@ -314,7 +316,7 @@ concept Q10; the speckit-pro v2.18.0 release body is the exemplar).
 | Acceptance Criteria | 20 Given/When/Then scenarios; 8 success criteria (SC-001–SC-008); 8 edge cases; 8 key entities |
 | Markers | 0 `[NEEDS CLARIFICATION]`; privacy scan clean (0 absolute paths) |
 | Gate G1 | PASS — runner validate-gate: `spec.md exists with 0 markers`; spec.md 24,605 bytes |
-| Reviewability budget | transition exception (typed ~13/14-PR split, operator-ratified) |
+| Reviewability budget | transition exception (canonical 13-slice/15-PR split, operator-ratified) |
 
 ### Files Generated
 
@@ -435,9 +437,9 @@ window, and the unavailable tasks-mode gate (recorded fallback chain).
 ## Constraints
 - Read docs/ai/specs/.process/XPLAT-010-design-concept.md before planning —
   it records the 11 accepted decisions (triage, suite architecture, count
-  parity, hooks, live evals, CI triggers/gating, .specify allowlist, 14-PR
+  parity, hooks, live evals, CI triggers/gating, .specify allowlist, 15-PR
   split, release-notes mechanism and enforcement).
-- The 14-PR stack and its ordering constraints are fixed (see the Scope
+- The 15-PR stack and its ordering constraints are fixed (see the Scope
   Budget and Split Decision section of this workflow file). Plan tasks so
   each PR is independently CI-green.
 - Shipped-runner changes (suite gate manifest read, confinement guard op) are
@@ -499,7 +501,7 @@ Why: 8 success criteria spanning four subsystems (harness port, guard, CI prefli
 /speckit-checklist requirements
 
 Focus on Repository Bash Confinement and CI Dispatch Guard requirements:
-- Every "Done When" bullet maps to at least one FR and one PR in the 14-PR stack
+- Every "Done When" bullet maps to at least one FR and one PR in the 15-PR stack
 - Count-parity requirements are stated per layer, not just globally
 - Release-notes requirements cover authoring, enforcement, composition, and skip paths
 - Pay special attention to: the boundary between XPLAT-010 scope and XPLAT-008 UAT / XPLAT-009 completed work
@@ -551,7 +553,7 @@ Focus on Repository Bash Confinement and CI Dispatch Guard requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| requirements | 32 | 2 found → 0 (1 loop) | +FR-026 (workflow shell = dispatch glue only), +FR-027 (preflight entrypoint fidelity); 13-vs-14 PR headline nuance noted for Analyze |
+| requirements | 32 | 2 found → 0 (1 loop) | +FR-026 (workflow shell = dispatch glue only), +FR-027 (preflight entrypoint fidelity); canonical 13-slice/15-PR headline normalized |
 | integration | 28 | 6 found → 0 (1 loop) | FR-006/SC-002 scoped to end-state w/ transitional-skip diagnostics; ordering enforcement decomposed (CI-self-enforcing vs review-preference); concurrent shipped-runner PR rebase+re-ritual rule (plan.md); branch-protection-change ledger (FR-018/FR-026); composer post-publish partial-failure recovery (FR-023 + Edge Case); manifest-integrity invariants (FR-007) |
 | reliability | 24 | 7 found → 0 (1 loop) | FR-002(e) binary/unreadable classification; FR-006 crash-vs-fail exit taxonomy; FR-023 transient-API fail-loud no-retry; FR-019 label-unavailability positive recording; FR-020 always-run evidence upload; Count-Parity entity environment-pin on capture AND comparison |
 | security | 20 | 6 found → 0 (1 loop) | FR-003 allowlist path-identity assertion; FR-004 negative-control exclusion test; FR-005 backstop-durability test; FR-022 dispatch-path env-var intake; FR-017 preflight least-privilege permissions; FR-014 hooks stdlib-json intake |
@@ -580,7 +582,7 @@ When checklist identifies `[Gap]` items:
 ## Task Structure
 - Small, testable chunks (1-2 hours each)
 - Clear acceptance criteria referencing FR-xxx
-- Group tasks by PR-stack slice (the 14-PR split in this workflow file's
+- Group tasks by PR-stack slice (the 15-PR split in this workflow file's
   Scope Budget section), honoring the ordering constraints:
   1 anytime; 2 before 3-10; 10 after 3-9; 11 last among confinement PRs;
   12 and 13 independent (13 early)
@@ -604,7 +606,7 @@ When checklist identifies `[Gap]` items:
 | Metric | Value |
 |--------|-------|
 | **Total Tasks** | 136 (T001–T136, contiguous) |
-| **Phases** | 17 (Setup + 14 PR slices + Polish) |
+| **Phases** | 17 (Setup + 15 emitted PRs + Polish) |
 | **Parallel Opportunities** | 53 `[P]` tasks (primary fan-out: 20 mechanical L1 validator ports) |
 | **User Stories Covered** | US1–US7 all mapped (8/72/12/9/7/5/10 tasks respectively + 13 setup/cleanup/polish) |
 | **Gate G5** | PASS — runner-verified: 136 tasks found, 0 markers |
@@ -632,7 +634,7 @@ it; recording it now wires no PR creation or branch splitting on its own.
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | `single-atomic-PR` | Advisory classifier reading of the feature as ONE unit (mass `.sh` deletion = destructive migration). The operator-ratified typed 14-PR stack supersedes as the delivery model — implementation proceeds slice-by-slice, each PR independently CI-green. Tension recorded for Analyze. |
+| **Route** | `single-atomic-PR` | Advisory classifier reading of the feature as ONE unit (mass `.sh` deletion = destructive migration). The operator-ratified typed 15-PR stack supersedes as the delivery model — implementation proceeds slice-by-slice, each PR independently CI-green. Tension recorded for Analyze. |
 | **Releasable** | `false` | Destructive-migration releasability: CI-green ≠ releasable for the aggregate change; per-slice same-PR-swap discipline (FR-012) is the mitigating control. |
 | **Signals** | `hard-atomic:destructive-migration`, `change-shape:modify-heavy`, `releasability:destructive-migration` | Decisive detector findings. |
 | **Warnings** | "destructive migration: a passing CI run does not prove this change is releasable (CI-green ≠ releasable)" | Carried into the implementation context. |
@@ -671,7 +673,7 @@ Focus on:
    wrong unless it carries an explicit revision note
 4. Consistency between task file paths and the actual repo structure
    (tests/speckit-pro/, scripts/, .claude/hooks/, .github/workflows/)
-5. Verify the 14-PR ordering constraints are encoded in task dependencies
+5. Verify the 15-PR ordering constraints are encoded in task dependencies
 ```
 
 ### Analyze Severity Levels
@@ -763,7 +765,7 @@ Before starting any task:
 | PR 8 — L8 parity | T073–T080 | 8/8 | Complete; `2197/2197` default, `88/88` docs smoke, shipped artifacts regenerated idempotently |
 | PR 9 — live-eval runners | T081–T087 | 7/7 | Complete; `2250/2250` default, `88/88` docs smoke, exact shell scan empty, shipped artifacts idempotent |
 | PR 10 — confinement guard + bash deletion | T088–T099 | 12/12 | Complete; `2300/2300` deterministic, `60/60` gate contract, `88/88` docs smoke, live guard `0` blockers + `10` vendored exclusions, shipped artifacts regenerated idempotently |
-| PR 11 — container/Windows preflight CI | | | |
+| PR 11 — container/Windows preflight CI | T100–T108 | 7/9 | Local implementation and validators complete (`1356/1356` Layer 1, `49/49` sentinel, actionlint clean); T105 PR-body publication and T108 hosted trigger/artifact proof pending |
 | PR 12 — release-notes pipeline | | | |
 | PR 13 — spec-size estimator runner op | T121–T130 | 10/10 | Complete; landed early in stack order |
 
@@ -778,7 +780,7 @@ Before starting any task:
 - [ ] Docs validation passes: `pnpm --dir docs-site validate`
 - [ ] Container preflight + Windows smoke evidence artifacts recorded
 - [ ] Release-notes composer proven on a real release (first release after PR 12 merges shows Highlights)
-- [ ] PRs created and reviewed (14-PR stack, each independently green)
+- [ ] PRs created and reviewed (15-PR stack, each independently green)
 - [ ] Merged to main branch (humans merge; autopilot never merges)
 
 ---

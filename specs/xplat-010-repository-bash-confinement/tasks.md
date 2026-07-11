@@ -263,17 +263,17 @@ Baseline capture AND the port-side parity comparison MUST run in the SAME pinned
 
 **Slice goal (US4 — Container and Runner Preflight CI)**: Add `container-preflight.yml` — Linux amd64/arm64 gating, Windows x64/ARM64 advisory — running against the fully-confined tree (hence last among confinement PRs).
 
-**Independent Test**: Trigger via manual dispatch and via a path-filtered runner/gate change; confirm Linux jobs are required, Windows jobs are `continue-on-error`, and each uploads an evidence artifact.
+**Independent Test**: Trigger via manual dispatch plus runner/gate and docs-only PR changes; confirm relevant changes run heavy jobs, docs-only changes produce successful no-op sentinels, Linux contexts are required, Windows jobs are `continue-on-error`, and each executed role uploads evidence.
 
-- [ ] T100 [US4] Author `.github/workflows/container-preflight.yml` with a workflow-level `permissions: {}` default and per-job minimal grants (`contents: read` for checkout; evidence upload uses the built-in token) — matching the `pr-checks.yml`/`deploy-docs.yml` least-privilege convention (FR-017).
-- [ ] T101 [US4] Configure path filters (runner, gate, workflow paths) + `workflow_dispatch`; a docs-only PR touching none of those paths MUST NOT trigger it (FR-017).
-- [ ] T102 [US4] Add Linux amd64 + arm64 container jobs running the SAME entrypoints CI uses — toolchain preflight, deterministic suite gate, the no-Bash/`jq` confinement guard, and the relevant release-readiness checks — as **gating** checks (FR-018/FR-027).
-- [ ] T103 [US4] Add Windows x64 + ARM64 direct-runner smoke jobs as `continue-on-error` advisory, running the interpreter-discovery + runner `runtime-info`/`preflight` subset (FR-019/FR-027). Record per-label availability by a mechanism that does NOT depend on the scarce runner starting, so an unavailable/public-preview label yields a positive `available:false` rather than a missing artifact or an indefinitely-queued job (FR-019, Edge Case).
-- [ ] T104 [US4] Add the evidence-artifact upload to every job with `if: always()` semantics so a FAILING preflight still captures evidence without masking an entrypoint failure or flipping a passing gate (FR-020). Evidence is never treated as native installed-plugin UAT (XPLAT-008 remains the release-claim gate).
+- [x] T100 [US4] Author `.github/workflows/container-preflight.yml` with a workflow-level `permissions: {}` default and per-job minimal grants (`contents: read` for checkout; evidence upload uses the built-in token) — matching the `pr-checks.yml`/`deploy-docs.yml` least-privilege convention (FR-017).
+- [x] T101 [US4] Configure an always-reporting PR trigger plus `workflow_dispatch`; put runner/gate/workflow path detection inside a lightweight job so docs-only PRs skip heavy execution while both required sentinels still report (FR-017).
+- [x] T102 [US4] Add Linux amd64 + arm64 container jobs running the SAME entrypoints CI uses — toolchain preflight, deterministic suite gate, the no-Bash/`jq` confinement guard, and the relevant release-readiness checks — as **gating** checks (FR-018/FR-027).
+- [x] T103 [US4] Add Windows x64 + ARM64 direct-runner smoke jobs as `continue-on-error` advisory, running ordered Python 3.11+ discovery (`py -V:3`, `py -3`, `python`, `python3`) plus runner `runtime-info`/`preflight` (FR-019/FR-027). Record official support tier and configured enablement in an Ubuntu control job before either Windows job queues; stable x64 defaults enabled, public-preview ARM64 defaults disabled, and repository variables/manual inputs provide explicit overrides.
+- [x] T104 [US4] Add the evidence-artifact upload to every job with `if: always()` semantics so a FAILING preflight still captures evidence without masking an entrypoint failure or flipping a passing gate (FR-020). Evidence is never treated as native installed-plugin UAT (XPLAT-008 remains the release-claim gate).
 - [ ] T105 [US4] Add the PR-body branch-protection callout: PR 11 adds TWO new required Linux check names — they must be added to branch protection manually (GitHub does not auto-register), mirroring the FR-022 callout style (FR-018).
-- [ ] T106 [US4] Update the self-referential workflow validator(s) so the new `container-preflight.yml` passes structural validation in the same PR.
-- [ ] T107 [US4] Record the CLAUDE.md CI/CD note confirming whether the new workflow requires a CLAUDE.md CI/CD-section update.
-- [ ] T108 [US4] Verify US4 end-to-end (quickstart US4): manual dispatch + path-filtered trigger fire; docs-only PR does not; Linux gating / Windows advisory roles correct; every job uploads evidence (SC-008).
+- [x] T106 [US4] Update the self-referential workflow validator(s) so the new `container-preflight.yml` passes structural validation in the same PR.
+- [x] T107 [US4] Record the CLAUDE.md CI/CD note confirming whether the new workflow requires a CLAUDE.md CI/CD-section update.
+- [ ] T108 [US4] Verify US4 end-to-end (quickstart US4): manual dispatch and a relevant PR run heavy jobs; a docs-only PR runs the workflow but skips heavy jobs; stable Linux gating contexts, Windows advisory behavior, and always-run evidence are correct (SC-008).
 
 **Checkpoint**: Preflight CI live; Linux gates, Windows advises, evidence uploaded.
 
