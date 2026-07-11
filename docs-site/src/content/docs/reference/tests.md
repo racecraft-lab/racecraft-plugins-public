@@ -11,11 +11,13 @@ SpecKit Pro validation layers and test-only files.
 
 - **Public path:** `/racecraft-plugins-public/reference/tests/`
 - **Generated output:** `docs-site/src/content/docs/reference/tests.md`
-- **Records:** 16
+- **Records:** 18
 
 ## Navigation Summary
 
+- tests/speckit-pro/AGENTS.md
 - tests/speckit-pro/check-toolchain.py
+- tests/speckit-pro/CLAUDE.md
 - tests/speckit-pro/layer1-structural
 - tests/speckit-pro/layer2-trigger
 - tests/speckit-pro/layer3-functional
@@ -39,6 +41,28 @@ SpecKit Pro validation layers and test-only files.
 
 ## Records
 
+### tests/speckit-pro/AGENTS.md
+
+- **Purpose:** Validation files in AGENTS.md.
+- **Classification:** `test-only`
+- **Platform concept:** SpecKit Pro validation layer
+- **Claude Code:** tests/speckit-pro/AGENTS.md
+- **Codex:** tests/speckit-pro/AGENTS.md
+- **Runtime difference:** Layer 1 includes separate Claude Code and Codex structural checks where the repository has runtime-specific plugin surfaces.
+
+#### Source Facts
+
+- tests/speckit-pro/AGENTS.md is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/AGENTS.md`.
+
+#### Sources
+
+- [tests/speckit-pro/AGENTS.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/AGENTS.md)
+
+#### Inferred Notes
+
+- These files are validation evidence only; DOC-007 does not change test semantics unless a docs-site validation need explicitly requires it.
+  - Based on: `tests/speckit-pro/AGENTS.md`
+
 ### tests/speckit-pro/check-toolchain.py
 
 - **Purpose:** Validation files in check-toolchain.py.
@@ -60,6 +84,28 @@ SpecKit Pro validation layers and test-only files.
 
 - These files are validation evidence only; DOC-007 does not change test semantics unless a docs-site validation need explicitly requires it.
   - Based on: `tests/speckit-pro/check-toolchain.py`
+
+### tests/speckit-pro/CLAUDE.md
+
+- **Purpose:** Validation files in CLAUDE.md.
+- **Classification:** `test-only`
+- **Platform concept:** SpecKit Pro validation layer
+- **Claude Code:** tests/speckit-pro/CLAUDE.md
+- **Codex:** tests/speckit-pro/CLAUDE.md
+- **Runtime difference:** Layer 1 includes separate Claude Code and Codex structural checks where the repository has runtime-specific plugin surfaces.
+
+#### Source Facts
+
+- tests/speckit-pro/CLAUDE.md is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/CLAUDE.md`.
+
+#### Sources
+
+- [tests/speckit-pro/CLAUDE.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/CLAUDE.md)
+
+#### Inferred Notes
+
+- These files are validation evidence only; DOC-007 does not change test semantics unless a docs-site validation need explicitly requires it.
+  - Based on: `tests/speckit-pro/CLAUDE.md`
 
 ### tests/speckit-pro/layer1-structural
 

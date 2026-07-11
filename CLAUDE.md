@@ -1,37 +1,12 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository. Shared agent guidance — including the four working rules — lives in [AGENTS.md](AGENTS.md) and is imported below; this file adds the Claude-Code-specific depth.
+
+@AGENTS.md
 
 <!-- SPECKIT START -->
 No active SpecKit implementation plan is selected. XPLAT-010 merged through PRs #311-#328 and is archived in `.specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md`. Repository validation is Python 3.11+ and manifest-driven; Bash is confined to bounded GitHub workflow dispatch glue and the fixed release-excluded vendored `.specify/**` allowlist. T108/T117 hosted evidence is complete. Public native Windows/macOS/Linux claims remain blocked by the preserved XPLAT-008 operator UAT matrix.
 <!-- SPECKIT END -->
-
-## Working in This Repo
-
-Four rules, in priority order. These exist because plugin/marketplace edits have high blast radius (every install consumer gets the change on `/plugin marketplace update`) and most defects here come from doing too much, not too little.
-
-### 1. Surface assumptions before editing
-- State them in chat before touching files. If a plugin manifest, release config, or CI workflow change is ambiguous, ask — don't infer.
-- If a request has multiple reasonable interpretations (e.g., "fix the release" could mean bump version, re-trigger workflow, or patch the script), list them and let the user pick.
-- If a simpler approach exists (e.g., a `chore:` empty commit vs. a code change), say so before implementing the larger one.
-
-### 2. Simplest change that solves it
-- No new abstractions for one-call-site code. No new test layers, scripts, or helpers unless a second use exists or is explicitly asked for.
-- No flags/options "for future flexibility" — add them when a second caller actually appears.
-- For repo-local gates, prefer `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < <request.json>` over new shell or `jq` logic. Do not add active repository Bash outside the bounded workflow-dispatch and fixed vendored `.specify/**` boundaries.
-
-### 3. Surgical edits
-- Touch only what the request requires. Don't reformat adjacent JSON, reorder keys in `plugin.json` / `marketplace.json`, or "clean up" comments you didn't author.
-- When editing one plugin's files, don't drift into another plugin's files unless the task explicitly spans them.
-- Remove only the imports/blocks your change orphans — leave pre-existing dead code alone (mention it, don't delete it).
-- Match existing style in shell scripts, YAML, and Markdown even if you'd write it differently.
-
-### 4. Verifiable success criteria
-- Translate every task into a check before coding: "edit X" → "after edit, `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json` passes" or "`gh pr view <N>` shows green".
-- For workflow / release changes, the success check is "the next release PR from release-please reflects this" — say that out loud before editing.
-- For multi-step work, list the steps + their verification commands up front, then loop on them.
-
-Tradeoff: these bias toward caution over speed. For a one-line `chore:` edit, use judgment.
 
 ## Start Here
 
@@ -49,10 +24,9 @@ A **Claude Code plugin marketplace** containing public plugins for spec-driven d
 /plugin install speckit-pro@racecraft-plugins-public
 ```
 
-After making changes, publish with:
+Changes land through a squash-merged PR (`main` is protected), and release-please publishes the release. Consumers then update with:
 ```bash
-git add . && git commit -m "Description" && git push
-# Then in Claude Code:
+# In Claude Code:
 /plugin marketplace update racecraft-plugins-public
 ```
 
@@ -73,7 +47,7 @@ The marketplace registry is at `.claude-plugin/marketplace.json`. Adding a new p
 **The test suite is NOT inside the plugin directory.** Plugin install (both Claude
 Code and Codex) copies the entire plugin directory to every consumer, and neither
 supports a file-exclusion mechanism — so anything under `<plugin>/` ships. To keep
-the 5-layer suite out of consumers' installs, it lives at the repo root in
+the test suite out of consumers' installs, it lives at the repo root in
 `tests/<plugin>/` (e.g. `tests/speckit-pro/`), a sibling of the plugin. The
 `validate-plugin-payload` Layer-1 check fails if `tests/`, `specs/`, or `.process/`
 ever reappear under the plugin dir.
@@ -82,7 +56,7 @@ ever reappear under the plugin dir.
 Commands must have YAML frontmatter (`---`) with `description:` and `allowed-tools:` fields, followed by body content. No frontmatter = test failure.
 
 ### Skill Structure
-Skills live under `skills/<skill-name>/` with a `SKILL.md` entry point. Supporting reference docs go in `references/` and shell scripts in `scripts/`.
+Skills live under `skills/<skill-name>/` with a `SKILL.md` entry point. Supporting reference docs go in `references/` and helper scripts (Python — shipped payloads carry no Bash) in `scripts/`.
 
 ## Running Tests
 
@@ -176,19 +150,19 @@ For per-feature history, see `git log` and `CHANGELOG.md` — don't maintain a d
 
 Feature branches use the naming convention `NNN-feature-name` where `NNN` is a zero-padded three-digit spec number (e.g., `004-integration-verification`).
 
-**PR title requirements:** All PR titles MUST follow the [Conventional Commits](https://www.conventionalcommits.org/) format:
+**PR title requirements:** All PR titles MUST follow the [Conventional Commits](https://www.conventionalcommits.org/) format, with a required scope — the release-readiness gate rejects scope-less titles:
 
 ```
-<type>(<optional scope>): <description>
+<type>(<scope>): <description>
 ```
 
-Valid types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`
+Valid types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`. Scopes are lowercase letters, digits, and hyphens.
 
 Examples:
 - `feat(speckit-pro): add new coaching command`
-- `fix: resolve session timeout`
-- `docs: update CLAUDE.md CI/CD sections`
-- `chore: sync marketplace.json versions`
+- `fix(speckit-pro): resolve session timeout`
+- `docs(claude-md): update CI/CD sections`
+- `chore(release): sync marketplace.json versions`
 
 The `validate-pr-title` CI check enforces this format and will block the PR if the title does not match.
 
@@ -216,7 +190,7 @@ The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-dra
 
 | Job | Description |
 |-----|-------------|
-| `detect` | Emits the current Python-gated plugin matrix. During XPLAT-007, this is intentionally fixed to `["speckit-pro"]`; selective changed-file matrices are deferred until the Python gate owns that decision. |
+| `detect` | Emits the current Python-gated plugin matrix. Intentionally fixed to `["speckit-pro"]` for now; selective changed-file matrices are deferred until the Python gate owns that decision. |
 | `test (<plugin>)` | Dispatches the Python runner toolchain and default-suite gates for each plugin in the matrix. |
 | `validate-plugins` | Sentinel/aggregator job. Always runs. Passes when the plugin test matrix passed or was skipped; fails when it failed or was cancelled. Provides the stable check name that branch protection requires. |
 | `validate-pr-title` | Validates the PR title against the Conventional Commits pattern. |
@@ -374,11 +348,11 @@ To override release-please's inferred version bump and pin a specific version:
 ```bash
 # Touch a file in the target component to scope the footer to that component,
 # then add the Release-As footer to the commit message.
-git commit -m "chore: force speckit-pro version
+git commit -m "chore(speckit-pro): force version
 
 Release-As: 1.2.0" speckit-pro/.claude-plugin/plugin.json
 git push origin <release-as-branch>
-gh pr create --base main --head <release-as-branch> --title "chore: force speckit-pro version"
+gh pr create --base main --head <release-as-branch> --title "chore(speckit-pro): force version"
 ```
 
 The `Release-As: X.Y.Z` footer MUST appear in the git commit trailer (separated from the subject by a blank line). The commit MUST touch at least one file under `speckit-pro/` — a commit that touches no component files will not target any component. The footer overrides the inferred version in the next release-please PR.
@@ -451,9 +425,9 @@ Check whether release-please ran but found no releasable commits: navigate to Ac
 
 **Recovery:**
 ```bash
-git commit --allow-empty -m "fix: trigger release for speckit-pro"
+git commit --allow-empty -m "fix(speckit-pro): trigger release"
 git push origin <release-trigger-branch>
-gh pr create --base main --head <release-trigger-branch> --title "fix: trigger release for speckit-pro"
+gh pr create --base main --head <release-trigger-branch> --title "fix(speckit-pro): trigger release"
 ```
 
 This can be combined with `Release-As:` if a specific version is needed (see Scenario 2).
@@ -472,9 +446,9 @@ Compare the version values against the GitHub Release tags. If they do not match
 python3 scripts/refresh-release-artifacts.py
 pnpm --dir docs-site reference:generate
 git add dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json docs-site/src/content/docs/reference
-git commit -m "chore: sync plugin payloads, marketplace versions, and docs reference"
+git commit -m "chore(release): sync plugin payloads, marketplace versions, and docs reference"
 git push origin <sync-branch>
-gh pr create --base main --head <sync-branch> --title "chore: sync plugin payloads and marketplace versions"
+gh pr create --base main --head <sync-branch> --title "chore(release): sync plugin payloads and marketplace versions"
 ```
 
 ---
