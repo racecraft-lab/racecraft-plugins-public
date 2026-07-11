@@ -865,7 +865,7 @@
             "kind": "trust_metadata",
             "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
             "required": true,
-            "sha256": "4b1fa7652802a15cbc5ce698e001b291a29e01f6cdfaa2a1fe411bc53cb82ba8",
+            "sha256": "a729e40c502dd3de56874dfad23fa19ed29757c858496de07f84d0da14130d90",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
             "transform": "none"
           },
@@ -1713,7 +1713,7 @@
             "kind": "trust_metadata",
             "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
             "required": true,
-            "sha256": "4b1fa7652802a15cbc5ce698e001b291a29e01f6cdfaa2a1fe411bc53cb82ba8",
+            "sha256": "a729e40c502dd3de56874dfad23fa19ed29757c858496de07f84d0da14130d90",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
             "transform": "none"
           },
@@ -1728,7 +1728,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "0311c0420b83606f6ac8be924e67ff48b74f4c9d9f5ef52353bf44ad53c4be20",
+        "file_tree_hash": "eb24b4f7d596b3c8ea4a6de4a88ffcb0c06b4109953f2f856d0bd1864a179712",
         "generated_root": "dist/claude/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
@@ -2729,7 +2729,7 @@
             "kind": "trust_metadata",
             "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
             "required": true,
-            "sha256": "4b1fa7652802a15cbc5ce698e001b291a29e01f6cdfaa2a1fe411bc53cb82ba8",
+            "sha256": "a729e40c502dd3de56874dfad23fa19ed29757c858496de07f84d0da14130d90",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
             "transform": "none"
           },
@@ -3730,7 +3730,7 @@
             "kind": "trust_metadata",
             "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
             "required": true,
-            "sha256": "4b1fa7652802a15cbc5ce698e001b291a29e01f6cdfaa2a1fe411bc53cb82ba8",
+            "sha256": "a729e40c502dd3de56874dfad23fa19ed29757c858496de07f84d0da14130d90",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
             "transform": "none"
           },
@@ -3745,7 +3745,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "0ac2fe84213e2f76bebb61dffe3223dc8642c0b9f456b78cac091fad9bcdc731",
+        "file_tree_hash": "2a48adaf1f5c5ec63bd6974d4fd185bbe6543b7c40c2649ac6e92501ef2d3dda",
         "generated_root": "dist/codex/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
