@@ -1,0 +1,30 @@
+001 valid relative up: passes
+002 missing up: is a violation
+003 empty up: is a violation
+004 wikilink up: is a violation (ill-formed for orphan)
+005 absolute-URL up: is a violation (not a relative target)
+006 root-absolute up: is a violation (not a relative target)
+007 protocol-relative up: is a violation (not a relative target)
+008 anchor-only up: is a violation (not a relative target)
+009 root-absolute up: with a LEADING SPACE is still a violation (trimmed)
+010 schemed up: (mailto:/tel:) is a violation (not a relative target)
+011 non-MOC docs in a gated spec are not required to carry up: (scan clean)
+012 no structureVersion -> SKIP (not gated)
+013 structureVersion 0 (< 1) -> SKIP
+014 quoted "1" -> SKIP (non-bare-integer)
+015 decimal 1.0 -> SKIP (non-bare-integer)
+016 non-numeric text -> SKIP (non-bare-integer)
+017 no --- fence -> SKIP (unparseable frontmatter)
+018 no SPEC-MOC.md in dir -> SKIP (scan clean, no marker globbed)
+019 bare integer 1 WITH inline # comment -> GATED (guards inline-comment false-skip)
+020 spec_id namespace-matches dir (prsg,002) -> PASS
+021 spec_id namespace-matches dir (spec,006a) -> PASS
+022 spec_id (spec,002) vs dir (prsg,002) collision -> VIOLATION
+023 spec_id 013a1 vs dir 013a near-miss -> VIOLATION
+024 absent spec_id in gated marker -> VIOLATION
+025 empty spec_id in gated marker -> VIOLATION
+026 Dogfood PRSG marker is version-gated (observable, not inferred from exit 0)
+027 Dogfood PRSG marker spec_id namespace-matches its directory
+028 real-tree scan of docs/ai/specs/ is clean (legacy skipped)
+029 real-tree scan of specs/ is clean (active markers pass, legacy skipped)
+TOTAL: 29
