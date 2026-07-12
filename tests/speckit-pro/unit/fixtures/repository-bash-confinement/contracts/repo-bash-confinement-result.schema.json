@@ -35,8 +35,16 @@
     "enumeration": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["source", "workflow_run_values"],
+      "required": ["active_instruction_values", "runtime_diagnostic_values", "source", "workflow_run_values"],
       "properties": {
+        "active_instruction_values": {
+          "const": "inspected",
+          "description": "Active project instructions and public support surfaces are checked for retired shell-helper guidance while vendored Spec Kit paths and negative/historical prose remain accepted."
+        },
+        "runtime_diagnostic_values": {
+          "const": "inspected",
+          "description": "Python runner diagnostic, remediation, error, and rollback output fields are checked structurally for obsolete shell guidance."
+        },
         "source": {
           "const": "git ls-files -z",
           "description": "Live repository-wide enumeration via the argv list [\"git\", \"ls-files\", \"-z\"] from the repo root (never a command string, never shell=True, never a fixed file list)."

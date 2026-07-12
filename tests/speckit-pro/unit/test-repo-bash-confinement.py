@@ -130,7 +130,18 @@ class RepoBashConfinementTests(unittest.TestCase):
             self.assertTrue(finding.get("line") is None or type(finding["line"]) is int)
 
         enumeration = data["enumeration"]
-        self.assertEqual(set(enumeration), {"source", "workflow_run_values", "tracked_file_count"})
+        self.assertEqual(
+            set(enumeration),
+            {
+                "active_instruction_values",
+                "runtime_diagnostic_values",
+                "source",
+                "workflow_run_values",
+                "tracked_file_count",
+            },
+        )
+        self.assertEqual(enumeration["active_instruction_values"], "inspected")
+        self.assertEqual(enumeration["runtime_diagnostic_values"], "inspected")
         self.assertEqual(enumeration["source"], "git ls-files -z")
         self.assertEqual(enumeration["workflow_run_values"], "inspected")
         self.assertIs(type(enumeration["tracked_file_count"]), int)
@@ -471,6 +482,118 @@ subprocess.run([executable, '--version'])
         findings = active_path_guard.repo_bash_python_findings("tools/shadowed-executable.py", shadowed)
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0].pattern, "<dynamic> --version")
+
+    def test_active_instruction_surfaces_block_retired_shell_guidance(self) -> None:
+        files = [
+            {
+                "path": ".claude/skills/custom-review/SKILL.md",
+                "content": "Run scripts/review-pr.sh before opening the PR.\n",
+            },
+            {
+                "path": "docs-site/src/content/docs/troubleshooting.md",
+                "content": "Install jq and run it to repair the generated payload.\n",
+            },
+            {
+                "path": ".claude/agents/custom-auditor.md",
+                "content": "Run Bash to validate the release.\n",
+            },
+        ]
+        with temporary_repo(files) as root:
+            result = run_guard(root)
+        blocking = [
+            item for item in result["data"]["findings"] if item["classification"] == "blocking_repo_bash"
+        ]
+        self.assertEqual(result["status"], "expected_failure")
+        self.assertEqual(
+            {item["category"] for item in blocking},
+            {"instruction_command", "instruction_script_path"},
+        )
+        self.assertEqual(
+            {item["path"] for item in blocking},
+            {
+                ".claude/agents/custom-auditor.md",
+                ".claude/skills/custom-review/SKILL.md",
+                "docs-site/src/content/docs/troubleshooting.md",
+            },
+        )
+
+    def test_active_instruction_classification_preserves_supported_context(self) -> None:
+        files = [
+            {
+                "path": ".claude/skills/speckit-plan/SKILL.md",
+                "content": "Run .specify/scripts/bash/setup-plan.sh --json from the repo root.\n",
+            },
+            {
+                "path": ".claude/claude-security-guidance.md",
+                "content": (
+                    "Historical context: scripts/generate-pr-body.sh and external jq were retired.\n"
+                    "Use gh pr view --json title --jq .title; gh --jq is not the external executable.\n"
+                ),
+            },
+            {
+                "path": "docs-site/src/content/docs/install/codex.md",
+                "content": "The installed runtime does not require Bash, Git Bash, or external jq.\n",
+            },
+            {
+                "path": ".github/copilot-instructions.md",
+                "content": "Do not add a Bash or jq dependency. Use specify init --script sh when requested.\n",
+            },
+        ]
+        with temporary_repo(files) as root:
+            result = run_guard(root)
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["data"]["blocking_count"], 0)
+
+    def test_runtime_diagnostic_fields_block_obsolete_shell_remediation(self) -> None:
+        files = [
+            {
+                "path": "speckit-pro/speckit_pro_runner/helpers/stale.py",
+                "content": (
+                    "def check():\n"
+                    "    return diagnostic(\n"
+                    "        'failed',\n"
+                    "        'repair failed',\n"
+                    "        remediation_actions=['Use scripts/repair-install.sh for mutation behavior.'],\n"
+                    "    )\n"
+                ),
+            },
+            {
+                "path": "speckit-pro/speckit_pro_runner/helpers/stale_registry.py",
+                "content": (
+                    "ENTRY = MutationEntry(\n"
+                    "    'id', 'operation', (), None, 'deferred', 'fixture', 'python', (), (),\n"
+                    "    'Use tools/retry-release.sh until cutover.',\n"
+                    ")\n"
+                ),
+            },
+        ]
+        with temporary_repo(files) as root:
+            result = run_guard(root)
+        blocking = [
+            item for item in result["data"]["findings"] if item["classification"] == "blocking_repo_bash"
+        ]
+        self.assertEqual(result["status"], "expected_failure")
+        self.assertEqual({item["category"] for item in blocking}, {"runtime_instruction_script_path"})
+        self.assertEqual(len(blocking), 2)
+
+    def test_runtime_provenance_and_negative_diagnostics_remain_non_blocking(self) -> None:
+        files = [
+            {
+                "path": "speckit-pro/speckit_pro_runner/helpers/provenance.py",
+                "content": (
+                    "def report():\n"
+                    "    return {\n"
+                    "        'inactive_provenance': {'prior_script': 'scripts/retired.sh'},\n"
+                    "        'message': 'The retired Bash helper was removed.',\n"
+                    "        'remediation_actions': ['Do not restore external jq.'],\n"
+                    "    }\n"
+                ),
+            }
+        ]
+        with temporary_repo(files) as root:
+            result = run_guard(root)
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["data"]["blocking_count"], 0)
 
     def test_symlink_targets_are_confined_before_content_reads(self) -> None:
         with tempfile.TemporaryDirectory(prefix="xplat010-outside-") as outside:

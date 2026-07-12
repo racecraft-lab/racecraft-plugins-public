@@ -45,6 +45,56 @@ REPO_BASH_COMMAND_NAMES = frozenset({"bash", "bash.exe", "jq", "jq.exe"})
 REPO_BASH_SHEBANG_NAMES = frozenset({"bash", "bash.exe", "sh", "sh.exe"})
 REPO_BASH_WORKFLOW_PREFIX = ".github/workflows/"
 REPO_BASH_WORKFLOW_SUFFIXES = frozenset({".yaml", ".yml"})
+REPO_BASH_ACTIVE_INSTRUCTION_FILES = frozenset(
+    {
+        ".claude/claude-security-guidance.md",
+        ".github/copilot-instructions.md",
+        ".specify/extensions/speckit-utils/commands/doctor.md",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "README.md",
+        "speckit-pro/README.md",
+    }
+)
+REPO_BASH_ACTIVE_INSTRUCTION_PREFIXES = (
+    ".claude/agents/",
+    ".claude/skills/",
+    "docs-site/src/content/docs/",
+    "docs-site/src/data/",
+)
+REPO_BASH_RUNTIME_OUTPUT_KEYS = frozenset(
+    {
+        "actions",
+        "error",
+        "message",
+        "remediation",
+        "remediation_actions",
+        "remediation_summary",
+        "rollback",
+        "stderr_line",
+        "summary",
+    }
+)
+REPO_BASH_SCRIPT_REFERENCE = re.compile(
+    r"(?<![\w*])(?P<path>(?:\.{0,2}/)?(?:\.?[A-Za-z0-9_][A-Za-z0-9_.-]*/)*"
+    r"[A-Za-z0-9_][A-Za-z0-9_.-]*\.(?:sh|bash))(?![\w-])",
+    re.IGNORECASE,
+)
+REPO_BASH_DIRECT_COMMAND = re.compile(
+    r"(?:^|[`'\"(:=]\s*)(?P<command>bash|bash\.exe|jq|jq\.exe|sh|sh\.exe)\s+(?P<argument>[^\s`'\")]+)",
+    re.IGNORECASE,
+)
+REPO_BASH_ACTIONABLE_TOOL = re.compile(
+    r"\b(?:execute|install|invoke|require|requires|required|run|use|uses|using)\s+"
+    r"(?:an?\s+|the\s+|external\s+)*(?P<command>bash|bash\.exe|jq|jq\.exe|sh|sh\.exe)\b",
+    re.IGNORECASE,
+)
+REPO_BASH_NON_ACTIONABLE_CONTEXT = re.compile(
+    r"\b(?:archive|archived|avoid|block|blocked|blocking|deprecated|deleted|does\s+not|do\s+not|earlier|"
+    r"former|formerly|historical|history|inactive|legacy|mention|mentions|must\s+not|never|no\s+longer|"
+    r"not\s+require|prior|prohibit|prohibited|provenance|remove|removed|retired|without|zero[- ]bash)\b",
+    re.IGNORECASE,
+)
 REPO_BASH_FIXTURE_PREFIXES = (
     "tests/speckit-pro/unit/fixtures/",
     "tests/speckit-pro/parity/",
@@ -584,6 +634,8 @@ def run_repo_bash_confinement(entry: Any, request: Any, repo_root: Path) -> dict
             {
                 "allowlist": repo_bash_allowlist_summary(request.inputs, allowlist),
                 "enumeration": {
+                    "active_instruction_values": "inspected",
+                    "runtime_diagnostic_values": "inspected",
                     "source": "git ls-files -z",
                     "workflow_run_values": "inspected",
                     "tracked_file_count": len(tracked_paths),
@@ -637,6 +689,8 @@ def run_repo_bash_confinement(entry: Any, request: Any, repo_root: Path) -> dict
                 for finding in findings
             ),
             "enumeration": {
+                "active_instruction_values": "inspected",
+                "runtime_diagnostic_values": "inspected",
                 "source": "git ls-files -z",
                 "workflow_run_values": "inspected",
                 "tracked_file_count": len(tracked_paths),
@@ -843,9 +897,14 @@ def repo_bash_path_findings(
     if path.startswith(REPO_BASH_WORKFLOW_PREFIX) and Path(path).suffix.lower() in REPO_BASH_WORKFLOW_SUFFIXES:
         return repo_bash_workflow_findings(path, content, tracked_paths or set())
     if Path(path).suffix.lower() == ".py":
-        return repo_bash_python_findings(path, content)
+        findings = repo_bash_python_findings(path, content)
+        if repo_bash_runtime_diagnostic_scan_path(path):
+            findings.extend(repo_bash_runtime_diagnostic_findings(path, content))
+        return findings
     if Path(path).name.lower() in {"hooks.json", "package.json"}:
         return repo_bash_json_findings(path, content)
+    if repo_bash_active_instruction_scan_path(path):
+        return repo_bash_instruction_findings(path, content)
     return []
 
 
@@ -869,7 +928,30 @@ def repo_bash_invocation_scan_path(path: str) -> bool:
         return False
     if normalized.startswith(REPO_BASH_WORKFLOW_PREFIX):
         return Path(normalized).suffix.lower() in REPO_BASH_WORKFLOW_SUFFIXES
-    return Path(normalized).suffix.lower() == ".py" or Path(normalized).name.lower() in {"hooks.json", "package.json"}
+    return (
+        Path(normalized).suffix.lower() == ".py"
+        or Path(normalized).name.lower() in {"hooks.json", "package.json"}
+        or repo_bash_active_instruction_scan_path(normalized)
+    )
+
+
+def repo_bash_active_instruction_scan_path(path: str) -> bool:
+    normalized = normalize_path(path)
+    if normalized in REPO_BASH_ACTIVE_INSTRUCTION_FILES:
+        return True
+    if not normalized.startswith(REPO_BASH_ACTIVE_INSTRUCTION_PREFIXES):
+        return False
+    suffix = Path(normalized).suffix.lower()
+    if normalized.startswith(".claude/agents/"):
+        return suffix == ".md" and len(Path(normalized).parts) == 3
+    if normalized.startswith(".claude/skills/"):
+        return suffix == ".md" and Path(normalized).name == "SKILL.md" and len(Path(normalized).parts) == 4
+    return suffix in {".md", ".mdx", ".ts"}
+
+
+def repo_bash_runtime_diagnostic_scan_path(path: str) -> bool:
+    normalized = normalize_path(path)
+    return normalized.startswith("speckit-pro/speckit_pro_runner/") and normalized.endswith(".py")
 
 
 def repo_bash_shebang(content: str) -> bool:
@@ -923,6 +1005,172 @@ def repo_bash_finding_record(finding: RawFinding) -> dict[str, Any]:
     if finding.classification == "vendored_specify_helper":
         record["release_readiness_excluded"] = True
     return record
+
+
+def repo_bash_instruction_findings(
+    path: str,
+    content: str,
+    *,
+    line_offset: int = 0,
+    active_role: str = "active_instruction",
+    category_prefix: str = "instruction",
+) -> list[RawFinding]:
+    """Find active shell guidance while preserving negative and vendored prose."""
+    lines = content.splitlines()
+    findings: list[RawFinding] = []
+    for index, line in enumerate(lines):
+        line_number = line_offset + index + 1
+        start = max(0, index - 1)
+        end = min(len(lines), index + 2)
+        context = REPO_BASH_SCRIPT_REFERENCE.sub("<script>", " ".join(lines[start:end]))
+        non_actionable = REPO_BASH_NON_ACTIONABLE_CONTEXT.search(context) is not None
+
+        script_matches = list(REPO_BASH_SCRIPT_REFERENCE.finditer(line))
+        blocking_script_reference = False
+        for match in script_matches:
+            target = repo_bash_instruction_target(match.group("path"))
+            if target in XPLAT_010_CANONICAL_ALLOWLIST_PATHS or non_actionable:
+                continue
+            blocking_script_reference = True
+            findings.append(
+                repo_bash_instruction_finding(
+                    path,
+                    line_number,
+                    f"{category_prefix}_script_path",
+                    match.group("path"),
+                    "active instruction references a retired or non-allowlisted shell helper",
+                    active_role=active_role,
+                )
+            )
+
+        if non_actionable or blocking_script_reference:
+            continue
+        for match in REPO_BASH_DIRECT_COMMAND.finditer(line):
+            command = executable_basename(match.group("command"))
+            argument = repo_bash_instruction_target(match.group("argument"))
+            if command in {"bash", "sh"} and argument in XPLAT_010_CANONICAL_ALLOWLIST_PATHS:
+                continue
+            findings.append(
+                repo_bash_instruction_finding(
+                    path,
+                    line_number,
+                    f"{category_prefix}_command",
+                    f"{match.group('command')} {match.group('argument')}",
+                    "active instruction requires a Bash/POSIX-sh or external jq command",
+                    active_role=active_role,
+                )
+            )
+            break
+        else:
+            match = REPO_BASH_ACTIONABLE_TOOL.search(line)
+            if match is not None:
+                findings.append(
+                    repo_bash_instruction_finding(
+                        path,
+                        line_number,
+                        f"{category_prefix}_command",
+                        match.group(0),
+                        "active instruction requires a Bash/POSIX-sh or external jq command",
+                        active_role=active_role,
+                    )
+                )
+    return deduplicate_raw_findings(findings)
+
+
+def repo_bash_instruction_finding(
+    path: str,
+    line: int,
+    category: str,
+    pattern: str,
+    reason: str,
+    *,
+    active_role: str,
+) -> RawFinding:
+    return RawFinding(
+        path=path,
+        line=line,
+        category=category,
+        pattern=pattern[:240],
+        reason=reason,
+        active_role=active_role,
+        classification="blocking_repo_bash",
+        remediation="Replace the instruction with the current Python runner or direct cross-platform command.",
+    )
+
+
+def repo_bash_instruction_target(raw: str) -> str:
+    normalized = normalize_path(raw)
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    return normalized
+
+
+def repo_bash_runtime_diagnostic_findings(path: str, content: str) -> list[RawFinding]:
+    """Inspect only AST fields that can be emitted as operator guidance."""
+    try:
+        tree = ast.parse(content)
+    except SyntaxError:
+        return [
+            repo_bash_instruction_finding(
+                path,
+                1,
+                "runtime_diagnostic_parse",
+                "<syntax error>",
+                "runner source could not be parsed for runtime diagnostic guidance",
+                active_role="runtime_diagnostic",
+            )
+        ]
+
+    expressions: list[ast.AST] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.keyword) and node.arg in REPO_BASH_RUNTIME_OUTPUT_KEYS:
+            expressions.append(node.value)
+        elif isinstance(node, ast.Dict):
+            for key, value in zip(node.keys, node.values):
+                if isinstance(key, ast.Constant) and key.value in REPO_BASH_RUNTIME_OUTPUT_KEYS:
+                    expressions.append(value)
+        elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            if any(isinstance(target, ast.Name) and target.id in REPO_BASH_RUNTIME_OUTPUT_KEYS for target in targets):
+                expressions.append(node.value)
+        elif isinstance(node, ast.Call) and repo_bash_call_name(node.func) == "diagnostic" and len(node.args) >= 2:
+            expressions.append(node.args[1])
+        elif isinstance(node, ast.Call) and repo_bash_call_name(node.func) == "MutationEntry" and len(node.args) >= 10:
+            expressions.append(node.args[9])
+
+    findings: list[RawFinding] = []
+    for expression in expressions:
+        for line, value in repo_bash_guidance_strings(expression):
+            findings.extend(
+                repo_bash_instruction_findings(
+                    path,
+                    value,
+                    line_offset=max(0, line - 1),
+                    active_role="runtime_diagnostic",
+                    category_prefix="runtime_instruction",
+                )
+            )
+    return deduplicate_raw_findings(findings)
+
+
+def repo_bash_guidance_strings(node: ast.AST | None) -> list[tuple[int, str]]:
+    if node is None:
+        return []
+    value = static_string_literal(node)
+    if value is not None:
+        return [(getattr(node, "lineno", 1), value)]
+    if isinstance(node, (ast.List, ast.Set, ast.Tuple)):
+        return [item for element in node.elts for item in repo_bash_guidance_strings(element)]
+    if isinstance(node, ast.Dict):
+        return [item for value_node in node.values for item in repo_bash_guidance_strings(value_node)]
+    return []
+
+
+def deduplicate_raw_findings(findings: list[RawFinding]) -> list[RawFinding]:
+    records: dict[tuple[str, int | None, str, str], RawFinding] = {}
+    for finding in findings:
+        records[(finding.path, finding.line, finding.category, finding.pattern)] = finding
+    return list(records.values())
 
 
 def repo_bash_workflow_findings(
