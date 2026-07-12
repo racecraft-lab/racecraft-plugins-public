@@ -46,10 +46,6 @@ concurrency:
   group: ${{ github.ref == 'refs/heads/main' && 'deploy-docs-github-pages' || format('deploy-docs-noop-{0}', github.run_id) }}
   cancel-in-progress: ${{ github.ref == 'refs/heads/main' }}
 
-defaults:
-  run:
-    shell: bash
-
 jobs:
   build:
     name: Validate and upload docs artifact
@@ -73,9 +69,10 @@ jobs:
           node-version: 22
 
       - name: Enable pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@10.25.0 --activate
+        run: corepack enable
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@10.25.0 --activate
 
       - name: Install docs-site dependencies
         run: pnpm --dir docs-site install --frozen-lockfile
@@ -83,15 +80,14 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm --dir docs-site exec playwright install --with-deps chromium
 
+      - name: Prepare docs artifact
+        run: python3 scripts/docs-artifact.py prepare docs-site/dist
+
       - name: Validate docs-site
-        run: |
-          set -euo pipefail
-          rm -rf docs-site/dist
-          pnpm --dir docs-site validate
-          if [ ! -d docs-site/dist ] || [ -z "$(find docs-site/dist -mindepth 1 -print -quit)" ]; then
-            echo "::error::docs-site/dist is missing or empty after validation."
-            exit 1
-          fi
+        run: pnpm --dir docs-site validate
+
+      - name: Verify docs artifact
+        run: python3 scripts/docs-artifact.py verify docs-site/dist
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
