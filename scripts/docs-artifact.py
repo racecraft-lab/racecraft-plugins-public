@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
+import stat
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -12,6 +14,9 @@ from pathlib import Path
 
 class ArtifactError(Exception):
     """An actionable docs artifact validation failure."""
+
+
+CANONICAL_ARTIFACT_PATH = Path("docs-site/dist")
 
 
 def checked_artifact_path(repo_root: Path, supplied_path: str | Path) -> Path:
@@ -45,6 +50,11 @@ def checked_artifact_path(repo_root: Path, supplied_path: str | Path) -> Path:
         raise ArtifactError(
             f"Refusing artifact path '{supplied_path}': it resolves to the repository root. "
             "Pass a dedicated output directory such as docs-site/dist."
+        )
+    if relative != CANONICAL_ARTIFACT_PATH:
+        raise ArtifactError(
+            f"Refusing artifact path '{supplied_path}': only '{CANONICAL_ARTIFACT_PATH}' is allowed. "
+            "The prepare operation recursively deletes its target, so the workflow path is fixed."
         )
 
     current = root
@@ -102,12 +112,7 @@ def verify_artifact(repo_root: Path, supplied_path: str | Path) -> Path:
             f"Docs artifact '{supplied_path}' is not a directory after validation. "
             "Fix the docs output configuration and rerun validation."
         )
-    try:
-        has_content = next(artifact.iterdir(), None) is not None
-    except OSError as exc:
-        raise ArtifactError(
-            f"Could not inspect docs artifact '{supplied_path}': {exc}. Check its permissions and retry."
-        ) from exc
+    has_content = validate_artifact_tree(artifact, supplied_path)
     if not has_content:
         raise ArtifactError(
             f"Docs artifact '{supplied_path}' is empty after validation. "
@@ -115,6 +120,61 @@ def verify_artifact(repo_root: Path, supplied_path: str | Path) -> Path:
         )
     print(f"Verified non-empty docs artifact path: {supplied_path}")
     return artifact
+
+
+def validate_artifact_tree(artifact: Path, supplied_path: str | Path) -> bool:
+    """Reject links and special files before the Pages action dereferences the tree."""
+    has_content = False
+
+    def walk_error(error: OSError) -> None:
+        raise ArtifactError(
+            f"Could not inspect docs artifact '{supplied_path}': {error}. Check its permissions and retry."
+        ) from error
+
+    try:
+        for directory, child_directories, files in os.walk(
+            artifact,
+            topdown=True,
+            onerror=walk_error,
+            followlinks=False,
+        ):
+            directory_path = Path(directory)
+            for name, expected_directory in (
+                *((name, True) for name in child_directories),
+                *((name, False) for name in files),
+            ):
+                has_content = True
+                entry = directory_path / name
+                metadata = entry.lstat()
+                if stat.S_ISLNK(metadata.st_mode):
+                    raise ArtifactError(
+                        f"Docs artifact '{supplied_path}' contains a symbolic link: "
+                        f"{entry.relative_to(artifact)}. Replace it with generated file content."
+                    )
+                if expected_directory:
+                    if not stat.S_ISDIR(metadata.st_mode):
+                        raise ArtifactError(
+                            f"Docs artifact '{supplied_path}' contains an invalid directory entry: "
+                            f"{entry.relative_to(artifact)}."
+                        )
+                    continue
+                if not stat.S_ISREG(metadata.st_mode):
+                    raise ArtifactError(
+                        f"Docs artifact '{supplied_path}' contains a special file: "
+                        f"{entry.relative_to(artifact)}. Only regular files and directories are allowed."
+                    )
+                if metadata.st_nlink != 1:
+                    raise ArtifactError(
+                        f"Docs artifact '{supplied_path}' contains a hard-linked file: "
+                        f"{entry.relative_to(artifact)}. Materialize a standalone generated file."
+                    )
+    except ArtifactError:
+        raise
+    except OSError as exc:
+        raise ArtifactError(
+            f"Could not inspect docs artifact '{supplied_path}': {exc}. Check its permissions and retry."
+        ) from exc
+    return has_content
 
 
 def emit_github_error(message: str) -> None:

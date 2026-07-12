@@ -6,6 +6,7 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import io
+import os
 import sys
 import tempfile
 import unittest
@@ -82,6 +83,15 @@ class DocsArtifactTests(unittest.TestCase):
         with self.assertRaisesRegex(DOCS_ARTIFACT.ArtifactError, "repository root"):
             DOCS_ARTIFACT.prepare_artifact(self.repo, ".")
 
+    def test_prepare_rejects_other_internal_directories(self) -> None:
+        for relative in (".github", "docs-site", "scripts"):
+            with self.subTest(relative=relative):
+                target = self.repo / relative
+                target.mkdir(parents=True, exist_ok=True)
+                with self.assertRaisesRegex(DOCS_ARTIFACT.ArtifactError, "only 'docs-site/dist' is allowed"):
+                    DOCS_ARTIFACT.prepare_artifact(self.repo, relative)
+                self.assertTrue(target.is_dir())
+
     def test_prepare_rejects_parent_traversal(self) -> None:
         with self.assertRaisesRegex(DOCS_ARTIFACT.ArtifactError, "path segments are not allowed"):
             DOCS_ARTIFACT.prepare_artifact(self.repo, "../outside")
@@ -106,10 +116,11 @@ class DocsArtifactTests(unittest.TestCase):
     def test_prepare_rejects_symlink_parent_escape(self) -> None:
         outside = self.temp_root / "outside"
         outside.mkdir()
-        (self.repo / "linked-docs").symlink_to(outside, target_is_directory=True)
+        self.docs_site.rmdir()
+        self.docs_site.symlink_to(outside, target_is_directory=True)
 
         with self.assertRaisesRegex(DOCS_ARTIFACT.ArtifactError, "symlink traversal"):
-            DOCS_ARTIFACT.prepare_artifact(self.repo, "linked-docs/dist")
+            DOCS_ARTIFACT.prepare_artifact(self.repo, "docs-site/dist")
         self.assertTrue(outside.is_dir())
 
     def test_prepare_rejects_file_target(self) -> None:
@@ -133,6 +144,43 @@ class DocsArtifactTests(unittest.TestCase):
         self.assertFalse(self.artifact.exists())
         self.assertEqual(sibling.read_text(encoding="utf-8"), "keep")
         self.assertEqual((other / "keep.txt").read_text(encoding="utf-8"), "keep")
+
+    def test_verify_rejects_descendant_symlink(self) -> None:
+        self.artifact.mkdir()
+        outside = self.docs_site / "outside.html"
+        outside.write_text("private", encoding="utf-8")
+        link = self.artifact / "leak.html"
+        try:
+            link.symlink_to(outside)
+        except OSError as exc:
+            self.skipTest(f"symlink creation unavailable: {exc}")
+
+        with self.assertRaisesRegex(DOCS_ARTIFACT.ArtifactError, "contains a symbolic link"):
+            DOCS_ARTIFACT.verify_artifact(self.repo, "docs-site/dist")
+
+    def test_verify_rejects_descendant_hard_link(self) -> None:
+        self.artifact.mkdir()
+        source = self.docs_site / "outside.html"
+        source.write_text("private", encoding="utf-8")
+        link = self.artifact / "leak.html"
+        try:
+            os.link(source, link)
+        except OSError as exc:
+            self.skipTest(f"hard-link creation unavailable: {exc}")
+
+        with self.assertRaisesRegex(DOCS_ARTIFACT.ArtifactError, "contains a hard-linked file"):
+            DOCS_ARTIFACT.verify_artifact(self.repo, "docs-site/dist")
+
+    def test_verify_rejects_special_file(self) -> None:
+        self.artifact.mkdir()
+        fifo = self.artifact / "stream"
+        try:
+            os.mkfifo(fifo)
+        except (AttributeError, OSError) as exc:
+            self.skipTest(f"FIFO creation unavailable: {exc}")
+
+        with self.assertRaisesRegex(DOCS_ARTIFACT.ArtifactError, "contains a special file"):
+            DOCS_ARTIFACT.verify_artifact(self.repo, "docs-site/dist")
 
     def test_cli_failure_emits_actionable_github_annotation(self) -> None:
         stderr = io.StringIO()
