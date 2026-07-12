@@ -7,7 +7,7 @@ from typing import Any
 
 from ..envelope import diagnostic, response
 from .install import run_install_helper
-from .mutation import run_mutation_helper, run_spec_index_write
+from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write
 from .pr_emission import run_pr_emission_helper
 from .promotion import promotion_record
 from .read_only import registry_report, run_registered_helper
@@ -80,6 +80,7 @@ class MutationEntry:
 SCRIPT_BASE = "speckit-pro/skills/speckit-autopilot/scripts"
 REQUEST_FIXTURE_BASE = "tests/speckit-pro/unit/fixtures/read-only-helpers/requests"
 MUTATION_REQUEST_FIXTURE_BASE = "tests/speckit-pro/unit/fixtures/mutation-helpers/requests"
+DISPATCHABLE_MUTATION_PROMOTION_STATUSES = frozenset({"golden_only", "bash_compared"})
 
 
 def authoritative_request(helper_id: str) -> str:
@@ -475,7 +476,7 @@ def mutation_registry_report() -> dict[str, Any]:
         "mutation_modes_promoted": sorted(
             record["helper_id"]
             for record in records
-            if record["promotion_status"] in {"golden_only", "bash_compared"}
+            if record["promotion_status"] in DISPATCHABLE_MUTATION_PROMOTION_STATUSES
         ),
     }
 
@@ -555,6 +556,9 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
             ],
         )
 
+    if entry.promotion_status not in DISPATCHABLE_MUTATION_PROMOTION_STATUSES:
+        return blocked_promotion_response(entry, request)
+
     if request.mode not in entry.modes:
         return response(
             "input_error",
@@ -595,3 +599,38 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
         return run_pr_emission_helper(entry, request)
 
     return run_mutation_helper(entry, request)
+
+
+def blocked_promotion_response(entry: MutationEntry, request: Any) -> dict[str, Any]:
+    mutation = empty_mutation(request.mode)
+    mutation["mutation_status"] = "blocked"
+    return response(
+        "expected_failure",
+        request_id=request.request_id,
+        data={
+            "helper_id": entry.helper_id,
+            "operation": entry.operation,
+            "mode": request.mode,
+            "promotion_status": entry.promotion_status,
+            "comparison_mode": entry.comparison_mode,
+            "writes_state": False,
+            "mutation": mutation,
+        },
+        diagnostics=[
+            diagnostic(
+                "helper_not_promoted",
+                "helper promotion status blocks runner mutation dispatch",
+                details={
+                    "helper_id": entry.helper_id,
+                    "operation": entry.operation,
+                    "mode": request.mode,
+                    "promotion_status": entry.promotion_status,
+                },
+                remediation_summary="Use only promoted mutation helpers for runner dispatch.",
+                remediation_actions=[
+                    "Inspect mutation-registry-dispatch output before retrying.",
+                    entry.rollback,
+                ],
+            )
+        ],
+    )
