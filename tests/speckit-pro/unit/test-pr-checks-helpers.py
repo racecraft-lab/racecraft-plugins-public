@@ -199,13 +199,17 @@ class DocsClassificationHelperTests(unittest.TestCase):
         self.assertFalse(classification.docs_contract)
 
     def test_full_mode_for_docs_contract(self) -> None:
-        classification = DOCS.classify_changed_files(
-            [".github/workflows/pr-checks.yml"]
-        )
-        self.assertEqual("full", classification.validation_mode)
-        self.assertFalse(classification.rendered_docs)
-        self.assertFalse(classification.generated_reference)
-        self.assertTrue(classification.docs_contract)
+        for file_path in (
+            ".github/workflows/pr-checks.yml",
+            "scripts/classify-docs-validation.py",
+            "scripts/docs-artifact.py",
+        ):
+            with self.subTest(file_path=file_path):
+                classification = DOCS.classify_changed_files([file_path])
+                self.assertEqual("full", classification.validation_mode)
+                self.assertFalse(classification.rendered_docs)
+                self.assertEqual(file_path.startswith("scripts/"), classification.generated_reference)
+                self.assertTrue(classification.docs_contract)
 
     def test_reference_mode_for_generated_reference_source(self) -> None:
         classification = DOCS.classify_changed_files(
