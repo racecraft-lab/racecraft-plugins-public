@@ -55,12 +55,14 @@ For generated reference detail, use the focused DOC-007 pages:
 SpecKit Pro installed workflows require Python 3.11 or newer and the official
 Spec Kit CLI in the target project environment. The active installed surfaces
 invoke `python -m speckit_pro_runner` through argv-style calls from the generated
-payload; Bash, Git Bash, WSL, PowerShell-specific command language, and `jq` are
-not installed-runtime requirements.
+payload. They do not require Bash, Git Bash, WSL, PowerShell-specific command
+language, or an external `jq` executable.
 
-Source-checkout validation and release maintenance still have a separate shell
-toolchain. Use [Contribute & Release](/racecraft-plugins-public/contribute-and-release/)
-for those maintainer requirements.
+Source-checkout validation uses the Python 3.11+ standard-library suite at
+`python3 tests/speckit-pro/run-all.py`. Docs maintenance additionally uses the
+documented Node and pnpm toolchain. Use
+[Contribute & Release](/racecraft-plugins-public/contribute-and-release/) for
+those maintainer requirements.
 
 ## Install Path Matrix
 
@@ -295,7 +297,7 @@ This page is grounded in:
   `speckit-pro/.codex-plugin/plugin.json`,
   `dist/codex/speckit-pro/.codex-plugin/plugin.json`,
   `speckit-pro/codex-skills/install/SKILL.md`,
-  `speckit-pro/codex-skills/install/scripts/install-codex-agents.sh`,
+  `speckit-pro/speckit_pro_runner/helpers/install.py`,
   `speckit-pro/codex-agents/*.toml`, and `speckit-pro/codex-hooks.json`
 
 DOC-004 stays bounded to Codex first-install guidance. DOC-007 owns deeper

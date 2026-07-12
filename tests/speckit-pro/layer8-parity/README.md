@@ -42,8 +42,9 @@ Then compare:
   identical, same task status per row (pass/fail/skipped), same
   Findings column modulo LLM-driven prose variance.
 - **Gate results**: every gate G0–G7 returns identical PASS/FAIL.
-- **PR body content**: byte-identical (PR body generation is
-  deterministic post-implementation).
+- **PR packet boundary**: identical feature-local packet lookup and deferred
+  blocker behavior. A missing current packet stops both paths before PR body or
+  PR creation side effects.
 
 Tolerance band:
 - 0 difference for spec content (FRs, acceptance criteria, user stories)
@@ -68,8 +69,12 @@ Tolerance band:
 
 The Python runner, extractor helpers, four fixture cases, and portable JSON
 environment contracts are implemented. Dry-run validation is deterministic
-and free. Live validation remains developer-triggered because it runs two
-budgeted `claude -p` processes per fixture.
+and free. It validates the versioned expected/tolerance schemas, cross-checks
+every compare source and tolerance key, and evaluates declared required
+invariants against `workflow.md`. Live mode evaluates the same invariants
+independently against both captured outputs before parity comparison. Live
+validation remains developer-triggered because it runs two budgeted
+`claude -p` processes per fixture.
 
 ## Fixture: `01-post-impl-parity`
 

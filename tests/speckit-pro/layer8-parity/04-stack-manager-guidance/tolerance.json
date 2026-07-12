@@ -1,4 +1,5 @@
 {
+  "schema": "speckit.layer8.tolerance.v1",
   "fixture_id": "04-stack-manager-guidance",
   "description": "Tolerances for comparing Agent Teams vs parallel-subagents fallback outcomes on PRSG-014 stack-manager guidance.",
   "fields": {
@@ -18,9 +19,9 @@
       "tolerance": "exact",
       "rationale": "Resume guidance must require the same decision, topology, PR identity, base/head ref, head SHA, and packet revalidation."
     },
-    "stack_manager.shared_script": {
+    "stack_manager.shared_helper": {
       "tolerance": "exact",
-      "rationale": "Claude Code and Codex guidance must point to the same shared detector script."
+      "rationale": "Claude Code and Codex guidance must name the same registered out-of-scope detector helper and use the same explicit fallback."
     },
     "stack_manager.shared_contract": {
       "tolerance": "exact",

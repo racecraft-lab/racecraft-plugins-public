@@ -26,16 +26,20 @@ changes. It does NOT regenerate the docs reference — the release workflow runs
 
 from __future__ import annotations
 
+import argparse
 import errno
 import hashlib
 import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
+import tempfile
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO
 
 sys.dont_write_bytecode = True
 
@@ -66,9 +70,46 @@ RELEASE_READINESS_REQUEST = "tests/speckit-pro/unit/fixtures/installed-plugin-re
 RELEASE_READINESS_RESULT = "docs/ai/specs/.process/XPLAT-009-release-readiness-result.json"
 RELEASE_READINESS_REQUEST_ID = "xplat-008-release-readiness-ready"
 
+CHECK_WORKTREE_PATHS = (
+    "dist",
+    ".claude-plugin/marketplace.json",
+    ".agents/plugins/marketplace.json",
+    "docs-site/src/content/docs/reference",
+    RUNNER_MANIFEST_FILE,
+    RUNNER_CHECKSUM_FILE,
+    INSTALLED_CACHE_ROOT,
+    PROOF_GLOB_DIR,
+    EVIDENCE_PROOF,
+    PAYLOAD_COMPLETENESS_RESULT,
+    ZERO_BASH_RESULT,
+    RELEASE_READINESS_RESULT,
+)
+CHECK_COPY_IGNORES = {
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "__pycache__",
+    "node_modules",
+}
 
-def main() -> int:
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="verify generated artifacts in an isolated copy without mutating the worktree",
+    )
+    args = parser.parse_args(argv)
     repo_root = Path(__file__).resolve().parents[1]
+    if args.check:
+        return check_release_artifacts(repo_root)
+    return refresh_release_artifacts(repo_root)
+
+
+def refresh_release_artifacts(repo_root: Path) -> int:
     runner_root = repo_root / "speckit-pro"
     sys.path.insert(0, str(runner_root))
 
@@ -117,6 +158,179 @@ def main() -> int:
     else:
         print("Release artifacts already consistent; no changes.")
     return 0
+
+
+def check_release_artifacts(
+    repo_root: Path,
+    *,
+    run: Callable[..., subprocess.CompletedProcess[Any]] = subprocess.run,
+    stdout: TextIO | None = None,
+    stderr: TextIO | None = None,
+) -> int:
+    """Regenerate in an isolated copy and report content or file-mode drift."""
+    stdout = sys.stdout if stdout is None else stdout
+    stderr = sys.stderr if stderr is None else stderr
+    repo_root = repo_root.resolve()
+
+    try:
+        status = run(
+            [
+                "git",
+                "status",
+                "--porcelain",
+                "--untracked-files=all",
+                "--",
+                *CHECK_WORKTREE_PATHS,
+            ],
+            cwd=str(repo_root),
+            text=True,
+            capture_output=True,
+            check=False,
+            shell=False,
+        )
+    except OSError as exc:
+        print(f"::error::Unable to inspect generated release artifacts: {exc}", file=stderr)
+        return 1
+    if status.returncode != 0:
+        if status.stderr:
+            stderr.write(status.stderr)
+        print(
+            f"::error::Unable to inspect generated release artifacts "
+            f"(git status exited {status.returncode}).",
+            file=stderr,
+        )
+        return status.returncode or 1
+    worktree_drift = [line for line in status.stdout.splitlines() if line.strip()]
+    if worktree_drift:
+        report_check_drift(worktree_drift, stderr)
+        return 1
+
+    try:
+        source_before = snapshot_tree(repo_root)
+        with tempfile.TemporaryDirectory(prefix="release-artifact-check-") as tmp:
+            isolated_root = Path(tmp) / "repository"
+            shutil.copytree(
+                repo_root,
+                isolated_root,
+                ignore=ignored_copy_names,
+                symlinks=True,
+            )
+            for setup_argv in (
+                ["git", "init", "--quiet"],
+                ["git", "add", "--all", "--force"],
+            ):
+                setup = run(
+                    setup_argv,
+                    cwd=str(isolated_root),
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                    shell=False,
+                )
+                if setup.returncode != 0:
+                    if setup.stderr:
+                        stderr.write(setup.stderr)
+                    print(
+                        f"::error::Unable to prepare the isolated release artifact check "
+                        f"({setup_argv[0]} {setup_argv[1]} exited {setup.returncode}).",
+                        file=stderr,
+                    )
+                    return setup.returncode or 1
+            child_environment = os.environ.copy()
+            child_environment["PYTHONDONTWRITEBYTECODE"] = "1"
+            completed = run(
+                [sys.executable, "scripts/refresh-release-artifacts.py"],
+                cwd=str(isolated_root),
+                env=child_environment,
+                text=True,
+                capture_output=True,
+                check=False,
+                shell=False,
+            )
+            if completed.returncode != 0:
+                if completed.stdout:
+                    stdout.write(completed.stdout)
+                if completed.stderr:
+                    stderr.write(completed.stderr)
+                print(
+                    f"::error::Generated release artifact verification failed "
+                    f"(refresh exited {completed.returncode}).",
+                    file=stderr,
+                )
+                return completed.returncode or 1
+            isolated_after = snapshot_tree(isolated_root)
+        source_after = snapshot_tree(repo_root)
+    except OSError as exc:
+        print(f"::error::Unable to verify generated release artifacts: {exc}", file=stderr)
+        return 1
+
+    if source_after != source_before:
+        print(
+            "::error::The source worktree changed while generated release artifacts were checked.",
+            file=stderr,
+        )
+        return 1
+
+    drift = compare_snapshots(source_before, isolated_after)
+    if drift:
+        report_check_drift(drift, stderr)
+        return 1
+
+    print("Generated release artifacts match the source tree.", file=stdout)
+    return 0
+
+
+def ignored_copy_names(_directory: str, names: list[str]) -> set[str]:
+    return {name for name in names if name in CHECK_COPY_IGNORES}
+
+
+def snapshot_tree(root: Path) -> dict[str, str]:
+    snapshot: dict[str, str] = {}
+    for directory, dirnames, filenames in os.walk(root, topdown=True, followlinks=False):
+        current = Path(directory)
+        dirnames[:] = sorted(name for name in dirnames if name not in CHECK_COPY_IGNORES)
+        for name in tuple(dirnames):
+            path = current / name
+            if path.is_symlink():
+                key = path.relative_to(root).as_posix()
+                snapshot[key] = f"link:{os.readlink(path)}"
+                dirnames.remove(name)
+        for name in sorted(filenames):
+            if name in CHECK_COPY_IGNORES:
+                continue
+            path = current / name
+            key = path.relative_to(root).as_posix()
+            if path.is_symlink():
+                snapshot[key] = f"link:{os.readlink(path)}"
+            elif path.is_file():
+                mode = stat.S_IMODE(path.stat().st_mode)
+                snapshot[key] = f"file:{mode:04o}:{sha256_file(path)}"
+    return snapshot
+
+
+def compare_snapshots(before: dict[str, str], after: dict[str, str]) -> list[str]:
+    changes: list[str] = []
+    for path in sorted(before.keys() | after.keys()):
+        if path not in before:
+            changes.append(f"A {path}")
+        elif path not in after:
+            changes.append(f"D {path}")
+        elif before[path] != after[path]:
+            changes.append(f"M {path}")
+    return changes
+
+
+def report_check_drift(drift: Sequence[str], stderr: TextIO) -> None:
+    print(
+        "::error::Generated release artifacts drift from the source tree. "
+        "Run scripts/refresh-release-artifacts.py and commit the result. "
+        "After publishing, re-run the Release workflow to re-sync the release PR "
+        "(Recovery Scenario 1).",
+        file=stderr,
+    )
+    print("Generated artifact drift:", file=stderr)
+    for line in dict.fromkeys(drift):
+        print(f"  {line}", file=stderr)
 
 
 # --------------------------------------------------------------------------- #

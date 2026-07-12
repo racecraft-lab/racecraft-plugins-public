@@ -40,9 +40,15 @@ Read these files (do not assume their structure — read first):
 
 Use Glob to enumerate plugins: `*/.claude-plugin/plugin.json`.
 
-Use `jq` via Bash when you need to compare keys / versions — it's authoritative.
+Use Read for initial inspection. For exact key and version comparisons, use
+Python 3.11+ standard-library `json` parsing (for example,
+`json.loads(Path(path).read_text(encoding="utf-8"))`) and compare the resulting
+objects. Reject invalid JSON or unexpected types; do not infer structure from
+regex matches or require an external JSON CLI.
 
-For step 6: `gh pr view --json title -q .title` (errors silently if no PR is open; that's fine, skip step 6).
+For step 6: `gh pr view --json title --jq .title` (errors silently if no PR is
+open; that's fine, skip step 6). Here `--jq` is a built-in GitHub CLI query
+option; it does not require the external `jq` executable.
 
 ## Output format
 
@@ -75,4 +81,5 @@ PASS / FAIL — <one-line reason>
 - Read the files. Do not infer their content from CLAUDE.md.
 - Cite file paths and line numbers for every finding — vague findings are useless.
 - Do NOT modify any files. You are read-only by design.
-- If `jq` or `gh` is missing, report it and continue with what you can.
+- If Python 3.11+ or `gh` is missing, report it and continue with the read-only
+  checks that remain available.

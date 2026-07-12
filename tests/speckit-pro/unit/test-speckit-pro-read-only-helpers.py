@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -27,6 +28,22 @@ REPOSITORY_BASH_CONFINEMENT_PLAN_DIR = (
     "tests/speckit-pro/unit/fixtures/plan-layers/repository-bash-confinement-plan"
 )
 WORKFLOW_FILE = "docs/ai/specs/.process/XPLAT-005-workflow.md"
+PR_PACKET_FIXTURE_DIR = REPO_ROOT / "tests" / "speckit-pro" / "unit" / "fixtures" / "pr-packet"
+PR_PACKET_SCHEMA = (
+    PLUGIN_ROOT / "skills" / "speckit-autopilot" / "contracts" / "pr-packet.schema.json"
+)
+PR_PACKET_SCHEMA_FIXTURE = (
+    REPO_ROOT
+    / "tests"
+    / "speckit-pro"
+    / "unit"
+    / "fixtures"
+    / "pr-packet-feature"
+    / "specs"
+    / "prsg-012-reviewer-ready-pr-packet-contract"
+    / "contracts"
+    / "pr-packet.schema.json"
+)
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
@@ -211,6 +228,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.assertNotIn("script", record)
             self.assertNotIn("generate-pr-body", str(record))
             self.assertNotIn("restack.sh", str(record))
+            active_record = {key: value for key, value in record.items() if key != "inactive_provenance"}
+            self.assertNotIn(".sh", json.dumps(active_record, sort_keys=True))
             fixture_path = command_stdin_fixture(record["authoritative_command"])
             self.assertTrue(fixture_path.is_file(), record["authoritative_command"])
             request = json.loads(fixture_path.read_text(encoding="utf-8"))
@@ -232,6 +251,84 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 self.assert_response(response, "input_error", exit_code)
                 self.assertEqual([diag["code"] for diag in response["diagnostics"]], [code])
                 self.assertEqual([diag["code"] for diag in stderr_records], [code])
+
+    def test_write_mode_diagnostic_names_registered_mutation_operation(self) -> None:
+        if self.helper_filter:
+            self.skipTest("write-mode remediation is registry-level")
+        cases = [
+            (
+                "generate-spec-index-check",
+                {"write_mode": True},
+                "Submit a separate runner request with helper_id and operation generate-spec-index-write.",
+            ),
+            (
+                "count-markers",
+                {"type": "all", "feature_dir": FEATURE_DIR, "write_mode": True},
+                "Inspect mutation-registry-dispatch for a registered Python mutation operation.",
+            ),
+            (
+                "plan-layers-feature-dir",
+                {"feature_dir": FEATURE_DIR, "write_mode": True},
+                "The registered plan-layers-marker-plan operation remains deferred; keep this request read_only.",
+            ),
+        ]
+        for helper_id, inputs, mutation_action in cases:
+            with self.subTest(helper_id=helper_id):
+                completed, response, stderr_records = run_runner(helper_request(helper_id, inputs))
+                self.assertEqual(completed.returncode, 2)
+                self.assert_response(response, "input_error", 2)
+                diagnostic = response["diagnostics"][0]
+                self.assertEqual(diagnostic["code"], "unsupported_mode")
+                self.assertEqual(
+                    diagnostic["remediation"]["actions"],
+                    ["Remove write_mode from the request.", mutation_action],
+                )
+                self.assertNotIn("Bash", json.dumps(diagnostic, sort_keys=True))
+                self.assertEqual(stderr_records, response["diagnostics"])
+
+    def test_active_error_output_uses_registered_operation_names(self) -> None:
+        if self.helper_filter:
+            self.skipTest("active output regression is cross-helper")
+        from speckit_pro_runner.helpers.read_only import (
+            confidence_gate,
+            count_markers,
+            validate_pr_packet_read_only,
+            validate_pr_workflow_contract,
+        )
+
+        cases = [
+            (
+                count_markers({}, REPO_ROOT),
+                '{"error":"Usage: count-markers <gaps|findings|clarifications|all> <feature_dir>"}\n',
+                "",
+                2,
+            ),
+            (
+                confidence_gate({}, REPO_ROOT),
+                '{"error":"Usage: confidence-gate <workflow-file> [--threshold N.NN] [--mode advisory|strict]"}\n',
+                "",
+                1,
+            ),
+            (
+                validate_pr_workflow_contract({}, REPO_ROOT),
+                "",
+                "validate-pr-workflow-contract: input_error: missing required option --title\n",
+                2,
+            ),
+            (
+                validate_pr_packet_read_only({}, REPO_ROOT),
+                None,
+                "validate-pr-packet-read-only: input_error: missing-packet-path: input.error: no-path\n",
+                2,
+            ),
+        ]
+        for result, stdout, stderr, exit_code in cases:
+            with self.subTest(stderr=stderr):
+                if stdout is not None:
+                    self.assertEqual(result["stdout"], stdout)
+                self.assertEqual(result["stderr"], stderr)
+                self.assertEqual(result["exit_code"], exit_code)
+                self.assertNotIn(".sh", result["stdout"] + result["stderr"])
 
     def test_fixture_manifests_cover_registered_helpers(self) -> None:
         if self.helper_filter and self.helper_filter != "helper-registry-dispatch":
@@ -256,6 +353,15 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 self.assertIn(field, record)
             self.assertEqual(record["subprocess_policy"]["shell"], False)
             self.assertTrue(record["deterministic_remediation"]["actions"])
+            active_guidance = json.dumps(
+                {
+                    "deterministic_remediation": record["deterministic_remediation"],
+                    "rollback": record["rollback"],
+                },
+                sort_keys=True,
+            )
+            self.assertNotIn(".sh", active_guidance)
+            self.assertNotIn("bash", active_guidance.lower())
             fixture_path = command_stdin_fixture(record["authoritative_command"])
             self.assertTrue(fixture_path.is_file(), record["authoritative_command"])
             request = json.loads(fixture_path.read_text(encoding="utf-8"))
@@ -624,6 +730,15 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.skipTest("validate-pr-packet shape case")
         with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
             packet = Path(project) / "packet.json"
+            packet.write_text('{"broken":\n', encoding="utf-8")
+            completed, response, stderr_records = run_runner(
+                helper_request("validate-pr-packet-read-only", {"packet_path": packet.relative_to(REPO_ROOT).as_posix()})
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assert_response(response, "input_error", 2)
+            self.assertEqual(response["data"]["stdout_json"]["failures"][0]["rule"], "input.error")
+            self.assertEqual(stderr_records, response["diagnostics"])
+
             packet.write_text("[]\n", encoding="utf-8")
             completed, response, stderr_records = run_runner(
                 helper_request("validate-pr-packet-read-only", {"packet_path": packet.relative_to(REPO_ROOT).as_posix()})
@@ -646,6 +761,199 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertIn("input.path.validation_result_path", rules)
         self.assertIn("input.path.body_file", rules)
         self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
+
+    def test_validate_pr_packet_rejects_schema_minimal_false_pass(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
+            self.skipTest("validate-pr-packet schema case")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            packet = Path(project) / "minimal-packet.json"
+            packet.write_text(
+                json.dumps(
+                    {
+                        "verification_evidence": ["present"],
+                        "scope_evidence": {"changed_files": ["README.md"]},
+                        "validation_result_path": (
+                            "specs/example/.process/pr-packets/minimal-packet/validation.json"
+                        ),
+                    }
+                ),
+                encoding="utf-8",
+            )
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-read-only",
+                    {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                )
+            )
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure", 1)
+        failures = response["data"]["stdout_json"]["failures"]
+        self.assertIn("packet.schema.required", {failure["rule"] for failure in failures})
+        missing_fields = {failure["field"] for failure in failures}
+        self.assertTrue({"target", "generated_title", "body_file"}.issubset(missing_fields))
+        self.assertEqual(stderr_records, response["diagnostics"])
+
+    def test_pr_packet_schema_accepts_established_scopes_and_rejects_mixed_case(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
+            self.skipTest("validate-pr-packet schema pattern case")
+        schema = json.loads(PR_PACKET_SCHEMA.read_text(encoding="utf-8"))
+        title_properties = schema["$defs"]["generated_title"]["properties"]
+        scope_pattern = title_properties["scope"]["pattern"]
+        value_pattern = title_properties["value"]["pattern"]
+        fixture_schema = json.loads(PR_PACKET_SCHEMA_FIXTURE.read_text(encoding="utf-8"))
+        fixture_title_properties = fixture_schema["$defs"]["generated_title"]["properties"]
+        self.assertEqual(fixture_title_properties["scope"]["pattern"], scope_pattern)
+        self.assertEqual(fixture_title_properties["value"]["pattern"], value_pattern)
+
+        for scope in ("speckit-pro", "PRSG-012", "SPEC-014C"):
+            with self.subTest(scope=scope, expected="accepted"):
+                self.assertIsNotNone(re.fullmatch(scope_pattern, scope))
+                self.assertIsNotNone(
+                    re.fullmatch(value_pattern, f"feat({scope}): Add packet validation")
+                )
+
+        for scope in ("PRsg-012", "SPEC-014c", "speckit-PRO"):
+            with self.subTest(scope=scope, expected="rejected"):
+                self.assertIsNone(re.fullmatch(scope_pattern, scope))
+                self.assertIsNone(
+                    re.fullmatch(value_pattern, f"feat({scope}): Add packet validation")
+                )
+
+    def test_validate_pr_packet_rejects_unsafe_missing_and_unreadable_body(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
+            self.skipTest("validate-pr-packet body path case")
+        valid_packet = json.loads((PR_PACKET_FIXTURE_DIR / "valid-single.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            packet = project_path / "packet.json"
+            cases = {
+                "unsafe": ("../outside.md", "input.path.body_file"),
+                "missing": (
+                    (project_path / "missing.md").relative_to(REPO_ROOT).as_posix(),
+                    "body.path",
+                ),
+            }
+            for name, (body_file, expected_rule) in cases.items():
+                with self.subTest(name=name):
+                    packet.write_text(
+                        json.dumps({**valid_packet, "body_file": body_file}),
+                        encoding="utf-8",
+                    )
+                    completed, response, stderr_records = run_runner(
+                        helper_request(
+                            "validate-pr-packet-read-only",
+                            {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                        )
+                    )
+                    self.assertEqual(completed.returncode, 1)
+                    self.assert_response(response, "expected_failure", 1)
+                    rules = {
+                        failure["rule"]
+                        for failure in response["data"]["stdout_json"]["failures"]
+                    }
+                    self.assertIn(expected_rule, rules)
+                    self.assertEqual(stderr_records, response["diagnostics"])
+
+            body = project_path / "unreadable.md"
+            body.write_text(
+                (PR_PACKET_FIXTURE_DIR / "bodies" / "valid-single.md").read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            packet.write_text(
+                json.dumps(
+                    {
+                        **valid_packet,
+                        "body_file": body.relative_to(REPO_ROOT).as_posix(),
+                    }
+                ),
+                encoding="utf-8",
+            )
+            from speckit_pro_runner.helpers import read_only
+
+            original_trusted_text = read_only.trusted_text
+
+            def unreadable_body(path: Path, root: Path | None = None) -> str | None:
+                if path.resolve(strict=False) == body.resolve(strict=False):
+                    return None
+                return original_trusted_text(path, root)
+
+            with patch.object(read_only, "trusted_text", side_effect=unreadable_body):
+                result = read_only.validate_pr_packet_read_only(
+                    {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                    REPO_ROOT,
+                )
+        self.assertEqual(result["exit_code"], 1)
+        failures = json.loads(result["stdout"])["failures"]
+        self.assertIn("body.readable", {failure["rule"] for failure in failures})
+
+    def test_validate_pr_packet_checks_body_currentness_without_writing_state(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
+            self.skipTest("validate-pr-packet currentness case")
+        for packet_name in ("valid-single.json", "valid-split.json"):
+            with self.subTest(packet_name=packet_name):
+                valid_packet_path = PR_PACKET_FIXTURE_DIR / packet_name
+                completed, response, stderr_records = run_runner(
+                    helper_request(
+                        "validate-pr-packet-read-only",
+                        {"packet_path": valid_packet_path.relative_to(REPO_ROOT).as_posix()},
+                    )
+                )
+                self.assertEqual(completed.returncode, 0)
+                self.assert_response(response, "ok", 0)
+                self.assertEqual(response["data"]["stdout_json"]["status"], "passed")
+                self.assertFalse(response["data"]["writes_state"])
+                self.assertEqual(response["data"]["promotion_status"], "python_authoritative")
+                self.assertEqual(stderr_records, [])
+
+        stale_packet = PR_PACKET_FIXTURE_DIR / "invalid-protected-edit.json"
+        completed, response, stderr_records = run_runner(
+            helper_request(
+                "validate-pr-packet-read-only",
+                {"packet_path": stale_packet.relative_to(REPO_ROOT).as_posix()},
+            )
+        )
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure", 1)
+        stale_rules = {
+            failure["rule"] for failure in response["data"]["stdout_json"]["failures"]
+        }
+        self.assertIn("body.protected_fingerprint", stale_rules)
+        self.assertFalse(response["data"]["writes_state"])
+        self.assertEqual(response["data"]["promotion_status"], "python_authoritative")
+        self.assertEqual(stderr_records, response["diagnostics"])
+
+        valid_packet = json.loads((PR_PACKET_FIXTURE_DIR / "valid-single.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            packet = Path(project) / "current-editable-packet.json"
+            packet.write_text(
+                json.dumps(
+                    {
+                        **valid_packet,
+                        "packet_id": "current-editable-packet",
+                        "body_file": (
+                            PR_PACKET_FIXTURE_DIR / "bodies" / "valid-single-edited.md"
+                        ).relative_to(REPO_ROOT).as_posix(),
+                        "validation_result_path": (
+                            "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/"
+                            "pr-packets/current-editable-packet/validation.json"
+                        ),
+                    }
+                ),
+                encoding="utf-8",
+            )
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-read-only",
+                    {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                )
+            )
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok", 0)
+        self.assertEqual(response["data"]["stdout_json"]["status"], "passed")
+        self.assertFalse(response["data"]["stdout_json"]["pr_blocked"])
+        self.assertFalse(response["data"]["writes_state"])
+        self.assertEqual(response["data"]["promotion_status"], "python_authoritative")
+        self.assertEqual(stderr_records, [])
 
     def test_validate_pr_workflow_contract_changed_files_is_canonicalized_and_evaluated(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-workflow-contract":

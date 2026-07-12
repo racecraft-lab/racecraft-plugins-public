@@ -27,14 +27,14 @@ The test:
    `tolerance.json`. PASS if all required fields match within
    tolerance; FAIL with field-level diff otherwise.
 
-The PRSG-012 packet contract is part of the parity surface. Both paths
-must render the same `.git/speckit-pr-packet.json`, use the shared
-`speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json`,
-validate with the shared
-`speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`,
-and write the same packet validation JSON before any PR creation side
-effect. Codex guidance must reference those shared artifacts rather than
-introducing duplicate Codex-only schema or validator copies.
+The PRSG-012 packet boundary is part of the parity surface. This fixture does
+not provide a current packet at
+`specs/parity-01-post-impl/.process/pr-packets/<packet-id>.json`. Both paths must
+report that `pr-packet-output` is deferred and stop before any PR creation side
+effect. They must not ask `generate-pr-body` to create packet JSON or claim that
+`validate-pr-packet-read-only` persisted a validation file. Codex guidance must
+use the same boundary rather than introducing a Codex-only packet path or
+validator copy.
 
 ## Mode
 
@@ -43,8 +43,10 @@ two different real execution paths produce equivalent answers from the
 model. Replay mode is not meaningful.
 
 The dry-run validation (`python3 run-parity-fixtures.py --dry-run`)
-verifies the fixture structure (required files present, JSON
-well-formed) without invoking claude -p.
+verifies the fixture structure, versioned JSON contracts, compare/tolerance
+cross-references, and every row in `## Required Invariants` without invoking
+claude -p. Live mode enforces those rows against both captured workflow
+outputs before comparing the two paths.
 
 ## Cost
 
@@ -56,7 +58,8 @@ fixture invocation.
 
 ## Status
 
-**Ready.** The fixture structure validates via dry-run, including packet/body
-artifact paths, validator evidence, explicit PR create argument parity, and
-the no post-create repair fallback invariant. Live execution is explicit and
-budgeted; `semantic-equivalent` comparisons remain skipped with a warning.
+**Ready.** The fixture structure validates via dry-run, including the
+feature-local packet path, deferred packet-emission blocker, no read-only
+persistence claim, and no post-create repair fallback invariant. Live execution
+is explicit and budgeted; `semantic-equivalent` comparisons remain skipped with
+a warning.

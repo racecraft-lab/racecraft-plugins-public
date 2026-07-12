@@ -60,7 +60,7 @@ jobs:
 
       - name: Emit Python-gated plugin matrix
         id: changed
-        run: echo 'plugins=["speckit-pro"]' >> "$GITHUB_OUTPUT"
+        run: python3 scripts/emit-plugin-matrix.py
 
   # ───────────────────────────────────────────────────────────────────
   # Job 2: Run Python-dispatched plugin gates
@@ -153,27 +153,10 @@ jobs:
         env:
           ACTIONLINT_VERSION: "1.7.12"
           ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
-        run: |
-          set -euo pipefail
-
-          tmp_dir="$(mktemp -d)"
-          trap 'rm -rf "$tmp_dir"' EXIT
-
-          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
-          archive_path="${tmp_dir}/${archive}"
-          curl -fsSL "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}" -o "$archive_path"
-
-          checksum_file="${tmp_dir}/checksums.txt"
-          printf '%s  %s\n' "$ACTIONLINT_SHA256" "$archive_path" > "$checksum_file"
-          sha256sum -c "$checksum_file"
-
-          tar -xzf "$archive_path" -C "$tmp_dir" actionlint
-          install -m 0755 "${tmp_dir}/actionlint" "${RUNNER_TEMP}/actionlint"
+        run: python3 scripts/install-actionlint.py install
 
       - name: Run actionlint
-        run: |
-          set -euo pipefail
-          "${RUNNER_TEMP}/actionlint" .github/workflows/*.yml
+        run: python3 scripts/install-actionlint.py run
 
   # ───────────────────────────────────────────────────────────────────
   # Job 5: Validate docs-site and generated reference surfaces
@@ -195,101 +178,7 @@ jobs:
         id: docs
         env:
           BASE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || inputs.base_ref }}
-        run: |
-          set -euo pipefail
-
-          # All files changed relative to the base branch.
-          changed_files=$(git diff --name-only "origin/${BASE_REF}...HEAD")
-
-          path_is_under() {
-            local file="$1"
-            local directory="$2"
-            [[ "$file" == "$directory"/* ]]
-          }
-
-          # DOC-010 changed-file surfaces:
-          # - Rendered docs-site: docs-site/** -> full validate.
-          # - Generated-reference source: plugin manifests, skills, agents,
-          #   hooks, scripts, README, tests, dist manifests, and source allowlists
-          #   -> reference drift plus docs-quality validation.
-          # - Docs-validation contract: docs-site scripts, package scripts,
-          #   Playwright config/spec, PR Checks docs-gate logic, docs deploy
-          #   workflow, and release workflow -> full validate.
-          # - Plugin-only changes outside those inputs keep the existing plugin
-          #   matrix semantics and skip docs validation successfully.
-          rendered_docs=false
-          generated_reference=false
-          docs_contract=false
-
-          while IFS= read -r file; do
-            [ -n "$file" ] || continue
-
-            if path_is_under "$file" "docs-site"; then
-              rendered_docs=true
-            fi
-
-            case "$file" in
-              */.claude-plugin/plugin.json|*/.codex-plugin/plugin.json|.claude-plugin/marketplace.json|.agents/plugins/marketplace.json)
-                generated_reference=true
-                ;;
-              speckit-pro/codex-hooks.json|README.md|*/README.md)
-                generated_reference=true
-                ;;
-              .specify/integrations/*|docs/prd-interactive-documentation.md|docs/roadmap-interactive-documentation.md|release-please-config.json|.release-please-manifest.json)
-                generated_reference=true
-                ;;
-            esac
-
-            if path_is_under "$file" "speckit-pro/skills" \
-              || path_is_under "$file" "speckit-pro/codex-skills" \
-              || path_is_under "$file" "speckit-pro/agents" \
-              || path_is_under "$file" "speckit-pro/codex-agents" \
-              || path_is_under "$file" "speckit-pro/hooks" \
-              || path_is_under "$file" "speckit-pro/scripts" \
-              || path_is_under "$file" "scripts" \
-              || path_is_under "$file" "tests/speckit-pro" \
-              || path_is_under "$file" "dist/claude" \
-              || path_is_under "$file" "dist/codex"; then
-              generated_reference=true
-            fi
-
-            if path_is_under "$file" "docs-site/scripts" \
-              || [[ "$file" == "docs-site/src/data/safe-install-aids.ts" ]] \
-              || [[ "$file" == "docs-site/package.json" ]] \
-              || [[ "$file" == "docs-site/playwright.config.mjs" ]] \
-              || [[ "$file" == "docs-site/tests/docs-smoke.spec.mjs" ]] \
-              || [[ "$file" == ".github/workflows/pr-checks.yml" ]] \
-              || [[ "$file" == ".github/workflows/deploy-docs.yml" ]] \
-              || [[ "$file" == ".github/workflows/release.yml" ]]; then
-              docs_contract=true
-            fi
-          done <<< "$changed_files"
-
-          should_validate_docs=false
-          validation_mode=skip
-          if [[ "$rendered_docs" == "true" || "$docs_contract" == "true" ]]; then
-            should_validate_docs=true
-            validation_mode=full
-          elif [[ "$generated_reference" == "true" ]]; then
-            should_validate_docs=true
-            validation_mode=reference
-          fi
-
-          echo "Rendered docs-site changed: ${rendered_docs}"
-          echo "Generated-reference source changed: ${generated_reference}"
-          echo "Docs-validation contract changed: ${docs_contract}"
-          echo "Docs validation mode: ${validation_mode}"
-          if [[ "$should_validate_docs" == "false" ]]; then
-            echo "No DOC-010 docs validation surfaces changed; validate-docs skipped successfully."
-          fi
-
-          {
-            echo "should_validate_docs=${should_validate_docs}"
-            echo "validation_mode=${validation_mode}"
-            echo "rendered_docs=${rendered_docs}"
-            echo "generated_reference=${generated_reference}"
-            echo "docs_contract=${docs_contract}"
-          } >> "$GITHUB_OUTPUT"
+        run: python3 scripts/classify-docs-validation.py
 
       - name: Set up Node
         if: steps.docs.outputs.should_validate_docs == 'true'
@@ -299,9 +188,11 @@ jobs:
 
       - name: Enable pnpm
         if: steps.docs.outputs.should_validate_docs == 'true'
-        run: |
-          corepack enable
-          corepack prepare pnpm@10.25.0 --activate
+        run: corepack enable
+
+      - name: Prepare pnpm
+        if: steps.docs.outputs.should_validate_docs == 'true'
+        run: corepack prepare pnpm@10.25.0 --activate
 
       - name: Install docs-site dependencies
         if: steps.docs.outputs.should_validate_docs == 'true'
@@ -332,11 +223,11 @@ jobs:
 
       - name: Run generated-reference docs validation
         if: steps.docs.outputs.validation_mode == 'reference'
-        run: |
-          set -euo pipefail
+        run: pnpm --dir docs-site reference:check
 
-          pnpm --dir docs-site reference:check
-          pnpm --dir docs-site validate:quality
+      - name: Run generated-reference docs quality validation
+        if: steps.docs.outputs.validation_mode == 'reference'
+        run: pnpm --dir docs-site validate:quality
 
   # ───────────────────────────────────────────────────────────────────
   # Job 6: Generated release artifacts must match the source tree.
@@ -359,17 +250,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Refresh generated artifacts and fail on drift
-        run: |
-          set -euo pipefail
-          PYTHONDONTWRITEBYTECODE=1 python3 scripts/refresh-release-artifacts.py
-          git add -A
-          if ! git diff --cached --quiet; then
-            echo "::error::Generated release artifacts drift from the source tree. Run scripts/refresh-release-artifacts.py and commit the result."
-            git status --porcelain
-            git --no-pager diff --cached --stat
-            exit 1
-          fi
-          echo "Generated release artifacts match the source tree."
+        run: PYTHONDONTWRITEBYTECODE=1 python3 scripts/refresh-release-artifacts.py --check
 
   # ───────────────────────────────────────────────────────────────────
   # Job 7: Sentinel aggregator — provides stable check name for branch
@@ -380,30 +261,18 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     needs: [detect, test, artifact-consistency]
-    permissions: {}
+    permissions:
+      contents: read
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
       - name: Check plugin test results
-        run: |
-          set -euo pipefail
-          detect_result="${{ needs.detect.result }}"
-          test_result="${{ needs.test.result }}"
-          artifact_result="${{ needs.artifact-consistency.result }}"
-          # detect failure or cancellation means the workflow itself is broken — fail the sentinel
-          if [[ "$detect_result" == "failure" || "$detect_result" == "cancelled" ]]; then
-            echo "::error::Detect job did not succeed (result: ${detect_result}). Workflow is broken."
-            exit 1
-          fi
-          if [[ "$test_result" == "success" || "$test_result" == "skipped" ]]; then
-            :
-          else
-            echo "::error::Plugin tests failed or were cancelled (result: ${test_result})."
-            exit 1
-          fi
-          if [[ "$artifact_result" == "success" || "$artifact_result" == "skipped" ]]; then
-            :
-          else
-            echo "::error::Generated artifacts drift from source (result: ${artifact_result})."
-            exit 1
-          fi
-          echo "Plugin tests passed or were skipped (result: ${test_result}); artifacts consistent (result: ${artifact_result})."
+        env:
+          DETECT_RESULT: ${{ needs.detect.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+          ARTIFACT_RESULT: ${{ needs.artifact-consistency.result }}
+        run: python3 scripts/check-pr-workflow-results.py

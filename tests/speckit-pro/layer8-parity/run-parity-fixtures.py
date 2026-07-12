@@ -24,6 +24,9 @@ from typing import Any
 SCRIPT_DIR = Path(__file__).resolve().parent
 LIB_DIR = SCRIPT_DIR / "lib"
 ENV_SCHEMA = "speckit.layer8.env.v1"
+EXPECTED_SCHEMA = "speckit.layer8.expected-equivalence.v1"
+TOLERANCE_SCHEMA = "speckit.layer8.tolerance.v1"
+ALLOWED_TOLERANCES = frozenset({"byte-identical", "exact", "tolerance-1", "semantic-equivalent"})
 DEFAULT_BUDGET_USD = "20"
 CLAUDE_EXECUTABLE_NAMES = frozenset({"claude", "claude.exe", "claude.cmd", "claude.bat"})
 RULE = "────────────────────────────────────────"
@@ -166,7 +169,139 @@ def validate_env_contract(path: Path, expected_mode: str) -> None:
             raise ValueError(f"{path.name} environment.set must map strings to strings")
 
 
-def validate_fixture_structure(fixture_dir: Path, counts: Counts) -> None:
+def validate_relative_source(value: object, label: str) -> str:
+    if not isinstance(value, str) or not value or value.startswith(("/", "\\")):
+        raise ValueError(f"{label} must be a non-empty relative path")
+    if "\\" in value or any(part in {"", ".", ".."} for part in value.split("/")):
+        raise ValueError(f"{label} must be a normalized repository-relative path")
+    return value
+
+
+def validate_fixture_contracts(fixture_dir: Path, expected: dict[str, Any], tolerance: dict[str, Any]) -> None:
+    fixture_id = fixture_dir.name
+    if expected.get("schema") != EXPECTED_SCHEMA:
+        raise ValueError(f"expected-equivalence.json schema must be {EXPECTED_SCHEMA}")
+    if tolerance.get("schema") != TOLERANCE_SCHEMA:
+        raise ValueError(f"tolerance.json schema must be {TOLERANCE_SCHEMA}")
+    if expected.get("fixture_id") != fixture_id or tolerance.get("fixture_id") != fixture_id:
+        raise ValueError("fixture_id must match the fixture directory in both contracts")
+
+    fields = tolerance.get("fields")
+    if not isinstance(fields, dict) or not fields:
+        raise ValueError("tolerance.json fields must be a non-empty object")
+    for key, entry in fields.items():
+        if not isinstance(key, str) or not key or not isinstance(entry, dict):
+            raise ValueError("tolerance.json fields must map non-empty strings to objects")
+        if entry.get("tolerance") not in ALLOWED_TOLERANCES:
+            raise ValueError(f"tolerance key '{key}' has an unsupported tolerance")
+        if not isinstance(entry.get("rationale"), str) or not entry["rationale"].strip():
+            raise ValueError(f"tolerance key '{key}' must provide a rationale")
+
+    compare = expected.get("compare")
+    if not isinstance(compare, list) or not compare:
+        raise ValueError("expected-equivalence.json compare must be a non-empty array")
+    compare_fields: set[str] = set()
+    tolerance_keys: set[str] = set()
+    compare_sources: set[str] = set()
+    for index, entry in enumerate(compare):
+        if not isinstance(entry, dict):
+            raise ValueError(f"compare[{index}] must be an object")
+        field = entry.get("field")
+        tolerance_key = entry.get("tolerance_key")
+        if not isinstance(field, str) or not field or field in compare_fields:
+            raise ValueError(f"compare[{index}].field must be a unique non-empty string")
+        if not isinstance(tolerance_key, str) or tolerance_key not in fields:
+            raise ValueError(f"compare[{index}].tolerance_key must reference tolerance.json fields")
+        compare_fields.add(field)
+        tolerance_keys.add(tolerance_key)
+        compare_sources.add(validate_relative_source(entry.get("source"), f"compare[{index}].source"))
+        section = entry.get("section_selector")
+        extractor = entry.get("extractor")
+        if (section is None) != (extractor is None):
+            raise ValueError(f"compare[{index}] must provide section_selector and extractor together")
+        if section is not None and (not isinstance(section, str) or not section.startswith("## ")):
+            raise ValueError(f"compare[{index}].section_selector must name an H2 section")
+        if extractor is not None and not (
+            extractor == "table_row_count" or isinstance(extractor, str) and extractor.startswith("table_column:")
+        ):
+            raise ValueError(f"compare[{index}].extractor is unsupported")
+    if tolerance_keys != set(fields):
+        missing = sorted(set(fields) - tolerance_keys)
+        raise ValueError(f"tolerance.json contains unreferenced fields: {missing}")
+
+    invariants = expected.get("required_invariants")
+    invariant_source = expected.get("required_invariants_source")
+    if invariants is None:
+        if invariant_source is not None:
+            raise ValueError("required_invariants_source requires required_invariants")
+        return
+    if not isinstance(invariants, dict) or not invariants:
+        raise ValueError("required_invariants must be a non-empty object")
+    for key, value in invariants.items():
+        if not isinstance(key, str) or not key:
+            raise ValueError("required_invariants keys must be non-empty strings")
+        if isinstance(value, list):
+            if not value or not all(isinstance(item, str) and item for item in value):
+                raise ValueError(f"required_invariants.{key} must be a non-empty string list")
+        elif not isinstance(value, (str, bool)) or isinstance(value, str) and not value:
+            raise ValueError(f"required_invariants.{key} must be a non-empty string, boolean, or string list")
+    if not isinstance(invariant_source, dict):
+        raise ValueError("required_invariants_source must be an object")
+    if set(invariant_source) != {"source", "section_selector", "key_column", "value_column"}:
+        raise ValueError("required_invariants_source has an invalid shape")
+    source = validate_relative_source(invariant_source.get("source"), "required_invariants_source.source")
+    if source not in compare_sources:
+        raise ValueError("required_invariants_source.source must also be a compared output")
+    for key in ("section_selector", "key_column", "value_column"):
+        value = invariant_source.get(key)
+        if not isinstance(value, str) or not value:
+            raise ValueError(f"required_invariants_source.{key} must be a non-empty string")
+    if not invariant_source["section_selector"].startswith("## "):
+        raise ValueError("required_invariants_source.section_selector must name an H2 section")
+
+
+def invariant_value(value: object) -> str:
+    if isinstance(value, bool):
+        return str(value).lower()
+    if isinstance(value, list):
+        return ", ".join(str(item) for item in value)
+    return str(value)
+
+
+def enforce_required_invariants(
+    output_root: Path,
+    expected: dict[str, Any],
+    counts: Counts,
+    label: str,
+) -> bool:
+    invariants = expected.get("required_invariants")
+    if not isinstance(invariants, dict):
+        return True
+    source = expected["required_invariants_source"]
+    artifact = output_root / source["source"]
+    section = strip_h2_prefix(source["section_selector"])
+    try:
+        keys = extractors.extract_table_column(artifact, section, source["key_column"]).splitlines()
+        values = extractors.extract_table_column(artifact, section, source["value_column"]).splitlines()
+    except (OSError, extractors.ExtractorError) as exc:
+        counts.fail(f"{label}: required invariants", f"cannot read invariant evidence: {exc}")
+        return False
+    if len(keys) != len(values) or len(keys) != len(set(keys)):
+        counts.fail(f"{label}: required invariants", "invariant evidence must contain unique key/value rows")
+        return False
+    observed = dict(zip(keys, values, strict=True))
+    failures = [
+        f"{key}: expected {invariant_value(value)!r}, observed {observed.get(key)!r}"
+        for key, value in invariants.items()
+        if observed.get(key) != invariant_value(value)
+    ]
+    if failures:
+        counts.fail(f"{label}: required invariants", "; ".join(failures))
+        return False
+    return True
+
+
+def validate_fixture_structure(fixture_dir: Path, counts: Counts) -> bool:
     fixture_id = fixture_dir.name
     ok = True
     for required in required_files():
@@ -191,20 +326,36 @@ def validate_fixture_structure(fixture_dir: Path, counts: Counts) -> None:
     if ok:
         counts.pass_(f"{fixture_id}: fixture structure complete")
 
-    json_checks = (
-        ("tolerance.json", load_json),
-        ("expected-equivalence.json", load_json),
-    )
-    for file_name, validator in json_checks:
+    contracts: dict[str, dict[str, Any]] = {}
+    for file_name in ("tolerance.json", "expected-equivalence.json"):
         path = fixture_dir / file_name
         if not path.is_file():
             continue
         try:
-            validator(path)
+            contracts[file_name] = load_json(path)
         except (json.JSONDecodeError, ValueError) as exc:
             counts.fail(f"{fixture_id}: {file_name} invalid JSON", str(exc))
+            ok = False
         else:
             counts.pass_(f"{fixture_id}: {file_name} parses")
+    if set(contracts) == {"tolerance.json", "expected-equivalence.json"}:
+        try:
+            validate_fixture_contracts(
+                fixture_dir,
+                contracts["expected-equivalence.json"],
+                contracts["tolerance.json"],
+            )
+        except ValueError as exc:
+            counts.fail(f"{fixture_id}: fixture contract invalid", str(exc))
+            ok = False
+        else:
+            ok &= enforce_required_invariants(
+                fixture_dir,
+                contracts["expected-equivalence.json"],
+                counts,
+                fixture_id,
+            )
+    return ok
 
 
 def discover_fixtures(config: Config) -> list[Path]:
@@ -541,6 +692,10 @@ def run_fixture_live(fixture_dir: Path, config: Config, counts: Counts) -> None:
 
     expected = load_json(fixture_dir / "expected-equivalence.json")
     tolerance = load_json(fixture_dir / "tolerance.json")
+    invariants_ok = enforce_required_invariants(path_a, expected, counts, f"{fixture_id}:Path A")
+    invariants_ok &= enforce_required_invariants(path_b, expected, counts, f"{fixture_id}:Path B")
+    if not invariants_ok:
+        return
     fail_fast = bool(expected.get("fail_fast", False))
     compare_entries = expected.get("compare", [])
     if not isinstance(compare_entries, list):
@@ -572,8 +727,8 @@ def main(argv: list[str] | None = None) -> int:
     for fixture_dir in discover_fixtures(config):
         print()
         print(fixture_dir.name)
-        validate_fixture_structure(fixture_dir, counts)
-        if config.mode == "live":
+        fixture_valid = validate_fixture_structure(fixture_dir, counts)
+        if config.mode == "live" and fixture_valid:
             run_fixture_live(fixture_dir, config, counts)
 
     print()

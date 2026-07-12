@@ -195,19 +195,19 @@ the command into your context and can kill the agent loop.
 
 During pre-flight, the parent may inspect the active workflow target and nearby
 legacy spec candidates for Tier-2 PROCESS relocation. This is static
-inspection/reporting only. It does not run
-`relocate-process-artifacts`.
+inspection/reporting only. The `relocate-process-artifacts` runner operation is
+deferred, has no authoritative request, and is unavailable.
 
-Suggest relocation only for thawed in-scope legacy specs with relocatable
-PROCESS artifacts. For each eligible spec, print:
+Report relocation candidates only for thawed in-scope legacy specs with
+relocatable PROCESS artifacts. For each eligible spec, print:
 
 ```text
-runner helper relocate-process-artifacts --dry-run --spec specs/<spec-dir> --repo-root .
-runner helper relocate-process-artifacts --apply --spec specs/<spec-dir> --repo-root .
+Tier-2 relocation candidate: specs/<spec-dir>.
+Deferred: relocate-process-artifacts is unavailable; no runner command may be executed.
 ```
 
-The `--apply` line is an operator follow-up after reviewing dry-run output and
-cleaning the worktree. The parent must suppress the suggestion for
+Do not advertise or invoke either runner mode and do not invent a replacement
+helper. The parent must suppress the candidate report for
 `frozen/in-flight`, invalid active-feature, already-current, already-normalized,
 no-candidate, `non_speckit_namespace`, and `date_named_legacy_namespace`
 cases. Record any surfaced suggestion or suppression note in the workflow log
@@ -870,8 +870,8 @@ map-affecting boundary — that is the failure this ordering avoids.
 # Write mode (NO --check): regenerate over the autopilot's target repo.
 # Pass "$PWD" explicitly — do NOT rely on the generator's default
 # REPO_ROOT. In a cached-plugin run the default resolves to the plugin
-# cache's parent, not the user's project, so the explicit arg is required
-# (same path-prefix + "$PWD" convention as generate-pr-body below).
+# cache's parent, not the user's project. Use the explicit target repository
+# path for installed-cache runs.
 runner helper generate-spec-index-write with repo root "$PWD" and mode apply
 ```
 
@@ -1021,24 +1021,34 @@ Step 2: Detect remote name: git remote -v
 Step 3: Push branch: git push -u <remote> <branch>
 Step 4: Apply final reviewability boundary:
   Use current committed reviewability evidence; if none is current, stop before PR side effects because final-reviewability-backstop is deferred.
-Step 5: If the backstop proceeds, generate PR body:
-  runner helper generate-pr-body "$PWD" specs/<number>-<name> .git/speckit-pr-body.md origin/main...HEAD
-Step 6: Create PR via gh CLI:
-  gh pr create \
-    --title "feat(SPEC-XXX): <Spec Name>" \
-    --body-file .git/speckit-pr-body.md
-Step 7: Update workflow file with PR URL
-Step 8: Final commit: "feat(SPEC-XXX): open PR for review"
+Step 5: Require a current packet at specs/<feature>/.process/pr-packets/<packet-id>.json.
+  pr-packet-output is deferred; if no current schema-valid packet already exists, STOP before gh pr create.
+Step 6: Validate that packet with validate-pr-packet-read-only and consume data.stdout_json in memory/state.
+  Require data.stdout_json.status=passed, data.stdout_json.pr_blocked=false, and response data.writes_state=false.
+  No validation file is written.
+Step 7: Validate title/scope with validate-pr-workflow-contract using the packet title.
+Step 8: Create the PR only from packet fields:
+  gh pr create --base <packet.target.base_branch> --head <packet.target.head_branch> \
+    --title <packet.generated_title.value> --body-file <packet.body_file>
+Step 9: Update workflow file with PR URL
+Step 10: Final commit: "feat(SPEC-XXX): open PR for review"
 ```
 
-The backstop is fail-closed at the PR boundary. Exit 0 means the final diff
-gate passed, warned, honored a valid typed exception, or produced final
+`generate-pr-body` is a body-only `golden_only` operation. Its complete input
+contract is `output_path`, `title`, and `sections`, and it writes one Markdown
+body. It does not create or update packet JSON, packet metadata, template
+markers, validation evidence, or PR commands. Its output alone never authorizes
+PR creation.
+
+The current committed backstop evidence is fail-closed at the PR boundary.
+Recorded exit 0 means the final diff gate passed, warned, honored a valid typed
+exception, or produced final
 `marker_split` with a current `pr_marker_plan`; PR preparation may continue.
 When a current `pr_marker_plan` exists, PR preparation continues through
 marker emission even if the final full-diff result is only `pass` or `warn`.
 A full-diff size block with current marker evidence also proceeds to marker
-emission and is not a manual re-slicing stop. Exit 1 means `reslicing_required`
-only for unexcepted
+emission and is not a manual re-slicing stop. Recorded exit 1 means
+`reslicing_required` only for unexcepted
 correctness or missing-marker cases: do not run `generate-pr-body`, do not
 invoke any `gh pr create` variant, and do not run `multi-pr-emission` yet.
 This blocks only PR side effects. It is not a final response condition: read
@@ -1046,7 +1056,7 @@ This blocks only PR side effects. It is not a final response condition: read
 inside the same autopilot run through PRSG-007, regenerate PRSG-008, or hand off
 to PRSG-009 until a valid slice PR stack is emitted or a typed exception is
 committed. Never report completion while
-`autopilot_continuation.required=true`. Exit 2 is a gate error: state is
+`autopilot_continuation.required=true`. Recorded exit 2 is a gate error: state is
 written, no packet is valid, and the run stops for operator repair.
 
 For marker-aware PR preparation, record gate status/mode/exit/evidence path,

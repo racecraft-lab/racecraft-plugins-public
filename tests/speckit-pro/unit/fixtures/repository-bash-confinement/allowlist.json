@@ -31,6 +31,13 @@
       "release_readiness_excluded": true
     },
     {
+      "path": ".specify/extensions/verify/scripts/bash/load-config.sh",
+      "categories": ["script_file"],
+      "reason": "Vendored upstream Spec Kit Verify extension configuration helper.",
+      "scope": "vendored_specify_helper",
+      "release_readiness_excluded": true
+    },
+    {
       "path": ".specify/scripts/bash/check-prerequisites.sh",
       "categories": ["script_file"],
       "reason": "Vendored upstream Spec Kit repository helper.",

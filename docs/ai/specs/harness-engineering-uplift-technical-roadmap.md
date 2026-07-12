@@ -543,8 +543,8 @@ Budget result: within budget
 **Key Files:**
 
 - `speckit-pro/speckit_pro_runner/` - Trace emission integration points.
-- `speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh` - PR packet
-  summary integration target.
+- `speckit-pro/speckit_pro_runner/helpers/pr_emission.py` - PR packet summary
+  integration target.
 - `docs/ai/specs/.process/` - Workflow trace summary conventions.
 
 **Done When:**
@@ -706,7 +706,7 @@ Budget result: within budget
 | Resource | Detail |
 |---|---|
 | Runtime substrate | Python 3.11+ standard-library runner from the XPLAT lane remains the target for installed-plugin helper behavior. |
-| Test suite | `bash tests/speckit-pro/run-all.sh` default deterministic layers; focused layers as needed during implementation. |
+| Test suite | `python3 tests/speckit-pro/run-all.py` default deterministic layers; focused Python validators as needed during implementation. |
 | Existing helper pattern | XPLAT-005 read-only helper registry, Python-authoritative helper records, request fixtures, and parity checks. |
 | Source-of-truth docs | `AGENTS.md`, `CLAUDE.md`, `.specify/memory/constitution.md`, PRDs, technical roadmaps, roadmap MOCs, and workflow files. |
 

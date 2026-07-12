@@ -11,6 +11,7 @@
 <!-- Short bullets: caveats, non-goals, deferred follow-ups, or known gaps.
      Omit this section entirely if there are none. -->
 
-<!-- generate-pr-body appends source markers, traceability, verification,
-     scope and non-goal evidence, known-gap language, reviewer checklist details,
-     and the UAT Runbook section automatically. Do not add them by hand. -->
+<!-- Packet emission is deferred. This template and generate-pr-body do not add
+     packet metadata, source markers, traceability, verification, scope, or UAT
+     evidence. PR creation requires an existing validated feature-local packet
+     and the packet-owned body it references. -->

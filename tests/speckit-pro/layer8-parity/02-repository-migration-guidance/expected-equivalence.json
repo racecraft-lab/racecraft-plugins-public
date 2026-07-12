@@ -1,4 +1,5 @@
 {
+  "schema": "speckit.layer8.expected-equivalence.v1",
   "fixture_id": "02-repository-migration-guidance",
   "description": "Fields that MUST match between Path A (Agent Teams) and Path B (parallel-subagents fallback) for PRSG-011 migration guidance.",
   "compare": [
@@ -10,18 +11,32 @@
       "tolerance_key": "migration_guidance.row_count"
     },
     {
-      "field": "migration_guidance.dry_run",
+      "field": "migration_guidance.operation",
       "source": "workflow.md",
       "section_selector": "## Migration Guidance Contract",
-      "extractor": "table_column:Dry Run",
-      "tolerance_key": "migration_guidance.commands"
+      "extractor": "table_column:Operation",
+      "tolerance_key": "migration_guidance.operation"
     },
     {
-      "field": "migration_guidance.apply",
+      "field": "migration_guidance.promotion_status",
       "source": "workflow.md",
       "section_selector": "## Migration Guidance Contract",
-      "extractor": "table_column:Apply",
-      "tolerance_key": "migration_guidance.commands"
+      "extractor": "table_column:Promotion Status",
+      "tolerance_key": "migration_guidance.promotion_status"
+    },
+    {
+      "field": "migration_guidance.authoritative_request",
+      "source": "workflow.md",
+      "section_selector": "## Migration Guidance Contract",
+      "extractor": "table_column:Authoritative Request",
+      "tolerance_key": "migration_guidance.authoritative_request"
+    },
+    {
+      "field": "migration_guidance.guidance",
+      "source": "workflow.md",
+      "section_selector": "## Migration Guidance Contract",
+      "extractor": "table_column:Guidance",
+      "tolerance_key": "migration_guidance.guidance"
     },
     {
       "field": "tier2_matrix.action",

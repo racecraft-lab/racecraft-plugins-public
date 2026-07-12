@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://racecraft.dev/speckit-pro/xplat-010/repo-bash-confinement-result.schema.json",
   "title": "XPLAT-010 Repository Bash Confinement Guard Result",
-  "description": "data payload of the runner response for the new active-path-guard operation 'repo-bash-confinement'. Mirrors the XPLAT-009 zero-bash-guard result shape. status pass iff blocking_count == 0. Allowlisted vendored entries are surfaced under release_readiness_excluded and excluded from the positive Bash-free evidence set (FR-004).",
+  "description": "data payload of the runner response for the new active-path-guard operation 'repo-bash-confinement'. Mirrors the XPLAT-009 zero-bash-guard result shape. status pass iff blocking_count == 0. Error envelopes fail closed with a nonzero blocking_count and not_inspected enumeration states. Allowlisted vendored entries are surfaced under release_readiness_excluded and excluded from the positive Bash-free evidence set (FR-004).",
   "type": "object",
   "additionalProperties": true,
   "required": [
@@ -35,15 +35,23 @@
     "enumeration": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["source", "workflow_exclusion"],
+      "required": ["active_instruction_values", "runtime_diagnostic_values", "source", "workflow_run_values"],
       "properties": {
+        "active_instruction_values": {
+          "enum": ["inspected", "not_inspected"],
+          "description": "Active project instructions and public support surfaces are checked for retired shell-helper guidance while vendored Spec Kit paths and negative/historical prose remain accepted."
+        },
+        "runtime_diagnostic_values": {
+          "enum": ["inspected", "not_inspected"],
+          "description": "Python runner diagnostic, remediation, error, and rollback output fields are checked structurally for obsolete shell guidance."
+        },
         "source": {
           "const": "git ls-files -z",
           "description": "Live repository-wide enumeration via the argv list [\"git\", \"ls-files\", \"-z\"] from the repo root (never a command string, never shell=True, never a fixed file list)."
         },
-        "workflow_exclusion": {
-          "const": ".github/workflows/",
-          "description": "The sanctioned Bash dispatch-glue boundary, applied as a post-enumeration Python filter."
+        "workflow_run_values": {
+          "enum": ["inspected", "not_inspected"],
+          "description": "Every tracked GitHub workflow run value is inspected and limited to one approved direct dispatch or exact GitHub output/summary append."
         },
         "tracked_file_count": { "type": "integer", "minimum": 0 }
       }
@@ -54,10 +62,10 @@
       "required": ["path", "entry_count", "release_readiness_excluded"],
       "properties": {
         "path": { "type": "string", "minLength": 1 },
-        "entry_count": { "const": 9 },
+        "entry_count": { "type": "integer", "minimum": 0, "maximum": 10 },
         "release_readiness_excluded": {
-          "const": true,
-          "description": "True iff every allowlist entry carries release_readiness_excluded: true."
+          "type": "boolean",
+          "description": "True iff a loaded allowlist exists and every entry carries release_readiness_excluded: true."
         }
       }
     }
@@ -72,7 +80,7 @@
         "line": { "type": ["integer", "null"] },
         "category": {
           "type": "string",
-          "description": "One of: script_file (.sh/.bash suffix or bash/POSIX-sh shebang), command_argv_subprocess / os_system / shell_true (Python AST), hooks_json_command, package_json_script."
+          "description": "One of: script_file, command_argv_subprocess / os_system / shell_true, hooks_json_command, package_json_script, or a workflow run-value category."
         },
         "classification": {
           "type": "string",

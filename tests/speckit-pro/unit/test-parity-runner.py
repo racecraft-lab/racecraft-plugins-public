@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import ast
+import copy
 import contextlib
 import importlib.util
 import io
@@ -162,13 +163,18 @@ def make_fixture(
     write_json(
         fixture / "tolerance.json",
         {
+            "schema": "speckit.layer8.tolerance.v1",
             "fixture_id": name,
-            "fields": tolerances,
+            "fields": {
+                key: value | {"rationale": value.get("rationale", "focused unit-test contract")}
+                for key, value in tolerances.items()
+            },
         },
     )
     write_json(
         fixture / "expected-equivalence.json",
         {
+            "schema": "speckit.layer8.expected-equivalence.v1",
             "fixture_id": name,
             "compare": compare,
             "fail_fast": fail_fast,
@@ -286,6 +292,60 @@ def call_shell_keyword_is_false(call: ast.Call) -> bool:
 
 
 class Layer8RunnerTests(unittest.TestCase):
+    def test_required_invariant_negative_canaries(self) -> None:
+        runner = import_runner()
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = make_fixture(
+                Path(temporary),
+                "invariant-canary",
+                [{"field": "workflow", "source": "workflow.md", "tolerance_key": "workflow"}],
+                {"workflow": {"tolerance": "exact"}},
+            )
+            (fixture / "workflow.md").write_text(
+                """# Invariant canary
+
+## Required Invariants
+
+| Invariant | Value |
+|-----------|-------|
+| missing_packet_blocks_pr_create | true |
+""",
+                encoding="utf-8",
+            )
+            expected = runner.load_json(fixture / "expected-equivalence.json")
+            tolerance = runner.load_json(fixture / "tolerance.json")
+            expected["required_invariants"] = {"missing_packet_blocks_pr_create": True}
+            expected["required_invariants_source"] = {
+                "source": "workflow.md",
+                "section_selector": "## Required Invariants",
+                "key_column": "Invariant",
+                "value_column": "Value",
+            }
+
+            with self.subTest(msg="invalid expected schema is rejected"):
+                invalid_schema = copy.deepcopy(expected)
+                invalid_schema["schema"] = "broken"
+                with self.assertRaisesRegex(ValueError, "schema must be"):
+                    runner.validate_fixture_contracts(fixture, invalid_schema, tolerance)
+
+            with self.subTest(msg="dangling tolerance reference is rejected"):
+                dangling = copy.deepcopy(expected)
+                dangling["compare"][0]["tolerance_key"] = "missing"
+                with self.assertRaisesRegex(ValueError, "must reference tolerance.json fields"):
+                    runner.validate_fixture_contracts(fixture, dangling, tolerance)
+
+            with self.subTest(msg="false required invariant output is rejected"):
+                runner.validate_fixture_contracts(fixture, expected, tolerance)
+                (fixture / "workflow.md").write_text(
+                    (fixture / "workflow.md").read_text(encoding="utf-8").replace("| true |", "| false |"),
+                    encoding="utf-8",
+                )
+                counts = runner.Counts()
+                with contextlib.redirect_stdout(io.StringIO()):
+                    valid = runner.enforce_required_invariants(fixture, expected, counts, fixture.name)
+                self.assertFalse(valid)
+                self.assertEqual(counts.failed, 1)
+
     def test_layer8_runner_contract(self) -> None:
         runner = import_runner()
         source = RUNNER.read_text(encoding="utf-8")

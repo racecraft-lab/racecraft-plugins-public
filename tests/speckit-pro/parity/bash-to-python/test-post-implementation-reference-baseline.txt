@@ -27,10 +27,10 @@
 027 Codex reference blocks skeleton-quality UAT before PR creation
 028 Codex reference blocks skeleton-quality UAT before PR creation
 029 Codex reference blocks skeleton-quality UAT before PR creation
-030 Claude dist reference mirrors source
-031 Codex dist reference carries multi-PR contract
-032 Codex dist reference carries multi-PR contract
-033 Codex dist reference carries multi-PR contract
-034 Codex dist reference carries multi-PR contract
-035 Codex dist reference carries multi-PR contract
+030 Claude reference requires current feature-local packet
+031 Codex reference requires current feature-local packet
+032 Claude reference consumes read-only packet validation in memory
+033 Codex reference consumes read-only packet validation in memory
+034 Claude reference keeps restack deferred with explicit fallback
+035 Codex reference keeps restack deferred with explicit fallback
 TOTAL: 35

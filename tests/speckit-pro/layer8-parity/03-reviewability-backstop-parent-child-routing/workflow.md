@@ -28,8 +28,8 @@ and Codex surfaces.
 
 | Surface | Stop Boundary | State | Packet |
 |---------|---------------|-------|--------|
-| Claude autopilot | before PR body, `gh pr create`, or `multi-pr-emission.sh` | `final_reviewability_gate.status=block` and `pr_created=false` | JSON re-slicing packet with PRSG-007/008/009 operator steps |
-| Codex autopilot | before PR body, `gh pr create`, or `multi-pr-emission.sh` | `final_reviewability_gate.status=block` and `pr_created=false` | JSON re-slicing packet with PRSG-007/008/009 operator steps |
+| Claude autopilot | on missing current evidence or correctness block, before `generate-pr-body`, `gh pr create`, or `multi-pr-emission` | `final_reviewability_gate.status=block` and `pr_created=false` | JSON re-slicing packet for internal PRSG-007/008/009 continuation |
+| Codex autopilot | on missing current evidence or correctness block, before `generate-pr-body`, `gh pr create`, or `multi-pr-emission` | `final_reviewability_gate.status=block` and `pr_created=false` | JSON re-slicing packet for internal PRSG-007/008/009 continuation |
 
 ## Exception Education Contract
 
@@ -42,8 +42,8 @@ and Codex surfaces.
 
 | Surface | Default Path | O5 Shape | Rollup |
 |---------|--------------|----------|--------|
-| Claude scaffold/status | PRSG-007/008/009 split planning first | parent manifest plus flat sibling child specs | topology-first `o5-topology.sh` rollup |
-| Codex scaffold/status | PRSG-007/008/009 split planning first | parent manifest plus flat sibling child specs | topology-first `o5-topology.sh` rollup |
+| Claude scaffold/status | PRSG-007/008/009 split planning first | parent manifest plus flat sibling child specs | topology-first runner helper `o5-topology` in read_only mode |
+| Codex scaffold/status | PRSG-007/008/009 split planning first | parent manifest plus flat sibling child specs | topology-first runner helper `o5-topology` in read_only mode |
 
 ## Contextual Routing Contract
 

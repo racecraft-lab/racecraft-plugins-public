@@ -1,4 +1,5 @@
 {
+  "schema": "speckit.layer8.expected-equivalence.v1",
   "fixture_id": "03-reviewability-backstop-parent-child-routing",
   "description": "Fields that MUST match between Path A and Path B for PRSG-010 guidance parity.",
   "compare": [

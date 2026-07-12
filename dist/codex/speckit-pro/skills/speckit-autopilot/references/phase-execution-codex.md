@@ -100,19 +100,19 @@ group (see [post-implementation-codex.md](./post-implementation-codex.md)).
 
 During pre-flight, the parent may inspect the active workflow target and nearby
 legacy spec candidates for Tier-2 PROCESS relocation. This is static
-inspection/reporting only. It does not run
-`relocate-process-artifacts`.
+inspection/reporting only. The `relocate-process-artifacts` runner operation is
+deferred, has no authoritative request, and is unavailable.
 
-Suggest relocation only for thawed in-scope legacy specs with relocatable
-PROCESS artifacts. For each eligible spec, print:
+Report relocation candidates only for thawed in-scope legacy specs with
+relocatable PROCESS artifacts. For each eligible spec, print:
 
 ```text
-runner helper relocate-process-artifacts --dry-run --spec specs/<spec-dir> --repo-root .
-runner helper relocate-process-artifacts --apply --spec specs/<spec-dir> --repo-root .
+Tier-2 relocation candidate: specs/<spec-dir>.
+Deferred: relocate-process-artifacts is unavailable; no runner command may be executed.
 ```
 
-The `--apply` line is an operator follow-up after reviewing dry-run output and
-cleaning the worktree. The parent must suppress the suggestion for
+Do not advertise or invoke either runner mode and do not invent a replacement
+helper. The parent must suppress the candidate report for
 `frozen/in-flight`, invalid active-feature, already-current, already-normalized,
 no-candidate, `non_speckit_namespace`, and `date_named_legacy_namespace`
 cases. Record any surfaced suggestion or suppression note in the workflow log
@@ -198,8 +198,7 @@ failure this ordering avoids.
 # Write mode (NO --check): regenerate over the autopilot's target repo.
 # Pass "$PWD" explicitly — do NOT rely on the generator's default REPO_ROOT.
 # In a cached-plugin run the default resolves to the plugin cache's parent, not
-# the user's project, so the explicit arg is required (same path-prefix +
-# "$PWD" convention as generate-pr-body below).
+# the user's project, so the explicit arg is required.
 runner helper generate-spec-index-write with repo root "$PWD" and mode apply
 ```
 
@@ -365,29 +364,35 @@ warnings, and any blocked/fixed tasks. The marker checkpoint SHA is the source
 commit for later live marker PR branches. Do not infer a new marker order from
 changed files or reviewability warnings.
 
-## PR Body Generation
+## PR Packet and Body Boundary
 
-Before creating or updating a PR after G7, the parent session runs:
+Before creating or updating a PR after G7, the parent session applies this
+fail-closed sequence:
 
 ```text
 final-reviewability boundary: use current committed reviewability evidence; if none is current, stop before PR side effects
-runner helper generate-pr-body "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD
+require specs/<feature>/.process/pr-packets/<packet-id>.json to already exist and be current
+run validate-pr-packet-read-only for that packet and consume response data.stdout_json in memory/state
+require data.stdout_json.status=passed, data.stdout_json.pr_blocked=false, and response data.writes_state=false
+run validate-pr-workflow-contract with the packet title
+create only with packet-owned --base, --head, --title, and --body-file values
 ```
 
-Run `generate-pr-body` only after current committed reviewability evidence shows
-`pass`, `warn`, honored typed exception, or final `marker_split` with a current
+Continue only after current committed reviewability evidence shows `pass`,
+`warn`, honored typed exception, or final `marker_split` with a current
 `pr_marker_plan`. When a current `pr_marker_plan` exists, PR preparation
 continues through marker emission even if the final full-diff result is only
 `pass` or `warn`. A full-diff size block with current marker evidence also
-proceeds to marker emission and is not a manual re-slicing stop. Exit 1 is
-`reslicing_required` only for unexcepted correctness or missing-marker cases:
+proceeds to marker emission and is not a manual re-slicing stop. In the current
+committed evidence, exit 1 is `reslicing_required` only for unexcepted
+correctness or missing-marker cases:
 do not generate a PR body, invoke any `gh pr create` variant, or run
 `multi-pr-emission` yet. This blocks only PR side effects. It is not a final
 response condition: read `autopilot_continuation`, the packet's
 `operator_steps`, and `resume.resume_from`; continue inside the same autopilot
 run through the named PRSG-007/008/009 phase until a valid slice PR stack is
 emitted or a typed exception is committed. Never report completion while
-`autopilot_continuation.required=true`. Exit 2 is a gate error: state is
+`autopilot_continuation.required=true`. Recorded exit 2 is a gate error: state is
 written, no packet is valid, and the run stops for operator repair.
 
 For marker-aware PR preparation, record gate status/mode/exit/evidence path,
@@ -395,10 +400,17 @@ fingerprint status, ordered marker IDs, checkpoints, warnings, final
 marker_split or marker-plan-ready handoff, packet validation, and PR mappings
 before PR side effects.
 
-`generate-pr-body` uses the host repository's pull request template if it
-exists, preserves unknown host-required sections, appends missing review-packet
-sections, and falls back to the bundled template when the host has none. Use
-`gh pr create --body-file .git/speckit-pr-body.md`, not an inline placeholder.
+The `pr-packet-output` and `validate-pr-packet-write` operations are deferred.
+If the feature-local packet or its referenced body is missing, stale, malformed,
+or invalid, stop before `gh pr create` and report the deferred packet-emission
+blocker. The read-only validator returns its result in `data.stdout_json`; it
+does not persist `validation.json` or any other validation artifact.
+
+`generate-pr-body` is a body-only `golden_only` operation. Its complete input
+contract is `output_path`, `title`, and `sections`, and it writes one Markdown
+body. It does not create or update packet JSON, packet metadata, template
+markers, validation evidence, or PR commands. Its output alone never authorizes
+PR creation.
 
 ## Coverage Audit
 

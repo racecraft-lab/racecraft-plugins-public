@@ -147,7 +147,7 @@ Users can install and use `speckit-pro`, but the current documentation makes the
   - **AC-5.1:** The tutorial shows the lifecycle from idea to PRD to technical roadmap to scaffolded spec to autopilot run.
   - **AC-5.2:** The docs explain specify, clarify, plan, checklist, tasks, analyze, and implement in user-facing language.
   - **AC-5.3:** The docs distinguish raw `grill-me`, `$speckit-prd`, `$speckit-scaffold-spec`, and `$speckit-autopilot` roles.
-  - **AC-5.4:** The tutorial includes prerequisite checks for Spec Kit CLI, constitution, GitHub CLI, and `jq`.
+  - **AC-5.4:** The tutorial includes prerequisite checks for Python 3.11+, Spec Kit CLI, constitution, and GitHub CLI.
   - **AC-5.5:** The docs validate whether Codex first-run should use `specify init --integration codex --integration-options="--skills"` rather than copying Claude initialization wording.
   - **AC-5.6:** The lifecycle visualizer has a static fallback diagram and does not require executing plugins.
 - **Priority:** Must
@@ -163,7 +163,7 @@ Users can install and use `speckit-pro`, but the current documentation makes the
   - **AC-6.3:** The manifest/version checker can compare displayed repo metadata from checked-in JSON examples and explain what must stay in sync.
   - **AC-6.4:** The payload diagram shows source tree, Claude dist, Codex dist, marketplace entries, and Codex cache as distinct nodes.
   - **AC-6.5:** All interactive components remain usable by keyboard and degrade to static Markdown tables.
-  - **AC-6.6:** The first-run checklist includes checkpoints but never runs shell commands from the browser.
+  - **AC-6.6:** The first-run checklist includes checkpoints but never executes local commands or inspects local files from the browser.
 - **Priority:** Must
 - **Source rationale:** User selected safe selectors/checkers; W3C accessibility principles constrain interaction design.
 
@@ -272,7 +272,7 @@ No candidate is cut entirely. The main leanness choice is merging related refere
 | Copyable command blocks | Users mistype commands and cannot tell expected output. | Copy button, platform badge, prerequisite notes, expected success signal. | Curated command metadata. | Plain fenced code blocks. | Every command block has platform/scope label. | Must |
 | Manifest/version checker | Users and maintainers miss version drift. | Display checked-in JSON values and compare expected version equality. | Marketplace and manifest JSON files. | Static checklist with file paths. | Flags mismatch as docs/release task; no writes. | Must |
 | Generated payload diagram | Users install source tree instead of generated payload. | Visual diagram of source -> dist -> marketplace -> install/cache. | Repo tree, build script, marketplace entries. | Mermaid/static image. | Shows Claude and Codex payloads separately. | Must |
-| First-run checklist | Users do not know whether prerequisites are complete. | Checkbox flow by platform and workflow goal. | Prerequisite list and command matrix. | Markdown checklist. | Includes Spec Kit CLI, constitution, `gh`, `jq`, restart where needed. | Must |
+| First-run checklist | Users do not know whether prerequisites are complete. | Checkbox flow by platform and workflow goal. | Prerequisite list and command matrix. | Markdown checklist. | Includes Python 3.11+, Spec Kit CLI, constitution, `gh`, and restart where needed. | Must |
 | Troubleshooting decision tree | Users cannot map symptom to cause. | Select symptom and platform to see diagnosis/fix. | Known failure modes from README and official docs. | Table by symptom. | Includes cache/path/permission/version/CLI-not-found cases. | Should |
 | Spec Kit lifecycle visualizer | Users cannot see how PRD, roadmap, workflow, and phases connect. | Stepper or diagram with phase artifacts and gates. | `speckit-pro` README and Spec Kit docs. | Mermaid/static diagram. | Distinguishes product requirements from implementation phases. | Should |
 | Release readiness checklist | Contributors miss build/test/sync steps. | Checklist grouped by changed file class. | CI workflow, scripts, AGENTS/CLAUDE guidance. | Markdown checklist. | Maps each changed surface to validation command. | Must |
@@ -322,7 +322,7 @@ Analytics implementation is out of scope until the Astro/Starlight site foundati
 ### Risks requiring mitigation
 
 - Official OpenAI/Anthropic plugin docs are moving targets; docs must include source-update reminders.
-- A static site adds a new dependency surface to a Bash/Markdown-heavy repo.
+- A static site adds a new dependency surface to a Python/Markdown-heavy repo.
 - Interactive widgets can obscure critical commands if static fallbacks are weak.
 - Duplicating roadmap files for prompt and SpecKit compatibility can create drift; one canonical owner should be chosen after initial handoff.
 - If docs validation is added too late, site drift can ship silently.

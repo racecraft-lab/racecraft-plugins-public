@@ -16,7 +16,7 @@
       "fixture_ids": ["complete-install", "missing-files", "safe-repair", "real-home-refusal"],
       "bash_reference_ids": [],
       "authoritative_python_command": "python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py",
-      "rollback": "Keep existing install scripts authoritative until XPLAT-007/XPLAT-008."
+      "rollback": "Use doctor-preflight for read-only diagnosis and doctor-repair for registered repair modes."
     },
     {
       "helper_id": "doctor-repair",
@@ -32,7 +32,7 @@
       "fixture_ids": ["pr-body-apply"],
       "bash_reference_ids": ["generate-pr-body"],
       "authoritative_python_command": "python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py",
-      "rollback": "Use generate-pr-body.sh until XPLAT-007 gate migration."
+      "rollback": "Retry the registered generate-pr-body operation in dry_run mode before applying again."
     },
     {
       "helper_id": "multi-pr-emission",
@@ -40,7 +40,7 @@
       "fixture_ids": ["fake-gh-command-capture"],
       "bash_reference_ids": [],
       "authoritative_python_command": "python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py",
-      "rollback": "Keep multi-pr-emission.sh authoritative for live PR work."
+      "rollback": "Keep live PR mutation deferred; use the registered multi-pr-emission operation only for command-plan capture."
     },
     {
       "helper_id": "relocate-process-artifacts",

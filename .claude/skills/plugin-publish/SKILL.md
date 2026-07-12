@@ -13,7 +13,7 @@ User-invocable. Stops Claude from auto-running this — it has side effects (pus
 
 Walks through the publish flow documented in `CLAUDE.md`, but enforces the parts that are easy to forget:
 
-1. **Pre-flight check** — `bash speckit-pro/tests/run-all.sh --layer 1` must pass (fast, ~5s, catches missing frontmatter / invalid JSON).
+1. **Pre-flight check** — `python3 tests/speckit-pro/run-all.py --layer 1` must pass (catches missing frontmatter and invalid JSON).
 2. **Detect remote** — `git remote -v` (per global CLAUDE.md "Git Operations" rule — don't assume `origin`).
 3. **Stage selectively** — list candidate files, ask user which to include. NEVER `git add -A` or `git add .`.
 4. **Commit with conventional-commits prefix** — required types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`. Validate before writing.

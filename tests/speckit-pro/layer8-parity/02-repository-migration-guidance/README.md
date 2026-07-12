@@ -6,13 +6,17 @@ on static text contracts, not script mutation behavior.
 
 ## Test scenario
 
-The workflow records the exact repository migration and Tier-2 relocation
-guidance that Claude Code and Codex surfaces must expose:
+The workflow records the exact deferred migration and Tier-2 relocation status
+that Claude Code and Codex surfaces must expose:
 
-- repository migration dry-run/apply sequence from `speckit-upgrade`
-- Tier-2 relocation dry-run/apply suggestion sequence from scaffold/autopilot
+- `migrate-structure` is deferred with no authoritative request
+- `relocate-process-artifacts` is deferred with no authoritative request
+- neither operation exposes an operator `dry_run` or `apply` contract
 - frozen, already-current, no-candidate, and out-of-scope suppression reasons
-- no automatic `relocate-process-artifacts.sh` execution
+- a bounded legacy-input example containing retired helper paths, which must
+  never be repeated as the current command
+- must not invoke the retired `relocate-process-artifacts.sh` path, the deferred
+  runner operation, or an invented replacement
 
 Layer 8 live mode compares the same workflow after Path A and Path B execution.
 Dry-run mode validates fixture shape and JSON.

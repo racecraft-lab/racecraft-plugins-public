@@ -36,8 +36,8 @@ You review one skill at a time. Caller passes the path to the changed `SKILL.md`
 
 ### 5. Layer 1 structural test
 Run as the last check:
-```bash
-cd speckit-pro && bash tests/run-all.sh --layer 1
+```console
+python3 tests/speckit-pro/run-all.py --layer 1
 ```
 If this fails, the skill is broken regardless of subjective quality.
 

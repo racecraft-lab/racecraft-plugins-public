@@ -44,9 +44,31 @@ durable schemaVersion 2 PRS manifest across Path A and Path B runs.)
 
 ## PR Packet Validation Evidence
 
-(Empty — autopilot populates this section during the post-impl run.
-Layer 8 compares the generated PR packet, shared validator result, and
-pre-create ordering across Path A and Path B runs.)
+The fixture intentionally supplies no current packet. Autopilot updates this
+row, but it must remain blocked before validation or PR creation.
+
+| Status | Packet Path | Validator Result | Writes State | Blocker |
+|--------|-------------|------------------|--------------|---------|
+| pending | `specs/parity-01-post-impl/.process/pr-packets/<packet-id>.json` | not_run | false | `pr-packet-output` deferred |
+
+## Required Invariants
+
+| Invariant | Value |
+|-----------|-------|
+| shared_packet_schema | speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json |
+| shared_packet_validator_helper_id | validate-pr-packet-read-only |
+| required_packet_path | specs/<feature>/.process/pr-packets/<packet-id>.json |
+| packet_emission_promotion_status | deferred |
+| validation_result_source | data.stdout_json |
+| validation_writes_state | false |
+| validation_artifact_written | false |
+| generate_pr_body_inputs | output_path, title, sections |
+| generate_pr_body_output | one_markdown_body |
+| runner_invocation | [resolved_python, -m, speckit_pro_runner] with one JSON request on stdin |
+| codex_duplicate_schema_or_validator | false |
+| requires_explicit_pr_create_args | --base, --head, --title, --body-file |
+| missing_packet_blocks_pr_create | true |
+| post_create_packet_repair_fallback | false |
 
 ## Notes
 
@@ -55,15 +77,17 @@ It is NOT a real spec — it's the smallest viable workflow that exercises
 the post-impl parallel group + serial tail plus ordered multi-PR emission.
 
 The `--from-phase post` flag (or equivalent) skips phases 1-7. Both
-Path A (teams) and Path B (parallel subagents) dispatch the same 3
-tracks (Doctor / Code Review / Verify-chain) and apply the serial tail
-(15 Reviewability → 16 PR Body → 17 PR Create → 18 Loop
-→ 19 Retrospective). The serial tail runs the final reviewability
-backstop before packet generation, renders `.git/speckit-pr-packet.json`
-and `.git/speckit-pr-body.md`, validates the current packet with the
-shared `validate-pr-packet.sh`, then creates PRs only with explicit
-`gh pr create --base --head --title --body-file` packet fields. PR
-creation emits N ordered Style B slice PRs from the PRSG-008 layer plan,
-with no legacy flattened-PR fallback, no new slicing heuristics, and no
-post-create packet repair fallback. Parity requires equivalent outputs
-across the two paths.
+Path A (teams) and Path B (parallel subagents) dispatch the same Doctor /
+Code Review / Verify-chain tracks, then complete Integration Suite,
+Reviewability Diff Gate, Self-Review, UAT Runbook Generation, PR Body
+Generation, PR Creation, Review Remediation, and Retrospective. The
+`generate-uat-skeleton` and `final-reviewability-backstop` helpers are
+deferred: reuse committed UAT and reviewability evidence when current, or
+record the documented deferred outcome before PR side effects. Packet
+emission is deferred. Because this fixture has no current schema-valid packet at
+the feature-local path, both routes stop before `validate-pr-packet-read-only`,
+`validate-pr-workflow-contract`, or `gh pr create`. `generate-pr-body` remains a
+body-only operation accepting `output_path`, `title`, and `sections`; it cannot
+fill the packet gap. Split routes may use `multi-pr-emission` only for
+`golden_only` command-plan capture after packets exist, never for packet or live
+PR emission. Parity requires equivalent deferred outcomes across the two paths.

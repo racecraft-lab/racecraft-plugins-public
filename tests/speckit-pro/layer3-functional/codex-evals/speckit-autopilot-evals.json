@@ -3,11 +3,12 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Run check-prerequisites.sh with no arguments to verify the autopilot environment is ready. Report whether the SpecKit CLI, git repo, and .specify directory checks pass.",
-      "expected_output": "Runs check-prerequisites.sh and returns JSON with per-check results. The all_pass field indicates whether all prerequisites are satisfied.",
+      "prompt": "Invoke the Python runner with one JSON request on stdin using helper_id=check-prerequisites, operation=check-prerequisites, mode=read_only, and inputs.workflow_file=docs/ai/specs/.process/XPLAT-005-workflow.md. Report whether the SpecKit CLI, project initialization, workflow, and branch checks pass.",
+      "expected_output": "Invokes [resolved_python, -m, speckit_pro_runner] with the structured check-prerequisites request and reads the response envelope's data.stdout_json. The all_pass field summarizes the per-check results.",
       "expectations": [
-        "Executes scripts/check-prerequisites.sh from the speckit-autopilot skill directory",
-        "Output contains JSON with a 'checks' array or individual check results",
+        "Invokes [resolved_python, -m, speckit_pro_runner] with one JSON request on stdin and no shell fallback",
+        "Uses helper_id and operation check-prerequisites, mode read_only, and the workflow_file input",
+        "Reads data.stdout_json with a 'checks' array or individual check results",
         "Each check has a 'pass' boolean field",
         "Output includes an 'all_pass' field summarizing overall status",
         "Checks include speckit_cli, project_init, and branch at minimum"
@@ -15,13 +16,13 @@
     },
     {
       "id": 2,
-      "prompt": "Run validate-gate.sh G7 on the specs/008-perspectives feature directory to verify the final implementation gate passes. The spec should have all required artifacts.",
-      "expected_output": "Runs validate-gate.sh G7 against the 008-perspectives feature directory and returns JSON indicating whether the gate passed, with marker counts and details.",
+      "prompt": "Invoke the Python runner's validate-gate read-only helper for G7 on tests/speckit-pro/unit/fixtures/read-only-helpers/read-only-helper-feature. Report the gate result and task-completion details from the JSON response.",
+      "expected_output": "Sends a structured validate-gate request with inputs.gate=G7 and the fixture feature_dir, then reports data.stdout_json. The current fixture returns pass=false because one task remains incomplete.",
       "expectations": [
-        "Executes scripts/validate-gate.sh with arguments 'G7' and the feature directory path",
-        "Output contains JSON with a 'pass' or 'result' boolean field",
-        "Includes marker count or artifact verification details",
-        "Gate G7 checks implementation-phase artifacts (code, tests, or final deliverables)"
+        "Invokes [resolved_python, -m, speckit_pro_runner] with helper_id and operation validate-gate in read_only mode",
+        "Provides inputs.gate=G7 and the repo-relative feature_dir",
+        "Reports data.stdout_json with gate=G7, pass=false, total=85, done=84, and one incomplete task",
+        "Treats G7 as the completed-task check implemented by the current runner helper"
       ]
     },
     {
@@ -74,26 +75,27 @@
         "States that it re-runs the checklist-executor to remediate [Gap] markers",
         "Mentions re-validating G4 after remediation",
         "References a maximum retry count or iteration limit",
-        "Mentions that the gate validation uses validate-gate.sh G4"
+        "Mentions that gate validation uses the validate-gate runner helper with inputs.gate=G4"
       ]
     },
     {
       "id": 7,
       "prompt": "What happens during the post-implementation phase of the autopilot after all 7 SDD phases complete? List the specific steps in order, including which ones use extensions and which are built-in.",
-      "expected_output": "Lists the post-implementation steps in order: verify, code review, integration tests, reviewability diff gate, self-review, UAT runbook generation, PR packet/body generation, pre-create PR packet validation, pre-create PR workflow contract validation, PR creation, review remediation loop, and retrospective — distinguishing extension-based vs built-in steps.",
+      "expected_output": "Lists all 14 Codex Post plan items in order, identifies the parallel group and serial tail, and distinguishes extension-backed items from built-in work. It states that generate-uat-skeleton, final-reviewability-backstop, pr-packet-output, and validate-pr-packet-write are deferred and detect-stack-manager-plan is out of scope. Before PR creation it requires an existing feature-local packet, validates it with validate-pr-packet-read-only using data.stdout_json in memory/state, validates title/scope with validate-pr-workflow-contract, and fails closed if packet emission is needed.",
       "expectations": [
-        "Lists verify implementation as a post-implementation step",
-        "Lists code review as a post-implementation step",
-        "Lists integration test suite verification",
+        "Lists all 14 canonical Codex Post items from Doctor Extension Check through Retrospective without collapsing supporting rows",
+        "Identifies Doctor, Verify Implementation, Verify Tasks Phantom Check, and Retrospective as extension-backed items and keeps Code Review plus Integration Suite built in",
         "Lists Self-Review (4-question audit) as an always-required built-in step before PR body generation",
-        "Lists UAT Runbook Generation — generate-uat-skeleton.sh writes and commits uat-runbook.md — as an always-required built-in step before PR body generation",
-        "Lists PR packet/body generation via generate-pr-body.sh --packet-output, including packet-owned generated title and body file fields",
-        "Lists pre-create packet validation via validate-pr-packet.sh after body generation and before any gh pr create",
-        "Lists pre-create PR workflow contract validation via validate-pr-workflow-contract.sh with packet title and changed-file evidence",
+        "Lists UAT Runbook Generation as mandatory and fail-open, states generate-uat-skeleton is deferred, reuses a committed source-derived runbook when present, and otherwise records skipped deferred evidence",
+        "Lists both Final Reviewability Backstop and PR Packet/Body Generation supporting rows in update_plan and autopilot-state.json",
+        "Lists the required existing packet path specs/<feature>/.process/pr-packets/<packet-id>.json and states pr-packet-output is deferred",
+        "Describes generate-pr-body only as a golden_only one-Markdown-body writer accepting output_path, title, and sections, not as packet emission",
+        "Lists pre-create validation via runner helper validate-pr-packet-read-only and consumes current data.stdout_json with writes_state=false without claiming a validation file was written",
+        "Lists pre-create PR workflow contract validation via runner helper validate-pr-workflow-contract with packet title and changed-file evidence",
         "Lists PR creation with gh pr create --base --head --title --body-file using packet target/title/body values",
         "Lists the parent-session review remediation loop",
-        "States invalid packets block before PR creation; no post-create auto-repair fallback is used",
-        "Distinguishes which steps require extensions (verify, retrospective) vs built-in (code review, integration tests, reviewability diff gate, self-review, UAT runbook generation, PR body generation, PR creation, review loop)"
+        "States final-reviewability-backstop and detect-stack-manager-plan are not active installed helper calls, so current evidence and explicit gh fallback behavior apply",
+        "States missing or invalid packets block before PR creation because packet emission/write validation is deferred; no post-create auto-repair fallback is used"
       ]
     },
     {
@@ -105,7 +107,7 @@
         "Explains that all work happens on the worktree feature branch",
         "Describes the feature branch naming pattern (NNN-short-name)",
         "Explains what happens when the autopilot detects it's on main (warns or stops)",
-        "References check-prerequisites.sh branch detection as part of this check"
+        "References branch, is_worktree, and on_feature_branch from the check-prerequisites runner response"
       ]
     },
     {
@@ -290,9 +292,9 @@
     {
       "id": 23,
       "prompt": "Imagine a user has installed a brand-new preset called 'team-xyz-tdd' (never seen in any catalog) and a brand-new extension called 'team-xyz-bdd' that registers an 'after_tasks' hook in .specify/extensions.yml. When $speckit-autopilot starts on a new feature, does it honor these without any code update to the autopilot or speckit-pro plugin? Walk me through how detection and honoring work for things the plugin has never heard of by name.",
-      "expected_output": "Explains that preset detection (detect-presets.sh) globs .specify/presets/*/preset.yml with no id filter and applies whatever conventions are found to every subagent prompt. Explains that extension hook execution reads .specify/extensions.yml at every phase boundary and fires whatever hooks are registered, regardless of which extension registered them. Concludes that yes, the autopilot honors arbitrary new presets and arbitrary new extension hooks with zero code changes.",
+      "expected_output": "Explains that the detect-presets read-only runner helper discovers every .specify/presets/*/preset.yml directory without an id allowlist and applies the returned conventions to every subagent prompt. Explains that extension hook execution reads .specify/extensions.yml at every phase boundary and fires registered hooks generically. Concludes that arbitrary new presets and hooks require no autopilot code change.",
       "expectations": [
-        "States that detect-presets.sh enumerates ALL presets by directory glob with no id filter",
+        "States that runner helper detect-presets enumerates ALL presets by directory glob with no id filter",
         "States that any preset's conventions get injected into every subagent prompt via PRESET_CONVENTIONS",
         "States that .specify/extensions.yml hooks are read dynamically at each phase boundary and fired generically",
         "States explicitly that no autopilot code change is required when the user installs a previously-unknown preset or extension",
@@ -301,32 +303,32 @@
     },
     {
       "id": 24,
-      "prompt": "Pretend you just finished Phase 6 (Analyze) for a feature and the consensus-synthesizer wrote this block to the workflow log:\n\n```\n📊 Confidence: 0.85\n\n- Task understanding: 0.95\n- Approach clarity: 0.80\n- Requirements alignment: 0.90\n- Risk assessment: 0.75\n- Completeness: 0.85\n```\n\nThe project's `.codex/speckit-pro.local.md` has no `confidence_gate_mode` key. The operator is about to start Phase 7 (Implement) via `$speckit-autopilot`. Walk through what the autopilot does at gate G6.5 in Codex: which script it runs, what exit code that script returns, what the autopilot does next, and what the alternate behavior would be if the operator passed `--strict` on the invocation. Be specific about the lowest-scoring criterion and explain why `/goal` cannot be the safety bound in headless `codex exec`.",
-      "expected_output": "Explains the G6.5 confidence gate behavior end-to-end in Codex: runs scripts/confidence-gate.sh against the workflow file, parses the 📊 Confidence emit, compares 0.85 against the default 0.90 threshold, exits 2 (FAIL). In advisory mode (the resolved default since no flag was passed and no local config override), the orchestrator logs the breakdown, identifies Risk Assessment as the lowest criterion at 0.75, dispatches a focused remediation round on open CRITICAL/HIGH findings, re-emits via spawn_agent consensus-synthesizer, and re-runs the gate. Max 3 iterations is the only safety bound because /goal is not first-class in codex exec per openai/codex#21764. In strict mode, exit 2 means STOP before Phase 7. The mode is resolved once at Step 0.6b by resolve-confidence-mode.sh and cached in CONFIDENCE_GATE_MODE.",
+      "prompt": "Pretend you just finished Phase 6 (Analyze) for a feature and the consensus-synthesizer wrote this block to the workflow log:\n\n```\n📊 Confidence: 0.85\n\n- Task understanding: 0.95\n- Approach clarity: 0.80\n- Requirements alignment: 0.90\n- Risk assessment: 0.75\n- Completeness: 0.85\n```\n\nThe project's `.codex/speckit-pro.local.md` has no `confidence_gate_mode` key. The operator is about to start Phase 7 (Implement) via `$speckit-autopilot`. Walk through the resolve-confidence-mode and confidence-gate runner requests, the helper exit code, remediation behavior, and the alternate behavior for `--strict`. Explain why `/goal` cannot be the safety bound in headless `codex exec`.",
+      "expected_output": "Explains the G6.5 behavior end-to-end in Codex: resolve-confidence-mode runs once during pre-flight and returns advisory, then confidence-gate reads the workflow emit with mode_name=advisory and threshold 0.90. Its data.exit_code is 2 with stdout_json.pass=false because 0.85 is below 0.90. The orchestrator identifies Risk Assessment at 0.75, dispatches focused remediation through spawn_agent, re-emits, and re-runs up to 3 times. Strict mode stops before Phase 7 after remediation remains below threshold.",
       "expectations": [
-        "Names scripts/confidence-gate.sh as the script that runs at G6.5",
-        "States the script exits 2 when composite (0.85) is below threshold (0.90 default)",
+        "Names the confidence-gate read-only runner helper and its workflow_file, mode_name, and threshold inputs",
+        "States the helper data.exit_code is 2 and stdout_json.pass is false when composite 0.85 is below threshold 0.90",
         "Identifies Risk Assessment (0.75) as the lowest-scoring criterion in the example block",
         "Explains advisory mode behavior: log + remediate the lowest criterion + re-emit via spawn_agent consensus-synthesizer + re-run (max 3 iterations), then continue to Phase 7",
         "Explains strict mode behavior: STOP before Phase 7",
-        "States that mode resolution happens once at Step 0.6b via resolve-confidence-mode.sh and is cached as CONFIDENCE_GATE_MODE for G6.5 to read (not re-resolved at G6.5)",
+        "States that mode resolution happens once at Step 0.6b via runner helper resolve-confidence-mode and is cached as CONFIDENCE_GATE_MODE for G6.5 to read",
         "Explains explicitly that /goal is not first-class in codex exec (cites openai/codex#21764 maintainer reply or equivalent) and that the 3-iteration cap is therefore the only safety bound in headless mode",
-        "Notes that resolve-confidence-mode.sh checks both .claude/speckit-pro.local.md AND .codex/speckit-pro.local.md as default config paths"
+        "Notes that resolve-confidence-mode checks both .claude/speckit-pro.local.md and .codex/speckit-pro.local.md as default config paths"
       ]
     },
     {
       "id": 25,
       "prompt": "The Codex autopilot just finished its Post: Integration Suite step and is about to start Post: PR Body Generation. Between those two, there's a new mandatory step called Post: Self-Review. Describe exactly what the autopilot does during Post: Self-Review — list each question the autopilot must answer, what the output block in the workflow log looks like, where the answers also end up, and whether the self-review can stop the PR from being created. Be specific about the block format and how it shows up in update_plan / autopilot-state.json.",
-      "expected_output": "Lists the 4 self-review questions in order (Tests executed? Edge cases? Requirements matched? Follow-up?), describes the block format with Self-Review heading and individual answer paragraphs, states answers are reproduced verbatim in the generated PR body's ## Self-Review Findings section, clarifies that self-review is a reporting step — it does NOT gate PR creation. The PR opens regardless. The step appears in update_plan and autopilot-state.json as `Post: Self-Review` between `Post: Reviewability Diff Gate` and `Post: PR Body Generation`.",
+      "expected_output": "Lists the 4 self-review questions in order (Tests executed? Edge cases? Requirements matched? Follow-up?), describes the block format with Self-Review heading and individual answer paragraphs, records answers in the workflow log, and mirrors them only into a declared editable ## Self-Review Findings region of an already-existing packet-owned body. It clarifies that self-review is reporting, while packet availability and validation remain separate fail-closed PR boundaries. The step appears in update_plan and autopilot-state.json between Reviewability Diff Gate and PR Body Generation.",
       "expectations": [
         "Lists all 4 questions in order: Tests executed? / Edge cases? / Requirements matched? / Follow-up?",
         "Tests executed? — requires citing the test run timestamp from the workflow log and confirming BUILD/TYPECHECK/LINT/UNIT_TEST/INTEGRATION_TEST each actually ran and exited zero",
         "Edge cases? — requires naming the test (file:line) for each acceptance criterion's non-happy path; flags criteria with only happy-path tests as [edge-case-gap]",
         "Requirements matched? — requires cross-walking spec.md FR-XXX list against tasks.md, with each FR tracing to at least one [X] task and each [X] task having implementation evidence (commit hash + passing test)",
         "Follow-up? — requires every [TODO], [DEFERRED], or [OUT-OF-SCOPE] marker to have an explicit landing place (roadmap entry, tracked issue, PR-body section)",
-        "States the answers are reproduced in the generated PR body under a ## Self-Review Findings section",
-        "States explicitly that self-review is a reporting step, NOT a gate — the PR opens regardless of what the review surfaces",
-        "Mentions that Post: Self-Review is item position #7 in the canonical 12-entry post-implementation list, between Post: Reviewability Diff Gate and Post: UAT Runbook Generation",
+        "States the answers remain canonical in the workflow log and are mirrored only when the existing packet-owned body declares an editable ## Self-Review Findings region",
+        "States explicitly that self-review is a reporting step, NOT a gate, while packet availability and validation still fail closed",
+        "Mentions that Post: Self-Review is item position #7 in the canonical 14-entry Codex post-implementation list, between Post: Reviewability Diff Gate and Post: UAT Runbook Generation",
         "Notes that the step transitions through update_plan + autopilot-state.json in pending → in_progress → completed states like every other canonical step"
       ]
     },
@@ -347,20 +349,21 @@
     },
     {
       "id": 27,
-      "prompt": "The Codex autopilot has finished Post: Self-Review and is about to open the PR. Walk through exactly how the parent session produces the PR body and guarantees the UAT runbook reaches the human reviewer. Name the scripts it runs, the order, what it commits, how it invokes gh pr create, and what it does if the generated body is missing the review-packet marker.",
-      "expected_output": "States the parent session runs generate-uat-skeleton.sh to write <feature-dir>/uat-runbook.md and commits it, then runs generate-pr-body.sh --packet-output to produce .git/speckit-pr-packet.json plus .git/speckit-pr-body.md. It validates the just-rendered packet with validate-pr-packet.sh and validates the PR workflow contract with validate-pr-workflow-contract.sh before PR creation, then opens the PR only with gh pr create --base --head --title --body-file values read from the packet — never a hand-written body, inline --body, or branch-derived title. The generated PR description is strict, unpatronizing, ELI5-style plain English: it names the actual change first and does not dump raw command, path, or packet evidence into the PR body. The generated body always contains a ## UAT Runbook section because the generator emits the heading even when the runbook file is absent. If the marker, UAT heading, protected sections, generic story/foundation labels, packet-mechanics prose, packet evidence, or PR workflow contract is missing, invalid, stale, or aggregate-split unsafe, validation blocks before PR creation and writes remediation evidence; there is no post-create repair fallback. Post: UAT Runbook Generation transitions through update_plan + autopilot-state.json like every canonical Post item; it is fail-open (a nonzero exit never blocks PR creation) yet mandatory.",
+      "prompt": "The Codex autopilot has finished Post: Self-Review and is about to open the PR. Walk through the current UAT, packet/body, validation, and PR-creation sequence. Name the runner helper IDs and deferred behavior, explain what is committed or skipped, show the gh pr create arguments, and state what happens when the required current packet is absent or invalid.",
+      "expected_output": "States that Post: UAT Runbook Generation is mandatory but generate-uat-skeleton is deferred: reuse a committed source-derived <feature-dir>/.process/uat-runbook.md when present, otherwise record skipped deferred evidence and continue fail-open; spawn uat-runbook-author only when a skeleton exists. Then require a current schema-valid packet at specs/<feature>/.process/pr-packets/<packet-id>.json because pr-packet-output and validate-pr-packet-write are deferred. Validate it with validate-pr-packet-read-only, consume data.stdout_json in memory/state with writes_state=false and no validation file, validate title/scope with validate-pr-workflow-contract, and open only with packet-owned gh pr create --base --head --title --body-file values. Missing or invalid packet evidence blocks before creation.",
       "expectations": [
-        "Parent session runs generate-uat-skeleton.sh to write <feature-dir>/uat-runbook.md before PR body generation",
-        "Commits the uat-runbook.md artifact (e.g. docs(SPEC-XXX): add UAT runbook)",
-        "Runs generate-pr-body.sh --packet-output to produce .git/speckit-pr-packet.json and .git/speckit-pr-body.md",
-        "Runs validate-pr-packet.sh against the current packet and requires a fresh passing result before PR creation",
-        "Runs validate-pr-workflow-contract.sh against the packet title and changed-file list before PR creation",
+        "States generate-uat-skeleton is registered but deferred and must not be invoked as an active helper",
+        "Reuses a committed source-derived <feature-dir>/.process/uat-runbook.md when present; otherwise records skipped: generate-uat-skeleton deferred and continues fail-open",
+        "Requires an existing current packet at specs/<feature>/.process/pr-packets/<packet-id>.json and states pr-packet-output plus validate-pr-packet-write are deferred",
+        "States generate-pr-body accepts only output_path, title, and sections to write one Markdown body and does not create packet metadata or markers",
+        "Runs runner helper validate-pr-packet-read-only against the current packet, consumes data.stdout_json in memory/state, and requires writes_state=false before PR creation",
+        "Runs runner helper validate-pr-workflow-contract against the packet title and changed-file list before PR creation",
         "Opens the PR with gh pr create --base --head --title --body-file using packet fields — explicitly NOT a hand-written body, inline --body, or branch-derived title",
         "Requires strict, unpatronizing, ELI5-style plain-English PR descriptions that name the actual change without dumping command, path, or packet evidence",
-        "States the generated PR body always contains a ## UAT Runbook section because generate-pr-body.sh emits the heading even when the runbook file is absent",
-        "States missing marker, UAT heading, protected packet sections, generic foundation/story labels, packet-mechanics prose, or stale evidence blocks before gh pr create with validation remediation output",
+        "Requires the packet-owned body_file to already exist as a readable repo-relative path",
+        "States missing, malformed, stale, or invalid packet evidence blocks before gh pr create with returned diagnostics",
         "States there is no post-create auto-repair fallback for invalid packets",
-        "States Post: UAT Runbook Generation appears in update_plan and autopilot-state.json and is fail-open (never blocks PR creation) yet mandatory — not an optional step"
+        "States Post: UAT Runbook Generation appears in update_plan and autopilot-state.json and remains mandatory and fail-open when its deferred helper is skipped"
       ]
     },
     {
@@ -381,27 +384,27 @@
     {
       "id": 29,
       "prompt": "During $speckit-autopilot startup, the workflow target has adjacent legacy candidates: specs/prsg-011-legacy has root analysis.md and uat-report.md with no structureVersion and is not named by .specify/feature.json; specs/prsg-012-active is the active in-flight feature; specs/prsg-013-current already carries SPEC-MOC.md structureVersion: 1 and its process files are already under .process/; specs/prsg-014-empty has only CONTRACT artifacts; specs/team-123-legacy and specs/2026-06-legacy are outside the SpecKit namespace. What should the autopilot report before continuing, and may it run the Tier-2 codemod itself?",
-      "expected_output": "Reports static Tier-2 guidance only for the thawed eligible PRSG legacy spec, including the exact dry-run command and clean-tree apply follow-up. Suppresses suggestions for frozen/in-flight, already-current, no-candidate, and out-of-scope candidates. Explicitly says Codex autopilot does not execute relocate-process-artifacts.sh automatically.",
+      "expected_output": "Reports only the thawed eligible PRSG legacy spec as a Tier-2 relocation candidate, then states relocate-process-artifacts is promotion_status=deferred, has no authoritative runner request, and is unavailable. Leaves PROCESS artifacts unchanged, suppresses all ineligible candidates, and explicitly rejects invoking the retired relocate-process-artifacts.sh path or advertising runner modes.",
       "expectations": [
         "Suggests Tier-2 relocation only for specs/prsg-011-legacy",
-        "Includes the exact dry-run command: speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --dry-run --spec specs/prsg-011-legacy --repo-root .",
-        "Includes the exact clean-tree apply follow-up: speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --apply --spec specs/prsg-011-legacy --repo-root .",
-        "States the apply command is a human/operator follow-up after reviewing dry-run output and cleaning the tree",
+        "Names relocate-process-artifacts as promotion_status=deferred with no authoritative runner request",
+        "States no dry_run, apply, or replacement runner command is available",
+        "Leaves the eligible candidate's PROCESS artifacts unchanged and records the deferred gap",
         "Reports specs/prsg-012-active as frozen/in-flight and suppresses the Tier-2 suggestion",
         "Reports specs/prsg-013-current as already current or already normalized and suppresses the Tier-2 suggestion",
         "Reports specs/prsg-014-empty as no Tier-2 candidate because no relocatable PROCESS artifacts exist",
         "Suppresses suggestions for specs/team-123-legacy with reason non_speckit_namespace and specs/2026-06-legacy with reason date_named_legacy_namespace",
-        "States that $speckit-autopilot must not invoke relocate-process-artifacts.sh --dry-run or --apply"
+        "States that $speckit-autopilot must not invoke the retired relocate-process-artifacts.sh path, the deferred operation, or an invented replacement"
       ]
     },
     {
       "id": 30,
-      "prompt": "Tasks just passed G5 and atomicity-route.sh returned route=split-PR for specs/prsg-008-layer-planner. Walk through the Codex autopilot layer-plan gate before Analyze or Implement starts. What command runs, what happens on exit 0 with warnings, what exact stop line appears on exit 1, what happens on exit 2, and what if the route is one-navigable-PR instead?",
-      "expected_output": "Explains that Codex autopilot runs plan-layers.sh only when the recorded atomicity route is exactly split-PR, before Analyze or Implement. Exit 0 persists the full versioned envelope under layer_plan in autopilot-state.json, writes a workflow ## Layer Plan summary, carries warnings forward, and continues. Exit 1 prints the fixed invalid_plan stop line and stops before implementation. Exit 2 stops with a distinct input_error message. Non-split routes skip the planner and record layer_plan.status=skipped.",
+      "prompt": "Tasks just passed G5 and runner helper atomicity-route returned route=split-PR for specs/prsg-008-layer-planner. Walk through the Codex layer-plan gate before Analyze or Implement starts. Which runner request runs, what happens on helper exit 0 with warnings, what exact stop line appears on exit 1, what happens on exit 2, and what if the route is one-navigable-PR instead?",
+      "expected_output": "Explains that Codex invokes the plan-layers-feature-dir read-only runner helper only when the recorded atomicity route is exactly split-PR, before Analyze or Implement. Exit 0 persists the full versioned envelope under layer_plan in autopilot-state.json, writes a workflow ## Layer Plan summary, carries warnings forward, and continues. Exit 1 prints the fixed invalid_plan stop line; exit 2 is a distinct input_error. Non-split routes skip planning and record layer_plan.status=skipped.",
       "expectations": [
-        "States that plan-layers.sh runs only when the recorded atomicity route is exactly split-PR",
+        "States that runner helper plan-layers-feature-dir runs only when the recorded atomicity route is exactly split-PR",
         "States that the planner runs after G5 atomicity routing and before Analyze or Implement",
-        "Names the command: <SKILL_SCRIPTS>/plan-layers.sh <feature_dir>",
+        "Names helper_id and operation plan-layers-feature-dir, mode read_only, and inputs.feature_dir",
         "States that exit 0 persists the full versioned planner envelope under layer_plan in autopilot-state.json",
         "States that exit 0 writes a concise workflow ## Layer Plan summary",
         "States that planner warnings on exit 0 are carried forward into implementation context",
@@ -415,37 +418,38 @@
     {
       "id": 31,
       "prompt": "A Codex autopilot run has finished Phase 7 and full verification for a feature whose PRSG-008 layer-plan fixture has three ordered increments: foundation, us1, and us2. Describe the post-implementation PR creation behavior required by PRSG-009 multi-PR emission. Include update_plan/autopilot-state.json handling, branch/base topology, scoped verification evidence, durable PRS rows, resume, failed-slice blocking, restack, and what must not change.",
-      "expected_output": "Explains that Codex keeps the canonical Post plan active, uses the PRSG-008 layer plan as the only slice source, runs multi-pr-emission.sh after full verification, validates each generated packet before PR creation, emits three ordered Style B slice PRs with explicit gh pr create --base/--head/--title/--body-file arguments, uses --source-feature-dir for marker emission when the source spec directory must differ from the non-conflicting emitted branch prefix, updates update_plan plus autopilot-state.json multi_pr_emission state, writes schemaVersion 2 PRS rows and MOC reviewer navigation after each successful PR, blocks before opening failed slice PRs, reconciles on resume by expected head/base, uses dry-run-first restack.sh after lower squash merges, and does not add a legacy flattened-PR fallback, generic foundation/story/slice PR titles, hardcoded plugin scopes for spec PRs, packet-mechanics PR body prose, raw evidence dumps in PR bodies, new slicing heuristics, PRSG-010 routing/backstop behavior, or .github/workflows/pr-checks.yml changes.",
+      "expected_output": "Explains that Codex keeps all 14 Post items active, consumes the plan-layers-feature-dir envelope as the only slice source, and may use multi-pr-emission only for golden_only command-plan capture after full verification. The helper does not emit packets or execute PRs, so every slice requires an existing feature-local packet that passes validate-pr-packet-read-only via data.stdout_json before an explicit packet-owned gh pr create command. It keeps source evidence separate from emitted branch prefixes, persists PRS/resume state, blocks failed slices, and treats restack as deferred with direct gh pr edit --base fallback.",
       "expectations": [
         "States that all canonical Post items remain in update_plan and autopilot-state.json until completed or explicitly skipped",
-        "States that PRSG-008 plan-layers.sh output is the authoritative ordering and membership source",
+        "States that PRSG-008 runner helper plan-layers-feature-dir output is the authoritative ordering and membership source",
         "States that PRSG-009 does not infer, reroute, or re-slice work and does not add PRSG-010 routing/backstop heuristics",
-        "Runs multi-pr-emission.sh only after implementation and full default verification have passed",
-        "For marker emission, passes --source-feature-dir specs/<feature> when the emitted branch prefix must differ from the source spec directory to avoid Git ref namespace conflicts",
+        "Uses multi-pr-emission only for golden_only command-plan capture after implementation and full default verification; it does not emit packets or execute live PR creation",
+        "Uses --source-feature-dir specs/<feature> to keep the source evidence directory separate when the emitted branch prefix must differ to avoid Git ref namespace conflicts",
         "Emits N ordered PRs from the fixture increments rather than one flattened all-changes PR",
         "Describes Style B topology: first slice targets the integration base and each later slice targets the immediately preceding slice branch",
         "Keeps full and scoped verification evidence under the source feature directory while emitted head/base refs use the safe branch prefix",
-        "Uses explicit gh pr create --base, --head, --title, and --body-file arguments from the generated packet for every slice PR",
+        "Requires every slice packet to already exist under specs/<feature>/.process/pr-packets/ and uses its --base, --head, --title, and --body-file values for explicit gh pr create",
         "Rejects generic foundation/story/slice labels, hardcoded plugin scopes for spec PRs, packet-mechanics prose, and raw evidence dumps before any slice PR is opened",
-        "Runs validate-pr-packet.sh before every slice gh pr create and treats stale validation JSON as evidence only",
+        "Runs validate-pr-packet-read-only before every slice gh pr create, consumes current data.stdout_json in memory/state, and records writes_state=false without claiming persistence",
         "Runs or records scoped verification per slice and carries the pre-emission full regression evidence by path instead of rerunning the full suite for every slice",
         "Writes schemaVersion 2 .process/prs.json rows and regenerates the Spec MOC PR table after each successful PR before attempting the next slice",
         "Persists top-level multi_pr_emission resume state in autopilot-state.json, including next_slice_id and slice statuses",
         "On resume, reconciles expected branches and GitHub PRs by expected head/base before creating anything new",
         "Stops before gh pr create when scoped verification or packet validation fails for a slice and keeps next_slice_id on the blocked slice",
         "States that a later failed slice does not rewind or invalidate earlier opened slice PRs",
-        "Describes restack.sh as dry-run by default, --apply for mutation, preserving declared slice scope after lower squash merges",
+        "States restack is deferred with no authoritative request and uses direct packet-owned gh pr edit <number> --base <branch> fallback preserving declared slice scope",
         "States that PRSG-009 scoped CI is recorded evidence and must not modify .github/workflows/pr-checks.yml"
       ]
     },
     {
       "id": 32,
-      "prompt": "During $speckit-autopilot in Codex, G5 has passed and reviewability-gate.sh tasks returned valid JSON with mode=tasks, status=block, and the only reason is size. The evidence path is specs/prsg-013-reviewability-markers/.process/reviewability/tasks-gate.json and the current marker plan fingerprint matches the spec, plan-declared file/test scope, tasks, reviewability evidence, and hazard route. Later, the final backstop sees the full diff is still too large. Should Codex autopilot stop for manual re-slicing, rewrite tasks.md, or continue? Walk through the required marker evidence and the correctness stops that still block.",
+      "prompt": "During $speckit-autopilot in Codex, G5 has passed and committed task-mode reviewability evidence records mode=tasks, status=block, with size as the only reason. The installed reviewability-gate runner helper supports setup mode only, so tasks mode is deferred. The evidence path is specs/prsg-013-reviewability-markers/.process/reviewability/tasks-gate.json and the current marker-plan fingerprint matches all inputs. Later, current committed final reviewability evidence says the full diff is still too large; final-reviewability-backstop is also deferred. Should Codex stop for manual re-slicing, rewrite tasks.md, or continue?",
       "expected_output": "Continues through the valid current size-only block with marker evidence and no manual re-slicing stop. Treats the G5 status=block as marker-planning input, persists top-level pr_marker_plan in autopilot-state.json, mirrors workflow evidence rather than authoring marker state in tasks.md, executes and checkpoints implementation in ordered marker IDs, and at the final backstop proceeds with final marker_split and marker-based PR emission. Records gate status/mode/exit/evidence path, fingerprint status, ordered marker IDs, checkpoints, warnings, final marker_split, packet validation, spec-scoped plain-English marker-derived PR titles/bodies, and PR mappings using repo-relative paths. Still stops on malformed/stale marker state, failed verification, invalid packet, unsafe output, unusable gate evidence, invalid JSON, unreadable artifacts, missing status/mode, stale fingerprints, generic marker titles, packet-mechanics PR bodies, raw evidence dumps in PR bodies, or non-size safety findings.",
       "expectations": [
         "States that a valid current size-only block continues and is not a manual re-slicing stop",
         "States there is no manual re-slicing stop and tasks.md must not be rewritten as authoritative marker state",
         "Treats the task-mode status=block JSON as marker-planning input despite a nonzero compatibility exit",
+        "States the runner helper reviewability-gate must not be invoked in tasks mode because only setup mode is active, and final-reviewability-backstop is deferred",
         "Persists top-level pr_marker_plan in autopilot-state.json and mirrors workflow evidence",
         "Uses repo-relative evidence paths, not absolute runtime paths",
         "Requires gate status/mode/exit/evidence path in the recorded evidence",
@@ -463,14 +467,15 @@
     {
       "id": 33,
       "prompt": "A Codex parent session has reached post-implementation PR creation for documentation specs. DOC-004 has a single generated PR packet for specs/doc-004-codex-marketplace-installation-path. DOC-003 has final marker_split evidence plus .process/emission/candidate/commands.candidate.json with five gh_pr_create operations. What must Codex do before opening PRs, and which title/splitting mistakes are forbidden?",
-      "expected_output": "Explains that DOC-backed single PR packets must generate and use docs(DOC-004): titles from packet metadata, then validate both validate-pr-packet.sh and validate-pr-workflow-contract.sh before any gh pr create. For DOC-003, the presence of final marker_split evidence and multi-PR candidate commands forbids one aggregate PR; Codex must run multi-pr-emission.sh with the current marker/layer evidence or stop blocked with validator evidence. It must not use feat(speckit-pro): for a DOC implementation PR and must not create or repair a single all-changes PR after split evidence exists.",
+      "expected_output": "Explains that the existing DOC-004 feature-local packet must carry a docs(DOC-004): title and pass validate-pr-packet-read-only through current data.stdout_json plus validate-pr-workflow-contract before gh pr create. generate-pr-body cannot create packet metadata. For DOC-003, final marker_split evidence and multiple candidate PR commands forbid an aggregate PR; Codex may use multi-pr-emission only for golden_only command-plan capture, requires an existing valid packet per slice, or stops blocked because packet emission is deferred.",
       "expectations": [
         "States that DOC-004 packet title scope must be DOC-004 and title type must be docs, e.g. docs(DOC-004): ...",
         "States that feat(speckit-pro): is forbidden for spec-backed DOC implementation PRs",
-        "Runs generate-pr-body.sh --packet-output and validate-pr-packet.sh before a single PR",
-        "Runs validate-pr-workflow-contract.sh with the generated packet title and changed-file list before any single gh pr create",
+        "Requires the existing feature-local DOC-004 packet and runs validate-pr-packet-read-only before a single PR",
+        "States generate-pr-body writes only one Markdown body from output_path, title, and sections and does not create DOC packet metadata",
+        "Runs runner helper validate-pr-workflow-contract with the generated packet title and changed-file list before any single gh pr create",
         "States that final marker_split evidence plus multiple gh_pr_create candidate operations forbids a single aggregate PR",
-        "Requires multi-pr-emission.sh for the DOC-003 split route or a blocked stop with validator evidence",
+        "Allows multi-pr-emission only for golden_only command-plan capture on the DOC-003 split route and otherwise stops with validator or deferred packet-emission evidence",
         "States Codex must not manually issue one gh pr create for all changed files when split candidate artifacts exist",
         "Requires each split PR creation to use packet-owned --base, --head, --title, and --body-file arguments",
         "States invalid packet, invalid workflow contract, stale validation, or aggregate split-contract failures block before PR creation",

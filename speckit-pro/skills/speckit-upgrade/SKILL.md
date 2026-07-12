@@ -28,19 +28,16 @@ If `.specify/` is missing, hands off to `/speckit-pro:speckit-install`.
 
 ## PRSG-011 Structure Migration Guidance
 
-For existing projects, after integration upgrade and verification, tell the
-operator that repository structure migration is explicit and safe by default.
-It is not run automatically by this skill.
+For existing projects, after integration upgrade and verification, report that
+repository structure migration is not available through the current runner.
+The `migrate-structure` operation has `promotion_status=deferred` and no
+authoritative request. Neither `dry_run` nor `apply` is an operator contract;
+do not invoke the operation or claim that it will report or mutate repository
+state.
 
-Use runner helper `migrate-structure` in dry-run mode first.
-
-Review the JSON report for pending, skipped, and no-op items. Clean the git tree
-if the report shows pending mutations and the worktree is dirty. Apply only
-when ready to mutate, run runner helper `migrate-structure` in apply mode.
-
-The apply command creates a backup before repository marker writes or generated
-navigation updates. Tier-2 PROCESS relocation is a separate per-spec codemod and
-must never be auto-run by `speckit-upgrade`.
+Record the deferred capability gap and leave repository structure unchanged.
+Tier-2 PROCESS relocation is separate, but `relocate-process-artifacts` is also
+deferred and unavailable. Do not recommend or auto-run either operation.
 
 ## Invocation
 

@@ -1,6 +1,6 @@
 ---
 name: scaffold-skill
-description: Scaffold a new skill inside speckit-pro (or another plugin in this marketplace). Creates skills/<name>/SKILL.md with valid YAML frontmatter, optionally mirrors under codex-skills/, then runs bash tests/run-all.sh --layer 1 to verify. Triggers on "scaffold skill", "add a skill", "new speckit skill", "create skill in plugin".
+description: Scaffold a new skill inside speckit-pro (or another plugin in this marketplace). Creates skills/<name>/SKILL.md with valid YAML frontmatter, optionally mirrors under codex-skills/, then runs python3 tests/speckit-pro/run-all.py --layer 1 to verify. Triggers on "scaffold skill", "add a skill", "new speckit skill", "create skill in plugin".
 license: MIT
 ---
 
@@ -42,14 +42,14 @@ Optional `references/` and `scripts/` subdirs (only if user said yes).
 
 ## Post-create
 
-Always run:
-```bash
-cd <plugin> && bash tests/run-all.sh --layer 1
+Always run from the repository root:
+```console
+python3 tests/speckit-pro/run-all.py --layer 1
 ```
 
 If Codex mirror created, also run:
-```bash
-cd <plugin> && bash tests/layer1-structural/validate-codex-skills.sh
+```console
+python3 tests/speckit-pro/layer1-structural/validate-codex-skills.py
 ```
 
 If either fails, fix the SKILL.md before reporting success.

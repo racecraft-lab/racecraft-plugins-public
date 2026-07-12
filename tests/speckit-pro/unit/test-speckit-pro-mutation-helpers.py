@@ -188,6 +188,8 @@ class MutationHelperTests(unittest.TestCase):
         for record in data["helpers"]:
             self.assertNotIn("script", record)
             self.assertNotEqual(record["promotion_status"], "python_authoritative")
+            active_record = {key: value for key, value in record.items() if key != "inactive_provenance"}
+            self.assertNotIn(".sh", json.dumps(active_record, sort_keys=True))
             if record["promotion_status"] in {"deferred", "out_of_scope"}:
                 self.assertEqual(record["authoritative_command"], "")
             else:
@@ -208,6 +210,87 @@ class MutationHelperTests(unittest.TestCase):
         self.assertEqual(prior_scripts["install-curated-set"], "speckit-pro/scripts/install-curated-set.sh")
         self.assertEqual(prior_scripts["generate-pr-body"], "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh")
         self.assertEqual(prior_scripts["multi-pr-emission"], "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh")
+        rollbacks = {
+            record["helper_id"]: record["promotion"]["rollback"]
+            for record in data["helpers"]
+        }
+        self.assertEqual(
+            rollbacks["install-codex-agents"],
+            "Keep install-codex-agents deferred until a Python runner implementation is promoted.",
+        )
+        self.assertEqual(
+            rollbacks["install-curated-set"],
+            "Keep install-curated-set deferred until a Python runner implementation is promoted.",
+        )
+        self.assertEqual(
+            rollbacks["generate-pr-body"],
+            "Retry the registered generate-pr-body operation in dry_run mode before applying again.",
+        )
+        self.assertEqual(
+            rollbacks["multi-pr-emission"],
+            "Keep live PR mutation deferred; use the registered multi-pr-emission operation only for command-plan capture.",
+        )
+
+    def test_unpromoted_helpers_fail_closed_before_dispatch_in_all_mutation_modes(self) -> None:
+        cases = [
+            (
+                "install-codex-agents",
+                "deferred",
+                {
+                    "operations": [
+                        {
+                            "operation_id": "adversarial-generic-write",
+                            "kind": "write_file",
+                            "target": "generated/adversarial.md",
+                            "content": "generic dispatch must not write\n",
+                        }
+                    ]
+                },
+            ),
+            (
+                "generate-uat-skeleton",
+                "deferred",
+                {
+                    "output_path": "generated/adversarial.md",
+                    "content": "PR-emission dispatch must not write\n",
+                },
+            ),
+            (
+                "detect-stack-manager-plan",
+                "out_of_scope",
+                {
+                    "commands": [["gh", "pr", "create"]],
+                    "output_path": "generated/adversarial.md",
+                    "content": "out-of-scope dispatch must not write\n",
+                },
+            ),
+        ]
+
+        for helper_id, promotion_status, inputs in cases:
+            for mode in ("dry_run", "apply"):
+                with self.subTest(helper_id=helper_id, mode=mode):
+                    tmp, git_root = self.temp_clean_git_repo()
+                    with tmp:
+                        target = git_root / "generated" / "adversarial.md"
+                        completed, response, stderr_records = run_runner(
+                            helper_request(helper_id, mode=mode, inputs=inputs),
+                            cwd=git_root,
+                        )
+
+                        self.assertEqual(completed.returncode, 1)
+                        self.assert_response(response, "expected_failure", 1)
+                        self.assertEqual([diag["code"] for diag in stderr_records], ["helper_not_promoted"])
+                        self.assertEqual(response["data"]["promotion_status"], promotion_status)
+                        self.assertFalse(response["data"]["writes_state"])
+                        mutation = response["data"]["mutation"]
+                        self.assertEqual(mutation["mode"], mode)
+                        self.assertEqual(mutation["mutation_status"], "blocked")
+                        self.assertEqual(mutation["planned_operations"], [])
+                        self.assertEqual(mutation["applied_operations"], [])
+                        self.assertEqual(mutation["planned_paths"], [])
+                        self.assertEqual(mutation["touched_paths"], [])
+                        self.assertFalse(mutation["live_mutation"])
+                        self.assertFalse(target.exists())
 
     def test_dry_run_reports_planned_write_without_mutating(self) -> None:
         tmp, target, rel = self.temp_repo_path("dry-run-output.json")
@@ -642,7 +725,7 @@ class MutationHelperTests(unittest.TestCase):
             )
             self.assertEqual(completed.returncode, 1)
             self.assert_response(response, "expected_failure", 1)
-            self.assertEqual([diag["code"] for diag in stderr_records], ["deferred_live_mutation"])
+            self.assertEqual([diag["code"] for diag in stderr_records], ["helper_not_promoted"])
             mutation = response["data"]["mutation"]
             self.assertEqual(mutation["mutation_status"], "blocked")
             self.assertEqual(mutation["applied_operations"], [])
@@ -701,6 +784,8 @@ class MutationHelperTests(unittest.TestCase):
                 self.assertIn(required, record)
             self.assertIn(record["promotion_status"], {"golden_only", "bash_compared", "deferred", "out_of_scope"})
             self.assertIn("rollback", record)
+            self.assertNotIn(".sh", record["rollback"])
+            self.assertNotIn("scripts authoritative", record["rollback"].lower())
 
 
 if __name__ == "__main__":

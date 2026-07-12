@@ -1,144 +1,127 @@
 # racecraft-plugins-public security rules
 
-These rules are specific to this repo's attack surfaces. The plugin ships to all
-marketplace consumers on every merge to main — mistakes here have wide blast radius.
+These rules are specific to this repository's attack surfaces. Plugin source and
+generated payloads reach marketplace consumers, so execution, filesystem, and
+release boundaries require reviewable structured inputs.
 
 ---
 
-## Shell injection through LLM-generated content
+## Untrusted content at process boundaries
 
-The autopilot, coach, and scaffold-spec skills all generate commit messages, PR
-titles, and branch names from LLM output (spec names, review summaries, phase
-descriptions). That output flows into shell commands. Rules:
+Autopilot, coach, and scaffold workflows can derive commit messages, PR titles,
+branch names, extension IDs, and review summaries from user or model text. Treat
+all such values as untrusted.
 
-- **Commit messages must use heredoc form**, never inline `-m "$(...)"`.**
-  Correct:
-  ```bash
-  git commit -m "$(cat <<'EOF'
-  feat(SPEC-XXX): <message here>
-  EOF
-  )"
-  ```
-  Wrong: `git commit -m "feat: address review - $summary"` where `$summary` is
-  LLM-generated. If `$summary` contains a double-quote or backtick the shell
-  expands it.
-
-- **Branch names derived from spec names must be sanitized before use.**
-  Strip everything except `[a-z0-9-]` — never pass a raw spec name directly to
-  `git checkout -b` or `git worktree add`. The spec name comes from the user's
-  technical roadmap and can contain slashes, quotes, or parens.
-
-- **`specify extension add <id>` where `<id>` comes from user chat must be
-  treated as untrusted input.** The coach's Play 3 confirms before running, but
-  the confirmation must show the literal command, not a reformatted version.
-  Never interpolate the id into a compound `&&` chain without quoting:
-  ```bash
-  specify extension add "$extension_id"   # correct — quoted
-  ```
+- Build subprocess arguments as Python lists and call `subprocess.run()` with
+  `shell=False`. Never concatenate untrusted text into a command string or opt
+  into `shell=True`.
+- Pass commit messages and other multiline values as one argv element or through
+  a dedicated file option such as `git commit --file <path>`.
+- Normalize branch-name components to the documented allowlist before passing
+  them to `git switch`, `git checkout`, or `git worktree` as one argv element.
+- Validate extension IDs and other selectors against the expected identifier
+  grammar. Show the exact planned argv to the user before a side effect that
+  originated from chat input.
+- Keep display strings separate from execution values. Escaping text for a log
+  or Markdown report does not make it safe for a process boundary.
 
 ---
 
-## PR body and `gh api` payloads with user-controlled content
+## PR bodies and GitHub API payloads
 
-The `generate-pr-body.sh` and `speckit-resolve-pr` skill construct PR bodies and
-GraphQL mutations from spec file content and PR review comment text. Rules:
+The current PR-body path is the `generate-pr-body` runner helper in
+`speckit-pro/speckit_pro_runner/helpers/pr_emission.py`. It creates structured
+mutation operations and writes through the runner's bounded mutation layer.
 
-- **Always use `--body-file` for `gh pr create`, never `--body "$(cat ...)"`.
-  The `generate-pr-body.sh` pattern is correct — keep it.** Inlining file content
-  into `--body` embeds newlines and quotes into a shell word, breaking the command.
+- Keep multiline PR content in the helper-generated body file and pass that file
+  to `gh pr create --body-file <path>`.
+- Encode GraphQL variables and REST payloads with Python standard-library
+  `json.dumps()` or a structured JSON input file. Do not interpolate review
+  comments or spec text into a GraphQL query string.
+- Validate PR titles against the repository's Conventional Commit policy before
+  emission. Treat review comments as data, not command fragments.
+- `gh --jq` is a GitHub CLI query option and does not require the external `jq`
+  executable. Repository JSON processing uses Python standard-library parsing.
 
-- **`gh api` GraphQL mutations for resolving review threads embed PR comment
-  body text into the `body:` field.** If a reviewer writes a comment containing
-  a backtick or double-quote in a GraphQL string context, the mutation will fail
-  or behave unexpectedly. Escape or JSON-encode the body string before embedding:
-  ```bash
-  body_json=$(jq -Rn --arg b "$comment_body" '$b')
-  ```
-  Do not use `echo "$comment_body"` inline inside a `-f query='mutation ...'` call.
-
-- **`git commit -m "fix: address review - $summary"` where `$summary` is extracted
-  from a PR review comment is injection-prone.** Extract the summary into a temp
-  file and use `--file` or heredoc form.
+Historical context: earlier releases used `generate-pr-body.sh`, shell heredocs,
+and external `jq` encoding. Those implementations were retired during the
+Python runtime migration and are archival evidence, not current guidance.
 
 ---
 
-## `generate-pr-body.sh` heredoc — verified safe, pattern to preserve
+## Eval fixture integrity
 
-The `<<EOF` heredoc in `generate-pr-body.sh` that embeds `$what`, `$why`, and
-`$non_goals` (extracted from `spec.md`) is safe as-is. Bash performs single-level
-expansion: `$what` is substituted with its current string value, but bash does NOT
-re-parse or re-execute command substitutions that appear inside that value. A spec
-containing `$(date)` in its Summary section will produce the literal text `$(date)`
-in the PR body, not a timestamp.
+Layer 2, 3, and 7 fixture files contain query strings consumed by Python eval and
+integration runners. A contributor with write access could add prompt-injection
+content that changes outcomes or exposes context.
 
-- Do NOT change the heredoc to `<<'EOF'` — it would break the intentional variable
-  expansions (`$FEATURE_DIR`, `${surfaces:-unknown}`, etc.) that the script relies on.
-- Preserve the `\`` escaping already in the template for markdown backtick code spans.
-  In an unquoted heredoc, `\`` prevents backtick command substitution — remove the
-  backslashes and you create real execution points.
+- Reject fixture content that asks the model to ignore system instructions,
+  contains jailbreak patterns, or references internal reminder/control tags.
+- Review new `query` fields as user requests. Multi-paragraph control
+  instructions require explicit security review.
+- Keep transcript fixtures free of credentials, raw personal paths, and other
+  secrets even when a scrubber is expected to run later.
+- `tests/speckit-pro/layer7-integration/scrub-transcript.py` compiles
+  `TRANSCRIPT_SCRUB_EXTRA_REGEX` with Python `re`. Invalid or adversarial
+  expressions can abort processing or remove assertion data, so the value stays
+  untrusted outside controlled test runs.
 
----
-
-## Eval fixture integrity (prompt injection attack surface)
-
-The Layer 2/3/7 fixture files (`tests/layer2-trigger/*.json`, `tests/layer3-functional/*.json`,
-`tests/layer7-integration/*/expected.json`) contain query strings that are passed
-directly to `claude -p`. An adversary with write access to these files could embed
-prompt-injection instructions that alter eval outcomes or exfiltrate context.
-
-- Never commit eval fixture content that includes jailbreak patterns, instructions
-  for ignoring system prompts, or references to `<system-reminder>` or
-  `<local-command-caveat>` tags.
-- When reviewing fixture PRs, check that new `"query"` fields look like genuine
-  user queries, not multi-paragraph instruction blocks.
-- The Python `scrub-transcript.py` port compiles
-  `TRANSCRIPT_SCRUB_EXTRA_REGEX` with the standard-library `re` engine and
-  applies it with `Pattern.sub()`. Invalid or malicious expressions can still
-  abort the scrubber or strip assertions the parser depends on, and Python's
-  regex dialect is not identical to jq's. Treat the value as untrusted outside
-  the test environment. The Bash/jq predecessor was retired with the converted
-  PR-7b replay runners.
+Historical context: the transcript scrubber and replay runners previously had
+shell and external-`jq` predecessors. The active implementations are Python.
 
 ---
 
-## Marketplace manifest and release pipeline trust
+## Marketplace and release trust boundaries
 
-The `.claude-plugin/marketplace.json` and `release-please-config.json` are the
-trust anchors for every plugin consumer. Rules:
+The marketplace manifests, plugin manifests, generated payloads, and release
+workflow are trust anchors for consumers.
 
-- **No credentials, tokens, or API keys in any `.json` or `.md` file under
-  `.claude-plugin/`.** These files are public and are synced on every
-  `/plugin marketplace update` by consumers.
-- **The `scripts/sync-marketplace-versions.sh` script runs as `github-actions[bot]`
-  with `contents: write` on the main branch.** Any change to this script or
-  `.github/workflows/release.yml` is a privilege-escalation surface — review
-  these files with the same scrutiny as a production secrets handler.
-- **Plugin `plugin.json` files must not include executable content** (no `eval`,
-  no inline scripts, no `command:` fields outside of `hooks/hooks.json`). Hook
-  command strings in `hooks.json` must always quote `${CLAUDE_PLUGIN_ROOT}` to
-  handle install paths that contain spaces.
-
----
-
-## Temp file handling in scripts
-
-- Always pair `mktemp` with a `trap 'rm -f "$tmpfile"' EXIT`. The `generate-pr-body.sh`
-  script already does this — maintain the pattern in any new script that uses temp files.
-- Never use a hardcoded `/tmp/fixed-name` temp file in scripts that could run
-  concurrently (e.g., parallel eval runners). `mktemp` prevents cross-test
-  contamination and TOCTOU races.
+- Never place credentials, tokens, or API keys in marketplace, plugin, docs, or
+  generated payload files.
+- Parse JSON with Python's `json` module and verify expected object/list/string
+  types before comparing or writing values. Regex and line-oriented matching are
+  not substitutes for structured parsing.
+- `scripts/sync-marketplace-versions.py` is the authoritative marketplace version
+  synchronizer. Changes to it or `.github/workflows/release.yml` receive the same
+  scrutiny as other write-capable release automation.
+- Do not hand-edit generated payloads or installed caches. Change authoritative
+  source and regenerate through the owning Python command.
+- Plugin manifests must not smuggle executable content. Where a host hook schema
+  requires a command string, keep it static, quote `${CLAUDE_PLUGIN_ROOT}`, and
+  never interpolate user-controlled values.
+- Preserve the boundary between repository source, generated distribution,
+  installed cache, and user configuration. A successful check at one boundary
+  does not establish trust at another.
 
 ---
 
-## `jq -r` output in shell loop variables
+## Temporary files and atomic replacement
 
-Several test scripts (`run-dispatch-fixtures.sh`, `run-return-format-fixtures.sh`,
-`run-e2e-fixtures.sh`) pipe `jq -r` output into `while read -r`, `mapfile`, and
-`done < <(...)` constructs. If a fixture JSON value contains a newline, it will
-split across loop iterations unexpectedly.
+- Use Python `tempfile` APIs or a unique same-directory temporary path for
+  intermediate files. Context managers and `finally` cleanup must cover both
+  success and failure.
+- Use `os.replace()` for atomic replacement after content is fully written and
+  flushed. Re-check trust-root and symlink constraints immediately before the
+  replace when the destination is security-sensitive.
+- Never use a fixed name under `/tmp` or another shared temporary directory.
+  Concurrent runs must not share an intermediate path.
+- Restrict temporary data to the minimum required content and lifetime. PR
+  bodies, transcripts, and generated manifests can contain sensitive repository
+  context even when they contain no credentials.
+- Validate that every requested output remains beneath its declared trust root;
+  reject path traversal, unexpected symlinks, and parent/child write conflicts.
 
-- Fixture string values that represent single identifiers (subagent types, skill
-  names) should not contain newlines — validate this in the Layer 1 structural
-  test rather than assuming.
-- When using `jq -r` output in a shell comparison (`[[ "$var" == "$expected" ]]`),
-  always double-quote both sides.
+---
+
+## Structured data and identifier validation
+
+- Parse JSON once, validate its schema-relevant types, and iterate the resulting
+  objects directly. Do not convert JSON arrays into line-delimited command input.
+- Reject identifiers containing newlines, control characters, or values outside
+  the documented grammar before they reach filenames, branch names, helper IDs,
+  or command plans.
+- Preserve JSON strings as data even when they contain quotes, backticks, or
+  newlines. Safety comes from structured serialization and argv boundaries, not
+  manual escaping.
+- Report malformed input with bounded diagnostics that do not echo secrets or
+  entire untrusted payloads.

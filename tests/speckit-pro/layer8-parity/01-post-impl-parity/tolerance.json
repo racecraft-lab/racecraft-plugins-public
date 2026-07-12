@@ -1,4 +1,5 @@
 {
+  "schema": "speckit.layer8.tolerance.v1",
   "fixture_id": "01-post-impl-parity",
   "description": "Tolerances for comparing Path A (Agent Teams) vs Path B (parallel subagents fallback) outcomes on the post-implementation parallel group.",
   "fields": {
@@ -30,21 +31,25 @@
       "tolerance": "exact",
       "rationale": "All 8 gates must return identical PASS/FAIL across paths."
     },
-    "pr_body": {
-      "tolerance": "byte-identical",
-      "rationale": "PR body generation is deterministic post-implementation; bytes must match."
+    "workflow.pr_packet_validation.status": {
+      "tolerance": "exact",
+      "rationale": "Both paths must stop at the same missing-packet boundary before PR creation."
     },
-    "pr_packet": {
-      "tolerance": "byte-identical",
-      "rationale": "The generated PR packet owns target branches, generated title, rendered body file, schema reference, and validation result path; Path A and Path B must render identical packet metadata."
+    "workflow.pr_packet_validation.packet_path": {
+      "tolerance": "exact",
+      "rationale": "Both paths require the same feature-local packet path and never use a linked-worktree .git child path."
     },
-    "pr_packet_validation": {
-      "tolerance": "byte-identical",
-      "rationale": "Both paths use the same shared validate-pr-packet.sh script and must write the same pre-create validation result before PR creation."
+    "workflow.pr_packet_validation.validator_result": {
+      "tolerance": "exact",
+      "rationale": "The validator remains not_run when the required current packet is absent."
     },
-    "prs_manifest": {
-      "tolerance": "byte-identical",
-      "rationale": "The durable schemaVersion 2 PRS manifest is deterministic and must match across Claude and Codex paths."
+    "workflow.pr_packet_validation.writes_state": {
+      "tolerance": "exact",
+      "rationale": "Neither path may claim that read-only packet validation persisted state."
+    },
+    "workflow.pr_packet_validation.blocker": {
+      "tolerance": "exact",
+      "rationale": "Both paths report the same deferred pr-packet-output capability gap."
     },
     "workflow.multi_pr_emission.row_count": {
       "tolerance": "exact",
