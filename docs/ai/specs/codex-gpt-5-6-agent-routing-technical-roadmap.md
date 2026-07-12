@@ -1,23 +1,22 @@
-# Codex ChatGPT Subscription Agent Routing Optimization Roadmap
+# Codex Agent Model Routing and Graceful Fallback Implementation Roadmap
 
-**Select component-wise evidence-backed static defaults across a finite ChatGPT
-support manifest, assemble one nine-agent core that improves over production in
-one locked canonical environment, require non-regression in every other support
-row and the powered long-horizon stratum, block attributable plan-native
-allowance regressions, and gate Spark separately as an optional helper.**
+**Select one evidence-backed preferred model/effort route and ordered qualified
+fallbacks for each named Codex agent, resolve the first compatible route from
+current runtime capabilities, and install the complete matrix atomically without
+changing any agent's safety, tool, or mutation contract.**
 
-This document defines the SPEC catalog for Codex ChatGPT subscription routing.
+This document defines the SPEC catalog for capability-based Codex agent routing.
 Each SPEC maps to an explicit acceptance-criteria subset in the source PRD and
 is prepared for `$speckit-scaffold-spec G56R-NNN`.
 
 **Source PRD:** [../../prd-codex-gpt-5-6-agent-routing.md](../../prd-codex-gpt-5-6-agent-routing.md)
 **Roadmap MOC:** [codex-gpt-5-6-agent-routing-roadmap-MOC.md](codex-gpt-5-6-agent-routing-roadmap-MOC.md)
 **Spec ID prefix:** `G56R-###`
-**Proposed branch:** `codex/chatgpt-agent-routing`
-**Status:** Draft; dependency graph approved 2026-07-09
+**Proposed branch:** `codex/agent-routing-fallback`
+**Status:** Draft; G56R-001 ready to scaffold
 
-**Legacy identifier note:** `G56R` is retained as a stable historical SPEC
-prefix; it does not constrain the eligible model catalog or subscription plan.
+**Legacy identifier note:** `G56R` and the existing filenames are retained for
+traceability. They do not limit the candidate catalog to GPT-5.6.
 
 ---
 
@@ -28,14 +27,14 @@ tiers**.
 
 | Tier | Specs | Purpose | Parallelization |
 |---|---|---|---|
-| 1 | G56R-001 | Authoritative research baseline and candidate matrix | Sequential spike |
-| 2 | G56R-002 | Authentication, native telemetry, treatment proof, and replayable trace schema | Sequential foundation |
-| 3 | G56R-003 | Corpus runner, acceptance scoring, and deterministic statistics | Sequential foundation |
-| 4 | G56R-004 | Policy control definition and dominance contract | Sequential foundation |
-| 5 | G56R-005 | Harness budgets and boundary simulation | Sequential foundation |
-| 6 | G56R-006 | Subscription-aware installer defaults and explicit global override | Sequential; implements the deferred Python helper |
-| 7 | G56R-007, G56R-008, G56R-009, G56R-010 | Route four disjoint agent cohorts | Parallel after G56R-006; serialize shared regeneration |
-| 8 | G56R-011 | Rebuild payload, reconcile shared assertions, run installed UAT, and prove release readiness | Sequential integration |
+| 1 | G56R-001 | Candidate route baseline and role contracts | Sequential spike |
+| 2 | G56R-002 | Capability discovery, telemetry profile, and exact treatment | Sequential foundation |
+| 3 | G56R-003 | Evaluation runner, fixtures, scoring, and statistics | Sequential foundation; two required work packages |
+| 4 | G56R-004 | Policy controls and adaptive comparators | Sequential foundation |
+| 5 | G56R-005 | Availability, fallback, and recovery simulation | Sequential foundation |
+| 6 | G56R-006 | Resolver, materializer, atomic installer, and strict override | Sequential framework slice |
+| 7 | G56R-007, G56R-008, G56R-009, G56R-010 | Qualify four disjoint agent cohorts | Parallel after G56R-006; serialize shared regeneration |
+| 8 | G56R-011 | Compose final identities, rebuild payload, run installed UAT, and prove release readiness | Sequential integration |
 
 **Execution order:** G56R-001 -> G56R-002 -> G56R-003 -> G56R-004 ->
 G56R-005 -> G56R-006 -> G56R-007 + G56R-008 + G56R-009 + G56R-010 ->
@@ -46,79 +45,99 @@ internal dependencies still apply: only G56R-001 is immediately scaffoldable.
 G56R-006 later implements and activates the currently deferred Python
 `install-codex-agents` helper; it must not reintroduce a deleted Bash helper.
 
-### Research-backed starting hypotheses
+### Candidate-route starting hypotheses
 
-This table records starting hypotheses, not a complete candidate shortlist or
-pre-approved routing table. G56R-001 must capability-probe the catalog union
-across every frozen support-manifest row and tested client, then derive the
-universally deliverable intersection. G56R-003 screens every role-eligible entry
-after G56R-002 establishes trustworthy telemetry; evidence controls qualification.
+This table records hypotheses, not a pre-approved route table. G56R-001 derives
+the candidate set from official model guidance and live capability evidence.
+G56R-002 freezes the executable subset before G56R-003 scores outcomes.
 
-| Agent | Current source baseline | Starting hypothesis | Initial effort comparison | Required catalog challengers |
+| Agent | Current source baseline | Starting hypothesis | Effort search | Required challengers |
 |---|---|---|---|---|
-| `phase-executor` | GPT-5.5 / xhigh | Sol | progressive descent | Every eligible catalog model, including baseline and GPT-5.4 |
-| `implement-executor` | GPT-5.5 / xhigh | Sol | progressive descent | Every eligible catalog model, including baseline and GPT-5.4 |
-| `analyze-executor` | GPT-5.5 / xhigh | Sol | progressive descent; max only after measured failure | Every eligible catalog model, including baseline and GPT-5.4 |
-| `checklist-executor` | GPT-5.5 / xhigh | Terra | progressive descent | Full eligible catalog; GPT-5.4 Mini required when exposed |
-| `uat-runbook-author` | GPT-5.5 / xhigh | Terra | progressive descent | Full eligible catalog; GPT-5.4 Mini required when exposed |
-| `clarify-executor` | GPT-5.5 / xhigh | Terra | progressive descent | Every eligible catalog model |
-| `domain-researcher` | GPT-5.5 / xhigh | Terra | progressive descent | Every eligible catalog model |
-| `codebase-analyst` | GPT-5.5 / low | Terra | progressive descent | Full eligible catalog, including lighter bounded-work models |
-| `spec-context-analyst` | GPT-5.5 / low | Terra | progressive descent | Full eligible catalog, including lighter bounded-work models |
-| `autopilot-fast-helper` | GPT-5.3 Codex Spark / effort omitted | Optional Spark on supported Pro rows | separate endpoint only | Validate no-helper behavior everywhere else |
+| `phase-executor` | GPT-5.5 / xhigh | Sol | default, ascend if needed, then descend | Every role-eligible discovered model, including baseline |
+| `implement-executor` | GPT-5.5 / xhigh | Sol | default, ascend if needed, then descend | Every role-eligible discovered model, including baseline |
+| `analyze-executor` | GPT-5.5 / xhigh | Sol | default, ascend if needed, then descend | Every role-eligible discovered model, including baseline |
+| `checklist-executor` | GPT-5.5 / xhigh | Terra | default, ascend if needed, then descend | Every role-eligible discovered model, including lighter structured-work models |
+| `uat-runbook-author` | GPT-5.5 / xhigh | Terra | default, ascend if needed, then descend | Every role-eligible discovered model, including lighter structured-work models |
+| `clarify-executor` | GPT-5.5 / xhigh | Terra | default, ascend if needed, then descend | Every role-eligible discovered model |
+| `domain-researcher` | GPT-5.5 / xhigh | Terra | default, ascend if needed, then descend | Every role-eligible discovered model |
+| `codebase-analyst` | GPT-5.5 / low | Terra | default, ascend if needed, then descend | Every role-eligible discovered model, including bounded-work models |
+| `spec-context-analyst` | GPT-5.5 / low | Terra | default, ascend if needed, then descend | Every role-eligible discovered model, including bounded-work models |
+| `autopilot-fast-helper` | GPT-5.3 Codex Spark / effort omitted | Fast qualified route | explicit effort search when supported | Discovered latency-oriented candidates plus a validated no-helper path |
 
-### Qualification and integrated release-decision rule
+### Route, evidence, and identity contract
 
-- Deterministic role contract, grounding/evidence, and safety checks are hard
-  gates.
-- A candidate must have zero critical contract, safety, grounding, or mutation
-  failures, clear absolute floors for every semantic-quality dimension, and
-  clear a confidence-bound non-inferiority margin against baseline.
-- The predeclared primary endpoint is task-level paired mean canonical resource
-  units per assigned objective through acceptance or the fixed terminal stop,
-  versus the immutable production policy in the locked canonical row and the
-  frozen assigned comparator in every other row. Candidate-caused failures
-  remain in the endpoint and acceptance gate.
-- Accepted-workflow rate must be non-inferior; p95 canonical use/duration, late
-  failure, retries, compaction overhead, steering, and required plan-native
-  allowance measures are mandatory guardrails, never alternative post-hoc
-  release endpoints.
-- Apply one content-addressed schedule sourced from the official ChatGPT Codex
-  token rate card to returned-model input/cached-input/output tokens. Freeze
-  alias, reasoning-token, precision, rounding, and unknown-model behavior; API
-  pricing remains diagnostic only.
-- Freeze a finite support manifest. Keep native credits, legacy messages,
-  included-limit utilization, purchased credits, resets, and throughput
-  plan-stratified; never pool incompatible regimes.
-- Use A1 capability/treatment screening, A2 within-model effort search, A3
-  frozen pair comparison, Stage B prompt interaction, and Stage C cohort locks
-  across disjoint component-selection partitions. Qualify any row-reference
-  projections on a separate pre-screen partition, then reserve an untouched
-  integrated release-confirmation corpus for G56R-011.
-- Run integrated confirmation as one multi-stratum campaign over the same locked
-  objectives: the canonical row owns production superiority, every other
-  mandatory row or proven equivalence class owns assigned-comparator non-
-  inferiority, and incompatible native accounting is never pooled. This proves
-  component-wise assembly improvement and support, not global optimization over
-  alternative complete nine-agent policies.
-- Treat unique objectives as the experimental units, cluster repeats within
-  task, preassign every workload stratum before treatment, power the comparative
-  long-horizon stratum, freeze weights, and isolate cache crossover. Boundary
-  canaries supplement rather than replace long-horizon inference.
-- Cohort target-population weights by assignment time, never terminal outcome.
-  Permit only one complete-pair rerun for a proven transient harness telemetry
-  failure; unexplained, inherent, recurrent, or differential attrition blocks
-  the affected decision.
-- Require installed or semantically equivalent custom-agent treatment before
-  scoring; bare prompt emulation cannot support release.
-- Start ordinary effort search at the documented default, ascend to a stable
-  pass when needed, then descend and retest the boundary. Freeze Standard speed.
-  Evaluate orchestration-changing Ultra only at policy level.
-- Define and freeze unpinned, adaptive, and Ultra controls before cohort
-  selection, then compare them with the final frozen static core during
-  integrated confirmation.
-- Evidence wins: no generation, tier, preview, or current default is forced into
-  a role when it fails.
+A route is a complete qualified tuple, not a model name:
+
+```text
+route = model
+      + explicit model_reasoning_effort
+      + instruction_hash
+      + required model and modality capabilities
+      + tool, skill, and MCP contract
+      + sandbox and mutation contract
+      + supported client range
+      + qualification evidence
+```
+
+Fallback may change only the approved model and effort for the same named agent.
+It preserves instructions, output contract, sandbox, mutation boundary, tools,
+skills, and MCP configuration. Ordered fallback is SpecKit Pro policy; it is not
+represented as a native custom-agent TOML fallback field.
+
+| Identity | Created by | Required contents |
+|---|---|---|
+| `agent_contract_id` | G56R-001 | Named role plus safety, grounding, mutation, tool, and output contracts |
+| `candidate_route_id` | G56R-001/G56R-002 | Candidate model/effort, contract and instruction hashes, required capabilities, and rationale |
+| `telemetry_profile_id` | G56R-002 | Pinned client/surface and mandatory, conditional, derived, and unavailable fields |
+| `runtime_capability_snapshot_id` | G56R-002 or installer preflight | Client/surface, model IDs, efforts, relevant capabilities, evidence method, timestamp, and raw evidence |
+| `experiment_policy_id` | G56R-003 | Corpora, partitions, scorers, analysis plan, budgets, terminal policy, and treatment controls |
+| `execution_trace_id` | G56R-003 | Assigned route, effective-route evidence, result, raw resource observations, retries, terminal state, and treatment integrity |
+| `route_resolution_id` | G56R-002 schema; G56R-003/G56R-006 records | Preferred and effective route, fallback index, reason, snapshot, attempted routes, and timestamp |
+| `resolved_agent_policy_id` | G56R-006 schema/fixtures; G56R-011 final records | Exact destination custom-agent content and selected effective route |
+| `agent_route_policy_id` | G56R-007 through G56R-010 | Named agent, preferred route, ordered qualified fallbacks, hard contract, evidence, client bounds, and invalidation rules |
+| `core_routing_policy_id` | G56R-011 | Ordered mapping of the nine required named agents to final route-policy IDs |
+| `optional_helper_policy_id` | G56R-011 | Final helper route policy, approved fallbacks, and no-helper contract |
+| `resolved_installation_id` | G56R-011 | Ordered mapping of installed agents to resolved policies and route resolutions |
+| `release_policy_id` | G56R-011 | Final core/helper identities, resolver version, evidence lock, UAT, invalidation rules, and bounded claims |
+
+Early traces must not require the final aggregate identities before G56R-011
+creates them.
+
+### Qualification and release-decision rule
+
+- Deterministic role, safety, grounding, mutation, tool, and output-contract
+  checks are hard gates.
+- A candidate must clear absolute semantic-quality and reliability floors and a
+  predeclared confidence-bound non-inferiority margin against the immutable
+  production route.
+- Among passing candidates, choose the preferred route under one predeclared,
+  environment-independent resource/latency score or Pareto rule. Raw input,
+  cached-input, and output tokens; duration; retries; compactions; terminal
+  state; and accepted-workflow rate are the evidence.
+- Every fallback independently passes the same hard role contract and the
+  declared fallback quality/reliability floor. Fallback order is frozen before
+  installed UAT.
+- Use disjoint screening, selection, cohort-lock, and integrated-confirmation
+  partitions; paired task-level inference; frozen workload strata; a powered
+  long-horizon stratum; cache isolation; bounded attrition rules; and
+  `inconclusive => no qualification`.
+- Benchmark the installed custom-agent treatment or the exact canonical
+  materialization later used by the installer. Bare prompt emulation remains a
+  smoke/degradation test and cannot support route qualification.
+- Begin each model at its documented default effort, ascend to the first stable
+  pass when necessary, then descend and retest the boundary. Treat any
+  orchestration-changing high-effort mode as a policy-level control, not a
+  normal per-agent effort step.
+- A `model/rerouted` service event is distinct from plugin fallback. A rerouted
+  run cannot score the requested route. Runtime UAT may continue only when the
+  destination is a qualified route for the same named agent; report it as a
+  service reroute. An unapproved destination is a hard treatment failure.
+- `codex exec --json` lifecycle and token events do not, by themselves,
+  constitute an authoritative effective-model field. The telemetry profile must
+  classify each claimed field by its actual source and preserve unavailable
+  values as null.
+- Evidence wins: no model family, effort, preview, or current default is forced
+  into a role when it fails.
 
 ## Reviewability Contract
 
@@ -129,58 +148,54 @@ legitimately applies. Generated payloads, tests, and documentation still count
 toward reviewer load even where they do not count as production LOC.
 
 **Estimator advisory:** The Python-authoritative `estimate-spec-size` operation
-was rerun on 2026-07-11. Each implementation SPEC used one user story, its
-declared total-file estimate, its current Scope-bullet count as functional
-requirements, and `new_vs_modify=modify`; G56R-001 used the spike flag. The
-per-SPEC budgets below record those outputs. G56R-003 returned `warn` at 500 LOC
-and two suggested slices, so its scaffold must preserve the declared runner/
-treatment versus fixture/scorer/corpus split. Every scaffold reruns the
-estimator if scope changes.
+was last recorded on 2026-07-11. Each scaffold must rerun it when scope or file
+counts change. G56R-003 remains a warning-sized SPEC and must preserve its two
+declared work packages.
 
 ## Dependency Graph
 
 ```text
-G56R-001 Research Baseline and Candidate Matrix
+G56R-001 Candidate Route Baseline and Role Contracts
     |
     v
-G56R-002 Authentication, Telemetry, Treatment, and Trace Schema
+G56R-002 Capability Discovery, Telemetry Profile, and Exact Treatment
     |
     v
-G56R-003 Corpus Runner, Scoring, and Statistics
+G56R-003 Evaluation Runner, Fixtures, Scoring, and Statistics
     |
     v
-G56R-004 Policy Control Definition and Dominance Contract
+G56R-004 Policy Controls and Adaptive Comparators
     |
     v
-G56R-005 Harness Budgets and Boundary Simulation
+G56R-005 Model Availability, Fallback, and Recovery Simulation
     |
     v
-G56R-006 Subscription-aware Installer Defaults and Explicit Override
+G56R-006 Resolver, Materializer, Installer, and Strict Override
     |
     +--> G56R-007 Quality-critical Executor Routing --------+
     +--> G56R-008 Structured-work Agent Routing ------------+
     +--> G56R-009 Read-only Reasoning Agent Routing --------+
-    +--> G56R-010 Latency-first Helper Routing -------------+
+    +--> G56R-010 Optional Helper and No-helper Path --------+
                                                               |
                                                               v
-                              G56R-011 Payload, Documentation, UAT, and Release Proof
+                   G56R-011 Final Composition, Installed UAT, and Release Proof
 ```
 
 ## Progress Tracking
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| G56R-001 | Research Baseline and Candidate Matrix | Pending | - | Ready to scaffold |
-| G56R-002 | Authentication, Telemetry, Treatment, and Trace Schema | Pending | - | Blocked by G56R-001 |
-| G56R-003 | Corpus Runner, Acceptance Scoring, and Statistics | Pending | - | Blocked by G56R-002 |
-| G56R-004 | Policy Control Definition and Dominance Contract | Pending | - | Blocked by G56R-003 |
-| G56R-005 | Harness Budgets and Boundary Simulation | Pending | - | Blocked by G56R-004 |
-| G56R-006 | Subscription-aware Installer Defaults and Explicit Override | Pending | - | Blocked by G56R-005 |
+| G56R-001 | Candidate Route Baseline and Role Contracts | Pending | - | Ready to scaffold |
+| G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | Pending | - | Blocked by G56R-001 |
+| G56R-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Pending | - | Blocked by G56R-002 |
+| G56R-004 | Policy Controls and Adaptive Comparators | Pending | - | Blocked by G56R-003 |
+| G56R-005 | Model Availability, Fallback, and Recovery Simulation | Pending | - | Blocked by G56R-004 |
+| G56R-006 | Capability-aware Resolver, Materializer, Installer, and Strict Override | Pending | - | Blocked by G56R-005 |
 | G56R-007 | Quality-critical Executor Routing | Pending | - | Blocked by G56R-006 |
 | G56R-008 | Structured-work Agent Routing | Pending | - | Blocked by G56R-006 |
 | G56R-009 | Read-only Reasoning Agent Routing | Pending | - | Blocked by G56R-006 |
-| G56R-010 | Latency-first Helper Routing | Pending | - | Blocked by G56R-006 |
-| G56R-011 | Payload, Documentation, UAT, and Release Proof | Pending | - | Blocked by G56R-007 through G56R-010 |
+| G56R-010 | Optional Helper Routing and No-helper Path | Pending | - | Blocked by G56R-006 |
+| G56R-011 | Payload, Installed Skill UAT, Fallback Proof, and Release Integration | Pending | - | Blocked by G56R-007 through G56R-010 |
 
 **Status legend:** Pending | Ready | In Progress | In Review | Complete | Blocked
 
@@ -188,163 +203,65 @@ G56R-006 Subscription-aware Installer Defaults and Explicit Override
 
 ## Specification Sections
 
-### G56R-001: Research Baseline and Candidate Matrix
+### G56R-001: Candidate Route Baseline and Role Contracts
 
 **Priority:** P1 | **Depends On:** None | **Enables:** G56R-002
 
-**Goal:** Produce the dated, cited decision input that defines what must be
-measured before any installed default changes.
+**Goal:** Produce the dated, cited candidate-route and role-contract handoff
+needed for capability discovery without changing installed defaults.
 
 **Reviewability Budget:** Primary surface: docs/process |
 Projected reviewable LOC: 0 (spike) | Suggested slices: 1 | Status: ok |
-Production files: 0 |
-Total files: approximately 3 |
+Production files: 0 | Total files: approximately 3 |
 Budget result: research spike; time-boxed, LOC sizing not applicable
 
 **Scope:**
 
-- Inventory the ten `speckit-pro/codex-agents/*.toml` files plus active Codex
-  install, autopilot, structural validation, Layer 6, payload, installed-cache,
-  and user-documentation policy surfaces.
-- Record current model/effort, role boundary, output contract, mutation class,
-  expected tool use, and representative task for each agent.
-- Freeze the same finite manifest domain as AC-1.6. `mandatory_plan_keys` =
-  [`free`, `go`, `plus`, `pro_5x`, `pro_20x`, `business_standard`,
-  `business_grandfathered_codex_seat`, `enterprise_flexible`,
-  `enterprise_included_seat`, `enterprise_legacy_message`, `edu_flexible`,
-  `edu_included_seat`, `healthcare_managed`,
-  `regulated_workspace_managed`, `gov_managed`, `teachers_managed`,
-  `clinicians_managed`]. `named_category_keys` =
-  [`chatgpt_for_healthcare`, `enterprise_regulated_workspace`, `chatgpt_gov`,
-  `chatgpt_fedramp`, `chatgpt_for_teachers`, `chatgpt_for_clinicians`].
-  `named_category_row_mappings` =
-  [`chatgpt_for_healthcare -> healthcare_managed`,
-  `enterprise_regulated_workspace -> regulated_workspace_managed`,
-  `chatgpt_gov -> gov_managed`, `chatgpt_for_teachers -> teachers_managed`,
-  `chatgpt_for_clinicians -> clinicians_managed`]. Record `chatgpt_fedramp` as a
-  named exclusion because the current
-  supported Codex setup is API-key-only. Treat rate-card inclusion as accounting
-  evidence, never as treatment-delivery equivalence. Record a versioned
-  `accounting_regime_id`, accounting
-  components, and rate revisions rather than collapsing included usage, optional
-  credits, grandfathered seats, and legacy messages. Freeze workspace/surface,
-  permissions, required/optional
-  capabilities, exclusions, support state, equivalence evidence/UAT owner, and
-  the versioned allowance-boundary contract, including auto-top-up/overage
-  state, for every row before screening. Every row also freezes
-  `target_population_weight`, the shared `target_population_snapshot_id`,
-  `plan_native_guardrail_state`, `plan_native_guardrail_id`,
-  `plan_native_guardrail_claim_boundary`,
-  `baseline_policy_id`, `baseline_support_state`,
-  `baseline_exact_treatment_evidence_hashes`, `baseline_comparator_type`,
-  `row_reference_policy_id` or null, `row_reference_selection_rule_id`,
-  `eligible_reference_policy_set`, `required_quality_and_contract_floors`,
-  `relationship_to_production_policy`, `compatibility_projection_rules`,
-  `selection_metric`, `selection_precedence`, `tie_break_rule`,
-  `selection_evidence_hash`, `reference_qualification_evidence_id`, and
-  `comparator_claim_boundary`. At manifest level,
-  freeze exactly one `target_population_snapshot` object containing
-  `target_population_snapshot_id`, `snapshot_source`,
-  `query_or_derivation_version`, `measurement_start`, `measurement_end`,
-  `population_definition`, `inclusion_and_exclusion_rules`,
-  `unknown_plan_handling`, `coverage_numerator`, `coverage_denominator`,
-  `minimum_coverage_threshold`, `weight_normalization_rule`,
-  `fallback_canonical_row_rule`, `assignment_count_by_plan`,
-  `terminal_state_by_extraction_cutoff`, `right_censored_count`, `active_count`,
-  `missing_terminal_event_count`, `allowance_blocked_count`,
-  `unknown_plan_count`, `extraction_cutoff`, `extraction_lag`, and
-  `snapshot_hash`. Derive that
-  snapshot from every eligible non-test, ChatGPT-authenticated production-core
-  assignment where `measurement_start <= assigned_at < measurement_end` in the
-  trailing 90 complete UTC days. Keep successes, failures, timeouts,
-  abandonments, active/right-censored work, allowance-blocked work, and missing-
-  terminal records in the denominator; exclude assignments outside the window
-  even when they terminate inside it. Terminal disposition is reporting-only.
-  Use `assignment_count_by_plan` for weights, count unresolved plans in the
-  denominator and `unknown_plan_count` without imputing them, set the minimum
-  coverage threshold to 0.95, and normalize resolved-row assignment weights.
-  Report every disposition at the frozen `extraction_cutoff` plus
-  `extraction_lag`, defined as `extraction_cutoff - measurement_end`.
-  Exactly one predeclared `fallback_canonical_row_rule` applies when the source
-  is unavailable, the denominator is zero, or coverage is below threshold: use
-  `plus`; estimated weights and alternate fallbacks are prohibited. Before
-  screening, select exactly one canonical row using the greatest valid frozen
-  target-population weight with lexical `plan_key` tie-breaking, or the sole
-  fallback, then bind
-  `canonical_row_key`, `canonical_subscription_environment_id`,
-  `canonical_selection_rationale`, `canonical_selection_rule_version`,
-  `canonical_baseline_deliverable`, `canonical_candidate_set_hash`, and
-  `canonical_lock_timestamp`. Prove production and candidate delivery there.
-  Changing the population snapshot, source, derivation, assignment-cohort rule,
-  extraction cutoff, window, population, coverage/normalization rule, fallback,
-  or canonical lock invalidates downstream evidence.
-- Freeze a versioned deterministic row-reference rule for every row where the
-  production baseline is not deliverable. Its fields are
-  `row_reference_selection_rule_id`, `eligible_reference_policy_set`,
-  `required_quality_and_contract_floors`, `relationship_to_production_policy`,
-  `compatibility_projection_rules`, `selection_metric`,
-  `selection_precedence`, `tie_break_rule`, `selection_evidence_hash`, and
-  `reference_qualification_evidence_id`.
-  Eligible references are exact-treatment-deliverable projections of the
-  immutable production core that preserve every compatible field and may change
-  only fields independently proven incompatible.
-  Rank them by changed-agent count, changed-field count, frozen precedence, then
-  lexical content-addressed policy ID; require every absolute floor. Candidate
-  outcomes cannot affect the rule. If no projection passes, the row is blocked;
-  a rule or selected-reference change invalidates affected evidence.
-- Reserve a content-addressed `reference_qualification_evidence_id` for each
-  row-reference decision. It points to previously frozen comparable evidence or
-  a dedicated pre-screen reference-qualification corpus disjoint from all
-  candidate and confirmation partitions. G56R-003 executes that corpus before
-  candidate screening when comparable evidence is unavailable; an evidence or
-  corpus change invalidates the selected reference and final manifest lock.
-- Classify every row's `plan_native_guardrail_state` as `required` when the same
-  authoritative attributable native measure exists for both arms, otherwise
-  `unavailable`. A required row freezes
-  `plan_native_guardrail_claim_boundary = native_allowance_noninferiority`; an
-  unavailable row freezes `canonical_resource_only`. Establish unavailable
-  status from authoritative capability evidence before screening; observed
-  missing telemetry follows AC-2.4 and cannot downgrade a required row. Freeze
-  source fields, bucket/window semantics, accounting regime/revision, and
-  isolation evidence. Never infer a native measure from the canonical
-  normalization.
-- Snapshot the official ChatGPT Codex token rate-card revision and returned-
-  model alias evidence that G56R-002 must serialize. API pricing remains a
-  separately labeled diagnostic source and cannot populate canonical
-  coefficients.
-- Create a primary-source fact table from current Codex plan/model availability,
-  live client catalog/capability probes, model pages, pricing/limits, migration,
-  prompt guidance, and Codex subagent pages.
-- Reconcile research conflicts explicitly. Current canonical model pages take
-  precedence over secondary claims about context size, availability, or effort
-  support.
-- Deliver the narrow candidate matrix, role-quality contracts, fixture backlog,
-  three-current/seven-missing fixture inventory, availability probes, current
-  harness limitations, and go/no-go handoffs to G56R-002 and G56R-003.
-- INVEST/vertical-slice rationale: this spike independently reduces the one
-  uncertainty that blocks safe model routing and is bounded by a research
-  output rather than implementation layers.
+- Inventory the ten custom-agent source definitions and record each agent's
+  immutable production route, instructions, role boundary, safety/grounding/
+  mutation contract, output contract, expected tool/skill/MCP use, supported
+  client assumptions, and representative tasks.
+- Publish a versioned `agent_route_candidate_manifest` covering all ten named
+  agents. Create `agent_contract_id` and provisional `candidate_route_id`
+  records for every agent. Each candidate records an explicit model/effort tuple,
+  instruction hash, required model and modality capabilities, tool/skill/MCP
+  contract, sandbox/mutation contract, rationale, known incompatibilities,
+  evidence requirements, and invalidation triggers.
+- Distinguish project-level candidate eligibility from installation-time
+  availability. Record preferred-route hypotheses and fallback-candidate
+  requirements without claiming that any candidate is executable.
+- Record the immutable production-route inputs that G56R-003 will bind into the
+  sole candidate and integrated comparator before screening. This research
+  output does not depend on G56R-002 or G56R-003 completion evidence.
+- Build a primary-source fact table from official Codex model, custom-agent,
+  configuration, app-server, and non-interactive documentation. Label every
+  undocumented behavior as an inference, open question, or proposed SpecKit Pro
+  policy.
+- Deliver the role contracts, provisional candidate manifest, fixture backlog,
+  three-current/seven-missing fixture inventory, telemetry requirements,
+  capability questions, and independent go/no-go handoff to G56R-002.
+- INVEST rationale: the spike closes the research uncertainty that blocks safe
+  capability probing and ends without depending on later telemetry results.
 
 **Out of Scope:**
 
 - Agent TOML, installer, prompt, payload, or default changes.
-- Live corpus execution or sweeps; G56R-003 owns them after G56R-002 supplies
-  trustworthy telemetry and treatment-proof schemas.
+- Live corpus execution, qualification, or fallback ordering.
 
 **Key Files:**
 
-- `docs/ai/research/` - dated subscription model-catalog research and matrix
+- [proposed] `docs/ai/research/codex-agent-route-candidates.md`
 - `speckit-pro/codex-agents/*.toml` - read-only inventory source
-- `tests/speckit-pro/layer6-efficiency/` - fixture-gap inventory source
+- `tests/speckit-pro/layer6-efficiency/` - current fixture-gap inventory source
 
 ---
 
-### G56R-002: Authentication, Telemetry, Treatment, and Trace Schema
+### G56R-002: Capability Discovery, Telemetry Profile, and Exact-Treatment Contract
 
 **Priority:** P1 | **Depends On:** G56R-001 | **Enables:** G56R-003
 
-**Goal:** Produce privacy-safe native telemetry, identity, and exact-treatment
-proof schemas before live experiments depend on derived resource measures.
+**Goal:** Freeze the executable candidate set and trustworthy trace contract
+before outcome-bearing evaluation begins.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
 Projected reviewable LOC: 265 | Suggested slices: 1 | Status: ok |
@@ -353,215 +270,136 @@ Budget result: re-estimate at scaffold; synthetic traces precede live use
 
 **Scope:**
 
-- Fail closed when ChatGPT authentication or a frozen support-manifest row
-  cannot be proven for qualification or release evidence. Preserve unresolved accounts for exploratory
-  evidence only.
-- Define trace fields and canonical serialization for `support_manifest_id`,
-  `installable_agent_policy_id`, `subscription_environment_id`, and
-  `execution_trace_id`, plus `universal_core_policy_id`,
-  `optional_helper_policy_id`, the bound row's
-  `helper_installation_state_id`, `workload_population_manifest_id`,
-  `workload_stratum_id`, `canonical_rate_schedule_id`, and `release_policy_id`;
-  G56R-001, G56R-003, and G56R-006 own the manifest and policy identities that
-  populate those fields.
-- Serialize named-category resolution, the exactly-one canonical-row lock, and
-  the complete population snapshot/fallback contract, plus each row's
-  production/reference comparator selection rule, qualification evidence,
-  identity, delivery evidence, and claim boundary. G56R-001 owns the frozen
-  rules and plan-population snapshot; G56R-003 owns reference qualification,
-  workload stratification, live corpus assignment, and enforcement.
-- Define raw parent/child trace events, requested/returned model/effort, speed,
-  tokens/context/tools/compaction/retry/validation/abandonment, null behavior,
-  and synthetic replay fixtures.
-- Define the replay and exact-treatment proof schema for installed or
-  semantically equivalent custom-agent configuration, including sandbox,
-  approvals, skills, MCP startup, actual tool schema, parent overrides, context
-  policy, and client. Synthetically validate success, null, and misdelivery
-  records; G56R-003 owns live gate execution.
-- Require 100% returned-model, speed, token, rate, and parent attribution for
-  every billable invocation used by the primary endpoint; preserve nulls but
-  never use a partial total for qualification or release. Define and
-  synthetically replay `telemetry_failure_id`, `objective_id`, `arm`,
-  `candidate_policy_id`, `manifest_row`, `workload_stratum_id`, `failure_stage`,
-  `missing_fields`, `classification`, `classification_evidence`,
-  `rerun_eligible`, `rerun_count`, and `final_disposition` for exactly
-  `independent_transient_harness_failure`,
-  `candidate_or_environment_inherent_telemetry_failure`, or
-  `unknown_or_unproven_cause`. Encode at most one original-assignment complete-
-  pair rerun for the first class, no rerun for the others, all-attempt retention,
-  blinded/pre-outcome classification, attrition by arm/returned model/plan row/
-  workload stratum/cause, and differential-missingness gates. Prohibit primary
-  conclusions from unexplained complete-case subsets. Separate benchmark judge
-  cost.
-- Define and synthetically validate the content-addressed canonical-rate
-  artifact with `canonical_rate_schedule_id`, `schema_version`,
-  `authoritative_source_class`, `source_revision`, `effective_as_of`,
-  `unit_name`, `returned_model_alias_map`, `model_rate_table`,
-  `input_coefficient`, `cached_input_coefficient`, `output_coefficient`,
-  `reasoning_token_inclusion_rule`, `standard_speed_multiplier`, `formula`,
-  `numeric_precision`, `rounding_rule`, `unknown_model_behavior`,
-  `schedule_hash`, and `lock_timestamp`. The explicit decimal formula sums
-  returned-model input, cached-input, and output coefficients and divides by one
-  million with no intermediate rounding. Charge native output once, use Standard
-  multiplier 1, and prohibit generic model-rate fallbacks. Map proven capability
-  or alias incompatibility to
-  `candidate_or_environment_inherent_telemetry_failure` and unresolved alias or
-  rate provenance to `unknown_or_unproven_cause`; neither is rerunnable.
-  Invalidate evidence after a schedule change.
-  Require `authoritative_source_class = official_chatgpt_codex_token_rate_card`;
-  API pricing remains diagnostic and cannot populate the table.
-- Keep the canonical token-vector score, plan-native token credits, legacy
-  message observations, every included-limit bucket, and purchased-credit
-  balances separate. Record limit ID, window, reset, utilization, and crossing.
-  Serialize each row's native metric, bucket, regime/revision, comparator, unit/
-  denominator, margin, confidence method, reset/missing-data rules, multiplicity,
-  task minimum, isolation proof, guardrail state, and claim boundary.
-- Use opaque aliases or keyed HMACs; enforce authorized datasets, ephemeral
-  worktrees, candidate isolation, retention, secrets scanning, and public/
-  private content/path redaction.
+- Implement or bind the pinned client integration to app-server `model/list`
+  and `modelProvider/capabilities/read`. Capture model IDs, supported efforts, relevant
+  capabilities, client/surface, evidence method, raw response, and timestamp in
+  `runtime_capability_snapshot_id`.
+- Where authoritative discovery is unavailable, allow only the predeclared
+  bounded exact invocation probe. An unresolved model or effort is unavailable
+  for qualification; do not infer it from product packaging or neighboring
+  model names.
+- Bind provisional candidates to the capability snapshot, complete their
+  `candidate_route_id` records, and freeze the executable set before G56R-003
+  scores outcomes.
+- Publish `telemetry_profile_id` for the pinned client and surface. Classify each
+  desired field as `stable_native`, `experimental_native`,
+  `derived_from_controlled_configuration`, or `unavailable`; state the source,
+  completeness rule, and claims each class may support. Never fabricate returned
+  effort, effective model, speed, token categories, or parent attribution.
+- Define `route_resolution_id` and exact-treatment replay schemas for candidate route, named
+  agent, explicit model and effort, instruction hash, sandbox and mutation
+  class, expected skills/MCP/tools, parent configuration, client, controlled
+  runtime overrides, delivery canary, and treatment failures.
+- Require every assigned objective to bind `candidate_route_id`,
+  `agent_contract_id`, `runtime_capability_snapshot_id`, `route_resolution_id`,
+  `experiment_policy_id`, and `execution_trace_id`. Define raw trace fields for assigned route, requested route,
+  effective-route evidence, service reroute events, raw token vector, duration,
+  context/tools/compaction/retries/validation, parent-child graph, terminal
+  state, acceptance, and null behavior.
+- A service-rerouted run is not scored as the requested route. Permit continued
+  runtime UAT only when the destination is a prequalified route for the same
+  named agent; otherwise fail treatment. Keep service rerouting distinct from a
+  resolver-selected fallback.
+- Validate success, null, unavailable-field, misdelivery, and approved/
+  unapproved service-reroute records with synthetic replay.
 
 **Out of Scope:**
 
-- Corpus execution, statistical qualification, policy-control definition,
-  budgets, and
-  route selection.
+- Corpus execution, scoring, statistical qualification, fallback ordering, or
+  installation.
 
 **Key Files:**
 
-- [proposed] `tests/speckit-pro/layer6-efficiency/lib/subscription_telemetry.py` - native account, plan, rate, and token adapter
-- [proposed] `tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py` - identity and exact-treatment trace schema
-- [proposed] `tests/speckit-pro/unit/test_efficiency_codex_telemetry.py` - synthetic replay and null/completeness contracts
+- [proposed] `tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py`
+- [proposed] `tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py`
+- [proposed] `tests/speckit-pro/unit/test_efficiency_codex_telemetry.py`
 
 ---
 
-### G56R-003: Corpus Runner, Acceptance Scoring, and Statistics
+### G56R-003: Evaluation Runner, Fixtures, Scoring, and Statistical Analysis
 
 **Priority:** P1 | **Depends On:** G56R-002 | **Enables:** G56R-004
 
-**Goal:** Execute exact custom-agent treatments and make component selection and
-cohort locking deterministic without consuming final release-confirmation data.
+**Goal:** Qualify preferred and fallback candidates reproducibly without
+consuming final integrated-confirmation data.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
 Projected reviewable LOC: 500 | Suggested slices: 2 | Status: warn |
 Production files: approximately 4 | Total files: more than 20 expected |
-Budget result: mandatory scaffold-time split between runner/treatment,
-fixture/scorer governance, and seven-role corpus expansion
+Budget result: mandatory scaffold-time split between treatment runner and
+fixture/scorer/statistical work
 
-**Scope:**
+**Required Work Package A - Treatment runner and trace:**
 
-- Add disjoint reference-qualification, screening, selection, per-cohort lock,
-  and integrated release-confirmation corpora. G56R-003 owns only the first four;
-  it reserves the last untouched for G56R-011. Reference qualification runs
-  before candidate screening only when comparable frozen evidence is unavailable
-  and its objectives cannot be reused by candidates. Apply randomized paired order, cache isolation,
-  unique-task sample sizing, blinded scoring, audits, inter-rater agreement, and
-  multiplicity gatekeeping.
-- Publish and lock `workload_population_manifest_id`, target-workload source/
-  definition, stratum definitions, pre-treatment assignment rule, frozen weights,
-  `assignment_count_by_stratum`, unknown handling, per-stratum task minima,
-  `long_horizon_stratum_id`, hash, and timestamp. Link the AC-1.6
-  `target_population_snapshot_id` as v1's source and reuse its frozen assignment
-  cohort and query/derivation version. Record authoritative
-  `assignment_count_by_stratum`, normalize those counts, and block below 0.95
-  classification coverage rather than imputing unknowns. Preassign every
-  objective from immutable task/protocol metadata;
-  realized tokens, duration, turns, compactions, retries, and outcomes cannot
-  change membership. Require the long-horizon definition to contain at least
-  four mandatory acceptance-linked phases and two separately scored validation
-  checkpoints declared before treatment. Give that stratum confidence-powered
-  samples in every required plan row/equivalence class.
-- Execute the installed custom-agent TOML or a generated semantically equivalent
-  profile. Classify every pre-score failure as candidate incompatibility or
-  independent harness misdelivery, populate the AC-2.16 live replay artifact,
-  and permit only successfully assigned treatments to reach quality scoring.
-- For per-agent pair selection freeze parent and non-candidate routes, prompts,
-  tools/MCP/skills, repository snapshot, validator, truncation, context/
-  compaction, retries, escalation, and acceptance checker.
-- Implement `R_i` canonical units through acceptance/terminal stop and `A_i`
-  acceptance per assigned objective after successful assignment. Candidate
-  incompatibility is a hard row-qualification failure; rerun only preclassified
-  independent harness/infrastructure misdelivery. During universal-core work,
-  Spark is `not_installed` in both arms; a candidate attempt to resolve, spawn,
-  or invoke it sets `A_i = 0`, retains measurable core `R_i`, and cannot be
-  rerun into eligibility. Use task-level paired inference and frozen weights.
-- Apply the locked canonical-rate schedule with decimal, no-intermediate-rounding
-  arithmetic and exact returned-model alias resolution. Charge output once,
-  apply Standard multiplier 1, and never use a generic fallback. Proven model or
-  alias incompatibility is a
-  `candidate_or_environment_inherent_telemetry_failure`; unresolved rate or
-  alias provenance is `unknown_or_unproven_cause`. Unproven reasoning-token
-  inclusion follows the same AC-2.4 completeness taxonomy.
-- Classify telemetry loss before outcomes. Permit at most one original-
-  assignment complete-pair rerun only for a proven
-  `independent_transient_harness_failure`; retain all attempts. Candidate/
-  environment-inherent loss fails telemetry qualification, and unknown cause
-  blocks the comparison. Enforce maximum transient and arm-differential rates
-  and report attrition by arm, returned model, plan row, workload stratum, and
-  cause; never analyze an unexplained complete-case subset.
-- Implement the one-sided bound, accepted-workflow non-inferiority, and a fully
-  specified simultaneous guardrail registry. Cohort locks apply component gates;
-  G56R-011 alone executes the final below-`-delta` release decision. Implement
-  and validate the long-horizon statistical procedures that G56R-011 applies to
-  untouched integrated-confirmation data: acceptance, semantic quality, paired
-  mean and p95 canonical resource, p95 duration, late failure, retries,
-  compaction, and `-delta_long_horizon` superiority. G56R-003 does not execute
-  or conclude that release gate.
-- Implement A1 default-effort treatment screening, A2 within-model effort
-  boundaries, A3 frozen pair comparison, Stage B prompt interactions, and Stage
-  C cohort lock. A1/A2 use screening, A3 and Stage B use selection, and each
-  Stage C consumes only its preassigned cohort-lock partition. Keep the baseline
-  prompt frozen throughout A1/A2/A3. Do not claim independent model or effort
-  effects, and do not consume integrated release-confirmation data.
-- Version/hash fixtures and scorers; use blinded five-class adjudication and
-  invalidate all affected results after a change. Label legacy results
-  non-release evidence.
-- Apply the cross-plan decision rule: enforce the pre-outcome canonical-row
-  lock, production superiority only there, assigned-comparator non-inferiority
-  on every other manifest row, no pooled native accounting, and per-row
-  component-wise challenger opportunity-cost reporting. Freeze each row's
-  candidate set, environment, production delivery state, comparator identity/
-  claim boundary, and one selected challenger before integrated release
-  confirmation. If production is not deliverable outside the canonical row,
-  enforce the predeclared row-reference rule: consider only exact-treatment-
-  deliverable minimum-change projections of production, require every absolute
-  quality and contract floor, and rank by changed agents, changed fields, frozen
-  precedence, then lexical policy ID. Candidate outcomes cannot influence the
-  reference. Bind the content-addressed qualification evidence before candidate
-  screening. If no projection passes, the row blocks release. A population-
-  snapshot, canonical-row, reference-rule, or comparator change invalidates
-  affected evidence; use the primary task-level estimator and confidence method
-  for the descriptive universal-versus-row-specific contrast. Plan-only models
-  never enter the universal candidate set.
-- Implement each `required` row's plan-native allowance non-inferiority analysis
-  under identical bucket/window semantics, controlled account isolation, and
-  the shared multiplicity family under
-  `plan_native_guardrail_claim_boundary = native_allowance_noninferiority`. A
-  material native regression blocks the row; an `unavailable` row remains
-  explicitly `canonical_resource_only` and cannot support native allowance or
-  throughput claims. Observed missingness cannot change either pre-screen state.
-- Pin the immutable canonical production policy, every non-canonical assigned
-  comparator, and the total campaign budget, racing method, futility/dominance
-  thresholds, and maximum cohort-lock and release candidates.
+- Replace bare prompt emulation for qualification with execution of the actual
+  custom-agent policy or byte-identical canonical materialization. Implement the
+  canonical materializer as a shared Python component consumed later by
+  G56R-006.
+- Before scoring, prove the expected named agent, explicit model/effort,
+  instruction hash, sandbox, tools, skills, MCP startup/schema, parent controls,
+  client, and context configuration. Treatment misdelivery does not become a
+  candidate-quality observation.
+- Emit replayable `execution_trace_id` records under the G56R-002 schema.
+  Preserve every assigned attempt, failed/abandoned branch, retry, repair,
+  validation, compaction, child, terminal result, and raw resource observation.
 
-**Out of Scope:** policy-control definition, runtime budgets, and
-installation defaults.
+**Required Work Package B - Fixtures, scoring, and statistics:**
+
+- Expand from three current role fixtures to a governed ten-role corpus. Use
+  blinded adjudication for candidate quality failure, treatment-delivery
+  failure, invalid fixture, invalid scorer, and infrastructure failure. A
+  fixture/scorer change versions it and invalidates affected results.
+- Create disjoint screening, selection, cohort-lock, and untouched integrated-
+  confirmation partitions. G56R-003 reserves but never consumes the final
+  partition.
+- Freeze `experiment_policy_id` before outcome-bearing evaluation. It defines
+  corpus versions, workload strata, long-horizon assignment from pretreatment
+  task properties, acceptance checker, semantic floors, safety gates,
+  superiority/non-inferiority margins, alpha, power, multiplicity, task-level
+  clustering, repeat rules, racing, attrition, campaign/workflow budgets,
+  terminal policy, and `inconclusive => no qualification`.
+- Before screening, bind the immutable production comparator to repository
+  revision, plugin version, per-agent route/configuration IDs, client version,
+  tool/configuration contract, corpus snapshot, instruction hashes, and the
+  frozen analysis plan. It remains the sole baseline for candidate and final
+  integrated comparisons.
+- Compare route resource behavior using raw input/cached-input/output tokens,
+  duration, retries, compactions, acceptance, and terminal state.
+- Use A1 capability/treatment screening at each model's documented default, A2
+  within-model effort boundary search, A3 frozen passing-pair comparison, Stage
+  B prompt interaction, and Stage C cohort locks. Prompts stay frozen through
+  A1/A2/A3; only shortlisted pairs enter Stage B. After selecting the final
+  instruction hash, requalify every committed preferred and fallback route
+  under that same hash before Stage C.
+- Freeze all non-candidate parent routes, agent routes, prompts, tools, context,
+  repository snapshot, validators, retries, and acceptance behavior for per-
+  agent attribution. Unpinned/adaptive experiments are policy-level controls.
+- Retain candidate-caused failures in resource and acceptance outcomes. Permit a
+  complete-pair rerun only for a preclassified independent transient harness
+  failure under the capped attrition rule; unexplained or differential loss
+  blocks the affected conclusion.
+
+**Out of Scope:**
+
+- Final route-policy creation, installed defaults, final aggregate identities,
+  or release confirmation.
 
 **Key Files:**
 
-- `tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.py` - current Python runner to replace or extend
-- `tests/speckit-pro/layer6-efficiency/lib/quality-scorer.py` - current lexical smoke scorer to layer beneath semantic gates
-- `tests/speckit-pro/layer6-efficiency/fixtures-codex/` - three current fixture directories and seven-role backlog
-- `tests/speckit-pro/unit/test-efficiency-codex-runner.py` - current runner contract coverage
-- `tests/speckit-pro/unit/test-efficiency-runner-portability.py` - current Python portability coverage
+- `tests/speckit-pro/layer6-efficiency/run_codex_role_eval.py` - current runner to replace for qualification
+- [proposed] `tests/speckit-pro/layer6-efficiency/lib/agent_materializer.py`
+- [proposed] `tests/speckit-pro/layer6-efficiency/lib/statistical_analysis.py`
+- `tests/speckit-pro/layer6-efficiency/fixtures-codex/` - current fixtures and proposed expansion
+- [proposed] `tests/speckit-pro/unit/test_efficiency_codex_runner.py`
 
 ---
 
-### G56R-004: Policy Control Definition and Dominance Contract
+### G56R-004: Policy Controls and Adaptive Comparators
 
 **Priority:** P1 | **Depends On:** G56R-003 | **Enables:** G56R-005
 
-**Goal:** Define, exact-treatment validate, and freeze policy-level controls and
-their dominance rule before the final static core exists.
+**Goal:** Define, exact-treatment validate, and freeze policy-level controls
+before the final static routing policy exists.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
 Projected reviewable LOC: 235 | Suggested slices: 1 | Status: ok |
@@ -570,126 +408,117 @@ Budget result: bounded to policy orchestration and replay fixtures
 
 **Scope:**
 
-- Define, exact-treatment validate, content-address, and freeze the unpinned,
-  adaptive, and Ultra controls; Ultra includes all automatically spawned work.
-- Freeze every control parameter and adaptive signal/threshold/escalation path,
-  plus quality eligibility, dominance metrics and margins, confidence method,
-  multiplicity position, and integrated-confirmation arm assignment. Validate
-  control execution and telemetry with smoke and replay fixtures.
-- Define material dominance to require every mandatory safety, quality,
-  reliability, availability, and support-row gate; frozen quality, reliability,
-  duration, and guardrail non-inferiority margins; and the predeclared canonical-
-  resource superiority margin.
-- Keep every result policy-level and never use it as causal evidence for one
-  agent route. G56R-004 does not compare with or conclude whether the future
-  `universal_core_policy_id` is dominated; G56R-011 owns that comparison.
-- Freeze the messaging consequence: a materially dominated static release may
-  ship for declared operational simplicity but cannot claim efficient, optimal,
-  or best measured routing.
+- Define, exact-treatment validate, content-address, and freeze unpinned,
+  adaptive, and justified high-effort controls. Include automatically spawned
+  child work in any orchestration-changing control.
+- Freeze adaptive signals, thresholds, escalation/de-escalation paths, budgets,
+  quality eligibility, dominance metrics and margins, confidence method,
+  multiplicity position, and integrated-confirmation arm assignment.
+- Define material dominance to require every mandatory safety, role, quality,
+  reliability, and availability gate plus the predeclared resource/duration
+  margins. Validate control execution and telemetry with replay and smoke data.
+- Keep results policy-level. G56R-004 cannot conclude whether the future static
+  `core_routing_policy_id` is dominated; G56R-011 performs that comparison.
+- Freeze the messaging rule: a materially dominated static release may ship for
+  declared operational simplicity but cannot claim efficient, optimal, or best
+  measured routing.
 
 ---
 
-### G56R-005: Harness Budgets and Boundary Simulation
+### G56R-005: Model Availability, Fallback, and Recovery Simulation
 
 **Priority:** P1 | **Depends On:** G56R-004 | **Enables:** G56R-006
 
-**Goal:** Prove evaluation accounting at campaign, workflow, and quota
-boundaries without adding production scheduler scope.
+**Goal:** Prove bounded resolver and recovery semantics before the installer
+uses real route policies.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
 Projected reviewable LOC: 242 | Suggested slices: 1 | Status: ok |
 Production files: approximately 3 | Total files: approximately 10 |
-Budget result: synthetic boundary fixtures before live quota experiments
+Budget result: synthetic availability and recovery fixtures before live UAT
 
 **Scope:**
 
-- Enforce campaign and objective canonical-use/time, plan-native usage where
-  applicable, retry, subagent, context-growth, cancellation, and escalation/
-  de-escalation budgets in the harness.
-- Simulate limit-near/exhausted, reset crossing, timeout, continue, and cancel
-  terminal outcomes. Production checkpoint/resume is a separate follow-up.
-- Mark reset-crossing runs and exclude them from ordinary within-window
-  throughput inference while retaining canonical use through the terminal stop.
-- Validate the boundary contracts frozen by G56R-001 for every manifest row:
-  observable active-turn and new-work platform behavior, durable artifacts,
-  graceful termination, supported resume/rerun path, user-visible recovery, and
-  the prohibition on plugin-initiated purchase, auto top-up, overage, or route
-  change. Freeze and record any pre-existing account-level automation; do not
-  introduce or claim a production scheduler gate.
+- Define fixture route policies and simulate preferred model absent, effort
+  unsupported, discovery unavailable, exact invocation probe success/failure,
+  treatment-probe failure, approved/unapproved service reroute, and no safe
+  required route.
+- Simulate optional-helper unavailable, validated no-helper continuation,
+  strict override incompatibility, bounded retry, fallback-list exhaustion,
+  rollback, atomic no-write, and previous-known-good installation preservation.
+- Require deterministic resolution reasons:
+  `preferred_model_unavailable`, `effort_unsupported`,
+  `capability_discovery_unavailable`, `treatment_probe_failed`, and
+  `no_safe_route`; distinguish every service reroute from these plugin reasons.
+- Reject loops, unqualified adjacent models, generic-agent substitution,
+  omitted model/effort inheritance, partial required-agent installation, or
+  fallback changes to instructions, tools, skills, MCP, sandbox, mutation, or
+  output contracts.
+- Enforce bounded campaign/workflow time, retries, subagent fan-out, context
+  growth, cancellation, and escalation/de-escalation in the harness. Production
+  checkpoint/resume scheduling remains separate follow-up work.
 
 ---
 
-### G56R-006: Subscription-aware Installer Defaults and Explicit Override
+### G56R-006: Capability-aware Resolver, Materializer, Installer, and Strict Override
 
 **Priority:** P1 | **Depends On:** G56R-005 |
 **Enables:** G56R-007 through G56R-010
 
-**Goal:** Implement the deferred Python agent installer, install role-pinned
-defaults predictably, and preserve one model-only compatibility override.
+**Goal:** Implement the reusable installation framework and prove it against
+fixture route policies without creating final route aggregates.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
 Projected reviewable LOC: 265 | Suggested slices: 1 | Status: ok |
-Production files: approximately 4 |
-Total files: approximately 10 |
-Budget result: re-estimate at scaffold; within one installer-policy slice by construction
+Production files: approximately 4 | Total files: approximately 10 |
+Budget result: re-estimate at scaffold; one resolver/installer policy slice
 
 **Scope:**
 
-- Implement and activate the currently deferred `install-codex-agents` registry
-  operation in the Python install helper; do not restore the deleted shell
-  installer.
-- Define `universal_core_policy_id` as the versioned ordered mapping from nine
-  core roles to plugin-owned `installable_agent_policy_id` values plus the
-  plugin-owned orchestration/retry hash. Define `optional_helper_policy_id` as a
-  hash of the helper definition plus the complete ordered `plan_key ->
-  helper_installation_state_id` mapping. Each row-specific state ID hashes only
-  `installed_enabled` or `not_installed`, the resolved helper policy or null,
-  invocation rule, no-helper contract, and capability evidence. Bind both
-  aggregates into `release_policy_id` with the required environment-contract
-  hash.
-- Install and verify each plugin-owned `installable_agent_policy_id` plus the
-  three aggregate IDs. Standard speed remains an environment-contract
-  prerequisite verified by treatment traces; the installer neither claims nor
-  mutates an unsupported per-agent speed field.
-- Retain one model-only override for the nine required core agents. Change
-  destination copies, never bundled source; retain each installed effort,
-  prompt, and sandbox; leave Spark unchanged and preserve the Standard-speed
-  environment requirement. Abort before any write if the tested client/catalog
-  cannot prove compatibility for every resulting model-effort tuple under that
-  requirement. Arbitrary effort mappings are out of scope.
-- Distinguish known unsupported, known unavailable, and unresolved availability.
-  Abort atomically for the first two; disclose unresolved preflight, require
-  acknowledgement, and require a post-install treatment-delivery canary only
-  when tuple compatibility is proven but authoritative entitlement preflight is
-  unavailable. Apply hard availability aborts to required agents and an
-  explicitly installed helper only. Known or unresolved Spark availability on
-  a non-Spark row leaves the optional TOML out of the discoverable destination
-  and requires the no-helper path instead.
-- Reconcile the active install skill's expected set with all ten source agents,
-  including `uat-runbook-author.toml`. The plugin-managed destination set
-  contains exactly nine required core TOMLs plus the conditional helper only on
-  proven Spark rows. Exclude unrelated user-owned files from that count and
-  preserve them byte-for-byte. Any reinstall whose bound
-  `helper_installation_state_id` is `not_installed` atomically removes a stale
-  plugin-managed Spark TOML and registry entry, proves the no-helper path,
-  verifies destination content, and requires restart.
-- INVEST/vertical-slice rationale: a consumer can install any later cohort's
-  role-pinned TOMLs end-to-end without another installer redesign.
+- Implement and activate the currently deferred Python
+  `install-codex-agents` operation; do not restore the deleted shell installer.
+- Consume the G56R-003 canonical materializer. The resolver evaluates the
+  preferred route, then each ordered fallback, using a fresh
+  `runtime_capability_snapshot_id`; when discovery is unavailable, use only the
+  predeclared bounded exact invocation-probe path.
+- A route is compatible only when its model/effort and required capabilities
+  are proven and the exact materialized treatment passes. Materialize explicit
+  model and effort values; never inherit an unmeasured parent default.
+- Emit `route_resolution_id` and `resolved_agent_policy_id` for each fixture
+  agent, including attempted routes and rejection reasons. G56R-006 owns the
+  production resolver implementation and framework fixtures, not the
+  G56R-002 trace schema or final `core_routing_policy_id`,
+  `optional_helper_policy_id`, `resolved_installation_id`, or
+  `release_policy_id` values.
+- Resolve every required agent before any write. If one has no safe route,
+  preserve the previous known-good installation and report every attempt.
+  Materialize destination copies only; never mutate bundled source policies or
+  unrelated user-owned files.
+- Install the optional helper only when at least one qualified helper route
+  resolves. Otherwise omit or remove the stale plugin-managed helper and prove
+  the no-helper contract without failing the required-agent installation.
+- Retain one explicit global model override for required agents. The override is
+  strict: preserve each effort and contract, validate every resulting tuple,
+  fail atomically when any tuple is incompatible or unresolved, and never fall
+  back silently. Arbitrary user effort mappings remain out of scope.
+- Verify destination content, required-agent count, conditional helper state,
+  resolution report, restart guidance, rollback, and previous-install
+  preservation using fixture policies and fake-home tests.
+- INVEST rationale: later cohorts can supply final route policies without
+  redesigning installation.
 
 **Out of Scope:**
 
-- Per-plan or per-agent overrides, install profiles, and user-supplied effort
-  mappings.
-- Inventing entitlement results when authoritative discovery is unavailable.
-- Claude installation behavior.
+- Final preferred/fallback selection or final aggregate identities.
+- Per-agent overrides, user-supplied effort maps, or Claude installation.
 
 **Key Files:**
 
-- `speckit-pro/codex-skills/install/SKILL.md` - active install contract
+- `speckit-pro/codex-skills/install/SKILL.md` - current install contract
 - `speckit-pro/speckit_pro_runner/helpers/install.py` - current install/doctor module and proposed agent-copy owner
 - `speckit-pro/speckit_pro_runner/helpers/registry.py` - current deferred operation and proposed activation point
 - `speckit-pro/codex-agents/*.toml` - source inventory
-- `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` - current mutation/install contract tests to extend with fake-home cases
+- `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` - current tests to extend with fake-home cases
 
 ---
 
@@ -697,40 +526,35 @@ Budget result: re-estimate at scaffold; within one installer-policy slice by con
 
 **Priority:** P1 | **Depends On:** G56R-006 | **Enables:** G56R-011
 
-**Goal:** Qualify evidence-backed component policies for phase,
-implementation, and analyze/remediation work, starting with Sol, without
-claiming complete-core optimality.
+**Goal:** Produce final preferred and ordered fallback route policies for phase,
+implementation, and analyze/remediation agents.
 
 **Reviewability Budget:** Primary surface: seed/config |
 Projected reviewable LOC: 257 | Suggested slices: 1 | Status: ok |
-Production files: 0 |
-Total files: approximately 10 |
+Production files: 0 | Total files: approximately 10 |
 Budget result: re-estimate at scaffold; three disjoint TOMLs plus role evidence
 
 **Scope:**
 
-- Start with Sol/Terra hypotheses, then screen every model in the universal
-  support-manifest intersection for `phase-executor`, `implement-executor`, and
-  `analyze-executor`, including GPT-5.5 baseline and GPT-5.4. Follow A1/A2/A3
-  pair selection, Stage B prompt interaction, one Stage C cohort lock, and exact
-  treatment under the Standard-speed environment contract.
+- Screen every executable, role-eligible candidate from the frozen manifest for
+  `phase-executor`, `implement-executor`, and `analyze-executor`; retain the
+  immutable production route as comparator.
 - Score real Specify/Plan/Tasks, strict TDD implementation, and full Analyze
-  remediation contracts, not generic coding prompts.
-- Pin each winning installable policy independently; update only
-  cohort-specific descriptions, tests, and guidance required for truthfulness.
-- Keep prompts frozen in A1/A2/A3; vary candidate prompt/context only for the A3
-  shortlist in Stage B; freeze the joint policy in its Stage C cohort lock
-  without consuming integrated release-confirmation data.
-- Prove default install, explicit override, model-availability handling, and
-  rollback for this cohort without touching the other cohorts.
-- INVEST/vertical-slice rationale: the three highest-risk mutating roles share
-  one quality-first evaluation seam and become installable with complete
-  cohort-specific evidence.
+  remediation contracts rather than generic coding prompts.
+- Apply A1/A2/A3, Stage B prompt interaction, Stage C cohort lock, exact
+  treatment, task-level inference, and progressive effort search without
+  consuming integrated-confirmation data.
+- Emit one final `agent_route_policy_id` per named agent containing its preferred
+  route, ordered independently qualified fallbacks, hard contract, evidence,
+  supported client bounds, and invalidation triggers.
+- Prove each route policy against the G56R-006 resolver/installer fixtures while
+  leaving non-cohort policies frozen.
+- INVEST rationale: the three highest-risk mutating roles share a quality-first
+  evidence seam but retain independent route policies.
 
 **Out of Scope:**
 
-- Structured checklist/UAT, read-only analyst, and fast-helper routes.
-- Pro mode or API/runtime feature adoption.
+- Structured checklist/UAT, read-only analyst, and helper routes.
 
 **Key Files:**
 
@@ -738,7 +562,6 @@ Budget result: re-estimate at scaffold; three disjoint TOMLs plus role evidence
 - `speckit-pro/codex-agents/implement-executor.toml`
 - `speckit-pro/codex-agents/analyze-executor.toml`
 - `tests/speckit-pro/layer6-efficiency/fixtures-codex/` - cohort fixtures/results
-- Cohort-specific structural/install assertions selected by G56R-006
 
 ---
 
@@ -746,42 +569,39 @@ Budget result: re-estimate at scaffold; three disjoint TOMLs plus role evidence
 
 **Priority:** P1 | **Depends On:** G56R-006 | **Enables:** G56R-011
 
-**Goal:** Qualify evidence-backed component policies for checklist remediation
-and UAT runbook authoring, starting with Terra, without claiming complete-core
-optimality.
+**Goal:** Produce final preferred and ordered fallback route policies for
+checklist remediation and UAT runbook authoring.
 
 **Reviewability Budget:** Primary surface: seed/config |
 Projected reviewable LOC: 210 | Suggested slices: 1 | Status: ok |
-Production files: 0 |
-Total files: approximately 8 |
+Production files: 0 | Total files: approximately 8 |
 Budget result: re-estimate at scaffold; two role TOMLs plus evidence
 
 **Scope:**
 
-- Start with Terra, then screen the universal support-manifest intersection for
-  `checklist-executor` and `uat-runbook-author`; GPT-5.4 Mini is
-  required when exposed. Follow A1/A2/A3, Stage B, one Stage C cohort lock, and
-  exact treatment for every candidate before integration.
-- Require complete all-severity checklist remediation and executable,
-  non-circular, acceptance-criteria-linked UAT runbooks.
-- Pin independent winners while preserving workspace-write, error, and fail-open
-  boundaries.
-- Keep prompts frozen for A1/A2/A3, evaluate shortlisted prompt interactions in
-  Stage B, consume only the cohort's Stage C lock partition, then prove install/
-  override/rollback for the complete policy and tested environment.
-- INVEST/vertical-slice rationale: two structured-output mutators share a
-  measurable contract and ship independently of deep executors and analysts.
+- Screen every executable, role-eligible candidate for `checklist-executor` and
+  `uat-runbook-author`; require complete all-severity checklist remediation and
+  executable, non-circular, acceptance-criteria-linked UAT runbooks.
+- Preserve workspace-write, error, and fail-open boundaries while applying the
+  same A1/A2/A3, Stage B, Stage C, exact-treatment, effort-search, and evidence
+  rules as G56R-007.
+- Emit one final `agent_route_policy_id` per named agent with preferred route,
+  ordered independently qualified fallbacks, hard contract, evidence, client
+  bounds, and invalidation triggers.
+- Prove both policies against the G56R-006 resolver/installer fixtures without
+  consuming integrated-confirmation data.
+- INVEST rationale: two structured-output mutators share a measurable contract
+  and remain independent of deep executors and analysts.
 
 **Out of Scope:**
 
-- Quality-critical executors, read-only analysts, and latency helper.
+- Quality-critical executors, read-only analysts, and helper routes.
 
 **Key Files:**
 
 - `speckit-pro/codex-agents/checklist-executor.toml`
 - `speckit-pro/codex-agents/uat-runbook-author.toml`
 - `tests/speckit-pro/layer6-efficiency/fixtures-codex/` - cohort fixtures/results
-- Cohort-specific structural/install assertions selected by G56R-006
 
 ---
 
@@ -789,37 +609,34 @@ Budget result: re-estimate at scaffold; two role TOMLs plus evidence
 
 **Priority:** P1 | **Depends On:** G56R-006 | **Enables:** G56R-011
 
-**Goal:** Route clarification, external research, codebase analysis, and project
-context analysis independently across the full eligible subscription catalog while
-preserving evidence boundaries.
+**Goal:** Produce final preferred and ordered fallback route policies for
+clarification, research, codebase analysis, and project-context analysis.
 
 **Reviewability Budget:** Primary surface: seed/config |
 Projected reviewable LOC: 290 | Suggested slices: 1 | Status: ok |
-Production files: 0 |
-Total files: approximately 12 |
+Production files: 0 | Total files: approximately 12 |
 Budget result: re-estimate at scaffold; four TOMLs plus bounded role fixtures
 
 **Scope:**
 
-- Start with Terra, then screen every universal-intersection candidate for all
-  four roles; retain lighter models for bounded scans only when they preserve
-  the contract.
-- Start each candidate at its documented default, ascend to a stable pass when
-  needed, then descend and retest the boundary. Exclude Ultra from this
-  per-agent search and freeze Standard speed.
-- Hard-gate read-only behavior, source-domain separation, citations/file
+- Screen every executable, role-eligible candidate for `clarify-executor`,
+  `domain-researcher`, `codebase-analyst`, and `spec-context-analyst`; retain
+  lighter models only when they preserve the complete role contract.
+- Hard-gate read-only behavior, source-domain separation, citations or file
   locators, abstention, and structured return formats.
-- Apply A1/A2/A3, Stage B, one Stage C cohort lock, and exact treatment. Pin the
-  lowest-canonical-use qualified component policy per agent, not one forced
-  cohort policy; prove install/override/rollback without consuming release-
-  confirmation data or claiming complete-core optimality.
-- INVEST/vertical-slice rationale: one read-only evidence seam enables parallel
-  evaluation without mutation conflicts while preserving four distinct
-  perspective contracts.
+- Apply A1/A2/A3, Stage B, Stage C, exact treatment, progressive effort search,
+  and the shared statistical plan without consuming integrated-confirmation
+  data.
+- Emit one final `agent_route_policy_id` per named agent with preferred route,
+  ordered independently qualified fallbacks, hard contract, evidence, client
+  bounds, and invalidation triggers.
+- Prove all policies against G56R-006 resolver/installer fixtures.
+- INVEST rationale: one read-only evidence seam preserves four distinct
+  perspective contracts without mutation conflicts.
 
 **Out of Scope:**
 
-- Mutating executors, UAT authoring, and latency helper.
+- Mutating executors, UAT authoring, and helper routing.
 
 **Key Files:**
 
@@ -831,49 +648,37 @@ Budget result: re-estimate at scaffold; four TOMLs plus bounded role fixtures
 
 ---
 
-### G56R-010: Latency-first Helper Routing
+### G56R-010: Optional Helper Routing and No-helper Path
 
 **Priority:** P1 | **Depends On:** G56R-006 | **Enables:** G56R-011
 
-**Goal:** Gate Spark as an optional Pro-row capability and prove the universal
-no-helper path without overstating shared efficiency.
+**Goal:** Select qualified helper routes and prove that autopilot remains valid
+when no helper route is available.
 
 **Reviewability Budget:** Primary surface: seed/config |
 Projected reviewable LOC: 177 | Suggested slices: 1 | Status: ok |
-Production files: 0 |
-Total files: approximately 6 |
+Production files: 0 | Total files: approximately 6 |
 Budget result: re-estimate at scaffold; single-agent vertical slice
 
 **Scope:**
 
-- Retain Spark only on support-manifest rows where availability is proven.
-  Explore Luna, GPT-5.4 Mini, GPT-5.4, Terra, and other candidates on a separate
-  helper scorecard until Spark has a comparable resource measure.
-- Create and reconcile `optional_helper_policy_id` as the helper-definition hash
-  plus the complete ordered `plan_key -> helper_installation_state_id` mapping.
-  Each row state records `installed_enabled` or `not_installed`, the resolved
-  helper policy or null, invocation rule, no-helper contract, and capability
-  evidence. On a non-Spark row, retain the helper in source and payload but do
-  not copy it into the discoverable destination or installed registry; Spark
-  unavailability is not a core-install failure.
-- Hard-gate read-only/advisory scope, concise return format, and prohibition on
-  SDD reasoning or mutation.
-- Explicitly set the winning effort so omission cannot inherit an unmeasured
-  model default.
-- Measure functionality, latency, spawn reliability, fallback, and observed
-  Spark quota separately. Preserve autopilot continuation when the helper is
-  not installed, unavailable, quota-limited, not invoked, or cannot spawn.
-- Prove the no-helper path on every support row. For every qualification or
-  cohort lock for the nine-agent core and in every primary and secondary arm of
-  integrated confirmation, Spark is `not_installed`, including on Pro rows, and
-  never enters the core statistic. An
-  attempted resolution, spawn, or invocation after assignment is a candidate-
-  caused hard contract failure with `A_i = 0` and retained measurable core
-  `R_i`; it cannot be rerun into eligibility. Only independent harness
-  contamination permits invalidation and rerun. Install and test Spark solely in
-  the separate optional-helper campaign.
-- INVEST/vertical-slice rationale: one optional leaf helper can be evaluated,
-  shipped, or rejected without changing any core executor.
+- Screen discovered latency-oriented candidates, including the production
+  helper route when executable, under the same explicit route and exact-
+  treatment rules as required agents.
+- Hard-gate read-only/advisory scope, concise return format, low-latency
+  behavior, and prohibition on SDD reasoning or mutation. Explicitly materialize
+  the qualified effort rather than inheriting a parent default.
+- Emit the helper's final `agent_route_policy_id` with preferred route and
+  ordered independently qualified fallbacks. Also freeze the no-helper contract
+  used when none resolves. G56R-011 creates the aggregate
+  `optional_helper_policy_id` after integration.
+- Measure functionality, latency, spawn reliability, resolution reasons, and
+  result use. Prove autopilot continuation when the helper is omitted,
+  unavailable, not invoked, or cannot spawn.
+- Keep helper qualification separate from the required nine-agent core
+  statistic; helper absence is not a required-core installation failure.
+- INVEST rationale: the optional leaf can be selected, omitted, or rejected
+  without changing any required agent.
 
 **Out of Scope:**
 
@@ -882,151 +687,99 @@ Budget result: re-estimate at scaffold; single-agent vertical slice
 **Key Files:**
 
 - `speckit-pro/codex-agents/autopilot-fast-helper.toml`
-- `speckit-pro/codex-skills/speckit-autopilot/SKILL.md` - only directly tied helper guidance
+- `speckit-pro/codex-skills/speckit-autopilot/SKILL.md` - directly tied helper guidance
 - `tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json`
 - [proposed] `tests/speckit-pro/layer6-efficiency/fixtures-codex/autopilot-fast-helper/`
 
 ---
 
-### G56R-011: Payload, Documentation, UAT, and Release Proof
+### G56R-011: Payload, Installed Skill UAT, Fallback Proof, and Release Integration
 
 **Priority:** P1 | **Depends On:** G56R-007, G56R-008, G56R-009, G56R-010 |
 **Enables:** Release
 
-**Goal:** Publish one internally consistent Codex payload whose nine-agent
-universal core is confirmed against production, row comparators, and frozen
-policy controls, including powered long-horizon and attributable plan-native
-gates, while installed Codex skills prove named-agent dispatch and result use
-and the optional helper is proven through a separate gate.
+**Goal:** Compose, install, and prove one internally consistent routing policy
+whose skills use the named agents and whose resolver behaves safely when a
+preferred route is unavailable.
 
 **Reviewability Budget:** Primary surface: docs/process |
 Projected reviewable LOC: 395 | Suggested slices: 1 | Status: ok |
-Production files: approximately 2 |
-Total files: approximately 15 |
+Production files: approximately 2 | Total files: approximately 15 |
 Budget result: re-estimate at scaffold; split release evidence from source fixes if warned
 
 **Scope:**
 
+- After all cohort locks, create final `resolved_agent_policy_id` records and
+  `core_routing_policy_id` from the nine required `agent_route_policy_id`
+  values; create `optional_helper_policy_id` from the helper route policy and
+  no-helper contract; resolve them into `resolved_installation_id`; then bind
+  the evidence, resolver version, UAT, invalidation rules, and bounded claims
+  into `release_policy_id`.
 - Rebuild `dist/codex` through the Python-authoritative payload builder and
   regenerate integrity metadata; never hand-edit generated agent files.
-- Reconcile source, payload, install, benchmark, canary, rollback, and PR packet
-  using `support_manifest_id`, `universal_core_policy_id`,
-  `optional_helper_policy_id`, every row's `helper_installation_state_id`,
-  `release_policy_id`, each
-  `installable_agent_policy_id`, each tested `subscription_environment_id`, and
-  linked `execution_trace_id` values. Source and payload retain ten definitions;
-  the plugin-managed destination set has exactly nine core agents plus the
-  conditional helper only on a proven Spark row. Unrelated user-owned files are
-  outside that count and remain byte-for-byte intact. Any reinstall whose bound
-  `helper_installation_state_id` is `not_installed` removes any stale plugin-
-  managed Spark TOML and registry entry.
-- Update active Codex install/autopilot/public docs with the evidence-backed
-  universal-core/optional-helper policy, global override, restart, entitlement,
-  progressive-claim, and rollback boundaries while preserving historical
-  records.
-- Publish a versioned `skill_agent_usage_manifest` for every active Codex skill
-  entry point and all ten source agents. Update each applicable skill instruction
-  to name the installed custom agent, triggering condition, result-consumption
-  contract, and allowed fallback; classify other mappings as conditional,
-  prohibited, or not applicable rather than leaving them implicit. Reject any
-  dispatch reference that does not resolve to the installed source inventory.
+- Reconcile source, payload, installation, benchmark, rollback, and release
+  packet identities. Source and payload retain ten definitions; the plugin-
+  managed destination contains nine required agents plus the helper only when a
+  qualified route resolves. Preserve unrelated user-owned files byte-for-byte
+  and remove a stale plugin-managed helper when the no-helper state applies.
+- Update active install/autopilot/public guidance with preferred/fallback route
+  resolution, strict override, effective-route reporting, restart, rollback,
+  service-reroute distinction, and the no-helper path.
+- Run final integrated confirmation of the assembled preferred nine-agent core
+  against the immutable production core on untouched data. Require all safety,
+  quality, reliability, accepted-workflow, raw-resource, duration, retry,
+  compaction, attrition, and powered long-horizon gates, including the
+  predeclared environment-independent resource-superiority endpoint. Passing
+  proves bounded component-wise improvement, not global optimality among every
+  possible assembled policy.
+- Compare the final static core with the frozen G56R-004 controls on predeclared
+  secondary arms. A materially dominant qualified control restricts efficiency
+  wording under the frozen messaging rule.
+- Publish `skill_agent_usage_manifest` for every active Codex skill entry point
+  and all ten source agents. Update each applicable skill to name the installed
+  agent, triggering condition, allowed route resolution, and result-consumption
+  contract; classify other mappings as conditional, prohibited, or not
+  applicable.
+- Run representative workflows through actual installed Codex skills. Across
+  the set, prove every required core agent was spawned by its name and that its
+  returned result affected a decision, artifact, or validation. Direct harness
+  injection, generic-agent substitution, missing required spawn, or unconsumed
+  result fails release proof. Test the helper in a separate workflow and prove
+  the no-helper path; no single workflow must spawn all ten agents.
+- Bind every installed UAT trace as:
+
+  ```text
+  skill_id
+    -> skill_instruction_hash
+    -> named_agent
+    -> route_resolution_id
+    -> effective_model_evidence_or_null
+    -> effective_effort_evidence_or_null
+    -> exact_treatment_evidence
+    -> returned_result_hash
+    -> consuming_decision_or_artifact
+  ```
+
+- Prove installed preferred selection and these bounded failure scenarios:
+  preferred model absent, effort unsupported, discovery unavailable with
+  allowed exact probe, treatment-probe failure, no safe required route with
+  atomic no-write and previous-install preservation, helper unavailable and
+  no-helper continuation, strict override failure, and rollback.
+- For service rerouting, prove a rerouted run never scores the requested route;
+  an approved destination may continue only as separately labeled runtime UAT,
+  while an unapproved destination fails treatment.
 - Run deterministic source, payload, installed-cache, default-suite,
-  active-path, benchmark replay, and install verification gates.
-- Run cohort locks and one integrated multi-stratum release-confirmation
-  campaign. Use the same locked objectives in the canonical row and every other
-  mandatory row or predeclared equivalence class. The exactly one pre-outcome
-  canonical row owns production superiority; every other stratum uses its AC-
-  2.13 assigned comparator and owns non-inferiority under the same multiplicity
-  family. For every support-manifest row and named-category resolution, prove
-  authentication, entitlement, model/effort catalog, installation, effective
-  tools, exact treatment, comparator delivery, and no-helper behavior. Run at
-  least one live smoke per predeclared plan-equivalence class. An inaccessible
-  mandatory row remains `unverified` and blocks universal release; another
-  class cannot cover it without the equivalence proof frozen before screening.
-- Execute the supplementary long-workflow boundary/recovery portfolio selected
-  before treatment from the frozen long-horizon task/protocol definition. Each
-  canary predeclares at least four required phases and its orchestration,
-  interruption, validation-repair, compaction-stress, or allowance-boundary
-  events. Report per-row results and separated wait categories, validate the
-  frozen boundary/recovery contract, and make no scheduler or comparative-
-  efficiency claim from canaries. They never replace the powered integrated
-  long-horizon stratum.
-- Evaluate the component-wise assembled installed nine-agent core exactly once
-  on the untouched integrated release-confirmation corpus after cohort locks.
-  Pair it with the immutable production core in the canonical row and each
-  non-canonical row's frozen assigned comparator elsewhere, with Spark
-  `not_installed` in every primary and secondary arm. A candidate attempt to
-  resolve, spawn, or invoke the absent helper is a hard contract failure with
-  `A_i = 0` and retained measurable core `R_i`, not a rerunnable invalid
-  observation. Only independently proven harness contamination permits
-  invalidation and rerun. This candidate-versus-assigned-comparator primary
-  family is the sole promotion decision; the secondary controls only gate
-  efficiency wording.
-  It must pass canonical production superiority plus every other stratum's
-  assigned-comparator non-inferiority, acceptance, safety/quality, guardrail,
-  and manifest-row qualification without pooling regimes. Passing does not
-  establish global optimality among alternative complete assemblies. Failure
-  reopens selection and requires a new versioned release-confirmation corpus.
-- Run representative workflows through the actual installed Codex skill entry
-  points. Across the workflow set, require trace evidence for every core agent
-  showing the complete chain from skill ID and hash, through
-  `spawn_agent(named installed agent)` and returned-result hash, to the consuming
-  decision, artifact, or validation. Direct harness injection, generic-agent
-  substitution, a missing required spawn, or an unconsumed result fails release
-  proof. Trigger and observe the optional helper only in its separate supported-
-  row campaign, and prove the no-helper path elsewhere. No individual workflow
-  must spawn all ten agents.
-- Bind every objective to the locked workload manifest and pre-treatment
-  stratum. In every required plan row/equivalence class, independently gate the
-  confidence-powered `long_horizon_stratum_id` on acceptance, semantic quality,
-  paired mean and p95 canonical resource, p95 duration, late failure, retries,
-  and compaction. Require canonical-row `-delta_long_horizon` superiority before
-  long-horizon efficiency wording; no other stratum may offset failure.
-- Prove the telemetry-attrition registry passed: only one capped complete-pair
-  rerun for proven transient harness loss, all attempts retained, and no unknown,
-  recurrent, inherent, threshold-exceeding, or unexplained arm-differential loss.
-  A complete-case subset cannot support release.
-- Require every `required` row to pass its frozen plan-native allowance non-
-  inferiority guardrail under identical bucket/window semantics and account
-  isolation and the explicit `native_allowance_noninferiority` claim boundary.
-  A material native regression blocks universal release. An
-  `unavailable` row is limited to the explicit `canonical_resource_only` claim
-  boundary and cannot support native allowance, credit, reset, or throughput
-  improvement wording.
-- Run the controls frozen by G56R-004 as predeclared secondary arms on the same
-  untouched locked objectives in the canonical row and every mandatory row or
-  proven equivalence class under the frozen multiplicity strategy. Compare each
-  eligible control with the final `universal_core_policy_id`, not an earlier
-  static prototype. Control parameters cannot change after G56R-004, and a
-  control that misses any mandatory safety, quality, reliability, availability,
-  support-row, or non-inferiority gate cannot materially dominate. These arms do
-  not alter the frozen core or replace the candidate-versus-assigned-comparator
-  primary promotion family; they determine whether AC-9.4 permits the bounded
-  efficiency claim. A control hash, adaptive parameter, margin, confidence
-  method, multiplicity, or arm-assignment change invalidates the affected
-  control comparison and efficiency claim.
-- Separately gate Spark on supported Pro rows and the no-helper path everywhere
-  else through the optional-helper campaign.
-- Pin the support manifest, named-category resolutions, canonical schedule,
-  complete assignment-time plan-population snapshot and fallback, workload-
-  population manifest, telemetry-attrition registry, canonical-rate schedule
-  ID/hash/formula/aliases/precision/rounding, canonical row/environment/
-  rationale/candidate hash/lock timestamp, per-row comparator-selection rules,
-  native-guardrail state, identities, and claim boundaries, minimum/tested Codex
-  versions, capability probes, environments, and rate regimes. Define affected-
-  evidence rerun triggers and production drift alerts.
-- Produce a public-readable PR packet with selected and rejected candidates,
-  workload-stratum and long-horizon results, telemetry attrition, canonical-rate
-  identity, plan-native guardrails/claim boundaries, known gaps, review order,
-  rollback, and release evidence.
-- INVEST/vertical-slice rationale: this final integration slice tests whether
-  four independently selected cohorts form a passing consumer-installable
-  system and reopens selection if they do not.
+  active-path, benchmark replay, install, rollback, and skill-driven integration
+  gates appropriate to the implementation changes. Produce a public-readable
+  evidence packet with selected/rejected routes, fallback order, controls,
+  long-horizon results, known gaps, review order, rollback, and rerun triggers.
+- INVEST rationale: the integration slice proves independently selected route
+  policies form a safe consumer-installable system and reopens selection when
+  they do not.
 
 **Out of Scope:**
 
-- Plans or environments absent from the frozen support manifest and unrelated
-  XPLAT cleanup.
+- Global optimality across every complete ten-agent assembly.
 - Manual version bumps; release-please owns release versioning.
 
 **Key Files:**
@@ -1039,7 +792,6 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
 - `speckit-pro/codex-skills/*/SKILL.md` - active skill-to-agent contracts
 - `docs-site/src/content/docs/install/codex.md`
 - `tests/speckit-pro/layer1-structural/validate-codex-agents.py`
-- [proposed] `tests/speckit-pro/layer1-structural/validate-codex-routing-docs.py`
 - `tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py`
 - `tests/speckit-pro/layer7-integration/` - skill-driven spawn and result-use proof
 - `docs/ai/specs/.process/` - release and live-UAT evidence
@@ -1054,7 +806,7 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
 |---|---|
 | Codex agent source | Ten TOML files under `speckit-pro/codex-agents/` |
 | Installed destination | `~/.codex/agents/` or explicit compatible destination |
-| Evaluation | Python Layer 6 prompt-emulation runner, three existing role fixtures, lexical smoke scorer; current results cannot support release |
+| Evaluation | Python Layer 6 prompt-emulation runner, three existing role fixtures, and lexical smoke scorer; current results cannot qualify production routes |
 | Payload build | Python 3.11+ `scripts/build-plugin-payloads.py` and runner payload gate |
 | Release | release-please plus deterministic source/payload/install/release gates |
 
@@ -1062,23 +814,24 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
 
 | Change | Where | Detail |
 |---|---|---|
-| Research record | `docs/ai/research/` | Dated official facts, conflicts, candidate matrix, role contracts |
-| Support manifest | `docs/ai/research/` | Finite plan/accounting variants, named-category resolutions, assignment-time population/fallback contract, one canonical row, native-guardrail states, deterministic per-row comparators, boundary contracts, evidence hashes, support states, and equivalence classes |
-| Model-effort pair evaluation | Layer 6 Python Codex harness | Exact treatment, content-addressed canonical rate, constrained attrition, workload manifest, powered long-horizon stratum, per-plan/native qualification, disjoint corpora, task-level statistics, ten role contracts |
-| Installer policy | Python install helper and registry | Activate deferred copy helper; core/row-aware-helper/release IDs; nine-agent plugin-managed destination set plus conditional helper; model-only atomic override |
-| Agent routes | `speckit-pro/codex-agents/*.toml` | Nine-agent universal core plus separately gated optional helper |
-| Skill-to-agent orchestration | `speckit-pro/codex-skills/` and Layer 7 | Explicit named-agent dispatch contract plus installed skill-driven spawn and result-consumption proof for all nine core roles and the conditional helper |
+| Candidate route record | [proposed] `docs/ai/research/` | Dated official facts, role contracts, candidate routes, capability questions, and fixture backlog |
+| Capability and telemetry adapter | [proposed] Layer 6 Python libraries | Runtime capability snapshot, exact invocation probe, telemetry profile, treatment and reroute trace schemas |
+| Route evaluation | Layer 6 Python harness | Canonical materializer, ten-role fixtures, disjoint corpora, scoring, statistics, raw resource evidence, and long-horizon stratum |
+| Fallback simulation | [proposed] Layer 6 replay fixtures | Availability, effort, probe, service-reroute, no-safe-route, helper, atomicity, rollback, and retry cases |
+| Installer policy | Python install helper and registry | Capability-aware resolver, explicit materialization, strict override, atomic complete-matrix write, reporting, and preservation |
+| Agent route policies | Route-policy evidence plus `speckit-pro/codex-agents/*.toml` | Preferred/fallback order remains project-owned; destination TOMLs materialize one explicit route |
+| Skill-to-agent orchestration | `speckit-pro/codex-skills/` and Layer 7 | Named-agent dispatch plus installed spawn and result-consumption proof for all required agents and the optional helper |
 | Generated payload | `dist/codex/` | Rebuild from source and refresh integrity evidence |
-| Consumer guidance | Codex install/autopilot/docs surfaces | Core/helper policy, fallback, restart, availability, rollback |
+| Consumer guidance | Codex install/autopilot/docs surfaces | Route resolution, fallback, strict override, effective route, restart, rollback, and no-helper behavior |
 
 ### Local Development Setup
 
 | Requirement | How |
 |---|---|
-| Python | Python 3.11+ standard library runner already required by SpecKit Pro |
-| Codex | Current client with custom-agent TOML support and access to shortlisted models |
-| Live eval budget | Explicit developer-local budget; never required by default CI |
-| Official accounting | Freeze canonical token schedule and plan-native/legacy regimes; API pricing is diagnostic only |
+| Python | Python 3.11+ standard-library runner already required by SpecKit Pro |
+| Codex | Pinned client with custom-agent TOML support and discovered or exactly probed candidate routes |
+| Live evaluation | Explicit developer-local campaign and workflow budgets; never required by default CI |
+| Evidence | Versioned capability snapshot, telemetry profile, exact-treatment trace, immutable production comparator, and raw resource observations |
 
 ## References
 
@@ -1086,25 +839,9 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
 - **Roadmap MOC:** [codex-gpt-5-6-agent-routing-roadmap-MOC.md](codex-gpt-5-6-agent-routing-roadmap-MOC.md)
 - **Constitution:** [../../../.specify/memory/constitution.md](../../../.specify/memory/constitution.md)
 - **Project standards:** [../../../AGENTS.md](../../../AGENTS.md) and [../../../CLAUDE.md](../../../CLAUDE.md)
-- **OpenAI latest model:** [Using GPT-5.6](https://developers.openai.com/api/docs/guides/latest-model)
-- **OpenAI migration guide:** [Upgrading to GPT-5.6 Sol](https://developers.openai.com/api/docs/guides/upgrading-to-gpt-5p6-sol)
-- **Codex models, Max, and Ultra:** [Codex models](https://learn.chatgpt.com/docs/models)
-- **Codex model routing:** [Choosing models and reasoning](https://learn.chatgpt.com/docs/agent-configuration/subagents#choosing-models-and-reasoning)
-- **Codex custom-agent configuration:** [Custom agents](https://learn.chatgpt.com/docs/agent-configuration/subagents#custom-agents)
-- **Model details:** [Sol](https://developers.openai.com/api/docs/models/gpt-5.6-sol), [Terra](https://developers.openai.com/api/docs/models/gpt-5.6-terra), [Luna](https://developers.openai.com/api/docs/models/gpt-5.6-luna)
-- **Codex authentication:** [ChatGPT subscription access versus API-key usage](https://learn.chatgpt.com/docs/auth)
-- **Codex plans, credits, and limits:** [Codex pricing](https://learn.chatgpt.com/docs/pricing)
-- **ChatGPT plan access:** [Using Codex with your ChatGPT plan](https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan)
-- **Native and legacy accounting:** [Codex rate card](https://help.openai.com/en/articles/20001106-codex-rate-card)
-- **Healthcare, Regulated, Clinicians, and Codex Local:** [HIPAA-eligible products and functionality](https://help.openai.com/en/articles/20001069-chatgpt-healthcare-and-regulated-workspace-functionality)
-- **FedRAMP Codex authentication boundary:** [ChatGPT Enterprise and API Platform for FedRAMP](https://help.openai.com/en/articles/20001070-chatgpt-enterprise-and-api-platform-for-fedramp)
-- **ChatGPT Gov environment:** [Introducing ChatGPT Gov](https://openai.com/global-affairs/introducing-chatgpt-gov/)
-- **Individual-plan credits:** [Using credits for flexible usage](https://help.openai.com/en/articles/12642688-using-credits-for-flexible-usage-in-chatgpt-freegopluspro)
-- **Managed-plan accounting variants:** [Flexible managed-plan pricing](https://help.openai.com/en/articles/11487671-flexible-pricing-for-chatgpt-enterprise-plans)
-- **Codex telemetry capability surface:** [App server](https://learn.chatgpt.com/docs/app-server)
-- **Speed modes and Spark:** [Codex speed](https://learn.chatgpt.com/docs/agent-configuration/speed)
-- **ChatGPT plugins and permissions:** [Plugins](https://learn.chatgpt.com/docs/plugins)
-- **Managed workspace controls:** [ChatGPT Work Admin FAQ](https://learn.chatgpt.com/docs/enterprise/work-admin-faq)
-- **Long-workflow controls:** [Long-running work](https://learn.chatgpt.com/docs/long-running-work)
-- **API-price diagnostic only:** [OpenAI API pricing](https://developers.openai.com/api/docs/pricing)
+- **Codex models and reasoning controls:** [Codex models](https://developers.openai.com/codex/models)
+- **Codex custom-agent behavior:** [Codex subagents](https://developers.openai.com/codex/subagents)
+- **Codex model discovery, capabilities, token use, and reroute events:** [Codex app server](https://developers.openai.com/codex/app-server)
+- **Codex configuration:** [Configuration reference](https://developers.openai.com/codex/config-reference)
+- **Codex non-interactive JSON events:** [Non-interactive mode](https://developers.openai.com/codex/noninteractive)
 - **Prompt guidance:** [GPT-5.6 prompting best practices](https://developers.openai.com/api/docs/guides/latest-model#prompting-best-practices)

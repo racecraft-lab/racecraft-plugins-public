@@ -1,77 +1,78 @@
 ---
-up: "[Codex ChatGPT Subscription Agent Routing Roadmap](codex-gpt-5-6-agent-routing-technical-roadmap.md)"
+up: "[Codex Agent Model Routing and Graceful Fallback Implementation Roadmap](codex-gpt-5-6-agent-routing-technical-roadmap.md)"
 related:
-  - "[Codex ChatGPT Subscription Agent Routing PRD](../../prd-codex-gpt-5-6-agent-routing.md)"
+  - "[Codex Agent Model Routing and Graceful Fallback PRD](../../prd-codex-gpt-5-6-agent-routing.md)"
 status: "Draft; G56R-001 ready to scaffold"
 rank:
 spec_id: "codex-gpt-5-6-agent-routing"
 structureVersion: 1
 ---
 
-# Codex ChatGPT Subscription Agent Routing - Map of Content
+# Codex Agent Model Routing and Graceful Fallback - Map of Content
 
-Navigation map for the evidence-first Codex subscription-routing roadmap.
+Navigation map for evidence-backed per-agent model routing and graceful fallback.
 
 ## Epics (curated)
 
-### Evidence Baseline
+### Candidate and Role Contracts
 
-Why: Establish current source truth for model, subscription, and workspace
-capabilities before any route becomes an installed default.
+Why: Establish candidate model and effort routes plus the immutable safety,
+tool, mutation, and output contracts for every named agent.
 
-- [G56R-001 Research Baseline and Candidate Matrix](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-001-research-baseline-and-candidate-matrix)
+- [G56R-001 Candidate Route Baseline and Role Contracts](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-001-candidate-route-baseline-and-role-contracts)
 
-### Telemetry Foundation
+### Capability and Treatment Evidence
 
-Why: Prove authentication, treatment delivery, usage accounting, and trace
-completeness before live candidate comparison.
+Why: Discover model and effort capabilities, prove exact treatment, and define
+the telemetry needed for reproducible route evaluation.
 
-- [G56R-002 Authentication, Telemetry, Treatment, and Trace Schema](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-002-authentication-telemetry-treatment-and-trace-schema)
+- [G56R-002 Capability Discovery, Telemetry Profile, and Exact-Treatment Contract](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-002-capability-discovery-telemetry-profile-and-exact-treatment-contract)
 
 ### Evaluation Runner
 
-Why: Run the locked corpus and make component qualification statistically
-reproducible without consuming final release evidence.
+Why: Run exact materialized agent policies against governed fixtures and make
+quality, reliability, and resource qualification statistically reproducible.
 
-- [G56R-003 Corpus Runner, Acceptance Scoring, and Statistics](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-003-corpus-runner-acceptance-scoring-and-statistics)
+- [G56R-003 Evaluation Runner, Fixtures, Scoring, and Statistical Analysis](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-003-evaluation-runner-fixtures-scoring-and-statistical-analysis)
 
 ### Policy Controls
 
-Why: Freeze the unpinned, adaptive, and Ultra controls used to bound the final
-static-policy efficiency claim.
+Why: Freeze unpinned and adaptive comparators that test whether static routing
+remains justified without changing the named-agent contract.
 
-- [G56R-004 Policy Control Definition and Dominance Contract](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-004-policy-control-definition-and-dominance-contract)
+- [G56R-004 Policy Controls and Adaptive Comparators](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-004-policy-controls-and-adaptive-comparators)
 
-### Harness Boundaries
+### Fallback and Recovery
 
-Why: Bound campaign usage and prove reset, cancellation, checkpoint, and resume
-behavior without expanding the production scheduler.
+Why: Prove model absence, unsupported effort, treatment failure, bounded
+fallback, atomic no-write, rollback, and no-safe-route behavior.
 
-- [G56R-005 Harness Budgets and Boundary Simulation](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-005-harness-budgets-and-boundary-simulation)
+- [G56R-005 Model Availability, Fallback, and Recovery Simulation](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-005-model-availability-fallback-and-recovery-simulation)
 
-### Installer Policy
+### Resolution and Installation
 
-Why: Install one universal core atomically while preserving explicit,
-validated compatibility overrides.
+Why: Resolve the first qualified compatible route, materialize an explicit
+agent policy, install the full matrix atomically, and keep overrides strict.
 
-- [G56R-006 Subscription-aware Installer Defaults and Explicit Override](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-006-subscription-aware-installer-defaults-and-explicit-override)
+- [G56R-006 Capability-aware Resolver, Materializer, Installer, and Strict Override](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-006-capability-aware-resolver-materializer-installer-and-strict-override)
 
 ### Role Cohorts
 
-Why: Qualify four disjoint agent groups in parallel after shared evidence and
-installation contracts stabilize.
+Why: Select one preferred route and ordered qualified fallbacks for each core
+agent and the optional helper after shared contracts stabilize.
 
 - [G56R-007 Quality-critical Executor Routing](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-007-quality-critical-executor-routing)
 - [G56R-008 Structured-work Agent Routing](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-008-structured-work-agent-routing)
 - [G56R-009 Read-only Reasoning Agent Routing](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-009-read-only-reasoning-agent-routing)
-- [G56R-010 Latency-first Helper Routing](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-010-latency-first-helper-routing)
+- [G56R-010 Optional Helper Routing and No-helper Path](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-010-optional-helper-routing-and-no-helper-path)
 
-### Release Proof
+### Release Integration
 
-Why: Confirm the assembled nine-agent core, optional helper behavior, installed
-payload, and release evidence before publishing defaults.
+Why: Reconcile payloads, prove installed skills spawn and consume results from
+the named agents, verify fallback and no-helper behavior, and publish rollback
+evidence before releasing defaults.
 
-- [G56R-011 Payload, Documentation, UAT, and Release Proof](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-011-payload-documentation-uat-and-release-proof)
+- [G56R-011 Payload, Installed Skill UAT, Fallback Proof, and Release Integration](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-011-payload-installed-skill-uat-fallback-proof-and-release-integration)
 
 <!-- GENERATED:INDEX:START (do not edit; regenerated by generate-spec-index) -->
 <!-- GENERATED:INDEX:END -->
