@@ -63,7 +63,7 @@ agent and the optional helper after shared contracts stabilize.
 
 - [G56R-007 Quality-critical Executor Routing](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-007-quality-critical-executor-routing)
 - [G56R-008 Structured-work Agent Routing](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-008-structured-work-agent-routing)
-- [G56R-009 Read-only Reasoning Agent Routing](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-009-read-only-reasoning-agent-routing)
+- [G56R-009 Read-only Reasoning and Orchestration-support Agent Routing](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-009-read-only-reasoning-and-orchestration-support-agent-routing)
 - [G56R-010 Optional Helper Routing and No-helper Path](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-010-optional-helper-routing-and-no-helper-path)
 
 ### Release Integration
