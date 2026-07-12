@@ -216,11 +216,74 @@
       ]
     },
     {
-      "case_id": "workflow-boundary-pass",
+      "case_id": "workflow-thin-python-dispatch-passes",
       "expected_status": "pass",
       "files": [
-        {"path": ".github/workflows/dispatch.sh", "content": "#!/usr/bin/env bash\npython3 tests/speckit-pro/run-all.py\n"},
-        {"path": ".github/workflows/helper.py", "content": "import subprocess\nsubprocess.run(['jq', '-e', '.'])\n"}
+        {"path": ".github/workflows/thin-python.yml", "content": "name: Thin Python\njobs:\n  check:\n    runs-on: ubuntu-latest\n    steps:\n      - run: python3 scripts/check.py\n"},
+        {"path": "scripts/check.py", "content": "print('checked')\n"}
+      ]
+    },
+    {
+      "case_id": "workflow-package-manager-dispatch-passes",
+      "expected_status": "pass",
+      "files": [
+        {"path": ".github/workflows/package-manager.yml", "content": "name: Package Manager\njobs:\n  check:\n    runs-on: ubuntu-latest\n    steps:\n      - run: corepack enable\n      - run: pnpm --dir docs-site validate\n      - run: \"${RUNNER_TEMP}/actionlint\" .github/workflows/*.yml\n"}
+      ]
+    },
+    {
+      "case_id": "workflow-runner-redirection-passes",
+      "expected_status": "pass",
+      "files": [
+        {"path": ".github/workflows/runner.yml", "content": "name: Runner\njobs:\n  check:\n    runs-on: ubuntu-latest\n    steps:\n      - run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < requests/check.json\n      - run: echo 'status=pass' >> \"$GITHUB_OUTPUT\"\n"},
+        {"path": "requests/check.json", "content": "{}\n"}
+      ]
+    },
+    {
+      "case_id": "workflow-python-shell-dispatch-passes",
+      "expected_status": "pass",
+      "files": [
+        {"path": ".github/workflows/python-shell.yml", "content": "name: Python Shell\njobs:\n  check:\n    runs-on: ubuntu-latest\n    steps:\n      - shell: python\n        run: import runpy; runpy.run_path(\"scripts/check.py\", run_name=\"__main__\")\n"},
+        {"path": "scripts/check.py", "content": "print('checked')\n"}
+      ]
+    },
+    {
+      "case_id": "workflow-multiline-control-logic-fails",
+      "expected_status": "fail",
+      "expected_category": "workflow_shell_logic",
+      "files": [
+        {"path": ".github/workflows/control.yml", "content": "name: Control\njobs:\n  check:\n    runs-on: ubuntu-latest\n    steps:\n      - run: |\n          set -euo pipefail\n          if test -f result.json; then\n            python3 scripts/check.py\n          fi\n"}
+      ]
+    },
+    {
+      "case_id": "workflow-jq-and-shell-script-fail",
+      "expected_status": "fail",
+      "expected_category": "workflow_forbidden_command",
+      "files": [
+        {"path": ".github/workflows/forbidden.yml", "content": "name: Forbidden\njobs:\n  check:\n    runs-on: ubuntu-latest\n    steps:\n      - run: jq -e . result.json\n      - run: tools/check.sh\n"}
+      ]
+    },
+    {
+      "case_id": "workflow-inline-python-heredoc-fails",
+      "expected_status": "fail",
+      "expected_category": "workflow_heredoc",
+      "files": [
+        {"path": ".github/workflows/heredoc.yml", "content": "name: Heredoc\njobs:\n  check:\n    runs-on: ubuntu-latest\n    steps:\n      - run: |\n          python3 - <<'PY'\n          print('inline')\n          PY\n"}
+      ]
+    },
+    {
+      "case_id": "workflow-sentinel-shell-logic-fails",
+      "expected_status": "fail",
+      "expected_category": "workflow_shell_logic",
+      "files": [
+        {"path": ".github/workflows/sentinel.yml", "content": "name: Sentinel\njobs:\n  check:\n    runs-on: ubuntu-latest\n    steps:\n      - run: |\n          result=success\n          if [[ \"$result\" == \"success\" ]]; then\n            exit 0\n          fi\n"}
+      ]
+    },
+    {
+      "case_id": "workflow-untracked-runner-input-fails",
+      "expected_status": "fail",
+      "expected_category": "workflow_untracked_input",
+      "files": [
+        {"path": ".github/workflows/untracked-input.yml", "content": "name: Untracked Input\njobs:\n  check:\n    runs-on: ubuntu-latest\n    steps:\n      - run: python3 -m speckit_pro_runner < missing.json\n"}
       ]
     }
   ]

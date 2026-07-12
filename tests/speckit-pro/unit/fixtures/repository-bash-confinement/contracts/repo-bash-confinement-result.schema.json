@@ -35,15 +35,15 @@
     "enumeration": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["source", "workflow_exclusion"],
+      "required": ["source", "workflow_run_values"],
       "properties": {
         "source": {
           "const": "git ls-files -z",
           "description": "Live repository-wide enumeration via the argv list [\"git\", \"ls-files\", \"-z\"] from the repo root (never a command string, never shell=True, never a fixed file list)."
         },
-        "workflow_exclusion": {
-          "const": ".github/workflows/",
-          "description": "The sanctioned Bash dispatch-glue boundary, applied as a post-enumeration Python filter."
+        "workflow_run_values": {
+          "const": "inspected",
+          "description": "Every tracked GitHub workflow run value is inspected and limited to one approved direct dispatch or exact GitHub output/summary append."
         },
         "tracked_file_count": { "type": "integer", "minimum": 0 }
       }
@@ -72,7 +72,7 @@
         "line": { "type": ["integer", "null"] },
         "category": {
           "type": "string",
-          "description": "One of: script_file (.sh/.bash suffix or bash/POSIX-sh shebang), command_argv_subprocess / os_system / shell_true (Python AST), hooks_json_command, package_json_script."
+          "description": "One of: script_file, command_argv_subprocess / os_system / shell_true, hooks_json_command, package_json_script, or a workflow run-value category."
         },
         "classification": {
           "type": "string",

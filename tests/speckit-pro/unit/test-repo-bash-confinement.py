@@ -104,7 +104,11 @@ class RepoBashConfinementTests(unittest.TestCase):
         schema = json.loads(RESULT_CONTRACT.read_text(encoding="utf-8"))
         self.assertEqual(schema["properties"]["feature_id"]["const"], "XPLAT-010")
         self.assertEqual(schema["properties"]["enumeration"]["properties"]["source"]["const"], "git ls-files -z")
-        self.assertEqual(schema["properties"]["allowlist"]["properties"]["entry_count"]["const"], 10)
+        expected_allowlist_count = len(active_path_guard.XPLAT_010_CANONICAL_ALLOWLIST_PATHS)
+        self.assertEqual(
+            schema["properties"]["allowlist"]["properties"]["entry_count"]["const"],
+            expected_allowlist_count,
+        )
         for field in schema["required"]:
             self.assertIn(field, data)
         self.assertEqual(data["schema_version"], schema["properties"]["schema_version"]["const"])
@@ -126,9 +130,9 @@ class RepoBashConfinementTests(unittest.TestCase):
             self.assertTrue(finding.get("line") is None or type(finding["line"]) is int)
 
         enumeration = data["enumeration"]
-        self.assertEqual(set(enumeration), {"source", "workflow_exclusion", "tracked_file_count"})
+        self.assertEqual(set(enumeration), {"source", "workflow_run_values", "tracked_file_count"})
         self.assertEqual(enumeration["source"], "git ls-files -z")
-        self.assertEqual(enumeration["workflow_exclusion"], ".github/workflows/")
+        self.assertEqual(enumeration["workflow_run_values"], "inspected")
         self.assertIs(type(enumeration["tracked_file_count"]), int)
         self.assertGreaterEqual(enumeration["tracked_file_count"], 0)
 
@@ -136,7 +140,7 @@ class RepoBashConfinementTests(unittest.TestCase):
         self.assertEqual(set(allowlist), {"path", "entry_count", "release_readiness_excluded"})
         self.assertIsInstance(allowlist["path"], str)
         self.assertTrue(allowlist["path"])
-        self.assertEqual(allowlist["entry_count"], 10)
+        self.assertEqual(allowlist["entry_count"], expected_allowlist_count)
         self.assertIs(allowlist["release_readiness_excluded"], True)
 
         self.assertEqual(data["total_finding_count"], len(data["findings"]))
@@ -169,9 +173,12 @@ class RepoBashConfinementTests(unittest.TestCase):
         allowlisted = [item for item in findings if item["classification"] == "vendored_specify_helper"]
         self.assertEqual(result["status"], "ok")
         self.assertEqual(result["data"]["blocking_count"], 0)
-        self.assertEqual(len(allowlisted), 10)
+        self.assertEqual(len(allowlisted), len(active_path_guard.XPLAT_010_CANONICAL_ALLOWLIST_PATHS))
         self.assertTrue(all(item["release_readiness_excluded"] is True for item in allowlisted))
-        self.assertEqual(result["data"]["classified_counts"], {"vendored_specify_helper": 10})
+        self.assertEqual(
+            result["data"]["classified_counts"],
+            {"vendored_specify_helper": len(active_path_guard.XPLAT_010_CANONICAL_ALLOWLIST_PATHS)},
+        )
         self.assertNotIn("bash_free", result["data"]["classified_counts"])
         self.assertTrue(result["data"]["allowlist"]["release_readiness_excluded"])
 
@@ -265,6 +272,107 @@ def check():
         nested_package = json.dumps({"scripts": {"check": "sh -c 'jq -e . result.json'"}})
         self.assertEqual(len(active_path_guard.repo_bash_json_findings("hooks.json", nested_hook)), 1)
         self.assertEqual(len(active_path_guard.repo_bash_json_findings("package.json", nested_package)), 1)
+
+    def test_workflow_scans_only_run_values_and_preserves_fixture_categories(self) -> None:
+        prose_only = """\
+name: Mentions bash and jq
+env:
+  NOTE: use tools/check.sh only in historical prose
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: example/bash-action@v1
+      - run: python3 scripts/check.py
+"""
+        tracked = {"scripts/check.py"}
+        self.assertEqual(
+            active_path_guard.repo_bash_workflow_findings(
+                ".github/workflows/prose.yml",
+                prose_only,
+                tracked,
+            ),
+            [],
+        )
+
+        expected_categories = {
+            "workflow-multiline-control-logic-fails": "workflow_shell_logic",
+            "workflow-jq-and-shell-script-fail": "workflow_forbidden_command",
+            "workflow-inline-python-heredoc-fails": "workflow_heredoc",
+            "workflow-sentinel-shell-logic-fails": "workflow_shell_logic",
+            "workflow-untracked-runner-input-fails": "workflow_untracked_input",
+        }
+        for case_id, expected_category in expected_categories.items():
+            with self.subTest(case_id=case_id):
+                workflow = CASES_BY_ID[case_id]["files"][0]
+                findings = active_path_guard.repo_bash_workflow_findings(
+                    workflow["path"],
+                    workflow["content"],
+                    set(),
+                )
+                self.assertTrue(findings)
+                self.assertIn(expected_category, {finding.category for finding in findings})
+
+    def test_workflow_boundary_allows_only_thin_direct_dispatch(self) -> None:
+        tracked = {"requests/check.json"}
+        allowed = (
+            "python3 scripts/check.py --mode ci",
+            "PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < requests/check.json",
+            "pnpm --dir docs-site validate",
+            "corepack prepare pnpm@10.25.0 --activate",
+            '"${RUNNER_TEMP}/actionlint" .github/workflows/*.yml',
+            'echo \'status=pass\' >> "$GITHUB_OUTPUT"',
+            'echo "## Summary" >> "$GITHUB_STEP_SUMMARY"',
+        )
+        for value in allowed:
+            with self.subTest(value=value):
+                self.assertIsNone(active_path_guard.repo_bash_workflow_run_failure(value, tracked))
+
+        blocked = {
+            "set -euo pipefail": "workflow_shell_logic",
+            "for item in one two; do echo $item; done": "workflow_shell_logic",
+            "if test -f result.json; then python3 scripts/check.py; fi": "workflow_shell_logic",
+            "check() { python3 scripts/check.py; }": "workflow_shell_logic",
+            "python3 - <<'PY'": "workflow_heredoc",
+            "python3 scripts/check.py $(git rev-parse HEAD)": "workflow_shell_logic",
+            "bash scripts/check.py": "workflow_forbidden_command",
+            "jq -e . result.json": "workflow_forbidden_command",
+            "tools/check.sh": "workflow_forbidden_command",
+            'echo "status=pass" >> "$OTHER_OUTPUT"': "workflow_shell_logic",
+            "python3 scripts/check.py 2>&1": "workflow_shell_logic",
+        }
+        for value, expected_category in blocked.items():
+            with self.subTest(value=value):
+                failure = active_path_guard.repo_bash_workflow_run_failure(value, tracked)
+                self.assertIsNotNone(failure)
+                self.assertEqual(failure[0], expected_category)
+
+    def test_workflow_contexts_ignore_defaults_run_mapping(self) -> None:
+        content = """\
+defaults:
+  run:
+    shell: bash
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - run: python3 scripts/check.py
+"""
+        contexts = active_path_guard.workflow_run_contexts(content)
+        self.assertEqual(len(contexts), 1)
+        self.assertIn("python3 scripts/check.py", contexts[0][2])
+
+    def test_allowlist_count_diagnostics_follow_the_canonical_set(self) -> None:
+        short = json.loads(json.dumps(ALLOWLIST_DOCUMENT))
+        short["entries"].pop()
+        with temporary_repo(allowlist=short) as root:
+            result = run_guard(root)
+        details = result["diagnostics"][0]["details"]
+        self.assertEqual(
+            details["expected_entry_count"],
+            len(active_path_guard.XPLAT_010_CANONICAL_ALLOWLIST_PATHS),
+        )
+        self.assertEqual(details["actual_entry_count"], len(short["entries"]))
 
     def test_nested_shell_payloads_are_inspected(self) -> None:
         source = """

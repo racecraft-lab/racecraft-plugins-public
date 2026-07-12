@@ -44,6 +44,7 @@ REPO_BASH_SCRIPT_SUFFIXES = (".sh", ".bash")
 REPO_BASH_COMMAND_NAMES = frozenset({"bash", "bash.exe", "jq", "jq.exe"})
 REPO_BASH_SHEBANG_NAMES = frozenset({"bash", "bash.exe", "sh", "sh.exe"})
 REPO_BASH_WORKFLOW_PREFIX = ".github/workflows/"
+REPO_BASH_WORKFLOW_SUFFIXES = frozenset({".yaml", ".yml"})
 REPO_BASH_FIXTURE_PREFIXES = (
     "tests/speckit-pro/unit/fixtures/",
     "tests/speckit-pro/parity/",
@@ -584,7 +585,7 @@ def run_repo_bash_confinement(entry: Any, request: Any, repo_root: Path) -> dict
                 "allowlist": repo_bash_allowlist_summary(request.inputs, allowlist),
                 "enumeration": {
                     "source": "git ls-files -z",
-                    "workflow_exclusion": REPO_BASH_WORKFLOW_PREFIX,
+                    "workflow_run_values": "inspected",
                     "tracked_file_count": len(tracked_paths),
                 },
             }
@@ -609,9 +610,14 @@ def run_repo_bash_confinement(entry: Any, request: Any, repo_root: Path) -> dict
 
     findings: list[RawFinding] = []
     for path in tracked_paths:
-        if path.startswith(REPO_BASH_WORKFLOW_PREFIX):
-            continue
-        findings.extend(repo_bash_path_findings(repo_root, path, allowlist))
+        findings.extend(
+            repo_bash_path_findings(
+                repo_root,
+                path,
+                allowlist,
+                tracked_paths=tracked_path_set,
+            )
+        )
 
     blocking = [finding for finding in findings if finding.classification == "blocking_repo_bash"]
     status = "expected_failure" if blocking else "ok"
@@ -632,7 +638,7 @@ def run_repo_bash_confinement(entry: Any, request: Any, repo_root: Path) -> dict
             ),
             "enumeration": {
                 "source": "git ls-files -z",
-                "workflow_exclusion": REPO_BASH_WORKFLOW_PREFIX,
+                "workflow_run_values": "inspected",
                 "tracked_file_count": len(tracked_paths),
             },
             "allowlist": repo_bash_allowlist_summary(request.inputs, allowlist),
@@ -652,7 +658,7 @@ def run_repo_bash_confinement(entry: Any, request: Any, repo_root: Path) -> dict
         remediation_summary="Remove repo-local Bash behavior or restore the exact vendored Spec Kit allowlist.",
         remediation_actions=[
             "Inspect data.findings for blocking_repo_bash entries.",
-            "Port executable behavior to Python or keep workflow-only dispatch under .github/workflows/.",
+            "Port executable behavior to Python and keep each workflow run value to one approved direct dispatch.",
             "Do not broaden or substitute the canonical XPLAT-010 allowlist.",
         ],
     )
@@ -679,11 +685,17 @@ def load_repo_bash_allowlist(repo_root: Path, inputs: dict[str, Any]) -> list[di
         return diagnostic("invalid_allowlist", "repository Bash allowlist has unsupported top-level fields")
     if document.get("schema_version") != "1.0" or document.get("feature_id") != "XPLAT-010":
         return diagnostic("invalid_allowlist", "repository Bash allowlist identity must be XPLAT-010 schema 1.0")
+    expected_paths = XPLAT_010_CANONICAL_ALLOWLIST_PATHS
+    expected_count = len(expected_paths)
     entries = document.get("entries")
-    if not isinstance(entries, list) or len(entries) != len(XPLAT_010_CANONICAL_ALLOWLIST_PATHS):
+    if not isinstance(entries, list) or len(entries) != expected_count:
         return diagnostic(
             "invalid_allowlist",
-            f"repository Bash allowlist must contain exactly {len(XPLAT_010_CANONICAL_ALLOWLIST_PATHS)} entries",
+            f"repository Bash allowlist must contain exactly {expected_count} entries",
+            details={
+                "expected_entry_count": expected_count,
+                "actual_entry_count": len(entries) if isinstance(entries, list) else None,
+            },
         )
 
     expected_fields = {"path", "categories", "reason", "scope", "release_readiness_excluded"}
@@ -713,16 +725,18 @@ def load_repo_bash_allowlist(repo_root: Path, inputs: dict[str, Any]) -> list[di
         normalized_entries.append(normalized_entry)
 
     actual_paths = [entry["path"] for entry in normalized_entries]
-    if len(set(actual_paths)) != len(actual_paths) or set(actual_paths) != XPLAT_010_CANONICAL_ALLOWLIST_PATHS:
+    if len(set(actual_paths)) != len(actual_paths) or set(actual_paths) != expected_paths:
         return diagnostic(
             "invalid_allowlist",
             (
                 "repository Bash allowlist must equal the exact canonical "
-                f"{len(XPLAT_010_CANONICAL_ALLOWLIST_PATHS)}-path set"
+                f"{expected_count}-path set"
             ),
             details={
-                "missing": sorted(XPLAT_010_CANONICAL_ALLOWLIST_PATHS - set(actual_paths)),
-                "unexpected": sorted(set(actual_paths) - XPLAT_010_CANONICAL_ALLOWLIST_PATHS),
+                "expected_entry_count": expected_count,
+                "actual_entry_count": len(actual_paths),
+                "missing": sorted(expected_paths - set(actual_paths)),
+                "unexpected": sorted(set(actual_paths) - expected_paths),
             },
         )
     return normalized_entries
@@ -770,7 +784,13 @@ def repo_bash_tracked_paths(repo_root: Path) -> list[str] | dict[str, Any]:
     return [normalize_path(item.decode("utf-8", errors="surrogateescape")) for item in stdout.split(b"\0") if item]
 
 
-def repo_bash_path_findings(repo_root: Path, tracked_path: str, allowlist: list[dict[str, Any]]) -> list[RawFinding]:
+def repo_bash_path_findings(
+    repo_root: Path,
+    tracked_path: str,
+    allowlist: list[dict[str, Any]],
+    *,
+    tracked_paths: set[str] | None = None,
+) -> list[RawFinding]:
     path = normalize_path(tracked_path)
     if invalid_scan_root_reason(path) is not None:
         return [
@@ -820,6 +840,8 @@ def repo_bash_path_findings(repo_root: Path, tracked_path: str, allowlist: list[
         content = content_path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return []
+    if path.startswith(REPO_BASH_WORKFLOW_PREFIX) and Path(path).suffix.lower() in REPO_BASH_WORKFLOW_SUFFIXES:
+        return repo_bash_workflow_findings(path, content, tracked_paths or set())
     if Path(path).suffix.lower() == ".py":
         return repo_bash_python_findings(path, content)
     if Path(path).name.lower() in {"hooks.json", "package.json"}:
@@ -845,6 +867,8 @@ def repo_bash_invocation_scan_path(path: str) -> bool:
         return False
     if Path(normalized).name.lower().endswith("-baseline.txt"):
         return False
+    if normalized.startswith(REPO_BASH_WORKFLOW_PREFIX):
+        return Path(normalized).suffix.lower() in REPO_BASH_WORKFLOW_SUFFIXES
     return Path(normalized).suffix.lower() == ".py" or Path(normalized).name.lower() in {"hooks.json", "package.json"}
 
 
@@ -899,6 +923,261 @@ def repo_bash_finding_record(finding: RawFinding) -> dict[str, Any]:
     if finding.classification == "vendored_specify_helper":
         record["release_readiness_excluded"] = True
     return record
+
+
+def repo_bash_workflow_findings(
+    path: str,
+    content: str,
+    tracked_paths: set[str],
+) -> list[RawFinding]:
+    """Inspect executable workflow run values without scanning YAML prose."""
+    findings: list[RawFinding] = []
+    for start, _end, context in workflow_run_contexts(content):
+        value = repo_bash_workflow_run_value(context)
+        if value is None:
+            findings.append(
+                repo_bash_workflow_finding(
+                    path,
+                    start,
+                    "workflow_dispatch",
+                    context,
+                    "workflow run value could not be parsed",
+                )
+            )
+            continue
+
+        shell = repo_bash_workflow_shell(content, start)
+        if shell == "python":
+            dispatch_path = repo_bash_python_shell_dispatch_path(value)
+            if dispatch_path is not None and dispatch_path in tracked_paths:
+                continue
+            reason = (
+                "workflow shell: python value must directly dispatch one tracked Python file"
+                if dispatch_path is None
+                else "workflow shell: python dispatch target is not tracked"
+            )
+            findings.append(
+                repo_bash_workflow_finding(
+                    path,
+                    start,
+                    "workflow_dispatch",
+                    value,
+                    reason,
+                )
+            )
+            continue
+        if shell not in {None, "bash"}:
+            findings.append(
+                repo_bash_workflow_finding(
+                    path,
+                    start,
+                    "workflow_dispatch",
+                    value,
+                    f"workflow run value uses unsupported shell {shell}",
+                )
+            )
+            continue
+
+        failure = repo_bash_workflow_run_failure(value, tracked_paths)
+        if failure is None:
+            continue
+        category, reason = failure
+        findings.append(repo_bash_workflow_finding(path, start, category, value, reason))
+    return findings
+
+
+def repo_bash_workflow_run_value(context: str) -> str | None:
+    lines = context.splitlines()
+    if not lines:
+        return None
+    first = lines[0].strip()
+    match = re.fullmatch(r"(?:-\s+)?run:\s*(.*)", first)
+    if match is None:
+        return None
+    scalar = match.group(1).strip()
+    if not re.fullmatch(r"[|>][+-]?", scalar):
+        return scalar or None
+    body = lines[1:]
+    nonempty = [line for line in body if line.strip()]
+    if not nonempty:
+        return ""
+    indent = min(len(line) - len(line.lstrip(" ")) for line in nonempty)
+    return "\n".join(line[indent:] if line.strip() else "" for line in body).strip()
+
+
+def repo_bash_workflow_shell(content: str, run_line: int) -> str | None:
+    lines = content.splitlines()
+    index = run_line - 1
+    if index < 0 or index >= len(lines):
+        return None
+    run_indent = len(lines[index]) - len(lines[index].lstrip(" "))
+    step_start = index if lines[index].lstrip(" ").startswith("- ") else 0
+    if step_start != index:
+        for candidate in range(index - 1, -1, -1):
+            line = lines[candidate]
+            stripped = line.lstrip(" ")
+            indent = len(line) - len(stripped)
+            if stripped.startswith("- ") and indent < run_indent:
+                step_start = candidate
+                break
+    step_line = lines[step_start]
+    step_indent = len(step_line) - len(step_line.lstrip(" "))
+    step_end = len(lines)
+    for candidate in range(step_start + 1, len(lines)):
+        line = lines[candidate]
+        stripped = line.lstrip(" ")
+        indent = len(line) - len(stripped)
+        if stripped.startswith("- ") and indent <= step_indent:
+            step_end = candidate
+            break
+    for line_number, line in enumerate(lines[step_start:step_end], start=step_start):
+        stripped = line.lstrip(" ")
+        indent = len(line) - len(stripped)
+        if line_number != step_start and indent != step_indent + 2:
+            continue
+        match = re.match(r"^\s*(?:-\s+)?shell:\s*([^\s#]+)", line)
+        if match is not None:
+            return match.group(1).strip('"\'').lower()
+    return None
+
+
+def repo_bash_python_shell_dispatch_path(value: str) -> str | None:
+    try:
+        tree = ast.parse(value)
+    except SyntaxError:
+        return None
+    if len(tree.body) != 2 or not isinstance(tree.body[0], ast.Import) or not isinstance(tree.body[1], ast.Expr):
+        return None
+    imported = tree.body[0].names
+    if len(imported) != 1 or imported[0].name != "runpy" or imported[0].asname is not None:
+        return None
+    call = tree.body[1].value
+    if (
+        not isinstance(call, ast.Call)
+        or not isinstance(call.func, ast.Attribute)
+        or not isinstance(call.func.value, ast.Name)
+        or call.func.value.id != "runpy"
+        or call.func.attr != "run_path"
+        or len(call.args) != 1
+        or len(call.keywords) != 1
+        or call.keywords[0].arg != "run_name"
+    ):
+        return None
+    target = call.args[0]
+    run_name = call.keywords[0].value
+    if (
+        not isinstance(target, ast.Constant)
+        or not isinstance(target.value, str)
+        or not isinstance(run_name, ast.Constant)
+        or run_name.value != "__main__"
+        or invalid_scan_root_reason(target.value) is not None
+        or Path(target.value).suffix.lower() != ".py"
+    ):
+        return None
+    return normalize_path(target.value)
+
+
+def repo_bash_workflow_run_failure(
+    value: str,
+    tracked_paths: set[str],
+) -> tuple[str, str] | None:
+    executable_lines = [
+        line.strip()
+        for line in value.splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    command = "\n".join(executable_lines)
+    if not command:
+        return "workflow_dispatch", "workflow run value has no direct command"
+    if "<<" in command:
+        return "workflow_heredoc", "workflow run value uses a heredoc"
+    if re.search(r"\$\(|`", command):
+        return "workflow_shell_logic", "workflow run value uses command substitution"
+    if re.search(r"(?i)(?<![\w.-])(?:bash|jq)(?:\.exe)?(?![\w.-])", command) or re.search(
+        r"(?i)(?<![\w.-])[^\s]+\.(?:sh|bash)(?![\w.-])",
+        command,
+    ):
+        return "workflow_forbidden_command", "workflow run value invokes bash, jq, or a Bash-family script"
+    if len(executable_lines) != 1:
+        return "workflow_shell_logic", "workflow run value contains more than one direct command"
+    if re.search(
+        r"(?i)(?:^|[\s;])(?:set\s+-|if\b|then\b|elif\b|else\b|fi\b|for\b|while\b|until\b|"
+        r"case\b|esac\b|select\b|function\b|do\b|done\b)|&&|\|\||(?<!\|)\|(?!\|)|;|"
+        r"(?:^|\s)[{}](?:\s|$)|(?:^|\s)[A-Za-z_][A-Za-z0-9_]*\s*\(\)\s*\{",
+        command,
+    ):
+        return "workflow_shell_logic", "workflow run value contains shell control logic"
+
+    if re.fullmatch(
+        r"echo\s+(?:'[^'\r\n]*'|\"[^\"\r\n]*\")\s*>>\s*\"\$(?:GITHUB_OUTPUT|GITHUB_STEP_SUMMARY)\"",
+        command,
+    ):
+        return None
+
+    try:
+        lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|()<>")
+        lexer.whitespace_split = True
+        lexer.commenters = ""
+        argv = list(lexer)
+    except ValueError:
+        return "workflow_dispatch", "workflow run value is not a parseable direct command"
+    while argv and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", argv[0]):
+        argv.pop(0)
+    if not argv:
+        return "workflow_dispatch", "workflow run value has no executable"
+
+    redirected_input: str | None = None
+    if "<" in argv:
+        if argv.count("<") != 1 or argv.index("<") != len(argv) - 2:
+            return "workflow_shell_logic", "workflow input redirection must be one trailing tracked JSON path"
+        redirected_input = normalize_path(argv[-1])
+        argv = argv[:-2]
+    if any(re.fullmatch(r"[;&|()<>]+", token) for token in argv):
+        return "workflow_shell_logic", "workflow run value contains shell operators"
+
+    executable = executable_basename(argv[0])
+    if executable in {"python", "python3"}:
+        runner_dispatch = len(argv) >= 3 and argv[1:3] == ["-m", "speckit_pro_runner"]
+        script_dispatch = len(argv) >= 2 and Path(argv[1]).suffix.lower() == ".py"
+        if not runner_dispatch and not script_dispatch:
+            return "workflow_dispatch", "workflow Python command must dispatch a script or speckit_pro_runner"
+        if redirected_input is None:
+            return None
+        if (
+            not runner_dispatch
+            or invalid_scan_root_reason(redirected_input) is not None
+            or Path(redirected_input).suffix.lower() != ".json"
+            or redirected_input not in tracked_paths
+        ):
+            return "workflow_untracked_input", "workflow runner input redirection must reference tracked JSON"
+        return None
+
+    if redirected_input is not None:
+        return "workflow_shell_logic", "workflow input redirection is limited to the Python runner"
+    if executable in {"pnpm", "corepack"}:
+        return None
+    if executable == "actionlint" or normalize_path(argv[0]).endswith("/actionlint"):
+        return None
+    return "workflow_dispatch", "workflow run value is not an approved direct Python, pnpm, corepack, or actionlint dispatch"
+
+
+def repo_bash_workflow_finding(
+    path: str,
+    line: int,
+    category: str,
+    pattern: str,
+    reason: str,
+) -> RawFinding:
+    return RawFinding(
+        path=path,
+        line=line,
+        category=category,
+        pattern=pattern.strip().replace("\n", " ")[:120],
+        reason=reason,
+        active_role="workflow_run_value",
+        classification="blocking_repo_bash",
+        remediation="Replace the run value with one approved direct dispatch or exact GitHub output append.",
+    )
 
 
 def repo_bash_python_findings(path: str, content: str) -> list[RawFinding]:
@@ -3983,14 +4262,19 @@ def workflow_run_contexts(content: str) -> list[tuple[int, int, str]]:
     while index < len(lines):
         line = lines[index]
         stripped = line.strip()
-        if not stripped.startswith("run:"):
+        match = re.fullmatch(r"(?:-\s+)?run:\s*(.*)", stripped)
+        if match is None:
+            index += 1
+            continue
+        scalar = match.group(1).strip()
+        if not scalar:
             index += 1
             continue
         start = index + 1
         indent = len(line) - len(line.lstrip(" "))
         block = [line]
         end = start
-        if stripped in {"run: |", "run: >"}:
+        if re.fullmatch(r"[|>][+-]?", scalar):
             next_index = index + 1
             while next_index < len(lines):
                 next_line = lines[next_index]
@@ -4453,7 +4737,7 @@ def repo_bash_base_data(entry: Any, operation: str, status: str) -> dict[str, An
         "script_file_count": 0,
         "enumeration": {
             "source": "git ls-files -z",
-            "workflow_exclusion": REPO_BASH_WORKFLOW_PREFIX,
+            "workflow_run_values": "inspected",
             "tracked_file_count": 0,
         },
         "allowlist": {
