@@ -22,6 +22,8 @@ class HelperEntry:
     comparison_mode: str
     authoritative_command: str
     out_of_scope_modes: tuple[str, ...] = ()
+    mutation_operation: str | None = None
+    mutation_operation_deferred: bool = False
 
     def as_record(self) -> dict[str, Any]:
         record = {
@@ -189,6 +191,7 @@ HELPERS: dict[str, HelperEntry] = {
         "bash_reference",
         authoritative_request("generate-spec-index-check"),
         ("write", "regenerate"),
+        mutation_operation="generate-spec-index-write",
     ),
     "o5-topology": HelperEntry(
         "o5-topology",
@@ -215,6 +218,8 @@ HELPERS: dict[str, HelperEntry] = {
         "bash_reference",
         authoritative_request("plan-layers-feature-dir"),
         ("marker-plan",),
+        mutation_operation="plan-layers-marker-plan",
+        mutation_operation_deferred=True,
     ),
     "validate-pr-workflow-contract": HelperEntry(
         "validate-pr-workflow-contract",
@@ -224,6 +229,8 @@ HELPERS: dict[str, HelperEntry] = {
         "bash_reference",
         authoritative_request("validate-pr-workflow-contract"),
         ("workflow-event-write",),
+        mutation_operation="validate-pr-workflow-contract-write",
+        mutation_operation_deferred=True,
     ),
     "validate-pr-packet-read-only": HelperEntry(
         "validate-pr-packet-read-only",
@@ -233,6 +240,8 @@ HELPERS: dict[str, HelperEntry] = {
         "bash_reference",
         authoritative_request("validate-pr-packet-read-only"),
         ("persistence", "workflow-event-upserts", "pr-body-generation", "pr-emission", "restack"),
+        mutation_operation="validate-pr-packet-write",
+        mutation_operation_deferred=True,
     ),
 }
 
@@ -297,7 +306,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "deferred",
         "golden_fixture",
         deferred_authoritative_request(),
-        rollback="Keep existing installer scripts authoritative until XPLAT-007/XPLAT-008.",
+        rollback="Keep install-codex-agents deferred until a Python runner implementation is promoted.",
     ),
     "install-curated-set": MutationEntry(
         "install-curated-set",
@@ -308,7 +317,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "bash_reference",
         deferred_authoritative_request(),
         bash_reference_ids=("install-curated-set",),
-        rollback="Keep install-curated-set.sh authoritative until install cutover.",
+        rollback="Keep install-curated-set deferred until a Python runner implementation is promoted.",
     ),
     "project-fixup-apply": MutationEntry(
         "project-fixup-apply",
@@ -338,7 +347,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         mutation_authoritative_request("generate-pr-body"),
         ("pr-body-apply",),
         ("generate-pr-body",),
-        "Use generate-pr-body.sh until XPLAT-007 gate migration.",
+        "Retry the registered generate-pr-body operation in dry_run mode before applying again.",
     ),
     "generate-uat-skeleton": MutationEntry(
         "generate-uat-skeleton",
@@ -385,7 +394,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "command_plan",
         mutation_authoritative_request("multi-pr-emission"),
         ("fake-gh-command-capture",),
-        rollback="Keep multi-pr-emission.sh authoritative for live PR work.",
+        rollback="Keep live PR mutation deferred; use the registered multi-pr-emission operation only for command-plan capture.",
     ),
     "restack": MutationEntry(
         "restack",

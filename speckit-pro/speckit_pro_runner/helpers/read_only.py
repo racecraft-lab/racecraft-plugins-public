@@ -76,7 +76,13 @@ def run_registered_helper(entry: Any, request: Any) -> dict[str, Any]:
         return response(status, request_id=request.request_id, diagnostics=[repo_root_result])
     repo_root = repo_root_result
 
-    validation_diag = validate_bounded_inputs(entry.helper_id, request.inputs, repo_root)
+    validation_diag = validate_bounded_inputs(
+        entry.helper_id,
+        request.inputs,
+        repo_root,
+        mutation_operation=entry.mutation_operation,
+        mutation_operation_deferred=entry.mutation_operation_deferred,
+    )
     if validation_diag is not None:
         return response("input_error", request_id=request.request_id, diagnostics=[validation_diag])
 
@@ -152,7 +158,14 @@ def find_repo_root(start: Path) -> Path | None:
     return None
 
 
-def validate_bounded_inputs(helper_id: str, inputs: dict[str, Any], repo_root: Path) -> dict[str, Any] | None:
+def validate_bounded_inputs(
+    helper_id: str,
+    inputs: dict[str, Any],
+    repo_root: Path,
+    *,
+    mutation_operation: str | None = None,
+    mutation_operation_deferred: bool = False,
+) -> dict[str, Any] | None:
     for key, value in iter_input_strings(inputs):
         if len(value.encode("utf-8")) > BOUNDED_TEXT_INPUT_BYTES:
             return diagnostic(
@@ -178,12 +191,22 @@ def validate_bounded_inputs(helper_id: str, inputs: dict[str, Any], repo_root: P
             if path_diag is not None:
                 return path_diag
     if inputs.get("write_mode") is True:
+        if mutation_operation and mutation_operation_deferred:
+            mutation_action = (
+                f"The registered {mutation_operation} operation remains deferred; keep this request read_only."
+            )
+        elif mutation_operation:
+            mutation_action = (
+                f"Submit a separate runner request with helper_id and operation {mutation_operation}."
+            )
+        else:
+            mutation_action = "Inspect mutation-registry-dispatch for a registered Python mutation operation."
         return diagnostic(
             "unsupported_mode",
             "write-mode helper behavior is out of scope for runner read-only dispatch",
             details={"helper_id": helper_id},
             remediation_summary="Use only registered read-only helper modes.",
-            remediation_actions=["Remove write_mode from the request.", "Use the existing Bash workflow for mutation behavior."],
+            remediation_actions=["Remove write_mode from the request.", mutation_action],
         )
     if helper_id in {"detect-commands", "detect-presets"}:
         raw_root = inputs.get("repo_root")
@@ -672,7 +695,7 @@ def count_markers(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     marker_type = str(inputs.get("type") or "")
     feature_dir = resolve_input_path(inputs.get("feature_dir") or "", repo_root)
     if not marker_type or not str(inputs.get("feature_dir") or ""):
-        return make_result(json_text({"error": "Usage: count-markers.sh <gaps|findings|clarifications|all> <feature_dir>"}), exit_code=2)
+        return make_result(json_text({"error": "Usage: count-markers <gaps|findings|clarifications|all> <feature_dir>"}), exit_code=2)
     if not trusted_dir_exists(feature_dir, repo_root):
         return make_result(json_text({"error": f"feature directory not found or unreadable: {inputs.get('feature_dir') or ''}"}), exit_code=2)
     spec = feature_dir / "spec.md"
@@ -975,7 +998,7 @@ def confidence_gate(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     if mode not in {"advisory", "strict"}:
         return make_result(json_text({"error": f"invalid mode: {mode}"}), exit_code=2)
     if not workflow_raw:
-        return make_result('{"error":"Usage: confidence-gate.sh <workflow-file> [--threshold N.NN] [--mode advisory|strict]"}\n', exit_code=1)
+        return make_result('{"error":"Usage: confidence-gate <workflow-file> [--threshold N.NN] [--mode advisory|strict]"}\n', exit_code=1)
     if not trusted_file_exists(workflow, repo_root):
         return make_result("", f'{{"error":"workflow file not found: {workflow_raw}"}}\n', 1)
     text = trusted_text(workflow, repo_root) or ""
@@ -1807,10 +1830,10 @@ def plan_layers_feature_dir(inputs: dict[str, Any], repo_root: Path) -> dict[str
 def validate_pr_workflow_contract(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     title = str(inputs.get("title") or "")
     if not title:
-        return make_result("", "validate-pr-workflow-contract.sh: input_error: missing required option --title\n", 2)
+        return make_result("", "validate-pr-workflow-contract: input_error: missing required option --title\n", 2)
     contract_root = resolve_input_path(inputs.get("repo_root") or ".", repo_root)
     if not trusted_dir_exists(contract_root, repo_root):
-        return make_result("", f"validate-pr-workflow-contract.sh: input_error: repo root not found: {inputs.get('repo_root') or '.'}\n", 2)
+        return make_result("", f"validate-pr-workflow-contract: input_error: repo root not found: {inputs.get('repo_root') or '.'}\n", 2)
     failures = []
     match = re.match(r"^(feat|fix|chore|docs|refactor|test)(\(([^)]+)\))?!?:\s+.+$", title)
     if not match:
@@ -1826,12 +1849,12 @@ def validate_pr_workflow_contract(inputs: dict[str, Any], repo_root: Path) -> di
         changed_file = resolve_input_path(changed_files, repo_root)
         changed_text = trusted_text(changed_file, repo_root)
         if changed_text is None:
-            return make_result("", f"validate-pr-workflow-contract.sh: input_error: changed-files list not readable: {changed_files}\n", 2)
+            return make_result("", f"validate-pr-workflow-contract: input_error: changed-files list not readable: {changed_files}\n", 2)
         changed_paths = [line for line in changed_text.splitlines() if line.strip()]
     else:
         detected_paths = git_diff_changed_paths(contract_root)
         if detected_paths is None:
-            return make_result("", "validate-pr-workflow-contract.sh: input_error: missing --changed-files and origin/main is unavailable\n", 2)
+            return make_result("", "validate-pr-workflow-contract: input_error: missing --changed-files and origin/main is unavailable\n", 2)
         changed_paths = detected_paths
     scopes = sorted({scope for path in changed_paths if (scope := spec_scope_from_changed_path(path))})
     if len(scopes) == 1:
@@ -1869,7 +1892,7 @@ def validate_pr_workflow_contract(inputs: dict[str, Any], repo_root: Path) -> di
             }
         )
     if failures:
-        stderr = f"validate-pr-workflow-contract.sh: validation_failure: {failures[0]['rule']}\n"
+        stderr = f"validate-pr-workflow-contract: validation_failure: {failures[0]['rule']}\n"
         return make_result(json_text({"script": "validate-pr-workflow-contract", "status": "failed", "title": title, "failures": failures}), stderr, 1)
     return make_result(json_text({"script": "validate-pr-workflow-contract", "status": "passed", "title": title}))
 
@@ -1900,17 +1923,17 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
     packet_id = packet.stem if raw else "missing-packet-path"
     if not raw or not trusted_file_exists(packet, repo_root):
         message = "missing packet path" if not raw else f"packet not found or unreadable: {raw}"
-        stderr_line = f"validate-pr-packet.sh: input_error: {packet_id}: input.error: no-path"
+        stderr_line = f"validate-pr-packet-read-only: input_error: {packet_id}: input.error: no-path"
         obj = packet_result("failed", "input_error", 2, packet_id, None, None, None, "no-path", True, stderr_line, [{"rule": "input.error", "field": "packet", "message": message}], ["[input.error] Provide a readable JSON PR packet with a feature-local validation_result_path."])
         return make_result(pretty_json_text(obj), stderr_line + "\n", 2)
     try:
         data = json.loads(trusted_text(packet, repo_root) or "")
     except json.JSONDecodeError:
-        stderr_line = f"validate-pr-packet.sh: input_error: {packet_id}: input.error: no-path"
+        stderr_line = f"validate-pr-packet-read-only: input_error: {packet_id}: input.error: no-path"
         obj = packet_result("failed", "input_error", 2, packet_id, None, None, None, "no-path", True, stderr_line, [{"rule": "input.error", "field": "packet", "message": f"packet JSON is malformed: {raw}"}], ["[input.error] Provide a readable JSON PR packet with a feature-local validation_result_path."])
         return make_result(pretty_json_text(obj), stderr_line + "\n", 2)
     if not isinstance(data, dict):
-        stderr_line = f"validate-pr-packet.sh: input_error: {packet_id}: input.error: shape"
+        stderr_line = f"validate-pr-packet-read-only: input_error: {packet_id}: input.error: shape"
         obj = packet_result("failed", "input_error", 2, packet_id, None, None, None, "no-path", True, stderr_line, [{"rule": "input.error", "field": "packet", "message": "packet JSON must be an object"}], ["[input.error] Provide a JSON object PR packet."])
         return make_result(pretty_json_text(obj), stderr_line + "\n", 2)
     failures = []
@@ -1948,7 +1971,7 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
             failures.append({"rule": "input.path.body_file", "field": "body_file", "message": path_diag["message"]})
     if failures:
         rules = ",".join(sorted({failure["rule"] for failure in failures}))
-        stderr_line = f"validate-pr-packet.sh: validation_failure: {packet_id}: {rules}: {validation_path}"
+        stderr_line = f"validate-pr-packet-read-only: validation_failure: {packet_id}: {rules}: {validation_path}"
         remediation = [f"[{failure['rule']}] Regenerate packet evidence before PR creation." for failure in failures]
         obj = packet_result("failed", "validation_failure", 1, packet_id, data.get("mode"), (generated_title or {}).get("value"), body_file, validation_path, True, stderr_line, failures, remediation, target or {})
         return make_result(pretty_json_text(obj), stderr_line + "\n", 1)

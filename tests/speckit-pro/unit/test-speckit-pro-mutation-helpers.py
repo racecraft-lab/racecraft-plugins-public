@@ -188,6 +188,8 @@ class MutationHelperTests(unittest.TestCase):
         for record in data["helpers"]:
             self.assertNotIn("script", record)
             self.assertNotEqual(record["promotion_status"], "python_authoritative")
+            active_record = {key: value for key, value in record.items() if key != "inactive_provenance"}
+            self.assertNotIn(".sh", json.dumps(active_record, sort_keys=True))
             if record["promotion_status"] in {"deferred", "out_of_scope"}:
                 self.assertEqual(record["authoritative_command"], "")
             else:
@@ -208,6 +210,26 @@ class MutationHelperTests(unittest.TestCase):
         self.assertEqual(prior_scripts["install-curated-set"], "speckit-pro/scripts/install-curated-set.sh")
         self.assertEqual(prior_scripts["generate-pr-body"], "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh")
         self.assertEqual(prior_scripts["multi-pr-emission"], "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh")
+        rollbacks = {
+            record["helper_id"]: record["promotion"]["rollback"]
+            for record in data["helpers"]
+        }
+        self.assertEqual(
+            rollbacks["install-codex-agents"],
+            "Keep install-codex-agents deferred until a Python runner implementation is promoted.",
+        )
+        self.assertEqual(
+            rollbacks["install-curated-set"],
+            "Keep install-curated-set deferred until a Python runner implementation is promoted.",
+        )
+        self.assertEqual(
+            rollbacks["generate-pr-body"],
+            "Retry the registered generate-pr-body operation in dry_run mode before applying again.",
+        )
+        self.assertEqual(
+            rollbacks["multi-pr-emission"],
+            "Keep live PR mutation deferred; use the registered multi-pr-emission operation only for command-plan capture.",
+        )
 
     def test_dry_run_reports_planned_write_without_mutating(self) -> None:
         tmp, target, rel = self.temp_repo_path("dry-run-output.json")
@@ -701,6 +723,8 @@ class MutationHelperTests(unittest.TestCase):
                 self.assertIn(required, record)
             self.assertIn(record["promotion_status"], {"golden_only", "bash_compared", "deferred", "out_of_scope"})
             self.assertIn("rollback", record)
+            self.assertNotIn(".sh", record["rollback"])
+            self.assertNotIn("scripts authoritative", record["rollback"].lower())
 
 
 if __name__ == "__main__":

@@ -211,6 +211,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.assertNotIn("script", record)
             self.assertNotIn("generate-pr-body", str(record))
             self.assertNotIn("restack.sh", str(record))
+            active_record = {key: value for key, value in record.items() if key != "inactive_provenance"}
+            self.assertNotIn(".sh", json.dumps(active_record, sort_keys=True))
             fixture_path = command_stdin_fixture(record["authoritative_command"])
             self.assertTrue(fixture_path.is_file(), record["authoritative_command"])
             request = json.loads(fixture_path.read_text(encoding="utf-8"))
@@ -232,6 +234,84 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 self.assert_response(response, "input_error", exit_code)
                 self.assertEqual([diag["code"] for diag in response["diagnostics"]], [code])
                 self.assertEqual([diag["code"] for diag in stderr_records], [code])
+
+    def test_write_mode_diagnostic_names_registered_mutation_operation(self) -> None:
+        if self.helper_filter:
+            self.skipTest("write-mode remediation is registry-level")
+        cases = [
+            (
+                "generate-spec-index-check",
+                {"write_mode": True},
+                "Submit a separate runner request with helper_id and operation generate-spec-index-write.",
+            ),
+            (
+                "count-markers",
+                {"type": "all", "feature_dir": FEATURE_DIR, "write_mode": True},
+                "Inspect mutation-registry-dispatch for a registered Python mutation operation.",
+            ),
+            (
+                "plan-layers-feature-dir",
+                {"feature_dir": FEATURE_DIR, "write_mode": True},
+                "The registered plan-layers-marker-plan operation remains deferred; keep this request read_only.",
+            ),
+        ]
+        for helper_id, inputs, mutation_action in cases:
+            with self.subTest(helper_id=helper_id):
+                completed, response, stderr_records = run_runner(helper_request(helper_id, inputs))
+                self.assertEqual(completed.returncode, 2)
+                self.assert_response(response, "input_error", 2)
+                diagnostic = response["diagnostics"][0]
+                self.assertEqual(diagnostic["code"], "unsupported_mode")
+                self.assertEqual(
+                    diagnostic["remediation"]["actions"],
+                    ["Remove write_mode from the request.", mutation_action],
+                )
+                self.assertNotIn("Bash", json.dumps(diagnostic, sort_keys=True))
+                self.assertEqual(stderr_records, response["diagnostics"])
+
+    def test_active_error_output_uses_registered_operation_names(self) -> None:
+        if self.helper_filter:
+            self.skipTest("active output regression is cross-helper")
+        from speckit_pro_runner.helpers.read_only import (
+            confidence_gate,
+            count_markers,
+            validate_pr_packet_read_only,
+            validate_pr_workflow_contract,
+        )
+
+        cases = [
+            (
+                count_markers({}, REPO_ROOT),
+                '{"error":"Usage: count-markers <gaps|findings|clarifications|all> <feature_dir>"}\n',
+                "",
+                2,
+            ),
+            (
+                confidence_gate({}, REPO_ROOT),
+                '{"error":"Usage: confidence-gate <workflow-file> [--threshold N.NN] [--mode advisory|strict]"}\n',
+                "",
+                1,
+            ),
+            (
+                validate_pr_workflow_contract({}, REPO_ROOT),
+                "",
+                "validate-pr-workflow-contract: input_error: missing required option --title\n",
+                2,
+            ),
+            (
+                validate_pr_packet_read_only({}, REPO_ROOT),
+                None,
+                "validate-pr-packet-read-only: input_error: missing-packet-path: input.error: no-path\n",
+                2,
+            ),
+        ]
+        for result, stdout, stderr, exit_code in cases:
+            with self.subTest(stderr=stderr):
+                if stdout is not None:
+                    self.assertEqual(result["stdout"], stdout)
+                self.assertEqual(result["stderr"], stderr)
+                self.assertEqual(result["exit_code"], exit_code)
+                self.assertNotIn(".sh", result["stdout"] + result["stderr"])
 
     def test_fixture_manifests_cover_registered_helpers(self) -> None:
         if self.helper_filter and self.helper_filter != "helper-registry-dispatch":
@@ -256,6 +336,15 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 self.assertIn(field, record)
             self.assertEqual(record["subprocess_policy"]["shell"], False)
             self.assertTrue(record["deterministic_remediation"]["actions"])
+            active_guidance = json.dumps(
+                {
+                    "deterministic_remediation": record["deterministic_remediation"],
+                    "rollback": record["rollback"],
+                },
+                sort_keys=True,
+            )
+            self.assertNotIn(".sh", active_guidance)
+            self.assertNotIn("bash", active_guidance.lower())
             fixture_path = command_stdin_fixture(record["authoritative_command"])
             self.assertTrue(fixture_path.is_file(), record["authoritative_command"])
             request = json.loads(fixture_path.read_text(encoding="utf-8"))
