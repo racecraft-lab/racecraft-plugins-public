@@ -198,6 +198,7 @@ class RepoBashConfinementTests(unittest.TestCase):
         substituted["entries"][-1]["path"] = ".specify/scripts/bash/substitute.sh"
         with temporary_repo(allowlist=substituted) as root:
             result = run_guard(root)
+        self.assert_result_contract(result["data"])
         self.assertEqual(result["status"], "input_error")
         self.assertEqual([item["code"] for item in result["diagnostics"]], ["invalid_allowlist"])
 
@@ -206,12 +207,14 @@ class RepoBashConfinementTests(unittest.TestCase):
             missing_path.unlink()
             git(root, "add", "-A")
             result = run_guard(root)
+        self.assert_result_contract(result["data"])
         self.assertEqual(result["status"], "input_error")
         self.assertEqual([item["code"] for item in result["diagnostics"]], ["invalid_allowlist"])
         self.assertEqual(result["diagnostics"][0]["details"]["missing"], [CANONICAL_PATHS[-1]])
 
         with temporary_repo() as root:
             result = run_guard(root, allowlist_file="missing-allowlist.json")
+        self.assert_result_contract(result["data"])
         self.assertEqual(result["status"], "input_error")
         self.assertEqual([item["code"] for item in result["diagnostics"]], ["invalid_allowlist"])
 
@@ -261,6 +264,43 @@ def check():
         self.assertEqual(len(unresolved), 1)
         self.assertIn("cannot be statically resolved", unresolved[0].reason)
         self.assertEqual(active_path_guard.REPO_BASH_COMMAND_NAMES, {"bash", "bash.exe", "jq", "jq.exe"})
+
+    def test_python_scans_class_bodies_and_methods_with_separate_bindings(self) -> None:
+        source = """
+import subprocess
+
+class SafeRunner:
+    @staticmethod
+    def run(argv):
+        return argv
+
+class Checks:
+    class_call = subprocess.run(['bash', '--version'])
+
+    def method(self):
+        return subprocess.run(['jq', '--version'])
+
+class Shadowed:
+    subprocess = SafeRunner
+    class_call = subprocess.run(['bash', '--version'])
+
+class ReboundAfterCall:
+    class_call = subprocess.run(['bash', '--help'])
+    subprocess = SafeRunner
+    safe_call = subprocess.run(['bash', '--safe'])
+
+class MethodBindings:
+    subprocess = SafeRunner
+
+    def method(self):
+        return subprocess.run(['bash', '--method'])
+"""
+        findings = active_path_guard.repo_bash_python_findings("tools/class-checks.py", source)
+        self.assertEqual(len(findings), 4)
+        self.assertEqual(
+            {item.pattern for item in findings},
+            {"bash --version", "jq --version", "bash --help", "bash --method"},
+        )
 
     def test_structural_json_scans_only_execution_values(self) -> None:
         hook_content = json.dumps(
@@ -325,9 +365,11 @@ jobs:
                 self.assertIn(expected_category, {finding.category for finding in findings})
 
     def test_workflow_boundary_allows_only_thin_direct_dispatch(self) -> None:
-        tracked = {"requests/check.json"}
+        tracked = {"requests/check.json", "scripts/check.py"}
         allowed = (
             "python3 scripts/check.py --mode ci",
+            'python3 scripts/check.py --message "alpha; beta | gamma && delta || epsilon"',
+            'python3 scripts/check.py --message ";"',
             "PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < requests/check.json",
             "pnpm --dir docs-site validate",
             "corepack prepare pnpm@10.25.0 --activate",
@@ -357,6 +399,82 @@ jobs:
                 failure = active_path_guard.repo_bash_workflow_run_failure(value, tracked)
                 self.assertIsNotNone(failure)
                 self.assertEqual(failure[0], expected_category)
+
+    def test_workflow_python_dispatch_paths_are_tracked_and_confined(self) -> None:
+        tracked = {"scripts/check.py", "scripts/not-python.txt"}
+        self.assertIsNone(
+            active_path_guard.repo_bash_workflow_run_failure(
+                "python3 ./scripts/check.py --mode ci",
+                tracked,
+            )
+        )
+        blocked = (
+            "python3 /tmp/external.py",
+            "python3 C:/tmp/external.py",
+            "python3 ../external.py",
+            "python3 ~/external.py",
+            "python3 scripts/untracked.py",
+            "python3 scripts/not-python.txt",
+        )
+        for value in blocked:
+            with self.subTest(value=value):
+                candidate = value.split()[1]
+                candidate_tracked = tracked if "untracked" in candidate else tracked | {candidate}
+                failure = active_path_guard.repo_bash_workflow_run_failure(value, candidate_tracked)
+                self.assertIsNotNone(failure)
+                self.assertEqual(failure[0], "workflow_dispatch")
+
+        invalid_python_shell_targets = (
+            "/tmp/external.py",
+            "C:/tmp/external.py",
+            "../external.py",
+            "~/external.py",
+            "scripts/untracked.py",
+            "scripts/not-python.txt",
+        )
+        for target in invalid_python_shell_targets:
+            with self.subTest(shell_python_target=target):
+                content = (
+                    "jobs:\n"
+                    "  check:\n"
+                    "    steps:\n"
+                    "      - shell: python\n"
+                    f"        run: import runpy; runpy.run_path({target!r}, run_name='__main__')\n"
+                )
+                findings = active_path_guard.repo_bash_workflow_findings(
+                    ".github/workflows/python-shell.yml",
+                    content,
+                    tracked if "untracked" in target else tracked | {target},
+                )
+                self.assertEqual([item.category for item in findings], ["workflow_dispatch"])
+
+    def test_workflow_python_dispatch_rejects_tracked_external_symlink(self) -> None:
+        workflow = {
+            "path": ".github/workflows/external-python.yml",
+            "content": (
+                "jobs:\n"
+                "  check:\n"
+                "    steps:\n"
+                "      - run: python3 scripts/external.py\n"
+            ),
+        }
+        with tempfile.TemporaryDirectory(prefix="xplat010-external-python-") as outside:
+            outside_target = Path(outside) / "external.py"
+            outside_target.write_text("print('external')\n", encoding="utf-8")
+            with temporary_repo([workflow]) as root:
+                link = root / "scripts" / "external.py"
+                link.parent.mkdir(parents=True, exist_ok=True)
+                try:
+                    link.symlink_to(outside_target)
+                except OSError as exc:
+                    self.skipTest(f"symlink creation unavailable: {exc}")
+                git(root, "add", "scripts/external.py")
+                result = run_guard(root)
+        self.assertEqual(result["status"], "expected_failure")
+        self.assertIn(
+            "workflow_dispatch",
+            {item["category"] for item in result["data"]["findings"]},
+        )
 
     def test_workflow_contexts_ignore_defaults_run_mapping(self) -> None:
         content = """\
@@ -544,6 +662,35 @@ subprocess.run([executable, '--version'])
         self.assertEqual(result["status"], "ok")
         self.assertEqual(result["data"]["blocking_count"], 0)
 
+    def test_actionable_instruction_does_not_inherit_adjacent_history(self) -> None:
+        content = (
+            "Historical context: the old release helper was removed.\n"
+            "Run scripts/revive-release.sh before publishing.\n"
+            "Do not restore the retired helper.\n"
+            "Install jq before validating the payload.\n"
+        )
+        findings = active_path_guard.repo_bash_instruction_findings("README.md", content)
+        self.assertEqual(
+            {(item.line, item.pattern) for item in findings},
+            {
+                (2, "scripts/revive-release.sh"),
+                (4, "Install jq"),
+            },
+        )
+
+        wrapped_negative = (
+            "The installed runtime does not\n"
+            "require Bash for validation.\n"
+            "Operators must not\n"
+            "install jq for this workflow.\n"
+            "Do not add a required\n"
+            "Bash or `jq` dependency to repository tests.\n"
+        )
+        self.assertEqual(
+            active_path_guard.repo_bash_instruction_findings("README.md", wrapped_negative),
+            [],
+        )
+
     def test_runtime_diagnostic_fields_block_obsolete_shell_remediation(self) -> None:
         files = [
             {
@@ -575,6 +722,56 @@ subprocess.run([executable, '--version'])
         self.assertEqual(result["status"], "expected_failure")
         self.assertEqual({item["category"] for item in blocking}, {"runtime_instruction_script_path"})
         self.assertEqual(len(blocking), 2)
+
+    def test_runtime_diagnostics_resolve_static_names_and_containers(self) -> None:
+        source = """
+TOOL_PREFIX = 'j'
+TOOL = TOOL_PREFIX + 'q'
+SCRIPT = 'scripts/repair' + '-install.sh'
+REMEDIATION = (
+    f'Install {TOOL} before retrying.',
+    {'fallback': [f'Run {SCRIPT} before retrying.']},
+)
+UNUSED = 'Run scripts/unrelated.sh from an implementation-only constant.'
+
+def check():
+    return diagnostic(
+        'failed',
+        'repair failed',
+        remediation_actions=REMEDIATION,
+    )
+"""
+        findings = active_path_guard.repo_bash_runtime_diagnostic_findings(
+            "speckit-pro/speckit_pro_runner/helpers/static.py",
+            source,
+        )
+        self.assertEqual(
+            {item.pattern for item in findings},
+            {"Install jq", "scripts/repair-install.sh"},
+        )
+
+    def test_runtime_diagnostics_fail_closed_only_for_dangerous_dynamic_templates(self) -> None:
+        source = """
+UNRELATED = 'Install jq from an implementation-only constant.'
+
+def check(tool, error):
+    message = 'Run scripts/not-emitted.sh before retrying.'
+    return diagnostic(
+        'failed',
+        f'Validation failed: {error}',
+        remediation_actions=[
+            f'Run {tool} before retrying.',
+            f'Retry after reviewing {error}.',
+        ],
+    )
+"""
+        findings = active_path_guard.repo_bash_runtime_diagnostic_findings(
+            "speckit-pro/speckit_pro_runner/helpers/dynamic.py",
+            source,
+        )
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "runtime_instruction_dynamic")
+        self.assertIn("<dynamic>", findings[0].pattern)
 
     def test_runtime_provenance_and_negative_diagnostics_remain_non_blocking(self) -> None:
         files = [
@@ -634,6 +831,7 @@ subprocess.run([executable, '--version'])
         with temporary_repo() as root:
             with patch.object(active_path_guard.subprocess, "run", side_effect=FileNotFoundError("git")):
                 result = run_guard(root)
+        self.assert_result_contract(result["data"])
         self.assertEqual(result["status"], "missing_prerequisite")
         self.assertEqual(result["exit_code"], 3)
         self.assertEqual([item["code"] for item in result["diagnostics"]], ["missing_prerequisite"])
@@ -644,6 +842,7 @@ subprocess.run([executable, '--version'])
             (root / "tests" / "speckit-pro").mkdir(parents=True)
             write_file(root, TEMP_ALLOWLIST, json.dumps(ALLOWLIST_DOCUMENT))
             result = run_guard(root)
+        self.assert_result_contract(result["data"])
         self.assertEqual(result["status"], "missing_prerequisite")
         self.assertEqual(result["exit_code"], 3)
         self.assertEqual([item["code"] for item in result["diagnostics"]], ["missing_prerequisite"])

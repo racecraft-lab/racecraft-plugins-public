@@ -95,6 +95,16 @@ REPO_BASH_NON_ACTIONABLE_CONTEXT = re.compile(
     r"not\s+require|prior|prohibit|prohibited|provenance|remove|removed|retired|without|zero[- ]bash)\b",
     re.IGNORECASE,
 )
+REPO_BASH_EXPLICIT_DIRECTIVE = re.compile(
+    r"^\s*(?:(?:[-*+]\s+)|(?:\d+[.)]\s+))?(?:\*\*|`)?"
+    r"(?:execute|install|invoke|require|requires|required|run|use|uses|using)\b",
+    re.IGNORECASE,
+)
+REPO_BASH_WRAPPED_NEGATIVE = re.compile(
+    r"\b(?:can|could|did|do|does|must|need|shall|should|will|would)\s+not\s*$|"
+    r"\b(?:no\s+longer|never|without)\s*$",
+    re.IGNORECASE,
+)
 REPO_BASH_FIXTURE_PREFIXES = (
     "tests/speckit-pro/unit/fixtures/",
     "tests/speckit-pro/parity/",
@@ -360,6 +370,27 @@ class RepoBashBindingEvent:
     arguments: tuple[ast.AST, ...]
 
 
+@dataclass(frozen=True)
+class RepoBashGuidanceString:
+    line: int
+    value: str
+    complete: bool
+
+
+@dataclass(frozen=True)
+class RepoBashGuidanceResolution:
+    kind: str
+    values: tuple[RepoBashGuidanceString, ...] = ()
+
+
+@dataclass(frozen=True)
+class RepoBashShellBindingEvent:
+    name: str
+    category: str | None
+    line: int
+    column: int
+
+
 REPO_BASH_UNKNOWN_RESOLUTION = RepoBashStaticResolution("unknown")
 REPO_BASH_NONE_RESOLUTION = RepoBashStaticResolution("none")
 
@@ -373,7 +404,7 @@ def run_active_path_guard(entry: Any, request: Any) -> dict[str, Any]:
             if request.operation == "active-runtime-guard"
             else zero_bash_base_data(entry, request.operation, status)
             if request.operation == "zero-bash-guard"
-            else repo_bash_base_data(entry, request.operation, status)
+            else repo_bash_base_data(entry, request.operation, status, request.inputs)
             if request.operation == "repo-bash-confinement"
             else base_data(entry, request.operation, status)
         )
@@ -609,14 +640,14 @@ def run_repo_bash_confinement(entry: Any, request: Any, repo_root: Path) -> dict
         return response(
             "input_error",
             request_id=request.request_id,
-            data=repo_bash_base_data(entry, request.operation, "input_error"),
+            data=repo_bash_base_data(entry, request.operation, "input_error", request.inputs),
             diagnostics=[allowlist_result],
         )
     allowlist = allowlist_result
 
     tracked_result = repo_bash_tracked_paths(repo_root)
     if is_diagnostic(tracked_result):
-        data = repo_bash_base_data(entry, request.operation, "missing_prerequisite")
+        data = repo_bash_base_data(entry, request.operation, "missing_prerequisite", request.inputs)
         data["allowlist"] = repo_bash_allowlist_summary(request.inputs, allowlist)
         return response(
             "missing_prerequisite",
@@ -629,7 +660,7 @@ def run_repo_bash_confinement(entry: Any, request: Any, repo_root: Path) -> dict
     tracked_path_set = set(tracked_paths)
     missing_allowlisted_paths = sorted(XPLAT_010_CANONICAL_ALLOWLIST_PATHS - tracked_path_set)
     if missing_allowlisted_paths:
-        data = repo_bash_base_data(entry, request.operation, "input_error")
+        data = repo_bash_base_data(entry, request.operation, "input_error", request.inputs)
         data.update(
             {
                 "allowlist": repo_bash_allowlist_summary(request.inputs, allowlist),
@@ -673,7 +704,7 @@ def run_repo_bash_confinement(entry: Any, request: Any, repo_root: Path) -> dict
 
     blocking = [finding for finding in findings if finding.classification == "blocking_repo_bash"]
     status = "expected_failure" if blocking else "ok"
-    data = repo_bash_base_data(entry, request.operation, status)
+    data = repo_bash_base_data(entry, request.operation, status, request.inputs)
     data.update(
         {
             "schema_version": "1.0",
@@ -895,7 +926,12 @@ def repo_bash_path_findings(
     except (OSError, UnicodeDecodeError):
         return []
     if path.startswith(REPO_BASH_WORKFLOW_PREFIX) and Path(path).suffix.lower() in REPO_BASH_WORKFLOW_SUFFIXES:
-        return repo_bash_workflow_findings(path, content, tracked_paths or set())
+        return repo_bash_workflow_findings(
+            path,
+            content,
+            tracked_paths or set(),
+            repo_root=repo_root,
+        )
     if Path(path).suffix.lower() == ".py":
         findings = repo_bash_python_findings(path, content)
         if repo_bash_runtime_diagnostic_scan_path(path):
@@ -1020,10 +1056,7 @@ def repo_bash_instruction_findings(
     findings: list[RawFinding] = []
     for index, line in enumerate(lines):
         line_number = line_offset + index + 1
-        start = max(0, index - 1)
-        end = min(len(lines), index + 2)
-        context = REPO_BASH_SCRIPT_REFERENCE.sub("<script>", " ".join(lines[start:end]))
-        non_actionable = REPO_BASH_NON_ACTIONABLE_CONTEXT.search(context) is not None
+        non_actionable = repo_bash_instruction_non_actionable(lines, index)
 
         script_matches = list(REPO_BASH_SCRIPT_REFERENCE.finditer(line))
         blocking_script_reference = False
@@ -1077,6 +1110,31 @@ def repo_bash_instruction_findings(
     return deduplicate_raw_findings(findings)
 
 
+def repo_bash_instruction_non_actionable(lines: list[str], index: int) -> bool:
+    line = lines[index]
+    local_context = REPO_BASH_SCRIPT_REFERENCE.sub("<script>", line)
+    if REPO_BASH_NON_ACTIONABLE_CONTEXT.search(local_context) is not None:
+        return True
+
+    directive = REPO_BASH_EXPLICIT_DIRECTIVE.search(line) is not None
+    direct_command = REPO_BASH_DIRECT_COMMAND.search(line) is not None
+    previous = lines[index - 1].strip() if index > 0 else ""
+    if directive:
+        return REPO_BASH_WRAPPED_NEGATIVE.search(previous) is not None
+    if direct_command:
+        if REPO_BASH_WRAPPED_NEGATIVE.search(previous) is not None:
+            return True
+        return (
+            REPO_BASH_NON_ACTIONABLE_CONTEXT.search(previous) is not None
+            and re.search(r"[.!?:;]\s*$", previous) is None
+        )
+
+    start = max(0, index - 1)
+    end = min(len(lines), index + 2)
+    adjacent_context = REPO_BASH_SCRIPT_REFERENCE.sub("<script>", " ".join(lines[start:end]))
+    return REPO_BASH_NON_ACTIONABLE_CONTEXT.search(adjacent_context) is not None
+
+
 def repo_bash_instruction_finding(
     path: str,
     line: int,
@@ -1121,49 +1179,319 @@ def repo_bash_runtime_diagnostic_findings(path: str, content: str) -> list[RawFi
             )
         ]
 
-    expressions: list[ast.AST] = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.keyword) and node.arg in REPO_BASH_RUNTIME_OUTPUT_KEYS:
-            expressions.append(node.value)
-        elif isinstance(node, ast.Dict):
-            for key, value in zip(node.keys, node.values):
-                if isinstance(key, ast.Constant) and key.value in REPO_BASH_RUNTIME_OUTPUT_KEYS:
-                    expressions.append(value)
-        elif isinstance(node, (ast.Assign, ast.AnnAssign)):
-            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-            if any(isinstance(target, ast.Name) and target.id in REPO_BASH_RUNTIME_OUTPUT_KEYS for target in targets):
-                expressions.append(node.value)
-        elif isinstance(node, ast.Call) and repo_bash_call_name(node.func) == "diagnostic" and len(node.args) >= 2:
-            expressions.append(node.args[1])
-        elif isinstance(node, ast.Call) and repo_bash_call_name(node.func) == "MutationEntry" and len(node.args) >= 10:
-            expressions.append(node.args[9])
-
     findings: list[RawFinding] = []
-    for expression in expressions:
-        for line, value in repo_bash_guidance_strings(expression):
-            findings.extend(
-                repo_bash_instruction_findings(
+    for scope in repo_bash_scopes(tree):
+        nodes = list(repo_bash_scope_nodes(scope))
+        assignments = repo_bash_runtime_assignments(tree, scope, nodes)
+        expressions: list[ast.AST] = []
+        for node in nodes:
+            if isinstance(node, ast.keyword) and node.arg in REPO_BASH_RUNTIME_OUTPUT_KEYS:
+                expressions.append(node.value)
+            elif isinstance(node, ast.Dict):
+                for key, value in zip(node.keys, node.values):
+                    if isinstance(key, ast.Constant) and key.value in REPO_BASH_RUNTIME_OUTPUT_KEYS:
+                        expressions.append(value)
+            elif isinstance(node, ast.Call) and repo_bash_call_name(node.func) == "diagnostic" and len(node.args) >= 2:
+                expressions.append(node.args[1])
+            elif isinstance(node, ast.Call) and repo_bash_call_name(node.func) == "MutationEntry" and len(node.args) >= 10:
+                expressions.append(node.args[9])
+
+        for expression in expressions:
+            resolution = repo_bash_guidance_resolution(
+                expression,
+                assignments,
+                expression,
+                set(),
+            )
+            for guidance in resolution.values:
+                emitted = repo_bash_instruction_findings(
                     path,
-                    value,
-                    line_offset=max(0, line - 1),
+                    guidance.value,
+                    line_offset=max(0, guidance.line - 1),
                     active_role="runtime_diagnostic",
                     category_prefix="runtime_instruction",
                 )
-            )
+                findings.extend(emitted)
+                if (
+                    not guidance.complete
+                    and not emitted
+                    and repo_bash_dynamic_guidance_can_hide_forbidden(guidance.value)
+                ):
+                    findings.append(
+                        repo_bash_instruction_finding(
+                            path,
+                            guidance.line,
+                            "runtime_instruction_dynamic",
+                            guidance.value,
+                            "dynamic runtime guidance can hide a forbidden shell instruction",
+                            active_role="runtime_diagnostic",
+                        )
+                    )
     return deduplicate_raw_findings(findings)
 
 
-def repo_bash_guidance_strings(node: ast.AST | None) -> list[tuple[int, str]]:
+def repo_bash_runtime_assignments(
+    tree: ast.AST,
+    scope: ast.AST,
+    scope_nodes: list[ast.AST],
+) -> dict[str, list[RepoBashBindingEvent]]:
+    module_assignments = repo_bash_assignment_nodes(list(repo_bash_scope_nodes(tree)))
+    if scope is tree:
+        return module_assignments
+
+    local_assignments = repo_bash_assignment_nodes(scope_nodes)
+    if isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+        local_names = repo_bash_shadowed_names(scope)
+        merged = {
+            name: list(events)
+            for name, events in module_assignments.items()
+            if name not in local_names
+        }
+    else:
+        merged = {name: list(events) for name, events in module_assignments.items()}
+    for name, events in local_assignments.items():
+        merged.setdefault(name, []).extend(events)
+        merged[name].sort(key=lambda event: (event.line, event.column))
+    return merged
+
+
+def repo_bash_guidance_strings(
+    node: ast.AST | None,
+    assignments: dict[str, list[RepoBashBindingEvent]] | None = None,
+    context: ast.AST | None = None,
+) -> list[tuple[int, str]]:
     if node is None:
         return []
-    value = static_string_literal(node)
-    if value is not None:
-        return [(getattr(node, "lineno", 1), value)]
+    resolution = repo_bash_guidance_resolution(
+        node,
+        assignments or {},
+        context or node,
+        set(),
+    )
+    return [(item.line, item.value) for item in resolution.values]
+
+
+def repo_bash_guidance_resolution(
+    node: ast.AST | None,
+    assignments: dict[str, list[RepoBashBindingEvent]],
+    context: ast.AST,
+    resolving: set[str],
+    depth: int = 0,
+) -> RepoBashGuidanceResolution:
+    if node is None:
+        return RepoBashGuidanceResolution("collection")
+    if depth >= REPO_BASH_RESOLUTION_MAX_DEPTH or len(resolving) >= REPO_BASH_RESOLUTION_MAX_DEPTH:
+        return repo_bash_dynamic_guidance(node)
+    if isinstance(node, ast.Constant):
+        if isinstance(node.value, str):
+            return repo_bash_scalar_guidance(node, node.value, complete=True)
+        if node.value is None or isinstance(node.value, (bool, int, float)):
+            return repo_bash_scalar_guidance(node, str(node.value), complete=True)
+        return repo_bash_dynamic_guidance(node)
+    if isinstance(node, ast.Name):
+        if node.id in resolving:
+            return repo_bash_dynamic_guidance(node)
+        position = (getattr(context, "lineno", 0), getattr(context, "col_offset", 0))
+        events = [
+            event
+            for event in assignments.get(node.id, [])
+            if (event.line, event.column) <= position
+        ]
+        assignment_indexes = [index for index, event in enumerate(events) if event.kind == "assign"]
+        if not assignment_indexes:
+            return repo_bash_dynamic_guidance(node)
+        assignment_index = assignment_indexes[-1]
+        assignment = events[assignment_index]
+        if events[assignment_index + 1 :]:
+            return repo_bash_dynamic_guidance(node)
+        return repo_bash_guidance_resolution(
+            assignment.arguments[0],
+            assignments,
+            assignment.context,
+            resolving | {node.id},
+            depth + 1,
+        )
+    if isinstance(node, ast.NamedExpr):
+        return repo_bash_guidance_resolution(
+            node.value,
+            assignments,
+            context,
+            resolving,
+            depth + 1,
+        )
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        return repo_bash_add_guidance(
+            repo_bash_guidance_resolution(
+                node.left,
+                assignments,
+                context,
+                resolving,
+                depth + 1,
+            ),
+            repo_bash_guidance_resolution(
+                node.right,
+                assignments,
+                context,
+                resolving,
+                depth + 1,
+            ),
+            node,
+        )
+    if isinstance(node, ast.JoinedStr):
+        current = repo_bash_scalar_guidance(node, "", complete=True)
+        for value in node.values:
+            if isinstance(value, ast.FormattedValue):
+                part = repo_bash_guidance_resolution(
+                    value.value,
+                    assignments,
+                    context,
+                    resolving,
+                    depth + 1,
+                )
+                if part.kind != "scalar" or len(part.values) != 1:
+                    part = repo_bash_dynamic_guidance(value)
+            else:
+                part = repo_bash_guidance_resolution(
+                    value,
+                    assignments,
+                    context,
+                    resolving,
+                    depth + 1,
+                )
+            current = repo_bash_add_guidance(current, part, node)
+        return current
     if isinstance(node, (ast.List, ast.Set, ast.Tuple)):
-        return [item for element in node.elts for item in repo_bash_guidance_strings(element)]
+        values: list[RepoBashGuidanceString] = []
+        for element in node.elts[:REPO_BASH_RESOLUTION_MAX_ITEMS]:
+            resolved = repo_bash_guidance_resolution(
+                element,
+                assignments,
+                context,
+                resolving,
+                depth + 1,
+            )
+            values.extend(resolved.values)
+            if len(values) >= REPO_BASH_RESOLUTION_MAX_ITEMS:
+                break
+        return RepoBashGuidanceResolution(
+            "collection",
+            tuple(values[:REPO_BASH_RESOLUTION_MAX_ITEMS]),
+        )
     if isinstance(node, ast.Dict):
-        return [item for value_node in node.values for item in repo_bash_guidance_strings(value_node)]
-    return []
+        values: list[RepoBashGuidanceString] = []
+        for value in node.values[:REPO_BASH_RESOLUTION_MAX_ITEMS]:
+            resolved = repo_bash_guidance_resolution(
+                value,
+                assignments,
+                context,
+                resolving,
+                depth + 1,
+            )
+            values.extend(resolved.values)
+            if len(values) >= REPO_BASH_RESOLUTION_MAX_ITEMS:
+                break
+        return RepoBashGuidanceResolution(
+            "collection",
+            tuple(values[:REPO_BASH_RESOLUTION_MAX_ITEMS]),
+        )
+    if isinstance(node, (ast.IfExp, ast.BoolOp)):
+        branches = (
+            [node.body, node.orelse]
+            if isinstance(node, ast.IfExp)
+            else list(node.values[:REPO_BASH_RESOLUTION_MAX_ITEMS])
+        )
+        values: list[RepoBashGuidanceString] = []
+        for branch in branches:
+            values.extend(
+                repo_bash_guidance_resolution(
+                    branch,
+                    assignments,
+                    context,
+                    resolving,
+                    depth + 1,
+                ).values
+            )
+        return RepoBashGuidanceResolution(
+            "collection",
+            tuple(values[:REPO_BASH_RESOLUTION_MAX_ITEMS]),
+        )
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "str" and len(node.args) == 1:
+        return repo_bash_guidance_resolution(
+            node.args[0],
+            assignments,
+            context,
+            resolving,
+            depth + 1,
+        )
+    return repo_bash_dynamic_guidance(node)
+
+
+def repo_bash_scalar_guidance(
+    node: ast.AST,
+    value: str,
+    *,
+    complete: bool,
+) -> RepoBashGuidanceResolution:
+    if len(value) > REPO_BASH_RESOLUTION_MAX_STRING:
+        value = value[: REPO_BASH_RESOLUTION_MAX_STRING - len("<dynamic>")] + "<dynamic>"
+        complete = False
+    return RepoBashGuidanceResolution(
+        "scalar",
+        (
+            RepoBashGuidanceString(
+                line=getattr(node, "lineno", 1),
+                value=value,
+                complete=complete,
+            ),
+        ),
+    )
+
+
+def repo_bash_dynamic_guidance(node: ast.AST) -> RepoBashGuidanceResolution:
+    return repo_bash_scalar_guidance(node, "<dynamic>", complete=False)
+
+
+def repo_bash_add_guidance(
+    left: RepoBashGuidanceResolution,
+    right: RepoBashGuidanceResolution,
+    node: ast.AST,
+) -> RepoBashGuidanceResolution:
+    if left.kind == "collection" and right.kind == "collection":
+        return RepoBashGuidanceResolution(
+            "collection",
+            (*left.values, *right.values)[:REPO_BASH_RESOLUTION_MAX_ITEMS],
+        )
+    if left.kind != "scalar" or right.kind != "scalar" or len(left.values) != 1 or len(right.values) != 1:
+        return repo_bash_dynamic_guidance(node)
+    left_value = left.values[0]
+    right_value = right.values[0]
+    return repo_bash_scalar_guidance(
+        node,
+        left_value.value + right_value.value,
+        complete=left_value.complete and right_value.complete,
+    )
+
+
+def repo_bash_dynamic_guidance_can_hide_forbidden(value: str) -> bool:
+    if "<dynamic>" not in value:
+        return False
+    static_context = value.replace("<dynamic>", "")
+    if REPO_BASH_NON_ACTIONABLE_CONTEXT.search(static_context) is not None:
+        return False
+    directive = REPO_BASH_EXPLICIT_DIRECTIVE.search(value)
+    if directive is not None and value.find("<dynamic>", directive.end()) >= 0:
+        return True
+    if re.search(
+        r"^\s*<dynamic>\s+(?:--?[A-Za-z0-9]|(?:bash|jq|sh)(?:\.exe)?\b|[^\s]+\.(?:sh|bash)\b)",
+        value,
+        re.IGNORECASE,
+    ):
+        return True
+    return re.search(
+        r"<dynamic>[^.!?\n]{0,80}(?:(?:bash|jq|sh)(?:\.exe)?\b|[^\s]+\.(?:sh|bash)\b)",
+        value,
+        re.IGNORECASE,
+    ) is not None
 
 
 def deduplicate_raw_findings(findings: list[RawFinding]) -> list[RawFinding]:
@@ -1177,6 +1505,8 @@ def repo_bash_workflow_findings(
     path: str,
     content: str,
     tracked_paths: set[str],
+    *,
+    repo_root: Path | None = None,
 ) -> list[RawFinding]:
     """Inspect executable workflow run values without scanning YAML prose."""
     findings: list[RawFinding] = []
@@ -1197,20 +1527,24 @@ def repo_bash_workflow_findings(
         shell = repo_bash_workflow_shell(content, start)
         if shell == "python":
             dispatch_path = repo_bash_python_shell_dispatch_path(value)
-            if dispatch_path is not None and dispatch_path in tracked_paths:
-                continue
-            reason = (
-                "workflow shell: python value must directly dispatch one tracked Python file"
-                if dispatch_path is None
-                else "workflow shell: python dispatch target is not tracked"
+            dispatch_failure = (
+                repo_bash_workflow_dispatch_path_failure(
+                    dispatch_path,
+                    tracked_paths,
+                    repo_root=repo_root,
+                )
+                if dispatch_path is not None
+                else "workflow shell: python value must directly dispatch one Python file"
             )
+            if dispatch_failure is None:
+                continue
             findings.append(
                 repo_bash_workflow_finding(
                     path,
                     start,
                     "workflow_dispatch",
                     value,
-                    reason,
+                    dispatch_failure,
                 )
             )
             continue
@@ -1226,7 +1560,11 @@ def repo_bash_workflow_findings(
             )
             continue
 
-        failure = repo_bash_workflow_run_failure(value, tracked_paths)
+        failure = repo_bash_workflow_run_failure(
+            value,
+            tracked_paths,
+            repo_root=repo_root,
+        )
         if failure is None:
             continue
         category, reason = failure
@@ -1325,9 +1663,29 @@ def repo_bash_python_shell_dispatch_path(value: str) -> str | None:
     return normalize_path(target.value)
 
 
+def repo_bash_workflow_dispatch_path_failure(
+    raw_path: str,
+    tracked_paths: set[str],
+    *,
+    repo_root: Path | None = None,
+) -> str | None:
+    if invalid_scan_root_reason(raw_path) is not None:
+        return "workflow Python dispatch target must be repository-relative and confined"
+    path = normalize_path(raw_path)
+    if Path(path).suffix.lower() != ".py":
+        return "workflow Python dispatch target must be a Python file"
+    if path not in tracked_paths:
+        return "workflow Python dispatch target must be tracked"
+    if repo_root is not None and repo_bash_content_path(repo_root, path) is None:
+        return "workflow Python dispatch target must resolve to a file inside the repository"
+    return None
+
+
 def repo_bash_workflow_run_failure(
     value: str,
     tracked_paths: set[str],
+    *,
+    repo_root: Path | None = None,
 ) -> tuple[str, str] | None:
     executable_lines = [
         line.strip()
@@ -1337,24 +1695,13 @@ def repo_bash_workflow_run_failure(
     command = "\n".join(executable_lines)
     if not command:
         return "workflow_dispatch", "workflow run value has no direct command"
-    if "<<" in command:
+    active_text, has_substitution = repo_bash_active_shell_text(command)
+    if "<<" in active_text:
         return "workflow_heredoc", "workflow run value uses a heredoc"
-    if re.search(r"\$\(|`", command):
+    if has_substitution:
         return "workflow_shell_logic", "workflow run value uses command substitution"
-    if re.search(r"(?i)(?<![\w.-])(?:bash|jq)(?:\.exe)?(?![\w.-])", command) or re.search(
-        r"(?i)(?<![\w.-])[^\s]+\.(?:sh|bash)(?![\w.-])",
-        command,
-    ):
-        return "workflow_forbidden_command", "workflow run value invokes bash, jq, or a Bash-family script"
     if len(executable_lines) != 1:
         return "workflow_shell_logic", "workflow run value contains more than one direct command"
-    if re.search(
-        r"(?i)(?:^|[\s;])(?:set\s+-|if\b|then\b|elif\b|else\b|fi\b|for\b|while\b|until\b|"
-        r"case\b|esac\b|select\b|function\b|do\b|done\b)|&&|\|\||(?<!\|)\|(?!\|)|;|"
-        r"(?:^|\s)[{}](?:\s|$)|(?:^|\s)[A-Za-z_][A-Za-z0-9_]*\s*\(\)\s*\{",
-        command,
-    ):
-        return "workflow_shell_logic", "workflow run value contains shell control logic"
 
     if re.fullmatch(
         r"echo\s+(?:'[^'\r\n]*'|\"[^\"\r\n]*\")\s*>>\s*\"\$(?:GITHUB_OUTPUT|GITHUB_STEP_SUMMARY)\"",
@@ -1362,8 +1709,18 @@ def repo_bash_workflow_run_failure(
     ):
         return None
 
+    if re.search(
+        r"(?i)(?:^|\s)(?:set\s+-|if\b|then\b|elif\b|else\b|fi\b|for\b|while\b|until\b|"
+        r"case\b|esac\b|select\b|function\b|do\b|done\b)",
+        active_text,
+    ) or re.search(
+        r"&&|\|\||(?<!\|)\|(?!\|)|(?<!&)&(?!&)|;|[(){}]|>",
+        active_text,
+    ):
+        return "workflow_shell_logic", "workflow run value contains shell control logic"
+
     try:
-        lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|()<>")
+        lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|()<>{}")
         lexer.whitespace_split = True
         lexer.commenters = ""
         argv = list(lexer)
@@ -1375,20 +1732,30 @@ def repo_bash_workflow_run_failure(
         return "workflow_dispatch", "workflow run value has no executable"
 
     redirected_input: str | None = None
-    if "<" in argv:
-        if argv.count("<") != 1 or argv.index("<") != len(argv) - 2:
+    input_redirects = list(re.finditer(r"(?<!<)<(?!<)", active_text))
+    if input_redirects:
+        if len(input_redirects) != 1 or len(argv) < 3 or argv[-2] != "<":
             return "workflow_shell_logic", "workflow input redirection must be one trailing tracked JSON path"
         redirected_input = normalize_path(argv[-1])
         argv = argv[:-2]
-    if any(re.fullmatch(r"[;&|()<>]+", token) for token in argv):
-        return "workflow_shell_logic", "workflow run value contains shell operators"
+
+    if repo_bash_workflow_argv_contains_forbidden(argv):
+        return "workflow_forbidden_command", "workflow run value invokes bash, jq, or a Bash-family script"
 
     executable = executable_basename(argv[0])
     if executable in {"python", "python3"}:
         runner_dispatch = len(argv) >= 3 and argv[1:3] == ["-m", "speckit_pro_runner"]
-        script_dispatch = len(argv) >= 2 and Path(argv[1]).suffix.lower() == ".py"
+        script_dispatch = len(argv) >= 2 and not argv[1].startswith("-")
         if not runner_dispatch and not script_dispatch:
             return "workflow_dispatch", "workflow Python command must dispatch a script or speckit_pro_runner"
+        if script_dispatch:
+            dispatch_failure = repo_bash_workflow_dispatch_path_failure(
+                argv[1],
+                tracked_paths,
+                repo_root=repo_root,
+            )
+            if dispatch_failure is not None:
+                return "workflow_dispatch", dispatch_failure
         if redirected_input is None:
             return None
         if (
@@ -1407,6 +1774,71 @@ def repo_bash_workflow_run_failure(
     if executable == "actionlint" or normalize_path(argv[0]).endswith("/actionlint"):
         return None
     return "workflow_dispatch", "workflow run value is not an approved direct Python, pnpm, corepack, or actionlint dispatch"
+
+
+def repo_bash_active_shell_text(command: str) -> tuple[str, bool]:
+    """Mask quoted and escaped literals while retaining active shell syntax."""
+    characters = list(command)
+    active = list(command)
+    quote: str | None = None
+    has_substitution = False
+    index = 0
+    while index < len(characters):
+        character = characters[index]
+        if quote == "'":
+            active[index] = " "
+            if character == "'":
+                quote = None
+            index += 1
+            continue
+        if quote == '"':
+            active[index] = " "
+            if character == "\\" and index + 1 < len(characters):
+                active[index + 1] = " "
+                index += 2
+                continue
+            if character == '"':
+                quote = None
+            elif character == "`" or (
+                character == "$" and index + 1 < len(characters) and characters[index + 1] == "("
+            ):
+                has_substitution = True
+            index += 1
+            continue
+        if character == "\\" and index + 1 < len(characters):
+            active[index] = " "
+            active[index + 1] = " "
+            index += 2
+            continue
+        if character in {"'", '"'}:
+            quote = character
+            active[index] = " "
+        elif character == "`" or (
+            character == "$" and index + 1 < len(characters) and characters[index + 1] == "("
+        ):
+            has_substitution = True
+        index += 1
+    return "".join(active), has_substitution
+
+
+def repo_bash_workflow_argv_contains_forbidden(argv: list[str]) -> bool:
+    if not argv:
+        return False
+    executable = executable_basename(argv[0])
+    if executable in REPO_BASH_COMMAND_NAMES or executable in {"sh", "sh.exe"}:
+        return True
+    if Path(normalize_path(argv[0])).suffix.lower() in REPO_BASH_SCRIPT_SUFFIXES:
+        return True
+    if repo_bash_argv_contains_forbidden(list(argv)):
+        return True
+    if executable == "env":
+        return any(
+            repo_bash_workflow_argv_contains_forbidden(delegated)
+            for delegated in env_delegated_argvs(argv)
+        )
+    if executable in {"command", "exec"}:
+        return repo_bash_workflow_argv_contains_forbidden(argv[1:])
+    return False
 
 
 def repo_bash_workflow_finding(
@@ -1437,24 +1869,38 @@ def repo_bash_python_findings(path: str, content: str) -> list[RawFinding]:
     imported_which_aliases = repo_bash_which_aliases(tree)
     imported_sys_aliases = repo_bash_sys_aliases(tree)
     wrappers = repo_bash_subprocess_wrappers(tree, aliases)
+    module_shell_events = repo_bash_shell_binding_events(tree)
+    module_shell_bindings = repo_bash_apply_shell_binding_events(
+        {"os": "os_modules", "subprocess": "subprocess_modules"},
+        module_shell_events,
+    )
     findings: list[RawFinding] = []
     for scope in repo_bash_scopes(tree):
         nodes = list(repo_bash_scope_nodes(scope))
         assignments = repo_bash_assignment_nodes(nodes)
+        local_shell_events = module_shell_events if scope is tree else repo_bash_shell_binding_events(scope)
         shadowed = repo_bash_shadowed_names(scope)
         which_aliases = tuple(aliases - shadowed for aliases in imported_which_aliases)
         sys_aliases = tuple(aliases - shadowed for aliases in imported_sys_aliases)
         for node in nodes:
             if not isinstance(node, ast.Call):
                 continue
+            call_aliases = repo_bash_effective_shell_aliases(
+                tree,
+                scope,
+                node,
+                module_shell_events,
+                module_shell_bindings,
+                local_shell_events,
+            )
             category: str | None = None
             args_node: ast.AST | None = None
             direct_subprocess = False
-            if is_os_system_call(node.func, aliases):
+            if is_os_system_call(node.func, call_aliases):
                 category = "os_system"
                 args_node = subprocess_args_node(node)
-            elif is_shell_backed_subprocess_call(node.func, aliases) or is_subprocess_call(node.func, aliases):
-                direct_subprocess = is_subprocess_call(node.func, aliases)
+            elif is_shell_backed_subprocess_call(node.func, call_aliases) or is_subprocess_call(node.func, call_aliases):
+                direct_subprocess = is_subprocess_call(node.func, call_aliases)
                 category = "shell_true" if call_has_shell_enabled(node) else "command_argv_subprocess"
                 args_node = subprocess_args_node(node)
             else:
@@ -1519,7 +1965,14 @@ def repo_bash_python_findings(path: str, content: str) -> list[RawFinding]:
 
 
 def repo_bash_scopes(tree: ast.AST) -> list[ast.AST]:
-    return [tree, *[node for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda))]]
+    return [
+        tree,
+        *[
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda))
+        ],
+    ]
 
 
 def repo_bash_scope_nodes(scope: ast.AST):
@@ -1532,6 +1985,124 @@ def repo_bash_scope_nodes(scope: ast.AST):
             if child is not scope and isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
                 continue
             stack.append(child)
+
+
+def repo_bash_shell_binding_events(scope: ast.AST) -> list[RepoBashShellBindingEvent]:
+    events: list[RepoBashShellBindingEvent] = []
+
+    def add(name: str, category: str | None, node: ast.AST) -> None:
+        events.append(
+            RepoBashShellBindingEvent(
+                name=name,
+                category=category,
+                line=getattr(node, "lineno", 0),
+                column=getattr(node, "col_offset", 0),
+            )
+        )
+
+    nodes = list(repo_bash_scope_nodes(scope))
+    for node in nodes:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                bound = alias.asname or alias.name.split(".", 1)[0]
+                module = alias.name.split(".", 1)[0]
+                category = (
+                    "os_modules"
+                    if module == "os"
+                    else "subprocess_modules"
+                    if module == "subprocess"
+                    else None
+                )
+                add(bound, category, node)
+        elif isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                if alias.name == "*":
+                    continue
+                bound = alias.asname or alias.name
+                category = None
+                if node.module == "os" and alias.name in OS_SHELL_FUNCTION_NAMES:
+                    category = "os_system_functions"
+                elif node.module == "subprocess" and alias.name in SUBPROCESS_ARGV_FUNCTION_NAMES:
+                    category = "subprocess_functions"
+                elif node.module == "subprocess" and alias.name in SUBPROCESS_SHELL_FUNCTION_NAMES:
+                    category = "subprocess_shell_functions"
+                add(bound, category, node)
+        elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+            add(node.id, None, node)
+
+        for child in ast.iter_child_nodes(node):
+            if child is not scope and isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                add(child.name, None, child)
+
+    events.sort(key=lambda event: (event.line, event.column))
+    return events
+
+
+def repo_bash_apply_shell_binding_events(
+    initial: dict[str, str],
+    events: list[RepoBashShellBindingEvent],
+    position: tuple[int, int] | None = None,
+) -> dict[str, str]:
+    bindings = dict(initial)
+    for event in events:
+        if position is not None and (event.line, event.column) > position:
+            break
+        if event.category is None:
+            bindings.pop(event.name, None)
+        else:
+            bindings[event.name] = event.category
+    return bindings
+
+
+def repo_bash_effective_shell_aliases(
+    tree: ast.AST,
+    scope: ast.AST,
+    context: ast.AST,
+    module_events: list[RepoBashShellBindingEvent],
+    module_bindings: dict[str, str],
+    local_events: list[RepoBashShellBindingEvent],
+) -> dict[str, set[str]]:
+    position = (getattr(context, "lineno", 0), getattr(context, "col_offset", 0))
+    if scope is tree:
+        bindings = repo_bash_apply_shell_binding_events(
+            {"os": "os_modules", "subprocess": "subprocess_modules"},
+            module_events,
+            position,
+        )
+    elif isinstance(scope, ast.ClassDef):
+        class_position = (getattr(scope, "lineno", 0), getattr(scope, "col_offset", 0))
+        bindings = repo_bash_apply_shell_binding_events(
+            {"os": "os_modules", "subprocess": "subprocess_modules"},
+            module_events,
+            class_position,
+        )
+        bindings = repo_bash_apply_shell_binding_events(bindings, local_events, position)
+    else:
+        bindings = dict(module_bindings)
+        local_names = {event.name for event in local_events}
+        if isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+            local_names.update(
+                argument.arg
+                for argument in [*scope.args.posonlyargs, *scope.args.args, *scope.args.kwonlyargs]
+            )
+            if scope.args.vararg is not None:
+                local_names.add(scope.args.vararg.arg)
+            if scope.args.kwarg is not None:
+                local_names.add(scope.args.kwarg.arg)
+        for name in local_names:
+            bindings.pop(name, None)
+        bindings = repo_bash_apply_shell_binding_events(bindings, local_events, position)
+
+    aliases = {
+        "os_modules": set[str](),
+        "os_system_functions": set[str](),
+        "subprocess_modules": set[str](),
+        "subprocess_functions": set[str](),
+        "subprocess_shell_functions": set[str](),
+    }
+    for name, category in bindings.items():
+        aliases[category].add(name)
+    return aliases
 
 
 def repo_bash_assignment_nodes(nodes: list[ast.AST]) -> dict[str, list[RepoBashBindingEvent]]:
@@ -4958,8 +5529,16 @@ def zero_bash_base_data(entry: Any, operation: str, status: str) -> dict[str, An
     }
 
 
-def repo_bash_base_data(entry: Any, operation: str, status: str) -> dict[str, Any]:
+def repo_bash_base_data(
+    entry: Any,
+    operation: str,
+    status: str,
+    inputs: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     passing = status == "ok"
+    allowlist_path = (inputs or {}).get("allowlist_file", XPLAT_010_ALLOWLIST)
+    if not isinstance(allowlist_path, str) or not allowlist_path:
+        allowlist_path = XPLAT_010_ALLOWLIST
     return {
         "gate": {
             "gate_id": entry.helper_id,
@@ -4977,21 +5556,23 @@ def repo_bash_base_data(entry: Any, operation: str, status: str) -> dict[str, An
         "schema_version": "1.0",
         "feature_id": "XPLAT-010",
         "status": "pass" if passing else "fail",
-        "blocking_count": 0 if passing else 1,
+        "blocking_count": 0,
         "classified_counts": {},
         "findings": [],
         "total_finding_count": 0,
         "truncated_finding_count": 0,
         "script_file_count": 0,
         "enumeration": {
+            "active_instruction_values": "inspected",
+            "runtime_diagnostic_values": "inspected",
             "source": "git ls-files -z",
             "workflow_run_values": "inspected",
             "tracked_file_count": 0,
         },
         "allowlist": {
-            "path": XPLAT_010_ALLOWLIST,
-            "entry_count": 0,
-            "release_readiness_excluded": False,
+            "path": allowlist_path,
+            "entry_count": len(XPLAT_010_CANONICAL_ALLOWLIST_PATHS),
+            "release_readiness_excluded": True,
         },
     }
 
