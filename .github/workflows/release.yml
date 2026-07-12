@@ -59,14 +59,6 @@ jobs:
         with:
           node-version: 22
 
-      - name: Validate release PR readiness
-        if: steps.release_prs.outputs.found == 'true'
-        run: python3 scripts/run-runner-requests.py tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json
-
-      - name: Validate XPLAT-008 release gates
-        if: steps.release_prs.outputs.found == 'true'
-        run: python3 scripts/run-runner-requests.py tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/runner-invocation.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/active-runtime-guard.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/release-readiness.json
-
       - name: Sync generated artifacts onto the release PR
         if: steps.release_prs.outputs.found == 'true'
         env:
@@ -77,6 +69,14 @@ jobs:
         # registries. The helper refreshes payloads, installed-cache proofs,
         # and gate evidence, and reconciles unchanged release branches with main.
         run: python3 scripts/sync_release_pr.py
+
+      - name: Validate release PR readiness
+        if: steps.release_prs.outputs.found == 'true'
+        run: python3 scripts/run-runner-requests.py tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json
+
+      - name: Validate XPLAT-008 release gates
+        if: steps.release_prs.outputs.found == 'true'
+        run: python3 scripts/run-runner-requests.py tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/runner-invocation.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/active-runtime-guard.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/release-readiness.json
 
       - name: Dispatch PR Checks for release PRs
         if: steps.release_prs.outputs.found == 'true'

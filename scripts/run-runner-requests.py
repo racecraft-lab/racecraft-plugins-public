@@ -12,6 +12,11 @@ from pathlib import Path
 from typing import Any
 
 
+def shell_compatible_status(returncode: int) -> int:
+    """Convert subprocess signal return codes to conventional shell statuses."""
+    return 128 + abs(returncode) if returncode < 0 else returncode or 1
+
+
 def run_runner_requests(
     repo_root: Path,
     request_files: Sequence[str],
@@ -52,12 +57,18 @@ def run_runner_requests(
             )
             return 1
         if completed.returncode != 0:
+            status = shell_compatible_status(completed.returncode)
+            failure = (
+                f"signal {-completed.returncode}; exit {status}"
+                if completed.returncode < 0
+                else f"exit {status}"
+            )
             print(
                 f"run-runner-requests: {request_file} failed "
-                f"(exit {completed.returncode})",
+                f"({failure})",
                 file=sys.stderr,
             )
-            return completed.returncode or 1
+            return status
     return 0
 
 

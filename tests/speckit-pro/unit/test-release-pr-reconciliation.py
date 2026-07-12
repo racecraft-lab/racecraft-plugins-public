@@ -7,6 +7,8 @@ import importlib.util
 import io
 import hashlib
 import json
+import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -282,7 +284,7 @@ class ReleasePrDispatchTests(unittest.TestCase):
             with self.subTest(raw=raw), self.assertRaises(dispatch.DispatchError):
                 dispatch.parse_release_prs(raw)
 
-    def test_dispatch_stops_and_propagates_subprocess_failure(self) -> None:
+    def test_dispatch_stops_and_reports_child_failure_with_parent_status(self) -> None:
         calls: list[list[str]] = []
 
         def failing_run(argv, **_kwargs):
@@ -301,9 +303,10 @@ class ReleasePrDispatchTests(unittest.TestCase):
         with redirect_stderr(stderr):
             returncode = dispatch.main(environment, run=failing_run)
 
-        self.assertEqual(17, returncode)
+        self.assertEqual(1, returncode)
         self.assertEqual(1, len(calls))
         self.assertIn("PR #1", stderr.getvalue())
+        self.assertIn("child exit 17", stderr.getvalue())
 
 
 class RunnerRequestDispatchTests(unittest.TestCase):
@@ -361,6 +364,29 @@ class RunnerRequestDispatchTests(unittest.TestCase):
         self.assertEqual(9, returncode)
         self.assertEqual(2, len(calls))
         self.assertIn("second.json", stderr.getvalue())
+
+    def test_runner_requests_normalize_signal_status_and_stop(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            for name in ("first.json", "second.json"):
+                (repo_root / name).write_text("{}\n", encoding="utf-8")
+            calls: list[bytes] = []
+
+            def signal_run(argv, **kwargs):
+                calls.append(kwargs["input"])
+                return subprocess.CompletedProcess(argv, -signal.SIGTERM)
+
+            stderr = io.StringIO()
+            with redirect_stderr(stderr):
+                returncode = runner_requests.run_runner_requests(
+                    repo_root,
+                    ["first.json", "second.json"],
+                    run=signal_run,
+                )
+
+        self.assertEqual(128 + signal.SIGTERM, returncode)
+        self.assertEqual(1, len(calls))
+        self.assertIn(f"signal {signal.SIGTERM}; exit {128 + signal.SIGTERM}", stderr.getvalue())
 
     def test_runner_requests_fail_closed_for_missing_request(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -433,6 +459,85 @@ class ReleaseNoteAuditTests(unittest.TestCase):
         }
         release = {"id": 789, "tag_name": snapshot["tag"], "body": published_body}
         return result, release
+
+    def _assert_acquisition_failure(
+        self,
+        environment_key: str,
+        expected_message: str,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            environment, _snapshot_bytes, _snapshot = self.make_case(root)
+            environment[environment_key] = "failure"
+            calls = {"composer": 0, "api": 0}
+
+            def unexpected_composer(argv, **_kwargs):
+                calls["composer"] += 1
+                return subprocess.CompletedProcess(argv, 99, stdout="", stderr="unexpected")
+
+            def unexpected_api(*_args, **_kwargs):
+                calls["api"] += 1
+                raise AssertionError("release API must not run")
+
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            returncode = audit.audit_release_notes(
+                root,
+                environment,
+                run=unexpected_composer,
+                urlopen=unexpected_api,
+                stdout=stdout,
+                stderr=stderr,
+            )
+            audit_bytes = (root / "release-note-audit.json").read_bytes()
+            output = (root / "github-output.txt").read_text(encoding="utf-8")
+            summary = (root / "summary.md").read_text(encoding="utf-8")
+
+        expected_record = {
+            "capture_result": environment["CAPTURE_RESULT"],
+            "composer_run_attempt": 2,
+            "error": expected_message,
+            "outcome": audit.FAILURE_OUTCOME,
+            "schema_version": 1,
+            "snapshot_download_outcome": environment["SNAPSHOT_DOWNLOAD_OUTCOME"],
+            "workflow_run_id": 123,
+        }
+        expected_audit = (
+            json.dumps(expected_record, sort_keys=True, separators=(",", ":")) + "\n"
+        ).encode()
+        expected_digest = hashlib.sha256(expected_audit).hexdigest()
+        self.assertEqual(1, returncode)
+        self.assertEqual({"composer": 0, "api": 0}, calls)
+        self.assertEqual(expected_audit, audit_bytes)
+        self.assertEqual(f"audit_sha256={expected_digest}\n", output)
+        self.assertEqual(
+            "### Release note composition failed\n\n"
+            f"- Audit SHA-256: `{expected_digest}`\n"
+            f"- Reason: `{expected_message}`\n",
+            summary,
+        )
+        self.assertEqual("", stdout.getvalue())
+        self.assertEqual(
+            json.dumps(
+                {"error": expected_message, "outcome": audit.FAILURE_OUTCOME},
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            + "\n",
+            stderr.getvalue(),
+        )
+
+    def test_audit_records_capture_result_failure_without_composer_or_api(self) -> None:
+        self._assert_acquisition_failure(
+            "CAPTURE_RESULT",
+            "release input capture did not succeed: failure",
+        )
+
+    def test_audit_records_snapshot_download_failure_without_composer_or_api(self) -> None:
+        self._assert_acquisition_failure(
+            "SNAPSHOT_DOWNLOAD_OUTCOME",
+            "release snapshot download did not succeed: failure",
+        )
 
     def test_audit_rejects_snapshot_digest_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -646,12 +751,8 @@ class RefreshReleaseArtifactsCheckTests(unittest.TestCase):
         (root / "generated.txt").write_text("current\n", encoding="utf-8")
 
     @staticmethod
-    def snapshot(root: Path) -> dict[str, bytes]:
-        return {
-            path.relative_to(root).as_posix(): path.read_bytes()
-            for path in root.rglob("*")
-            if path.is_file()
-        }
+    def snapshot(root: Path) -> dict[str, str]:
+        return refresh.snapshot_tree(root)
 
     def test_check_mode_reports_clean_isolated_regeneration(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -677,6 +778,76 @@ class RefreshReleaseArtifactsCheckTests(unittest.TestCase):
         self.assertFalse(refresh_calls[0][1]["shell"])
         self.assertIn(["git", "init", "--quiet"], git_calls)
         self.assertIn(["git", "add", "--all", "--force"], git_calls)
+
+    def test_check_mode_runs_a_real_isolated_copy_without_source_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.make_repo(root)
+            subprocess.run(
+                ["git", "init", "--quiet"],
+                cwd=root,
+                check=True,
+                shell=False,
+                capture_output=True,
+            )
+            before = self.snapshot(root)
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+
+            returncode = refresh.check_release_artifacts(
+                root,
+                stdout=stdout,
+                stderr=stderr,
+            )
+            after = self.snapshot(root)
+
+        self.assertEqual(0, returncode, stderr.getvalue())
+        self.assertEqual(before, after)
+        self.assertEqual("Generated release artifacts match the source tree.\n", stdout.getvalue())
+        self.assertEqual("", stderr.getvalue())
+
+    @unittest.skipIf(os.name == "nt", "POSIX mode and symlink records are not portable to Windows")
+    def test_snapshot_tree_records_file_modes_content_and_symlinks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.make_repo(root)
+            generated = root / "generated.txt"
+            generated.chmod(0o640)
+            (root / "generated-link").symlink_to("generated.txt")
+
+            before = refresh.snapshot_tree(root)
+            generated.chmod(0o750)
+            after = refresh.snapshot_tree(root)
+
+        self.assertEqual(
+            "file:0640:" + hashlib.sha256(b"current\n").hexdigest(),
+            before["generated.txt"],
+        )
+        self.assertEqual("link:generated.txt", before["generated-link"])
+        self.assertEqual(["M generated.txt"], refresh.compare_snapshots(before, after))
+
+    @unittest.skipIf(os.name == "nt", "POSIX executable-mode drift is not portable to Windows")
+    def test_check_mode_reports_executable_mode_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.make_repo(root)
+            (root / "generated.txt").chmod(0o644)
+
+            def mode_drift_run(argv, **kwargs):
+                if argv[0] == "git":
+                    return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+                (Path(kwargs["cwd"]) / "generated.txt").chmod(0o755)
+                return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+
+            stderr = io.StringIO()
+            returncode = refresh.check_release_artifacts(
+                root,
+                run=mode_drift_run,
+                stderr=stderr,
+            )
+
+        self.assertEqual(1, returncode)
+        self.assertIn("M generated.txt", stderr.getvalue())
 
     def test_default_mode_still_uses_the_mutating_refresh_path(self) -> None:
         with (

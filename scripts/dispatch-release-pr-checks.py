@@ -16,10 +16,6 @@ DEFAULT_TITLE = "chore(release): release speckit-pro"
 class DispatchError(ValueError):
     """Release PR metadata or workflow dispatch failed."""
 
-    def __init__(self, message: str, returncode: int = 1) -> None:
-        super().__init__(message)
-        self.returncode = returncode or 1
-
 
 def parse_release_prs(raw: str | None) -> list[dict[str, str]]:
     try:
@@ -111,8 +107,7 @@ def dispatch_release_pr_checks(
         except subprocess.CalledProcessError as exc:
             raise DispatchError(
                 f"PR Checks dispatch failed for PR #{release_pr['number']} "
-                f"(exit {exc.returncode})",
-                exc.returncode,
+                f"(child exit {exc.returncode})",
             ) from exc
         except OSError as exc:
             raise DispatchError(
@@ -131,7 +126,7 @@ def main(
         dispatch_release_pr_checks(release_prs, run=run)
     except DispatchError as exc:
         print(f"dispatch-release-pr-checks: {exc}", file=sys.stderr)
-        return exc.returncode
+        return 1
     return 0
 
 

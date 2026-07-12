@@ -61,10 +61,29 @@ RELEASE_NOTE_EVENTS = (
     "unlabeled",
     "ready_for_review",
 )
+RELEASE_PR_FOUND_CONDITION = "steps.release_prs.outputs.found == 'true'"
+RELEASE_CREATED_CONDITION = "steps.release.outputs['speckit-pro--release_created'] == 'true'"
+RUNNER_REQUEST_PREFIX = "python3 scripts/run-runner-requests.py"
+RELEASE_READINESS_REQUEST = (
+    "tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json"
+)
+TEST_PAYLOAD_EVIDENCE_REQUEST = (
+    "tests/speckit-pro/unit/fixtures/runner-gates/requests/test-payload-evidence.json"
+)
+XPLAT_008_RELEASE_REQUESTS = (
+    "tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/runner-invocation.json",
+    "tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/active-runtime-guard.json",
+    "tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness.json",
+    "tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/release-readiness.json",
+)
 
 
 def _contains_all(text: str, needles: tuple[str, ...]) -> bool:
     return all(needle in text for needle in needles)
+
+
+def _runner_request_command(request_files: tuple[str, ...]) -> str:
+    return " ".join((RUNNER_REQUEST_PREFIX, *request_files))
 
 
 def _mapping_block(text: str, key: str, indent: int) -> str:
@@ -305,6 +324,66 @@ class ValidateReleaseWorkflow(unittest.TestCase):
                     ),
                 )
             )
+            runner_steps = (
+                (
+                    "Validate release PR readiness",
+                    RELEASE_PR_FOUND_CONDITION,
+                    (RELEASE_READINESS_REQUEST,),
+                ),
+                (
+                    "Validate XPLAT-008 release gates",
+                    RELEASE_PR_FOUND_CONDITION,
+                    XPLAT_008_RELEASE_REQUESTS,
+                ),
+                (
+                    "Verify generated test payload evidence",
+                    RELEASE_CREATED_CONDITION,
+                    (TEST_PAYLOAD_EVIDENCE_REQUEST,),
+                ),
+                (
+                    "Validate post-release readiness",
+                    RELEASE_CREATED_CONDITION,
+                    (RELEASE_READINESS_REQUEST,),
+                ),
+                (
+                    "Validate post-release XPLAT-008 gates",
+                    RELEASE_CREATED_CONDITION,
+                    XPLAT_008_RELEASE_REQUESTS,
+                ),
+            )
+            expected_runner_commands: list[str] = []
+            for step_name, condition, request_files in runner_steps:
+                step = _named_step_block(release_job, step_name)
+                expected_command = _runner_request_command(request_files)
+                self.assertTrue(step, f"missing release workflow step: {step_name}")
+                self.assertEqual([condition], _scalar_values(step, "if", 8))
+                self.assertEqual([expected_command], _scalar_values(step, "run", 8))
+                expected_runner_commands.append(expected_command)
+            actual_runner_commands = [
+                command
+                for command in _run_commands(release_job)
+                if command.startswith(RUNNER_REQUEST_PREFIX)
+            ]
+            self.assertEqual(expected_runner_commands, actual_runner_commands)
+
+            ordered_pre_release_steps = (
+                "Set up Node",
+                "Sync generated artifacts onto the release PR",
+                "Validate release PR readiness",
+                "Validate XPLAT-008 release gates",
+                "Dispatch PR Checks for release PRs",
+            )
+            step_positions = [
+                release_job.find(f"      - name: {step_name}")
+                for step_name in ordered_pre_release_steps
+            ]
+            self.assertNotIn(-1, step_positions)
+            self.assertEqual(sorted(step_positions), step_positions)
+            for step_name in ordered_pre_release_steps:
+                self.assertEqual(
+                    [RELEASE_PR_FOUND_CONDITION],
+                    _scalar_values(_named_step_block(release_job, step_name), "if", 8),
+                )
 
         with self.subTest(msg="release workflow verifies generated test payload evidence"):
             self.assertIn("test-payload-evidence.json", content)

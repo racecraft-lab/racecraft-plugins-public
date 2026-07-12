@@ -33,6 +33,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -166,7 +167,7 @@ def check_release_artifacts(
     stdout: TextIO | None = None,
     stderr: TextIO | None = None,
 ) -> int:
-    """Regenerate in an isolated copy and report any byte-level drift."""
+    """Regenerate in an isolated copy and report content or file-mode drift."""
     stdout = sys.stdout if stdout is None else stdout
     stderr = sys.stderr if stderr is None else stderr
     repo_root = repo_root.resolve()
@@ -302,7 +303,8 @@ def snapshot_tree(root: Path) -> dict[str, str]:
             if path.is_symlink():
                 snapshot[key] = f"link:{os.readlink(path)}"
             elif path.is_file():
-                snapshot[key] = f"file:{sha256_file(path)}"
+                mode = stat.S_IMODE(path.stat().st_mode)
+                snapshot[key] = f"file:{mode:04o}:{sha256_file(path)}"
     return snapshot
 
 
