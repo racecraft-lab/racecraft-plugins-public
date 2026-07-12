@@ -1,5 +1,31 @@
 # Changelog
 
+## [2.19.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.18.1...speckit-pro-v2.19.0) (2026-07-12)
+
+
+### Features
+
+* **autopilot:** harden durable marker planning ([e2459ea](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e2459ea06acec180aabc241ff766ba38091497bb))
+* **gates:** enforce repository Bash confinement ([78e0611](https://github.com/racecraft-lab/racecraft-plugins-public/commit/78e06119a423df8aa40c1269eeac618923be5975))
+* **release:** validate consumer release-note blocks ([59cfd0e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/59cfd0e3ea86c11565bf2f3b7abee51eca498331))
+* **xplat-010:** enforce repository Bash confinement ([9cd8b63](https://github.com/racecraft-lab/racecraft-plugins-public/commit/9cd8b632c51b2768b498e5051fbfacb25f7df887))
+* **XPLAT-010:** PR-2 slice - suite manifest, python orchestrator, and manifest-reading gate ([d35a594](https://github.com/racecraft-lab/racecraft-plugins-public/commit/d35a594953776d4f3d9680f7d526182a10b525f0))
+* **XPLAT-010:** PR-5 slice - port toolchain and Layer 5 dispatch ([0149d1c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0149d1c26338a490e1622f62e1ab54d102f93ec4))
+* **XPLAT-010:** PR-7b slice - port Layer 7 replay runners ([a99e5ab](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a99e5ab4da1ffc70aa9be1151f9b309bc2140c4b))
+* **XPLAT-010:** PR-8 slice - port Layer 8 parity harness ([8c41e9b](https://github.com/racecraft-lab/racecraft-plugins-public/commit/8c41e9b1e7e80a918744dbe60b2e40d06a99adde))
+* **XPLAT-010:** PR-9 slice - port live eval runners ([7a0fa5c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/7a0fa5cc7e02eebf60e1623127dd3642c0f7fc73))
+* **xplat-010:** replace Bash suite orchestration with Python ([0a7bd98](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0a7bd98d2aafe07704140684d72759af47885f29))
+* **xplat-010:** validate consumer release-note blocks ([3613987](https://github.com/racecraft-lab/racecraft-plugins-public/commit/361398770d2f05508abe5224d7a6a7b4ae3ae5e0))
+
+
+### Bug Fixes
+
+* **index:** restore Python spec index generation ([#332](https://github.com/racecraft-lab/racecraft-plugins-public/issues/332)) ([c754d9a](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c754d9afafda0f222401f2ac4a7ce86d67b48347))
+* **release:** keep contract guidance runtime-neutral ([5a1aafd](https://github.com/racecraft-lab/racecraft-plugins-public/commit/5a1aafdd5871fcc5c73eb7554933681988b85e0c))
+* **speckit-pro:** stop SpecKit tooling from growing agent context files ([#335](https://github.com/racecraft-lab/racecraft-plugins-public/issues/335)) ([0775a45](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0775a457fc072a54fae9596468bf7ab0e8a0f309))
+* **tooling:** complete repository Bash cleanup ([#337](https://github.com/racecraft-lab/racecraft-plugins-public/issues/337)) ([fb9a773](https://github.com/racecraft-lab/racecraft-plugins-public/commit/fb9a773b96bbbe16c152d46fa0c6d5f9dae77524))
+* **xplat-010:** restore spec-size estimation ([#313](https://github.com/racecraft-lab/racecraft-plugins-public/issues/313)) ([6bca785](https://github.com/racecraft-lab/racecraft-plugins-public/commit/6bca7852919c0fa2e4fd3e1e7ded254df85d6ae9))
+
 ## [2.18.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.18.0...speckit-pro-v2.18.1) (2026-07-09)
 
 
