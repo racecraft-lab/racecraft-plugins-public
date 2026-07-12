@@ -100,6 +100,10 @@ assignments that clear the consumer-focused gates.
   compatibility override, no silent downgrade, exactly nine installed core
   agents, and a conditional tenth helper only where its invocation contract is
   proven.
+- Make active Codex skills explicitly dispatch the installed custom agents by
+  name, and prove through skill-driven execution traces that each spawned
+  agent's result is consumed by the workflow rather than merely installed or
+  benchmarked in isolation.
 - Rebuild and verify the Codex payload, active guidance, and installed-cache
   evidence before release.
 - Compare static role pins with an unpinned Codex-selected control and an
@@ -887,7 +891,8 @@ assignments that clear the consumer-focused gates.
   selection, workload-stratum and long-horizon gates, telemetry-attrition rules,
   canonical-rate calculation, plan-native claim boundaries, source-versus-
   destination agent inventory, row-aware helper identity and absence semantics,
-  final-static-versus-control ownership, component terminology, and the bounded
+  skill-to-agent usage-manifest coverage and existing-name references, final-
+  static-versus-control ownership, component terminology, and the bounded
   assembled-policy claim. They reject
   absent paths described as current,
   obsolete Layer 6 shell paths, contradictory G56R-002/G56R-003 ownership,
@@ -962,6 +967,31 @@ assignments that clear the consumer-focused gates.
   equivalence class. This portfolio validates operability, recovery, and
   boundary behavior only; it is additional evidence and never substitutes for
   AC-2.9/AC-8.9 comparative long-horizon results.
+- **AC-8.13 — Skill-to-agent orchestration proof**: Before release, G56R-011
+  publishes a versioned `skill_agent_usage_manifest` covering every active
+  `speckit-pro/codex-skills/*/SKILL.md` entry point and every one of the ten
+  source agents. Each skill-agent mapping records the skill ID and content hash,
+  exact installed agent name, trigger or phase, `required`, `conditional`,
+  `prohibited`, or `not_applicable` state, spawn condition, result-consumption
+  contract, and allowed fallback. Each applicable skill instruction explicitly
+  directs Codex to spawn the named installed custom agent; substituting a generic
+  agent when the matching bundled role is available does not satisfy the
+  contract. Across the manifest, every required core agent has at least one
+  production skill path, while `autopilot-fast-helper` remains conditional under
+  AC-7.* and AC-8.11. Any dispatch reference that does not resolve to the
+  installed source inventory blocks release.
+
+  Representative UAT invokes the actual installed Codex skills, not a direct
+  harness call to an agent. Across those workflows, every one of the nine core
+  agents is observed at least once under a predeclared triggering condition. A
+  trace binds `skill_id` and skill hash to the `spawn_agent` call, installed
+  agent identity, returned result hash, and a downstream decision, artifact, or
+  validation step that consumed the result. Missing a required spawn, returning
+  work that the parent skill does not use, silently substituting another agent,
+  or injecting the agent directly from the harness fails release proof. The
+  separate optional-helper campaign proves the same chain for
+  `autopilot-fast-helper` on a supported row and proves the no-helper path on all
+  other rows. No single workflow is required to spawn all ten agents.
 
 ### 3.9 Workflow Budget and Adaptive-policy Contract *(-> G56R-004, G56R-005, G56R-011)*
 
@@ -1121,13 +1151,18 @@ assignments that clear the consumer-focused gates.
    state, and release-policy IDs; it verifies a conditional tenth helper identity
    only on supported rows. Environment and execution evidence separately prove
    effective speed, tools, permissions, and model resolution.
-4. Source, generated payload, installed cache, guidance, tests, and UAT agree on
+4. Installed Codex skill workflows collectively prove the named spawn and
+   result-consumption chain for every required core agent, plus the optional
+   helper on a supported row and the no-helper path elsewhere. Agent presence,
+   direct harness invocation, or an unconsumed return does not satisfy this
+   criterion.
+5. Source, generated payload, installed cache, guidance, tests, and UAT agree on
    the universal core and optional-helper split, workload manifest, canonical
    rate schedule, and telemetry-attrition evidence. Every mandatory manifest row
    is `supported`; any additional row has an explicit non-claiming state. A
    plan-native allowance claim is made only for rows whose required native
    guardrail passes.
-5. Consumers retain a documented global compatibility override and a previous
+6. Consumers retain a documented global compatibility override and a previous
    release rollback path.
 
 ## 9. References

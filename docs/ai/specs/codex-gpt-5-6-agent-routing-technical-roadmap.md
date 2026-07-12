@@ -896,7 +896,8 @@ Budget result: re-estimate at scaffold; single-agent vertical slice
 **Goal:** Publish one internally consistent Codex payload whose nine-agent
 universal core is confirmed against production, row comparators, and frozen
 policy controls, including powered long-horizon and attributable plan-native
-gates, while the optional helper is proven through a separate gate.
+gates, while installed Codex skills prove named-agent dispatch and result use
+and the optional helper is proven through a separate gate.
 
 **Reviewability Budget:** Primary surface: docs/process |
 Projected reviewable LOC: 395 | Suggested slices: 1 | Status: ok |
@@ -923,6 +924,12 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
   universal-core/optional-helper policy, global override, restart, entitlement,
   progressive-claim, and rollback boundaries while preserving historical
   records.
+- Publish a versioned `skill_agent_usage_manifest` for every active Codex skill
+  entry point and all ten source agents. Update each applicable skill instruction
+  to name the installed custom agent, triggering condition, result-consumption
+  contract, and allowed fallback; classify other mappings as conditional,
+  prohibited, or not applicable rather than leaving them implicit. Reject any
+  dispatch reference that does not resolve to the installed source inventory.
 - Run deterministic source, payload, installed-cache, default-suite,
   active-path, benchmark replay, and install verification gates.
 - Run cohort locks and one integrated multi-stratum release-confirmation
@@ -960,6 +967,15 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
   and manifest-row qualification without pooling regimes. Passing does not
   establish global optimality among alternative complete assemblies. Failure
   reopens selection and requires a new versioned release-confirmation corpus.
+- Run representative workflows through the actual installed Codex skill entry
+  points. Across the workflow set, require trace evidence for every core agent
+  showing the complete chain from skill ID and hash, through
+  `spawn_agent(named installed agent)` and returned-result hash, to the consuming
+  decision, artifact, or validation. Direct harness injection, generic-agent
+  substitution, a missing required spawn, or an unconsumed result fails release
+  proof. Trigger and observe the optional helper only in its separate supported-
+  row campaign, and prove the no-helper path elsewhere. No individual workflow
+  must spawn all ten agents.
 - Bind every objective to the locked workload manifest and pre-treatment
   stratum. In every required plan row/equivalence class, independently gate the
   confidence-powered `long_horizon_stratum_id` on acceptance, semantic quality,
@@ -1020,10 +1036,12 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
 - `dist/codex/speckit-pro/` - generated output only
 - `speckit-pro/codex-skills/install/SKILL.md`
 - `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`
+- `speckit-pro/codex-skills/*/SKILL.md` - active skill-to-agent contracts
 - `docs-site/src/content/docs/install/codex.md`
 - `tests/speckit-pro/layer1-structural/validate-codex-agents.py`
 - [proposed] `tests/speckit-pro/layer1-structural/validate-codex-routing-docs.py`
 - `tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py`
+- `tests/speckit-pro/layer7-integration/` - skill-driven spawn and result-use proof
 - `docs/ai/specs/.process/` - release and live-UAT evidence
 
 ---
@@ -1049,6 +1067,7 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
 | Model-effort pair evaluation | Layer 6 Python Codex harness | Exact treatment, content-addressed canonical rate, constrained attrition, workload manifest, powered long-horizon stratum, per-plan/native qualification, disjoint corpora, task-level statistics, ten role contracts |
 | Installer policy | Python install helper and registry | Activate deferred copy helper; core/row-aware-helper/release IDs; nine-agent plugin-managed destination set plus conditional helper; model-only atomic override |
 | Agent routes | `speckit-pro/codex-agents/*.toml` | Nine-agent universal core plus separately gated optional helper |
+| Skill-to-agent orchestration | `speckit-pro/codex-skills/` and Layer 7 | Explicit named-agent dispatch contract plus installed skill-driven spawn and result-consumption proof for all nine core roles and the conditional helper |
 | Generated payload | `dist/codex/` | Rebuild from source and refresh integrity evidence |
 | Consumer guidance | Codex install/autopilot/docs surfaces | Core/helper policy, fallback, restart, availability, rollback |
 
