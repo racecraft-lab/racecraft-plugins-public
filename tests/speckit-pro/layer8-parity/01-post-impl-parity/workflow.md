@@ -44,9 +44,12 @@ durable schemaVersion 2 PRS manifest across Path A and Path B runs.)
 
 ## PR Packet Validation Evidence
 
-(Empty — autopilot populates this section during the post-impl run.
-Layer 8 compares the generated PR packet, shared validator result, and
-pre-create ordering across Path A and Path B runs.)
+The fixture intentionally supplies no current packet. Autopilot updates this
+row, but it must remain blocked before validation or PR creation.
+
+| Status | Packet Path | Validator Result | Writes State | Blocker |
+|--------|-------------|------------------|--------------|---------|
+| pending | `specs/parity-01-post-impl/.process/pr-packets/<packet-id>.json` | not_run | false | `pr-packet-output` deferred |
 
 ## Notes
 
@@ -62,10 +65,10 @@ Generation, PR Creation, Review Remediation, and Retrospective. The
 `generate-uat-skeleton` and `final-reviewability-backstop` helpers are
 deferred: reuse committed UAT and reviewability evidence when current, or
 record the documented deferred outcome before PR side effects. Packet
-generation uses runner helper `generate-pr-body`; current packet and title/scope
-checks use `validate-pr-packet-read-only` and
-`validate-pr-workflow-contract`. PR creation uses only explicit
-`gh pr create --base --head --title --body-file` packet fields. Split routes
-use `multi-pr-emission` dry-run command planning before explicit live `gh`
-commands, with no flattened-PR fallback, new slicing heuristics, or post-create
-packet repair. Parity requires equivalent outputs across the two paths.
+emission is deferred. Because this fixture has no current schema-valid packet at
+the feature-local path, both routes stop before `validate-pr-packet-read-only`,
+`validate-pr-workflow-contract`, or `gh pr create`. `generate-pr-body` remains a
+body-only operation accepting `output_path`, `title`, and `sections`; it cannot
+fill the packet gap. Split routes may use `multi-pr-emission` only for
+`golden_only` command-plan capture after packets exist, never for packet or live
+PR emission. Parity requires equivalent deferred outcomes across the two paths.

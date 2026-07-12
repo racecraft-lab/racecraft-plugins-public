@@ -48,6 +48,18 @@
         "Does NOT attempt to run `specify integration upgrade` (would fail)",
         "Hands off to `$speckit-install` with a clear explanation that upgrade only operates on existing installs"
       ]
+    },
+    {
+      "id": 5,
+      "prompt": "The integration upgrade passed. Should $speckit-upgrade now run repository structure migration or Tier-2 PROCESS relocation through the runner? Give the exact current capability status and next action.",
+      "expected_output": "States that migrate-structure and relocate-process-artifacts are promotion_status=deferred with no authoritative runner request. Neither dry_run nor apply is an available operator contract, so the skill does not invoke either operation, does not claim a report or mutation occurred, leaves repository structure unchanged, and records the deferred capability gap.",
+      "expectations": [
+        "Names migrate-structure as deferred with no authoritative runner request",
+        "Names relocate-process-artifacts as deferred and unavailable",
+        "States that neither dry_run nor apply may be invoked for either operation",
+        "Leaves repository structure and PROCESS artifacts unchanged",
+        "Reports the deferred capability gap instead of inventing a replacement command"
+      ]
     }
   ]
 }

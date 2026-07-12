@@ -9,6 +9,7 @@ predecessor executes 13 assertions; the count-parity baseline is pinned at
 
 from __future__ import annotations
 
+import inspect
 import json
 import os
 import re
@@ -34,6 +35,52 @@ LAYER3_CONTRACT_ROOTS = (
     TESTS_ROOT / "layer3-functional" / "codex-evals",
 )
 LAYER8_ROOT = TESTS_ROOT / "layer8-parity"
+
+if str(PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(PLUGIN_ROOT))
+from speckit_pro_runner.helpers.pr_emission import generate_pr_body  # noqa: E402
+from speckit_pro_runner.helpers.registry import HELPERS, MUTATION_HELPERS  # noqa: E402
+
+SHIPPED_RUNTIME_CONTRACTS = (
+    PLUGIN_ROOT / "skills" / "speckit-upgrade" / "SKILL.md",
+    PLUGIN_ROOT / "codex-skills" / "speckit-upgrade" / "SKILL.md",
+    PLUGIN_ROOT / "skills" / "speckit-scaffold-spec" / "SKILL.md",
+    PLUGIN_ROOT / "codex-skills" / "speckit-scaffold-spec" / "SKILL.md",
+    PLUGIN_ROOT / "skills" / "speckit-autopilot" / "SKILL.md",
+    PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "SKILL.md",
+    PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "phase-execution.md",
+    PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "phase-execution-codex.md",
+    PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "post-implementation.md",
+    PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "post-implementation-codex.md",
+    PLUGIN_ROOT / "skills" / "speckit-autopilot" / "templates" / "pr-description-template.md",
+)
+EXPECTED_DEFERRED_HELPERS = frozenset(
+    {
+        "ensure-reviewability-preset",
+        "install-codex-agents",
+        "migrate-structure",
+        "pr-packet-output",
+        "relocate-process-artifacts",
+        "restack",
+        "validate-pr-packet-write",
+    }
+)
+PACKET_PATH_CONTRACT = "specs/<feature>/.process/pr-packets/<packet-id>.json"
+SAFE_NEGATION_MARKERS = (
+    "do not",
+    "does not",
+    "must not",
+    "never",
+    "no runner command",
+    "not active",
+    "unavailable",
+    "out of scope",
+    "is deferred",
+    "are deferred",
+    "registered as deferred",
+    "registered but deferred",
+    "without claiming",
+)
 
 RETIRED_REPOSITORY_HELPERS = frozenset(
     {
@@ -201,6 +248,161 @@ def layer8_contract_files() -> tuple[list[Path], list[Path]]:
     return [path for path in markdown if path.is_file()], [path for path in structured if path.is_file()]
 
 
+def runtime_contract_files() -> list[Path]:
+    markdown, structured = layer8_contract_files()
+    layer3 = [path for root in LAYER3_CONTRACT_ROOTS for path in sorted(root.glob("*.json"))]
+    return sorted({*SHIPPED_RUNTIME_CONTRACTS, *layer3, *markdown, *structured})
+
+
+def contract_units(path: Path) -> list[str]:
+    text = path.read_text(encoding="utf-8")
+    if path.suffix == ".json":
+        return [value for _field_path, value in json_strings(json.loads(text))]
+    paragraphs = [" ".join(block.split()) for block in re.split(r"\n\s*\n", text) if block.strip()]
+    table_rows = [line.strip() for line in text.splitlines() if line.lstrip().startswith("|")]
+    return [*paragraphs, *table_rows]
+
+
+def has_safe_negation(text: str) -> bool:
+    lowered = text.casefold()
+    return any(marker in lowered for marker in SAFE_NEGATION_MARKERS)
+
+
+def runtime_registry_violations() -> list[str]:
+    violations: list[str] = []
+    for helper_id in sorted(EXPECTED_DEFERRED_HELPERS):
+        entry = MUTATION_HELPERS.get(helper_id)
+        if entry is None:
+            violations.append(f"registry: missing expected helper {helper_id}")
+            continue
+        if entry.promotion_status != "deferred":
+            violations.append(f"registry: {helper_id} status={entry.promotion_status}, expected deferred")
+        if entry.authoritative_command:
+            violations.append(f"registry: deferred helper {helper_id} exposes an authoritative request")
+
+    generate_entry = MUTATION_HELPERS.get("generate-pr-body")
+    if generate_entry is None or generate_entry.promotion_status != "golden_only":
+        status = None if generate_entry is None else generate_entry.promotion_status
+        violations.append(f"registry: generate-pr-body status={status}, expected golden_only")
+    source = inspect.getsource(generate_pr_body)
+    input_fields = set(re.findall(r'request\.inputs\.get\("([^"]+)"', source))
+    if input_fields != {"output_path", "title", "sections"}:
+        violations.append(f"implementation: generate-pr-body fields={sorted(input_fields)}")
+
+    validate_entry = HELPERS.get("validate-pr-packet-read-only")
+    if validate_entry is None or validate_entry.promotion_status != "python_authoritative":
+        status = None if validate_entry is None else validate_entry.promotion_status
+        violations.append(f"registry: validate-pr-packet-read-only status={status}")
+    elif "persistence" not in validate_entry.out_of_scope_modes:
+        violations.append("registry: packet validator no longer marks persistence out of scope")
+    return violations
+
+
+def runtime_contract_violations() -> list[str]:
+    violations: list[str] = []
+    unavailable = {
+        helper_id
+        for helper_id, entry in MUTATION_HELPERS.items()
+        if entry.promotion_status in {"deferred", "out_of_scope"}
+    }
+    unsupported_body_claims = (
+        "packet/body generation via runner helper generate-pr-body",
+        "generate-pr-body metadata",
+        "generate-pr-body appends",
+        "generate-pr-body creates",
+        "generate-pr-body emits",
+        "generate-pr-body uses the host",
+        "generate-pr-body writes packet",
+        "generator emits",
+        "generator writes packet",
+    )
+    persistence_safe = (
+        "writes_state=false",
+        "does not persist",
+        "never writes",
+        "no validation file",
+        "without claiming",
+        "do not claim",
+        "must not",
+    )
+
+    for path in runtime_contract_files():
+        relative = path.relative_to(REPO_ROOT).as_posix()
+        for unit in contract_units(path):
+            lowered = unit.casefold()
+            if ".git/" in lowered:
+                violations.append(f"{relative}: uses invalid linked-worktree .git child path")
+            if "--packet-output" in lowered or "packet_output" in lowered:
+                violations.append(f"{relative}: claims unsupported generate-pr-body packet output")
+            if any(claim in lowered for claim in unsupported_body_claims) and not has_safe_negation(unit):
+                violations.append(f"{relative}: claims unsupported generate-pr-body behavior")
+
+            for helper_id in unavailable:
+                if helper_id not in lowered:
+                    continue
+                helper = re.escape(helper_id)
+                invocation = re.search(
+                    rf"(?:runner helper\s+`?{helper}`?|\b(?:run|invoke|execute|call|retry|use)\b.{{0,160}}\b{helper}\b|\b{helper}\b.{{0,80}}(?:--dry-run|--apply|mode[ =](?:dry_run|apply)))",
+                    lowered,
+                )
+                if invocation and not has_safe_negation(unit):
+                    violations.append(f"{relative}: actively invokes unavailable helper {helper_id}")
+
+            persistence_claim = any(
+                term in lowered for term in ("validation.json", "validation_result_path", "validation file")
+            ) or re.search(r"validate-pr-packet.{0,100}\b(?:writes|persists|persisted|written)\b", lowered)
+            if "validate-pr-packet" in lowered and persistence_claim:
+                if not any(marker in lowered for marker in persistence_safe):
+                    violations.append(f"{relative}: claims read-only packet validation persists state")
+    return sorted(set(violations))
+
+
+def runtime_contract_parity_violations() -> list[str]:
+    violations: list[str] = []
+    pairs = (
+        (
+            "upgrade",
+            PLUGIN_ROOT / "skills" / "speckit-upgrade" / "SKILL.md",
+            PLUGIN_ROOT / "codex-skills" / "speckit-upgrade" / "SKILL.md",
+            ("migrate-structure", "relocate-process-artifacts", "promotion_status=deferred", "no authoritative request"),
+        ),
+        (
+            "scaffold",
+            PLUGIN_ROOT / "skills" / "speckit-scaffold-spec" / "SKILL.md",
+            PLUGIN_ROOT / "codex-skills" / "speckit-scaffold-spec" / "SKILL.md",
+            ("relocate-process-artifacts", "install-codex-agents", "ensure-reviewability-preset", "deferred", "unavailable"),
+        ),
+        (
+            "autopilot",
+            PLUGIN_ROOT / "skills" / "speckit-autopilot" / "SKILL.md",
+            PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "SKILL.md",
+            (PACKET_PATH_CONTRACT, "pr-packet-output", "data.stdout_json", "writes_state=false", "output_path", "sections"),
+        ),
+        (
+            "phase execution",
+            PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "phase-execution.md",
+            PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "phase-execution-codex.md",
+            (PACKET_PATH_CONTRACT, "relocate-process-artifacts", "data.stdout_json", "writes_state=false", "output_path", "sections"),
+        ),
+        (
+            "post implementation",
+            PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "post-implementation.md",
+            PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "post-implementation-codex.md",
+            (PACKET_PATH_CONTRACT, "pr-packet-output", "data.stdout_json", "writes_state=false", "gh pr edit <number> --base <branch>"),
+        ),
+    )
+    for label, claude_path, codex_path, required in pairs:
+        bodies = {
+            "Claude": re.sub(r"\s+", " ", claude_path.read_text(encoding="utf-8").casefold()),
+            "Codex": re.sub(r"\s+", " ", codex_path.read_text(encoding="utf-8").casefold()),
+        }
+        for surface, body in bodies.items():
+            for token in required:
+                if token.casefold() not in body:
+                    violations.append(f"{label}: {surface} missing parity token {token}")
+    return violations
+
+
 def markdown_section_map(text: str) -> tuple[list[str], dict[str, str]]:
     current = "<preamble>"
     line_sections: list[str] = []
@@ -309,6 +511,9 @@ class EvalRunnerSkillSelectionTests(unittest.TestCase):
     def test_eval_runner_skill_selection_contract(self) -> None:
         self.assertEqual(baseline_inventory(BASELINE), CURRENT_INVENTORY)
         self.assertEqual(retired_contract_violations(), [])
+        self.assertEqual(runtime_registry_violations(), [])
+        self.assertEqual(runtime_contract_violations(), [])
+        self.assertEqual(runtime_contract_parity_violations(), [])
 
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

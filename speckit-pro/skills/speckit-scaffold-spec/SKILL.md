@@ -95,16 +95,17 @@ relocation only when all of these are true:
 - A root PROCESS allow-list artifact or matching docs-side scaffold artifact is
   present. If none exists, report that no Tier-2 action is needed.
 
-For the one eligible thawed candidate, print static operator guidance with the
-real `specs/<spec-dir>` value substituted:
+For the one eligible thawed candidate, report the candidate and the runtime gap
+with the real `specs/<spec-dir>` value substituted:
 
 ```text
-Run runner helper relocate-process-artifacts in dry-run mode for specs/<spec-dir>.
-After reviewing a clean dry-run, run the same helper in apply mode.
+Tier-2 relocation candidate: specs/<spec-dir>.
+Deferred: relocate-process-artifacts has no authoritative runner request and is unavailable.
 ```
 
-Frame `--apply` as a follow-up only after the operator reviews clean dry-run
-output and has a clean worktree. Never invoke the relocation helper from scaffold.
+Do not invoke the deferred operation, advertise either runner mode, or invent a
+replacement command. Leave the PROCESS artifacts unchanged. This advisory gap
+does not block the remaining scaffold workflow, but it must be recorded.
 
 ## Invocation
 
@@ -118,15 +119,12 @@ output and has a clean worktree. Never invoke the relocation helper from scaffol
 ### -0.5 Verify Claude Agent Package Completeness
 
 Before parsing or mutating the repository, resolve the plugin root from this
-skill location and run the shared install validator:
-
-```text
-Run runner helper install-codex-agents/install validation for the target surface.
-```
-
-This checks every bundled Claude Code `agents/*.md` file, including
-`uat-runbook-author.md`. If the validator fails, STOP and tell the user to
-update/reinstall `speckit-pro`, run `/reload-plugins`, and retry. Claude Code
+skill location and verify by filesystem reads that every bundled Claude Code
+`agents/*.md` file is present, including `uat-runbook-author.md`.
+`install-codex-agents` is deferred and unavailable; do not invoke it as a
+validator or repair operation. If the file inventory is incomplete, STOP and
+tell the user to update/reinstall `speckit-pro`, run `/reload-plugins`, and
+retry. Claude Code
 loads plugin agents directly from the plugin cache, so scaffold cannot safely
 self-heal a missing Claude agent file.
 
@@ -306,11 +304,10 @@ workflow prompts. Pass the doc path forward.
 All file operations happen in the worktree directory.
 
 ```text
-0. Install or refresh the generic speckit-pro reviewability preset:
-   Run runner helper ensure-reviewability-preset for `.worktrees/<number>-<short-name>` and preset `speckit-pro-reviewability`.
-
-   If status is installed, commit .specify/presets/speckit-pro-reviewability
-   and .specify/presets/.registry with the setup artifacts.
+0. Require the generic `speckit-pro-reviewability` preset to already exist in
+   the worktree. `ensure-reviewability-preset` is deferred and unavailable, so
+   do not invoke it or claim setup generated preset files. If the preset is
+   absent, STOP and report the deferred capability gap.
 
    Verify resolution from the worktree:
    From `.worktrees/<number>-<short-name>/`, run

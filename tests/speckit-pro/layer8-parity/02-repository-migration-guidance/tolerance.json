@@ -6,9 +6,21 @@
       "tolerance": "exact",
       "rationale": "Both paths must preserve the same runtime guidance rows."
     },
-    "migration_guidance.commands": {
+    "migration_guidance.operation": {
       "tolerance": "exact",
-      "rationale": "FR-026 and FR-028 structured runner requests are operator-facing product contracts."
+      "rationale": "Both surfaces name the same deferred runner operation without turning it into an invocation."
+    },
+    "migration_guidance.promotion_status": {
+      "tolerance": "exact",
+      "rationale": "Both surfaces must report the registry-backed deferred status."
+    },
+    "migration_guidance.authoritative_request": {
+      "tolerance": "exact",
+      "rationale": "Neither deferred operation has an authoritative request."
+    },
+    "migration_guidance.guidance": {
+      "tolerance": "exact",
+      "rationale": "Both surfaces report the gap and leave repository state unchanged."
     },
     "tier2_matrix.action": {
       "tolerance": "exact",

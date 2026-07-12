@@ -91,17 +91,17 @@ relocation only when all of these are true:
 - A root PROCESS allow-list artifact or matching docs-side scaffold artifact is
   present. If none exists, report that no Tier-2 action is needed.
 
-For the one eligible thawed candidate, print static operator guidance with the
-real `specs/<spec-dir>` value substituted:
+For the one eligible thawed candidate, report the candidate and the runtime gap
+with the real `specs/<spec-dir>` value substituted:
 
 ```text
-Run runner helper relocate-process-artifacts in dry-run mode for specs/<spec-dir>.
-After reviewing a clean dry-run, run the same helper in apply mode.
+Tier-2 relocation candidate: specs/<spec-dir>.
+Deferred: relocate-process-artifacts has no authoritative runner request and is unavailable.
 ```
 
-Frame `--apply` as a follow-up only after the operator reviews clean dry-run
-output and has a clean worktree. Never invoke the relocation helper from
-`$speckit-scaffold-spec`.
+Do not invoke the deferred operation, advertise either runner mode, or invent a
+replacement command. Leave the PROCESS artifacts unchanged. This advisory gap
+does not block the remaining scaffold workflow, but it must be recorded.
 
 > **Codex implicit-trigger note (eval harness vs production):** Layer 2 trigger evals score this skill at 69% (11/16) on the Codex selector — but POS is a perfect 8/8 (every "scaffold SPEC-009" / "create a new spec branch" / "prep SPEC-022 for autopilot" query fires correctly). All 5 NEG misses are false-positives in single-skill staging where the harness loads only this skill, so the Codex selector has no alternative to route adjacent SDD queries to ("roadmap status" / "what's the progress on SPEC-009" → should go to `$speckit-status`, "run the fully populated workflow" → `$speckit-autopilot`, "resolve PR review comments" → `$speckit-resolve-pr`). In production all six speckit-pro skills are loaded together and Codex routes those queries to their proper destinations. The eval results under-report real-world accuracy; positive-trigger reliability is the operationally-relevant number. (This skill was renamed from `speckit-setup` in v1.12; the rename did not regress trigger behavior — same POS pass rate as before.)
 
@@ -137,20 +137,14 @@ else should be derived from the repository.
 
 ## Procedure
 
-### -0.5 Verify and Autoheal Codex Agent Install
+### -0.5 Verify Codex Agent Install
 
-Before parsing or mutating the repository, resolve the plugin root from this
-skill location and run the shared install validator:
-
-```text
-Run runner helper install-codex-agents in dry-run or apply mode for the Codex surface.
-```
-
-This checks every bundled `codex-agents/*.toml` file, including
-`uat-runbook-author.toml`, against `.codex/agents/` and `~/.codex/agents/`. If
-autoheal copies or refreshes files, tell the user Codex must be restarted after
-scaffold completes. If the validator still fails, STOP and report its exact
-message; do not continue into Grill Me with an incomplete Codex install.
+Before parsing or mutating the repository, resolve the plugin root and verify by
+filesystem reads that every bundled `codex-agents/*.toml` file, including
+`uat-runbook-author.toml`, is installed under `.codex/agents/` or
+`~/.codex/agents/`. `install-codex-agents` is deferred and unavailable; do not
+invoke it for validation or autoheal. If the inventory is incomplete, STOP,
+instruct the user to run `$install`, restart Codex, and then retry scaffold.
 
 ### 0. Ensure SpecKit CLI
 
@@ -294,19 +288,14 @@ condition. Do not synthesize design-concept content yourself.
 
 ### 5. Copy the workflow template into the worktree
 
-Before copying the workflow template, install or refresh the generic
-speckit-pro reviewability preset inside the worktree:
+Before copying the workflow template, require the generic
+`speckit-pro-reviewability` preset to already exist inside the worktree.
+`ensure-reviewability-preset` is deferred and unavailable; do not invoke it or
+claim setup generated preset files. If the preset is absent, STOP and report the
+deferred capability gap.
 
-```text
-Run runner helper ensure-reviewability-preset for <worktree-path> and preset speckit-pro-reviewability.
-```
-
-This script generates `.specify/presets/speckit-pro-reviewability/` from the
-host project's current core templates and then adds reviewability budget and PR
-review packet requirements. Commit the resulting preset files on the spec
-branch when the script reports `status: installed`.
-
-After installation, verify template resolution from the worktree:
+After confirming the preset is present, verify template resolution from the
+worktree:
 
 ```text
 specify preset resolve spec-template

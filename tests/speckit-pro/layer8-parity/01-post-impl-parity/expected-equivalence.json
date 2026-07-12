@@ -46,24 +46,39 @@
       "tolerance_key": "gate_results.G0_through_G7"
     },
     {
-      "field": "pr_body",
-      "source": ".git/speckit-pr-body.md",
-      "tolerance_key": "pr_body"
+      "field": "workflow.pr_packet_validation.status",
+      "source": "workflow.md",
+      "section_selector": "## PR Packet Validation Evidence",
+      "extractor": "table_column:Status",
+      "tolerance_key": "workflow.pr_packet_validation.status"
     },
     {
-      "field": "pr_packet",
-      "source": ".git/speckit-pr-packet.json",
-      "tolerance_key": "pr_packet"
+      "field": "workflow.pr_packet_validation.packet_path",
+      "source": "workflow.md",
+      "section_selector": "## PR Packet Validation Evidence",
+      "extractor": "table_column:Packet Path",
+      "tolerance_key": "workflow.pr_packet_validation.packet_path"
     },
     {
-      "field": "pr_packet_validation",
-      "source": "specs/parity-01-post-impl/.process/pr-packets/speckit-pr-packet/validation.json",
-      "tolerance_key": "pr_packet_validation"
+      "field": "workflow.pr_packet_validation.validator_result",
+      "source": "workflow.md",
+      "section_selector": "## PR Packet Validation Evidence",
+      "extractor": "table_column:Validator Result",
+      "tolerance_key": "workflow.pr_packet_validation.validator_result"
     },
     {
-      "field": "prs_manifest",
-      "source": "specs/parity-01-post-impl/.process/prs.json",
-      "tolerance_key": "prs_manifest"
+      "field": "workflow.pr_packet_validation.writes_state",
+      "source": "workflow.md",
+      "section_selector": "## PR Packet Validation Evidence",
+      "extractor": "table_column:Writes State",
+      "tolerance_key": "workflow.pr_packet_validation.writes_state"
+    },
+    {
+      "field": "workflow.pr_packet_validation.blocker",
+      "source": "workflow.md",
+      "section_selector": "## PR Packet Validation Evidence",
+      "extractor": "table_column:Blocker",
+      "tolerance_key": "workflow.pr_packet_validation.blocker"
     },
     {
       "field": "workflow.multi_pr_emission.row_count",
@@ -104,6 +119,13 @@
   "required_invariants": {
     "shared_packet_schema": "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json",
     "shared_packet_validator_helper_id": "validate-pr-packet-read-only",
+    "required_packet_path": "specs/<feature>/.process/pr-packets/<packet-id>.json",
+    "packet_emission_promotion_status": "deferred",
+    "validation_result_source": "data.stdout_json",
+    "validation_writes_state": false,
+    "validation_artifact_written": false,
+    "generate_pr_body_inputs": ["output_path", "title", "sections"],
+    "generate_pr_body_output": "one_markdown_body",
     "runner_invocation": "[resolved_python, -m, speckit_pro_runner] with one JSON request on stdin",
     "codex_duplicate_schema_or_validator": false,
     "requires_explicit_pr_create_args": [
@@ -112,6 +134,7 @@
       "--title",
       "--body-file"
     ],
+    "missing_packet_blocks_pr_create": true,
     "post_create_packet_repair_fallback": false
   },
   "fail_fast": false,

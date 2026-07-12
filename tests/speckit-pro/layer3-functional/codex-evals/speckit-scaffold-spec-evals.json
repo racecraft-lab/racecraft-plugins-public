@@ -88,17 +88,17 @@
     {
       "id": 8,
       "prompt": "When $speckit-scaffold-spec prepares PRSG-011, it finds five legacy migration candidates: specs/prsg-011-legacy has root retrospective.md and verification-evidence.md with no structureVersion and is not active; specs/prsg-012-active is named by .specify/feature.json; specs/prsg-013-current already has SPEC-MOC.md structureVersion: 1 and only .process files; specs/prsg-014-empty has no relocatable PROCESS artifacts; and specs/team-123-legacy plus specs/2026-06-legacy are out of scope. What Tier-2 relocation guidance should setup surface, and what must it not do automatically?",
-      "expected_output": "Surfaces a suggestion only for the thawed eligible PRSG legacy spec using runner helper relocate-process-artifacts in dry_run mode, with the same helper in apply mode only as a clean-tree operator follow-up. Reports all suppression/no-op states and explicitly rejects invoking the retired relocate-process-artifacts.sh path or auto-running the helper.",
+      "expected_output": "Reports only the thawed eligible PRSG legacy spec as a Tier-2 relocation candidate, then states that relocate-process-artifacts is promotion_status=deferred, has no authoritative runner request, and is unavailable. It leaves PROCESS artifacts unchanged, reports all suppression/no-op states, and explicitly rejects invoking the retired relocate-process-artifacts.sh path or advertising runner modes.",
       "expectations": [
         "Suggests Tier-2 relocation only for specs/prsg-011-legacy",
-        "Names runner helper_id and operation relocate-process-artifacts with mode dry_run for specs/prsg-011-legacy",
-        "Names the same relocate-process-artifacts helper with mode apply as the clean-tree follow-up",
-        "States the apply command is a follow-up after operator review and a clean worktree, not part of scaffold execution",
+        "Names relocate-process-artifacts as promotion_status=deferred with no authoritative runner request",
+        "States no dry_run, apply, or replacement runner command is available for relocation",
+        "Leaves the candidate's PROCESS artifacts unchanged while allowing the remaining scaffold workflow to continue",
         "Reports specs/prsg-012-active as frozen/in-flight from .specify/feature.json and does not suggest relocation for it",
         "Reports specs/prsg-013-current as already current or already normalized and does not suggest relocation for it",
         "Reports specs/prsg-014-empty as no Tier-2 action needed because no relocatable PROCESS artifacts exist",
         "Suppresses suggestions for specs/team-123-legacy with reason non_speckit_namespace and specs/2026-06-legacy with reason date_named_legacy_namespace",
-        "States that $speckit-scaffold-spec does not invoke the retired relocate-process-artifacts.sh path or auto-run the relocation helper"
+        "States that $speckit-scaffold-spec does not invoke the retired relocate-process-artifacts.sh path, the deferred operation, or an invented replacement"
       ]
     }
   ]

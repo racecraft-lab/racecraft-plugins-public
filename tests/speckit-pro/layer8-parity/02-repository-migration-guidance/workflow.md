@@ -34,22 +34,21 @@ exists as a current command, and neither may be recommended or invoked.
 
 ## Migration Guidance Contract
 
-Every entry below means invoke `[resolved_python, "-m", "speckit_pro_runner"]`
-with one JSON request on stdin. `helper_id` and `operation` use the same value;
-the row supplies the request `mode` and bounded `inputs`.
+No entry below is a runner invocation. Both operations are registered but have
+no authoritative request.
 
-| Surface | Dry Run | Apply | Guarantee |
-|---------|---------|-------|-----------|
-| Claude upgrade | `helper_id=migrate-structure; mode=dry_run; inputs.repo_root=.` | `helper_id=migrate-structure; mode=apply; inputs.repo_root=.` | repository migration only; no Tier-2 auto-run |
-| Codex upgrade | `helper_id=migrate-structure; mode=dry_run; inputs.repo_root=.` | `helper_id=migrate-structure; mode=apply; inputs.repo_root=.` | repository migration only; no Tier-2 auto-run |
-| Claude scaffold/autopilot | `helper_id=relocate-process-artifacts; mode=dry_run; inputs.spec=specs/prsg-011-legacy; inputs.repo_root=.` | `helper_id=relocate-process-artifacts; mode=apply; inputs.spec=specs/prsg-011-legacy; inputs.repo_root=.` | static suggestion only; never auto-runs relocation |
-| Codex scaffold/autopilot | `helper_id=relocate-process-artifacts; mode=dry_run; inputs.spec=specs/prsg-011-legacy; inputs.repo_root=.` | `helper_id=relocate-process-artifacts; mode=apply; inputs.spec=specs/prsg-011-legacy; inputs.repo_root=.` | static suggestion only; never auto-runs relocation |
+| Surface | Operation | Promotion Status | Authoritative Request | Guidance |
+|---------|-----------|------------------|-----------------------|----------|
+| Claude upgrade | `migrate-structure` | deferred | none | report capability gap; leave repository structure unchanged |
+| Codex upgrade | `migrate-structure` | deferred | none | report capability gap; leave repository structure unchanged |
+| Claude scaffold/autopilot | `relocate-process-artifacts` | deferred | none | report eligible candidate and gap; leave PROCESS artifacts unchanged |
+| Codex scaffold/autopilot | `relocate-process-artifacts` | deferred | none | report eligible candidate and gap; leave PROCESS artifacts unchanged |
 
 ## Tier-2 Suggestion Matrix
 
 | Case | Action | Reason |
 |------|--------|--------|
-| thawed eligible legacy spec with PROCESS files | suggest dry-run and clean-tree apply follow-up | thawed_relocatable_process |
+| thawed eligible legacy spec with PROCESS files | report deferred candidate; no command | thawed_relocatable_process |
 | spec named by `.specify/feature.json` | suppress suggestion | frozen/in-flight |
 | `SPEC-MOC.md` already carries `structureVersion: 1` | suppress suggestion | already-current |
 | PROCESS artifacts already under `.process/` | suppress suggestion | already-normalized |
@@ -61,7 +60,5 @@ the row supplies the request `mode` and bounded `inputs`.
 
 | Surface | Forbidden |
 |---------|-----------|
-| scaffold | must not invoke retired `relocate-process-artifacts.sh` or auto-run helper mode `dry_run` |
-| scaffold | must not invoke retired `relocate-process-artifacts.sh` or auto-run helper mode `apply` |
-| autopilot | must not invoke retired `relocate-process-artifacts.sh` or auto-run helper mode `dry_run` |
-| autopilot | must not invoke retired `relocate-process-artifacts.sh` or auto-run helper mode `apply` |
+| scaffold | must not invoke retired `relocate-process-artifacts.sh`, the deferred operation, or an invented replacement |
+| autopilot | must not invoke retired `relocate-process-artifacts.sh`, the deferred operation, or an invented replacement |

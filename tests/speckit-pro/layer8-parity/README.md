@@ -42,8 +42,9 @@ Then compare:
   identical, same task status per row (pass/fail/skipped), same
   Findings column modulo LLM-driven prose variance.
 - **Gate results**: every gate G0–G7 returns identical PASS/FAIL.
-- **PR body content**: byte-identical (PR body generation is
-  deterministic post-implementation).
+- **PR packet boundary**: identical feature-local packet lookup and deferred
+  blocker behavior. A missing current packet stops both paths before PR body or
+  PR creation side effects.
 
 Tolerance band:
 - 0 difference for spec content (FRs, acceptance criteria, user stories)

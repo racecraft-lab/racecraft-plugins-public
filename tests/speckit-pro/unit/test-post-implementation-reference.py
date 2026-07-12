@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import sys
 import unittest
 from collections.abc import Callable
@@ -27,26 +26,6 @@ CODEX_REF = (
     / "references"
     / "post-implementation-codex.md"
 )
-CLAUDE_DIST = (
-    REPO_ROOT
-    / "dist"
-    / "claude"
-    / "speckit-pro"
-    / "skills"
-    / "speckit-autopilot"
-    / "references"
-    / "post-implementation.md"
-)
-CODEX_DIST = (
-    REPO_ROOT
-    / "dist"
-    / "codex"
-    / "speckit-pro"
-    / "skills"
-    / "speckit-autopilot"
-    / "references"
-    / "post-implementation-codex.md"
-)
 BASELINE = (
     REPO_ROOT
     / "tests"
@@ -60,10 +39,6 @@ LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 from test_result import run_counted  # noqa: E402
-
-
-def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def baseline_inventory(path: Path) -> list[str]:
@@ -84,7 +59,6 @@ class PostImplementationReferenceTests(unittest.TestCase):
     def test_reference_contract(self) -> None:
         claude_body = CLAUDE_REF.read_text(encoding="utf-8")
         codex_body = CODEX_REF.read_text(encoding="utf-8")
-        codex_dist_body = CODEX_DIST.read_text(encoding="utf-8")
 
         checks: list[tuple[str, Callable[[], None]]] = [
             (
@@ -210,34 +184,33 @@ class PostImplementationReferenceTests(unittest.TestCase):
                 lambda: self.assertNotIn("A plain skeleton is an acceptable fallback", codex_body),
             ),
             (
-                "Claude dist reference mirrors source",
-                lambda: self.assertEqual(
-                    sha256(CLAUDE_REF),
-                    sha256(CLAUDE_DIST),
-                    "dist/claude post-implementation reference",
+                "Claude reference requires current feature-local packet",
+                lambda: self.assertIn("specs/<feature>/.process/pr-packets/<packet-id>.json", claude_body),
+            ),
+            (
+                "Codex reference requires current feature-local packet",
+                lambda: self.assertIn("specs/<feature>/.process/pr-packets/<packet-id>.json", codex_body),
+            ),
+            (
+                "Claude reference consumes read-only packet validation in memory",
+                lambda: self.assertTrue("data.stdout_json" in claude_body and "writes_state=false" in claude_body),
+            ),
+            (
+                "Codex reference consumes read-only packet validation in memory",
+                lambda: self.assertTrue("data.stdout_json" in codex_body and "writes_state=false" in codex_body),
+            ),
+            (
+                "Claude reference keeps restack deferred with explicit fallback",
+                lambda: self.assertTrue(
+                    "runner `restack` operation is\ndeferred, has no authoritative request" in claude_body
+                    and "gh pr edit <number> --base <branch>" in claude_body
                 ),
             ),
             (
-                "Codex dist reference carries multi-PR contract",
-                lambda: self.assertIn("multi-pr-emission", codex_dist_body),
-            ),
-            (
-                "Codex dist reference carries multi-PR contract",
-                lambda: self.assertIn("MUST NOT infer, reroute, or re-slice", codex_dist_body),
-            ),
-            (
-                "Codex dist reference carries multi-PR contract",
-                lambda: self.assertIn("schemaVersion: 2", codex_dist_body),
-            ),
-            (
-                "Codex dist reference carries multi-PR contract",
-                lambda: self.assertIn("autopilot_continuation", codex_dist_body),
-            ),
-            (
-                "Codex dist reference carries multi-PR contract",
-                lambda: self.assertIn(
-                    "MUST NOT modify `.github/workflows/pr-checks.yml`",
-                    codex_dist_body,
+                "Codex reference keeps restack deferred with explicit fallback",
+                lambda: self.assertTrue(
+                    "runner `restack` operation is\ndeferred, has no authoritative request" in codex_body
+                    and "gh pr edit <number> --base <branch>" in codex_body
                 ),
             ),
         ]
