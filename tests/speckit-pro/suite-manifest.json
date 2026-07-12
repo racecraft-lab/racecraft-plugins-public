@@ -29,6 +29,7 @@
         { "path": "tests/speckit-pro/layer1-structural/validate-hooks.py", "label": "validate-hooks", "baseline": "tests/speckit-pro/parity/bash-to-python/validate-hooks-baseline.txt" },
         { "path": "tests/speckit-pro/layer1-structural/validate-scripts.py", "label": "validate-scripts", "baseline": "tests/speckit-pro/parity/bash-to-python/validate-scripts-baseline.txt" },
         { "path": "tests/speckit-pro/layer1-structural/validate-curated-set.py", "label": "validate-curated-set", "baseline": "tests/speckit-pro/parity/bash-to-python/validate-curated-set-baseline.txt" },
+        { "path": "tests/speckit-pro/layer1-structural/validate-specify-extensions.py", "label": "validate-specify-extensions", "baseline": null },
         { "path": "tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.py", "label": "validate-pr-checks-sentinel", "baseline": "tests/speckit-pro/parity/bash-to-python/validate-pr-checks-sentinel-baseline.txt" },
         { "path": "tests/speckit-pro/layer1-structural/validate-release-workflow.py", "label": "validate-release-workflow", "baseline": "tests/speckit-pro/parity/bash-to-python/validate-release-workflow-baseline.txt" },
         { "path": "tests/speckit-pro/layer1-structural/validate-process-gitattributes.py", "label": "validate-process-gitattributes", "baseline": "tests/speckit-pro/parity/bash-to-python/validate-process-gitattributes-baseline.txt" },

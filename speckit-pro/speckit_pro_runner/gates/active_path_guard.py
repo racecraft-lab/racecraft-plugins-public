@@ -32,6 +32,7 @@ XPLAT_010_CANONICAL_ALLOWLIST_PATHS = frozenset(
         ".specify/extensions/git/scripts/bash/create-new-feature.sh",
         ".specify/extensions/git/scripts/bash/git-common.sh",
         ".specify/extensions/git/scripts/bash/initialize-repo.sh",
+        ".specify/extensions/verify/scripts/bash/load-config.sh",
         ".specify/scripts/bash/check-prerequisites.sh",
         ".specify/scripts/bash/common.sh",
         ".specify/scripts/bash/create-new-feature.sh",
@@ -680,7 +681,10 @@ def load_repo_bash_allowlist(repo_root: Path, inputs: dict[str, Any]) -> list[di
         return diagnostic("invalid_allowlist", "repository Bash allowlist identity must be XPLAT-010 schema 1.0")
     entries = document.get("entries")
     if not isinstance(entries, list) or len(entries) != len(XPLAT_010_CANONICAL_ALLOWLIST_PATHS):
-        return diagnostic("invalid_allowlist", "repository Bash allowlist must contain exactly 10 entries")
+        return diagnostic(
+            "invalid_allowlist",
+            f"repository Bash allowlist must contain exactly {len(XPLAT_010_CANONICAL_ALLOWLIST_PATHS)} entries",
+        )
 
     expected_fields = {"path", "categories", "reason", "scope", "release_readiness_excluded"}
     normalized_entries: list[dict[str, Any]] = []
@@ -712,7 +716,10 @@ def load_repo_bash_allowlist(repo_root: Path, inputs: dict[str, Any]) -> list[di
     if len(set(actual_paths)) != len(actual_paths) or set(actual_paths) != XPLAT_010_CANONICAL_ALLOWLIST_PATHS:
         return diagnostic(
             "invalid_allowlist",
-            "repository Bash allowlist must equal the exact canonical 10-path set",
+            (
+                "repository Bash allowlist must equal the exact canonical "
+                f"{len(XPLAT_010_CANONICAL_ALLOWLIST_PATHS)}-path set"
+            ),
             details={
                 "missing": sorted(XPLAT_010_CANONICAL_ALLOWLIST_PATHS - set(actual_paths)),
                 "unexpected": sorted(set(actual_paths) - XPLAT_010_CANONICAL_ALLOWLIST_PATHS),
