@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import os
@@ -22,6 +23,13 @@ PLAN_LAYERS_CAPTURE_LIMIT_BYTES = 256 * 1024
 SUBPROCESS_TIMEOUT_SECONDS = 30
 BOUNDED_TEXT_INPUT_BYTES = 32 * 1024
 WINDOWS_DRIVE_RE = re.compile(r"^[A-Za-z]:[\\/]")
+PR_PACKET_SCHEMA_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "skills"
+    / "speckit-autopilot"
+    / "contracts"
+    / "pr-packet.schema.json"
+)
 
 EXIT_STATUS = {
     0: "ok",
@@ -1917,6 +1925,277 @@ def spec_scope_from_changed_path(path: str) -> str:
     return ""
 
 
+def load_pr_packet_schema() -> tuple[dict[str, Any] | None, str | None]:
+    try:
+        schema = json.loads(PR_PACKET_SCHEMA_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, f"PR packet schema is unavailable or malformed: {exc.__class__.__name__}"
+    if not isinstance(schema, dict):
+        return None, "PR packet schema root must be an object"
+    return schema, None
+
+
+def pr_packet_schema_failures(data: dict[str, Any], schema: dict[str, Any]) -> list[dict[str, Any]]:
+    failures = json_schema_failures(data, schema, schema, "")
+    unique: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for failure in failures:
+        identity = (failure["rule"], failure["field"], failure["message"])
+        if identity not in seen:
+            unique.append(failure)
+            seen.add(identity)
+    return unique
+
+
+def json_schema_failures(
+    value: Any,
+    schema: Any,
+    root_schema: dict[str, Any],
+    field: str,
+) -> list[dict[str, Any]]:
+    if schema is True:
+        return []
+    if schema is False or not isinstance(schema, dict):
+        return [schema_failure("definition", field, "Value is rejected by the packet schema.")]
+
+    failures: list[dict[str, Any]] = []
+    reference = schema.get("$ref")
+    if isinstance(reference, str):
+        resolved = resolve_local_schema_reference(reference, root_schema)
+        if resolved is None:
+            failures.append(schema_failure("definition", field, f"Unresolvable schema reference: {reference}"))
+        else:
+            failures.extend(json_schema_failures(value, resolved, root_schema, field))
+
+    one_of = schema.get("oneOf")
+    if isinstance(one_of, list):
+        matches = sum(
+            not json_schema_failures(value, candidate, root_schema, field)
+            for candidate in one_of
+        )
+        if matches != 1:
+            failures.append(
+                schema_failure("one_of", field, "Value must match exactly one allowed packet schema shape.")
+            )
+
+    expected_type = schema.get("type")
+    if expected_type is not None and not json_schema_type_matches(value, expected_type):
+        expected = ", ".join(expected_type) if isinstance(expected_type, list) else str(expected_type)
+        failures.append(schema_failure("type", field, f"Value must have schema type: {expected}."))
+        return failures
+
+    if "const" in schema and not json_values_equal(value, schema["const"]):
+        failures.append(schema_failure("const", field, "Value does not match the schema constant."))
+    enum = schema.get("enum")
+    if isinstance(enum, list) and not any(json_values_equal(value, candidate) for candidate in enum):
+        failures.append(schema_failure("enum", field, "Value is not one of the schema's allowed values."))
+
+    all_of = schema.get("allOf")
+    if isinstance(all_of, list):
+        for candidate in all_of:
+            failures.extend(json_schema_failures(value, candidate, root_schema, field))
+
+    condition = schema.get("if")
+    if isinstance(condition, dict):
+        branch = schema.get("then") if not json_schema_failures(value, condition, root_schema, field) else schema.get("else")
+        if branch is not None:
+            failures.extend(json_schema_failures(value, branch, root_schema, field))
+
+    negated = schema.get("not")
+    if isinstance(negated, dict) and not json_schema_failures(value, negated, root_schema, field):
+        failures.append(schema_failure("not", field, "Value matches a packet schema shape that is forbidden here."))
+
+    if isinstance(value, dict):
+        properties = schema.get("properties") if isinstance(schema.get("properties"), dict) else {}
+        required = schema.get("required") if isinstance(schema.get("required"), list) else []
+        for key in required:
+            if isinstance(key, str) and key not in value:
+                missing_field = schema_child_field(field, key)
+                failures.append(
+                    schema_failure("required", missing_field, f"Required schema field is missing: {missing_field}.")
+                )
+        for key, child_schema in properties.items():
+            if key in value:
+                failures.extend(
+                    json_schema_failures(
+                        value[key],
+                        child_schema,
+                        root_schema,
+                        schema_child_field(field, key),
+                    )
+                )
+        if schema.get("additionalProperties") is False:
+            for key in sorted(value.keys() - properties.keys()):
+                extra_field = schema_child_field(field, str(key))
+                failures.append(
+                    schema_failure(
+                        "additional_properties",
+                        extra_field,
+                        f"Schema does not allow packet field: {extra_field}.",
+                    )
+                )
+
+    if isinstance(value, list):
+        minimum_items = schema.get("minItems")
+        maximum_items = schema.get("maxItems")
+        if isinstance(minimum_items, int) and len(value) < minimum_items:
+            failures.append(schema_failure("min_items", field, f"Array must contain at least {minimum_items} item(s)."))
+        if isinstance(maximum_items, int) and len(value) > maximum_items:
+            failures.append(schema_failure("max_items", field, f"Array must contain at most {maximum_items} item(s)."))
+        prefix_items = schema.get("prefixItems") if isinstance(schema.get("prefixItems"), list) else []
+        for index, child_schema in enumerate(prefix_items[: len(value)]):
+            failures.extend(
+                json_schema_failures(value[index], child_schema, root_schema, f"{field}[{index}]")
+            )
+        item_schema = schema.get("items")
+        if item_schema is not None:
+            for index in range(len(prefix_items), len(value)):
+                failures.extend(
+                    json_schema_failures(value[index], item_schema, root_schema, f"{field}[{index}]")
+                )
+
+    if isinstance(value, str):
+        minimum_length = schema.get("minLength")
+        if isinstance(minimum_length, int) and len(value) < minimum_length:
+            failures.append(schema_failure("min_length", field, f"String must contain at least {minimum_length} character(s)."))
+        pattern = schema.get("pattern")
+        if isinstance(pattern, str):
+            try:
+                matches = re.search(pattern, value) is not None
+            except re.error:
+                matches = False
+            if not matches:
+                failures.append(schema_failure("pattern", field, "String does not match the packet schema pattern."))
+
+    minimum = schema.get("minimum")
+    if isinstance(minimum, (int, float)) and isinstance(value, (int, float)) and not isinstance(value, bool):
+        if value < minimum:
+            failures.append(schema_failure("minimum", field, f"Number must be at least {minimum}."))
+    return failures
+
+
+def resolve_local_schema_reference(reference: str, root_schema: dict[str, Any]) -> Any | None:
+    if not reference.startswith("#/"):
+        return None
+    resolved: Any = root_schema
+    for token in reference[2:].split("/"):
+        key = token.replace("~1", "/").replace("~0", "~")
+        if not isinstance(resolved, dict) or key not in resolved:
+            return None
+        resolved = resolved[key]
+    return resolved
+
+
+def json_schema_type_matches(value: Any, expected: Any) -> bool:
+    expected_types = expected if isinstance(expected, list) else [expected]
+    type_checks = {
+        "array": lambda candidate: isinstance(candidate, list),
+        "boolean": lambda candidate: isinstance(candidate, bool),
+        "integer": lambda candidate: isinstance(candidate, int) and not isinstance(candidate, bool),
+        "null": lambda candidate: candidate is None,
+        "number": lambda candidate: isinstance(candidate, (int, float)) and not isinstance(candidate, bool),
+        "object": lambda candidate: isinstance(candidate, dict),
+        "string": lambda candidate: isinstance(candidate, str),
+    }
+    return any(isinstance(name, str) and name in type_checks and type_checks[name](value) for name in expected_types)
+
+
+def json_values_equal(left: Any, right: Any) -> bool:
+    if isinstance(left, bool) or isinstance(right, bool):
+        return type(left) is type(right) and left == right
+    if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+        return left == right
+    return type(left) is type(right) and left == right
+
+
+def schema_child_field(parent: str, child: str) -> str:
+    return f"{parent}.{child}" if parent else child
+
+
+def schema_failure(keyword: str, field: str, message: str) -> dict[str, Any]:
+    return {
+        "rule": f"packet.schema.{keyword}",
+        "field": field or "packet",
+        "message": message,
+    }
+
+
+def protected_body_sha256(body_text: str) -> str:
+    normalized: list[str] = []
+    in_packet = False
+    editable_field = ""
+    seen_known_gaps = False
+    known_gaps_body_seen = False
+    for raw_line in body_text.splitlines():
+        line = raw_line.rstrip(" \t\r")
+        if not in_packet and line == "## Summary":
+            in_packet = True
+        if not in_packet:
+            continue
+        if seen_known_gaps and known_gaps_body_seen and not line:
+            break
+        if seen_known_gaps and re.match(r"^#{1,6}\s+", line):
+            break
+        start = re.fullmatch(r"<!-- speckit-pro-editable:(summary|what_changed|why_it_matters):start -->", line)
+        if not editable_field and start:
+            editable_field = start.group(1)
+            normalized.extend([line, f"<elided:{editable_field}>"])
+            continue
+        if editable_field and line == f"<!-- speckit-pro-editable:{editable_field}:end -->":
+            editable_field = ""
+            normalized.append(line)
+            continue
+        if editable_field:
+            continue
+        normalized.append(line)
+        if line == "## Known Gaps":
+            seen_known_gaps = True
+        elif seen_known_gaps and line:
+            known_gaps_body_seen = True
+    content = "\n".join(normalized)
+    if normalized:
+        content += "\n"
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
+def pr_packet_body_failures(data: dict[str, Any], repo_root: Path) -> list[dict[str, Any]]:
+    body_file = data.get("body_file")
+    if not isinstance(body_file, str) or not body_file:
+        return []
+    if validate_path_value("validate-pr-packet-read-only", "body_file", body_file, repo_root) is not None:
+        return []
+    body_path = resolve_input_path(body_file, repo_root)
+    if not trusted_file_exists(body_path, repo_root):
+        return [
+            {
+                "rule": "body.path",
+                "field": "body_file",
+                "message": f"Rendered body file is missing or is not a regular file: {body_file}",
+            }
+        ]
+    body_text = trusted_text(body_path, repo_root)
+    if body_text is None:
+        return [
+            {
+                "rule": "body.readable",
+                "field": "body_file",
+                "message": f"Rendered body file is unreadable: {body_file}",
+            }
+        ]
+    fingerprint = data.get("protected_body_fingerprint")
+    expected = fingerprint.get("value") if isinstance(fingerprint, dict) else None
+    if isinstance(expected, str) and re.fullmatch(r"[a-f0-9]{64}", expected):
+        if protected_body_sha256(body_text) != expected:
+            return [
+                {
+                    "rule": "body.protected_fingerprint",
+                    "field": "body_file",
+                    "message": "Protected body fingerprint changed outside sanctioned editable prose fields.",
+                }
+            ]
+    return []
+
+
 def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     raw = str(inputs.get("packet_path") or "")
     packet = resolve_input_path(raw, repo_root)
@@ -1936,7 +2215,12 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
         stderr_line = f"validate-pr-packet-read-only: input_error: {packet_id}: input.error: shape"
         obj = packet_result("failed", "input_error", 2, packet_id, None, None, None, "no-path", True, stderr_line, [{"rule": "input.error", "field": "packet", "message": "packet JSON must be an object"}], ["[input.error] Provide a JSON object PR packet."])
         return make_result(pretty_json_text(obj), stderr_line + "\n", 2)
-    failures = []
+    schema, schema_error = load_pr_packet_schema()
+    if schema is None:
+        stderr_line = f"validate-pr-packet-read-only: input_error: {packet_id}: input.schema: no-path"
+        obj = packet_result("failed", "input_error", 2, packet_id, None, None, None, "no-path", True, stderr_line, [{"rule": "input.schema", "field": "packet", "message": schema_error or "PR packet schema is unavailable."}], ["[input.schema] Restore the bundled PR packet schema before validation."])
+        return make_result(pretty_json_text(obj), stderr_line + "\n", 2)
+    failures = pr_packet_schema_failures(data, schema)
     scope_evidence = data.get("scope_evidence")
     generated_title = data.get("generated_title")
     target = data.get("target")
@@ -1969,6 +2253,7 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
         path_diag = validate_path_value("validate-pr-packet-read-only", "body_file", body_file, repo_root)
         if path_diag is not None:
             failures.append({"rule": "input.path.body_file", "field": "body_file", "message": path_diag["message"]})
+    failures.extend(pr_packet_body_failures(data, repo_root))
     if failures:
         rules = ",".join(sorted({failure["rule"] for failure in failures}))
         stderr_line = f"validate-pr-packet-read-only: validation_failure: {packet_id}: {rules}: {validation_path}"
