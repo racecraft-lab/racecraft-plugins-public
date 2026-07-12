@@ -62,6 +62,8 @@ G56R-002 freezes the executable subset before G56R-003 scores outcomes.
 | `domain-researcher` | GPT-5.5 / xhigh | Terra | default, ascend if needed, then descend | Every role-eligible discovered model |
 | `codebase-analyst` | GPT-5.5 / low | Terra | default, ascend if needed, then descend | Every role-eligible discovered model, including bounded-work models |
 | `spec-context-analyst` | GPT-5.5 / low | Terra | default, ascend if needed, then descend | Every role-eligible discovered model, including bounded-work models |
+| `consensus-synthesizer` | None - net-new parity addition (Claude baseline: sonnet / max) | Terra | default, ascend if needed, then descend | Every role-eligible discovered model, including bounded-work models |
+| `gate-validator` | None - net-new parity addition (Claude baseline: sonnet / max) | Terra | default, ascend if needed, then descend | Every role-eligible discovered model, including bounded-work models |
 | `autopilot-fast-helper` | GPT-5.3 Codex Spark / effort omitted | Fast qualified route | explicit effort search when supported | Discovered latency-oriented candidates plus a validated no-helper path |
 
 ### Route, evidence, and identity contract
@@ -95,7 +97,7 @@ represented as a native custom-agent TOML fallback field.
 | `route_resolution_id` | G56R-002 schema; G56R-003/G56R-006 records | Preferred and effective route, fallback index, reason, snapshot, attempted routes, and timestamp |
 | `resolved_agent_policy_id` | G56R-006 schema/fixtures; G56R-011 final records | Exact destination custom-agent content and selected effective route |
 | `agent_route_policy_id` | G56R-007 through G56R-010 | Named agent, preferred route, ordered qualified fallbacks, hard contract, evidence, client bounds, and invalidation rules |
-| `core_routing_policy_id` | G56R-011 | Ordered mapping of the nine required named agents to final route-policy IDs |
+| `core_routing_policy_id` | G56R-011 | Ordered mapping of the eleven required named agents to final route-policy IDs |
 | `optional_helper_policy_id` | G56R-011 | Final helper route policy, approved fallbacks, and no-helper contract |
 | `resolved_installation_id` | G56R-011 | Ordered mapping of installed agents to resolved policies and route resolutions |
 | `release_policy_id` | G56R-011 | Final core/helper identities, resolver version, evidence lock, UAT, invalidation rules, and bounded claims |
@@ -148,9 +150,10 @@ legitimately applies. Generated payloads, tests, and documentation still count
 toward reviewer load even where they do not count as production LOC.
 
 **Estimator advisory:** The Python-authoritative `estimate-spec-size` operation
-was last recorded on 2026-07-11. Each scaffold must rerun it when scope or file
-counts change. G56R-003 remains a warning-sized SPEC and must preserve its two
-declared work packages.
+was last recorded on 2026-07-11 and rerun for G56R-009 on 2026-07-12 after the
+two parity agents joined that cohort (392 LOC, ok). Each scaffold must rerun it
+when scope or file counts change. G56R-003 remains a warning-sized SPEC and must
+preserve its two declared work packages.
 
 ## Dependency Graph
 
@@ -174,7 +177,7 @@ G56R-006 Resolver, Materializer, Installer, and Strict Override
     |
     +--> G56R-007 Quality-critical Executor Routing --------+
     +--> G56R-008 Structured-work Agent Routing ------------+
-    +--> G56R-009 Read-only Reasoning Agent Routing --------+
+    +--> G56R-009 Read-only Reasoning and Orchestration-support Agent Routing --+
     +--> G56R-010 Optional Helper and No-helper Path --------+
                                                               |
                                                               v
@@ -193,7 +196,7 @@ G56R-006 Resolver, Materializer, Installer, and Strict Override
 | G56R-006 | Capability-aware Resolver, Materializer, Installer, and Strict Override | Pending | - | Blocked by G56R-005 |
 | G56R-007 | Quality-critical Executor Routing | Pending | - | Blocked by G56R-006 |
 | G56R-008 | Structured-work Agent Routing | Pending | - | Blocked by G56R-006 |
-| G56R-009 | Read-only Reasoning Agent Routing | Pending | - | Blocked by G56R-006 |
+| G56R-009 | Read-only Reasoning and Orchestration-support Agent Routing | Pending | - | Blocked by G56R-006 |
 | G56R-010 | Optional Helper Routing and No-helper Path | Pending | - | Blocked by G56R-006 |
 | G56R-011 | Payload, Installed Skill UAT, Fallback Proof, and Release Integration | Pending | - | Blocked by G56R-007 through G56R-010 |
 
@@ -217,12 +220,14 @@ Budget result: research spike; time-boxed, LOC sizing not applicable
 
 **Scope:**
 
-- Inventory the ten custom-agent source definitions and record each agent's
-  immutable production route, instructions, role boundary, safety/grounding/
+- Inventory the ten current custom-agent source definitions plus the two
+  parity additions derived from the Claude plugin (`consensus-synthesizer`,
+  `gate-validator`) and record each agent's immutable production route or its
+  recorded absence, instructions, role boundary, safety/grounding/
   mutation contract, output contract, expected tool/skill/MCP use, supported
   client assumptions, and representative tasks.
-- Publish a versioned `agent_route_candidate_manifest` covering all ten named
-  agents. Create `agent_contract_id` and provisional `candidate_route_id`
+- Publish a versioned `agent_route_candidate_manifest` covering all twelve
+  named agents. Create `agent_contract_id` and provisional `candidate_route_id`
   records for every agent. Each candidate records an explicit model/effort tuple,
   instruction hash, required model and modality capabilities, tool/skill/MCP
   contract, sandbox/mutation contract, rationale, known incompatibilities,
@@ -238,7 +243,7 @@ Budget result: research spike; time-boxed, LOC sizing not applicable
   undocumented behavior as an inference, open question, or proposed SpecKit Pro
   policy.
 - Deliver the role contracts, provisional candidate manifest, fixture backlog,
-  three-current/seven-missing fixture inventory, telemetry requirements,
+  three-current/nine-missing fixture inventory, telemetry requirements,
   capability questions, and independent go/no-go handoff to G56R-002.
 - INVEST rationale: the spike closes the research uncertainty that blocks safe
   capability probing and ends without depending on later telemetry results.
@@ -345,7 +350,7 @@ fixture/scorer/statistical work
 
 **Required Work Package B - Fixtures, scoring, and statistics:**
 
-- Expand from three current role fixtures to a governed ten-role corpus. Use
+- Expand from three current role fixtures to a governed twelve-role corpus. Use
   blinded adjudication for candidate quality failure, treatment-delivery
   failure, invalid fixture, invalid scorer, and infrastructure failure. A
   fixture/scorer change versions it and invalidates affected results.
@@ -605,25 +610,34 @@ Budget result: re-estimate at scaffold; two role TOMLs plus evidence
 
 ---
 
-### G56R-009: Read-only Reasoning Agent Routing
+### G56R-009: Read-only Reasoning and Orchestration-support Agent Routing
 
 **Priority:** P1 | **Depends On:** G56R-006 | **Enables:** G56R-011
 
 **Goal:** Produce final preferred and ordered fallback route policies for
-clarification, research, codebase analysis, and project-context analysis.
+clarification, research, codebase analysis, project-context analysis, consensus
+synthesis, and gate validation.
 
 **Reviewability Budget:** Primary surface: seed/config |
-Projected reviewable LOC: 290 | Suggested slices: 1 | Status: ok |
-Production files: 0 | Total files: approximately 12 |
-Budget result: re-estimate at scaffold; four TOMLs plus bounded role fixtures
+Projected reviewable LOC: 392 | Suggested slices: 1 | Status: ok |
+Production files: 0 | Total files: approximately 16 |
+Budget result: re-estimate at scaffold; six TOMLs plus bounded role fixtures
 
 **Scope:**
 
 - Screen every executable, role-eligible candidate for `clarify-executor`,
-  `domain-researcher`, `codebase-analyst`, and `spec-context-analyst`; retain
-  lighter models only when they preserve the complete role contract.
+  `domain-researcher`, `codebase-analyst`, `spec-context-analyst`,
+  `consensus-synthesizer`, and `gate-validator`; retain lighter models only
+  when they preserve the complete role contract.
+- Author the two parity additions as named Codex custom agents per current
+  official custom-agent documentation before route qualification, with role
+  contracts mirroring the Claude definitions, and record any platform-specific
+  divergence explicitly.
 - Hard-gate read-only behavior, source-domain separation, citations or file
-  locators, abstention, and structured return formats.
+  locators, abstention, and structured return formats; additionally hard-gate
+  the three-analyst consensus-synthesis contract (agreement rule, confidence
+  assessment, actionable synthesized answer) and the structured gate-validation
+  evidence contract.
 - Apply A1/A2/A3, Stage B, Stage C, exact treatment, progressive effort search,
   and the shared statistical plan without consuming integrated-confirmation
   data.
@@ -631,8 +645,8 @@ Budget result: re-estimate at scaffold; four TOMLs plus bounded role fixtures
   ordered independently qualified fallbacks, hard contract, evidence, client
   bounds, and invalidation triggers.
 - Prove all policies against G56R-006 resolver/installer fixtures.
-- INVEST rationale: one read-only evidence seam preserves four distinct
-  perspective contracts without mutation conflicts.
+- INVEST rationale: one read-only evidence seam preserves six distinct
+  perspective and orchestration-support contracts without mutation conflicts.
 
 **Out of Scope:**
 
@@ -644,6 +658,8 @@ Budget result: re-estimate at scaffold; four TOMLs plus bounded role fixtures
 - `speckit-pro/codex-agents/domain-researcher.toml`
 - `speckit-pro/codex-agents/codebase-analyst.toml`
 - `speckit-pro/codex-agents/spec-context-analyst.toml`
+- [proposed] `speckit-pro/codex-agents/consensus-synthesizer.toml` - net-new parity addition
+- [proposed] `speckit-pro/codex-agents/gate-validator.toml` - net-new parity addition
 - `tests/speckit-pro/layer6-efficiency/fixtures-codex/` - cohort fixtures/results
 
 ---
@@ -675,7 +691,7 @@ Budget result: re-estimate at scaffold; single-agent vertical slice
 - Measure functionality, latency, spawn reliability, resolution reasons, and
   result use. Prove autopilot continuation when the helper is omitted,
   unavailable, not invoked, or cannot spawn.
-- Keep helper qualification separate from the required nine-agent core
+- Keep helper qualification separate from the required eleven-agent core
   statistic; helper absence is not a required-core installation failure.
 - INVEST rationale: the optional leaf can be selected, omitted, or rejected
   without changing any required agent.
@@ -710,7 +726,7 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
 **Scope:**
 
 - After all cohort locks, create final `resolved_agent_policy_id` records and
-  `core_routing_policy_id` from the nine required `agent_route_policy_id`
+  `core_routing_policy_id` from the eleven required `agent_route_policy_id`
   values; create `optional_helper_policy_id` from the helper route policy and
   no-helper contract; resolve them into `resolved_installation_id`; then bind
   the evidence, resolver version, UAT, invalidation rules, and bounded claims
@@ -718,14 +734,14 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
 - Rebuild `dist/codex` through the Python-authoritative payload builder and
   regenerate integrity metadata; never hand-edit generated agent files.
 - Reconcile source, payload, installation, benchmark, rollback, and release
-  packet identities. Source and payload retain ten definitions; the plugin-
-  managed destination contains nine required agents plus the helper only when a
+  packet identities. Source and payload retain twelve definitions; the plugin-
+  managed destination contains eleven required agents plus the helper only when a
   qualified route resolves. Preserve unrelated user-owned files byte-for-byte
   and remove a stale plugin-managed helper when the no-helper state applies.
 - Update active install/autopilot/public guidance with preferred/fallback route
   resolution, strict override, effective-route reporting, restart, rollback,
   service-reroute distinction, and the no-helper path.
-- Run final integrated confirmation of the assembled preferred nine-agent core
+- Run final integrated confirmation of the assembled preferred eleven-agent core
   against the immutable production core on untouched data. Require all safety,
   quality, reliability, accepted-workflow, raw-resource, duration, retry,
   compaction, attrition, and powered long-horizon gates, including the
@@ -736,7 +752,7 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
   secondary arms. A materially dominant qualified control restricts efficiency
   wording under the frozen messaging rule.
 - Publish `skill_agent_usage_manifest` for every active Codex skill entry point
-  and all ten source agents. Update each applicable skill to name the installed
+  and all twelve source agents. Update each applicable skill to name the installed
   agent, triggering condition, allowed route resolution, and result-consumption
   contract; classify other mappings as conditional, prohibited, or not
   applicable.
@@ -745,7 +761,7 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
   returned result affected a decision, artifact, or validation. Direct harness
   injection, generic-agent substitution, missing required spawn, or unconsumed
   result fails release proof. Test the helper in a separate workflow and prove
-  the no-helper path; no single workflow must spawn all ten agents.
+  the no-helper path; no single workflow must spawn all twelve agents.
 - Bind every installed UAT trace as:
 
   ```text
@@ -779,7 +795,7 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
 
 **Out of Scope:**
 
-- Global optimality across every complete ten-agent assembly.
+- Global optimality across every complete twelve-agent assembly.
 - Manual version bumps; release-please owns release versioning.
 
 **Key Files:**
@@ -804,7 +820,7 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
 
 | Resource | Detail |
 |---|---|
-| Codex agent source | Ten TOML files under `speckit-pro/codex-agents/` |
+| Codex agent source | Ten current TOML files under `speckit-pro/codex-agents/`; two parity additions arrive via G56R-009 |
 | Installed destination | `~/.codex/agents/` or explicit compatible destination |
 | Evaluation | Python Layer 6 prompt-emulation runner, three existing role fixtures, and lexical smoke scorer; current results cannot qualify production routes |
 | Payload build | Python 3.11+ `scripts/build-plugin-payloads.py` and runner payload gate |
@@ -816,7 +832,7 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
 |---|---|---|
 | Candidate route record | [proposed] `docs/ai/research/` | Dated official facts, role contracts, candidate routes, capability questions, and fixture backlog |
 | Capability and telemetry adapter | [proposed] Layer 6 Python libraries | Runtime capability snapshot, exact invocation probe, telemetry profile, treatment and reroute trace schemas |
-| Route evaluation | Layer 6 Python harness | Canonical materializer, ten-role fixtures, disjoint corpora, scoring, statistics, raw resource evidence, and long-horizon stratum |
+| Route evaluation | Layer 6 Python harness | Canonical materializer, twelve-role fixtures, disjoint corpora, scoring, statistics, raw resource evidence, and long-horizon stratum |
 | Fallback simulation | [proposed] Layer 6 replay fixtures | Availability, effort, probe, service-reroute, no-safe-route, helper, atomicity, rollback, and retry cases |
 | Installer policy | Python install helper and registry | Capability-aware resolver, explicit materialization, strict override, atomic complete-matrix write, reporting, and preservation |
 | Agent route policies | Route-policy evidence plus `speckit-pro/codex-agents/*.toml` | Preferred/fallback order remains project-owned; destination TOMLs materialize one explicit route |
@@ -845,3 +861,6 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
 - **Codex configuration:** [Configuration reference](https://developers.openai.com/codex/config-reference)
 - **Codex non-interactive JSON events:** [Non-interactive mode](https://developers.openai.com/codex/noninteractive)
 - **Prompt guidance:** [GPT-5.6 prompting best practices](https://developers.openai.com/api/docs/guides/latest-model#prompting-best-practices)
+- **Cross-platform parity source (Claude agent definitions):**
+  `speckit-pro/agents/consensus-synthesizer.md` and
+  `speckit-pro/agents/gate-validator.md`

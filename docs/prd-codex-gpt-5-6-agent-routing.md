@@ -21,8 +21,16 @@ catalog includes any supported Codex model that satisfies an agent's contract.
 > without silently changing its role, tools, safety boundary, or output
 > contract?
 
-SpecKit Pro defines ten named Codex custom agents: nine required core agents and
-the optional `autopilot-fast-helper`. The existing definitions pin one model or
+SpecKit Pro currently defines ten named Codex custom agents: nine required core
+agents and the optional `autopilot-fast-helper`. The Claude plugin also defines
+two orchestration-support agents with no Codex counterpart:
+`consensus-synthesizer` and `gate-validator`. Cross-platform agent parity is a
+governing principle: both platforms define the same named agents under each
+platform's official configuration surface and diverge only for
+platform-specific implementation requirements. This plan therefore targets a
+twelve-agent Codex catalog: eleven required core agents (the nine current core
+roles plus the two net-new parity additions) and the optional helper. The
+existing definitions pin one model or
 inherit one configuration, but they do not express an evidence-backed ordered
 fallback policy. A model may also be absent, an effort may be unsupported, or
 the exact configured treatment may fail even when a catalog entry exists.
@@ -61,7 +69,7 @@ approved model/effort route for the same named agent. It cannot substitute a
 different named agent, a generic agent, or a weaker safety/tool contract.
 
 No complete public benchmark compares every supported Codex model and effort on
-SpecKit Pro's ten roles. Model branding, generation, or placement in product
+SpecKit Pro's twelve roles. Model branding, generation, or placement in product
 guidance therefore does not prove a route. The PRD uses controlled evaluation
 to qualify preferred and fallback routes, then resolves installation against a
 versioned capability snapshot from the user's working Codex environment.
@@ -81,6 +89,10 @@ vectors, duration, retries, compaction, and accepted-workflow rate.
   or more ordered, independently qualified fallback routes.
 - Give the optional helper a preferred route, qualified helper fallbacks, and a
   validated no-helper path.
+- Maintain the same named agents on both the Codex and Claude platforms,
+  following each platform's official documentation and diverging only for
+  platform-specific implementation requirements; this plan delivers the Codex
+  half of the shared twelve-agent catalog.
 - Preserve role-specific correctness, grounding, safety, mutation, output,
   tool, and orchestration contracts across every route.
 - Select preferred routes quality and reliability first, then use one
@@ -126,7 +138,7 @@ vectors, duration, retries, compaction, and accepted-workflow rate.
 - Offering quality/balanced/economy profiles or arbitrary per-agent user
   overrides in v1. The existing one-model compatibility override remains the
   KISS escape hatch and is strict.
-- Searching the complete nine-agent combination space or claiming global
+- Searching the complete eleven-agent combination space or claiming global
   assembled-policy optimality. Version 1 performs component-wise route and
   prompt selection, then confirms the assembled preferred core.
 - Automatically selecting an unqualified adjacent model, changing a named
@@ -166,7 +178,7 @@ depend on final aggregates that do not yet exist.
 | `agent_route_policy_id` | G56R-007 through G56R-010 | Named agent, preferred route, ordered fallbacks, hard contract, evidence, client bounds, and invalidation rules |
 | `route_resolution_id` | G56R-002 schema; G56R-003/G56R-006 records | Preferred and effective routes, fallback index and reason, attempted routes, capability snapshot, and timestamp |
 | `resolved_agent_policy_id` | G56R-006 schema/fixtures; G56R-011 final records | Exact materialized destination content and selected effective route for one named agent |
-| `core_routing_policy_id` | G56R-011 | Ordered mapping of the nine required named agents to final route policies |
+| `core_routing_policy_id` | G56R-011 | Ordered mapping of the eleven required named agents to final route policies |
 | `optional_helper_policy_id` | G56R-011 | Helper preferred route, qualified fallbacks, no-helper contract, and integration reference |
 | `resolved_installation_id` | G56R-011 | Ordered mapping of installed agents to resolved policies and resolution evidence |
 | `release_policy_id` | G56R-011 | Final core, helper state, resolver/installer version, evidence lock, UAT, invalidation rules, and bounded claims |
@@ -179,15 +191,18 @@ selection and G56R-011 composes the aggregates.
 
 ### 3.1 Research Baseline and Candidate Routes *(-> G56R-001)*
 
-- **AC-1.1**: A dated research record inventories all ten named Codex agents and
-  every active source, installer, skill, validation, evaluation,
+- **AC-1.1**: A dated research record inventories all twelve named target agents
+  (the ten current Codex agents plus the parity additions
+  `consensus-synthesizer` and `gate-validator` derived from the Claude plugin)
+  and every active source, installer, skill, validation, evaluation,
   generated-payload, and installed-cache surface that encodes or consumes their
   route policy.
 - **AC-1.2**: The record cites current official OpenAI documentation for model
   IDs, custom-agent configuration fields, supported reasoning controls,
   capability discovery, telemetry, reroute events, and non-interactive output.
   Conflicting claims are rejected or explicitly unresolved.
-- **AC-1.3**: Every agent has an immutable production route, a role-specific
+- **AC-1.3**: Every agent has an immutable production route (recorded as absent
+  for the two parity additions), a role-specific
   contract, candidate model/effort tuples from discovered capabilities or a
   pinned probe, prompt/context candidates when justified, and a fixture backlog.
   A model or effort is excluded only for recorded incompatibility, contract
@@ -203,7 +218,10 @@ selection and G56R-011 composes the aggregates.
   executable before capability preflight.
 - **AC-1.6 — Candidate route and fallback manifest**: Before scored screening,
   G56R-001 publishes a versioned `agent_route_candidate_manifest` covering all
-  ten named agents. For each agent it records the immutable production route;
+  twelve named agents; the two parity additions enter with role contracts
+  derived from the Claude definitions and no current Codex production route.
+  For each agent it records the immutable production route or its recorded
+  absence;
   every candidate model/effort tuple; required model, modality, custom-agent,
   tool, skill, MCP, sandbox, and client capabilities; `agent_contract_id`;
   prompt/instruction hash; candidate rationale; known incompatibilities;
@@ -317,7 +335,11 @@ selection and G56R-011 composes the aggregates.
   per-agent route/configuration IDs, client version, tool/configuration contract,
   corpus snapshot, prompt hashes, and analysis plan. Candidate routes compare
   with the corresponding production role route; integrated release compares the
-  final assembled preferred core with the immutable production core. The
+  final assembled preferred core with the immutable production core. A parity
+  addition with no production role route qualifies against its absolute
+  contract, quality, and reliability floors; the workflow-level integrated
+  comparison still pairs the assembled eleven-agent core against the immutable
+  production core on the same objectives. The
   immutable production comparator remains the sole release baseline.
 - **AC-2.14 — Missing telemetry and attrition**: Every attempt records missing
   fields, cause classification, evidence, rerun eligibility/count, and final
@@ -411,7 +433,7 @@ selection and G56R-011 composes the aggregates.
 - **AC-3.4**: Bundled source policies are never mutated. Destination copies
   contain explicit effective model and effort; omitted inherited defaults do
   not satisfy the contract. The plugin-managed destination set contains
-  exactly the nine core agent files plus the helper only when resolved;
+  exactly the eleven core agent files plus the helper only when resolved;
   unrelated user files are preserved and excluded from that count. Reinstall
   without a helper removes a stale plugin-managed helper atomically.
 - **AC-3.5**: The explicit global model override remains strict, validates every
@@ -455,21 +477,28 @@ selection and G56R-011 composes the aggregates.
   order, contract, evidence, client bounds, invalidation rules, install proof,
   and rollback evidence.
 
-### 3.6 Read-only Reasoning Agent Routing *(-> G56R-009)*
+### 3.6 Read-only Reasoning and Orchestration-support Agent Routing *(-> G56R-009)*
 
-- **AC-6.1**: `clarify-executor`, `domain-researcher`, `codebase-analyst`, and
-  `spec-context-analyst` screen every eligible route; lighter routes remain only
-  when their grounding, citation, and output contracts pass.
+- **AC-6.1**: `clarify-executor`, `domain-researcher`, `codebase-analyst`,
+  `spec-context-analyst`, `consensus-synthesizer`, and `gate-validator` screen
+  every eligible route; lighter routes remain only when their grounding,
+  citation, and output contracts pass.
 - **AC-6.2**: Each model follows the ordered effort search and boundary-retest
   contract; selection cannot stop after testing only one lower effort.
 - **AC-6.3**: Every route remains grounded in its assigned evidence domain,
   preserves citations or file locators, and performs no writes.
-- **AC-6.4**: One model is not forced across all four roles. Each final
+- **AC-6.4**: One model is not forced across all six roles. Each final
   `agent_route_policy_id` records its independently qualified preferred route
   and ordered fallbacks.
 - **AC-6.5**: Exact-treatment evaluation, bounded prompt/context tuning, cohort
   lock, install proof, and rollback evidence follow the shared contract; release
   proof remains G56R-011.
+- **AC-6.6**: The two parity additions are authored as named Codex custom agents
+  per current official custom-agent documentation before route qualification,
+  with role contracts mirroring the Claude definitions (three-analyst consensus
+  synthesis with confidence assessment; structured gate-validation evidence).
+  Any platform-specific divergence from the Claude contract is recorded
+  explicitly.
 
 ### 3.7 Optional Latency-first Helper Routing *(-> G56R-010)*
 
@@ -493,8 +522,8 @@ selection and G56R-011 composes the aggregates.
 
 ### 3.8 Payload, Installed UAT, and Release Proof *(-> G56R-011)*
 
-- **AC-8.1**: The Codex payload is rebuilt from source. All ten source and
-  payload agent definitions, manifests/checksums, nine required destination
+- **AC-8.1**: The Codex payload is rebuilt from source. All twelve source and
+  payload agent definitions, manifests/checksums, eleven required destination
   policies, optional installed helper, final identities, and active guidance
   reconcile without hand-editing generated artifacts.
 - **AC-8.2**: Active Codex guidance explains preferred routes, qualified
@@ -528,16 +557,16 @@ selection and G56R-011 composes the aggregates.
   manifest, route policies, and release policy. Changes trigger the predeclared
   scope of requalification, fallback revalidation, or integrated confirmation.
 - **AC-8.8**: Deterministic documentation checks validate relative links,
-  current versus proposed paths, the ten-agent count, PRD-to-roadmap ownership,
+  current versus proposed paths, the twelve-agent count, PRD-to-roadmap ownership,
   acyclic dependencies, candidate-versus-final identity lifecycle, exact-
   treatment wording, fallback ownership, strict override, atomic no-write,
   helper/no-helper behavior, and skill-to-agent coverage. They reject retired
   non-capability routing requirements and unsupported claims that native
   custom-agent TOML provides ordered fallback.
 - **AC-8.9 — Integrated release gate**: After G56R-007 through G56R-010 lock
-  their policies, G56R-011 composes one `core_routing_policy_id` from the nine
-  required preferred routes and evaluates it exactly once against the immutable
-  production core on the untouched integrated confirmation corpus. The core
+  their policies, G56R-011 composes one `core_routing_policy_id` from the
+  eleven required preferred routes and evaluates it exactly once against the
+  immutable production core on the untouched integrated confirmation corpus. The core
   must pass every contract, safety, quality, reliability, accepted-workflow,
   predeclared environment-independent resource-superiority, long-horizon, and
   simultaneous guardrail gate. Frozen controls run as predeclared secondary
@@ -546,7 +575,7 @@ selection and G56R-011 composes the aggregates.
   orchestration selection and requires new versioned confirmation evidence.
   Passing proves bounded improvement over production, not global assembled-
   policy optimality.
-- **AC-8.10 — Capability support claim**: Support means the nine required named
+- **AC-8.10 — Capability support claim**: Support means the eleven required named
   agents resolve from qualified route policies, install atomically, deliver
   exact treatment in the tested Codex client/surface, and preserve the previous
   installation when resolution fails. The claim is limited to the tested
@@ -567,7 +596,7 @@ selection and G56R-011 composes the aggregates.
   AC-2.9 comparative long-horizon evidence.
 - **AC-8.13 — Skill-to-agent and model-fallback proof**: Before release,
   G56R-011 publishes a versioned `skill_agent_usage_manifest` covering every
-  active Codex skill entry point and all ten source agents. Each mapping records
+  active Codex skill entry point and all twelve source agents. Each mapping records
   skill ID and instruction hash, exact installed agent name, trigger/phase,
   `required`, `conditional`, `prohibited`, or `not_applicable` state, spawn
   condition, result-consumption contract, and allowed model-route fallback.
@@ -576,7 +605,7 @@ selection and G56R-011 composes the aggregates.
   production skill path; the helper remains conditional.
 
   Representative UAT invokes the actual installed skills, not a direct harness
-  call. Across those workflows, every one of the nine core agents is observed at
+  call. Across those workflows, every one of the eleven core agents is observed at
   least once under a predeclared trigger. Each trace binds `skill_id` and skill
   hash to the named-agent spawn, `route_resolution_id`, effective model/effort
   when proven, exact-treatment evidence, returned result hash, and downstream
@@ -586,7 +615,7 @@ selection and G56R-011 composes the aggregates.
   different named or generic agent, or injecting the agent directly from the
   harness fails release proof. The separate helper campaign proves the same
   chain when a helper route resolves and proves the no-helper path otherwise.
-  No single workflow must spawn all ten agents.
+  No single workflow must spawn all twelve agents.
 
 ### 3.9 Budgets, Controls, Fallback, and Recovery *(-> G56R-004, G56R-005, G56R-011)*
 
@@ -623,7 +652,7 @@ selection and G56R-011 composes the aggregates.
 ## 4. Migration Path (one phase per SPEC)
 
 - **Phase 1 (G56R-001) - Candidate and role-contract research**: Establish
-  official platform facts, ten-agent role contracts, provisional candidate
+  official platform facts, twelve-agent role contracts, provisional candidate
   routes, fallback requirements, and fixture/telemetry needs without waiting on
   G56R-002 or changing defaults.
 - **Phase 2 (G56R-002 through G56R-005) - Evaluation foundation**: Freeze
@@ -645,6 +674,10 @@ selection and G56R-011 composes the aggregates.
 
 - Codex-only scope: Codex agent definitions and skills, the active Python
   runner/install path, Codex payloads, and directly related tests/evals/docs.
+- Cross-platform parity: the named-agent catalog remains identical across the
+  Codex and Claude plugins; catalog changes land on both platforms or record an
+  explicit platform-specific exception. The Claude half of the shared
+  twelve-agent catalog is owned by the companion Claude routing PRD.
 - G56R-006 implements the currently deferred Python Codex-agent installer; no
   deleted Bash helper may be restored or described as active.
 - Python 3.11+ standard library remains the installed runtime substrate; this
@@ -695,6 +728,11 @@ selection and G56R-011 composes the aggregates.
   comparable resource measure and exact effort configuration? Recommendation:
   qualify only what the telemetry profile proves and preserve the no-helper path
   for every unresolved case.
+- **OQ-8 (G56R-001/G56R-009):** Which Codex custom-agent capabilities are
+  required to express the Claude orchestration-support contracts (consensus
+  synthesis and gate validation)? Recommendation: derive the role contracts
+  from the Claude agent definitions, author per current official custom-agent
+  documentation, and record any platform-specific divergence explicitly.
 
 ## 7. SPEC Catalog Crosswalk
 
@@ -711,7 +749,7 @@ selection and G56R-011 composes the aggregates.
 | Capability-aware Resolver, Materializer, Installer, and Strict Override | AC-3.* | G56R-006, G56R-011 | G56R-005 | P1 |
 | Quality-critical Executor Routing | AC-4.* | G56R-007, G56R-011 | G56R-006 | P1 |
 | Structured-work Agent Routing | AC-5.* | G56R-008, G56R-011 | G56R-006 | P1 |
-| Read-only Reasoning Agent Routing | AC-6.* | G56R-009, G56R-011 | G56R-006 | P1 |
+| Read-only Reasoning and Orchestration-support Agent Routing | AC-6.* | G56R-009, G56R-011 | G56R-006 | P1 |
 | Optional Helper Routing and No-helper Path | AC-2.18, AC-7.* | G56R-006, G56R-010, G56R-011 | G56R-005 | P1 |
 | Payload, Installed Skill UAT, Fallback Proof, and Release Integration | AC-8.* | G56R-011 | G56R-007 through G56R-010 | P1 |
 
@@ -720,7 +758,7 @@ selection and G56R-011 composes the aggregates.
 1. All acceptance criteria map once through the acyclic G56R-001 through
    G56R-011 catalog; G56R-001 does not wait on G56R-002, G56R-006 creates only
    framework/fixture policies, and G56R-011 creates final aggregates.
-2. Every one of the nine required named agents has one qualified preferred
+2. Every one of the eleven required named agents has one qualified preferred
    route and zero or more ordered qualified fallbacks. Every fallback preserves
    the same agent contract and changes only explicit model/effort route fields.
 3. The optional helper has one qualified preferred route when available,
@@ -757,3 +795,6 @@ selection and G56R-011 composes the aggregates.
 - **Codex configuration fields and inheritance:** [Configuration reference](https://developers.openai.com/codex/config-reference)
 - **Codex non-interactive JSONL and token-usage events:** [Non-interactive mode](https://developers.openai.com/codex/noninteractive)
 - **Current model-selection and prompting guidance:** [Latest model](https://developers.openai.com/api/docs/guides/latest-model)
+- **Cross-platform parity source (Claude agent definitions):**
+  `speckit-pro/agents/consensus-synthesizer.md` and
+  `speckit-pro/agents/gate-validator.md`
