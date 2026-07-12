@@ -1,4 +1,5 @@
 {
+  "schema": "speckit.layer8.expected-equivalence.v1",
   "fixture_id": "01-post-impl-parity",
   "description": "Fields that MUST match between Path A (Agent Teams) and Path B (parallel subagents fallback) runs. Tolerances per field defined in tolerance.json.",
   "compare": [
@@ -136,6 +137,12 @@
     ],
     "missing_packet_blocks_pr_create": true,
     "post_create_packet_repair_fallback": false
+  },
+  "required_invariants_source": {
+    "source": "workflow.md",
+    "section_selector": "## Required Invariants",
+    "key_column": "Invariant",
+    "value_column": "Value"
   },
   "fail_fast": false,
   "report_format": "field-level-diff"

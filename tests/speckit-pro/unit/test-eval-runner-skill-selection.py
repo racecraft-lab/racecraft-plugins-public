@@ -388,7 +388,7 @@ def runtime_contract_parity_violations() -> list[str]:
             "post implementation",
             PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "post-implementation.md",
             PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "post-implementation-codex.md",
-            (PACKET_PATH_CONTRACT, "pr-packet-output", "data.stdout_json", "writes_state=false", "gh pr edit <number> --base <branch>"),
+            (),
         ),
     )
     for label, claude_path, codex_path, required in pairs:
@@ -400,6 +400,66 @@ def runtime_contract_parity_violations() -> list[str]:
             for token in required:
                 if token.casefold() not in body:
                     violations.append(f"{label}: {surface} missing parity token {token}")
+    post_paths = pairs[-1][1:3]
+    violations.extend(
+        post_implementation_outcome_violations(
+            {
+                "Claude": post_paths[0].read_text(encoding="utf-8"),
+                "Codex": post_paths[1].read_text(encoding="utf-8"),
+            }
+        )
+    )
+    return violations
+
+
+def post_implementation_outcome_violations(bodies: dict[str, str]) -> list[str]:
+    required_fragments = {
+        "deferred UAT invocation prohibition": (
+            "the runner helper `generate-uat-skeleton` is registered as deferred",
+            "never invoke it as an active helper",
+        ),
+        "missing UAT fail-open fallback": (
+            "mark the uat row skipped with that evidence, and continue to pr-body generation and pr creation",
+            "missing deferred output alone never marks the row failed and never blocks pr side effects",
+        ),
+        "registered-validator-only blocker": (
+            "never invoke `validate-uat-runbook`: that helper is not registered",
+            "if no actual registered uat-validation path exists",
+            "if and only if that just-run validator reports the existing runbook invalid",
+        ),
+        "stack-manager invocation prohibition and fallback": (
+            "`detect-stack-manager-plan` is out of scope and must not be invoked",
+            "use explicit packet-owned `gh pr create --base --head --title --body-file` commands",
+        ),
+        "source-directory and branch-prefix split": (
+            "`--feature-branch` is the emitted branch prefix",
+            "`--source-feature-dir specs/<feature>`",
+            "evidence, scoped evidence, prs, and moc files stay under the source feature directory while emitted head/base refs use the safe branch prefix",
+        ),
+    }
+    required_patterns = {
+        "missing packet blocker": r"if any (?:required )?packet is absent or invalid,(?:.|\n){0,120}stop",
+        "post-mutation manager block": r"(?:prior|partial) `gh-stack` mutation(?: already occurred)?,?(?:.|\n){0,120}block(?:.|\n){0,120}(?:rather than|instead of) mixing managers",
+        "golden-only live-mutation prohibition": r"`multi-pr-emission`(?:.|\n){0,120}`golden_only`(?:.|\n){0,160}does not emit packets or execute live pr mutations",
+    }
+    forbidden_patterns = {
+        "missing UAT output must not stop": r"(?:skeleton generation fails|output file is missing)(?:.|\n){0,160}(?:stop|blocks?)",
+        "unregistered UAT helper must not be called": r"runner helper validate-uat-runbook",
+        "post-mutation fallback must not run": r"after (?:a |any )?partial `gh-stack` mutation(?:.|\n){0,100}(?:fall back|fallback) to `?gh pr",
+    }
+
+    violations: list[str] = []
+    for surface, raw_body in bodies.items():
+        body = re.sub(r"\s+", " ", raw_body.casefold())
+        for outcome, fragments in required_fragments.items():
+            if any(fragment not in body for fragment in fragments):
+                violations.append(f"post implementation: {surface} missing outcome: {outcome}")
+        for outcome, pattern in required_patterns.items():
+            if re.search(pattern, body) is None:
+                violations.append(f"post implementation: {surface} missing outcome: {outcome}")
+        for outcome, pattern in forbidden_patterns.items():
+            if re.search(pattern, body):
+                violations.append(f"post implementation: {surface} contradictory outcome: {outcome}")
     return violations
 
 
@@ -508,6 +568,26 @@ def write_fake_skill_creator(root: Path) -> Path:
 
 
 class EvalRunnerSkillSelectionTests(unittest.TestCase):
+    def test_post_implementation_outcome_negative_canaries(self) -> None:
+        claude = (PLUGIN_ROOT / "skills/speckit-autopilot/references/post-implementation.md").read_text(encoding="utf-8")
+        codex = (PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/post-implementation-codex.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(post_implementation_outcome_violations({"Claude": claude, "Codex": codex}), [])
+
+        canaries = {
+            "missing deferred output stop": claude + "\nIf the output file is missing, STOP before PR creation.\n",
+            "active unregistered validator": claude + "\nRun runner helper validate-uat-runbook now.\n",
+            "post-mutation fallback": claude + "\nAfter a partial `gh-stack` mutation, fall back to `gh pr create`.\n",
+            "source and branch reversal": claude.replace(
+                "evidence, scoped evidence, PRS, and MOC files stay under\n   the source feature directory while emitted head/base refs use the safe branch\n   prefix",
+                "evidence, scoped evidence, PRS, and MOC files move to the safe branch prefix",
+            ),
+        }
+        for name, mutated in canaries.items():
+            with self.subTest(msg=name):
+                self.assertTrue(post_implementation_outcome_violations({"Claude": mutated, "Codex": codex}))
+
     def test_eval_runner_skill_selection_contract(self) -> None:
         self.assertEqual(baseline_inventory(BASELINE), CURRENT_INVENTORY)
         self.assertEqual(retired_contract_violations(), [])

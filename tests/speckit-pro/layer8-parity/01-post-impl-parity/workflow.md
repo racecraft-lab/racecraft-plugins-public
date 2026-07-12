@@ -51,6 +51,25 @@ row, but it must remain blocked before validation or PR creation.
 |--------|-------------|------------------|--------------|---------|
 | pending | `specs/parity-01-post-impl/.process/pr-packets/<packet-id>.json` | not_run | false | `pr-packet-output` deferred |
 
+## Required Invariants
+
+| Invariant | Value |
+|-----------|-------|
+| shared_packet_schema | speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json |
+| shared_packet_validator_helper_id | validate-pr-packet-read-only |
+| required_packet_path | specs/<feature>/.process/pr-packets/<packet-id>.json |
+| packet_emission_promotion_status | deferred |
+| validation_result_source | data.stdout_json |
+| validation_writes_state | false |
+| validation_artifact_written | false |
+| generate_pr_body_inputs | output_path, title, sections |
+| generate_pr_body_output | one_markdown_body |
+| runner_invocation | [resolved_python, -m, speckit_pro_runner] with one JSON request on stdin |
+| codex_duplicate_schema_or_validator | false |
+| requires_explicit_pr_create_args | --base, --head, --title, --body-file |
+| missing_packet_blocks_pr_create | true |
+| post_create_packet_repair_fallback | false |
+
 ## Notes
 
 This file is the test input for `tests/layer8-parity/01-post-impl-parity/`.

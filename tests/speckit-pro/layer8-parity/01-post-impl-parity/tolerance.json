@@ -1,4 +1,5 @@
 {
+  "schema": "speckit.layer8.tolerance.v1",
   "fixture_id": "01-post-impl-parity",
   "description": "Tolerances for comparing Path A (Agent Teams) vs Path B (parallel subagents fallback) outcomes on the post-implementation parallel group.",
   "fields": {

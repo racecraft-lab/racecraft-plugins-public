@@ -1,4 +1,5 @@
 {
+  "schema": "speckit.layer8.expected-equivalence.v1",
   "fixture_id": "02-repository-migration-guidance",
   "description": "Fields that MUST match between Path A (Agent Teams) and Path B (parallel-subagents fallback) for PRSG-011 migration guidance.",
   "compare": [

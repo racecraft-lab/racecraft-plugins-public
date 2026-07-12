@@ -728,44 +728,32 @@ answers in writing so anyone reviewing the PR sees them.
 
 ## UAT Runbook Generation
 
-Immediately after Self-Review and before PR-body generation
-(between `Post: Self-Review` and `Post: PR Body Generation`), the
-orchestrator generates a deterministic UAT runbook from `spec.md` so
-the PR ships with a story-by-story acceptance artifact. The runner helper
-`generate-uat-skeleton` is registered as deferred for installed workflows; do
-not invoke it as an active helper. Reuse a committed source-derived runbook when
-present. If none exists, log `skipped: generate-uat-skeleton deferred` and
-continue.
+Immediately after Self-Review and before PR-body generation (between
+`Post: Self-Review` and `Post: PR Body Generation`), the orchestrator records
+UAT runbook status. This row is mandatory, but its deferred capability boundary
+is fail-open. The runner helper `generate-uat-skeleton` is registered as
+deferred for installed workflows, so never invoke it as an active helper.
 
-- `UAT_PROJECT_COMMANDS` is the discovered `PROJECT_COMMANDS`
-  (Step 0.11) serialized to JSON — the script formats the Env Setup
-  table from it and never re-runs `detect-commands`.
-- `--workflow-file <workflow-file>` lets the script echo the
-  `## Self-Review` block written just above into the runbook's
-  Self-Review Findings section.
-- Output is written exactly once to `<feature-dir>/.process/uat-runbook.md`
-  (deterministic overwrite, no merge); the script is silent on stdout.
+Reuse a committed source-derived `<feature-dir>/.process/uat-runbook.md` when
+present. If none exists, log `skipped: generate-uat-skeleton deferred`, mark the
+UAT row skipped with that evidence, and continue to PR-body generation and PR
+creation. Missing deferred output alone never marks the row failed and never
+blocks PR side effects.
 
-The skeleton script is fail-safe for file integrity: on a nonzero exit
-(e.g., exit 1 on an unreadable spec) it writes no partial `uat-runbook.md`
-(FR-006). It is **not** a review-ready fallback. If skeleton generation fails
-or the output file is missing, mark `Post: UAT Runbook Generation` failed and
-STOP before PR-body generation or PR creation.
-
-After the skeleton is written, **spawn the `speckit-pro:uat-runbook-author`
-subagent to rewrite it in place** so the runbook reads in plain English
-and a non-engineer can actually execute it:
+When the committed runbook exists, **spawn the
+`speckit-pro:uat-runbook-author` subagent to rewrite it in place** so the
+runbook reads in plain English and a non-engineer can actually execute it:
 
 ```text
 Agent(
   subagent_type: "speckit-pro:uat-runbook-author",
   description: "SPEC-XXX UAT runbook authoring",
   prompt: """
-    Rewrite the UAT runbook skeleton in place so a non-engineer can
+    Rewrite the committed source-derived UAT runbook in place so a non-engineer can
     follow it. Edit ONLY this file: <feature-dir>/.process/uat-runbook.md
 
     Inputs:
-    - Skeleton: <feature-dir>/.process/uat-runbook.md
+    - Runbook: <feature-dir>/.process/uat-runbook.md
     - Spec: <feature-dir>/spec.md
     - Plan: <feature-dir>/plan.md
     - Quickstart (if present): <feature-dir>/quickstart.md
@@ -781,25 +769,22 @@ Agent(
 )
 ```
 
-- **Pass PROJECT_COMMANDS to the agent.** This is what lets it write a
-  real Env Setup instead of the skeleton's `<unknown>` rows — the same
-  gap that produced the meaningless Env Setup table in earlier PRs.
-- If the author agent errors or returns without editing, leave the deterministic
-  skeleton in place for diagnosis, but do **not** continue to PR creation until
-  the quality validator below passes.
+- **Pass PROJECT_COMMANDS to the agent.** This lets it replace unknown setup
+  rows with executable project commands.
+- If the author agent errors or returns without editing, log the outcome and
+  continue fail-open with the committed source-derived runbook unchanged.
 
-After authoring, validate the runbook quality:
+Never invoke `validate-uat-runbook`: that helper is not registered. Before any
+UAT quality validation, inspect the live registered helper metadata. If no
+actual registered UAT-validation path exists, log
+`skipped: UAT validation unavailable` and continue fail-open. If a registered
+validation path exists, run that registered validator against the existing
+runbook. If and only if that just-run validator reports the existing runbook
+invalid, STOP before PR-body generation or PR creation and report its
+diagnostics. Missing deferred output is never sent to validation and never
+blocks.
 
-```text
-Command("'runner helper validate-uat-runbook' <feature-dir>/.process/uat-runbook.md")
-```
-
-If validation fails, STOP before PR-body generation or PR creation and report the
-validator message. The validator rejects missing runbooks, unknown
-`PROJECT_COMMANDS` rows, skeleton per-story placeholders, circular FR Coverage
-Matrix text, and absent-runbook PR-body stubs.
-
-Then auto-commit the authored runbook:
+If authoring changed the existing runbook, auto-commit that change:
 
 ```text
 git add <feature-dir>/.process/uat-runbook.md

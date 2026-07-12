@@ -69,8 +69,12 @@ Tolerance band:
 
 The Python runner, extractor helpers, four fixture cases, and portable JSON
 environment contracts are implemented. Dry-run validation is deterministic
-and free. Live validation remains developer-triggered because it runs two
-budgeted `claude -p` processes per fixture.
+and free. It validates the versioned expected/tolerance schemas, cross-checks
+every compare source and tolerance key, and evaluates declared required
+invariants against `workflow.md`. Live mode evaluates the same invariants
+independently against both captured outputs before parity comparison. Live
+validation remains developer-triggered because it runs two budgeted
+`claude -p` processes per fixture.
 
 ## Fixture: `01-post-impl-parity`
 

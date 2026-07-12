@@ -43,8 +43,10 @@ two different real execution paths produce equivalent answers from the
 model. Replay mode is not meaningful.
 
 The dry-run validation (`python3 run-parity-fixtures.py --dry-run`)
-verifies the fixture structure (required files present, JSON
-well-formed) without invoking claude -p.
+verifies the fixture structure, versioned JSON contracts, compare/tolerance
+cross-references, and every row in `## Required Invariants` without invoking
+claude -p. Live mode enforces those rows against both captured workflow
+outputs before comparing the two paths.
 
 ## Cost
 
