@@ -1,56 +1,77 @@
 ---
-up: "[Codex GPT-5.6 Agent Routing Roadmap](codex-gpt-5-6-agent-routing-technical-roadmap.md)"
+up: "[Codex ChatGPT Subscription Agent Routing Roadmap](codex-gpt-5-6-agent-routing-technical-roadmap.md)"
 related:
-  - "[Codex GPT-5.6 Agent Routing PRD](../../prd-codex-gpt-5-6-agent-routing.md)"
+  - "[Codex ChatGPT Subscription Agent Routing PRD](../../prd-codex-gpt-5-6-agent-routing.md)"
 status: "Draft; G56R-001 ready to scaffold"
 rank:
 spec_id: "codex-gpt-5-6-agent-routing"
 structureVersion: 1
 ---
 
-# Codex GPT-5.6 Agent Routing - Map of Content
+# Codex ChatGPT Subscription Agent Routing - Map of Content
 
-Navigation map for the evidence-first Codex model-routing roadmap.
+Navigation map for the evidence-first Codex subscription-routing roadmap.
 
 ## Epics (curated)
 
 ### Evidence Baseline
 
-Why: Establish current source truth and authoritative GPT-5.6 facts before a
-marketing tier becomes an installed default.
+Why: Establish current source truth for model, subscription, and workspace
+capabilities before any route becomes an installed default.
 
 - [G56R-001 Research Baseline and Candidate Matrix](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-001-research-baseline-and-candidate-matrix)
 
-### Promotion Harness
+### Telemetry Foundation
 
-Why: Make model x effort quality, evidence, latency, tokens, credits, and cost
-per success measurable for every role.
+Why: Prove authentication, treatment delivery, usage accounting, and trace
+completeness before live candidate comparison.
 
-- [G56R-002 Model-Effort Benchmark and Promotion Harness](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-002-model-effort-benchmark-and-promotion-harness)
+- [G56R-002 Authentication, Telemetry, Treatment, and Trace Schema](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-002-authentication-telemetry-treatment-and-trace-schema)
+
+### Evaluation Runner
+
+Why: Run the locked corpus and make component qualification statistically
+reproducible without consuming final release evidence.
+
+- [G56R-003 Corpus Runner, Acceptance Scoring, and Statistics](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-003-corpus-runner-acceptance-scoring-and-statistics)
+
+### Policy Controls
+
+Why: Freeze the unpinned, adaptive, and Ultra controls used to bound the final
+static-policy efficiency claim.
+
+- [G56R-004 Policy Control Definition and Dominance Contract](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-004-policy-control-definition-and-dominance-contract)
+
+### Harness Boundaries
+
+Why: Bound campaign usage and prove reset, cancellation, checkpoint, and resume
+behavior without expanding the production scheduler.
+
+- [G56R-005 Harness Budgets and Boundary Simulation](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-005-harness-budgets-and-boundary-simulation)
 
 ### Installer Policy
 
-Why: Preserve independently pinned role defaults and keep one visible,
-intentional compatibility override before any cohort migrates.
+Why: Install one universal core atomically while preserving explicit,
+validated compatibility overrides.
 
-- [G56R-003 Tier-aware Installer Defaults and Explicit Override](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-003-tier-aware-installer-defaults-and-explicit-override)
+- [G56R-006 Subscription-aware Installer Defaults and Explicit Override](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-006-subscription-aware-installer-defaults-and-explicit-override)
 
 ### Role Cohorts
 
-Why: Route disjoint agent groups in parallel after shared evidence and install
-contracts stabilize, while keeping each promotion and rollback reviewable.
+Why: Qualify four disjoint agent groups in parallel after shared evidence and
+installation contracts stabilize.
 
-- [G56R-004 Quality-critical Executor Routing](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-004-quality-critical-executor-routing)
-- [G56R-005 Structured-work Agent Routing](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-005-structured-work-agent-routing)
-- [G56R-006 Read-only Reasoning Agent Routing](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-006-read-only-reasoning-agent-routing)
-- [G56R-007 Latency-first Helper Routing](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-007-latency-first-helper-routing)
+- [G56R-007 Quality-critical Executor Routing](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-007-quality-critical-executor-routing)
+- [G56R-008 Structured-work Agent Routing](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-008-structured-work-agent-routing)
+- [G56R-009 Read-only Reasoning Agent Routing](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-009-read-only-reasoning-agent-routing)
+- [G56R-010 Latency-first Helper Routing](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-010-latency-first-helper-routing)
 
 ### Release Proof
 
-Why: Regenerate one internally consistent payload and require installed,
-consumer-visible UAT before publishing the selected ten-agent matrix.
+Why: Confirm the assembled nine-agent core, optional helper behavior, installed
+payload, and release evidence before publishing defaults.
 
-- [G56R-008 Payload, Documentation, UAT, and Release Proof](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-008-payload-documentation-uat-and-release-proof)
+- [G56R-011 Payload, Documentation, UAT, and Release Proof](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-011-payload-documentation-uat-and-release-proof)
 
 <!-- GENERATED:INDEX:START (do not edit; regenerated by generate-spec-index) -->
 <!-- GENERATED:INDEX:END -->
