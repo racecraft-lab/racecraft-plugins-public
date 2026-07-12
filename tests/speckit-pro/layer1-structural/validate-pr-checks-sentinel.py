@@ -40,6 +40,10 @@ if str(LIB_DIR) not in sys.path:
 from test_result import run_counted  # noqa: E402
 
 WORKFLOW_FILE = REPO_ROOT / ".github" / "workflows" / "pr-checks.yml"
+ACTIONLINT_HELPER_FILE = REPO_ROOT / "scripts" / "install-actionlint.py"
+DOCS_CLASSIFIER_FILE = REPO_ROOT / "scripts" / "classify-docs-validation.py"
+RESULTS_HELPER_FILE = REPO_ROOT / "scripts" / "check-pr-workflow-results.py"
+MATRIX_HELPER_FILE = REPO_ROOT / "scripts" / "emit-plugin-matrix.py"
 CONTAINER_WORKFLOW_FILE = REPO_ROOT / ".github" / "workflows" / "container-preflight.yml"
 WINDOWS_PREFLIGHT_HELPER_FILE = REPO_ROOT / "tests" / "speckit-pro" / "run-hosted-windows-preflight.py"
 CONTAINER_DISPATCH_HELPER_FILE = REPO_ROOT / "tests" / "speckit-pro" / "run-container-preflight.py"
@@ -68,57 +72,77 @@ TITLE_LITERAL = "TITLE: ${{ github.event_name == 'pull_request' && github.event.
 BASE_REF_LITERAL = "BASE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || inputs.base_ref }}"
 
 # Ordered check table (1:1 with the frozen baseline). Each entry is
-# ``(kind, name, payload)`` and emits exactly one counted subTest, in order:
+# ``(source, kind, name, payload)`` and emits exactly one counted subTest, in order:
+#   "workflow" -> inspect only ``pr-checks.yml``
+#   "combined" -> inspect the workflow plus its four Python helper sources
 #   "all"    -> every substring in payload must be present in CONTENT
 #   "absent" -> every substring in payload must be absent from CONTENT
-CONTENT_CHECKS: list[tuple[str, str, list[str]]] = [
+CONTENT_CHECKS: list[tuple[str, str, str, list[str]]] = [
     # Checks 1-4 (exists, job defined, job name, checkout regex) are emitted as
     # explicit subTests before this table; it resumes at check 5, in order.
-    ("all", "title validation uses Python release-readiness gate",
+    ("workflow", "all", "title validation uses Python release-readiness gate",
      ["release-readiness-live-github.json", "python3 -m speckit_pro_runner"]),
-    ("all", "title validation supplies title and base evidence", [TITLE_LITERAL, BASE_REF_LITERAL]),
-    ("all", "workflow validation job is defined", ["validate-workflows:"]),
-    ("all", "workflow validation installs pinned actionlint", [
+    ("workflow", "all", "title validation supplies title and base evidence", [TITLE_LITERAL, BASE_REF_LITERAL]),
+    ("workflow", "all", "workflow validation job is defined", ["validate-workflows:"]),
+    ("combined", "all", "workflow validation installs pinned actionlint", [
         'ACTIONLINT_VERSION: "1.7.12"',
         'ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"',
-        "https://github.com/rhysd/actionlint/releases/download/v",
-        "sha256sum -c",
+        "run: python3 scripts/install-actionlint.py install",
+        "https://github.com/rhysd/actionlint/releases/download/",
+        "verify_sha256(archive_path, pinned_sha256)",
     ]),
-    ("all", "workflow validation runs actionlint over all workflows",
-     ['"${RUNNER_TEMP}/actionlint" .github/workflows/*.yml']),
-    ("all", "Python-gated plugin matrix is emitted",
-     ["Emit Python-gated plugin matrix", 'plugins=["speckit-pro"]']),
-    ("all", "workflow_dispatch trigger is defined", ["workflow_dispatch:"]),
-    ("all", "dispatched PR checks identify the PR number",
+    ("combined", "all", "workflow validation runs actionlint over all workflows", [
+        "run: python3 scripts/install-actionlint.py run",
+        'workflows_directory.glob("*.yml")',
+        "shell=False",
+    ]),
+    ("combined", "all", "Python-gated plugin matrix is emitted", [
+        "Emit Python-gated plugin matrix",
+        "run: python3 scripts/emit-plugin-matrix.py",
+        'PLUGINS = ("speckit-pro",)',
+    ]),
+    ("workflow", "all", "workflow_dispatch trigger is defined", ["workflow_dispatch:"]),
+    ("workflow", "all", "dispatched PR checks identify the PR number",
      ['run-name: "PR Checks #', "inputs.pr_number"]),
-    ("all", "workflow_dispatch accepts PR check inputs", ["pr_number:", "pr_title:", "base_ref:"]),
-    ("all", "detect supports dispatched release PR checks", [
+    ("workflow", "all", "workflow_dispatch accepts PR check inputs", ["pr_number:", "pr_title:", "base_ref:"]),
+    ("workflow", "all", "detect supports dispatched release PR checks", [
         "github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false",
         "github.event_name == 'pull_request' && github.base_ref || inputs.base_ref",
     ]),
-    ("all", "title validation supports dispatched release PR checks",
+    ("workflow", "all", "title validation supports dispatched release PR checks",
      ["github.event_name == 'pull_request' && github.event.pull_request.title || inputs.pr_title"]),
-    ("all", "sentinel depends on detect, test, and artifact-consistency jobs",
+    ("workflow", "all", "sentinel depends on detect, test, and artifact-consistency jobs",
      ["needs: [detect, test, artifact-consistency]"]),
-    ("all", "sentinel checks the artifact-consistency result",
-     ['artifact_result="${{ needs.artifact-consistency.result }}"']),
-    ("all", "sentinel runs if: always()", ["if: always()"]),
-    ("all", "sentinel has permissions: {}", ["permissions: {}"]),
-    ("absent", "latest jq job is deferred", ["test-latest-jq:", "latest_jq_result"]),
-    ("all", "test job dispatches runner toolchain gate",
+    ("workflow", "all", "sentinel checks the artifact-consistency result", [
+        "ARTIFACT_RESULT: ${{ needs.artifact-consistency.result }}",
+        "run: python3 scripts/check-pr-workflow-results.py",
+    ]),
+    ("workflow", "all", "sentinel runs if: always()", ["if: always()"]),
+    ("workflow", "all", "sentinel has permissions: {}", ["permissions: {}"]),
+    ("workflow", "absent", "latest jq job is deferred", ["test-latest-jq:", "latest_jq_result"]),
+    ("workflow", "all", "test job dispatches runner toolchain gate",
      ["run-toolchain-preflight.json", 'PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner']),
-    ("all", "test job dispatches runner default suite gate",
+    ("workflow", "all", "test job dispatches runner default suite gate",
      ["run-default-suite.json", 'PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner']),
-    ("all", "docs validation dispatches runner toolchain preflight",
+    ("workflow", "all", "docs validation dispatches runner toolchain preflight",
      ["Report docs toolchain",
       "run-toolchain-preflight-docs.json"]),
-    ("absent", "docs validation does not dispatch bash toolchain check",
+    ("workflow", "absent", "docs validation does not dispatch bash toolchain check",
      ["bash tests/speckit-pro/check-toolchain.sh --mode docs"]),
-    ("all", "sentinel checks detect_result for failure", ["detect_result"]),
-    ("all", "sentinel checks test_result for success or skipped", ["test_result"]),
-    ("all", "sentinel exits 0 on success or skipped", ['"success" || "$test_result" == "skipped"']),
-    ("all", "sentinel exits 1 on detect failure", ['"failure"']),
-    ("all", "sentinel exits 1 on detect cancellation", ['"cancelled"']),
+    ("combined", "all", "sentinel checks detect_result for failure", [
+        "DETECT_RESULT: ${{ needs.detect.result }}",
+        'detect_result in {"failure", "cancelled"}',
+    ]),
+    ("combined", "all", "sentinel checks test_result for success or skipped", [
+        "TEST_RESULT: ${{ needs.test.result }}",
+        'test_result not in {"success", "skipped"}',
+    ]),
+    ("combined", "all", "sentinel exits 0 on success or skipped", [
+        "Plugin tests passed or were skipped",
+        'artifact_result not in {"success", "skipped"}',
+    ]),
+    ("combined", "all", "sentinel exits 1 on detect failure", ['"failure"']),
+    ("combined", "all", "sentinel exits 1 on detect cancellation", ['"cancelled"']),
 ]
 
 CONTAINER_JOBS = (
@@ -192,6 +216,20 @@ class ValidatePrChecksSentinel(unittest.TestCase):
             self.assertTrue(WORKFLOW_FILE.is_file(), f"file not found: {WORKFLOW_FILE}")
 
         content = WORKFLOW_FILE.read_text(encoding="utf-8") if WORKFLOW_FILE.is_file() else ""
+        helper_files = (
+            ACTIONLINT_HELPER_FILE,
+            DOCS_CLASSIFIER_FILE,
+            RESULTS_HELPER_FILE,
+            MATRIX_HELPER_FILE,
+        )
+        helper_contents = {
+            path: path.read_text(encoding="utf-8") if path.is_file() else ""
+            for path in helper_files
+        }
+        sources = {
+            "workflow": content,
+            "combined": "\n".join((content, *helper_contents.values())),
+        }
 
         with self.subTest(msg="validate-plugins job is defined"):
             self.assertIn("validate-plugins:", content)
@@ -205,13 +243,14 @@ class ValidatePrChecksSentinel(unittest.TestCase):
             )
 
         # Remaining substring/absence checks, in frozen baseline order.
-        for kind, name, needles in CONTENT_CHECKS:
+        for source, kind, name, needles in CONTENT_CHECKS:
             with self.subTest(msg=name):
+                selected_content = sources[source]
                 if kind == "all":
-                    missing = [n for n in needles if n not in content]
+                    missing = [n for n in needles if n not in selected_content]
                     self.assertEqual([], missing, f"missing expected content: {missing}")
                 else:  # "absent"
-                    present = [n for n in needles if n in content]
+                    present = [n for n in needles if n in selected_content]
                     self.assertEqual([], present, f"unexpected content present: {present}")
 
         with self.subTest(msg="all GitHub workflow files are valid YAML"):
@@ -248,6 +287,74 @@ jobs:
             )
             failures = [p.name for p in sorted(WORKFLOWS_DIR.glob("*.yml")) if not _yaml_valid(p)]
             self.assertEqual([], failures, f"GitHub workflow YAML syntax validation failed for: {failures}")
+
+            missing_helpers = [str(path.relative_to(REPO_ROOT)) for path in helper_files if not path.is_file()]
+            self.assertEqual([], missing_helpers, f"PR Checks helper files are missing: {missing_helpers}")
+            for path, helper_content in helper_contents.items():
+                compile(helper_content, str(path), "exec")
+                self.assertNotIn("shell=True", helper_content)
+
+            self.assertIn(
+                "run: PYTHONDONTWRITEBYTECODE=1 python3 "
+                "scripts/refresh-release-artifacts.py --check",
+                content,
+            )
+            self.assertIn("run: python3 scripts/classify-docs-validation.py", content)
+            self.assertNotRegex(content, r"(?m)^\s*run:\s*[|>]\s*$")
+            self.assertNotRegex(
+                content,
+                r"(?mi)^\s*shell:\s*(?:sh|bash|zsh|pwsh|powershell)\s*$",
+            )
+            self.assertNotRegex(content, r"(?i)(?:^|[\s\"'=])[^\s\"']+\.(?:sh|bash|zsh)\b")
+            direct_jq = re.compile(r"(?<![\w-])jq(?![\w-])")
+            self.assertNotRegex(content, direct_jq)
+            self.assertIsNone(direct_jq.search("gh pr view 123 --jq .title"))
+            self.assertIsNotNone(direct_jq.search("jq -r .title result.json"))
+
+            run_commands = re.findall(r"(?m)^\s+run:\s*([^\n]+)$", content)
+            self.assertTrue(run_commands)
+            for command in run_commands:
+                for shell_token in ("|", "&", ";", "<<", ">", "$(", "<(", "`", "*"):
+                    self.assertNotIn(shell_token, command, f"shell logic in run command: {command}")
+                match = re.match(
+                    r"^(?:[A-Z_][A-Z0-9_]*=(?:\"[^\"]*\"|'[^']*'|\S+)\s+)*"
+                    r"(?P<executable>\S+)",
+                    command,
+                )
+                self.assertIsNotNone(match, f"unable to classify run command: {command}")
+                executable = match.group("executable") if match else ""
+                self.assertIn(
+                    executable,
+                    {"python", "python3", "node", "pnpm", "corepack"},
+                    f"run command is not a thin Python/Node/pnpm dispatch: {command}",
+                )
+
+            sentinel_block = _job_block(content, "validate-plugins")
+            self.assertRegex(sentinel_block, r"(?m)^    permissions: \{\}$")
+            self.assertIn("persist-credentials: false", sentinel_block)
+
+            actionlint_content = helper_contents[ACTIONLINT_HELPER_FILE]
+            self.assertNotIn("extractall(", actionlint_content)
+            self.assertNotIn("archive.extract(", actionlint_content)
+            self.assertIn("archive.extractfile(member)", actionlint_content)
+            self.assertIn("sorted_workflow_files", actionlint_content)
+            self.assertIn("shell=False", actionlint_content)
+
+            docs_content = helper_contents[DOCS_CLASSIFIER_FILE]
+            self.assertIn('["git", "diff", "--name-only", f"origin/{base_ref}...HEAD"]', docs_content)
+            for output_name in (
+                "should_validate_docs",
+                "validation_mode",
+                "rendered_docs",
+                "generated_reference",
+                "docs_contract",
+            ):
+                self.assertIn(output_name, docs_content)
+
+            self.assertNotIn("git add -A", content)
+            self.assertNotIn("sha256sum", content)
+            self.assertNotIn("curl ", content)
+            self.assertNotIn("tar ", content)
 
     def test_container_preflight(self) -> None:
         with self.subTest(msg="container-preflight.yml exists"):
