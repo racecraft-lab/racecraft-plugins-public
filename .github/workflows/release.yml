@@ -51,9 +51,7 @@ jobs:
           BASE_REF: main
           GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
           RELEASE_PRS: ${{ steps.release.outputs.prs }}
-        run: |
-          set -euo pipefail
-          python3 scripts/resolve_release_prs.py --github-output "$GITHUB_OUTPUT"
+        run: python3 scripts/resolve_release_prs.py --github-output "$GITHUB_OUTPUT"
 
       - name: Set up Node
         if: steps.release_prs.outputs.found == 'true'
@@ -63,100 +61,44 @@ jobs:
 
       - name: Validate release PR readiness
         if: steps.release_prs.outputs.found == 'true'
-        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json
+        run: python3 scripts/run-runner-requests.py tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json
 
       - name: Validate XPLAT-008 release gates
         if: steps.release_prs.outputs.found == 'true'
-        run: |
-          set -euo pipefail
-          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/runner-invocation.json
-          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/active-runtime-guard.json
-          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness.json
-          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/release-readiness.json
+        run: python3 scripts/run-runner-requests.py tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/runner-invocation.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/active-runtime-guard.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/release-readiness.json
 
       - name: Sync generated artifacts onto the release PR
         if: steps.release_prs.outputs.found == 'true'
         env:
           BASE_REF: main
+          PYTHONDONTWRITEBYTECODE: "1"
           RELEASE_PRS: ${{ steps.release_prs.outputs.prs }}
-        run: |
-          set -euo pipefail
-          # release-please bumps only the source plugin versions and the
-          # marketplace registries; refresh the generated payloads,
-          # installed-cache proofs, and gate evidence so the release PR passes
-          # its own gates. release-please's extra-files must NEVER pre-bump
-          # dist/** or the installed-cache fixtures: the refresh script's
-          # proof-snapshot heuristic assumes it is the only mutator of those
-          # trees, and a pre-bumped tree makes it skip the live proof rows as
-          # test sentinels (the zero-bash gate then blocks on stale hashes).
-          # All artifact logic lives in the Python refresh script. This step
-          # also merges current main into an unchanged existing release branch,
-          # so release-infrastructure fixes are never stranded behind
-          # release-please's `prs_created=false` output.
-          PYTHONDONTWRITEBYTECODE=1 python3 scripts/sync_release_pr.py
+        # release-please bumps only the source plugin versions and marketplace
+        # registries. The helper refreshes payloads, installed-cache proofs,
+        # and gate evidence, and reconciles unchanged release branches with main.
+        run: python3 scripts/sync_release_pr.py
 
       - name: Dispatch PR Checks for release PRs
         if: steps.release_prs.outputs.found == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_PRS: ${{ steps.release_prs.outputs.prs }}
-        run: |
-          python3 - <<'PY'
-          import json
-          import os
-          import subprocess
-          import sys
-
-          release_prs = json.loads(os.environ.get("RELEASE_PRS") or "[]")
-          if not release_prs:
-              print("release PR resolver returned no metadata", file=sys.stderr)
-              sys.exit(1)
-
-          for release_pr in release_prs:
-              branch = release_pr.get("headBranchName") or release_pr.get("headRefName") or ""
-              number = str(release_pr.get("number") or "")
-              title = release_pr.get("title") or "chore(release): release speckit-pro"
-              if not branch or not number:
-                  print("release PR metadata missing branch or number", file=sys.stderr)
-                  sys.exit(1)
-              subprocess.run(
-                  [
-                      "gh",
-                      "workflow",
-                      "run",
-                      "pr-checks.yml",
-                      "--ref",
-                      branch,
-                      "-f",
-                      "pr_number=" + number,
-                      "-f",
-                      "pr_title=" + title,
-                      "-f",
-                      "base_ref=main",
-                  ],
-                  check=True,
-              )
-          PY
+        run: python3 scripts/dispatch-release-pr-checks.py
 
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
 
       - name: Verify generated test payload evidence
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
-        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/test-payload-evidence.json
+        run: python3 scripts/run-runner-requests.py tests/speckit-pro/unit/fixtures/runner-gates/requests/test-payload-evidence.json
 
       - name: Validate post-release readiness
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
-        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json
+        run: python3 scripts/run-runner-requests.py tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness.json
 
       - name: Validate post-release XPLAT-008 gates
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
-        run: |
-          set -euo pipefail
-          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/runner-invocation.json
-          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/active-runtime-guard.json
-          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness.json
-          PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/release-readiness.json
+        run: python3 scripts/run-runner-requests.py tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/runner-invocation.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/active-runtime-guard.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/release-readiness.json
 
       - name: Set up Node
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
@@ -164,31 +106,26 @@ jobs:
         with:
           node-version: 22
 
+      - name: Enable Corepack
+        if: steps.release.outputs['speckit-pro--release_created'] == 'true'
+        run: corepack enable
+
+      - name: Activate pnpm
+        if: steps.release.outputs['speckit-pro--release_created'] == 'true'
+        run: corepack prepare pnpm@10.25.0 --activate
+
       - name: Regenerate docs reference
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
-        run: |
-          set -euo pipefail
-          corepack enable
-          corepack prepare pnpm@10.25.0 --activate
-          # reference:generate is a pure node: built-in script — no node_modules needed.
-          pnpm --dir docs-site reference:generate
+        # reference:generate is a pure node: built-in script; no node_modules needed.
+        run: pnpm --dir docs-site reference:generate
 
       - name: Verify release artifacts are consistent
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
-        run: |
-          set -euo pipefail
-
-          # The release PR carries the generated payload, marketplace, and docs
-          # reference sync (see "Sync generated artifacts onto the release PR"),
-          # so main should already be consistent once the release PR is merged.
-          if git diff --quiet -- dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json docs-site/src/content/docs/reference; then
-            echo "Release artifacts are consistent: the release PR carried the generated sync."
-            exit 0
-          fi
-
-          echo "::error::Release artifacts drifted after publishing. Re-run the Release workflow to re-sync the release PR (Recovery Scenario 1):"
-          git --no-pager diff --stat -- dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json docs-site/src/content/docs/reference
-          exit 1
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        # The release PR should already carry the generated payload,
+        # marketplace, proof, evidence, and docs-reference sync.
+        run: python3 scripts/refresh-release-artifacts.py --check
 
   capture-release-note-inputs:
     needs: release
@@ -271,280 +208,7 @@ jobs:
           SNAPSHOT_DOWNLOAD_OUTCOME: ${{ steps.download_release_snapshot.outcome }}
           WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
           WORKFLOW_RUN_ID: ${{ github.run_id }}
-        run: |
-          python3 - <<'PY'
-          import hashlib
-          import json
-          import os
-          import re
-          import subprocess
-          import sys
-          import urllib.parse
-          import urllib.request
-          from pathlib import Path
-
-          snapshot_path = Path("release-note-input/release-note-snapshot.json")
-          audit_path = Path("release-note-audit.json")
-          composer_path = Path("scripts/compose-release-notes.py")
-          failure_outcome = "release_note_composition_failed"
-          capture_result = os.environ["CAPTURE_RESULT"]
-          download_outcome = os.environ["SNAPSHOT_DOWNLOAD_OUTCOME"]
-          audit = {
-              "capture_result": capture_result,
-              "composer_run_attempt": int(os.environ["WORKFLOW_RUN_ATTEMPT"]),
-              "outcome": failure_outcome,
-              "schema_version": 1,
-              "snapshot_download_outcome": download_outcome,
-              "workflow_run_id": int(os.environ["WORKFLOW_RUN_ID"]),
-          }
-
-          def sha256(data: bytes) -> str:
-              return hashlib.sha256(data).hexdigest()
-
-          def write_audit() -> str:
-              encoded = (json.dumps(audit, sort_keys=True, separators=(",", ":")) + "\n").encode()
-              audit_path.write_bytes(encoded)
-              digest = sha256(encoded)
-              with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
-                  output.write(f"audit_sha256={digest}\n")
-                  if "release_body_sha256" in audit:
-                      output.write(f"release_body_sha256={audit['release_body_sha256']}\n")
-              return digest
-
-          def append_summary(lines: list[str]) -> None:
-              summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
-              if not summary_path:
-                  return
-              with Path(summary_path).open("a", encoding="utf-8") as summary:
-                  summary.write("\n".join(lines).rstrip() + "\n")
-
-          def fail(message: str, returncode: int = 1) -> None:
-              audit["error"] = message
-              audit_digest = write_audit()
-              append_summary(
-                  [
-                      "### Release note composition failed",
-                      "",
-                      f"- Audit SHA-256: `{audit_digest}`",
-                      f"- Reason: `{message}`",
-                  ]
-              )
-              print(
-                  json.dumps(
-                      {"error": message, "outcome": failure_outcome},
-                      sort_keys=True,
-                      separators=(",", ":"),
-                  ),
-                  file=sys.stderr,
-              )
-              raise SystemExit(returncode or 1)
-
-          try:
-              if capture_result != "success":
-                  fail(f"release input capture did not succeed: {capture_result or 'missing'}")
-              if download_outcome != "success":
-                  fail(f"release snapshot download did not succeed: {download_outcome or 'missing'}")
-
-              snapshot_bytes = snapshot_path.read_bytes()
-              snapshot_sha256 = sha256(snapshot_bytes)
-              expected_sha256 = os.environ["EXPECTED_SNAPSHOT_SHA256"]
-              if not re.fullmatch(r"[0-9a-f]{64}", expected_sha256):
-                  fail("release snapshot has no valid expected SHA-256")
-              if snapshot_sha256 != expected_sha256:
-                  fail("release snapshot SHA-256 mismatch")
-
-              artifact_id = os.environ["SNAPSHOT_ARTIFACT_ID"]
-              artifact_digest = os.environ["SNAPSHOT_ARTIFACT_DIGEST"]
-              if not artifact_id.isdigit() or not re.fullmatch(r"[0-9a-f]{64}", artifact_digest):
-                  fail("release snapshot artifact metadata is invalid")
-
-              snapshot = json.loads(snapshot_bytes)
-              expected_keys = {
-                  "compare",
-                  "compare_headers",
-                  "previous_tag",
-                  "pulls",
-                  "release_body",
-                  "repository",
-                  "schema_version",
-                  "tag",
-              }
-              if not isinstance(snapshot, dict) or set(snapshot) != expected_keys:
-                  fail("release snapshot schema is invalid")
-              if (
-                  snapshot["schema_version"] != 1
-                  or snapshot["repository"] != os.environ["GITHUB_REPOSITORY"]
-                  or not isinstance(snapshot["release_body"], str)
-                  or not isinstance(snapshot["tag"], str)
-                  or not snapshot["tag"].strip()
-                  or not isinstance(snapshot["compare"], dict)
-                  or not isinstance(snapshot["pulls"], dict)
-              ):
-                  fail("release snapshot provenance is invalid")
-
-              audit["composer_sha256"] = sha256(composer_path.read_bytes())
-              audit["raw_release_body_sha256"] = sha256(snapshot["release_body"].encode())
-              audit["snapshot"] = {
-                  "artifact_digest": artifact_digest,
-                  "artifact_id": int(artifact_id),
-                  "artifact_url": os.environ["SNAPSHOT_ARTIFACT_URL"],
-                  "byte_count": len(snapshot_bytes),
-                  "content_sha256": snapshot_sha256,
-              }
-              audit["tag"] = snapshot["tag"]
-
-              composer_environment = os.environ.copy()
-              composer_environment["RELEASE_TAG"] = snapshot["tag"]
-              completed = subprocess.run(
-                  [sys.executable, str(composer_path), "--snapshot", str(snapshot_path)],
-                  env=composer_environment,
-                  text=True,
-                  capture_output=True,
-                  check=False,
-              )
-              sys.stdout.write(completed.stdout)
-              audit["composer_returncode"] = completed.returncode
-              if completed.returncode != 0:
-                  audit["composer_diagnostic_sha256"] = sha256(completed.stderr.encode())
-                  message = "release-note composer failed"
-                  try:
-                      diagnostic = json.loads(completed.stderr)
-                      if (
-                          isinstance(diagnostic, dict)
-                          and diagnostic.get("outcome") == failure_outcome
-                          and isinstance(diagnostic.get("error"), str)
-                      ):
-                          message = f"{message}: {diagnostic['error']}"
-                  except json.JSONDecodeError:
-                      pass
-                  fail(message, completed.returncode)
-              sys.stderr.write(completed.stderr)
-
-              composer_result = json.loads(completed.stdout)
-              expected_result_keys = {
-                  "body_byte_count",
-                  "body_sha256",
-                  "commit_count",
-                  "outcome",
-                  "previous_tag",
-                  "pull_request_count",
-                  "release_id",
-                  "snapshot_byte_count",
-                  "snapshot_payload_sha256",
-                  "snapshot_reused",
-                  "snapshot_source_sha256",
-                  "tag",
-              }
-              if (
-                  not isinstance(composer_result, dict)
-                  or set(composer_result) != expected_result_keys
-                  or composer_result.get("outcome") != "release_note_composed"
-                  or composer_result.get("tag") != snapshot["tag"]
-              ):
-                  fail("release-note composer returned an invalid result envelope")
-              release_id = composer_result.get("release_id")
-              if isinstance(release_id, bool) or not isinstance(release_id, int) or release_id <= 0:
-                  fail("release-note composer returned an invalid release id")
-              composer_digests = (
-                  composer_result.get("body_sha256"),
-                  composer_result.get("snapshot_payload_sha256"),
-                  composer_result.get("snapshot_source_sha256"),
-              )
-              if not all(
-                  isinstance(digest, str) and re.fullmatch(r"[0-9a-f]{64}", digest)
-                  for digest in composer_digests
-              ):
-                  fail("release-note composer returned invalid digest metadata")
-              if not isinstance(composer_result.get("snapshot_reused"), bool):
-                  fail("release-note composer returned an invalid snapshot reuse verdict")
-              commit_count = composer_result.get("commit_count")
-              pull_request_count = composer_result.get("pull_request_count")
-              body_byte_count = composer_result.get("body_byte_count")
-              snapshot_byte_count = composer_result.get("snapshot_byte_count")
-              if (
-                  isinstance(commit_count, bool)
-                  or not isinstance(commit_count, int)
-                  or not 0 <= commit_count <= 250
-                  or isinstance(pull_request_count, bool)
-                  or not isinstance(pull_request_count, int)
-                  or not 0 <= pull_request_count <= commit_count
-                  or isinstance(body_byte_count, bool)
-                  or not isinstance(body_byte_count, int)
-                  or body_byte_count <= 0
-                  or snapshot_byte_count != len(snapshot_bytes)
-              ):
-                  fail("release-note composer returned invalid count metadata")
-
-              repository = urllib.parse.quote(os.environ["GITHUB_REPOSITORY"], safe="/")
-              release_url = (
-                  f"{os.environ['GITHUB_API_URL'].rstrip('/')}/repos/{repository}/releases/{release_id}"
-              )
-              request = urllib.request.Request(
-                  release_url,
-                  headers={
-                      "Accept": "application/vnd.github+json",
-                      "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
-                      "User-Agent": "racecraft-release-note-audit",
-                      "X-GitHub-Api-Version": "2022-11-28",
-                  },
-                  method="GET",
-              )
-              with urllib.request.urlopen(request, timeout=30.0) as response:
-                  release = json.loads(response.read().decode("utf-8"))
-              published_body = release.get("body") if isinstance(release, dict) else None
-              expected_suffix = f"## Commit appendix\n\n{snapshot['release_body']}"
-              if (
-                  release.get("id") != release_id
-                  or release.get("tag_name") != snapshot["tag"]
-                  or not isinstance(published_body, str)
-                  or not published_body.startswith("## Highlights\n\n")
-              ):
-                  fail("published release body does not match the composed release contract")
-              marker = "\n\n<!-- release-note-composer-snapshot:v1 "
-              if published_body.count(marker) != 1:
-                  fail("published release body has no unique immutable snapshot marker")
-              payload, _marker_metadata = published_body.rsplit(marker, 1)
-              published_body_sha256 = sha256(published_body.encode())
-              if (
-                  not payload.endswith(expected_suffix)
-                  or composer_result["body_sha256"] != published_body_sha256
-                  or composer_result["body_byte_count"] != len(published_body.encode())
-                  or composer_result["snapshot_payload_sha256"] != sha256(payload.encode())
-                  or composer_result["snapshot_source_sha256"] != snapshot_sha256
-              ):
-                  fail("published release body does not match composer digest metadata")
-
-              audit.update(
-                  {
-                      "outcome": "release_note_composed_and_verified",
-                      "body_byte_count": composer_result["body_byte_count"],
-                      "commit_count": composer_result["commit_count"],
-                      "previous_tag": composer_result["previous_tag"],
-                      "pull_request_count": composer_result["pull_request_count"],
-                      "release_body_sha256": published_body_sha256,
-                      "release_id": release_id,
-                      "snapshot_payload_sha256": composer_result["snapshot_payload_sha256"],
-                      "snapshot_reused": composer_result["snapshot_reused"],
-                      "snapshot_source_sha256": composer_result["snapshot_source_sha256"],
-                      "snapshot_byte_count": composer_result["snapshot_byte_count"],
-                  }
-              )
-              audit_digest = write_audit()
-              append_summary(
-                  [
-                      "### Release note audit",
-                      "",
-                      f"- Snapshot SHA-256: `{snapshot_sha256}`",
-                      f"- Published body SHA-256: `{audit['release_body_sha256']}`",
-                      f"- Audit SHA-256: `{audit_digest}`",
-                      f"- Snapshot artifact: {os.environ['SNAPSHOT_ARTIFACT_URL']}",
-                  ]
-              )
-          except SystemExit:
-              raise
-          except Exception as error:
-              fail(f"release note audit raised {type(error).__name__}: {error}")
-          PY
+        run: python3 scripts/audit-release-notes.py
 
       - name: Upload immutable release note audit
         id: upload_release_audit
@@ -563,32 +227,4 @@ jobs:
           AUDIT_ARTIFACT_DIGEST: ${{ steps.upload_release_audit.outputs['artifact-digest'] }}
           AUDIT_ARTIFACT_ID: ${{ steps.upload_release_audit.outputs['artifact-id'] }}
           AUDIT_ARTIFACT_URL: ${{ steps.upload_release_audit.outputs['artifact-url'] }}
-        run: |
-          python3 - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          record = {
-              "artifact_digest": os.environ["AUDIT_ARTIFACT_DIGEST"],
-              "artifact_id": int(os.environ["AUDIT_ARTIFACT_ID"]),
-              "artifact_url": os.environ["AUDIT_ARTIFACT_URL"],
-              "outcome": "release_note_audit_published",
-          }
-          print(json.dumps(record, sort_keys=True, separators=(",", ":")))
-          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
-          if summary_path:
-              with Path(summary_path).open("a", encoding="utf-8") as summary:
-                  summary.write(
-                      "\n".join(
-                          [
-                              "### Immutable audit artifact",
-                              "",
-                              f"- Artifact id: `{record['artifact_id']}`",
-                              f"- Artifact SHA-256: `{record['artifact_digest']}`",
-                              f"- Artifact: {record['artifact_url']}",
-                          ]
-                      )
-                      + "\n"
-                  )
-          PY
+        run: python3 scripts/audit-release-notes.py --record-artifact

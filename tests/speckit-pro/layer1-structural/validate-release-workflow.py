@@ -22,12 +22,10 @@ Baseline: ``tests/speckit-pro/parity/bash-to-python/validate-release-workflow-ba
 from __future__ import annotations
 
 import json
-import os
 import posixpath
 import re
-import subprocess
+import shlex
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 
@@ -42,8 +40,12 @@ from test_result import run_counted  # noqa: E402
 WORKFLOW_FILE = REPO_ROOT / ".github" / "workflows" / "release.yml"
 PR_CHECKS_WORKFLOW_FILE = REPO_ROOT / ".github" / "workflows" / "pr-checks.yml"
 COMPOSER_FILE = REPO_ROOT / "scripts" / "compose-release-notes.py"
+AUDIT_HELPER_FILE = REPO_ROOT / "scripts" / "audit-release-notes.py"
+DISPATCH_HELPER_FILE = REPO_ROOT / "scripts" / "dispatch-release-pr-checks.py"
 POLICY_FILE = REPO_ROOT / "scripts" / "release_note_policy.py"
+REFRESH_HELPER_FILE = REPO_ROOT / "scripts" / "refresh-release-artifacts.py"
 RESOLVER_FILE = REPO_ROOT / "scripts" / "resolve_release_prs.py"
+RUNNER_REQUEST_HELPER_FILE = REPO_ROOT / "scripts" / "run-runner-requests.py"
 SYNC_HELPER_FILE = REPO_ROOT / "scripts" / "sync_release_pr.py"
 RELEASE_CONFIG_FILE = REPO_ROOT / "release-please-config.json"
 CHECKOUT_PIN_RE = re.compile(r"actions/checkout@[0-9a-f]{40}")
@@ -127,22 +129,31 @@ def _inline_list(value: str) -> tuple[str, ...]:
     return tuple(item.strip() for item in value[1:-1].split(",") if item.strip())
 
 
-def _inline_python_program(step_block: str) -> str:
-    """Extract one indentation-bounded Python heredoc from a workflow step."""
-    lines = step_block.splitlines()
-    for index, line in enumerate(lines):
-        if line.lstrip() != "python3 - <<'PY'":
-            continue
-        prefix = line[: len(line) - len(line.lstrip())]
-        body: list[str] = []
-        for candidate in lines[index + 1 :]:
-            if candidate == f"{prefix}PY":
-                return "\n".join(body) + "\n"
-            if candidate and not candidate.startswith(prefix):
-                return ""
-            body.append(candidate[len(prefix) :] if candidate else "")
-        return ""
-    return ""
+def _run_commands(text: str) -> list[str]:
+    return [
+        match.group("command").strip()
+        for match in re.finditer(r"(?m)^\s+run:\s*(?P<command>[^\r\n]*)$", text)
+    ]
+
+
+def _is_thin_direct_dispatch(command: str) -> bool:
+    """Accept one direct tool invocation and reject shell composition."""
+    if not command or command in {"|", ">", "|-", ">-"}:
+        return False
+    try:
+        lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|<>")
+        lexer.whitespace_split = True
+        lexer.commenters = ""
+        tokens = list(lexer)
+    except ValueError:
+        return False
+    if not tokens or tokens[0] not in {"corepack", "gh", "node", "pnpm", "python3"}:
+        return False
+    if any(token and set(token) <= set(";&|<>") for token in tokens):
+        return False
+    if any("$(" in token or "`" in token for token in tokens):
+        return False
+    return not any(token.endswith(".sh") for token in tokens)
 
 
 class ValidateReleaseWorkflow(unittest.TestCase):
@@ -157,8 +168,24 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             else ""
         )
         composer_content = COMPOSER_FILE.read_text(encoding="utf-8") if COMPOSER_FILE.is_file() else ""
+        audit_helper_content = (
+            AUDIT_HELPER_FILE.read_text(encoding="utf-8") if AUDIT_HELPER_FILE.is_file() else ""
+        )
+        dispatch_helper_content = (
+            DISPATCH_HELPER_FILE.read_text(encoding="utf-8")
+            if DISPATCH_HELPER_FILE.is_file()
+            else ""
+        )
         policy_content = POLICY_FILE.read_text(encoding="utf-8") if POLICY_FILE.is_file() else ""
+        refresh_helper_content = (
+            REFRESH_HELPER_FILE.read_text(encoding="utf-8") if REFRESH_HELPER_FILE.is_file() else ""
+        )
         resolver_content = RESOLVER_FILE.read_text(encoding="utf-8") if RESOLVER_FILE.is_file() else ""
+        runner_request_helper_content = (
+            RUNNER_REQUEST_HELPER_FILE.read_text(encoding="utf-8")
+            if RUNNER_REQUEST_HELPER_FILE.is_file()
+            else ""
+        )
         sync_helper_content = SYNC_HELPER_FILE.read_text(encoding="utf-8") if SYNC_HELPER_FILE.is_file() else ""
 
         with self.subTest(msg="release workflow uses release-please"):
@@ -183,17 +210,20 @@ class ValidateReleaseWorkflow(unittest.TestCase):
         with self.subTest(msg="release workflow can dispatch PR checks"):
             self.assertTrue(
                 _contains_all(
-                    content,
+                    content + dispatch_helper_content,
                     (
                         "actions: write",
+                        "scripts/dispatch-release-pr-checks.py",
                         '"gh",',
                         '"workflow",',
                         '"run",',
                         '"pr-checks.yml",',
                         '"--ref",',
-                        '"pr_number=" + number',
-                        '"pr_title=" + title',
-                        '"base_ref=main"',
+                        'f"pr_number={release_pr[\'number\']}"',
+                        'f"pr_title={release_pr[\'title\']}"',
+                        '"base_ref=main",',
+                        "check=True",
+                        "shell=False",
                     ),
                 ),
                 "expected release workflow to dispatch PR Checks for release-please PR branches",
@@ -208,11 +238,20 @@ class ValidateReleaseWorkflow(unittest.TestCase):
                         "scripts/resolve_release_prs.py",
                         'RELEASE_PRS: ${{ steps.release_prs.outputs.prs }}',
                         "steps.release_prs.outputs.found == 'true'",
-                        'release_pr.get("headBranchName") or release_pr.get("headRefName") or ""',
-                        "release PR resolver returned no metadata",
+                        "scripts/dispatch-release-pr-checks.py",
                     ),
                 ),
                 "expected release workflow to normalize release-please output and reconcile unchanged open release PRs",
+            )
+            self.assertTrue(
+                _contains_all(
+                    dispatch_helper_content,
+                    (
+                        'item.get("headBranchName") or item.get("headRefName")',
+                        "release PR resolver returned no metadata",
+                        "parse_release_prs",
+                    ),
+                )
             )
 
         with self.subTest(msg="release PR resolver discovers unchanged open Release Please branches"):
@@ -247,11 +286,24 @@ class ValidateReleaseWorkflow(unittest.TestCase):
                         "Validate release PR readiness",
                         "steps.release_prs.outputs.found == 'true'",
                         'RELEASE_PRS: ${{ steps.release_prs.outputs.prs }}',
+                        "scripts/run-runner-requests.py",
                         "release-readiness.json",
                         "Dispatch PR Checks for release PRs",
                     ),
                 ),
                 "expected release workflow to validate release PR readiness before dispatching PR Checks",
+            )
+            self.assertTrue(
+                RUNNER_REQUEST_HELPER_FILE.is_file()
+                and _contains_all(
+                    runner_request_helper_content,
+                    (
+                        "[sys.executable, \"-m\", \"speckit_pro_runner\"]",
+                        "input=request_bytes",
+                        "shell=False",
+                        "if completed.returncode != 0:",
+                    ),
+                )
             )
 
         with self.subTest(msg="release workflow verifies generated test payload evidence"):
@@ -310,10 +362,20 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             self.assertIn("pnpm --dir docs-site reference:generate", content)
 
         with self.subTest(msg="release workflow verifies release artifacts are consistent after publishing"):
-            self.assertIn(
-                "Verify release artifacts are consistent",
-                content,
-                "expected release workflow to verify dist/marketplace/docs-reference consistency after a release",
+            self.assertTrue(
+                _contains_all(
+                    content + refresh_helper_content,
+                    (
+                        "Verify release artifacts are consistent",
+                        "scripts/refresh-release-artifacts.py --check",
+                        "def check_release_artifacts(",
+                        "tempfile.TemporaryDirectory",
+                        "shutil.copytree",
+                        "shell=False",
+                        "Recovery Scenario 1",
+                    ),
+                ),
+                "expected a non-mutating release artifact check after publishing",
             )
 
         with self.subTest(msg="release workflow opens NO follow-up payload/marketplace sync PR"):
@@ -476,93 +538,37 @@ class ValidateReleaseWorkflow(unittest.TestCase):
         with self.subTest(msg="composer audits capture download and digest failures"):
             self.assertTrue(
                 _contains_all(
-                    compose_step,
+                    compose_step + audit_helper_content,
                     (
                         "if: ${{ always() && !cancelled() }}",
                         "CAPTURE_RESULT: ${{ needs.capture-release-note-inputs.result }}",
                         "EXPECTED_SNAPSHOT_SHA256: ${{ needs.capture-release-note-inputs.outputs.snapshot_sha256 }}",
                         "SNAPSHOT_ARTIFACT_DIGEST: ${{ needs.capture-release-note-inputs.outputs.snapshot_artifact_digest }}",
                         "SNAPSHOT_DOWNLOAD_OUTCOME: ${{ steps.download_release_snapshot.outcome }}",
-                        'failure_outcome = "release_note_composition_failed"',
+                        "run: python3 scripts/audit-release-notes.py",
+                        'FAILURE_OUTCOME = "release_note_composition_failed"',
                         '"capture_result": capture_result',
                         '"snapshot_download_outcome": download_outcome',
                         'if capture_result != "success":',
                         'if download_outcome != "success":',
                         'snapshot_sha256 != expected_sha256',
-                        'snapshot["repository"] != os.environ["GITHUB_REPOSITORY"]',
+                        'snapshot["repository"] != environment["GITHUB_REPOSITORY"]',
                         '"compare_headers"',
                         '"release_body"',
                         '"pulls"',
                         'not re.fullmatch(r"[0-9a-f]{64}", artifact_digest)',
+                        'except AuditFailure as error:',
                     ),
                 )
             )
-            self.assertEqual(1, compose_step.count('"release_note_composition_failed"'))
-            self.assertNotIn("release_note_audit_failed", compose_step)
-            failure_branch = compose_step.find("if completed.returncode != 0:")
-            wrapper_fail = compose_step.find("fail(message, completed.returncode)", failure_branch)
-            forwarded_stderr = compose_step.find("sys.stderr.write(completed.stderr)")
+            self.assertNotIn("release_note_audit_failed", audit_helper_content)
+            failure_branch = audit_helper_content.find("if completed.returncode != 0:")
+            wrapper_fail = audit_helper_content.find("fail(message, completed.returncode)", failure_branch)
+            forwarded_stderr = audit_helper_content.find("stderr.write(completed.stderr)")
             self.assertGreater(failure_branch, -1)
             self.assertGreater(wrapper_fail, failure_branch)
             self.assertGreater(forwarded_stderr, failure_branch)
             self.assertLess(wrapper_fail, forwarded_stderr)
-
-            audit_program = _inline_python_program(compose_step)
-            self.assertTrue(audit_program, "expected executable inline release-note audit program")
-            failure_cases = (
-                ("failure", "skipped", None, "release input capture did not succeed: failure"),
-                ("success", "failure", None, "release snapshot download did not succeed: failure"),
-                ("success", "success", b"{}\n", "release snapshot SHA-256 mismatch"),
-            )
-            for capture_result, download_outcome, snapshot_bytes, expected_error in failure_cases:
-                with tempfile.TemporaryDirectory() as tmp_dir:
-                    tmp_path = Path(tmp_dir)
-                    if snapshot_bytes is not None:
-                        snapshot_path = tmp_path / "release-note-input" / "release-note-snapshot.json"
-                        snapshot_path.parent.mkdir()
-                        snapshot_path.write_bytes(snapshot_bytes)
-                    environment = os.environ.copy()
-                    environment.update(
-                        {
-                            "CAPTURE_RESULT": capture_result,
-                            "EXPECTED_SNAPSHOT_SHA256": "0" * 64,
-                            "GITHUB_API_URL": "https://api.github.test",
-                            "GITHUB_OUTPUT": str(tmp_path / "github-output.txt"),
-                            "GITHUB_REPOSITORY": "racecraft-lab/repo",
-                            "GITHUB_STEP_SUMMARY": str(tmp_path / "summary.md"),
-                            "GITHUB_TOKEN": "test-token",
-                            "SNAPSHOT_ARTIFACT_DIGEST": "",
-                            "SNAPSHOT_ARTIFACT_ID": "",
-                            "SNAPSHOT_ARTIFACT_URL": "",
-                            "SNAPSHOT_DOWNLOAD_OUTCOME": download_outcome,
-                            "WORKFLOW_RUN_ATTEMPT": "2",
-                            "WORKFLOW_RUN_ID": "123",
-                        }
-                    )
-                    completed = subprocess.run(
-                        [sys.executable, "-c", audit_program],
-                        cwd=tmp_path,
-                        env=environment,
-                        text=True,
-                        capture_output=True,
-                        check=False,
-                    )
-                    self.assertEqual(1, completed.returncode, completed.stderr)
-                    self.assertEqual("", completed.stdout)
-                    self.assertEqual(1, completed.stderr.count("release_note_composition_failed"))
-                    diagnostic = json.loads(completed.stderr)
-                    self.assertEqual(expected_error, diagnostic["error"])
-                    self.assertEqual("release_note_composition_failed", diagnostic["outcome"])
-                    audit_bytes = (tmp_path / "release-note-audit.json").read_bytes()
-                    audit = json.loads(audit_bytes)
-                    self.assertEqual(expected_error, audit["error"])
-                    self.assertEqual("release_note_composition_failed", audit["outcome"])
-                    self.assertEqual(capture_result, audit["capture_result"])
-                    self.assertEqual(download_outcome, audit["snapshot_download_outcome"])
-                    self.assertEqual(
-                        (json.dumps(audit, sort_keys=True, separators=(",", ":")) + "\n").encode(),
-                        audit_bytes,
-                    )
 
         with self.subTest(msg="composer rejects highlights emptied by sanitization"):
             validation_function = _python_function_block(policy_content, "validate_release_note")
@@ -645,13 +651,16 @@ class ValidateReleaseWorkflow(unittest.TestCase):
             self.assertNotRegex(composer_job, r"RELEASE_BODY:\s*\$\{\{")
             self.assertIn("RELEASE_BODY: ${{ needs.release.outputs.body }}", capture_step)
             self.assertIn("RELEASE_TAG: ${{ needs.release.outputs.tag_name }}", capture_step)
-            self.assertIn('composer_environment["RELEASE_TAG"] = snapshot["tag"]', compose_step)
-            self.assertNotIn('composer_environment["RELEASE_BODY"]', compose_step)
+            self.assertIn(
+                'composer_environment["RELEASE_TAG"] = snapshot["tag"]',
+                audit_helper_content,
+            )
+            self.assertNotIn('composer_environment["RELEASE_BODY"]', audit_helper_content)
 
         with self.subTest(msg="composer emits a verified digest-bound audit record"):
             self.assertTrue(
                 _contains_all(
-                    compose_step,
+                    audit_helper_content,
                     (
                         '"release_note_composed_and_verified"',
                         'published_body.startswith("## Highlights\\n\\n")',
@@ -675,7 +684,7 @@ class ValidateReleaseWorkflow(unittest.TestCase):
         with self.subTest(msg="composer uploads and summarizes an immutable audit artifact"):
             self.assertTrue(
                 _contains_all(
-                    audit_upload_step + audit_record_step,
+                    audit_upload_step + audit_record_step + audit_helper_content,
                     (
                         "if: ${{ always() }}",
                         "name: release-note-audit-${{ github.run_id }}-${{ github.run_attempt }}",
@@ -684,6 +693,7 @@ class ValidateReleaseWorkflow(unittest.TestCase):
                         "AUDIT_ARTIFACT_DIGEST: ${{ steps.upload_release_audit.outputs['artifact-digest'] }}",
                         "AUDIT_ARTIFACT_ID: ${{ steps.upload_release_audit.outputs['artifact-id'] }}",
                         "AUDIT_ARTIFACT_URL: ${{ steps.upload_release_audit.outputs['artifact-url'] }}",
+                        "run: python3 scripts/audit-release-notes.py --record-artifact",
                         "Immutable audit artifact",
                     ),
                 )
@@ -693,8 +703,9 @@ class ValidateReleaseWorkflow(unittest.TestCase):
         with self.subTest(msg="composer invokes Python without elevated release token"):
             self.assertIn(
                 '[sys.executable, str(composer_path), "--snapshot", str(snapshot_path)]',
-                compose_step,
+                audit_helper_content,
             )
+            self.assertIn("shell=False", audit_helper_content)
             self.assertIn("EXPECTED_SNAPSHOT_SHA256:", compose_step)
             self.assertIn("GITHUB_TOKEN: ${{ github.token }}", compose_step)
             self.assertNotIn("actions: write", composer_job)
@@ -735,6 +746,22 @@ jobs:
                 "stdlib YAML sanity check accepted an under-indented step child",
             )
             self.assertTrue(_yaml_syntax_sane(content), "release.yml failed YAML syntax validation")
+            run_commands = _run_commands(content)
+            self.assertTrue(run_commands, "release workflow has no direct dispatch steps")
+            self.assertTrue(
+                all(_is_thin_direct_dispatch(command) for command in run_commands),
+                f"release workflow contains shell logic or a non-direct dispatch: {run_commands}",
+            )
+            self.assertTrue(
+                _is_thin_direct_dispatch("gh pr view 123 --jq '.number | tostring'"),
+                "GitHub CLI --jq must not be treated as an external jq command",
+            )
+            self.assertFalse(_is_thin_direct_dispatch("jq -r .number input.json"))
+            self.assertFalse(_is_thin_direct_dispatch("python3 helper.py && echo unsafe"))
+            self.assertFalse(_is_thin_direct_dispatch("python3 helper.py > result.json"))
+            self.assertFalse(_is_thin_direct_dispatch("python3 - <<'PY'"))
+            self.assertFalse(_is_thin_direct_dispatch("if python3 helper.py; then exit 1; fi"))
+            self.assertFalse(_is_thin_direct_dispatch("python3 legacy.sh"))
 
         with self.subTest(msg="release-please-config.json exists"):
             self.assertTrue(RELEASE_CONFIG_FILE.is_file(), f"file not found: {RELEASE_CONFIG_FILE}")
