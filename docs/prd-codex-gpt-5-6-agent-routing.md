@@ -1,304 +1,787 @@
-# PRD: Codex GPT-5.6 Agent Routing
+# PRD: Codex Agent Model Routing and Graceful Fallback
 
 **Status**: Active - not yet implemented
 **Source**: Maintainer request plus official OpenAI documentation, `$research`,
-and `$tavily-research` passes completed 2026-07-09
+and `$tavily-research` passes completed 2026-07-09 and revalidated 2026-07-12
 **Created**: 2026-07-09
-**Last updated**: 2026-07-09
-**Target window**: Next SpecKit Pro minor release after the active XPLAT-009
-installer/runtime surface is stable
+**Last updated**: 2026-07-12
+**Target window**: Next SpecKit Pro minor release after the evaluation and
+installer specifications in this roadmap are implemented
+**Legacy identifier note**: The stable `G56R` SPEC prefix originated when this
+work was scoped to GPT-5.6. It remains for traceability, but the candidate
+catalog includes any supported Codex model that satisfies an agent's contract.
 
 ---
 
 ## 1. Problem
 
-> "How should SpecKit Pro route each Codex agent to GPT-5.6 Sol, Terra, or
-> Luna - and to which reasoning effort - so consumers get the best reliable
-> result at the lowest measured cost?"
+> Which evidence-backed preferred model and reasoning-effort route, with which
+> ordered qualified fallbacks, should SpecKit Pro install for each named Codex
+> agent so that the agent remains usable when its preferred route is unavailable
+> without silently changing its role, tools, safety boundary, or output
+> contract?
 
-SpecKit Pro currently defines ten Codex custom agents. Nine source TOMLs pin
-`gpt-5.5`; the latency-first helper pins `gpt-5.3-codex-spark`. Effort is mostly
-`xhigh`, with two read-only analysts at `low` and the Spark helper omitting an
-effort field. The installer and structural tests also encode a mostly uniform
-model policy. That policy cannot take advantage of the GPT-5.6 family's
-role-specific price/capability tiers, and the current Layer 6 Codex harness
-sweeps effort while holding the TOML model constant.
+SpecKit Pro currently defines ten named Codex custom agents: nine required core
+agents and the optional `autopilot-fast-helper`. The Claude plugin also defines
+two orchestration-support agents with no Codex counterpart:
+`consensus-synthesizer` and `gate-validator`. Cross-platform agent parity is a
+governing principle: both platforms define the same named agents under each
+platform's official configuration surface and diverge only for
+platform-specific implementation requirements. This plan therefore targets a
+twelve-agent Codex catalog: eleven required core agents (the nine current core
+roles plus the two net-new parity additions) and the optional helper. The
+existing definitions pin one model or
+inherit one configuration, but they do not express an evidence-backed ordered
+fallback policy. A model may also be absent, an effort may be unsupported, or
+the exact configured treatment may fail even when a catalog entry exists.
+Without a project-owned resolver, installation can either fail late or silently
+produce a different runtime than the one evaluated.
 
-OpenAI positions `gpt-5.6-sol` as the flagship tier,
-`gpt-5.6-terra` as the intelligence/cost balance, and `gpt-5.6-luna` for
-cost-sensitive, high-volume work. Current standard API rates per 1M tokens are
-Sol `$5 / $0.50 / $6.25 / $30`, Terra
-`$2.50 / $0.25 / $3.125 / $15`, and Luna
-`$1 / $0.10 / $1.25 / $6` for uncached input / cached input / cache write /
-output. OpenAI also recommends preserving the current reasoning effort as a
-migration baseline and testing one level lower on representative work.
+Current OpenAI documentation establishes these platform facts:
 
-The requested research passes did not find a complete public benchmark that
-compares all three GPT-5.6 tiers on SpecKit Pro's ten roles. Therefore this PRD
-does not treat a marketing tier as a proven assignment. It defines an
-evidence-first promotion process and ships only role assignments that clear a
-consumer-focused quality floor.
+- Each custom-agent file describes one named agent and may set one `model` and
+  one `model_reasoning_effort`; omitted values can inherit from the parent.
+- Codex surfaces can expose model discovery, supported efforts and
+  capabilities, token-usage events, and conditional service-reroute events,
+  subject to the exact client and surface.
+- Applicable project or skill instructions can request named subagent
+  delegation.
+- `codex exec --json` documents lifecycle and token-usage events, but it does
+  not by itself guarantee an authoritative effective-model or effective-effort
+  field for every run.
 
-## 2. Goals & Non-goals
+The following are proposed SpecKit Pro policies, not claims about native Codex
+fallback behavior:
+
+- one preferred route and an ordered list of independently qualified fallback
+  routes for each named agent;
+- capability discovery and bounded exact invocation probes;
+- one canonical resolver and materializer shared by evaluation and install;
+- complete-matrix atomic installation with previous-install preservation;
+- strict explicit override behavior; and
+- route-resolution, exact-treatment, and release identities.
+
+A route is more than a model name. It includes an explicit model and explicit
+reasoning effort plus the instruction hash, required model and modality
+capabilities, tool/skill/MCP contract, sandbox and mutation contract, supported
+client range, and qualification evidence. A fallback may change only the
+approved model/effort route for the same named agent. It cannot substitute a
+different named agent, a generic agent, or a weaker safety/tool contract.
+
+No complete public benchmark compares every supported Codex model and effort on
+SpecKit Pro's twelve roles. Model branding, generation, or placement in product
+guidance therefore does not prove a route. The PRD uses controlled evaluation
+to qualify preferred and fallback routes, then resolves installation against a
+versioned capability snapshot from the user's working Codex environment.
+
+The evaluation boundary is the accepted end-to-end workflow, not an isolated
+agent response. It includes parent and child work, retries, validation, repairs,
+compaction, cancellations, and abandoned branches. Long-horizon work is a
+powered comparative stratum in the release decision and also has separate
+recovery canaries. Resource evidence remains environment-independent: raw token
+vectors, duration, retries, compaction, and accepted-workflow rate.
+
+## 2. Goals, Product Contract, and Non-goals
 
 ### 2.1 Goals
 
-- Give every installed SpecKit Pro Codex agent an explicit, role-appropriate
-  model and reasoning-effort default selected by measured evidence.
-- Preserve consumer-visible correctness, grounding, output contracts, and
-  workflow completion while minimizing measured cost per successful run.
-- Evaluate Sol, Terra, and Luna without forcing any tier into production when
-  it fails the promotion bar.
-- Make the model x effort decision reproducible through role fixtures,
-  versioned results, and a documented promotion rule.
-- Keep installation predictable: role-pinned defaults, one explicit global
-  compatibility override, no silent downgrade, and complete verification of
-  all ten installed agents.
-- Rebuild and verify the Codex payload, active guidance, and installed-cache
-  evidence before release.
+- Give every required named agent one evidence-backed preferred route and zero
+  or more ordered, independently qualified fallback routes.
+- Give the optional helper a preferred route, qualified helper fallbacks, and a
+  validated no-helper path.
+- Maintain the same named agents on both the Codex and Claude platforms,
+  following each platform's official documentation and diverging only for
+  platform-specific implementation requirements; this plan delivers the Codex
+  half of the shared twelve-agent catalog.
+- Preserve role-specific correctness, grounding, safety, mutation, output,
+  tool, and orchestration contracts across every route.
+- Select preferred routes quality and reliability first, then use one
+  predeclared environment-independent resource/latency rule among passing
+  candidates.
+- Materialize explicit model and reasoning-effort values; never rely on an
+  unmeasured inherited default in installed destination policies.
+- Resolve the complete required-agent matrix before one atomic write, and
+  preserve the previous known-good installation when any required agent has no
+  safe compatible route.
+- Report the preferred route, effective route, fallback index, and resolution
+  reason for every installed named agent.
+- Keep the explicit global model override strict: an unavailable or
+  incompatible requested override fails atomically rather than silently falling
+  back.
+- Use the same materializer and exact-treatment predicate in evaluation and
+  installation.
+- Include bounded prompt and context tuning when it targets measured overhead,
+  while retaining an unchanged-prompt attribution stage.
+- Compare the selected static policy with frozen unpinned and adaptive controls
+  before describing the static result as efficient.
+- Make installed Codex skills explicitly spawn the required custom agents by
+  name and prove that their returned work affects a downstream decision,
+  artifact, or validation result.
+- Rebuild and reconcile payloads, active guidance, installed-cache evidence,
+  fallback UAT, and rollback evidence before release.
 
 ### 2.2 Non-goals (out of scope)
 
+- Detecting or classifying commercial subscription plans, entitlements,
+  workspaces, billing, credits, allowances, quotas, rate limits, or account
+  upgrades. None of those may determine route selection, fallback order,
+  installation, evaluation, UAT, or release eligibility.
 - Changing Claude agent models, Claude commands, or Claude marketplace
   behavior.
+- Claiming that ordered model fallback is a native custom-agent TOML feature.
+  SpecKit Pro owns the ordered route policy, resolver, and materializer.
 - Adopting GPT-5.6 Pro mode, persisted reasoning, Programmatic Tool Calling,
   explicit prompt caching, or the Responses API multi-agent beta.
-- Rewriting every agent prompt. Prompt cleanup is allowed only after an
-  unchanged-prompt baseline and only when a before/after evaluation proves
-  equal-or-better behavior with lower context cost or fixes a measured defect.
-- Offering quality/balanced/economy install profiles or per-agent overrides in
-  v1. The existing one-model compatibility override remains the KISS escape
-  hatch.
-- Claiming universal GPT-5.6 availability across accounts, operating systems,
-  or Codex surfaces.
-- Replacing historical model references, archived evidence, or old eval
-  baselines solely to make repository-wide search results uniform.
+- Unbounded or aesthetic prompt rewriting. Prompt changes must target measured
+  instruction, handoff, tool-schema, duplicated-context, or compaction overhead
+  and be tested against an unchanged-prompt control.
+- Offering quality/balanced/economy profiles or arbitrary per-agent user
+  overrides in v1. The existing one-model compatibility override remains the
+  KISS escape hatch and is strict.
+- Searching the complete eleven-agent combination space or claiming global
+  assembled-policy optimality. Version 1 performs component-wise route and
+  prompt selection, then confirms the assembled preferred core.
+- Automatically selecting an unqualified adjacent model, changing a named
+  agent, or weakening its prompt, sandbox, tools, skills, MCP, mutation, or
+  output contract during fallback.
+- Building production checkpoint/resume or external-limit-aware scheduling. Evaluation
+  budgets and failure simulations do not create a new workflow scheduler.
+- Rewriting historical model references or archived evidence solely to make
+  repository-wide searches uniform.
+
+### 2.3 Route and Identity Lifecycle
+
+One route is the following complete, qualified tuple:
+
+```text
+route = explicit model
+      + explicit model_reasoning_effort
+      + instruction/prompt hash
+      + required model and modality capabilities
+      + required tool/skill/MCP contract
+      + sandbox/mutation contract
+      + supported client range
+      + qualification evidence
+```
+
+The identity lifecycle is intentionally staged so early experiments do not
+depend on final aggregates that do not yet exist.
+
+| Identity | Created by | Required contents |
+|---|---|---|
+| `agent_contract_id` | G56R-001 | Named role plus safety, grounding, mutation, tool, and output contract |
+| `candidate_route_id` | G56R-001/G56R-002 | Candidate model/effort tuple, contract and instruction hashes, required capabilities, rationale, and invalidation rules |
+| `telemetry_profile_id` | G56R-002 | Pinned client/surface and mandatory, conditional, derived, and unavailable telemetry fields |
+| `runtime_capability_snapshot_id` | G56R-002 or installer preflight | Client/surface, discovered models, supported efforts and capabilities, timestamp, retrieval/probe method, and raw evidence |
+| `experiment_policy_id` | G56R-003 | Corpus and partitions, scorer, analysis plan, budgets, terminal policy, and treatment controls |
+| `execution_trace_id` | G56R-003 | Assigned route, effective-route evidence, task outcome, resource evidence, retries, terminal state, and treatment integrity |
+| `agent_route_policy_id` | G56R-007 through G56R-010 | Named agent, preferred route, ordered fallbacks, hard contract, evidence, client bounds, and invalidation rules |
+| `route_resolution_id` | G56R-002 schema; G56R-003/G56R-006 records | Preferred and effective routes, fallback index and reason, attempted routes, capability snapshot, and timestamp |
+| `resolved_agent_policy_id` | G56R-006 schema/fixtures; G56R-011 final records | Exact materialized destination content and selected effective route for one named agent |
+| `core_routing_policy_id` | G56R-011 | Ordered mapping of the eleven required named agents to final route policies |
+| `optional_helper_policy_id` | G56R-011 | Helper preferred route, qualified fallbacks, no-helper contract, and integration reference |
+| `resolved_installation_id` | G56R-011 | Ordered mapping of installed agents to resolved policies and resolution evidence |
+| `release_policy_id` | G56R-011 | Final core, helper state, resolver/installer version, evidence lock, UAT, invalidation rules, and bounded claims |
+
+`core_routing_policy_id`, `optional_helper_policy_id`, and `release_policy_id`
+are attached to evidence only after G56R-007 through G56R-010 finish route
+selection and G56R-011 composes the aggregates.
 
 ## 3. Acceptance Criteria
 
-### 3.1 Research Baseline and Candidate Matrix *(-> G56R-001)*
+### 3.1 Research Baseline and Candidate Routes *(-> G56R-001)*
 
-- **AC-1.1**: A dated research record inventories all ten Codex agents and every
-  active source, installer, skill, validation, eval, generated-payload, and
-  installed-cache surface that encodes their model or effort policy.
-- **AC-1.2**: The record cites current official OpenAI pages for model IDs,
-  positioning, pricing, context/tool support, Codex custom-agent fields, and
-  reasoning-effort guidance; conflicting secondary claims are rejected or
-  labeled unresolved.
-- **AC-1.3**: Every agent has a current baseline, a primary GPT-5.6 candidate,
-  at least one adjacent cheaper challenger where supported, an effort baseline,
-  and a role-specific quality contract.
-- **AC-1.4**: Facts, inferences, and unverified assumptions are visibly
-  separated, and no public head-to-head benchmark is claimed where none was
-  located.
-- **AC-1.5**: The time-boxed spike ends with a go/no-go decision and fixture
-  requirements for G56R-002; it does not change installed defaults.
+- **AC-1.1**: A dated research record inventories all twelve named target agents
+  (the ten current Codex agents plus the parity additions
+  `consensus-synthesizer` and `gate-validator` derived from the Claude plugin)
+  and every active source, installer, skill, validation, evaluation,
+  generated-payload, and installed-cache surface that encodes or consumes their
+  route policy.
+- **AC-1.2**: The record cites current official OpenAI documentation for model
+  IDs, custom-agent configuration fields, supported reasoning controls,
+  capability discovery, telemetry, reroute events, and non-interactive output.
+  Conflicting claims are rejected or explicitly unresolved.
+- **AC-1.3**: Every agent has an immutable production route (recorded as absent
+  for the two parity additions), a role-specific
+  contract, candidate model/effort tuples from discovered capabilities or a
+  pinned probe, prompt/context candidates when justified, and a fixture backlog.
+  A model or effort is excluded only for recorded incompatibility, contract
+  failure, or predeclared dominance evidence.
+- **AC-1.4**: Platform facts, reasonable inferences, proposed SpecKit Pro
+  policies, and unverified assumptions are visibly separated. No head-to-head
+  benchmark or native fallback feature is claimed where none is documented.
+- **AC-1.5 — Research completion without a dependency cycle**: The time-boxed
+  research spike ends with a provisional candidate-route manifest,
+  role-contract catalog, fixture backlog, telemetry requirements, unresolved
+  capability questions, and a go/no-go handoff to G56R-002. It does not depend
+  on G56R-002 results, change installed defaults, or claim that a candidate is
+  executable before capability preflight.
+- **AC-1.6 — Candidate route and fallback manifest**: Before scored screening,
+  G56R-001 publishes a versioned `agent_route_candidate_manifest` covering all
+  twelve named agents; the two parity additions enter with role contracts
+  derived from the Claude definitions and no current Codex production route.
+  For each agent it records the immutable production route or its recorded
+  absence;
+  every candidate model/effort tuple; required model, modality, custom-agent,
+  tool, skill, MCP, sandbox, and client capabilities; `agent_contract_id`;
+  prompt/instruction hash; candidate rationale; known incompatibilities;
+  required qualification artifacts; and invalidation triggers. It distinguishes
+  project-level candidate eligibility from installation-time availability.
+  G56R-002 later binds the manifest to a versioned runtime capability snapshot
+  and freezes the executable candidate set before G56R-003 scores outcomes.
+- **AC-1.7 — Current harness baseline**: The research record labels historical
+  prompt-emulation results as `non_release_evidence` until G56R-003 replays them
+  through the shared materializer with exact treatment and the required skills,
+  MCP servers, tool schema, sandbox, parent configuration, and telemetry proof.
 
-### 3.2 Model-Effort Benchmark and Promotion Harness *(-> G56R-002)*
+### 3.2 Route Evaluation and Qualification *(-> G56R-002 through G56R-004)*
 
-- **AC-2.1**: The Codex efficiency harness can run an explicit
-  `model x model_reasoning_effort x agent` configuration instead of holding the
-  TOML model constant, and it has a representative contract fixture for all ten
-  agents.
-- **AC-2.2**: Each result records the requested and returned model, effort,
-  environment, wall time, input tokens, cached input, cache writes when exposed,
-  output/reasoning tokens, actual Codex credits when exposed, and normalized
-  cost using a dated official-pricing snapshot.
-- **AC-2.3**: Deterministic contract, grounding/evidence, and safety checks are
-  hard gates. Semantic quality uses a blinded role-specific rubric, with human
-  review only for close or disputed outcomes.
-- **AC-2.4**: Live evaluation is staged: three repeats per shortlisted
-  configuration, expanded only when results are close or unstable, followed by
-  installed-workflow UAT on the winners. Live runs are never part of the free
-  default CI suite.
-- **AC-2.5**: A configuration is promotable only with zero critical contract
-  regressions and at least 95% of the current role-quality baseline. Among
-  promotable configurations, the lowest measured cost per successful run wins;
-  latency breaks ties.
-- **AC-2.6**: Effort tuning starts with the current effort and one level lower.
-  `max` is tested only for an unresolved quality-first failure, and no effort is
-  committed until the installed Codex version accepts it for that model.
-- **AC-2.7**: A versioned, replayable result artifact records candidates,
-  failures, selected routes, rejected routes, pricing date, and promotion
-  rationale.
+- **AC-2.1 — Controlled model-effort pair selection**: Stage A1 screens each
+  eligible model at its documented default ordinary effort after exact
+  treatment is proven. Stage A2 holds the model and all non-effort variables
+  fixed, ascends when necessary to find a pass, then descends through every
+  supported lower ordinary effort and retests the failing boundary. Stage A3
+  compares frozen passing model-effort pairs with every non-candidate variable
+  frozen. Stage B admits only A3-shortlisted pairs and evaluates predeclared
+  prompt-by-pair interactions. Stage C freezes the complete cohort policy and
+  evaluates it once on its disjoint cohort-lock partition. Stage A selects
+  model-effort pairs; it does not claim independent model and effort effects.
+- **AC-2.2 — Capability discovery and controlled environment**: The harness
+  binds every run to a pinned Codex client/surface, candidate route, controlled
+  repository/task environment, and versioned
+  `runtime_capability_snapshot_id`. The snapshot records discovered model IDs,
+  supported reasoning efforts, relevant model/provider capabilities, client
+  version, retrieval/probe method, timestamp, and raw evidence. When
+  authoritative model discovery is unavailable, the harness may use a
+  predeclared exact invocation probe; unresolved availability blocks that
+  route's scored run.
+- **AC-2.3 — Route-resolution and execution trace**: Every assigned objective
+  binds `candidate_route_id`, `agent_contract_id`,
+  `runtime_capability_snapshot_id`, `route_resolution_id`,
+  `experiment_policy_id`, and `execution_trace_id`. The trace records requested
+  and effective model/effort when the telemetry profile supports those claims,
+  fallback index and reason, service-reroute events, instruction hash, effective
+  sandbox and approvals, loaded skills/MCP/tools, parent-child graph, token
+  categories when exposed, wall time, retries, compaction, validation,
+  cancellation, terminal state, and outcome. Nulls are preserved. Final
+  core/helper/release aggregate IDs are attached only after those aggregates
+  exist. A service reroute is always recorded separately from SpecKit Pro route
+  resolution and never reported as plugin fallback. Any service reroute makes
+  the run non-scorable as qualification evidence for the requested route.
+- **AC-2.4 — Telemetry capability profile**: G56R-002 publishes a versioned
+  telemetry capability profile for the pinned client and surface. Qualification
+  requires complete evidence only for fields classified as mandatory by that
+  profile: successful treatment assignment, effective route or an approved
+  proof of configured route with no unapproved reroute, task outcome, duration,
+  and raw token fields needed by the declared endpoint. Conditional or
+  unavailable fields remain null and cannot support claims that require them.
+  Telemetry failure classification, bounded complete-pair reruns, attrition
+  reporting, and no arm-only discretionary reruns are predeclared.
+- **AC-2.5 — Environment-independent resource evidence**: The primary resource
+  evidence is the complete objective-level raw token vector, request/turn count,
+  wall time, retries, compaction, and failed or abandoned work through the
+  terminal policy. The selection rule uses one predeclared
+  environment-independent score or Pareto rule across passing candidates.
+- **AC-2.6 — Per-agent attribution**: Paired per-agent experiments freeze the
+  parent route, every non-candidate agent route, all prompts other than the
+  allowed Stage B candidate prompt, tools, skills, MCP, sandbox, repository
+  snapshot, context/compaction policy, retry/escalation policy, validation, and
+  acceptance checker. Unpinned and adaptive runs are policy-level controls and
+  are not evidence attributable to one agent.
+- **AC-2.7 — Objective-level estimand**: For each randomized objective `i`,
+  `R_i` is all attributable resource consumption from assignment until
+  acceptance or the predeclared terminal stop, and `A_i` is one only when the
+  objective is accepted. Candidate-caused failures, timeouts, cancellations,
+  budget exhaustion, and abandoned branches remain in `R_i` with `A_i = 0`.
+  Independently proven transient harness failure is classified before outcome
+  inspection and may receive only the bounded full-pair rerun defined in the
+  analysis plan.
+- **AC-2.8 — Statistical unit and workload population**: The primary unit is a
+  unique workflow objective; repeats are clustered within objective and paired
+  inference occurs at the task level. Before screening, a versioned workload
+  manifest freezes pre-treatment stratum definitions, target weights, unknown
+  handling, minimum unique tasks, and cache-state isolation. Strata and weights
+  cannot be selected from candidate outcomes.
+- **AC-2.9 — Long-horizon comparative evidence**: The workload manifest defines
+  long-horizon membership from task and protocol characteristics before either
+  arm runs, never from realized duration, turns, tokens, retries, or
+  compactions. Integrated confirmation contains a powered long-horizon stratum
+  that independently clears accepted-workflow, semantic-quality, raw-resource,
+  p95-resource, p95-duration, late-failure, retry, and compaction guardrails. A
+  long-horizon efficiency claim additionally requires its predeclared
+  superiority endpoint; recovery canaries cannot substitute for this evidence.
+- **AC-2.10 — Prompt interaction stage**: Model/effort attribution uses the
+  unchanged baseline prompt. Only Stage A-shortlisted pairs enter prompt/context
+  interaction evaluation, where only the candidate agent's bounded prompt may
+  vary. After one final instruction hash is selected, every preferred and
+  fallback route is requalified under that same instruction hash. The selected
+  model, effort, prompt, and fallback order are then frozen as one route policy
+  for cohort lock and integrated confirmation.
+- **AC-2.11 — Search and campaign bounds**: For every model, capability probing
+  produces an ordered supported-effort set. The predeclared rule starts at the
+  documented default, ascends to the first stable pass when necessary, then
+  descends and boundary-retests to find the lowest stable ordinary effort.
+  Ultra or any mode that changes orchestration topology is a policy-level
+  control, not an ordinary per-agent effort. Campaign raw-token use, wall time,
+  candidate count, futility rules, racing method, and confirmation-entry cap are
+  frozen before outcome-bearing runs.
+- **AC-2.12 — Evidence partitions and multiplicity**: Screening, selection,
+  cohort lock, and integrated release confirmation use disjoint objective sets.
+  The final confirmation set is used exactly once after candidates, prompts,
+  margins, endpoints, guardrails, stopping rules, and multiplicity strategy are
+  locked. Changing any locked decision invalidates affected evidence.
+- **AC-2.13 — Immutable production comparator**: Before screening, the immutable
+  production comparator is pinned by repository revision, plugin version,
+  per-agent route/configuration IDs, client version, tool/configuration contract,
+  corpus snapshot, prompt hashes, and analysis plan. Candidate routes compare
+  with the corresponding production role route; integrated release compares the
+  final assembled preferred core with the immutable production core. A parity
+  addition with no production role route qualifies against its absolute
+  contract, quality, and reliability floors; the workflow-level integrated
+  comparison still pairs the assembled eleven-agent core against the immutable
+  production core on the same objectives. The
+  immutable production comparator remains the sole release baseline.
+- **AC-2.14 — Missing telemetry and attrition**: Every attempt records missing
+  fields, cause classification, evidence, rerun eligibility/count, and final
+  disposition. Only independently proven transient harness failures can receive
+  a capped full-pair rerun under the original assignment. Candidate-inherent,
+  environment-inherent, recurrent, unknown, or arm-differential telemetry loss
+  fails qualification or blocks the affected claim. No primary conclusion may
+  use an unexplained complete-case subset.
+- **AC-2.15 — Guardrail registry**: Before outcome-bearing evaluation, every
+  mandatory safety, quality, grounding, mutation, accepted-workflow, p95
+  resource/duration, late-failure, retry, steering, and compaction guardrail has
+  a definition, unit, denominator, comparator, margin, confidence method,
+  missing-data rule, multiplicity position, and minimum unique-task count.
+  Human steering is prohibited or follows one frozen scripted intervention
+  policy.
+- **AC-2.16 — Analysis plan and decision rule**: A versioned analysis plan
+  predeclares the primary endpoint, practical margin, one-sided confidence rule,
+  alpha/multiplicity strategy, target power, variance and clustering assumptions,
+  sample sizes, racing adjustment, attrition thresholds, terminal policy, and
+  `inconclusive => no qualification`. Numeric thresholds live in this plan or a
+  content-addressed registry, not in post-hoc review judgment.
+- **AC-2.17 — Policy controls and dominance**: G56R-004 defines and freezes the
+  unpinned, adaptive, and topology-changing controls, their execution contracts,
+  parameters, eligibility floors, dominance metrics, margins, multiplicity, and
+  untouched comparison partition. G56R-011 later compares the final frozen core
+  with those controls. A control materially dominates only when it passes every
+  mandatory contract, safety, quality, reliability, and availability gate and
+  clears the predeclared resource/duration dominance rule.
+- **AC-2.18 — Optional helper availability contract**:
+  `autopilot-fast-helper` is optional and excluded from the required-core
+  primary statistic. G56R-010 selects a preferred helper route, zero or more
+  independently qualified helper fallback routes, and a validated no-helper
+  path. Installation resolves the first available qualified helper route; when
+  none is available, the helper is not installed and autopilot continues
+  through the no-helper contract.
+- **AC-2.19 — Exact treatment and fallback resolution**: Every scored run
+  executes an installed custom-agent configuration or a configuration produced
+  by the same canonical materializer used by the installer. Equivalence
+  requires byte-identical serialization of plugin-owned fields and equality of
+  the predeclared route, instructions, sandbox/mutation class, skills, MCP
+  servers, tool schema, relevant parent configuration, client version, and
+  controlled runtime overrides. Preferred-route unavailability invokes the
+  resolver before assignment. A scored run begins only after one approved route
+  is resolved and exact treatment is proven. Runtime UAT may continue after a
+  service reroute only when the event identifies a route already qualified for
+  the same named agent; the event and resulting route remain service behavior,
+  never resolver success. An unapproved or unidentifiable reroute is a hard
+  treatment failure. `codex exec --json` lifecycle output is not treated as
+  universal proof of effective model or effort when the pinned telemetry
+  profile does not expose those fields.
+- **AC-2.20 — Blinded fixture and scorer governance**: Before evaluation, each
+  fixture and scorer has a versioned contract, independent validity review, and
+  frozen acceptance behavior. Low or surprising output is adjudicated blind to
+  candidate identity as exactly one of candidate quality failure, treatment-
+  delivery failure, invalid fixture, invalid scorer, or infrastructure failure;
+  no score threshold predetermines the cause. Changing a fixture or scorer
+  increments its version and invalidates every affected candidate result.
+  Neither may change after its selection or confirmation partition locks.
+  Historical results produced without exact-treatment proof remain
+  non-release evidence.
+- **AC-2.21 — Preferred and fallback route qualification**: For each required
+  agent, the preferred route is the highest-ranked route that clears all hard
+  contract, absolute quality/reliability, and production non-inferiority gates
+  under the predeclared environment-independent selection rule. An ordered
+  fallback route is eligible only when it clears the same hard contract and the
+  declared fallback quality/reliability floor. The final
+  `agent_route_policy_id` records the preferred route, ordered eligible
+  fallbacks, evidence IDs, and invalidation triggers. G56R-011 confirms the
+  assembled preferred core and separately verifies resolver behavior for
+  preferred unavailable, effort unsupported, treatment-probe failure, service
+  reroute, no safe route, and optional-helper absent scenarios.
 
-### 3.3 Tier-aware Installer Defaults and Explicit Override *(-> G56R-003)*
+### 3.3 Capability-aware Installer and Strict Override *(-> G56R-006)*
 
-- **AC-3.1**: A default install preserves each bundled agent TOML's validated
-  role-specific model and effort instead of rewriting every non-helper agent to
-  one default model.
-- **AC-3.2**: The existing single global model override remains available as an
-  explicit compatibility action and deliberately replaces all routed agent
-  models only when the consumer requests it.
-- **AC-3.3**: The installer never silently downgrades. Unsupported or
-  unavailable requested models produce a clear, actionable report without a
-  partial install or mutation of the bundled source templates.
-- **AC-3.4**: Source and destination inventory agree on all ten agent TOMLs,
-  including `uat-runbook-author.toml`; unrelated user agents are preserved.
-- **AC-3.5**: Install output reports the effective model/effort matrix, the
-  destination, override state, copied files, verification result, and restart
-  requirement.
-- **AC-3.6**: Implementation uses the post-XPLAT-009 Python runner/install path
-  and does not restore a deleted active Bash helper.
+- **AC-3.1**: The installer consumes final per-agent route policies and a
+  runtime capability snapshot, resolves one effective route for every required
+  named agent, and creates content-addressed `route_resolution_id` and
+  `resolved_agent_policy_id` evidence for framework fixtures. After every route
+  policy is locked, G56R-011 creates the final `resolved_agent_policy_id`
+  records and composes `resolved_installation_id`.
+- **AC-3.2**: Default installation automatically selects the first compatible
+  route in each agent's ordered policy and reports every fallback. It never
+  changes the named agent, prompt, sandbox, tools, skills, MCP, output contract,
+  or mutation boundary as part of model fallback.
+- **AC-3.3**: The installer resolves the complete matrix before writing. If
+  every required agent has a safe route, it commits atomically. If any required
+  agent has no safe route, it preserves the previous known-good installation
+  and reports the unresolved agent, attempted routes, rejection reasons, and
+  remediation. An optional helper with no safe route is omitted and uses the
+  validated no-helper path without failing the core install.
+- **AC-3.4**: Bundled source policies are never mutated. Destination copies
+  contain explicit effective model and effort; omitted inherited defaults do
+  not satisfy the contract. The plugin-managed destination set contains
+  exactly the eleven core agent files plus the helper only when resolved;
+  unrelated user files are preserved and excluded from that count. Reinstall
+  without a helper removes a stale plugin-managed helper atomically.
+- **AC-3.5**: The explicit global model override remains strict, validates every
+  resulting named-agent route and effort before mutation, and aborts atomically
+  when unavailable or incompatible. It does not use the default fallback chain
+  or silently coerce effort.
+- **AC-3.6**: Install output reports preferred and effective routes, fallback
+  indices and reasons, capability snapshot, attempted/rejected routes, copied
+  files, optional-helper state, previous-install disposition, verification
+  result, and restart requirement.
 
-### 3.4 Quality-critical Executor Routing *(-> G56R-004)*
+### 3.4 Quality-critical Executor Routing *(-> G56R-007)*
 
 - **AC-4.1**: `phase-executor`, `implement-executor`, and `analyze-executor`
-  evaluate Sol at their current effort and one level lower, with Terra as the
-  adjacent lower-cost challenger and `max` considered only after a measured
-  quality failure.
-- **AC-4.2**: Each committed model/effort clears the G56R-002 promotion rule on
-  role-specific planning, TDD implementation, and analyze/remediation fixtures.
-- **AC-4.3**: Agent sandbox, TDD, grounding, artifact, and remediation contracts
-  remain unchanged unless a separately measured prompt cleanup is required.
-- **AC-4.4**: Any prompt cleanup is evaluated after the routing baseline and is
-  retained only when it preserves or improves quality while reducing context
-  cost or fixing a specific regression.
-- **AC-4.5**: Cohort-specific source, install, validation, and rollback evidence
-  makes the route independently reviewable.
+  screen every eligible model/effort route from the frozen candidate manifest;
+  named models are hypotheses, not predetermined winners.
+- **AC-4.2**: Each agent's preferred route and every committed fallback clear
+  the role qualification rules on planning, TDD implementation, and
+  analysis/remediation fixtures before the cohort lock.
+- **AC-4.3**: Sandbox, TDD, grounding, artifact, validation, and remediation
+  contracts remain hard invariants across route, prompt/context, and fallback
+  evaluation.
+- **AC-4.4**: Each role follows the staged pair, prompt-interaction, and cohort-
+  lock design. Only G56R-011 supplies integrated release confirmation.
+- **AC-4.5**: Each final `agent_route_policy_id` records the preferred route,
+  ordered fallbacks, evidence, supported client bounds, invalidation triggers,
+  install proof, and rollback evidence.
 
-### 3.5 Structured-work Agent Routing *(-> G56R-005)*
+### 3.5 Structured-work Agent Routing *(-> G56R-008)*
 
-- **AC-5.1**: `checklist-executor` and `uat-runbook-author` evaluate Terra at
-  their current effort and one level lower, with Sol and Luna included only
-  where the role fixture makes them credible adjacent candidates.
-- **AC-5.2**: Checklist remediation remains complete at every severity and UAT
+- **AC-5.1**: `checklist-executor` and `uat-runbook-author` screen every eligible
+  route, including bounded-work candidates when their tool and output contracts
+  pass.
+- **AC-5.2**: Checklist remediation remains complete at every severity; UAT
   runbooks remain executable, plain-English, non-circular, and traceable to
   acceptance criteria.
-- **AC-5.3**: The selected routes clear the shared promotion rule and preserve
-  workspace-write boundaries and fail-open/fail-closed behavior specific to
-  each role.
-- **AC-5.4**: Measured prompt cleanup follows the same baseline-first rule as
-  G56R-004, and cohort-specific install and rollback evidence is recorded.
+- **AC-5.3**: Preferred and fallback routes preserve each role's workspace-write
+  boundary and fail-open/fail-closed behavior and clear component qualification
+  plus the disjoint cohort lock.
+- **AC-5.4**: Each final `agent_route_policy_id` contains the complete route
+  order, contract, evidence, client bounds, invalidation rules, install proof,
+  and rollback evidence.
 
-### 3.6 Read-only Reasoning Agent Routing *(-> G56R-006)*
+### 3.6 Read-only Reasoning and Orchestration-support Agent Routing *(-> G56R-009)*
 
-- **AC-6.1**: `clarify-executor`, `domain-researcher`, `codebase-analyst`, and
-  `spec-context-analyst` evaluate Terra as the primary candidate; Sol is a
-  quality challenger for harder synthesis, and Luna is tested only for bounded
-  scans where its output contract can be preserved.
-- **AC-6.2**: The two current `xhigh` roles compare `xhigh` and `high`; the two
-  current `low` analysts compare `low` and the next supported lower effort
-  without relying on an omitted GPT-5.6 default.
-- **AC-6.3**: All outputs remain grounded in their assigned evidence domain,
-  preserve citations/file locators, and perform no writes.
-- **AC-6.4**: The lowest-cost passing route is committed per agent; one cohort
-  model is not forced across all four roles.
-- **AC-6.5**: Measured prompt cleanup, install proof, and rollback evidence obey
-  the same cohort contract as G56R-004.
+- **AC-6.1**: `clarify-executor`, `domain-researcher`, `codebase-analyst`,
+  `spec-context-analyst`, `consensus-synthesizer`, and `gate-validator` screen
+  every eligible route; lighter routes remain only when their grounding,
+  citation, and output contracts pass.
+- **AC-6.2**: Each model follows the ordered effort search and boundary-retest
+  contract; selection cannot stop after testing only one lower effort.
+- **AC-6.3**: Every route remains grounded in its assigned evidence domain,
+  preserves citations or file locators, and performs no writes.
+- **AC-6.4**: One model is not forced across all six roles. Each final
+  `agent_route_policy_id` records its independently qualified preferred route
+  and ordered fallbacks.
+- **AC-6.5**: Exact-treatment evaluation, bounded prompt/context tuning, cohort
+  lock, install proof, and rollback evidence follow the shared contract; release
+  proof remains G56R-011.
+- **AC-6.6**: The two parity additions are authored as named Codex custom agents
+  per current official custom-agent documentation before route qualification,
+  with role contracts mirroring the Claude definitions (three-analyst consensus
+  synthesis with confidence assessment; structured gate-validation evidence).
+  Any platform-specific divergence from the Claude contract is recorded
+  explicitly.
 
-### 3.7 Latency-first Helper Routing *(-> G56R-007)*
+### 3.7 Optional Latency-first Helper Routing *(-> G56R-010)*
 
-- **AC-7.1**: `autopilot-fast-helper` evaluates Luna at `low` and `none` when
-  both are accepted by the installed Codex version, against its current Spark
-  behavior and Terra as a fallback candidate.
-- **AC-7.2**: The helper remains read-only, advisory, bounded to compression,
-  triage, and query drafting, and never performs SpecKit reasoning or mutation.
-- **AC-7.3**: The committed route clears the shared promotion rule and improves
-  or preserves latency and cost per successful helper result; GPT-5.6 omission
-  must not accidentally select its default `medium` effort.
-- **AC-7.4**: Autopilot continues correctly when the helper is unavailable, and
-  evidence wins over a requirement to use Luna.
-- **AC-7.5**: Source, install, validation, prompt-cleanup, and rollback evidence
-  is independently reviewable.
+- **AC-7.1**: `autopilot-fast-helper` remains optional. It receives one
+  preferred route, zero or more qualified fallback routes, and a validated
+  no-helper path; current availability is established through capability
+  evidence rather than an indirect product label.
+- **AC-7.2**: Every helper route remains read-only and advisory, bounded to
+  compression, triage, and query drafting, and never performs SpecKit reasoning
+  or mutation.
+- **AC-7.3**: The helper scorecard measures functionality, latency, raw resource
+  evidence, spawn reliability, and resolver behavior. An omitted effort cannot
+  select an unmeasured inherited default.
+- **AC-7.4**: Autopilot continues correctly when no helper route resolves, the
+  helper is not installed, is not invoked, or fails to spawn. The no-helper path
+  is a release requirement.
+- **AC-7.5**: The helper's `agent_route_policy_id` binds the preferred route,
+  ordered fallbacks, qualification evidence, invalidation triggers, and
+  rollback proof. G56R-011 combines it with the no-helper contract and
+  installation state to create `optional_helper_policy_id`.
 
-### 3.8 Payload, Documentation, UAT, and Release Proof *(-> G56R-008)*
+### 3.8 Payload, Installed UAT, and Release Proof *(-> G56R-011)*
 
-- **AC-8.1**: The Codex payload is rebuilt from source; source TOMLs, generated
-  payloads, manifests/checksums, install inventory, and expected model/effort
-  matrix agree without hand-editing generated artifacts.
-- **AC-8.2**: Active Codex install/autopilot guidance explains the selected
-  routes, promotion evidence, explicit global override, restart requirement,
-  and non-universal availability boundary without rewriting historical records.
-- **AC-8.3**: Structural, installer, benchmark-replay, payload, installed-cache,
-  default-suite, and active-path gates pass on the final source tree.
-- **AC-8.4**: A live entitled Codex account completes at least one installed
-  representative workflow per routed cohort, and the evidence records returned
-  model, effort, quality result, latency, token/credit usage, and any safeguard
-  intervention.
-- **AC-8.5**: Release messaging makes only progressively proven claims and
-  includes rollback through an explicit global override or previous plugin
-  release.
-- **AC-8.6**: The PR packet lists the final ten-agent matrix, rejected
-  candidates, verification evidence, known availability gaps, and review order.
+- **AC-8.1**: The Codex payload is rebuilt from source. All twelve source and
+  payload agent definitions, manifests/checksums, eleven required destination
+  policies, optional installed helper, final identities, and active guidance
+  reconcile without hand-editing generated artifacts.
+- **AC-8.2**: Active Codex guidance explains preferred routes, qualified
+  fallback, strict override, resolver reporting, restart, optional-helper/no-
+  helper behavior, and bounded evidence claims without rewriting history.
+- **AC-8.3**: Focused structural, installer, replay, payload, installed-cache,
+  active-path, and UAT gates pass on the final implementation. Every surface
+  agrees on the identity it owns and distinguishes requested configuration,
+  route resolution, environment evidence, and runtime observation.
+- **AC-8.4 — Installed fallback UAT**: Installed UAT uses actual skill entry
+  points and covers the preferred path for every routed cohort; at least one
+  deterministic preferred-unavailable fallback per route-policy class;
+  unsupported-effort resolution; treatment-probe failure; approved and
+  unapproved service-reroute handling; no-safe-route preservation of the
+  previous installation; optional-helper resolved and no-helper behavior;
+  strict override failure; and rollback. UAT records the named agent,
+  `route_resolution_id`, effective model/effort when proven, exact-treatment
+  evidence, returned result hash, and downstream consuming step.
+- **AC-8.5**: Release messaging states only the routes, fallback behavior,
+  quality/reliability evidence, resource evidence, and supported client bounds
+  that were proven. It includes rollback through the previous known-good
+  installation or a previous plugin release.
+- **AC-8.6**: The release packet lists `core_routing_policy_id`,
+  `optional_helper_policy_id`, `resolved_installation_id`, `release_policy_id`,
+  every `agent_route_policy_id`, rejected candidates, capability and telemetry
+  profiles, analysis-plan lock, qualification and control results, UAT,
+  remaining gaps, and review order.
+- **AC-8.7**: Release evidence pins minimum/tested Codex versions, candidate
+  manifest, runtime capability snapshot, telemetry profile, prompts, tool and
+  context contracts, materializer/resolver versions, analysis plan, workload
+  manifest, route policies, and release policy. Changes trigger the predeclared
+  scope of requalification, fallback revalidation, or integrated confirmation.
+- **AC-8.8**: Deterministic documentation checks validate relative links,
+  current versus proposed paths, the twelve-agent count, PRD-to-roadmap ownership,
+  acyclic dependencies, candidate-versus-final identity lifecycle, exact-
+  treatment wording, fallback ownership, strict override, atomic no-write,
+  helper/no-helper behavior, and skill-to-agent coverage. They reject retired
+  non-capability routing requirements and unsupported claims that native
+  custom-agent TOML provides ordered fallback.
+- **AC-8.9 — Integrated release gate**: After G56R-007 through G56R-010 lock
+  their policies, G56R-011 composes one `core_routing_policy_id` from the
+  eleven required preferred routes and evaluates it exactly once against the
+  immutable production core on the untouched integrated confirmation corpus. The core
+  must pass every contract, safety, quality, reliability, accepted-workflow,
+  predeclared environment-independent resource-superiority, long-horizon, and
+  simultaneous guardrail gate. Frozen controls run as predeclared secondary
+  arms on untouched data and gate the bounded efficiency wording without
+  changing the primary comparator. Failure reopens route, prompt, or
+  orchestration selection and requires new versioned confirmation evidence.
+  Passing proves bounded improvement over production, not global assembled-
+  policy optimality.
+- **AC-8.10 — Capability support claim**: Support means the eleven required named
+  agents resolve from qualified route policies, install atomically, deliver
+  exact treatment in the tested Codex client/surface, and preserve the previous
+  installation when resolution fails. The claim is limited to the tested
+  technical capability contract and does not promise uninterrupted completion
+  under an external usage limit.
+- **AC-8.11 — Optional-helper release gate**: G56R-010 and G56R-011 separately
+  prove the helper's preferred route, qualified fallbacks, spawn reliability,
+  latency/resource evidence, and no-helper behavior. Helper results do not enter
+  the required-core primary statistic unless a later analysis plan explicitly
+  defines a comparable integrated policy.
+- **AC-8.12 — Long-workflow recovery canaries**: A pre-treatment portfolio
+  contains at least the minimum unique-task count from the analysis plan. Each
+  task declares at least four phases and its scripted multi-agent, interruption,
+  validation-repair, compaction-stress, cancellation, or resume event before
+  treatment. Across the portfolio, at least one task exercises each named event
+  class. Active model time, tool wait, and human wait are separated. These
+  canaries validate operability and recovery only and never substitute for
+  AC-2.9 comparative long-horizon evidence.
+- **AC-8.13 — Skill-to-agent and model-fallback proof**: Before release,
+  G56R-011 publishes a versioned `skill_agent_usage_manifest` covering every
+  active Codex skill entry point and all twelve source agents. Each mapping records
+  skill ID and instruction hash, exact installed agent name, trigger/phase,
+  `required`, `conditional`, `prohibited`, or `not_applicable` state, spawn
+  condition, result-consumption contract, and allowed model-route fallback.
+  Every applicable skill explicitly directs Codex to spawn the named installed
+  custom agent. Across the manifest, every required core agent has at least one
+  production skill path; the helper remains conditional.
 
-## 4. Migration Path (phased - one phase per SPEC)
+  Representative UAT invokes the actual installed skills, not a direct harness
+  call. Across those workflows, every one of the eleven core agents is observed at
+  least once under a predeclared trigger. Each trace binds `skill_id` and skill
+  hash to the named-agent spawn, `route_resolution_id`, effective model/effort
+  when proven, exact-treatment evidence, returned result hash, and downstream
+  decision, artifact, or validation step that consumed the result. Fallback
+  changes only the approved model/effort route within that same named agent.
+  Missing a required spawn, leaving returned work unused, substituting a
+  different named or generic agent, or injecting the agent directly from the
+  harness fails release proof. The separate helper campaign proves the same
+  chain when a helper route resolves and proves the no-helper path otherwise.
+  No single workflow must spawn all twelve agents.
 
-- **Phase 1 (G56R-001) - Research baseline**: establish authoritative facts,
-  current surfaces, candidate routes, and role contracts without changing
-  defaults.
-- **Phase 2 (G56R-002) - Benchmark foundation**: make model x effort evaluation,
-  cost-per-success accounting, and layered promotion reproducible.
-- **Phase 3 (G56R-003) - Installer policy**: preserve role-pinned defaults and
-  keep one explicit global compatibility override on the Python runtime path.
-- **Phase 4 (G56R-004 through G56R-007) - Role cohorts**: evaluate and migrate
-  four independently reviewable cohorts in parallel after the shared contract
-  is stable.
-- **Phase 5 (G56R-008) - Release proof**: regenerate payloads, reconcile shared
-  assertions, run installed UAT, and publish only proven claims.
+### 3.9 Budgets, Controls, Fallback, and Recovery *(-> G56R-004, G56R-005, G56R-011)*
+
+- **AC-9.1**: The harness declares maximum campaign and per-objective resource
+  use/time, retries, subagent threads/depth, context growth, probe attempts, and
+  redundant work. These are evaluation controls, not production scheduler
+  features.
+- **AC-9.2**: Adaptive controls define observable escalation signals, qualified
+  escalation/de-escalation routes, retry and cancellation bounds, and evidence
+  requirements. They cannot choose a model or effort outside the frozen
+  candidate set.
+- **AC-9.3**: G56R-005 simulates preferred model absent, effort unsupported,
+  model hidden, discovery unavailable, exact invocation probe success/failure,
+  treatment-probe failure, approved/unapproved service reroute, no safe required
+  route, helper unavailable, atomic no-write, previous-install preservation,
+  strict override failure, rollback, and retry exhaustion.
+- **AC-9.4**: G56R-004 freezes the dominance contract, and G56R-011 applies it
+  to the final assembled core. If an eligible frozen control materially
+  dominates, static defaults may still ship for declared operational simplicity,
+  but release language cannot call them efficient, optimal, or best measured.
+- **AC-9.5 — Fallback and recovery semantics**: The resolver deterministically
+  evaluates the preferred route then each ordered fallback. Eligibility
+  requires discovered capability or a successful bounded exact invocation
+  probe, supported effort, complete hard-contract qualification, and successful
+  exact-treatment materialization. Preferred-model absence,
+  effort-unsupported, discovery-unavailable, treatment-probe-failed, and other
+  outcomes have stable reason codes. The resolver records every attempted
+  route, limits retries, prevents fallback loops, and never accepts an
+  unqualified route. If a required agent has no safe route, installation makes
+  no partial write, preserves the previous known-good installation, and emits
+  actionable recovery. If no helper route resolves, it uses the validated no-
+  helper path. It never changes unrelated Codex configuration.
+
+## 4. Migration Path (one phase per SPEC)
+
+- **Phase 1 (G56R-001) - Candidate and role-contract research**: Establish
+  official platform facts, twelve-agent role contracts, provisional candidate
+  routes, fallback requirements, and fixture/telemetry needs without waiting on
+  G56R-002 or changing defaults.
+- **Phase 2 (G56R-002 through G56R-005) - Evaluation foundation**: Freeze
+  capability discovery, telemetry profile, exact treatment, shared materializer,
+  runner, fixtures, statistical analysis, controls, budgets, and fallback/
+  recovery simulation.
+- **Phase 3 (G56R-006) - Resolver and installer framework**: Implement the
+  capability-aware resolver, canonical materializer, atomic installer, strict
+  override, and fixture route policies. Do not create final route aggregates.
+- **Phase 4 (G56R-007 through G56R-010) - Agent route policies**: Select
+  preferred and ordered fallback routes for the three required-agent cohorts
+  and optional helper after the shared framework is stable.
+- **Phase 5 (G56R-011) - Final composition and release proof**: Create final
+  core/helper/release identities, rebuild payloads, reconcile installed
+  evidence, run skill-driven UAT and fallback proof, compare frozen controls,
+  and publish only proven claims.
 
 ## 5. Constraints
 
-- Codex-only scope: `speckit-pro/codex-agents/`, Codex skills, the active Python
+- Codex-only scope: Codex agent definitions and skills, the active Python
   runner/install path, Codex payloads, and directly related tests/evals/docs.
-- G56R-003 and later implementation must ground on the post-XPLAT-009 active
-  installer/runtime surface; no deleted Bash helper may be restored.
+- Cross-platform parity: the named-agent catalog remains identical across the
+  Codex and Claude plugins; catalog changes land on both platforms or record an
+  explicit platform-specific exception. The Claude half of the shared
+  twelve-agent catalog is owned by the companion Claude routing PRD.
+- G56R-006 implements the currently deferred Python Codex-agent installer; no
+  deleted Bash helper may be restored or described as active.
 - Python 3.11+ standard library remains the installed runtime substrate; this
   PRD adds no runtime dependency.
-- Agent TOMLs remain the role-policy source of truth. Generated payloads are
-  rebuilt from source, never edited directly.
-- `model_reasoning_effort` values must be accepted by the installed Codex
-  version and selected model before they become defaults.
-- No silent model fallback, partial install, or unreported change to an agent's
-  sandbox/mutation boundary.
-- Live AI evals remain developer-local and budgeted; deterministic and replay
-  checks remain the default CI path.
+- A documented custom-agent file can set one model and one reasoning effort;
+  ordered fallback remains SpecKit Pro policy outside the native agent schema.
+- Source agent definitions and final route-policy manifests are the plugin-owned
+  sources of truth. Capability snapshots and execution traces prove the
+  environment and observed runtime separately.
+- Destination agent policies always materialize explicit model and effort.
+- A model or effort must be discovered or pass the pinned probe and exact-
+  treatment contract before it can become a preferred or fallback route.
+- No silent model fallback, generic-agent substitution, partial required-agent
+  install, or unreported change to sandbox/mutation/tool boundaries is allowed.
+- Live AI evaluation remains developer-local, controlled, and budgeted;
+  deterministic replay and structural checks remain the default CI path.
 - Release-please owns version changes; implementation does not manually bump
   plugin versions.
-- Every implementation slice stays within the repository reviewability
-  contract and reruns the forward size estimator when it becomes available.
+- Every implementation slice follows repository reviewability limits and runs
+  only the relevant Python-authoritative validation.
 
 ## 6. Open Questions
 
-- **OQ-1 (G56R-001):** Does the entitled release-test account expose all three
-  GPT-5.6 tiers and every candidate effort through the installed Codex client?
-  Recommendation: record capability probes and abstain from unverified routes.
-- **OQ-2 (G56R-002):** Does current Codex telemetry expose cache-write tokens and
-  actual credit usage separately? Recommendation: record native fields when
-  present and use dated API-rate normalization as a clearly labeled fallback.
-- **OQ-3 (G56R-003):** Which Python helper owns agent installation after
-  XPLAT-009 merges? Recommendation: bind to the live authoritative registry at
-  scaffold time instead of naming a removed compatibility script.
-- **OQ-4 (G56R-004 through G56R-007):** Which adjacent-tier challengers survive
-  the research spike's availability and contract screen? Recommendation: keep
-  the approved shortlist narrow and expand only unstable comparisons.
+- **OQ-1 (G56R-001/G56R-002):** Which current model IDs and efforts are exposed
+  by each supported Codex client/surface? Recommendation: prefer authoritative
+  discovery, pin the evidence, and use the bounded exact invocation probe only
+  when discovery is unavailable.
+- **OQ-2 (G56R-002):** Which app-server model and provider capability fields are
+  stable enough for installer preflight? Recommendation: version the raw
+  capability snapshot and classify each field through the telemetry profile.
+- **OQ-3 (G56R-002):** Which surface supplies authoritative effective-model and
+  effective-effort evidence for every run? Recommendation: preserve nulls when
+  unavailable. Do not infer returned effort or treat `codex exec --json`
+  lifecycle output as proof it does not document.
+- **OQ-4 (G56R-002/G56R-003):** How reliably does the tested surface expose
+  service-reroute events? Recommendation: classify the field as conditional,
+  keep service reroute separate from plugin resolution, and apply AC-2.3 and
+  AC-2.19.
+- **OQ-5 (G56R-007 through G56R-010):** Which catalog challengers and effort
+  boundaries survive capability, contract, and long-workflow qualification?
+  Recommendation: let evidence determine each named agent's order rather than
+  forcing one model across a cohort.
+- **OQ-6 (G56R-006):** Which Codex integration point gives the installer the
+  required model/capability snapshot? Recommendation: use the documented
+  discovery surface when available, otherwise the bounded probe contract;
+  unresolved capability produces no write.
+- **OQ-7 (G56R-010):** Does the current helper candidate expose a stable,
+  comparable resource measure and exact effort configuration? Recommendation:
+  qualify only what the telemetry profile proves and preserve the no-helper path
+  for every unresolved case.
+- **OQ-8 (G56R-001/G56R-009):** Which Codex custom-agent capabilities are
+  required to express the Claude orchestration-support contracts (consensus
+  synthesis and gate validation)? Recommendation: derive the role contracts
+  from the Claude agent definitions, author per current official custom-agent
+  documentation, and record any platform-specific divergence explicitly.
 
 ## 7. SPEC Catalog Crosswalk
 
 | Feature (§3) | Acceptance Criteria | SPEC | Depends on | Priority |
 |---|---|---|---|---|
-| Research Baseline and Candidate Matrix | AC-1.* | G56R-001 | - | P1 |
-| Model-Effort Benchmark and Promotion Harness | AC-2.* | G56R-002 | G56R-001 | P1 |
-| Tier-aware Installer Defaults and Explicit Override | AC-3.* | G56R-003 | G56R-002; XPLAT-009 runtime stable | P1 |
-| Quality-critical Executor Routing | AC-4.* | G56R-004 | G56R-003 | P1 |
-| Structured-work Agent Routing | AC-5.* | G56R-005 | G56R-003 | P1 |
-| Read-only Reasoning Agent Routing | AC-6.* | G56R-006 | G56R-003 | P1 |
-| Latency-first Helper Routing | AC-7.* | G56R-007 | G56R-003 | P1 |
-| Payload, Documentation, UAT, and Release Proof | AC-8.* | G56R-008 | G56R-004 through G56R-007 | P1 |
+| Candidate Route Baseline and Role Contracts | AC-1.* | G56R-001 | - | P1 |
+| Capability Discovery and Telemetry Profile | AC-2.2 through AC-2.5 | G56R-002 | G56R-001 | P1 |
+| Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | AC-2.1, AC-2.6 through AC-2.16, AC-2.20 | G56R-003 | G56R-002 | P1 |
+| Exact Treatment and Service-reroute Handling | AC-2.19 | G56R-002, G56R-003, G56R-006, G56R-011 | G56R-001 | P1 |
+| Preferred and Fallback Route Qualification | AC-2.21 | G56R-003, G56R-007 through G56R-011 | G56R-002 | P1 |
+| Policy Controls and Adaptive Comparators | AC-2.17, AC-9.2, AC-9.4 | G56R-004, G56R-011 | G56R-003 | P1 |
+| Model Availability, Fallback, and Recovery Simulation | AC-9.1, AC-9.3 | G56R-005 | G56R-004 | P1 |
+| Production Fallback and Recovery Semantics | AC-9.5 | G56R-005, G56R-006, G56R-011 | G56R-004 | P1 |
+| Capability-aware Resolver, Materializer, Installer, and Strict Override | AC-3.* | G56R-006, G56R-011 | G56R-005 | P1 |
+| Quality-critical Executor Routing | AC-4.* | G56R-007, G56R-011 | G56R-006 | P1 |
+| Structured-work Agent Routing | AC-5.* | G56R-008, G56R-011 | G56R-006 | P1 |
+| Read-only Reasoning and Orchestration-support Agent Routing | AC-6.* | G56R-009, G56R-011 | G56R-006 | P1 |
+| Optional Helper Routing and No-helper Path | AC-2.18, AC-7.* | G56R-006, G56R-010, G56R-011 | G56R-005 | P1 |
+| Payload, Installed Skill UAT, Fallback Proof, and Release Integration | AC-8.* | G56R-011 | G56R-007 through G56R-010 | P1 |
 
 ## 8. Success Criteria
 
-1. All eight Features map 1:1 to G56R-001 through G56R-008 and all acceptance
-   criteria are traceable through roadmap, implementation, and release evidence.
-2. Every shipped agent route has zero critical contract regressions, at least
-   95% of its current quality baseline, and the lowest measured cost per
-   successful run among passing candidates, with latency used as tie-breaker.
-3. A clean install verifies all ten agents and reports the exact effective
-   model/effort matrix with no silent fallback.
-4. Source, generated Codex payload, installed cache, guidance, tests, and UAT
-   evidence agree on the final matrix.
-5. Consumers retain a documented global compatibility override and a previous
-   release rollback path.
+1. All acceptance criteria map once through the acyclic G56R-001 through
+   G56R-011 catalog; G56R-001 does not wait on G56R-002, G56R-006 creates only
+   framework/fixture policies, and G56R-011 creates final aggregates.
+2. Every one of the eleven required named agents has one qualified preferred
+   route and zero or more ordered qualified fallbacks. Every fallback preserves
+   the same agent contract and changes only explicit model/effort route fields.
+3. The optional helper has one qualified preferred route when available,
+   approved helper fallbacks when supported, and a validated no-helper path.
+4. The resolver uses a versioned capability snapshot, materializes explicit
+   model and effort values, reports every fallback, bounds all probes/retries,
+   and distinguishes service rerouting from plugin fallback.
+5. A complete required-agent matrix resolves before one atomic install. Any
+   unresolved required agent causes no partial write and preserves the previous
+   known-good installation; strict override failure has the same atomicity.
+6. The assembled preferred core passes integrated contract, quality,
+   reliability, environment-independent resource-superiority, simultaneous
+   guardrail, and powered long-horizon gates against the immutable production
+   core. Release wording obeys the frozen control-dominance result and does not
+   claim global optimality.
+7. Installed skill-driven UAT collectively proves named-agent spawn, resolved
+   route, exact treatment, returned result, and downstream consumption for every
+   required agent, plus the optional helper and no-helper paths. Direct harness
+   injection, generic substitution, or unused results do not satisfy release.
+8. Source, generated payload, installer output, installed cache, active
+   guidance, replay evidence, UAT, rollback, and final identities agree. Only
+   capability-based routing claims supported by the pinned client/surface and
+   evidence are published.
 
 ## 9. References
 
@@ -306,9 +789,12 @@ consumer-focused quality floor.
 - **Roadmap MOC:** [codex-gpt-5-6-agent-routing-roadmap-MOC.md](ai/specs/codex-gpt-5-6-agent-routing-roadmap-MOC.md)
 - **Constitution:** [Racecraft Plugins Public Constitution](../.specify/memory/constitution.md)
 - **Project standards:** [AGENTS.md](../AGENTS.md) and [CLAUDE.md](../CLAUDE.md)
-- **Latest-model guidance:** [Using GPT-5.6](https://developers.openai.com/api/docs/guides/latest-model)
-- **Migration guidance:** [Upgrading to GPT-5.6 Sol](https://developers.openai.com/api/docs/guides/upgrading-to-gpt-5p6-sol)
-- **Codex subagents:** [Choosing models and reasoning](https://developers.openai.com/codex/concepts/subagents#choosing-models-and-reasoning)
-- **Model pages:** [Sol](https://developers.openai.com/api/docs/models/gpt-5.6-sol), [Terra](https://developers.openai.com/api/docs/models/gpt-5.6-terra), [Luna](https://developers.openai.com/api/docs/models/gpt-5.6-luna)
-- **Pricing:** [OpenAI API pricing](https://developers.openai.com/api/docs/pricing)
-- **Prompt guidance:** [GPT-5.6 prompting best practices](https://developers.openai.com/api/docs/guides/latest-model#prompting-best-practices)
+- **Codex custom agents, subagents, model, effort, and skill-trigger behavior:** [Subagents](https://developers.openai.com/codex/subagents)
+- **Codex model discovery, provider capabilities, token usage, and conditional reroute events:** [App server](https://developers.openai.com/codex/app-server)
+- **Codex model and reasoning guidance:** [Models](https://developers.openai.com/codex/models)
+- **Codex configuration fields and inheritance:** [Configuration reference](https://developers.openai.com/codex/config-reference)
+- **Codex non-interactive JSONL and token-usage events:** [Non-interactive mode](https://developers.openai.com/codex/noninteractive)
+- **Current model-selection and prompting guidance:** [Latest model](https://developers.openai.com/api/docs/guides/latest-model)
+- **Cross-platform parity source (Claude agent definitions):**
+  `speckit-pro/agents/consensus-synthesizer.md` and
+  `speckit-pro/agents/gate-validator.md`
