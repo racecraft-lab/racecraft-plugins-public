@@ -173,6 +173,7 @@ def audit_release_notes(
                 ):
                     message = f"{message}: {diagnostic['error']}"
             except json.JSONDecodeError:
+                # Composer stderr is not guaranteed to be JSON; keep the generic failure message.
                 pass
             fail(message, completed.returncode)
         stderr.write(completed.stderr)
