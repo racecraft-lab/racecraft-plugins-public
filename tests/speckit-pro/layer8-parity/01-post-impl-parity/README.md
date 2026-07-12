@@ -30,8 +30,7 @@ The test:
 The PRSG-012 packet contract is part of the parity surface. Both paths
 must render the same `.git/speckit-pr-packet.json`, use the shared
 `speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json`,
-validate with the shared
-`speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`,
+validate with runner helper `validate-pr-packet-read-only`,
 and write the same packet validation JSON before any PR creation side
 effect. Codex guidance must reference those shared artifacts rather than
 introducing duplicate Codex-only schema or validator copies.

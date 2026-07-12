@@ -40,7 +40,7 @@
     },
     "pr_packet_validation": {
       "tolerance": "byte-identical",
-      "rationale": "Both paths use the same shared validate-pr-packet.sh script and must write the same pre-create validation result before PR creation."
+      "rationale": "Both paths use runner helper validate-pr-packet-read-only and must produce the same fresh pre-create validation result."
     },
     "prs_manifest": {
       "tolerance": "byte-identical",

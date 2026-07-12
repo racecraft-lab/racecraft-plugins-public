@@ -103,7 +103,8 @@
   ],
   "required_invariants": {
     "shared_packet_schema": "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json",
-    "shared_packet_validator": "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
+    "shared_packet_validator_helper_id": "validate-pr-packet-read-only",
+    "runner_invocation": "[resolved_python, -m, speckit_pro_runner] with one JSON request on stdin",
     "codex_duplicate_schema_or_validator": false,
     "requires_explicit_pr_create_args": [
       "--base",

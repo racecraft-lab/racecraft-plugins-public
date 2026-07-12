@@ -31,11 +31,11 @@
       "tolerance_key": "stack_manager.recovery"
     },
     {
-      "field": "stack_manager.shared_script",
+      "field": "stack_manager.shared_helper",
       "source": "workflow.md",
       "section_selector": "## Stack Manager Guidance Contract",
-      "extractor": "table_column:Shared Script",
-      "tolerance_key": "stack_manager.shared_script"
+      "extractor": "table_column:Shared Runner Helper",
+      "tolerance_key": "stack_manager.shared_helper"
     },
     {
       "field": "stack_manager.shared_contract",
@@ -46,9 +46,10 @@
     }
   ],
   "required_invariants": {
-    "shared_stack_manager_script": "speckit-pro/skills/speckit-autopilot/scripts/detect-stack-manager.sh",
+    "registered_stack_manager_helper_id": "detect-stack-manager-plan",
+    "active_stack_manager_helper_call": false,
     "shared_stack_manager_contract": "speckit-pro/skills/speckit-autopilot/contracts/stack-manager-decision.schema.json",
-    "codex_duplicate_script_or_schema": false,
+    "codex_duplicate_helper_or_schema": false,
     "fallback_before_mutation": true,
     "fallback_after_gh_stack_mutation": false
   },

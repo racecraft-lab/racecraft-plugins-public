@@ -1,4 +1,5 @@
 # 04 - Stack Manager Guidance
 
 Checks that Agent Teams and fallback paths describe the same supported,
-fallback, blocked, recovery, shared-script, and shared-contract guidance.
+fallback, blocked, recovery, registered runner-helper, and shared-contract
+guidance.

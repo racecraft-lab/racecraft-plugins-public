@@ -24,14 +24,26 @@ surfaces.
 | Phase 6: Analyze | Complete | no findings |
 | Phase 7: Implement | Complete | no code changes |
 
+## Legacy Input Scenario
+
+The synthetic legacy repository contains old operator notes that name the
+retired paths `speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh`
+and `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh`.
+These strings are fixture input and historical provenance only. Neither path
+exists as a current command, and neither may be recommended or invoked.
+
 ## Migration Guidance Contract
+
+Every entry below means invoke `[resolved_python, "-m", "speckit_pro_runner"]`
+with one JSON request on stdin. `helper_id` and `operation` use the same value;
+the row supplies the request `mode` and bounded `inputs`.
 
 | Surface | Dry Run | Apply | Guarantee |
 |---------|---------|-------|-----------|
-| Claude upgrade | `speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh --dry-run --repo-root .` | `speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh --apply --repo-root .` | repository migration only; no Tier-2 auto-run |
-| Codex upgrade | `speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh --dry-run --repo-root .` | `speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh --apply --repo-root .` | repository migration only; no Tier-2 auto-run |
-| Claude scaffold/autopilot | `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --dry-run --spec specs/prsg-011-legacy --repo-root .` | `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --apply --spec specs/prsg-011-legacy --repo-root .` | suggestion only; never invokes relocation |
-| Codex scaffold/autopilot | `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --dry-run --spec specs/prsg-011-legacy --repo-root .` | `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --apply --spec specs/prsg-011-legacy --repo-root .` | suggestion only; never invokes relocation |
+| Claude upgrade | `helper_id=migrate-structure; mode=dry_run; inputs.repo_root=.` | `helper_id=migrate-structure; mode=apply; inputs.repo_root=.` | repository migration only; no Tier-2 auto-run |
+| Codex upgrade | `helper_id=migrate-structure; mode=dry_run; inputs.repo_root=.` | `helper_id=migrate-structure; mode=apply; inputs.repo_root=.` | repository migration only; no Tier-2 auto-run |
+| Claude scaffold/autopilot | `helper_id=relocate-process-artifacts; mode=dry_run; inputs.spec=specs/prsg-011-legacy; inputs.repo_root=.` | `helper_id=relocate-process-artifacts; mode=apply; inputs.spec=specs/prsg-011-legacy; inputs.repo_root=.` | static suggestion only; never auto-runs relocation |
+| Codex scaffold/autopilot | `helper_id=relocate-process-artifacts; mode=dry_run; inputs.spec=specs/prsg-011-legacy; inputs.repo_root=.` | `helper_id=relocate-process-artifacts; mode=apply; inputs.spec=specs/prsg-011-legacy; inputs.repo_root=.` | static suggestion only; never auto-runs relocation |
 
 ## Tier-2 Suggestion Matrix
 
@@ -49,7 +61,7 @@ surfaces.
 
 | Surface | Forbidden |
 |---------|-----------|
-| scaffold | must not invoke `relocate-process-artifacts.sh --dry-run` |
-| scaffold | must not invoke `relocate-process-artifacts.sh --apply` |
-| autopilot | must not invoke `relocate-process-artifacts.sh --dry-run` |
-| autopilot | must not invoke `relocate-process-artifacts.sh --apply` |
+| scaffold | must not invoke retired `relocate-process-artifacts.sh` or auto-run helper mode `dry_run` |
+| scaffold | must not invoke retired `relocate-process-artifacts.sh` or auto-run helper mode `apply` |
+| autopilot | must not invoke retired `relocate-process-artifacts.sh` or auto-run helper mode `dry_run` |
+| autopilot | must not invoke retired `relocate-process-artifacts.sh` or auto-run helper mode `apply` |

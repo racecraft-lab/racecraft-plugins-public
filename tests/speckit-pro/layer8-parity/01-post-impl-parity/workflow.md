@@ -55,15 +55,17 @@ It is NOT a real spec — it's the smallest viable workflow that exercises
 the post-impl parallel group + serial tail plus ordered multi-PR emission.
 
 The `--from-phase post` flag (or equivalent) skips phases 1-7. Both
-Path A (teams) and Path B (parallel subagents) dispatch the same 3
-tracks (Doctor / Code Review / Verify-chain) and apply the serial tail
-(15 Reviewability → 16 PR Body → 17 PR Create → 18 Loop
-→ 19 Retrospective). The serial tail runs the final reviewability
-backstop before packet generation, renders `.git/speckit-pr-packet.json`
-and `.git/speckit-pr-body.md`, validates the current packet with the
-shared `validate-pr-packet.sh`, then creates PRs only with explicit
-`gh pr create --base --head --title --body-file` packet fields. PR
-creation emits N ordered Style B slice PRs from the PRSG-008 layer plan,
-with no legacy flattened-PR fallback, no new slicing heuristics, and no
-post-create packet repair fallback. Parity requires equivalent outputs
-across the two paths.
+Path A (teams) and Path B (parallel subagents) dispatch the same Doctor /
+Code Review / Verify-chain tracks, then complete Integration Suite,
+Reviewability Diff Gate, Self-Review, UAT Runbook Generation, PR Body
+Generation, PR Creation, Review Remediation, and Retrospective. The
+`generate-uat-skeleton` and `final-reviewability-backstop` helpers are
+deferred: reuse committed UAT and reviewability evidence when current, or
+record the documented deferred outcome before PR side effects. Packet
+generation uses runner helper `generate-pr-body`; current packet and title/scope
+checks use `validate-pr-packet-read-only` and
+`validate-pr-workflow-contract`. PR creation uses only explicit
+`gh pr create --base --head --title --body-file` packet fields. Split routes
+use `multi-pr-emission` dry-run command planning before explicit live `gh`
+commands, with no flattened-PR fallback, new slicing heuristics, or post-create
+packet repair. Parity requires equivalent outputs across the two paths.

@@ -8,7 +8,7 @@
     },
     "migration_guidance.commands": {
       "tolerance": "exact",
-      "rationale": "FR-026 and FR-028 command strings are operator-facing product contracts."
+      "rationale": "FR-026 and FR-028 structured runner requests are operator-facing product contracts."
     },
     "tier2_matrix.action": {
       "tolerance": "exact",

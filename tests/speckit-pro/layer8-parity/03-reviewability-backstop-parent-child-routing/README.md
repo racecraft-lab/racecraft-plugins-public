@@ -10,13 +10,14 @@ or emit PRs.
 The workflow records the guidance that Claude Code and Codex surfaces must keep
 aligned:
 
-- final reviewability backstop stops before PR body generation, `gh pr create`,
-  or `multi-pr-emission.sh`
+- missing or correctness-blocked current reviewability evidence stops before
+  `generate-pr-body`, `gh pr create`, or runner helper `multi-pr-emission`
 - generated/template exception text is rejected while operator-owned
   `refactor`, `infra`, and `upgrade` classes remain valid only in review-visible
   contract artifacts
 - parent-child decomposition is a fallback after normal split planning cannot
   produce reviewable slices; child specs remain flat siblings
+- O5 rollup uses the `o5-topology` read-only runner helper
 - contextual router probes promote only high-confidence evidence and keep weak
   evidence in closed hint tokens
 

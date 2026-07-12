@@ -33,7 +33,7 @@
         "Explains that G1 validates the specify phase output (spec.md exists, no [TBD] markers)",
         "Explains that G4 validates checklist completion (no [Gap] markers in spec.md or plan.md)",
         "Explains that G7 validates task completion (all tasks marked [x] in tasks.md)",
-        "Mentions how gate validation is performed (validate-gate.sh script, programmatic checks, or marker scanning)"
+        "Mentions how gate validation is performed through the validate-gate runner helper and programmatic marker checks"
       ]
     },
     {
