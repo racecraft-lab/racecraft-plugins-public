@@ -177,7 +177,7 @@ G56R-006 Resolver, Materializer, Installer, and Strict Override
     |
     +--> G56R-007 Quality-critical Executor Routing --------+
     +--> G56R-008 Structured-work Agent Routing ------------+
-    +--> G56R-009 Read-only and Orchestration Routing ------+
+    +--> G56R-009 Read-only Reasoning and Orchestration-support Agent Routing --+
     +--> G56R-010 Optional Helper and No-helper Path --------+
                                                               |
                                                               v
