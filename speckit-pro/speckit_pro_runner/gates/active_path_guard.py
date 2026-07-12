@@ -8,6 +8,7 @@ import json
 import os
 import re
 import shlex
+import string
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -45,6 +46,7 @@ REPO_BASH_COMMAND_NAMES = frozenset({"bash", "bash.exe", "jq", "jq.exe"})
 REPO_BASH_SHEBANG_NAMES = frozenset({"bash", "bash.exe", "sh", "sh.exe"})
 REPO_BASH_WORKFLOW_PREFIX = ".github/workflows/"
 REPO_BASH_WORKFLOW_SUFFIXES = frozenset({".yaml", ".yml"})
+REPO_BASH_WORKFLOW_DYNAMIC_PATH = re.compile(r"[$`*?\[\]{}]|%[^%\r\n]+%")
 REPO_BASH_ACTIVE_INSTRUCTION_FILES = frozenset(
     {
         ".claude/claude-security-guidance.md",
@@ -98,6 +100,11 @@ REPO_BASH_NON_ACTIONABLE_CONTEXT = re.compile(
 REPO_BASH_EXPLICIT_DIRECTIVE = re.compile(
     r"^\s*(?:(?:[-*+]\s+)|(?:\d+[.)]\s+))?(?:\*\*|`)?"
     r"(?:execute|install|invoke|require|requires|required|run|use|uses|using)\b",
+    re.IGNORECASE,
+)
+REPO_BASH_MODAL_DIRECTIVE = re.compile(
+    r"\b(?:can|could|must|need(?:s)?\s+to|shall|should|will|would)\s+"
+    r"(?:execute|install|invoke|require|run|use)\b",
     re.IGNORECASE,
 )
 REPO_BASH_WRAPPED_NEGATIVE = re.compile(
@@ -389,6 +396,7 @@ class RepoBashShellBindingEvent:
     category: str | None
     line: int
     column: int
+    dominates: bool
 
 
 REPO_BASH_UNKNOWN_RESOLUTION = RepoBashStaticResolution("unknown")
@@ -665,10 +673,10 @@ def run_repo_bash_confinement(entry: Any, request: Any, repo_root: Path) -> dict
             {
                 "allowlist": repo_bash_allowlist_summary(request.inputs, allowlist),
                 "enumeration": {
-                    "active_instruction_values": "inspected",
-                    "runtime_diagnostic_values": "inspected",
+                    "active_instruction_values": "not_inspected",
+                    "runtime_diagnostic_values": "not_inspected",
                     "source": "git ls-files -z",
-                    "workflow_run_values": "inspected",
+                    "workflow_run_values": "not_inspected",
                     "tracked_file_count": len(tracked_paths),
                 },
             }
@@ -1113,10 +1121,16 @@ def repo_bash_instruction_findings(
 def repo_bash_instruction_non_actionable(lines: list[str], index: int) -> bool:
     line = lines[index]
     local_context = REPO_BASH_SCRIPT_REFERENCE.sub("<script>", line)
-    if REPO_BASH_NON_ACTIONABLE_CONTEXT.search(local_context) is not None:
+    if (
+        REPO_BASH_NON_ACTIONABLE_CONTEXT.search(local_context) is not None
+        or re.search(r"\bshould\s+not\b", local_context, re.IGNORECASE) is not None
+    ):
         return True
 
-    directive = REPO_BASH_EXPLICIT_DIRECTIVE.search(line) is not None
+    directive = (
+        REPO_BASH_EXPLICIT_DIRECTIVE.search(line) is not None
+        or REPO_BASH_MODAL_DIRECTIVE.search(line) is not None
+    )
     direct_command = REPO_BASH_DIRECT_COMMAND.search(line) is not None
     previous = lines[index - 1].strip() if index > 0 else ""
     if directive:
@@ -1302,15 +1316,22 @@ def repo_bash_guidance_resolution(
             return repo_bash_dynamic_guidance(node)
         assignment_index = assignment_indexes[-1]
         assignment = events[assignment_index]
-        if events[assignment_index + 1 :]:
-            return repo_bash_dynamic_guidance(node)
-        return repo_bash_guidance_resolution(
+        current = repo_bash_guidance_resolution(
             assignment.arguments[0],
             assignments,
             assignment.context,
             resolving | {node.id},
             depth + 1,
         )
+        for event in events[assignment_index + 1 :]:
+            current = repo_bash_apply_guidance_event(
+                current,
+                event,
+                assignments,
+                resolving | {node.id},
+                depth + 1,
+            )
+        return current
     if isinstance(node, ast.NamedExpr):
         return repo_bash_guidance_resolution(
             node.value,
@@ -1337,6 +1358,49 @@ def repo_bash_guidance_resolution(
             ),
             node,
         )
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mod):
+        template = repo_bash_guidance_resolution(
+            node.left,
+            assignments,
+            context,
+            resolving,
+            depth + 1,
+        )
+        positional: list[RepoBashGuidanceResolution] = []
+        mapping: dict[str, RepoBashGuidanceResolution] = {}
+        if isinstance(node.right, ast.Tuple):
+            positional = [
+                repo_bash_guidance_resolution(
+                    value,
+                    assignments,
+                    context,
+                    resolving,
+                    depth + 1,
+                )
+                for value in node.right.elts[:REPO_BASH_RESOLUTION_MAX_ITEMS]
+            ]
+        elif isinstance(node.right, ast.Dict):
+            for key, value in zip(node.right.keys, node.right.values):
+                if not isinstance(key, ast.Constant) or not isinstance(key.value, str):
+                    return repo_bash_dynamic_guidance(node)
+                mapping[key.value] = repo_bash_guidance_resolution(
+                    value,
+                    assignments,
+                    context,
+                    resolving,
+                    depth + 1,
+                )
+        else:
+            positional = [
+                repo_bash_guidance_resolution(
+                    node.right,
+                    assignments,
+                    context,
+                    resolving,
+                    depth + 1,
+                )
+            ]
+        return repo_bash_percent_guidance(template, positional, mapping, node)
     if isinstance(node, ast.JoinedStr):
         current = repo_bash_scalar_guidance(node, "", complete=True)
         for value in node.values:
@@ -1415,15 +1479,187 @@ def repo_bash_guidance_resolution(
             "collection",
             tuple(values[:REPO_BASH_RESOLUTION_MAX_ITEMS]),
         )
-    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "str" and len(node.args) == 1:
+    if isinstance(node, ast.Call):
+        if (
+            isinstance(node.func, ast.Attribute)
+            and node.func.attr == "format"
+            and not any(keyword.arg is None for keyword in node.keywords)
+        ):
+            template = repo_bash_guidance_resolution(
+                node.func.value,
+                assignments,
+                context,
+                resolving,
+                depth + 1,
+            )
+            positional = [
+                repo_bash_guidance_resolution(
+                    argument,
+                    assignments,
+                    context,
+                    resolving,
+                    depth + 1,
+                )
+                for argument in node.args[:REPO_BASH_RESOLUTION_MAX_ITEMS]
+            ]
+            keywords = {
+                keyword.arg: repo_bash_guidance_resolution(
+                    keyword.value,
+                    assignments,
+                    context,
+                    resolving,
+                    depth + 1,
+                )
+                for keyword in node.keywords[:REPO_BASH_RESOLUTION_MAX_ITEMS]
+                if keyword.arg is not None
+            }
+            return repo_bash_format_guidance(template, positional, keywords, node)
+        if isinstance(node.func, ast.Name) and node.func.id == "str" and len(node.args) == 1:
+            return repo_bash_guidance_resolution(
+                node.args[0],
+                assignments,
+                context,
+                resolving,
+                depth + 1,
+            )
+    return repo_bash_dynamic_guidance(node)
+
+
+def repo_bash_apply_guidance_event(
+    current: RepoBashGuidanceResolution,
+    event: RepoBashBindingEvent,
+    assignments: dict[str, list[RepoBashBindingEvent]],
+    resolving: set[str],
+    depth: int,
+) -> RepoBashGuidanceResolution:
+    def resolve(node: ast.AST) -> RepoBashGuidanceResolution:
         return repo_bash_guidance_resolution(
-            node.args[0],
+            node,
             assignments,
-            context,
+            event.context,
             resolving,
             depth + 1,
         )
-    return repo_bash_dynamic_guidance(node)
+
+    if event.kind == "augadd" and len(event.arguments) == 1:
+        return repo_bash_add_guidance(current, resolve(event.arguments[0]), event.context)
+    if event.kind in {"append", "extend"} and len(event.arguments) == 1:
+        if current.kind != "collection":
+            return repo_bash_dynamic_guidance(event.context)
+        added = resolve(event.arguments[0])
+        return RepoBashGuidanceResolution(
+            "collection",
+            (*current.values, *added.values)[:REPO_BASH_RESOLUTION_MAX_ITEMS],
+        )
+    if event.kind == "insert" and len(event.arguments) == 2:
+        if current.kind != "collection":
+            return repo_bash_dynamic_guidance(event.context)
+        index = repo_bash_static_integer(event.arguments[0])
+        added = resolve(event.arguments[1])
+        if index is None:
+            return repo_bash_dynamic_guidance(event.context)
+        values = list(current.values)
+        normalized_index = max(0, min(index if index >= 0 else len(values) + index, len(values)))
+        values[normalized_index:normalized_index] = added.values
+        return RepoBashGuidanceResolution(
+            "collection",
+            tuple(values[:REPO_BASH_RESOLUTION_MAX_ITEMS]),
+        )
+    return repo_bash_dynamic_guidance(event.context)
+
+
+def repo_bash_guidance_item(
+    resolution: RepoBashGuidanceResolution,
+    node: ast.AST,
+) -> RepoBashGuidanceString:
+    if resolution.kind == "scalar" and len(resolution.values) == 1:
+        return resolution.values[0]
+    return RepoBashGuidanceString(
+        line=getattr(node, "lineno", 1),
+        value="<dynamic>",
+        complete=False,
+    )
+
+
+def repo_bash_format_guidance(
+    template: RepoBashGuidanceResolution,
+    positional: list[RepoBashGuidanceResolution],
+    keywords: dict[str, RepoBashGuidanceResolution],
+    node: ast.AST,
+) -> RepoBashGuidanceResolution:
+    template_item = repo_bash_guidance_item(template, node)
+    output: list[str] = []
+    complete = template_item.complete
+    automatic_index = 0
+    try:
+        fields = list(string.Formatter().parse(template_item.value))
+    except ValueError:
+        return repo_bash_dynamic_guidance(node)
+    for literal, field_name, format_spec, conversion in fields:
+        output.append(literal)
+        if field_name is None:
+            continue
+        if field_name == "":
+            index = automatic_index
+            automatic_index += 1
+            resolution = positional[index] if index < len(positional) else repo_bash_dynamic_guidance(node)
+        elif field_name.isdecimal():
+            index = int(field_name)
+            resolution = positional[index] if index < len(positional) else repo_bash_dynamic_guidance(node)
+        elif re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", field_name):
+            resolution = keywords.get(field_name, repo_bash_dynamic_guidance(node))
+        else:
+            resolution = repo_bash_dynamic_guidance(node)
+        item = repo_bash_guidance_item(resolution, node)
+        output.append(item.value)
+        complete = complete and item.complete and not format_spec and conversion is None
+    return repo_bash_scalar_guidance(node, "".join(output), complete=complete)
+
+
+def repo_bash_percent_guidance(
+    template: RepoBashGuidanceResolution,
+    positional: list[RepoBashGuidanceResolution],
+    mapping: dict[str, RepoBashGuidanceResolution],
+    node: ast.AST,
+) -> RepoBashGuidanceResolution:
+    template_item = repo_bash_guidance_item(template, node)
+    field_pattern = re.compile(
+        r"%(?:\((?P<key>[^)]+)\))?[#0\- +]*(?:\d+|\*)?(?:\.(?:\d+|\*))?"
+        r"[hlL]?(?P<conversion>[diouxXeEfFgGcrsa%])"
+    )
+    output: list[str] = []
+    complete = template_item.complete
+    cursor = 0
+    positional_index = 0
+    for match in field_pattern.finditer(template_item.value):
+        literal = template_item.value[cursor : match.start()]
+        if "%" in literal:
+            return repo_bash_dynamic_guidance(node)
+        output.append(literal)
+        cursor = match.end()
+        if match.group("conversion") == "%":
+            output.append("%")
+            continue
+        key = match.group("key")
+        if key is not None:
+            resolution = mapping.get(key, repo_bash_dynamic_guidance(node))
+        else:
+            resolution = (
+                positional[positional_index]
+                if positional_index < len(positional)
+                else repo_bash_dynamic_guidance(node)
+            )
+            positional_index += 1
+        item = repo_bash_guidance_item(resolution, node)
+        output.append(item.value)
+        complete = complete and item.complete and "*" not in match.group(0)
+    tail = template_item.value[cursor:]
+    if "%" in tail:
+        return repo_bash_dynamic_guidance(node)
+    output.append(tail)
+    if cursor == 0:
+        return repo_bash_dynamic_guidance(node)
+    return repo_bash_scalar_guidance(node, "".join(output), complete=complete)
 
 
 def repo_bash_scalar_guidance(
@@ -1671,6 +1907,8 @@ def repo_bash_workflow_dispatch_path_failure(
 ) -> str | None:
     if invalid_scan_root_reason(raw_path) is not None:
         return "workflow Python dispatch target must be repository-relative and confined"
+    if REPO_BASH_WORKFLOW_DYNAMIC_PATH.search(raw_path) is not None:
+        return "workflow Python dispatch target must not use shell expansion or glob syntax"
     path = normalize_path(raw_path)
     if Path(path).suffix.lower() != ".py":
         return "workflow Python dispatch target must be a Python file"
@@ -1989,6 +2227,25 @@ def repo_bash_scope_nodes(scope: ast.AST):
 
 def repo_bash_shell_binding_events(scope: ast.AST) -> list[RepoBashShellBindingEvent]:
     events: list[RepoBashShellBindingEvent] = []
+    nodes = list(repo_bash_scope_nodes(scope))
+    node_set = set(nodes)
+    parents = {
+        child: parent
+        for parent in nodes
+        for child in ast.iter_child_nodes(parent)
+        if child in node_set
+    }
+
+    def dominates(node: ast.AST) -> bool:
+        current = node
+        while current is not scope:
+            parent = parents.get(current)
+            if parent is None:
+                break
+            if isinstance(parent, (ast.If, ast.For, ast.AsyncFor, ast.While, ast.Try, ast.Match)):
+                return False
+            current = parent
+        return True
 
     def add(name: str, category: str | None, node: ast.AST) -> None:
         events.append(
@@ -1997,10 +2254,10 @@ def repo_bash_shell_binding_events(scope: ast.AST) -> list[RepoBashShellBindingE
                 category=category,
                 line=getattr(node, "lineno", 0),
                 column=getattr(node, "col_offset", 0),
+                dominates=dominates(node),
             )
         )
 
-    nodes = list(repo_bash_scope_nodes(scope))
     for node in nodes:
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -2048,6 +2305,8 @@ def repo_bash_apply_shell_binding_events(
         if position is not None and (event.line, event.column) > position:
             break
         if event.category is None:
+            if not event.dominates:
+                continue
             bindings.pop(event.name, None)
         else:
             bindings[event.name] = event.category
@@ -5536,6 +5795,7 @@ def repo_bash_base_data(
     inputs: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     passing = status == "ok"
+    inspection_state = "inspected" if passing else "not_inspected"
     allowlist_path = (inputs or {}).get("allowlist_file", XPLAT_010_ALLOWLIST)
     if not isinstance(allowlist_path, str) or not allowlist_path:
         allowlist_path = XPLAT_010_ALLOWLIST
@@ -5556,23 +5816,23 @@ def repo_bash_base_data(
         "schema_version": "1.0",
         "feature_id": "XPLAT-010",
         "status": "pass" if passing else "fail",
-        "blocking_count": 0,
+        "blocking_count": 0 if passing else 1,
         "classified_counts": {},
         "findings": [],
         "total_finding_count": 0,
         "truncated_finding_count": 0,
         "script_file_count": 0,
         "enumeration": {
-            "active_instruction_values": "inspected",
-            "runtime_diagnostic_values": "inspected",
+            "active_instruction_values": inspection_state,
+            "runtime_diagnostic_values": inspection_state,
             "source": "git ls-files -z",
-            "workflow_run_values": "inspected",
+            "workflow_run_values": inspection_state,
             "tracked_file_count": 0,
         },
         "allowlist": {
             "path": allowlist_path,
-            "entry_count": len(XPLAT_010_CANONICAL_ALLOWLIST_PATHS),
-            "release_readiness_excluded": True,
+            "entry_count": len(XPLAT_010_CANONICAL_ALLOWLIST_PATHS) if passing else 0,
+            "release_readiness_excluded": passing,
         },
     }
 
@@ -5615,7 +5875,7 @@ def invalid_scan_root_reason(raw: str) -> str | None:
     root = normalize_path(raw)
     if not root:
         return "configured scan root must be non-empty"
-    if Path(root).is_absolute() or re.match(r"^[A-Za-z]:/", root) or root.startswith("~"):
+    if Path(root).is_absolute() or re.match(r"^[A-Za-z]:", root) or root.startswith("~"):
         return "configured scan root must be repository-relative"
     parts = [part for part in root.split("/") if part and part != "."]
     if any(part == ".." for part in parts):

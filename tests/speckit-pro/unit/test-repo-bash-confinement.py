@@ -106,7 +106,7 @@ class RepoBashConfinementTests(unittest.TestCase):
         self.assertEqual(schema["properties"]["enumeration"]["properties"]["source"]["const"], "git ls-files -z")
         expected_allowlist_count = len(active_path_guard.XPLAT_010_CANONICAL_ALLOWLIST_PATHS)
         self.assertEqual(
-            schema["properties"]["allowlist"]["properties"]["entry_count"]["const"],
+            schema["properties"]["allowlist"]["properties"]["entry_count"]["maximum"],
             expected_allowlist_count,
         )
         for field in schema["required"]:
@@ -140,10 +140,20 @@ class RepoBashConfinementTests(unittest.TestCase):
                 "tracked_file_count",
             },
         )
-        self.assertEqual(enumeration["active_instruction_values"], "inspected")
-        self.assertEqual(enumeration["runtime_diagnostic_values"], "inspected")
+        inspection_fields = (
+            "active_instruction_values",
+            "runtime_diagnostic_values",
+            "workflow_run_values",
+        )
+        inspection_states = {enumeration[field] for field in inspection_fields}
+        self.assertEqual(len(inspection_states), 1)
+        inspection_state = next(iter(inspection_states))
+        for field in inspection_fields:
+            self.assertIn(
+                inspection_state,
+                schema["properties"]["enumeration"]["properties"][field]["enum"],
+            )
         self.assertEqual(enumeration["source"], "git ls-files -z")
-        self.assertEqual(enumeration["workflow_run_values"], "inspected")
         self.assertIs(type(enumeration["tracked_file_count"]), int)
         self.assertGreaterEqual(enumeration["tracked_file_count"], 0)
 
@@ -151,15 +161,25 @@ class RepoBashConfinementTests(unittest.TestCase):
         self.assertEqual(set(allowlist), {"path", "entry_count", "release_readiness_excluded"})
         self.assertIsInstance(allowlist["path"], str)
         self.assertTrue(allowlist["path"])
-        self.assertEqual(allowlist["entry_count"], expected_allowlist_count)
-        self.assertIs(allowlist["release_readiness_excluded"], True)
+        self.assertIs(type(allowlist["entry_count"]), int)
+        self.assertGreaterEqual(allowlist["entry_count"], 0)
+        self.assertLessEqual(allowlist["entry_count"], expected_allowlist_count)
+        self.assertIs(type(allowlist["release_readiness_excluded"]), bool)
 
         self.assertEqual(data["total_finding_count"], len(data["findings"]))
         self.assertEqual(data["truncated_finding_count"], 0)
-        self.assertEqual(
-            data["blocking_count"],
-            sum(item["classification"] == "blocking_repo_bash" for item in data["findings"]),
-        )
+        if inspection_state == "inspected":
+            self.assertEqual(allowlist["entry_count"], expected_allowlist_count)
+            self.assertIs(allowlist["release_readiness_excluded"], True)
+            self.assertEqual(
+                data["blocking_count"],
+                sum(item["classification"] == "blocking_repo_bash" for item in data["findings"]),
+            )
+        else:
+            self.assertEqual(data["status"], "fail")
+            self.assertGreater(data["blocking_count"], 0)
+            self.assertEqual(data["findings"], [])
+            self.assertEqual(allowlist["release_readiness_excluded"], allowlist["entry_count"] > 0)
         self.assertEqual(sum(data["classified_counts"].values()), len(data["findings"]))
 
     def test_fixture_matrix_and_result_contract(self) -> None:
@@ -301,6 +321,43 @@ class MethodBindings:
             {item.pattern for item in findings},
             {"bash --version", "jq --version", "bash --help", "bash --method"},
         )
+
+    def test_conditional_subprocess_rebinding_does_not_hide_forbidden_calls(self) -> None:
+        sources = {
+            "if": """
+import subprocess
+
+if False:
+    subprocess = safe_runner
+
+subprocess.run(['bash', '--version'])
+""",
+            "loop": """
+import subprocess
+
+for runner in optional_runners:
+    subprocess = runner
+
+subprocess.run(['bash', '--version'])
+""",
+            "try": """
+import subprocess
+
+try:
+    initialize_runner()
+except RuntimeError:
+    subprocess = safe_runner
+
+subprocess.run(['bash', '--version'])
+""",
+        }
+        for control_flow, source in sources.items():
+            with self.subTest(control_flow=control_flow):
+                findings = active_path_guard.repo_bash_python_findings(
+                    f"tools/{control_flow}-rebind.py",
+                    source,
+                )
+                self.assertEqual([item.pattern for item in findings], ["bash --version"])
 
     def test_structural_json_scans_only_execution_values(self) -> None:
         hook_content = json.dumps(
@@ -447,6 +504,41 @@ jobs:
                     tracked if "untracked" in target else tracked | {target},
                 )
                 self.assertEqual([item.category for item in findings], ["workflow_dispatch"])
+
+    def test_workflow_python_targets_reject_expansion_globs_and_drive_prefixes(self) -> None:
+        blocked_targets = (
+            "scripts/$TARGET.py",
+            "scripts/${TARGET}.py",
+            "scripts/*.py",
+            "scripts/check?.py",
+            "scripts/[ab].py",
+            "scripts/{one,two}.py",
+            "C:tools/check.py",
+            "C:/tools/check.py",
+            "C:\\tools\\check.py",
+        )
+        for target in blocked_targets:
+            with self.subTest(target=target):
+                tracked = {active_path_guard.normalize_path(target)}
+                failure = active_path_guard.repo_bash_workflow_dispatch_path_failure(
+                    target,
+                    tracked,
+                )
+                self.assertIsNotNone(failure)
+
+        for command in (
+            "python3 'scripts/$TARGET.py'",
+            "python3 scripts/*.py",
+            "python3 C:tools/check.py",
+        ):
+            with self.subTest(command=command):
+                target = command.split(maxsplit=1)[1].strip("'")
+                failure = active_path_guard.repo_bash_workflow_run_failure(
+                    command,
+                    {active_path_guard.normalize_path(target)},
+                )
+                self.assertIsNotNone(failure)
+                self.assertEqual(failure[0], "workflow_dispatch")
 
     def test_workflow_python_dispatch_rejects_tracked_external_symlink(self) -> None:
         workflow = {
@@ -691,6 +783,17 @@ subprocess.run([executable, '--version'])
             [],
         )
 
+    def test_operator_directive_does_not_inherit_adjacent_history(self) -> None:
+        content = (
+            "Historical context: scripts/retired-release.sh was removed.\n"
+            "Operators should run scripts/revive-release.sh before publishing.\n"
+        )
+        findings = active_path_guard.repo_bash_instruction_findings("README.md", content)
+        self.assertEqual(
+            [(item.line, item.pattern) for item in findings],
+            [(2, "scripts/revive-release.sh")],
+        )
+
     def test_runtime_diagnostic_fields_block_obsolete_shell_remediation(self) -> None:
         files = [
             {
@@ -748,6 +851,36 @@ def check():
         self.assertEqual(
             {item.pattern for item in findings},
             {"Install jq", "scripts/repair-install.sh"},
+        )
+
+    def test_runtime_diagnostics_resolve_format_percent_and_incremental_strings(self) -> None:
+        source = """
+FORMAT_ACTION = 'Install {} before retrying.'.format('jq')
+PERCENT_ACTION = 'Run %s before retrying.' % 'scripts/repair-install.sh'
+
+def check():
+    incremental_action = 'Use '
+    incremental_action += 'bash before retrying.'
+    actions = []
+    actions.append('Run scripts/rebuild-cache.sh before retrying.')
+    return diagnostic(
+        'failed',
+        'repair failed',
+        remediation_actions=[FORMAT_ACTION, PERCENT_ACTION, incremental_action, actions],
+    )
+"""
+        findings = active_path_guard.repo_bash_runtime_diagnostic_findings(
+            "speckit-pro/speckit_pro_runner/helpers/incremental.py",
+            source,
+        )
+        self.assertEqual(
+            {item.pattern for item in findings},
+            {
+                "Install jq",
+                "scripts/repair-install.sh",
+                "Use bash",
+                "scripts/rebuild-cache.sh",
+            },
         )
 
     def test_runtime_diagnostics_fail_closed_only_for_dangerous_dynamic_templates(self) -> None:
@@ -846,6 +979,40 @@ def check(tool, error):
         self.assertEqual(result["status"], "missing_prerequisite")
         self.assertEqual(result["exit_code"], 3)
         self.assertEqual([item["code"] for item in result["diagnostics"]], ["missing_prerequisite"])
+
+    def test_error_envelopes_do_not_claim_zero_blocks_or_completed_inspection(self) -> None:
+        with temporary_repo() as root:
+            allowlist_error = run_guard(root, allowlist_file="missing-allowlist.json")
+        self.assertEqual(allowlist_error["status"], "input_error")
+        self.assertGreater(allowlist_error["data"]["blocking_count"], 0)
+        self.assertEqual(
+            {
+                allowlist_error["data"]["enumeration"][field]
+                for field in (
+                    "active_instruction_values",
+                    "runtime_diagnostic_values",
+                    "workflow_run_values",
+                )
+            },
+            {"not_inspected"},
+        )
+
+        with temporary_repo() as root:
+            with patch.object(active_path_guard.subprocess, "run", side_effect=FileNotFoundError("git")):
+                git_error = run_guard(root)
+        self.assertEqual(git_error["status"], "missing_prerequisite")
+        self.assertGreater(git_error["data"]["blocking_count"], 0)
+        self.assertEqual(
+            {
+                git_error["data"]["enumeration"][field]
+                for field in (
+                    "active_instruction_values",
+                    "runtime_diagnostic_values",
+                    "workflow_run_values",
+                )
+            },
+            {"not_inspected"},
+        )
 
     def test_guard_does_not_accept_fixed_file_inputs(self) -> None:
         with temporary_repo([{"path": "tools/stray.sh", "content": "#!/bin/sh\n"}]) as root:
