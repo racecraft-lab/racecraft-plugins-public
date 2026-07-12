@@ -9,7 +9,7 @@ release workflow hotfix shipped in PR #125, and the 2.8.1 release plus local
 Codex reinstall verification confirmed clean platform-specific payloads.
 
 **Branch:** `feat/cicd-release-pipeline`
-**Design Spec:** [2026-03-24-cicd-versioning-release-pipeline-design.md](../superpowers/specs/2026-03-24-cicd-versioning-release-pipeline-design.md)
+**Current release workflow:** [Contribute & Release](../../../docs-site/src/content/docs/contribute-and-release.md)
 
 ---
 
@@ -486,7 +486,8 @@ second skill directory name into the install payload.
 
 ## References
 
-- **Design Spec:** [2026-03-24-cicd-versioning-release-pipeline-design.md](../superpowers/specs/2026-03-24-cicd-versioning-release-pipeline-design.md)
+- **Current release workflow:** [Contribute & Release](../../../docs-site/src/content/docs/contribute-and-release.md)
+- **Historical design provenance:** [Merged-spec archive report](../../../.specify/memory/archive-reports/2026-06-13-merged-specs-post-merge-hygiene.md#historical-cicd-design-source)
 - **SpecKit Workflow Template:** `docs/ai/speckit-workflow-template.md`
 - **Project Standards:** [CLAUDE.md](../../../CLAUDE.md), [AGENTS.md](../../../AGENTS.md)
 - **Anthropic Plugin Docs:** [Plugins Reference](https://code.claude.com/docs/en/plugins-reference), [Plugin Marketplaces](https://code.claude.com/docs/en/plugin-marketplaces)

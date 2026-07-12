@@ -85,6 +85,18 @@
 
 ## Recovery Commands
 
+### Historical CI/CD Design Source
+
+The original CI/CD design document was removed as outdated in commit
+`5161ee3ab4b8c187e92fc8159335a2643deea506`. The completed technical roadmap
+preserves its relevant decisions, and the current operational workflow lives in
+`docs-site/src/content/docs/contribute-and-release.md`. Recover the historical
+source from the deletion commit's parent with:
+
+```text
+git show 73fcc0cdfdf8f6589d0bc48935011a7a765746d8:docs/superpowers/specs/2026-03-24-cicd-versioning-release-pipeline-design.md
+```
+
 ### SPEC-001
 
 ```text
