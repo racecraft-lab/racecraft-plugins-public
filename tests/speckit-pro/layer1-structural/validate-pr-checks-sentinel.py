@@ -118,7 +118,10 @@ CONTENT_CHECKS: list[tuple[str, str, str, list[str]]] = [
         "run: python3 scripts/check-pr-workflow-results.py",
     ]),
     ("workflow", "all", "sentinel runs if: always()", ["if: always()"]),
-    ("workflow", "all", "sentinel has permissions: {}", ["permissions: {}"]),
+    ("workflow", "all", "sentinel has only checkout read permission", [
+        "validate-plugins:",
+        "contents: read",
+    ]),
     ("workflow", "absent", "latest jq job is deferred", ["test-latest-jq:", "latest_jq_result"]),
     ("workflow", "all", "test job dispatches runner toolchain gate",
      ["run-toolchain-preflight.json", 'PYTHONPATH="${PLUGIN}" python3 -m speckit_pro_runner']),
@@ -330,7 +333,7 @@ jobs:
                 )
 
             sentinel_block = _job_block(content, "validate-plugins")
-            self.assertRegex(sentinel_block, r"(?m)^    permissions: \{\}$")
+            self.assertRegex(sentinel_block, r"(?m)^    permissions:\n      contents: read$")
             self.assertIn("persist-credentials: false", sentinel_block)
 
             actionlint_content = helper_contents[ACTIONLINT_HELPER_FILE]

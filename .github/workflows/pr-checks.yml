@@ -261,7 +261,8 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     needs: [detect, test, artifact-consistency]
-    permissions: {}
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
