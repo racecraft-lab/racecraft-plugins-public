@@ -586,10 +586,10 @@ export const firstRunCheckpoints = [
     handoff: docsLink('First-run checkpoints', '/first-run/'),
   },
   {
-    id: 'jq',
-    label: 'jq',
+    id: 'python-runtime',
+    label: 'Python 3.11+ runtime',
     category: 'prerequisite',
-    description: '`jq` is ready when helper scripts inspect JSON gate output.',
+    description: 'Confirm Python 3.11+ is available for the SpecKit Pro runner and repository validation.',
     handoff: docsLink('First-run checkpoints', '/first-run/'),
   },
   {

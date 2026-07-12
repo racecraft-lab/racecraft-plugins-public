@@ -199,9 +199,15 @@ function validateData(dataModule) {
   }
 
   const checkpointText = checkpoints.map((checkpoint) => `${checkpoint.label} ${checkpoint.description}`).join('\n').toLowerCase();
-  for (const requiredText of ['platform', 'spec kit cli', 'constitution', 'roadmap', 'github cli', 'jq', 'branch', 'worktree', 'scaffold', 'docs validation']) {
+  const checkpointIds = new Set(checkpoints.map((checkpoint) => checkpoint.id));
+  for (const requiredText of ['platform', 'spec kit cli', 'python 3.11', 'constitution', 'roadmap', 'github cli', 'branch', 'worktree', 'scaffold', 'docs validation']) {
     assert(checkpointText.includes(requiredText), `firstRunCheckpoints must cover ${requiredText}.`);
   }
+  assert(checkpointIds.has('python-runtime'), 'firstRunCheckpoints must include the Python 3.11+ runtime prerequisite.');
+  assert(
+    !checkpoints.some((checkpoint) => checkpoint.id === 'jq' || checkpoint.label?.trim().toLowerCase() === 'jq'),
+    'firstRunCheckpoints must not require the external jq executable.',
+  );
 
   const handoffText = handoffs.map((handoff) => `${handoff.href} ${handoff.scope}`).join('\n');
   for (const requiredPath of ['/install/claude-code/', '/install/codex/', '/first-run/', '/troubleshooting/', '/reference/']) {
@@ -272,7 +278,7 @@ function validateRenderingSources(routeSource, componentSource, dataSource) {
     /contenteditable/i,
     /<textarea/i,
     /paste(?:d)? user json/i,
-    /run[s]? shell commands from the browser/i,
+    /(?:run[s]?|execute[s]?) (?:local|shell) commands from the browser/i,
   ];
 
   for (const pattern of forbiddenPatterns) {

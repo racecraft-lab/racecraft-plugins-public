@@ -1,5 +1,5 @@
 ---
-description: "Validate project health: templates, agent config, scripts, constitution, and feature artifacts"
+description: "Validate project health: templates, agent config, Python runner/helpers, constitution, and feature artifacts"
 ---
 
 ## User Input
@@ -45,13 +45,31 @@ If an agent is configured (e.g., `"ai_assistant": "claude"`):
 - Agent dir missing: FAIL ("agent directory not found")
 - Agent dir exists but no commands: WARN ("no command files registered")
 
-### Step 4: Check scripts
+### Step 4: Check the Python runner and helpers
 
-Scan `scripts/bash/` and `scripts/powershell/` for script files.
+Look for the current SpecKit Pro runner package in either location:
 
-- No scripts directory: WARN ("no scripts directory found")
-- Scripts exist and are executable: PASS
-- Scripts exist but not executable (missing +x on .sh files): WARN ("scripts not executable - run `chmod +x scripts/bash/*.sh`")
+- Source checkout, relative to the project root: `speckit-pro/speckit_pro_runner/`
+- Installed payload, relative to the resolved plugin root: `speckit_pro_runner/`
+
+If a runner package is present, verify these files exist and are non-empty:
+
+- `__main__.py`
+- `runtime.py`
+- `helpers/registry.py`
+- `gates/registry.py`
+- `speckit-pro-runner.manifest.json`
+- `speckit-pro-runner.sha256`
+
+Read the manifest with Python standard-library `json` and confirm it is a JSON object.
+
+- Runner package and all required files are valid: PASS
+- Runner package exists but a required file is missing, empty, or invalid: FAIL
+- Neither runner location exists: WARN ("SpecKit Pro Python runner not found - skipping plugin runtime layout checks")
+
+The vendored `.specify/scripts/**` compatibility helpers are outside this
+SpecKit Pro runtime check. Leave them unchanged and do not infer a plugin runtime
+prerequisite from their presence.
 
 ### Step 5: Check constitution
 
@@ -80,7 +98,7 @@ Project Health Check
 
 Templates:     5/5 PASS
 Agent Config:  PASS (Claude Code, 8 commands registered)
-Scripts:       PASS (bash: 4 executable, powershell: 4)
+Python Runner: PASS (source checkout; helpers, gates, metadata)
 Constitution:  PASS (245 words)
 
 Features:
