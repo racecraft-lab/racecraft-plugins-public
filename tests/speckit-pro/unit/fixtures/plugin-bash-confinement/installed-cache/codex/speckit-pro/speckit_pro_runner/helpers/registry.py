@@ -7,7 +7,7 @@ from typing import Any
 
 from ..envelope import diagnostic, response
 from .install import run_install_helper
-from .mutation import run_mutation_helper, run_spec_index_write
+from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write
 from .pr_emission import run_pr_emission_helper
 from .promotion import promotion_record
 from .read_only import registry_report, run_registered_helper
@@ -22,6 +22,8 @@ class HelperEntry:
     comparison_mode: str
     authoritative_command: str
     out_of_scope_modes: tuple[str, ...] = ()
+    mutation_operation: str | None = None
+    mutation_operation_deferred: bool = False
 
     def as_record(self) -> dict[str, Any]:
         record = {
@@ -78,6 +80,7 @@ class MutationEntry:
 SCRIPT_BASE = "speckit-pro/skills/speckit-autopilot/scripts"
 REQUEST_FIXTURE_BASE = "tests/speckit-pro/unit/fixtures/read-only-helpers/requests"
 MUTATION_REQUEST_FIXTURE_BASE = "tests/speckit-pro/unit/fixtures/mutation-helpers/requests"
+DISPATCHABLE_MUTATION_PROMOTION_STATUSES = frozenset({"golden_only", "bash_compared"})
 
 
 def authoritative_request(helper_id: str) -> str:
@@ -189,6 +192,7 @@ HELPERS: dict[str, HelperEntry] = {
         "bash_reference",
         authoritative_request("generate-spec-index-check"),
         ("write", "regenerate"),
+        mutation_operation="generate-spec-index-write",
     ),
     "o5-topology": HelperEntry(
         "o5-topology",
@@ -215,6 +219,8 @@ HELPERS: dict[str, HelperEntry] = {
         "bash_reference",
         authoritative_request("plan-layers-feature-dir"),
         ("marker-plan",),
+        mutation_operation="plan-layers-marker-plan",
+        mutation_operation_deferred=True,
     ),
     "validate-pr-workflow-contract": HelperEntry(
         "validate-pr-workflow-contract",
@@ -224,6 +230,8 @@ HELPERS: dict[str, HelperEntry] = {
         "bash_reference",
         authoritative_request("validate-pr-workflow-contract"),
         ("workflow-event-write",),
+        mutation_operation="validate-pr-workflow-contract-write",
+        mutation_operation_deferred=True,
     ),
     "validate-pr-packet-read-only": HelperEntry(
         "validate-pr-packet-read-only",
@@ -233,6 +241,8 @@ HELPERS: dict[str, HelperEntry] = {
         "bash_reference",
         authoritative_request("validate-pr-packet-read-only"),
         ("persistence", "workflow-event-upserts", "pr-body-generation", "pr-emission", "restack"),
+        mutation_operation="validate-pr-packet-write",
+        mutation_operation_deferred=True,
     ),
 }
 
@@ -297,7 +307,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "deferred",
         "golden_fixture",
         deferred_authoritative_request(),
-        rollback="Keep existing installer scripts authoritative until XPLAT-007/XPLAT-008.",
+        rollback="Keep install-codex-agents deferred until a Python runner implementation is promoted.",
     ),
     "install-curated-set": MutationEntry(
         "install-curated-set",
@@ -308,7 +318,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "bash_reference",
         deferred_authoritative_request(),
         bash_reference_ids=("install-curated-set",),
-        rollback="Keep install-curated-set.sh authoritative until install cutover.",
+        rollback="Keep install-curated-set deferred until a Python runner implementation is promoted.",
     ),
     "project-fixup-apply": MutationEntry(
         "project-fixup-apply",
@@ -338,7 +348,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         mutation_authoritative_request("generate-pr-body"),
         ("pr-body-apply",),
         ("generate-pr-body",),
-        "Use generate-pr-body.sh until XPLAT-007 gate migration.",
+        "Retry the registered generate-pr-body operation in dry_run mode before applying again.",
     ),
     "generate-uat-skeleton": MutationEntry(
         "generate-uat-skeleton",
@@ -385,7 +395,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "command_plan",
         mutation_authoritative_request("multi-pr-emission"),
         ("fake-gh-command-capture",),
-        rollback="Keep multi-pr-emission.sh authoritative for live PR work.",
+        rollback="Keep live PR mutation deferred; use the registered multi-pr-emission operation only for command-plan capture.",
     ),
     "restack": MutationEntry(
         "restack",
@@ -466,7 +476,7 @@ def mutation_registry_report() -> dict[str, Any]:
         "mutation_modes_promoted": sorted(
             record["helper_id"]
             for record in records
-            if record["promotion_status"] in {"golden_only", "bash_compared"}
+            if record["promotion_status"] in DISPATCHABLE_MUTATION_PROMOTION_STATUSES
         ),
     }
 
@@ -546,6 +556,9 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
             ],
         )
 
+    if entry.promotion_status not in DISPATCHABLE_MUTATION_PROMOTION_STATUSES:
+        return blocked_promotion_response(entry, request)
+
     if request.mode not in entry.modes:
         return response(
             "input_error",
@@ -586,3 +599,38 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
         return run_pr_emission_helper(entry, request)
 
     return run_mutation_helper(entry, request)
+
+
+def blocked_promotion_response(entry: MutationEntry, request: Any) -> dict[str, Any]:
+    mutation = empty_mutation(request.mode)
+    mutation["mutation_status"] = "blocked"
+    return response(
+        "expected_failure",
+        request_id=request.request_id,
+        data={
+            "helper_id": entry.helper_id,
+            "operation": entry.operation,
+            "mode": request.mode,
+            "promotion_status": entry.promotion_status,
+            "comparison_mode": entry.comparison_mode,
+            "writes_state": False,
+            "mutation": mutation,
+        },
+        diagnostics=[
+            diagnostic(
+                "helper_not_promoted",
+                "helper promotion status blocks runner mutation dispatch",
+                details={
+                    "helper_id": entry.helper_id,
+                    "operation": entry.operation,
+                    "mode": request.mode,
+                    "promotion_status": entry.promotion_status,
+                },
+                remediation_summary="Use only promoted mutation helpers for runner dispatch.",
+                remediation_actions=[
+                    "Inspect mutation-registry-dispatch output before retrying.",
+                    entry.rollback,
+                ],
+            )
+        ],
+    )
