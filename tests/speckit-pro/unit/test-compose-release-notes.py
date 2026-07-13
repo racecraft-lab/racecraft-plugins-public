@@ -196,6 +196,53 @@ class ComposeReleaseNotesTests(unittest.TestCase):
         self.assertEqual(commits[0].subject, "feat(scope)!: Add public highlights (#101)")
 
     @inventory_check
+    def test_merge_commit_ranges_resolve_prs_and_skip_inner_commits(self) -> None:
+        commits = COMPOSER.discover_commits(
+            compare_payload(
+                "feat(autopilot): harden durable marker planning",
+                "docs(release): record composition coverage",
+                "Merge pull request #314 from racecraft-lab/xplat-010-review/03-us1"
+                "\n\nfeat(xplat-010): replace Bash suite orchestration with Python",
+                "Merge pull request #326 from racecraft-lab/xplat-010-review/15-release-contract"
+                "\n\nfeat(xplat-010): validate consumer release-note blocks",
+                "Merge pull request #331 from racecraft-lab/docs-constitution-python",
+                "fix(tooling): complete repository Bash cleanup (#337)",
+            ),
+            {},
+        )
+        self.assertEqual([commit.pr_number for commit in commits], [314, 326, 331, 337])
+        self.assertEqual([commit.kind for commit in commits], ["feat", "feat", "", "fix"])
+        self.assertEqual(
+            commits[0].subject,
+            "feat(xplat-010): replace Bash suite orchestration with Python",
+        )
+
+        body = COMPOSER.compose_release_body(
+            RAW_BODY,
+            commits,
+            {
+                314: pull(
+                    "feat(xplat-010): replace Bash suite orchestration with Python",
+                    "```release-note\nThe test suite now runs on Python alone.\n```",
+                ),
+                326: pull("feat(xplat-010): validate consumer release-note blocks"),
+                331: pull("docs(constitution): align governance with Python tooling"),
+                337: pull("fix(tooling): complete repository Bash cleanup"),
+            },
+            compare_commit_count=6,
+        )
+        self.assertIn("- The test suite now runs on Python alone.", body)
+        self.assertIn("- validate consumer release-note blocks", body)
+        self.assertIn("- complete repository Bash cleanup", body)
+        self.assertNotIn("Merge pull request", body.split("## Commit appendix")[0])
+
+        with self.assertRaisesRegex(COMPOSER.CompositionError, "resolved no pull requests"):
+            COMPOSER.discover_commits(
+                compare_payload("feat(autopilot): harden durable marker planning"),
+                {},
+            )
+
+    @inventory_check
     def test_compare_commit_count_survives_pull_request_deduplication(self) -> None:
         commits = COMPOSER.discover_commits(
             compare_payload(

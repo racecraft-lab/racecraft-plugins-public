@@ -49,6 +49,7 @@ COMPARE_HEADING_RE = re.compile(
     r"(?m)^#{1,6}[ \t]+.*?\]\([^\n)]*/compare/"
     r"(?P<previous>[^\s)]+?)\.\.\.(?P<current>[^\s)]+)\)"
 )
+MERGE_COMMIT_SUBJECT_RE = re.compile(r"^Merge pull request #(?P<number>[1-9][0-9]*) from \S+$")
 SNAPSHOT_MARKER_RE = re.compile(
     r"\n\n<!-- release-note-composer-snapshot:v1 "
     r"source_sha256=(?P<source_sha256>[0-9a-f]{64}) "
@@ -187,16 +188,29 @@ def discover_commits(
         message = commit.get("message") if isinstance(commit, dict) else None
         if not isinstance(message, str) or not message.splitlines():
             raise CompositionError(f"Compare API commit {index} has no subject")
-        subject = message.splitlines()[0].strip()
+        lines = message.splitlines()
+        subject = lines[0].strip()
         pr_match = TRAILING_PR_RE.search(subject)
         if pr_match is None:
-            raise CompositionError(f"commit subject has no resolvable trailing (#N): {subject!r}")
+            pr_match = MERGE_COMMIT_SUBJECT_RE.match(subject)
+            if pr_match is None:
+                # A merge-commit range lists inner branch commits that carry no
+                # PR reference of their own; the merge commit resolves their PR.
+                continue
+            # GitHub merge commits carry the PR title as the first non-empty
+            # body line; prefer it for the commit kind and fallback subject.
+            for line in lines[1:]:
+                if line.strip():
+                    subject = line.strip()
+                    break
         number = int(pr_match.group("number"))
         prefix_match = CONVENTIONAL_PREFIX_RE.match(subject)
         kind = prefix_match.group("kind").lower() if prefix_match else ""
         if number not in seen:
             seen.add(number)
             discovered.append(DiscoveredCommit(number, subject, kind))
+    if commits_value and not discovered:
+        raise CompositionError("Compare range commit subjects resolved no pull requests")
     return discovered
 
 
