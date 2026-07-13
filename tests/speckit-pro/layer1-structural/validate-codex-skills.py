@@ -252,6 +252,7 @@ class ValidateCodexSkills(unittest.TestCase):
         for ref_file in (
             skill_dir / "references" / "phase-execution-codex.md",
             skill_dir / "references" / "post-implementation-codex.md",
+            skill_dir / "references" / "error-recovery-codex.md",
         ):
             if ref_file.is_file():
                 runtime_doc = f"{runtime_doc}\n{ref_file.read_text(encoding='utf-8')}"
@@ -268,10 +269,26 @@ class ValidateCodexSkills(unittest.TestCase):
                 "expected both spawn_agent and wait_agent in the Codex autopilot skill",
             )
 
-        with self.subTest(msg="speckit-autopilot: names real Codex follow-up tools"):
+        with self.subTest(msg="speckit-autopilot: maps hosted and local Codex follow-up tools"):
             self.assertTrue(
-                "followup_task" in runtime_doc and "send_message" in runtime_doc and "send_input" not in runtime_doc,
-                "expected followup_task/send_message and no obsolete send_input reference",
+                "followup_task" in runtime_doc
+                and "send_message" in runtime_doc
+                and "resume_agent" in runtime_doc
+                and "send_input" in runtime_doc,
+                "expected hosted followup_task/send_message plus local send_input and resume-then-send_input handling",
+            )
+
+        with self.subTest(msg="speckit-autopilot: adapts agent cleanup to the exposed Codex surface"):
+            self.assertTrue(
+                "absence of `close_agent` is NOT" in runtime_doc
+                and "prerequisite failure" in runtime_doc
+                and "only when `close_agent` is exposed" in runtime_doc
+                and "interrupt_agent" in runtime_doc
+                and "list_agents" in runtime_doc
+                and "terminal status is corroboration or recovery evidence only" in runtime_doc
+                and "A `wait_agent` timeout is one bounded mailbox poll" in runtime_doc
+                and "`close_agent` is REQUIRED" not in runtime_doc,
+                "expected capability-aware hosted/local lifecycle handling without a close_agent hard requirement",
             )
 
         with self.subTest(msg="speckit-autopilot: validates a single in_progress item before phase execution"):

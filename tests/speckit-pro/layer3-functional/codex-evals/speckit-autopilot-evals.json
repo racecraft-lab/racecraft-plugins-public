@@ -368,17 +368,21 @@
     },
     {
       "id": 28,
-      "prompt": "You are running the Codex autopilot and you are about to fan out work to subagents — for example a Phase 7 batch of [P]-marked tasks, or consensus analysts across several queued items. Describe exactly how you manage agent threads: how many you keep open at once and why, what the full lifecycle of each spawned agent is, and what you do with agents once they finish. Also state what you check about agent threads before reporting the run complete, and what you do if close_agent errors because the agent is already gone or a subagent appears stuck.",
-      "expected_output": "States the full lifecycle is spawn_agent -> wait_agent -> close_agent: every spawned agent is closed with close_agent once its result is consumed, because a completed thread stays open and consumes the session's concurrent-thread budget until closed. States the session caps concurrently open threads at agents.max_threads (config.toml, default 6; surfaced as max_concurrent_threads_per_session), and that fan-out wider than the cap is dispatched incrementally in waves (spawn up to the cap, close each as wait_agent reports it final, refill the freed slot) rather than spawning everything in one turn. Treats close_agent as best-effort and idempotent: a 'thread not found' / already-gone error means the slot is already free, so it logs and continues without retry-looping and without abandoning cleanup of other agents. Bounds wait_agent with a timeout so a stuck subagent cannot hang the run. States that before reporting the run complete it calls list_agents and closes any thread still open.",
+      "prompt": "You are running the Codex autopilot and you are about to fan out work to subagents — for example a Phase 7 batch of [P]-marked tasks, or consensus analysts across several queued items. Describe how you detect the current collaboration surface, respect its concurrency limit, and complete each dispatch. Cover both a local Codex surface that exposes close_agent and hosted Responses Multi-agent, which does not. Also state what you check before reporting completion and how you handle a stuck subagent.",
+      "expected_output": "Capability-detects collaboration actions. On hosted Responses, send_message queues context and followup_task assigns work and starts a turn. On a local surface, send_input delivers follow-up work to an open agent; a closed agent requires resume_agent followed by send_input. Requires spawn_agent -> a bounded wait_agent loop -> consume the dispatched agent's actual final result on every surface; ordinary messages, timeouts, and terminal status do not replace the summary. If close_agent is exposed, calls it best-effort after consuming the result and does not retry-loop already-gone. If absent, does not stop: hosted Responses Multi-agent exposes no close action, so the host retains the inspectable completed thread. Derives subagent_slots from the current surface, subtracting root from total-agent counts and using one when no count is exposed, then dispatches wider fan-out in waves. One wait timeout is only a poll boundary. interrupt_agent is only for a confirmed stuck running turn, preserves context, and requires the item to be re-spawned and return a real result. Audits list_agents when exposed or tracked task/result evidence otherwise before completion.",
       "expectations": [
-        "Names the spawn_agent -> wait_agent -> close_agent lifecycle and that close_agent is required for every spawned agent",
-        "Explains that a completed agent thread stays OPEN and consumes the concurrency budget until close_agent is called",
-        "States the concurrent-open-thread cap is agents.max_threads (default 6), also surfaced as max_concurrent_threads_per_session",
-        "Dispatches fan-out wider than the cap in waves (spawn up to the cap, close each finished agent, refill the freed slot) instead of spawning all in one turn",
-        "Notes wait_agent returns whichever agent finishes first, so slots drain and refill incrementally rather than as an all-at-once barrier",
-        "Treats close_agent as best-effort/idempotent — a 'thread not found' or already-gone error is treated as already-closed, logged, and not retry-looped, and does NOT cause it to stop closing other agents",
-        "Bounds wait_agent with a timeout so a stuck subagent cannot hang the orchestrator",
-        "Before reporting completion, calls list_agents and close_agent on any thread still open from the run"
+        "Capability-detects the collaboration actions before dispatch and does not hard-stop merely because close_agent is absent",
+        "Maps hosted followup_task to assigning work and local send_input to follow-up delivery; a closed local agent uses resume_agent then send_input",
+        "Names spawn_agent -> bounded wait_agent loop -> consume the actual final result as the required cross-surface lifecycle",
+        "States that ordinary mailbox messages, timeouts, and terminal status cannot replace the required agent summary",
+        "Derives subagent_slots from the current surface, subtracts one when a total-agent count includes root, and falls back safely to one when no count is exposed",
+        "Dispatches fan-out wider than the cap in waves instead of spawning all work in one turn",
+        "When close_agent is exposed, treats cleanup as best-effort and does not retry-loop an already-gone result",
+        "When close_agent is absent, leaves the completed inspectable thread to the host without stopping",
+        "Treats one wait_agent timeout as a poll boundary rather than proof the agent is stuck",
+        "Uses interrupt_agent only for a confirmed stuck running turn and states interruption is neither closure nor a result",
+        "Requires any interrupted required item to be re-spawned and return a real result before completion",
+        "Before reporting completion, audits list_agents when exposed or tracked dispatch IDs and consumed results otherwise"
       ]
     },
     {

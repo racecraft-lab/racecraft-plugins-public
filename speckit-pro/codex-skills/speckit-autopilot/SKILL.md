@@ -73,39 +73,66 @@ Bind the workflow to actual Codex primitives:
 
 - `update_plan` is REQUIRED before Phase 1 and after every phase transition.
   If the call fails or is skipped, STOP.
-- `spawn_agent` and `wait_agent` are the REQUIRED orchestration primitives
-  for phase execution. Use `followup_task` when a follow-up should trigger
-  the already-running agent's next turn; use `send_message` only for queued
-  context that does not need to trigger a turn.
-- `close_agent` is REQUIRED to end each subagent once you have consumed its
-  `wait_agent` result. The lifecycle for EVERY dispatch is
-  `spawn_agent` → `wait_agent` → `close_agent` — not just the first two. A
-  completed agent thread stays OPEN and keeps consuming the session's
-  concurrent-thread budget until you close it (Codex's own guidance: "Don't
-  keep agents open for too long if they are not needed anymore"), so close it
-  promptly in the SAME turn you read its result, while it is still fresh.
-- Treat `close_agent` as best-effort and idempotent. If it reports the thread
-  is already gone (`thread not found`, already-shutdown, `InternalAgentDied`),
-  the slot is already free — log it and move on. NEVER retry-loop a failed
-  close, never let a close error block the run, and NEVER stop closing future
-  agents because one close failed. Abandoning cleanup is exactly what lets
-  orphaned threads pile up, exhaust the cap, and freeze the session
-  (openai/codex#22779, #19197; newer Codex makes close idempotent via #24903).
-  Bound every `wait_agent` with a `timeout_ms` so a stuck subagent cannot hang
-  the orchestrator, and on resume never try to re-close an agent from an
-  earlier or aborted session — those threads are already gone.
-- Respect the session's concurrent-open-thread cap. It is `agents.max_threads`
-  in `config.toml` (default **6**); Codex also surfaces it to you at spawn time
-  as `max_concurrent_threads_per_session`. Never hold more open agent threads
-  than that cap. For any fan-out potentially wider than the cap (Phase 7 `[P]`
-  batches, multi-item consensus), dispatch **incrementally**, not all in one
-  turn: spawn up to the cap, then each time `wait_agent` reports an agent at
-  final status, `close_agent` it and spawn the next queued item into the freed
-  slot. `wait_agent` returns whichever agent finishes first, so this drains and
-  refills slot-by-slot — it is not an all-at-once barrier. Stay at or below the
-  cap conservatively.
-- Before reporting the run complete, call `list_agents` and `close_agent` any
-  thread still open from this run. No completed agent should outlive the run.
+- Discover the callable collaboration actions before dispatch and select the
+  semantic equivalents that the current Codex surface actually exposes.
+  `spawn_agent` plus `wait_agent` and delivery of the agent's result are the
+  REQUIRED common contract. Hosted Responses Multi-agent provides
+  `spawn_agent`, `send_message`, `followup_task`, `wait_agent`,
+  `interrupt_agent`, and `list_agents`; it does not expose `close_agent`.
+  Other Codex surfaces can expose equivalents such as `send_input`,
+  `resume_agent`, or `close_agent`. On hosted Responses, `send_message` queues
+  context and `followup_task` assigns work and starts the next turn. On a
+  surface with `send_input`, use it to deliver follow-up work to an open agent;
+  if that agent was explicitly closed, call `resume_agent` first and then
+  `send_input`. Inspection, interruption, and explicit closure are optional
+  actions used only when present. Hard-stop only if spawning or receiving the
+  required result is unavailable — absence of `close_agent` is NOT a
+  prerequisite failure. See the official [Responses Multi-agent action
+  contract](https://developers.openai.com/api/docs/guides/responses-multi-agent#how-multi-agent-works)
+  and [Codex subagent orchestration
+  guidance](https://learn.chatgpt.com/docs/agent-configuration/subagents#orchestration-and-thread-controls),
+  plus the local [configuration
+  reference](https://learn.chatgpt.com/docs/config-file/config-reference#configtoml).
+- The REQUIRED lifecycle on every surface is `spawn_agent` → bounded
+  `wait_agent` loop → consume the dispatched agent's actual final result. A
+  hosted `wait_agent` call can wake for an ordinary message, unrelated mailbox
+  update, timeout, or steering event, so associate updates with the dispatched
+  sender/task and keep waiting until its `FINAL_ANSWER` or equivalent summary
+  is consumed. A terminal status is corroboration or recovery evidence only;
+  it never replaces the required result. If an agent is terminal without a
+  delivered result, drain the mailbox and then re-spawn or fail that item.
+- When `close_agent` is exposed, call it promptly after consuming the result.
+  Cleanup policy is best-effort: if the surface reports the agent already gone,
+  log it and continue without retry-looping. When `close_agent` is absent,
+  consume the result and leave the inspectable thread to the host; optionally
+  reuse it with the available follow-up action.
+- On resume, never assume an older agent still exists. If `list_agents` is
+  available, match returned current-tree entries to the workflow target and
+  current incomplete plan item's canonical task name/prompt; manage or reuse
+  only agents confirmed present and owned by this autopilot run. Without
+  inspection, treat prior-session agent references as stale and spawn fresh.
+  Apply explicit closure only to run-owned agents confirmed present, including
+  a reconciled agent that was spawned before the interruption.
+- Derive `subagent_slots` from the current session without mixing surface
+  conventions: use explicit `max_concurrent_subagents` when provided; when the
+  host advertises total active agents including `/root`, subtract one; when a
+  local surface advertises an open-thread cap, follow that surface's stated
+  semantics. If no count is exposed, set `subagent_slots = 1` as the safe
+  fallback. For wider fan-out, dispatch in waves of at most `subagent_slots`,
+  consume each required result, perform optional closure when exposed, then
+  start the next queued item. Never hard-code one surface's default as
+  another surface's cap.
+- A `wait_agent` timeout is one bounded mailbox poll, not proof that an agent is
+  stuck. Continue bounded waits and inspect status/progress when possible. Use
+  `interrupt_agent` only after a separate execution deadline or confirmed
+  no-progress condition, and only to cancel a still-running turn; it preserves
+  context and is not closure. Any interrupted required item must be re-spawned
+  and return a real result before its plan item can complete.
+- Before reporting the run complete, use `list_agents` when exposed; otherwise
+  audit the tracked dispatch IDs and consumed results. Every required dispatch
+  must have a consumed result. Close remaining current-run threads best-effort
+  only when `close_agent` is exposed. Hosted completed threads are host-managed
+  and do not block completion.
 - `autopilot-fast-helper` is OPTIONAL. Only the main autopilot may invoke it,
   and only for tiny text-only compression, triage, or query-drafting work.
   Never route edits, gate decisions, or consensus votes through it.
@@ -292,7 +319,7 @@ Each phase type has its own specialized executor agent:
 | Clarify | `clarify-executor` | Read-only question set; parent answers and edits |
 | Checklist | `checklist-executor` | Must run checklist AND remediate gaps with research |
 | Analyze | `analyze-executor` | Must run analysis AND remediate ALL findings with research |
-| Implement | `implement-executor` | Task-level dispatch with strict TDD. **Honor `[P]` markers within the concurrency cap** — dispatch consecutive `[P]`-tagged tasks of the same agent type in cap-bounded waves: spawn up to `agents.max_threads` (default 6) at once, and as each finishes via `wait_agent`, `close_agent` it and spawn the next `[P]` task into the freed slot. Do NOT spawn every `[P]` task in ONE turn when the run is wider than the cap. Non-`[P]` tasks dispatch one at a time. After each wave, run TYPECHECK + UNIT_TEST in the lead; on regression, fall back to serial re-run. |
+| Implement | `implement-executor` | Task-level dispatch with strict TDD. **Honor `[P]` markers within derived `subagent_slots`** — dispatch consecutive `[P]`-tagged tasks of the same agent type in cap-bounded waves. As each actual result arrives through the bounded `wait_agent` loop, record it, call `close_agent` only when exposed, and start the next `[P]` task. Do NOT spawn every `[P]` task in ONE turn when the run is wider than the cap. Non-`[P]` tasks dispatch one at a time. After each wave, run TYPECHECK + UNIT_TEST in the lead; on regression, fall back to serial re-run. |
 | Read-only consensus | analyst agents | Read-heavy code/spec/domain analysis |
 
 Concrete Codex mapping:
@@ -420,14 +447,15 @@ ROUND 1 — Category-routed, BATCHED across items
   IF any synthesizer flags [HUMAN REVIEW NEEDED]:
     log + STOP autopilot after applying remaining safe edits.
 
-ROUND 2 — Fan-out across queued items, capped at agents.max_threads
+ROUND 2 — Fan-out across queued items, capped by the current session
   Stage 4: spawn_agent the (3 - |Sx|) analysts that did not run in
-           Round 1 across the queued items, but never hold more than
-           agents.max_threads (default 6) open at once. Dispatch in waves:
-           as each analyst reaches final status via wait_agent, close_agent
-           it and spawn the next queued (item, analyst) into the freed slot.
-  Stage 5: spawn_agent the Round-2 synthesizers under the same cap;
-           close_agent each once its result is recorded.
+           Round 1 across the queued items, but never exceed derived
+           subagent_slots. Dispatch in waves: loop bounded wait_agent calls
+           until each analyst result is consumed, record it, close_agent only
+           when that action is exposed, and start the next queued
+           (item, analyst).
+  Stage 5: spawn_agent the Round-2 synthesizers under subagent_slots;
+           apply the same capability-aware completion lifecycle to each.
   Stage 6: apply Round-2 Artifact Edits serially.
            Apply edit OR flag [HUMAN REVIEW NEEDED] and STOP.
 ```
