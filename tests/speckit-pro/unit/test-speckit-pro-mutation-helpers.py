@@ -209,10 +209,9 @@ class MutationHelperTests(unittest.TestCase):
             record["helper_id"]: record.get("inactive_provenance", {}).get("prior_script")
             for record in data["helpers"]
         }
-        self.assertEqual(
-            prior_scripts["install-codex-agents"],
-            "speckit-pro/codex-skills/install/scripts/install-codex-agents.sh",
-        )
+        self.assertIsNone(prior_scripts["install-codex-agents"])
+        install_record = next(record for record in data["helpers"] if record["helper_id"] == "install-codex-agents")
+        self.assertEqual(install_record["promotion"]["bash_reference_ids"], ["install-codex-agents"])
         self.assertEqual(prior_scripts["install-curated-set"], "speckit-pro/scripts/install-curated-set.sh")
         self.assertEqual(prior_scripts["generate-pr-body"], "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh")
         self.assertEqual(prior_scripts["multi-pr-emission"], "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh")

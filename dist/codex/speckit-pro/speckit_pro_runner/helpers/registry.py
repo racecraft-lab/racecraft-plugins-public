@@ -303,11 +303,12 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "install-codex-agents",
         "install-codex-agents",
         ("dry_run", "apply"),
-        "speckit-pro/codex-skills/install/scripts/install-codex-agents.sh",
+        None,
         "golden_only",
         "golden_fixture",
         mutation_authoritative_request("install-codex-agents"),
         ("dry-run-refresh", "stale-overwrite", "no-op", "rollback", "invalid-source", "unsafe-destination"),
+        bash_reference_ids=("install-codex-agents",),
         rollback="Retry in dry_run mode and preserve the previous same-named Codex agent files before applying again.",
     ),
     "install-curated-set": MutationEntry(

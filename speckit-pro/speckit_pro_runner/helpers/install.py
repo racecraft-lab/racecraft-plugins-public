@@ -456,6 +456,7 @@ def cleanup_codex_agent_destination(
         try:
             path.rmdir()
         except OSError:
+            # Cleanup is best-effort and must not replace the install or rollback result.
             pass
 
 
