@@ -188,12 +188,21 @@ def discover_commits(
         message = commit.get("message") if isinstance(commit, dict) else None
         if not isinstance(message, str) or not message.splitlines():
             raise CompositionError(f"Compare API commit {index} has no subject")
-        subject = message.splitlines()[0].strip()
-        pr_match = TRAILING_PR_RE.search(subject) or MERGE_COMMIT_SUBJECT_RE.match(subject)
+        lines = message.splitlines()
+        subject = lines[0].strip()
+        pr_match = TRAILING_PR_RE.search(subject)
         if pr_match is None:
-            # A merge-commit range lists inner branch commits that carry no PR
-            # reference of their own; the merge commit resolves their PR.
-            continue
+            pr_match = MERGE_COMMIT_SUBJECT_RE.match(subject)
+            if pr_match is None:
+                # A merge-commit range lists inner branch commits that carry no
+                # PR reference of their own; the merge commit resolves their PR.
+                continue
+            # GitHub merge commits carry the PR title as the first non-empty
+            # body line; prefer it for the commit kind and fallback subject.
+            for line in lines[1:]:
+                if line.strip():
+                    subject = line.strip()
+                    break
         number = int(pr_match.group("number"))
         prefix_match = CONVENTIONAL_PREFIX_RE.match(subject)
         kind = prefix_match.group("kind").lower() if prefix_match else ""
