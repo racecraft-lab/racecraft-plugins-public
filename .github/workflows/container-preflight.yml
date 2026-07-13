@@ -72,7 +72,7 @@ jobs:
           PREFLIGHT_OPERATION: detect-changes
           EVIDENCE_DIR: ${{ runner.temp }}/container-preflight-changes
           EVENT_NAME: ${{ github.event_name }}
-          PR_DRAFT: ${{ github.event.pull_request.draft }}
+          PR_DRAFT: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft || false }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: import runpy; runpy.run_path("tests/speckit-pro/run-container-preflight.py", run_name="__main__")
