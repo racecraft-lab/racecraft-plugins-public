@@ -24,6 +24,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          # Persist the release token so the later sync can fetch and push the
+          # release branch without exposing the unsynchronized head for review.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+
+      - name: Hold existing release PRs as draft
+        env:
+          BASE_REF: main
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+        run: python3 scripts/release-pr-lifecycle.py hold
+
       - id: release
         uses: googleapis/release-please-action@v5
         with:
@@ -36,13 +49,6 @@ jobs:
           # secrets.RELEASE_PLEASE_TOKEN is empty so the || falls through and the
           # expression resolves to github.token — the workflow keeps working
           # until the secret exists.
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
-
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          fetch-depth: 0
-          # Persist the same token for the release PR checkout. XPLAT-007 keeps
-          # public payload-sync mutation deferred to XPLAT-008.
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
 
       - name: Resolve new or existing release PRs
@@ -77,6 +83,14 @@ jobs:
       - name: Validate XPLAT-008 release gates
         if: steps.release_prs.outputs.found == 'true'
         run: python3 scripts/run-runner-requests.py tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/runner-invocation.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/active-runtime-guard.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/payload-completeness.json tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/release-readiness.json
+
+      - name: Mark synchronized release PRs ready for review
+        if: steps.release_prs.outputs.found == 'true'
+        env:
+          BASE_REF: main
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+          RELEASE_PRS: ${{ steps.release_prs.outputs.prs }}
+        run: python3 scripts/release-pr-lifecycle.py ready
 
       - name: Dispatch PR Checks for release PRs
         if: steps.release_prs.outputs.found == 'true'
