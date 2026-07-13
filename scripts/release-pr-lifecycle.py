@@ -45,11 +45,13 @@ class CommandRunner:
         completed = subprocess.run(
             ["gh", *argv[1:]],
             text=True,
+            capture_output=True,
             shell=False,
             check=False,
         )
         if completed.returncode != 0:
-            raise LifecycleError(f"command failed ({completed.returncode}): {' '.join(argv)}")
+            detail = (completed.stderr or completed.stdout or "").strip()
+            raise LifecycleError(detail or f"command failed ({completed.returncode}): {' '.join(argv)}")
 
 
 def lifecycle_targets(
