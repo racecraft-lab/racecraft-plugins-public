@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.19.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.19.0...speckit-pro-v2.19.1) (2026-07-13)
+
+
+### Bug Fixes
+
+* **autopilot:** support hosted Codex agent lifecycle ([#341](https://github.com/racecraft-lab/racecraft-plugins-public/issues/341)) ([c16fc46](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c16fc466809b9d0a8c48038a9893df147aea2ccc))
+* **codex:** restore durable agent refresh ([#343](https://github.com/racecraft-lab/racecraft-plugins-public/issues/343)) ([58f52b8](https://github.com/racecraft-lab/racecraft-plugins-public/commit/58f52b819017e97c470cef63a17d210938fc1edf))
+
 ## [2.19.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.18.1...speckit-pro-v2.19.0) (2026-07-12)
 
 
