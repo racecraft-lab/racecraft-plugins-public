@@ -102,10 +102,13 @@ have Agent Teams primitives — Codex always uses the parallel
 - **Track C:** Verify-chain (items 11 → 12 → 14) — single subagent that
   runs the 3 commands sequentially in its own context (shared test fixtures)
 
-Dispatch the 3 tracks via `spawn_agent`, then `wait_agent` for each and
-`close_agent` it as soon as its result is recorded. Three tracks fits within
-the default `agents.max_threads` (6); if the session's cap is lower, dispatch
-in cap-bounded waves rather than all at once. The Lead synthesizes findings
+Dispatch the 3 tracks via `spawn_agent`, then loop bounded `wait_agent` calls
+until each track's actual result is consumed. A terminal status corroborates
+completion but cannot replace the result. Record each result and call
+`close_agent` only when the current surface exposes it. Three tracks fits the
+hosted Responses default of three active subagents; if derived
+`subagent_slots` is lower, dispatch in cap-bounded waves rather than all at
+once. The Lead synthesizes findings
 into the workflow file's Post-Implementation Checklist, then continues serial
 tail (15 → 16 → 17 → 18 → 19).
 
@@ -135,9 +138,13 @@ background subagents as the fallback path. The 3-track structure
   incomplete item instead. `Post: Retrospective` remains the final Post item and
   must be completed or explicitly skipped before completion can be reported.
 - **Agent-thread sweep before completion:** as part of the same pre-final audit,
-  call `list_agents` and `close_agent` any thread still open from this run. No
-  completed agent thread should outlive the run — leaked open threads consume
-  the session's `agents.max_threads` budget and starve later spawns.
+  call `list_agents` when exposed; otherwise audit tracked dispatch IDs and
+  consumed results. Every required dispatch must have a real result. When
+  `close_agent` is exposed, close remaining current-run threads best-effort.
+  A single wait timeout never authorizes interruption; interrupt only a
+  confirmed stuck turn, then re-spawn that required item and consume its result
+  before completion. Hosted completed threads remain inspectable and are
+  managed by the host; their absence of explicit closure is not a failure.
 
 ## PR Packet Validation Workflow
 

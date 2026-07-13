@@ -58,18 +58,20 @@ for phase in PHASES starting from first_pending:
           use the matching installed SpecKit custom agent
        b. spawn_agent the resolved <executor>:
           "Run $speckit-<phase> with: <prompt>"
-       c. wait_agent for the summary, then close_agent the executor once its
-          summary is recorded — frees its concurrent-thread slot; never leave
-          a finished executor open
+       c. Loop bounded wait_agent calls until this executor's actual summary is
+          delivered; a status update or timeout alone is not the result. Record
+          the summary, then close_agent only when that action is exposed. On
+          hosted Responses, the host retains the inspectable completed thread.
        d. update_plan: mark this prompt's item as "completed"
        e. Write the same transition to autopilot-state.json
     5. Run consensus in main session if needed:
        Parse executor's "Unresolved for consensus" section.
        For each item → spawn the category-routed analysts (codebase-analyst,
        spec-context-analyst, domain-researcher) per Rule 7 via
-       spawn_agent → wait_agent → close_agent each, holding no more than
-       agents.max_threads (default 6) open at once (dispatch in waves when
-       items × analysts exceeds the cap) → apply consensus rules → edit
+       spawn_agent → bounded wait_agent loop → consume each analyst result,
+       calling close_agent only when exposed and never exceeding the derived
+       subagent_slots limit (dispatch in waves when items × analysts exceeds
+       the cap) → apply consensus rules → edit
        artifacts → mark the corresponding Consensus item complete in both stores
     6. Check .specify/extensions.yml for after_<phase> hooks
        → run accepted hooks (non-destructive), skip duplicates

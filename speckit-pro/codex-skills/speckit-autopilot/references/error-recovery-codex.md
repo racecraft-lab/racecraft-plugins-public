@@ -29,12 +29,14 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
    missing, `pending`, or `in_progress`, resume at the first incomplete Post
    item. Do not summarize completion from a `Phase 7: Implement Complete`
    state.
-6. Do NOT try to `close_agent` or `wait_agent` on subagents from the previous
-   (interrupted) session — those threads are gone, and a close attempt will
-   error harmlessly. Resume with a clean `spawn_agent` → `wait_agent` →
-   `close_agent` lifecycle for newly spawned agents only. Keep closing the new
-   agents you spawn — do not conclude from one stale-agent close error that
-   closing is unsafe.
+6. Never assume subagents from a previous interrupted session still exist. If
+   `list_agents` is exposed, match current-tree entries to the workflow target
+   and current incomplete plan item's canonical task name/prompt. Manage or
+   reuse only agents confirmed present and owned by this autopilot run. Without
+   inspection, treat prior-session references as stale and spawn fresh. In
+   either case, loop bounded `wait_agent` calls until each required result is
+   actually consumed; use `close_agent` only when exposed and only for
+   run-owned agents confirmed present, including reconciled agents.
 
 ## Common Issues
 
@@ -48,15 +50,15 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
   and STOP. Present all 3 perspectives to the user.
 - **MCP tool unavailable:** Skip research that depends on it. Use
   file search and read fallbacks for codebase analysis. Log warning.
-- **`close_agent` errors, or a subagent appears stuck/frozen:** On the Codex
-  app especially, `close_agent` can report `thread not found` on an
-  already-gone agent, and a stuck subagent can leave the main thread spinning
-  (openai/codex#23219, #23292). Treat a failed close as already-closed — log
-  and continue; never retry-loop it, and never stop closing future agents.
-  Abandoning cleanup is what lets orphaned threads exhaust the cap and freeze
-  the session (openai/codex#19197). Bound `wait_agent` with a `timeout_ms` so
-  a stuck subagent cannot hang the orchestrator; on a hang, stop waiting, mark
-  the item for re-spawn, and continue.
+- **Lifecycle action unavailable, or a subagent appears stuck/frozen:** Missing
+  `close_agent` is expected on hosted Responses Multi-agent and MUST NOT stop
+  the run. When explicit closure is exposed but returns already-gone, log and
+  continue without retry-looping. Bound each `wait_agent` poll with
+  `timeout_ms`, but treat one timeout only as a poll boundary: continue waiting
+  and inspect `list_agents` when possible. Use `interrupt_agent` only when
+  exposed and a separate deadline or repeated no-progress check confirms the
+  turn is stuck. Interruption preserves context and is not closure or a result;
+  re-spawn the required item and consume its real result before completion.
 
 ## Context Window Management
 

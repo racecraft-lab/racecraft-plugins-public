@@ -36,7 +36,8 @@ The validator enforces that the Codex `speckit-autopilot/SKILL.md`
 1. `update_plan` — the progress contract; required for plan tracking
 2. `autopilot-state.json` — durable persistence in the workflow dir
 3. `spawn_agent` + `wait_agent` (both must appear) — phase dispatch primitives
-4. `followup_task` + `send_message` (both must appear); `send_input` must NOT appear (obsolete)
+4. Hosted `followup_task` + `send_message`, plus local `send_input` and the
+   closed-thread sequence `resume_agent` then `send_input`
 5. `Exactly one plan item is `in_progress`` — Codex plan invariant
 6. `phase family coverage is mandatory` + `Phase 7: Implement - Pending task decomposition` + `Post: Doctor Extension Check` + `Post: Retrospective` — all-phase coverage
 7. `PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]` — canonical PHASES order
