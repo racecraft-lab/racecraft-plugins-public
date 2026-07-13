@@ -303,11 +303,13 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "install-codex-agents",
         "install-codex-agents",
         ("dry_run", "apply"),
-        "speckit-pro/codex-skills/install/scripts/install-codex-agents.sh",
-        "deferred",
+        None,
+        "golden_only",
         "golden_fixture",
-        deferred_authoritative_request(),
-        rollback="Keep install-codex-agents deferred until a Python runner implementation is promoted.",
+        mutation_authoritative_request("install-codex-agents"),
+        ("dry-run-refresh", "stale-overwrite", "no-op", "rollback", "invalid-source", "unsafe-destination"),
+        bash_reference_ids=("install-codex-agents",),
+        rollback="Retry in dry_run mode and preserve the previous same-named Codex agent files before applying again.",
     ),
     "install-curated-set": MutationEntry(
         "install-curated-set",
@@ -580,7 +582,7 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
     if entry.helper_id == "generate-spec-index-write":
         return run_spec_index_write(entry, request)
 
-    if entry.helper_id in {"doctor-preflight", "doctor-repair", "install-health-repair"}:
+    if entry.helper_id in {"doctor-preflight", "doctor-repair", "install-health-repair", "install-codex-agents"}:
         return run_install_helper(entry, request)
 
     if entry.helper_id in {

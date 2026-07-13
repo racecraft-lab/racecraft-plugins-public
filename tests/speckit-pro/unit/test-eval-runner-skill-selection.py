@@ -57,7 +57,6 @@ SHIPPED_RUNTIME_CONTRACTS = (
 EXPECTED_DEFERRED_HELPERS = frozenset(
     {
         "ensure-reviewability-preset",
-        "install-codex-agents",
         "migrate-structure",
         "pr-packet-output",
         "relocate-process-artifacts",
@@ -370,7 +369,7 @@ def runtime_contract_parity_violations() -> list[str]:
             "scaffold",
             PLUGIN_ROOT / "skills" / "speckit-scaffold-spec" / "SKILL.md",
             PLUGIN_ROOT / "codex-skills" / "speckit-scaffold-spec" / "SKILL.md",
-            ("relocate-process-artifacts", "install-codex-agents", "ensure-reviewability-preset", "deferred", "unavailable"),
+            ("relocate-process-artifacts", "ensure-reviewability-preset", "deferred", "unavailable"),
         ),
         (
             "autopilot",

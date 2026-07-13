@@ -24,7 +24,10 @@ PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+if str(PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(PLUGIN_ROOT))
 from test_result import run_counted  # noqa: E402
+from speckit_pro_runner.helpers.registry import MUTATION_HELPERS  # noqa: E402
 
 CODEX_SKILLS_DIR = PLUGIN_ROOT / "codex-skills"
 
@@ -245,7 +248,16 @@ class ValidateCodexSkills(unittest.TestCase):
 
             if skill == "install":
                 with self.subTest(msg="install: installer helper is documented"):
-                    self.assertIn("install-codex-agents", body)
+                    entry = MUTATION_HELPERS["install-codex-agents"]
+                    self.assertTrue(
+                        "install-codex-agents" in body
+                        and "dry_run" in body
+                        and "apply" in body
+                        and "verified" in body
+                        and entry.promotion_status == "golden_only"
+                        and bool(entry.authoritative_command),
+                        "expected a promoted, fixture-backed install-codex-agents dry-run/apply contract",
+                    )
 
     def _check_autopilot_skill(self, skill_dir: Path, body: str) -> None:
         runtime_doc = body
@@ -345,7 +357,16 @@ class ValidateCodexSkills(unittest.TestCase):
             )
 
         with self.subTest(msg="speckit-autopilot: fails closed to the install skill when subagents are missing"):
-            self.assertIn("$install", body)
+            prerequisites = _read(skill_dir / "references" / "prerequisites-codex.md")
+            self.assertTrue(
+                "$install" in body
+                and "$install" in prerequisites
+                and "install-codex-agents" in prerequisites
+                and "dry_run" in prerequisites
+                and "validate-agent-install" not in prerequisites
+                and "--autoheal" not in prerequisites,
+                "expected read-only installer dry-run preflight and install/restart fail-closed guidance",
+            )
 
         with self.subTest(msg="speckit-autopilot: documents the optional Spark helper"):
             self.assertIn("autopilot-fast-helper", body)

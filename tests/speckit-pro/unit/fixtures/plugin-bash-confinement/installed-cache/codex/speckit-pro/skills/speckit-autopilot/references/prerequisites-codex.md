@@ -12,7 +12,7 @@ This is the Codex-specific mirror of `prerequisites.md`. Same checks, Codex-spec
 - [Step 0.6: Load Settings](#step-06-load-settings) — project settings YAML frontmatter
 - [Step 0.8: Capability Coverage & Plugin Limitation Check](#step-08-capability-coverage--plugin-limitation-check) — informational research/context advisory
 - [Step 0.9: Constitution Validation](#step-09-constitution-validation) — principle checks against current codebase
-- [Step 0.10: Codex Agent Availability Check](#step-010-codex-agent-availability-check) — verify and autoheal installed custom agents under `.codex/agents/`
+- [Step 0.10: Codex Agent Availability Check](#step-010-codex-agent-availability-check) — verify installed custom agents without mutating them
 - [Step 0.10b: Implementation Agent Detection](#step-010b-implementation-agent-detection) — discover `PROJECT_IMPLEMENTATION_AGENT`
 - [Step 0.11: Project Command Discovery](#step-011-project-command-discovery) — `detect-commands` → `PROJECT_COMMANDS`
 - [Step 0.12: Preset and Extension Detection](#step-012-preset-and-extension-detection) — `detect-presets` → `PRESET_CONVENTIONS`
@@ -136,15 +136,16 @@ Read the workflow file's Prerequisites table. If already
 ### 0.10 Codex Agent Availability Check
 
 Before phase execution, validate that every bundled SpecKit Pro Codex custom
-agent is installed on official Codex runtime paths. Run the shared validator
-with autoheal:
+agent is current on the selected official Codex runtime path. Run the promoted
+`install-codex-agents` runner helper in `dry_run` mode, using the same
+destination and model that `$install` would use:
 
 ```text
-'runner helper validate-agent-install' --surface codex --autoheal
+'runner helper install-codex-agents' mode=dry_run inputs={destination?, model?}
 ```
 
-The validator checks the bundled `codex-agents/*.toml` contract and verifies
-the installed runtime files on:
+The helper validates the bundled `codex-agents/*.toml` contract and compares
+the rendered files with either selected runtime path:
 
 1. `.codex/agents/<agent>.toml`
 2. `~/.codex/agents/<agent>.toml`
@@ -162,11 +163,12 @@ Bundled agents:
 - `autopilot-fast-helper`
 - `uat-runbook-author`
 
-If the validator succeeds after autoheal, continue and record that Codex
-subagents were refreshed. If it still fails, STOP with its error message and
-tell the user to run `$install`, approve the expected local write, then restart
-Codex. A restart is required whenever autoheal copied or refreshed agent TOML
-files.
+Continue only when the helper returns `ok` with mutation status `no_op`. If it
+reports planned files, fails validation, or cannot inspect the selected path,
+STOP with its diagnostics. Tell the user to run `$install`, approve the expected
+local write, restart Codex, and then retry autopilot. This pre-flight is
+read-only: never apply or autoheal agent files from inside autopilot because the
+current Codex process cannot load refreshed custom-agent definitions safely.
 
 ### 0.10b Implementation Agent Detection
 
