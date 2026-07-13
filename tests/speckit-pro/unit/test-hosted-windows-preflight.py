@@ -412,6 +412,8 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
     def run_pull_change_detection(
         self,
         diff_output: str,
+        *,
+        draft: bool = False,
     ) -> tuple[int, dict[str, object], str, list[mock._Call]]:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -424,6 +426,7 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
                 "EVIDENCE_DIR": str(evidence_dir),
                 "GITHUB_OUTPUT": str(output_path),
                 "EVENT_NAME": "pull_request",
+                "PR_DRAFT": str(draft).lower(),
                 "BASE_SHA": base_sha,
                 "HEAD_SHA": head_sha,
             }
@@ -502,6 +505,18 @@ class ContainerPreflightDispatchTests(unittest.TestCase):
             calls[1].args[1][0:3],
             ["diff", "--no-renames", "--name-only"],
         )
+
+    def test_draft_pull_request_defers_heavy_preflight_without_git_diff(self) -> None:
+        return_code, result, changed_files, calls = self.run_pull_change_detection(
+            "tests/speckit-pro/unit/test-example.py\n",
+            draft=True,
+        )
+
+        self.assertEqual(return_code, 0)
+        self.assertEqual(result["run_preflight"], "false")
+        self.assertEqual(result["reason"], "draft_pull_request")
+        self.assertEqual(changed_files, "draft_pull_request\n")
+        self.assertEqual(calls, [])
 
     def test_rename_out_of_preflight_surface_still_runs_heavy_jobs(self) -> None:
         return_code, result, changed_files, _ = self.run_pull_change_detection(

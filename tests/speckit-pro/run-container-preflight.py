@@ -201,6 +201,10 @@ def _detect_changes() -> int:
         changed_files = ["workflow_dispatch"]
         run_preflight = True
         reason = "manual_dispatch"
+    elif event_name == "pull_request" and os.environ.get("PR_DRAFT", "").strip().lower() == "true":
+        changed_files = ["draft_pull_request"]
+        run_preflight = False
+        reason = "draft_pull_request"
     elif event_name == "pull_request":
         base_sha = _required_env("BASE_SHA")
         head_sha = _required_env("HEAD_SHA")

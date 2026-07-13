@@ -33,6 +33,10 @@ def load_module(name: str, path: Path):
 
 
 resolver = load_module("resolve_release_prs", REPO_ROOT / "scripts" / "resolve_release_prs.py")
+lifecycle = load_module(
+    "release_pr_lifecycle",
+    REPO_ROOT / "scripts" / "release-pr-lifecycle.py",
+)
 refresh = load_module("refresh_release_artifacts", REPO_ROOT / "scripts" / "refresh-release-artifacts.py")
 sync = load_module("sync_release_pr", REPO_ROOT / "scripts" / "sync_release_pr.py")
 dispatch = load_module(
@@ -307,6 +311,100 @@ class ReleasePrDispatchTests(unittest.TestCase):
         self.assertEqual(1, len(calls))
         self.assertIn("PR #1", stderr.getvalue())
         self.assertIn("child exit 17", stderr.getvalue())
+
+
+class ReleasePrLifecycleTests(unittest.TestCase):
+    class FakeRunner:
+        def __init__(self, draft_states: dict[int, bool]) -> None:
+            self.draft_states = draft_states
+            self.commands: list[list[str]] = []
+
+        def output(self, argv) -> str:
+            command = list(argv)
+            self.commands.append(command)
+            number = int(command[3])
+            return json.dumps({"isDraft": self.draft_states[number]})
+
+        def run(self, argv) -> None:
+            self.commands.append(list(argv))
+
+    def test_existing_release_pr_is_held_draft_idempotently(self) -> None:
+        release_prs = [
+            {
+                "number": 342,
+                "title": "release",
+                "headBranchName": "release-please--branches--main--components--speckit-pro",
+            },
+            {
+                "number": 343,
+                "title": "release",
+                "headBranchName": "release-please--branches--main--components--other",
+            },
+        ]
+        runner = self.FakeRunner({342: False, 343: True})
+
+        lifecycle.set_draft_state(release_prs, draft=True, runner=runner)
+
+        self.assertIn(["gh", "pr", "ready", "342", "--undo"], runner.commands)
+        self.assertNotIn(["gh", "pr", "ready", "343", "--undo"], runner.commands)
+
+    def test_synchronized_release_pr_is_marked_ready(self) -> None:
+        runner = self.FakeRunner({342: True})
+        release_prs = lifecycle.lifecycle_targets(
+            json.dumps(
+                [
+                    {
+                        "number": 342,
+                        "title": "release",
+                        "headBranchName": "release-please--branches--main--components--speckit-pro",
+                    }
+                ]
+            ),
+            "main",
+            fetch_open=lambda _base_ref: self.fail("action metadata must avoid an open-PR query"),
+        )
+
+        lifecycle.set_draft_state(release_prs, draft=False, runner=runner)
+
+        self.assertIn(["gh", "pr", "ready", "342"], runner.commands)
+
+    def test_ready_without_release_metadata_fails_closed(self) -> None:
+        stderr = io.StringIO()
+        with redirect_stderr(stderr):
+            return_code = lifecycle.main(
+                ["ready"],
+                {"BASE_REF": "main", "RELEASE_PRS": "[]"},
+                runner=self.FakeRunner({}),
+                fetch_open=lambda _base_ref: [],
+            )
+
+        self.assertEqual(1, return_code)
+        self.assertIn("release PR resolver returned no metadata", stderr.getvalue())
+
+    def test_release_workflow_holds_review_until_artifact_sync(self) -> None:
+        config = json.loads((REPO_ROOT / "release-please-config.json").read_text(encoding="utf-8"))
+        workflow = (REPO_ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        container = (REPO_ROOT / ".github/workflows/container-preflight.yml").read_text(encoding="utf-8")
+
+        self.assertIs(config["draft-pull-request"], True)
+        ordered_markers = (
+            "Hold existing release PRs as draft",
+            "id: release",
+            "Sync generated artifacts onto the release PR",
+            "Validate XPLAT-008 release gates",
+            "Mark synchronized release PRs ready for review",
+            "Dispatch PR Checks for release PRs",
+        )
+        positions = [workflow.find(marker) for marker in ordered_markers]
+        self.assertNotIn(-1, positions)
+        self.assertEqual(sorted(positions), positions)
+        self.assertIn("python3 scripts/release-pr-lifecycle.py hold", workflow)
+        self.assertIn("python3 scripts/release-pr-lifecycle.py ready", workflow)
+        self.assertIn(
+            "PR_DRAFT: ${{ github.event_name == 'pull_request' && "
+            "github.event.pull_request.draft || false }}",
+            container,
+        )
 
 
 class RunnerRequestDispatchTests(unittest.TestCase):
