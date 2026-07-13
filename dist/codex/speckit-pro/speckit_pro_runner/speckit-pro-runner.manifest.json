@@ -3,7 +3,7 @@
   "runner_contract_id": "speckit-pro-runner",
   "selected_runtime_name": "python-stdlib-runner",
   "contract_version": "1.0",
-  "plugin_version": "2.18.1",
+  "plugin_version": "2.19.0",
   "runner_version": "0.1.0",
   "source_revision": "unknown",
   "python_minimum_version": "3.11",
