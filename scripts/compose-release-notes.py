@@ -49,6 +49,7 @@ COMPARE_HEADING_RE = re.compile(
     r"(?m)^#{1,6}[ \t]+.*?\]\([^\n)]*/compare/"
     r"(?P<previous>[^\s)]+?)\.\.\.(?P<current>[^\s)]+)\)"
 )
+MERGE_COMMIT_SUBJECT_RE = re.compile(r"^Merge pull request #(?P<number>[1-9][0-9]*) from \S+$")
 SNAPSHOT_MARKER_RE = re.compile(
     r"\n\n<!-- release-note-composer-snapshot:v1 "
     r"source_sha256=(?P<source_sha256>[0-9a-f]{64}) "
@@ -188,15 +189,19 @@ def discover_commits(
         if not isinstance(message, str) or not message.splitlines():
             raise CompositionError(f"Compare API commit {index} has no subject")
         subject = message.splitlines()[0].strip()
-        pr_match = TRAILING_PR_RE.search(subject)
+        pr_match = TRAILING_PR_RE.search(subject) or MERGE_COMMIT_SUBJECT_RE.match(subject)
         if pr_match is None:
-            raise CompositionError(f"commit subject has no resolvable trailing (#N): {subject!r}")
+            # A merge-commit range lists inner branch commits that carry no PR
+            # reference of their own; the merge commit resolves their PR.
+            continue
         number = int(pr_match.group("number"))
         prefix_match = CONVENTIONAL_PREFIX_RE.match(subject)
         kind = prefix_match.group("kind").lower() if prefix_match else ""
         if number not in seen:
             seen.add(number)
             discovered.append(DiscoveredCommit(number, subject, kind))
+    if commits_value and not discovered:
+        raise CompositionError("Compare range commit subjects resolved no pull requests")
     return discovered
 
 
