@@ -400,7 +400,11 @@ class ReleasePrLifecycleTests(unittest.TestCase):
         self.assertEqual(sorted(positions), positions)
         self.assertIn("python3 scripts/release-pr-lifecycle.py hold", workflow)
         self.assertIn("python3 scripts/release-pr-lifecycle.py ready", workflow)
-        self.assertIn("PR_DRAFT: ${{ github.event.pull_request.draft }}", container)
+        self.assertIn(
+            "PR_DRAFT: ${{ github.event_name == 'pull_request' && "
+            "github.event.pull_request.draft || false }}",
+            container,
+        )
 
 
 class RunnerRequestDispatchTests(unittest.TestCase):
