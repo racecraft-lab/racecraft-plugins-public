@@ -96,7 +96,7 @@
         "value": "speckit_pro_runner/helpers/install.py",
         "display": "speckit_pro_runner/helpers/install.py"
       },
-      "sha256": "89b75d9b1ec9815c33a4aa5f8e856ae18fabd0ec174566c3aa896408c43075c5"
+      "sha256": "aa310bb0e303ff26f3e7879cdd8b51155d22305baea6bfa195261c5226756acf"
     },
     {
       "path": {
@@ -136,7 +136,7 @@
         "value": "speckit_pro_runner/helpers/registry.py",
         "display": "speckit_pro_runner/helpers/registry.py"
       },
-      "sha256": "2158ab47f4f2b15dfc12465969d843fa48f72e2809fd5ccae6076b7ab4ac3028"
+      "sha256": "4f4ce14daa65def64f9f53b27e1d95665f8bd1ae4a0e9f34d8bb39e6ad9f025e"
     },
     {
       "path": {

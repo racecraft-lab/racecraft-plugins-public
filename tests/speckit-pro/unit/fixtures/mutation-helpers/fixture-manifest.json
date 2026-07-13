@@ -32,6 +32,13 @@
       "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/doctor-repair.json"
     },
     {
+      "helper_id": "install-codex-agents",
+      "operation": "install-codex-agents",
+      "modes": ["dry_run", "apply"],
+      "failure_classes": ["invalid_input", "incomplete_agent_bundle", "unsafe_agent_destination", "codex_agent_install_failed"],
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/install-codex-agents.json"
+    },
+    {
       "helper_id": "generate-pr-body",
       "operation": "generate-pr-body",
       "modes": ["dry_run", "apply"],

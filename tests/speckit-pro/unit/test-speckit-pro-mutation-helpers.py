@@ -5,11 +5,13 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 
@@ -53,14 +55,18 @@ def run_runner(
     request: object,
     *,
     cwd: Path = REPO_ROOT,
+    env_overrides: dict[str, str] | None = None,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, object], list[dict[str, object]]]:
+    env = runner_env()
+    if env_overrides:
+        env.update(env_overrides)
     completed = subprocess.run(
         [sys.executable, "-m", "speckit_pro_runner"],
         input=json.dumps(request) if not isinstance(request, str) else request,
         text=True,
         capture_output=True,
         cwd=cwd,
-        env=runner_env(),
+        env=env,
         shell=False,
         check=False,
     )
@@ -216,7 +222,7 @@ class MutationHelperTests(unittest.TestCase):
         }
         self.assertEqual(
             rollbacks["install-codex-agents"],
-            "Keep install-codex-agents deferred until a Python runner implementation is promoted.",
+            "Retry in dry_run mode and preserve the previous same-named Codex agent files before applying again.",
         )
         self.assertEqual(
             rollbacks["install-curated-set"],
@@ -234,7 +240,7 @@ class MutationHelperTests(unittest.TestCase):
     def test_unpromoted_helpers_fail_closed_before_dispatch_in_all_mutation_modes(self) -> None:
         cases = [
             (
-                "install-codex-agents",
+                "install-curated-set",
                 "deferred",
                 {
                     "operations": [
@@ -291,6 +297,418 @@ class MutationHelperTests(unittest.TestCase):
                         self.assertEqual(mutation["touched_paths"], [])
                         self.assertFalse(mutation["live_mutation"])
                         self.assertFalse(target.exists())
+
+    def test_install_codex_agents_refreshes_stale_files_and_preserves_unrelated_agents(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            destination = git_root / ".codex" / "agents"
+            destination.mkdir(parents=True)
+            stale = destination / "analyze-executor.toml"
+            unrelated = destination / "user-owned-agent.toml"
+            stale.write_text("stale\n", encoding="utf-8")
+            unrelated.write_text("user owned\n", encoding="utf-8")
+            inputs = {"destination": ".codex/agents", "model": "gpt-5.5"}
+
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", inputs=inputs),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assertEqual(stderr_records, [])
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(response["data"]["mutation"]["mutation_status"], "planned")
+            self.assertEqual(len(response["data"]["mutation"]["planned_operations"]), 10)
+            self.assertEqual(stale.read_text(encoding="utf-8"), "stale\n")
+
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", mode="apply", inputs=inputs),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assertEqual(stderr_records, [])
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(response["data"]["mutation"]["mutation_status"], "applied")
+            self.assertTrue(response["data"]["writes_state"])
+            self.assertTrue(response["data"]["restart_required"])
+            self.assertEqual(response["data"]["verification"]["status"], "verified")
+            self.assertEqual(unrelated.read_text(encoding="utf-8"), "user owned\n")
+            for source in sorted((PLUGIN_ROOT / "codex-agents").glob("*.toml")):
+                self.assertEqual((destination / source.name).read_bytes(), source.read_bytes())
+
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", mode="apply", inputs=inputs),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assertEqual(stderr_records, [])
+            self.assert_response(response, "ok", 0)
+            mutation = response["data"]["mutation"]
+            self.assertEqual(mutation["mutation_status"], "no_op")
+            self.assertEqual(mutation["planned_operations"], [])
+            self.assertEqual(len(mutation["no_op_operations"]), 10)
+            self.assertFalse(response["data"]["restart_required"])
+
+    def test_install_codex_agents_defaults_to_fake_user_home_without_touching_real_home(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp, tempfile.TemporaryDirectory() as home_tmp:
+            fake_home = Path(home_tmp).resolve()
+            destination = fake_home / ".codex" / "agents"
+            destination.mkdir(parents=True)
+            unrelated = destination / "user-owned-agent.toml"
+            unrelated.write_bytes(b"user owned\n")
+            env = {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}
+
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", mode="apply", inputs={"model": "gpt-5.5"}),
+                cwd=git_root,
+                env_overrides=env,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assertEqual(stderr_records, [])
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(response["data"]["destination"], destination.as_posix())
+            self.assertTrue(response["data"]["restart_required"])
+            self.assertEqual(unrelated.read_bytes(), b"user owned\n")
+            for source in sorted((PLUGIN_ROOT / "codex-agents").glob("*.toml")):
+                self.assertEqual((destination / source.name).read_bytes(), source.read_bytes())
+
+            completed, response, stderr_records = run_runner(
+                helper_request("install-codex-agents", mode="apply", inputs={"model": "gpt-5.5"}),
+                cwd=git_root,
+                env_overrides=env,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assertEqual(stderr_records, [])
+            self.assertEqual(response["data"]["mutation"]["mutation_status"], "no_op")
+            self.assertFalse(response["data"]["restart_required"])
+
+    def test_install_codex_agents_applies_strict_gpt_5_4_destination_rewrite(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "install-codex-agents",
+                    mode="apply",
+                    inputs={"destination": ".codex/agents", "model": "gpt-5.4"},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assertEqual(stderr_records, [])
+            self.assert_response(response, "ok", 0)
+            destination = (git_root / ".codex" / "agents").resolve()
+            spark = (destination / "autopilot-fast-helper.toml").read_text(encoding="utf-8")
+            self.assertIn('model = "gpt-5.3-codex-spark"', spark)
+            for target in sorted(destination.glob("*.toml")):
+                if target.name == "autopilot-fast-helper.toml":
+                    continue
+                self.assertIn('model = "gpt-5.4"', target.read_text(encoding="utf-8"), target.name)
+
+    def test_install_codex_agents_rejects_invalid_model_and_incomplete_source_before_writes(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            destination = (git_root / ".codex" / "agents").resolve()
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "install-codex-agents",
+                    mode="apply",
+                    inputs={"destination": ".codex/agents", "model": "unsupported"},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assert_response(response, "input_error", 2)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["unsupported_codex_model"])
+            self.assertFalse(destination.exists())
+
+        with tempfile.TemporaryDirectory() as source_tmp:
+            fake_plugin = Path(source_tmp) / "speckit-pro"
+            shutil.copytree(PLUGIN_ROOT / "codex-agents", fake_plugin / "codex-agents")
+            (fake_plugin / "codex-agents" / "uat-runbook-author.toml").unlink()
+            request = SimpleNamespace(
+                request_id="test-incomplete-codex-agent-source",
+                helper_id="install-codex-agents",
+                operation="install-codex-agents",
+                mode="dry_run",
+                inputs={"destination": ".codex/agents", "model": "gpt-5.5"},
+            )
+            from speckit_pro_runner.helpers import install
+            from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+            with patch.object(install, "codex_plugin_root", return_value=fake_plugin):
+                response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
+            self.assertEqual(response["status"], "input_error")
+            self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["incomplete_agent_bundle"])
+
+        with tempfile.TemporaryDirectory() as source_tmp:
+            fake_plugin = Path(source_tmp) / "speckit-pro"
+            shutil.copytree(PLUGIN_ROOT / "codex-agents", fake_plugin / "codex-agents")
+            analyze = fake_plugin / "codex-agents" / "analyze-executor.toml"
+            analyze.write_text(
+                analyze.read_text(encoding="utf-8").replace('model = "gpt-5.5"', "model = 'gpt-5.5'", 1),
+                encoding="utf-8",
+            )
+            request = SimpleNamespace(
+                request_id="test-noncanonical-codex-agent-model",
+                helper_id="install-codex-agents",
+                operation="install-codex-agents",
+                mode="dry_run",
+                inputs={"destination": ".codex/agents", "model": "gpt-5.4"},
+            )
+            from speckit_pro_runner.helpers import install
+            from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+            with patch.object(install, "codex_plugin_root", return_value=fake_plugin):
+                response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
+            self.assertEqual(response["status"], "input_error")
+            self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["unsafe_agent_bundle"])
+
+    def test_install_codex_agents_rolls_back_failed_batch(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            destination = git_root / ".codex" / "agents"
+            destination.mkdir(parents=True)
+            destination = destination.resolve()
+            stale = destination / "analyze-executor.toml"
+            unrelated = destination / "user-owned-agent.toml"
+            stale.write_bytes(b"stale\xff\n")
+            stale.chmod(0o640)
+            unrelated.write_bytes(b"user owned\n")
+            request = SimpleNamespace(
+                request_id="test-codex-agent-rollback",
+                helper_id="install-codex-agents",
+                operation="install-codex-agents",
+                mode="apply",
+                inputs={"destination": ".codex/agents", "model": "gpt-5.5"},
+            )
+            from speckit_pro_runner.helpers import install
+            from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+            real_write = install.write_codex_agent_atomic
+
+            def fail_second_write(
+                target: Path,
+                content: bytes,
+                target_dir: Path,
+                identity: tuple[int, int] | None,
+                *,
+                mode: int | None = None,
+            ) -> None:
+                if target.name == "autopilot-fast-helper.toml":
+                    raise OSError("injected test failure")
+                real_write(target, content, target_dir, identity, mode=mode)
+
+            with (
+                patch.object(install, "codex_agent_destination", return_value=destination),
+                patch.object(install, "write_codex_agent_atomic", side_effect=fail_second_write),
+            ):
+                response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["codex_agent_install_failed"])
+            self.assertTrue(response["data"]["rollback_succeeded"])
+            self.assertFalse(response["data"]["writes_state"])
+            self.assertFalse(response["data"]["restart_required"])
+            self.assertEqual(stale.read_bytes(), b"stale\xff\n")
+            self.assertEqual(stale.stat().st_mode & 0o7777, 0o640)
+            self.assertEqual(unrelated.read_bytes(), b"user owned\n")
+            self.assertEqual(sorted(path.name for path in destination.glob("*.toml")), ["analyze-executor.toml", "user-owned-agent.toml"])
+
+    def test_install_codex_agents_mode_restore_fails_closed_without_fchmod(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            destination = Path(tmp).resolve() / "agents"
+            destination.mkdir()
+            target = destination / "analyze-executor.toml"
+            from speckit_pro_runner.helpers import install
+
+            identity = install.codex_agent_destination_identity(destination)
+            with patch.object(install.os, "fchmod", None):
+                with self.assertRaisesRegex(OSError, "descriptor-based mode restoration"):
+                    install.write_codex_agent_atomic(
+                        target,
+                        b"restored\n",
+                        destination,
+                        identity,
+                        mode=0o640,
+                    )
+
+            self.assertFalse(target.exists())
+            self.assertEqual(list(destination.iterdir()), [])
+
+    def test_install_codex_agents_snapshot_uses_open_descriptor_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp).resolve() / "analyze-executor.toml"
+            target.write_bytes(b"existing\n")
+            target.chmod(0o600)
+            from speckit_pro_runner.helpers import install
+
+            real_open = install.os.open
+
+            def chmod_after_open(path: object, flags: int) -> int:
+                descriptor = real_open(path, flags)
+                Path(path).chmod(0o640)
+                return descriptor
+
+            with patch.object(install.os, "open", side_effect=chmod_after_open):
+                state = install.codex_agent_previous_state(target)
+
+            self.assertIsNotNone(state)
+            assert state is not None
+            self.assertEqual(state[0], b"existing\n")
+            self.assertEqual(state[1] & 0o7777, 0o640)
+
+    def test_install_codex_agents_rollback_never_chmods_swapped_symlink_target(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp, tempfile.TemporaryDirectory() as outside_tmp:
+            destination = git_root / ".codex" / "agents"
+            destination.mkdir(parents=True)
+            destination = destination.resolve()
+            stale = destination / "analyze-executor.toml"
+            stale.write_bytes(b"stale\n")
+            stale.chmod(0o640)
+            outside = Path(outside_tmp).resolve() / "outside.toml"
+            outside.write_bytes(b"outside\n")
+            outside.chmod(0o600)
+            outside_mode = outside.stat().st_mode & 0o7777
+            request = SimpleNamespace(
+                request_id="test-codex-agent-rollback-symlink-swap",
+                helper_id="install-codex-agents",
+                operation="install-codex-agents",
+                mode="apply",
+                inputs={"destination": ".codex/agents", "model": "gpt-5.5"},
+            )
+            from speckit_pro_runner.helpers import install
+            from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+            real_replace = install.os.replace
+            replace_count = 0
+
+            def swap_after_rollback_replace(source: object, target: object) -> None:
+                nonlocal replace_count
+                real_replace(source, target)
+                replace_count += 1
+                if replace_count == 2:
+                    target_path = Path(target)
+                    target_path.unlink()
+                    target_path.symlink_to(outside)
+
+            real_write = install.write_codex_agent_atomic
+
+            def fail_second_write(
+                target: Path,
+                content: bytes,
+                target_dir: Path,
+                identity: tuple[int, int] | None,
+                *,
+                mode: int | None = None,
+            ) -> None:
+                if target.name == "autopilot-fast-helper.toml":
+                    raise OSError("injected test failure")
+                real_write(target, content, target_dir, identity, mode=mode)
+
+            with (
+                patch.object(install, "codex_agent_destination", return_value=destination),
+                patch.object(install, "write_codex_agent_atomic", side_effect=fail_second_write),
+                patch.object(install.os, "replace", side_effect=swap_after_rollback_replace),
+            ):
+                response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertFalse(response["data"]["rollback_succeeded"])
+            self.assertTrue(response["data"]["writes_state"])
+            self.assertTrue(response["data"]["restart_required"])
+            self.assertEqual(outside.read_bytes(), b"outside\n")
+            self.assertEqual(outside.stat().st_mode & 0o7777, outside_mode)
+
+    def test_install_codex_agents_rejects_non_codex_and_symlink_destinations(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "install-codex-agents",
+                    mode="apply",
+                    inputs={"destination": "agents", "model": "gpt-5.5"},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assert_response(response, "input_error", 2)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_destination"])
+            self.assertFalse((git_root / "agents").exists())
+
+            with tempfile.TemporaryDirectory() as outside:
+                codex_dir = git_root / ".codex"
+                try:
+                    codex_dir.symlink_to(Path(outside), target_is_directory=True)
+                except OSError:
+                    self.skipTest("symlink creation is unavailable")
+                completed, response, stderr_records = run_runner(
+                    helper_request(
+                        "install-codex-agents",
+                        mode="apply",
+                        inputs={"destination": ".codex/agents", "model": "gpt-5.5"},
+                    ),
+                    cwd=git_root,
+                )
+                self.assertEqual(completed.returncode, 2)
+                self.assert_response(response, "input_error", 2)
+                self.assertEqual([diag["code"] for diag in stderr_records], ["unsafe_agent_destination"])
+                self.assertEqual(list(Path(outside).iterdir()), [])
+
+    def test_install_codex_agents_rejects_managed_leaf_symlink_before_writes(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp, tempfile.TemporaryDirectory() as outside_tmp:
+            destination = git_root / ".codex" / "agents"
+            destination.mkdir(parents=True)
+            outside = Path(outside_tmp) / "outside.toml"
+            outside.write_bytes(b"outside\xff\n")
+            try:
+                (destination / "analyze-executor.toml").symlink_to(outside)
+            except OSError:
+                self.skipTest("symlink creation is unavailable")
+
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "install-codex-agents",
+                    mode="apply",
+                    inputs={"destination": ".codex/agents", "model": "gpt-5.5"},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assert_response(response, "input_error", 2)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["unsafe_agent_destination"])
+            self.assertEqual(outside.read_bytes(), b"outside\xff\n")
+            self.assertEqual(sorted(path.name for path in destination.iterdir()), ["analyze-executor.toml"])
+
+    def test_install_codex_agents_blocks_destination_identity_change(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            destination = git_root / ".codex" / "agents"
+            destination.mkdir(parents=True)
+            destination = destination.resolve()
+            request = SimpleNamespace(
+                request_id="test-codex-agent-destination-race",
+                helper_id="install-codex-agents",
+                operation="install-codex-agents",
+                mode="apply",
+                inputs={"destination": ".codex/agents", "model": "gpt-5.5"},
+            )
+            from speckit_pro_runner.helpers import install
+            from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+            real_identity = install.codex_agent_destination_identity(destination)
+            identities = iter((real_identity, (real_identity[0], real_identity[1] + 1)))
+            with (
+                patch.object(install, "codex_agent_destination", return_value=destination),
+                patch.object(install, "codex_agent_destination_identity", side_effect=lambda _path: next(identities)),
+            ):
+                response = install.run_codex_agent_install(MUTATION_HELPERS["install-codex-agents"], request)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertTrue(response["data"]["rollback_succeeded"])
+            self.assertFalse(response["data"]["writes_state"])
+            self.assertEqual(list(destination.iterdir()), [])
 
     def test_dry_run_reports_planned_write_without_mutating(self) -> None:
         tmp, target, rel = self.temp_repo_path("dry-run-output.json")

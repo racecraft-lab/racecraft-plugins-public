@@ -2,19 +2,23 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
+import os
 import platform as platform_module
 import re
 import shutil
+import stat
 import subprocess
 import sys
-import copy
+import tempfile
+import tomllib
 from pathlib import Path, PurePosixPath
 from typing import Any
 
 from ..envelope import diagnostic, response
-from .mutation import resolve_candidate_path, run_mutation_helper, validate_target_path
+from .mutation import empty_mutation, operation_record, resolve_candidate_path, run_mutation_helper, validate_target_path
 from .read_only import find_repo_root, is_relative_to, repo_relative
 
 INVENTORY_NAME = "install_inventory.json"
@@ -24,6 +28,21 @@ DEFAULT_RUNNER_INVOCATION_CASES = XPLAT_008_FIXTURE_ROOT / "runner-invocation-ca
 XPLAT_008_PROMOTION_RECORDS = XPLAT_008_FIXTURE_ROOT / "promotion-records.json"
 DEFAULT_INSTALL_HEALTH_CASES = XPLAT_008_FIXTURE_ROOT / "install-health-repair-cases.json"
 MINIMUM_PYTHON = (3, 11, 0)
+REQUIRED_CODEX_AGENT_NAMES = frozenset(
+    {
+        "analyze-executor.toml",
+        "autopilot-fast-helper.toml",
+        "checklist-executor.toml",
+        "clarify-executor.toml",
+        "codebase-analyst.toml",
+        "domain-researcher.toml",
+        "implement-executor.toml",
+        "phase-executor.toml",
+        "spec-context-analyst.toml",
+        "uat-runbook-author.toml",
+    }
+)
+SUPPORTED_CODEX_AGENT_MODELS = frozenset({"gpt-5.5", "gpt-5.4"})
 
 
 def run_runner_invocation_gate(entry: Any, request: Any) -> dict[str, Any]:
@@ -60,6 +79,9 @@ def run_runner_invocation_gate(entry: Any, request: Any) -> dict[str, Any]:
 
 
 def run_install_helper(entry: Any, request: Any) -> dict[str, Any]:
+    if request.helper_id == "install-codex-agents":
+        return run_codex_agent_install(entry, request)
+
     repo_root = find_repo_root(Path.cwd())
     if repo_root is None:
         return response(
@@ -131,6 +153,418 @@ def run_install_helper(entry: Any, request: Any) -> dict[str, Any]:
             }
         )
     return run_mutation_helper(entry, request, operations=repair_ops, extra_data={"doctor": doctor})
+
+
+def run_codex_agent_install(entry: Any, request: Any) -> dict[str, Any]:
+    source_dir = codex_plugin_root() / "codex-agents"
+    source_result = load_codex_agent_bundle(source_dir, request.inputs)
+    if is_diagnostic(source_result):
+        return response("input_error", request_id=request.request_id, diagnostics=[source_result])
+    rendered, model = source_result
+
+    destination_result = codex_agent_destination(request.inputs)
+    if is_diagnostic(destination_result):
+        return response("input_error", request_id=request.request_id, diagnostics=[destination_result])
+    destination = destination_result
+    unsafe = codex_agent_destination_diagnostic(destination)
+    if unsafe is not None:
+        return response("input_error", request_id=request.request_id, diagnostics=[unsafe])
+
+    mutation = empty_mutation(request.mode)
+    planned: list[tuple[str, Path, bytes]] = []
+    for name, content in rendered.items():
+        target = destination / name
+        operation = {"operation_id": f"install-codex-agent:{name}", "kind": "write_file", "target": target.as_posix()}
+        try:
+            previous_state = codex_agent_previous_state(target)
+        except OSError as exc:
+            return response(
+                "input_error",
+                request_id=request.request_id,
+                diagnostics=[
+                    diagnostic(
+                        "unsafe_agent_destination",
+                        "Codex agent destination contains an unsafe managed entry",
+                        details={"path": target.as_posix(), "error": str(exc)},
+                    )
+                ],
+            )
+        current = previous_state[0] if previous_state is not None else None
+        if current == content:
+            mutation["no_op_operations"].append(operation_record(operation))
+            continue
+        planned.append((name, target, content))
+        mutation["planned_operations"].append(operation_record(operation))
+        mutation["planned_paths"].append(target.as_posix())
+
+    mutation["live_mutation"] = request.mode == "apply" and bool(planned)
+    data = codex_agent_install_data(entry, request, mutation, source_dir, destination, model, rendered)
+    if request.mode == "dry_run":
+        mutation["mutation_status"] = "planned" if planned else "no_op"
+        return response("ok", request_id=request.request_id, data=data)
+
+    if not planned:
+        mutation["mutation_status"] = "no_op"
+        data["restart_required"] = False
+        data["verification"] = {"status": "verified", "matched_files": sorted(rendered)}
+        return response("ok", request_id=request.request_id, data=data)
+
+    previous: dict[str, tuple[bytes, int] | None] = {}
+    destination_existed = destination.exists()
+    destination_parent_existed = destination.parent.exists()
+    destination_identity: tuple[int, int] | None = None
+    failed_name: str | None = None
+    try:
+        destination.mkdir(parents=True, exist_ok=True)
+        unsafe = codex_agent_destination_diagnostic(destination)
+        if unsafe is not None:
+            raise OSError("destination changed before apply")
+        destination_identity = codex_agent_destination_identity(destination)
+        for index, (name, target, content) in enumerate(planned):
+            failed_name = name
+            if not codex_agent_target_is_safe(target, destination, destination_identity):
+                raise OSError(f"unsafe destination entry: {name}")
+            previous[name] = codex_agent_previous_state(target)
+            write_codex_agent_atomic(target, content, destination, destination_identity)
+            operation = {"operation_id": f"install-codex-agent:{name}", "kind": "write_file", "target": target.as_posix()}
+            mutation["applied_operations"].append(operation_record(operation))
+            mutation["touched_paths"].append(target.as_posix())
+
+        mismatches = verify_codex_agent_install(destination, rendered)
+        if mismatches:
+            raise OSError(f"post-copy verification failed: {', '.join(mismatches)}")
+    except OSError as exc:
+        rollback_failures = rollback_codex_agent_install(destination, previous, destination_identity)
+        cleanup_codex_agent_destination(
+            destination,
+            destination_existed=destination_existed,
+            destination_parent_existed=destination_parent_existed,
+        )
+        mutation["mutation_status"] = "partial_failure" if rollback_failures else "blocked"
+        if failed_name is not None:
+            failed_target = destination / failed_name
+            mutation["failure_operation"] = operation_record(
+                {
+                    "operation_id": f"install-codex-agent:{failed_name}",
+                    "kind": "write_file",
+                    "target": failed_target.as_posix(),
+                }
+            )
+        mutation["manual_remediation"] = (
+            ["Restore the reported files manually before retrying."] if rollback_failures else []
+        )
+        data["writes_state"] = bool(rollback_failures)
+        data["rollback_succeeded"] = not rollback_failures
+        data["restart_required"] = bool(rollback_failures)
+        data["verification"] = {"status": "failed", "matched_files": []}
+        return response(
+            "expected_failure",
+            request_id=request.request_id,
+            data=data,
+            diagnostics=[
+                diagnostic(
+                    "codex_agent_install_failed",
+                    "Codex agent installation failed and rollback was attempted",
+                    details={"error": str(exc), "rollback_failures": rollback_failures},
+                    remediation_summary="Inspect the destination and retry after resolving the reported failure.",
+                    remediation_actions=mutation["manual_remediation"] or ["Retry the same request in dry_run mode."],
+                )
+            ],
+        )
+
+    mutation["mutation_status"] = "applied"
+    data["writes_state"] = True
+    data["verification"] = {"status": "verified", "matched_files": sorted(rendered)}
+    return response("ok", request_id=request.request_id, data=data)
+
+
+def codex_plugin_root() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
+def load_codex_agent_bundle(source_dir: Path, inputs: dict[str, Any]) -> tuple[dict[str, bytes], str] | dict[str, Any]:
+    raw_model = inputs["model"] if "model" in inputs else os.environ.get("SPECKIT_CODEX_MODEL") or "gpt-5.5"
+    if not isinstance(raw_model, str) or raw_model not in SUPPORTED_CODEX_AGENT_MODELS:
+        return diagnostic(
+            "unsupported_codex_model",
+            "model must be gpt-5.5 or gpt-5.4",
+            details={"model": raw_model},
+            remediation_summary="Choose a supported explicit Codex agent model.",
+            remediation_actions=["Set inputs.model to gpt-5.5 or gpt-5.4."],
+        )
+    if not source_dir.is_dir() or source_dir.is_symlink():
+        return diagnostic("missing_agent_bundle", "bundled codex-agents directory is missing or unsafe")
+    if any(source_dir.glob("*.md")):
+        return diagnostic("legacy_agent_bundle", "bundled codex-agents directory contains legacy Markdown agents")
+    source_files = sorted(source_dir.glob("*.toml"), key=lambda path: path.name)
+    source_names = {path.name for path in source_files}
+    missing = sorted(REQUIRED_CODEX_AGENT_NAMES - source_names)
+    unexpected = sorted(source_names - REQUIRED_CODEX_AGENT_NAMES)
+    if missing or unexpected:
+        return diagnostic(
+            "incomplete_agent_bundle",
+            "bundled Codex agent set does not match the required inventory",
+            details={"missing_files": missing, "unexpected_files": unexpected},
+            remediation_summary="Restore the complete bundled agent set before installing.",
+            remediation_actions=["Repair or reinstall the SpecKit Pro plugin."],
+        )
+    rendered: dict[str, bytes] = {}
+    try:
+        for path in source_files:
+            if path.is_symlink() or not path.is_file():
+                raise OSError(path.name)
+            source_bytes = path.read_bytes()
+            source_text = source_bytes.decode("utf-8")
+            source_policy = tomllib.loads(source_text)
+            if source_policy.get("name") != path.stem:
+                raise ValueError(f"{path.name}: name must match filename")
+            expected_source_model = "gpt-5.3-codex-spark" if path.name == "autopilot-fast-helper.toml" else "gpt-5.5"
+            if source_policy.get("model") != expected_source_model:
+                raise ValueError(f"{path.name}: unexpected source model")
+
+            if raw_model == "gpt-5.4" and expected_source_model == "gpt-5.5":
+                rendered_text, replacement_count = re.subn(
+                    r'^model = "gpt-5\.5"$',
+                    'model = "gpt-5.4"',
+                    source_text,
+                    flags=re.MULTILINE,
+                )
+                if replacement_count != 1:
+                    raise ValueError(f"{path.name}: expected exactly one model rewrite")
+                rendered_policy = tomllib.loads(rendered_text)
+                if rendered_policy.get("model") != "gpt-5.4":
+                    raise ValueError(f"{path.name}: model rewrite did not validate")
+                rendered[path.name] = rendered_text.encode("utf-8")
+            else:
+                rendered[path.name] = source_bytes
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError, ValueError) as exc:
+        return diagnostic(
+            "unsafe_agent_bundle",
+            "bundled Codex agent templates could not be read safely",
+            details={"error": type(exc).__name__, "message": str(exc)},
+        )
+    return rendered, raw_model
+
+
+def codex_agent_destination(inputs: dict[str, Any]) -> Path | dict[str, Any]:
+    default = Path.home() / ".codex" / "agents"
+    raw = inputs.get("destination")
+    if raw is None:
+        candidate = default
+    elif not isinstance(raw, str) or not raw.strip():
+        return diagnostic("invalid_destination", "destination must be a non-empty path string")
+    else:
+        candidate = Path(raw).expanduser()
+        if not candidate.is_absolute():
+            candidate = Path.cwd() / candidate
+    candidate = candidate.absolute()
+    allowed = {
+        default.absolute(),
+        (Path.cwd() / ".codex" / "agents").absolute(),
+    }
+    if candidate not in allowed:
+        return diagnostic(
+            "invalid_destination",
+            "destination must be the user or current-project Codex agents directory",
+            details={"destination": candidate.as_posix()},
+            remediation_summary="Use ~/.codex/agents or .codex/agents.",
+            remediation_actions=["Retry with a Codex-native agent destination."],
+        )
+    return candidate
+
+
+def codex_agent_destination_diagnostic(destination: Path) -> dict[str, Any] | None:
+    for path in (destination, *destination.parents):
+        if path.exists() and path.is_symlink():
+            return diagnostic(
+                "unsafe_agent_destination",
+                "Codex agent destination must not traverse symlinks",
+                details={"path": path.as_posix()},
+            )
+        if path == path.parent:
+            break
+    if destination.exists() and not destination.is_dir():
+        return diagnostic("unsafe_agent_destination", "Codex agent destination is not a directory")
+    return None
+
+
+def codex_agent_destination_identity(destination: Path) -> tuple[int, int]:
+    metadata = destination.lstat()
+    if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode):
+        raise OSError("destination is not a stable directory")
+    return metadata.st_dev, metadata.st_ino
+
+
+def codex_agent_previous_state(target: Path) -> tuple[bytes, int] | None:
+    try:
+        metadata = target.lstat()
+    except FileNotFoundError:
+        return None
+    if not stat.S_ISREG(metadata.st_mode):
+        raise OSError("managed target is not a regular file")
+
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    descriptor: int | None = None
+    try:
+        descriptor = os.open(target, flags)
+        opened_metadata = os.fstat(descriptor)
+        if (opened_metadata.st_dev, opened_metadata.st_ino) != (metadata.st_dev, metadata.st_ino):
+            raise OSError("managed target changed while being read")
+        with os.fdopen(descriptor, "rb") as handle:
+            descriptor = None
+            content = handle.read()
+            opened_metadata = os.fstat(handle.fileno())
+            if (opened_metadata.st_dev, opened_metadata.st_ino) != (metadata.st_dev, metadata.st_ino):
+                raise OSError("managed target changed while being read")
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+    return content, opened_metadata.st_mode
+
+
+def rollback_codex_agent_install(
+    destination: Path,
+    previous: dict[str, tuple[bytes, int] | None],
+    destination_identity: tuple[int, int] | None,
+) -> list[str]:
+    failures: list[str] = []
+    for name, state in reversed(list(previous.items())):
+        target = destination / name
+        try:
+            if state is None:
+                if not codex_agent_target_is_safe(target, destination, destination_identity):
+                    raise OSError("rollback target became unsafe")
+                if target.exists():
+                    target.unlink()
+            else:
+                content, mode = state
+                write_codex_agent_atomic(target, content, destination, destination_identity, mode=mode)
+        except OSError:
+            failures.append(name)
+    return sorted(failures)
+
+
+def cleanup_codex_agent_destination(
+    destination: Path,
+    *,
+    destination_existed: bool,
+    destination_parent_existed: bool,
+) -> None:
+    for path, existed in ((destination, destination_existed), (destination.parent, destination_parent_existed)):
+        if existed:
+            continue
+        try:
+            path.rmdir()
+        except OSError:
+            pass
+
+
+def write_codex_agent_atomic(
+    target: Path,
+    content: bytes,
+    destination: Path,
+    destination_identity: tuple[int, int] | None,
+    *,
+    mode: int | None = None,
+) -> None:
+    if not codex_agent_target_is_safe(target, destination, destination_identity):
+        raise OSError("unsafe target path")
+    tmp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            prefix=f".{target.name}.",
+            suffix=".tmp",
+            dir=destination,
+            delete=False,
+        ) as handle:
+            tmp_path = Path(handle.name)
+            handle.write(content)
+            if mode is not None:
+                descriptor_chmod = getattr(os, "fchmod", None)
+                if not callable(descriptor_chmod):
+                    raise OSError("safe descriptor-based mode restoration is unavailable")
+                descriptor_chmod(handle.fileno(), mode & 0o7777)
+            handle.flush()
+            os.fsync(handle.fileno())
+        if codex_agent_destination_identity(destination) != destination_identity:
+            raise OSError("destination changed after temporary file creation")
+        if not codex_agent_target_is_safe(target, destination, destination_identity):
+            raise OSError("target path changed before replace")
+        os.replace(tmp_path, target)
+        tmp_path = None
+        if codex_agent_destination_identity(destination) != destination_identity:
+            raise OSError("destination changed during replace")
+        installed_state = codex_agent_previous_state(target)
+        if installed_state is None or installed_state[0] != content:
+            raise OSError("target changed after replace")
+        if mode is not None and (installed_state[1] & 0o7777) != (mode & 0o7777):
+            raise OSError("target mode changed after replace")
+    finally:
+        if tmp_path is not None:
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
+
+
+def codex_agent_target_is_safe(
+    target: Path,
+    destination: Path,
+    destination_identity: tuple[int, int] | None,
+) -> bool:
+    try:
+        current_identity = codex_agent_destination_identity(destination)
+    except OSError:
+        return False
+    if destination_identity is None or current_identity != destination_identity or target.parent != destination:
+        return False
+    try:
+        metadata = target.lstat()
+    except FileNotFoundError:
+        return True
+    except OSError:
+        return False
+    return stat.S_ISREG(metadata.st_mode)
+
+
+def verify_codex_agent_install(destination: Path, rendered: dict[str, bytes]) -> list[str]:
+    mismatches: list[str] = []
+    for name, content in rendered.items():
+        target = destination / name
+        try:
+            state = codex_agent_previous_state(target)
+            if state is None or state[0] != content:
+                mismatches.append(name)
+        except OSError:
+            mismatches.append(name)
+    return sorted(mismatches)
+
+
+def codex_agent_install_data(
+    entry: Any,
+    request: Any,
+    mutation: dict[str, Any],
+    source_dir: Path,
+    destination: Path,
+    model: str,
+    rendered: dict[str, bytes],
+) -> dict[str, Any]:
+    return {
+        "helper_id": entry.helper_id,
+        "operation": entry.operation,
+        "mode": request.mode,
+        "promotion_status": entry.promotion_status,
+        "comparison_mode": entry.comparison_mode,
+        "writes_state": False,
+        "source": source_dir.as_posix(),
+        "destination": destination.as_posix(),
+        "model": model,
+        "agent_files": sorted(rendered),
+        "restart_required": request.mode == "apply",
+        "verification": {"status": "planned", "matched_files": []},
+        "mutation": mutation,
+    }
 
 
 def run_install_health_repair(entry: Any, request: Any, repo_root: Path) -> dict[str, Any]:

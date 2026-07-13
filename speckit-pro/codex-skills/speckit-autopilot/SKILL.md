@@ -572,7 +572,12 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
 - **Step 0.8: Capability Coverage Check** — informational research/context advisory (agents have fallbacks)
 - **Step 0.8b: Capability Enumeration, Grounding & Feed-down** — you are the only component that discovers openly. Enumerate the tools and installed skills this session actually exposes and select best-fit per the capability-discovery directive (speckit-pro/skills/speckit-autopilot/references/capability-discovery.md); assume no fixed set — the user may have installed anything. Subagents inherit the operator's full installed surface and follow the same directive — read-only roles select only read/research capabilities (their mutation built-ins are denied). Still pass the discovered evidence a subagent needs directly in each prompt: shared context beats re-discovery. Ground your OWN output (gate decisions, consensus synthesis, PR bodies) per the grounding contract (speckit-pro/skills/speckit-autopilot/references/grounding.md): cite a real tool/skill/file result for every external fact, and abstain when none grounds it.
 - **Step 0.9: Constitution Validation** — principle checks against current codebase
-- **Step 0.10: Codex Agent Availability Check** — `install-codex-agents` is registered as deferred in the runner mutation registry. Do not invoke it as an active helper. Verify bundled SpecKit Pro Codex agents from the installed file inventory; if required agents are missing, STOP and instruct the user to run `$install`, approve the expected local write, then restart Codex.
+- **Step 0.10: Codex Agent Availability Check** — Run the promoted
+  `install-codex-agents` helper in `dry_run` mode against the selected project or
+  user destination and its installed model choice. If any required file is
+  missing or stale, STOP and instruct the user to run `$install`, approve the
+  expected local write, and restart Codex. Do not apply the repair inside
+  autopilot: the current process cannot reload changed custom agents safely.
 - **Step 0.10b: Implementation Agent Detection** — discover `PROJECT_IMPLEMENTATION_AGENT` from `.codex/agents/`
 - **Step 0.11: Project Command Discovery** — runner helper `detect-commands` → `PROJECT_COMMANDS`
 - **Step 0.12: Preset and Extension Detection** — runner helper `detect-presets` → `PRESET_CONVENTIONS`
@@ -1057,8 +1062,11 @@ registered helper or gate operation IDs below.
 - `detect-commands`, `detect-presets`, and `count-markers` — Provide
   deterministic command, preset, and marker evidence through runner-owned
   operation IDs.
-- `generate-uat-skeleton`, `install-codex-agents`,
-  `final-reviewability-backstop`, and `detect-stack-manager-plan` — Registered
+- `install-codex-agents` — Content-aware Codex agent refresh used in `dry_run`
+  mode during preflight; apply only through `$install`, followed by a Codex
+  restart.
+- `generate-uat-skeleton`, `final-reviewability-backstop`, and
+  `detect-stack-manager-plan` — Registered
   but not active helper calls for installed workflows; follow the deferred or
   out-of-scope guidance above instead of invoking them.
 - `pr-packet-output`, `validate-pr-packet-write`,

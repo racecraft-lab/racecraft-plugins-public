@@ -42,8 +42,12 @@ G56R-011
 
 **Implementation boundary:** This sequence has no external prerequisite, but its
 internal dependencies still apply: only G56R-001 is immediately scaffoldable.
-G56R-006 later implements and activates the currently deferred Python
-`install-codex-agents` helper; it must not reintroduce a deleted Bash helper.
+A route-agnostic Python `install-codex-agents` helper is active for safe static
+agent refreshes. G56R-006 later extends that baseline with capability-aware
+resolution, materialization, and atomic policy installation; it must not
+reintroduce a deleted Bash helper. The baseline's optional `gpt-5.4` rewrite is
+legacy static compatibility only: it does not qualify model routes or runtime
+capabilities, and G56R-006 replaces it with strict route-aware resolution.
 
 ### Candidate-route starting hypotheses
 
@@ -480,8 +484,9 @@ Budget result: re-estimate at scaffold; one resolver/installer policy slice
 
 **Scope:**
 
-- Implement and activate the currently deferred Python
-  `install-codex-agents` operation; do not restore the deleted shell installer.
+- Extend the active route-agnostic Python `install-codex-agents` operation with
+  capability-aware resolution and atomic policy installation; do not restore
+  the deleted shell installer.
 - Consume the G56R-003 canonical materializer. The resolver evaluates the
   preferred route, then each ordered fallback, using a fresh
   `runtime_capability_snapshot_id`; when discovery is unavailable, use only the
@@ -521,7 +526,7 @@ Budget result: re-estimate at scaffold; one resolver/installer policy slice
 
 - `speckit-pro/codex-skills/install/SKILL.md` - current install contract
 - `speckit-pro/speckit_pro_runner/helpers/install.py` - current install/doctor module and proposed agent-copy owner
-- `speckit-pro/speckit_pro_runner/helpers/registry.py` - current deferred operation and proposed activation point
+- `speckit-pro/speckit_pro_runner/helpers/registry.py` - active static baseline and capability-aware extension point
 - `speckit-pro/codex-agents/*.toml` - source inventory
 - `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` - current tests to extend with fake-home cases
 

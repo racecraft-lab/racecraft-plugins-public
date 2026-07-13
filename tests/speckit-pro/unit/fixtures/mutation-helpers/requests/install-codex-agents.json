@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-install-codex-agents",
+  "helper_id": "install-codex-agents",
+  "operation": "install-codex-agents",
+  "mode": "dry_run",
+  "inputs": {
+    "destination": ".codex/agents",
+    "model": "gpt-5.5"
+  }
+}

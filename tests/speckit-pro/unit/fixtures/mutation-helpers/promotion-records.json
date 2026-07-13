@@ -27,6 +27,14 @@
       "rollback": "Remove doctor-repair registry entry."
     },
     {
+      "helper_id": "install-codex-agents",
+      "promotion_status": "golden_only",
+      "fixture_ids": ["dry-run-refresh", "stale-overwrite", "no-op", "rollback", "invalid-source", "unsafe-destination"],
+      "bash_reference_ids": ["install-codex-agents"],
+      "authoritative_python_command": "python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py",
+      "rollback": "Retry in dry_run mode and preserve the previous same-named Codex agent files before applying again."
+    },
+    {
       "helper_id": "generate-pr-body",
       "promotion_status": "golden_only",
       "fixture_ids": ["pr-body-apply"],
