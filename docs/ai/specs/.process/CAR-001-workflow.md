@@ -61,9 +61,9 @@ questions in the CAR-002 handoff instead of extending the box.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Specify | `/speckit-specify` | ✅ Complete | 25 FRs, 11 acceptance scenarios, 7 SCs; 0 `[NEEDS CLARIFICATION]` |
+| Clarify | `/speckit-clarify` | ⏭️ Skipped | G1 found 0 `[NEEDS CLARIFICATION]` markers; design-concept Q1–Q9 bind the decisions and open items are intentionally deferred to CAR-002 as CAP-Q probe questions |
+| Plan | `/speckit-plan` | 🔄 In Progress | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -100,7 +100,7 @@ Each phase requires **human review and approval** before proceeding:
 | V. Conventional Commits | Scoped commits, e.g. `docs(research): ...` / `chore(CAR-001): ...` | `git log` review |
 | VI. KISS, Simplicity & YAGNI | Requirements-level backlog, no speculative schema surface | Code/doc review against design concept Q4/Q8 |
 
-**Constitution Check:** ✅ / ❌ (mark before proceeding to G1)
+**Constitution Check:** ✅ Verified (2026-07-14) — green baseline suite passes 2734/2734 (L1 1426, L4 1122, L5 186); principle II (no new Bash — deliverables are Markdown + JSON), IV (suite passes untouched — baseline green), V (conventional commits), VI (KISS/YAGNI — requirements-level backlog) all hold for a read-only docs spike.
 
 ---
 
@@ -225,13 +225,15 @@ behavior.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | |
-| User Stories | |
-| Acceptance Criteria | |
+| Functional Requirements | 25 (FR-001…FR-025) |
+| User Stories | 1 (single-story research spike, P1) |
+| Acceptance Criteria | 11 acceptance scenarios + 7 measurable success criteria (SC-001…SC-007); 9 key entities; 6 edge cases |
+| `[NEEDS CLARIFICATION]` markers | 0 (verified via grep) |
+| Template | `speckit-pro-reviewability` preset v1.0.0 (Reviewability Budget + PR Packet sections completed) |
 
 ### Files Generated
 
-- [ ] `specs/car-001-candidate-route-baseline/spec.md`
+- [x] `specs/car-001-candidate-route-baseline/spec.md` (+ `checklists/requirements.md`, all quality items pass)
 
 ### SpecKit Traceability Markers
 
