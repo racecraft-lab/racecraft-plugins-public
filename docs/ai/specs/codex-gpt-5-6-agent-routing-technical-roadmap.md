@@ -13,7 +13,7 @@ is prepared for `$speckit-scaffold-spec G56R-NNN`.
 **Roadmap MOC:** [codex-gpt-5-6-agent-routing-roadmap-MOC.md](codex-gpt-5-6-agent-routing-roadmap-MOC.md)
 **Spec ID prefix:** `G56R-###`
 **Proposed branch:** `codex/agent-routing-fallback`
-**Status:** Draft; G56R-001 ready to scaffold
+**Status:** Draft; G56R-001 in progress
 
 **Legacy identifier note:** `G56R` and the existing filenames are retained for
 traceability. They do not limit the candidate catalog to GPT-5.6.
@@ -192,7 +192,7 @@ G56R-006 Resolver, Materializer, Installer, and Strict Override
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| G56R-001 | Candidate Route Baseline and Role Contracts | Pending | - | Ready to scaffold |
+| G56R-001 | Candidate Route Baseline and Role Contracts | In Progress | [G56R-001-workflow.md](.process/G56R-001-workflow.md) | Specify |
 | G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | Pending | - | Blocked by G56R-001 |
 | G56R-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Pending | - | Blocked by G56R-002 |
 | G56R-004 | Policy Controls and Adaptive Comparators | Pending | - | Blocked by G56R-003 |
