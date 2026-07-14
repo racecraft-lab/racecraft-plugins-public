@@ -73,7 +73,7 @@ required for all twelve agents unless the "Required" column says otherwise.
 | `candidate_rationale` | string | yes | Why this candidate set fits the role (may also be recorded per tuple in §4). |
 | `known_incompatibilities` | array[object] | yes | Recorded incompatibilities; each `{subject, reason, evidence_ref}`. Empty array allowed, but the field MUST be present. |
 | `required_qualification_artifacts` | array[string] | yes | The evidence CAR-003 must produce before any candidate is called executable (e.g. fixture pass records, transcript captures). |
-| `invalidation_triggers` | array[string] | yes | Conditions that invalidate this entry (e.g. "alias `opus` re-points to a new resolved model ID", "agent frontmatter route drifts from the comparator hash"). |
+| `invalidation_triggers` | array[string] | yes | Conditions that invalidate this entry. MUST be candidate-specific and actionable, not boilerplate (FR-014): for every distinct alias in `candidate_routes` the array MUST carry a trigger for that alias re-pointing to a new resolved model ID (e.g. "alias `opus` re-points to a new resolved model ID"), and MUST carry the agent's comparator-drift trigger (e.g. "agent frontmatter route drifts from the comparator hash"). `minItems` 1 in the contract; the per-alias coverage is enforced by the quickstart check (§7 rule 10), not by JSON Schema. |
 | `fixture_backlog_ref` | string | yes | Cross-reference to the requirements-level fixture-backlog entry in the record (FR-019); the manifest does not inline full fixture specs. |
 
 ### 3.1 `role_contract`
@@ -92,6 +92,18 @@ required for all twelve agents unless the "Required" column says otherwise.
 | `instruction_sha256` | string (64-hex) | yes | sha256 over the **frontmatter-stripped** agent body. A pure frontmatter route change MUST leave this unchanged (SC-007). |
 | `full_file_sha256` | string (64-hex) | yes | sha256 over the full agent file (frontmatter included), for drift detection. |
 | `hash_source` | string enum `claude-agent-md` \| `codex-toml-translation` | yes | For the eleven current agents, `claude-agent-md`. For `autopilot-fast-helper` (no Claude `.md` exists), `codex-toml-translation`: the instruction identity is computed over the contract-equivalent translated body, and `full_file_sha256` records the sha256 of the source Codex toml for provenance. |
+
+**Hash input — source and boundary (FR-010, FR-011, SC-007).** All three hashes
+MUST be computed over the agent file's bytes **as published at the pinned
+comparator tag** (`speckit-pro-v2.19.1`, commit
+`e343aa2e4ebcb2d48c501f285d7072cfd55722da`), never the working-tree copy, so the
+recorded identity provably represents the immutable comparator and is
+reproducible from the tag. **Frontmatter** is the leading YAML block delimited by
+the first pair of `---` fence lines (the file's opening `---` line and its
+closing `---` line); the **instruction body** is everything after that closing
+fence line, hashed verbatim — byte-for-byte, no normalization of whitespace,
+line endings, or content (Design Q4, which rejected a normalization policy as
+YAGNI). `full_file_sha256` covers the whole file including the frontmatter block.
 
 ### 3.3 `required_capabilities` (FR-014)
 
@@ -136,7 +148,7 @@ the skipped Clarify phase would have pinned down.
 |-------|------|----------|-------------|
 | `status` | string const `probe_required` | yes | This spike never resolves availability; it is always a CAR-002 probe outcome (AC-1.4, AC-1.5). No candidate is claimed executable before probing (FR-022). |
 | `probe_question_ref` | string (`CAP-Qn`) | yes | The capability question CAR-002 answers to establish availability. |
-| `binding_question_ref` | string (`CAP-Qn`) | optional | Present when `expected_resolved_model_id` is `null` (the alias-to-ID binding is itself an open question). |
+| `binding_question_ref` | string (`CAP-Qn`) | conditional | Required when `expected_resolved_model_id` is `null` (the alias-to-ID binding is itself an open question), omitted otherwise. The contract enforces this via a conditional `allOf` on `candidate_route_tuple` (§7 rule 6). |
 
 **Exclusion rule (FR-016)**: a model or effort is excluded from a candidate set
 only for recorded incompatibility (`known_incompatibilities`), recorded contract
@@ -162,6 +174,15 @@ constraints:
   `{codex_field, claude_equivalent, evidence_class, note}`), mapping e.g.
   `sandbox_mode: read-only` → the shared read-only `disallowedTools` denylist and
   `codex-spark` → `haiku` + explicit low effort (starting hypotheses, labeled).
+  The table MUST be **source-complete** (FR-017): every field in
+  `speckit-pro/codex-agents/autopilot-fast-helper.toml` — `model`, `sandbox_mode`,
+  and the `developer_instructions` contract content (role prose, bounded jobs,
+  hard rules, output formats) — appears as a row, either mapped to a Claude
+  equivalent or explicitly marked no-equivalent (`evidence_class: proposed_policy`
+  per FR-018); no source field is silently dropped. Because JSON Schema cannot
+  read the source toml, this source-exhaustiveness is a quickstart/review-enforced
+  authoring rule (like the §7 rule 10 invalidation-trigger coverage), not a schema
+  constraint.
 - Claude-only fields with no Codex equivalent (e.g. `maxTurns`) appear with a
   proposed value and `evidence_class: proposed_policy` labeled "proposed SpecKit
   Pro policy", deferred to CAR-010 (FR-018).
@@ -196,16 +217,20 @@ manifest carries the machine-referenceable stubs so tuples can point at them by
    (`autopilot-fast-helper`) has `immutable_production_route == null` and
    `production_route_recorded_absence == true`; the other eleven have a non-null
    route and `false`.
-4. **Hash integrity (FR-011, SC-007)**: `instruction_sha256` and
-   `full_file_sha256` are 64-hex; for the eleven current agents recomputing
-   sha256 over the frontmatter-stripped body reproduces `instruction_sha256`,
-   and a pure frontmatter route change does not change it.
+4. **Hash integrity (FR-010, FR-011, SC-007)**: `instruction_sha256` and
+   `full_file_sha256` are 64-hex; all hashes are computed over the agent file's
+   bytes at the pinned comparator tag (not the working tree) using the §3.2
+   frontmatter boundary; for the eleven current agents recomputing sha256 over
+   the frontmatter-stripped tag body reproduces `instruction_sha256`, and a pure
+   frontmatter route change does not change it.
 5. **Eligibility/availability split (FR-015)**: every tuple has both
    `project_level_eligibility` and `environment_time_availability`;
    `environment_time_availability.status` is always `probe_required`.
 6. **Unbound-alias rule (Edge Cases)**: whenever `expected_resolved_model_id`
    is `null`, `environment_time_availability.binding_question_ref` references an
-   existing `CAP-Qn`.
+   existing `CAP-Qn`. This is enforced structurally by the contract's conditional
+   `allOf` on `candidate_route_tuple` (a null `expected_resolved_model_id`
+   requires `binding_question_ref`), not by prose alone.
 7. **No-executable-claim (FR-022)**: no field asserts a candidate is executable;
    executability is always gated behind `probe_required` + qualification
    artifacts.
@@ -214,6 +239,12 @@ manifest carries the machine-referenceable stubs so tuples can point at them by
 9. **Cross-reference integrity (Constitution VI)**: every `agent_contract_id`,
    `fixture_backlog_ref`, and `CAP-Qn` referenced in the manifest resolves to a
    section in the record; no machine datum is duplicated as prose that can drift.
+10. **Invalidation-trigger coverage (FR-014)**: `invalidation_triggers` is
+    candidate-specific and actionable — for every distinct alias in
+    `candidate_routes` there is a trigger for that alias re-pointing, plus the
+    agent's comparator-drift trigger; a single generic/boilerplate trigger fails
+    this rule. Enforced by the quickstart check (candidate aliases cannot be
+    cross-referenced against free-text triggers in JSON Schema).
 
 ---
 

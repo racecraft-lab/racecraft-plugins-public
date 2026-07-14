@@ -27,6 +27,9 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [data-model.md](data-model.md)
 - [research.md](research.md)
 - [contracts/agent-route-candidate-manifest.schema.json](contracts/agent-route-candidate-manifest.schema.json)
+- [checklists/data-integrity.md](checklists/data-integrity.md)
 - [checklists/requirements.md](checklists/requirements.md)
+- [checklists/research-rigor.md](checklists/research-rigor.md)
+- [checklists/traceability.md](checklists/traceability.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

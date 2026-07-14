@@ -124,7 +124,22 @@
           }
         },
         "tuple_rationale": { "type": "string" }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["expected_resolved_model_id"],
+            "properties": { "expected_resolved_model_id": { "type": "null" } }
+          },
+          "then": {
+            "properties": {
+              "environment_time_availability": {
+                "required": ["status", "probe_question_ref", "binding_question_ref"]
+              }
+            }
+          }
+        }
+      ]
     },
     "required_capabilities": {
       "type": "object",

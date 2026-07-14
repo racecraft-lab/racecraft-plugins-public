@@ -83,8 +83,8 @@ zero data impact. spec.md FR-009 + Assumption and plan.md are reconciled to
 | Specify | `/speckit-specify` | ✅ Complete | 25 FRs, 11 acceptance scenarios, 7 SCs; 0 `[NEEDS CLARIFICATION]` |
 | Clarify | `/speckit-clarify` | ⏭️ Skipped | G1 found 0 `[NEEDS CLARIFICATION]` markers; design-concept Q1–Q9 bind the decisions and open items are intentionally deferred to CAR-002 as CAP-Q probe questions |
 | Plan | `/speckit-plan` | ✅ Complete | plan/research/data-model/contracts-schema/quickstart; manifest schema fully specified; comparator pinned 2.19.1/e343aa2e; constitution PASS 6/6; reviewability advisory `pass` (0 production LOC) |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Checklist | `/speckit-checklist` | ✅ Complete | 3 domains (traceability, data-integrity, research-rigor); 11 gaps → 0; no consensus needed (all high-confidence) |
+| Tasks | `/speckit-tasks` | 🔄 In Progress | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 
@@ -481,12 +481,12 @@ Focus on CAR-001 Candidate Route Baseline and Role Contracts requirements:
 
 ### Checklist Results
 
-| Checklist | Items | Gaps | Spec References |
+| Checklist | Items | Gaps (found→remaining) | Remediation (spec/plan/data-model/contract refs) |
 |-----------|-------|------|-----------------|
-| traceability | | | |
-| data-integrity | | | |
-| research-rigor | | | |
-| **Total** | | | |
+| traceability | 41 | 3→0 | Added FR-026 (telemetry-requirements content), FR-027 (prompt/context-candidate deferral to CAR-003); extended FR-020 (AC-1.7 replay conditions); FR-022 cross-ref |
+| data-integrity | 30 | 5→0 | Extended FR-011 (hash source = pinned-tag bytes), FR-014 (per-alias invalidation triggers); added SC-008 (schema conformance); added `candidate_route_tuple` conditional to the JSON Schema (empirically verified: unbound alias requires `binding_question_ref`); data-model §3.2/§4.2/§7 |
+| research-rigor | 27 | 3→0 | Extended FR-005 (unresolved conflict → CAP-Qn, resolving a FR-005/SC-003 inconsistency), FR-008 (alias re-pointing manifestation → CAP-Qn), FR-017 (source-complete parity table); Edge Cases + data-model §5 |
+| **Total** | 98 | 11→0 | 0 `[Gap]` and 0 real `[NEEDS CLARIFICATION]` remaining (verified); no consensus rounds required |
 
 ### Addressing Gaps
 
