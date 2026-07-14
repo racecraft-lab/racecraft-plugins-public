@@ -6,6 +6,7 @@ This is the Codex-specific mirror of `prerequisites.md`. Same checks, Codex-spec
 
 ## Contents
 
+- [Workflow Worktree Binding](#workflow-worktree-binding) — fail closed when the workflow belongs to a different checkout
 - [Step -1: Archive Sweep Startup](#step--1-archive-sweep-startup) — archive previously merged specs before workflow execution
 - [Step 0.0: Resolve Script Paths](#step-00-resolve-script-paths) — locate the plugin's `SKILL_SCRIPTS` directory
 - [Step 0.1–0.7: Environment Checks](#step-01-07-environment-checks) — `check-prerequisites` JSON parsing, branch detection
@@ -17,6 +18,32 @@ This is the Codex-specific mirror of `prerequisites.md`. Same checks, Codex-spec
 - [Step 0.11: Project Command Discovery](#step-011-project-command-discovery) — `detect-commands` → `PROJECT_COMMANDS`
 - [Step 0.12: Preset and Extension Detection](#step-012-preset-and-extension-detection) — `detect-presets` → `PRESET_CONVENTIONS`
 
+## Workflow Worktree Binding
+
+Run this read-only guard before Step -1, before reading workflow content, and
+before any repository mutation:
+
+1. Resolve the current checkout with `git rev-parse --show-toplevel`.
+2. If the supplied workflow path exists inside that checkout, continue.
+3. If a relative workflow path is missing, parse `git worktree list
+   --porcelain` and test that same relative path under each registered
+   worktree. Do not search commits, branches, or arbitrary filesystem roots.
+4. If exactly one other worktree contains the workflow, STOP before Archive
+   Sweep and report:
+
+   ```text
+   STOP: Workflow file is not in the current checkout. Start a new Codex task rooted at <worktree>, then run $speckit-autopilot <relative-workflow-path>.
+   ```
+
+5. If multiple worktrees contain it, STOP and list the candidate worktree
+   roots. If none contains it, report the original missing path and STOP.
+6. Treat an absolute workflow path outside the current checkout the same way:
+   identify its registered worktree, then require a task rooted there.
+
+Never copy, move, check out, rebase, or reconstruct the workflow to make the
+current checkout pass. Never execute a workflow from one worktree while phase
+commands, agents, gates, or commits target another.
+
 ## Step -1: Archive Sweep Startup
 
 Before Step 0 and before any requested spec phase work, run Archive Sweep
@@ -26,7 +53,39 @@ to archive previously merged specs.
    field, the `--spec` override, or the active `specs/**` path in the workflow.
 2. Detect archive extension state from `.specify/extensions.yml`,
    `.specify/extensions/.registry`, and `.specify/extensions/archive/extension.yml`.
-3. If the archive extension is installed, determine the sweep mode from the
+3. When the archive extension is installed and enabled, use its project-local
+   command contract as the Codex invocation path:
+
+   - Read `provides.commands` in the extension manifest, resolve the
+     `speckit.archive.run` file relative to the archive extension directory,
+     and verify that file exists before treating the extension as executable.
+   - Read and follow that command contract directly from this Codex skill. Do
+     not require a generated `$speckit-archive-run` skill, a slash command, or
+     any file under `.claude/`; project extension registration may belong to a
+     different integration.
+   - Treat integration-specific frontmatter entries and manifest requirements
+     as renderer metadata for the project's installed integration. Do not
+     resolve or execute those entries from the Codex plugin.
+   - Use the already-validated worktree root and current target to derive
+     absolute `REPO_ROOT`, `FEATURE_DIR`, `MEMORY_DIR`, and `TEMPLATES_DIR`.
+     Step 0's runner checks own the Codex environment validation. Record
+     `prerequisite_mode=codex_native_worktree_binding` and
+     `prerequisite_available=true`.
+
+   This direct contract adapter is the Codex execution path even when the
+   extension registry lists only another integration under
+   `registered_commands`.
+
+4. If the manifest command file is missing or unreadable, the direct contract
+   fails, or the Codex-native worktree binding cannot provide the required
+   paths, treat the installed extension as broken. Record `status=blocked`,
+   `invocation_available=false` or `prerequisite_available=false` as
+   applicable, and `safeToApplyCleanup=false` under `archive_sweep`. Then STOP
+   before Phase 0 with the exact failed path or operation. Do not substitute a
+   manual `specs/` inventory, mark the Archive Sweep plan item completed, or
+   advance Phase 0.
+
+5. After the command and prerequisite pass, determine the sweep mode from the
    current branch:
 
    **Feature / spec worktree branch** (normal autopilot case — run with actual
@@ -41,13 +100,22 @@ to archive previously merged specs.
    archive command: --sweep --current-target <current-spec-dir> --dry-run
    ```
 
-4. Archive Sweep may archive/clean up only previously merged specs. It MUST
+6. Archive Sweep may archive/clean up only previously merged specs. It MUST
    exclude the current target spec until a later run sees that spec as merged.
-5. Persist sweep output into `autopilot-state.json` under `archive_sweep`,
-   including eligible previous specs, excluded current spec, archive extension
-   installed state, cleanup mode, and `safeToApplyCleanup`.
-6. Add/update an `Archive Sweep: previously merged specs archived` plan item
-   before Phase 0 in both `update_plan` and `autopilot-state.json`.
+7. Persist sweep output into `autopilot-state.json` under `archive_sweep`,
+   including `status`, `execution_path=extension_contract`,
+   `invocation_available`, `prerequisite_available`, `prerequisite_mode`,
+   eligible previous specs, excluded current spec, archive extension installed
+   state, cleanup mode, and `safeToApplyCleanup`.
+8. When the executed sweep finds no prior candidates, record
+   `status=no_candidates`, empty eligible previous specs, the excluded current
+   spec, and `safeToApplyCleanup=false`. This is a successful no-op and may
+   complete the Archive Sweep plan item. It is not a fallback for a broken or
+   unexecuted command path.
+9. Add/update the canonical `Archive Sweep: previously merged specs
+   dry-run/apply eligibility` plan item before Phase 0 in both `update_plan`
+   and `autopilot-state.json`. Complete it only after the direct contract run
+   succeeds or the extension is confirmed absent.
 
 If the archive extension is missing, record `archive_extension_installed=false`,
 keep cleanup disabled, and continue only after warning that the project should

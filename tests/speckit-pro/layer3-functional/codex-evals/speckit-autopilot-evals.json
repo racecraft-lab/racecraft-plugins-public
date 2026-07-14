@@ -487,6 +487,47 @@
       ]
     },
     {
+      "id": 34,
+      "prompt": "I invoked $speckit-autopilot docs/ai/specs/.process/G56R-001-workflow.md, but that relative path is absent from this checkout. git worktree list shows exactly one other registered worktree containing the same path. Should Codex search commits or read the workflow there while continuing in this checkout?",
+      "expected_output": "Stops before Archive Sweep or any mutation, does not search revisions or execute across worktrees, and tells the operator to start a new Codex task rooted at the one matching worktree before running the same relative $speckit-autopilot invocation.",
+      "expectations": [
+        "Stops before Archive Sweep, Phase 0, and repository mutation",
+        "Uses git worktree list --porcelain only to locate the same relative path",
+        "Does not search commits, branches, revisions, or arbitrary filesystem roots",
+        "Does not read a workflow from one worktree while mutating another",
+        "Reports the matching absolute worktree root and requires a new Codex task rooted there",
+        "Repeats $speckit-autopilot with the workflow path relative to the matching worktree"
+      ]
+    },
+    {
+      "id": 35,
+      "prompt": "Archive Sweep startup finds the archive extension enabled, but .registry lists only a Claude registered command. The manifest points to commands/archive.md and also declares integration-specific prerequisite metadata. The workflow is bound to the current worktree, and specs/ contains only the excluded current target. What must Codex record and may it continue?",
+      "expected_output": "Uses the archive manifest's project-local command contract directly as the Codex execution path, treats integration-specific prerequisite metadata as non-Codex renderer input, derives paths from the already-bound worktree/current target, and executes the zero-candidate sweep. It records execution_path=extension_contract, invocation_available=true, prerequisite_available=true, prerequisite_mode=codex_native_worktree_binding, status=no_candidates, the excluded target, an empty eligible list, and safeToApplyCleanup=false; then it may complete Archive Sweep and continue to Phase 0.",
+      "expectations": [
+        "Does not require a generated $speckit-archive-run skill, slash command, or .claude skill",
+        "Reads the speckit.archive.run command file from the extension manifest relative to the archive extension directory",
+        "Does not resolve or execute integration-specific prerequisite metadata from the Codex plugin",
+        "Derives absolute paths from the already-bound worktree and current target",
+        "Records execution_path=extension_contract and both invocation_available=true and prerequisite_available=true",
+        "Records prerequisite_mode=codex_native_worktree_binding and status=no_candidates",
+        "Records the excluded current target, no eligible previous specs, and safeToApplyCleanup=false",
+        "Completes the Archive Sweep plan item only after this executed no-op, then may advance Phase 0"
+      ]
+    },
+    {
+      "id": 36,
+      "prompt": "Archive Sweep startup finds the archive extension enabled, but its manifest command file is missing (or the Codex-native worktree binding cannot resolve the required paths). A manual specs/ listing shows zero prior candidates. Can Codex mark the sweep completed and move Phase 0 to in progress?",
+      "expected_output": "No. Treats the installed extension as broken, records archive_sweep status=blocked and safeToApplyCleanup=false with invocation_available=false or prerequisite_available=false as applicable, leaves Archive Sweep incomplete, and stops before Phase 0 with the exact missing path. A manual zero-candidate inventory cannot substitute for an unexecuted command contract.",
+      "expectations": [
+        "Rejects marking Archive Sweep completed from a manual specs/ inventory",
+        "Records status=blocked and safeToApplyCleanup=false",
+        "Records invocation_available=false for a missing command or prerequisite_available=false for a missing prerequisite",
+        "Reports the exact missing path or failed command",
+        "Stops before Phase 0 and does not mark Phase 0 in progress",
+        "Does not confuse status=no_candidates with an unavailable or unexecuted invocation path"
+      ]
+    },
+    {
       "id": 101,
       "prompt": "During the Codex autopilot, the implement-executor needs to match a new payment-retry module to the repo's existing error-handling pattern. Several capabilities could help. How does it decide which one to use to gather that codebase context, and what governs the choice?",
       "expected_output": "Describes installed-capability discovery: the executor first identifies the needed capability category (codebase context), then selects the best INSTALLED capability for that need by task fit, source directness, and expected evidence quality — not by a fixed named-tool order or a preferred vendor set. Capability categories are a taxonomy, not an ordered fallback chain. A formerly named tool is used only when discovery selects it as the best available capability for that need.",

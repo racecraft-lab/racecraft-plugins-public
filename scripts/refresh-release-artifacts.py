@@ -90,6 +90,7 @@ CHECK_COPY_IGNORES = {
     ".pytest_cache",
     ".ruff_cache",
     ".venv",
+    ".worktrees",
     "__pycache__",
     "node_modules",
 }
@@ -217,7 +218,7 @@ def check_release_artifacts(
             )
             for setup_argv in (
                 ["git", "init", "--quiet"],
-                ["git", "add", "--all", "--force"],
+                ["git", "add", "--all"],
             ):
                 setup = run(
                     setup_argv,

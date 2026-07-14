@@ -441,9 +441,16 @@ Finish with a concise scaffold report that includes:
 - remote branch that was pushed
 - bootstrap result from step 3.5, including commands run and health check, or
   `no documented bootstrap`
-- the exact next step: run `$speckit-autopilot` with the generated
-  workflow file (Codex skills are invoked via `$skill-name`, not via
-  any `/<plugin>:<skill>` slash command — see openai/codex#7480)
+- the absolute worktree root from `git rev-parse --show-toplevel` run inside
+  the worktree
+- the exact next step: start a new Codex task rooted at that worktree, then run
+  `$speckit-autopilot` with the workflow path relative to the worktree root
+  (Codex skills are invoked via `$skill-name`, not via any
+  `/<plugin>:<skill>` slash command — see openai/codex#7480)
+
+Never hand off only the inner workflow path from the parent checkout. Do not
+suggest running autopilot from main, a detached checkout, or any workspace root
+other than the generated spec worktree.
 
 ## Failure Handling
 

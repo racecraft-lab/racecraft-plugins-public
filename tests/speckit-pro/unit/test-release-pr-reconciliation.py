@@ -875,7 +875,48 @@ class RefreshReleaseArtifactsCheckTests(unittest.TestCase):
         self.assertEqual([sys.executable, "scripts/refresh-release-artifacts.py"], refresh_calls[0][0])
         self.assertFalse(refresh_calls[0][1]["shell"])
         self.assertIn(["git", "init", "--quiet"], git_calls)
-        self.assertIn(["git", "add", "--all", "--force"], git_calls)
+        self.assertIn(["git", "add", "--all"], git_calls)
+
+    def test_check_mode_excludes_ignored_local_files_from_isolated_git_index(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.make_repo(root)
+            (root / ".gitignore").write_text("ignored-local.sh\n", encoding="utf-8")
+            (root / "ignored-local.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+            (root / "scripts" / "refresh-release-artifacts.py").write_text(
+                "import subprocess\n"
+                "result = subprocess.run(\n"
+                "    ['git', 'ls-files', '--error-unmatch', 'ignored-local.sh'],\n"
+                "    capture_output=True,\n"
+                "    check=False,\n"
+                ")\n"
+                "raise SystemExit(1 if result.returncode == 0 else 0)\n",
+                encoding="utf-8",
+            )
+            subprocess.run(
+                ["git", "init", "--quiet"],
+                cwd=root,
+                check=True,
+                shell=False,
+                capture_output=True,
+            )
+
+            stderr = io.StringIO()
+            returncode = refresh.check_release_artifacts(root, stderr=stderr)
+
+        self.assertEqual(0, returncode, stderr.getvalue())
+
+    def test_snapshot_tree_excludes_local_worktrees(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.make_repo(root)
+            nested = root / ".worktrees" / "local"
+            nested.mkdir(parents=True)
+            (nested / "unrelated.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+
+            snapshot = refresh.snapshot_tree(root)
+
+        self.assertNotIn(".worktrees/local/unrelated.sh", snapshot)
 
     def test_check_mode_runs_a_real_isolated_copy_without_source_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
