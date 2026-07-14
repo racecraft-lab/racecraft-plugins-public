@@ -148,6 +148,55 @@ class MutationHelperTests(unittest.TestCase):
             check=True,
         )
 
+    def pr_packet_inputs(self, base_ref: str, *, feature_dir: str = "specs/g56r-001-packet-fixture") -> dict[str, object]:
+        return {
+            "source_feature_dir": feature_dir,
+            "packet_id": "single-review",
+            "base_ref": base_ref,
+            "base_branch": base_ref,
+            "title_type": "docs",
+            "title_scope": "g56r-001",
+            "title_description": "Publish candidate route baseline",
+            "summary": "Publish the grounded candidate route baseline for reviewer handoff.",
+            "what_changed": [
+                "Added candidate route evidence.",
+                "Prepared one schema-valid single PR packet.",
+            ],
+            "why_it_matters": "Reviewers receive one deterministic handoff instead of reconstructing packet metadata.",
+            "how_to_review": [
+                "Review the feature specification and changed-file scope.",
+                "Confirm the body fingerprint with the read-only validator.",
+            ],
+            "how_to_uat": "Run the focused packet output and read-only validation tests.",
+            "uat_runbook": "No manual product flow is required; the focused runner tests are the acceptance path.",
+            "uat_source": f"{feature_dir}/quickstart.md",
+            "verification_evidence": [
+                {
+                    "kind": "unit_test",
+                    "source": f"{feature_dir}/quickstart.md",
+                    "summary": "The packet output acceptance path passed.",
+                    "result": "passed",
+                }
+            ],
+            "scope_evidence": {
+                "reviewable_loc": 12,
+                "production_files": 0,
+                "budget_result": "within_budget",
+                "non_goals": [
+                    "Split packet output remains deferred.",
+                    "Write-mode packet validation remains deferred.",
+                ],
+            },
+            "known_gaps": ["No known gaps for the single packet handoff."],
+            "source_markers": [
+                {
+                    "marker_id": "feature-spec",
+                    "rendered_text": "Source: the feature specification defines this reviewer handoff.",
+                    "source": f"{feature_dir}/spec.md",
+                }
+            ],
+        }
+
     def assert_schema_contract_response(self, response: dict[str, object], result_schema: dict[str, object]) -> None:
         self.assertIn(response["status"], result_schema["properties"]["status"]["enum"])
         self.assertIsInstance(response["diagnostics"], list)
@@ -1147,6 +1196,196 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(mutation["mutation_status"], "blocked")
             self.assertEqual(mutation["applied_operations"], [])
             self.assertFalse(mutation["live_mutation"])
+
+    def test_pr_packet_output_derives_single_body_and_packet_then_passes_read_only_validation(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            base_ref = "integration-base"
+            self.run_git(git_root, "branch", base_ref)
+            self.run_git(git_root, "checkout", "--quiet", "-b", "packet-feature")
+            feature_dir = "specs/g56r-001-packet-fixture"
+            feature = git_root / feature_dir
+            feature.mkdir(parents=True)
+            (feature / "spec.md").write_text("# Feature Specification: Candidate Route Baseline\n", encoding="utf-8")
+            (feature / "quickstart.md").write_text("# Quickstart\n\nRun focused tests.\n", encoding="utf-8")
+            (git_root / "candidate.json").write_text('{"candidate":"route"}\n', encoding="utf-8")
+            self.run_git(git_root, "add", feature_dir, "candidate.json")
+            self.run_git(git_root, "commit", "--quiet", "-m", "docs(g56r-001): add packet fixture")
+
+            inputs = self.pr_packet_inputs(base_ref, feature_dir=feature_dir)
+            missing_source = {**inputs, "verification_evidence": [{**inputs["verification_evidence"][0], "source": "docs/missing.md"}]}
+            completed, blocked, stderr_records = run_runner(
+                helper_request("pr-packet-output", mode="apply", inputs=missing_source),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assert_response(blocked, "input_error", 2)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_input"])
+
+            completed, response, stderr_records = run_runner(
+                helper_request("pr-packet-output", mode="apply", inputs=inputs),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+            mutation = response["data"]["mutation"]
+            self.assertEqual(mutation["mutation_status"], "applied")
+            self.assertEqual(
+                [operation["operation_id"] for operation in mutation["planned_operations"]],
+                ["pr-packet-output:body", "pr-packet-output:packet"],
+            )
+            self.assertEqual(mutation["applied_operations"], mutation["planned_operations"])
+
+            packet_path = git_root / str(response["data"]["packet_path"])
+            body_path = git_root / str(response["data"]["body_file"])
+            self.assertTrue(packet_path.is_file())
+            self.assertTrue(body_path.is_file())
+            packet = json.loads(packet_path.read_text(encoding="utf-8"))
+            body = body_path.read_text(encoding="utf-8")
+            self.assertEqual(packet["mode"], "single")
+            self.assertNotIn("split_slice", packet)
+            self.assertEqual(packet["generated_title"]["value"], "docs(g56r-001): Publish candidate route baseline")
+            self.assertEqual(packet["body_file"], body_path.relative_to(git_root).as_posix())
+            self.assertEqual(packet["scope_evidence"]["total_files"], len(packet["scope_evidence"]["changed_files"]))
+            self.assertIn(packet_path.relative_to(git_root).as_posix(), packet["scope_evidence"]["changed_files"])
+            self.assertIn(body_path.relative_to(git_root).as_posix(), packet["scope_evidence"]["changed_files"])
+            for heading in packet["required_headings"]:
+                self.assertIn(f"## {heading}\n", body)
+            self.assertIn(packet["source_markers"][0]["rendered_text"], body)
+            self.assertTrue(body.endswith("\n"))
+            self.assertTrue(packet_path.read_text(encoding="utf-8").endswith("\n"))
+
+            completed, validation, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-read-only",
+                    operation="validate-pr-packet-read-only",
+                    mode="read_only",
+                    inputs={"packet_path": packet_path.relative_to(git_root).as_posix()},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assert_response(validation, "ok", 0)
+            self.assertEqual(stderr_records, [])
+            self.assertEqual(validation["data"]["stdout_json"]["status"], "passed")
+            self.assertFalse(validation["data"]["stdout_json"]["pr_blocked"])
+            self.assertFalse(validation["data"]["writes_state"])
+
+            body_before = body_path.read_text(encoding="utf-8")
+            packet_before = packet_path.read_text(encoding="utf-8")
+            completed, existing_response, stderr_records = run_runner(
+                helper_request("pr-packet-output", mode="apply", inputs=inputs),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 1)
+            self.assert_response(existing_response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["existing_pr_packet_output"])
+            self.assertTrue(stderr_records[0]["details"]["body_exists"])
+            self.assertTrue(stderr_records[0]["details"]["packet_exists"])
+            self.assertIn("never authorize reuse", stderr_records[0]["remediation"]["actions"][0])
+            self.assertEqual(body_path.read_text(encoding="utf-8"), body_before)
+            self.assertEqual(packet_path.read_text(encoding="utf-8"), packet_before)
+
+            self.run_git(git_root, "add", body_path.relative_to(git_root).as_posix(), packet_path.relative_to(git_root).as_posix())
+            self.run_git(git_root, "commit", "--quiet", "-m", "docs(g56r-001): add review packet")
+            candidate = git_root / "candidate.json"
+            candidate.write_text('{"candidate":"route-updated"}\n', encoding="utf-8")
+            self.run_git(git_root, "add", candidate.relative_to(git_root).as_posix())
+            self.run_git(git_root, "commit", "--quiet", "-m", "docs(g56r-001): update existing route")
+
+            completed, later_existing, stderr_records = run_runner(
+                helper_request("pr-packet-output", mode="apply", inputs=inputs),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 1)
+            self.assert_response(later_existing, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["existing_pr_packet_output"])
+            self.assertIn("never authorize reuse", stderr_records[0]["remediation"]["actions"][0])
+            self.assertEqual(body_path.read_text(encoding="utf-8"), body_before)
+            self.assertEqual(packet_path.read_text(encoding="utf-8"), packet_before)
+
+    def test_pr_packet_output_rejects_unsafe_or_unsupported_inputs_before_writes(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            base_ref = "integration-base"
+            self.run_git(git_root, "branch", base_ref)
+            self.run_git(git_root, "checkout", "--quiet", "-b", "packet-feature")
+            baseline = self.pr_packet_inputs(base_ref)
+            self.run_git(git_root, "update-ref", "refs/remotes/origin/integration-base", "integration-base")
+            origin_inputs = {**baseline, "base_ref": "origin/integration-base"}
+            completed, response, stderr_records = run_runner(
+                helper_request("pr-packet-output", inputs=origin_inputs),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+
+            cases = {
+                "raw output injection": {**baseline, "output_path": "generated/unsafe.json"},
+                "feature traversal": {**baseline, "source_feature_dir": "specs/../outside"},
+                "scope mismatch": {**baseline, "title_scope": "spec-998"},
+                "base mismatch": {**baseline, "base_branch": "develop"},
+                "unsupported remote": {**baseline, "base_ref": "upstream/integration-base"},
+                "full local ref": {**baseline, "base_ref": "refs/heads/integration-base"},
+                "sha object target": {**baseline, "base_ref": "deadbeef", "base_branch": "deadbeef"},
+                "missing verification": {**baseline, "verification_evidence": []},
+                "unsafe evidence source": {
+                    **baseline,
+                    "source_markers": [
+                        {
+                            "marker_id": "unsafe",
+                            "rendered_text": "Source: unsafe.",
+                            "source": "../outside.md",
+                        }
+                    ],
+                },
+                "split mode injection": {**baseline, "mode": "split"},
+            }
+            for name, inputs in cases.items():
+                with self.subTest(msg=name):
+                    completed, response, stderr_records = run_runner(
+                        helper_request("pr-packet-output", inputs=inputs),
+                        cwd=git_root,
+                    )
+                    self.assertEqual(completed.returncode, 2)
+                    self.assert_response(response, "input_error", 2)
+                    self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_input"])
+                    self.assertFalse((git_root / "generated" / "unsafe.json").exists())
+                    self.assertFalse((git_root / "specs" / "g56r-001-packet-fixture" / ".process").exists())
+
+            dirty = git_root / "dirty.txt"
+            dirty.write_text("untracked\n", encoding="utf-8")
+            completed, response, stderr_records = run_runner(
+                helper_request("pr-packet-output", inputs=baseline),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 1)
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["dirty_worktree"])
+            self.assertIn("both dry_run and apply modes", stderr_records[0]["message"])
+            self.assertIn("committed base...HEAD evidence", stderr_records[0]["message"])
+            self.assertEqual(response["data"]["mutation"]["mutation_status"], "blocked")
+            self.assertNotIn("changed_file_count", response["data"])
+            dirty.unlink()
+
+            existing = git_root / "specs" / "g56r-001-packet-fixture" / ".process" / "pr-packets" / "single-review.md"
+            existing.parent.mkdir(parents=True)
+            existing.write_text("existing packet body\n", encoding="utf-8")
+            self.run_git(git_root, "add", existing.relative_to(git_root).as_posix())
+            self.run_git(git_root, "commit", "--quiet", "-m", "test: add existing packet body")
+            completed, response, stderr_records = run_runner(
+                helper_request("pr-packet-output", inputs=baseline),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 1)
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["partial_pr_packet_output"])
+            self.assertEqual(stderr_records[0]["details"]["body_exists"], True)
+            self.assertEqual(stderr_records[0]["details"]["packet_exists"], False)
+            self.assertEqual(existing.read_text(encoding="utf-8"), "existing packet body\n")
+            self.assertFalse(existing.with_suffix(".json").exists())
 
     def test_contract_schemas_match_runner_fixture_envelopes(self) -> None:
         request_schema = json.loads(REQUEST_SCHEMA.read_text(encoding="utf-8"))

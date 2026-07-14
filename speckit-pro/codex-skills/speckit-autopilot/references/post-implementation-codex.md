@@ -31,7 +31,7 @@ in order; do not collapse or defer.
 | 13 | Code Review | (none) — built-in | spawn a subagent to independently review the diff `origin/main...HEAD`; report findings by severity |
 | 14 | Integration Suite | (none) | `PROJECT_COMMANDS.FULL_VERIFY` or detected full test command |
 | 15 | Final Reviewability Backstop | (none) | deferred helper; use current committed evidence or stop before PR side effects |
-| 16 | PR Packet/Body Generation | final backstop proceeded | require an existing current `specs/<feature>/.process/pr-packets/<packet-id>.json`; stop if absent because packet emission is deferred |
+| 16 | PR Packet/Body Generation | final backstop proceeded | run `pr-packet-output` for a grounded single packet; split packet output remains deferred |
 | 17 | PR Creation | current packet validation passed | single-PR path only when no split route and no current `pr_marker_plan`; `multi-pr-emission` for split-PR routes or marker-ready plans |
 | 18 | Review Remediation | (none) | parent session loop — inspect PR feedback, dispatch fixes as needed |
 | 19 | Retrospective | retrospective ext | `$speckit-retrospective-analyze` (FINAL STEP) |
@@ -123,9 +123,9 @@ background subagents as the fallback path. The 3-track structure
   skill sigil and SPEC context.
 - Built-in verification, git, push, PR creation, and review polling stay in the
   parent session so the orchestrator owns durable state and final reporting.
-- PR creation requires an existing schema-valid feature-local packet and the
-  repo-relative body file it references. No active helper creates or repairs
-  packet metadata.
+- Single-route PR creation generates a schema-valid feature-local packet and
+  referenced body through `pr-packet-output`, then requires fresh read-only
+  validation. Split packet generation remains unavailable.
 - Missing optional extensions are logged and skipped. Do not fail the entire
   autopilot because an optional extension command is unavailable.
 - Never mark the workflow complete until every planned Post item is completed or
@@ -153,10 +153,13 @@ fail-closed sequence:
 
 ```text
 final-reviewability boundary: use current committed reviewability evidence; if none is current, stop before PR side effects
-require specs/<feature>/.process/pr-packets/<packet-id>.json to already exist and be current
+for a single route, run pr-packet-output in apply mode with grounded structured evidence
+require its derived specs/<feature>/.process/pr-packets/<packet-id>.json and body_file to exist
 run validate-pr-packet-read-only for that packet and consume response data.stdout_json in memory/state
 require data.stdout_json.status=passed, data.stdout_json.pr_blocked=false, and response data.writes_state=false
-run validate-pr-workflow-contract with the packet title and current repository diff
+git add only the packet and body, then commit them
+rerun full final verification, the final reviewability boundary, validate-pr-packet-read-only, and validate-pr-workflow-contract
+push the packet commit
 create only with packet-owned --base, --head, --title, and --body-file values
 ```
 
@@ -175,11 +178,27 @@ fingerprint status, ordered marker IDs, checkpoints, warnings, final
 marker_split or marker-plan-ready handoff, packet validation, and PR mappings
 before PR side effects. All evidence paths must be repo-relative.
 
-`pr-packet-output` and `validate-pr-packet-write` are deferred. If the current
-schema-valid packet or its repo-relative `body_file` is absent, stale,
-malformed, or unreadable, stop before `gh pr create` and report the deferred
-packet-emission blocker. Do not synthesize a packet or choose an arbitrary
-older packet.
+`pr-packet-output` is a `golden_only`, single-packet producer. Invoke it with
+`helper_id=pr-packet-output`, the same operation, `mode=apply`, and only these
+grounded input groups: source feature/packet/base refs; conventional title
+parts; summary/change/why/review prose; UAT text and repo-relative source;
+verification evidence; scope metrics, budget result, and non-goals; known gaps;
+source markers; and a release note for `feat` or `fix`. It rejects caller-owned
+output paths, raw content, operations, and split metadata. It derives the
+current head, changed files, total file count, fixed body/packet/validation
+paths, headings, editable markers, and protected fingerprint, then uses atomic
+file writes in body-then-packet order. If the generated packet or body is stale,
+malformed, or unreadable, stop before `gh pr create`. Split packet output and
+`validate-pr-packet-write` remain deferred.
+
+`base_ref` accepts only the exact `<base_branch>` or
+`origin/<base_branch>` form; object IDs and other remote/full-ref forms are
+rejected. Both `dry_run` and `apply` require a clean committed worktree because
+scope is derived from `base...HEAD`. On resume, inspect the derived body and
+packet paths first. If either output already exists, never validate it for reuse and never overwrite
+it. Inspect and remove both body and packet artifacts. If either is tracked,
+commit its deletion, restore a clean committed worktree, and regenerate both
+from the grounded request.
 
 `generate-pr-body` is a body-only `golden_only` operation. Its complete input
 contract is `output_path`, `title`, and `sections`, and it writes one Markdown
@@ -188,7 +207,7 @@ markers, validation evidence, or PR commands. Its output alone never authorizes
 PR creation.
 
 **Refine only sanctioned prose fields — write for a non-expert public reader.**
-If the existing packet declares editable fields and its existing body contains
+If the generated packet declares editable fields and its body contains
 their exact marker pairs, edit only those regions. Otherwise leave the body
 unchanged and fail closed if required reviewer content is absent.
 
@@ -225,6 +244,14 @@ contain multi-PR candidate commands or multi-marker final split evidence. A
 only valid for non-spec plugin changes. Any split-contract failure means the
 single-PR path is forbidden. Continue only through the split workflow below,
 or stop blocked with the validator output.
+
+Stage only `packet.body_file` and the generated packet path, then commit those
+artifacts. Re-run the full final verification suite and final reviewability
+boundary against the committed artifacts. Re-run
+`validate-pr-packet-read-only` and `validate-pr-workflow-contract`; if any
+remediation changes repository bytes or packet evidence, remove the stale
+packet artifacts and regenerate from a clean worktree. Detect the remote and
+push the packet commit only after every repeated check passes.
 
 Create the single PR from packet fields, never from branch-derived title text
 or hand-written body content:
@@ -264,8 +291,8 @@ Codex parent-session responsibilities:
    PR mutations. Every slice packet must already exist at
    `specs/<feature>/.process/pr-packets/<packet-id>.json` and validate against
    current marker evidence before `gh pr create` or equivalent PR side effects.
-   If any packet is absent or invalid, stop and report that `pr-packet-output`
-   is deferred.
+   If any required packet is absent or invalid, stop and report that split
+   packet output remains deferred; the promoted helper is single-only.
    For marker emission, `--feature-branch` is the emitted branch prefix. If
    that prefix would collide with an existing parent branch ref, pass a
    non-conflicting prefix through `--feature-branch` and the authoritative
@@ -378,7 +405,7 @@ so a single review template serves both runtimes.
 
 **The self-review does not gate PR creation.** Gaps it surfaces
 (`[edge-case-gap]`, orphan FR, silent TODO) are written to the workflow log. If
-the already-existing packet-owned body declares an editable
+the packet-owned body declares an editable
 `## Self-Review Findings` region, mirror the findings there without changing
 protected packet content. The finding itself is the deliverable; packet
 availability and validation remain separate fail-closed PR boundaries.

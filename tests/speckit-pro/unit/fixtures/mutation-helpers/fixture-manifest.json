@@ -46,6 +46,13 @@
       "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/generate-pr-body.json"
     },
     {
+      "helper_id": "pr-packet-output",
+      "operation": "pr-packet-output",
+      "modes": ["dry_run", "apply"],
+      "failure_classes": ["invalid_input", "dirty_worktree", "unsupported_path", "write_failure", "partial_failure"],
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/pr-packet-output.json"
+    },
+    {
       "helper_id": "multi-pr-emission",
       "operation": "multi-pr-emission",
       "modes": ["dry_run"],

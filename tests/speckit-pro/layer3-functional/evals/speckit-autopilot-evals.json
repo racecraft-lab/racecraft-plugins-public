@@ -76,20 +76,21 @@
     {
       "id": 7,
       "prompt": "What happens during the post-implementation phase of the autopilot after all 7 SDD phases complete? List the specific steps in order, including which ones use extensions and which are built-in.",
-      "expected_output": "Lists the canonical 12 Post items in order, identifies the parallel group and serial tail, and distinguishes extension-backed items from built-in work. It states that generate-uat-skeleton, final-reviewability-backstop, pr-packet-output, and validate-pr-packet-write are deferred. Before PR creation it requires an existing feature-local packet, validates it with validate-pr-packet-read-only using data.stdout_json in memory/state, validates title/scope with validate-pr-workflow-contract, and fails closed if packet emission is needed.",
+      "expected_output": "Lists the canonical 12 Post items in order, identifies the parallel group and serial tail, and distinguishes extension-backed items from built-in work. It states that generate-uat-skeleton, final-reviewability-backstop, and validate-pr-packet-write are deferred. On a single route it runs the golden_only pr-packet-output helper with grounded structured evidence to derive the feature-local body and packet, validates that packet with validate-pr-packet-read-only using data.stdout_json in memory/state, commits only the packet artifacts, reruns final verification and both validators, pushes the packet commit, and validates title/scope with validate-pr-workflow-contract before creation. Split packet output remains deferred.",
       "expectations": [
         "Lists all 12 canonical Post items from Doctor Extension Check through Retrospective without collapsing or omitting an item",
         "Identifies Doctor, Verify Implementation, Verify Tasks Phantom Check, and Retrospective as extension-backed items and keeps Code Review plus Integration Suite built in",
         "Lists Self-Review (4-question audit) as an always-required built-in step before PR body generation",
         "Lists UAT Runbook Generation as mandatory and fail-open, states generate-uat-skeleton is deferred, reuses a committed source-derived runbook when present, and otherwise records skipped deferred evidence",
-        "Lists the required existing packet path specs/<feature>/.process/pr-packets/<packet-id>.json and states pr-packet-output is deferred",
+        "Runs golden_only pr-packet-output in apply mode for a single route and requires its derived packet path specs/<feature>/.process/pr-packets/<packet-id>.json",
         "Describes generate-pr-body only as a golden_only one-Markdown-body writer accepting output_path, title, and sections, not as packet emission",
         "Lists pre-create validation via runner helper validate-pr-packet-read-only and consumes current data.stdout_json with writes_state=false without claiming a validation file was written",
         "Lists pre-create PR workflow contract validation via runner helper validate-pr-workflow-contract with packet title and changed-file evidence",
+        "Stages and commits only the generated body and packet, reruns final verification plus both validators against that commit, and pushes it before PR creation",
         "Lists PR creation with gh pr create --base --head --title --body-file using packet target/title/body values",
         "Lists review remediation loop using /loop command",
         "States final-reviewability-backstop is deferred, so current committed reviewability evidence is required before PR side effects",
-        "States missing or invalid packets block before PR creation because packet emission/write validation is deferred; no post-create auto-repair fallback is used"
+        "States malformed or invalid generated packets block before PR creation, while split packet output and write validation remain deferred; no post-create auto-repair fallback is used"
       ]
     },
     {
@@ -270,17 +271,21 @@
     {
       "id": 22,
       "prompt": "The autopilot has finished Post: Self-Review and is about to open the PR. Walk through the current UAT, packet/body, validation, and PR-creation sequence. Name the runner helper IDs and deferred behavior, explain what is committed or skipped, show the gh pr create arguments, and state what happens when the required current packet is absent or invalid.",
-      "expected_output": "States that Post: UAT Runbook Generation is mandatory but generate-uat-skeleton is deferred: reuse a committed source-derived <feature-dir>/.process/uat-runbook.md when present, otherwise record skipped deferred evidence and continue fail-open; invoke the author agent only when a skeleton exists. Then require a current schema-valid packet at specs/<feature>/.process/pr-packets/<packet-id>.json because pr-packet-output and validate-pr-packet-write are deferred. Validate it with validate-pr-packet-read-only, consume data.stdout_json in memory/state with writes_state=false and no validation file, validate title/scope with validate-pr-workflow-contract, and open only with packet-owned gh pr create --base --head --title --body-file values. Missing or invalid packet evidence blocks before creation.",
+      "expected_output": "States that Post: UAT Runbook Generation is mandatory but generate-uat-skeleton is deferred: reuse a committed source-derived <feature-dir>/.process/uat-runbook.md when present, otherwise record skipped deferred evidence and continue fail-open; invoke the author agent only when a skeleton exists. Then run golden_only pr-packet-output in apply mode with grounded structured evidence to derive a single body and schema-valid packet at specs/<feature>/.process/pr-packets/<packet-id>.json; validate-pr-packet-write remains deferred. Validate the output with validate-pr-packet-read-only, consume data.stdout_json in memory/state with writes_state=false and no validation file, stage and commit only the packet artifacts, rerun final verification and both validators, push that commit, and open only with packet-owned gh pr create --base --head --title --body-file values. Invalid packet evidence blocks before creation.",
       "expectations": [
         "States generate-uat-skeleton is registered but deferred and must not be invoked as an active helper",
         "Reuses a committed source-derived <feature-dir>/.process/uat-runbook.md when present; otherwise records skipped: generate-uat-skeleton deferred and continues fail-open",
-        "Requires an existing current packet at specs/<feature>/.process/pr-packets/<packet-id>.json and states pr-packet-output plus validate-pr-packet-write are deferred",
+        "Runs golden_only pr-packet-output in apply mode with structured feature, title, UAT, verification, scope, gap, and source-marker evidence and requires its derived packet at specs/<feature>/.process/pr-packets/<packet-id>.json",
         "States generate-pr-body accepts only output_path, title, and sections to write one Markdown body and does not create packet metadata or markers",
         "Runs runner helper validate-pr-packet-read-only against the current packet, consumes data.stdout_json in memory/state, and requires writes_state=false before PR creation",
         "Runs runner helper validate-pr-workflow-contract against the packet title and changed-file list before PR creation",
+        "Stages and commits only the generated body and packet, reruns full final verification plus both validators against that commit, and pushes it before gh pr create",
         "Opens the PR with gh pr create --base --head --title --body-file using packet fields — explicitly NOT a hand-written body, inline --body, or branch-derived title",
         "Requires strict, unpatronizing, ELI5-style plain-English PR descriptions that name the actual change without dumping command, path, or packet evidence",
-        "Requires the packet-owned body_file to already exist as a readable repo-relative path",
+        "Requires pr-packet-output to derive and write the body before the packet and requires the packet-owned body_file to be a readable repo-relative path",
+        "Accepts base_ref only as <base_branch> or origin/<base_branch> and rejects object IDs and other ref forms",
+        "Requires a clean committed worktree for both pr-packet-output dry_run and apply because scope comes from base...HEAD",
+        "On resume, never reuses or overwrites an existing body or packet; it inspects and removes both, commits any tracked deletion, restores a clean committed worktree, and regenerates both",
         "States missing, malformed, stale, or invalid packet evidence blocks before gh pr create with returned diagnostics",
         "States there is no post-create auto-repair fallback for invalid packets",
         "States the UAT Post item is mandatory and fail-open even when its deferred helper is skipped"
@@ -305,7 +310,7 @@
     {
       "id": 24,
       "prompt": "A completed feature has a PRSG-008 split-PR layer plan fixture with three increments in order: foundation, us1, and us2. The implementation and full default verification already passed. Walk through what /speckit-pro:speckit-autopilot must do during post-implementation PR creation for PRSG-009 multi-PR emission. Include branch/base topology, scoped verification, durable PRS rows, resume behavior, failed-slice blocking, restack, and the routing boundary.",
-      "expected_output": "Explains that post-implementation consumes the plan-layers-feature-dir envelope as the only slice source and may use multi-pr-emission only for golden_only command-plan capture after full verification. The helper does not emit packets or execute PRs, so every slice requires an existing feature-local packet that passes validate-pr-packet-read-only via data.stdout_json before an explicit packet-owned gh pr create command. It keeps evidence under the source feature directory, records schemaVersion 2 PRS and resume state, blocks failed slices without rewinding earlier PRs, and treats restack as deferred with direct gh pr edit --base fallback.",
+      "expected_output": "Explains that post-implementation consumes the plan-layers-feature-dir envelope as the only slice source and may use multi-pr-emission only for golden_only command-plan capture after full verification. The helper does not emit packets or execute PRs, and pr-packet-output is single-only, so every split slice requires an existing feature-local packet that passes validate-pr-packet-read-only via data.stdout_json before an explicit packet-owned gh pr create command. It keeps evidence under the source feature directory, records schemaVersion 2 PRS and resume state, blocks failed slices without rewinding earlier PRs, and treats restack as deferred with direct gh pr edit --base fallback.",
       "expectations": [
         "States that PRSG-008 runner helper plan-layers-feature-dir output is the authoritative ordering and membership source",
         "States that PRSG-009 does not infer, reroute, or re-slice work and does not add PRSG-010 routing/backstop heuristics",
@@ -314,7 +319,7 @@
         "Emits N ordered PRs from the fixture increments rather than one flattened all-changes PR",
         "Describes Style B topology: first slice targets the integration base and each later slice targets the immediately preceding slice branch",
         "Keeps full and scoped verification evidence under the source feature directory while emitted head/base refs use the safe branch prefix",
-        "Requires every slice packet to already exist under specs/<feature>/.process/pr-packets/ and uses its --base, --head, --title, and --body-file values for explicit gh pr create",
+        "States pr-packet-output is single-only, so every split slice packet must already exist under specs/<feature>/.process/pr-packets/ and provides --base, --head, --title, and --body-file values for explicit gh pr create",
         "Rejects generic foundation/story/slice labels, hardcoded plugin scopes for spec PRs, packet-mechanics prose, and raw evidence dumps before any slice PR is opened",
         "Runs validate-pr-packet-read-only before every slice gh pr create, consumes current data.stdout_json in memory/state, and records writes_state=false without claiming persistence",
         "Runs or records scoped verification per slice and carries the pre-emission full regression evidence by path instead of rerunning the full suite for every slice",
@@ -353,15 +358,15 @@
     {
       "id": 26,
       "prompt": "A post-implementation autopilot run is preparing documentation specs. DOC-004 has a single generated PR packet for specs/doc-004-codex-marketplace-installation-path. DOC-003 has final marker_split evidence plus .process/emission/candidate/commands.candidate.json with five gh_pr_create operations. What must the Claude autopilot do before opening PRs, and which title/splitting mistakes are forbidden?",
-      "expected_output": "Explains that the existing DOC-004 feature-local packet must carry a docs(DOC-004): title and pass validate-pr-packet-read-only through current data.stdout_json plus validate-pr-workflow-contract before gh pr create. generate-pr-body cannot create packet metadata. For DOC-003, final marker_split evidence and multiple candidate PR commands forbid an aggregate PR; Claude may use multi-pr-emission only for golden_only command-plan capture, requires an existing valid packet per slice, or stops blocked because packet emission is deferred.",
+      "expected_output": "Explains that Claude must generate the single DOC-004 feature-local packet with pr-packet-output, using a docs(DOC-004): title, then pass validate-pr-packet-read-only through current data.stdout_json plus validate-pr-workflow-contract before gh pr create. generate-pr-body cannot create packet metadata. For DOC-003, final marker_split evidence and multiple candidate PR commands forbid an aggregate PR; Claude may use multi-pr-emission only for golden_only command-plan capture, requires an existing valid packet per slice, or stops blocked because split packet output is deferred.",
       "expectations": [
         "States that DOC-004 packet title scope must be DOC-004 and title type must be docs, e.g. docs(DOC-004): ...",
         "States that feat(speckit-pro): is forbidden for spec-backed DOC implementation PRs",
-        "Requires the existing feature-local DOC-004 packet and runs validate-pr-packet-read-only before a single PR",
+        "Runs pr-packet-output to derive the single feature-local DOC-004 packet and body, then runs validate-pr-packet-read-only before a single PR",
         "States generate-pr-body writes only one Markdown body from output_path, title, and sections and does not create DOC packet metadata",
         "Runs runner helper validate-pr-workflow-contract with the generated packet title and changed-file list before any single gh pr create",
         "States that final marker_split evidence plus multiple gh_pr_create candidate operations forbids a single aggregate PR",
-        "Allows multi-pr-emission only for golden_only command-plan capture on the DOC-003 split route and otherwise stops with validator or deferred packet-emission evidence",
+        "Allows multi-pr-emission only for golden_only command-plan capture on the DOC-003 split route and otherwise stops with validator or deferred split-packet evidence",
         "States the agent must not manually issue one gh pr create for all changed files when split candidate artifacts exist",
         "Requires each split PR creation to use packet-owned --base, --head, --title, and --body-file arguments",
         "States invalid packet, invalid workflow contract, stale validation, or aggregate split-contract failures block before PR creation",

@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-pr-packet-output",
+  "helper_id": "pr-packet-output",
+  "operation": "pr-packet-output",
+  "mode": "dry_run",
+  "inputs": {
+    "source_feature_dir": "specs/spec-999-pr-packet-output-fixture",
+    "packet_id": "single-review",
+    "base_ref": "origin/main",
+    "base_branch": "main",
+    "title_type": "feat",
+    "title_scope": "spec-999",
+    "title_description": "Generate safe single packet output",
+    "summary": "Generate one reviewer-ready PR body and its schema-valid packet metadata.",
+    "what_changed": [
+      "Added a runner-owned single-packet output path.",
+      "Derived target paths and changed-file scope from trusted repository state."
+    ],
+    "why_it_matters": "Autopilot can prepare a grounded packet without accepting arbitrary file writes.",
+    "how_to_review": [
+      "Inspect the generated body structure and editable markers.",
+      "Inspect packet metadata and changed-file evidence before PR creation."
+    ],
+    "how_to_uat": "Run the focused mutation and read-only packet validation tests.",
+    "uat_runbook": "No manual product path is required; the focused runner tests are the acceptance path.",
+    "uat_source": "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py",
+    "verification_evidence": [
+      {
+        "kind": "unit_test",
+        "source": "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py",
+        "summary": "Focused packet output and read-only validation coverage is present.",
+        "result": "fixture"
+      }
+    ],
+    "scope_evidence": {
+      "reviewable_loc": 0,
+      "production_files": 0,
+      "budget_result": "within_budget",
+      "non_goals": [
+        "Split packet output remains deferred.",
+        "Write-mode packet validation remains deferred."
+      ]
+    },
+    "known_gaps": [
+      "Split packet output is outside this promoted helper contract."
+    ],
+    "source_markers": [
+      {
+        "marker_id": "packet-contract",
+        "rendered_text": "Source: the bundled packet schema defines the emitted metadata contract.",
+        "source": "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json"
+      }
+    ],
+    "release_note": "Autopilot can generate a schema-valid single PR packet before review handoff."
+  }
+}

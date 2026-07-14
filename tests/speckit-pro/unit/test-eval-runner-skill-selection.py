@@ -38,7 +38,10 @@ LAYER8_ROOT = TESTS_ROOT / "layer8-parity"
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
-from speckit_pro_runner.helpers.pr_emission import generate_pr_body  # noqa: E402
+from speckit_pro_runner.helpers.pr_emission import (  # noqa: E402
+    PR_PACKET_INPUT_FIELDS,
+    generate_pr_body,
+)
 from speckit_pro_runner.helpers.registry import HELPERS, MUTATION_HELPERS  # noqa: E402
 
 SHIPPED_RUNTIME_CONTRACTS = (
@@ -58,7 +61,6 @@ EXPECTED_DEFERRED_HELPERS = frozenset(
     {
         "ensure-reviewability-preset",
         "migrate-structure",
-        "pr-packet-output",
         "relocate-process-artifacts",
         "restack",
         "validate-pr-packet-write",
@@ -288,6 +290,18 @@ def runtime_registry_violations() -> list[str]:
     if input_fields != {"output_path", "title", "sections"}:
         violations.append(f"implementation: generate-pr-body fields={sorted(input_fields)}")
 
+    packet_entry = MUTATION_HELPERS.get("pr-packet-output")
+    if packet_entry is None or packet_entry.promotion_status != "golden_only":
+        status = None if packet_entry is None else packet_entry.promotion_status
+        violations.append(f"registry: pr-packet-output status={status}, expected golden_only")
+    elif not packet_entry.authoritative_command:
+        violations.append("registry: pr-packet-output is missing an authoritative request")
+    unsafe_packet_fields = {"content", "operations", "output_path", "split_slice"}
+    if PR_PACKET_INPUT_FIELDS & unsafe_packet_fields:
+        violations.append(
+            f"implementation: pr-packet-output exposes unsafe fields={sorted(PR_PACKET_INPUT_FIELDS & unsafe_packet_fields)}"
+        )
+
     validate_entry = HELPERS.get("validate-pr-packet-read-only")
     if validate_entry is None or validate_entry.promotion_status != "python_authoritative":
         status = None if validate_entry is None else validate_entry.promotion_status
@@ -375,19 +389,19 @@ def runtime_contract_parity_violations() -> list[str]:
             "autopilot",
             PLUGIN_ROOT / "skills" / "speckit-autopilot" / "SKILL.md",
             PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "SKILL.md",
-            (PACKET_PATH_CONTRACT, "pr-packet-output", "data.stdout_json", "writes_state=false", "output_path", "sections"),
+            (PACKET_PATH_CONTRACT, "pr-packet-output", "golden_only", "single", "data.stdout_json", "writes_state=false", "output_path", "sections"),
         ),
         (
             "phase execution",
             PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "phase-execution.md",
             PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "phase-execution-codex.md",
-            (PACKET_PATH_CONTRACT, "relocate-process-artifacts", "data.stdout_json", "writes_state=false", "output_path", "sections"),
+            (PACKET_PATH_CONTRACT, "pr-packet-output", "golden_only", "single", "relocate-process-artifacts", "data.stdout_json", "writes_state=false", "output_path", "sections"),
         ),
         (
             "post implementation",
             PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "post-implementation.md",
             PLUGIN_ROOT / "codex-skills" / "speckit-autopilot" / "references" / "post-implementation-codex.md",
-            (),
+            (PACKET_PATH_CONTRACT, "pr-packet-output", "golden_only", "single", "validate-pr-packet-write"),
         ),
     )
     for label, claude_path, codex_path, required in pairs:

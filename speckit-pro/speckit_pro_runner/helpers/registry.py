@@ -375,9 +375,11 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "pr-packet-output",
         ("dry_run", "apply"),
         None,
-        "deferred",
+        "golden_only",
         "golden_fixture",
-        deferred_authoritative_request(),
+        mutation_authoritative_request("pr-packet-output"),
+        ("single-dry-run", "single-apply", "invalid-input", "packet-last"),
+        rollback="Inspect and remove both packet artifacts, commit any tracked deletion, then regenerate from a clean committed worktree; read-only packet validation remains mandatory.",
     ),
     "validate-pr-workflow-contract-write": MutationEntry(
         "validate-pr-workflow-contract-write",

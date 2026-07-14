@@ -27,11 +27,12 @@ The test:
    `tolerance.json`. PASS if all required fields match within
    tolerance; FAIL with field-level diff otherwise.
 
-The PRSG-012 packet boundary is part of the parity surface. This fixture does
-not provide a current packet at
-`specs/parity-01-post-impl/.process/pr-packets/<packet-id>.json`. Both paths must
-report that `pr-packet-output` is deferred and stop before any PR creation side
-effect. They must not ask `generate-pr-body` to create packet JSON or claim that
+The PRSG-012 packet boundary is part of the parity surface. This fixture is a
+three-slice PRSG-008 route and provides no current slice packets.
+`pr-packet-output` is `golden_only` but single-only, so neither path may invoke
+it for these slices even if grounded inputs are available. Both paths stop
+before PR creation because split packet output remains deferred. They must not
+ask `generate-pr-body` to create packet JSON or claim that
 `validate-pr-packet-read-only` persisted a validation file. Codex guidance must
 use the same boundary rather than introducing a Codex-only packet path or
 validator copy.
@@ -59,7 +60,7 @@ fixture invocation.
 ## Status
 
 **Ready.** The fixture structure validates via dry-run, including the
-feature-local packet path, deferred packet-emission blocker, no read-only
+feature-local packet path, deferred split-packet blocker, no read-only
 persistence claim, and no post-create repair fallback invariant. Live execution
 is explicit and budgeted; `semantic-equivalent` comparisons remain skipped with
 a warning.

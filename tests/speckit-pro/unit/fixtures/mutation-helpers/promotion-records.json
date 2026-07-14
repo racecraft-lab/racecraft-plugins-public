@@ -43,6 +43,14 @@
       "rollback": "Retry the registered generate-pr-body operation in dry_run mode before applying again."
     },
     {
+      "helper_id": "pr-packet-output",
+      "promotion_status": "golden_only",
+      "fixture_ids": ["single-dry-run", "single-apply", "invalid-input", "packet-last"],
+      "bash_reference_ids": [],
+      "authoritative_python_command": "python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py",
+      "rollback": "Inspect and remove both packet artifacts, commit any tracked deletion, then regenerate from a clean committed worktree."
+    },
+    {
       "helper_id": "multi-pr-emission",
       "promotion_status": "golden_only",
       "fixture_ids": ["fake-gh-command-capture"],

@@ -581,19 +581,32 @@ detailed procedures in `references/post-implementation.md`:
    `resume.resume_from`, then continue internally through PRSG-007/008/009
    until a valid slice PR stack is emitted or a typed exception is committed.
    Never report completion while `autopilot_continuation.required=true`; a gate
-   error writes state and stops without a packet. After a proceed result,
-   require a current schema-valid packet to already exist at
-   `specs/<feature>/.process/pr-packets/<packet-id>.json`. Packet emission is not
-   available: `pr-packet-output` and `validate-pr-packet-write` are deferred,
-   and `generate-pr-body` writes only one Markdown body from `output_path`,
-   `title`, and `sections`. It does not create packet JSON or metadata. If the
-   current packet or its referenced body does not already exist, stop before
-   `gh pr create` and report the deferred packet-emission blocker.
-   Run `validate-pr-packet-read-only` against the existing packet and consume
+   error writes state and stops without a packet. After a single-route proceed
+   result, invoke the `golden_only` `pr-packet-output` helper in `apply` mode
+   with grounded feature, title, UAT, verification, scope, gap, and source-marker
+   inputs. It derives the current branch, changed-file scope, body path, packet
+   path, protected fingerprint, and validation-result path, then atomically
+   writes the body before the authorizing single-packet JSON at
+   `specs/<feature>/.process/pr-packets/<packet-id>.json`. Callers must not pass
+   raw output paths, content, operations, or split metadata. The helper supports
+   single packets only; split packet output and `validate-pr-packet-write` remain
+   deferred. It accepts `base_ref` only as `<base_branch>` or
+   `origin/<base_branch>` and rejects object IDs. Both `dry_run` and `apply`
+   require a clean committed worktree because scope is derived from
+   `base...HEAD`. On resume, if either body or packet already exists, never
+   authorize reuse or overwrite.
+   Inspect and remove both artifacts; if either is tracked, commit its deletion,
+   restore a clean committed worktree, and regenerate. `generate-pr-body`
+   remains a separate one-Markdown-body helper and
+   does not create packet JSON or metadata. Run `validate-pr-packet-read-only`
+   against the just-generated single packet and consume
    only the current response `data.stdout_json` in memory and durable state.
    Continue only when it reports `status=passed`, `pr_blocked=false`, and the
-   response reports `writes_state=false`; no validation file is written. Open
-   the PR with packet fields through
+   response reports `writes_state=false`; no validation file is written. Stage
+   only the generated body and packet, then commit them. Re-run the full final
+   verification suite, final reviewability boundary, packet validation, and
+   PR workflow validation against the committed artifacts. Push that packet
+   commit only after every repeated check passes, then open the PR with packet fields through
    `gh pr create --base --head --title --body-file`; never derive the title
    from the branch, write the body from scratch, pass inline `--body`, reuse
    prior validation evidence, or repair invalid packets after creation. Before
@@ -603,10 +616,11 @@ detailed procedures in `references/post-implementation.md`:
    include multi-PR candidate commands or final marker-split evidence for more
    than one PR, the single-PR path is forbidden. `multi-pr-emission` may capture
    a `golden_only` command plan, but it does not emit packets or execute PRs.
-   Continue only when every required feature-local packet already exists and
-   passes the same read-only validation; otherwise stop blocked with the
-   validator evidence and deferred packet-emission gap. Push, create PR, update
-   workflow file.
+   Continue on a split route only when every required feature-local slice packet
+   already exists and passes the same read-only validation; otherwise stop
+   blocked with validator evidence because split packet output remains deferred.
+   Commit the generated packet artifacts, reverify and revalidate them, push,
+   create the PR, then update the workflow file.
    Required evidence prompts: gate status/mode/exit/evidence path,
    fingerprint status, ordered marker IDs, checkpoints, warnings, final
    marker_split or marker-plan-ready handoff, packet validation, and PR
@@ -688,6 +702,11 @@ registered helper or gate operation IDs below.
 - `generate-pr-body` — `golden_only` body writer accepting exactly
   `output_path`, `title`, and `sections`; it writes one Markdown body and does
   not emit packet JSON, metadata, markers, validation evidence, or PR commands.
+- `pr-packet-output` — `golden_only` single-packet producer. It accepts only
+  structured feature/title/UAT/evidence/scope inputs, derives its feature-local
+  body and packet paths plus current git scope, and writes the body before the
+  packet. It does not accept raw output paths, content, operations, or split
+  metadata.
 - `validate-pr-packet-read-only` — Validate an existing feature-local packet and
   return the result in `data.stdout_json` with `writes_state=false`; it does not
   persist validation state.
@@ -698,7 +717,7 @@ registered helper or gate operation IDs below.
 - `generate-uat-skeleton` and `final-reviewability-backstop` — Registered but
   deferred for installed workflows; follow the deferred guidance above instead
   of invoking them.
-- `pr-packet-output`, `validate-pr-packet-write`,
-  `relocate-process-artifacts`, and `restack` — Registered but deferred with no
-  active invocation contract. Do not invoke them or infer capability from
-  generic runner plumbing.
+- `validate-pr-packet-write`, `relocate-process-artifacts`, and `restack` —
+  Registered but deferred with no active invocation contract. Split packet
+  output is also deferred; do not infer those capabilities from generic runner
+  plumbing.
