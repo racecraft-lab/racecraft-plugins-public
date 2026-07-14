@@ -97,6 +97,9 @@ INTEGRATION_CLASSES = (
 )
 PROJECTION_START = "<!-- g56r-001-agreement-projection:start -->"
 PROJECTION_END = "<!-- g56r-001-agreement-projection:end -->"
+NARRATIVE_HASH_MARKER = re.compile(
+    r"<!-- g56r-001-human-narrative-sha256:(sha256:[0-9a-f]{64}) -->"
+)
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
@@ -169,6 +172,31 @@ def refresh_manifest_hash(manifest: dict[str, object]) -> None:
     manifest["handoff"]["admission_binding"]["manifest_content_hash"] = expected_manifest_hash(manifest)
 
 
+def human_narrative_hash(narrative: str) -> str:
+    start = narrative.find(PROJECTION_START)
+    end = narrative.find(PROJECTION_END, start + len(PROJECTION_START)) if start >= 0 else -1
+    if start >= 0 and end >= 0:
+        narrative = (
+            narrative[:start]
+            + PROJECTION_START
+            + "\n"
+            + PROJECTION_END
+            + narrative[end + len(PROJECTION_END):]
+        )
+    narrative = NARRATIVE_HASH_MARKER.sub(
+        "<!-- g56r-001-human-narrative-sha256:<content-hash> -->",
+        narrative,
+    )
+    narrative = re.sub(
+        r"(?m)^\*\*Manifest content hash:\*\* `sha256:[0-9a-f]{64}`$",
+        "**Manifest content hash:** `<manifest-content-hash>`",
+        narrative,
+    )
+    normalized = normalize(narrative)
+    assert isinstance(normalized, str)
+    return f"sha256:{hashlib.sha256(normalized.encode('utf-8')).hexdigest()}"
+
+
 def project_provenance(name: str) -> dict[str, object]:
     return {
         "evidence_id": f"project-{name}",
@@ -202,6 +230,23 @@ def platform_provenance(name: str, feature: str) -> dict[str, object]:
         "conflict_status": "none",
         "invalidation_triggers": ["official documentation changes"],
         "source_url": "https://platform.openai.com/docs/models",
+    }
+
+
+def surface_provenance(name: str, surface: str) -> dict[str, object]:
+    return {
+        "evidence_id": f"surface-{name}-{surface}",
+        "evidence_class": "official_openai",
+        "classification": "platform_fact",
+        "exact_locator": f"Custom agents > {surface} applicability",
+        "observed_or_retrieved_on": "2026-07-14",
+        "surface": surface,
+        "feature": "custom_agent_fields",
+        "documented_scope": f"Custom-agent evidence scoped to {surface}.",
+        "applicability": "documented_for_named_scope_only",
+        "conflict_status": "none",
+        "invalidation_triggers": ["official documentation changes"],
+        "source_url": "https://developers.openai.com/codex/subagents",
     }
 
 
@@ -394,8 +439,8 @@ def basic_manifest() -> dict[str, object]:
                     {
                         "surface": surface,
                         "applicability": "undocumented",
-                        "feature": "agent route support",
-                        "evidence_ids": [f"platform-{name}"],
+                        "feature": "custom_agent_fields",
+                        "evidence_ids": [f"surface-{name}-{surface}"],
                         "documented_scope": "not_stated",
                         "conflict_status": "none",
                     }
@@ -442,6 +487,7 @@ def basic_manifest() -> dict[str, object]:
                 "provenance": [
                     project_provenance(name),
                     platform_provenance(name, PLATFORM_FEATURES[agent_index % len(PLATFORM_FEATURES)]),
+                    *(surface_provenance(name, surface) for surface in sorted(SURFACES)),
                 ],
                 "invalidation_triggers": [
                     "tracked route changes",
@@ -538,6 +584,22 @@ def basic_manifest() -> dict[str, object]:
 
 
 def write_artifacts(root: Path, manifest: dict[str, object]) -> None:
+    narrative_prefix = (
+        "# Candidate Route Baseline\n\n"
+        "<!-- g56r-001-human-narrative-sha256:sha256:"
+        + "0" * 64
+        + " -->\n\n"
+        "started_at: 2026-07-14T09:00:00-05:00\n"
+        "deadline_at: 2026-07-14T17:00:00-05:00\n\n"
+        "## Normalized agreement projection\n\n"
+    )
+    narrative_template = narrative_prefix + f"{PROJECTION_START}\n{PROJECTION_END}\n"
+    narrative_prefix = NARRATIVE_HASH_MARKER.sub(
+        "<!-- g56r-001-human-narrative-sha256:"
+        + human_narrative_hash(narrative_template)
+        + " -->",
+        narrative_prefix,
+    )
     projection = json.dumps(
         normalize(manifest),
         ensure_ascii=False,
@@ -548,11 +610,8 @@ def write_artifacts(root: Path, manifest: dict[str, object]) -> None:
     write_text(
         root,
         NARRATIVE_PATH,
-        "# Candidate Route Baseline\n\n"
-        "started_at: 2026-07-14T09:00:00-05:00\n"
-        "deadline_at: 2026-07-14T17:00:00-05:00\n\n"
-        "## Normalized agreement projection\n\n"
-        f"{PROJECTION_START}\n```json\n{projection}\n```\n{PROJECTION_END}\n",
+        narrative_prefix
+        + f"{PROJECTION_START}\n```json\n{projection}\n```\n{PROJECTION_END}\n",
     )
     write_text(
         root,
@@ -691,6 +750,48 @@ class G56R001ArtifactTests(unittest.TestCase):
             write_artifacts(root, unsafe)
             self.assertTrue(
                 any("sanitization" in error for error in checker.validate_repository(root))
+            )
+
+    def test_sanitization_rejects_absolute_paths_identities_and_secrets(self) -> None:
+        checker = self.require_checker()
+        unsafe_values = (
+            "/etc/passwd",
+            "/opt/company/private.toml",
+            "builduser@ci-host",
+            "freds-macbook.local",
+            "sk-proj-" + "a" * 32,
+        )
+        with tempfile.TemporaryDirectory(prefix="g56r-001-artifacts-") as temporary:
+            root = Path(temporary)
+            for unsafe_value in unsafe_values:
+                manifest = basic_manifest()
+                manifest["agents"][0]["source_observations"][2]["logical_locator"] = unsafe_value
+                write_artifacts(root, manifest)
+
+                self.assertTrue(
+                    any("sanitization" in error for error in checker.validate_repository(root)),
+                    unsafe_value,
+                )
+
+            bare_identity = basic_manifest()
+            bare_identity["agents"][0]["source_observations"][2]["logical_locator"] = "alice"
+            write_artifacts(root, bare_identity)
+            self.assertTrue(
+                any("requires a logical locator" in error for error in checker.validate_repository(root))
+            )
+
+            extra_identity = basic_manifest()
+            extra_identity["agents"][0]["source_observations"][2]["display_name"] = "alice"
+            write_artifacts(root, extra_identity)
+            self.assertTrue(
+                any("prohibited fields" in error for error in checker.validate_repository(root))
+            )
+
+            unmodeled_identity = basic_manifest()
+            unmodeled_identity["agents"][0]["note"] = "alice"
+            write_artifacts(root, unmodeled_identity)
+            self.assertTrue(
+                any("exact agent-centric schema" in error for error in checker.validate_repository(root))
             )
 
     def test_canonical_hash_normalizes_unicode_and_line_endings(self) -> None:
@@ -865,6 +966,18 @@ class G56R001ArtifactTests(unittest.TestCase):
                 any("surface record" in error for error in checker.validate_repository(root))
             )
 
+            inherited_surface = copy.deepcopy(manifest)
+            inherited_surface["agents"][0]["surface_records"][0]["evidence_ids"] = [
+                inherited_surface["agents"][0]["surface_records"][1]["evidence_ids"][0]
+            ]
+            write_artifacts(root, inherited_surface)
+            self.assertTrue(
+                any(
+                    "surface- and feature-matched official evidence" in error
+                    for error in checker.validate_repository(root)
+                )
+            )
+
     def test_parity_semantic_mappings_are_complete_and_exact(self) -> None:
         checker = self.require_checker()
         with tempfile.TemporaryDirectory(prefix="g56r-001-artifacts-") as temporary:
@@ -934,6 +1047,26 @@ class G56R001ArtifactTests(unittest.TestCase):
                 any("Markdown/JSON agreement" in error for error in checker.validate_repository(root))
             )
 
+    def test_human_narrative_content_hash_rejects_prose_drift(self) -> None:
+        checker = self.require_checker()
+        with tempfile.TemporaryDirectory(prefix="g56r-001-artifacts-") as temporary:
+            root = Path(temporary)
+            manifest = basic_manifest()
+            write_artifacts(root, manifest)
+            narrative_path = root / NARRATIVE_PATH
+            narrative = narrative_path.read_text(encoding="utf-8")
+            narrative_path.write_text(
+                narrative.replace(
+                    "started_at:",
+                    "Contradictory summary: 99 agents and no production routes.\nstarted_at:",
+                ),
+                encoding="utf-8",
+            )
+
+            errors = checker.validate_repository(root)
+
+            self.assertTrue(any("narrative content hash" in error for error in errors), errors)
+
     def test_handoff_checks_reproduce_the_terminal_decision(self) -> None:
         checker = self.require_checker()
         with tempfile.TemporaryDirectory(prefix="g56r-001-artifacts-") as temporary:
@@ -971,6 +1104,35 @@ class G56R001ArtifactTests(unittest.TestCase):
                 errors = self.validation_errors(checker, manifest)
 
                 self.assertTrue(any("prohibited candidate claim" in error for error in errors), errors)
+
+    def test_candidate_evidence_references_resolve_within_provenance(self) -> None:
+        checker = self.require_checker()
+        for owner in ("project_eligibility", "rationale"):
+            manifest = basic_manifest()
+            manifest["agents"][0]["candidates"][0][owner]["evidence_ids"] = [
+                "missing-evidence"
+            ]
+
+            errors = self.validation_errors(checker, manifest)
+
+            self.assertTrue(
+                any("dangling evidence_ids" in error for error in errors),
+                (owner, errors),
+            )
+
+        manifest = basic_manifest()
+        manifest["agents"][0]["candidates"][0]["known_incompatibilities"] = [
+            {
+                "contract_field": "tools",
+                "description": "An evidenced incompatibility.",
+                "evidence_ids": ["missing-evidence"],
+                "eligibility_effect": "none",
+            }
+        ]
+
+        errors = self.validation_errors(checker, manifest)
+
+        self.assertTrue(any("dangling evidence_ids" in error for error in errors), errors)
 
     def test_source_observations_bind_to_the_enclosing_route_and_contract(self) -> None:
         checker = self.require_checker()

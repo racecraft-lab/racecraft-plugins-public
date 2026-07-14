@@ -24,7 +24,8 @@ cache, installed-state, route, default, or version file.
 
 **Storage**: Three research delivery files: one Markdown narrative, one UTF-8
 JSON manifest, and one feature-local read-only checker; plus one focused Layer
-4 test file and the required existing suite-manifest declaration
+4 test file, the required existing suite-manifest declaration, and one exact
+research-artifact allowance in the existing repository guard test
 
 **Testing**: direct `tests/speckit-pro/unit/test-g56r-001-artifacts.py` RED/GREEN
 cycles; `python3 specs/g56r-001-candidate-route-baseline/check-artifacts.py`;
@@ -55,8 +56,8 @@ fixtures, all evidence-supported project-level candidates, and one terminal
 handoff decision
 
 **Reviewability Budget**: Primary surface `docs/process`; 0 production LOC and
-0 production files; 3 research delivery files plus 2 constitution-required
-validation paths; one primary feature surface. Checker and unit-test LOC remain
+0 production files; 3 research delivery files plus 3 required validation
+paths; one primary feature surface. Checker and unit-test LOC remain
 reviewable validation code and are re-estimated before implementation against
 the `speckit-pro-reviewability` v1.0.0 thresholds.
 
@@ -67,6 +68,7 @@ the `speckit-pro-reviewability` v1.0.0 thresholds.
 - NEW specs/g56r-001-candidate-route-baseline/check-artifacts.py
 - NEW tests/speckit-pro/unit/test-g56r-001-artifacts.py
 - MODIFIED tests/speckit-pro/suite-manifest.json
+- MODIFIED tests/speckit-pro/unit/test-speckit-pro-runner.py
 
 These are the complete implementation operations. The checker is intentionally
 feature-local and disposable; only its focused unit test is registered in the
@@ -221,11 +223,11 @@ declared operations. It must state:
   frameworks, and platform claims without official evidence.
 - **Review order**: narrative, manifest, checker, then recorded command output.
 - **Scope budget**: one docs/process feature surface, 0 production LOC/files, 3
-  research delivery files plus 2 required validation paths.
+  research delivery files plus 3 required validation paths.
 - **Traceability**: the table above plus checker evidence for AC-1.1–AC-1.7.
 - **Known gaps**: each item names G56R-002, G56R-003, or another exact owner.
-- **Rollback/flags**: revert the three delivery files, focused test, and suite
-  manifest entry; no runtime feature flag applies.
+- **Rollback/flags**: revert the three delivery files, focused test, suite
+  manifest entry, and exact guard allowance; no runtime feature flag applies.
 
 ## Project Structure
 
@@ -260,7 +262,8 @@ tests/speckit-pro/layer6-efficiency/   # read-only fixture inventory
 tests/speckit-pro/
 ├── suite-manifest.json                # Layer 4 declaration only
 └── unit/
-    └── test-g56r-001-artifacts.py     # focused checker coverage
+    ├── test-g56r-001-artifacts.py     # focused checker coverage
+    └── test-speckit-pro-runner.py     # exact research-path guard allowance
 ```
 
 **Structure Decision**: The primary feature surface is `docs/process`. The two
@@ -277,12 +280,12 @@ environment surfaces remain read-only.
 | I. Plugin Structure Compliance | PASS | Design adds no shipped plugin content; all three delivery operations remain outside `speckit-pro/`. |
 | II. Cross-Platform Runtime & Script Safety | PASS | The contract requires structured JSON, deterministic UTF-8, `pathlib`, Python 3.11+, and no shell/dependencies. |
 | III. Semantic Versioning | PASS | Manifest version is the research-data contract version, not a plugin version; no release metadata changes. |
-| IV. Test Coverage Before Merge | PASS | The design includes focused checker unit coverage, suite membership, direct validation, Layer 4, and the default suite. |
+| IV. Test Coverage Before Merge | PASS | The design includes focused checker unit coverage, suite membership, the exact research-path guard, direct validation, Layer 4, and the default suite. |
 | V. Conventional Commits | PASS | No design artifact introduces a commit-policy exception. |
 | VI. KISS, Simplicity & YAGNI | PASS | The data model is explicit and agent-centric; one fixed-path checker replaces any schema package or generic validation layer. |
 
 No constitution violation or split exception remains. The design stays at 0
-production LOC/files, with 3 research delivery files and 2 required validation
+production LOC/files, with 3 research delivery files and 3 required validation
 paths. Reviewability is re-estimated before implementation.
 
 ## Complexity Tracking

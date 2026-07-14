@@ -35,6 +35,20 @@ AGENT_NAMES = {
 ABSENT_AGENTS = {"consensus-synthesizer", "gate-validator"}
 CURRENT_FIXTURES = {"codebase-analyst", "domain-researcher", "spec-context-analyst"}
 SURFACES = {"cli", "desktop_app", "app_server", "non_interactive"}
+AGENT_FIELDS = {
+    "agent_name",
+    "agent_contract",
+    "production_route",
+    "candidates",
+    "route_policy_inventory",
+    "source_observations",
+    "surface_records",
+    "fixture_contract",
+    "telemetry_requirements",
+    "classified_unknowns",
+    "provenance",
+    "invalidation_triggers",
+}
 SEMANTIC_FIELDS = (
     "role_boundary",
     "authorization_boundaries",
@@ -126,16 +140,39 @@ PROVENANCE_FIELDS = {
 }
 PROJECTION_START = "<!-- g56r-001-agreement-projection:start -->"
 PROJECTION_END = "<!-- g56r-001-agreement-projection:end -->"
+NARRATIVE_HASH_MARKER = re.compile(
+    r"<!-- g56r-001-human-narrative-sha256:(sha256:[0-9a-f]{64}) -->"
+)
 HASH_VALUE = re.compile(r"^sha256:[0-9a-f]{64}$")
+LOGICAL_LOCATOR = re.compile(
+    r"^[a-z][a-z0-9_-]*(?:/[A-Za-z0-9][A-Za-z0-9._-]*)+$"
+)
 
 RFC3339 = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
 )
 LOCAL_PATH = re.compile(
-    r"(?:^|[\s\"'=])(?:/(?:Users|home|root|private|var|tmp)/|[A-Za-z]:\\Users\\)"
+    r"(?:^|[\s\"'=])(?:"
+    r"/(?:Users|home|root|private|var|tmp|opt|etc|usr|bin|sbin|Library)(?:/|(?=$))"
+    r"|/(?!/)[A-Za-z0-9._~-]+/[A-Za-z0-9._~+/-]+"
+    r"|[A-Za-z]:[\\/]"
+    r"|\\\\[^\\/\s]+[\\/]"
+    r")",
+    re.IGNORECASE,
 )
 SECRET_VALUE = re.compile(
-    r"(?:\bBearer\s+[A-Za-z0-9._~+/=-]{8,}|\b(?:sk|ghp|github_pat)_[A-Za-z0-9_-]{8,})",
+    r"(?:\bBearer\s+[A-Za-z0-9._~+/=-]{8,}"
+    r"|\bsk(?:-[A-Za-z0-9]+)*-[A-Za-z0-9_-]{8,}"
+    r"|\b(?:sk|ghp|github_pat)_[A-Za-z0-9_-]{8,}"
+    r"|\bAKIA[0-9A-Z]{16}\b"
+    r"|\bxox[baprs]-[A-Za-z0-9-]{8,}"
+    r"|-----BEGIN [A-Z ]*PRIVATE KEY-----)",
+    re.IGNORECASE,
+)
+LOCAL_IDENTITY = re.compile(
+    r"(?:\b(?:username|user|hostname|host)\s*[:=]\s*[A-Za-z0-9._-]+"
+    r"|\b[A-Za-z0-9._-]+@[A-Za-z0-9._-]+\b"
+    r"|\b[A-Za-z0-9-]+\.local\b)",
     re.IGNORECASE,
 )
 SENSITIVE_KEYS = {
@@ -185,6 +222,31 @@ def manifest_content_hash(manifest: dict[str, Any]) -> str:
         if isinstance(binding, dict):
             binding.pop("manifest_content_hash", None)
     return canonical_hash(payload)
+
+
+def human_narrative_hash(narrative: str) -> str:
+    start = narrative.find(PROJECTION_START)
+    end = narrative.find(PROJECTION_END, start + len(PROJECTION_START)) if start >= 0 else -1
+    if start >= 0 and end >= 0:
+        narrative = (
+            narrative[:start]
+            + PROJECTION_START
+            + "\n"
+            + PROJECTION_END
+            + narrative[end + len(PROJECTION_END):]
+        )
+    narrative = NARRATIVE_HASH_MARKER.sub(
+        "<!-- g56r-001-human-narrative-sha256:<content-hash> -->",
+        narrative,
+    )
+    narrative = re.sub(
+        r"(?m)^\*\*Manifest content hash:\*\* `sha256:[0-9a-f]{64}`$",
+        "**Manifest content hash:** `<manifest-content-hash>`",
+        narrative,
+    )
+    normalized = normalize(narrative)
+    assert isinstance(normalized, str)
+    return f"sha256:{hashlib.sha256(normalized.encode('utf-8')).hexdigest()}"
 
 
 def _slug(value: str) -> str:
@@ -282,9 +344,17 @@ def _validate_sanitization(manifest: dict[str, Any], narrative: str, errors: lis
     for location, key, value in _iter_values(manifest):
         if key.lower() in SENSITIVE_KEYS:
             violations.append(f"{location} uses prohibited field {key!r}")
-        if isinstance(value, str) and (LOCAL_PATH.search(value) or SECRET_VALUE.search(value)):
+        if isinstance(value, str) and (
+            LOCAL_PATH.search(value)
+            or LOCAL_IDENTITY.search(value)
+            or SECRET_VALUE.search(value)
+        ):
             violations.append(f"{location} contains machine-local or secret material")
-    if LOCAL_PATH.search(narrative) or SECRET_VALUE.search(narrative):
+    if (
+        LOCAL_PATH.search(narrative)
+        or LOCAL_IDENTITY.search(narrative)
+        or SECRET_VALUE.search(narrative)
+    ):
         violations.append("narrative contains machine-local or secret material")
     for violation in sorted(set(violations)):
         errors.append(f"sanitization violation: {violation}")
@@ -336,6 +406,12 @@ def _validate_agents(manifest: dict[str, Any], errors: list[str]) -> None:
     missing_fixtures: set[object] = set()
     for record in records:
         name = record.get("agent_name")
+        if set(record) != AGENT_FIELDS:
+            errors.append(
+                f"agent {name!r} fields must match the exact agent-centric schema; "
+                f"missing={sorted(AGENT_FIELDS - set(record))}, "
+                f"extra={sorted(set(record) - AGENT_FIELDS)}"
+            )
         route = record.get("production_route")
         status = route.get("status") if isinstance(route, dict) else None
         if status == "present":
@@ -436,7 +512,7 @@ def _validate_candidate(
         not isinstance(eligibility, dict)
         or eligibility_status not in {"eligible", "excluded"}
         or not _is_nonempty(eligibility.get("basis"))
-        or not isinstance(eligibility.get("evidence_ids"), list)
+        or not _nonempty_string_list(eligibility.get("evidence_ids"))
     ):
         errors.append(f"{location} project_eligibility must record status, basis, and evidence_ids")
 
@@ -455,7 +531,7 @@ def _validate_candidate(
         not isinstance(rationale, dict)
         or not _is_nonempty(rationale.get("classification"))
         or not _is_nonempty(rationale.get("summary"))
-        or not isinstance(rationale.get("evidence_ids"), list)
+        or not _nonempty_string_list(rationale.get("evidence_ids"))
     ):
         errors.append(f"{location} rationale must record classification, summary, and evidence_ids")
 
@@ -471,6 +547,10 @@ def _validate_candidate(
             required = {"contract_field", "description", "evidence_ids", "eligibility_effect"}
             if not required <= set(incompatibility):
                 errors.append(f"{location} incompatibility[{incompatibility_index}] is incomplete")
+            elif not _nonempty_string_list(incompatibility.get("evidence_ids")):
+                errors.append(
+                    f"{location} incompatibility[{incompatibility_index}] evidence_ids must be non-empty"
+                )
             if incompatibility.get("eligibility_effect") not in {"none", "exclude"}:
                 errors.append(f"{location} incompatibility[{incompatibility_index}] has invalid eligibility_effect")
             if incompatibility.get("eligibility_effect") == "exclude":
@@ -506,8 +586,36 @@ def _validate_candidate(
     ):
         errors.append(f"{location} qualification requirement values must be non-empty and valid")
 
-    if not isinstance(candidate.get("provenance"), list) or not candidate.get("provenance"):
+    provenance = candidate.get("provenance")
+    if not isinstance(provenance, list) or not provenance:
         errors.append(f"{location} provenance must be non-empty")
+    else:
+        provenance_ids = {
+            record.get("evidence_id")
+            for record in provenance
+            if isinstance(record, dict) and isinstance(record.get("evidence_id"), str)
+        }
+        evidence_references = [
+            ("project_eligibility", eligibility.get("evidence_ids") if isinstance(eligibility, dict) else None),
+            ("rationale", rationale.get("evidence_ids") if isinstance(rationale, dict) else None),
+        ]
+        if isinstance(incompatibilities, list):
+            evidence_references.extend(
+                (
+                    f"known_incompatibilities[{incompatibility_index}]",
+                    incompatibility.get("evidence_ids"),
+                )
+                for incompatibility_index, incompatibility in enumerate(incompatibilities)
+                if isinstance(incompatibility, dict)
+            )
+        for reference_location, evidence_ids in evidence_references:
+            if not isinstance(evidence_ids, list):
+                continue
+            dangling = sorted(set(evidence_ids) - provenance_ids, key=str)
+            if dangling:
+                errors.append(
+                    f"{location}.{reference_location} has dangling evidence_ids: {dangling}"
+                )
     if not _nonempty_string_list(candidate.get("invalidation_triggers")):
         errors.append(f"{location} candidate invalidation_triggers must contain concrete values")
     return candidate
@@ -875,6 +983,16 @@ def _validate_record_details(manifest: dict[str, Any], errors: list[str]) -> Non
                     errors.append(f"agent {name!r} source observation is incomplete")
                     continue
                 evidence_class = observation["evidence_class"]
+                allowed_fields = common | (
+                    {"repository_path", "repository_revision", "evidence_role"}
+                    if evidence_class == "tracked_source"
+                    else {"logical_locator"}
+                )
+                extra_fields = sorted(set(observation) - allowed_fields)
+                if extra_fields:
+                    errors.append(
+                        f"agent {name!r} source observation contains prohibited fields: {extra_fields}"
+                    )
                 expected_route_binding = {
                     "model_id": route.get("model_id"),
                     "reasoning_effort": route.get("reasoning_effort"),
@@ -895,7 +1013,10 @@ def _validate_record_details(manifest: dict[str, Any], errors: list[str]) -> Non
                     elif revision is not None and observation.get("repository_revision") != revision:
                         errors.append(f"agent {name!r} tracked source observation has revision drift")
                 else:
-                    if not _is_nonempty(observation.get("logical_locator")):
+                    logical_locator = observation.get("logical_locator")
+                    if not isinstance(logical_locator, str) or not LOGICAL_LOCATOR.fullmatch(
+                        logical_locator
+                    ):
                         errors.append(f"agent {name!r} environment observation requires a logical locator")
                     if started is None or deadline is None or not _date_in_workday(observation.get("observed_on"), started, deadline):
                         errors.append(f"agent {name!r} environment source observation violates freshness")
@@ -908,14 +1029,19 @@ def _validate_record_details(manifest: dict[str, Any], errors: list[str]) -> Non
                 errors.append(f"agent {name!r} surface record is incomplete")
             elif surface.get("applicability") not in {"documented", "undocumented", "not_applicable"}:
                 errors.append(f"agent {name!r} surface record applicability is invalid")
-            elif surface.get("applicability") == "not_applicable" and not any(
+            elif not _nonempty_string_list(surface.get("evidence_ids")) or not any(
                 evidence_id in official_evidence
                 and official_evidence[evidence_id].get("surface") == surface.get("surface")
                 and official_evidence[evidence_id].get("feature") == surface.get("feature")
                 for evidence_id in surface.get("evidence_ids", [])
             ):
+                surface_kind = (
+                    "not_applicable surface"
+                    if surface.get("applicability") == "not_applicable"
+                    else "surface record"
+                )
                 errors.append(
-                    f"agent {name!r} not_applicable surface requires surface- and feature-matched official evidence"
+                    f"agent {name!r} {surface_kind} requires surface- and feature-matched official evidence"
                 )
 
         fixture = agent.get("fixture_contract")
@@ -997,6 +1123,11 @@ def _validate_record_details(manifest: dict[str, Any], errors: list[str]) -> Non
 
 
 def _validate_agreement(narrative: str, manifest: dict[str, Any], errors: list[str]) -> None:
+    narrative_hash_matches = NARRATIVE_HASH_MARKER.findall(narrative)
+    if len(narrative_hash_matches) != 1:
+        errors.append("human-readable narrative content hash marker is missing or duplicated")
+    elif narrative_hash_matches[0] != human_narrative_hash(narrative):
+        errors.append("human-readable narrative content hash does not match the prose")
     start = narrative.find(PROJECTION_START)
     end = narrative.find(PROJECTION_END, start + len(PROJECTION_START)) if start >= 0 else -1
     if start < 0 or end < 0:

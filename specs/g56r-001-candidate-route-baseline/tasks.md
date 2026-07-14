@@ -12,10 +12,11 @@
 - `docs/ai/research/codex-agent-route-candidate-manifest.json`
 - `specs/g56r-001-candidate-route-baseline/check-artifacts.py`
 
-The checked-in checker also requires exactly two validation-path changes:
+The checked-in checker also requires exactly three validation-path changes:
 
 - `tests/speckit-pro/unit/test-g56r-001-artifacts.py`
 - `tests/speckit-pro/suite-manifest.json`
+- `tests/speckit-pro/unit/test-speckit-pro-runner.py`
 
 No production, plugin, agent, installer, payload, cache, installed-state,
 default-route, version, generated-release, or unrelated file is modified. The
@@ -116,7 +117,7 @@ validation.
 ## Phase 5: Validate and Emit the Terminal Handoff
 
 **Goal**: Reproduce the objective decision, stop within the declared workday,
-and leave a review-ready three-file research delivery with its two required
+and leave a review-ready three-file research delivery with its three required
 validation-path changes.
 
 **Independent Test**: Two focused checker runs return the same result; a
@@ -124,9 +125,9 @@ maintainer reviewing narrative, manifest, and checker reaches the same terminal
 decision without undocumented context.
 
 - [x] T023 [US1] Run `python3 specs/g56r-001-candidate-route-baseline/check-artifacts.py`, correct only in-scope completeness or agreement defects in the three declared delivery files, and preserve evidence for every remaining failed gate without probing, scoring, qualifying, mutating, or fixing source defects (AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-1.6, AC-1.7)
-- [x] T024 [US1] Run `python3 tests/speckit-pro/unit/test-g56r-001-artifacts.py`, `python3 tests/speckit-pro/run-all.py --layer 4`, `python3 tests/speckit-pro/run-all.py --integration`, and `python3 tests/speckit-pro/run-all.py`, preserving exact results for the handoff and confirming that the only suite-manifest change is the focused Layer 4 declaration while all production surfaces remain unchanged (AC-1.5)
+- [x] T024 [US1] Run `python3 tests/speckit-pro/unit/test-g56r-001-artifacts.py`, `python3 tests/speckit-pro/unit/test-speckit-pro-runner.py`, `python3 tests/speckit-pro/run-all.py --layer 4`, `python3 tests/speckit-pro/run-all.py --integration`, and `python3 tests/speckit-pro/run-all.py`, preserving exact results for the handoff, confirming that the only suite-manifest change is the focused Layer 4 declaration, and proving the two research artifacts are the only new exact guard allowances while all production surfaces remain unchanged (AC-1.5)
 - [x] T025 [US1] Classify all remaining unknowns and publish the reproducible `go` or precise `no_go` packet, final `stopped_at`, completion checks, self-reference-free manifest content hash, G56R-002 capability-snapshot requirement, admission binding or unmet conditions, validation evidence, AC-1.1–AC-1.7 traceability, review order, 0-production-LOC scope, known-gap owners, and rollback/no-feature-flag notes in `docs/ai/research/codex-agent-route-candidates.md` and `docs/ai/research/codex-agent-route-candidate-manifest.json` (AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-1.6, AC-1.7)
-- [x] T026 [US1] Run `python3 specs/g56r-001-candidate-route-baseline/check-artifacts.py` twice and `git diff --check`, confirm identical checker summaries and exactly three research delivery paths plus two validation paths, and ensure any terminal failure remains an owned `no_go` rather than extending the workday or reducing scope (AC-1.5, AC-1.6)
+- [x] T026 [US1] Run `python3 specs/g56r-001-candidate-route-baseline/check-artifacts.py` twice and `git diff --check`, confirm identical checker summaries and exactly three research delivery paths plus three validation paths, and ensure any terminal failure remains an owned `no_go` rather than extending the workday or reducing scope (AC-1.5, AC-1.6)
 
 **Checkpoint**: G56R-001 ends with a deterministic three-file research handoff
 and zero production files or LOC.
@@ -150,7 +151,7 @@ and zero production files or LOC.
 
 ### Parallel Opportunities
 
-- None. The three-delivery-file ceiling plus two constitution-required
+- None. The three-delivery-file ceiling plus three required
   validation paths means evidence collection, contract derivation, projection,
   and validation either share an output or depend on a frozen prior result.
   Adding `[P]` would create same-file conflicts or nondeterministic
@@ -173,9 +174,10 @@ be `no_go` when an objective condition remains unmet at the deadline.
 3. Review and run
    `specs/g56r-001-candidate-route-baseline/check-artifacts.py` for objective
    agreement and handoff reproduction.
-4. Review `tests/speckit-pro/unit/test-g56r-001-artifacts.py` and the single
-   Layer 4 declaration in `tests/speckit-pro/suite-manifest.json` for focused
-   checker coverage.
+4. Review `tests/speckit-pro/unit/test-g56r-001-artifacts.py`, the single Layer
+   4 declaration in `tests/speckit-pro/suite-manifest.json`, and the exact
+   two-file allowance in `tests/speckit-pro/unit/test-speckit-pro-runner.py`
+   for focused checker and post-commit guard coverage.
 
 ## Notes
 

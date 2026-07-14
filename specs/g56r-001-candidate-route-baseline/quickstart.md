@@ -15,6 +15,8 @@ discover capabilities, probe a runtime, score candidates, or mutate routes.
 - The focused checker test and its Layer 4 declaration must exist at:
   - `tests/speckit-pro/unit/test-g56r-001-artifacts.py`
   - `tests/speckit-pro/suite-manifest.json`
+  - `tests/speckit-pro/unit/test-speckit-pro-runner.py` (exact research-path
+    guard allowance)
 
 Review [data-model.md](data-model.md) and
 [contracts/agent-route-candidate-manifest.md](contracts/agent-route-candidate-manifest.md)
@@ -28,7 +30,8 @@ git diff --name-only <base-revision>...HEAD
 
 Expected research delivery paths are exactly the narrative, manifest, and
 feature-local checker above, plus the focused Layer 4 test and its existing
-suite-manifest declaration. Workflow/spec planning checkpoints may appear
+suite-manifest declaration and the exact two-file research allowance in the
+existing runner guard. Workflow/spec planning checkpoints may appear
 separately in the autopilot history, but no plugin, agent, installer, payload,
 cache, installed-state, route-default, version, generated-release, or
 unrelated configuration file belongs to the implementation delivery.

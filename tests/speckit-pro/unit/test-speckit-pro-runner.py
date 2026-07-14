@@ -493,6 +493,10 @@ class RunnerFoundationTests(unittest.TestCase):
             "docs-site/src/content/docs/reference/agents.md",
             "docs-site/src/content/docs/reference/scripts.md",
             "docs-site/src/content/docs/reference/tests.md",
+            # G56R-001 research-only route evidence; these artifacts make no
+            # executable, qualified, preferred, fallback, or public support claim.
+            "docs/ai/research/codex-agent-route-candidate-manifest.json",
+            "docs/ai/research/codex-agent-route-candidates.md",
             "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
             "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
             "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",

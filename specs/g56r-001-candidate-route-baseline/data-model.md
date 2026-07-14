@@ -457,4 +457,7 @@ The checker compares normalized Markdown and JSON values for:
 - completion checks and terminal handoff state.
 
 Missing values fail. Empty arrays and permitted nulls are explicit values, not
-omissions.
+omissions. A `g56r-001-human-narrative-sha256` marker separately binds the
+human-readable prose after Unicode/newline normalization, with the normalized
+projection and displayed manifest hash replaced by fixed placeholders before
+hashing. This keeps the check non-circular while making stale prose fail.

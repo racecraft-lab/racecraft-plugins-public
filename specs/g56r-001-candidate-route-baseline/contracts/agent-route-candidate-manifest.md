@@ -276,7 +276,10 @@ hashes, route-to-contract binding drift, an evidenced hard-incompatible
 candidate remaining eligible, incomplete fields, evidence, surfaces, fixtures,
 or unknowns, sanitization violations, eligibility/availability conflation,
 unsupported qualification or ordering claims, Markdown/JSON disagreement, or
-an unreproducible handoff.
+an unreproducible handoff. It also validates the human-readable narrative
+content hash after replacing the normalized projection and displayed manifest
+hash with fixed placeholders, so prose drift is detected without a circular
+hash dependency.
 
 It performs no network access, runtime probing, scoring, qualification,
 mutation, or generic schema service.

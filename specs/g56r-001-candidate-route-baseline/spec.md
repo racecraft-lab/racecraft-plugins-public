@@ -180,8 +180,11 @@ decision without consulting undocumented context or executing a candidate.
   model-effort-treatment tuples, eligibility, installed availability,
   capabilities, rationale, incompatibilities, qualification, provenance,
   invalidation triggers, and classified unknowns. Missing fields are errors;
-  empty lists and permitted nulls are explicit values. Lexical stable-ID order
-  is presentation-only and MUST NOT express preference or fallback ordering.
+  empty lists and permitted nulls are explicit values. A deterministic
+  human-narrative content-hash marker MUST also bind all prose outside the
+  normalized projection so stale summary text fails validation. Lexical
+  stable-ID order is presentation-only and MUST NOT express preference or
+  fallback ordering.
 
 Changing hash inputs, role, authorization or approval, safety, grounding,
 mutation, tool, skill, MCP, sandbox, output, route-to-contract binding,
@@ -414,7 +417,9 @@ fixed in this feature.
   `jq`, package dependencies, or a reusable validator framework. Because the
   checked-in checker is a repository tool, it MUST have focused Layer 4 unit
   coverage under `tests/speckit-pro/unit/`, with its test entry declared in
-  `tests/speckit-pro/suite-manifest.json`.
+  `tests/speckit-pro/suite-manifest.json`. The existing repository guard MUST
+  also allow exactly the two contracted `docs/ai/research/` artifacts without
+  broadening its public-claim exclusions.
 - **FR-027**: The spike MUST NOT perform runtime probing, live scoring,
   qualification, final fallback ordering, or defect fixes; MUST NOT mutate
   tracked source, agents, prompts, installers, caches, installed-state,
@@ -437,7 +442,7 @@ fixed in this feature.
 - **Projected reviewable production LOC**: 0
 - **Projected production files**: 0
 - **Projected total delivery files**: approximately 3 research delivery files,
-  plus 2 constitution-required validation paths
+  plus 3 required validation paths after the post-commit guard is exercised
 - **Budget result**: within budget as a one-working-day research spike; the
   timebox and objective terminal gate are the sizing controls
 - **Split decision**: no split; this remains one G56R-001 spike and stops with a
@@ -515,9 +520,10 @@ fixed in this feature.
   judgment.
 - **SC-010**: The delivery preserves 0 production LOC and 0 production files,
   contains the approximately 3 research delivery files plus only the focused
-  Layer 4 test and required suite-manifest declaration, and its PR review packet
-  maps every major requirement and outcome to a file and verification result
-  without invoking a transition exception.
+  Layer 4 test, required suite-manifest declaration, and exact two-file
+  research allowance in the existing repository guard, and its PR review
+  packet maps every major requirement and outcome to a file and verification
+  result without invoking a transition exception.
 
 ## Assumptions
 
