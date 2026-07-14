@@ -143,8 +143,10 @@ Bind the workflow to actual Codex primitives:
   as the workflow file. Resume reads that file first, then reconciles with the
   workflow file.
 - This skill owns `./agents/openai.yaml` as Codex skill metadata for UI
-  appearance, invocation policy, and tool dependencies. Do not treat that
-  sidecar as a custom-agent manifest.
+  appearance and invocation policy. Optional research/context capabilities are
+  discovered at runtime, so the sidecar MUST NOT declare Tavily, Context7, or
+  any other optional capability as a required tool dependency. Do not treat
+  that sidecar as a custom-agent manifest.
 - SpecKit Pro also ships bundled custom-agent templates under
   `../../codex-agents/`. Those bundled TOML files are package assets, not
   runtime registrations.
@@ -544,6 +546,11 @@ You receive a workflow file path and optional arguments:
 path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|analyze|implement] [--spec SPEC-ID] [--strict | --advisory]
 ```
 
+Before Step -1, bind the workflow to the current worktree. If the supplied
+path is missing from the current checkout, follow the read-only worktree
+resolution contract in `prerequisites-codex.md`. Never read a workflow from
+one worktree while running phases or mutations against another checkout.
+
 `--strict` and `--advisory` override the pre-Implement confidence
 gate (G6.5) mode for this invocation. They beat
 `confidence_gate_mode` in `.claude/speckit-pro.local.md` (or
@@ -556,7 +563,10 @@ and the precedence rule documented there.
 
 See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full pre-flight sequence:
 
-- **Step -1: Archive Sweep Startup** — archive previously merged specs (sweep vs dry-run by branch type)
+- **Step -1: Archive Sweep Startup** — execute the installed archive
+  extension's project-local command contract directly in Codex, use the
+  Codex-native worktree binding for path prerequisites, and fail closed on a
+  broken installed extension
 - **Step 0.0: Use Runner Operations** — invoke `speckit_pro_runner` helper IDs with one JSON request on stdin
 - **Step 0.1–0.7: Environment Checks** — `check-prerequisites` JSON parsing, branch detection
 - **Step 0.6: Load Settings** — `consensus-mode`, `gate-failure`, `auto-commit`, `security-keywords`

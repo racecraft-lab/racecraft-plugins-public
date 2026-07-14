@@ -567,6 +567,36 @@ def write_fake_skill_creator(root: Path) -> Path:
 
 
 class EvalRunnerSkillSelectionTests(unittest.TestCase):
+    def test_codex_archive_sweep_execution_contract(self) -> None:
+        prerequisites = (
+            PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/prerequisites-codex.md"
+        ).read_text(encoding="utf-8")
+        normalized = " ".join(prerequisites.split())
+
+        self.assertIn("use its project-local command contract as the Codex invocation path", normalized)
+        self.assertIn("Do not require a generated `$speckit-archive-run` skill", normalized)
+        self.assertIn("Treat integration-specific frontmatter entries and manifest requirements", normalized)
+        self.assertIn("Do not resolve or execute those entries from the Codex plugin", normalized)
+        self.assertIn("`prerequisite_mode=codex_native_worktree_binding`", normalized)
+        self.assertIn("Do not substitute a manual `specs/` inventory", normalized)
+        self.assertIn("STOP before Phase 0", normalized)
+        self.assertIn("`status=no_candidates`", normalized)
+        self.assertIn("It is not a fallback for a broken or unexecuted command path", normalized)
+
+    def test_codex_autopilot_worktree_handoff_contract(self) -> None:
+        scaffold = (PLUGIN_ROOT / "codex-skills/speckit-scaffold-spec/SKILL.md").read_text(encoding="utf-8")
+        autopilot = (PLUGIN_ROOT / "codex-skills/speckit-autopilot/SKILL.md").read_text(encoding="utf-8")
+        prerequisites = (
+            PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/prerequisites-codex.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("start a new Codex task rooted at that worktree", scaffold)
+        self.assertIn("Never hand off only the inner workflow path from the parent checkout", scaffold)
+        self.assertIn("bind the workflow to the current worktree", autopilot)
+        self.assertIn("git worktree list\n   --porcelain", prerequisites)
+        self.assertIn("STOP: Workflow file is not in the current checkout", prerequisites)
+        self.assertIn("Never copy, move, check out, rebase, or reconstruct the workflow", prerequisites)
+
     def test_post_implementation_outcome_negative_canaries(self) -> None:
         claude = (PLUGIN_ROOT / "skills/speckit-autopilot/references/post-implementation.md").read_text(encoding="utf-8")
         codex = (PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/post-implementation-codex.md").read_text(

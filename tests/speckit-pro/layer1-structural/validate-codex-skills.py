@@ -445,6 +445,13 @@ class ValidateCodexSkills(unittest.TestCase):
             else:
                 self.fail(f"no implicit-invocation policy expectation defined for '{skill}'; update validate-codex-skills.sh")
 
+            if skill == "speckit-autopilot":
+                self.assertNotIn(
+                    "dependencies:",
+                    sidecar.read_text(encoding="utf-8"),
+                    "autopilot optional research capabilities must not be declared as required tool dependencies",
+                )
+
 
 def build_suite() -> unittest.TestSuite:
     return unittest.defaultTestLoader.loadTestsFromTestCase(ValidateCodexSkills)
