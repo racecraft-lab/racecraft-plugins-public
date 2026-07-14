@@ -119,10 +119,13 @@ authoritative only for SpecKit Pro project facts.
 
 ## One-Working-Day Execution Sequence
 
-The implementation records `started_at` before step 1 and `stopped_at` at the
-terminal boundary. Steps are sequential because later records depend on frozen
-evidence and contract identities. Parallel source reading is allowed only when
-source sets are disjoint and reconciliation uses the predeclared rules.
+The implementation records `started_at` and the scheduled workday `deadline_at`
+before step 1 and `stopped_at` at the terminal boundary. All three use RFC 3339
+timestamps with explicit UTC offsets and satisfy
+`started_at <= stopped_at <= deadline_at`. Steps are sequential because later
+records depend on frozen evidence and contract identities. Parallel source
+reading is allowed only when source sets are disjoint and reconciliation uses
+the predeclared rules.
 
 1. **Freeze the record contract**: record repository revision, research date,
    workday boundary, claim labels, evidence classes, four surfaces,
@@ -151,10 +154,10 @@ source sets are disjoint and reconciliation uses the predeclared rules.
    its deterministic result, run Layer 4, and run the default deterministic
    suite. Validation is offline, read-only, and performs no probing or
    qualification.
-8. **Stop and hand off**: at the scheduled boundary, emit `go` only if every
-   FR-024 condition passes with no blocking conflict or unclassified unknown.
-   Otherwise emit the exact `no_go` payload without extending work or reducing
-   deliverables.
+8. **Stop and hand off**: no later than the predeclared `deadline_at`, emit `go`
+   only if every FR-024 condition passes with no blocking conflict or
+   unclassified unknown. Otherwise emit the exact `no_go` payload without
+   extending work or reducing deliverables.
 
 ## Evidence and Validation Design
 
@@ -173,11 +176,15 @@ The checker reads fixed paths and fails closed on:
   surfaces, fixture contracts, telemetry requirements, or classified unknowns;
 - malformed/duplicate/reused IDs, malformed hashes, or canonicalization/hash
   mismatches;
-- missing unchanged controls, unsupported exclusion reasons, conflated project
-  eligibility and installed availability, or qualification/final-order claims;
+- route-to-contract binding drift, an evidenced hard-incompatible candidate
+  remaining eligible, missing unchanged controls, unsupported exclusion
+  reasons, conflated project eligibility and installed availability, or
+  qualification/final-order claims;
 - unsafe local fields or path/credential/secret patterns;
 - disagreement between normalized Markdown and JSON projections; or
-- a terminal decision that cannot be reproduced from the completion checks.
+- a freshness or invalidation rule violation; or
+- a terminal decision or recorded workday boundary that cannot be reproduced
+  from the completion checks.
 
 The checker does not fetch, probe, score, qualify, mutate, or provide reusable
 schema APIs. Its human-readable success output lists the validated artifact

@@ -74,7 +74,8 @@ decision without consulting undocumented context or executing a candidate.
 - A project-level candidate is documented but unavailable on the current
   machine or on only some target surfaces.
 - A candidate is otherwise discoverable but cannot preserve one hard role,
-  safety, grounding, mutation, tool, skill, MCP, sandbox, or output contract.
+  authorization or approval, safety, grounding, mutation, tool, skill, MCP,
+  sandbox, or output contract.
 - A prompt or context variant has no evidence-backed overhead hypothesis, or
   the unchanged-prompt control is missing.
 - Two records use different readable IDs for the same canonical contract or
@@ -112,6 +113,15 @@ decision without consulting undocumented context or executing a candidate.
   `blocking_no_go` when it prevents the objective completeness gate, or as
   `nonblocking_deferred` only when it supports no G56R-001 conclusion and has a
   named owner, impact, and follow-up.
+- **Freshness and invalidation rule**: Platform and environment evidence used
+  by a passing completion check MUST be retrieved or observed during the
+  recorded workday; project evidence MUST match the pinned research revision.
+  An unavailable or unverifiable source, or a fired invalidation trigger, MUST
+  stop the affected claim from remaining classified as a fact. The claim MUST
+  be revalidated or classified as an `unverified_assumption` or `conflict` with
+  a terminal disposition. A trigger that fires after `go` invalidates the
+  affected admission evidence and dependent results until refresh and
+  re-admission.
 
 ### Session 2 — Agent Contract, Identity, and Manifest Completeness (2026-07-14)
 
@@ -173,7 +183,8 @@ decision without consulting undocumented context or executing a candidate.
   empty lists and permitted nulls are explicit values. Lexical stable-ID order
   is presentation-only and MUST NOT express preference or fallback ordering.
 
-Changing hash inputs, authorization, safety, mutation, tool, sandbox,
+Changing hash inputs, role, authorization or approval, safety, grounding,
+mutation, tool, skill, MCP, sandbox, output, route-to-contract binding,
 hard-incompatibility, parity-route absence, or eligibility-versus-availability
 semantics requires explicit maintainer security review; this clarification does
 not change those accepted boundaries.
@@ -214,10 +225,13 @@ not change those accepted boundaries.
   exact-treatment replay, scoring, qualification, and evidence-backed preferred
   or fallback ordering. Every deferred unknown records its class, impact, owner
   spec, and required follow-up.
-- **One-day terminal gate**: Stop at the recorded end of one working day. Emit
-  `go` only when every FR-024 condition passes and no blocking conflict or
-  unclassified unknown remains. Otherwise emit `no_go` with `started_at`,
-  `stopped_at`, `completed_artifacts`, and `unmet_conditions`; each unmet
+- **One-day terminal gate**: Before evidence collection, record `started_at`
+  and the scheduled workday `deadline_at`; record `stopped_at` when the terminal
+  packet is emitted. All three are RFC 3339 timestamps with explicit UTC
+  offsets and MUST satisfy `started_at <= stopped_at <= deadline_at`. Emit `go`
+  only when every FR-024 condition passes before the deadline and no blocking
+  conflict or unclassified unknown remains. Otherwise emit `no_go` with the
+  three timestamps, `completed_artifacts`, and `unmet_conditions`; each unmet
   condition contains `gate_id`, `requirement_refs`, `condition`,
   `available_evidence_ids`, `impact`, `owner_spec`, and `required_follow_up`.
   The spike MUST NOT extend scope, reduce deliverables, fix discovered defects,
@@ -234,9 +248,10 @@ artifact review; it does not create an unresolved Clarify item.
 
 This feature is one research-only spike. It does not perform runtime capability
 probes, execute or score candidates, qualify routes, choose final fallback
-ordering, or mutate agents, installers, prompts, payloads, caches,
-installed-state, defaults, or versions. Defects discovered during inventory are
-recorded and handed off; they are not fixed in this feature.
+ordering, or mutate tracked source, agents, installers, prompts, payloads,
+caches, installed-state, defaults, versions, or unrelated configuration.
+Defects discovered during inventory are recorded and handed off; they are not
+fixed in this feature.
 
 ### Functional Requirements
 
@@ -253,17 +268,36 @@ recorded and handed off; they are not fixed in this feature.
   production route exists.
 - **FR-004**: The inventory MUST identify every active source, installer,
   skill, validation, evaluation, generated-payload, and installed-cache surface
-  that encodes or consumes the twelve agents' route policy.
+  that encodes or consumes the twelve agents' route policy. Each active point
+  MUST appear exactly once at the pinned research revision with a stable entry
+  ID, repository-relative or logical locator, integration class, producer,
+  consumer, or both role, affected agents and policy fields, authority and
+  evidence classes, canonical-input or derived-output relationship, reciprocal
+  upstream and downstream entry IDs, revision or version, observation date,
+  mismatch status, and nullable defect owner. Derived outputs MUST name their
+  canonical input and remain non-authoritative. Missing, duplicate, orphaned,
+  unclassified, or unowned mismatching entries fail FR-024.
 - **FR-005**: Tracked source, cached source, and sanitized installed-state
   evidence MUST remain separate, and any mismatch MUST be recorded without
   allowing local state to redefine the tracked production contract.
 - **FR-006**: Every agent MUST have a semantic role contract covering role and
-  authorization boundaries, safety, grounding, mutation, tools, skills, MCP
-  use, sandbox expectations, output contract, supported-client assumptions,
-  and representative tasks.
+  authorization boundaries, including approval conditions and authorized
+  approvers, safety, grounding, mutation, tools, skills, MCP use, sandbox
+  expectations, output contract, supported-client assumptions, and
+  representative tasks. Each hard-boundary field MUST state its applicable
+  permitted and prohibited behavior and required stop or escalation condition;
+  a generic capability label is insufficient.
 - **FR-007**: The two parity contracts MUST be derived from the semantics of
   the corresponding Claude definitions and MUST NOT copy Claude-specific
-  configuration mechanics as if they were Codex requirements.
+  configuration mechanics as if they were Codex requirements. For every
+  FR-006 field, each parity contract MUST record the exact Claude source
+  locator and revision, a mapping status of `preserved`, `codex_adapted`, or
+  `not_applicable`, a justification for adapted or non-applicable fields, and
+  the mapped Codex contract value. Mapping metadata is provenance excluded from
+  `contract_hash`; the mapped semantic value remains in the existing hash
+  payload. Any missing hard field, unresolved locator, invalid status, missing
+  justification, empty value, or normalized-value disagreement forces
+  `no_go`.
 - **FR-008**: Every agent contract MUST have a readable, stable
   `agent_contract_id`, a canonical instruction hash, and a canonical contract
   hash, with repeatable canonicalization rules recorded in the narrative.
@@ -275,7 +309,10 @@ recorded and handed off; they are not fixed in this feature.
   contract hashes, required model and modality capabilities, custom-agent,
   tool, skill, MCP, sandbox, mutation, and client requirements, rationale,
   known incompatibilities, required qualification artifacts, and invalidation
-  triggers.
+  triggers. Each candidate's `agent_contract_id` and `contract_hash`, and each
+  production route's `contract_hash`, MUST match the enclosing agent contract.
+  Changing model, reasoning effort, or treatment MUST NOT replace or relax the
+  bound hard contract.
 - **FR-011**: The catalog MUST include every evidence-supported project-level
   model-and-effort candidate eligible for a named role, including the immutable
   production baseline, without claiming that a candidate is executable or
@@ -283,7 +320,9 @@ recorded and handed off; they are not fixed in this feature.
 - **FR-012**: A candidate MAY be excluded only for recorded incompatibility,
   hard-contract failure, or applicable predeclared dominance evidence; every
   exclusion MUST cite its evidence and affected contract, and local
-  unavailability alone MUST NOT be an exclusion.
+  unavailability alone MUST NOT be an exclusion. A cited incompatibility with
+  any hard role, authorization or approval, safety, grounding, mutation, tool,
+  skill, MCP, sandbox, or output boundary MUST mark the candidate `excluded`.
 - **FR-013**: Project-level candidate eligibility MUST be distinct from
   installation-time availability, which remains a G56R-002 decision bound to a
   versioned capability snapshot.
@@ -308,7 +347,13 @@ recorded and handed off; they are not fixed in this feature.
   Omitted source scope MUST be recorded as `not_stated` and MUST NOT be
   inferred. Every project fact MUST cite a tracked repository-relative path and
   recorded revision, identify that file's evidence role, and remain unresolved
-  when no declared canonical source establishes precedence.
+  when no declared canonical source establishes precedence. Evidence used by a
+  passing FR-024 check MUST satisfy the freshness rule: official and environment
+  evidence is retrieved or observed during the recorded workday, and project
+  evidence matches the pinned research revision. If a source is unavailable or
+  unverifiable, or an invalidation trigger fires, the affected claim MUST be
+  revalidated or reclassified from fact to `unverified_assumption` or
+  `conflict`; the affected completion check cannot pass until resolved.
 - **FR-018**: Platform facts, project facts, reasonable inferences, proposed
   SpecKit Pro policy, and unverified assumptions MUST be visibly classified;
   the research MUST NOT claim undocumented native fallback, benchmark, model,
@@ -324,8 +369,8 @@ recorded and handed off; they are not fixed in this feature.
   Evidence MUST NOT be inherited across surfaces; silent coverage is
   `undocumented`, and `not_applicable` requires explicit official evidence.
 - **FR-021**: Installed-state evidence MUST retain only relevant sanitized
-  facts and hashes and MUST exclude home paths, credentials, secrets, and
-  unrelated local configuration.
+  facts and hashes and MUST exclude absolute or home paths, usernames,
+  hostnames, credentials, secrets, and unrelated local configuration.
 - **FR-022**: The handoff MUST identify the three current and nine missing Codex
   role fixtures, provide a fixture contract for every agent with a
   representative task, expected behavior, and hard-contract assertions, and
@@ -334,21 +379,38 @@ recorded and handed off; they are not fixed in this feature.
   unresolved question by whether documentation, G56R-002 capability discovery,
   or later scored qualification can answer it, and identify the owning
   downstream spec without treating the unknown as a final policy decision.
+  G56R-002 admission MUST require `go`, the supported manifest type/version,
+  passing focused checks, and an immutable binding to the research revision,
+  manifest content hash, every production-route identity, every contract ID
+  and hash, every candidate ID and bound identity tuple, and one versioned
+  capability snapshot. `no_go` and unsupported manifest versions are rejected
+  before capability work begins.
 - **FR-024**: The G56R-002 handoff MUST use an objective completeness gate that
   checks artifact presence, twelve-agent coverage, contract and candidate
   completeness, provenance, cross-artifact agreement, fixture contracts,
-  telemetry requirements, classified unknowns, and sanitization.
-- **FR-025**: The spike MUST stop after one working day. It MUST emit a go
-  packet only when FR-024 passes; otherwise it MUST emit a no-go packet listing
-  each unmet condition, available evidence, impact, and required follow-up
-  without extending the spike or reducing accepted deliverables.
+  telemetry requirements, classified unknowns, and sanitization. Admission
+  MUST preserve the candidate set and every project-eligibility value; G56R-002
+  may record installation availability only against the bound capability
+  snapshot and MUST NOT mutate qualification, preference, or fallback order.
+  Drift in any bound research revision, manifest identity, production route,
+  instruction, contract, or candidate identity invalidates admission and its
+  dependent results until G56R-002 re-admits a new versioned snapshot.
+- **FR-025**: Before evidence collection, the spike MUST record `started_at`
+  and its scheduled workday `deadline_at`, then stop and record `stopped_at` no
+  later than that deadline. All three timestamps MUST use RFC 3339 with an
+  explicit UTC offset and satisfy `started_at <= stopped_at <= deadline_at`.
+  It MUST emit a go packet only when FR-024 passes before the deadline;
+  otherwise it MUST emit a no-go packet listing each unmet condition, available
+  evidence, impact, and required follow-up without extending the spike or
+  reducing accepted deliverables.
 - **FR-026**: Artifact validation MUST use focused Python 3.11+ standard-library
   structured checks only, MUST parse JSON structurally, and MUST NOT add Bash,
   `jq`, package dependencies, or a reusable validator framework.
 - **FR-027**: The spike MUST NOT perform runtime probing, live scoring,
-  qualification, final fallback ordering, production mutation, or defect fixes,
-  and MUST NOT remove a project candidate solely because this installation
-  lacks it.
+  qualification, final fallback ordering, or defect fixes; MUST NOT mutate
+  tracked source, agents, prompts, installers, caches, installed-state,
+  generated payloads, defaults, versions, or unrelated configuration; and MUST
+  NOT remove a project candidate solely because this installation lacks it.
 
 ### Reviewability Notes
 

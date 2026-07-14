@@ -74,6 +74,8 @@ Required identity fields:
 - `agent_contract_id`: `agent-contract/<agent-name>/v<N>`
 - `instruction_hash`: lowercase `sha256:<64-hex>`
 - `contract_hash`: lowercase `sha256:<64-hex>`
+- `semantic_mappings`: required only for `consensus-synthesizer` and
+  `gate-validator`; exactly one `SemanticMapping` per FR-006 semantic field
 
 Required FR-006 semantic fields:
 
@@ -94,6 +96,24 @@ All semantic fields are non-empty strings or explicit non-empty arrays as
 defined by the contract. The two parity-role contracts derive these semantics
 from the cited Claude instruction bodies, while excluding Claude frontmatter,
 tool-list syntax, transport, and routing mechanics.
+
+Hard-boundary fields state applicable permitted and prohibited behavior plus
+required stop or escalation conditions. `authorization_boundaries` also states
+approval conditions and who may grant approval. Tool, skill, MCP, sandbox, and
+mutation fields preserve restrictions rather than merely naming available
+capabilities.
+
+### `SemanticMapping`
+
+Each parity role records exactly twelve mappings with `contract_field`,
+`claude_repository_path`, `claude_repository_revision`,
+`claude_exact_locator`, `mapping_status`, `justification`, and
+`mapped_codex_contract_value`. Status is `preserved`, `codex_adapted`, or
+`not_applicable`; justification is required for the latter two. The mapped
+value is non-empty and, after canonical normalization, equals the corresponding
+`AgentContract` value. Missing or inconsistent mappings force `no_go`.
+Mapping metadata is provenance excluded from `contract_hash`; the mapped
+semantic value is already included through its FR-006 field.
 
 ### Canonical identity rules
 
@@ -145,6 +165,7 @@ State rules:
   `absence_reason`.
 - Only `consensus-synthesizer` and `gate-validator` use `absent`, null route
   bindings, and a non-empty cited absence reason.
+- Every present route's `contract_hash` equals its enclosing `AgentContract`.
 - A tracked source establishes the project production route. Cache or installed
   observations can report mismatch but cannot change this state.
 
@@ -179,6 +200,8 @@ Validation rules:
 
 - `project_eligibility` is one of `eligible` or `excluded` and includes its
   evidence-backed basis.
+- `agent_contract_id` and `contract_hash` equal the enclosing `AgentContract`;
+  a model, effort, or treatment change cannot replace or relax that contract.
 - `installation_availability.status` is always `unresolved_g56r_002` in this
   feature; sanitized observations cannot change eligibility.
 - A variant requires a bounded overhead hypothesis and a corresponding
@@ -224,8 +247,8 @@ Required fields:
 - `eligibility_effect`: `none` or `exclude`
 
 Use an explicit empty `known_incompatibilities` array when none exist. A hard
-authorization, safety, grounding, mutation, tool, sandbox, or output-contract
-failure requires `exclude`.
+role, authorization or approval, safety, grounding, mutation, tool, skill, MCP,
+sandbox, or output-contract failure requires `exclude`.
 
 ## `QualificationRequirements`
 
@@ -275,6 +298,15 @@ Allowed claim classifications are `platform_fact`, `project_fact`,
 Allowed conflict states are `none`, `resolved_by_authority`,
 `blocking_no_go`, and `nonblocking_deferred`. A deferred conflict also records
 owner, impact, and required follow-up and supports no G56R-001 conclusion.
+
+A provenance record can support a passing completion check only when official
+or environment evidence was retrieved or observed within the recorded
+`started_at`/`deadline_at` workday and project evidence matches the pinned
+research revision. If its source becomes unavailable or unverifiable, or a
+declared invalidation trigger fires, the record is revalidated or reclassified
+from fact to `unverified_assumption` or `conflict`. Until then, the affected
+completion check cannot pass. A trigger after `go` invalidates the affected
+admission evidence and dependent results until refresh and re-admission.
 
 ### `SourceObservation`
 
@@ -363,10 +395,12 @@ Required fields:
 
 - `decision`: `go` or `no_go`
 - `started_at`
+- `deadline_at`
 - `stopped_at`
 - `completed_artifacts`
 - `completion_checks`
 - `unmet_conditions`
+- `admission_binding`: required for `go`; null for `no_go`
 
 `CompletionCheck` contains `gate_id`, requirement references, objective
 condition, status, and evidence IDs. The checks cover artifact presence,
@@ -374,8 +408,21 @@ condition, status, and evidence IDs. The checks cover artifact presence,
 fixtures, telemetry requirements, classified unknowns, sanitization, and
 conflict disposition.
 
+`started_at`, `deadline_at`, and `stopped_at` are RFC 3339 timestamps with
+explicit UTC offsets. The deadline is declared before evidence collection and
+the values satisfy `started_at <= stopped_at <= deadline_at`.
+
 For `go`, every check passes, `unmet_conditions` is empty, and no blocking
 conflict or unclassified unknown exists.
+
+`admission_binding` contains the supported manifest type/version, research
+revision, manifest content hash, complete production-route identities, every
+contract ID and both hashes, every candidate ID with its bound contract ID,
+hashes, model, effort, and treatment, and the versioned capability-snapshot
+requirement. G56R-002 rejects `no_go` or an unsupported version, preserves the
+candidate set and project eligibility, and records installation availability
+only against that snapshot. Drift in any bound identity invalidates admission
+and dependent results until a new snapshot is explicitly admitted.
 
 For `no_go`, every `UnmetCondition` contains:
 
