@@ -12,26 +12,31 @@ discover capabilities, probe a runtime, score candidates, or mutate routes.
   - `docs/ai/research/codex-agent-route-candidates.md`
   - `docs/ai/research/codex-agent-route-candidate-manifest.json`
   - `specs/g56r-001-candidate-route-baseline/check-artifacts.py`
+- The focused checker test and its Layer 4 declaration must exist at:
+  - `tests/speckit-pro/unit/test-g56r-001-artifacts.py`
+  - `tests/speckit-pro/suite-manifest.json`
 
 Review [data-model.md](data-model.md) and
 [contracts/agent-route-candidate-manifest.md](contracts/agent-route-candidate-manifest.md)
 before interpreting the checker result.
 
-## 1. Confirm the three-file delivery boundary
+## 1. Confirm the delivery and validation boundary
 
 ```bash
 git diff --name-only <base-revision>...HEAD
 ```
 
-Expected delivery paths are exactly the narrative, manifest, and feature-local
-checker above. Workflow/spec planning checkpoints may appear separately in the
-autopilot history, but no plugin, agent, installer, payload, cache,
-installed-state, route-default, version, generated-release, or unrelated
-configuration file belongs to the implementation delivery.
+Expected research delivery paths are exactly the narrative, manifest, and
+feature-local checker above, plus the focused Layer 4 test and its existing
+suite-manifest declaration. Workflow/spec planning checkpoints may appear
+separately in the autopilot history, but no plugin, agent, installer, payload,
+cache, installed-state, route-default, version, generated-release, or
+unrelated configuration file belongs to the implementation delivery.
 
-## 2. Run the focused checker twice
+## 2. Run the focused unit coverage and checker twice
 
 ```bash
+python3 tests/speckit-pro/unit/test-g56r-001-artifacts.py
 python3 specs/g56r-001-candidate-route-baseline/check-artifacts.py
 python3 specs/g56r-001-candidate-route-baseline/check-artifacts.py
 ```
@@ -103,6 +108,7 @@ Confirm these boundaries manually:
 
 ```bash
 python3 tests/speckit-pro/run-all.py --layer 4
+python3 tests/speckit-pro/run-all.py --integration
 python3 tests/speckit-pro/run-all.py
 git diff --check
 ```

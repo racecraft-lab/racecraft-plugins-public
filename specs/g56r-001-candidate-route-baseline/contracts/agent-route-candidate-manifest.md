@@ -241,11 +241,16 @@ The three timestamps use RFC 3339 with explicit UTC offsets; `deadline_at` is
 declared before evidence collection, and the values satisfy
 `started_at <= stopped_at <= deadline_at`.
 The binding pins the supported manifest type/version, research revision,
-manifest content hash, every route/contract/candidate identity and bound tuple,
-and a versioned capability snapshot. G56R-002 rejects `no_go` and unsupported
-versions, preserves the candidate set and project eligibility, and records
-installation availability only against the bound snapshot. Drift in any bound
-identity invalidates admission and dependent results until re-admission.
+`manifest_content_hash`, every route/contract/candidate identity and bound
+tuple, and `capability_snapshot_requirement`. The content hash is lowercase
+`sha256:<64-hex>` over the complete recursively normalized manifest after
+omitting `handoff.admission_binding.manifest_content_hash`, using the same
+canonical JSON serialization as `contract_hash`. G56R-002 rejects `no_go` and
+unsupported versions, preserves the candidate set and project eligibility,
+creates or selects the versioned runtime capability snapshot, and records its
+binding outside this immutable G56R-001 manifest. Drift in any bound identity
+invalidates admission and dependent results until re-admission. G56R-001 does
+not depend on the resulting snapshot.
 
 For `no_go`, every unmet condition requires:
 

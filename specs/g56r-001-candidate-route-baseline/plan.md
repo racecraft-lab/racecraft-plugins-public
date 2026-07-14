@@ -22,11 +22,14 @@ cache, installed-state, route, default, or version file.
 **Primary Dependencies**: Python standard library only (`json`, `hashlib`,
 `unicodedata`, `pathlib`, `re`, and `datetime` as needed); no package install
 
-**Storage**: Three checked-in files: one Markdown narrative, one UTF-8 JSON
-manifest, and one feature-local read-only checker
+**Storage**: Three research delivery files: one Markdown narrative, one UTF-8
+JSON manifest, and one feature-local read-only checker; plus one focused Layer
+4 test file and the required existing suite-manifest declaration
 
-**Testing**: `python3 specs/g56r-001-candidate-route-baseline/check-artifacts.py`;
-`python3 tests/speckit-pro/run-all.py --layer 4`; final deterministic
+**Testing**: direct `tests/speckit-pro/unit/test-g56r-001-artifacts.py` RED/GREEN
+cycles; `python3 specs/g56r-001-candidate-route-baseline/check-artifacts.py`;
+`python3 tests/speckit-pro/run-all.py --layer 4`;
+`python3 tests/speckit-pro/run-all.py --integration`; final deterministic
 `python3 tests/speckit-pro/run-all.py`
 
 **Target Platform**: Repository review on any Python 3.11+ host; recorded Codex
@@ -51,21 +54,25 @@ absent routes, 4 independent Codex surfaces, 3 current fixtures, 9 missing
 fixtures, all evidence-supported project-level candidates, and one terminal
 handoff decision
 
-**Reviewability Budget**: Primary surface `docs/process`; 0 projected
-reviewable production LOC; 0 production files; 3 total delivery files; one
-primary surface; within the `speckit-pro-reviewability` v1.0.0 warn threshold of
-400 LOC and block threshold of 800 LOC
+**Reviewability Budget**: Primary surface `docs/process`; 0 production LOC and
+0 production files; 3 research delivery files plus 2 constitution-required
+validation paths; one primary feature surface. Checker and unit-test LOC remain
+reviewable validation code and are re-estimated before implementation against
+the `speckit-pro-reviewability` v1.0.0 thresholds.
 
 ## Declared File Operations
 
 - NEW docs/ai/research/codex-agent-route-candidates.md
 - NEW docs/ai/research/codex-agent-route-candidate-manifest.json
 - NEW specs/g56r-001-candidate-route-baseline/check-artifacts.py
+- NEW tests/speckit-pro/unit/test-g56r-001-artifacts.py
+- MODIFIED tests/speckit-pro/suite-manifest.json
 
 These are the complete implementation operations. The checker is intentionally
-feature-local and disposable; it is not registered as a reusable repository
-framework. All other source, cache, installed-state, agent, fixture, and policy
-paths are read-only evidence inputs.
+feature-local and disposable; only its focused unit test is registered in the
+existing Layer 4 manifest. It does not become a reusable repository framework.
+All other source, cache, installed-state, agent, fixture, and policy paths are
+read-only evidence inputs.
 
 ## Constitution Check
 
@@ -78,7 +85,7 @@ paths are read-only evidence inputs.
 | I. Plugin Structure Compliance | PASS | No plugin file changes. The only executable check remains outside the shipped plugin under the feature spec directory. Layer 1 remains available as part of the default suite. |
 | II. Cross-Platform Runtime & Script Safety | PASS | The checker uses Python 3.11+ standard-library structured JSON and path APIs, deterministic UTF-8, and no Bash, `jq`, package, or shell subprocess. |
 | III. Semantic Versioning | PASS | No plugin manifest or version changes are planned. |
-| IV. Test Coverage Before Merge | PASS | The delivery-specific checker is the focused acceptance test for both artifacts; direct execution is followed by Layer 4 and the default Python-authoritative suite. No reusable helper or production component is introduced. |
+| IV. Test Coverage Before Merge | PASS | The checked-in Python checker has a focused Layer 4 unit file declared in the suite manifest; direct RED/GREEN runs are followed by Layer 4 and the default Python-authoritative suite. |
 | V. Conventional Commits | PASS | The parent workflow owns the phase and final Conventional Commit checkpoints. |
 | VI. KISS, Simplicity & YAGNI | PASS | Three delivery files, one flat agent-centric manifest, and one direct checker; no framework, package, router, installer, or abstraction layer. |
 
@@ -213,10 +220,12 @@ declared operations. It must state:
 - **Non-goals**: probing, scoring, qualification, ordering, mutation, fixes,
   frameworks, and platform claims without official evidence.
 - **Review order**: narrative, manifest, checker, then recorded command output.
-- **Scope budget**: one docs/process surface, 0 production LOC/files, 3 files.
+- **Scope budget**: one docs/process feature surface, 0 production LOC/files, 3
+  research delivery files plus 2 required validation paths.
 - **Traceability**: the table above plus checker evidence for AC-1.1–AC-1.7.
 - **Known gaps**: each item names G56R-002, G56R-003, or another exact owner.
-- **Rollback/flags**: revert the three files; no runtime feature flag applies.
+- **Rollback/flags**: revert the three delivery files, focused test, and suite
+  manifest entry; no runtime feature flag applies.
 
 ## Project Structure
 
@@ -235,7 +244,7 @@ specs/g56r-001-candidate-route-baseline/
     └── agent-route-candidate-manifest.md
 ```
 
-### Delivery and read-only evidence surfaces
+### Delivery, validation, and read-only evidence surfaces
 
 ```text
 docs/ai/research/
@@ -247,14 +256,19 @@ speckit-pro/
 └── agents/                            # read-only Claude parity sources
 
 tests/speckit-pro/layer6-efficiency/   # read-only fixture inventory
+
+tests/speckit-pro/
+├── suite-manifest.json                # Layer 4 declaration only
+└── unit/
+    └── test-g56r-001-artifacts.py     # focused checker coverage
 ```
 
-**Structure Decision**: The primary review surface is `docs/process`. The two
+**Structure Decision**: The primary feature surface is `docs/process`. The two
 published research files live with existing research records, while the
-one-off checker lives with its feature contract so it can be archived with the
-spec instead of becoming permanent infrastructure. All runtime, plugin, test
-harness, installer, generated-payload, and environment surfaces remain
-read-only.
+one-off checker lives with its feature contract. Constitution Principle IV
+requires the focused Layer 4 test and its manifest declaration; no reusable
+test framework is added. All runtime, plugin, installer, generated-payload, and
+environment surfaces remain read-only.
 
 ## Post-design Constitution Re-check
 
@@ -263,13 +277,13 @@ read-only.
 | I. Plugin Structure Compliance | PASS | Design adds no shipped plugin content; all three delivery operations remain outside `speckit-pro/`. |
 | II. Cross-Platform Runtime & Script Safety | PASS | The contract requires structured JSON, deterministic UTF-8, `pathlib`, Python 3.11+, and no shell/dependencies. |
 | III. Semantic Versioning | PASS | Manifest version is the research-data contract version, not a plugin version; no release metadata changes. |
-| IV. Test Coverage Before Merge | PASS | `quickstart.md` defines direct focused validation, repeatability, Layer 4, and default-suite commands. |
+| IV. Test Coverage Before Merge | PASS | The design includes focused checker unit coverage, suite membership, direct validation, Layer 4, and the default suite. |
 | V. Conventional Commits | PASS | No design artifact introduces a commit-policy exception. |
 | VI. KISS, Simplicity & YAGNI | PASS | The data model is explicit and agent-centric; one fixed-path checker replaces any schema package or generic validation layer. |
 
 No constitution violation or split exception remains. The design stays at 0
-production LOC/files and 3 total delivery files, below all reviewability
-thresholds.
+production LOC/files, with 3 research delivery files and 2 required validation
+paths. Reviewability is re-estimated before implementation.
 
 ## Complexity Tracking
 

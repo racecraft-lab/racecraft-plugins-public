@@ -382,16 +382,22 @@ fixed in this feature.
   G56R-002 admission MUST require `go`, the supported manifest type/version,
   passing focused checks, and an immutable binding to the research revision,
   manifest content hash, every production-route identity, every contract ID
-  and hash, every candidate ID and bound identity tuple, and one versioned
-  capability snapshot. `no_go` and unsupported manifest versions are rejected
-  before capability work begins.
+  and hash, every candidate ID and bound identity tuple, and the required
+  capability-snapshot scope. The manifest content hash MUST be lowercase
+  `sha256:<64-hex>` over the complete recursively normalized manifest after
+  omitting `handoff.admission_binding.manifest_content_hash`, serialized with
+  the FR-008 canonical JSON rules. G56R-002, not G56R-001, creates or selects
+  the versioned runtime capability snapshot and binds it during admission.
+  `no_go` and unsupported manifest versions are rejected before capability
+  work begins.
 - **FR-024**: The G56R-002 handoff MUST use an objective completeness gate that
   checks artifact presence, twelve-agent coverage, contract and candidate
   completeness, provenance, cross-artifact agreement, fixture contracts,
   telemetry requirements, classified unknowns, and sanitization. Admission
   MUST preserve the candidate set and every project-eligibility value; G56R-002
-  may record installation availability only against the bound capability
-  snapshot and MUST NOT mutate qualification, preference, or fallback order.
+  may record installation availability only after binding its own versioned
+  capability snapshot and MUST NOT mutate qualification, preference, or
+  fallback order.
   Drift in any bound research revision, manifest identity, production route,
   instruction, contract, or candidate identity invalidates admission and its
   dependent results until G56R-002 re-admits a new versioned snapshot.
@@ -405,7 +411,10 @@ fixed in this feature.
   reducing accepted deliverables.
 - **FR-026**: Artifact validation MUST use focused Python 3.11+ standard-library
   structured checks only, MUST parse JSON structurally, and MUST NOT add Bash,
-  `jq`, package dependencies, or a reusable validator framework.
+  `jq`, package dependencies, or a reusable validator framework. Because the
+  checked-in checker is a repository tool, it MUST have focused Layer 4 unit
+  coverage under `tests/speckit-pro/unit/`, with its test entry declared in
+  `tests/speckit-pro/suite-manifest.json`.
 - **FR-027**: The spike MUST NOT perform runtime probing, live scoring,
   qualification, final fallback ordering, or defect fixes; MUST NOT mutate
   tracked source, agents, prompts, installers, caches, installed-state,
@@ -427,7 +436,8 @@ fixed in this feature.
   and agent surfaces are read-only evidence inputs
 - **Projected reviewable production LOC**: 0
 - **Projected production files**: 0
-- **Projected total delivery files**: approximately 3
+- **Projected total delivery files**: approximately 3 research delivery files,
+  plus 2 constitution-required validation paths
 - **Budget result**: within budget as a one-working-day research spike; the
   timebox and objective terminal gate are the sizing controls
 - **Split decision**: no split; this remains one G56R-001 spike and stops with a
@@ -503,10 +513,11 @@ fixed in this feature.
   completion gate reaches the same go/no-go result as the recorded handoff and
   can identify the owner of every deferred unknown without undocumented
   judgment.
-- **SC-010**: The delivery preserves 0 production LOC, 0 production files, and
-  approximately 3 delivery files, and its PR review packet maps every major
-  requirement and outcome to a file and verification result without invoking a
-  transition exception.
+- **SC-010**: The delivery preserves 0 production LOC and 0 production files,
+  contains the approximately 3 research delivery files plus only the focused
+  Layer 4 test and required suite-manifest declaration, and its PR review packet
+  maps every major requirement and outcome to a file and verification result
+  without invoking a transition exception.
 
 ## Assumptions
 

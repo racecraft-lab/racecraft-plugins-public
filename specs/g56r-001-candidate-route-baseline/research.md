@@ -152,9 +152,10 @@ agreement, classified unknowns, and reproducible terminal state. Run it twice
 for repeatability, then run Layer 4 and the default deterministic suite.
 
 **Rationale**: A direct checker gives objective evidence while keeping exactly
-three delivery files and avoiding a schema package, generic helper, fixture
-framework, dependency, or test-manifest change. It can be archived with the
-feature after the research handoff.
+three research delivery files and avoiding a schema package, generic helper,
+fixture framework, or dependency. Because it is a checked-in repository tool,
+Constitution Principle IV requires one focused Layer 4 unit file and its entry
+in the existing suite manifest.
 
 **Alternatives considered**:
 
@@ -162,8 +163,8 @@ feature after the research handoff.
   would not be reproducible.
 - JSON Schema plus a reusable validator was rejected as unnecessary and
   incomplete for cross-artifact semantic rules.
-- Repository test-framework registration was rejected because this one-off
-  research contract does not justify permanent infrastructure.
+- A reusable repository validation framework was rejected; the existing Layer
+  4 manifest receives only the constitution-required focused test entry.
 
 ## Decision 8: Make fixture and unknown ownership explicit
 
@@ -196,13 +197,14 @@ becoming either a false conclusion or a generic future-work bucket.
 
 ## Decision 9: Use a terminal objective gate at the workday boundary
 
-**Decision**: Record `started_at` before evidence work and `stopped_at` at the
-end of the scheduled maintainer workday. Emit `go` only when the declared
+**Decision**: Record `started_at` and `deadline_at` before any checker or
+evidence work and `stopped_at` at the terminal boundary no later than the
+deadline. Emit `go` only when the declared
 artifact, coverage, contract, candidate, provenance, agreement, fixture,
 telemetry, unknown-classification, and sanitization checks all pass and no
 blocking conflict remains.
 
-Otherwise emit `no_go` containing `started_at`, `stopped_at`,
+Otherwise emit `no_go` containing `started_at`, `deadline_at`, `stopped_at`,
 `completed_artifacts`, and `unmet_conditions`. Each unmet condition records
 `gate_id`, `requirement_refs`, `condition`, `available_evidence_ids`, `impact`,
 `owner_spec`, and `required_follow_up`.
@@ -228,8 +230,9 @@ deliberately implementation evidence tasks, not Plan clarifications:
 
 - Current documented model IDs and effort values must be collected from
   current official OpenAI sources during the spike.
-- Installation-specific executability remains G56R-002 work against a
-  versioned capability snapshot.
+- Installation-specific executability remains G56R-002 work. G56R-001 records
+  only the capability-snapshot requirement; G56R-002 creates or selects and
+  binds the versioned runtime snapshot during admission.
 - Preferred routes and ordered fallbacks remain G56R-003 qualification work.
 
 No `NEEDS CLARIFICATION` item remains in the Plan artifacts.

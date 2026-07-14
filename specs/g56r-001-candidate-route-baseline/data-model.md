@@ -416,13 +416,18 @@ For `go`, every check passes, `unmet_conditions` is empty, and no blocking
 conflict or unclassified unknown exists.
 
 `admission_binding` contains the supported manifest type/version, research
-revision, manifest content hash, complete production-route identities, every
+revision, `manifest_content_hash`, complete production-route identities, every
 contract ID and both hashes, every candidate ID with its bound contract ID,
-hashes, model, effort, and treatment, and the versioned capability-snapshot
-requirement. G56R-002 rejects `no_go` or an unsupported version, preserves the
-candidate set and project eligibility, and records installation availability
-only against that snapshot. Drift in any bound identity invalidates admission
-and dependent results until a new snapshot is explicitly admitted.
+hashes, model, effort, and treatment, and `capability_snapshot_requirement`.
+The content hash is lowercase `sha256:<64-hex>` over the complete manifest after
+recursive string normalization and omission of
+`handoff.admission_binding.manifest_content_hash`, serialized with the same
+canonical JSON rules as `contract_hash`. G56R-002 rejects `no_go` or an
+unsupported version, preserves the candidate set and project eligibility,
+creates or selects the versioned runtime capability snapshot, and binds its ID
+during admission outside the immutable G56R-001 manifest. G56R-001 does not
+depend on that snapshot result. Drift in any bound identity invalidates
+admission and dependent results until a new snapshot is explicitly admitted.
 
 For `no_go`, every `UnmetCondition` contains:
 
