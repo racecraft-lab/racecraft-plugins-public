@@ -85,7 +85,7 @@ zero data impact. spec.md FR-009 + Assumption and plan.md are reconciled to
 | Plan | `/speckit-plan` | ✅ Complete | plan/research/data-model/contracts-schema/quickstart; manifest schema fully specified; comparator pinned 2.19.1/e343aa2e; constitution PASS 6/6; reviewability advisory `pass` (0 production LOC) |
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains (traceability, data-integrity, research-rigor); 11 gaps → 0; no consensus needed (all high-confidence) |
 | Tasks | `/speckit-tasks` | ✅ Complete | 32 tasks, 4 phases, 11 `[P]`; FR 27/27 + SC 8/8 covered; atomicity route = one-navigable-PR (releasable), layer plan skipped |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Analyze | `/speckit-analyze` | ✅ Complete | 2 findings (1 MEDIUM, 1 LOW), both remediated; 0 CRITICAL/HIGH; no consensus needed |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -620,7 +620,22 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| A1 | LOW | Stale `SC-001…SC-007` range in quickstart.md + checklists/traceability.md left the new SC-008 uncredited | Updated both to `SC-001…SC-008`; quickstart V3 now maps explicitly to SC-008 |
+| A2 | MEDIUM | quickstart V5 recomputed the instruction hash from the **working tree**, contradicting the hardened FR-011 (must use the pinned-tag bytes); passed only incidentally because the spike changes 0 bytes | Rewrote V5 to read agent bytes via `git show speckit-pro-v2.19.1:…` (stdlib `subprocess`, `shell=False` — same provenance as T008/T027) |
+
+**Result:** 0 CRITICAL, 0 HIGH, 1 MEDIUM, 1 LOW — both remediated; re-run `count-markers` (findings mode) = 0 across all severities. Constitution II/IV/VI PASS; coverage complete (27 FRs, 8 SCs, 7 ACs, 12 agents all tasked); zero design-concept drift; boundary integrity clean. **Consensus: none needed** (0 unresolved findings). Only derived artifacts (quickstart, one checklist) changed; authoritative spec/plan/tasks were already correct.
+
+### Pre-Implement Confidence (G6.5 data source)
+
+📊 Confidence: 0.98
+
+- Task understanding: 0.97
+- Approach clarity: 0.96
+- Requirements alignment: 1.00
+- Risk assessment: 1.00
+- Completeness: 0.97
+
+Consensus-synthesizer emit at the end of Phase 6 (mean of the five criteria = 0.98, above the 0.90 threshold). `CONFIDENCE_GATE_MODE = advisory`.
 
 ---
 

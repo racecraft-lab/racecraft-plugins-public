@@ -57,7 +57,7 @@ not-yet-authored deliverables.
 - [ ] CHK030 - Is the `fable` rule (enters executor-class sets; excluded only by recorded probe or contract evidence, never by product-announcement status) consistent between the requirements and the edge cases? [Consistency, Spec §FR-013 / Edge Cases]
 - [ ] CHK031 - Is "executor-class" defined with a criterion so the set of `fable`-eligible agents is unambiguous? [Clarity, Spec §Assumptions]
 - [ ] CHK032 - Do the data-model and contract agree that `platform_field_mapping` is required only on the helper entry and absent on the eleven current agents? [Consistency, data-model §5 / contract]
-- [ ] CHK033 - Are success criteria SC-001…SC-007 each traceable to the requirements they measure? [Traceability, Spec §Success Criteria]
+- [ ] CHK033 - Are success criteria SC-001…SC-008 each traceable to the requirements they measure? [Traceability, Spec §Success Criteria]
 
 ## Verification Pass (post-remediation)
 

@@ -3,7 +3,7 @@
 **Date**: 2026-07-14 | **Branch**: `car-001-candidate-route-baseline`
 
 This is a validation/run guide for the two CAR-001 deliverables. It proves the
-spike's success criteria (SC-001…SC-007) end-to-end. Field-level details live in
+spike's success criteria (SC-001…SC-008) end-to-end. Field-level details live in
 [`data-model.md`](./data-model.md); the machine contract is
 [`contracts/agent-route-candidate-manifest.schema.json`](./contracts/agent-route-candidate-manifest.schema.json).
 Run every command from the repository root. Do not embed absolute filesystem
@@ -38,7 +38,7 @@ python3 -m json.tool docs/ai/research/claude-agent-route-candidate-manifest.json
 
 Expected: `manifest JSON: VALID`.
 
-### V3 — Manifest conforms to the machine contract (data-model §7)
+### V3 — Manifest conforms to the machine contract (SC-008, data-model §7)
 
 Validate the manifest against the JSON Schema. If `jsonschema` is available it
 gives the richest output; otherwise a stdlib structural check covers the
@@ -92,26 +92,29 @@ PY
 
 ### V5 — Instruction identity survives a pure frontmatter route change (SC-007)
 
-Recompute the frontmatter-stripped-body sha256 for a current agent and confirm it
-matches the manifest; then confirm that swapping only a frontmatter route value
-(model/effort) does not change it. Uses the Python standard library only
-(FR-025).
+Recompute the frontmatter-stripped-body sha256 for a current agent **from the
+pinned comparator tag** (`git show speckit-pro-v2.19.1:…`, matching FR-011 and
+T027 — never the working-tree copy) and confirm it matches the manifest; then
+confirm that swapping only a frontmatter route value (model/effort) does not
+change it. Uses the Python standard library only (FR-025).
 
 ```bash
 python3 - <<'PY'
-import hashlib, json, re, pathlib
+import hashlib, json, re, subprocess
 def strip_frontmatter(text):
     m = re.match(r"^---\n.*?\n---\n", text, re.DOTALL)
     return text[m.end():] if m else text
 man = json.load(open("docs/ai/research/claude-agent-route-candidate-manifest.json"))
 name = "phase-executor"
-p = pathlib.Path("speckit-pro/agents/%s.md" % name)
-body = strip_frontmatter(p.read_text(encoding="utf-8"))
-live = hashlib.sha256(body.encode("utf-8")).hexdigest()
+tag = "speckit-pro-v2.19.1"
+# Read the agent bytes AS PUBLISHED AT THE PINNED TAG (FR-011: "not the working-tree
+# copy"), via the same git-show provenance T008/T027 use — never the working tree.
+raw = subprocess.run(["git", "show", "%s:speckit-pro/agents/%s.md" % (tag, name)],
+                     capture_output=True, check=True).stdout.decode("utf-8")
+live = hashlib.sha256(strip_frontmatter(raw).encode("utf-8")).hexdigest()
 recorded = man["agents"][name]["agent_file_hashes"]["instruction_sha256"]
 assert live == recorded, f"instruction hash drift for {name}: {live} != {recorded}"
 # Simulate a pure frontmatter route change: alter only the frontmatter, re-strip, re-hash.
-raw = p.read_text(encoding="utf-8")
 mutated = re.sub(r"(?m)^model:.*$", "model: sonnet", raw, count=1)
 assert hashlib.sha256(strip_frontmatter(mutated).encode("utf-8")).hexdigest() == live, \
     "frontmatter route change must not alter instruction identity"
@@ -159,7 +162,8 @@ self-contained, and lists no dependency on CAR-002 results (SC-004, FR-022).
 | Check | Proves |
 |-------|--------|
 | V1, V7 | SC-006 — zero shipped-byte change; default suite green |
-| V2, V3, V4 | SC-001 — twelve-agent coverage, contract-valid manifest |
+| V2, V4 | SC-001 — twelve-agent coverage, contract-valid manifest |
+| V3 | SC-008 — manifest conforms to the `agent-route-candidate-manifest.schema.json` contract |
 | V5 | SC-007 — instruction identity stable under route change |
 | V6 | Privacy constraint — no absolute paths in deliverables |
 | V8 | SC-002, SC-003, SC-004 — citation, labeling, self-contained handoff |
