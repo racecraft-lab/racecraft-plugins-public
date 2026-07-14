@@ -87,6 +87,147 @@ decision without consulting undocumented context or executing a candidate.
   only when clearly classified and does not hide a missing G56R-001 contract,
   candidate, provenance, or agreement requirement.
 
+## Clarifications
+
+### Session 1 — Evidence Authority and Surface Applicability (2026-07-14)
+
+- **Official-source precedence**: Use only first-party OpenAI documentation or
+  release notes for platform facts. Prefer the source with the narrowest
+  explicit surface, version, and feature applicability. Release notes establish
+  historical or version facts only; recency alone does not resolve equal-scope
+  conflicts.
+- **Repository evidence roles**: Cite tracked files at a recorded repository
+  revision. Accepted planning records establish requirements, source and
+  manifests establish current definitions, and tests or fixtures establish
+  declared validation and inventory. Generated artifacts cannot override their
+  canonical inputs; cache and installed state remain environment observations.
+- **Surface isolation**: Represent `cli`, `desktop_app`, `app_server`, and
+  `non_interactive` independently. Evidence never inherits across surfaces;
+  silence is `undocumented`, and `not_applicable` requires explicit evidence.
+- **Provenance completeness**: Record source URL, exact locator, retrieval date,
+  surface, feature, documented client or version scope, applicability, conflict
+  status, and invalidation trigger. Missing source scope is `not_stated`, never
+  an inferred current or cross-version claim.
+- **Conflict terminal rule**: Classify every unresolved authority conflict as
+  `blocking_no_go` when it prevents the objective completeness gate, or as
+  `nonblocking_deferred` only when it supports no G56R-001 conclusion and has a
+  named owner, impact, and follow-up.
+
+### Session 2 — Agent Contract, Identity, and Manifest Completeness (2026-07-14)
+
+- **Manifest envelope and version**: The JSON root MUST contain
+  `"manifest_type": "agent_route_candidate_manifest"`,
+  `"manifest_version": 1`, `"research_date": "YYYY-MM-DD"`, and
+  `"agents": [...]`. The `agents` array contains one self-contained record per
+  named agent; route-centric or normalized top-level tables are prohibited.
+  Increment `manifest_version` only when the machine-readable contract changes.
+- **Readable IDs**: `agent_contract_id` MUST match
+  `agent-contract/<agent-name>/v<N>`. `candidate_route_id` MUST match
+  `candidate-route/<agent-name>/<model-slug>/<effort-slug>/<treatment-slug>/v<N>`,
+  where exact model and effort values remain separate fields and
+  `treatment-slug` is `unchanged` or an evidence-justified variant. IDs MUST NOT
+  encode preference or fallback rank. One canonical identity has one ID, and an
+  ID MUST NOT be reused after its route-defining tuple or bound hashes change.
+- **Canonical hashes**: Hashes use SHA-256 and lowercase
+  `sha256:<64-hex>`. Before hashing, normalize strings to Unicode NFC, normalize
+  CRLF and CR to LF, preserve all other whitespace, and encode UTF-8 without a
+  byte-order mark. `instruction_hash` covers the complete decoded instruction
+  body only, excluding TOML, frontmatter, route, and transport syntax; for the
+  two parity roles it covers the cited Claude instruction body used as the
+  semantic source without implying a Codex production route. `contract_hash`
+  covers `agent_name` plus the FR-006 semantic contract fields after recursive
+  string normalization and Python
+  `json.dumps(..., ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)`
+  serialization. IDs, hashes, routes, candidates, provenance, and presentation
+  fields are excluded from the contract-hash payload.
+- **Required record fields**: Every agent record contains `agent_name`,
+  `agent_contract`, `production_route`, and `candidates`. `agent_contract`
+  contains both IDs and hashes plus every FR-006 semantic field.
+  `production_route` contains `status`, `candidate_route_id`, `model_id`,
+  `reasoning_effort`, `instruction_hash`, `contract_hash`, `absence_reason`,
+  `provenance`, and `invalidation_triggers`. Present routes require non-null
+  route bindings; only `consensus-synthesizer` and `gate-validator` use
+  `status: "absent"`, null route bindings, and a cited absence reason. Every
+  candidate contains `candidate_route_id`, `agent_contract_id`, `model_id`,
+  `reasoning_effort`, `treatment`, both hashes, `project_eligibility`,
+  `installation_availability`, `capability_requirements`, `rationale`,
+  `known_incompatibilities`, `qualification_requirements`, `provenance`, and
+  `invalidation_triggers`. Capability requirements separately cover model,
+  modalities, reasoning effort, custom agents, tools, skills, MCP, sandbox,
+  mutation, and clients. Rationale records classification, summary, and evidence
+  IDs. Each incompatibility records the affected contract field, description,
+  evidence IDs, and eligibility effect; use an explicit empty list when no
+  incompatibilities exist. Qualification remains `unqualified` or
+  `not_applicable_excluded` and
+  names required capability checks, fixture, artifacts, telemetry, and owner.
+  Project-fact provenance also records repository revision and evidence role.
+  `installation_availability.status` remains `unresolved_g56r_002`; sanitized
+  observations cannot change project eligibility.
+- **Agreement and completeness**: Focused checks prove both artifacts contain
+  exactly the FR-002 set: 12 unique agents, 10 present production routes, and
+  absent routes only for `consensus-synthesizer` and `gate-validator`. Normalized
+  Markdown and JSON projections agree on IDs, hashes, route or absence,
+  model-effort-treatment tuples, eligibility, installed availability,
+  capabilities, rationale, incompatibilities, qualification, provenance,
+  invalidation triggers, and classified unknowns. Missing fields are errors;
+  empty lists and permitted nulls are explicit values. Lexical stable-ID order
+  is presentation-only and MUST NOT express preference or fallback ordering.
+
+Changing hash inputs, authorization, safety, mutation, tool, sandbox,
+hard-incompatibility, parity-route absence, or eligibility-versus-availability
+semantics requires explicit maintainer security review; this clarification does
+not change those accepted boundaries.
+
+### Session 3 — Local Evidence, Fixture Backlog, and Go/No-Go (2026-07-14)
+
+- **Evidence separation and sanitization**: Every agent MUST record independent
+  `tracked_source`, `cached_source`, and `installed_state` observations with
+  only the evidence class, agent name, relevant model and effort fields,
+  instruction and contract hashes, observation date, surface, and version when
+  known. Tracked source additionally records a repository-relative path,
+  revision, and evidence role; cache and installed locators remain logical
+  labels. Absolute or home paths, usernames, hostnames, credentials, secrets,
+  and unrelated configuration are prohibited. Only tracked source defines the
+  production contract; mismatches are record-only defects with a named owner.
+- **Fixture inventory and contract**: The three current fixtures are exactly
+  `codebase-analyst`, `domain-researcher`, and `spec-context-analyst`. The nine
+  missing fixtures are exactly `phase-executor`, `implement-executor`,
+  `analyze-executor`, `checklist-executor`, `uat-runbook-author`,
+  `clarify-executor`, `consensus-synthesizer`, `gate-validator`, and
+  `autopilot-fast-helper`. Every agent's fixture contract contains status, a
+  nullable repository-relative fixture path, representative task and input
+  type, expected behavior and output shape, and FR-006 hard-contract
+  assertions. Historical prompt-emulation remains `non_release_evidence`.
+- **Focused artifact checks**: One delivery-specific, offline, read-only Python
+  3.11+ standard-library checker MUST parse JSON structurally and fail on an
+  invalid envelope or version; incorrect 12/10/2 coverage; missing or duplicate
+  IDs; invalid hashes or canonicalization; incomplete contracts, candidates,
+  provenance, or surface records; fixture inventory or contract gaps;
+  sanitization violations; cross-artifact disagreement; unclassified unknowns;
+  or an unreproducible gate result. It MUST NOT become a reusable framework or
+  perform probing, scoring, qualification, or mutation.
+- **Unknown ownership**: G56R-001 resolves documentation and tracked, cached,
+  and sanitized installed-state inventory questions and completes contracts,
+  candidates, provenance, fixture contracts, agreement, and sanitization.
+  G56R-002 owns executable capability and installation-availability questions
+  against a versioned capability snapshot. G56R-003 owns fixture execution,
+  exact-treatment replay, scoring, qualification, and evidence-backed preferred
+  or fallback ordering. Every deferred unknown records its class, impact, owner
+  spec, and required follow-up.
+- **One-day terminal gate**: Stop at the recorded end of one working day. Emit
+  `go` only when every FR-024 condition passes and no blocking conflict or
+  unclassified unknown remains. Otherwise emit `no_go` with `started_at`,
+  `stopped_at`, `completed_artifacts`, and `unmet_conditions`; each unmet
+  condition contains `gate_id`, `requirement_refs`, `condition`,
+  `available_evidence_ids`, `impact`, `owner_spec`, and `required_follow_up`.
+  The spike MUST NOT extend scope, reduce deliverables, fix discovered defects,
+  or mutate production state.
+
+Expanding retained machine-local fields or changing the security-relevant
+boundaries named after Session 2 requires explicit maintainer security review.
+Human review of these normative field and payload names is required with the
+artifact review; it does not create an unresolved Clarify item.
+
 ## Requirements *(mandatory)*
 
 ### Scope Boundaries
@@ -157,19 +298,31 @@ recorded and handed off; they are not fixed in this feature.
   discovery, telemetry, reroute events, and non-interactive output. Current
   official OpenAI documentation MUST be the exclusive authority for these
   OpenAI platform facts, while repository files MUST be the authority only for
-  SpecKit Pro project facts.
+  SpecKit Pro project facts. For competing official sources, authority MUST
+  follow the source with the narrowest explicit surface, version, and feature
+  applicability; recency alone MUST NOT break a tie, and equally applicable
+  conflicts MUST remain unresolved.
 - **FR-017**: Every platform fact MUST record an exact official source locator,
-  retrieval date, target Codex surface, and client or feature applicability;
-  every project fact MUST record a repository-relative source locator.
+  retrieval date, target Codex surface, feature, documented client or version
+  scope, applicability status, conflict status, and invalidation trigger.
+  Omitted source scope MUST be recorded as `not_stated` and MUST NOT be
+  inferred. Every project fact MUST cite a tracked repository-relative path and
+  recorded revision, identify that file's evidence role, and remain unresolved
+  when no declared canonical source establishes precedence.
 - **FR-018**: Platform facts, project facts, reasonable inferences, proposed
   SpecKit Pro policy, and unverified assumptions MUST be visibly classified;
   the research MUST NOT claim undocumented native fallback, benchmark, model,
   effort, telemetry, or effective-route behavior.
 - **FR-019**: Conflicting or applicability-ambiguous sources MUST be recorded
   as conflicts and left unresolved when authority cannot be established; the
-  newest source or a local observation MUST NOT silently win.
-- **FR-020**: CLI, desktop/app, app-server, and non-interactive records MUST be
-  separate and MUST state when evidence is unavailable for a surface.
+  newest source or a local observation MUST NOT silently win. Every unresolved
+  authority conflict MUST end as `blocking_no_go` or `nonblocking_deferred`.
+  Blocking conflicts fail FR-024; nonblocking conflicts require named
+  ownership, impact, and follow-up and MUST NOT support a G56R-001 conclusion.
+- **FR-020**: Every platform claim MUST use independent Surface Records for
+  `cli`, `desktop_app`, `app_server`, and `non_interactive` as applicable.
+  Evidence MUST NOT be inherited across surfaces; silent coverage is
+  `undocumented`, and `not_applicable` requires explicit official evidence.
 - **FR-021**: Installed-state evidence MUST retain only relevant sanitized
   facts and hashes and MUST exclude home paths, credentials, secrets, and
   unrelated local configuration.
