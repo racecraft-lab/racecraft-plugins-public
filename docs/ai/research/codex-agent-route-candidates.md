@@ -1,6 +1,6 @@
 # Codex Agent Route Candidate Baseline
 
-<!-- g56r-001-human-narrative-sha256:sha256:ae7e21e63e04a291fabad44d07edbc866b7105953a983e8608ce2f335adb521e -->
+<!-- g56r-001-human-narrative-sha256:sha256:ec55838a2c0ec09d0e3483d200436de25bd6d3f606d099b14edc646b0f00a36a -->
 
 **Status:** Complete — terminal `go` handoff
 
@@ -772,9 +772,9 @@ qualified, preferred, or ordered as a fallback.
 |-------------|------------------|-----------------|
 | `G56R-FOCUSED-48` | `python3 tests/speckit-pro/unit/test-g56r-001-artifacts.py` | 48/48 passed |
 | `PRIVACY-SCAN-10` | `python3 tests/speckit-pro/unit/test-privacy-scan.py` | 10/10 passed after the unsafe test fixture was constructed at runtime and durable state used a logical agent destination |
-| `LAYER4-1187` | `python3 tests/speckit-pro/run-all.py --layer 4` | 1187/1187 passed |
+| `LAYER4-1189` | `python3 tests/speckit-pro/run-all.py --layer 4` | 1189/1189 passed |
 | `INTEGRATION-257` | `python3 tests/speckit-pro/run-all.py --integration` | 257/257 passed |
-| `DEFAULT-2800` | `python3 tests/speckit-pro/run-all.py` | 2800/2800 passed: Layer 1 1427/1427, Layer 4 1187/1187, Layer 5 186/186 |
+| `DEFAULT-2802` | `python3 tests/speckit-pro/run-all.py` | 2802/2802 passed: Layer 1 1427/1427, Layer 4 1189/1189, Layer 5 186/186 |
 | `G56R-CHECKER-PASS-1` | `python3 specs/g56r-001-candidate-route-baseline/check-artifacts.py` | PASS: 12 agents, 10 present, 2 absent, 3 current fixtures, 9 missing |
 
 The pre-handoff checker had one deliberate failure, `handoff decision must be
