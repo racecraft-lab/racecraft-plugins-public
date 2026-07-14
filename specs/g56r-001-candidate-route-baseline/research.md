@@ -39,6 +39,9 @@ never override tracked production definitions.
 
 For competing official sources, prefer the source with the narrowest explicit
 surface, version, and feature applicability. Recency alone is not a tiebreaker.
+An authority resolution names that winning evidence ID and scope; a source
+that does not state the named surface is not a competitor, and a cross-source
+intersection is proposed project policy rather than authority evidence.
 An equal-authority conflict remains unresolved and ends as
 `blocking_no_go` or `nonblocking_deferred` under the ratified terminal rule.
 
@@ -104,6 +107,11 @@ body. `contract_hash` covers `agent_name` plus all FR-006 semantic fields after
 recursive string normalization and deterministic Python JSON serialization
 with `ensure_ascii=False`, `sort_keys=True`, compact separators, and
 `allow_nan=False`.
+
+For Claude frontmatter sources, the body starts immediately after the LF that
+terminates the closing `---`; the blank separator LF before the first heading
+and every later character are preserved. This removes the boundary ambiguity
+that would otherwise produce two plausible hashes for the same source.
 
 **Rationale**: Readable IDs support review and stable references; hashes detect
 content drift. Excluding transport/configuration syntax keeps the two Claude

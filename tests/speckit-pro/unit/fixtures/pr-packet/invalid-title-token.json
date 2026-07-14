@@ -151,7 +151,8 @@
       "summary",
       "what_changed",
       "why_it_matters"
-    ]
+    ],
+    "normalization_profile": "whole_body_v2"
   },
   "validation_result_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/pr-packets/invalid-title-token/validation.json"
 }

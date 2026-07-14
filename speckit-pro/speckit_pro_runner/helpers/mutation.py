@@ -25,6 +25,12 @@ from .read_only import (
 )
 
 DEFAULT_ROLLBACK = "Review touched_paths and restore the previous file content before retrying."
+SECURE_DIR_FD_WRITES = (
+    os.name == "posix"
+    and hasattr(os, "O_DIRECTORY")
+    and hasattr(os, "O_NOFOLLOW")
+    and all(function in os.supports_dir_fd for function in (os.open, os.mkdir, os.stat, os.unlink))
+)
 
 
 def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
@@ -229,6 +235,35 @@ def _spec_index_target_chain_is_safe(target: Path, trust_root: Path) -> bool:
     return not stat.S_ISLNK(target_mode) and stat.S_ISREG(target_mode)
 
 
+def _mutation_target_chain_is_safe(target: Path, trust_root: Path) -> bool:
+    """Allow new write paths while rejecting symlinks at every existing component."""
+
+    if not is_relative_to(target, trust_root):
+        return False
+    try:
+        root_mode = trust_root.lstat().st_mode
+        relative = target.relative_to(trust_root)
+    except (OSError, ValueError):
+        return False
+    if stat.S_ISLNK(root_mode) or not stat.S_ISDIR(root_mode) or not relative.parts:
+        return False
+    current = trust_root
+    for index, part in enumerate(relative.parts):
+        current = current / part
+        try:
+            mode = current.lstat().st_mode
+        except FileNotFoundError:
+            continue
+        except OSError:
+            return False
+        if stat.S_ISLNK(mode):
+            return False
+        is_target = index == len(relative.parts) - 1
+        if (is_target and not stat.S_ISREG(mode)) or (not is_target and not stat.S_ISDIR(mode)):
+            return False
+    return True
+
+
 def _spec_index_write_data(
     entry: Any,
     request: Any,
@@ -375,7 +410,7 @@ def run_mutation_helper(
         if op["kind"] == "write_file":
             target = resolve_candidate_path(op["target"], repo_root)
             try:
-                write_file_atomic(target, str(op["content"]))
+                write_file_atomic(target, str(op["content"]), trust_root=repo_root)
             except OSError as exc:
                 mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
                 mutation["failure_operation"] = operation_record(op)
@@ -637,8 +672,11 @@ def git_worktree_status(repo_root: Path) -> bool | dict[str, Any]:
 
 
 def write_file_atomic(target: Path, content: str, *, trust_root: Path | None = None) -> None:
-    if trust_root is not None and not _spec_index_target_chain_is_safe(target, trust_root):
-        raise OSError("unsafe target path")
+    if trust_root is not None:
+        if not _mutation_target_chain_is_safe(target, trust_root):
+            raise OSError("unsafe target path")
+        _write_file_atomic_trusted(target, content, trust_root)
+        return
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp = target.with_name(f".{target.name}.tmp-{os.getpid()}")
     try:
@@ -646,8 +684,6 @@ def write_file_atomic(target: Path, content: str, *, trust_root: Path | None = N
             fh.write(ensure_final_newline(content))
             fh.flush()
             os.fsync(fh.fileno())
-        if trust_root is not None and not _spec_index_target_chain_is_safe(target, trust_root):
-            raise OSError("target path changed before replace")
         os.replace(tmp, target)
     finally:
         if tmp.exists():
@@ -656,6 +692,77 @@ def write_file_atomic(target: Path, content: str, *, trust_root: Path | None = N
             except OSError:
                 # Best-effort cleanup only; the write outcome is already determined.
                 pass
+
+
+def _write_file_atomic_trusted(target: Path, content: str, trust_root: Path) -> None:
+    """Write through pinned no-follow directory descriptors or fail closed."""
+
+    if not SECURE_DIR_FD_WRITES:
+        raise OSError("secure descriptor-relative writes are unavailable")
+
+    relative = target.relative_to(trust_root)
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
+    parent_fd = os.open(trust_root, directory_flags)
+    try:
+        for part in relative.parts[:-1]:
+            try:
+                next_fd = os.open(part, directory_flags, dir_fd=parent_fd)
+            except FileNotFoundError:
+                try:
+                    os.mkdir(part, mode=0o755, dir_fd=parent_fd)
+                except FileExistsError:
+                    pass
+                next_fd = os.open(part, directory_flags, dir_fd=parent_fd)
+            os.close(parent_fd)
+            parent_fd = next_fd
+
+        target_name = relative.name
+        try:
+            target_mode = os.stat(target_name, dir_fd=parent_fd, follow_symlinks=False).st_mode
+        except FileNotFoundError:
+            target_mode = None
+        if target_mode is not None and not stat.S_ISREG(target_mode):
+            raise OSError("unsafe target path")
+
+        tmp_name = ""
+        tmp_fd = -1
+        file_flags = (
+            os.O_WRONLY
+            | os.O_CREAT
+            | os.O_EXCL
+            | os.O_NOFOLLOW
+            | getattr(os, "O_CLOEXEC", 0)
+        )
+        for counter in range(100):
+            candidate = f".{target_name}.tmp-{os.getpid()}-{counter}"
+            try:
+                tmp_fd = os.open(candidate, file_flags, 0o600, dir_fd=parent_fd)
+                tmp_name = candidate
+                break
+            except FileExistsError:
+                continue
+        if tmp_fd < 0:
+            raise OSError("unable to reserve atomic temporary file")
+
+        try:
+            with os.fdopen(tmp_fd, "w", encoding="utf-8", newline="\n") as fh:
+                tmp_fd = -1
+                fh.write(ensure_final_newline(content))
+                fh.flush()
+                os.fsync(fh.fileno())
+            os.replace(tmp_name, target_name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+            tmp_name = ""
+            os.fsync(parent_fd)
+        finally:
+            if tmp_fd >= 0:
+                os.close(tmp_fd)
+            if tmp_name:
+                try:
+                    os.unlink(tmp_name, dir_fd=parent_fd)
+                except FileNotFoundError:
+                    pass
+    finally:
+        os.close(parent_fd)
 
 
 def ensure_final_newline(content: str) -> str:

@@ -97,6 +97,11 @@ defined by the contract. The two parity-role contracts derive these semantics
 from the cited Claude instruction bodies, while excluding Claude frontmatter,
 tool-list syntax, transport, and routing mechanics.
 
+For a Claude frontmatter source, the instruction body begins immediately after
+the LF terminating the closing `---`. Every subsequent character is preserved,
+including the blank separator LF before the first heading. This boundary is
+normative for `instruction_hash` and for source-drift validation.
+
 Hard-boundary fields state applicable permitted and prohibited behavior plus
 required stop or escalation conditions. `authorization_boundaries` also states
 approval conditions and who may grant approval. Tool, skill, MCP, sandbox, and
@@ -298,6 +303,11 @@ Allowed claim classifications are `platform_fact`, `project_fact`,
 Allowed conflict states are `none`, `resolved_by_authority`,
 `blocking_no_go`, and `nonblocking_deferred`. A deferred conflict also records
 owner, impact, and required follow-up and supports no G56R-001 conclusion.
+`resolved_by_authority` also records `authority_resolution` with a
+`winning_evidence_id` and non-empty `authority_basis`. The winner must be cited
+in the same provenance or Surface Record and must have explicit applicability
+to that surface and feature; `not_stated` evidence is neither a winner nor a
+competitor. A cross-source intersection is classified as `proposed_policy`.
 
 A provenance record can support a passing completion check only when official
 or environment evidence was retrieved or observed within the recorded

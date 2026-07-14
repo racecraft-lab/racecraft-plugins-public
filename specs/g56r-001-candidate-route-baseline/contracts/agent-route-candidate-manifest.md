@@ -164,6 +164,10 @@ twelve semantic fields using recursively normalized strings and Python JSON
 serialization with `ensure_ascii=False`, sorted keys, compact separators, and
 `allow_nan=False`.
 
+For Claude frontmatter sources, that body begins immediately after the LF
+terminating the closing `---`; the following blank separator LF before the
+first heading and every later character remain part of the hash input.
+
 ## Evidence and surfaces
 
 The narrative's active route-policy inventory contains exactly one entry per
@@ -190,6 +194,10 @@ Platform provenance uses only official OpenAI sources and requires URL, exact
 locator, retrieval date, surface, feature, documented scope (`not_stated` when
 omitted), applicability, conflict status, and invalidation triggers. Project
 provenance requires repository-relative path, revision, and evidence role.
+When `conflict_status` is `resolved_by_authority`, provenance and the consuming
+Surface Record also include `authority_resolution.winning_evidence_id` and
+`authority_resolution.authority_basis`. The winner is an explicitly applicable
+cited source; `not_stated` evidence cannot win or be treated as a competitor.
 
 Official and environment evidence can support a passing completion check only
 when retrieved or observed during the recorded workday; project evidence must

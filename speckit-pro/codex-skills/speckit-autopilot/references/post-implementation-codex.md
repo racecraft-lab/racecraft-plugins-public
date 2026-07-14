@@ -126,17 +126,24 @@ background subagents as the fallback path. The 3-track structure
 - Single-route PR creation generates a schema-valid feature-local packet and
   referenced body through `pr-packet-output`, then requires fresh read-only
   validation. Split packet generation remains unavailable.
-- Missing optional extensions are logged and skipped. Do not fail the entire
-  autopilot because an optional extension command is unavailable.
-- Never mark the workflow complete until every planned Post item is completed or
-  explicitly logged as skipped.
+- Missing optional extensions are logged and skipped only where their procedure
+  explicitly declares a fail-open boundary. Do not generalize that permission
+  to packet generation, push, PR creation, or PR reconciliation.
+- `Post: PR Packet/Body Generation` and `Post: PR Creation` are non-skippable.
+  A packet, push, authentication, network, or create/reconcile failure leaves
+  the first affected row `in_progress` or `blocked`; it never becomes `skipped`
+  and the workflow never becomes complete.
+- Never mark the workflow complete until every required Post item is completed,
+  every optional skip is explicitly authorized by its named procedure, and PR
+  Creation records a verified GitHub PR number, URL, head, and base.
 - **Pre-final completion audit:** Before any final user-facing response,
   re-read `autopilot-state.json`, reconcile it with `update_plan`, and verify
   the canonical Post list. You MUST NOT send a final response while any `Post:`
   item is `pending`, `in_progress`, or missing; equivalently, while any Post
-  item is pending, in_progress, or missing. Continue with the first
+  item is pending, in_progress, missing, or PR Creation lacks verified PR
+  evidence. Continue with the first
   incomplete item instead. `Post: Retrospective` remains the final Post item and
-  must be completed or explicitly skipped before completion can be reported.
+  must be completed before completion can be reported.
 - **Agent-thread sweep before completion:** as part of the same pre-final audit,
   call `list_agents` when exposed; otherwise audit tracked dispatch IDs and
   consumed results. Every required dispatch must have a real result. When
@@ -185,8 +192,9 @@ parts; summary/change/why/review prose; UAT text and repo-relative source;
 verification evidence; scope metrics, budget result, and non-goals; known gaps;
 source markers; and a release note for `feat` or `fix`. It rejects caller-owned
 output paths, raw content, operations, and split metadata. It derives the
-current head, changed files, total file count, fixed body/packet/validation
-paths, headings, editable markers, and protected fingerprint, then uses atomic
+current head, immutable base/source HEAD SHAs, source-diff fingerprint,
+changed files, total file count, fixed body/packet/validation paths, headings,
+editable markers, and versioned protected fingerprint, then uses atomic
 file writes in body-then-packet order. If the generated packet or body is stale,
 malformed, or unreadable, stop before `gh pr create`. Split packet output and
 `validate-pr-packet-write` remain deferred.
@@ -253,8 +261,12 @@ remediation changes repository bytes or packet evidence, remove the stale
 packet artifacts and regenerate from a clean worktree. Detect the remote and
 push the packet commit only after every repeated check passes.
 
-Create the single PR from packet fields, never from branch-derived title text
-or hand-written body content:
+Before creating, require `gh --version` and `gh auth status`. Reconcile GitHub
+by the packet's exact head and base using `gh pr list --state open --head
+<head> --base <base> --json number,url,headRefName,baseRefName`. One exact match
+is authoritative and must be reused; more than one is an ambiguity block. With
+zero matches, create the single PR from packet fields, never from branch-derived
+title text or hand-written body content:
 
 ```text
 gh pr create \
@@ -263,6 +275,16 @@ gh pr create \
   --title <packet.generated_title.value> \
   --body-file <packet.body_file>
 ```
+
+After either a successful create or an ambiguous create failure, run the same
+exact head/base lookup again before retrying. Verify the single result with
+`gh pr view <number> --json number,url,state,headRefName,baseRefName`; require an
+open PR with the packet-owned head/base, then persist its number and URL in the
+workflow and `autopilot-state.json`. Zero matches, multiple matches, failed auth,
+or a mismatched view leaves `Post: PR Creation` incomplete and must not be
+reported as a completed autopilot run.
+A failed or ambiguous outcome leaves PR Creation incomplete and cannot be
+converted to a skip.
 
 ## Multi-PR Emission Workflow
 

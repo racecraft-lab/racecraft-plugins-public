@@ -104,7 +104,7 @@
         "value": "speckit_pro_runner/helpers/mutation.py",
         "display": "speckit_pro_runner/helpers/mutation.py"
       },
-      "sha256": "3c41707860c6c819b4c028b3c9fe05d42b1c9ae863fb4a596cd180128a243ac1"
+      "sha256": "4649d431a60669e42efe675525cd6c117cd60067e6776182f3bba28f7408af40"
     },
     {
       "path": {
@@ -112,7 +112,7 @@
         "value": "speckit_pro_runner/helpers/pr_emission.py",
         "display": "speckit_pro_runner/helpers/pr_emission.py"
       },
-      "sha256": "0077df3c6e2d9fe05e54ad69d68586d2ab91cd8c134bce4988805d672aa8db74"
+      "sha256": "0eccf8e91f4bd213ff75805639f023f6d8e1f4bdb08482870c62046e8cc633ca"
     },
     {
       "path": {
@@ -128,7 +128,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "24ab8ec28c903f85597b08f125bad584f420a3b4c7a3283cf83b4176102bb4f1"
+      "sha256": "862503eced8995a8209846038583db48fc2f5b374d719cac7e2b837f47ccb974"
     },
     {
       "path": {

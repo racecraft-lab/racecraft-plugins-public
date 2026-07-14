@@ -1244,6 +1244,17 @@ class MutationHelperTests(unittest.TestCase):
             packet = json.loads(packet_path.read_text(encoding="utf-8"))
             body = body_path.read_text(encoding="utf-8")
             self.assertEqual(packet["mode"], "single")
+            self.assertEqual(packet["schema_version"], "1.1.0")
+            self.assertRegex(packet["source_revision"]["base_sha"], r"^[0-9a-f]{40,64}$")
+            self.assertRegex(packet["source_revision"]["source_head_sha"], r"^[0-9a-f]{40,64}$")
+            self.assertRegex(
+                packet["source_revision"]["source_diff_fingerprint"]["value"],
+                r"^[0-9a-f]{64}$",
+            )
+            self.assertEqual(
+                packet["protected_body_fingerprint"]["normalization_profile"],
+                "whole_body_v2",
+            )
             self.assertNotIn("split_slice", packet)
             self.assertEqual(packet["generated_title"]["value"], "docs(g56r-001): Publish candidate route baseline")
             self.assertEqual(packet["body_file"], body_path.relative_to(git_root).as_posix())
@@ -1272,6 +1283,53 @@ class MutationHelperTests(unittest.TestCase):
             self.assertFalse(validation["data"]["stdout_json"]["pr_blocked"])
             self.assertFalse(validation["data"]["writes_state"])
 
+            packet_text = packet_path.read_text(encoding="utf-8")
+            downgraded = json.loads(packet_text)
+            downgraded["schema_version"] = "1.0.0"
+            packet_path.write_text(json.dumps(downgraded, indent=2) + "\n", encoding="utf-8")
+            completed, downgrade_validation, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-read-only",
+                    operation="validate-pr-packet-read-only",
+                    mode="read_only",
+                    inputs={"packet_path": packet_path.relative_to(git_root).as_posix()},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 1)
+            self.assert_response(downgrade_validation, "expected_failure", 1)
+            self.assertTrue(downgrade_validation["data"]["stdout_json"]["pr_blocked"])
+            self.assertIn(
+                "source.legacy_unbound",
+                {failure["rule"] for failure in downgrade_validation["data"]["stdout_json"]["failures"]},
+            )
+
+            missing_profile = json.loads(packet_text)
+            missing_profile["protected_body_fingerprint"].pop("normalization_profile")
+            packet_path.write_text(json.dumps(missing_profile, indent=2) + "\n", encoding="utf-8")
+            completed, profile_validation, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-read-only",
+                    operation="validate-pr-packet-read-only",
+                    mode="read_only",
+                    inputs={"packet_path": packet_path.relative_to(git_root).as_posix()},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 1)
+            self.assert_response(profile_validation, "expected_failure", 1)
+            profile_failures = profile_validation["data"]["stdout_json"]["failures"]
+            self.assertTrue(profile_validation["data"]["stdout_json"]["pr_blocked"])
+            self.assertTrue(
+                any(
+                    failure["rule"] == "packet.schema.required"
+                    and failure["field"] == "protected_body_fingerprint.normalization_profile"
+                    for failure in profile_failures
+                ),
+                profile_failures,
+            )
+            packet_path.write_text(packet_text, encoding="utf-8")
+
             body_before = body_path.read_text(encoding="utf-8")
             packet_before = packet_path.read_text(encoding="utf-8")
             completed, existing_response, stderr_records = run_runner(
@@ -1293,6 +1351,24 @@ class MutationHelperTests(unittest.TestCase):
             candidate.write_text('{"candidate":"route-updated"}\n', encoding="utf-8")
             self.run_git(git_root, "add", candidate.relative_to(git_root).as_posix())
             self.run_git(git_root, "commit", "--quiet", "-m", "docs(g56r-001): update existing route")
+
+            completed, stale_validation, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-read-only",
+                    operation="validate-pr-packet-read-only",
+                    mode="read_only",
+                    inputs={"packet_path": packet_path.relative_to(git_root).as_posix()},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 1)
+            self.assert_response(stale_validation, "expected_failure", 1)
+            self.assertTrue(stale_validation["data"]["stdout_json"]["pr_blocked"])
+            stale_rules = {
+                failure["rule"]
+                for failure in stale_validation["data"]["stdout_json"]["failures"]
+            }
+            self.assertIn("source.post_generation_change", stale_rules)
 
             completed, later_existing, stderr_records = run_runner(
                 helper_request("pr-packet-output", mode="apply", inputs=inputs),
@@ -1330,6 +1406,11 @@ class MutationHelperTests(unittest.TestCase):
                 "unsupported remote": {**baseline, "base_ref": "upstream/integration-base"},
                 "full local ref": {**baseline, "base_ref": "refs/heads/integration-base"},
                 "sha object target": {**baseline, "base_ref": "deadbeef", "base_branch": "deadbeef"},
+                "same head and base": {
+                    **baseline,
+                    "base_ref": "packet-feature",
+                    "base_branch": "packet-feature",
+                },
                 "missing verification": {**baseline, "verification_evidence": []},
                 "unsafe evidence source": {
                     **baseline,
@@ -1386,6 +1467,32 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(stderr_records[0]["details"]["packet_exists"], False)
             self.assertEqual(existing.read_text(encoding="utf-8"), "existing packet body\n")
             self.assertFalse(existing.with_suffix(".json").exists())
+
+    @unittest.skipUnless(os.name == "posix", "descriptor-relative race test requires POSIX")
+    def test_atomic_mutation_write_blocks_parent_swap_before_temporary_write(self) -> None:
+        from speckit_pro_runner.helpers import mutation
+
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            root = base / "root"
+            outside = base / "outside"
+            root.mkdir()
+            outside.mkdir()
+            target = root / "generated" / "packet.json"
+            original_mkdir = os.mkdir
+
+            def swap_parent(path: str, mode: int = 0o777, *, dir_fd: int | None = None) -> None:
+                original_mkdir(path, mode, dir_fd=dir_fd)
+                generated = root / "generated"
+                generated.rename(root / "displaced")
+                generated.symlink_to(outside, target_is_directory=True)
+
+            with patch.object(mutation.os, "mkdir", side_effect=swap_parent):
+                with self.assertRaises(OSError):
+                    mutation.write_file_atomic(target, "{}\n", trust_root=root)
+            self.assertFalse(target.exists())
+            self.assertEqual(list(outside.iterdir()), [])
+            self.assertEqual(list((root / "displaced").iterdir()), [])
 
     def test_contract_schemas_match_runner_fixture_envelopes(self) -> None:
         request_schema = json.loads(REQUEST_SCHEMA.read_text(encoding="utf-8"))

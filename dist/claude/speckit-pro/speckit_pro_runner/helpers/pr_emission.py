@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 import subprocess
 from pathlib import Path, PurePosixPath
@@ -171,9 +172,18 @@ def generate_pr_packet(entry: Any, request: Any) -> dict[str, Any]:
             "packet apply requires readable trusted spec, UAT, verification, and marker sources",
             details={"source_feature_dir": feature_dir},
         )
-    head_branch, changed_files, git_error = _git_packet_context(repo_root, git_base_ref)
+    git_context, git_error = _git_packet_context(repo_root, git_base_ref)
     if git_error:
         return input_error(request, "packet git context is unavailable", details={"git_error": git_error})
+    assert git_context is not None
+    head_branch = git_context["head_branch"]
+    if head_branch == inputs["base_branch"]:
+        return input_error(
+            request,
+            "packet head branch must differ from its base branch",
+            details={"head_branch": head_branch, "base_branch": inputs["base_branch"]},
+        )
+    changed_files = git_context["changed_files"]
     changed_files = sorted({*changed_files, body_path, packet_path})
     unsafe = [path for path in changed_files if not _safe_path(path)]
     if unsafe:
@@ -181,7 +191,16 @@ def generate_pr_packet(entry: Any, request: Any) -> dict[str, Any]:
 
     title = f"{inputs['title_type']}({inputs['title_scope']}): {inputs['title_description']}"
     body = _render_packet_body(inputs, packet_path, changed_files)
-    packet = _packet_record(inputs, body_path, validation_path, head_branch, title, body, changed_files)
+    packet = _packet_record(
+        inputs,
+        body_path,
+        validation_path,
+        head_branch,
+        title,
+        body,
+        changed_files,
+        git_context,
+    )
     schema, schema_error = load_pr_packet_schema()
     if schema is None:
         return response(
@@ -379,19 +398,22 @@ def _existing_packet_output(
     )
 
 
-def _git_packet_context(repo_root: Path, base_ref: str) -> tuple[str, list[str], str | None]:
+def _git_packet_context(
+    repo_root: Path, base_ref: str
+) -> tuple[dict[str, Any] | None, str | None]:
     commands = (
         ["symbolic-ref", "--quiet", "--short", "HEAD"],
         ["rev-parse", "--verify", "--quiet", f"{base_ref}^{{commit}}"],
+        ["rev-parse", "--verify", "--quiet", "HEAD^{commit}"],
         ["diff", "--name-only", "-z", f"{base_ref}...HEAD", "--"],
+        ["diff", "--binary", "--full-index", f"{base_ref}...HEAD", "--"],
     )
-    results: list[subprocess.CompletedProcess[str]] = []
+    results: list[subprocess.CompletedProcess[bytes]] = []
     try:
         for command in commands:
             results.append(
                 subprocess.run(
                     ["git", "-C", str(repo_root), *command],
-                    text=True,
                     capture_output=True,
                     shell=False,
                     check=False,
@@ -399,13 +421,25 @@ def _git_packet_context(repo_root: Path, base_ref: str) -> tuple[str, list[str],
                 )
             )
     except (OSError, subprocess.TimeoutExpired) as exc:
-        return "", [], type(exc).__name__
+        return None, type(exc).__name__
     if any(result.returncode != 0 for result in results):
-        return "", [], "detached_head_or_undiffable_base"
-    branch = results[0].stdout.strip()
+        return None, "detached_head_or_undiffable_base"
+    branch = results[0].stdout.decode("utf-8", errors="strict").strip()
     if not _safe_ref(branch):
-        return "", [], "unsafe_head_branch"
-    return branch, [path for path in results[2].stdout.split("\0") if path], None
+        return None, "unsafe_head_branch"
+    changed_files = [
+        path
+        for path in results[3].stdout.decode("utf-8", errors="strict").split("\0")
+        if path
+    ]
+    return {
+        "base_ref": base_ref,
+        "base_sha": results[1].stdout.decode("ascii").strip(),
+        "source_head_sha": results[2].stdout.decode("ascii").strip(),
+        "source_diff_sha256": hashlib.sha256(results[4].stdout).hexdigest(),
+        "head_branch": branch,
+        "changed_files": changed_files,
+    }, None
 
 
 def _render_packet_body(inputs: dict[str, Any], packet_path: str, changed_files: list[str]) -> str:
@@ -469,13 +503,24 @@ def _packet_record(
     title: str,
     body: str,
     changed_files: list[str],
+    git_context: dict[str, Any],
 ) -> dict[str, Any]:
     feature_dir, scope = inputs["source_feature_dir"], inputs["scope_evidence"]
     return {
-        "schema_version": "1.0.0",
+        "schema_version": "1.1.0",
         "packet_id": inputs["packet_id"],
         "mode": "single",
         "target": {"base_branch": inputs["base_branch"], "head_branch": head_branch},
+        "source_revision": {
+            "base_ref": git_context["base_ref"],
+            "base_sha": git_context["base_sha"],
+            "source_head_sha": git_context["source_head_sha"],
+            "source_diff_fingerprint": {
+                "algorithm": "sha256",
+                "value": git_context["source_diff_sha256"],
+                "normalization": "git diff --binary --full-index <base-ref>...HEAD -- at packet generation",
+            },
+        },
         "source_feature_dir": feature_dir,
         "generated_title": {
             "value": title,
@@ -513,6 +558,7 @@ def _packet_record(
         "protected_body_fingerprint": {
             "algorithm": "sha256",
             "value": protected_body_sha256(body),
+            "normalization_profile": "whole_body_v2",
             "normalization": "entire rendered body from first line through EOF; LF; trailing whitespace trimmed; final newline ensured; declared editable bodies elided before sha256.",
             "elided_fields": ["summary", "what_changed", "why_it_matters"],
         },

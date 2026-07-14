@@ -14,9 +14,9 @@ requirements:
   unspecified: 0
 findings:
   critical: 0
-  significant: 1
-  minor: 1
-  positive: 3
+  significant: 6
+  minor: 2
+  positive: 4
   unresolved: 0
 terminal_handoff: go
 ---
@@ -28,21 +28,24 @@ terminal_handoff: go
 G56R-001 completed all 26 tasks and all 37 explicitly numbered requirements
 (27 FR, 0 NFR, and 10 SC). The final artifacts reproduce a `go` handoff with
 exactly 12 agents, 10 present routes, 2 explicit route absences, 3 current
-fixtures, and 9 missing fixtures. The focused checker passes, the independent
-task audit records 26 VERIFIED items, and the final default suite passes
-2803/2803.
+fixtures, and 9 missing fixtures. The corrected checker passes twice, and the
+focused adversarial suite records 55/55. The independent task audit still
+records 26 VERIFIED items; final combined-branch suite totals are refreshed
+immediately before PR creation.
 
 Spec adherence is 100%. Two numbered requirements, FR-026 and SC-010, were
 modified during review to include the exact repository guard allowance and
-then fully implemented. One significant validation gap and one minor scope
-declaration gap were found after the first implementation commit; both were
-resolved in `7eab3c69` before closeout. There are no residual deviations,
-constitution violations, or unowned findings.
+then fully implemented. Later adversarial review found additional evidence,
+hash-boundary, inventory, provenance, and checkpoint defects; all are resolved
+in the final artifacts and checker. There are no residual G56R requirement
+deviations or unowned findings.
 
-The reviewability gate remains WARN with `pass: true`: the six-path
-implementation is 13,432 added lines, but it preserves 0 production LOC and 0
-production files and is atomic because the narrative, manifest, checker, and
-tests mutually validate one another.
+The original G56R implementation remains a six-path, 0-production-LOC research
+slice. After autopilot incorrectly ended without a PR, the user explicitly
+required one combined PR containing that slice plus a durable SpecKit Pro fix
+for both Codex and Claude Code. The typed `Reviewability-Exception: infra`
+records this route; it does not waive correctness, tests, source freshness, or
+live PR verification.
 
 ## Metrics
 
@@ -53,11 +56,12 @@ tests mutually validate one another.
 - Spec adherence:
   `((35 implemented + 2 modified + (0 partial * 0.5)) / (37 - 0 unspecified)) * 100 = 100%`.
 - Terminal implementation interval: `2026-07-14T12:45:56-05:00` through
-  `2026-07-14T14:55:31-05:00`, within the predeclared deadline of
+  `2026-07-14T17:43:58-05:00`, within the predeclared deadline of
   `2026-07-14T20:45:56-05:00`.
-- Final verification: checker PASS, focused artifacts 48/48, runner guard
-  11/11, integration 257/257, Layer 1 1427/1427, Layer 4 1190/1190, Layer 5
-  186/186, and default total 2803/2803.
+- Current verification: checker PASS twice and focused artifacts 55/55. The
+  final runner guard, mutation/read-only/eval regressions, integration, Layer
+  1/4/5, default suite, generated payloads, and release-artifact check are
+  recorded after the combined branch is frozen.
 
 ## Proposed Spec Changes
 
@@ -76,7 +80,7 @@ implementation matches the refined text.
 | Requirement | Status | Implementation and verification evidence |
 |---|---|---|
 | FR-001 | Implemented | The dated Markdown narrative and versioned JSON manifest exist; T020-T022; checker PASS. |
-| FR-002 | Implemented | The manifest and normalized projection contain the exact 12-agent set; T004/T020; focused 48/48. |
+| FR-002 | Implemented | The manifest and normalized projection contain the exact 12-agent set; T004/T020; focused 55/55. |
 | FR-003 | Implemented | Ten agents have bound present routes and the two parity roles have cited absences; T014/T015/T020. |
 | FR-004 | Implemented | The narrative and per-agent records contain stable, reciprocal route-policy inventory entries with mismatch ownership; T011. |
 | FR-005 | Implemented | Tracked, cached, and installed observations are distinct and tracked source remains authoritative; T012. |
@@ -100,7 +104,7 @@ implementation matches the refined text.
 | FR-023 | Implemented | Telemetry, owned unknowns, immutable admission binding, content hash, and G56R-002 snapshot ownership are published; T019/T021/T025. |
 | FR-024 | Implemented | Eleven objective completion checks pass and reproduce `go` without changing eligibility or qualification state; T007/T008/T023/T025/T026. |
 | FR-025 | Implemented | Start, stop, and deadline are RFC 3339 ordered timestamps, and the terminal packet was emitted before deadline; T001/T025. |
-| FR-026 | Modified | Final scope adds the exact two-file runner-guard allowance to the Python checker, focused Layer 4 test, and suite declaration; T002-T008/T023/T024; focused 48/48, guard 11/11, default 2803/2803. |
+| FR-026 | Modified | The G56R slice adds the exact two-file runner-guard allowance to the Python checker, focused Layer 4 test, and suite declaration; T002-T008/T023/T024; focused 55/55 and checker PASS twice. |
 | FR-027 | Implemented | The six implementation paths contain no runtime probe, score, qualification, route mutation, source-defect repair, or production change; T009/T017/T023. |
 
 ### Non-Functional Requirements
@@ -121,9 +125,9 @@ from the adherence denominator.
 | SC-005 | Implemented | Official and project provenance is complete, current to the research date/revision, and conflict-labeled. |
 | SC-006 | Implemented | Four surfaces and three source-observation classes remain distinct; sanitization tests pass. |
 | SC-007 | Implemented | Fixture inventory and contracts reproduce the exact 3/9 split and non-release label. |
-| SC-008 | Implemented | Structured checker and 48 focused tests prove parsing, identity, hashing, canonicalization, and cross-artifact agreement. |
+| SC-008 | Implemented | Structured checker and 55 focused tests prove parsing, source-body identity, hashing, canonicalization, provenance matrices, and cross-artifact agreement. |
 | SC-009 | Implemented | Two identical checker runs and the admission binding reproduce the same `go` and downstream owners. |
-| SC-010 | Modified | Final scope is exactly 3 delivery plus 3 validation paths, including the exact guard allowance; production impact remains zero and reviewability is WARN/pass. |
+| SC-010 | Modified | The G56R slice is exactly 3 delivery plus 3 validation paths, including the exact guard allowance; its production impact remains zero. The later combined plugin recovery is separately authorized and not counted as G56R implementation scope. |
 
 ## Architecture Drift
 
@@ -133,10 +137,10 @@ from the adherence denominator.
 | One feature-local, offline, read-only Python 3.11+ standard-library checker | Delivered under the feature directory; live checker PASS | None |
 | Exact 12/10/2 agents/routes and 3/9 fixtures | Checker and manifest reproduce those sets | None |
 | Official-only platform evidence, repository project evidence, and independent client surfaces | Final provenance and surface checks enforce the frozen authority model | None |
-| No probing, scoring, qualification, final ordering, defect repair, or production mutation | Six changed implementation paths are research/validation only; 0 production LOC/files | None |
-| Three delivery plus three validation paths | Final implementation has exactly those six paths | None against the final plan; initial five-path declaration was corrected during review |
-| One 8-hour workday | Terminal packet emitted after about 2 hours 10 minutes | None |
-| One navigable review slice | 13,432 added implementation lines triggered WARN/pass, but splitting would separate mutually validating artifacts | MINOR reviewability pressure, accepted without exception |
+| No probing, scoring, qualification, final ordering, defect repair, or production mutation in G56R | The original six implementation paths are research/validation only; 0 production LOC/files | None for G56R; the later shared-runtime repair is a separately authorized failure-recovery scope |
+| Three delivery plus three validation paths | The G56R implementation has exactly those six paths | None against the final G56R plan; the combined PR does not redefine this boundary |
+| One 8-hour workday | Terminal research packet re-frozen within the declared deadline after adversarial remediation | None |
+| One navigable review slice | The user required one PR for the atomic research packet plus its blocking autopilot recovery | Typed `infra` reviewability exception; no correctness or test waiver |
 
 ## Significant Deviations and Root Causes
 
@@ -144,10 +148,17 @@ from the adherence denominator.
 |---|---|---|---|---|
 | D-01 | SIGNIFICANT | Resolved | Independent review found that the first checker could accept dangling candidate evidence, cross-surface evidence, narrower sanitization, and stale prose outside the normalized projection. Commit `7eab3c69` added referential integrity, surface/feature matching, expanded sanitization, and a deterministic human-prose hash with negative tests. | The initial RED matrix emphasized schema shape and projection equality but did not enumerate adversarial reference and prose-drift cases. Add those cases to the first checker-test inventory, before artifact population. |
 | D-02 | MINOR | Resolved | The first declared implementation boundary omitted the existing post-commit public-claim guard. Commit `7eab3c69` added four exact allowlist lines in `test-speckit-pro-runner.py` and reconciled FR-026, SC-010, plan, tasks, quickstart, data model, and contract docs from two to three validation paths. | Planning validated the new checker and suite membership before testing the committed research paths against the existing guard. Run the exact post-commit guard before freezing declared file operations. |
+| D-03 | SIGNIFICANT | Resolved | The two Claude-derived instruction hashes initially excluded the blank LF after frontmatter, even though the normative body preserves it. Source-derived hashing and negative tests now bind the exact decoded body boundary. | The contract said “body” without defining the closing-frontmatter byte boundary. Freeze byte boundaries before recording hashes and make the checker derive them from source. |
+| D-04 | SIGNIFICANT | Resolved | Surface evidence initially summarized only four custom-agent records per agent instead of the required 7 features × 4 surfaces. The manifest now has exactly 28 unique pairs for each of 12 agents and rejects missing, duplicate, or unexpected pairs. | A summary-level completeness check was mistaken for the spec's feature-by-surface matrix. Encode the Cartesian set in the first RED suite. |
+| D-05 | SIGNIFICANT | Resolved | Official reasoning-effort pages expose different vocabularies. The final records name Subagents as the narrower CLI/desktop custom-agent authority, use App Server `model/list` and non-interactive configuration independently, and classify any intersection as policy. | The first remediation treated a conservative intersection as authority resolution. Resolutions now require a winning evidence ID and reject `not_stated` competitors. |
+| D-06 | SIGNIFICANT | Resolved | The human inventory overclaimed Claude parity chains and omitted reciprocal links from the two real Claude payloads to shared consumers. Inventory checks now require the exact physical set and reciprocal links. | Narrative counting drifted beyond the plan's scoped parity sources. Validate both missing and unexpected entries against a frozen physical set. |
+| D-07 | MINOR | Resolved | The first terminal timestamp preceded material review fixes, and Tasks state attributed 26 tasks to the 22-task checkpoint. The final stop is re-frozen after remediation, and state distinguishes the initial and Analyze-remediated checkpoints. | Phase summaries were updated independently from source history. Derive checkpoint counts from the recorded commits before completion. |
+| D-08 | SIGNIFICANT | Resolved | Autopilot ended with PR creation marked skipped because packet output was deferred; old packets also lacked source-revision freshness. Shared runner helpers and both client contracts now make packet/push/verified PR creation fail closed, revision-bound, and idempotently reconciled. | Optional and required Post rows shared the same skip semantics. Encode terminal completion as a verified external invariant, not a prose convention. |
 
-No requirement was dropped, relaxed, left partial, or implemented outside the
-final accepted boundaries. Both deviations were corrected and reverified
-before the terminal evidence commit `60dfff18`.
+No G56R requirement was dropped, relaxed, or left partial. D-01/D-02 were
+resolved in the original implementation history; D-03 through D-07 were found
+by the user-mandated Tavily and adversarial rereview. D-08 is the separately
+authorized plugin recovery required to finish the same autopilot run.
 
 ## Innovations and Best Practices
 
@@ -156,27 +167,31 @@ before the terminal evidence commit `60dfff18`.
 | P-01 | POSITIVE | The human narrative has a non-circular deterministic hash that excludes the normalized projection and substitutes its own marker, so prose drift cannot hide behind machine projection agreement. | Reuse for future dual human/machine research packets. Keep it feature-local unless a second concrete use appears; not yet a constitution candidate. |
 | P-02 | POSITIVE | Candidate rationale, eligibility, and incompatibility evidence must resolve inside that candidate's provenance, while surface claims require official evidence matching both surface and feature. | Reuse as an evidence-integrity checklist pattern in G56R-002/G56R-003. Prefer checklist guidance over a generic validation framework. |
 | P-03 | POSITIVE | The existing public-claim guard was broadened by exactly two file paths, not by a directory prefix, and received a direct 11/11 proof. | Reuse exact allowlisting for future research-only artifacts. This already follows KISS/YAGNI and does not require a constitution amendment. |
+| P-04 | POSITIVE | PR packets bind base/source revisions, full-index diff identity, body normalization profile, and permitted packet-only dirty paths; completion then reconciles an existing PR before or after create. | Reuse this shared runner contract for both Codex and Claude Code autopilot. Treat a missing or ambiguous PR as incomplete, never skipped. |
 
 ## Constitution Compliance
 
 | Article | Result | Evidence |
 |---|---|---|
-| I. Plugin Structure Compliance | PASS | No shipped plugin file changed; repository tests remain under `tests/speckit-pro/`; Layer 1 passes 1427/1427. |
-| II. Cross-Platform Runtime & Script Safety | PASS | The checker uses Python 3.11+ standard-library structured JSON, deterministic UTF-8, and platform-safe paths; no Bash, `jq`, package, or shell subprocess was added; Layer 4 passes 1190/1190. |
-| III. Semantic Versioning | PASS / N/A | No plugin manifest, marketplace version, or release metadata changed. Manifest version 1 is a research-data contract, not a plugin version. |
-| IV. Test Coverage Before Merge | PASS | The checker has 48 focused Layer 4 tests, declared suite membership, an 11/11 exact guard test, and a 2803/2803 default-suite result. |
-| V. Conventional Commits | PASS | All branch commits use `type(scope): description`; no PR was created, so the eventual PR-title gate remains outside this report-only closeout. |
-| VI. KISS, Simplicity & YAGNI | PASS | One fixed-path checker and explicit agent-centric data were used; no package, reusable validator framework, route abstraction, or speculative runtime feature was added. |
+| I. Plugin Structure Compliance | PASS pending final suite | Shared behavior stays in `speckit_pro_runner`; Codex and Claude skill/reference surfaces both consume it; repository tests remain under `tests/speckit-pro/`. |
+| II. Cross-Platform Runtime & Script Safety | PASS pending final suite | Runtime changes use Python 3.11 standard library, argument arrays, canonical Git object IDs, atomic writes, and trust-root symlink checks; no Bash or `jq` dependency was added. |
+| III. Semantic Versioning | PASS | No version file is hand-edited. The `fix` PR carries one release-note block so release automation owns the eventual bump and generated release artifacts. |
+| IV. Test Coverage Before Merge | PASS pending final suite | G56R has 55 focused cases; mutation, read-only, and both-client eval regressions cover the durable PR path. Full layer/integration/default totals are refreshed before creation. |
+| V. Conventional Commits | PASS | Existing commits are conventional; remediation and packet commits will use narrow conventional scopes, and the PR title includes `G56R-001`. |
+| VI. KISS, Simplicity & YAGNI | PASS | The repair extends the existing runner/schema/reference path and existing tests; it adds no new shell, package, service, or duplicate client runtime. |
 
-Constitution violations: **None**. Complexity exceptions: **None**.
+Constitution violations: **None**. Complexity exceptions: one typed `infra`
+reviewability route for the user-required combined PR; no correctness or test
+exception.
 
 ## Unspecified Implementations
 
-None in the delivery. The final human-prose hash and exact runner-guard
-allowance were incorporated into the normative specification and planning
-artifacts before closeout, so they are classified as modified requirements,
-not unspecified features. `verify-tasks-report.md` and this retrospective are
-post-implementation workflow evidence rather than product scope.
+None in the G56R delivery. The source-body boundary, authority-resolution proof,
+human-prose hash, and exact runner-guard allowance are now incorporated into
+the normative specification and checker. The durable autopilot recovery is not
+an inferred G56R requirement: it is the user's explicit post-failure scope and
+is documented by the combined-PR exception. `verify-tasks-report.md` and this
+retrospective remain workflow evidence rather than product scope.
 
 ## Task Execution Analysis
 
@@ -198,9 +213,9 @@ post-implementation workflow evidence rather than product scope.
 - Blockers: no terminal blocker. Analyze found four pre-implementation issues
   (one CRITICAL and three HIGH) and resolved them before implementation;
   independent review later found D-01/D-02 and resolved both before closeout.
-- Post boundaries: UAT and PR creation were explicitly skipped because no
-  source-derived UAT runbook or validated PR packet exists. These are workflow
-  boundaries, not missing G56R-001 implementation tasks or requirements.
+- Post boundaries: UAT remains the canonical authorized skip because no
+  source-derived runbook exists. PR packet generation and verified PR creation
+  are mandatory recovery steps and cannot be converted into skips.
 
 ## Lessons Learned and Recommendations
 
@@ -221,6 +236,15 @@ post-implementation workflow evidence rather than product scope.
 5. **LOW — Keep narrow exceptions exact.** Continue preferring file-level
    guard allowances and focused direct tests over directory prefixes or a
    reusable exception framework.
+6. **DOWNSTREAM — Harden runtime evidence, not this frozen baseline.** Tavily
+   review against OWASP agent security, W3C PROV-DM, SLSA provenance,
+   OpenTelemetry GenAI conventions, OpenAI evaluation guidance, RouteLLM, and
+   RouterBench found no G56R-001 blocker. G56R-002 should treat retrieved,
+   tool, and agent content as untrusted; content-digest capability snapshots
+   and effective configuration; carry provenance IDs into traces; and pin a
+   typed telemetry adapter. G56R-003 should add prompt-injection,
+   tool-confusion, privilege, and prohibited-mutation fixtures plus held-out,
+   paired, uncertainty-aware routing qualification.
 
 No recommendation requires changing this completed spec. If a future request
 seeks to amend `spec.md`, it must pass a new explicit human confirmation gate.
@@ -234,7 +258,7 @@ seeks to amend `spec.md`, it must pass a new explicit human confirmation gate.
 | `docs/ai/research/codex-agent-route-candidates.md` | Human evidence record, contracts, candidate catalog, fixtures, unknowns, handoff | FR-001-FR-025, FR-027; SC-001-SC-009 |
 | `docs/ai/research/codex-agent-route-candidate-manifest.json` | Versioned agent-centric machine projection and admission binding | FR-001-FR-025; SC-001-SC-009 |
 | `specs/g56r-001-candidate-route-baseline/check-artifacts.py` | Fixed-path offline completeness and agreement checker | FR-002-FR-026; SC-002-SC-009 |
-| `tests/speckit-pro/unit/test-g56r-001-artifacts.py` | 48 focused positive and negative artifact-contract tests | FR-002-FR-027; SC-002-SC-010 |
+| `tests/speckit-pro/unit/test-g56r-001-artifacts.py` | 55 focused positive and negative artifact-contract tests | FR-002-FR-027; SC-002-SC-010 |
 | `tests/speckit-pro/suite-manifest.json` | Single Layer 4 membership declaration | FR-026; SC-010 |
 | `tests/speckit-pro/unit/test-speckit-pro-runner.py` | Exact two-research-file public-claim guard allowance | FR-026; SC-010 |
 
@@ -262,12 +286,12 @@ seeks to amend `spec.md`, it must pass a new explicit human confirmation gate.
 
 | Check | Result | Basis |
 |---|---|---|
-| Evidence completeness | PASS | D-01 and D-02 cite commits, paths, behaviors, and verification; positive findings cite their implementations. |
+| Evidence completeness | PASS | D-01 through D-08 cite paths, behaviors, root causes, and verification; positive findings cite their implementations. |
 | Coverage integrity | PASS | Every FR-001-FR-027 and SC-001-SC-010 appears exactly once; the absence of NFR IDs is explicit. |
 | Metrics sanity | PASS | Completion is 26/26; adherence uses 35 implemented + 2 modified over 37 non-unspecified requirements. |
 | Severity consistency | PASS | No residual or constitutional issue is labeled below its impact; the significant and minor deviations are explicitly resolved. |
 | Constitution review | PASS | All six articles are assessed and violations are explicitly stated as None. |
 | Human Gate readiness | PASS | Proposed Spec Changes explicitly states None; default-NO is recorded and no spec mutation or handoff occurred. |
-| Actionability | PASS | Five prioritized recommendations map directly to D-01, D-02, reviewability evidence, and reusable positive practices. |
+| Actionability | PASS | Prioritized recommendations cover evidence integrity, reviewability, runtime provenance/security, and empirical downstream qualification without changing the frozen baseline. |
 
 **Overall self-assessment: PASS.** All blocking checklist items pass.

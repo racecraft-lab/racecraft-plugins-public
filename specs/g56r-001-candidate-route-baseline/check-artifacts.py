@@ -8,6 +8,7 @@ import hashlib
 import json
 import re
 import sys
+import tomllib
 import unicodedata
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -34,6 +35,14 @@ AGENT_NAMES = {
 }
 ABSENT_AGENTS = {"consensus-synthesizer", "gate-validator"}
 CURRENT_FIXTURES = {"codebase-analyst", "domain-researcher", "spec-context-analyst"}
+INSTRUCTION_SOURCE_PATHS = {
+    name: Path(
+        f"speckit-pro/agents/{name}.md"
+        if name in ABSENT_AGENTS
+        else f"speckit-pro/codex-agents/{name}.toml"
+    )
+    for name in AGENT_NAMES
+}
 SURFACES = {"cli", "desktop_app", "app_server", "non_interactive"}
 AGENT_FIELDS = {
     "agent_name",
@@ -114,6 +123,38 @@ PLATFORM_FEATURES = {
     "telemetry",
     "reroute_events",
     "non_interactive_output",
+}
+OFFICIAL_LOCATORS = {
+    "https://developers.openai.com/codex/models": {
+        "Recommended models; Choose a model",
+    },
+    "https://developers.openai.com/codex/config-reference": {
+        "model_reasoning_effort",
+    },
+    "https://developers.openai.com/codex/subagents": {
+        "Custom agents; Custom agent file schema",
+        "Reasoning effort (model_reasoning_effort)",
+    },
+    "https://developers.openai.com/codex/app-server": {
+        "Models / List models (model/list)",
+        "Models / List models (model/list); supportedReasoningEfforts",
+        "Models / List models (model/list); Model provider capabilities; Experimental features",
+        "Events / Turn events; model/rerouted",
+    },
+    "https://developers.openai.com/codex/config-advanced": {
+        "Observability and telemetry",
+    },
+    "https://developers.openai.com/codex/cyber-safety": {
+        "How it works; False positives",
+    },
+    "https://developers.openai.com/codex/noninteractive": {
+        "Make output machine-readable; --json; --output-schema",
+    },
+}
+SURFACE_RECORD_KEYS = {
+    (feature, surface)
+    for feature in PLATFORM_FEATURES
+    for surface in SURFACES
 }
 INTEGRATION_CLASSES = {
     "source",
@@ -212,6 +253,39 @@ def canonical_hash(value: object) -> str:
         allow_nan=False,
     ).encode("utf-8")
     return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
+
+
+def instruction_hash(body: str) -> str:
+    normalized = normalize(body)
+    assert isinstance(normalized, str)
+    return f"sha256:{hashlib.sha256(normalized.encode('utf-8')).hexdigest()}"
+
+
+def instruction_body(repo_root: Path, agent_name: str) -> tuple[str | None, str | None]:
+    """Return the decoded instruction body while preserving body whitespace."""
+
+    source_path = INSTRUCTION_SOURCE_PATHS[agent_name]
+    try:
+        source = (repo_root / source_path).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        return None, f"unable to read {source_path.as_posix()} as UTF-8: {exc}"
+
+    if agent_name in ABSENT_AGENTS:
+        normalized = normalize(source)
+        assert isinstance(normalized, str)
+        frontmatter = re.match(r"\A---\n.*?^---\n", normalized, flags=re.DOTALL | re.MULTILINE)
+        if frontmatter is None:
+            return None, f"{source_path.as_posix()} has invalid frontmatter boundaries"
+        return normalized[frontmatter.end():], None
+
+    try:
+        parsed = tomllib.loads(source)
+    except tomllib.TOMLDecodeError as exc:
+        return None, f"unable to parse {source_path.as_posix()} as TOML: {exc}"
+    body = parsed.get("developer_instructions")
+    if not isinstance(body, str):
+        return None, f"{source_path.as_posix()} has no decoded developer_instructions string"
+    return body, None
 
 
 def manifest_content_hash(manifest: dict[str, Any]) -> str:
@@ -439,13 +513,15 @@ def _validate_agents(manifest: dict[str, Any], errors: list[str]) -> None:
         if not isinstance(surface_records, list):
             errors.append(f"agent {name!r} surface_records must be an array")
             continue
-        surfaces = [
-            item.get("surface")
+        surface_keys = [
+            (item.get("feature"), item.get("surface"))
             for item in surface_records
             if isinstance(item, dict)
         ]
-        if len(surfaces) != len(set(surfaces)) or set(surfaces) != SURFACES:
-            errors.append(f"agent {name!r} surface set must contain each of the four surfaces exactly once")
+        if len(surface_keys) != len(set(surface_keys)) or set(surface_keys) != SURFACE_RECORD_KEYS:
+            errors.append(
+                f"agent {name!r} surface records must contain every required feature/surface pair exactly once"
+            )
 
     if present != AGENT_NAMES - ABSENT_AGENTS or absent != ABSENT_AGENTS:
         errors.append(
@@ -719,6 +795,32 @@ def _validate_identities_and_candidates(manifest: dict[str, Any], errors: list[s
         errors.append("candidate_route_id values must be globally unique")
 
 
+def _validate_instruction_sources(
+    manifest: dict[str, Any], repo_root: Path, errors: list[str]
+) -> None:
+    agents = manifest.get("agents")
+    if not isinstance(agents, list):
+        return
+    for record in agents:
+        if not isinstance(record, dict):
+            continue
+        name = record.get("agent_name")
+        contract = record.get("agent_contract")
+        if not isinstance(name, str) or name not in INSTRUCTION_SOURCE_PATHS:
+            continue
+        if not isinstance(contract, dict):
+            continue
+        body, source_error = instruction_body(repo_root, name)
+        if source_error is not None:
+            errors.append(source_error)
+            continue
+        assert body is not None
+        expected = instruction_hash(body)
+        if contract.get("instruction_hash") != expected:
+            errors.append(
+                f"agent {name!r} instruction_hash does not match complete decoded source body"
+            )
+
 def _validate_admission_binding(manifest: dict[str, Any], errors: list[str]) -> None:
     handoff = manifest.get("handoff")
     if not isinstance(handoff, dict) or handoff.get("decision") != "go":
@@ -842,6 +944,39 @@ def _validate_inventory(manifest: dict[str, Any], errors: list[str]) -> None:
     if len(ids) != len(set(ids)):
         errors.append("route-policy inventory entry IDs must be unique")
     by_id = {entry.get("entry_id"): entry for entry in entries}
+    claude_agents = ABSENT_AGENTS
+    physical_entries = {
+        *(f"RP-SRC-CODEX-{name}" for name in AGENT_NAMES - ABSENT_AGENTS),
+        *(f"RP-PAYLOAD-CODEX-{name}" for name in AGENT_NAMES - ABSENT_AGENTS),
+        *(f"RP-SRC-CLAUDE-{name}" for name in claude_agents),
+        *(f"RP-PAYLOAD-CLAUDE-{name}" for name in claude_agents),
+    }
+    actual_physical = {
+        entry_id
+        for entry_id in by_id
+        if isinstance(entry_id, str)
+        and re.fullmatch(r"RP-(?:SRC|PAYLOAD)-(?:CODEX|CLAUDE)-[a-z0-9-]+", entry_id)
+    }
+    missing_physical = sorted(physical_entries - actual_physical)
+    unexpected_physical = sorted(actual_physical - physical_entries)
+    if missing_physical or unexpected_physical:
+        errors.append(
+            "route-policy physical source/payload inventory must match the exact scoped set; "
+            f"missing={missing_physical}, unexpected={unexpected_physical}"
+        )
+    for entry_id in sorted(physical_entries & set(by_id)):
+        expected_class = "source" if entry_id.startswith("RP-SRC-") else "generated_payload"
+        if by_id[entry_id].get("integration_class") != expected_class:
+            errors.append(f"inventory entry {entry_id!r} must use integration_class {expected_class!r}")
+    parity_payload_consumers = {"RP-PAYLOAD-PROOF", "RP-CACHE-PROOF", "RP-VAL-DERIVED"}
+    if parity_payload_consumers <= set(by_id):
+        for name in sorted(ABSENT_AGENTS):
+            entry_id = f"RP-PAYLOAD-CLAUDE-{name}"
+            entry = by_id.get(entry_id)
+            if isinstance(entry, dict) and set(entry.get("downstream_entry_ids", [])) != parity_payload_consumers:
+                errors.append(
+                    f"inventory entry {entry_id!r} must link to the exact parity payload proof consumers"
+                )
     for entry in entries:
         entry_id = entry.get("entry_id")
         for downstream in entry.get("downstream_entry_ids", []):
@@ -876,6 +1011,11 @@ def _validate_provenance(
         "unverified_assumption", "environment_observation", "conflict",
     }
     conflicts = {"none", "resolved_by_authority", "blocking_no_go", "nonblocking_deferred"}
+    records_by_id = {
+        record.get("evidence_id"): record
+        for record in records
+        if isinstance(record, dict) and isinstance(record.get("evidence_id"), str)
+    }
     for index, record in enumerate(records):
         item = f"{location} provenance[{index}]"
         missing = _missing_fields(record, PROVENANCE_FIELDS)
@@ -887,6 +1027,24 @@ def _validate_provenance(
             errors.append(f"{item} has invalid classification")
         if record.get("conflict_status") not in conflicts:
             errors.append(f"{item} has invalid conflict disposition")
+        if record.get("conflict_status") == "resolved_by_authority":
+            resolution = record.get("authority_resolution")
+            if _missing_fields(resolution, {"winning_evidence_id", "authority_basis"}):
+                errors.append(f"{item} resolved authority conflict must name a winning evidence source and basis")
+            else:
+                assert isinstance(resolution, dict)
+                winner = records_by_id.get(resolution.get("winning_evidence_id"))
+                if winner is None:
+                    errors.append(f"{item} resolved authority winner does not resolve within provenance")
+                elif str(winner.get("applicability", "")).startswith("not_stated"):
+                    errors.append(f"{item} resolved authority winner cannot be not_stated evidence")
+                elif (
+                    winner.get("surface") != record.get("surface")
+                    or winner.get("feature") != record.get("feature")
+                ):
+                    errors.append(f"{item} resolved authority winner must match the conflict surface and feature")
+            if str(record.get("applicability", "")).startswith("not_stated"):
+                errors.append(f"{item} not_stated evidence cannot be an authority-conflict competitor")
         if not _is_nonempty(record.get("invalidation_triggers")):
             errors.append(f"{item} requires invalidation triggers")
         classification = record.get("classification")
@@ -894,6 +1052,10 @@ def _validate_provenance(
             source_url = record.get("source_url")
             if not _official_openai_url(source_url):
                 errors.append(f"{item} platform fact must cite an official OpenAI URL")
+            elif source_url not in OFFICIAL_LOCATORS:
+                errors.append(f"{item} platform fact must use a registered frozen official source URL")
+            elif record.get("exact_locator") not in OFFICIAL_LOCATORS[source_url]:
+                errors.append(f"{item} exact locator does not belong to its recorded official source URL")
             if started is None or deadline is None or not _date_in_workday(
                 record.get("observed_or_retrieved_on"), started, deadline
             ):
@@ -1029,7 +1191,11 @@ def _validate_record_details(manifest: dict[str, Any], errors: list[str]) -> Non
                 errors.append(f"agent {name!r} surface record is incomplete")
             elif surface.get("applicability") not in {"documented", "undocumented", "not_applicable"}:
                 errors.append(f"agent {name!r} surface record applicability is invalid")
-            elif not _nonempty_string_list(surface.get("evidence_ids")) or not any(
+            elif surface.get("conflict_status") not in {
+                "none", "resolved_by_authority", "blocking_no_go", "nonblocking_deferred",
+            }:
+                errors.append(f"agent {name!r} surface record conflict disposition is invalid")
+            elif not _nonempty_string_list(surface.get("evidence_ids")) or not all(
                 evidence_id in official_evidence
                 and official_evidence[evidence_id].get("surface") == surface.get("surface")
                 and official_evidence[evidence_id].get("feature") == surface.get("feature")
@@ -1043,6 +1209,36 @@ def _validate_record_details(manifest: dict[str, Any], errors: list[str]) -> Non
                 errors.append(
                     f"agent {name!r} {surface_kind} requires surface- and feature-matched official evidence"
                 )
+            elif any(
+                official_evidence[evidence_id].get("conflict_status")
+                != surface.get("conflict_status")
+                for evidence_id in surface.get("evidence_ids", [])
+            ):
+                errors.append(f"agent {name!r} surface conflict disposition disagrees with cited provenance")
+            elif surface.get("conflict_status") == "resolved_by_authority":
+                resolution = surface.get("authority_resolution")
+                if _missing_fields(resolution, {"winning_evidence_id", "authority_basis"}):
+                    errors.append(
+                        f"agent {name!r} resolved surface authority conflict must name a winning evidence source and basis"
+                    )
+                else:
+                    assert isinstance(resolution, dict)
+                    winner_id = resolution.get("winning_evidence_id")
+                    winner = official_evidence.get(winner_id)
+                    if winner_id not in surface.get("evidence_ids", []):
+                        errors.append(f"agent {name!r} surface authority winner must be cited by the surface record")
+                    elif winner is None or str(winner.get("applicability", "")).startswith("not_stated"):
+                        errors.append(f"agent {name!r} surface authority winner cannot be not_stated evidence")
+                    if any(
+                        official_evidence[evidence_id].get("authority_resolution") != resolution
+                        for evidence_id in surface.get("evidence_ids", [])
+                    ):
+                        errors.append(f"agent {name!r} surface authority resolution disagrees with cited provenance")
+                if any(
+                    str(official_evidence[evidence_id].get("applicability", "")).startswith("not_stated")
+                    for evidence_id in surface.get("evidence_ids", [])
+                ):
+                    errors.append(f"agent {name!r} not_stated evidence cannot be a surface authority competitor")
 
         fixture = agent.get("fixture_contract")
         fixture_fields = {
@@ -1242,6 +1438,7 @@ def validate_repository(repo_root: Path = REPO_ROOT) -> list[str]:
         _validate_envelope(manifest, errors)
         _validate_agents(manifest, errors)
         _validate_identities_and_candidates(manifest, errors)
+        _validate_instruction_sources(manifest, root, errors)
         _validate_admission_binding(manifest, errors)
         _validate_inventory(manifest, errors)
         _validate_record_details(manifest, errors)

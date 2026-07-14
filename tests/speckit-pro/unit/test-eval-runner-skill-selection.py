@@ -449,6 +449,12 @@ def post_implementation_outcome_violations(bodies: dict[str, str]) -> list[str]:
             "`--source-feature-dir specs/<feature>`",
             "evidence, scoped evidence, prs, and moc files stay under the source feature directory while emitted head/base refs use the safe branch prefix",
         ),
+        "non-skippable idempotent PR creation": (
+            "`gh auth status`",
+            "`gh pr list --state open --head",
+            "`gh pr view <number>",
+            "a failed or ambiguous outcome leaves pr creation incomplete and cannot be converted to a skip",
+        ),
     }
     required_patterns = {
         "missing packet blocker": r"if any (?:required )?packet is absent or invalid,(?:.|\n){0,120}stop",

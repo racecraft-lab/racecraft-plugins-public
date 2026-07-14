@@ -158,6 +158,10 @@ def instruction_hash(body: str) -> str:
     return f"sha256:{hashlib.sha256(normalized.encode('utf-8')).hexdigest()}"
 
 
+def fixture_instruction_body(name: str) -> str:
+    return f"Role instructions for {name}.\r\nPreserve hard boundaries.\r"
+
+
 def slug(value: str) -> str:
     return "-".join(filter(None, re.split(r"[^a-z0-9]+", value.lower())))
 
@@ -216,37 +220,51 @@ def project_provenance(name: str) -> dict[str, object]:
     }
 
 
-def platform_provenance(name: str, feature: str) -> dict[str, object]:
-    return {
-        "evidence_id": f"platform-{name}",
-        "evidence_class": "official_openai",
-        "classification": "platform_fact",
-        "exact_locator": "Models > current model identifiers",
-        "observed_or_retrieved_on": "2026-07-14",
-        "surface": "cli",
-        "feature": feature,
-        "documented_scope": "Codex clients; exact version not stated",
-        "applicability": "documented",
-        "conflict_status": "none",
-        "invalidation_triggers": ["official documentation changes"],
-        "source_url": "https://platform.openai.com/docs/models",
+def surface_provenance(name: str, feature: str, surface: str) -> dict[str, object]:
+    sources = {
+        "model_identifiers": (
+            "https://developers.openai.com/codex/models",
+            "Recommended models; Choose a model",
+        ),
+        "reasoning_controls": (
+            "https://developers.openai.com/codex/config-reference",
+            "model_reasoning_effort",
+        ),
+        "custom_agent_fields": (
+            "https://developers.openai.com/codex/subagents",
+            "Custom agents; Custom agent file schema",
+        ),
+        "capability_discovery": (
+            "https://developers.openai.com/codex/app-server",
+            "Models / List models (model/list); Model provider capabilities; Experimental features",
+        ),
+        "telemetry": (
+            "https://developers.openai.com/codex/config-advanced",
+            "Observability and telemetry",
+        ),
+        "reroute_events": (
+            "https://developers.openai.com/codex/cyber-safety",
+            "How it works; False positives",
+        ),
+        "non_interactive_output": (
+            "https://developers.openai.com/codex/noninteractive",
+            "Make output machine-readable; --json; --output-schema",
+        ),
     }
-
-
-def surface_provenance(name: str, surface: str) -> dict[str, object]:
+    source_url, exact_locator = sources[feature]
     return {
-        "evidence_id": f"surface-{name}-{surface}",
+        "evidence_id": f"surface-{name}-{feature}-{surface}",
         "evidence_class": "official_openai",
         "classification": "platform_fact",
-        "exact_locator": f"Custom agents > {surface} applicability",
+        "exact_locator": exact_locator,
         "observed_or_retrieved_on": "2026-07-14",
         "surface": surface,
-        "feature": "custom_agent_fields",
-        "documented_scope": f"Custom-agent evidence scoped to {surface}.",
+        "feature": feature,
+        "documented_scope": f"{feature} evidence scoped to {surface}.",
         "applicability": "documented_for_named_scope_only",
         "conflict_status": "none",
         "invalidation_triggers": ["official documentation changes"],
-        "source_url": "https://developers.openai.com/codex/subagents",
+        "source_url": source_url,
     }
 
 
@@ -265,7 +283,7 @@ def basic_manifest() -> dict[str, object]:
             f"Authorization for {name}: permitted work follows the parent task; prohibited expansion "
             "requires stopping; only the parent or maintainer may approve escalation."
         )
-        body = f"Role instructions for {name}.\r\nPreserve hard boundaries.\r"
+        body = fixture_instruction_body(name)
         contract = {
             "agent_contract_id": f"agent-contract/{name}/v1",
             "instruction_hash": instruction_hash(body),
@@ -368,6 +386,50 @@ def basic_manifest() -> dict[str, object]:
                 "defect_owner": None,
             },
         ]
+        physical_families = ["CLAUDE"] if absent else ["CODEX"]
+        for family in physical_families:
+            physical_source = f"RP-SRC-{family}-{name}"
+            physical_payload = f"RP-PAYLOAD-{family}-{name}"
+            inventory.extend(
+                [
+                    {
+                        "entry_id": physical_source,
+                        "locator": f"speckit-pro/{'codex-agents' if family == 'CODEX' else 'agents'}/{name}.{'toml' if family == 'CODEX' else 'md'}",
+                        "integration_class": "source",
+                        "role": "producer",
+                        "affected_agents": [name],
+                        "policy_fields": ["model_id", "reasoning_effort", "instructions"],
+                        "authority_class": "canonical_project_source",
+                        "evidence_class": "tracked_source",
+                        "relationship": "canonical_input",
+                        "canonical_input_entry_id": None,
+                        "upstream_entry_ids": [],
+                        "downstream_entry_ids": [physical_payload],
+                        "revision_or_version": "0123456789abcdef",
+                        "observed_on": "2026-07-14",
+                        "mismatch_status": "matches",
+                        "defect_owner": None,
+                    },
+                    {
+                        "entry_id": physical_payload,
+                        "locator": f"dist/{family.lower()}/speckit-pro/{'codex-agents' if family == 'CODEX' else 'agents'}/{name}.{'toml' if family == 'CODEX' else 'md'}",
+                        "integration_class": "generated_payload",
+                        "role": "producer_consumer",
+                        "affected_agents": [name],
+                        "policy_fields": ["model_id", "reasoning_effort", "instructions"],
+                        "authority_class": "derived_output",
+                        "evidence_class": "tracked_source",
+                        "relationship": "derived_output",
+                        "canonical_input_entry_id": physical_source,
+                        "upstream_entry_ids": [physical_source],
+                        "downstream_entry_ids": [],
+                        "revision_or_version": "0123456789abcdef",
+                        "observed_on": "2026-07-14",
+                        "mismatch_status": "matches",
+                        "defect_owner": None,
+                    },
+                ]
+            )
         agents.append(
             {
                 "agent_name": name,
@@ -439,11 +501,12 @@ def basic_manifest() -> dict[str, object]:
                     {
                         "surface": surface,
                         "applicability": "undocumented",
-                        "feature": "custom_agent_fields",
-                        "evidence_ids": [f"surface-{name}-{surface}"],
+                        "feature": feature,
+                        "evidence_ids": [f"surface-{name}-{feature}-{surface}"],
                         "documented_scope": "not_stated",
                         "conflict_status": "none",
                     }
+                    for feature in sorted(PLATFORM_FEATURES)
                     for surface in sorted(SURFACES)
                 ],
                 "fixture_contract": {
@@ -486,8 +549,11 @@ def basic_manifest() -> dict[str, object]:
                 ],
                 "provenance": [
                     project_provenance(name),
-                    platform_provenance(name, PLATFORM_FEATURES[agent_index % len(PLATFORM_FEATURES)]),
-                    *(surface_provenance(name, surface) for surface in sorted(SURFACES)),
+                    *(
+                        surface_provenance(name, feature, surface)
+                        for feature in sorted(PLATFORM_FEATURES)
+                        for surface in sorted(SURFACES)
+                    ),
                 ],
                 "invalidation_triggers": [
                     "tracked route changes",
@@ -584,6 +650,21 @@ def basic_manifest() -> dict[str, object]:
 
 
 def write_artifacts(root: Path, manifest: dict[str, object]) -> None:
+    for name in sorted(AGENT_NAMES):
+        body = fixture_instruction_body(name)
+        if name in ABSENT_AGENTS:
+            write_text(
+                root,
+                Path(f"speckit-pro/agents/{name}.md"),
+                f"---\nname: {name}\n---\n{body}",
+            )
+        else:
+            write_text(
+                root,
+                Path(f"speckit-pro/codex-agents/{name}.toml"),
+                f"name = {json.dumps(name)}\n"
+                f"developer_instructions = {json.dumps(body)}\n",
+            )
     narrative_prefix = (
         "# Candidate Route Baseline\n\n"
         "<!-- g56r-001-human-narrative-sha256:sha256:"
@@ -730,7 +811,7 @@ class G56R001ArtifactTests(unittest.TestCase):
             missing_surface["agents"][0]["surface_records"].pop()
             write_artifacts(root, missing_surface)
             self.assertTrue(
-                any("surface set" in error for error in checker.validate_repository(root))
+                any("feature/surface pair" in error for error in checker.validate_repository(root))
             )
 
     def test_validates_workday_timestamps_and_sanitization(self) -> None:
@@ -802,6 +883,42 @@ class G56R001ArtifactTests(unittest.TestCase):
 
         self.assertEqual(checker.canonical_hash(decomposed), canonical_hash(normalized))
         self.assertEqual(checker.canonical_hash(decomposed), checker.canonical_hash(normalized))
+
+    def test_instruction_hashes_are_recomputed_from_source_bodies(self) -> None:
+        checker = self.require_checker()
+        with tempfile.TemporaryDirectory(prefix="g56r-001-artifacts-") as temporary:
+            root = Path(temporary)
+            manifest = basic_manifest()
+            write_artifacts(root, manifest)
+            source = root / "speckit-pro" / "codex-agents" / "analyze-executor.toml"
+            source.write_text(
+                source.read_text(encoding="utf-8").replace(
+                    "Preserve hard boundaries.", "Preserve changed boundaries."
+                ),
+                encoding="utf-8",
+            )
+
+            self.assertTrue(
+                any(
+                    "instruction_hash does not match complete decoded source body" in error
+                    for error in checker.validate_repository(root)
+                )
+            )
+
+    def test_claude_frontmatter_exclusion_preserves_body_separator_whitespace(self) -> None:
+        checker = self.require_checker()
+        with tempfile.TemporaryDirectory(prefix="g56r-001-artifacts-") as temporary:
+            root = Path(temporary)
+            write_text(
+                root,
+                Path("speckit-pro/agents/consensus-synthesizer.md"),
+                "---\nname: consensus-synthesizer\n---\n\n# Consensus Synthesizer\n",
+            )
+
+            body, error = checker.instruction_body(root, "consensus-synthesizer")
+
+            self.assertIsNone(error)
+            self.assertEqual(body, "\n# Consensus Synthesizer\n")
 
     def test_readable_ids_and_hash_format_are_enforced(self) -> None:
         checker = self.require_checker()
@@ -933,6 +1050,30 @@ class G56R001ArtifactTests(unittest.TestCase):
                 any("mismatching inventory entry" in error for error in checker.validate_repository(root))
             )
 
+            extra_claude = copy.deepcopy(manifest)
+            agent = extra_claude["agents"][0]
+            codex_source = next(
+                item for item in agent["route_policy_inventory"]
+                if item["entry_id"].startswith("RP-SRC-CODEX-")
+            )
+            codex_payload = next(
+                item for item in agent["route_policy_inventory"]
+                if item["entry_id"].startswith("RP-PAYLOAD-CODEX-")
+            )
+            name = agent["agent_name"]
+            claude_source = copy.deepcopy(codex_source)
+            claude_payload = copy.deepcopy(codex_payload)
+            claude_source["entry_id"] = f"RP-SRC-CLAUDE-{name}"
+            claude_source["downstream_entry_ids"] = [f"RP-PAYLOAD-CLAUDE-{name}"]
+            claude_payload["entry_id"] = f"RP-PAYLOAD-CLAUDE-{name}"
+            claude_payload["canonical_input_entry_id"] = claude_source["entry_id"]
+            claude_payload["upstream_entry_ids"] = [claude_source["entry_id"]]
+            agent["route_policy_inventory"].extend([claude_source, claude_payload])
+            write_artifacts(root, extra_claude)
+            self.assertTrue(
+                any("exact scoped set" in error for error in checker.validate_repository(root))
+            )
+
     def test_provenance_freshness_surfaces_and_source_observations_are_validated(self) -> None:
         checker = self.require_checker()
         with tempfile.TemporaryDirectory(prefix="g56r-001-artifacts-") as temporary:
@@ -950,6 +1091,24 @@ class G56R001ArtifactTests(unittest.TestCase):
             write_artifacts(root, unofficial)
             self.assertTrue(
                 any("official OpenAI" in error for error in checker.validate_repository(root))
+            )
+
+            wrong_locator = copy.deepcopy(manifest)
+            wrong_locator["agents"][0]["provenance"][1]["exact_locator"] = (
+                "Custom agents; Custom agent file schema"
+            )
+            write_artifacts(root, wrong_locator)
+            self.assertTrue(
+                any("locator does not belong" in error for error in checker.validate_repository(root))
+            )
+
+            unregistered_official = copy.deepcopy(manifest)
+            unregistered_official["agents"][0]["provenance"][1]["source_url"] = (
+                "https://developers.openai.com/codex/overview"
+            )
+            write_artifacts(root, unregistered_official)
+            self.assertTrue(
+                any("registered frozen official source" in error for error in checker.validate_repository(root))
             )
 
             missing_observation = copy.deepcopy(manifest)
@@ -977,6 +1136,135 @@ class G56R001ArtifactTests(unittest.TestCase):
                     for error in checker.validate_repository(root)
                 )
             )
+
+    def test_resolved_authority_requires_an_explicit_applicable_winner(self) -> None:
+        checker = self.require_checker()
+        manifest = basic_manifest()
+        agent = manifest["agents"][0]
+        surface = next(
+            item for item in agent["surface_records"]
+            if item["surface"] == "cli" and item["feature"] == "reasoning_controls"
+        )
+        primary = next(
+            item for item in agent["provenance"]
+            if item.get("evidence_id") == surface["evidence_ids"][0]
+        )
+        competitor = copy.deepcopy(primary)
+        competitor.update({
+            "evidence_id": "surface-reasoning-subagents-cli",
+            "source_url": "https://developers.openai.com/codex/subagents",
+            "exact_locator": "Reasoning effort (model_reasoning_effort)",
+        })
+        primary["conflict_status"] = "resolved_by_authority"
+        competitor["conflict_status"] = "resolved_by_authority"
+        agent["provenance"].append(competitor)
+        surface["conflict_status"] = "resolved_by_authority"
+        surface["evidence_ids"].append(competitor["evidence_id"])
+
+        errors = self.validation_errors(checker, manifest)
+
+        self.assertTrue(any("must name a winning evidence source" in error for error in errors), errors)
+
+    def test_not_stated_evidence_cannot_win_or_compete_in_authority_resolution(self) -> None:
+        checker = self.require_checker()
+        manifest = basic_manifest()
+        agent = manifest["agents"][0]
+        surface = next(
+            item for item in agent["surface_records"]
+            if item["surface"] == "cli" and item["feature"] == "reasoning_controls"
+        )
+        primary = next(
+            item for item in agent["provenance"]
+            if item.get("evidence_id") == surface["evidence_ids"][0]
+        )
+        competitor = copy.deepcopy(primary)
+        competitor.update({
+            "evidence_id": "surface-reasoning-subagents-cli",
+            "source_url": "https://developers.openai.com/codex/subagents",
+            "exact_locator": "Reasoning effort (model_reasoning_effort)",
+            "applicability": "not_stated_for_named_surface",
+        })
+        resolution = {
+            "winning_evidence_id": competitor["evidence_id"],
+            "authority_basis": "narrower explicit surface and feature scope",
+        }
+        primary.update({"conflict_status": "resolved_by_authority", "authority_resolution": resolution})
+        competitor.update({"conflict_status": "resolved_by_authority", "authority_resolution": resolution})
+        agent["provenance"].append(competitor)
+        surface.update({
+            "conflict_status": "resolved_by_authority",
+            "evidence_ids": [primary["evidence_id"], competitor["evidence_id"]],
+            "authority_resolution": resolution,
+        })
+
+        errors = self.validation_errors(checker, manifest)
+
+        self.assertTrue(any("not_stated evidence" in error for error in errors), errors)
+
+    def test_authority_winner_must_match_conflict_surface_and_feature(self) -> None:
+        checker = self.require_checker()
+        for mismatch in ("feature", "surface"):
+            with self.subTest(mismatch=mismatch):
+                manifest = basic_manifest()
+                provenance = manifest["agents"][0]["provenance"]
+                subject = next(
+                    item for item in provenance
+                    if item.get("surface") == "cli" and item.get("feature") == "reasoning_controls"
+                )
+                winner = next(
+                    item for item in provenance
+                    if (
+                        mismatch == "feature"
+                        and item.get("surface") == subject["surface"]
+                        and item.get("feature") != subject["feature"]
+                    ) or (
+                        mismatch == "surface"
+                        and item.get("surface") != subject["surface"]
+                        and item.get("feature") == subject["feature"]
+                    )
+                )
+                subject.update({
+                    "conflict_status": "resolved_by_authority",
+                    "authority_resolution": {
+                        "winning_evidence_id": winner["evidence_id"],
+                        "authority_basis": "claimed narrower scope",
+                    },
+                })
+
+                errors = self.validation_errors(checker, manifest)
+
+                self.assertTrue(any("match the conflict surface and feature" in error for error in errors), errors)
+
+    def test_surface_authority_resolution_must_match_cited_provenance(self) -> None:
+        checker = self.require_checker()
+        manifest = basic_manifest()
+        agent = manifest["agents"][0]
+        surface = next(
+            item for item in agent["surface_records"]
+            if item["surface"] == "cli" and item["feature"] == "reasoning_controls"
+        )
+        provenance = next(
+            item for item in agent["provenance"]
+            if item.get("evidence_id") == surface["evidence_ids"][0]
+        )
+        provenance.update({
+            "conflict_status": "resolved_by_authority",
+            "authority_resolution": {
+                "winning_evidence_id": provenance["evidence_id"],
+                "authority_basis": "narrower explicit feature scope",
+            },
+        })
+        surface.update({
+            "conflict_status": "resolved_by_authority",
+            "authority_resolution": {
+                "winning_evidence_id": provenance["evidence_id"],
+                "authority_basis": "different unsupported basis",
+            },
+        })
+
+        errors = self.validation_errors(checker, manifest)
+
+        self.assertTrue(any("resolution disagrees with cited provenance" in error for error in errors), errors)
 
     def test_parity_semantic_mappings_are_complete_and_exact(self) -> None:
         checker = self.require_checker()
@@ -1244,7 +1532,9 @@ class G56R001ArtifactTests(unittest.TestCase):
         surface = next(item for item in agent["surface_records"] if item["surface"] == "cli")
         official = next(
             item for item in agent["provenance"]
-            if item["classification"] == "platform_fact" and item["surface"] == "cli"
+            if item["classification"] == "platform_fact"
+            and item["surface"] == "cli"
+            and item["feature"] != surface["feature"]
         )
         self.assertNotEqual(surface["feature"], official["feature"])
         surface["applicability"] = "not_applicable"

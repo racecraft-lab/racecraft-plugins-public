@@ -603,8 +603,10 @@ If `--from-phase` is specified, start from that phase regardless
 of the status table.
 
 If all seven SDD phases are complete, check Post state before stopping.
-If every required Post item is complete or explicitly skipped, report
-"All phases and post-implementation items complete" and stop. If Post
+If every required Post item is complete, every optional skip is authorized by
+its named fail-open procedure, and PR Creation contains a verified GitHub PR
+number and URL, report "All phases and post-implementation items complete" and
+stop. PR packet generation, push, and PR creation are non-skippable. If Post
 items are missing, pending, or in progress, continue into Step 1.1 to create
 or rebuild the Post plan items, then execute Step 3.
 
@@ -993,15 +995,16 @@ missing; equivalently, if any Post item is pending, in_progress, or
 missing. If the audit finds incomplete Post work, set the first
 incomplete item to `in_progress` in both state stores and continue the
 autopilot loop instead of summarizing. `Post: Retrospective` is the final
-Post item; it must be completed or explicitly skipped before the
-autopilot can report completion.
+Post item; it must be completed before the autopilot can report completion.
 
 Audit invariant: any Post item is pending, in_progress, or missing means
 the autopilot is not complete.
 
-Only after every Post item is completed or explicitly skipped, and the
-PR URL is known, the autopilot is DONE. Report the final summary with
-PR URL.
+Only after every required Post item is completed, every optional skip is
+explicitly authorized, and a live exact-head/base lookup verifies the recorded
+PR number and URL, the autopilot is DONE. Report the final summary with PR URL.
+Any packet, push, auth, create, or reconciliation failure leaves PR Creation
+incomplete; it can never be converted to `skipped`.
 
 ## Workflow File Update Protocol + Error Recovery
 

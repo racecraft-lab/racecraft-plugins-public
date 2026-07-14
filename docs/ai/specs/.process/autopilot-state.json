@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/G56R-001-workflow.md",
   "spec_id": "G56R-001",
   "feature_dir": "specs/g56r-001-candidate-route-baseline",
-  "updated_at": "2026-07-14T21:28:34Z",
-  "active_step": "Complete",
-  "status": "completed",
+  "updated_at": "2026-07-14T17:43:58-05:00",
+  "active_step": "Post: Adversarial Review and Durable PR Recovery",
+  "status": "in_progress",
   "archive_sweep": {
     "status": "no_candidates",
     "execution_path": "extension_contract",
@@ -270,10 +270,12 @@
       "parallel_tasks": 0,
       "user_stories": ["US1"],
       "acceptance_criteria": ["AC-1.1", "AC-1.2", "AC-1.3", "AC-1.4", "AC-1.5", "AC-1.6", "AC-1.7"],
-      "gate": {"id": "G5", "status": "pass", "reason": "26 tasks found on Analyze remediation rerun"},
+      "gate": {"id": "G5", "status": "pass", "reason": "22 tasks initially generated; Analyze remediation rerun produced and verified 26 tasks"},
       "post_hook": "optional_git_commit_skipped_parent_checkpoint_owner",
       "spec_index": {"status": "regenerated", "touched": ["specs/g56r-001-candidate-route-baseline/SPEC-MOC.md"]},
-      "checkpoint_commit": "1aaeca511c4685bf252ec511384ce0d98e135e27"
+      "checkpoint_commit": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+      "initial_generation": {"task_count": 22, "task_range": "T001-T022", "checkpoint_commit": "1aaeca511c4685bf252ec511384ce0d98e135e27"},
+      "analyze_remediation_rerun": {"task_count": 26, "task_range": "T001-T026", "checkpoint_commit": "7f8c17369e15a359c6e24eea844c79a2d47d3bab"}
     },
     "atomicity": {
       "route": "one-navigable-PR",
@@ -346,6 +348,19 @@
           "bind not_applicable official evidence to both surface and feature"
         ]
       },
+      "adversarial_findings": {
+        "status": "resolved",
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "items": [
+          "bind parity hashes to the exact source-body byte boundary",
+          "require the exact seven-feature by four-surface evidence matrix",
+          "resolve official reasoning evidence by feature-specific authority",
+          "limit physical Claude parity inventory to the two actual chains",
+          "refresh terminal hashes, time, projection, task checkpoints, and roadmap status"
+        ]
+      },
       "tdd_evidence": [
         {
           "tasks": ["T002"],
@@ -404,11 +419,12 @@
           "result": "45/45 passed; final independent review found 0 CRITICAL/HIGH gaps"
         }
       ],
-      "stopped_at": "2026-07-14T14:55:31-05:00",
-      "manifest_content_hash": "sha256:a1ecc5b8a837e1b08175d480ae9ad08131b3d2a94bb8ef220bce1205de49198e",
+      "stopped_at": "2026-07-14T17:43:58-05:00",
+      "manifest_content_hash": "sha256:dd74647af70ca48f7aa66d7e9287e60f4e96d99da41c11a06b0fcf0ad478f878",
+      "narrative_content_hash": "sha256:89b688e0641636a9921b923a021a29cf230e52e8880cb80831607b03d0ac9288",
       "terminal_handoff": "go",
       "verification": {
-        "focused": "48/48",
+        "focused": "55/55",
         "runner_guard": "11/11",
         "privacy": "10/10",
         "layer_4": "1190/1190",
@@ -423,24 +439,26 @@
         "status": "pass",
         "reason": "T001-T026 complete; terminal go reproduced by two identical checker runs"
       },
-      "checkpoint_commit": "15399458"
+      "checkpoint_commit": "pending_final_remediation_commit"
     }
   },
   "post_results": {
     "doctor": {"status": "completed", "result": "5 PASS, 0 WARN, 0 FAIL"},
-    "verify": {"status": "completed", "tasks": "26/26", "requirements": "27/27", "findings": 0},
+    "verify": {"status": "in_progress", "tasks": "26/26", "requirements": "27/27", "focused": "55/55", "final_suite": "in_progress"},
     "verify_tasks": {"status": "completed", "verified": 26, "flagged": 0, "report": "specs/g56r-001-candidate-route-baseline/verify-tasks-report.md"},
-    "code_review": {"status": "completed", "disposition": "approve", "risk": "low", "actionable_findings": 0},
-    "integration_suite": {"status": "completed", "timestamp": "2026-07-14T21:19:18Z", "preflight": "pass", "layer_1": "1427/1427", "layer_4": "1190/1190", "layer_5": "186/186", "default": "2803/2803"},
-    "reviewability_diff": {"status": "completed", "disposition": "warn", "pass": true, "full_branch_files": 24, "full_branch_additions": 17628, "full_branch_deletions": 7691, "implementation_paths": 6, "implementation_additions": 13432, "production_files": 0, "production_loc": 0, "atomicity_route": "one-navigable-PR"},
-    "self_review": {"status": "completed", "edge_case_gaps": 0, "requirement_orphans": 0, "task_orphans": 0, "silent_markers": 0, "tidiness_findings": 0},
+    "code_review": {"status": "completed", "disposition": "approve", "risk": "low", "actionable_findings": 0, "adversarial_agents": ["spec_adversary", "evidence_adversary", "repair_adversary"]},
+    "integration_suite": {"status": "in_progress", "preflight": "pass", "layer_1": "1427/1427", "layer_4": "in_progress", "layer_5": "186/186", "integration": "257/257", "default": "pending"},
+    "reviewability_diff": {"status": "in_progress", "route": "single_combined_pr", "exception": "specs/g56r-001-candidate-route-baseline/contracts/combined-pr-reviewability-exception.md", "reason": "user explicitly required one PR containing G56R-001 plus the durable cross-client SpecKit Pro repair"},
+    "self_review": {"status": "pending_rerun", "edge_case_gaps": 0, "requirement_orphans": 0, "task_orphans": 0, "silent_markers": 0, "tidiness_findings": 0},
     "uat_runbook": {"status": "skipped", "reason": "generate-uat-skeleton deferred; no committed source-derived runbook"},
-    "final_reviewability_backstop": {"status": "completed", "disposition": "warn_proceed", "marker_plan": null, "autopilot_continuation_required": false},
-    "pr_packet_body_generation": {"status": "skipped", "reason": "pr-packet-output deferred; current packet absent"},
-    "pr_body_generation": {"status": "skipped", "reason": "current packet and packet-owned body absent"},
-    "pr_creation": {"status": "skipped", "reason": "no current validated packet; no push or PR side effects"},
-    "review_remediation": {"status": "skipped", "reason": "no PR created; local independent review already approved"},
-    "retrospective": {"status": "completed", "report": "specs/g56r-001-candidate-route-baseline/retrospective.md", "completion_rate": 100, "spec_adherence": 100, "critical_findings": 0, "unresolved_findings": 0, "proposed_spec_changes": 0}
+    "final_reviewability_backstop": {"status": "in_progress", "disposition": "combined_pr_exception_recorded", "autopilot_continuation_required": true},
+    "adversarial_review": {"status": "completed", "disposition": "approve", "official_research": "Tavily live official documentation recheck complete", "community_research": "OWASP, W3C PROV-DM, SLSA, OpenTelemetry, OpenAI eval guidance, RouteLLM, and RouterBench reviewed; downstream recommendations only", "agents": ["spec_adversary", "evidence_adversary", "repair_adversary"]},
+    "failure_recovery": {"status": "in_progress", "root_cause": "PR packet output was deferred and PR creation could terminate as a skip; legacy packets also lacked source-revision freshness protection", "durable_fix": "shared runner schema/helpers plus both Codex and Claude autopilot completion contracts make packet, push, and verified PR creation fail-closed and idempotently reconciled"},
+    "pr_packet_body_generation": {"status": "pending", "reason": "generate only after final clean committed source state"},
+    "pr_body_generation": {"status": "pending", "reason": "owned by the validated PR packet"},
+    "pr_creation": {"status": "pending", "reason": "cannot complete without verified GitHub PR number, URL, head, and base"},
+    "review_remediation": {"status": "pending", "reason": "requires the live PR"},
+    "retrospective": {"status": "in_progress", "report": "specs/g56r-001-candidate-route-baseline/retrospective.md", "completion_rate": 100, "spec_adherence": 100, "critical_findings": 0, "unresolved_findings": 0, "proposed_spec_changes": 0}
   },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
@@ -471,18 +489,19 @@
     {"step": "Phase 7: Implement T020-T022 - deps T014-T019; TDD projection agreement checks; PROJECT_COMMANDS focused unit, Layer 4, integration, full verify; COMPLETED_TASKS T001-T022", "status": "completed"},
     {"step": "Phase 7: Implement T023-T026 - deps T020-T022; TDD GREEN repeatability and full verification; PROJECT_COMMANDS focused unit, Layer 4, integration, full verify; COMPLETED_TASKS T001-T026", "status": "completed"},
     {"step": "Post: Doctor Extension Check", "status": "completed"},
-    {"step": "Post: Verify Implementation", "status": "completed"},
+    {"step": "Post: Verify Implementation", "status": "pending"},
     {"step": "Post: Verify Tasks Phantom Check", "status": "completed"},
     {"step": "Post: Code Review", "status": "completed"},
-    {"step": "Post: Integration Suite", "status": "completed"},
-    {"step": "Post: Reviewability Diff Gate", "status": "completed"},
-    {"step": "Post: Self-Review", "status": "completed"},
+    {"step": "Post: Integration Suite", "status": "pending"},
+    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
+    {"step": "Post: Self-Review", "status": "pending"},
     {"step": "Post: UAT Runbook Generation", "status": "skipped"},
-    {"step": "Post: Final Reviewability Backstop", "status": "completed"},
-    {"step": "Post: PR Packet/Body Generation", "status": "skipped"},
-    {"step": "Post: PR Body Generation", "status": "skipped"},
-    {"step": "Post: PR Creation", "status": "skipped"},
-    {"step": "Post: Review Remediation", "status": "skipped"},
-    {"step": "Post: Retrospective", "status": "completed"}
+    {"step": "Post: Final Reviewability Backstop", "status": "pending"},
+    {"step": "Post: Adversarial Review and Durable PR Recovery", "status": "in_progress"},
+    {"step": "Post: PR Packet/Body Generation", "status": "pending"},
+    {"step": "Post: PR Body Generation", "status": "pending"},
+    {"step": "Post: PR Creation", "status": "pending"},
+    {"step": "Post: Review Remediation", "status": "pending"},
+    {"step": "Post: Retrospective", "status": "pending"}
   ]
 }

@@ -584,8 +584,9 @@ detailed procedures in `references/post-implementation.md`:
    error writes state and stops without a packet. After a single-route proceed
    result, invoke the `golden_only` `pr-packet-output` helper in `apply` mode
    with grounded feature, title, UAT, verification, scope, gap, and source-marker
-   inputs. It derives the current branch, changed-file scope, body path, packet
-   path, protected fingerprint, and validation-result path, then atomically
+   inputs. It derives the current branch, immutable base/source HEAD SHAs,
+   source-diff fingerprint, changed-file scope, body path, packet path,
+   versioned protected fingerprint, and validation-result path, then atomically
    writes the body before the authorizing single-packet JSON at
    `specs/<feature>/.process/pr-packets/<packet-id>.json`. Callers must not pass
    raw output paths, content, operations, or split metadata. The helper supports
@@ -620,7 +621,11 @@ detailed procedures in `references/post-implementation.md`:
    already exists and passes the same read-only validation; otherwise stop
    blocked with validator evidence because split packet output remains deferred.
    Commit the generated packet artifacts, reverify and revalidate them, push,
-   create the PR, then update the workflow file.
+   create the PR, then update the workflow file. Packet generation, push, and
+   PR creation are non-skippable. Require `gh` availability/authentication,
+   exact head/base existing-PR reconciliation before and after create, and a
+   verified PR number and URL in durable workflow/state evidence. A failure
+   leaves PR Creation incomplete; it never authorizes a skip or completion.
    Required evidence prompts: gate status/mode/exit/evidence path,
    fingerprint status, ordered marker IDs, checkpoints, warnings, final
    marker_split or marker-plan-ready handoff, packet validation, and PR
@@ -628,8 +633,10 @@ detailed procedures in `references/post-implementation.md`:
 6. **3.3 Review Remediation** — schedule `/loop` to monitor
    and resolve Copilot/human review comments every 5 minutes
 
-After scheduling the loop, the autopilot is DONE. Report
-the final summary with PR URL.
+After scheduling the loop, re-read the workflow and state. The autopilot is
+DONE only when every required Post item is complete, each optional skip is
+authorized by its named fail-open procedure, and a live exact-head/base lookup
+verifies the recorded PR number and URL. Report the final summary with PR URL.
 
 ## Workflow File Update Protocol
 

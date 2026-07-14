@@ -2143,6 +2143,49 @@ def protected_body_sha256(body_text: str) -> str:
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
+def legacy_protected_body_sha256(body_text: str) -> str:
+    """Validate pre-profile packets using their original Summary-to-Known-Gaps span."""
+
+    normalized: list[str] = []
+    in_packet = False
+    editable_field = ""
+    seen_known_gaps = False
+    known_gaps_body_seen = False
+    for raw_line in body_text.splitlines():
+        line = raw_line.rstrip(" \t\r")
+        if not in_packet and line == "## Summary":
+            in_packet = True
+        if not in_packet:
+            continue
+        if seen_known_gaps and known_gaps_body_seen and not line:
+            break
+        if seen_known_gaps and re.match(r"^#{1,6}\s+", line):
+            break
+        start = re.fullmatch(
+            r"<!-- speckit-pro-editable:(summary|what_changed|why_it_matters):start -->",
+            line,
+        )
+        if not editable_field and start:
+            editable_field = start.group(1)
+            normalized.extend([line, f"<elided:{editable_field}>"])
+            continue
+        if editable_field and line == f"<!-- speckit-pro-editable:{editable_field}:end -->":
+            editable_field = ""
+            normalized.append(line)
+            continue
+        if editable_field:
+            continue
+        normalized.append(line)
+        if line == "## Known Gaps":
+            seen_known_gaps = True
+        elif seen_known_gaps and line:
+            known_gaps_body_seen = True
+    content = "\n".join(normalized)
+    if normalized:
+        content += "\n"
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
 def pr_packet_body_failures(data: dict[str, Any], repo_root: Path) -> list[dict[str, Any]]:
     body_file = data.get("body_file")
     if not isinstance(body_file, str) or not body_file:
@@ -2170,7 +2213,13 @@ def pr_packet_body_failures(data: dict[str, Any], repo_root: Path) -> list[dict[
     fingerprint = data.get("protected_body_fingerprint")
     expected = fingerprint.get("value") if isinstance(fingerprint, dict) else None
     if isinstance(expected, str) and re.fullmatch(r"[a-f0-9]{64}", expected):
-        if protected_body_sha256(body_text) != expected:
+        profile = fingerprint.get("normalization_profile")
+        actual = (
+            protected_body_sha256(body_text)
+            if profile == "whole_body_v2"
+            else legacy_protected_body_sha256(body_text)
+        )
+        if actual != expected:
             return [
                 {
                     "rule": "body.protected_fingerprint",
@@ -2179,6 +2228,133 @@ def pr_packet_body_failures(data: dict[str, Any], repo_root: Path) -> list[dict[
                 }
             ]
     return []
+
+
+def _git_bytes(repo_root: Path, *args: str) -> subprocess.CompletedProcess[bytes] | None:
+    try:
+        return subprocess.run(
+            ["git", "-C", str(repo_root), *args],
+            capture_output=True,
+            shell=False,
+            check=False,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+
+
+def pr_packet_source_failures(
+    data: dict[str, Any], packet_path: Path, repo_root: Path
+) -> list[dict[str, Any]]:
+    """Bind schema 1.1 single packets to their immutable source revision and scope."""
+
+    if data.get("schema_version") == "1.0.0":
+        return [{
+            "rule": "source.legacy_unbound",
+            "field": "schema_version",
+            "message": "Legacy schema 1.0 packets have no trusted source-revision binding and cannot authorize PR creation.",
+        }]
+    if data.get("schema_version") != "1.1.0":
+        return [{
+            "rule": "source.currentness",
+            "field": "schema_version",
+            "message": "Only source-bound schema 1.1 packets can authorize PR creation.",
+        }]
+    source = data.get("source_revision")
+    target = data.get("target")
+    scope = data.get("scope_evidence")
+    body_file = data.get("body_file")
+    if not all(isinstance(value, dict) for value in (source, target, scope)) or not isinstance(body_file, str):
+        return [{
+            "rule": "source.currentness",
+            "field": "source_revision",
+            "message": "Packet source revision evidence is incomplete.",
+        }]
+    assert isinstance(source, dict) and isinstance(target, dict) and isinstance(scope, dict)
+    if target.get("base_branch") == target.get("head_branch"):
+        return [{
+            "rule": "source.branch_distinct",
+            "field": "target",
+            "message": "Packet head branch must differ from its base branch.",
+        }]
+
+    base_ref = source.get("base_ref")
+    base_sha = source.get("base_sha")
+    source_head = source.get("source_head_sha")
+    diff_record = source.get("source_diff_fingerprint")
+    expected_diff = diff_record.get("value") if isinstance(diff_record, dict) else None
+    if not all(isinstance(value, str) and value for value in (base_ref, base_sha, source_head, expected_diff)):
+        return [{
+            "rule": "source.currentness",
+            "field": "source_revision",
+            "message": "Packet source revision values are incomplete.",
+        }]
+
+    commands = {
+        "branch": ("symbolic-ref", "--quiet", "--short", "HEAD"),
+        "base": ("rev-parse", "--verify", "--quiet", f"{base_ref}^{{commit}}"),
+        "head": ("rev-parse", "--verify", "--quiet", "HEAD^{commit}"),
+        "ancestor": ("merge-base", "--is-ancestor", source_head, "HEAD"),
+        "source_diff": ("diff", "--binary", "--full-index", f"{base_sha}...{source_head}", "--"),
+        "changed": ("diff", "--name-only", "-z", f"{base_sha}...HEAD", "--"),
+        "unstaged": ("diff", "--name-only", "-z", "--"),
+        "staged": ("diff", "--cached", "--name-only", "-z", "--"),
+        "untracked": ("ls-files", "--others", "--exclude-standard", "-z"),
+    }
+    results = {name: _git_bytes(repo_root, *command) for name, command in commands.items()}
+    if any(result is None for result in results.values()) or any(
+        result.returncode != 0
+        for name, result in results.items()
+        if name != "ancestor" and result is not None
+    ) or results["ancestor"] is None or results["ancestor"].returncode != 0:
+        return [{
+            "rule": "source.currentness",
+            "field": "source_revision",
+            "message": "Packet source revision is unavailable or is not an ancestor of current HEAD.",
+        }]
+
+    def decoded(name: str, encoding: str = "utf-8") -> str:
+        result = results[name]
+        assert result is not None
+        return result.stdout.decode(encoding, errors="strict")
+
+    failures: list[dict[str, Any]] = []
+    if decoded("branch").strip() != target.get("head_branch"):
+        failures.append({"rule": "source.head_branch", "field": "target.head_branch", "message": "Current branch differs from the packet head branch."})
+    if decoded("base", "ascii").strip() != base_sha:
+        failures.append({"rule": "source.base_sha", "field": "source_revision.base_sha", "message": "Packet base revision moved after generation."})
+    source_diff_result = results["source_diff"]
+    assert source_diff_result is not None
+    if hashlib.sha256(source_diff_result.stdout).hexdigest() != expected_diff:
+        failures.append({"rule": "source.diff_fingerprint", "field": "source_revision.source_diff_fingerprint", "message": "Packet source diff fingerprint is stale."})
+
+    packet_rel = packet_path.relative_to(repo_root).as_posix()
+    allowed_outputs = {packet_rel, body_file}
+    dirty_paths: set[str] = set()
+    for name in ("unstaged", "staged", "untracked"):
+        dirty_paths.update(path for path in decoded(name).split("\0") if path)
+    unexpected_dirty = sorted(dirty_paths - allowed_outputs)
+    if unexpected_dirty:
+        failures.append({"rule": "source.worktree", "field": "source_revision", "message": "Non-packet worktree changes make packet evidence stale."})
+
+    changed = {path for path in decoded("changed").split("\0") if path} | allowed_outputs
+    expected_changed = scope.get("changed_files")
+    if not isinstance(expected_changed, list) or sorted(changed) != sorted(expected_changed):
+        failures.append({"rule": "source.changed_files", "field": "scope_evidence.changed_files", "message": "Current base-to-head scope differs from the packet changed-file evidence."})
+
+    post_source = _git_bytes(
+        repo_root,
+        "diff",
+        "--quiet",
+        f"{source_head}..HEAD",
+        "--",
+        ".",
+        f":(exclude){packet_rel}",
+        f":(exclude){body_file}",
+    )
+    if post_source is None or post_source.returncode != 0:
+        failures.append({"rule": "source.post_generation_change", "field": "source_revision.source_head_sha", "message": "A non-packet file changed after packet generation."})
+    return failures
 
 
 def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
@@ -2239,6 +2415,7 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
         if path_diag is not None:
             failures.append({"rule": "input.path.body_file", "field": "body_file", "message": path_diag["message"]})
     failures.extend(pr_packet_body_failures(data, repo_root))
+    failures.extend(pr_packet_source_failures(data, packet, repo_root))
     if failures:
         rules = ",".join(sorted({failure["rule"] for failure in failures}))
         stderr_line = f"validate-pr-packet-read-only: validation_failure: {packet_id}: {rules}: {validation_path}"

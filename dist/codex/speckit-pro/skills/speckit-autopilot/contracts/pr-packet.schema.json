@@ -24,7 +24,7 @@
   "properties": {
     "schema_version": {
       "type": "string",
-      "pattern": "^1\\.0\\.0$"
+      "enum": ["1.0.0", "1.1.0"]
     },
     "packet_id": {
       "type": "string",
@@ -36,6 +36,9 @@
     },
     "target": {
       "$ref": "#/$defs/pr_target"
+    },
+    "source_revision": {
+      "$ref": "#/$defs/source_revision"
     },
     "source_feature_dir": {
       "type": "string",
@@ -215,6 +218,23 @@
   "allOf": [
     {
       "if": {
+        "properties": { "schema_version": { "const": "1.1.0" } },
+        "required": ["schema_version"]
+      },
+      "then": {
+        "required": ["source_revision"],
+        "properties": {
+          "protected_body_fingerprint": {
+            "required": ["normalization_profile"],
+            "properties": {
+              "normalization_profile": { "const": "whole_body_v2" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
         "properties": { "mode": { "const": "split" } },
         "required": ["mode"]
       },
@@ -229,6 +249,35 @@
     }
   ],
   "$defs": {
+    "source_revision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base_ref", "base_sha", "source_head_sha", "source_diff_fingerprint"],
+      "properties": {
+        "base_ref": {
+          "type": "string",
+          "pattern": "^refs/(?:heads|remotes/origin)/[A-Za-z0-9][A-Za-z0-9._/-]*$"
+        },
+        "base_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40,64}$"
+        },
+        "source_head_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40,64}$"
+        },
+        "source_diff_fingerprint": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["algorithm", "value", "normalization"],
+          "properties": {
+            "algorithm": { "const": "sha256" },
+            "value": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "normalization": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
     "pr_target": {
       "type": "object",
       "additionalProperties": false,
@@ -381,6 +430,10 @@
         "algorithm": {
           "type": "string",
           "enum": ["sha256"]
+        },
+        "normalization_profile": {
+          "type": "string",
+          "enum": ["legacy_summary_to_known_gaps_v1", "whole_body_v2"]
         },
         "value": {
           "type": "string",

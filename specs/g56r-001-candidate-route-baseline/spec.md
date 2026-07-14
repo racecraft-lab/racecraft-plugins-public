@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-14
 
-**Status**: Draft
+**Status**: Complete
 
 **Input**: User description: "Define a one-working-day, research-only candidate route baseline and role contracts for all twelve named agents."
 
@@ -113,6 +113,11 @@ decision without consulting undocumented context or executing a candidate.
   `blocking_no_go` when it prevents the objective completeness gate, or as
   `nonblocking_deferred` only when it supports no G56R-001 conclusion and has a
   named owner, impact, and follow-up.
+- **Authority-resolution proof**: `resolved_by_authority` MUST name the winning
+  evidence ID and the narrower explicit surface/version/feature basis. Evidence
+  recorded as `not_stated` for that surface can neither win nor participate as
+  a competing authority. An intersection or admission restriction derived from
+  multiple sources is `proposed_policy`, not an authority resolution.
 - **Freshness and invalidation rule**: Platform and environment evidence used
   by a passing completion check MUST be retrieved or observed during the
   recorded workday; project evidence MUST match the pinned research revision.
@@ -150,6 +155,9 @@ decision without consulting undocumented context or executing a candidate.
   `json.dumps(..., ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)`
   serialization. IDs, hashes, routes, candidates, provenance, and presentation
   fields are excluded from the contract-hash payload.
+  For Claude frontmatter sources, the body begins immediately after the LF
+  terminating the closing `---`; every following character, including the
+  blank separator LF before the first heading, remains part of the body.
 - **Required record fields**: Every agent record contains `agent_name`,
   `agent_contract`, `production_route`, and `candidates`. `agent_contract`
   contains both IDs and hashes plus every FR-006 semantic field.

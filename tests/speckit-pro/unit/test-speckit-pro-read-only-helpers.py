@@ -886,7 +886,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
         failures = json.loads(result["stdout"])["failures"]
         self.assertIn("body.readable", {failure["rule"] for failure in failures})
 
-    def test_validate_pr_packet_checks_body_currentness_without_writing_state(self) -> None:
+    def test_validate_pr_packet_checks_legacy_body_currentness_but_blocks_pr(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
             self.skipTest("validate-pr-packet currentness case")
         for packet_name in ("valid-single.json", "valid-split.json"):
@@ -898,12 +898,17 @@ class ReadOnlyHelperTests(unittest.TestCase):
                         {"packet_path": valid_packet_path.relative_to(REPO_ROOT).as_posix()},
                     )
                 )
-                self.assertEqual(completed.returncode, 0)
-                self.assert_response(response, "ok", 0)
-                self.assertEqual(response["data"]["stdout_json"]["status"], "passed")
+                self.assertEqual(completed.returncode, 1)
+                self.assert_response(response, "expected_failure", 1)
+                result = response["data"]["stdout_json"]
+                self.assertEqual(result["status"], "failed")
+                self.assertTrue(result["pr_blocked"])
+                rules = {failure["rule"] for failure in result["failures"]}
+                self.assertIn("source.legacy_unbound", rules)
+                self.assertNotIn("body.protected_fingerprint", rules)
                 self.assertFalse(response["data"]["writes_state"])
                 self.assertEqual(response["data"]["promotion_status"], "python_authoritative")
-                self.assertEqual(stderr_records, [])
+                self.assertEqual(stderr_records, response["diagnostics"])
 
         stale_packet = PR_PACKET_FIXTURE_DIR / "invalid-protected-edit.json"
         completed, response, stderr_records = run_runner(
@@ -947,13 +952,17 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
                 )
             )
-        self.assertEqual(completed.returncode, 0)
-        self.assert_response(response, "ok", 0)
-        self.assertEqual(response["data"]["stdout_json"]["status"], "passed")
-        self.assertFalse(response["data"]["stdout_json"]["pr_blocked"])
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure", 1)
+        result = response["data"]["stdout_json"]
+        self.assertEqual(result["status"], "failed")
+        self.assertTrue(result["pr_blocked"])
+        rules = {failure["rule"] for failure in result["failures"]}
+        self.assertIn("source.legacy_unbound", rules)
+        self.assertNotIn("body.protected_fingerprint", rules)
         self.assertFalse(response["data"]["writes_state"])
         self.assertEqual(response["data"]["promotion_status"], "python_authoritative")
-        self.assertEqual(stderr_records, [])
+        self.assertEqual(stderr_records, response["diagnostics"])
 
         from speckit_pro_runner.helpers.read_only import protected_body_sha256
 

@@ -2,7 +2,7 @@
 up: "[Codex Agent Model Routing and Graceful Fallback Implementation Roadmap](codex-gpt-5-6-agent-routing-technical-roadmap.md)"
 related:
   - "[Codex Agent Model Routing and Graceful Fallback PRD](../../prd-codex-gpt-5-6-agent-routing.md)"
-status: "Draft; G56R-001 in progress"
+status: "Draft; G56R-001 complete"
 rank:
 spec_id: "codex-gpt-5-6-agent-routing"
 structureVersion: 1

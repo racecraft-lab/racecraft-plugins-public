@@ -49,7 +49,7 @@
       "helper_id": "pr-packet-output",
       "operation": "pr-packet-output",
       "modes": ["dry_run", "apply"],
-      "failure_classes": ["invalid_input", "dirty_worktree", "unsupported_path", "write_failure", "partial_failure"],
+      "failure_classes": ["invalid_input", "dirty_worktree", "git_status_unavailable", "existing_pr_packet_output", "partial_pr_packet_output", "unsupported_path", "write_failure", "partial_failure"],
       "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/mutation-helpers/requests/pr-packet-output.json"
     },
     {

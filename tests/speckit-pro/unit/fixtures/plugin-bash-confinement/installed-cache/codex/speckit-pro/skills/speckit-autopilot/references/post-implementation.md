@@ -322,6 +322,12 @@ test count, pass/fail, regressions found.
 
 ## 3.2 PR Creation
 
+PR creation is non-skippable. Only rows whose procedure explicitly names an
+optional fail-open boundary may be skipped. Authentication, packet generation,
+push, create, or reconciliation failures leave PR Creation incomplete and the
+autopilot must not report completion. Completion requires a verified GitHub PR
+number, URL, head, and base in both the workflow and `autopilot-state.json`.
+
 For specs whose atomicity route is `split-PR`, PR creation is multi-PR
 emission. The PRSG-008 `plan-layers` output is the authoritative source of
 review order and slice membership. The post-implementation phase MUST NOT infer, reroute, or re-slice
@@ -390,7 +396,10 @@ opens one slice PR.
    branch, exact changed-file list, total file count, fixed headings/editable
    markers, feature-local body/packet/validation paths, and protected body
    fingerprint. It uses atomic file writes in body-then-packet order so a
-   partial failure cannot create a new authorizing packet. Require the response
+   partial failure cannot create a new authorizing packet. The packet also
+   binds immutable base/source HEAD SHAs and a source-diff fingerprint, and its
+   protected body fingerprint declares a versioned normalization profile.
+   Require the response
    packet path to equal
    `specs/<feature>/.process/pr-packets/<packet-id>.json`.
    `base_ref` accepts only the exact `<base_branch>` or
@@ -458,8 +467,11 @@ opens one slice PR.
    remediation changes repository bytes or packet evidence, remove the stale
    packet artifacts and return to Step 6 from a clean worktree. Detect the
    remote and push the packet commit only after every repeated check passes.
-6g. Create the single PR from packet fields, never from branch-derived title
-   text or hand-written body content:
+6g. Require `gh --version` and `gh auth status`. Reconcile by exact packet head
+   and base with `gh pr list --state open --head <head> --base <base> --json
+   number,url,headRefName,baseRefName`. Reuse one exact match; multiple matches
+   block as ambiguous. With zero matches, create the single PR from packet
+   fields, never from branch-derived title text or hand-written body content:
    ```text
    gh pr create \
      --base <packet.target.base_branch> \
@@ -467,6 +479,14 @@ opens one slice PR.
      --title <packet.generated_title.value> \
      --body-file <packet.body_file>
    ```
+6h. After success or an ambiguous create error, repeat the exact head/base
+   lookup before retrying. Verify the single result with `gh pr view <number>
+   --json number,url,state,headRefName,baseRefName`; require an open PR with the
+   packet-owned head/base. Persist its number and URL in both durable state
+   stores. Zero/multiple matches, failed auth, or mismatched view leaves PR
+   Creation incomplete and cannot be converted to a skip.
+   A failed or ambiguous outcome leaves PR Creation incomplete and cannot be
+   converted to a skip.
 7. For split-PR routes, marker_split final-backstop outcomes, or any current
    `pr_marker_plan` marked emission-ready, use the layer/marker plan as the only
    ordering and membership source after the final backstop proceeds.
@@ -532,9 +552,10 @@ opens one slice PR.
     slice PRs as blocked.
 ```
 
-If `gh` is not installed, push the branch and tell the user
-to create the missing slice PRs manually using the same explicit base/head/body
-shape.
+If `gh` is not installed or authenticated, preserve the pushed branch and
+packet evidence, leave PR Creation incomplete, and report the concrete blocker.
+Never mark the autopilot complete merely because a manual create command can be
+shown to the user.
 
 **Scoped CI boundary:** PRSG-009 scoped CI is recorded reviewer evidence in slice
 packets, PR bodies, `.process/prs.json`, workflow evidence, and

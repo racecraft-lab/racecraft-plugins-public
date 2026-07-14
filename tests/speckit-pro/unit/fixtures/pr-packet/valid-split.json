@@ -118,7 +118,8 @@
       "summary",
       "what_changed",
       "why_it_matters"
-    ]
+    ],
+    "normalization_profile": "whole_body_v2"
   },
   "split_slice": {
     "slice_id": "packet-validation",
