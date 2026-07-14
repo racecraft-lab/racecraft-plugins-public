@@ -955,6 +955,63 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertEqual(response["data"]["promotion_status"], "python_authoritative")
         self.assertEqual(stderr_records, [])
 
+        from speckit_pro_runner.helpers.read_only import protected_body_sha256
+
+        base_body = (PR_PACKET_FIXTURE_DIR / "bodies" / "valid-single.md").read_text(encoding="utf-8")
+        editable_body = (PR_PACKET_FIXTURE_DIR / "bodies" / "valid-single-edited.md").read_text(encoding="utf-8")
+        self.assertEqual(protected_body_sha256(editable_body), protected_body_sha256(base_body))
+        release_body = base_body + "\n```release-note\nOriginal release note.\n```\n"
+        protected_mutations = {
+            "release-note-mutated": (
+                release_body.replace("Original release note.", "Tampered release note."),
+                protected_body_sha256(release_body),
+            ),
+            "appended-markdown": (
+                base_body + "\n## Untrusted Appendix\n\nThis text was appended after generation.\n",
+                protected_body_sha256(base_body),
+            ),
+            "source-marker-mutated": (
+                base_body.replace("valid-single.json", "tampered-source.json", 1),
+                protected_body_sha256(base_body),
+            ),
+        }
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            for packet_id, (mutated_body, expected_fingerprint) in protected_mutations.items():
+                with self.subTest(packet_id=packet_id):
+                    body_path = project_path / f"{packet_id}.md"
+                    packet_path = project_path / f"{packet_id}.json"
+                    body_path.write_text(mutated_body, encoding="utf-8")
+                    packet_path.write_text(
+                        json.dumps(
+                            {
+                                **valid_packet,
+                                "packet_id": packet_id,
+                                "body_file": body_path.relative_to(REPO_ROOT).as_posix(),
+                                "protected_body_fingerprint": {
+                                    **valid_packet["protected_body_fingerprint"],
+                                    "value": expected_fingerprint,
+                                },
+                                "validation_result_path": (
+                                    "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/"
+                                    f"pr-packets/{packet_id}/validation.json"
+                                ),
+                            }
+                        ),
+                        encoding="utf-8",
+                    )
+                    completed, response, stderr_records = run_runner(
+                        helper_request(
+                            "validate-pr-packet-read-only",
+                            {"packet_path": packet_path.relative_to(REPO_ROOT).as_posix()},
+                        )
+                    )
+                    self.assertEqual(completed.returncode, 1)
+                    self.assert_response(response, "expected_failure", 1)
+                    rules = {failure["rule"] for failure in response["data"]["stdout_json"]["failures"]}
+                    self.assertIn("body.protected_fingerprint", rules)
+                    self.assertEqual(stderr_records, response["diagnostics"])
+
     def test_validate_pr_workflow_contract_changed_files_is_canonicalized_and_evaluated(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-workflow-contract":
             self.skipTest("validate-pr-workflow-contract changed-files case")

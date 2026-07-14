@@ -1016,22 +1016,23 @@ should understand what the presets enforce:
 After G7 passes:
 
 ```text
-Step 1: Run final verification suite (build, typecheck, lint, test)
-Step 2: Detect remote name: git remote -v
-Step 3: Push branch: git push -u <remote> <branch>
-Step 4: Apply final reviewability boundary:
+Step 1: From a clean worktree, run final verification and apply the final reviewability boundary:
   Use current committed reviewability evidence; if none is current, stop before PR side effects because final-reviewability-backstop is deferred.
-Step 5: Require a current packet at specs/<feature>/.process/pr-packets/<packet-id>.json.
-  pr-packet-output is deferred; if no current schema-valid packet already exists, STOP before gh pr create.
-Step 6: Validate that packet with validate-pr-packet-read-only and consume data.stdout_json in memory/state.
+Step 2: For a single route, run pr-packet-output in apply mode with grounded structured evidence.
+  It derives and writes the body first, then the authorizing packet at specs/<feature>/.process/pr-packets/<packet-id>.json.
+  Do not pass raw output paths, content, operations, or split metadata. Split packet output remains deferred.
+Step 3: Validate the just-generated packet with validate-pr-packet-read-only and consume data.stdout_json in memory/state.
   Require data.stdout_json.status=passed, data.stdout_json.pr_blocked=false, and response data.writes_state=false.
   No validation file is written.
-Step 7: Validate title/scope with validate-pr-workflow-contract using the packet title.
-Step 8: Create the PR only from packet fields:
+Step 4: Stage only the generated body and packet, then commit them.
+Step 5: Re-run the full final verification suite and final reviewability boundary against the committed packet artifacts.
+  If remediation changes repository bytes or packet evidence, remove the stale artifacts and regenerate from a clean worktree before continuing.
+Step 6: Re-run validate-pr-packet-read-only, then validate title/scope with validate-pr-workflow-contract using the packet title.
+Step 7: Detect the remote and push the packet commit: git push -u <remote> <branch>
+Step 8: Create the PR only from the freshly validated packet fields:
   gh pr create --base <packet.target.base_branch> --head <packet.target.head_branch> \
     --title <packet.generated_title.value> --body-file <packet.body_file>
-Step 9: Update workflow file with PR URL
-Step 10: Final commit: "feat(SPEC-XXX): open PR for review"
+Step 9: Update workflow/state with the PR URL, commit that handoff, and push.
 ```
 
 `generate-pr-body` is a body-only `golden_only` operation. Its complete input
@@ -1039,6 +1040,22 @@ contract is `output_path`, `title`, and `sections`, and it writes one Markdown
 body. It does not create or update packet JSON, packet metadata, template
 markers, validation evidence, or PR commands. Its output alone never authorizes
 PR creation.
+
+`pr-packet-output` is the `golden_only` single-packet producer. Its structured
+request provides the source feature, packet ID, base ref/branch, conventional
+title parts, reviewer prose, UAT source/runbook, verification evidence, scope
+metrics/non-goals, known gaps, and source markers. The helper derives the body,
+packet, and validation-result paths; current head branch; exact changed-file
+list; total file count; fixed headings/editable markers; and protected body
+fingerprint. It writes the body before the packet so a partial failure cannot
+create a new authorizing packet. `validate-pr-packet-write` and all split packet
+output remain deferred. `base_ref` accepts only `<base_branch>` or
+`origin/<base_branch>`; object IDs and other remote/full-ref forms are
+rejected. Both `dry_run` and `apply` require a clean committed worktree because
+scope is derived from `base...HEAD`. On resume, if either derived output exists, never authorize reuse or
+overwrite. Inspect and remove both body and packet artifacts. If either is
+tracked, commit its deletion, restore a clean committed worktree, and
+regenerate both from the grounded request.
 
 The current committed backstop evidence is fail-closed at the PR boundary.
 Recorded exit 0 means the final diff gate passed, warned, honored a valid typed

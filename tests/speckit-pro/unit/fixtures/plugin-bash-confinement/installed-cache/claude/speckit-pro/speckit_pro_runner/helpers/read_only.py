@@ -2122,20 +2122,9 @@ def schema_failure(keyword: str, field: str, message: str) -> dict[str, Any]:
 
 def protected_body_sha256(body_text: str) -> str:
     normalized: list[str] = []
-    in_packet = False
     editable_field = ""
-    seen_known_gaps = False
-    known_gaps_body_seen = False
     for raw_line in body_text.splitlines():
         line = raw_line.rstrip(" \t\r")
-        if not in_packet and line == "## Summary":
-            in_packet = True
-        if not in_packet:
-            continue
-        if seen_known_gaps and known_gaps_body_seen and not line:
-            break
-        if seen_known_gaps and re.match(r"^#{1,6}\s+", line):
-            break
         start = re.fullmatch(r"<!-- speckit-pro-editable:(summary|what_changed|why_it_matters):start -->", line)
         if not editable_field and start:
             editable_field = start.group(1)
@@ -2148,10 +2137,6 @@ def protected_body_sha256(body_text: str) -> str:
         if editable_field:
             continue
         normalized.append(line)
-        if line == "## Known Gaps":
-            seen_known_gaps = True
-        elif seen_known_gaps and line:
-            known_gaps_body_seen = True
     content = "\n".join(normalized)
     if normalized:
         content += "\n"

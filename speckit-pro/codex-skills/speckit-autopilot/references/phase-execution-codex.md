@@ -373,10 +373,13 @@ fail-closed sequence:
 
 ```text
 final-reviewability boundary: use current committed reviewability evidence; if none is current, stop before PR side effects
-require specs/<feature>/.process/pr-packets/<packet-id>.json to already exist and be current
+from a clean committed worktree, run pr-packet-output in apply mode with grounded structured evidence for a single route
+require its derived specs/<feature>/.process/pr-packets/<packet-id>.json and body_file to exist
 run validate-pr-packet-read-only for that packet and consume response data.stdout_json in memory/state
 require data.stdout_json.status=passed, data.stdout_json.pr_blocked=false, and response data.writes_state=false
-run validate-pr-workflow-contract with the packet title
+git add only the packet and body, then commit them
+rerun full final verification, the final reviewability boundary, validate-pr-packet-read-only, and validate-pr-workflow-contract
+push the packet commit
 create only with packet-owned --base, --head, --title, and --body-file values
 ```
 
@@ -402,11 +405,25 @@ fingerprint status, ordered marker IDs, checkpoints, warnings, final
 marker_split or marker-plan-ready handoff, packet validation, and PR mappings
 before PR side effects.
 
-The `pr-packet-output` and `validate-pr-packet-write` operations are deferred.
-If the feature-local packet or its referenced body is missing, stale, malformed,
-or invalid, stop before `gh pr create` and report the deferred packet-emission
-blocker. The read-only validator returns its result in `data.stdout_json`; it
-does not persist `validation.json` or any other validation artifact.
+For a single route, run the `golden_only` `pr-packet-output` operation in
+`apply` mode with grounded structured feature/title/UAT/evidence/scope inputs.
+It derives the feature-local body and packet paths, current branch, changed-file
+scope, title metadata, and protected body fingerprint; it writes the body before
+the packet. Do not provide raw output paths, content, operations, or split
+metadata. `validate-pr-packet-write` and split packet output remain deferred.
+If the generated packet or body is stale, malformed, or invalid, stop before
+`gh pr create`. The read-only validator returns its result in
+`data.stdout_json`; it does not persist `validation.json` or any other
+validation artifact.
+
+`base_ref` accepts only `<base_branch>` or `origin/<base_branch>`; object IDs
+and other remote/full-ref forms are rejected. Both `dry_run` and `apply`
+require a clean committed worktree because scope is derived from
+`base...HEAD`. On resume, when either derived output already exists, never
+authorize reuse or overwrite. Inspect and remove
+both body and packet artifacts. If either is tracked, commit its deletion,
+restore a clean committed worktree, and regenerate both from the grounded
+request.
 
 `generate-pr-body` is a body-only `golden_only` operation. Its complete input
 contract is `output_path`, `title`, and `sections`, and it writes one Markdown
