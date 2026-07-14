@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.19.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.19.1...speckit-pro-v2.19.2) (2026-07-14)
+
+
+### Bug Fixes
+
+* **codex:** harden autopilot startup ([#345](https://github.com/racecraft-lab/racecraft-plugins-public/issues/345)) ([edcc6ca](https://github.com/racecraft-lab/racecraft-plugins-public/commit/edcc6ca3b216ab708aff6a8a5856d115abb8ee60))
+
 ## [2.19.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.19.0...speckit-pro-v2.19.1) (2026-07-13)
 
 
