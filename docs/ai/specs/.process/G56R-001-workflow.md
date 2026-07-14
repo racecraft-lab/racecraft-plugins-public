@@ -38,13 +38,15 @@ clarifications use /speckit-clarify and consensus, never grill-me.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | /speckit-specify | ⏳ Pending | Define the research artifact contract |
-| Clarify | /speckit-clarify | ⏳ Pending | Resolve evidence, identity, and handoff precision |
-| Plan | /speckit-plan | ⏳ Pending | Plan a one-day evidence-first spike |
-| Checklist | /speckit-checklist | ⏳ Pending | Four requirement-quality domains |
-| Tasks | /speckit-tasks | ⏳ Pending | Order research, reconciliation, validation, and handoff |
-| Analyze | /speckit-analyze | ⏳ Pending | Cross-check all artifacts against the Design Concept |
-| Implement | /speckit-implement | ⏳ Pending | Produce the narrative, manifest, and go/no-go packet |
+| Specify | /speckit-specify | ✅ Complete | 27 FRs, 10 outcomes, 0 clarification markers; G1 passed |
+| Clarify | /speckit-clarify | ✅ Complete | 15 decisions applied across three sessions; G2 passed |
+| Plan | /speckit-plan | ✅ Complete | Five design artifacts; G3 and reviewability estimator passed |
+| Checklist | /speckit-checklist | ✅ Complete | 117/117 assessed; 9 gaps fixed; G4 passed |
+| Tasks | /speckit-tasks | ✅ Complete | 26 ordered US1 tasks after Analyze remediation; G5 passed |
+| Analyze | /speckit-analyze | ✅ Complete | Four initial findings resolved; rerun clean; G6 passed |
+| Confidence Gate | G6.5 | ✅ Complete | Composite 0.99 exceeded the 0.90 advisory threshold |
+| Implement | /speckit-implement | 🔄 In Progress | Execute T001–T026 in five dependency-ordered groups |
+| Post | Autopilot post-implementation items | ⏳ Pending | Complete all fourteen durable post-implementation rows |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -58,6 +60,7 @@ clarifications use /speckit-clarify and consensus, never grill-me.
 | G4 | After Checklists | All genuine gaps are resolved or explicitly scoped out |
 | G5 | After Tasks | Every acceptance criterion and handoff artifact has ordered task coverage |
 | G6 | After Analyze | No CRITICAL inconsistency or Design Concept drift remains |
+| G6.5 | After Analyze Consensus | Confidence evidence and its advisory disposition are recorded before implementation |
 | G7 | During Implement | Each artifact increment is grounded, reconciled, and verified before continuing |
 
 ---
@@ -72,6 +75,21 @@ clarifications use /speckit-clarify and consensus, never grill-me.
 - **Commands run:** none
 - **Health check:** not applicable because AGENTS.md and CLAUDE.md document no
   worktree install, build, code-index, MCP, or bootstrap procedure
+
+### Autopilot Phase 0 Evidence
+
+| Field | Result |
+|-------|--------|
+| Workflow binding | Current checkout and branch `g56r-001-candidate-route-baseline` verified by live git |
+| Archive Sweep | `no_candidates`; current target excluded; no cleanup mutation |
+| Runner prerequisites | `all_pass: true`; SpecKit CLI `0.11.8`; initialized worktree |
+| Branch diagnostic | Runner returned an empty branch and `on_feature_branch: false`; live git is authoritative and Specify must not create a branch |
+| Codex agents | Ten bundled agents current at user scope; dry-run install result `no_op` |
+| Confidence mode | `advisory` |
+| Project commands | Runner reported all generic slots `N/A`; repository validation remains Python-authoritative via `python3 tests/speckit-pro/run-all.py` |
+| Preset | `speckit-pro-reviewability` v1.0.0 for spec, plan, and tasks |
+| Focused baseline | `python3 tests/speckit-pro/run-all.py --layer 1` — 1427/1427 passed |
+| Tier-2 relocation | Suppressed: the current spec already has `SPEC-MOC.md` `structureVersion: 1` |
 
 ### Reviewability Setup Decision
 
@@ -101,7 +119,9 @@ not expand G56R-001 beyond its docs/process research boundary.
 | Conventional Commits | Focused conventional commit and public-readable PR title | Validate commit and eventual PR title |
 | Plugin Structure Compliance | Research artifacts remain outside the shipped plugin directory | Changed-file scope check |
 
-**Constitution Check:** Pending at G1 and required again at G3.
+**Constitution Check:** Verified at Phase 0 through the research-only scope,
+structured-validation constraints, and the 1427/1427 Layer 1 baseline. Re-check
+after Specify at G1, after Plan at G3, and during final closeout.
 
 ---
 
@@ -211,13 +231,29 @@ for the 23 accepted scoping decisions and their rationale.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Pending |
-| User Stories | 1 planned |
-| Acceptance Criteria | AC-1.1 through AC-1.7 |
+| Functional Requirements | 27 (FR-001 through FR-027) |
+| User Stories | 1 P1 story with 9 independently testable scenarios |
+| Measurable Outcomes | 10 (SC-001 through SC-010) |
+| Acceptance Criteria | AC-1.1 through AC-1.7 traced in the requirements checklist |
+| Quality Validation | 16/16 specification checklist items passed |
+| G1 | PASS — `spec.md` exists with 0 `[NEEDS CLARIFICATION]` markers |
+| Post-Specify Doctor | Core project health checks passed; missing plan/tasks are expected before later phases |
+| Checkpoint Commit | `e56d0454` — `feat(g56r-001): complete specify phase` |
+
+### Constitution Recheck at G1
+
+| Principle | Status | Evidence |
+|-----------|--------|----------|
+| Cross-Platform Runtime and Script Safety | PASS | FR-026 requires Python 3.11+ structured checks and prohibits Bash, jq, packages, and reusable validation tooling |
+| Test Coverage Before Merge | PASS | Requirements checklist 16/16; Layer 1 baseline remains 1427/1427 |
+| KISS, Simplicity, and YAGNI | PASS | One research spike, focused disposable checks, 0 production LOC, and no reusable framework |
+| Conventional Commits | PASS | Phase checkpoint uses the repository Conventional Commit format |
+| Plugin Structure Compliance | PASS | All delivery surfaces remain under `docs/` and `specs/`, outside the shipped plugin |
 
 ### Files Generated
 
-- [ ] specs/g56r-001-candidate-route-baseline/spec.md
+- [x] specs/g56r-001-candidate-route-baseline/spec.md
+- [x] specs/g56r-001-candidate-route-baseline/checklists/requirements.md
 
 ### Traceability Markers
 
@@ -291,9 +327,22 @@ recorded with owners and are not fixed in G56R-001.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Evidence and surfaces | Pending | Pending |
-| 2 | Manifest and identities | Pending | Pending |
-| 3 | Local evidence and handoff | Pending | Pending |
+| 1 | Evidence and surfaces | 5 | Source precedence, repository evidence roles, surface isolation, provenance fields, and conflict terminal rules added; Consensus skipped with 0 unresolved items |
+| 2 | Manifest and identities | 5 | Manifest envelope, readable IDs, canonical hashes, complete per-agent records, and cross-artifact agreement rules added; Consensus skipped with 0 unresolved items |
+| 3 | Local evidence and handoff | 5 | Sanitized evidence fields, exact 3/9 fixture inventory, focused checks, downstream ownership, and exact go/no payload added; Consensus skipped with 0 unresolved items |
+
+### Clarify Gate Result
+
+| Field | Result |
+|-------|--------|
+| G2 | PASS — 0 `[NEEDS CLARIFICATION]` markers |
+| Consensus | Skipped after each session; 0 unresolved items |
+| Fixture evidence | Exactly 3 current Codex fixtures and 9 missing role fixtures confirmed from the live repository |
+| Security disposition | Explicit maintainer review required only if retained local fields or accepted security-relevant boundaries change |
+| Human review | Normative field and no-go payload names require artifact review; no Clarify blocker remains |
+| Post-Clarify hook | Optional git commit hook skipped because autopilot owns the per-phase checkpoint commit |
+| Spec index | Regeneration completed as a no-op; index was current |
+| Checkpoint Commit | `83181937` — `feat(g56r-001): complete clarify phase` |
 
 ---
 
@@ -365,11 +414,23 @@ recorded with owners and are not fixed in G56R-001.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| plan.md | ⏳ Pending | Evidence sequence, data model, validation, handoff |
-| research.md | ⏳ Pending | Spec-local decision rationale if needed |
-| data-model.md | ⏳ Pending | Agent, contract, candidate, provenance, fixture, handoff entities |
-| contracts/ | ⏳ Pending | Only if Plan proves a review-visible data contract is necessary |
-| quickstart.md | ⏳ Pending | Reviewer verification steps if useful |
+| plan.md | ✅ Complete | Evidence sequence, three delivery operations, validation, and terminal handoff |
+| research.md | ✅ Complete | Ratified decision rationale without unresolved platform claims |
+| data-model.md | ✅ Complete | Agent, contract, candidate, provenance, fixture, unknown, and handoff entities |
+| contracts/ | ✅ Complete | Review-visible manifest contract; no reusable schema package |
+| quickstart.md | ✅ Complete | Reviewer validation guide and expected outcomes |
+
+### Plan Gate Result
+
+| Field | Result |
+|-------|--------|
+| G3 | PASS — `plan.md` exists with 0 unresolved markers |
+| Reviewability estimate | PASS — projected 0 production LOC, 3 new delivery files, 0 production files |
+| Constitution recheck | PASS — Layer 1 structural validation 1427/1427; pre/post-design checks pass |
+| Delivery boundary | Narrative, JSON manifest, and feature-local focused checker only |
+| Post-Plan hooks | Optional traceability validator not invoked; optional git hook skipped because autopilot owns checkpoint commits |
+| Spec index | Regenerated; `SPEC-MOC.md` now links all Plan artifacts |
+| Checkpoint Commit | `b0f5e66e` — `feat(g56r-001): complete plan phase` |
 
 ---
 
@@ -440,11 +501,33 @@ Focus on Candidate Route Baseline and Role Contracts requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| llm-integration | Pending | Pending | Pending |
-| integration | Pending | Pending | Pending |
-| reliability | Pending | Pending | Pending |
-| security | Pending | Pending | Pending |
-| **Total** | Pending | Pending | Pending |
+| llm-integration | 26/26 assessed | 0 | FR-006, FR-008–FR-020, FR-023–FR-027; no remediation required; Consensus skipped |
+| integration | 29/29 assessed | 3 → 0 | FR-004, FR-006–FR-007, FR-013, FR-023–FR-025; resolved through spec-context consensus |
+| reliability | 30/30 assessed | 2 → 0 | FR-005, FR-008, FR-016–FR-025; workday deadline and evidence invalidation rules added; Consensus skipped |
+| security | 32/32 assessed | 4 → 0 | FR-006–FR-007, FR-010–FR-012, FR-021, FR-023–FR-024, FR-027; Consensus skipped |
+| **Total** | **117/117 assessed** | **9 → 0** | All requirement-quality markers resolved |
+
+### Consensus Resolution Log
+
+| Domain / Item | Route | Resolution | Confidence |
+|---------------|-------|------------|------------|
+| integration CHK008 | spec-context | Added exact route-policy inventory entry fields, reciprocal lineage, authority, mismatch ownership, and objective set-completeness failure rules | High |
+| integration CHK020 | spec-context | Added per-field Claude parity mappings with source locators, mapping states, justification, normalized-value agreement, and fail-closed handling | High |
+| integration CHK025 | spec-context | Added G56R-002 admission binding, eligibility preservation, versioned capability snapshot, rejection, drift invalidation, and re-admission rules | High |
+
+Round 1 resolved all three items without a security-boundary change. No Round 2
+or human ambiguity review was required.
+
+### Checklist Gate Result
+
+| Field | Result |
+|-------|--------|
+| G4 | PASS — 0 `[Gap]` markers |
+| Remediation | 9 genuine gaps fixed: 3 integration, 2 reliability, 4 security |
+| Consensus | Integration items CHK008, CHK020, and CHK025 resolved in Round 1; all other domains had 0 unresolved items |
+| Post-Checklist hook | Optional git commit hook skipped because autopilot owns the phase checkpoint |
+| Spec index | Regenerated to link all four domain checklists |
+| Checkpoint Commit | `9c44a830` — `feat(g56r-001): complete checklist phase` |
 
 Address genuine gaps in spec.md or plan.md, rerun the affected checklist, and
 document intentional scope cuts with rationale.
@@ -504,10 +587,17 @@ Q20-Q23 for local evidence and availability boundaries.
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | Pending |
-| **Phases** | Pending |
-| **Parallel Opportunities** | Pending |
-| **User Stories Covered** | Pending |
+| **Total Tasks** | 26 (T001–T026) after Analyze remediation |
+| **Phases** | 5 ordered research phases |
+| **Parallel Opportunities** | 0; shared outputs and frozen-evidence dependencies make parallel edits unsafe |
+| **User Stories Covered** | US1; all tasks map to one or more of AC-1.1 through AC-1.7 |
+| **G5** | PASS — 26 tasks found on remediation rerun |
+| **Post-Tasks hook** | Optional git commit hook skipped because autopilot owns checkpoint commits |
+| **Spec index** | Regenerated to link `tasks.md` |
+| **Checkpoint Commit** | `1aaeca51` — `feat(g56r-001): complete tasks phase` |
+| **Analyze remediation** | Started the clock before checker/evidence work and added three focused RED/GREEN checker increments, the required Layer 4 test, and its suite-manifest declaration |
+| **Tasks reviewability helper** | `reviewability-gate` tasks mode deferred because the installed runner supports setup mode only |
+| **Reviewability fallback** | Setup evidence `warn` with `pass: true`; plan estimator `pass`; one atomic navigable PR; no marker plan required |
 
 ---
 
@@ -518,10 +608,12 @@ scaffolding does not create PR slices from this placeholder.
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | Expected to reflect one research-only spike after task evidence exists |
-| **Releasable** | | Filled by the classifier |
-| **Signals** | | Filled by the classifier |
-| **Warnings** | | Filled by the classifier |
+| **Route** | one-navigable-PR | The three research delivery files plus two required validation paths remain atomic |
+| **Releasable** | true | Classifier found a navigable single-PR shape |
+| **Signals** | `change-shape:modify-heavy` | Advisory shape signal |
+| **Warnings** | none | No classifier warning |
+
+Layer planning is skipped because the route is not `split-PR`.
 
 ~~~text
 runner helper atomicity-route specs/g56r-001-candidate-route-baseline
@@ -572,7 +664,52 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| Pending | Pending | Pending | Pending |
+| C1 | CRITICAL | The checked-in checker lacked constitution-required focused Layer 4 coverage and suite membership | Added FR-026 coverage requirements, one focused test path, one Layer 4 suite declaration, and explicit RED/GREEN tasks |
+| I1 | HIGH | Checker work preceded `started_at` and `deadline_at` | Reordered T001 so both timestamps are recorded before checker or evidence work |
+| U1 | HIGH | The manifest content hash was self-referential and underspecified | Defined lowercase SHA-256 over canonical normalized JSON with `handoff.admission_binding.manifest_content_hash` omitted |
+| I2 | HIGH | Capability-snapshot ownership conflicted with the G56R-002 dependency boundary | G56R-001 now records only the snapshot requirement; G56R-002 creates or selects and binds the runtime snapshot during admission |
+
+| Verification | Result |
+|--------------|--------|
+| Analyze rerun | PASS — 0 CRITICAL, 0 HIGH, and no new CRITICAL/HIGH inconsistency |
+| Consensus | Skipped — 0 unresolved items after deterministic local-contract remediation |
+| G5 rerun | PASS — 26 tasks, 0 markers |
+| G6 helper | PASS — 0 CRITICAL/HIGH findings, 0 markers |
+| Reviewability re-estimate | PASS — projected 0 production LOC; 4 new plus 1 modified declared implementation paths |
+| Spec index | Current; regeneration was a no-op |
+| Checkpoint Commit | `7f8c1736` — `fix(g56r-001): resolve analyze findings` |
+
+📊 Confidence: 0.99
+
+- Task understanding: 0.99
+- Approach clarity: 0.98
+- Requirements alignment: 0.99
+- Risk assessment: 1.00
+- Completeness: 1.00
+
+---
+
+## Phase 6.5: Confidence Gate
+
+### Confidence Gate Command
+
+~~~text
+runner helper confidence-gate
+workflow_file: docs/ai/specs/.process/G56R-001-workflow.md
+mode_name: resolved during Phase 0 (default advisory)
+~~~
+
+Record the confidence score, criterion breakdown, helper disposition, and any
+focused remediation before Phase 7 begins.
+
+| Field | Result |
+|-------|--------|
+| Composite | 0.99 |
+| Threshold | 0.90 |
+| Mode | advisory |
+| Helper result | PASS; recommended action `proceed` |
+| Lowest criterion | Approach clarity, 0.98 |
+| Iterations | 1; no remediation required |
 
 ---
 
@@ -613,31 +750,49 @@ metadata, generated release artifacts, or unrelated configuration.
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| Evidence and inventory | Pending | Pending | Official platform sources plus classified project evidence |
-| Role contracts and candidates | Pending | Pending | Twelve-agent completeness |
-| Narrative and manifest | Pending | Pending | Markdown plus JSON |
-| Validation and handoff | Pending | Pending | Focused checks plus objective go/no-go |
+| Clock and checker TDD | T001–T008 | Complete | RED/GREEN: `0/4`→`7/7`, `7/14`→`14/14`, `14/20`→`20/20`, review `20/42`→`42/42`, recheck `42/45`→`45/45`; final review accepted |
+| Evidence and inventory | T009–T013 | Complete | Reconciled official, project, and environment evidence; no blocking conflict; three owned downstream defects; focused test 45/45; completed tasks: T001–T013 |
+| Role contracts and candidates | T014–T019 | Complete | Twelve immutable semantic contracts, canonical identities, candidates, fixtures, telemetry, and owned unknowns recorded; completed tasks: T014–T019 |
+| Narrative and manifest | T020–T022 | Complete | Twelve lexical agent records and the exact normalized Markdown projection agree; focused test 45/45; completed tasks: T020–T022 |
+| Validation and handoff | T023–T026 | Complete | Terminal `go`; focused 45/45, Layer 4 1187/1187, integration 257/257, default 2800/2800; checker PASS twice with identical summaries; `git diff --check` clean; completed tasks: T023–T026 |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks are complete or explicitly handed to the owning downstream spec.
-- [ ] docs/ai/research/codex-agent-route-candidates.md exists.
-- [ ] docs/ai/research/codex-agent-route-candidate-manifest.json parses as JSON.
-- [ ] Exactly twelve unique agents have complete semantic contract records.
-- [ ] Candidate and contract IDs are readable, unique, and bound to canonical hashes.
-- [ ] Every candidate has provenance, capabilities, rationale, incompatibilities,
+| Item | Status | Evidence |
+|------|--------|----------|
+| Post: Doctor Extension Check | Pending | Pending |
+| Post: Verify Implementation | Pending | Pending |
+| Post: Verify Tasks Phantom Check | Pending | Pending |
+| Post: Code Review | Pending | Pending |
+| Post: Integration Suite | Pending | Pending |
+| Post: Reviewability Diff Gate | Pending | Pending |
+| Post: Self-Review | Pending | Pending |
+| Post: UAT Runbook Generation | Pending | Pending |
+| Post: Final Reviewability Backstop | Pending | Pending |
+| Post: PR Packet/Body Generation | Pending | Pending |
+| Post: PR Body Generation | Pending | Pending |
+| Post: PR Creation | Pending | Pending |
+| Post: Review Remediation | Pending | Pending |
+| Post: Retrospective | Pending | Pending |
+
+- [x] All tasks are complete or explicitly handed to the owning downstream spec.
+- [x] docs/ai/research/codex-agent-route-candidates.md exists.
+- [x] docs/ai/research/codex-agent-route-candidate-manifest.json parses as JSON.
+- [x] Exactly twelve unique agents have complete semantic contract records.
+- [x] Candidate and contract IDs are readable, unique, and bound to canonical hashes.
+- [x] Every candidate has provenance, capabilities, rationale, incompatibilities,
   qualification requirements, and invalidation triggers.
-- [ ] Official platform claims carry URL, date, surface, and applicability.
-- [ ] Project, cache, and sanitized installed-state evidence remain distinct.
-- [ ] No home path, credential, or unrelated local configuration appears.
-- [ ] Markdown and JSON agree on identities, candidates, hypotheses, and unknowns.
-- [ ] Historical prompt-emulation evidence is labeled non-release evidence.
-- [ ] No final fallback ordering or executable-candidate claim appears.
-- [ ] No production, install, payload, cache, version, or generated-release file changed.
-- [ ] Focused artifact checks and the smallest relevant Python gate pass.
-- [ ] The G56R-002 handoff records objective go/no-go, fixture backlog,
+- [x] Official platform claims carry URL, date, surface, and applicability.
+- [x] Project, cache, and sanitized installed-state evidence remain distinct.
+- [x] No home path, credential, or unrelated local configuration appears.
+- [x] Markdown and JSON agree on identities, candidates, hypotheses, and unknowns.
+- [x] Historical prompt-emulation evidence is labeled non-release evidence.
+- [x] No final fallback ordering or executable-candidate claim appears.
+- [x] No production, install, payload, cache, version, or generated-release file changed.
+- [x] Focused artifact checks and the smallest relevant Python gate pass.
+- [x] The G56R-002 handoff records objective go/no-go, fixture backlog,
   telemetry needs, and every probe-dependent or score-dependent open question.
 
 ---
