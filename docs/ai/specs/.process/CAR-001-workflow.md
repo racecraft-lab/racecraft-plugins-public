@@ -55,6 +55,25 @@ autopilot run — design concept Q9), not LOC. No split is warranted; gaps
 remaining at the end of the run become explicit no-go items or capability
 questions in the CAR-002 handoff instead of extending the box.
 
+### Comparator Pin — execution record (2026-07-14)
+
+The design concept (Q3) and scaffold-time spec named `speckit-pro 2.19.0` as
+"the latest published release tag at research time." The binding rule is
+**latest-at-research-time**; `2.19.0` was a snapshot taken at scaffold time
+(2026-07-13). At actual research/execution time (2026-07-14) the latest
+published release is **`speckit-pro-v2.19.1`** (published 2026-07-13T23:15:49Z,
+not draft/prerelease), commit SHA `e343aa2e4ebcb2d48c501f285d7072cfd55722da`.
+
+Per the spec's own Assumption ("the autopilot run records the exact tag and the
+commit SHA it pins as the comparator"), the comparator is pinned to
+**2.19.1 / e343aa2e**. Verified ground-truth: `speckit-pro/agents/*.md` and
+`speckit-pro/codex-agents/` are **byte-identical between 2.19.0 and 2.19.1**
+(the 2.19.0→2.19.1 delta touches only runner, skills, installed-cache mirrors,
+and tests), so all eleven route tuples, instruction hashes, and full-file hashes
+are identical to the 2.19.0 values — this is a clean pin-identity refresh with
+zero data impact. spec.md FR-009 + Assumption and plan.md are reconciled to
+2.19.1 during the Plan-phase review.
+
 ---
 
 ## Workflow Overview
@@ -63,7 +82,7 @@ questions in the CAR-002 handoff instead of extending the box.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 25 FRs, 11 acceptance scenarios, 7 SCs; 0 `[NEEDS CLARIFICATION]` |
 | Clarify | `/speckit-clarify` | ⏭️ Skipped | G1 found 0 `[NEEDS CLARIFICATION]` markers; design-concept Q1–Q9 bind the decisions and open items are intentionally deferred to CAR-002 as CAP-Q probe questions |
-| Plan | `/speckit-plan` | 🔄 In Progress | |
+| Plan | `/speckit-plan` | ✅ Complete | plan/research/data-model/contracts-schema/quickstart; manifest schema fully specified; comparator pinned 2.19.1/e343aa2e; constitution PASS 6/6; reviewability advisory `pass` (0 production LOC) |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -362,11 +381,13 @@ use, representative tasks) so CAR-003 fixtures can be derived from it.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, execution flow |
-| `research.md` | ⏳ | Decision rationales (if needed) |
-| `data-model.md` | ⏳ | Manifest schema field definitions |
-| `contracts/` | ⏳ | Manifest JSON shape (if emitted) |
-| `quickstart.md` | ⏳ | How CAR-002 consumes the handoff |
+| `plan.md` | ✅ | Technical context + execution flow; constitution PASS 6/6 |
+| `research.md` | ✅ | Decision rationales incl. 2.19.0→2.19.1 comparator reconciliation (byte-identical agents verified) |
+| `data-model.md` | ✅ | Full manifest schema field definitions (all AC-1.6 per-agent fields) |
+| `contracts/agent-route-candidate-manifest.schema.json` | ✅ | JSON Schema draft 2020-12; enforces 12 agents, eligibility-vs-availability split, helper-only platform_field_mapping, instruction/full-file hash split. Valid JSON. |
+| `quickstart.md` | ✅ | How CAR-002 consumes the handoff |
+
+**Plan-phase reviewability estimate (advisory):** `status: pass` — projected 0 production LOC, greenfield, 2 new deliverable files, 0 production files. Within budget; non-blocking.
 
 ---
 

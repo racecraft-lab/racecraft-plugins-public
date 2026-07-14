@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft-lab/car-001/agent-route-candidate-manifest.schema.json",
+  "title": "agent_route_candidate_manifest",
+  "description": "CAR-001 provisional research manifest. Machine contract that CAR-002/CAR-003/CAR-006 bind to. Normative field-level spec lives in specs/car-001-candidate-route-baseline/data-model.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "manifest_kind",
+    "generated_at",
+    "provisional",
+    "immutable_production_comparator",
+    "alias_universe",
+    "capability_questions",
+    "agents"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "manifest_kind": { "const": "agent_route_candidate_manifest" },
+    "generated_at": { "type": "string", "format": "date" },
+    "provisional": { "const": true },
+    "immutable_production_comparator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["release_tag", "commit_sha", "pin_rationale"],
+      "properties": {
+        "release_tag": { "type": "string" },
+        "commit_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "pin_rationale": { "type": "string", "minLength": 1 },
+        "reconciliation_note": { "type": "string" }
+      }
+    },
+    "alias_universe": {
+      "type": "array",
+      "items": { "enum": ["opus", "sonnet", "haiku", "fable"] },
+      "uniqueItems": true,
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "capability_questions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/capability_question" }
+    },
+    "agents": {
+      "type": "object",
+      "description": "Map of agent_name -> agent_route_entry. MUST contain exactly the twelve named agents (SC-001).",
+      "minProperties": 12,
+      "maxProperties": 12,
+      "propertyNames": {
+        "enum": [
+          "analyze-executor",
+          "checklist-executor",
+          "clarify-executor",
+          "codebase-analyst",
+          "consensus-synthesizer",
+          "domain-researcher",
+          "gate-validator",
+          "implement-executor",
+          "phase-executor",
+          "spec-context-analyst",
+          "uat-runbook-author",
+          "autopilot-fast-helper"
+        ]
+      },
+      "additionalProperties": { "$ref": "#/$defs/agent_route_entry" }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "cap_qn": { "type": "string", "pattern": "^CAP-Q\\d+$" },
+    "evidence_class": { "enum": ["fact", "inference", "proposed_policy", "assumption"] },
+    "capability_question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "question", "blocks"],
+      "properties": {
+        "id": { "$ref": "#/$defs/cap_qn" },
+        "question": { "type": "string", "minLength": 1 },
+        "blocks": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "route_tuple_field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "effort"],
+      "properties": {
+        "model": { "enum": ["opus", "sonnet", "haiku", "fable"] },
+        "effort": { "enum": ["low", "medium", "high", "max"] }
+      }
+    },
+    "candidate_route_tuple": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "alias",
+        "expected_resolved_model_id",
+        "effort",
+        "project_level_eligibility",
+        "environment_time_availability"
+      ],
+      "properties": {
+        "alias": { "enum": ["opus", "sonnet", "haiku", "fable"] },
+        "expected_resolved_model_id": { "type": ["string", "null"] },
+        "effort": { "enum": ["low", "medium", "high", "max"] },
+        "project_level_eligibility": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["eligible", "basis", "evidence_class"],
+          "properties": {
+            "eligible": { "type": "boolean" },
+            "basis": { "type": "string", "minLength": 1 },
+            "evidence_class": { "$ref": "#/$defs/evidence_class" }
+          }
+        },
+        "environment_time_availability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "probe_question_ref"],
+          "properties": {
+            "status": { "const": "probe_required" },
+            "probe_question_ref": { "$ref": "#/$defs/cap_qn" },
+            "binding_question_ref": { "$ref": "#/$defs/cap_qn" }
+          }
+        },
+        "tuple_rationale": { "type": "string" }
+      }
+    },
+    "required_capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "modality", "subagent_fields", "tools", "skills", "client"],
+      "properties": {
+        "model": { "type": "array", "items": { "type": "string" } },
+        "modality": { "type": "array", "items": { "type": "string" } },
+        "subagent_fields": { "type": "array", "items": { "type": "string" } },
+        "tools": { "type": "array", "items": { "type": "string" } },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "client": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "role_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "mutation_boundary", "output_format", "source_ref"],
+      "properties": {
+        "summary": { "type": "string", "minLength": 1 },
+        "mutation_boundary": { "type": "string", "minLength": 1 },
+        "output_format": { "type": "string", "minLength": 1 },
+        "source_ref": { "type": "string", "minLength": 1 }
+      }
+    },
+    "agent_file_hashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["instruction_sha256", "full_file_sha256", "hash_source"],
+      "properties": {
+        "instruction_sha256": { "$ref": "#/$defs/sha256" },
+        "full_file_sha256": { "$ref": "#/$defs/sha256" },
+        "hash_source": { "enum": ["claude-agent-md", "codex-toml-translation"] }
+      }
+    },
+    "platform_field_mapping_row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["codex_field", "claude_equivalent", "evidence_class"],
+      "properties": {
+        "codex_field": { "type": "string" },
+        "claude_equivalent": { "type": "string" },
+        "evidence_class": { "$ref": "#/$defs/evidence_class" },
+        "note": { "type": "string" }
+      }
+    },
+    "known_incompatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subject", "reason"],
+      "properties": {
+        "subject": { "type": "string" },
+        "reason": { "type": "string" },
+        "evidence_ref": { "type": "string" }
+      }
+    },
+    "agent_route_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agent_name",
+        "agent_contract_id",
+        "role_contract",
+        "immutable_production_route",
+        "production_route_recorded_absence",
+        "agent_file_hashes",
+        "candidate_routes",
+        "required_capabilities",
+        "candidate_rationale",
+        "known_incompatibilities",
+        "required_qualification_artifacts",
+        "invalidation_triggers",
+        "fixture_backlog_ref"
+      ],
+      "properties": {
+        "agent_name": { "type": "string", "minLength": 1 },
+        "agent_contract_id": { "type": "string", "minLength": 1 },
+        "role_contract": { "$ref": "#/$defs/role_contract" },
+        "immutable_production_route": {
+          "oneOf": [
+            { "$ref": "#/$defs/route_tuple_field" },
+            { "type": "null" }
+          ]
+        },
+        "production_route_recorded_absence": { "type": "boolean" },
+        "agent_file_hashes": { "$ref": "#/$defs/agent_file_hashes" },
+        "candidate_routes": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/candidate_route_tuple" }
+        },
+        "required_capabilities": { "$ref": "#/$defs/required_capabilities" },
+        "candidate_rationale": { "type": "string", "minLength": 1 },
+        "known_incompatibilities": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/known_incompatibility" }
+        },
+        "required_qualification_artifacts": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "invalidation_triggers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "fixture_backlog_ref": { "type": "string", "minLength": 1 },
+        "platform_field_mapping": {
+          "type": "array",
+          "description": "Required only on the autopilot-fast-helper entry (FR-017); absent on the eleven current agents.",
+          "items": { "$ref": "#/$defs/platform_field_mapping_row" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "production_route_recorded_absence": { "const": true } } },
+          "then": {
+            "properties": { "immutable_production_route": { "type": "null" } },
+            "required": ["platform_field_mapping"]
+          }
+        },
+        {
+          "if": { "properties": { "production_route_recorded_absence": { "const": false } } },
+          "then": {
+            "properties": { "immutable_production_route": { "$ref": "#/$defs/route_tuple_field" } }
+          }
+        }
+      ]
+    }
+  }
+}

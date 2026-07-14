@@ -1,0 +1,165 @@
+# Quickstart: Validate the CAR-001 Baseline Deliverables
+
+**Date**: 2026-07-14 | **Branch**: `car-001-candidate-route-baseline`
+
+This is a validation/run guide for the two CAR-001 deliverables. It proves the
+spike's success criteria (SC-001…SC-007) end-to-end. Field-level details live in
+[`data-model.md`](./data-model.md); the machine contract is
+[`contracts/agent-route-candidate-manifest.schema.json`](./contracts/agent-route-candidate-manifest.schema.json).
+Run every command from the repository root. Do not embed absolute filesystem
+paths in any deliverable — the privacy scan below enforces this.
+
+## Prerequisites
+
+- Python 3.11+ (standard library only; no third-party packages required).
+- The two deliverables exist:
+  - `docs/ai/research/claude-agent-route-candidates.md` (the record)
+  - `docs/ai/research/claude-agent-route-candidate-manifest.json` (the manifest)
+- Read-only inventory sources present and unmodified: `speckit-pro/agents/*.md`,
+  `speckit-pro/codex-agents/autopilot-fast-helper.toml`,
+  `tests/speckit-pro/layer6-efficiency/fixtures/`.
+
+## Validation scenarios
+
+### V1 — Repository default suite still passes untouched (SC-006)
+
+```bash
+python3 tests/speckit-pro/run-all.py
+```
+
+Expected: zero failures. The spike changes no shipped byte, so Layers 1/4/5 pass
+exactly as on `main`.
+
+### V2 — Manifest is valid JSON (SC-001 precondition)
+
+```bash
+python3 -m json.tool docs/ai/research/claude-agent-route-candidate-manifest.json > /dev/null && echo "manifest JSON: VALID"
+```
+
+Expected: `manifest JSON: VALID`.
+
+### V3 — Manifest conforms to the machine contract (data-model §7)
+
+Validate the manifest against the JSON Schema. If `jsonschema` is available it
+gives the richest output; otherwise a stdlib structural check covers the
+load-bearing rules (twelve-agent coverage, alias closure, absence integrity,
+eligibility/availability split). Expected outcome either way: no violations.
+
+```bash
+python3 - <<'PY'
+import json, pathlib
+man = json.load(open("docs/ai/research/claude-agent-route-candidate-manifest.json"))
+schema = json.load(open("specs/car-001-candidate-route-baseline/contracts/agent-route-candidate-manifest.schema.json"))
+try:
+    import jsonschema
+    jsonschema.validate(man, schema)
+    print("contract: VALID (jsonschema)")
+except ModuleNotFoundError:
+    agents = man["agents"]
+    assert len(agents) == 12, f"expected 12 agents, got {len(agents)}"
+    absent = [n for n, e in agents.items() if e["production_route_recorded_absence"]]
+    assert absent == ["autopilot-fast-helper"], f"absence integrity: {absent}"
+    for n, e in agents.items():
+        for t in e["candidate_routes"]:
+            assert t["alias"] in {"opus", "sonnet", "haiku", "fable"}, (n, t["alias"])
+            assert t["environment_time_availability"]["status"] == "probe_required", n
+    print("contract: VALID (stdlib structural check)")
+PY
+```
+
+### V4 — Twelve-agent coverage, every required field present (SC-001)
+
+```bash
+python3 - <<'PY'
+import json
+man = json.load(open("docs/ai/research/claude-agent-route-candidate-manifest.json"))
+required = ["agent_name","agent_contract_id","role_contract","immutable_production_route",
+           "production_route_recorded_absence","agent_file_hashes","candidate_routes",
+           "required_capabilities","candidate_rationale","known_incompatibilities",
+           "required_qualification_artifacts","invalidation_triggers","fixture_backlog_ref"]
+expected = {"analyze-executor","checklist-executor","clarify-executor","codebase-analyst",
+            "consensus-synthesizer","domain-researcher","gate-validator","implement-executor",
+            "phase-executor","spec-context-analyst","uat-runbook-author","autopilot-fast-helper"}
+agents = man["agents"]
+assert set(agents) == expected, set(agents) ^ expected
+for n, e in agents.items():
+    missing = [f for f in required if f not in e]
+    assert not missing, f"{n} missing {missing}"
+    assert e["candidate_routes"], f"{n} has no candidate tuple"
+print("coverage: 12/12 agents, all required fields present")
+PY
+```
+
+### V5 — Instruction identity survives a pure frontmatter route change (SC-007)
+
+Recompute the frontmatter-stripped-body sha256 for a current agent and confirm it
+matches the manifest; then confirm that swapping only a frontmatter route value
+(model/effort) does not change it. Uses the Python standard library only
+(FR-025).
+
+```bash
+python3 - <<'PY'
+import hashlib, json, re, pathlib
+def strip_frontmatter(text):
+    m = re.match(r"^---\n.*?\n---\n", text, re.DOTALL)
+    return text[m.end():] if m else text
+man = json.load(open("docs/ai/research/claude-agent-route-candidate-manifest.json"))
+name = "phase-executor"
+p = pathlib.Path("speckit-pro/agents/%s.md" % name)
+body = strip_frontmatter(p.read_text(encoding="utf-8"))
+live = hashlib.sha256(body.encode("utf-8")).hexdigest()
+recorded = man["agents"][name]["agent_file_hashes"]["instruction_sha256"]
+assert live == recorded, f"instruction hash drift for {name}: {live} != {recorded}"
+# Simulate a pure frontmatter route change: alter only the frontmatter, re-strip, re-hash.
+raw = p.read_text(encoding="utf-8")
+mutated = re.sub(r"(?m)^model:.*$", "model: sonnet", raw, count=1)
+assert hashlib.sha256(strip_frontmatter(mutated).encode("utf-8")).hexdigest() == live, \
+    "frontmatter route change must not alter instruction identity"
+print("SC-007: instruction identity stable under pure frontmatter route change")
+PY
+```
+
+### V6 — No absolute filesystem paths leak into deliverables (privacy scan)
+
+```bash
+python3 - <<'PY'
+import re, pathlib
+pat = re.compile(r"/(Users|home)/")
+bad = []
+for f in ["docs/ai/research/claude-agent-route-candidates.md",
+          "docs/ai/research/claude-agent-route-candidate-manifest.json"]:
+    for i, line in enumerate(pathlib.Path(f).read_text(encoding="utf-8").splitlines(), 1):
+        if pat.search(line):
+            bad.append(f"{f}:{i}")
+assert not bad, "absolute paths found: " + ", ".join(bad)
+print("privacy scan: no absolute filesystem paths in deliverables")
+PY
+```
+
+### V7 — Zero shipped-byte change (SC-006, FR-024)
+
+```bash
+git status --porcelain speckit-pro dist tests
+```
+
+Expected: empty output. Nothing under `speckit-pro/`, `dist/`, or `tests/` is
+added, modified, or removed by the spike.
+
+### V8 — Every platform fact is cited; statements are labeled (SC-002, SC-003)
+
+Manual review of the record: confirm every row in the primary-source fact table
+carries a source URL, an access date, and a short verbatim quote (SC-002), and
+that every statement is visibly labeled fact / inference / proposed policy /
+assumption (SC-003). Confirm the capability-question section uses stable
+`CAP-Qn` IDs and that the go/no-go handoff is the record's final section, is
+self-contained, and lists no dependency on CAR-002 results (SC-004, FR-022).
+
+## Success criteria mapping
+
+| Check | Proves |
+|-------|--------|
+| V1, V7 | SC-006 — zero shipped-byte change; default suite green |
+| V2, V3, V4 | SC-001 — twelve-agent coverage, contract-valid manifest |
+| V5 | SC-007 — instruction identity stable under route change |
+| V6 | Privacy constraint — no absolute paths in deliverables |
+| V8 | SC-002, SC-003, SC-004 — citation, labeling, self-contained handoff |
