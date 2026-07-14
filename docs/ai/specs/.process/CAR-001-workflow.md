@@ -84,7 +84,7 @@ zero data impact. spec.md FR-009 + Assumption and plan.md are reconciled to
 | Clarify | `/speckit-clarify` | ⏭️ Skipped | G1 found 0 `[NEEDS CLARIFICATION]` markers; design-concept Q1–Q9 bind the decisions and open items are intentionally deferred to CAR-002 as CAP-Q probe questions |
 | Plan | `/speckit-plan` | ✅ Complete | plan/research/data-model/contracts-schema/quickstart; manifest schema fully specified; comparator pinned 2.19.1/e343aa2e; constitution PASS 6/6; reviewability advisory `pass` (0 production LOC) |
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains (traceability, data-integrity, research-rigor); 11 gaps → 0; no consensus needed (all high-confidence) |
-| Tasks | `/speckit-tasks` | 🔄 In Progress | |
+| Tasks | `/speckit-tasks` | ✅ Complete | 32 tasks, 4 phases, 11 `[P]`; FR 27/27 + SC 8/8 covered; atomicity route = one-navigable-PR (releasable), layer plan skipped |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 
@@ -544,10 +544,10 @@ When checklist identifies `[Gap]` items:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 32 (T001–T032) |
+| **Phases** | 4 (Setup, Foundational/Inventory, User Story 1 [groups A–D], Polish/Verification) |
+| **Parallel Opportunities** | 11 `[P]` markers — inventory sweeps (T004–T007) + independent verification checks |
+| **User Stories Covered** | 1 (US1); FR coverage 27/27, SC coverage 8/8 (independently verified — zero missing); 0 markers |
 
 ---
 
@@ -568,10 +568,14 @@ line count. Surface the four fields the SKILL extracts from the emitted decision
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
-| **Signals** | | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
-| **Warnings** | | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+| **Route** | `one-navigable-PR` | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
+| **Releasable** | `true` | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
+| **Signals** | `change-shape:modify-heavy` | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
+| **Warnings** | _(none)_ | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+
+**Layer Plan:** `skipped` — the route is `one-navigable-PR` (non-split), so the layer planner (split-PR only) does not run. This spike ships as a single navigable PR; no PR marker plan is required.
+
+**Reviewability boundary (tasks mode):** The runner `reviewability-gate` supports **setup mode only** on the installed runner; **tasks mode is deferred** (helper `reviewability-gate`, requested mode `tasks`, deferral reason: tasks/pre-PR modes not promoted on the installed runner). Fallback evidence chain → **proceed**: setup-mode gate at scaffold = `warn`+`pass` (roadmap-wide surface count, recorded in Scope Budget above); plan-phase `estimate-reviewable-loc` = `pass` (0 production LOC); operator-ratified split decision = single spike slice. No size-only block; no correctness/safety finding.
 
 To produce the decision, run the classifier against the feature directory:
 
