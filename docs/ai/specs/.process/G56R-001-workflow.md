@@ -53,8 +53,8 @@ Grill Me is human-in-the-loop only. Once autopilot starts, clarification uses
 |---|---|---|---|
 | Specify | `$speckit-specify` | Complete | Created spec and requirements checklist; G1 passed |
 | Clarify | `$speckit-clarify` | Complete | Resolved execution-time source, parity-role, fixture, and handoff ambiguities; G2 passed |
-| Plan | `$speckit-plan` | In Progress | Plan one canonical report and its deterministic validation |
-| Checklist | `$speckit-checklist` | Pending | Run all five user-selected operational domains |
+| Plan | `$speckit-plan` | Complete | Generated plan, research, data model, report contract, quickstart, and G3 pass evidence |
+| Checklist | `$speckit-checklist` | In Progress | Run all five user-selected operational domains |
 | Tasks | `$speckit-tasks` | Pending | Produce source-first documentation tasks only |
 | Analyze | `$speckit-analyze` | Pending | Reject authority, scope, traceability, and count drift |
 | Confidence Gate | G6.5 | Pending | Record advisory pre-implementation confidence after analysis and before report authoring |
@@ -410,12 +410,12 @@ $speckit-plan
 
 | Artifact | Status | Notes |
 |---|---|---|
-| `plan.md` | Pending | Documentation execution flow and declared file operations |
-| `research.md` | Pending | Source, classification, ID, and invalidation decisions |
-| `data-model.md` | Pending | Ledger, role, candidate, fixture, and handoff record fields if the preset emits it |
-| `contracts/` | Pending | Documentation contracts only if required; no runtime schema |
-| `quickstart.md` | Pending | Revalidation and deterministic verification steps |
-| G3 Gate | Pending | Must confirm one-report scope and no production changes |
+| `plan.md` | Complete | Documentation execution flow and declared file operation for the one canonical report |
+| `research.md` | Complete | Source, classification, ID, candidate-admission, fixture, and validation decisions |
+| `data-model.md` | Complete | Ledger, role, candidate, effort-surface, fixture, traceability, and handoff record fields |
+| `contracts/` | Complete | Planning-only Markdown report contract; no runtime schema |
+| `quickstart.md` | Complete | Revalidation and deterministic verification steps |
+| G3 Gate | Pass | `plan.md` exists with 0 unresolved markers; reviewability estimate projected 0 production LOC |
 
 ---
 
