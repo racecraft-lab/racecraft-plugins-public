@@ -14,6 +14,7 @@
     "resulting_snapshot",
     "operation_count",
     "operations",
+    "source_preconditions",
     "warnings",
     "plan_hash"
   ],
@@ -33,6 +34,11 @@
       "maxItems": 256,
       "items": { "$ref": "#/$defs/operation" }
     },
+    "source_preconditions": {
+      "type": "array",
+      "maxItems": 4096,
+      "items": { "$ref": "#/$defs/sourcePrecondition" }
+    },
     "warnings": {
       "type": "array",
       "items": { "type": "string" },
@@ -43,6 +49,16 @@
   "$defs": {
     "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "snapshot": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "sourcePrecondition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "prior_sha256", "resulting_sha256"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "prior_sha256": { "$ref": "#/$defs/digest" },
+        "resulting_sha256": { "$ref": "#/$defs/digest" }
+      }
+    },
     "operation": {
       "type": "object",
       "additionalProperties": false,

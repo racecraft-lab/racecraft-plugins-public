@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import posixpath
 import re
 import stat
@@ -288,6 +289,7 @@ def run_knowledge_update_apply(entry: Any, request: Any) -> dict[str, Any]:
         if not isinstance(operations, list):
             raise KnowledgeError("invalid_plan", "knowledge update plan operations must be an array")
         _validate_apply_operations(repo_root, operations)
+        _validate_source_preconditions(repo_root, supplied_plan, phase="prior")
     except KnowledgeError as exc:
         mutation["mutation_status"] = "blocked"
         return _error_response(
@@ -314,26 +316,24 @@ def run_knowledge_update_apply(entry: Any, request: Any) -> dict[str, Any]:
             data=_apply_data(entry, request, mutation, supplied_plan),
         )
 
-    backups: list[tuple[Path, bytes | None]] = []
-    created_directories: set[Path] = set()
-    simulate_failure_after = request.inputs.get("simulate_failure_after")
-    if simulate_failure_after is not None and (
-        isinstance(simulate_failure_after, bool) or not isinstance(simulate_failure_after, int)
-    ):
+    if "simulate_failure_after" in request.inputs:
         mutation["mutation_status"] = "blocked"
         return _error_response(
             request.request_id,
-            KnowledgeError("invalid_input", "simulate_failure_after must be an integer"),
+            KnowledgeError("invalid_input", "simulate_failure_after is not a supported apply input"),
             data=_apply_data(entry, request, mutation, supplied_plan),
         )
+
+    backups: list[tuple[Path, bytes | None]] = []
+    created_directories: set[Path] = set()
+    failure_operation: dict[str, Any] | None = None
     try:
-        for index, operation in enumerate(operations):
-            if isinstance(simulate_failure_after, int) and index >= simulate_failure_after:
-                raise OSError("simulated knowledge write failure")
+        for operation in operations:
+            failure_operation = operation
             target = repo_root / str(operation["target"])
             if not _safe_write_target_chain(target, repo_root):
                 raise OSError("knowledge update target chain became unsafe")
-            before = target.read_bytes() if target.is_file() else None
+            before = _read_apply_target(target)
             before_hash = _sha256_bytes(before) if before is not None else None
             if before_hash != operation.get("prior_sha256"):
                 raise _SourceChangedError("knowledge update target changed immediately before write")
@@ -347,19 +347,36 @@ def run_knowledge_update_apply(entry: Any, request: Any) -> dict[str, Any]:
                 {"operation_id": operation["operation_id"], "kind": "write_file", "target": operation["target"]}
             )
             mutation["touched_paths"].append(str(operation["target"]))
-    except OSError as exc:
+        failure_operation = None
+        _validate_source_preconditions(repo_root, supplied_plan, phase="resulting")
+    except (KnowledgeError, OSError) as exc:
         rollback_errors = _rollback_writes(backups, repo_root, created_directories)
-        mutation["mutation_status"] = "rolled_back" if not rollback_errors else "partial_failure"
-        mutation["live_mutation"] = bool(backups)
-        mutation["manual_remediation"] = rollback_errors
+        residual_paths = _residual_mutation_paths(backups, created_directories)
+        mutation["mutation_status"] = "partial_failure" if residual_paths else "rolled_back"
+        mutation["live_mutation"] = bool(residual_paths)
+        mutation["manual_remediation"] = [*rollback_errors, *[f"residual mutation: {path}" for path in residual_paths]]
+        if failure_operation is not None:
+            mutation["failure_operation"] = {
+                "operation_id": failure_operation.get("operation_id"),
+                "kind": failure_operation.get("kind"),
+                "target": failure_operation.get("target"),
+            }
+            failed_target = str(failure_operation.get("target"))
+            if failed_target not in mutation["touched_paths"]:
+                mutation["touched_paths"].append(failed_target)
+        source_failure = isinstance(exc, KnowledgeError) and exc.code == "source_changed"
         return _error_response(
             request.request_id,
             KnowledgeError(
-                "source_changed" if isinstance(exc, _SourceChangedError) else "write_failure",
+                "source_changed" if isinstance(exc, _SourceChangedError) or source_failure else "write_failure",
                 "knowledge update target changed and rollback was attempted"
-                if isinstance(exc, _SourceChangedError)
+                if isinstance(exc, _SourceChangedError) or source_failure
                 else "knowledge update failed and rollback was attempted",
-                details={"error": type(exc).__name__, "rollback_errors": rollback_errors},
+                details={
+                    "error": type(exc).__name__,
+                    "rollback_errors": rollback_errors,
+                    "residual_paths": residual_paths,
+                },
             ),
             expected_failure=True,
             data=_apply_data(entry, request, mutation, supplied_plan),
@@ -398,26 +415,67 @@ def _knowledge_root(repo_root: Path) -> Path:
 
 
 def _read_utf8(path: Path, *, limit: int = MAX_CONCEPT_BYTES) -> str:
+    raw = _read_regular_bytes(path, limit=limit, oversized_code="oversized_concept")
     try:
-        mode = path.lstat().st_mode
+        return raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise KnowledgeError("invalid_utf8", "knowledge files must be valid UTF-8", details={"path": path.as_posix()}) from exc
+
+
+def _read_regular_bytes(path: Path, *, limit: int, oversized_code: str) -> bytes:
+    descriptor = -1
+    try:
+        before = path.lstat()
+        if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
+            raise KnowledgeError(
+                "unsafe_path",
+                "knowledge sources must be regular non-symlink files",
+                details={"path": path.as_posix()},
+            )
+        flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+        descriptor = os.open(path, flags)
+        opened = os.fstat(descriptor)
+        if not stat.S_ISREG(opened.st_mode) or (before.st_dev, before.st_ino) != (opened.st_dev, opened.st_ino):
+            raise KnowledgeError(
+                "source_changed",
+                "knowledge source changed while it was being opened",
+                details={"path": path.as_posix()},
+            )
+        if opened.st_size > limit:
+            raise KnowledgeError(
+                oversized_code,
+                "knowledge source exceeds its bounded file size",
+                details={"path": path.as_posix(), "limit_bytes": limit, "size_bytes": opened.st_size},
+            )
+        chunks: list[bytes] = []
+        size = 0
+        while True:
+            chunk = os.read(descriptor, min(64 * 1024, limit + 1 - size))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            size += len(chunk)
+            if size > limit:
+                raise KnowledgeError(
+                    oversized_code,
+                    "knowledge source exceeds its bounded file size",
+                    details={"path": path.as_posix(), "limit_bytes": limit, "size_bytes": size},
+                )
+        return b"".join(chunks)
+    except KnowledgeError:
+        raise
     except OSError as exc:
         raise KnowledgeError(
             "unreadable_file",
-            "knowledge file could not be inspected",
+            "knowledge source could not be read",
             details={"path": path.as_posix(), "error": type(exc).__name__},
         ) from exc
-    if stat.S_ISLNK(mode) or not stat.S_ISREG(mode):
-        raise KnowledgeError("unsafe_path", "knowledge files must be regular non-symlink files", details={"path": path.as_posix()})
-    if path.stat().st_size > limit:
-        raise KnowledgeError(
-            "oversized_concept",
-            "knowledge concept exceeds the bounded file size",
-            details={"path": path.as_posix(), "limit_bytes": limit},
-        )
-    try:
-        return path.read_bytes().decode("utf-8")
-    except UnicodeDecodeError as exc:
-        raise KnowledgeError("invalid_utf8", "knowledge files must be valid UTF-8", details={"path": path.as_posix()}) from exc
+    finally:
+        if descriptor >= 0:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
 
 
 def _split_frontmatter(text: str) -> tuple[dict[str, Any], str]:
@@ -640,13 +698,20 @@ def _remove_metadata(text: str, keys: set[str]) -> str:
         end = lines.index("---", 1)
     except ValueError as exc:
         raise KnowledgeError("invalid_frontmatter", "frontmatter opening delimiter has no closing delimiter") from exc
-    kept = [lines[0]]
-    for line in lines[1:end]:
-        key = line.split(":", 1)[0].strip() if ":" in line and not line.startswith((" ", "\t", "- ")) else ""
+    removals: list[tuple[int, int]] = []
+    for index, line in enumerate(lines[1:end], start=1):
+        if line.startswith((" ", "\t", "- ")) or ":" not in line:
+            continue
+        key = line.split(":", 1)[0].strip()
         if key not in keys:
-            kept.append(line)
-    kept.extend(lines[end:])
-    return "\n".join(kept).rstrip() + "\n"
+            continue
+        span_end = index + 1
+        while span_end < end and lines[span_end].startswith((" ", "\t", "- ")):
+            span_end += 1
+        removals.append((index, span_end))
+    for start, span_end in reversed(removals):
+        del lines[start:span_end]
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def _load_concepts(repo_root: Path) -> list[Concept]:
@@ -1559,6 +1624,21 @@ def _concept_sources(concept: Concept) -> list[dict[str, str]]:
     return sources
 
 
+def _source_token_records(concept: Concept) -> list[tuple[str, str, str]]:
+    records: list[tuple[str, str, str]] = []
+    for field in ("x-speckit-sources", "x-speckit-migration-sources"):
+        tokens = concept.metadata.get(field, [])
+        if not isinstance(tokens, list):
+            continue
+        for token in tokens:
+            if not isinstance(token, str) or "|" not in token:
+                continue
+            path, digest = token.rsplit("|", 1)
+            if re.fullmatch(r"[a-f0-9]{64}", digest):
+                records.append((field, path, digest))
+    return records
+
+
 def _snippet(body: str, tokens: list[str]) -> str:
     compact = re.sub(r"\s+", " ", body).strip()
     if not compact:
@@ -1581,8 +1661,9 @@ def _build_plan(repo_root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
     timestamp = inputs.get("timestamp")
     if timestamp is None:
         timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-    if not isinstance(timestamp, str) or not _valid_timestamp(timestamp):
+    if not isinstance(timestamp, str):
         raise KnowledgeError("invalid_input", "timestamp must be an ISO-8601 date-time string")
+    timestamp = _normalized_timestamp(timestamp)
     scope = _normalized_scope(inputs.get("scope"))
     normalized_request = _normalized_plan_request(inputs, action, timestamp, scope)
     existing = _load_concepts(repo_root)
@@ -1837,6 +1918,7 @@ def _build_plan(repo_root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
         log = _render_log(repo_root, action, timestamp, resulting_snapshot)
         explicit_operations.append((_knowledge_target("log.md"), log))
     operations = _materialize_operations(repo_root, explicit_operations)
+    source_preconditions = _build_source_preconditions(repo_root, concepts, operations)
     content_bytes = sum(len(str(operation["content"]).encode("utf-8")) for operation in operations)
     if len(operations) > MAX_PLAN_OPERATIONS or content_bytes > MAX_PLAN_CONTENT_BYTES:
         raise KnowledgeError(
@@ -1860,6 +1942,7 @@ def _build_plan(repo_root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
         "resulting_snapshot": resulting_snapshot,
         "operation_count": len(operations),
         "operations": operations,
+        "source_preconditions": source_preconditions,
         "warnings": sorted(set(warnings)),
     }
     plan["plan_hash"] = _plan_hash(plan)
@@ -1949,7 +2032,8 @@ def _migration_records(
             "x-speckit-producer-skill": "knowledge-migration",
             "x-speckit-producer-agent": "speckit-pro-runner",
             "x-speckit-sources": [
-                f"{repo_relative(roadmap, repo_root)}|{_sha256_file(roadmap)}",
+                f"{repo_relative(roadmap, repo_root)}|"
+                f"{_sha256_text(source_text) if source == roadmap else _sha256_file(roadmap)}",
             ],
         }
         if has_legacy_view:
@@ -2911,7 +2995,7 @@ def _materialize_operations(repo_root: Path, requested: list[tuple[str, str]]) -
     operations: list[dict[str, Any]] = []
     for index, (target, content) in enumerate(sorted(deduplicated.items()), start=1):
         path = repo_root / target
-        prior = path.read_bytes() if path.is_file() and not path.is_symlink() else None
+        prior = _read_optional_target(path)
         encoded = content.encode("utf-8")
         if prior == encoded:
             continue
@@ -2926,6 +3010,175 @@ def _materialize_operations(repo_root: Path, requested: list[tuple[str, str]]) -
             }
         )
     return operations
+
+
+def _read_optional_target(path: Path) -> bytes | None:
+    try:
+        mode = path.lstat().st_mode
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        raise KnowledgeError(
+            "unreadable_file",
+            "knowledge update target could not be inspected",
+            details={"path": path.as_posix(), "error": type(exc).__name__},
+        ) from exc
+    if stat.S_ISLNK(mode) or not stat.S_ISREG(mode):
+        raise KnowledgeError(
+            "unsafe_path",
+            "knowledge update targets must be regular non-symlink files",
+            details={"path": path.as_posix()},
+        )
+    return _read_regular_bytes(
+        path,
+        limit=MAX_PLAN_CONTENT_BYTES,
+        oversized_code="oversized_concept",
+    )
+
+
+def _read_apply_target(path: Path) -> bytes | None:
+    try:
+        return _read_optional_target(path)
+    except KnowledgeError as exc:
+        raise _SourceChangedError(str(exc)) from exc
+
+
+def _source_path(repo_root: Path, raw: str) -> Path:
+    relative = PurePosixPath(raw.replace("\\", "/"))
+    if relative.is_absolute() or not relative.parts or ".." in relative.parts:
+        raise KnowledgeError(
+            "missing_source",
+            "knowledge source path must stay inside the repository",
+            details={"path": raw},
+        )
+    path = repo_root.joinpath(*relative.parts)
+    if not _safe_repository_chain(path, repo_root):
+        raise KnowledgeError(
+            "missing_source",
+            "knowledge source must be a regular non-symlink repository file",
+            details={"path": raw},
+        )
+    return path
+
+
+def _build_source_preconditions(
+    repo_root: Path,
+    concepts: list[Concept],
+    operations: list[dict[str, Any]],
+) -> list[dict[str, str]]:
+    operations_by_target = {str(operation["target"]): operation for operation in operations}
+    records: dict[str, dict[str, str]] = {}
+    for concept in concepts:
+        if concept.metadata.get("x-speckit-status") in {"archived", "superseded"}:
+            continue
+        concept_is_planned = _knowledge_target(concept.relative_path) in operations_by_target
+        for field, raw_path, recorded_digest in _source_token_records(concept):
+            if field == "x-speckit-migration-sources" and not concept_is_planned:
+                continue
+            path = _source_path(repo_root, raw_path)
+            normalized = repo_relative(path, repo_root)
+            actual = _sha256_file(path)
+            operation = operations_by_target.get(normalized)
+            if operation is None:
+                if actual != recorded_digest:
+                    raise KnowledgeError(
+                        "stale_source",
+                        "active knowledge source hash changed",
+                        details={
+                            "concept": concept.relative_path,
+                            "path": normalized,
+                            "expected": recorded_digest,
+                            "actual": actual,
+                        },
+                    )
+                resulting = actual
+            else:
+                prior = operation.get("prior_sha256")
+                resulting = operation.get("content_sha256")
+                if actual != prior:
+                    raise KnowledgeError(
+                        "source_changed",
+                        "planned knowledge source target changed during planning",
+                        details={"path": normalized},
+                    )
+                expected_token = resulting if field == "x-speckit-sources" else prior
+                if recorded_digest != expected_token:
+                    raise KnowledgeError(
+                        "stale_source",
+                        "knowledge source token does not match its planned state",
+                        details={
+                            "concept": concept.relative_path,
+                            "path": normalized,
+                            "field": field,
+                            "expected": expected_token,
+                            "actual": recorded_digest,
+                        },
+                    )
+            record = {
+                "path": normalized,
+                "prior_sha256": actual,
+                "resulting_sha256": str(resulting),
+            }
+            if normalized in records and records[normalized] != record:
+                raise KnowledgeError(
+                    "stale_source",
+                    "knowledge concepts disagree about a shared source precondition",
+                    details={"path": normalized},
+                )
+            records[normalized] = record
+    return [records[path] for path in sorted(records, key=lambda value: value.encode("utf-8"))]
+
+
+def _validate_source_preconditions(
+    repo_root: Path,
+    plan: dict[str, Any],
+    *,
+    phase: str,
+) -> None:
+    preconditions = plan.get("source_preconditions")
+    if not isinstance(preconditions, list) or phase not in {"prior", "resulting"}:
+        raise KnowledgeError("invalid_plan", "knowledge plan source preconditions are invalid")
+    digest_key = f"{phase}_sha256"
+    seen: set[str] = set()
+    for index, record in enumerate(preconditions):
+        if not isinstance(record, dict) or set(record) != {
+            "path",
+            "prior_sha256",
+            "resulting_sha256",
+        }:
+            raise KnowledgeError(
+                "invalid_plan",
+                "knowledge plan source precondition has invalid fields",
+                details={"source_index": index},
+            )
+        raw_path = record.get("path")
+        expected = record.get(digest_key)
+        if (
+            not isinstance(raw_path, str)
+            or raw_path in seen
+            or not isinstance(expected, str)
+            or re.fullmatch(r"[a-f0-9]{64}", expected) is None
+        ):
+            raise KnowledgeError(
+                "invalid_plan",
+                "knowledge plan source precondition is malformed or duplicated",
+                details={"source_index": index},
+            )
+        seen.add(raw_path)
+        try:
+            actual = _sha256_file(_source_path(repo_root, raw_path))
+        except KnowledgeError as exc:
+            raise KnowledgeError(
+                "source_changed",
+                "knowledge source became unavailable during apply",
+                details={"path": raw_path, "phase": phase, "cause": exc.code},
+            ) from exc
+        if actual != expected:
+            raise KnowledgeError(
+                "source_changed",
+                "knowledge source changed during apply",
+                details={"path": raw_path, "phase": phase, "expected": expected, "actual": actual},
+            )
 
 
 def _validate_apply_operations(repo_root: Path, operations: list[Any]) -> None:
@@ -2944,7 +3197,14 @@ def _validate_apply_operations(repo_root: Path, operations: list[Any]) -> None:
         if path_diag is not None:
             raise KnowledgeError(str(path_diag.get("code", "unsafe_path")), str(path_diag.get("message", "unsafe update path")), details=path_diag.get("details", {}))
         path = repo_root / target
-        current = path.read_bytes() if path.is_file() and not path.is_symlink() else None
+        try:
+            current = _read_optional_target(path)
+        except KnowledgeError as exc:
+            raise KnowledgeError(
+                "source_changed",
+                "knowledge update target became unreadable after planning",
+                details={"target": target, "cause": exc.code},
+            ) from exc
         actual_prior = _sha256_bytes(current) if current is not None else None
         if actual_prior != operation.get("prior_sha256"):
             raise KnowledgeError("source_changed", "knowledge update target changed after planning", details={"target": target})
@@ -2996,6 +3256,43 @@ def _rollback_writes(
         except OSError as exc:
             errors.append(f"{directory.as_posix()}: {type(exc).__name__}")
     return errors
+
+
+def _residual_mutation_paths(
+    backups: list[tuple[Path, bytes | None]],
+    created_directories: set[Path],
+) -> list[str]:
+    residual: set[str] = set()
+    for target, before in backups:
+        try:
+            mode = target.lstat().st_mode
+        except FileNotFoundError:
+            if before is not None:
+                residual.add(target.as_posix())
+            continue
+        except OSError:
+            residual.add(target.as_posix())
+            continue
+        if before is None:
+            residual.add(target.as_posix())
+            continue
+        if stat.S_ISLNK(mode) or not stat.S_ISREG(mode):
+            residual.add(target.as_posix())
+            continue
+        try:
+            current = target.read_bytes()
+        except OSError:
+            residual.add(target.as_posix())
+            continue
+        if current != before:
+            residual.add(target.as_posix())
+    for directory in created_directories:
+        try:
+            if directory.exists() or directory.is_symlink():
+                residual.add(directory.as_posix())
+        except OSError:
+            residual.add(directory.as_posix())
+    return sorted(residual, key=lambda value: value.encode("utf-8"))
 
 
 def _safe_repository_chain(
@@ -3067,7 +3364,8 @@ def _apply_data(entry: Any, request: Any, mutation: dict[str, Any], plan: dict[s
         "mode": request.mode,
         "promotion_status": entry.promotion_status,
         "comparison_mode": entry.comparison_mode,
-        "writes_state": request.mode == "apply" and mutation.get("mutation_status") == "applied",
+        "writes_state": request.mode == "apply"
+        and (mutation.get("mutation_status") == "applied" or bool(mutation.get("live_mutation"))),
         "expected_snapshot": plan.get("expected_snapshot") if isinstance(plan, dict) else None,
         "resulting_snapshot": plan.get("resulting_snapshot") if isinstance(plan, dict) else None,
         "mutation": mutation,
@@ -3159,12 +3457,27 @@ def _knowledge_target(relative: str) -> str:
     return (KNOWLEDGE_RELATIVE_ROOT / PurePosixPath(relative)).as_posix()
 
 
+def _normalized_timestamp(value: str) -> str:
+    if re.fullmatch(
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})",
+        value,
+    ) is None:
+        raise KnowledgeError("invalid_input", "timestamp must be an RFC 3339 date-time with a timezone")
+    try:
+        parsed = datetime.fromisoformat(f"{value[:-1]}+00:00" if value.endswith("Z") else value)
+    except ValueError:
+        raise KnowledgeError("invalid_input", "timestamp must be an RFC 3339 date-time with a timezone") from None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise KnowledgeError("invalid_input", "timestamp must include a timezone")
+    return parsed.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
 def _valid_timestamp(value: str) -> bool:
     try:
-        datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
+        _normalized_timestamp(value)
+    except KnowledgeError:
         return False
-    return "T" in value
+    return True
 
 
 def _sha256_text(value: str) -> str:
@@ -3172,24 +3485,9 @@ def _sha256_text(value: str) -> str:
 
 
 def _sha256_file(path: Path, *, limit: int = MAX_SOURCE_BYTES) -> str:
-    try:
-        size = path.stat().st_size
-    except OSError as exc:
-        raise KnowledgeError("unreadable_file", "source file could not be inspected") from exc
-    if size > limit:
-        raise KnowledgeError(
-            "oversized_source",
-            "source file exceeds the bounded provenance size",
-            details={"limit_bytes": limit, "size_bytes": size},
-        )
-    digest = hashlib.sha256()
-    try:
-        with path.open("rb") as stream:
-            for chunk in iter(lambda: stream.read(64 * 1024), b""):
-                digest.update(chunk)
-    except OSError as exc:
-        raise KnowledgeError("unreadable_file", "source file could not be read") from exc
-    return digest.hexdigest()
+    return _sha256_bytes(
+        _read_regular_bytes(path, limit=limit, oversized_code="oversized_source")
+    )
 
 
 def _sha256_bytes(value: bytes) -> str:

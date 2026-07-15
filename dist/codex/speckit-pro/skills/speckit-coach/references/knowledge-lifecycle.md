@@ -85,11 +85,13 @@ Exact envelope shapes:
 For `migrate`, reviewed cutover carries `reviewed: true` and
 `legacy_memory_reviewed: true`. For `promote`, plan inputs also carry `candidate`; for `supersede`,
 `concept_path` and `replacement`; for `archive`, `concept_path` and optional
-`sources`. An optional ISO-8601 `timestamp` makes a plan reproducible.
+`sources`. An optional RFC 3339 `timestamp` with a timezone makes a plan reproducible.
 
 For mutations, always run plan first, show its proposed operations and warnings,
-and apply only the exact accepted plan. A stale snapshot or validation failure
-must stop without partial writes. `generate-spec-index-check` and
+and apply only the exact accepted plan. The signed plan includes source
+preconditions that apply rechecks before and after writes. A stale snapshot,
+changed source, or validation failure must stop without partial writes.
+`generate-spec-index-check` and
 `generate-spec-index-write` are compatibility adapters; use the knowledge
 operations for new flows.
 

@@ -492,7 +492,9 @@ class RunnerFoundationTests(unittest.TestCase):
             "docs-site/src/data/safe-install-aids.ts",
             "docs-site/src/content/docs/reference/agents.md",
             "docs-site/src/content/docs/reference/scripts.md",
+            "docs-site/src/content/docs/reference/skills.md",
             "docs-site/src/content/docs/reference/tests.md",
+            "docs/ai/research/harness-knowledge-authority-inventory.md",
             "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
             "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
             "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",
@@ -556,6 +558,7 @@ class RunnerFoundationTests(unittest.TestCase):
             "docs/ai/specs/.process/XPLAT-009",
             "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/",
         )
+        allowed_okf_prefixes = ("docs/ai/knowledge/",)
         allowed_tool_surface_exact = {
             # Operator-owned tool surface (tools: allowlist retirement):
             # capability-discovery role boundaries and the single-orchestrator
@@ -599,6 +602,8 @@ class RunnerFoundationTests(unittest.TestCase):
             if path.startswith(allowed_xplat009_prefixes):
                 if path.endswith(".sh"):
                     self.assertEqual(status_by_path.get(path), "D", path)
+                continue
+            if path.startswith(allowed_okf_prefixes):
                 continue
             self.assertFalse(path.startswith(forbidden_prefixes), path)
             if path.startswith("docs/"):

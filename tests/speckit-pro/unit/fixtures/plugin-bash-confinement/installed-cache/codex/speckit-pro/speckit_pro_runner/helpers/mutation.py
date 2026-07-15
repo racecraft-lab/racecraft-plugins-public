@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import secrets
 import stat
 import tempfile
 from pathlib import Path
@@ -266,7 +267,7 @@ def _spec_index_target_chain_is_safe(target: Path, trust_root: Path) -> bool:
             try:
                 mode = current.lstat().st_mode
             except FileNotFoundError:
-                continue
+                return False
             if stat.S_ISLNK(mode) or not stat.S_ISDIR(mode):
                 return False
         try:
@@ -686,11 +687,16 @@ def git_worktree_status(repo_root: Path) -> bool | dict[str, Any]:
 
 
 def write_file_atomic(target: Path, content: str, *, trust_root: Path | None = None) -> None:
-    if trust_root is not None and not _spec_index_target_chain_is_safe(target, trust_root):
-        raise OSError("unsafe target path")
+    if trust_root is not None:
+        if os.name == "posix":
+            _write_file_atomic_posix(target, content, trust_root)
+            return
+        if os.name == "nt":
+            _write_file_atomic_windows(target, content, trust_root)
+            return
+        raise OSError("trusted atomic writes are unsupported on this platform")
+
     target.parent.mkdir(parents=True, exist_ok=True)
-    if trust_root is not None and not _spec_index_target_chain_is_safe(target, trust_root):
-        raise OSError("unsafe target path after parent creation")
     descriptor = -1
     tmp: Path | None = None
     try:
@@ -702,8 +708,6 @@ def write_file_atomic(target: Path, content: str, *, trust_root: Path | None = N
             target_mode = 0o666 & ~previous_umask
         descriptor, raw_tmp = tempfile.mkstemp(prefix=f".{target.name}.tmp-", dir=target.parent)
         tmp = Path(raw_tmp)
-        if trust_root is not None and not _spec_index_target_chain_is_safe(tmp, trust_root):
-            raise OSError("unsafe temporary target path")
         os.fchmod(descriptor, target_mode)
         with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as fh:
             descriptor = -1
@@ -711,10 +715,6 @@ def write_file_atomic(target: Path, content: str, *, trust_root: Path | None = N
             fh.flush()
             os.fsync(fh.fileno())
         if tmp.is_symlink() or not tmp.is_file():
-            raise OSError("temporary target path changed before replace")
-        if trust_root is not None and not _spec_index_target_chain_is_safe(target, trust_root):
-            raise OSError("target path changed before replace")
-        if trust_root is not None and not _spec_index_target_chain_is_safe(tmp, trust_root):
             raise OSError("temporary target path changed before replace")
         os.replace(tmp, target)
         if os.name == "posix":
@@ -735,6 +735,314 @@ def write_file_atomic(target: Path, content: str, *, trust_root: Path | None = N
             except OSError:
                 # Best-effort cleanup only; the write outcome is already determined.
                 pass
+
+
+def _write_relative_parts(target: Path, trust_root: Path) -> tuple[tuple[str, ...], str]:
+    try:
+        relative = target.relative_to(trust_root)
+    except ValueError as exc:
+        raise OSError("atomic write target is outside the trust root") from exc
+    parts = relative.parts
+    if not parts or any(part in {"", ".", ".."} or "\x00" in part for part in parts):
+        raise OSError("atomic write target is not a safe relative path")
+    return parts[:-1], parts[-1]
+
+
+def _write_file_atomic_posix(target: Path, content: str, trust_root: Path) -> None:
+    parents, leaf = _write_relative_parts(target, trust_root)
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+    descriptors: list[int] = []
+    temporary_descriptor = -1
+    temporary_name: str | None = None
+    committed = False
+    try:
+        descriptors.append(os.open(trust_root, directory_flags))
+        for part in parents:
+            try:
+                descriptor = os.open(part, directory_flags, dir_fd=descriptors[-1])
+            except FileNotFoundError:
+                os.mkdir(part, mode=0o777, dir_fd=descriptors[-1])
+                descriptor = os.open(part, directory_flags, dir_fd=descriptors[-1])
+            descriptors.append(descriptor)
+        parent_descriptor = descriptors[-1]
+        try:
+            target_stat = os.stat(leaf, dir_fd=parent_descriptor, follow_symlinks=False)
+        except FileNotFoundError:
+            target_mode = None
+        else:
+            if not stat.S_ISREG(target_stat.st_mode):
+                raise OSError("atomic write target must be a regular non-symlink file")
+            target_mode = stat.S_IMODE(target_stat.st_mode)
+
+        temporary_flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC
+        for _ in range(128):
+            candidate = f".{leaf}.tmp-{secrets.token_hex(8)}"
+            try:
+                temporary_descriptor = os.open(
+                    candidate,
+                    temporary_flags,
+                    0o666,
+                    dir_fd=parent_descriptor,
+                )
+            except FileExistsError:
+                continue
+            temporary_name = candidate
+            break
+        if temporary_descriptor < 0 or temporary_name is None:
+            raise OSError("could not allocate a unique atomic-write temporary file")
+        if target_mode is not None:
+            os.fchmod(temporary_descriptor, target_mode)
+        payload = ensure_final_newline(content).encode("utf-8")
+        offset = 0
+        while offset < len(payload):
+            offset += os.write(temporary_descriptor, payload[offset:])
+        os.fsync(temporary_descriptor)
+        if not stat.S_ISREG(os.fstat(temporary_descriptor).st_mode):
+            raise OSError("atomic-write temporary handle is not a regular file")
+        os.replace(
+            temporary_name,
+            leaf,
+            src_dir_fd=parent_descriptor,
+            dst_dir_fd=parent_descriptor,
+        )
+        committed = True
+        os.fsync(parent_descriptor)
+    finally:
+        if temporary_descriptor >= 0:
+            try:
+                os.close(temporary_descriptor)
+            except OSError:
+                pass
+        if not committed and temporary_name is not None and descriptors:
+            try:
+                os.unlink(temporary_name, dir_fd=descriptors[-1])
+            except OSError:
+                pass
+        for descriptor in reversed(descriptors):
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+
+
+def _write_file_atomic_windows(target: Path, content: str, trust_root: Path) -> None:
+    # Windows lacks Python-level dir_fd mutation APIs. Pin every directory with
+    # non-delete-sharing Win32 handles and rename the open temporary handle.
+    import ctypes
+    from ctypes import wintypes
+
+    parents, leaf = _write_relative_parts(target, trust_root)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    invalid_handle = wintypes.HANDLE(-1).value
+    file_share_read = 0x00000001
+    file_share_write = 0x00000002
+    open_existing = 3
+    create_new = 1
+    file_flag_backup_semantics = 0x02000000
+    file_flag_open_reparse_point = 0x00200000
+    file_attribute_normal = 0x00000080
+    file_attribute_directory = 0x00000010
+    file_attribute_reparse_point = 0x00000400
+    generic_write = 0x40000000
+    delete_access = 0x00010000
+    file_attribute_tag_info = 9
+    file_id_info = 18
+    file_rename_info = 3
+
+    class FileAttributeTagInfo(ctypes.Structure):
+        _fields_ = [("FileAttributes", wintypes.DWORD), ("ReparseTag", wintypes.DWORD)]
+
+    class FileIdInfo(ctypes.Structure):
+        _fields_ = [("VolumeSerialNumber", ctypes.c_ulonglong), ("FileId", ctypes.c_byte * 16)]
+
+    class FileRenameInfo(ctypes.Structure):
+        _fields_ = [
+            ("ReplaceIfExists", wintypes.BOOLEAN),
+            ("RootDirectory", wintypes.HANDLE),
+            ("FileNameLength", wintypes.DWORD),
+            ("FileName", wintypes.WCHAR * 1),
+        ]
+
+    kernel32.CreateFileW.restype = wintypes.HANDLE
+    kernel32.CreateFileW.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.HANDLE,
+    ]
+    kernel32.GetFileInformationByHandleEx.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_int,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+    ]
+    kernel32.GetFileInformationByHandleEx.restype = wintypes.BOOL
+    kernel32.CreateDirectoryW.argtypes = [wintypes.LPCWSTR, wintypes.LPVOID]
+    kernel32.CreateDirectoryW.restype = wintypes.BOOL
+    kernel32.WriteFile.argtypes = [
+        wintypes.HANDLE,
+        wintypes.LPCVOID,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+        wintypes.LPVOID,
+    ]
+    kernel32.WriteFile.restype = wintypes.BOOL
+    kernel32.FlushFileBuffers.argtypes = [wintypes.HANDLE]
+    kernel32.FlushFileBuffers.restype = wintypes.BOOL
+    kernel32.SetFileInformationByHandle.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_int,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+    ]
+    kernel32.SetFileInformationByHandle.restype = wintypes.BOOL
+    kernel32.GetFileAttributesW.argtypes = [wintypes.LPCWSTR]
+    kernel32.GetFileAttributesW.restype = wintypes.DWORD
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    kernel32.DeleteFileW.argtypes = [wintypes.LPCWSTR]
+    kernel32.DeleteFileW.restype = wintypes.BOOL
+
+    def win_error(message: str) -> OSError:
+        return OSError(ctypes.get_last_error(), message)
+
+    def open_directory(path: Path) -> int:
+        handle = kernel32.CreateFileW(
+            str(path),
+            0,
+            file_share_read | file_share_write,
+            None,
+            open_existing,
+            file_flag_backup_semantics | file_flag_open_reparse_point,
+            None,
+        )
+        if handle == invalid_handle:
+            raise win_error("could not pin atomic-write directory")
+        attributes = FileAttributeTagInfo()
+        identity = FileIdInfo()
+        if not kernel32.GetFileInformationByHandleEx(
+            handle,
+            file_attribute_tag_info,
+            ctypes.byref(attributes),
+            ctypes.sizeof(attributes),
+        ) or not kernel32.GetFileInformationByHandleEx(
+            handle,
+            file_id_info,
+            ctypes.byref(identity),
+            ctypes.sizeof(identity),
+        ):
+            kernel32.CloseHandle(handle)
+            raise win_error("could not validate atomic-write directory identity")
+        if not attributes.FileAttributes & file_attribute_directory or attributes.FileAttributes & file_attribute_reparse_point:
+            kernel32.CloseHandle(handle)
+            raise OSError("atomic-write directory must be a non-reparse directory")
+        return int(handle)
+
+    root = Path(os.path.abspath(trust_root))
+    target_path = root.joinpath(*parents, leaf)
+    handles: list[int] = []
+    temporary_handle = invalid_handle
+    temporary_path: Path | None = None
+    committed = False
+    try:
+        anchor = Path(root.anchor)
+        current = anchor
+        handles.append(open_directory(current))
+        for part in (*root.parts[1:], *parents):
+            current = current / part
+            try:
+                handles.append(open_directory(current))
+            except OSError:
+                if not kernel32.CreateDirectoryW(str(current), None) and ctypes.get_last_error() != 183:
+                    raise win_error("could not create atomic-write directory")
+                handles.append(open_directory(current))
+        attributes = kernel32.GetFileAttributesW(str(target_path))
+        if attributes == 0xFFFFFFFF:
+            if ctypes.get_last_error() not in {2, 3}:
+                raise win_error("could not inspect atomic write target")
+        elif attributes & file_attribute_directory or attributes & file_attribute_reparse_point:
+            raise OSError("atomic write target must be a regular non-reparse file")
+        for _ in range(128):
+            candidate = current / f".{leaf}.tmp-{secrets.token_hex(8)}"
+            temporary_handle = kernel32.CreateFileW(
+                str(candidate),
+                generic_write | delete_access,
+                file_share_read | file_share_write,
+                None,
+                create_new,
+                file_attribute_normal | file_flag_open_reparse_point,
+                None,
+            )
+            if temporary_handle != invalid_handle:
+                temporary_path = candidate
+                break
+            if ctypes.get_last_error() != 80:
+                raise win_error("could not create atomic-write temporary file")
+        if temporary_handle == invalid_handle or temporary_path is None:
+            raise OSError("could not allocate a unique atomic-write temporary file")
+        temporary_attributes = FileAttributeTagInfo()
+        temporary_identity = FileIdInfo()
+        if not kernel32.GetFileInformationByHandleEx(
+            temporary_handle,
+            file_attribute_tag_info,
+            ctypes.byref(temporary_attributes),
+            ctypes.sizeof(temporary_attributes),
+        ) or not kernel32.GetFileInformationByHandleEx(
+            temporary_handle,
+            file_id_info,
+            ctypes.byref(temporary_identity),
+            ctypes.sizeof(temporary_identity),
+        ):
+            raise win_error("could not validate atomic-write temporary identity")
+        if temporary_attributes.FileAttributes & (
+            file_attribute_directory | file_attribute_reparse_point
+        ):
+            raise OSError("atomic-write temporary handle must be a regular non-reparse file")
+        payload = ensure_final_newline(content).encode("utf-8")
+        offset = 0
+        while offset < len(payload):
+            chunk = payload[offset : offset + 64 * 1024]
+            buffer = ctypes.create_string_buffer(chunk)
+            written = wintypes.DWORD()
+            if not kernel32.WriteFile(
+                temporary_handle,
+                buffer,
+                len(chunk),
+                ctypes.byref(written),
+                None,
+            ):
+                raise win_error("could not write atomic-write temporary file")
+            if written.value == 0:
+                raise OSError("atomic-write temporary file accepted zero bytes")
+            offset += written.value
+        if not kernel32.FlushFileBuffers(temporary_handle):
+            raise win_error("could not flush atomic-write temporary file")
+        encoded_name = str(target_path).encode("utf-16-le")
+        name_offset = FileRenameInfo.FileName.offset
+        rename_buffer = ctypes.create_string_buffer(name_offset + len(encoded_name))
+        rename_info = ctypes.cast(rename_buffer, ctypes.POINTER(FileRenameInfo)).contents
+        rename_info.ReplaceIfExists = 1
+        rename_info.RootDirectory = None
+        rename_info.FileNameLength = len(encoded_name)
+        ctypes.memmove(ctypes.addressof(rename_buffer) + name_offset, encoded_name, len(encoded_name))
+        if not kernel32.SetFileInformationByHandle(
+            temporary_handle,
+            file_rename_info,
+            rename_buffer,
+            len(rename_buffer),
+        ):
+            raise win_error("could not commit atomic-write temporary file")
+        committed = True
+    finally:
+        if temporary_handle != invalid_handle:
+            kernel32.CloseHandle(temporary_handle)
+        if not committed and temporary_path is not None:
+            kernel32.DeleteFileW(str(temporary_path))
+        for handle in reversed(handles):
+            kernel32.CloseHandle(handle)
 
 
 def ensure_final_newline(content: str) -> str:

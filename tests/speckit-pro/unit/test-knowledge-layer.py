@@ -13,6 +13,8 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -22,8 +24,13 @@ FIXED_TIME = "2026-07-14T12:00:00Z"
 
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+if str(PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(PLUGIN_ROOT))
 
 from test_result import run_counted  # noqa: E402
+from speckit_pro_runner.helpers import knowledge as knowledge_helper  # noqa: E402
+from speckit_pro_runner.helpers import mutation as mutation_helper  # noqa: E402
+from speckit_pro_runner.helpers.registry import MUTATION_HELPERS  # noqa: E402
 
 
 def sha256(path: Path) -> str:
@@ -126,6 +133,20 @@ class KnowledgeLayerTests(unittest.TestCase):
             },
         )
 
+    def apply_direct(self, root: Path, plan: dict[str, object]) -> dict[str, object]:
+        entry = MUTATION_HELPERS["knowledge-update-apply"]
+        request = SimpleNamespace(
+            request_id="test-knowledge-update-apply-direct",
+            mode="apply",
+            inputs={
+                "repo_root": root.relative_to(REPO_ROOT).as_posix(),
+                "plan": plan,
+                "plan_hash": plan["plan_hash"],
+                "expected_snapshot": plan["expected_snapshot"],
+            },
+        )
+        return knowledge_helper.run_knowledge_update_apply(entry, request)
+
     def init(self, root: Path) -> dict[str, object]:
         plan = self.plan(root, "init")
         completed, body = self.apply(root, plan)
@@ -223,6 +244,72 @@ class KnowledgeLayerTests(unittest.TestCase):
             {item["code"] for item in duplicate_health["findings"]},
         )
 
+    def test_timestamps_require_timezones_and_reads_return_structured_errors(self) -> None:
+        root = self.repo("timestamp-and-read-errors")
+        completed, naive = run_helper(
+            root,
+            "knowledge-update-plan",
+            "read_only",
+            {"action": "init", "timestamp": "2026-07-14T12:00:00"},
+        )
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertEqual(naive["diagnostics"][0]["code"], "invalid_input")
+
+        offset = self.plan(root, "init", timestamp="2026-07-14T07:00:00-05:00")
+        self.assertEqual(offset["request"]["timestamp"], FIXED_TIME)
+
+        concept = self.write(
+            root,
+            "docs/ai/knowledge/patterns/unreadable.md",
+            "---\ntype: note\n---\n# Unreadable\n",
+        )
+        with mock.patch.object(knowledge_helper.os, "read", side_effect=PermissionError):
+            with self.assertRaises(knowledge_helper.KnowledgeError) as captured:
+                knowledge_helper._read_utf8(concept)
+        self.assertEqual(captured.exception.code, "unreadable_file")
+
+    @unittest.skipUnless(
+        os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
+        "descriptor-relative atomic-write regression requires POSIX dir_fd support",
+    )
+    def test_atomic_writer_cannot_follow_a_swapped_parent_symlink(self) -> None:
+        root = self.repo("atomic-race")
+        parent = root / "safe"
+        parent.mkdir()
+        target = parent / "target.md"
+        target.write_text("before\n", encoding="utf-8")
+        detached = root / "detached"
+        external = self.repo("external")
+        external_target = external / "target.md"
+        external_target.write_text("external\n", encoding="utf-8")
+        real_replace = os.replace
+        swapped = False
+
+        def swap_then_replace(
+            source: str,
+            destination: str,
+            *,
+            src_dir_fd: int | None = None,
+            dst_dir_fd: int | None = None,
+        ) -> None:
+            nonlocal swapped
+            if not swapped:
+                parent.rename(detached)
+                parent.symlink_to(external, target_is_directory=True)
+                swapped = True
+            real_replace(
+                source,
+                destination,
+                src_dir_fd=src_dir_fd,
+                dst_dir_fd=dst_dir_fd,
+            )
+
+        with mock.patch.object(mutation_helper.os, "replace", side_effect=swap_then_replace):
+            mutation_helper.write_file_atomic(target, "after", trust_root=root)
+
+        self.assertEqual(external_target.read_text(encoding="utf-8"), "external\n")
+        self.assertEqual((detached / "target.md").read_text(encoding="utf-8"), "after\n")
+
     def test_reviewed_promotion_search_scope_and_source_freshness(self) -> None:
         root = self.repo("promotion")
         self.current_root = root
@@ -305,6 +392,66 @@ class KnowledgeLayerTests(unittest.TestCase):
         self.assertFalse(stale["profile_healthy"])
         self.assertIn("stale_source", {finding["code"] for finding in stale["findings"]})
 
+        completed, blocked_rebuild = run_helper(
+            root,
+            "knowledge-update-plan",
+            "read_only",
+            {"action": "rebuild", "timestamp": FIXED_TIME},
+        )
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertEqual(blocked_rebuild["diagnostics"][0]["code"], "stale_source")
+
+    def test_source_preconditions_cover_prewrite_and_postwrite_races(self) -> None:
+        root = self.repo("source-races")
+        self.current_root = root
+        self.init(root)
+        source = self.write(root, "docs/source.md", "Reviewed source.\n")
+        candidate = self.candidate("decisions/race.md", "Race Decision", [source])
+        plan = self.plan(root, "promote", candidate=candidate)
+        concept = root / "docs/ai/knowledge/decisions/race.md"
+        original_validate = knowledge_helper._validate_apply_operations
+
+        def change_after_recompute(repo_root: Path, operations: list[object]) -> None:
+            original_validate(repo_root, operations)
+            source.write_text("Changed before the first write.\n", encoding="utf-8")
+
+        with mock.patch.object(
+            knowledge_helper,
+            "_validate_apply_operations",
+            side_effect=change_after_recompute,
+        ):
+            body = self.apply_direct(root, plan)
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual(body["diagnostics"][0]["code"], "source_changed")
+        self.assertFalse(body["data"]["writes_state"])
+        self.assertFalse(concept.exists())
+
+        source.write_text("Reviewed source.\n", encoding="utf-8")
+        plan = self.plan(root, "promote", candidate=candidate)
+        original_preconditions = knowledge_helper._validate_source_preconditions
+
+        def change_before_result(
+            repo_root: Path,
+            accepted_plan: dict[str, object],
+            *,
+            phase: str,
+        ) -> None:
+            if phase == "resulting":
+                source.write_text("Changed after repository writes.\n", encoding="utf-8")
+            original_preconditions(repo_root, accepted_plan, phase=phase)
+
+        with mock.patch.object(
+            knowledge_helper,
+            "_validate_source_preconditions",
+            side_effect=change_before_result,
+        ):
+            body = self.apply_direct(root, plan)
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual(body["diagnostics"][0]["code"], "source_changed")
+        self.assertEqual(body["data"]["mutation"]["mutation_status"], "rolled_back")
+        self.assertFalse(body["data"]["writes_state"])
+        self.assertFalse(concept.exists())
+
     def test_secrets_and_stale_plans_or_snapshots_fail_without_writes(self) -> None:
         root = self.repo("conflicts")
         self.current_root = root
@@ -363,14 +510,68 @@ class KnowledgeLayerTests(unittest.TestCase):
         plan = self.plan(root, "init")
         before = file_snapshot(root)
 
-        completed, body = self.apply(root, plan, simulate_failure_after=1)
+        completed, rejected = self.apply(root, plan, simulate_failure_after=1)
         self.assertNotEqual(completed.returncode, 0)
+        self.assertEqual(rejected["status"], "input_error")
+        self.assertEqual(rejected["diagnostics"][0]["code"], "invalid_input")
+        self.assertEqual(file_snapshot(root), before)
+
+        real_writer = knowledge_helper.write_file_atomic
+        write_count = 0
+
+        def fail_after_one(target: Path, content: str, *, trust_root: Path | None = None) -> None:
+            nonlocal write_count
+            if write_count >= 1:
+                raise OSError("injected test write failure")
+            write_count += 1
+            real_writer(target, content, trust_root=trust_root)
+
+        with mock.patch.object(knowledge_helper, "write_file_atomic", side_effect=fail_after_one):
+            body = self.apply_direct(root, plan)
         self.assertEqual(body["status"], "expected_failure")
         self.assertEqual(body["diagnostics"][0]["code"], "write_failure")
         self.assertEqual(body["data"]["mutation"]["mutation_status"], "rolled_back")
         self.assertFalse(body["data"]["writes_state"])
         self.assertEqual(file_snapshot(root), before)
         self.assertFalse((root / "docs" / "ai" / "knowledge").exists())
+
+    def test_rollback_failure_reports_residual_writes(self) -> None:
+        root = self.repo("rollback-failure")
+        self.init(root)
+        manifest = root / "docs/ai/knowledge/manifest.json"
+        manifest.write_text("invalid\n", encoding="utf-8")
+        plan = self.plan(root, "rebuild")
+        self.assertGreaterEqual(plan["operation_count"], 2)
+        before = file_snapshot(root)
+        real_writer = knowledge_helper.write_file_atomic
+        write_count = 0
+
+        def fail_write_and_rollback(
+            target: Path,
+            content: str,
+            *,
+            trust_root: Path | None = None,
+        ) -> None:
+            nonlocal write_count
+            write_count += 1
+            if write_count >= 2:
+                raise OSError("injected rollback failure")
+            real_writer(target, content, trust_root=trust_root)
+
+        with mock.patch.object(
+            knowledge_helper,
+            "write_file_atomic",
+            side_effect=fail_write_and_rollback,
+        ):
+            body = self.apply_direct(root, plan)
+
+        mutation = body["data"]["mutation"]
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual(mutation["mutation_status"], "partial_failure")
+        self.assertTrue(body["data"]["writes_state"])
+        self.assertTrue(mutation["live_mutation"])
+        self.assertIsNotNone(mutation["failure_operation"])
+        self.assertNotEqual(file_snapshot(root), before)
 
     def test_generated_state_repairs_and_existing_secrets_are_not_searchable(self) -> None:
         root = self.repo("generated-repair")
@@ -796,6 +997,13 @@ class KnowledgeLayerTests(unittest.TestCase):
             "# Demo Technical Roadmap\n\n## SPEC-001\n\nSecond reviewed revision.\n",
             encoding="utf-8",
         )
+        current.write_text(
+            current.read_text(encoding="utf-8").replace(
+                "---\n# Demo Technical Roadmap",
+                'x-speckit-legacy-related:\n  - "[Runbook](../../runbook.md)"\n---\n# Demo Technical Roadmap',
+            ),
+            encoding="utf-8",
+        )
         replacement["body"] = "## Curated map\n\nSecond reviewed map revision."
         replacement["sources"][0]["sha256"] = sha256(roadmap)
         second = self.plan(
@@ -808,6 +1016,8 @@ class KnowledgeLayerTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         histories = list((root / "docs/ai/knowledge/projects/demo/history").glob("roadmap-*.md"))
         self.assertEqual(len(histories), 2)
+        latest_history = max(histories, key=lambda path: path.stat().st_mtime_ns)
+        self.assertNotIn('  - "[Runbook]', latest_history.read_text(encoding="utf-8"))
         _, repeated = run_helper(root, "knowledge-health", "read_only")
         self.assertTrue(repeated["data"]["health"]["profile_healthy"], repeated)
 
