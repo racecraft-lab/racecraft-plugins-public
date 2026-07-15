@@ -2,7 +2,7 @@
 up: "[SpecKit Pro Harness Engineering Uplift Roadmap](harness-engineering-uplift-technical-roadmap.md)"
 related:
   - "[SpecKit Pro Harness Engineering Uplift PRD](../../prd-harness-engineering-uplift.md)"
-status: "Draft; 14-spec roadmap planned, HRNS-001 ready to scaffold after maintainer acceptance"
+status: "Active; HRNS-001 scaffolded and ready for autopilot"
 rank:
 spec_id: "harness-engineering-uplift"
 structureVersion: 1

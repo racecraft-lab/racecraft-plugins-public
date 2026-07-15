@@ -241,7 +241,7 @@ HRNS-002 + HRNS-005 + HRNS-006 + HRNS-009 + HRNS-010 + HRNS-011 + HRNS-012 + HRN
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| HRNS-001 | Harness Surface Inventory and Gap Taxonomy | Pending | - | Ready to scaffold from this PRD/roadmap |
+| HRNS-001 | Harness Surface Inventory and Gap Taxonomy | In Progress | [.process/HRNS-001-workflow.md](.process/HRNS-001-workflow.md) | Run `$speckit-autopilot` from the dedicated worktree |
 | HRNS-002 | Progressive Context and Durable State Contract | Pending | - | Blocked by HRNS-001 |
 | HRNS-003 | Helper, Tool, and Capability Contract | Pending | - | Blocked by HRNS-001 |
 | HRNS-004 | Permission, Sandbox, and Pre-action Authorization Controls | Pending | - | Blocked by HRNS-003 |
