@@ -43,8 +43,8 @@ The design concept is the source of truth for these scoping decisions:
 | Specify | `/speckit-specify` | ✅ Complete | Created spec.md and requirements checklist; G1 routed to Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | Resolved row schema, research boundaries, proof commands, and lifecycle updates |
 | Plan | `/speckit-plan` | ✅ Complete | Created plan, research, data model, quickstart, and MOC refresh |
-| Checklist | `/speckit-checklist` | 🔄 In Progress | Data integrity, security, integration, and reliability |
-| Tasks | `/speckit-tasks` | ⏳ Pending | Evidence-first docs tasks bounded by the Design Concept |
+| Checklist | `/speckit-checklist` | ✅ Complete | Data integrity, security, integration, and reliability checklists generated; G4 passed |
+| Tasks | `/speckit-tasks` | 🔄 In Progress | Evidence-first docs tasks bounded by the Design Concept |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Check cross-artifact scope and AC-1.* coverage |
 | Confidence Gate | G6.5 | ⏳ Pending | Record pre-Implement confidence and mode before implementation |
 | Implement | `/speckit-implement` | ⏳ Pending | Produce and validate the taxonomy artifact only |
@@ -487,11 +487,11 @@ Focus on HRNS-001 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| data-integrity | | | |
-| security | | | |
-| integration | | | |
-| reliability | | | |
-| **Total** | | | |
+| data-integrity | 12 | 0 | FR-001, FR-003, FR-005, FR-006, FR-010, SC-001, SC-004 |
+| security | 12 | 0 | FR-008, FR-009, FR-010, PR Review Packet Requirements |
+| integration | 12 | 0 | FR-006, FR-008, FR-012, SC-001 |
+| reliability | 12 | 0 | FR-005, FR-009, FR-013, Assumptions, Independent Test |
+| **Total** | 48 | 0 | G4 passed with 0 `[Gap]` markers |
 
 ### Addressing Gaps
 
