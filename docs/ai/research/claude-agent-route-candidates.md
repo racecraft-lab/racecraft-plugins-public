@@ -586,18 +586,455 @@ Each `CAP-Qn` above states the **detection/probe** need only; the *Go / no-go ha
 (task T025, final section) carries any that remain unverified as no-go items or open
 questions, and asserts no dependency on CAR-002 results.
 
+### Capability-question prose (CAP-Q1…CAP-Q6)
+
+Full prose for each capability question, consolidating the probes raised by the alias-binding
+rows (`ALS-opus…ALS-fable`, task T010), the inter-doc conflict scan (task T013 — none found, so
+no conflict-driven question), and the two undocumented behaviors (task T014). The IDs are stable
+and match the manifest `capability_questions` stubs verbatim; this pass adds prose and does not
+renumber. All six are **open probes**, not declarative claims — they carry none of the four class
+tags (FR-005/FR-008), and no candidate is claimed executable before they are answered.
+
+- **`CAP-Q1` — `opus` environment-time binding.** Does the `opus` Claude Code alias resolve to
+  `claude-opus-4-8` in the pinned benchmark environment, and is that alias-to-dated-ID binding
+  stable? The docs bind `opus` only to "the latest Opus model" (`ALS-opus`), and `claude-opus-4-8`
+  is today's latest Opus (`MDL-1`) — but that is a recorded *inference*, not a settled binding: the
+  target floats and is re-pointable via `ANTHROPIC_DEFAULT_OPUS_MODEL` and allowlist pinning
+  (`ALS-repoint`, `RES-3`). CAR-002 must probe the environment-time resolved ID. **Blocks:** the
+  `opus/max` candidate binding for the five `opus` executors (analyze/checklist/clarify/implement/
+  phase) and the `opus` upshift candidate on the six `sonnet` analysts.
+- **`CAP-Q2` — `sonnet` environment-time binding.** Does the `sonnet` alias resolve to
+  `claude-sonnet-5` in the pinned environment, and is that binding stable under the same
+  floating-resolution, allowlist-pinning, and re-pointing risks (`ALS-sonnet`, `RES-3`,
+  `ALS-repoint`)? **Blocks:** the `sonnet` candidate tuples for the six `sonnet` analyst/validator/
+  author agents (codebase/consensus/domain/gate/spec-context/uat), the `sonnet` lower-cost candidate
+  on the five executors, and the helper's `sonnet` fallback.
+- **`CAP-Q3` — `haiku` environment-time binding.** Does the `haiku` alias resolve to
+  `claude-haiku-4-5-20251001` (API alias `claude-haiku-4-5`) in the pinned environment (`ALS-haiku`,
+  `MDL-1`)? **Blocks:** the `autopilot-fast-helper` starting-hypothesis `haiku` + low-effort candidate
+  binding, and the `haiku` candidate tuples on the six analyst roles.
+- **`CAP-Q4` — `fable` binding and availability.** Does the `fable` alias resolve to `claude-fable-5`
+  **and** is `fable` available/accessible in the pinned benchmark environment (PRD OQ-4), given the
+  `best`/`fable` "where your organization has access" gating (`ALS-context`) and
+  `ANTHROPIC_DEFAULT_FABLE_MODEL` re-pointing (`ALS-fable`, `ALS-repoint`)? **Blocks:** `fable`'s
+  executor-class candidate eligibility and environment-time availability across the five executors.
+  `fable` stays an executor-class candidate and is excluded only by recorded probe/contract evidence
+  (FR-013), never by announcement status.
+- **`CAP-Q5` — unavailable-model dispatch (undocumented).** When a subagent's `model` frontmatter
+  names an **unavailable** model at dispatch, does Claude Code hard-error or silently substitute
+  another model? The error path is documented only for the main-session `/model` custom-model surface
+  (`RES-5`, the `model_not_found` category) — **never** for subagent-frontmatter dispatch. Recorded as
+  a mandatory probe question, never assumed (FR-008). **Blocks:** any CAR-003 fallback design that
+  assumes a defined unavailable-model dispatch outcome for the twelve agents.
+- **`CAP-Q6` — alias re-pointing execution-time manifestation (undocumented).** At a subagent's
+  execution time, when a shipped alias has **re-pointed** to a new resolved model ID, is the new model
+  silently used, does it hard-error, or is it otherwise handled? This is distinct from and additional
+  to alias re-pointing's role as a recorded manifest invalidation trigger (FR-014): the docs surface
+  the resolved model via `resolvedModel`/`TEL-5` and announce main-session substitution via `RES-3`,
+  but do not document the subagent execution-time manifestation. Recorded as a mandatory probe
+  question, never assumed (FR-008). **Blocks:** CAR-003 route-stability assumptions and the semantics
+  of the per-alias invalidation triggers recorded on every agent entry.
+
 ## Fixture backlog
 
-<!-- authored in a later unit (Group C requirements-level fixture backlog, task T021) — one entry per twelve agents; the Layer 6 fixture gap above is its input -->
+Requirements-level backlog only — one entry per the twelve agents (FR-019, SC-004). Each entry
+states the role contract to exercise (from the manifest `role_contract`), representative task types,
+required evidence (tool surface, mutation boundary, output format), and a pass/fail signal sketch.
+It contains **no full fixture specifications** — concrete inputs, golden outputs, and fixture wiring
+are CAR-003's deliverable, not this spike's. Each subsection anchor matches that agent's manifest
+`fixture_backlog_ref`. Two agents (`consensus-synthesizer`, `gate-validator`) already have a current
+Claude Layer 6 fixture (see *Layer 6 Claude fixture gap*); their entries note what a CAR-003
+role-contract fixture must add beyond that smoke fixture. The other ten have no current Claude fixture.
+
+*Statement class: these entries are `[INFERENCE]`/`[POLICY]` — the "role contract to exercise" restates
+repository facts (the shipped agent contract at the pinned tag), while the representative tasks, required
+evidence, and pass/fail sketches are fixture requirements this project proposes for CAR-003. No new
+platform fact and no benchmark result is asserted.*
+
+### Fixture backlog: analyze-executor
+
+- **Role contract to exercise** — runs `/speckit-analyze`, then researches and remediates every finding
+  at all severities (CRITICAL/HIGH/MEDIUM/LOW), applying evidence-grounded fixes to the feature's
+  spec/plan/tasks artifacts (production route `opus/max`).
+- **Representative task types** — a spec/plan/tasks set seeded with findings across all four severities,
+  including at least one cross-artifact inconsistency and one finding whose fix requires external evidence.
+- **Required evidence** — *Tool surface:* full operator surface with **no** `disallowedTools` denylist;
+  the fixture confirms the agent can invoke `Skill` (`/speckit-analyze`), `Read`/`Write`/`Edit`, and
+  `Bash`. *Mutation boundary:* read-write confined to `spec.md`/`plan.md`/`tasks.md`; no cross-spec or
+  shipped-payload writes. *Output format:* structured analysis-and-remediation summary (findings by
+  severity, fixes applied, residual gaps).
+- **Pass/fail signal sketch** — PASS when every seeded finding is surfaced at its correct severity and
+  remediated with cited evidence, edits land only in the three artifacts, and the summary enumerates
+  fixes and residual gaps. FAIL on a missed or misclassified finding, an evidence-free fix, a write
+  outside the artifact boundary, or a malformed summary.
+
+### Fixture backlog: checklist-executor
+
+- **Role contract to exercise** — runs a single `/speckit-checklist` domain, then researches and
+  remediates any `[Gap]` markers, applying evidence-grounded fixes to `spec.md` or `plan.md`
+  (production route `opus/max`).
+- **Representative task types** — a spec + plan seeded with one checklist domain containing several
+  `[Gap]` markers, at least one requiring external best-practice evidence to close.
+- **Required evidence** — *Tool surface:* full operator surface, no denylist; `Skill`
+  (`/speckit-checklist`), `Read`/`Write`/`Edit`, `Bash`. *Mutation boundary:* read-write on
+  `spec.md`/`plan.md` only. *Output format:* checklist-domain result (gaps found, evidence, fixes applied).
+- **Pass/fail signal sketch** — PASS when each `[Gap]` is closed with cited evidence, edits stay confined
+  to `spec.md`/`plan.md`, and the result lists gaps, evidence, and fixes. FAIL on an unremediated gap, an
+  evidence-free fix, an out-of-boundary write, or a missing result structure.
+
+### Fixture backlog: clarify-executor
+
+- **Role contract to exercise** — prepares a single Clarify question set: inspects the workflow prompt,
+  spec, and repo evidence and returns prioritized questions with recommended answers and evidence for the
+  parent orchestrator to apply; never edits artifacts and never waits on a user (production route
+  `opus/max`, read-only).
+- **Representative task types** — an underspecified spec plus a workflow prompt that requires a
+  prioritized set of clarifying questions with recommended answers.
+- **Required evidence** — *Tool surface:* read-only — `Read`/`Grep`/`Glob` plus read-only `Bash`
+  inspection; the eight-tool write/dispatch denylist (`Write, Edit, MultiEdit, NotebookEdit, Skill,
+  Agent, TeamCreate, SendMessage`) is enforced (the fixture confirms a write/dispatch attempt is denied).
+  *Mutation boundary:* strictly read-only — zero artifact edits, no dispatch, no wait-on-user. *Output
+  format:* prioritized clarify question set, each item carrying a recommended answer and supporting evidence.
+- **Pass/fail signal sketch** — PASS when the set is prioritized, each item has a recommended answer plus
+  evidence, and the run makes no edits or dispatches and never blocks on user input. FAIL on any artifact
+  mutation, any dispatch, a question lacking a recommended answer or evidence, or a wait-on-user hang.
+
+### Fixture backlog: codebase-analyst
+
+- **Role contract to exercise** — analyzes the existing codebase to resolve a question, gap, or finding
+  from the perspective of established code patterns and conventions; returns a structured answer with
+  file-level evidence; used in autopilot consensus rounds (production route `sonnet/max`, `background:true`,
+  read-only).
+- **Representative task types** — a consensus question about code patterns or conventions answerable only
+  by reading the codebase.
+- **Required evidence** — *Tool surface:* read-only — `Read`/`Grep`/`Glob` plus read-only `Bash`; the
+  eight-tool denylist is enforced; `background:true`. *Mutation boundary:* read-only. *Output format:*
+  structured answer with file-level codebase evidence (file references).
+- **Pass/fail signal sketch** — PASS when the answer cites concrete file-level evidence, stays within the
+  read-only tool surface, and returns in the consensus structure. FAIL on any mutation, an answer without
+  file-level evidence, or the wrong output shape. Background note: per `TEL-5` a background subagent's
+  async-launch response carries `resolvedModel` but no usage fields, so the fixture must capture cost/usage
+  from the completed run (see *Telemetry requirements*).
+
+### Fixture backlog: consensus-synthesizer
+
+- **Role contract to exercise** — synthesizes the three consensus analysts' outputs into one actionable
+  answer with a confidence assessment: applies the 2-of-3 agreement rule, flags all-disagree cases for
+  human review, and produces exact artifact edits for the orchestrator to apply (does not apply them)
+  (production route `sonnet/max`, read-only). Has a current Layer 6 fixture.
+- **Representative task types** — one input set of three analyst outputs at 2-of-3 agreement, and a second
+  set where all three disagree.
+- **Required evidence** — *Tool surface:* read-only — `Read`/`Grep`/`Glob`; the eight-tool denylist is
+  enforced. *Mutation boundary:* read-only — emits proposed edits as text; the orchestrator applies them.
+  *Output format:* synthesized answer plus confidence assessment plus exact proposed artifact edits.
+- **Pass/fail signal sketch** — PASS when 2-of-3 agreement yields the agreed answer with a confidence
+  assessment, the all-disagree set is flagged for human review, and proposed edits are emitted as text
+  (not applied). FAIL when the agent applies an edit itself, mis-resolves the agreement rule, or omits the
+  confidence or the human-review flag. Beyond the current smoke fixture: a CAR-003 fixture must add the
+  read-only tool-surface enforcement and real dispatch-context treatment that the bare-prompt Layer 6
+  fixture omits (see *Layer 6 labeling*).
+
+### Fixture backlog: domain-researcher
+
+- **Role contract to exercise** — researches industry best practices and official documentation to resolve
+  a question, gap, or finding with an evidence-based recommendation; used across Clarify, Checklist, and
+  Analyze consensus phases (production route `sonnet/max`, `background:true`, read-only).
+- **Representative task types** — a question that can be resolved only by external best-practice or
+  official-documentation research.
+- **Required evidence** — *Tool surface:* read-only research — `Read` plus `WebSearch` plus `WebFetch`;
+  the eight-tool denylist is enforced; `background:true`. *Mutation boundary:* read-only. *Output format:*
+  recommendation backed by external-documentation and community best-practice citations.
+- **Pass/fail signal sketch** — PASS when the recommendation cites external sources and stays within the
+  read-only research tool surface. FAIL on any mutation, an uncited recommendation, or missing
+  `WebSearch`/`WebFetch` use where the task requires external evidence. Background telemetry note as for
+  `codebase-analyst`.
+
+### Fixture backlog: gate-validator
+
+- **Role contract to exercise** — runs gate-validation commands (marker checks, metric thresholds) and
+  returns pass/fail with structured JSON evidence; validates gates G0-G7 after each autopilot phase
+  (production route `sonnet/max`, read-only). Has a current Layer 6 fixture.
+- **Representative task types** — an artifact set constructed to pass some gates and fail others, spanning
+  both marker-presence and metric-threshold checks.
+- **Required evidence** — *Tool surface:* read-only — `Read` plus `Bash` (runs gate-validation commands)
+  plus `Grep`; the eight-tool denylist is enforced. *Mutation boundary:* read-only — runs validation and
+  reports results; no edits. *Output format:* pass/fail gate result with structured JSON evidence.
+- **Pass/fail signal sketch** — PASS when each gate verdict matches ground truth and the JSON evidence is
+  well-formed and parseable. FAIL on a wrong gate verdict, any mutation, or malformed JSON. Beyond the
+  current smoke fixture: a CAR-003 fixture must add read-only tool-surface enforcement and structured-output
+  proof (`structured_output` via `--json-schema`; see *Telemetry requirements*, *Layer 6 labeling*).
+
+### Fixture backlog: implement-executor
+
+- **Role contract to exercise** — executes a single implementation task using strict TDD
+  red-green-refactor: writes a failing test first, verifies it FAILs, writes the minimum implementation to
+  pass, then refactors; returns structured TDD evidence (production route `opus/max`; `memory: project`).
+- **Representative task types** — one well-scoped implementation task with a clear, testable behavior.
+- **Required evidence** — *Tool surface:* full operator surface **except** `Skill` (`disallowedTools:
+  Skill`); the fixture confirms `Skill` is denied while `Read`/`Write`/`Edit`/`Bash` work. *Mutation
+  boundary:* read-write on the task's test and implementation files (TDD). *Output format:* structured TDD
+  evidence (failing test, FAIL verification, minimal implementation, refactor).
+- **Pass/fail signal sketch** — PASS when the transcript shows red (a failing test plus an observed FAIL)
+  before green (the minimal passing implementation) and then a refactor, edits stay confined to the test
+  and implementation files, and `Skill` is unused/denied. FAIL on green-before-red (no observed failing
+  test), any `Skill` invocation, or an out-of-scope write.
+
+### Fixture backlog: phase-executor
+
+- **Role contract to exercise** — executes a single SpecKit phase (Specify, Plan, or Tasks) by running the
+  `/speckit-*` command via the `Skill` tool at high reasoning effort; returns a concise summary of files
+  created, metrics, markers, and errors (production route `opus/max`).
+- **Representative task types** — one invocation per phase — Specify, Plan, Tasks — each from a prepared
+  upstream state.
+- **Required evidence** — *Tool surface:* full operator surface, no denylist; `Skill`
+  (`/speckit-specify`, `/speckit-plan`, `/speckit-tasks`), `Read`/`Write`/`Edit`, `Bash`. *Mutation
+  boundary:* read-write producing the phase artifacts (`spec.md`/`plan.md`/`tasks.md`) via the
+  Skill-invoked command; no cross-spec writes. *Output format:* concise phase-result summary (files
+  created, metrics, markers found, errors).
+- **Pass/fail signal sketch** — PASS when the Skill-invoked phase produces the expected artifact and the
+  summary reports files, metrics, markers, and errors, with writes confined to the current spec. FAIL on a
+  missing or misplaced artifact, a cross-spec write, or absent summary fields.
+
+### Fixture backlog: spec-context-analyst
+
+- **Role contract to exercise** — analyzes the project constitution, technical roadmap, and prior spec
+  artifacts to resolve a question, gap, or finding from the perspective of established project decisions
+  and principles; used across consensus phases (production route `sonnet/max`, `background:true`, read-only).
+- **Representative task types** — a consensus question answerable only from project decisions and
+  principles (constitution, roadmap, or prior specs).
+- **Required evidence** — *Tool surface:* read-only — `Read`/`Grep`/`Glob`; the eight-tool denylist is
+  enforced; `background:true`. *Mutation boundary:* read-only. *Output format:* answer grounded in project
+  decisions and specifications.
+- **Pass/fail signal sketch** — PASS when the answer cites project-decision sources and stays read-only.
+  FAIL on any mutation, an answer ungrounded in project artifacts, or the wrong shape. Background telemetry
+  note as for `codebase-analyst`.
+
+### Fixture backlog: uat-runbook-author
+
+- **Role contract to exercise** — rewrites a deterministic UAT runbook skeleton into a plain-English,
+  executable acceptance runbook a non-engineer can follow: concrete numbered steps with observable expected
+  results, plain setup prose, and a real FR-coverage mapping; edits the skeleton in place; fail-open
+  (production route `sonnet/max`).
+- **Representative task types** — a generated UAT skeleton (placeholder per-story checkboxes, a raw Env
+  Setup table, a circular FR Coverage Matrix) to rewrite; plus a malformed or partial skeleton to exercise
+  the fail-open path.
+- **Required evidence** — *Tool surface:* `Read`/`Edit`/`Write`; `disallowedTools: Skill, Agent,
+  TeamCreate, SendMessage` (the fixture confirms these are denied). *Mutation boundary:* read-write on the
+  UAT runbook skeleton file **only**, edited in place; fail-open — on any trouble it leaves the skeleton
+  untouched and never blocks PR creation. *Output format:* edited-in-place runbook (numbered steps with
+  observable expected results, plain setup prose, a real FR-coverage matrix).
+- **Pass/fail signal sketch** — PASS when the good skeleton becomes concrete numbered steps, plain setup
+  prose, and a real FR mapping edited in place, and the malformed skeleton is left untouched (fail-open, no
+  crash, no block). FAIL on a dispatch attempt, an edit outside the skeleton file, a hard failure that
+  blocks PR creation, or placeholder content left unrewritten on the good input.
+
+### Fixture backlog: autopilot-fast-helper
+
+- **Role contract to exercise** — optional latency-first, text-only leaf helper for the top-level autopilot
+  orchestrator: performs exactly one small advisory text task per invocation (compress, triage, draft
+  search queries, or normalize prompt context), then returns control; advisory only, not an executor,
+  reviewer, or decision-maker (no current Claude production route — recorded absence; candidate route
+  `haiku` + low effort, `CAP-Q3`).
+- **Representative task types** — one fixture per bounded job: (1) compress a long executor/workflow
+  summary; (2) triage an unresolved item into `codebase`, `spec-context`, `domain-research`, or `mixed`;
+  (3) draft search queries; (4) normalize prompt context; plus an insufficient-context input to exercise
+  the "say so briefly and return the smallest useful fallback" rule.
+- **Required evidence** — *Tool surface:* **no tools** — advisory text only; uses only prompt context (no
+  `Write`/`Edit`, no `Skill`/`Agent`/dispatch, no web or filesystem); read-only denylist posture (Codex
+  `sandbox_mode: read-only` maps to the shared read-only denylist per the helper's `platform_field_mapping`).
+  *Mutation boundary:* strictly read-only and non-mutating — never edits files, proposes patches, runs
+  commands, spawns agents, or makes final decisions. *Output format:* exactly one of the four compact,
+  paste-ready formats matching the job — `## Fast Brief`, `## Fast Triage`, `## Query Drafts`, or
+  `## Compact Context`.
+- **Pass/fail signal sketch** — PASS when the output uses the correct one-of-four format for the requested
+  job, stays advisory (never claims to have fixed, validated, resolved, or decided), uses only prompt
+  context, and returns a single result (leaf worker; no dispatch, no follow-up request). FAIL on the wrong
+  format, a gate/consensus/approval decision, any mutation or dispatch, use of tools/web/filesystem, or
+  more than one job per invocation. Note: this agent has no current Claude Layer 6 fixture, and both its
+  candidate route (`haiku`/low, `CAP-Q3`) and its proposed `maxTurns` (CAR-010) remain probe/finalization-
+  gated.
 
 ## Telemetry requirements
 
-<!-- authored in a later unit (Group C telemetry requirements, task T022) — non-interactive `claude -p --output-format json` fields per role, necessity-labeled -->
+The non-interactive telemetry that each role's **later** route qualification (CAR-002/CAR-003) must
+satisfy, stated as requirements only and derived from the recorded non-interactive-telemetry facts
+`TEL-1…TEL-5`. Each field carries a **necessity label**: **mandatory**, **derived-from-configuration**,
+or **platform-unavailable** (FR-026). **CAR-001 states these requirements; it builds no CAR-002 telemetry
+capability profile** — capturing, scoring, and thresholding this telemetry against candidate tuples is
+CAR-002/CAR-003 work, not this spike's.
+
+*Statement class: `[INFERENCE]` composed from `TEL-1…TEL-5` (the necessity labels are requirements derived
+from those cited facts); no new platform fact is asserted.*
+
+### Mandatory (captured per candidate-tuple run)
+
+From the `claude -p --output-format json` result payload (`TEL-1`):
+
+- **`result`** (the role's text output) — needed to score the run against the fixture's pass/fail signal
+  (see *Fixture backlog*).
+- **session id** — transcript provenance and traceability across the candidate-tuple runs.
+- **`usage` metadata** (input/output/cache token counts) — the cost basis; `TEL-4`'s OTel
+  `claude_code.api_request` event enumerates `input_tokens`/`output_tokens`/`cache_read_tokens`/
+  `cache_creation_tokens` at the same granularity.
+- **`total_cost_usd`** — the cost half of cost-quality route qualification.
+- **per-model cost breakdown** — attributes cost to the resolved model.
+- **`structured_output`** — mandatory **only for roles whose `output_format` is structured**
+  (`gate-validator`'s pass/fail JSON evidence most sharply), obtained by adding `--json-schema` (`TEL-1`);
+  it proves the structured contract, not just prose.
+
+The binding-proof field (from a companion surface, not the top-level `-p` result body):
+
+- **`resolvedModel`** (mandatory; sourced from the SubagentStart hook / Agent-tool response, `TEL-5`) —
+  the field that **proves** which dated model the shipped alias actually resolved to at run time; it is
+  the direct evidence for `CAP-Q1…CAP-Q4`. Because it can differ from the requested `model`, qualification
+  MUST capture it and MUST NOT assume the alias binding.
+
+### Derived-from-configuration (known from the dispatched tuple, not read back)
+
+- **dispatched `model` alias and `effort`** — set by the fixture when it dispatches the candidate tuple, so
+  they are recorded by construction. `effort` in particular is **never** present in the
+  `-p --output-format json` result (`TEL-2`).
+- **agent identity / `query_source`** (`main`/`subagent`/`auxiliary`) — known from which agent the fixture
+  dispatched; surfaced out-of-band as the OTel `claude_code.cost.usage` `agent.name`/`query_source`
+  attributes (`TEL-3`), not the `-p` result.
+- **`speed` / fast mode** — a session-level Opus configuration orthogonal to per-agent route policy (fast
+  mode is not a subagent frontmatter field, `FST-3`/`PLG-1`); derived from the session config, not a
+  per-agent telemetry value.
+
+### Platform-unavailable on the `-p --output-format json` result surface
+
+These MUST NOT be asserted from the `-p` result; where needed they come only from a distinct channel
+(OTel/hooks) or cannot be had:
+
+- **effective reasoning effort actually applied** — never returned by the `-p` JSON result (`TEL-2`). It is
+  knowable only as the *configured* value (derived-from-configuration, above) or observed out-of-band via
+  the OTel `claude_code.cost.usage` `effort` attribute (`TEL-3`); qualification MUST NOT read it back from
+  the `-p` result. This is the canonical never-returned / derived field.
+- **per-subagent cost/effort/speed attribution** — the `-p` result gives `total_cost_usd` plus a
+  per-*model* breakdown, but per-*subagent* attribution (`query_source`, `effort`, `speed`, `agent.name`)
+  lives only on the OTel surface (`claude_code.cost.usage`, `TEL-3`), a channel distinct from the `-p` result.
+
+### Per-role differentiators
+
+- **Background analysts** (`codebase-analyst`, `domain-researcher`, `spec-context-analyst`;
+  `background:true`) — per `TEL-5`, a background subagent's async-launch tool response carries
+  `resolvedModel` but **no usage fields** (`status: async_launched`). Their cost/usage telemetry MUST be
+  captured from the completed transcript or a non-background evaluation run, not the launch response;
+  `resolvedModel` remains available at launch.
+- **Structured-output roles** (`gate-validator`, and any role emitting JSON evidence) — `structured_output`
+  via `--json-schema` is mandatory (above), not optional.
+- **`autopilot-fast-helper`** — text-only, no tools; its qualification telemetry is the same mandatory `-p`
+  result set (`result` / cost / `resolvedModel`) against the `haiku`/low candidate (`CAP-Q3`); no
+  tool-call telemetry applies.
+
+Again: CAR-001 records these requirements only and **builds no CAR-002 telemetry capability profile**.
 
 ## Layer 6 labeling
 
-<!-- authored in a later unit (Group C Layer 6 labeling, task T023) — label the current Layer 6 Claude path as bare prompt emulation; mark historical results non_release_evidence; state the CAR-003 lift condition -->
+**Bare prompt emulation.** The current Layer 6 Claude evaluation path
+(`tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.py`) drives a **frontmatter-stripped
+agent body piped to `claude -p --model <model>`** (with `-c model_reasoning_effort=<effort>`; the
+`SWEEP_CONFIGS` model sweep) — see the *Route-policy surface inventory* (F) and the *Layer 6 Claude
+fixture gap*. This is **bare prompt emulation**: it runs the instruction prose against a model but does
+**not** reproduce the agent's real execution treatment.
+
+Because it strips the frontmatter and dispatches a bare top-level `-p` prompt, the emulation omits:
+
+- **the required tool surface** — the agent's `disallowedTools` denylist and allowed tools are not applied
+  (a read-only analyst is not actually held read-only);
+- **the mutation contract** — the read-only versus read-write boundary is not enforced;
+- **the dispatch context** — a real run is a plugin-scoped subagent dispatched through the Agent tool /
+  orchestrator (`speckit-pro:<name>`, `PLG-2`), not a bare `-p` prompt;
+- **telemetry proof** — `resolvedModel` from the SubagentStart hook and per-tuple cost are not captured
+  (see *Telemetry requirements*).
+
+**`non_release_evidence`.** Accordingly, **all historical Layer 6 results are labeled
+`non_release_evidence`** — including the two current Claude fixtures (`consensus-synthesizer`,
+`gate-validator`) and the `results-codex/` smoke results. Bare prompt emulation is **smoke-only** evidence
+(does the prose roughly work against a model), and it **cannot support a release** route decision.
+
+**Lift condition (CAR-003 only).** This label is lifted **only** by a CAR-003 replay through the shared
+materializer that dispatches each agent under its **exact treatment** — the required tool surface, the
+mutation contract, the dispatch context, and telemetry proof (AC-1.7). **CAR-001 claims no such replay**
+and performs none; it records the label and the lift condition only.
+
+*Statement class: the description of the current path is a repository fact (observed from
+`run-efficiency-benchmarks.py` at the pinned tag); the `non_release_evidence` labeling and the CAR-003 lift
+condition are proposed SpecKit Pro policy `[POLICY]`. No platform fact or benchmark result is asserted.*
 
 ## Go / no-go handoff
 
-<!-- authored in unit 5 (Group D handoff, task T025) — final section: enumerate the provisional manifest, role-contract catalog, fixture backlog, telemetry requirements, unresolved capability questions, and the go/no-go decision; assert no dependency on CAR-002 results and no executable claim before probing -->
+The record's final section: the self-contained handoff to CAR-002. It **enumerates the six required
+elements** (FR-022), records any mandatory fact left unverified within the single-run timebox as a no-go
+item or `CAP-Qn` (FR-023, SC-005), and **depends on no CAR-002 (or later) result and claims no candidate
+executable before capability probing** (FR-022, AC-1.5, SC-004).
+
+> **Self-containment assertion (read first).** This handoff is composed entirely from the pinned comparator
+> (`speckit-pro-v2.19.1`), the tracked repository tree, and cited official documentation. It consumes **no**
+> CAR-002 result, and it asserts **no** candidate route is executable before the capability questions below
+> are answered by probing. A CAR-002 implementer can freeze the executable candidate set from this record
+> and manifest alone, without re-deriving any role contract or re-reading agent source (SC-004).
+
+*Statement class: `[INFERENCE]`/`[POLICY]` — this section composes the cited facts and the manifest into a
+handoff and states a go/no-go decision (proposed SpecKit Pro policy); it asserts no new platform fact.*
+
+### The six required elements (FR-022)
+
+1. **Provisional candidate-route manifest** — `docs/ai/research/claude-agent-route-candidate-manifest.json`
+   (`provisional: true`): all twelve agents, `alias_universe` `[opus, sonnet, haiku, fable]`, the pinned
+   immutable production comparator (`speckit-pro-v2.19.1`, commit `e343aa2e4ebcb2d48c501f285d7072cfd55722da`),
+   and per-agent `candidate_routes` each carrying the shipped alias, the expected resolved model ID, and
+   effort, with `project_level_eligibility` recorded separately from `environment_time_availability`
+   (FR-015). Well-formed and schema-conformant (SC-008).
+2. **Role-contract catalog** — the twelve `role_contract` objects (summary, mutation_boundary,
+   output_format, repo-relative `source_ref`) in the manifest, plus the record's *Agent inventory* and
+   *Codex helper source inventory*: eleven current Claude routes and the `autopilot-fast-helper` recorded
+   absence (net-new twelfth agent, contract-equivalent-translated from the Codex source with a
+   source-complete `platform_field_mapping`).
+3. **Fixture backlog** — the record's *Fixture backlog*: twelve requirements-level entries (role contract to
+   exercise, representative task types, required evidence, pass/fail signal sketch; FR-019), each resolvable
+   from its manifest `fixture_backlog_ref`. No full fixture specifications — those are CAR-003.
+4. **Telemetry requirements (FR-026)** — the record's *Telemetry requirements*: the necessity-labeled
+   (mandatory / derived-from-configuration / platform-unavailable) non-interactive
+   `claude -p --output-format json` fields each role's later qualification must satisfy, derived from
+   `TEL-1…TEL-5`. CAR-001 states them only and builds no CAR-002 telemetry capability profile.
+5. **Unresolved capability questions** — `CAP-Q1…CAP-Q6` (record *Capability questions* plus manifest
+   `capability_questions`): the four alias-binding probes (`CAP-Q1` opus, `CAP-Q2` sonnet, `CAP-Q3` haiku,
+   `CAP-Q4` fable + availability) and the two undocumented-behavior probes (`CAP-Q5` unavailable-model
+   dispatch, `CAP-Q6` alias re-pointing execution-time manifestation).
+6. **Go/no-go decision** — stated below.
+
+### No-go items / mandatory facts unverified within the timebox (FR-023, SC-005)
+
+Within the single autopilot run, every platform fact recordable from current official Anthropic
+documentation was sourced, quoted, and dated (*Primary-source fact table*, access date 2026-07-14). The
+facts that documentation does **not** settle — and that therefore remain unverified at run end — are carried
+as capability questions, never as facts or assumptions, with zero silent gaps:
+
+- **Alias-to-dated-ID environment-time bindings** — `CAP-Q1` (opus), `CAP-Q2` (sonnet), `CAP-Q3` (haiku),
+  `CAP-Q4` (fable, including availability). The docs bind each alias only to a *floating* "latest-family"
+  target, re-pointable by environment variables and provider allowlists (`ALS-repoint`, `RES-3`), so no
+  alias-to-dated-ID binding is a settled fact.
+- **Two undocumented dispatch behaviors** — `CAP-Q5` (unavailable-model dispatch: hard-error versus silent
+  substitution) and `CAP-Q6` (execution-time manifestation of alias re-pointing).
+
+No mandatory fact was dropped or left in a silent or unclassifiable state; each open item has a stable
+`CAP-Qn` home, and the timebox was not extended to chase them (FR-023).
+
+### Decision
+
+- **GO — the baseline handoff is complete.** CAR-002 has everything it needs to design capability probes and
+  then freeze the executable candidate set: the provisional manifest, the role-contract catalog, the
+  candidate tuples (project-level eligibility recorded, environment-time availability probe-gated), the
+  fixture backlog, the telemetry requirements, and the six capability questions — all dated and cited, with
+  zero shipped-default change (SC-006).
+- **NO-GO — no candidate is executable yet.** No candidate route may be treated as executable until its
+  `CAP-Qn` is resolved by probing: each alias must be resolved to its dated model ID and confirmed available
+  in the benchmark environment (`CAP-Q1…CAP-Q4`), and the two undocumented dispatch behaviors (`CAP-Q5`,
+  `CAP-Q6`) must be probed before any CAR-003 fallback or route-stability design relies on them. `fable`
+  remains an executor-class candidate, excluded only by recorded probe or contract evidence (FR-013), never
+  by product-announcement status.
+
+**No dependency on CAR-002 results; no executable claim before probing.** This handoff records candidate
+*eligibility* and probe *needs* only. It depends on no CAR-002 (or later) result (SC-004) and asserts no
+candidate route is executable before the capability questions above are answered (FR-022, AC-1.5).
