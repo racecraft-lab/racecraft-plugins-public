@@ -7,9 +7,9 @@ Covers:
     house-convention ``{passed}/{total}`` accounting (FR-010, Clarifications
     Session 1, count-parity contract §3).
   * ``capture_baseline`` — the ``^\\s*(.+?)\\s\\.\\.\\.\\s(PASS|FAIL)$`` parse
-    filter, the frozen ``NNN <name>`` + ``TOTAL: <N>`` render, fail-loud on an
-    empty/stale name, and the pinned non-root capture environment (FR-011,
-    count-parity contract §1/§2).
+    filter, strict frozen-inventory reads, the ``NNN <name>`` + ``TOTAL: <N>``
+    render, fail-loud on an empty/stale name, and the pinned non-root capture
+    environment (FR-011, count-parity contract §1/§2).
 
 Run standalone: ``python3 tests/speckit-pro/lib/test_lib.py`` — prints the
 house-convention ``test-lib: {passed}/{total} passed`` summary.
@@ -18,6 +18,7 @@ house-convention ``test-lib: {passed}/{total} passed`` summary.
 from __future__ import annotations
 
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -110,6 +111,32 @@ class CountingTestResultTests(unittest.TestCase):
 
 
 class CaptureBaselineParseTests(unittest.TestCase):
+    def test_inventory_preserves_order_and_duplicate_names(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            baseline = Path(temporary) / "baseline.txt"
+            baseline.write_text("001 alpha\n002 beta\n003 alpha\nTOTAL: 3\n", encoding="utf-8")
+            self.assertEqual(capture_baseline.baseline_inventory(baseline), ["alpha", "beta", "alpha"])
+
+    def test_inventory_total_mismatch_raises_exact_error(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            baseline = Path(temporary) / "baseline.txt"
+            baseline.write_text("001 alpha\nTOTAL: 2\n", encoding="utf-8")
+            with self.assertRaises(AssertionError) as context:
+                capture_baseline.baseline_inventory(baseline)
+            self.assertEqual(str(context.exception), "baseline TOTAL 2 does not match 1 names")
+
+    def test_inventory_missing_file_raises_file_not_found(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            with self.assertRaises(FileNotFoundError):
+                capture_baseline.baseline_inventory(Path(temporary) / "missing.txt")
+
+    def test_inventory_malformed_line_raises_value_error(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            baseline = Path(temporary) / "baseline.txt"
+            baseline.write_text("malformed\nTOTAL: 1\n", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                capture_baseline.baseline_inventory(baseline)
+
     def test_parses_only_verbose_pass_fail_lines_in_order(self) -> None:
         text = (
             "Running validate-agents...\n"
