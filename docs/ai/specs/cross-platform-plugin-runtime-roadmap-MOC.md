@@ -1,11 +1,16 @@
 ---
 up: "[Cross-Platform Plugin Runtime Roadmap](cross-platform-plugin-runtime-technical-roadmap.md)"
-related:
-  - "[Cross-Platform Plugin Runtime PRD](../../prd-cross-platform-plugin-runtime.md)"
+related: ["[Cross-Platform Plugin Runtime PRD](../../prd-cross-platform-plugin-runtime.md)"]
 status: "XPLAT-001 through XPLAT-010 complete/archived; public native-platform claims held by XPLAT-008 UAT matrix"
-rank:
+rank: ""
 spec_id: "cross-platform-plugin-runtime"
 structureVersion: 1
+type: "speckit-legacy-project-map"
+title: "Roadmap - Map of Content"
+description: "Generated compatibility view of the canonical OKF map."
+resource: "docs/ai/knowledge/projects/cross-platform-plugin-runtime/roadmap.md"
+x-speckit-authority: "generated-compatibility"
+x-speckit-generated-from: "docs/ai/knowledge/projects/cross-platform-plugin-runtime/roadmap.md"
 ---
 
 # Roadmap - Map of Content

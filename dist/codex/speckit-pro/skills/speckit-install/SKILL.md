@@ -217,7 +217,28 @@ If the script reports that an entry has neither a GitHub Release nor
 a git tag, surface the message but do not block the install. The
 operator can re-run after the upstream extension publishes a tag.
 
-### 6. Verify
+### 6. Initialize durable project knowledge
+
+Follow [the shared knowledge lifecycle](../speckit-coach/references/knowledge-lifecycle.md).
+First inventory legacy MOCs and `.specify/memory`; `.specify/` absence alone
+does not make the knowledge state fresh. Inventory Design Concepts separately
+as review sources. Only MOCs and memory trigger `migrate`; never bulk
+auto-migrate Design Concepts. When the bundle, MOCs, and memory are absent, run
+`knowledge-update-plan` with action `init` even if Design Concepts exist. When
+MOCs or memory exist, use action `migrate` with `reviewed: true` and
+`legacy_memory_reviewed: true`; require review of the proposed import. Show the
+plan, then apply only the accepted result using inputs `repo_root`, the returned
+`plan` object, `plan_hash`, and `expected_snapshot`. After initialization or
+migration, offer to review each Design Concept for reusable decisions through
+candidate validation, deduplication, and staging. Finish with `knowledge-health`.
+
+When adding an integration to an existing bundle, preserve
+`docs/ai/knowledge/**` byte-for-byte and run health only. If `.specify/` exists
+but the bundle does not and MOCs or memory exist, hand off to `$speckit-upgrade`
+for reviewed migration; do not silently initialize over them. Design Concepts
+alone do not trigger that handoff or migration.
+
+### 7. Verify
 
 ```text
 specify check 2>&1
@@ -233,7 +254,7 @@ Confirm:
 If verification fails, report the mismatch — do not silently
 continue.
 
-### 7. Report
+### 8. Report
 
 Return a concise install summary:
 
@@ -242,6 +263,7 @@ Return a concise install summary:
 
 **CLI version:** specify <X.Y.Z>
 **Repo init:** .specify/ scaffolded (templates, scripts, constitution placeholder)
+**Knowledge:** docs/ai/knowledge/ initialized and healthy (snapshot <id>)
 **Integrations installed:**
 - claude → .claude/skills/speckit-*/ (skills mode)
 - codex  → .codex/skills/speckit-*/ (skills mode)
@@ -271,6 +293,8 @@ STOP and report — do not improvise — when:
 - The repo has uncommitted changes that would conflict with the
   new files. Recommend committing or stashing first.
 - The operator declines confirmation on integration choice.
+- A knowledge init plan becomes stale or fails validation; leave existing
+  project knowledge untouched and report the runner diagnostic.
 
 If a partial install happened (e.g., `claude` succeeded but `codex`
 failed), report exactly what landed and what did not. Recommend

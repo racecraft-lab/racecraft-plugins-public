@@ -16,6 +16,13 @@ verify the **Codex custom subagents** that ship with this plugin.
 This skill exists only for the Codex runtime. It does **not** manage
 Claude Code agents, Claude marketplace metadata, or Claude commands.
 
+It also does not initialize or migrate a project's knowledge bundle. The agents
+installed here honor the SpecKit knowledge contract: read-only analysts may
+return `knowledge_candidates`, evidence-only agents may not, and no worker
+writes candidate or canonical knowledge files. Use `$speckit-install` for a new
+project bundle or `$speckit-upgrade` for reviewed migration of an existing
+project.
+
 The bundled source of truth lives in the plugin at:
 
 - `codex-agents/*.toml`

@@ -134,7 +134,28 @@ empty `--accept` meaning all). A provenance trail is recorded in
 `.specify/curated-install.json` — commit this to git so the project's
 extension state is reproducible.
 
-### 6. Verify and report
+### 6. Initialize durable project knowledge
+
+Follow [the shared knowledge lifecycle](../speckit-coach/references/knowledge-lifecycle.md).
+First inventory legacy MOCs and `.specify/memory`; `.specify/` absence alone
+does not make the knowledge state fresh. Inventory Design Concepts separately
+as review sources. Only MOCs and memory trigger `migrate`; never bulk
+auto-migrate Design Concepts. When the bundle, MOCs, and memory are absent, run
+`knowledge-update-plan` with action `init` even if Design Concepts exist. When
+MOCs or memory exist, use action `migrate` with `reviewed: true` and
+`legacy_memory_reviewed: true`; require review of the proposed import. Show the
+plan, then apply only the accepted result using inputs `repo_root`, the returned
+`plan` object, `plan_hash`, and `expected_snapshot`. After initialization or
+migration, offer to review each Design Concept for reusable decisions through
+candidate validation, deduplication, and staging. Finish with `knowledge-health`.
+
+When adding an integration to an existing bundle, preserve
+`docs/ai/knowledge/**` byte-for-byte and run health only. If `.specify/` exists
+but the bundle does not and MOCs or memory exist, hand off to `speckit-upgrade`
+for reviewed migration; do not silently initialize over them. Design Concepts
+alone do not trigger that handoff or migration.
+
+### 7. Verify and report
 
 Run `specify check` and `specify integration list`.
 Report to the operator:
@@ -147,6 +168,7 @@ Report to the operator:
   in Codex).
 - A reminder to **restart the coding-agent process** (Claude Code or
   Codex CLI) so the newly installed skills/commands are picked up.
+- The knowledge bundle snapshot and health, or the reviewed-migration handoff.
 
 ## Hard Constraints
 
@@ -158,6 +180,8 @@ Report to the operator:
 - Never mutate `.specify/memory/constitution.md` — that's the
   operator's content. If they don't have one yet, leave the SpecKit
   placeholder in place and tell them how to fill it.
+- Never overwrite or delete operator-owned `docs/ai/knowledge/**`. All knowledge
+  writes must come from an accepted runner plan.
 - If `specify init` fails (e.g., network error fetching templates),
   STOP and report the exact error. Do not partially-install or
   retry silently.

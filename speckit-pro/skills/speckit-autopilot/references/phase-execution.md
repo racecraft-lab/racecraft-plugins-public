@@ -17,6 +17,12 @@
    Edit application. See consensus-protocol.md §Batched Dispatch.
 4. **TASK LIST DRIVES EXECUTION** — Check the task list
    after each subagent returns to know what's next.
+5. **KNOWLEDGE IS BOUNDED AND RECEIPTED** — The parent runs
+   `knowledge-health` plus a narrow `knowledge-search` before dispatch, verifies
+   selected sources, and passes only those selections to the phase worker. The
+   parent records the `knowledge_use_receipt`, consumes any returned
+   `knowledge_candidates`, and alone stages candidate packets. Workers never
+   write knowledge or candidate files.
 
 ---
 
@@ -59,6 +65,7 @@ commands and scripts:
 | **Scripts** | `.specify/scripts/<type>/` | Shell scripts for branch creation, path resolution, prerequisite checking |
 | **Templates** | `.specify/templates/` | Spec, plan, tasks, checklist, and agent file templates |
 | **Constitution** | `.specify/memory/constitution.md` | Project principles for gate validation |
+| **Knowledge bundle** | `docs/ai/knowledge/` | Reviewed reusable context, selected through runner search |
 
 ### Key Scripts
 
@@ -849,64 +856,24 @@ domain knowledge. Both follow identical discipline.
 **After G7 passes:** Run Integration/E2E Test Verification,
 then execute PR Creation Protocol (see below).
 
-### Phase-Gate: Spec-MOC Navigation Regeneration
+### Phase-Gate: Knowledge Map and Compatibility-View Synchronization
 
-At **every phase boundary** — for all seven phases — regenerate the
-spec map navigation zones and fold any change into that phase's
-existing checkpoint commit. This runs as an **idempotent** step
-**immediately before** each phase's **Commit:** step (above), so the
-rebuilt maps are swept into the same `git add … && git commit`. A
-boundary that changes nothing contributes nothing.
+At every phase boundary, before the normal checkpoint commit, run
+`knowledge-health` for `projects/<roadmap-slug>/specs` with the target worktree
+as `repo_root`. If a gated authoritative source cited by the current map
+changed, build a reviewed same-path replacement and run
+`knowledge-update-plan` with action `supersede`; never use `rebuild` to refresh
+its source hash. If canonical concepts and source hashes are current but a
+generated index, manifest, log, or compatibility view drifted, use action
+`rebuild`. Inspect deterministic operations and warnings, then run
+`knowledge-update-apply` with `repo_root`, the complete accepted `plan`,
+`plan_hash`, and `expected_snapshot`. A stale plan, changed source, malformed
+map, or rollback diagnostic stops the phase without a partial write.
 
-**Why before the commit:** the existing per-phase `git add specs/ &&
-git commit` (phases 1–6) / `git add -A && git commit` (phase 7) is what
-folds the rebuilt maps into the one checkpoint commit. Running the
-rebuild *after* the commit would force a second commit on every
-map-affecting boundary — that is the failure this ordering avoids.
-
-**Step (run at each boundary, before the Commit step):**
-
-```text
-# Write mode (NO --check): regenerate over the autopilot's target repo.
-# Pass "$PWD" explicitly — do NOT rely on the generator's default
-# REPO_ROOT. In a cached-plugin run the default resolves to the plugin
-# cache's parent, not the user's project. Use the explicit target repository
-# path for installed-cache runs.
-runner helper generate-spec-index-write with repo root "$PWD" and mode apply
-```
-
-**Act on the result:**
-
-- **Exit 2 (error)** → a map is malformed/unbalanced or a PRS manifest
-  is unreadable. **Surface the actionable stderr line and STOP.** Do
-  NOT commit a broken regen and do NOT advance the phase.
-- **Exit 0 (clean)** → the generator wrote any stale maps and returned
-  success. **The commit decision is diff-driven, not exit-code-driven**
-  (write mode returns `0` whether or not it changed a file; the stale
-  `exit 1` is `--check`-only and never reached here). Inspect the
-  working tree:
-  - `git diff` (plus `git status` for newly-injected zones) is
-    **empty** → nothing was regenerated. This is the idempotent no-op:
-    contribute nothing, proceed to the phase's normal Commit step.
-  - `git diff` is **non-empty** and the rebuild rides **alongside**
-    other staged phase work → it is folded into that phase's existing
-    checkpoint commit (`feat(SPEC-XXX): complete <phase> phase` /
-    `feat(SPEC-XXX): implement phase`). No separate commit is made.
-  - `git diff` is **non-empty** and the regenerated maps are the
-    **only** staged change → make a standalone commit with this fixed,
-    public-readable subject:
-
-    ```text
-    docs(speckit-pro): regenerate spec-MOC navigation zones
-    ```
-
-This subject is a fixed constant (it is NOT computed per run): `docs:`
-because regenerating generated documentation zones is a docs-scope
-change and does not trigger a release-please version bump. The
-regeneration is a pure function of committed files, so re-running it on
-an unchanged tree yields a zero-byte diff and no commit — exactly one
-rebuild contribution to the checkpoint commit on a map-affecting
-boundary, and none on a no-op boundary.
+Fold any canonical index or generated MOC compatibility-view diff into the
+existing phase checkpoint. A no-op plan adds no commit. Never hand-edit a
+generated view, and use the legacy `generate-spec-index-write` adapter only when
+running an older installed plugin that does not expose the knowledge helpers.
 
 ## Full Integration / E2E Suite Verification
 

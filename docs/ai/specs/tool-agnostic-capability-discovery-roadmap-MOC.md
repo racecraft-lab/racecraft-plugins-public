@@ -1,11 +1,16 @@
 ---
 up: "[Tool-Agnostic Capability Discovery Roadmap](tool-agnostic-capability-discovery-technical-roadmap.md)"
-related:
-  - "[Tool-Agnostic Capability Discovery PRD](../../prd-tool-agnostic-capability-discovery.md)"
+related: ["[Tool-Agnostic Capability Discovery PRD](../../prd-tool-agnostic-capability-discovery.md)"]
 status: "TACD-004 complete"
-rank:
+rank: ""
 spec_id: "tool-agnostic-capability-discovery"
 structureVersion: 1
+type: "speckit-legacy-project-map"
+title: "Roadmap - Map of Content"
+description: "Generated compatibility view of the canonical OKF map."
+resource: "docs/ai/knowledge/projects/tool-agnostic-capability-discovery/roadmap.md"
+x-speckit-authority: "generated-compatibility"
+x-speckit-generated-from: "docs/ai/knowledge/projects/tool-agnostic-capability-discovery/roadmap.md"
 ---
 
 # Roadmap - Map of Content

@@ -17,7 +17,9 @@
   and the downstream tools can consume this document without re-interpretation.
 
   Authoring tip: generate this with `/speckit-pro:speckit-prd` (a collaborative,
-  one-question-at-a-time interview), or fill it in by hand.
+  one-question-at-a-time interview), or fill it in by hand. Once this PRD is
+  reviewed, `/speckit-pro:speckit-prd --roadmap-only <this-path>` creates the
+  roadmap and knowledge surfaces without rewriting the PRD.
 -->
 
 **Status**: <!-- Draft | Active — not yet implemented | In progress | Shipped -->
@@ -154,9 +156,25 @@
 <!-- Links the downstream specs will need. Remove rows that don't apply. -->
 
 - **Technical roadmap:** `docs/ai/specs/{{FEATURE_SLUG}}-technical-roadmap.md`
+- **Canonical knowledge map:** `docs/ai/knowledge/projects/{{FEATURE_SLUG}}/roadmap.md`
+- **Knowledge use receipt:** Use the schema-valid JSON below. Replace its fields
+  when reviewed knowledge was selected; never write `none`.
 - **Constitution:** `.specify/memory/constitution.md`
 - **Project standards:** <!-- AGENTS.md / CLAUDE.md / equivalent -->
 - **Discovery / source:** <!-- brief, issue, PR-FAQ, design concept doc -->
+
+```json
+{
+  "receipt_version": "1.0",
+  "snapshot_id": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "query": "PRD and roadmap decisions",
+  "selected_concepts": [],
+  "verified_sources": [],
+  "producer": { "skill": "speckit-prd" },
+  "purpose": "Ground PRD and roadmap decisions in reviewed project knowledge.",
+  "result": "No reviewed project knowledge selected."
+}
+```
 
 ---
 

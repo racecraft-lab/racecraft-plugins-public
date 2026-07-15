@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-knowledge-update-apply",
+  "helper_id": "knowledge-update-apply",
+  "operation": "knowledge-update-apply",
+  "mode": "dry_run",
+  "inputs": {
+    "repo_root": ".",
+    "plan": {},
+    "plan_hash": "",
+    "expected_snapshot": ""
+  }
+}

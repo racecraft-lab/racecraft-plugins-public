@@ -31,6 +31,7 @@ automation, and review helpers on top of the official Spec Kit workflow.
 | Scoping interviews | `grill-me` asks one decision at a time before a spec is written. |
 | SDD coaching | `speckit-coach` explains methodology, roadmaps, gates, and extension choices. |
 | PRD and roadmap authoring | `speckit-prd` turns a broad idea into a PRD and SPEC catalog. |
+| Durable project knowledge | A repo-owned OKF bundle preserves reviewed decisions and patterns with source hashes, bounded search, use receipts, and generated MOC compatibility views. |
 | Spec scaffolding | `speckit-scaffold-spec` creates the worktree and workflow file for one SPEC. |
 | Autopilot execution | `speckit-autopilot` runs the SDD phases toward an implementation PR. |
 | Status and review helpers | `speckit-status` shows what is next; `speckit-resolve-pr` handles review comments. |
@@ -171,7 +172,7 @@ invocations on the left or the Codex skill invocations on the right.
 | Create PRD and roadmap | `/speckit-pro:speckit-prd "saved searches"` | `$speckit-prd "saved searches"` |
 | Check project status | `/speckit-pro:speckit-status` | `$speckit-status` |
 | Prepare one SPEC | `/speckit-pro:speckit-scaffold-spec SPEC-001` | `$speckit-scaffold-spec SPEC-001` |
-| Run autopilot | `/speckit-pro:speckit-autopilot docs/ai/specs/SPEC-001-workflow.md` | `$speckit-autopilot docs/ai/specs/SPEC-001-workflow.md` |
+| Run autopilot | `/speckit-pro:speckit-autopilot docs/ai/specs/.process/SPEC-001-workflow.md` | `$speckit-autopilot docs/ai/specs/.process/SPEC-001-workflow.md` |
 
 Before autopilot, define your project's constitution with the command installed
 by Spec Kit for your runtime. The official Spec Kit workflow treats the
@@ -188,6 +189,11 @@ flowchart LR
     E --> F["Autopilot phases"]
     F --> G["Pull request"]
     G --> H["Resolve review feedback"]
+    K[("Reviewed OKF knowledge")] -. "bounded context + receipts" .-> B
+    K -. "bounded context + receipts" .-> D
+    K -. "bounded context + receipts" .-> F
+    C --> K
+    D --> K
 ```
 
 The core idea is simple:
@@ -196,6 +202,31 @@ The core idea is simple:
 2. Convert that context into Spec Kit artifacts.
 3. Run phase gates so ambiguity does not silently drift forward.
 4. Implement only after the spec, plan, tasks, and analysis have enough detail.
+
+### Durable knowledge and recovery
+
+SpecKit Pro keeps reviewed reusable knowledge under `docs/ai/knowledge/` while
+PRDs, roadmaps, specs, Design Concepts, workflows, tests, and archive reports
+remain their own authorities or evidence. Skills run bounded health/search,
+verify selected source hashes, and record schema-valid use receipts. Workers may
+propose candidates under `docs/ai/specs/.process/knowledge-candidates/`; only a
+reviewed parent flow may stage or promote them.
+
+Treat `docs/ai/knowledge/**` as a protected, repo-owned surface. Do not hand-edit
+canonical concepts, generated indexes, manifests, logs, or generated
+`*-roadmap-MOC.md` / `SPEC-MOC.md` views. Use the installed Python runner's
+`knowledge-update-plan` and `knowledge-update-apply`, review the exact plan, and
+apply it with the matching snapshot and plan hash.
+
+Recovery depends on the diagnostic:
+
+- Authoritative source changed: build a reviewed same-path replacement and use
+  `supersede`; do not use `rebuild` to refresh a source hash.
+- Canonical sources are current but an index, manifest, log, or MOC view drifted:
+  use `rebuild`.
+- No bundle and legacy MOCs or memory exist: use reviewed `migrate`; Design
+  Concepts are reviewed individually as candidate sources, never bulk imported.
+- No bundle and no legacy MOCs or memory exist: use install/init.
 
 ## Skill Map
 
@@ -358,6 +389,17 @@ the phase or workflow.
 
 Run `speckit-scaffold-spec` for the target SPEC. The scaffold step populates the
 workflow from the roadmap and design concept before autopilot runs.
+
+</details>
+
+<details>
+<summary><strong>Knowledge health reports drift or incomplete migration</strong></summary>
+
+Do not edit `docs/ai/knowledge/**` or generated MOCs directly. If an
+authoritative cited source changed, review a same-path `supersede`. If only a
+generated projection drifted, run a reviewed `rebuild`. If the bundle is absent
+and legacy MOCs or memory were detected, run reviewed `migrate`; use init only
+for a truly empty knowledge state.
 
 </details>
 

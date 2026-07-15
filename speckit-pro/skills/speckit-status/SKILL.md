@@ -17,6 +17,15 @@ stdin, read one JSON response from stdout, and surface stderr diagnostics.
 Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
 PowerShell-specific command-language requirement for installed workflows.
 
+## Durable knowledge status
+
+Follow [the shared knowledge lifecycle](../speckit-coach/references/knowledge-lifecycle.md).
+Run runner operation `knowledge-health` with the consumer repo root. Report
+bundle presence, OKF/profile conformance, snapshot, freshness, source-hash and
+link failures, duplicate IDs, unreviewed candidates, migration coverage, and
+MOC compatibility-view drift. This skill is read-only: never run a knowledge
+plan or apply operation.
+
 ## Codex Skill-Selection Guard
 
 If this file is loaded in Codex, the runtime selected the Claude Code
@@ -50,8 +59,10 @@ Workflow files:    **/*-workflow.md  (active/completed specs with phase detail)
 Technical roadmaps: **/*technical-roadmap*.md  OR  **/*-roadmap.md
 Design concepts:   **/*-design-concept.md  (grill-me output per spec)
 Also check:        docs/ai/specs/*-workflow.md
+                   docs/ai/specs/.process/*-design-concept.md
                    docs/ai/specs/*-design-concept.md
                    docs/ai/*roadmap*.md
+Knowledge:         docs/ai/knowledge/manifest.json
 Archive state:     .specify/extensions.yml
                    .specify/extensions/.registry
                    .specify/extensions/archive/extension.yml
@@ -62,6 +73,8 @@ For each design concept doc found, record the SPEC-ID it corresponds to
 (parsed from the filename `SPEC-<ID>-design-concept.md` or from the doc's
 frontmatter). This drives the **DC** (Design Concept) column in the
 phase-detail dashboard and the per-spec detail view.
+When both paths exist, prefer `.process/`; the non-`.process` path is a legacy
+read fallback only.
 
 ### 2. Parse the Technical Roadmap (Full Roadmap)
 
@@ -161,37 +174,20 @@ Include an Archive Sweep summary when archive state exists:
 - next step: install/vendor archive, keep dry-run-only, or perform reviewed
   cleanup after archive success and recovery commands
 
-#### Spec-Map Index Freshness (read-only)
+#### Knowledge and compatibility-view freshness (read-only)
 
-As part of producing the dashboard, report whether each version-marked
-`SPEC-MOC.md`'s generated navigation zones are current. Run the shared
-generator in **read-only `--check` mode** — it regenerates the zones in
-memory, diffs them against the committed maps, and **writes nothing**:
+Use the `knowledge-health` response as the single report. For an absent bundle,
+recommend reviewed `migrate` when health reports `incomplete_migration` or
+legacy MOC/memory inventory; recommend install/init only when that inventory is
+truly empty. Distinguish a valid current bundle, authoritative source drift
+(recommend reviewed same-path `supersede`), projection-only drift (recommend
+`rebuild`), and invalid content (name the diagnostic). `generate-spec-index-check`
+is a compatibility adapter only; do not invoke both operations or reimplement
+either check.
 
-```text
-Run runner helper generate-spec-index-check with repo root "$PWD".
-```
-
-Pass `"$PWD"` (the project root) explicitly. Without it the generator infers
-its repo root from the script's own location, which in a cached-plugin install
-is the plugin cache — not the user's project — so the freshness check would
-scan the wrong tree.
-
-Surface a single freshness line in the dashboard from the exit code:
-
-- exit `0` → **index current**
-- exit `1` → **index stale — run regen** (the maps drifted from their
-  sources; the fix is `/speckit-pro:speckit-autopilot`, whose phase gates
-  rebuild the zones — `speckit-status` does not regenerate them)
-- exit `2` → **index check error: `<message>`** — name the failure from the
-  generator's stderr line (e.g. a malformed `prs.json` or a non-regular-file
-  map target)
-
-**Read-only guarantee:** `speckit-status` MUST NOT write any file. It invokes
-the generator only with `--check`, which writes nothing on **any** path —
-including the exit-`2` error path. The dashboard never runs the generator in
-write mode and never regenerates the maps itself; reporting staleness here is
-purely advisory.
+**Read-only guarantee:** `speckit-status` never writes, rebuilds, stages, or
+promotes knowledge. Report candidate counts and recommended owners without
+changing them.
 
 #### O5 Parent Rollup And Re-Slicing Status
 
@@ -277,7 +273,9 @@ Show detailed information for that spec:
 
 - All phase statuses with notes (from workflow file, if exists)
 - Technical roadmap scope description
-- Design Concept doc path (if `SPEC-<ID>-design-concept.md` exists) — also
+- Design Concept doc path (prefer
+  `docs/ai/specs/.process/SPEC-<ID>-design-concept.md`, then fall back to the
+  historical `docs/ai/specs/SPEC-<ID>-design-concept.md`) — also
   surface its frontmatter `question_count` and Open Questions count for a
   quick read on how thoroughly the spec was scoped
 - Dependencies and what it enables
@@ -299,7 +297,8 @@ No workflow file found. To begin:
 Tell the user:
 
 - No technical roadmap or workflow files found in the project
-- Guide them to create a technical roadmap:
-  `/speckit-pro:speckit-coach help me create a technical roadmap`
-- Or create a single workflow: copy
-  `skills/speckit-coach/templates/workflow-template.md`
+- If no PRD exists, route authoring to `/speckit-pro:speckit-prd <idea-or-brief>`
+- If a reviewed PRD exists, route roadmap-only authoring to
+  `/speckit-pro:speckit-prd --roadmap-only <existing-prd-path>`
+- After the roadmap exists, create a workflow only through
+  `/speckit-pro:speckit-scaffold-spec <SPEC-ID>`

@@ -17,6 +17,18 @@ PowerShell-specific command-language requirement for installed workflows.
 
 Before researching or recommending, enumerate the tools and skills your session actually exposes — do not assume a fixed set; the user may have installed anything — and select the best fit per `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`. Ground every external fact you assert in a real tool, skill, or file result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`, and abstain when nothing grounds it.
 
+## Durable knowledge
+
+Follow [the shared knowledge lifecycle](../../skills/speckit-coach/references/knowledge-lifecycle.md).
+In the worktree, run `knowledge-health` and a bounded `knowledge-search` for
+the roadmap entry, dependencies, and relevant project patterns by actually
+invoking the installed runner in that order; describing the calls is not
+completion. Verify selected sources and place a receipt that validates against
+`knowledge-use-receipt.schema.json` in the workflow file. Use
+`knowledge-update-plan`/`knowledge-update-apply` to create the canonical spec
+map and its generated `SPEC-MOC.md` compatibility view; never hand-write the
+view.
+
 ## Scope
 
 Use this skill when the user wants a SPEC-ID prepared for
@@ -25,10 +37,12 @@ bootstrap step: identify the roadmap entry, create or reuse the correct
 worktree branch, generate the workflow file, and leave the repository in a
 state where the autopilot can start immediately.
 
-If the user is still figuring out how to decompose a feature, write a
-technical roadmap, or understand the SDD process, redirect them to
-`$speckit-coach`. Do not invent roadmap data or phase prompts from vague
-requirements when the roadmap entry does not exist.
+If the user is still figuring out the SDD process, redirect them to
+`$speckit-coach`. If they need to create a technical roadmap, redirect them to
+`$speckit-prd`: use `$speckit-prd --roadmap-only <existing-prd-path>` when a
+reviewed PRD already exists, or `$speckit-prd <idea-or-brief>` otherwise. Do
+not invent roadmap data or phase prompts from vague requirements when the
+roadmap entry does not exist.
 
 ## Artifact tiering (CONTRACT vs EXHAUST)
 
@@ -51,10 +65,11 @@ reviewable, independently ordered slices.
 O5 v1 uses a review-visible CONTRACT parent manifest at
 `specs/<parent-branch>/o5-parent-manifest.json`. Child specs stay flat siblings
 under `specs/<child-branch>`; never create nested
-`specs/<parent>/<child>` directories. Child `SPEC-MOC.md` frontmatter keeps
-`up:` pointed at the roadmap. Add only curated body links to the parent
-manifest and shared design concept; add retrospective links only after the
-retrospective exists. Do not create child branches or worktrees automatically
+`specs/<parent>/<child>` directories. Put the child map's `up` relationship and
+curated links to the parent manifest/shared Design Concept in the canonical OKF
+spec-map candidate; add retrospective links only after that source exists. The
+generated `SPEC-MOC.md` compatibility view projects those fields and is never
+hand-edited. Do not create child branches or worktrees automatically
 from the parent scaffold — each child is scaffolded independently.
 
 Before presenting O5 as ready, validate the manifest with:
@@ -177,8 +192,10 @@ operator approval.
 
 Search for the roadmap before asking the user where it lives. Check likely
 paths such as `docs/ai/`, `docs/ai/specs/`, and any file matching
-`*technical-roadmap*` or `*roadmap*`. If no roadmap exists, stop with a short
-message telling the user to create one with `$speckit-coach`.
+`*technical-roadmap*` or `*roadmap*`. If no roadmap exists, stop and route
+roadmap creation through `$speckit-prd`. Use
+`$speckit-prd --roadmap-only <existing-prd-path>` when a reviewed PRD exists;
+otherwise use `$speckit-prd <idea-or-brief>`.
 
 ### 2. Parse the requested roadmap entry
 
@@ -315,39 +332,6 @@ lands correctly), then load the shared workflow template from the plugin. Do
 not author a new template from scratch. The generated file should live at a
 path like `docs/ai/specs/.process/SPEC-009-workflow.md` inside the worktree.
 
-### 5.5. Write the SPEC-MOC marker (in the worktree)
-
-Write a minimal `SPEC-MOC.md` navigation marker into the spec's CONTRACT
-directory on EVERY new spec, regardless of how many slices it will ultimately
-have (single-slice specs get the marker too — it is the version-gate carrier).
-
-This marker is a CONTRACT artifact: write it to `specs/<branch-name>/SPEC-MOC.md`
-— NOT redirected to `.process/`, and NOT written to `docs/ai/specs/`. Create the
-contract directory if it is absent (`mkdir -p specs/<branch-name>/`); scaffold
-owns this early creation. Name the directory from the branch (NOT auto-numbered)
-so the `spec_id` namespace-matches the directory.
-
-Load the shared spec-MOC template from the plugin at
-`skills/speckit-coach/templates/spec-moc-template.md` (the template is a single
-shared, runtime-agnostic copy — do NOT duplicate it under `codex-skills/`).
-Token-substitute it with the same `{{TOKEN}}` mechanism used for the workflow
-template:
-
-- `{{ROADMAP_TITLE}}` — a short link text for the roadmap (e.g., the spec series
-  name + " roadmap")
-- `{{ROADMAP_FILENAME}}` — the existing `*-technical-roadmap.md` filename without
-  the `.md` extension
-- `{{SPEC_ID}}` — the roadmap identity, e.g., `PRSG-002` (must namespace-match
-  `<branch-name>`)
-
-The written marker MUST carry a non-empty, quoted relative `up:` markdown link
-pointing at the existing `*-technical-roadmap.md` — from `specs/<branch-name>/`
-this resolves as `../../docs/ai/specs/<roadmap-filename>.md` (the
-`../../docs/ai/specs/` prefix is hardcoded in the template; only the filename is
-tokenized), NEVER a `[[wikilink]]` — plus `structureVersion: 1` (carried verbatim
-from the template, with its "keep in sync with the lint scripts' hardcoded
-literal" comment) and a `spec_id` that namespace-matches the contract directory.
-
 ### 6. Populate the workflow file
 
 Replace all placeholders using the roadmap data. At minimum populate:
@@ -388,19 +372,78 @@ the primary enrichment layer; the roadmap scope is the seed. If a critical
 detail cannot be derived from either, stop and report the gap rather than
 filling it with fiction.
 
+### 6.5. Finalize sources and operational state in the worktree
+
+Before hashing or promotion:
+
+1. Read the populated workflow back. Require every placeholder to be replaced,
+   all phase prompts to be complete, and the `knowledge_use_receipt` to record
+   the actual bounded search/use from this scaffold run.
+2. Read the Design Concept back and finish accepted corrections. Require Goals,
+   Non-goals, Design Tree/Q&A, and Open Questions.
+3. Update the technical roadmap copy in the worktree to mark the requested spec
+   in progress. Do not commit or push a separate roadmap-status change.
+4. Treat that roadmap edit as authoritative source drift for the canonical
+   project map. Reread the finalized roadmap, build a reviewed same-path
+   replacement with its current source hash, and plan/apply `supersede` before
+   creating the spec map. Never use `rebuild` to refresh the project map's
+   source hash. If no canonical project map exists, stop and route the roadmap
+   through `$speckit-prd` or reviewed migration rather than inventing one here.
+5. Reread the finalized roadmap and Design Concept bytes. They are the stable
+   authoritative/evidentiary candidate sources. The workflow is mutable
+   operational state and must never be included as a candidate source or hash.
+
+Do not edit the roadmap, Design Concept, or workflow after candidate hashing.
+If any must change, discard the pending plan and recompute evidence first.
+
+### 6.6. Create the canonical spec map and compatibility view in the worktree
+
+Create `specs/<branch-name>/` if absent. Build a candidate matching
+`knowledge-candidate.schema.json` from only the finalized technical-roadmap
+entry and Design Concept: `type: speckit-spec-map`, `concept_path:
+projects/<roadmap-slug>/specs/<normalized-spec-id>.md`, `id: SPEC-<ID>`, project
+`<roadmap-slug>`, non-empty `title`, `description`, and curated `body`, `state:
+reviewed`, `reviewed: true`, and `producer.skill: speckit-scaffold-spec`. Every
+source carries its exact path, section, line evidence when available, and
+SHA-256. Set `legacy_view: specs/<branch-name>/SPEC-MOC.md` and `legacy_up` to
+the exact Markdown link
+`[<roadmap-title>](../../docs/ai/specs/<roadmap-slug>-roadmap-MOC.md)`.
+Do not cite or hash the workflow or any other mutable state file.
+
+Run `knowledge-update-plan` and `knowledge-update-apply` for action `promote`
+with scope `projects/<roadmap-slug>/specs`. Then run `knowledge-health`; plan and
+apply `rebuild` with the same scope only for generated index, manifest, log, or
+compatibility-view drift while canonical sources are current. Every apply
+carries the worktree `repo_root`, the complete
+returned `plan`, `plan_hash`, and `expected_snapshot`. Review operations before
+each apply, then inspect the durable concept and generated compatibility view.
+Status, PRS, backlinks, indexes, and compatibility views are generated; never
+hand-edit the view or its sentinel zones.
+
 ### 7. Commit and push from the worktree
 
-Stage the generated/updated preset files when present, plus the design concept
-doc, the workflow file, AND the SPEC-MOC marker in the worktree branch (the
-marker is a review-visible CONTRACT artifact — if it is written but left
+Run final `knowledge-health` with scope `projects/<roadmap-slug>/specs` first.
+Require the promoted spec map, generated indexes, source hashes, and SPEC-MOC
+compatibility view to be current; stop before commit if health is not clean.
+
+Then stage the generated/updated preset files when present, plus the roadmap,
+design concept
+doc, workflow file, canonical spec-map concept, generated indexes, and SPEC-MOC
+compatibility view in the worktree branch (the view is a review-visible
+projection — if it is generated but left
 untracked it never reaches the PR). Create a focused setup commit and push that
 branch to the detected remote:
 
 ```
 git add .specify/presets/speckit-pro-reviewability \
         .specify/presets/.registry \
+        <roadmap-path-from-step-1> \
         docs/ai/specs/.process/SPEC-<ID>-design-concept.md \
         docs/ai/specs/.process/SPEC-<ID>-workflow.md \
+        docs/ai/knowledge/index.md \
+        docs/ai/knowledge/log.md \
+        docs/ai/knowledge/manifest.json \
+        docs/ai/knowledge/projects/<roadmap-slug> \
         specs/<branch-name>/SPEC-MOC.md
 git commit -m 'chore(SPEC-XXX): add design concept and workflow for autopilot'
 ```
@@ -410,7 +453,12 @@ only the design concept, the workflow, and the marker:
 
 ```
 git add docs/ai/specs/.process/SPEC-<ID>-design-concept.md \
+        <roadmap-path-from-step-1> \
         docs/ai/specs/.process/SPEC-<ID>-workflow.md \
+        docs/ai/knowledge/index.md \
+        docs/ai/knowledge/log.md \
+        docs/ai/knowledge/manifest.json \
+        docs/ai/knowledge/projects/<roadmap-slug> \
         specs/<branch-name>/SPEC-MOC.md
 git commit -m 'chore(SPEC-XXX): add design concept and workflow for autopilot'
 ```
@@ -421,13 +469,6 @@ Then verify:
 - placeholders are gone from the workflow file
 - `git rev-parse --abbrev-ref HEAD` shows the spec branch
 - `git log --oneline -1` shows the setup commit
-
-### 8. Update roadmap status in the worktree
-
-Update the technical roadmap copy inside the worktree to mark the spec as in
-progress. Commit and push that roadmap status change on the same spec branch.
-Do not touch the main checkout. The roadmap change reaches the default branch
-only when the spec branch is merged.
 
 ## Output
 

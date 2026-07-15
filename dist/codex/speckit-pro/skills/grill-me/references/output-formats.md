@@ -8,7 +8,7 @@ at the end of an interview.
 ### Standalone mode
 
 ```text
-docs/ai/specs/<slug>-design-concept.md
+docs/ai/specs/.process/<slug>-design-concept.md
 ```
 
 `<slug>` is derived from the input:
@@ -25,7 +25,7 @@ Append a `-2`, `-3` suffix, or ask the user via `AskUserQuestion`.
 ### Setup mode
 
 ```text
-.worktrees/<NNN>-<short-name>/docs/ai/specs/SPEC-<ID>-design-concept.md
+.worktrees/<NNN>-<short-name>/docs/ai/specs/.process/SPEC-<ID>-design-concept.md
 ```
 
 The calling `/speckit-pro:speckit-scaffold-spec` command supplies `<NNN>`, `<short-name>`,
@@ -46,8 +46,13 @@ source_input:
   ref: "<path or topic string or 'interactive'>"
 question_count: <integer>
 stop_reason: "natural" | "user-ended" | "soft-cap" | "hard-cap"
+knowledge_snapshot: "<sha256 snapshot id>"
 ---
 ```
+
+When the bundle is absent, use the SHA-256 of empty bytes:
+`sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
+Never write `none` for a snapshot.
 
 ## Body Structure
 
@@ -110,14 +115,41 @@ Items that came up but were deliberately deferred. Each item has:
 - **Suggested next step:** <how to resolve, e.g., "Ask <stakeholder>
   before /scaffold-spec runs", "Defer to /speckit-clarify during autopilot">
 
+## Knowledge Use
+
+Record one JSON object that validates against
+`knowledge-use-receipt.schema.json`. When the bundle is absent, use this
+complete receipt rather than `none` or prose:
+
+```json
+{
+  "receipt_version": "1.0",
+  "snapshot_id": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "query": "pre-spec scoping recommendations",
+  "selected_concepts": [],
+  "verified_sources": [],
+  "producer": { "skill": "grill-me" },
+  "purpose": "Ground recommendations in reviewed project knowledge.",
+  "result": "No reviewed project knowledge selected."
+}
+```
+
+When concepts are used, replace the snapshot and query, add each selected
+concept's `path`, `id`, and unprefixed SHA-256, add each verified source's
+`path` and unprefixed SHA-256, and state the recommendation or output that
+consumed them in `result`. Keep `producer.skill`; add `producer.agent` only
+when an agent actually performed the use. When a present bundle returns no
+selected concepts, keep both arrays empty but record that bundle's actual
+snapshot instead of the empty-bundle snapshot.
+
 ## Recommended Next Step
 
 Pick the most useful next action based on what the session produced.
 One of:
 
 - **Feed into the technical roadmap.** Run
-  `/speckit-pro:speckit-coach help me add this to the technical roadmap` and
-  reference this doc.
+  `$speckit-prd --roadmap-only <existing-prd-path>` and reference this doc when
+  the reviewed PRD incorporates its decisions.
 - **Run setup.** If a SPEC-XXX entry already exists in the roadmap,
   run `/speckit-pro:speckit-scaffold-spec SPEC-XXX`. (Note: in setup mode, this section
   is informational only — setup has already happened.)
@@ -141,3 +173,7 @@ One of:
 - **No editorializing.** This doc is a record, not an essay. State
   what was asked, what you recommended, what was chosen, what the
   reasoning was. Save analysis for the spec.
+- **Do not promote directly.** Reusable interview decisions are
+  `knowledge_candidates`, not canonical concepts. In setup mode return them to
+  the scaffold parent. In standalone mode stage only explicitly reviewed,
+  schema-valid, deduplicated `proposed` packets; never promote them.

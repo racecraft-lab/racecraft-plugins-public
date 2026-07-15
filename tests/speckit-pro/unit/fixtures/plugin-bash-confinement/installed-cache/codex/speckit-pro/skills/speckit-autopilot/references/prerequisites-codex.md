@@ -102,6 +102,10 @@ to archive previously merged specs.
 
 6. Archive Sweep may archive/clean up only previously merged specs. It MUST
    exclude the current target spec until a later run sees that spec as merged.
+   Before cleanup, apply the knowledge `archive` plan for each eligible
+   canonical spec map. Cleanup may remove its other active artifacts but must
+   retain, or immediately regenerate, the archived `SPEC-MOC.md` compatibility
+   stub. Stub removal requires a separate reviewed deprecation.
 7. Persist sweep output into `autopilot-state.json` under `archive_sweep`,
    including `status`, `execution_path=extension_contract`,
    `invocation_available`, `prerequisite_available`, `prerequisite_mode`,

@@ -113,6 +113,16 @@ framework or broad vendor product dependency.
   human-on-the-loop, fully automated, or disallowed. Open-ended recursive
   self-improvement and self-modifying harness-control loops are classified as
   disallowed unless a later dedicated spec proves bounded safety controls.
+- **AC-1.8**: The inventory classifies every plugin-managed knowledge-like
+  surface exactly once as authoritative source, reusable knowledge, operational
+  state, immutable evidence, legacy memory, or generated projection. Coverage
+  includes roadmap MOCs, SPEC-MOCs, PRDs, roadmaps, Design Concepts, workflow
+  files, `.specify/memory/`, research, retrospectives, O5/PRS state, archive and
+  UAT evidence, skills, agents, templates, hooks, manifests, and generated
+  Claude/Codex payloads. The initial corpus baseline records nine technical
+  roadmaps, six roadmap MOCs, three roadmaps without MOCs, 42 Design Concepts,
+  45 workflow files, 30 archive reports, and no active SPEC-MOCs, then requires
+  implementation to regenerate rather than assume those counts.
 
 ### 3.2 Progressive Context and Durable State Contract *(-> HRNS-002)*
 
@@ -146,6 +156,21 @@ framework or broad vendor product dependency.
   project guidance from active task-specific instructions or injected context.
   Switching focus is atomic, records the active task/spec identity, and avoids
   mutating root instructions or creating accidental PR diffs.
+- **AC-2.11**: Reusable project knowledge lives in an OKF v0.1 bundle at
+  `docs/ai/knowledge/`, with generated `index.md` maps, a generated `log.md`, a
+  deterministic `manifest.json`, project-scoped roadmap/spec concepts, and
+  reviewed decision, architecture, domain, operations, and pattern concepts.
+  The bundle pins the normative OKF revision and uses path identity plus a
+  durable SpecKit join key; it does not require a database, vector store,
+  external service, or non-standard-library parser.
+- **AC-2.12**: Existing roadmap and SPEC MOC semantics are ported into the OKF
+  bundle under single ownership. Curated MOC content becomes canonical OKF
+  content, generated zones become deterministic OKF indexes/projections, and
+  legacy MOC paths become generated compatibility views. Current source,
+  approved contracts, and workflow state remain authoritative in their own
+  domains; `.specify/memory/{spec,plan,changelog}.md` is imported as reviewed,
+  deduplicated atomic knowledge and then frozen as legacy history rather than
+  maintained as a coequal memory authority.
 
 ### 3.3 Helper, Tool, and Capability Contract *(-> HRNS-003)*
 
@@ -169,6 +194,17 @@ framework or broad vendor product dependency.
   schemas as contract references. The decision distinguishes the
   Python-authoritative source, generated schemas, test fixtures, and runtime
   dependency impact.
+- **AC-3.8**: The Python runner exposes `knowledge-health`, `knowledge-search`,
+  `knowledge-update-plan`, and `knowledge-update-apply` with explicit schemas,
+  read-only versus mutating behavior, deterministic plan/snapshot hashes,
+  conflict checks, rollback, and bounded output. Update actions cover init,
+  migrate, rebuild, promote, supersede, and archive. Search excludes archived
+  and superseded concepts by default and exposes an explicit historical filter.
+- **AC-3.9**: One parser/model/renderer owns OKF profile parsing, manifest and
+  index generation, MOC compatibility rendering, source hashing, and migration
+  planning. Existing `generate-spec-index-check` and
+  `generate-spec-index-write` operations remain response-compatible adapters
+  until a separate deprecation spec proves installed Claude/Codex migration.
 
 ### 3.4 Permission, Sandbox, and Pre-action Authorization Controls *(-> HRNS-004)*
 
@@ -202,6 +238,15 @@ framework or broad vendor product dependency.
   size limits, provenance checks, and human confirmation before commit or team
   distribution. Personal context artifacts remain local by default and must not
   appear in PR diffs accidentally.
+- **AC-4.10**: `docs/ai/knowledge/**` is a protected shared surface. Knowledge
+  documents are treated as untrusted data that cannot expand permissions or
+  override current user/project instructions. Promotion requires safe paths,
+  symlink confinement, secret and sensitivity checks, source provenance,
+  expected-snapshot validation, a reviewable diff, and reviewed PR merge.
+  Worker agents may propose structured candidates but cannot write canonical
+  knowledge. Optional archive integrations that append per-spec history to
+  `AGENTS.md`, `CLAUDE.md`, or `GEMINI.md` remain dry-run-only until their
+  behavior is compatible with this authority model.
 
 ### 3.5 Feedback Sensors and Eval Readiness Ladder *(-> HRNS-005)*
 
@@ -252,6 +297,16 @@ framework or broad vendor product dependency.
   accepted. They flag vacuous patterns such as placeholder assertions,
   broad OR fallbacks, conditional file-existence guards, and self-fulfilling
   setup.
+- **AC-5.14**: Verification separates permissive base OKF v0.1 conformance from
+  the stricter trusted SpecKit profile. Fixtures cover required `type`, reserved
+  `index.md`/`log.md` behavior, unknown-field preservation, source hashes,
+  duplicate IDs, stale records, compatibility-view drift, unsafe content, and
+  deterministic migration/rebuild behavior.
+- **AC-5.15**: Representative installed skill workflows prove actual knowledge
+  use: a skill performs bounded retrieval, selects a concept, verifies its cited
+  source, materially uses the result in a downstream artifact or decision, and
+  emits a use receipt. Bundle presence, search output, agent inventory, or a
+  harness-only invocation is insufficient evidence.
 
 ### 3.6 Trace, Debug, and Review Evidence Packets *(-> HRNS-006)*
 
@@ -283,6 +338,11 @@ framework or broad vendor product dependency.
   warm-up baseline, context-health zone, compaction/auto-save event, and whether
   resume evidence came from a named checkpoint, workflow artifact, or emergency
   fallback.
+- **AC-6.10**: Knowledge use emits a bounded receipt containing the manifest
+  snapshot ID, query, selected concept IDs and hashes, verified source paths,
+  purpose, and resulting decision or output. Receipts preserve skill/agent
+  lineage without copying concept bodies, raw transcripts, secrets, or personal
+  identifiers into trace packets.
 
 ### 3.7 Long-horizon Orchestration and Resumption Controls *(-> HRNS-007)*
 
@@ -312,6 +372,13 @@ framework or broad vendor product dependency.
   safe-stop behavior. No loop may expand its own permissions, edit its own
   approval/eval gates, or merge/promote its own harness changes without a
   human-visible review packet.
+- **AC-7.10**: PRD, Grill Me, scaffold, autopilot, status, resolve-PR, coach,
+  install/upgrade, and archive-cleanup use one knowledge lifecycle. Long-running
+  workflows record the selected knowledge snapshot, detect drift before resume,
+  collect candidates only at verified checkpoints, and serialize canonical
+  promotion after rebase. Design Concept writers use
+  `docs/ai/specs/.process/<ID>-design-concept.md`; readers support the historical
+  non-`.process` location as a migration fallback.
 
 ### 3.8 Harness Drift, Garbage Collection, and Self-healing Remediation *(-> HRNS-008)*
 
@@ -339,32 +406,56 @@ framework or broad vendor product dependency.
   oversized, secret-bearing, orphaned, or no-longer-load-bearing context
   checkpoints. Cleanup requires a dry-run preview and preserves reviewable
   recovery evidence.
+- **AC-8.10**: Knowledge health identifies malformed or stale concepts, source
+  hash drift, missing provenance, broken required links, duplicate stable IDs,
+  unresolved candidates, superseded records, archived-spec coverage gaps,
+  legacy-memory drift, and MOC compatibility-view drift. Findings are read-only
+  and evidence-backed; repair runs through plan/apply with recovery evidence.
+  Source drift is repaired by reviewed supersession rather than silently
+  refreshing provenance, and map compatibility ownership transfers atomically.
+- **AC-8.11**: Archive cleanup promotes or supersedes reviewed durable knowledge
+  and rebuilds the manifest/index/compatibility views before deleting an active
+  spec directory. The detailed archive report remains evidence, archived specs
+  remain discoverable, legacy memory append paths stop after bundle cutover, and
+  no compatibility file is removed without a separate deprecation decision and
+  installed-payload proof.
 
 ## 4. Migration Path
 
 - **Phase 1 (HRNS-001) - Harness taxonomy**: Freeze the surface inventory, gap
-  taxonomy, and external-candidate evaluation matrix that downstream specs use
-  for shared boundaries.
+  taxonomy, external-candidate evaluation matrix, and knowledge authority map
+  that downstream specs use for shared boundaries. Re-run the repository corpus
+  counts and assign every knowledge-like surface one treatment.
 - **Phase 2 (HRNS-002) - Context and state**: Update workflow entrypoints so long
   runs externalize durable state, context checkpoints, context-health signals,
-  and resume instructions.
+  and resume instructions. Define the OKF bundle/profile, authority order,
+  project/spec hierarchy, candidate lifecycle, MOC port, legacy-memory cutover,
+  and non-destructive reviewed migration.
 - **Phase 3 (HRNS-003) - Helper/tool contract**: Normalize helper registry,
-  capability discovery, dry-run, and generated documentation behavior.
+  capability discovery, dry-run, and generated documentation behavior. Add the
+  four knowledge operations, shared renderer, manifest/snapshot schemas, and
+  legacy spec-index adapters.
 - **Phase 4 (HRNS-004) - Permission and sandbox controls**: Add risk metadata,
   pre-action authorization, protected harness-control surfaces, shared-context
-  promotion gates, and safe-stop semantics.
+  promotion gates, and safe-stop semantics. Protect the canonical bundle and
+  enforce review, provenance, secret, sensitivity, path, symlink, and stale-plan
+  checks.
 - **Phase 5 (HRNS-005) - Eval ladder**: Connect existing test layers and future
   evals to deterministic, fixture-first evidence, including evaluator hierarchy
-  rules for bounded self-improvement loops.
+  rules for bounded self-improvement loops, OKF/profile conformance, migration
+  idempotence, and actual skill retrieval/use proof.
 - **Phase 6 (HRNS-006) - Trace/debug packets**: Add bounded local trace records
   and review-packet summaries for helper, workflow, and self-improvement
-  iterations.
+  iterations, including knowledge snapshot and use-receipt lineage.
 - **Phase 7 (HRNS-007) - Long-horizon orchestration**: Harden parallel work,
   checkpoint/resume, planner/evaluator separation, self-improvement loop
-  budgets, rollback, promotion gates, and stop conditions.
+  budgets, rollback, promotion gates, and stop conditions. Wire every producing
+  and consuming skill/agent to bounded retrieval, candidates, snapshot drift,
+  and serialized promotion.
 - **Phase 8 (HRNS-008) - Garbage collection**: Add bounded drift detection and
   self-healing remediation patterns for human-authored and self-generated
-  harness artifacts.
+  harness artifacts. Cut archive cleanup over to reviewed OKF promotion before
+  active-spec deletion and freeze legacy memory append paths.
 
 ## 5. Constraints
 
@@ -392,6 +483,18 @@ framework or broad vendor product dependency.
   safe to make blocking.
 - Treat one-off discovery artifacts as planning inputs, not production runtime
   artifacts.
+- Pin normative behavior to Open Knowledge Format v0.1 at commit
+  `ee67a5ca27044ebe7c38385f5b6cffc2305a9c1a`; later draft changes require an
+  explicit profile/version decision rather than silent adoption.
+- Keep `docs/ai/knowledge/` operator-owned and preserve it byte-for-byte during
+  SpecKit upgrades. New installations initialize it idempotently; existing
+  repositories migrate only through reviewed plan/apply.
+- Keep raw Design Concept interviews, workflows, UAT, PR packets, traces, and
+  archive reports outside the canonical bundle. They may be cited as evidence
+  but never bulk-promoted or treated as instructions.
+- Do not add background/global hook writes. Continuous knowledge maintenance
+  occurs only at explicit install, PRD, scaffold, phase, review, archive,
+  status, upgrade, and drift-check boundaries.
 
 ## 6. Open Questions
 
@@ -428,6 +531,12 @@ framework or broad vendor product dependency.
   restore instructions rather than committed raw transcripts; require explicit
   promotion, secret scanning, size caps, provenance, and human review before any
   shared checkpoint becomes team-consumable.
+- **OQ-9 (HRNS-002/HRNS-003):** Should the existing MOCs and memory monoliths
+  remain independently editable after OKF adoption? Decision: no. Curated MOC
+  knowledge moves into canonical OKF concepts, legacy MOCs become generated
+  compatibility views, and legacy memory becomes frozen history after reviewed
+  import. Current technical roadmaps and workflow state retain their existing
+  authority rather than being copied into OKF.
 
 ## 7. SPEC Catalog Crosswalk
 
@@ -459,3 +568,13 @@ framework or broad vendor product dependency.
 - **Roadmap MOC:** `docs/ai/specs/harness-engineering-uplift-roadmap-MOC.md`
 - **Constitution:** `.specify/memory/constitution.md`
 - **Project standards:** `AGENTS.md`, `CLAUDE.md`
+- **Open Knowledge Format v0.1 (pinned):**
+  `https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/ee67a5ca27044ebe7c38385f5b6cffc2305a9c1a/okf/SPEC.md`
+- **Google Cloud OKF introduction:**
+  `https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing/`
+- **Pulumi knowledge-as-code interpretation:**
+  `https://www.pulumi.com/blog/knowledge-as-code-the-memory-file-just-got-a-spec/`
+- **Karpathy LLM-wiki pattern:**
+  `https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f`
+- **Live knowledge authority and migration inventory:**
+  `docs/ai/research/harness-knowledge-authority-inventory.md`

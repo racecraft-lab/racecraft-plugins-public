@@ -1,7 +1,7 @@
 interface:
   display_name: "SpecKit PRD"
-  short_description: "Author a lean PRD and technical roadmap from an idea"
-  default_prompt: "Collaboratively turn an idea into a PRD and a technical roadmap with a SPEC catalog"
+  short_description: "Author a PRD and roadmap, or a roadmap from a reviewed PRD"
+  default_prompt: "Collaboratively turn an idea into a PRD and SPEC roadmap, or use roadmap-only mode for an existing reviewed PRD"
 
 policy:
   allow_implicit_invocation: false

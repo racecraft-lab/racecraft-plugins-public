@@ -105,7 +105,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 ### Speckit Archive Cleanup
 
-- **Purpose:** Archive a merged SpecKit spec, remove completed active specs, refresh roadmap and project-memory state, and prepare the cleanup PR after merge.
+- **Purpose:** Archive a merged SpecKit spec, remove completed active artifacts, refresh roadmap and project-memory state, and prepare the cleanup PR after merge.
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro speckit-archive-cleanup skill
 - **Claude Code:** /speckit-pro:speckit-archive-cleanup
@@ -116,7 +116,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 - **Claude Code invocation:** `/speckit-pro:speckit-archive-cleanup`
 - **Codex invocation:** `$speckit-archive-cleanup`
-- **Purpose:** Archive a merged SpecKit spec, remove completed active specs, refresh roadmap and project-memory state, and prepare the cleanup PR after merge.
+- **Purpose:** Archive a merged SpecKit spec, remove completed active artifacts, refresh roadmap and project-memory state, and prepare the cleanup PR after merge.
 - **Expected output artifact:** Archive report, project-memory updates, cleaned active spec folder, refreshed generated indexes, and a cleanup PR.
 
 **Prerequisites**
@@ -175,7 +175,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 ### Speckit Coach
 
-- **Purpose:** SpecKit SDD coach. Invoke to explain, guide, walk through, or help troubleshoot Spec-Driven Development: getting started with SDD, which checklist domains to pick (api, security, observability, data-integrity, resilie...
+- **Purpose:** SpecKit SDD coach. Invoke to explain, guide, or troubleshoot Spec-Driven Development: checklist domains (api, security, observability, data-integrity, resilience), simplicity gates, testable acceptance criteria, conse...
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro speckit-coach skill
 - **Claude Code:** /speckit-pro:speckit-coach
@@ -186,7 +186,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 - **Claude Code invocation:** `/speckit-pro:speckit-coach`
 - **Codex invocation:** `$speckit-coach`
-- **Purpose:** SpecKit SDD coach. Invoke to explain, guide, walk through, or help troubleshoot Spec-Driven Development: getting started with SDD, which checklist domains to pick (api, security, observability, data-integrity, resilie...
+- **Purpose:** SpecKit SDD coach. Invoke to explain, guide, or troubleshoot Spec-Driven Development: checklist domains (api, security, observability, data-integrity, resilience), simplicity gates, testable acceptance criteria, conse...
 - **Expected output artifact:** SDD coaching guidance or next-step explanation.
 
 **Prerequisites**
@@ -245,7 +245,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 ### Speckit Prd
 
-- **Purpose:** Collaboratively turn a raw product or technical idea into three artifacts — a lean PRD, a technical roadmap with a SPEC catalog, and a roadmap-MOC home note — ready for $speckit-scaffold-spec and $speckit-autopilot.
+- **Purpose:** Collaboratively turn a product or technical idea into a lean PRD, a technical roadmap with a SPEC catalog, a canonical OKF roadmap map, and a generated MOC compatibility view, ready for $speckit-scaffold-spec and $spe...
 - **Classification:** `source`
 - **Platform concept:** SpecKit Pro speckit-prd skill
 - **Claude Code:** /speckit-pro:speckit-prd
@@ -256,7 +256,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 - **Claude Code invocation:** `/speckit-pro:speckit-prd`
 - **Codex invocation:** `$speckit-prd`
-- **Purpose:** Collaboratively turn a raw product or technical idea into three artifacts — a lean PRD, a technical roadmap with a SPEC catalog, and a roadmap-MOC home note — ready for $speckit-scaffold-spec and $speckit-autopilot.
+- **Purpose:** Collaboratively turn a product or technical idea into a lean PRD, a technical roadmap with a SPEC catalog, a canonical OKF roadmap map, and a generated MOC compatibility view, ready for $speckit-scaffold-spec and $spe...
 - **Expected output artifact:** A PRD and roadmap entry for later SPEC scaffolding.
 
 **Prerequisites**

@@ -60,6 +60,9 @@ EXPECTED_HELPERS = [
     "resolve-confidence-mode",
     "confidence-gate",
     "generate-spec-index-check",
+    "knowledge-health",
+    "knowledge-search",
+    "knowledge-update-plan",
     "o5-topology",
     "atomicity-route",
     "plan-layers-feature-dir",
@@ -69,6 +72,12 @@ EXPECTED_HELPERS = [
 ]
 
 JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
+NON_BASH_REFERENCE_HELPERS = {
+    "helper-registry-dispatch",
+    "knowledge-health",
+    "knowledge-search",
+    "knowledge-update-plan",
+}
 
 HELPER_CASES: dict[str, dict[str, object]] = {
     "check-prerequisites": {"workflow_file": WORKFLOW_FILE},
@@ -81,6 +90,16 @@ HELPER_CASES: dict[str, dict[str, object]] = {
     "resolve-confidence-mode": {"autopilot_args": ["--advisory", WORKFLOW_FILE]},
     "confidence-gate": {"workflow_file": WORKFLOW_FILE, "mode_name": "advisory"},
     "generate-spec-index-check": {},
+    "knowledge-health": {"repo_root": "tests/speckit-pro/unit/fixtures/read-only-helpers/knowledge-empty-repo"},
+    "knowledge-search": {
+        "repo_root": "tests/speckit-pro/unit/fixtures/read-only-helpers/knowledge-empty-repo",
+        "query": "",
+    },
+    "knowledge-update-plan": {
+        "repo_root": "tests/speckit-pro/unit/fixtures/read-only-helpers/knowledge-empty-repo",
+        "action": "init",
+        "timestamp": "2026-07-14T12:00:00Z",
+    },
     "o5-topology": {"target": FEATURE_DIR},
     "atomicity-route": {"feature_dir": FEATURE_DIR},
     "plan-layers-feature-dir": {"feature_dir": FEATURE_DIR},
@@ -338,7 +357,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
         fixture_ids = [record["helper_id"] for record in fixture_manifest["helpers"]]
         bash_ids = [record["helper_id"] for record in bash_manifest["comparisons"]]
         self.assertEqual(fixture_ids, EXPECTED_HELPERS)
-        self.assertEqual(bash_ids, [helper for helper in EXPECTED_HELPERS if helper != "helper-registry-dispatch"])
+        self.assertEqual(bash_ids, [helper for helper in EXPECTED_HELPERS if helper not in NON_BASH_REFERENCE_HELPERS])
         for record in fixture_manifest["helpers"]:
             for field in (
                 "promotion_status",
@@ -1238,6 +1257,14 @@ class ReadOnlyHelperTests(unittest.TestCase):
             with self.subTest(helper_id=helper_id):
                 completed, response, stderr_records = run_runner(helper_request(helper_id, HELPER_CASES[helper_id]))
                 data = response["data"]
+                if helper_id in NON_BASH_REFERENCE_HELPERS:
+                    self.assertEqual(data["helper_id"], helper_id)
+                    self.assertEqual(data["operation"], helper_id)
+                    self.assertIs(data["writes_state"], False)
+                    self.assertEqual(completed.returncode, response["exit_code"])
+                    self.assertEqual(stderr_records, response["diagnostics"])
+                    self.assert_response(response, "ok", 0)
+                    continue
                 self.assertEqual(data["shell"], False)
                 self.assertEqual(data["argv"][-2:], ["-m", "speckit_pro_runner"])
                 self.assertEqual(data["python_operation"], helper_id)

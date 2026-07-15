@@ -139,6 +139,42 @@
       "out_of_scope": ["write", "regenerate"]
     },
     {
+      "helper_id": "knowledge-health",
+      "operation": "knowledge-health",
+      "promotion_status": "python_authoritative",
+      "failure_classes": ["invalid_input", "malformed_json", "validation_failure", "unsupported_path"],
+      "rejected_stdout_schema": {"initialized": "boolean", "profile_healthy": "boolean", "findings": "array"},
+      "deterministic_remediation": {"summary": "Inspect evidence-backed knowledge findings before mutation.", "actions": ["Run knowledge-health from the repository root.", "Create a reviewed knowledge-update-plan for repair."]},
+      "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
+      "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/knowledge-health.json",
+      "rollback": "knowledge-health is read-only; repair only through a reviewed plan/apply operation."
+    },
+    {
+      "helper_id": "knowledge-search",
+      "operation": "knowledge-search",
+      "promotion_status": "python_authoritative",
+      "failure_classes": ["invalid_input", "malformed_json", "validation_failure", "unsupported_path", "snapshot_changed"],
+      "rejected_stdout_schema": {"snapshot_id": "string", "results": "array"},
+      "deterministic_remediation": {"summary": "Retry a bounded search against the current knowledge snapshot.", "actions": ["Run knowledge-health to obtain the current snapshot.", "Retry with supported scope and filter fields."]},
+      "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
+      "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/knowledge-search.json",
+      "rollback": "knowledge-search is read-only and writes no repository state."
+    },
+    {
+      "helper_id": "knowledge-update-plan",
+      "operation": "knowledge-update-plan",
+      "promotion_status": "python_authoritative",
+      "failure_classes": ["invalid_input", "malformed_json", "validation_failure", "unsupported_path", "migration_required", "review_required", "source_changed"],
+      "rejected_stdout_schema": {"plan_hash": "string", "operations": "array"},
+      "deterministic_remediation": {"summary": "Review a fresh bounded plan before applying any knowledge mutation.", "actions": ["Resolve reported review or source-evidence findings.", "Regenerate the plan from the current snapshot."]},
+      "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
+      "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/read-only-helpers/requests/knowledge-update-plan.json",
+      "rollback": "Planning is read-only; discard the plan when review, sources, or repository state changes."
+    },
+    {
       "helper_id": "o5-topology",
       "operation": "o5-topology",
       "promotion_status": "python_authoritative",

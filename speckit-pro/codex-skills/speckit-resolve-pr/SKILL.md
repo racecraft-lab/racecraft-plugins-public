@@ -13,6 +13,17 @@ description: >
 
 Before researching or recommending, enumerate the tools and skills your session actually exposes — do not assume a fixed set; the user may have installed anything — and select the best fit per `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`. Ground every external fact you assert in a real tool, skill, or file result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`, and abstain when nothing grounds it.
 
+## Durable knowledge
+
+Follow [the shared knowledge lifecycle](../../skills/speckit-coach/references/knowledge-lifecycle.md).
+Before remediation, run `knowledge-health` and a bounded `knowledge-search` for
+the affected subsystem and prior reviewed fixes. Verify selected sources and
+record a `knowledge_use_receipt` in the remediation report. Workers may return
+`knowledge_candidates`, but they never write candidate or canonical knowledge
+files. After focused and full verification, the parent may stage a candidate
+only for a genuinely reusable recurring fix; never promote during PR
+remediation and never turn a one-off review comment into project doctrine.
+
 ## Scope
 
 Use this skill when the user wants review feedback addressed on an existing

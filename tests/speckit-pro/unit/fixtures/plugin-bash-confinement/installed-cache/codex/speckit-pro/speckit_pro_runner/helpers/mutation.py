@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import os
 import stat
+import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 from ..envelope import diagnostic, response
@@ -43,6 +45,47 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
             remediation_actions=["Set inputs.repo_root to the repository being regenerated.", "Retry the request."],
         )
         return response("input_error", request_id=request.request_id, diagnostics=[diag])
+
+    if (target_root / "docs" / "ai" / "knowledge" / "manifest.json").is_file():
+        from .knowledge import KnowledgeError, _build_plan, run_knowledge_update_apply
+
+        try:
+            rendered, specs_present = render_spec_index(target_root)
+            plan = _build_plan(target_root, {"action": "rebuild"})
+        except (KnowledgeError, SpecIndexRenderError) as exc:
+            diag = diagnostic(
+                exc.code if isinstance(exc, KnowledgeError) else "invalid_spec_index",
+                str(exc),
+                details=exc.details if isinstance(exc, KnowledgeError) else {},
+                remediation_summary="Repair the canonical knowledge bundle before rebuilding compatibility maps.",
+                remediation_actions=["Run knowledge-health.", "Create a fresh knowledge-update-plan for rebuild."],
+            )
+            return response("input_error", request_id=request.request_id, diagnostics=[diag])
+        apply_request = SimpleNamespace(
+            request_id=request.request_id,
+            mode=request.mode,
+            inputs={
+                "repo_root": request.inputs.get("repo_root") or ".",
+                "plan": plan,
+                "plan_hash": plan["plan_hash"],
+                "expected_snapshot": plan["expected_snapshot"],
+            },
+        )
+        result = run_knowledge_update_apply(entry, apply_request)
+        data = result.get("data")
+        if isinstance(data, dict) and isinstance(data.get("mutation"), dict):
+            parity_data = _spec_index_write_data(
+                entry,
+                request,
+                data["mutation"],
+                specs_present=specs_present,
+                rendered=rendered,
+                writes_state=bool(data.get("writes_state")),
+            )
+            parity_data["expected_snapshot"] = data.get("expected_snapshot")
+            parity_data["resulting_snapshot"] = data.get("resulting_snapshot")
+            result["data"] = parity_data
+        return result
 
     try:
         rendered, specs_present = render_spec_index(target_root)
@@ -220,10 +263,16 @@ def _spec_index_target_chain_is_safe(target: Path, trust_root: Path) -> bool:
     try:
         for part in relative.parts[:-1]:
             current = current / part
-            mode = current.lstat().st_mode
+            try:
+                mode = current.lstat().st_mode
+            except FileNotFoundError:
+                continue
             if stat.S_ISLNK(mode) or not stat.S_ISDIR(mode):
                 return False
-        target_mode = target.lstat().st_mode
+        try:
+            target_mode = target.lstat().st_mode
+        except FileNotFoundError:
+            return True
     except OSError:
         return False
     return not stat.S_ISLNK(target_mode) and stat.S_ISREG(target_mode)
@@ -375,7 +424,7 @@ def run_mutation_helper(
         if op["kind"] == "write_file":
             target = resolve_candidate_path(op["target"], repo_root)
             try:
-                write_file_atomic(target, str(op["content"]))
+                write_file_atomic(target, str(op["content"]), trust_root=repo_root)
             except OSError as exc:
                 mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
                 mutation["failure_operation"] = operation_record(op)
@@ -640,17 +689,47 @@ def write_file_atomic(target: Path, content: str, *, trust_root: Path | None = N
     if trust_root is not None and not _spec_index_target_chain_is_safe(target, trust_root):
         raise OSError("unsafe target path")
     target.parent.mkdir(parents=True, exist_ok=True)
-    tmp = target.with_name(f".{target.name}.tmp-{os.getpid()}")
+    if trust_root is not None and not _spec_index_target_chain_is_safe(target, trust_root):
+        raise OSError("unsafe target path after parent creation")
+    descriptor = -1
+    tmp: Path | None = None
     try:
-        with tmp.open("w", encoding="utf-8", newline="\n") as fh:
+        try:
+            target_mode = stat.S_IMODE(target.lstat().st_mode)
+        except FileNotFoundError:
+            previous_umask = os.umask(0)
+            os.umask(previous_umask)
+            target_mode = 0o666 & ~previous_umask
+        descriptor, raw_tmp = tempfile.mkstemp(prefix=f".{target.name}.tmp-", dir=target.parent)
+        tmp = Path(raw_tmp)
+        if trust_root is not None and not _spec_index_target_chain_is_safe(tmp, trust_root):
+            raise OSError("unsafe temporary target path")
+        os.fchmod(descriptor, target_mode)
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as fh:
+            descriptor = -1
             fh.write(ensure_final_newline(content))
             fh.flush()
             os.fsync(fh.fileno())
+        if tmp.is_symlink() or not tmp.is_file():
+            raise OSError("temporary target path changed before replace")
         if trust_root is not None and not _spec_index_target_chain_is_safe(target, trust_root):
             raise OSError("target path changed before replace")
+        if trust_root is not None and not _spec_index_target_chain_is_safe(tmp, trust_root):
+            raise OSError("temporary target path changed before replace")
         os.replace(tmp, target)
+        if os.name == "posix":
+            parent_descriptor = os.open(target.parent, os.O_RDONLY)
+            try:
+                os.fsync(parent_descriptor)
+            finally:
+                os.close(parent_descriptor)
     finally:
-        if tmp.exists():
+        if descriptor >= 0:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+        if tmp is not None and tmp.exists():
             try:
                 tmp.unlink()
             except OSError:

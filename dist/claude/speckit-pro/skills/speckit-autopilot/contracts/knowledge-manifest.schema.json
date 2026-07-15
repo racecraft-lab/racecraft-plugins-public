@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft-lab/racecraft-plugins-public/knowledge-manifest.schema.json",
+  "title": "SpecKit Pro OKF knowledge manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest_version",
+    "profile",
+    "okf",
+    "generated_at",
+    "snapshot_id",
+    "concepts",
+    "legacy_memory",
+    "legacy_memory_status"
+  ],
+  "properties": {
+    "manifest_version": { "const": "1.0" },
+    "profile": { "const": "speckit-okf/1" },
+    "okf": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "revision"],
+      "properties": {
+        "version": { "const": "0.1" },
+        "revision": {
+          "const": "ee67a5ca27044ebe7c38385f5b6cffc2305a9c1a"
+        }
+      }
+    },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "snapshot_id": { "$ref": "#/$defs/snapshot" },
+    "concepts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/concept" }
+    },
+    "legacy_memory": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/source" }
+    },
+    "legacy_memory_status": {
+      "enum": ["absent", "pending_review", "frozen"]
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "snapshot": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "concept": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "type",
+        "id",
+        "project",
+        "sha256",
+        "authority",
+        "status",
+        "sources"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^(projects|decisions|architecture|domain|operations|patterns)/.+\\.md$"
+        },
+        "type": { "type": "string", "minLength": 1 },
+        "id": { "type": "string", "minLength": 1 },
+        "project": { "type": ["string", "null"] },
+        "sha256": { "$ref": "#/$defs/digest" },
+        "authority": { "enum": ["reviewed", "source-backed"] },
+        "status": { "type": "string", "minLength": 1 },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": { "$ref": "#/$defs/source" }
+        }
+      }
+    }
+  }
+}

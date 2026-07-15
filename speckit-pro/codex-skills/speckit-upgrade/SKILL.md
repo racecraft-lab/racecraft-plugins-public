@@ -13,6 +13,18 @@ locally-modified files via backup-then-force-then-restore. Handles
 the v0.8.13 slash-command → skills migration. Supports upgrading
 one or both integrations (`claude`, `codex`).
 
+## Durable knowledge preservation and migration
+
+Follow [the shared knowledge lifecycle](../../skills/speckit-coach/references/knowledge-lifecycle.md).
+Treat `docs/ai/knowledge/**` as operator-owned content outside SpecKit CLI
+template replacement. Record pre-upgrade `knowledge-health` and preserve the
+subtree byte-for-byte. After the integration upgrade, run health again. If no
+bundle exists but legacy MOCs or `.specify/memory` content do, offer a reviewed
+`migrate` plan; never silently initialize, delete, or rewrite legacy sources.
+Inventory Design Concepts separately as review sources. Their presence never
+triggers bulk migration; review reusable decisions individually through the
+candidate flow after the bundle is ready.
+
 If `.specify/` is missing, hands off to `$speckit-install` —
 upgrade only operates on existing installs.
 
@@ -75,6 +87,8 @@ Accept optional integration keys as arguments:
   explicit operator instruction. Restore the operator's backup
   verbatim, or leave the freshly-templated placeholder in place if
   they explicitly said so.
+- Never overwrite, replace, or delete `docs/ai/knowledge/**` outside an accepted
+  knowledge runner plan. A CLI upgrade is not permission to promote candidates.
 - Never touch this plugin's own files (`.claude-plugin/`,
   `codex-skills/`, plugin's `commands/`).
 - If any `specify` invocation fails for non-diff reasons (network,
@@ -265,7 +279,28 @@ If the script reports that an entry has neither a GitHub Release nor
 a git tag, surface the message but do not block the upgrade. The
 operator can re-run after the upstream extension publishes a tag.
 
-### 9. Report
+### 9. Migrate or verify durable project knowledge
+
+- Existing bundle: run `knowledge-health`, compare its snapshot and diagnostics
+  with the pre-upgrade result, and stop if operator content changed unexpectedly.
+- Legacy project without a bundle: run `knowledge-update-plan` with action
+  `migrate`, `reviewed: true`, `legacy_memory_reviewed: true`, and the consumer
+  repo root. Show proposed concepts, unmatched
+  records, frozen legacy-memory cutover, and generated MOC compatibility views.
+  Apply only after review using inputs `repo_root`, the returned `plan` object,
+  `plan_hash`, and `expected_snapshot`.
+- Project without a bundle, legacy MOCs, or memory: offer a reviewed action
+  `init`; do not create it implicitly during an upgrade. Design Concepts alone
+  still follow this branch because they are review sources, not migration input.
+
+In all cases, inventory Design Concepts separately. Do not bulk auto-migrate
+them. After migration or initialization, offer to review reusable decisions one
+at a time and route accepted proposals through candidate validation,
+deduplication, and staging.
+
+Finish with `knowledge-health`. Preserve all legacy sources in v1.
+
+### 10. Report
 
 Return a structured summary:
 
@@ -281,6 +316,7 @@ Return a structured summary:
 
 **Customizations preserved:**
 - .specify/memory/constitution.md (restored from backup)
+- docs/ai/knowledge/** (operator-owned; snapshot <id>)
 - .specify/templates/spec-template.md (kept upgrade version; your edits saved at $BACKUP)
 - SpecKit prerequisite helper restored from backup
 

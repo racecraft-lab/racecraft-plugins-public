@@ -1,11 +1,16 @@
 ---
 up: "[Codex Agent Model Routing and Graceful Fallback Implementation Roadmap](codex-gpt-5-6-agent-routing-technical-roadmap.md)"
-related:
-  - "[Codex Agent Model Routing and Graceful Fallback PRD](../../prd-codex-gpt-5-6-agent-routing.md)"
+related: ["[Codex Agent Model Routing and Graceful Fallback PRD](../../prd-codex-gpt-5-6-agent-routing.md)"]
 status: "Draft; G56R-001 ready to scaffold"
-rank:
+rank: ""
 spec_id: "codex-gpt-5-6-agent-routing"
 structureVersion: 1
+type: "speckit-legacy-project-map"
+title: "Codex Agent Model Routing and Graceful Fallback - Map of Content"
+description: "Generated compatibility view of the canonical OKF map."
+resource: "docs/ai/knowledge/projects/codex-gpt-5-6-agent-routing/roadmap.md"
+x-speckit-authority: "generated-compatibility"
+x-speckit-generated-from: "docs/ai/knowledge/projects/codex-gpt-5-6-agent-routing/roadmap.md"
 ---
 
 # Codex Agent Model Routing and Graceful Fallback - Map of Content

@@ -8,11 +8,16 @@
 
 ## How to Use This Template
 
-1. **Copy this template** to create a new workflow guide:
+1. **Run scaffold** for the selected roadmap entry. Do not copy this template
+   directly for an active workflow:
 
    ```text
-   cp .github/skills/speckit/templates/workflow-template.md docs/ai/specs/{{SPEC_ID}}-workflow.md
+   /speckit-pro:speckit-scaffold-spec {{SPEC_ID}}
    ```
+
+   Scaffold writes
+   `docs/ai/specs/.process/{{SPEC_ID}}-workflow.md` in the dedicated worktree and
+   keeps its canonical spec map and generated `SPEC-MOC.md` coherent.
 
 2. **Replace placeholders** throughout the document:
    - `{{SPEC_ID}}` → Your spec identifier (e.g., `SPEC-001`)
@@ -38,6 +43,9 @@ Questions live at:
 docs/ai/specs/.process/{{SPEC_ID}}-design-concept.md
 ```
 
+For historical projects only, readers may fall back to
+`docs/ai/specs/{{SPEC_ID}}-design-concept.md`. New writes always use `.process/`.
+
 Re-read it before each phase if you need to disambiguate a prompt. The
 Specify and Clarify Prompts below were populated from that interview,
 so the design concept doc is the source of truth for any decision
@@ -47,6 +55,38 @@ captured during scoping.
 > the autopilot loop. Once the workflow file is populated and autopilot
 > begins, clarifications happen via `/speckit-clarify` and the
 > consensus protocol — never via grill-me.
+
+---
+
+## Durable Knowledge
+
+The reviewed OKF bundle is reusable context, not workflow state. Before each
+relevant phase, the orchestrator runs bounded health/search, verifies selected
+sources, and appends one JSON object that validates against
+`knowledge-use-receipt.schema.json`. Workers return candidates to the
+orchestrator and never write knowledge files. Never record `none`; when the
+bundle is absent, use this complete receipt:
+
+```json
+{
+  "receipt_version": "1.0",
+  "snapshot_id": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "query": "scaffold roadmap entry and dependencies",
+  "selected_concepts": [],
+  "verified_sources": [],
+  "producer": { "skill": "speckit-scaffold-spec" },
+  "purpose": "Ground scaffold prompts in reviewed project knowledge.",
+  "result": "No reviewed project knowledge selected."
+}
+```
+
+For each later phase, append the same exact shape with the actual snapshot,
+query, producer skill/agent, selected concept `path`/`id`/unprefixed `sha256`,
+verified source `path`/unprefixed `sha256`, purpose, and consumed result.
+When a present bundle returns no selections, keep both arrays empty but use its
+actual snapshot rather than the empty-bundle snapshot.
+
+**Staged candidates:** `[]` <!-- or repo-relative packet paths -->
 
 ---
 
@@ -504,6 +544,8 @@ Before starting any task:
 - [ ] Manual verification complete
 - [ ] PR created and reviewed
 - [ ] Merged to main branch
+- [ ] Knowledge candidates staged by the orchestrator (or explicitly none)
+- [ ] Generated knowledge indexes and MOC compatibility views are healthy
 
 ---
 
@@ -520,6 +562,9 @@ Before starting any task:
 ### Patterns to Reuse
 
 -
+
+<!-- Lessons are candidate sources, not canonical knowledge. Promote only after
+review and verified source evidence, normally during post-merge archive cleanup. -->
 
 ---
 

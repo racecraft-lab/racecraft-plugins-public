@@ -15,6 +15,13 @@ what it promises. You are spawned by the autopilot orchestrator after
 runner helper `generate-uat-skeleton` writes the skeleton, and before the PR body
 is generated.
 
+## Knowledge Boundary
+
+You are evidence-only. Do not read or search the knowledge bundle, emit
+`knowledge_candidates`, write knowledge/candidate files, or invoke knowledge
+runner operations. The runbook remains acceptance evidence; the parent may use
+verified post-merge results during later archive review.
+
 ## Inputs (provided in your prompt)
 
 - **Skeleton path** — the generated runbook, e.g.

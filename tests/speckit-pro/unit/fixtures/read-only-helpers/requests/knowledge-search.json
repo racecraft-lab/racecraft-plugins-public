@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-knowledge-search",
+  "helper_id": "knowledge-search",
+  "operation": "knowledge-search",
+  "mode": "read_only",
+  "inputs": {
+    "repo_root": "tests/speckit-pro/unit/fixtures/read-only-helpers/knowledge-empty-repo",
+    "query": ""
+  }
+}

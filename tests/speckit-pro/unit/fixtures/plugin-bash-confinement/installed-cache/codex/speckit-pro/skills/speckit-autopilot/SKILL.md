@@ -35,6 +35,34 @@ questions, SDD philosophy, or learning how SpecKit works, redirect
 the user to `$speckit-coach` — the coaching skill is the right
 resource for methodology guidance.
 
+## Durable knowledge lifecycle
+
+Follow [the shared knowledge lifecycle](../speckit-coach/references/knowledge-lifecycle.md).
+At startup and before every relevant phase dispatch:
+
+1. Run `knowledge-health`, then a bounded `knowledge-search` for the current
+   spec, phase, and unresolved decision. Verify selected source hashes.
+2. Pass only selected concepts and verified sources to the terminal worker.
+   Record a `knowledge_use_receipt` in the workflow/trace packet and durable
+   autopilot state so resume can detect snapshot drift.
+3. Accept `knowledge_candidates` only in worker results. Workers never write the
+   bundle or candidate files. The orchestrator validates, deduplicates, and
+   stages task-scoped packets under
+   `docs/ai/specs/.process/knowledge-candidates/<scope>/`; candidates remain
+   excluded from canonical search.
+4. After a gated phase changes an authoritative source cited by the current
+   project/spec map, build a reviewed same-path replacement and plan/apply
+   `supersede` using the returned `plan_hash` and `expected_snapshot`. Never use
+   `rebuild` to refresh a source hash. When canonical sources are current but a
+   generated index, manifest, log, or MOC view has drifted, plan/apply
+   `rebuild`. Never hand-edit OKF indexes or MOC compatibility views.
+
+Do not promote worker candidates during implementation. The reviewed same-path
+supersession above is limited to keeping an existing canonical map aligned with
+a gated authoritative source; new candidate promotion requires serialized
+PR-merge/archive handling. On resume, if the recorded
+snapshot differs, rerun health/search and issue a new receipt before dispatch.
+
 Your context window will be automatically compacted as it
 approaches its limit, allowing you to continue working
 indefinitely. Do not stop tasks early. Always be as persistent
@@ -566,7 +594,8 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
 - **Step -1: Archive Sweep Startup** — execute the installed archive
   extension's project-local command contract directly in Codex, use the
   Codex-native worktree binding for path prerequisites, and fail closed on a
-  broken installed extension
+  broken installed extension. Apply `archive` for eligible canonical maps before
+  cleanup and retain/regenerate each archived `SPEC-MOC.md` stub.
 - **Step 0.0: Use Runner Operations** — invoke `speckit_pro_runner` helper IDs with one JSON request on stdin
 - **Step 0.1–0.7: Environment Checks** — `check-prerequisites` JSON parsing, branch detection
 - **Step 0.6: Load Settings** — `consensus-mode`, `gate-failure`, `auto-commit`, `security-keywords`

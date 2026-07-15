@@ -13,6 +13,18 @@ compatibility: "Requires Claude Code with AskUserQuestion tool support. Codex va
 
 Before researching or recommending, enumerate the tools and skills your session actually exposes — do not assume a fixed set; the user may have installed anything — and select the best fit per `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`. Ground every external fact you assert in a real tool, skill, or file result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`, and abstain when nothing grounds it. (For grill-me, this governs your research-backed recommended answers, not the interview mechanics.)
 
+## Durable knowledge
+
+Follow [the shared knowledge lifecycle](../speckit-coach/references/knowledge-lifecycle.md).
+When `docs/ai/knowledge/manifest.json` exists, run runner operations
+`knowledge-health` and a narrow `knowledge-search` before forming
+research-backed recommendations. Verify selected sources and record a
+`knowledge_use_receipt` in the Design Concept. Interview answers are candidate
+decisions, not canonical knowledge. In setup mode return them to the scaffold
+parent for review and staging. In standalone mode, after explicit user review,
+act as the parent: validate and deduplicate accepted proposals, then stage only
+schema-valid `proposed` packets. Never promote them automatically.
+
 ## The Canonical Grill Me Prompt
 
 This skill operationalizes the original Grill Me prompt verbatim — keep
@@ -87,21 +99,30 @@ context:
 
 - Triggered when the user runs `/speckit-pro:grill-me` directly.
 - Input: a file path, a topic string, or empty (skill prompts user).
-- Output path: `docs/ai/specs/<slug>-design-concept.md`, where `<slug>`
+- Output path: `docs/ai/specs/.process/<slug>-design-concept.md`, where `<slug>`
   is derived from the input (file basename without extension, or
   kebab-cased topic). User can override by passing a second argument
   with an explicit path.
+- Candidate behavior: show reusable proposals for explicit user review. For
+  each accepted proposal, validate against `knowledge-candidate.schema.json`,
+  deduplicate against canonical concepts and staged packets, and write the
+  `state: proposed`, `reviewed: false` packet under
+  `docs/ai/specs/.process/knowledge-candidates/<slug>/`. Reject or revise an
+  invalid packet; never promote it.
 
 ### Setup mode
 
 - Triggered when invoked from `/speckit-pro:speckit-scaffold-spec` (the calling command
   passes a marker / context indicating it's the setup flow).
 - Input: the spec scope description from the technical roadmap.
-- Output path: `.worktrees/<NNN>-<short-name>/docs/ai/specs/SPEC-<ID>-design-concept.md`
+- Output path: `.worktrees/<NNN>-<short-name>/docs/ai/specs/.process/SPEC-<ID>-design-concept.md`
   (the worktree path the setup command provides).
 - Additional behavior: surface the Q&A answers back to the calling
   setup command so it can enrich the workflow file's Specify Prompt
   and Clarify Prompts.
+- Candidate behavior: return the complete `knowledge_candidates` array to the
+  scaffold parent. Do not stage packets from the nested skill; the parent owns
+  validation, deduplication, review, and staging.
 
 ## How to Run an Interview
 
@@ -138,6 +159,12 @@ that file before activating. The high-level loop:
 6. **Write the Design Concept doc** following the schema in
    `references/output-formats.md`, recording any chosen split (see the
    slice-sizing branch).
+7. **Handle candidates and use evidence** — include reusable, unreviewed
+   decision proposals in `knowledge_candidates` with `state: proposed` and
+   `reviewed: false`, plus the exact schema-valid knowledge receipt written to
+   the document. In setup mode return the array to the parent. In standalone
+   mode obtain explicit review, validate, deduplicate, and stage accepted
+   packets. Do not write the canonical knowledge bundle or promote a packet.
 
 ## The slice-sizing branch
 
@@ -239,8 +266,8 @@ A chosen slice-split from the slice-sizing branch is recorded in
 - It does not write a workflow file. That's `/speckit-pro:speckit-scaffold-spec`'s job.
 - It does not write a spec file (`spec.md`). That's `/speckit-specify`'s
   job.
-- It does not modify the technical roadmap. That's `/speckit-pro:speckit-coach`'s
-  job.
+- It does not modify the technical roadmap. Route roadmap authoring to
+  `/speckit-pro:speckit-prd --roadmap-only <existing-prd-path>`.
 - It does not run autonomously. See the Hard Constraints block above.
 
 ## Examples
@@ -254,7 +281,7 @@ Actions:
 2. Identify branches: data model, scoring rules, retroactivity, UX surface, performance, privacy, rollout
 3. Loop on `AskUserQuestion`, one question per branch, recommendation always first
 4. Stop at natural endpoint (no critical opens remain) or user wraps up
-5. Write `docs/ai/specs/leaderboard-design-concept.md`
+5. Write `docs/ai/specs/.process/leaderboard-design-concept.md`
 
 Result: Design Concept Markdown file with frontmatter, Goals, Non-goals, Q&A log, Open Questions, Recommended Next Step.
 

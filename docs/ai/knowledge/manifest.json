@@ -1,0 +1,1977 @@
+{
+  "concepts": [
+    {
+      "authority": "reviewed",
+      "id": "cicd-release-pipeline",
+      "path": "projects/cicd-release-pipeline/roadmap.md",
+      "project": "cicd-release-pipeline",
+      "sha256": "2d5e68e05c7ae2df23871ff6486c40b574cff488e60d1ec620e7285b58dca965",
+      "sources": [
+        {
+          "path": "docs/ai/specs/cicd-release-pipeline-technical-roadmap.md",
+          "sha256": "56e99d49eee23a2a1906c22d058b78aea7c3222df3f4cab4549941c13a2d29b8"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-project-map"
+    },
+    {
+      "authority": "reviewed",
+      "id": "claude-agent-routing",
+      "path": "projects/claude-agent-routing/roadmap.md",
+      "project": "claude-agent-routing",
+      "sha256": "0e3bd5916f4ddb1cc26289c139169b75058ae820658ad7695657e24d93e4b091",
+      "sources": [
+        {
+          "path": "docs/ai/specs/claude-agent-routing-technical-roadmap.md",
+          "sha256": "26146ebe4afcdd4aa5d43ebddd448c89fd419304acccb2ffb9543ae54af7cf22"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-project-map"
+    },
+    {
+      "authority": "reviewed",
+      "id": "codex-gpt-5-6-agent-routing",
+      "path": "projects/codex-gpt-5-6-agent-routing/roadmap.md",
+      "project": "codex-gpt-5-6-agent-routing",
+      "sha256": "81a8a581b657821e17e349206d4ae609a4f7fae3766254ec1bd80088c20ba285",
+      "sources": [
+        {
+          "path": "docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md",
+          "sha256": "0d2b7feb13367b077c3cc54966e15a7ad669119bd64ef36ada7a7dfba9039f40"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-project-map"
+    },
+    {
+      "authority": "reviewed",
+      "id": "cross-platform-plugin-runtime",
+      "path": "projects/cross-platform-plugin-runtime/roadmap.md",
+      "project": "cross-platform-plugin-runtime",
+      "sha256": "4ee98184d3b9daa4d99fc788ddecd53b061976bf7c6b445ada32e9ff34024a7d",
+      "sources": [
+        {
+          "path": "docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md",
+          "sha256": "1d610d11aee3004d4509cb5e3e25405018bfc74769c1f90efe6e3672b118fce5"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-project-map"
+    },
+    {
+      "authority": "reviewed",
+      "id": "harness-engineering-uplift",
+      "path": "projects/harness-engineering-uplift/roadmap.md",
+      "project": "harness-engineering-uplift",
+      "sha256": "2c4a49e630ad712e72e2e22f7435ce73a7e8253f2e81dd293f1f36429bdbbea5",
+      "sources": [
+        {
+          "path": "docs/ai/specs/harness-engineering-uplift-technical-roadmap.md",
+          "sha256": "58a59010aedec2fb306c428947e8178e6cb8f632dfb1a9ece0ff8e5cda4c3270"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-project-map"
+    },
+    {
+      "authority": "reviewed",
+      "id": "interactive-documentation",
+      "path": "projects/interactive-documentation/roadmap.md",
+      "project": "interactive-documentation",
+      "sha256": "7ddb8e39de746472eff33fd4ade23cffb138befc250c54811ad397e7e2f7f11e",
+      "sources": [
+        {
+          "path": "docs/ai/specs/interactive-documentation-technical-roadmap.md",
+          "sha256": "27a779c853b8b63ba4e7b7bf0deeb31855b86ea3dead5131a886fdf1d5914128"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-project-map"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-6534a54db764864e",
+      "path": "projects/legacy-memory/changelog-artifact-relocation-tiering-process-collapse-6534a54db7.md",
+      "project": "legacy-memory",
+      "sha256": "7635f7406ff4b9f031b679dbdedfd9f7163923a49ad9842e2da8fa0f82d46318",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-629526af34a09379",
+      "path": "projects/legacy-memory/changelog-atomicity-test-router-read-only-classifier-629526af34.md",
+      "project": "legacy-memory",
+      "sha256": "ad504dbb17a4a5f4e85159b1fac79805b583ff65bed3f7eb720acbb75be62b47",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-cb210d8354704ce9",
+      "path": "projects/legacy-memory/changelog-brand-identity-and-marketplace-landing-page-cb210d8354.md",
+      "project": "legacy-memory",
+      "sha256": "be6a02a6405e8622b4b200340b1fafdd9a4edd0c8f680000000e748a15066421",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-d462f7295ffd4b9d",
+      "path": "projects/legacy-memory/changelog-changelog-overview-d462f7295f.md",
+      "project": "legacy-memory",
+      "sha256": "becff9ee4077b91186976759324f915d179f1757a748329900e066cdc11771dc",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-8e5f7a7a5a03a888",
+      "path": "projects/legacy-memory/changelog-completed-active-specs-sweep-xplat-001-xplat-002-doc-014-8e5f7a7a5a.md",
+      "project": "legacy-memory",
+      "sha256": "44792ae105add2346a461745382959083de8ec22e5cb1160fcc6e905a7d6375a",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-abfd2e4c556fde0d",
+      "path": "projects/legacy-memory/changelog-doc-001-interactive-documentation-framework-and-ia-spike-abfd2e4c55.md",
+      "project": "legacy-memory",
+      "sha256": "40943bf70341db9760c4d46e910edf56210b3de089a870f80e5bd1b0d7e4b2c8",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-4307b4421c161ac9",
+      "path": "projects/legacy-memory/changelog-doc-002-unified-landing-page-and-ia-shell-4307b4421c.md",
+      "project": "legacy-memory",
+      "sha256": "c8cc81bd3404416d13b33b994f1938cf12ddbcd63e430bbb351b95d52151b629",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-d4161c341024aba7",
+      "path": "projects/legacy-memory/changelog-doc-003-and-doc-004-platform-install-paths-d4161c3410.md",
+      "project": "legacy-memory",
+      "sha256": "a5c3256bfb0e7d8cc26f12b574445ce927a1288713c159318127028d82f375e2",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-ca54c57139280389",
+      "path": "projects/legacy-memory/changelog-doc-005-first-successful-workflow-tutorial-and-lifecycle-explain-ca54c57139.md",
+      "project": "legacy-memory",
+      "sha256": "ec980b8e82a3399218ef6ca4e28a43120d6570657436812808545f1eb859334d",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-7697585850962dca",
+      "path": "projects/legacy-memory/changelog-doc-006-safe-interactive-selector-and-validation-aids-7697585850.md",
+      "project": "legacy-memory",
+      "sha256": "4f745d05b6bdcf8556ca2c92d76942b9cc95c6c2dc213a94e203ebb097e6bd2d",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-b8db58fc4354f0f1",
+      "path": "projects/legacy-memory/changelog-doc-007-command-workflow-manifest-and-file-layout-reference-b8db58fc43.md",
+      "project": "legacy-memory",
+      "sha256": "5c15cede9e48e6b6bbad0171c5d8108377001fc81884600259da7ff658684462",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-02a512f87dad5569",
+      "path": "projects/legacy-memory/changelog-doc-008-and-doc-009-interactive-documentation-trust-and-release--02a512f87d.md",
+      "project": "legacy-memory",
+      "sha256": "33fe0ad1fb515cb106285f3d1486abf7d352aad998c533f341aa488687716a6a",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-f7bcd6c704328240",
+      "path": "projects/legacy-memory/changelog-doc-010-search-accessibility-deep-links-docs-validation-f7bcd6c704.md",
+      "project": "legacy-memory",
+      "sha256": "e3f15646f511196f0cd3ca5a5d3c14601cdd820ba6599f6b9a2466487d605b0b",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-88a29aa8d28d0af9",
+      "path": "projects/legacy-memory/changelog-doc-011-github-pages-build-and-deploy-pipeline-88a29aa8d2.md",
+      "project": "legacy-memory",
+      "sha256": "b8f3d5758b0c2191adf1b46d2c5bfd6efeae6c46b993c45228339f5aa81e0e56",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-1e82615040f24e91",
+      "path": "projects/legacy-memory/changelog-harden-the-hatch-o5-monster-epics-1e82615040.md",
+      "project": "legacy-memory",
+      "sha256": "9ec9929be59b70c4d71c7709079cbfb36cf370aa01e1d185f39fca81de5d09c7",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-77624d1c175e9f24",
+      "path": "projects/legacy-memory/changelog-layer-planner-tasks-md-to-ordered-increments-77624d1c17.md",
+      "project": "legacy-memory",
+      "sha256": "189f9d0427b0ae31a674a1ab9ae438e32057ab4b1e451698cb55e8a30e0e9a5d",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-8338bd0b366f3d40",
+      "path": "projects/legacy-memory/changelog-merged-active-spec-archive-hygiene-sweep-8338bd0b36.md",
+      "project": "legacy-memory",
+      "sha256": "c98939d6ba91316e37929ac635212ef4cf47a70497644e93b674f89a036e8019",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-f15e274503961a82",
+      "path": "projects/legacy-memory/changelog-multi-pr-emission-post-implementation-rewrite-f15e274503.md",
+      "project": "legacy-memory",
+      "sha256": "1e77e056f12e3b632b200eb0d5dd193fb4720d7ee442a5baf94e9f240b582051",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-0afb67c51abfe3e1",
+      "path": "projects/legacy-memory/changelog-non-stopping-reviewability-markers-0afb67c51a.md",
+      "project": "legacy-memory",
+      "sha256": "b37762e6e8455a704795be8ccb6c9dce28a6dd1464d6cb19b5950c106d109c93",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-acecd5998ebfced4",
+      "path": "projects/legacy-memory/changelog-prsg-005-and-prsg-013-archive-cleanup-application-acecd5998e.md",
+      "project": "legacy-memory",
+      "sha256": "8ab530bae09600dd7e26f1464bf3d78e45f53572558119456e080774bbad0895",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-bb8ea35715bf50f7",
+      "path": "projects/legacy-memory/changelog-prsg-008-archive-cleanup-application-bb8ea35715.md",
+      "project": "legacy-memory",
+      "sha256": "037c7f85222cd89bc04bd7f3e017bf09cd3e8b7e4709e396c5ae801e7afb1684",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-7f3313a8ad408d2c",
+      "path": "projects/legacy-memory/changelog-prsg-009-archive-cleanup-application-7f3313a8ad.md",
+      "project": "legacy-memory",
+      "sha256": "0b2f6c3b43702679f06f725ec4f0c7f4205289f35afeada2bc13a885e7bfbbb9",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-2364de89019ae8c8",
+      "path": "projects/legacy-memory/changelog-prsg-010-archive-cleanup-application-2364de8901.md",
+      "project": "legacy-memory",
+      "sha256": "2acd882078f858b66ae9facf5516232c36e60cdfb08d5c61d4d5781b8ba23755",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-8c8445c33952d884",
+      "path": "projects/legacy-memory/changelog-prsg-014-optional-gh-stack-stack-manager-integration-8c8445c339.md",
+      "project": "legacy-memory",
+      "sha256": "c826f4ebc306070d10673724a85787b075880f05af8e94101a3325cc2c90f31e",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-5606fb5adb212595",
+      "path": "projects/legacy-memory/changelog-prsg-archive-cleanup-application-5606fb5adb.md",
+      "project": "legacy-memory",
+      "sha256": "0ef2ae0c4286ab8131ee6d68d3c15c7ada4351883658384583cce690784bfb31",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-8ed66d820368c6f6",
+      "path": "projects/legacy-memory/changelog-retro-migration-version-marker-state-keyed-backfill-relocate-8ed66d8203.md",
+      "project": "legacy-memory",
+      "sha256": "19d1315d7ea437bb523ade46a02a780601744b14b59aa5744c0aed0428ec74ec",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-097f36fb6ddccc6f",
+      "path": "projects/legacy-memory/changelog-tacd-001-platform-mechanics-spike-097f36fb6d.md",
+      "project": "legacy-memory",
+      "sha256": "5a102b97bc4ccd31d56c6d8af208b789b37dc17dc8a2a44156834662ae8ab1d3",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-e5d9b38935a8336c",
+      "path": "projects/legacy-memory/changelog-tacd-002-capability-discovery-directive-and-agent-updates-e5d9b38935.md",
+      "project": "legacy-memory",
+      "sha256": "7e12ea09804d3ecd964076542114b109fdb86a442d3d9ee93517c957bb260147",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-e76caaf6b0d9b270",
+      "path": "projects/legacy-memory/changelog-tacd-003-prerequisite-and-documentation-messaging-e76caaf6b0.md",
+      "project": "legacy-memory",
+      "sha256": "cf9d202440d5cd3b2a83346b3c0d66bd3c48b0e11c473e4e2aa15aff60b6b308",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-6ebef21cb853d3a2",
+      "path": "projects/legacy-memory/changelog-tacd-004-verification-coverage-6ebef21cb8.md",
+      "project": "legacy-memory",
+      "sha256": "7bb9728785ee805bd4e8b4fc7dcfd56befbf47f8ebffba00e485f9b7c62d36ec",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-d1866a9b22fd1ef2",
+      "path": "projects/legacy-memory/changelog-vertical-slice-sizing-heuristics-in-prd-grill-me-d1866a9b22.md",
+      "project": "legacy-memory",
+      "sha256": "02ae5825334314b5ee83f46801b2d65b4534483f86d5157963059d5c45905a1c",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-33e527f460fdb2f8",
+      "path": "projects/legacy-memory/changelog-xplat-003-supply-chain-security-and-consumer-trust-model-33e527f460.md",
+      "project": "legacy-memory",
+      "sha256": "565fbfbe319a3c58727f670598b96be9893120d4c174c72d3f468cec33ea9a16",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-bd371cd497fd1e5b",
+      "path": "projects/legacy-memory/changelog-xplat-004-cross-platform-runner-foundation-bd371cd497.md",
+      "project": "legacy-memory",
+      "sha256": "d5087c50b4e07700d34d226ab97c1af487b7a0f69792ae9cbe1813e70c0d1ec8",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-c80ae7d1ca6e4e0f",
+      "path": "projects/legacy-memory/changelog-xplat-005-read-only-helper-port-c80ae7d1ca.md",
+      "project": "legacy-memory",
+      "sha256": "cde50414e06a61ef963605e5f4d498b5417265323f38bdca02acf1a8ed2e16e7",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-ebe0d275adea1c72",
+      "path": "projects/legacy-memory/changelog-xplat-006-mutation-install-and-pr-emission-helper-port-ebe0d275ad.md",
+      "project": "legacy-memory",
+      "sha256": "9412b63118df1c2e4c17147eeecdae2b4ec79926c03b486d2411be651f973068",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-f4085bc74c58926b",
+      "path": "projects/legacy-memory/changelog-xplat-007-python-tooling-and-release-gate-migration-f4085bc74c.md",
+      "project": "legacy-memory",
+      "sha256": "e2beadf92c70f08db5fcc5fc22b838191a1af465b71744043d8577727405e195",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-5f5dee559373f2c0",
+      "path": "projects/legacy-memory/changelog-xplat-008-claude-codex-cutover-and-universal-install-release-gat-5f5dee5593.md",
+      "project": "legacy-memory",
+      "sha256": "71cfa37db72a228b7e5b86161ad6c8de3d6031c3f7a06e5070a7910136e53c4e",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-52d0207ff99800bc",
+      "path": "projects/legacy-memory/changelog-xplat-009-plugin-source-and-payload-bash-eradication-52d0207ff9.md",
+      "project": "legacy-memory",
+      "sha256": "e6bcf3d00e792a103f2254b23fe8dd3e9c40152ca96f684e73e07b9eecdec0cd",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-24aaee7305373bc4",
+      "path": "projects/legacy-memory/changelog-xplat-010-repository-bash-confinement-and-ci-dispatch-guard-24aaee7305.md",
+      "project": "legacy-memory",
+      "sha256": "66e64913ba9b60b98625f2f2f4709203c5b88671218b1ed11614a6b49ab6c460",
+      "sources": [
+        {
+          "path": ".specify/memory/changelog.md",
+          "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-5d4ddc21358ba19f",
+      "path": "projects/legacy-memory/plan-artifact-relocation-tiering-process-collapse-5d4ddc2135.md",
+      "project": "legacy-memory",
+      "sha256": "f05b5d5699ef085b4ced44dce19564830b0dcb7253e6204878e9dc45434d3515",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-e55602d66e724585",
+      "path": "projects/legacy-memory/plan-atomicity-test-router-read-only-classifier-e55602d66e.md",
+      "project": "legacy-memory",
+      "sha256": "41a3bdac276fef9f23014f9f4848430df6f27b6592df0a652d07b584c146d374",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-b0ee696dc689de7d",
+      "path": "projects/legacy-memory/plan-doc-001-interactive-documentation-framework-and-ia-spike-b0ee696dc6.md",
+      "project": "legacy-memory",
+      "sha256": "b4b73da3423ec7758bd35b334df30689c4bb80dbca7690021ae399b4255f7c19",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-b7c64cf46559ed33",
+      "path": "projects/legacy-memory/plan-doc-002-unified-landing-page-and-ia-shell-b7c64cf465.md",
+      "project": "legacy-memory",
+      "sha256": "54bae1f952dcf1088d518dc677f4a50ad62b7fce5c727b02ef4712944d685510",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-08b185040dcceed9",
+      "path": "projects/legacy-memory/plan-doc-003-and-doc-004-platform-install-paths-08b185040d.md",
+      "project": "legacy-memory",
+      "sha256": "bfaa47f22acf553722254bbedb5b7ff23877586318fc7f940d2e3c6d802ac020",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-2961b7d2ddf5b85d",
+      "path": "projects/legacy-memory/plan-doc-005-first-successful-workflow-tutorial-and-lifecycle-explain-2961b7d2dd.md",
+      "project": "legacy-memory",
+      "sha256": "be3db05dbacfb658f57fb41776c93d812e4d44a787ca77d7342fb21ef12748cb",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-63a7ac27ca726715",
+      "path": "projects/legacy-memory/plan-doc-006-safe-interactive-selector-and-validation-aids-63a7ac27ca.md",
+      "project": "legacy-memory",
+      "sha256": "bfcb76c521140ee15754dd64b7030c4d1478d4ebd85566e5e45689581581dea0",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-d16ab59e1882762d",
+      "path": "projects/legacy-memory/plan-doc-007-command-workflow-manifest-and-file-layout-reference-d16ab59e18.md",
+      "project": "legacy-memory",
+      "sha256": "d6480a6e129a8b5d5b27f9595f5862554d8e124db18af9dc368a188b76a423bb",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-12775995e23cfd07",
+      "path": "projects/legacy-memory/plan-doc-008-and-doc-009-interactive-documentation-post-merge-archive-12775995e2.md",
+      "project": "legacy-memory",
+      "sha256": "44492cf052ec0541402a3b72686ddedd75d37487d3f16ffc029a3ad04d03f4a2",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-65e80be4ec59798b",
+      "path": "projects/legacy-memory/plan-doc-010-interactive-documentation-quality-hardening-65e80be4ec.md",
+      "project": "legacy-memory",
+      "sha256": "386dd2d84e5249f6dee48e4a6a4c2b5471b53fd3e51a82b827baa1ca4b48c211",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-fbddc58f018aa8d2",
+      "path": "projects/legacy-memory/plan-doc-011-github-pages-build-and-deploy-pipeline-fbddc58f01.md",
+      "project": "legacy-memory",
+      "sha256": "3fcace9c13a0c5b072afdd70081614f192a837b1e3cb732705ea49c57e7cec2e",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-9270dedad2948c37",
+      "path": "projects/legacy-memory/plan-doc-013-brand-identity-and-marketplace-landing-page-9270dedad2.md",
+      "project": "legacy-memory",
+      "sha256": "f99f3709003c62b6305145876331de3d32f89aa89ca1adf9c9a87371c1bdd70d",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-d68ff13c3ae8a0a4",
+      "path": "projects/legacy-memory/plan-doc-014-seo-and-ai-discoverability-d68ff13c3a.md",
+      "project": "legacy-memory",
+      "sha256": "4fcce79ffcac31a81f9514e5b61248d0e1c2cab358b90dd7bb2bc245415d8e6b",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-ad76be0172f08e5e",
+      "path": "projects/legacy-memory/plan-harden-the-hatch-o5-monster-epics-ad76be0172.md",
+      "project": "legacy-memory",
+      "sha256": "6509eff112a0c2731b6bb8c04abab99b02c9b074c8a251936ba95974ff317aae",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-8f2d7d0f566b0755",
+      "path": "projects/legacy-memory/plan-layer-planner-tasks-md-to-ordered-increments-8f2d7d0f56.md",
+      "project": "legacy-memory",
+      "sha256": "7e83f626e5213debc218755c0d8fe7be06136450e5378b946b38d3e20649c891",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-ce33bb7ecd97deb8",
+      "path": "projects/legacy-memory/plan-merged-active-spec-archive-hygiene-sweep-ce33bb7ecd.md",
+      "project": "legacy-memory",
+      "sha256": "cbf320fd92662785992ff7efde3ef0b14bdd9aa5281b0931ea176fa079c532bc",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-65ee76b2f97d05d6",
+      "path": "projects/legacy-memory/plan-multi-pr-emission-post-implementation-rewrite-65ee76b2f9.md",
+      "project": "legacy-memory",
+      "sha256": "c527f6e5a4900ea728e988af604968efc2db8b3dcac1b4fe42f1c3c418e6ba2b",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-b4a3c9a330ce5fad",
+      "path": "projects/legacy-memory/plan-non-stopping-reviewability-markers-b4a3c9a330.md",
+      "project": "legacy-memory",
+      "sha256": "27208be76a15b0fe25ede00decdeefedc1349bc9c02bb8fe5eb2a56f184a1881",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-d212deaf08d41c44",
+      "path": "projects/legacy-memory/plan-plan-overview-d212deaf08.md",
+      "project": "legacy-memory",
+      "sha256": "b2decac361e0bf4bed8650108e8de8c07c3639a07702757e53b87b4441ae2731",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-7e7d4ce2b8068036",
+      "path": "projects/legacy-memory/plan-prsg-014-optional-gh-stack-stack-manager-integration-7e7d4ce2b8.md",
+      "project": "legacy-memory",
+      "sha256": "9521170acebbfeaf116d9764d325a79812c434a47e13d9a7cbeb18d2c9698629",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-dd3263ba979876da",
+      "path": "projects/legacy-memory/plan-retro-migration-version-marker-state-keyed-backfill-relocate-dd3263ba97.md",
+      "project": "legacy-memory",
+      "sha256": "d63dc4bab495f0552fdfe80b7dde976d559120e2c76e3b901ab668dcb11dce67",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-87ecdcdfe81b8682",
+      "path": "projects/legacy-memory/plan-tacd-001-platform-mechanics-spike-87ecdcdfe8.md",
+      "project": "legacy-memory",
+      "sha256": "1d4aa64cf2d87056fb96f0dbde41b151be5992a9271414510e5bd6fa1e5f1e5d",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-f6c0021ffc6502e4",
+      "path": "projects/legacy-memory/plan-tacd-002-capability-discovery-directive-and-agent-updates-f6c0021ffc.md",
+      "project": "legacy-memory",
+      "sha256": "07a7a36c2a9dfc691059597e1c3f3721bf8b5d7af1011e70a8f4446c022d6ef0",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-8c516f84fdf19c1e",
+      "path": "projects/legacy-memory/plan-tacd-003-prerequisite-and-documentation-messaging-8c516f84fd.md",
+      "project": "legacy-memory",
+      "sha256": "e50cd10ebf1c2e333eb7a149e3f5f8ad79f103c85ec299dc9d05b160ac7b8926",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-f2622eb193f7584b",
+      "path": "projects/legacy-memory/plan-tacd-004-verification-coverage-f2622eb193.md",
+      "project": "legacy-memory",
+      "sha256": "dc280f59a6d5275e94426ead41db4cd5eb56ba02082dca08b3871b581dd88885",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-1538ea1fe71c2e6a",
+      "path": "projects/legacy-memory/plan-vertical-slice-sizing-heuristics-in-prd-grill-me-1538ea1fe7.md",
+      "project": "legacy-memory",
+      "sha256": "507c0d7ffcd7ca086c9d2ac0218f8c19769ff30da2f718806050d63fa23015e3",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-a5f14853d4c4f08a",
+      "path": "projects/legacy-memory/plan-xplat-001-runtime-inventory-and-constraints-a5f14853d4.md",
+      "project": "legacy-memory",
+      "sha256": "56d8b50d899a2d896f573a10f505faeb3543d55589e95bed379806be60fdadbb",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-ff349c5ae3e0ba57",
+      "path": "projects/legacy-memory/plan-xplat-002-runtime-implementation-options-and-contract-decision-ff349c5ae3.md",
+      "project": "legacy-memory",
+      "sha256": "ee872e3176ea59a2639402c7fbca5901ae5efa3fca0e0ba8c03339a9399e5654",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-dbd6092089031d9b",
+      "path": "projects/legacy-memory/plan-xplat-003-supply-chain-security-and-consumer-trust-model-dbd6092089.md",
+      "project": "legacy-memory",
+      "sha256": "a7159752c866230425ad270219040c89d0a524e77e769ca8943f32f56fc9fd2d",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-f470801597d89498",
+      "path": "projects/legacy-memory/plan-xplat-004-cross-platform-runner-foundation-f470801597.md",
+      "project": "legacy-memory",
+      "sha256": "e453b4fd9962273ceebc68fd91ffdf900eddbb8ed5be3c1d0200d373164265b0",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-467ced540695346d",
+      "path": "projects/legacy-memory/plan-xplat-005-read-only-helper-port-467ced5406.md",
+      "project": "legacy-memory",
+      "sha256": "df4177952f488b080f93671199c530966e822a92c66ecc4e9ea45a5b8df1f6a0",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-f872298aa5ab229d",
+      "path": "projects/legacy-memory/plan-xplat-006-mutation-install-and-pr-emission-helper-port-f872298aa5.md",
+      "project": "legacy-memory",
+      "sha256": "164f7baaa2fd51e9f0d2385494fa8cbe896a10475f497af64cedaf16fa0acdb2",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-d7628e8ce7218e17",
+      "path": "projects/legacy-memory/plan-xplat-007-python-tooling-and-release-gate-migration-d7628e8ce7.md",
+      "project": "legacy-memory",
+      "sha256": "cecc55a7d748140f1fe1fb9ecd878c8eb57fca0b125a0b254fd94cab5fe9721d",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-f61bcd766b6e9b68",
+      "path": "projects/legacy-memory/plan-xplat-008-claude-codex-cutover-and-universal-install-release-gat-f61bcd766b.md",
+      "project": "legacy-memory",
+      "sha256": "de3def249151a9d497439918bf5a319e36b5069115beba969a3ee1d98a31cdef",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-057c49951ae97661",
+      "path": "projects/legacy-memory/plan-xplat-009-plugin-source-and-payload-bash-eradication-057c49951a.md",
+      "project": "legacy-memory",
+      "sha256": "846e8338433ad0fcf6542646a489b981e92dab00da0ca51662ee07dab73731f8",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-5e301c12cd7b3b81",
+      "path": "projects/legacy-memory/plan-xplat-010-repository-bash-confinement-and-ci-dispatch-guard-5e301c12cd.md",
+      "project": "legacy-memory",
+      "sha256": "c48261da1c1ac0df484a2d06695b25df18bb05f70878c00949b561b22ce77d21",
+      "sources": [
+        {
+          "path": ".specify/memory/plan.md",
+          "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-a8943d808b59883e",
+      "path": "projects/legacy-memory/spec-artifact-relocation-tiering-process-collapse-a8943d808b.md",
+      "project": "legacy-memory",
+      "sha256": "e3c4dbc5e69e862ddfdeb879611c352f6ebd9e6e26e778c76a4913c5ecc9f04d",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-ff1c41e27a30e4ed",
+      "path": "projects/legacy-memory/spec-atomicity-test-router-read-only-classifier-ff1c41e27a.md",
+      "project": "legacy-memory",
+      "sha256": "db796883e709262850889af46ba5f2bdc6b3ee65f13cab25f9a654e9d85001bf",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-e9c54467af442c06",
+      "path": "projects/legacy-memory/spec-deterministic-uat-runbook-skeleton-pr-body-integration-e9c54467af.md",
+      "project": "legacy-memory",
+      "sha256": "90b07df4859e6483bb6d0a41a070e0390a9d47dc05a3fb19f8ac6a7776f8297c",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-8a7bd3da901426e6",
+      "path": "projects/legacy-memory/spec-doc-002-unified-landing-page-and-ia-shell-8a7bd3da90.md",
+      "project": "legacy-memory",
+      "sha256": "f7a46bf25daaf08502ca86bded051d89d4ed94ceb70b496ab7d7c5e8fcf853e2",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-0ab59903a0d7603e",
+      "path": "projects/legacy-memory/spec-doc-003-claude-code-marketplace-installation-path-0ab59903a0.md",
+      "project": "legacy-memory",
+      "sha256": "aab22fc841ede88a9a3242fc5d5625993417d5042d08969a933ea53085ecb058",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-fa054514d91ec340",
+      "path": "projects/legacy-memory/spec-doc-004-codex-marketplace-installation-path-fa054514d9.md",
+      "project": "legacy-memory",
+      "sha256": "5c616e85ccce429d4f53bab225aef80d9b29845056110dccbe920dd1dd94bf4b",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-50e39cd2f1f7f3fc",
+      "path": "projects/legacy-memory/spec-doc-005-first-successful-workflow-tutorial-and-lifecycle-explain-50e39cd2f1.md",
+      "project": "legacy-memory",
+      "sha256": "9ba189d69cea40f30c5d3a34e0a0e4088d30cd2c5570f3d5ba56d0f6cc53d792",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-7016090898dff837",
+      "path": "projects/legacy-memory/spec-doc-006-safe-interactive-selector-and-validation-aids-7016090898.md",
+      "project": "legacy-memory",
+      "sha256": "43590f9d1a8dd9700d9b409a78d2f77776876a1bc733dee959c3b6bddf0ba870",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-02445c86cf41abd9",
+      "path": "projects/legacy-memory/spec-doc-007-command-workflow-manifest-and-file-layout-reference-02445c86cf.md",
+      "project": "legacy-memory",
+      "sha256": "36cb8c848361a180d8936fa3cb044fce6404b1d6debb76ccbf7b74ac96815c69",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-a9c99433fb3d6285",
+      "path": "projects/legacy-memory/spec-doc-008-and-doc-009-interactive-documentation-trust-and-release--a9c99433fb.md",
+      "project": "legacy-memory",
+      "sha256": "f0a4a880ca34d06a9d16c81226e00e9b711e54858a8e755aafe9f80e01f499c9",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-57b7d7afa1476cab",
+      "path": "projects/legacy-memory/spec-doc-010-search-accessibility-deep-links-docs-validation-57b7d7afa1.md",
+      "project": "legacy-memory",
+      "sha256": "a1451d752c19e52aa0a133f44b385b2ad82a37482df397880a12b1a146d75431",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-e2eb5443d5b7894c",
+      "path": "projects/legacy-memory/spec-doc-011-github-pages-build-and-deploy-pipeline-e2eb5443d5.md",
+      "project": "legacy-memory",
+      "sha256": "af3e80faac3b85323834191f43ebe784ddcacbc2efc4f47280ec0ba75aad6f40",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-7edb8c0dd566c001",
+      "path": "projects/legacy-memory/spec-doc-013-brand-identity-and-marketplace-landing-page-7edb8c0dd5.md",
+      "project": "legacy-memory",
+      "sha256": "4c491a0cab738eaebdcacba4d616fc4babaf5ba18b97b099dbcf887d05d4a8e9",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-aaf7399926ea037b",
+      "path": "projects/legacy-memory/spec-doc-014-seo-and-ai-discoverability-aaf7399926.md",
+      "project": "legacy-memory",
+      "sha256": "943b15904c983578d3c60da79a49b1d392c4582f8d72817ab07b78dcbc51dca8",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-87016f8108be4606",
+      "path": "projects/legacy-memory/spec-generated-index-prs-backlinks-status-integration-phase-gate-rege-87016f8108.md",
+      "project": "legacy-memory",
+      "sha256": "fd4beb4f6ea6333896d59a80153c89a357b8ba6e8ba1f7be1a2713f99cd32108",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-2f55c8bfba9406a3",
+      "path": "projects/legacy-memory/spec-harden-the-hatch-o5-monster-epics-2f55c8bfba.md",
+      "project": "legacy-memory",
+      "sha256": "82f27da1a3e98fd8c3e72c81270e35c32e79f4126c1f731bbb68eb591f2f89f8",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-6bf2bf4ac4bbd30b",
+      "path": "projects/legacy-memory/spec-integration-and-verification-6bf2bf4ac4.md",
+      "project": "legacy-memory",
+      "sha256": "8d915a280fe5537aea346149bea0c1e6aef6c853a5d0d3e1c267c4e50257a55d",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-56eeebdbb24c5131",
+      "path": "projects/legacy-memory/spec-interactive-documentation-framework-and-ia-spike-56eeebdbb2.md",
+      "project": "legacy-memory",
+      "sha256": "ef73446b556b46cdab188f12290bf9f50ad69a3431ba406b0213c33cd13bf9ae",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-5c5e4b861e04b907",
+      "path": "projects/legacy-memory/spec-layer-planner-tasks-md-to-ordered-increments-5c5e4b861e.md",
+      "project": "legacy-memory",
+      "sha256": "098c28fa9a8c1869d8bab56c8f184f3919a98173f4ec19b9b2b8fa792d974274",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-29081e4af380d92c",
+      "path": "projects/legacy-memory/spec-moc-templates-scaffold-time-skeleton-version-gated-lints-29081e4af3.md",
+      "project": "legacy-memory",
+      "sha256": "17ba14891f001e333c04d735e0e082e92fd729cc3783dead20d50aee187165d2",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-aabe1aebb53b4c59",
+      "path": "projects/legacy-memory/spec-multi-pr-emission-post-implementation-rewrite-aabe1aebb5.md",
+      "project": "legacy-memory",
+      "sha256": "0d20deda114652dcbbe453c82cff93624ee70636303776afddc6f2d9d54f2e14",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-dea0c5ce9989e702",
+      "path": "projects/legacy-memory/spec-non-stopping-reviewability-markers-dea0c5ce99.md",
+      "project": "legacy-memory",
+      "sha256": "55204278b31ddf71ad6ef52bd1bc1118c78fb962517017463896501e5853c7f1",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-cdd04c57056f29db",
+      "path": "projects/legacy-memory/spec-optional-gh-stack-stack-manager-integration-cdd04c5705.md",
+      "project": "legacy-memory",
+      "sha256": "79d057ae2ec4d2f2df7268d693261e52201ad0a148459933379f8cf828458e58",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-ea684a4153d32bc3",
+      "path": "projects/legacy-memory/spec-plan-phase-reviewability-budget-gate-threshold-rework-ea684a4153.md",
+      "project": "legacy-memory",
+      "sha256": "86880cc02fbc63a9ecc27254288b0e91b60d6d97247646466573f4ee9319d2d8",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-6fd4c8dbe13b60f8",
+      "path": "projects/legacy-memory/spec-pr-checks-workflow-6fd4c8dbe1.md",
+      "project": "legacy-memory",
+      "sha256": "5d4bb8605fc9cfd2d8508e6a75756f47df2bfe6fee297fc113bf216f2f94f9ab",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-d71ca2d022893fd8",
+      "path": "projects/legacy-memory/spec-release-automation-d71ca2d022.md",
+      "project": "legacy-memory",
+      "sha256": "fa0171da4b96c6e57ac4fedd50193de9fa1c93c5152ccd8c1925ac8640519424",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-3141b75a8b589a4b",
+      "path": "projects/legacy-memory/spec-repository-foundation-for-ci-cd-pipeline-3141b75a8b.md",
+      "project": "legacy-memory",
+      "sha256": "9c8c9831975a028dc6fa5e17801af7828670f5351812c07a60a88db61a492810",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-2cf4d8714205051e",
+      "path": "projects/legacy-memory/spec-retro-migration-version-marker-state-keyed-backfill-relocate-2cf4d87142.md",
+      "project": "legacy-memory",
+      "sha256": "76e2835b2ad18f12fab61254b83b0911033f5c926014ae20c9b39528391a0160",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-f43d4f36cc0f2be4",
+      "path": "projects/legacy-memory/spec-reviewer-ready-pr-packet-contract-f43d4f36cc.md",
+      "project": "legacy-memory",
+      "sha256": "f0a662304282a59ae97063bec9ca7e5402c3169c50d9816b0be534545a27e2dc",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-e724930dcc3fb5fc",
+      "path": "projects/legacy-memory/spec-roadmap-moc-home-note-from-prd-coach-the-two-zone-structure-e724930dcc.md",
+      "project": "legacy-memory",
+      "sha256": "c0b9bbcf06c242ea619a038a428fedecedb8a0ab730e8da8f73eb291a8f2f6af",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-0f204fe2c475336d",
+      "path": "projects/legacy-memory/spec-spec-overview-0f204fe2c4.md",
+      "project": "legacy-memory",
+      "sha256": "e981a0da64b02f15f1cb6362e6c7c5c4a25cce78f154ee3247a4374a00bbcf0e",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-a7596a85f931125e",
+      "path": "projects/legacy-memory/spec-tacd-002-capability-discovery-directive-and-agent-updates-a7596a85f9.md",
+      "project": "legacy-memory",
+      "sha256": "6afe08280f85b4c858820d0ca9c55240b7f140a8799d5275b107c13be49687e2",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-324855218894b43d",
+      "path": "projects/legacy-memory/spec-tacd-003-prerequisite-and-documentation-messaging-3248552188.md",
+      "project": "legacy-memory",
+      "sha256": "ae90db72d826cda4c9c859f8982812e7fe09608eee6563b0015fa508c4a12770",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-a504711de649098c",
+      "path": "projects/legacy-memory/spec-tacd-004-verification-coverage-a504711de6.md",
+      "project": "legacy-memory",
+      "sha256": "406f80b8e054545b3a9ef101e666ddde25f3b6bfcb12b838db2324b1ab96d8de",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-c2f791e6128359f7",
+      "path": "projects/legacy-memory/spec-tool-agnostic-capability-discovery-platform-mechanics-spike-c2f791e612.md",
+      "project": "legacy-memory",
+      "sha256": "ae4dab9aa9acb07c284e74de88639382a4837cf387d6aaddf8660766fe33f627",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-817e1394931b08ee",
+      "path": "projects/legacy-memory/spec-vertical-slice-sizing-heuristics-in-prd-grill-me-817e139493.md",
+      "project": "legacy-memory",
+      "sha256": "d45087f444b42e2537711088662da549563be847f8d3417a6bc5cb7fb2a3722f",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-6d4d0fac03d4a099",
+      "path": "projects/legacy-memory/spec-xplat-001-runtime-inventory-and-constraints-6d4d0fac03.md",
+      "project": "legacy-memory",
+      "sha256": "83c9cf5fc93c1fdb9c022373b8eee94098d330a33c0e9d56e070adb5a1fd03c9",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-4e7b489fdbc8bc90",
+      "path": "projects/legacy-memory/spec-xplat-002-runtime-implementation-options-and-contract-decision-4e7b489fdb.md",
+      "project": "legacy-memory",
+      "sha256": "05e013f259a16595dccd7c3037a3d38a1f375584164a4c0e392e6f1d85bf9454",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-e1617418d56bf289",
+      "path": "projects/legacy-memory/spec-xplat-003-supply-chain-security-and-consumer-trust-model-e1617418d5.md",
+      "project": "legacy-memory",
+      "sha256": "c1c0f0ca445a5c05cf7f5c7a65dbb7f4f7ec3e08b1b99c27bd530f711fd645ea",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-890c565ab416c201",
+      "path": "projects/legacy-memory/spec-xplat-004-cross-platform-runner-foundation-890c565ab4.md",
+      "project": "legacy-memory",
+      "sha256": "60236c6b4de14215d3bd31f47d9bcdf251d70ba4b68c6a1aff02a1623d7f6916",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-5c440dc6c15f2d97",
+      "path": "projects/legacy-memory/spec-xplat-005-read-only-helper-port-5c440dc6c1.md",
+      "project": "legacy-memory",
+      "sha256": "c90bdb863c2d027256c34cdf815b7f4d44211ff1f6824521fe844b8dcc81fd66",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-9944efbb95bbbc0a",
+      "path": "projects/legacy-memory/spec-xplat-006-mutation-install-and-pr-emission-helper-port-9944efbb95.md",
+      "project": "legacy-memory",
+      "sha256": "751440ea12d8071955eebda4584cca0512ad05453bb2bf3931299e89e1c66bd5",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-bb73b523a5742504",
+      "path": "projects/legacy-memory/spec-xplat-007-python-tooling-and-release-gate-migration-bb73b523a5.md",
+      "project": "legacy-memory",
+      "sha256": "cd0e7008f164b712de5ad5c26a50abfdf7381882879aa2ff230290dc30807097",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-2c28e13c8c4cd906",
+      "path": "projects/legacy-memory/spec-xplat-008-claude-codex-cutover-and-universal-install-release-gat-2c28e13c8c.md",
+      "project": "legacy-memory",
+      "sha256": "1da010eb74cae525992b361f87e45b8423c32745aa7e81523f2c6ffa9741537d",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-4f71dc67b44d2762",
+      "path": "projects/legacy-memory/spec-xplat-009-plugin-source-and-payload-bash-eradication-4f71dc67b4.md",
+      "project": "legacy-memory",
+      "sha256": "140e20021bbbbd989c57d041b08a565e76ec96b9cc1b309a9113f9b3585bf296",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "legacy-memory-952b08e9f3de62d2",
+      "path": "projects/legacy-memory/spec-xplat-010-repository-bash-confinement-and-ci-dispatch-guard-952b08e9f3.md",
+      "project": "legacy-memory",
+      "sha256": "12ed33e57f36d8bea1a4f3c80fb3b8f266ad5efe30d978b95715439c430d1153",
+      "sources": [
+        {
+          "path": ".specify/memory/spec.md",
+          "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-legacy-memory-record"
+    },
+    {
+      "authority": "reviewed",
+      "id": "pr-size-governance",
+      "path": "projects/pr-size-governance/roadmap.md",
+      "project": "pr-size-governance",
+      "sha256": "acbbccb498ea55815d8ff75fae4f25a3d7af8ae60d48f490d6ec88426a09f337",
+      "sources": [
+        {
+          "path": "docs/ai/specs/pr-size-governance-technical-roadmap.md",
+          "sha256": "474a59b2a076f013e96697350cde2ae1989e886008a75e6bae4ef9ac7c712a60"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-project-map"
+    },
+    {
+      "authority": "reviewed",
+      "id": "reviewer-experience",
+      "path": "projects/reviewer-experience/roadmap.md",
+      "project": "reviewer-experience",
+      "sha256": "d11af1f71b8cc89715381f3f9e0a022fd4613265a7b01e033a54f1185551d7bb",
+      "sources": [
+        {
+          "path": "docs/ai/specs/reviewer-experience-technical-roadmap.md",
+          "sha256": "12d91eee436ff0548f0b44a7ee384852dc4b72d4b72bc17670dff6bfac106a97"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-project-map"
+    },
+    {
+      "authority": "reviewed",
+      "id": "tool-agnostic-capability-discovery",
+      "path": "projects/tool-agnostic-capability-discovery/roadmap.md",
+      "project": "tool-agnostic-capability-discovery",
+      "sha256": "70148dd225b65cfe14c61b2dafb84a2b5604ef7fadbd72ffd18a915da75cb1a4",
+      "sources": [
+        {
+          "path": "docs/ai/specs/tool-agnostic-capability-discovery-technical-roadmap.md",
+          "sha256": "114fd00c0e8f512d93164e67208294c58957b7a3f87669655ae7656b3aa60229"
+        }
+      ],
+      "status": "active",
+      "type": "speckit-project-map"
+    }
+  ],
+  "generated_at": "2026-07-14T12:00:00Z",
+  "legacy_memory": [
+    {
+      "path": ".specify/memory/spec.md",
+      "sha256": "6cf150d1147d326b209ae521a49b153b8679c9a4fe9eba55d406391f0aac564d"
+    },
+    {
+      "path": ".specify/memory/plan.md",
+      "sha256": "d5658cd2b1231d4ddfdeede36cb1bf9d43650292437b64960ae855cc29857c10"
+    },
+    {
+      "path": ".specify/memory/changelog.md",
+      "sha256": "87f298677b2de7d51fbc33b22047848d70ba6be8bbce1822fd597e23cafc49c3"
+    }
+  ],
+  "legacy_memory_status": "frozen",
+  "manifest_version": "1.0",
+  "okf": {
+    "revision": "ee67a5ca27044ebe7c38385f5b6cffc2305a9c1a",
+    "version": "0.1"
+  },
+  "profile": "speckit-okf/1",
+  "snapshot_id": "sha256:bf38df6a1319bff4ce0d25eb91aba13440cc5ba3fa7ad36b5c8b1e07ae5595cd"
+}

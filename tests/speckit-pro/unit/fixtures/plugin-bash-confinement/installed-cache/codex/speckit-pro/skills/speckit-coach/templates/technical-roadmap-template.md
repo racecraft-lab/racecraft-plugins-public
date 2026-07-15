@@ -5,6 +5,7 @@
 This document defines the **SPEC catalog** for {{FEATURE_NAME}}: an ordered set of specifications derived from the source PRD. Each SPEC corresponds 1:1 to a Feature / Acceptance-Criteria group in the PRD (`AC-N.*`), preserving traceability from PRD → roadmap → spec. Each specification is executed end-to-end through the SpecKit workflow (specify → clarify → plan → checklist → tasks → analyze → implement) before moving to the next, and is prepared for autopilot with `/speckit-pro:speckit-scaffold-spec SPEC-NNN`, which reads this roadmap as its input.
 
 **Source PRD:** {{PRD_LINK}} <!-- the PRD whose Features become the SPEC catalog below -->
+**Knowledge Map:** [Canonical project knowledge](../knowledge/projects/{{FEATURE_SLUG}}/index.md)
 **Branch:** `{{BRANCH_NAME}}`
 **Tracker:** {{TRACKER_LINK}}
 

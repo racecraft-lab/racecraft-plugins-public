@@ -17,6 +17,15 @@ stdin, read one JSON response from stdout, and surface stderr diagnostics.
 Do not add a shell fallback, `jq` parsing path, Git Bash, WSL, or
 PowerShell-specific command-language requirement for installed workflows.
 
+## Durable knowledge status
+
+Follow [the shared knowledge lifecycle](../speckit-coach/references/knowledge-lifecycle.md).
+Run runner operation `knowledge-health` with the consumer repo root. Report
+bundle presence, OKF/profile conformance, snapshot, freshness, source-hash and
+link failures, duplicate IDs, unreviewed candidates, migration coverage, and
+MOC compatibility-view drift. This skill is read-only: never run a knowledge
+plan or apply operation.
+
 ## Scope
 
 Use this skill when the user wants to know what is in progress, what is
@@ -48,6 +57,9 @@ before answering:
 - technical roadmap files, typically matching `*technical-roadmap*` or
   `*roadmap*`
 - workflow files, typically matching `*-workflow.md`
+- design concepts under `docs/ai/specs/.process/`; use
+  `docs/ai/specs/` only as a legacy read fallback
+- `docs/ai/knowledge/manifest.json`
 - archive extension state files when present:
   `.specify/extensions.yml`, `.specify/extensions/.registry`,
   `.specify/extensions/archive/extension.yml`, and
@@ -127,38 +139,19 @@ the dashboard:
   cleanup branch; if safe, recommend reviewed cleanup only after archive success
   and recovery commands are recorded
 
-### 3.2 Spec-Map index freshness (read-only)
+### 3.2 Knowledge and compatibility-view freshness (read-only)
 
-When the project has version-marked `SPEC-MOC.md` maps, report whether their
-generated navigation zones are current. Run the shared generator in read-only
-`--check` mode — it rebuilds the zones in memory, diffs them against the
-committed maps, and writes nothing. The generator is the one shared script;
-reference it by its plugin-root-relative path rather than reimplementing the
-check:
+Use the `knowledge-health` response as the single report. For an absent bundle,
+recommend reviewed `migrate` when health reports `incomplete_migration` or
+legacy MOC/memory inventory; recommend install/init only when that inventory is
+truly empty. Distinguish a valid current bundle, authoritative source drift
+(recommend reviewed same-path `supersede`), projection-only drift (recommend
+`rebuild`), and invalid content (name the diagnostic). `generate-spec-index-check`
+is a compatibility adapter only; do not invoke both operations or reimplement
+either check.
 
-```text
-Run runner helper generate-spec-index-check with repo root "$PWD".
-```
-
-Pass `"$PWD"` (the project root) explicitly. Without it the generator infers its
-repo root from the script's own location, which in a cached-plugin install is the
-plugin cache — not the user's project — so the freshness check would scan the
-wrong tree.
-
-Surface one freshness line in the dashboard from the exit code:
-
-- exit `0` → **index current**
-- exit `1` → **index stale — run regen**: the maps drifted from their sources.
-  `speckit-status` does not regenerate them; the fix is `$speckit-autopilot`,
-  whose phase gates rebuild the zones.
-- exit `2` → **index check error**: name the failure from the generator's
-  stderr line (for example a malformed `prs.json` or a non-regular-file map
-  target).
-
-This dashboard is strictly read-only. It invokes the generator only with
-`--check`, which writes nothing on any path — including the exit-`2` error
-path. `speckit-status` never runs the generator in write mode and never
-regenerates the maps itself; reporting staleness here is purely advisory.
+This dashboard never writes, rebuilds, stages, or promotes knowledge. Report
+candidate counts and recommended owners without changing them.
 
 ### 3.3 O5 parent rollup and re-slicing status
 
@@ -224,8 +217,9 @@ artifacts, blockers, and next action.
 
 The answer should be actionable. If the best next step is to create a workflow,
 say so. If the best next step is to resume autopilot from an active workflow,
-say so. If the roadmap is missing, point the user to `$speckit-coach` for
-roadmap creation guidance.
+say so. If the roadmap is missing and a reviewed PRD exists, point the user to
+`$speckit-prd --roadmap-only <existing-prd-path>`; otherwise use
+`$speckit-prd <idea-or-brief>`.
 
 ## Edge Cases
 
@@ -250,3 +244,4 @@ wants to act on the recommendation, direct them to the corresponding entrypoint:
 - `$speckit-autopilot` to execute a workflow
 - `$speckit-resolve-pr` to address review feedback
 - `$speckit-coach` for process guidance
+- `$speckit-prd` for PRD/roadmap mutation, including `--roadmap-only`

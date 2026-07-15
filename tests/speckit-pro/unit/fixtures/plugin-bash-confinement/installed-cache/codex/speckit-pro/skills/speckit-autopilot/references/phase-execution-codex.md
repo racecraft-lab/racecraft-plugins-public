@@ -38,6 +38,12 @@ all seven SDD phases, and Post before any subagent is spawned.
 Consensus uses `codebase-analyst`, `spec-context-analyst`, and
 `domain-researcher`. `autopilot-fast-helper` is optional and never votes.
 
+Before each worker dispatch, the parent runs `knowledge-health` and a narrow
+`knowledge-search`, verifies selected sources, and includes only those selections
+in the prompt. The parent records a `knowledge_use_receipt` in the workflow and
+durable state. Workers may return `knowledge_candidates`; they never write the
+bundle or candidate packets. The parent alone validates and stages candidates.
+
 ## Main Execution Loop
 
 For each pending phase, spawn a subagent, collect the result, validate the
@@ -52,7 +58,8 @@ for phase in PHASES starting from first_pending:
        and mirror the same status change into autopilot-state.json
     2. Check .specify/extensions.yml for before_<phase> hooks
        → run accepted hooks (non-destructive), skip duplicates
-    3. Read the workflow file's prompt(s) for this phase
+    3. Read the workflow file's prompt(s) for this phase; run bounded knowledge
+       health/search, verify selected sources, and record the use receipt
     4. For EACH prompt in the phase:
        a. Resolve <executor>:
           use the matching installed SpecKit custom agent
@@ -73,6 +80,7 @@ for phase in PHASES starting from first_pending:
        subagent_slots limit (dispatch in waves when items × analysts exceeds
        the cap) → apply consensus rules → edit
        artifacts → mark the corresponding Consensus item complete in both stores
+       → validate and stage any knowledge_candidates without promoting them
     6. Check .specify/extensions.yml for after_<phase> hooks
        → run accepted hooks (non-destructive), skip duplicates
     7. Validate gate directly in the main session:
@@ -178,62 +186,25 @@ mid-autonomous-run, or crash the run. If the helper is unavailable on an older
 plugin build, record the diagnostic note and continue, same as any other error
 path.
 
-## Phase-Gate: Spec-MOC Navigation Regeneration
+## Phase-Gate: Knowledge Map and Compatibility-View Synchronization
 
-At **every phase boundary** — for all seven phases — regenerate the spec map
-navigation zones and fold any change into that phase's existing checkpoint
-commit. This runs as an **idempotent** step **immediately before step 10's
-commit** in the Main Execution Loop above (`git add specs/ && git commit` for
-phases 1–6, `git add -A && git commit` for phase 7), so the rebuilt maps are
-swept into that same commit. A boundary that changes nothing contributes
-nothing — no extra `update_plan` item and no `autopilot-state.json` transition
-are recorded for this step.
+At every phase boundary, immediately before step 10's checkpoint commit, run
+`knowledge-health` for `projects/<roadmap-slug>/specs` with the target worktree
+as `repo_root`. If a gated authoritative source cited by the current map
+changed, build a reviewed same-path replacement and run
+`knowledge-update-plan` with action `supersede`; never use `rebuild` to refresh
+its source hash. If canonical concepts and source hashes are current but a
+generated index, manifest, log, or compatibility view drifted, use action
+`rebuild`. Inspect deterministic operations and warnings, then run
+`knowledge-update-apply` with `repo_root`, the complete accepted `plan`,
+`plan_hash`, and `expected_snapshot`. A stale plan, changed source, malformed
+map, or rollback diagnostic stops the phase without a partial write.
 
-**Why before step 10:** step 10's `git add … && git commit` is what folds the
-rebuilt maps into the one checkpoint commit. Running the rebuild *after* the
-commit would force a second commit on every map-affecting boundary — the
-failure this ordering avoids.
-
-**Step (run at each boundary, before step 10):**
-
-```text
-# Write mode (NO --check): regenerate over the autopilot's target repo.
-# Pass "$PWD" explicitly — do NOT rely on the generator's default REPO_ROOT.
-# In a cached-plugin run the default resolves to the plugin cache's parent, not
-# the user's project, so the explicit arg is required.
-runner helper generate-spec-index-write with repo root "$PWD" and mode apply
-```
-
-**Act on the result:**
-
-- **Exit 2 (error)** → a map is malformed/unbalanced or a PRS manifest is
-  unreadable. **Surface the actionable stderr line and STOP.** Do NOT commit a
-  broken regen and do NOT advance the phase.
-- **Exit 0 (clean)** → the generator wrote any stale maps and returned success.
-  **The commit decision is diff-driven, not exit-code-driven** (write mode
-  returns `0` whether or not it changed a file; the stale `exit 1` is
-  `--check`-only and is never reached here). Inspect the working tree:
-  - `git diff` (plus `git status` for newly-injected zones) is **empty** →
-    nothing was regenerated. This is the idempotent no-op: contribute nothing,
-    proceed to step 10's normal commit.
-  - `git diff` is **non-empty** and the rebuild rides **alongside** other
-    staged phase work → it is folded into that phase's existing checkpoint
-    commit (`feat(SPEC-XXX): complete <phase> phase` / `feat(SPEC-XXX):
-    implement phase`). No separate commit is made.
-  - `git diff` is **non-empty** and the regenerated maps are the **only**
-    staged change → make a standalone commit with this fixed, public-readable
-    subject:
-
-    ```text
-    docs(speckit-pro): regenerate spec-MOC navigation zones
-    ```
-
-This subject is a fixed constant (it is NOT computed per run): `docs:` because
-regenerating generated documentation zones is a docs-scope change and does not
-trigger a release-please version bump. The regeneration is a pure function of
-committed files, so re-running it on an unchanged tree yields a zero-byte diff
-and no commit — exactly one rebuild contribution to the checkpoint commit on a
-map-affecting boundary, and none on a no-op boundary.
+Fold any canonical index or generated MOC compatibility-view diff into the
+existing phase checkpoint. A no-op plan adds no commit or plan-state transition.
+Never hand-edit a generated view, and use the legacy
+`generate-spec-index-write` adapter only with an older installed plugin that
+does not expose the knowledge helpers.
 
 ## Phase 6.5: Pre-Implement Confidence Gate
 

@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft-lab/racecraft-plugins-public/knowledge-candidate.schema.json",
+  "title": "SpecKit Pro knowledge candidate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "concept_path",
+    "type",
+    "title",
+    "description",
+    "body",
+    "state",
+    "reviewed",
+    "sources",
+    "producer"
+  ],
+  "properties": {
+    "concept_path": {
+      "type": "string",
+      "pattern": "^(projects|decisions|architecture|domain|operations|patterns)/.+\\.md$"
+    },
+    "type": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "description": { "type": "string", "minLength": 1, "maxLength": 2048 },
+    "body": { "type": "string", "minLength": 1 },
+    "state": { "enum": ["proposed", "reviewed"] },
+    "reviewed": { "type": "boolean" },
+    "id": { "type": "string", "minLength": 1 },
+    "project": { "type": "string", "minLength": 1 },
+    "confidence": { "enum": ["low", "medium", "high"] },
+    "sensitivity": { "enum": ["public", "internal"] },
+    "supersedes": { "type": "string", "minLength": 1 },
+    "legacy_view": { "type": "string", "minLength": 1 },
+    "legacy_up": {
+      "type": "string",
+      "pattern": "^\\[[^\\]\\r\\n]+\\]\\([^)\\r\\n]+-roadmap-MOC\\.md\\)$"
+    },
+    "legacy_related": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["skill"],
+      "properties": {
+        "skill": { "type": "string", "minLength": 1 },
+        "agent": { "type": "string", "minLength": 1 }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "section", "sha256"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "section": { "type": "string", "minLength": 1 },
+          "line_start": { "type": "integer", "minimum": 1 },
+          "line_end": { "type": "integer", "minimum": 1 },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "state": { "const": "proposed" },
+        "reviewed": { "const": false }
+      }
+    },
+    {
+      "properties": {
+        "state": { "const": "reviewed" },
+        "reviewed": { "const": true }
+      }
+    }
+  ],
+  "allOf": [
+    {
+      "if": { "properties": { "type": { "const": "speckit-project-map" } } },
+      "then": {
+        "required": ["id", "project", "legacy_view"],
+        "properties": {
+          "concept_path": { "pattern": "^projects/[^/]+/roadmap\\.md$" },
+          "legacy_view": { "pattern": "^docs/ai/specs/[^/]+-roadmap-MOC\\.md$" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "const": "speckit-spec-map" } } },
+      "then": {
+        "required": ["id", "project", "legacy_view", "legacy_up"],
+        "properties": {
+          "concept_path": { "pattern": "^projects/[^/]+/specs/[^/]+\\.md$" },
+          "legacy_view": { "pattern": "^(specs/.+/SPEC-MOC\\.md|docs/ai/specs/.+/SPEC-MOC\\.md)$" }
+        }
+      }
+    }
+  ]
+}

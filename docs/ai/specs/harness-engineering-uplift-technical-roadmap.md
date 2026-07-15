@@ -12,6 +12,7 @@ as its input.
 
 **Source PRD:** [../../prd-harness-engineering-uplift.md](../../prd-harness-engineering-uplift.md)
 **Roadmap MOC:** [harness-engineering-uplift-roadmap-MOC.md](harness-engineering-uplift-roadmap-MOC.md)
+**Knowledge Map:** [../knowledge/projects/harness-engineering-uplift/roadmap.md](../knowledge/projects/harness-engineering-uplift/roadmap.md)
 **Spec ID prefix:** `HRNS-###`
 **Status:** Draft. Added 2026-07-03 and updated 2026-07-04 to describe the
 SpecKit Pro harness hardening lane.
@@ -186,6 +187,16 @@ Budget result: within budget
   disallowed. Flag open-ended recursive self-improvement and self-modifying
   harness-control loops as disallowed unless a dedicated future spec proves
   bounded safety controls.
+- Produce a complete knowledge authority/migration inventory. Classify MOCs,
+  PRDs/roadmaps/contracts, Design Concepts, research, workflows/state, O5/PRS,
+  legacy memory, retrospectives, archive/UAT/PR evidence, plugin guidance,
+  hooks, manifests, and generated payloads as source, reusable knowledge,
+  operational state, evidence, legacy history, or projection. Recompute the
+  current nine-roadmap/six-MOC/42-design-concept/45-workflow/30-archive-report
+  baseline and explicitly cover the three roadmaps without MOCs.
+- Treat `docs/ai/research/harness-knowledge-authority-inventory.md` as the
+  reviewable baseline artifact and regenerate its corpus evidence before
+  accepting HRNS-001.
 
 **Out of Scope:**
 
@@ -217,6 +228,8 @@ Budget result: within budget
 - The taxonomy names every self-improvement loop class discovered in current
   skills, agents, helpers, generated payloads, evals, and workflow files, and
   records its permitted closure level or disallowed status.
+- Every knowledge-like surface has exactly one authority classification,
+  migration treatment, producer/consumer list, and downstream HRNS owner.
 - Each retained gap has surface tags, state classification, owner workflow, and
   downstream HRNS ownership.
 - The PR packet includes the taxonomy path, review scope, verification command or
@@ -258,6 +271,15 @@ Budget result: within budget
   generated task-specific guidance, injected resume context, and default/fresh
   task state must be distinguishable and switchable without changing root
   instructions or producing accidental PR diffs.
+- Define the pinned OKF v0.1 profile and operator-owned
+  `docs/ai/knowledge/` hierarchy, including project-scoped roadmap/spec
+  concepts, reviewed reusable concepts, generated indexes/log, deterministic
+  manifest snapshot, path identity, stable join keys, provenance, freshness,
+  sensitivity, supersession, and authority precedence.
+- Port curated roadmap/SPEC MOC semantics into canonical OKF concepts, define
+  generated legacy views, normalize new Design Concepts under `.process/`, and
+  specify non-destructive reviewed import plus freeze semantics for
+  `.specify/memory/{spec,plan,changelog}.md`.
 
 **Out of Scope:**
 
@@ -284,6 +306,9 @@ Budget result: within budget
   before resume without mutating canonical project guidance.
 - Verification includes a focused docs/reference check or fixture proving stale
   roadmap, workflow, feature, generated payload, or archive pointers are caught.
+- The bundle, migration, candidate, MOC-compatibility, legacy-memory cutover,
+  and authority contracts are decision-complete without introducing a third
+  workflow/status authority or external runtime dependency.
 
 ---
 
@@ -315,6 +340,16 @@ Budget result: within budget
   schemas, and existing repo-local runner metadata. Record whether SpecKit Pro
   should keep schemas Python-authoritative, generate machine-readable schemas,
   or introduce an optional validation adapter.
+- Implement runner contracts for `knowledge-health`, `knowledge-search`,
+  `knowledge-update-plan`, and `knowledge-update-apply`. Plan/apply supports
+  init, migrate, rebuild, promote, supersede, and archive with deterministic
+  plan/snapshot hashes, bounded results, conflict detection, rollback, and
+  explicit consumer-root resolution. Historical search is opt-in, and reviewed
+  supersession is the repair path for changed source authority.
+- Consolidate MOC/profile frontmatter parsing, manifest/index/log generation,
+  source hashing, migration, and compatibility rendering behind one
+  Python-authoritative model. Preserve existing spec-index operation IDs as
+  response-compatible adapters.
 
 **Out of Scope:**
 
@@ -343,6 +378,9 @@ Budget result: within budget
 - A schema-contract decision names the canonical source of truth, generated
   artifact format, validation path, dependency posture, and fixtures proving
   contract drift is detected.
+- All four knowledge operations and their manifest, candidate, plan, and use
+  receipt schemas are registered, shipped, documented, and fixture-covered;
+  legacy adapters have an explicit separate-spec removal gate.
 
 ---
 
@@ -377,6 +415,13 @@ Budget result: within budget
 - Define shared-context promotion gates: secret scan, size cap, provenance
   check, storage-class check, human confirmation, and clean git-footprint
   behavior before any context checkpoint is committed or distributed to a team.
+- Protect `docs/ai/knowledge/**` and treat its Markdown as untrusted data.
+  Canonical writes require the guarded apply helper, expected snapshot/plan,
+  confined paths and symlinks, secret/sensitivity/provenance checks, reviewable
+  diffs, and reviewed PR promotion. Worker agents can return candidates only.
+- Detect optional archive integrations that append history to root agent
+  instruction files; keep incompatible apply paths dry-run-only and route
+  durable promotion through the OKF/archive-cleanup contract.
 
 **Out of Scope:**
 
@@ -410,6 +455,9 @@ Budget result: within budget
 - Shared-context promotion guidance includes explicit block/warn behavior for
   secrets, oversize artifacts, missing provenance, and accidental personal-state
   diffs.
+- Security fixtures prove knowledge cannot override current instructions,
+  expand permissions, escape the consumer root, follow unsafe symlinks, expose
+  secrets, or self-promote from a worker/terminal agent.
 
 ---
 
@@ -457,6 +505,12 @@ Budget result: within budget
   tests, formal or executable verifiers, and fixture parity outrank calibrated
   rubrics and LLM judges; intrinsic self-assessment may propose changes but
   cannot approve harness-control changes.
+- Add separate base-OKF and trusted-SpecKit-profile coverage for reserved files,
+  required type, unknown fields, source hashes, stale/duplicate/superseded
+  records, MOC compatibility drift, migration idempotence, and unsafe content.
+- Require installed skill-driven use proof: bounded search, concept selection,
+  source verification, material downstream use, and a use receipt. Inventory or
+  harness-only invocation does not satisfy the criterion.
 
 **Out of Scope:**
 
@@ -496,6 +550,9 @@ Budget result: within budget
 - Test/eval inventory guidance includes banned vacuous patterns such as
   placeholder assertions, broad OR fallbacks, conditional file-existence guards,
   and self-fulfilling setup.
+- End-to-end fixtures prove a Design Concept decision and retrospective lesson
+  are reviewed, promoted, retrieved in fresh sessions, actually used by later
+  workflows, and recorded with valid receipts.
 
 ---
 
@@ -534,6 +591,9 @@ Budget result: within budget
   baseline, context-health zone, burn-rate estimate where available,
   compaction/auto-save event, restore source, and whether the source was named,
   workflow-derived, or emergency fallback.
+- Add a bounded knowledge use receipt with snapshot ID, query, selected concept
+  IDs/hashes, verified sources, purpose, downstream decision/output, and
+  skill/agent lineage.
 
 **Out of Scope:**
 
@@ -563,6 +623,8 @@ Budget result: within budget
   rejected without raw log dumps, secrets, or reliance on chat history alone.
 - Context-continuity fixtures prove compaction/resume evidence can be summarized
   without committing raw personal transcripts or leaking secrets.
+- Receipt fixtures prove actual knowledge consumption without copying concept
+  bodies, raw interviews, secrets, or personal identifiers into traces.
 
 ---
 
@@ -601,6 +663,14 @@ Budget result: within budget
   resource caps, modification scope, rollback checkpoints, promotion gates,
   and safe-stop behavior for loops that generate, critique, refine, or test
   future harness behavior.
+- Integrate the shared knowledge lifecycle across PRD, Grill Me, scaffold,
+  autopilot, status, resolve-PR, coach, install/upgrade, and archive-cleanup.
+  Workflows retrieve a bounded snapshot before relevant phases, record receipts,
+  collect candidates only after verified checkpoints, detect snapshot drift on
+  resume, and serialize canonical apply after rebase.
+- Align Claude/Codex skill and agent roles: context/research/execution agents may
+  return structured candidates, only the parent orchestrator writes candidate
+  packets or applies promotion, and gate/UAT agents remain evidence-only.
 
 **Out of Scope:**
 
@@ -631,6 +701,8 @@ Budget result: within budget
 - Self-improvement loops record budget, scope, checkpoint, rollback, promotion,
   and safe-stop state before execution and reject stale or self-authorizing
   state before resume.
+- Representative skill flows use the same snapshot, candidate, receipt,
+  Design Concept path/fallback, and promotion contracts across Claude and Codex.
 
 ---
 
@@ -665,6 +737,14 @@ Budget result: within budget
   and any agent-authored feedback memories used by later workflows.
 - Include context checkpoint drift checks for stale, duplicate, oversized,
   secret-bearing, orphaned, or no-longer-load-bearing checkpoints and summaries.
+- Add knowledge health/drift coverage for malformed concepts, stale source
+  hashes, missing provenance, duplicate IDs, broken required links, unresolved
+  candidates, supersession, archived-spec gaps, frozen-memory drift, and legacy
+  MOC projection drift.
+- Change archive cleanup so reviewed knowledge promotion/supersession and a
+  verified rebuild occur before active-spec deletion. Keep detailed archive
+  reports as evidence, preserve archived-spec discovery, and stop independent
+  legacy-memory appends after cutover.
 
 **Out of Scope:**
 
@@ -698,6 +778,9 @@ Budget result: within budget
   stale, duplicate, unsafe to reuse, cleanup candidate, or no-op archive.
 - Context checkpoint findings are classified as active, stale, duplicate,
   oversized, secret-bearing, orphaned, cleanup candidate, or no-op archive.
+- Archive and migration fixtures prove active and archived records remain
+  discoverable, legacy files are preserved, rebuilds are no-ops when current,
+  and compatibility views cannot become a second editable authority.
 
 ---
 
@@ -708,7 +791,7 @@ Budget result: within budget
 | Runtime substrate | Python 3.11+ standard-library runner from the XPLAT lane remains the target for installed-plugin helper behavior. |
 | Test suite | `python3 tests/speckit-pro/run-all.py` default deterministic layers; focused Python validators as needed during implementation. |
 | Existing helper pattern | XPLAT-005 read-only helper registry, Python-authoritative helper records, request fixtures, and parity checks. |
-| Source-of-truth docs | `AGENTS.md`, `CLAUDE.md`, `.specify/memory/constitution.md`, PRDs, technical roadmaps, roadmap MOCs, and workflow files. |
+| Source-of-truth docs | `AGENTS.md`, `CLAUDE.md`, `.specify/memory/constitution.md`, PRDs, technical roadmaps, approved contracts, workflow/state files for progress, and reviewed `docs/ai/knowledge/` synthesis. Legacy MOCs and memory files become compatibility/history after cutover. |
 
 ## Scaffold Notes
 

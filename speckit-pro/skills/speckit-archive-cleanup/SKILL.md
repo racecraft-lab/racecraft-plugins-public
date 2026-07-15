@@ -21,8 +21,22 @@ the fallback guard was triggered.
 Use this skill after a SpecKit implementation PR has merged and the repository
 still contains active workflow or `specs/**` residue for that completed work.
 The goal is to preserve recovery evidence in project memory, remove only the
-completed active spec folder, refresh generated SpecKit indexes, and leave the
-roadmap ready for the next SPEC.
+completed spec's active artifacts, retain its generated archived `SPEC-MOC.md`
+stub, refresh generated SpecKit indexes, and leave the roadmap ready for the
+next SPEC.
+
+## Durable knowledge
+
+Follow [the shared knowledge lifecycle](../speckit-coach/references/knowledge-lifecycle.md).
+Archive cleanup is the final distillation boundary. Before deleting active spec
+residue, review reusable final decisions, patterns, domain facts, and runbooks;
+promote accepted candidates through `knowledge-update-plan` and
+`knowledge-update-apply`. Then use action `archive` to preserve discoverability
+and regenerate indexes and MOC compatibility views. Never edit generated MOCs
+or canonical concepts directly.
+For archive planning, pass the canonical `concept_path` and optional verified
+archive-report `sources`. Every apply carries `repo_root`, the complete accepted
+`plan`, `plan_hash`, and `expected_snapshot`.
 
 This is a mutation-heavy archive workflow. Do not use it for normal status
 checks, scaffold setup, autopilot implementation, or read-only PR review. If
@@ -61,7 +75,7 @@ Start from live repository truth:
 6. List active specs with `find specs -mindepth 1 -maxdepth 4 -print` and
    identify the exact folder that belongs to the merged spec.
 
-Do not remove any active spec folder until merge provenance and recovery
+Do not remove any active spec artifacts until merge provenance and recovery
 commands are recorded. Do not remove process files under
 `docs/ai/specs/.process/` unless repository history shows that process evidence
 is intentionally deleted for completed specs. In this repository, process files
@@ -80,24 +94,40 @@ Then update the project state in this order:
    source spec path, workflow file, canonical shipped artifacts, cleanup branch,
    cleanup command, verification commands, and exact recovery commands using
    `git show` or `git checkout` against the merge commit.
-2. Append concise records to `.specify/memory/spec.md`,
-   `.specify/memory/plan.md`, and `.specify/memory/changelog.md`. These records
-   should summarize what shipped, where canonical artifacts live now, why the
-   active spec folder can be removed, and where the detailed archive report is.
-3. Update roadmap, traceability, agent context (AGENTS/CLAUDE/GEMINI), or MOC
-   files ONLY to remove or correct references that still describe the merged
-   spec as pending, in progress, or blocking downstream work. Never append
+2. If the knowledge manifest has `legacy_memory_status: frozen`, do not append to
+   `.specify/memory/spec.md`, `plan.md`, or `changelog.md`; they are frozen
+   history. Before cutover only, preserve the repository's compatibility append
+   behavior. The archive report remains evidence in both cases.
+3. Update roadmap, traceability, or agent context files ONLY to remove or
+   correct references that still describe the merged spec as pending, in
+   progress, or blocking downstream work. Never edit MOCs; the archive apply
+   regenerates their compatibility views. Never append
    per-spec history entries (archive notes, Active Technologies bullets, or
    Recent Changes bullets) to agent context files — the archive report and
-   `.specify/memory/` records are the system of record for history, and agent
+   knowledge concepts are the system of record for reusable history, and agent
    context files must stay small (Codex reads AGENTS.md under a 32 KiB budget).
+   A changed roadmap is authoritative source drift: build a reviewed
+   replacement for its canonical project map and plan/apply same-path
+   `supersede`. Do not use `rebuild` to refresh its source hash.
 4. Update `docs/ai/specs/.process/autopilot-state.json` only if it exists and
    still points at the completed spec. The status should become an archived or
    completed archive state, with the cleanup applied and post-merge archive
    phase completed.
-5. Remove the completed active spec directory under `specs/`. Keep `specs/.gitkeep`.
-6. Regenerate the active spec index with the repository's existing generator,
-   then run its `--check` mode.
+5. Reread the finalized roadmap, traceability files, and verified archive
+   report. Only now build `knowledge_candidates` with exact source hashes.
+   Review and promote accepted candidates with a `promote` plan/apply, apply any
+   roadmap-map `supersede`, then run an `archive` plan/apply for the SPEC with
+   current durable sources. Do not promote raw workflow status, UAT prose, or
+   unverified lessons. If a source changes after hashing, discard the plan and
+   recompute it.
+6. Remove the completed spec's other active artifacts under `specs/<branch>/`,
+   but retain the directory and regenerated archived `SPEC-MOC.md` compatibility
+   stub. Keep `specs/.gitkeep`. Removing that stub requires a separate reviewed
+   deprecation; archive cleanup never deletes it.
+7. Run `knowledge-health` and require the archived concept to remain
+   discoverable, source evidence to resolve, and all generated indexes and the
+   archived MOC compatibility stub to be current. Use `rebuild` only if health
+   reports projection drift while canonical sources remain current.
 
 Prefer local helper scripts over hand-maintaining generated files. If the repo
 has docs-site generated reference pages or generated plugin payloads affected by
@@ -114,8 +144,8 @@ These parts are safe to do in parallel:
 
 These parts must be serialized:
 
-- edits to roadmap, traceability, memory, MOC, and autopilot-state files
-- active spec directory removal
+- edits to roadmap, traceability, legacy memory, knowledge, and autopilot-state files
+- active spec artifact removal while preserving the archived `SPEC-MOC.md` stub
 - generated index and generated docs updates
 - staging, committing, pushing, and PR creation
 
@@ -128,9 +158,10 @@ make it easy to leave contradictory status such as "archived" in memory but
 Run the smallest checks that prove the cleanup, then the standard project
 checks if plugin or generated payload files changed. Typical checks:
 
-- active spec listing shows only expected active specs and `specs/.gitkeep`
+- archived spec directory contains only the expected generated `SPEC-MOC.md`
+  stub, and active spec listings contain only expected work
 - `python3 -m json.tool docs/ai/specs/.process/autopilot-state.json`
-- SpecKit index generation and `--check`
+- knowledge archive apply, optional projection-only rebuild, then `knowledge-health`
 - docs-site reference generation/checks when reference pages changed
 - payload builder and payload parity checks when plugin source changed
 - `git diff --check`
@@ -144,7 +175,7 @@ archive is fully verified when generated files or structural checks are stale.
 Report:
 
 - the merged PR and merge commit used as provenance
-- the active spec folder removed
+- the active spec artifacts removed and archived `SPEC-MOC.md` stub retained
 - archive report path
 - roadmap or traceability status changes
 - generated files refreshed

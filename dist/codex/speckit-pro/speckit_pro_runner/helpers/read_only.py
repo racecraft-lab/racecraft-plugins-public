@@ -1695,6 +1695,19 @@ def generate_spec_index_check(inputs: dict[str, Any], repo_root: Path) -> dict[s
     root = resolve_input_path(inputs.get("repo_root") or ".", repo_root).resolve(strict=False)
     if not trusted_dir_exists(root, repo_root):
         return make_result("", f"generate-spec-index: REPO_ROOT is not a directory: {root}\n", 2)
+    if (root / "docs" / "ai" / "knowledge" / "manifest.json").is_file():
+        try:
+            from .knowledge import KnowledgeError, _build_plan
+
+            plan = _build_plan(root, {"action": "rebuild"})
+        except KnowledgeError as exc:
+            return make_result("", f"generate-spec-index: {exc}\n", 2)
+        if plan["operations"]:
+            return make_result(
+                "spec-index: STALE — canonical knowledge projection differs from committed views\n",
+                exit_code=1,
+            )
+        return make_result("spec-index: index current — canonical knowledge projections up to date.\n")
     try:
         rendered, specs_present = render_spec_index(root)
     except SpecIndexRenderError as exc:

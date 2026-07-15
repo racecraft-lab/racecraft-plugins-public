@@ -197,7 +197,7 @@ Before writing your first SpecKit spec, consider running `/speckit-pro:grill-me`
 /speckit-pro:grill-me "gamification overhaul for the user dashboard"
 ```
 
-The skill walks every branch of the design tree, asks one question at a time with its recommended answer first, and produces a Design Concept doc at `docs/ai/specs/<slug>-design-concept.md` — capturing Goals, Non-goals, the full Q&A log, and any Open Questions you deferred.
+The skill walks every branch of the design tree, asks one question at a time with its recommended answer first, and produces a Design Concept doc at `docs/ai/specs/.process/<slug>-design-concept.md` — capturing Goals, Non-goals, the full Q&A log, and any Open Questions you deferred. Readers may fall back to the historical non-`.process` path, but new writes always use `.process/`.
 
 **When to grill standalone vs. let `/speckit-pro:speckit-scaffold-spec` invoke it:**
 

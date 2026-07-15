@@ -1,11 +1,16 @@
 ---
 up: "[SpecKit Pro Harness Engineering Uplift Roadmap](harness-engineering-uplift-technical-roadmap.md)"
-related:
-  - "[SpecKit Pro Harness Engineering Uplift PRD](../../prd-harness-engineering-uplift.md)"
+related: ["[SpecKit Pro Harness Engineering Uplift PRD](../../prd-harness-engineering-uplift.md)"]
 status: "Draft; HRNS-001 ready to scaffold after maintainer acceptance"
-rank:
+rank: ""
 spec_id: "harness-engineering-uplift"
 structureVersion: 1
+type: "speckit-legacy-project-map"
+title: "Roadmap - Map of Content"
+description: "Generated compatibility view of the canonical OKF map."
+resource: "docs/ai/knowledge/projects/harness-engineering-uplift/roadmap.md"
+x-speckit-authority: "generated-compatibility"
+x-speckit-generated-from: "docs/ai/knowledge/projects/harness-engineering-uplift/roadmap.md"
 ---
 
 # Roadmap - Map of Content
@@ -13,6 +18,21 @@ structureVersion: 1
 Navigation map for the SpecKit Pro harness-engineering uplift lane.
 
 ## Epics (curated)
+
+### Durable Knowledge Layer (cross-cutting)
+
+Why: SpecKit Pro already maintains roadmap/SPEC MOCs, Design Concepts,
+workflow lessons, archive memory, and evidence packets. The uplift ports their
+reusable meaning into one reviewed OKF v0.1 bundle instead of adding another
+editable memory system. Source documents and operational state retain their
+authority; legacy MOCs become generated compatibility views.
+
+- HRNS-001 inventories and classifies every existing knowledge-like surface.
+- HRNS-002 defines the OKF bundle, MOC/memory port, and authority model.
+- HRNS-003 adds deterministic health, search, plan, apply, and compatibility
+  rendering contracts.
+- HRNS-004 through HRNS-008 protect, verify, trace, consume, maintain, archive,
+  and prove actual skill-driven use of the layer.
 
 ### Harness Taxonomy
 
@@ -25,7 +45,9 @@ harness surfaces and gaps so future specs use the same workflow boundaries.
 
 Why: Reliable agent work starts with concise repo-grounded context and explicit
 tool/helper contracts. These two specs can proceed in parallel after HRNS-001
-because they touch separable surfaces.
+because they touch separable surfaces. Together they establish the canonical
+OKF profile and the runner operations that replace independent MOC/memory
+maintenance.
 
 - HRNS-002 Progressive Context and Durable State Contract
 - HRNS-003 Helper, Tool, and Capability Contract
@@ -58,8 +80,9 @@ larger autonomous runs are safe.
 ### Harness Maintenance
 
 Why: Harnesses drift. Prompts, docs, helper registries, generated payloads,
-examples, and sensors need bounded garbage collection that cites concrete repo
-evidence and avoids speculative cleanup.
+examples, sensors, knowledge source hashes, superseded concepts, frozen legacy
+memory, and generated MOC views need bounded garbage collection that cites
+concrete repo evidence and avoids speculative cleanup.
 
 - HRNS-008 Harness Drift, Garbage Collection, and Self-healing Remediation
 

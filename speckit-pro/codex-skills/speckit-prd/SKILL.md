@@ -1,22 +1,18 @@
 ---
 name: speckit-prd
 description: >
-  Collaboratively turn a raw product or technical idea into three
-  artifacts — a lean PRD, a technical roadmap with a SPEC catalog,
-  and a roadmap-MOC home note — ready for $speckit-scaffold-spec and
-  $speckit-autopilot. Use when the user says: "write a PRD",
-  "$speckit-prd", "create a product requirements document",
-  "draft a PRD and roadmap", "shape this idea into a PRD",
-  "turn this brief into a PRD", "plan a product",
-  "decompose an idea into a SPEC catalog", "before I write specs",
-  "right-size the catalog". Runs a one-question-at-a-time interview
-  with a recommended answer first, then writes docs/prd-NAME.md,
-  docs/ai/specs/NAME-technical-roadmap.md, and
-  docs/ai/specs/NAME-roadmap-MOC.md. Front door of the chain: PRD
-  then roadmap then scaffold-spec then autopilot. NOT per-spec scoping
-  (use grill-me), NOT worktree prep (use speckit-scaffold-spec), NOT
-  SDD coaching (use speckit-coach). Accepts an idea string, a
-  brief/transcript file, or empty. Requires an interactive session.
+  Collaboratively turn a product or technical idea into a lean PRD, a
+  technical roadmap with a SPEC catalog, a canonical OKF roadmap map, and a
+  generated MOC compatibility view, ready for $speckit-scaffold-spec and
+  $speckit-autopilot. Use for "$speckit-prd", "write a PRD", "draft a PRD and
+  roadmap", "plan a product", "decompose an idea into a SPEC catalog",
+  "decompose this existing PRD", "--roadmap-only", or "right-size the
+  catalog". Runs a recommendation-first, one-question-at-a-time interview.
+  Normal mode accepts an idea, brief or transcript file, or empty input.
+  Roadmap-only mode accepts a reviewed PRD path, preserves that PRD, and writes
+  only downstream roadmap and knowledge surfaces. Not for per-spec scoping
+  (use grill-me), worktree prep (use speckit-scaffold-spec), or SDD coaching
+  (use speckit-coach). Requires an interactive session.
 ---
 
 # SpecKit PRD — Collaborative PRD & Roadmap Authoring (Codex)
@@ -25,15 +21,28 @@ description: >
 
 Before researching or recommending, enumerate the tools and skills your session actually exposes — do not assume a fixed set; the user may have installed anything — and select the best fit per `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`. Ground every external fact you assert in a real tool, skill, or file result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`, and abstain when nothing grounds it. (This governs your research-backed recommended answers, not the interview mechanics.)
 
-You are a **collaborative product partner**. Turn a raw idea into two durable
-artifacts by thinking *with* the user, one question at a time, then emit a third
-derived from them:
+## Durable knowledge
+
+Follow [the shared knowledge lifecycle](../../skills/speckit-coach/references/knowledge-lifecycle.md).
+If a bundle exists, run `knowledge-health` and a bounded `knowledge-search`
+before the interview; verify selected sources and cite the resulting
+`knowledge_use_receipt` in the PRD references. The technical roadmap remains the
+catalog authority. Its reviewed grouping and rationale become the canonical OKF
+roadmap concept; the roadmap-MOC is only a generated compatibility view.
+
+You are a **collaborative product partner**. In normal mode, turn a raw idea
+into three durable artifacts by thinking *with* the user, one question at a
+time, then emit a canonical map and generated compatibility view. In
+roadmap-only mode, consume the existing reviewed PRD as artifact 1 and produce
+artifacts 2-4 without rewriting it:
 
 1. A **lean PRD** (`docs/prd-<slug>.md`) — the WHAT and WHY.
 2. A **technical roadmap with a SPEC catalog**
    (`docs/ai/specs/<slug>-technical-roadmap.md`) — the ordered specs the PRD
    decomposes into.
-3. A **roadmap-MOC home note** (`docs/ai/specs/<slug>-roadmap-MOC.md`) — a single
+3. A canonical **OKF roadmap map**
+   (`docs/ai/knowledge/projects/<slug>/roadmap.md`) — reviewed grouping and rationale.
+4. A generated **roadmap-MOC compatibility view** (`docs/ai/specs/<slug>-roadmap-MOC.md`) — a single
    navigable map for the whole spec tree, derived from the roadmap (see step 6).
 
 This is the **front door** of the speckit-pro chain. Downstream tools read the
@@ -93,24 +102,35 @@ PRD→roadmap decomposition algorithm live in
 `../../skills/speckit-prd/references/prd-authoring-protocol.md` — read it before
 starting. High-level loop:
 
-1. **Read the input** (idea string, brief/transcript file, or ask the user).
-   Derive a kebab-case `<slug>`.
+**Select the mode first.** Normal mode accepts an idea, brief, transcript, or
+empty input and authors both PRD and roadmap. Roadmap-only mode requires
+`--roadmap-only <existing-prd-path>`; treat that reviewed PRD's goals,
+non-goals, acceptance criteria, and SPEC crosswalk as binding. Do not rewrite
+it unless the user explicitly approves a correction. Ask only questions needed
+for unresolved decomposition, dependency, priority, or reviewability decisions.
+
+1. **Read the input** (idea string, brief/transcript file, existing PRD in
+   roadmap-only mode, or ask the user). Derive a kebab-case `<slug>`.
 2. **Build a model** from the project context above.
-3. **Interview** one branch at a time, recommendation first:
+3. **Interview** one branch at a time, recommendation first. In normal mode:
    Problem → Users → Goals → Non-goals → **Feature breakdown** → Sequencing →
    Acceptance criteria per feature → Constraints → Open questions. The
    feature-breakdown branch is the most important — it births the SPEC catalog.
    Keep features small enough that each maps to one reviewable SPEC.
-4. **Draft the PRD** from
+   In roadmap-only mode, skip branches already resolved by the PRD.
+4. **Draft the PRD in normal mode only** from
    `../../skills/speckit-coach/templates/prd-template.md`; number `AC-N.*`, tag
    each Feature `(→ SPEC-00N)`, fill the §7 SPEC Catalog Crosswalk 1:1 with §3.
-   Write `docs/prd-<slug>.md`.
+   Write `docs/prd-<slug>.md`. In roadmap-only mode preserve the existing PRD
+   bytes and skip this write.
 5. **Decompose into the roadmap** from
    `../../skills/speckit-coach/templates/technical-roadmap-template.md` — one
    SPEC per Feature, with scope detailed enough to drive `/speckit-specify`,
    dependencies, priority, status `⏳ Pending`, reviewability budget. Set
-   `Source PRD` to `docs/prd-<slug>.md`. Confirm the dependency graph with the
-   user. Write `docs/ai/specs/<slug>-technical-roadmap.md`.
+   `Source PRD` to `docs/prd-<slug>.md` and `Knowledge Map` to the relative link
+   `[Canonical project knowledge](../knowledge/projects/<slug>/index.md)`.
+   Confirm the dependency graph with the user. Write
+   `docs/ai/specs/<slug>-technical-roadmap.md`.
 
    **Right-size the catalog by construction.** Use SPIDR (split along a Spike,
    Path, Interface, Data, or Rule seam) and vertical slicing so every SPEC is a
@@ -145,64 +165,45 @@ starting. High-level loop:
    `Projected reviewable LOC` field unpopulated (or note it as unavailable), add a
    short advisory note, and continue. Never read the script's exit code as a gate
    and never let an unavailable estimate become a hard stop.
-6. **Emit the roadmap-MOC home note (third artifact).** When — and only when —
-   you have just authored a fresh PRD + technical-roadmap, also write a
-   roadmap-MOC **home note** at `docs/ai/specs/<slug>-roadmap-MOC.md`: one
-   navigable map for the whole spec tree, carrying two zones. This is
-   **new-roadmaps-only** — never backfill a home note onto an existing/legacy
-   roadmap (a later spec owns retro-migration).
-
-   **6a. Derive the curated epics zone (ZERO new interview questions).** The
-   roadmap's phase/tier grouping IS the epic structure — reuse it; ask the user
-   nothing new for this (the decomposition already happened in step 5). For each
-   phase/tier scaffold one epic: an epic title (the phase name), the phase's
-   member SPEC-MOC links as relative `[]()` links, and a one-line advisory
-   **"Why:"** placeholder the author refines by hand. If the roadmap has **no
-   phase grouping** (a flat catalog), emit a single **"Specs"** epic listing all
-   specs plus a one-line advisory note to group them. The curated zone is an
-   editable scaffold; the generator never touches it.
-
-   **6b. Write from the template, then fill the INDEX.** Copy the shared template
-   so the file carries **only** the empty `GENERATED:INDEX` sentinel pair (the
-   template ships exactly that pair — not PRS or BACKLINKS — so the generator's
-   whole-zone-rewrite path fills only the INDEX). Set the home note's frontmatter
-   `up:` to a relative `[]()` link to `<slug>-technical-roadmap.md`, fill the
-   curated epics zone around the sentinels, and write
-   `docs/ai/specs/<slug>-roadmap-MOC.md` from
-   `../../skills/speckit-coach/templates/roadmap-moc-template.md`. Then invoke the
-   generator to fill the INDEX — **passing the consumer's repo root positionally**.
-   The generator's default repo root is the plugin's parent, correct in the
-   plugin-source repo but **wrong in a consumer install** (the plugin lives in the
-   plugin cache, not under the user's repo), so always pass the user's project root
-   (the directory holding `docs/` and `specs/`) explicitly by running runner
-   operation `generate-spec-index-write`.
-   The generator fills one `- [<spec_id>](../../../specs/<dir>/SPEC-MOC.md) · <status>`
-   row per gated spec, normalized-ID ascending. Do not author the sentinel bytes or
-   the INDEX rows by hand — the template carries the sentinels and the generator owns
-   the rows.
-
-   **6c. Add the reciprocal roadmap link.** Add one line to the technical-roadmap
-   linking back to the home note (a relative `[]()` link to
-   `<slug>-roadmap-MOC.md`), so the two top-level documents are mutually reachable.
-   Do **not** change any spec-MOC's `up:`, the spec-MOC template, or
-   scaffold-spec — the home note is a downward index + curated layer, leaving the
-   per-spec upward-navigation contract untouched.
-
-   **6d. Epic-count advisory (warn, never block).** If the derived scaffold yields
-   more than ~10 epics, print a single one-line advisory (e.g. "11 epics — consider
-   consolidating; >~10 strains navigability") and **still write the home note**.
-   The cap is advisory only — never a block, never a CI lint.
+   Finish every accepted edit to the PRD and roadmap now, including the
+   Knowledge Map link, and persist both. Reread the final bytes before building
+   source evidence. If either source changes after hashing, discard the pending
+   knowledge plan and recompute its hashes.
+6. **Build the canonical knowledge map and compatibility MOC.** Use the reviewed
+   roadmap grouping and rationale; ask no new questions and do not hand-author a
+   MOC. Inventory pre-existing legacy MOCs and `.specify/memory`, but do not run
+   `init` or `migrate` yet. From the finalized source bytes, build a candidate
+   matching `knowledge-candidate.schema.json`: `type: speckit-project-map`,
+   `concept_path: projects/<slug>/roadmap.md`, stable `id`, project `<slug>`,
+   non-empty `title`, `description`, and curated `body`, `state: reviewed`,
+   `reviewed: true`, and `producer.skill: speckit-prd`. Every PRD/roadmap source
+   carries its exact path, section, line evidence when available, and SHA-256.
+   Set `legacy_view: docs/ai/specs/<slug>-roadmap-MOC.md`. If no canonical map
+   exists, plan/apply `promote` with scope `projects/<slug>` **first**;
+   promotion can initialize an absent bundle. If a canonical map exists and
+   finalized PRD or roadmap bytes changed, build a reviewed same-path
+   replacement and plan/apply `supersede`; never use `rebuild` to refresh a
+   source hash. If the inventory found legacy
+   MOCs or memory, plan and apply `migrate` with `reviewed: true` and
+   `legacy_memory_reviewed: true` after promotion, and
+   require its plan to preserve the existing `projects/<slug>/roadmap.md` rather
+   than overwrite it. Then run `knowledge-health`; plan/apply `rebuild` with
+   scope `projects/<slug>` only when canonical sources are current but a
+   generated index, manifest, log, or compatibility view drifted. Every apply carries `repo_root`, the complete returned
+   `plan`, `plan_hash`, and `expected_snapshot`. A source edit or stale snapshot
+   requires a new plan and hash. Review the canonical roadmap, generated
+   indexes, and generated compatibility view. Warn, but do not block, when the
+   roadmap has more than about ten epics.
 
 7. **Verify & hand off.** §3 features, the §7 crosswalk, and the roadmap catalog
-   must agree on count, names, and IDs. Confirm the home note exists with both
-   zones (curated epics + a filled GENERATED INDEX) and that the roadmap carries
-   the reciprocal link. Report the three paths and the next step.
+   must agree on count, names, and IDs. Run `knowledge-health` and confirm the
+   canonical roadmap concept, generated indexes, and compatibility MOC are
+   current. Report all paths and the next step.
 
 ## Output contract
 
-Three committed Markdown files: the lean PRD, the technical-roadmap (carrying the
-reciprocal link to the home note), and the roadmap-MOC home note (curated epics
-zone + generator-filled GENERATED INDEX zone, `up:` linking back to the roadmap).
+Committed source artifacts plus the canonical roadmap concept, generated
+indexes, and generated roadmap-MOC compatibility view.
 
 ```text
 ## PRD & Roadmap Ready
@@ -210,6 +211,7 @@ zone + generator-filled GENERATED INDEX zone, `up:` linking back to the roadmap)
 PRD:                     docs/prd-<slug>.md
 Technical Roadmap:       docs/ai/specs/<slug>-technical-roadmap.md
 Roadmap-MOC home note:   docs/ai/specs/<slug>-roadmap-MOC.md
+Canonical knowledge map: docs/ai/knowledge/projects/<slug>/roadmap.md
 SPEC catalog:            SPEC-001 … SPEC-00N (one per PRD Feature)
 
 Next:
@@ -224,9 +226,10 @@ $speckit-scaffold-spec SPEC-001       # prepare the first spec for autopilot
 - Not SDD methodology coaching — that is `$speckit-coach`.
 - Not autonomous. See the HITL guard.
 
-If the user already has a PRD and only needs the roadmap, hand off to
-`$speckit-coach help me create a technical roadmap` (PRD-in, roadmap-out). This
-skill is for when the PRD does not exist yet.
+If the user already has a reviewed PRD and only needs the roadmap, use
+`$speckit-prd --roadmap-only <existing-prd-path>`. The coach may explain
+decomposition, but this skill owns roadmap mutation and the coherent OKF/MOC
+lifecycle.
 
 ## Codex-specific notes
 
@@ -254,12 +257,22 @@ User: *"$speckit-prd — write a PRD for saved searches with email alerts."*
 4. Draft `docs/prd-saved-searches.md` (Features §3, AC-1.* … AC-4.*, §7 crosswalk
    to SPEC-001 … SPEC-004).
 5. Decompose into `docs/ai/specs/saved-searches-technical-roadmap.md`; confirm the
-   dependency graph.
-6. Emit `docs/ai/specs/saved-searches-roadmap-MOC.md` (curated epics zone from the
-   roadmap's phases + a generator-filled GENERATED INDEX); add the reciprocal link.
-7. Report all three paths; recommend `$speckit-scaffold-spec SPEC-001`.
+   dependency graph and finalize its canonical knowledge link.
+6. Reread and hash the finalized PRD and roadmap, promote
+   `docs/ai/knowledge/projects/saved-searches/roadmap.md` first, migrate any
+   pre-existing legacy MOCs or memory without replacing it, then rebuild its
+   indexes and `docs/ai/specs/saved-searches-roadmap-MOC.md` compatibility view.
+7. Report the source and knowledge paths; recommend `$speckit-scaffold-spec SPEC-001`.
 
-### Example 2 — refusing a non-interactive run
+### Example 2 — existing PRD to roadmap only
+
+User: *"$speckit-prd --roadmap-only docs/prd-saved-searches.md"*
+
+Read and preserve the reviewed PRD, interview only on unresolved catalog
+decisions, write the technical roadmap, then promote or same-path supersede the
+canonical project map and regenerate projections through the runner.
+
+### Example 3 — refusing a non-interactive run
 
 A background `codex exec` job invokes this skill. The HITL probe cannot confirm a
 live user. Draft a best-effort PRD strictly from supplied material, mark every
@@ -281,6 +294,6 @@ interactive pass before it is roadmap-ready.
   taxonomy, heuristics, stop conditions, decomposition algorithm.
 - `../../skills/speckit-coach/templates/prd-template.md` — lean PRD template.
 - `../../skills/speckit-coach/templates/technical-roadmap-template.md` — roadmap / SPEC-catalog template.
-- `../../skills/speckit-coach/templates/roadmap-moc-template.md` — roadmap-MOC home-note template (carries the empty GENERATED INDEX sentinel pair the generator fills).
-- Runner operation `generate-spec-index-write` — fills the home note's GENERATED INDEX zone (invoke with the consumer repo root positionally).
+- `../../skills/speckit-coach/templates/roadmap-moc-template.md` — generated legacy MOC compatibility-view template.
+- Runner operations `knowledge-update-plan` and `knowledge-update-apply` — promote the canonical roadmap concept and rebuild projections.
 - `../../skills/speckit-coach/references/slicing-heuristics.md` — single source of truth for SPIDR + INVEST + vertical-slicing and the ~400 reviewable-LOC ceiling (summarized inline above; invoked via runner operation `estimate-spec-size`).

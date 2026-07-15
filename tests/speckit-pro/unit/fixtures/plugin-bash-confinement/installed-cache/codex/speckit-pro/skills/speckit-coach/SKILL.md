@@ -1,6 +1,6 @@
 ---
 name: speckit-coach
-description: "SpecKit SDD coach. Invoke to explain, guide, walk through, or help troubleshoot Spec-Driven Development: getting started with SDD, which checklist domains to pick (api, security, observability, data-integrity, resilience), a failing simplicity gate or gate-validator rejecting acceptance criteria, writing testable acceptance criteria, the consensus protocol and phase gates, the difference between specify plan and specify tasks, what speckit commands do, how presets like tdd-mandate change the workflow, where grill-me or clarify fit in the SDD process, decomposing a feature into multiple specs or creating a technical roadmap, the roadmap-MOC home note / Map of Content two-zone structure, repairing a speckit-pro project, and browsing, installing, or removing SpecKit extensions, presets, hooks, and catalog entries (verify, doctor, archive, retrospective, jira). Not for running autopilot, conducting the grill-me interview, or unrelated tasks (linting, MCP tools, PR review, git status, build errors)."
+description: "SpecKit SDD coach. Invoke to explain, guide, or troubleshoot Spec-Driven Development: checklist domains (api, security, observability, data-integrity, resilience), simplicity gates, testable acceptance criteria, consensus and phase gates, specify plan versus tasks, presets, grill-me and clarify, feature decomposition, technical-roadmap concepts, canonical OKF maps, generated MOC views, durable project knowledge, project repair, and SpecKit extensions or hooks (verify, doctor, archive, retrospective, jira). The coach explains and routes artifact mutations to their owning skills. Not for running autopilot, conducting the grill-me interview, or unrelated linting, MCP, PR, git, or build tasks."
 ---
 
 # SpecKit Coach & Enhancement Skill
@@ -27,6 +27,19 @@ After installation, Codex exposes the bundled skill entrypoints `$speckit-coach`
 > **Codex implicit-trigger limitation (Q&A queries):** Layer 2 trigger evals show that Codex auto-invokes this coach reliably on **problem-statement** queries ("the simplicity gate is failing", "which checklist domains should I pick", "gate validator is rejecting my acceptance criteria") and **explicit invocations** ("$speckit-coach", "run the coach"), but **does not consistently auto-fire on pure Q&A phrasings** ("explain X", "walk me through Y", "what's the difference between X and Y", "where does X fit"). Codex typically responds to those by *mentioning* `$speckit-coach` in the answer rather than auto-invoking it. This is a Codex selector behavior (skills are biased toward action/imperative intents) and is not solvable by tuning this description alone — Claude Code uses the `argument-hint` YAML field for these example phrasings, which Codex does not yet support ([openai/codex#10585](https://github.com/openai/codex/issues/10585)). **Recommendation for Codex users:** when asking a methodology question, prefix it with `$speckit-coach` to force-invoke, or phrase the question as a problem you're stuck on ("I'm stuck understanding the consensus protocol" rather than "explain the consensus protocol"). Measured pass rates: Codex 15/23 (65%) vs Claude 19/23 (83%) on the same eval set.
 
 ## What This Skill Does
+
+### Durable Knowledge Coaching
+
+Use [the knowledge lifecycle reference](references/knowledge-lifecycle.md)
+for questions about OKF, project memory, knowledge health, candidates,
+promotion, MOC migration, or stale concepts. When inspecting a project, run
+`knowledge-health` read-only and explain its diagnostics. Teach bounded
+`knowledge-search`, source verification, use receipts, reviewed promotion, and
+archive distillation. Never advise hand-editing generated indexes or MOC
+compatibility views, and never conflate workflow state with reusable knowledge.
+The coach explains and routes mutation workflows; it does not directly create
+or update PRDs, technical roadmaps, workflow files, spec directories, canonical
+concepts, or generated views.
 
 ### Dynamic Project Awareness
 
@@ -75,7 +88,7 @@ When the developer asks about any SpecKit command, provide coaching from [the co
 | "install codex agents", "subagents missing", "repair codex install", "refresh codex agents" | Route to the SpecKit Pro Codex `install` skill. Explain that `speckit-autopilot` and `speckit-coach` still own skill-local `agents/openai.yaml` metadata sidecars, but real custom agents register from `.codex/agents/*.toml` or `~/.codex/agents/*.toml`, so the install skill copies the bundled `codex-agents/*.toml` templates into place and the user must restart Codex afterward. |
 | "run autopilot", "execute workflow", "autonomous" | Guide to `$speckit-autopilot` — prerequisites, workflow file setup, and autonomous execution. See [autopilot guide](references/autopilot-guide.md) |
 | "check status", "where am I", "workflow progress", "what's next", "roadmap", "project health" | Guide to `$speckit-status` for technical roadmap progress (completed, ready, blocked specs), or `$speckit-doctor` for project health diagnostics (`$speckit-doctor` requires the doctor extension — install via `specify extension add doctor`) |
-| "roadmap map", "home note", "Map of Content", "roadmap-MOC", "navigation", "how is the home note structured", "curated vs generated zone", "two-zone", "can I edit the INDEX", "cap epics" | Explain the roadmap-MOC home note's two-zone structure from [roadmap-MOC guide](references/roadmap-moc-guide.md) — the curated epics zone is hand-authored/editable, the GENERATED INDEX zone is machine-regenerated by runner operation `generate-spec-index-write` and never hand-edited, and the cap-epics-below-~10 guardrail is advisory (warns, never blocks) |
+| "roadmap map", "home note", "Map of Content", "roadmap-MOC", "navigation", "can I edit the MOC", "cap epics" | Explain the canonical OKF roadmap concept and generated MOC compatibility view from [roadmap-MOC guide](references/roadmap-moc-guide.md). Curated grouping lives in reviewed knowledge; all indexes and legacy MOC zones are generated through knowledge plan/apply. The about-ten-epic guardrail remains advisory. |
 | "fix up this speckit-pro project", "repair existing SpecKit project", "make template edits durable", "template customizations got overwritten", "upgrade-safe templates", "reviewability preset repair" | Run the Project Fixup workflow below. Audit `.specify`, migrate reviewability-related direct core template edits into a project-local preset, verify `specify preset resolve`, preserve host PR templates, and restore core templates only from a reviewed source. |
 | "configure autopilot", "settings", "consensus mode" | Guide to `.claude/speckit-pro.local.md` settings (project-relative path, works on both Claude Code and Codex) — consensus mode, auto-commit, gate failure behavior. See [autopilot guide](references/autopilot-guide.md) |
 | "how does consensus work", "clarify automation" | Explain the 3-agent consensus protocol — codebase-analyst, spec-context-analyst, domain-researcher. See [autopilot guide](references/autopilot-guide.md) |
@@ -89,7 +102,7 @@ When the developer asks about any SpecKit command, provide coaching from [the co
 | "what extensions are available", "search extensions", "find an extension for X", "browse extensions", "list community extensions" | Run **Play 1 — Discovery**: `specify extension search [keyword]` (fallback to `gh api` against `catalog.community.json`, then WebFetch the raw URL). Render results grouped by category. See [presets & extensions guide](references/presets-extensions-guide.md) — "Browsing the live catalog". |
 | "tell me about the X extension", "info on X extension", "what does X extension do", "details on X extension" | Run **Play 2 — Deep dive**: `specify extension info <id>`. Fallback: fetch the extension's own `extension.yml` from its repo via `gh api` or WebFetch and read out `provides.commands`, `hooks`, `requires.speckit_version`, `tags`. Cross-reference against `specify --version`. |
 | "install X extension", "add the X extension", "remove X extension", "disable an extension", "enable an extension", "configure an extension" | Run **Play 3 — Install / configure / remove**. Always confirm with the user before mutating. Use `specify extension add/remove/enable/disable/set-priority`. **Every install / configure / hook-wiring response MUST end with a two-line closing block, verbatim** — do not paraphrase, do not skip, even if the rest of the response is long: <br>`**No plugin update or restart needed** — the autopilot re-reads `.specify/extensions.yml` at every phase boundary, so any hook you wire here fires on the next autopilot run. No `claude` / `codex` restart, no `/plugin marketplace update`, no session reload.`<br>`**Two config files to know:** `.specify/extensions/<id>/<id>-config.yml` (shared, commit to git) and `.specify/extensions/<id>/<id>-config.local.yml` (personal, gitignored).`<br>If the extension should fire automatically at a phase boundary, register it in `.specify/extensions.yml`. |
-| "archive extension", "Archive Sweep", "archive cleanup", "spec graveyard", "remove merged specs", "provenance" | Explain the Racecraft archive extension path: install or vendor `racecraft-lab/spec-kit-archive` from a pinned tag/commit, run Archive Sweep at autopilot startup, exclude the current target spec, keep unsafe checkouts dry-run-only, and clean active `specs/**` only after archive success plus recovery commands. |
+| "archive extension", "Archive Sweep", "archive cleanup", "spec graveyard", "remove merged specs", "provenance" | Explain the Racecraft archive extension path: install or vendor `racecraft-lab/spec-kit-archive` from a pinned tag/commit, run Archive Sweep at autopilot startup, exclude the current target spec, keep unsafe checkouts dry-run-only, and remove only other active artifacts after archive success while retaining/regenerating the archived `SPEC-MOC.md` stub. |
 | "hook events", "after_implement", "before_specify" | Explain the 8 hook events and how extensions use them. See [presets & extensions guide](references/presets-extensions-guide.md) |
 | "template resolution", "which template", "preset resolve" | Explain 4-tier resolution: overrides > presets > extensions > core. See [presets & extensions guide](references/presets-extensions-guide.md) |
 | "catalog", "custom catalog", "extension catalog", "preset catalog" | Explain multi-catalog stacks, custom catalogs, env vars. See [presets & extensions guide](references/presets-extensions-guide.md) |
@@ -109,11 +122,11 @@ When the developer asks about any SpecKit command, provide coaching from [the co
 | "are my tasks good", "review tasks" | Check task quality: story organization, granularity, traceability, parallelism |
 | **Enhancement Commands (speckit-pro plugin)** | |
 | "scope this idea", "pre-spec scoping", "interview me on this brief", "walk every branch of the design tree", "produce a Design Concept doc", "before /speckit-specify", "before I write the spec" | Guide to `$grill-me` — relentless one-question-at-a-time interview that produces a Design Concept doc (Goals, Non-goals, Q&A log, Open Questions). Strictly human-in-the-loop. The output enriches `$speckit-scaffold-spec`'s workflow file phase prompts. Use it standalone for raw briefs / transcripts, or rely on `$speckit-scaffold-spec` to invoke it automatically per spec. |
-| "write a PRD", "create a product requirements document", "draft a PRD and roadmap", "shape this idea into a PRD", "turn this brief into a PRD", "plan a product", "decompose an idea into a SPEC catalog", "before I write specs" | Guide to `$speckit-prd` — a collaborative, one-question-at-a-time interview that authors a lean PRD **and** the technical roadmap (SPEC catalog) from a raw idea. This is the front door of the chain (PRD → roadmap → scaffold-spec → autopilot). Use it when the PRD does not exist yet; if a PRD already exists and you only need decomposition, use the technical-roadmap path below. |
-| "technical roadmap", "decompose feature", "multi-spec", "too large for one spec" | Guide technical roadmap creation — decompose large features into sequential specs. See Enhancement section below. **Tip:** if no PRD exists yet, author it and the roadmap together with `$speckit-prd`. To sharpen an existing PRD before decomposing, run `$grill-me docs/prd.md` first to lock in the scope envelope. |
-| "workflow tracking", "track phases", "workflow file" | Guide workflow file creation — per-spec 7-phase tracking. See Enhancement section below |
+| "write a PRD", "create a product requirements document", "draft a PRD and roadmap", "shape this idea into a PRD", "turn this brief into a PRD", "plan a product", "decompose an idea into a SPEC catalog", "before I write specs" | Guide to `$speckit-prd` — a collaborative, one-question-at-a-time interview that authors a lean PRD **and** the technical roadmap (SPEC catalog) from a raw idea. This is the front door of the chain (PRD → roadmap → scaffold-spec → autopilot). |
+| "technical roadmap", "decompose feature", "multi-spec", "too large for one spec" | Explain decomposition, then route mutation to `$speckit-prd`. Use normal mode when no PRD exists, or `$speckit-prd --roadmap-only <existing-prd-path>` when a reviewed PRD already exists. The PRD skill owns the roadmap, canonical OKF map, and generated MOC. |
+| "workflow tracking", "track phases", "workflow file" | Explain per-spec tracking, then route creation to `$speckit-scaffold-spec <SPEC-ID>`; scaffold owns the worktree, Design Concept, workflow, canonical spec map, and generated `SPEC-MOC.md`. |
 | "recommend checklists", "which checklists", "what domains to check" | Run spec-driven domain recommendation — analyze spec to suggest enriched checklist prompts. See Enhancement section below |
-| "decompose", "create spec directories", "break into specs" | Guide spec decomposition — generate individual spec directories from technical roadmap. See Enhancement section below |
+| "decompose", "create spec directories", "break into specs" | Explain the sequence, then route roadmap authoring to `$speckit-prd` and each spec/workflow setup to `$speckit-scaffold-spec <SPEC-ID>`. The coach does not create directories or run `/speckit-specify` directly. |
 | "setup spec", "create worktree", "prepare for autopilot" | Guide to `$speckit-scaffold-spec` — creates worktree, branch, workflow file |
 | "resolve PR", "fix review comments", "address copilot comments" | Guide to `$speckit-resolve-pr` — addresses review comments, fixes code, resolves threads |
 | **Team Workflow** | |
@@ -162,18 +175,23 @@ CLI upgrades.
    preset path, resolved templates, core-template restore status, PR template
    status, and any manual follow-up.
 
-#### `/speckit technical-roadmap` — Multi-Spec Project Decomposition
+#### Technical Roadmap Coaching — Multi-Spec Project Decomposition
 
-When a feature is too large for a single spec, create a **technical roadmap** that decomposes it into discrete, sequential specifications with dependency graphs.
+When a feature is too large for a single spec, explain how a **technical
+roadmap** decomposes it into discrete, sequential specifications with dependency
+graphs. Route the actual write to `$speckit-prd`: normal mode from a raw idea,
+or `--roadmap-only <existing-prd-path>` from an accepted PRD.
 
 **When to use:** The feature involves multiple tiers (e.g., backend + frontend), multiple independent deliverables, or will take more than one `/speckit-specify` → `/speckit-implement` cycle.
 
-**How to create the technical roadmap:**
+**Mutation handoff:**
 
-1. Copy the [technical roadmap template](templates/technical-roadmap-template.md) to `docs/ai/specs/<feature-name>-technical-roadmap.md`
-2. Analyze the feature using the decomposition algorithm below
-3. Populate each spec section with scope descriptions detailed enough to drive `/speckit-specify`
-4. Review the dependency graph with the developer before proceeding
+1. Explain the decomposition algorithm below without writing files.
+2. If no PRD exists, invoke `$speckit-prd <idea-or-brief>`.
+3. If a reviewed PRD exists, invoke
+   `$speckit-prd --roadmap-only <existing-prd-path>`.
+4. Let the PRD skill populate the roadmap, reviewed canonical project map, and
+   generated compatibility view, then review the dependency graph with the user.
 
 **Step 1: Analyze the Feature Request**
 
@@ -238,19 +256,21 @@ Alternatives considered: [Brief list of alternatives that were rejected and why.
 - Each spec gets its own `specs/<number>-<name>/` directory
 - Scope descriptions must be detailed enough to directly drive `/speckit-specify`
 
-#### `/speckit workflow` — Per-Spec Phase Tracking
+#### Workflow Coaching — Per-Spec Phase Tracking
 
 Create workflow tracking files that document the progress of each spec through all 7 SpecKit phases with human review gates.
 
 **When to use:** After creating a technical roadmap or when starting any spec that benefits from phase-by-phase documentation.
 
-**How to create:**
+**Mutation handoff:**
 
-1. Copy the [workflow template](templates/workflow-template.md) to `docs/ai/specs/SPEC-<ID>-workflow.md`
-2. Replace placeholders (SPEC_ID, SPEC_NAME, BRANCH_NAME)
-3. Update the workflow status table as you complete each phase
-4. Document key decisions, artifacts produced, and gate checkpoint results
-5. Capture lessons learned after implementation
+1. Explain the seven phases and human review gates.
+2. Invoke `$speckit-scaffold-spec <SPEC-ID>` to create the worktree, run the
+   interactive Design Concept interview, populate
+   `docs/ai/specs/.process/<SPEC-ID>-workflow.md`, and create the canonical spec
+   map plus generated `SPEC-MOC.md`.
+3. Use `$speckit-status` for read-only progress and `$speckit-autopilot` for
+   execution.
 
 #### Archive Extension And Archive Sweep
 
@@ -268,10 +288,12 @@ provenance, coach the user toward the Racecraft archive extension:
    autopilot run after its PR has merged.
 5. Keep dirty worktrees or unsafe branches dry-run-only or stopped. Do not mix
    prior-spec cleanup into an unrelated feature branch.
-6. Remove active `specs/**` folders only as an explicit reviewed forward change
-   after archive success, merge/tree references, recovery commands, and
-   `safeToApplyCleanup=true` are recorded. Never rewrite history and never rely
-   on post-merge CI mutating `main`.
+6. Remove a completed spec's other active artifacts only as an explicit
+   reviewed forward change after archive success, merge/tree references,
+   recovery commands, and `safeToApplyCleanup=true` are recorded. Retain or
+   regenerate its archived `SPEC-MOC.md` compatibility stub; removing that stub
+   is a separate reviewed deprecation. Never rewrite history and never rely on
+   post-merge CI mutating `main`.
 
 #### `/speckit recommend-checklists` — Spec-Driven Domain Recommendations
 
@@ -289,14 +311,17 @@ Analyze the current spec and plan to recommend the most impactful checklist doma
 
 See [Checklist Domains Guide](references/checklist-domains-guide.md) for the full signal extraction algorithm and enriched prompt patterns.
 
-#### `/speckit decompose` — Break Technical Roadmap into Spec Directories
+#### Decomposition Handoff — Roadmap to Spec Worktrees
 
-After creating a technical roadmap, generate the individual spec directories:
+After creating a technical roadmap, route each accepted entry through the
+scaffold lifecycle:
 
 1. Read the technical roadmap to identify all specs
-2. For each spec, create `specs/<number>-<name>/` directory
-3. Run `/speckit-specify` for each spec using the technical roadmap's scope description
-4. Update the technical roadmap's progress tracking table
+2. Select the next unblocked SPEC with `$speckit-status`
+3. Invoke `$speckit-scaffold-spec <SPEC-ID>`; do not create spec directories or
+   workflow files directly from the coach
+4. Let scaffold update the roadmap through reviewed knowledge lifecycle actions,
+   then use autopilot for the SpecKit phases
 
 ### Autonomous Execution
 
@@ -369,7 +394,8 @@ specs/<number>-<feature-name>/
 - [Best Practices](references/best-practices.md) — Lessons learned, anti-patterns, tips
 - [Presets & Extensions Guide](references/presets-extensions-guide.md) — Presets, extensions, hooks, catalogs, custom presets
 - [Autopilot Guide](references/autopilot-guide.md) — Autonomous execution, consensus protocol, configuration
-- [Roadmap-MOC Guide](references/roadmap-moc-guide.md) — The home note's curated-vs-generated two-zone structure and the advisory epic cap
+- [Knowledge Lifecycle](references/knowledge-lifecycle.md) — OKF bundle, trust, runner operations, receipts, candidates, promotion, and archive rules
+- [Roadmap-MOC Guide](references/roadmap-moc-guide.md) — Canonical OKF roadmap maps and generated legacy MOC compatibility views
 - [PRD Template](templates/prd-template.md) — Lean, universal PRD; author it with `$speckit-prd`
 - [Technical Roadmap Template](templates/technical-roadmap-template.md) — Multi-spec project decomposition (SPEC catalog derived from the PRD)
 - [Workflow Template](templates/workflow-template.md) — Per-spec 7-phase tracking

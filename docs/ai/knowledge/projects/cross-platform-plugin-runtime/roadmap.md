@@ -1,0 +1,127 @@
+---
+type: "speckit-project-map"
+title: "Roadmap - Map of Content"
+description: "Durable project map for Roadmap - Map of Content."
+resource: "docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md"
+tags: ["project-map","speckit"]
+timestamp: "2026-07-14T12:00:00Z"
+x-speckit-id: "cross-platform-plugin-runtime"
+x-speckit-project: "cross-platform-plugin-runtime"
+x-speckit-authority: "reviewed"
+x-speckit-status: "active"
+x-speckit-confidence: "high"
+x-speckit-sensitivity: "internal"
+x-speckit-legacy-status: "XPLAT-001 through XPLAT-010 complete/archived; public native-platform claims held by XPLAT-008 UAT matrix"
+x-speckit-sources: ["docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md|1d610d11aee3004d4509cb5e3e25405018bfc74769c1f90efe6e3672b118fce5"]
+x-speckit-migration-sources: ["docs/ai/specs/cross-platform-plugin-runtime-roadmap-MOC.md|af818d1b14903357d6a5a88aebda946d4fe50edf0e29fc748a7d625947ba623f"]
+x-speckit-producer-skill: "knowledge-migration"
+x-speckit-producer-agent: "speckit-pro-runner"
+x-speckit-legacy-view: "docs/ai/specs/cross-platform-plugin-runtime-roadmap-MOC.md"
+x-speckit-legacy-up: "[Cross-Platform Plugin Runtime Roadmap](cross-platform-plugin-runtime-technical-roadmap.md)"
+x-speckit-legacy-related: ["[Cross-Platform Plugin Runtime PRD](../../prd-cross-platform-plugin-runtime.md)"]
+---
+# Roadmap - Map of Content
+
+Source of truth: `docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md`.
+
+## Curated map
+
+Navigation map for the cross-platform plugin runtime release-blocker lane.
+
+## Epics (curated)
+
+### Runtime Discovery
+
+Why: Stop guessing whether Windows support is documentation, environment setup,
+or architecture work. Inventory the real active surfaces before choosing a
+replacement runtime.
+
+- XPLAT-001 Runtime Inventory and Constraints (completed and archived after PR
+  #263; recovery report:
+  `.specify/memory/archive-reports/2026-06-29-completed-active-specs-post-merge-hygiene.md`)
+
+### Runtime Contract
+
+Why: Evaluate implementation options before building. The selected runtime must
+be a supportable public contract, not an implementation accident.
+
+- XPLAT-002 Runtime Implementation Options and Contract Decision (completed and
+  archived after PR #266; recovery report:
+  `.specify/memory/archive-reports/2026-06-29-completed-active-specs-post-merge-hygiene.md`)
+
+### Consumer Trust
+
+Why: A new runtime changes the adoption risk profile. Consumers need a clear
+supply-chain story before the plugin is marketed as public-ready.
+
+- XPLAT-003 Supply-Chain Security and Consumer Trust Model (completed and
+  archived after PR #267; recovery report:
+  `.specify/memory/archive-reports/2026-06-29-xplat-003-post-merge-hygiene.md`)
+
+### Runner Foundation
+
+Why: Create one structured helper invocation path before porting behavior. The
+runner owns path handling, JSON envelopes, subprocess safety, platform preflight,
+and first-release security controls.
+
+- XPLAT-004 Cross-Platform Runner Foundation (completed and archived after PR
+  #274; recovery report:
+  `.specify/memory/archive-reports/2026-07-01-xplat-004-post-merge-hygiene.md`)
+
+### Helper Migration
+
+Why: Port behavior in reviewable batches, proving parity before any active Claude
+or Codex surface changes.
+
+- XPLAT-005 Read-Only Helper Port (completed and archived after PR #276;
+  recovery report:
+  `.specify/memory/archive-reports/2026-07-03-xplat-005-post-merge-hygiene.md`)
+- XPLAT-006 Mutation, Install, and PR-Emission Helper Port (completed and
+  archived after PR #281; recovery report:
+  `.specify/memory/archive-reports/2026-07-04-xplat-006-post-merge-hygiene.md`)
+
+### Python Gate Migration
+
+Why: Make the repository's active helpers, tests, evals, payload builders,
+install-verification scripts, and release-readiness gates Python-authoritative
+before any public cutover claim.
+
+- XPLAT-007 Python Tooling and Release-Gate Migration (completed and archived
+  after PRs #284-#287; recovery report:
+  `.specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md`)
+
+### Public Release Gate
+
+Why: Public release needs proof that the installed plugin works on native
+Windows, macOS, and Linux without Unix-shell workarounds; that Claude Code and
+Codex installs include every expected skill, bundled agent, hook, generated
+payload, runner source or launcher file, and active Python test/eval gate; that
+update and safe repair paths work; and that the published security claims match
+the implemented controls.
+
+- XPLAT-008 Claude/Codex Cutover and Universal Install Release Gate (completed
+  and archived after PRs #289-#292; recovery report:
+  `.specify/memory/archive-reports/2026-07-07-xplat-008-post-merge-hygiene.md`;
+  preserved release/UAT evidence:
+  `docs/ai/specs/.process/XPLAT-008-release-readiness.md` and
+  `docs/ai/specs/.process/XPLAT-008-uat-matrix.md`)
+
+### Bash Eradication Backstop
+
+Why: XPLAT-008 removed Bash scripts from generated/installed payloads, but a
+follow-up audit found remaining source plugin Bash scripts, stale active Bash
+guidance, and repo-wide shell harnesses. These specs turn the stricter
+"Bash only in CI/CD workflow dispatch" policy into scaffoldable cleanup work.
+
+- XPLAT-009 Plugin Source and Payload Bash Eradication (completed and archived
+  after PR #297 shipped in speckit-pro 2.18.0; recovery report:
+  `.specify/memory/archive-reports/2026-07-08-xplat-009-post-merge-hygiene.md`;
+  preserved guard/proof evidence: `docs/ai/specs/.process/XPLAT-009-*` and
+  contract schemas under
+  `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/contracts/`)
+- XPLAT-010 Repository Bash Confinement and CI Dispatch Guard (completed and
+  archived after PRs #311-#328; recovery report:
+  `.specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md`;
+  preserved process evidence: `docs/ai/specs/.process/XPLAT-010-*`; purpose-based
+  repository-confinement and planner fixtures under
+  `tests/speckit-pro/unit/fixtures/`; T108/T117 hosted evidence complete)

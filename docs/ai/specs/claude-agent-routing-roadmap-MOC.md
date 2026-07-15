@@ -1,11 +1,16 @@
 ---
 up: "[Claude Code Agent Model Routing and Graceful Fallback Implementation Roadmap](claude-agent-routing-technical-roadmap.md)"
-related:
-  - "[Claude Code Agent Model Routing and Graceful Fallback PRD](../../prd-claude-agent-routing.md)"
+related: ["[Claude Code Agent Model Routing and Graceful Fallback PRD](../../prd-claude-agent-routing.md)"]
 status: "Draft; CAR-001 ready to scaffold"
-rank:
+rank: ""
 spec_id: "claude-agent-routing"
 structureVersion: 1
+type: "speckit-legacy-project-map"
+title: "Claude Code Agent Model Routing and Graceful Fallback - Map of Content"
+description: "Generated compatibility view of the canonical OKF map."
+resource: "docs/ai/knowledge/projects/claude-agent-routing/roadmap.md"
+x-speckit-authority: "generated-compatibility"
+x-speckit-generated-from: "docs/ai/knowledge/projects/claude-agent-routing/roadmap.md"
 ---
 
 # Claude Code Agent Model Routing and Graceful Fallback - Map of Content

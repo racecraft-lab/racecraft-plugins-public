@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft-lab/racecraft-plugins-public/knowledge-update-plan.schema.json",
+  "title": "SpecKit Pro OKF knowledge update plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "plan_version",
+    "profile",
+    "action",
+    "scope",
+    "request",
+    "expected_snapshot",
+    "resulting_snapshot",
+    "operation_count",
+    "operations",
+    "warnings",
+    "plan_hash"
+  ],
+  "properties": {
+    "plan_version": { "const": "1.0" },
+    "profile": { "const": "speckit-okf/1" },
+    "action": {
+      "enum": ["init", "migrate", "rebuild", "promote", "supersede", "archive"]
+    },
+    "scope": { "type": "string", "minLength": 1 },
+    "request": { "type": "object" },
+    "expected_snapshot": { "$ref": "#/$defs/snapshot" },
+    "resulting_snapshot": { "$ref": "#/$defs/snapshot" },
+    "operation_count": { "type": "integer", "minimum": 0 },
+    "operations": {
+      "type": "array",
+      "maxItems": 256,
+      "items": { "$ref": "#/$defs/operation" }
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "plan_hash": { "$ref": "#/$defs/snapshot" }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "snapshot": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation_id",
+        "kind",
+        "target",
+        "prior_sha256",
+        "content_sha256",
+        "content"
+      ],
+      "properties": {
+        "operation_id": { "type": "string", "minLength": 1 },
+        "kind": { "const": "write_file" },
+        "target": { "type": "string", "minLength": 1 },
+        "prior_sha256": {
+          "oneOf": [
+            { "$ref": "#/$defs/digest" },
+            { "type": "null" }
+          ]
+        },
+        "content_sha256": { "$ref": "#/$defs/digest" },
+        "content": { "type": "string" }
+      }
+    }
+  }
+}

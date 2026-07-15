@@ -71,21 +71,23 @@ before starting a new spec.
 
 ### 4. Technical Roadmap Exists (Recommended)
 
-For multi-spec projects, create a technical roadmap first:
+For multi-spec projects, create a technical roadmap through the PRD lifecycle:
 
 ```text
-/speckit-pro:speckit-coach help me create a technical roadmap
+/speckit-pro:speckit-prd <idea-or-brief>
+# Or, when a reviewed PRD already exists:
+/speckit-pro:speckit-prd --roadmap-only docs/prd-<slug>.md
 ```
 
-The technical roadmap provides scope descriptions that drive the
-Specify phase.
+The PRD skill writes the roadmap, canonical OKF project map, and generated MOC.
+The roadmap provides scope descriptions that drive the Specify phase.
 
 ### 5. Workflow File Populated
 
-Copy the workflow template and fill in the prompts:
+Scaffold the selected roadmap entry; do not copy the workflow template directly:
 
 ```text
-cp skills/speckit-coach/templates/workflow-template.md docs/ai/specs/SPEC-XXX-workflow.md
+/speckit-pro:speckit-scaffold-spec SPEC-XXX
 ```
 
 **Critical:** The workflow file must have:
@@ -447,10 +449,10 @@ The workflow file persists all state. To resume from any point:
 /speckit-pro:speckit-status
 
 # 2. Look at the workflow file for the last completed phase
-search docs/ai/specs/SPEC-XXX-workflow.md for phase status markers
+search docs/ai/specs/.process/SPEC-XXX-workflow.md for phase status markers
 
 # 3. Resume from the next pending phase
-/speckit-pro:speckit-autopilot docs/ai/specs/SPEC-XXX-workflow.md --from-phase <next>
+/speckit-pro:speckit-autopilot docs/ai/specs/.process/SPEC-XXX-workflow.md --from-phase <next>
 ```
 
 **Safe to re-run:** Phases are idempotent — re-running a
@@ -472,12 +474,13 @@ specify init --integration claude
 # Create constitution (if not already)
 /speckit-constitution
 
-# Create technical roadmap (for multi-spec projects)
-/speckit-pro:speckit-coach help me create a technical roadmap
+# Create PRD + technical roadmap (for multi-spec projects)
+/speckit-pro:speckit-prd <idea-or-brief>
+# Existing PRD:
+/speckit-pro:speckit-prd --roadmap-only docs/prd-<slug>.md
 
-# Create and populate workflow file
-cp skills/speckit-coach/templates/workflow-template.md docs/ai/specs/SPEC-XXX-workflow.md
-# Edit the workflow file — fill in ALL prompts with project-specific details
+# Create and populate the workflow plus canonical spec map
+/speckit-pro:speckit-scaffold-spec SPEC-XXX
 ```
 
 ### 2. Configure (Optional)
@@ -492,7 +495,7 @@ settings.
 claude --dangerously-skip-permissions
 
 # Launch autopilot
-/speckit-pro:speckit-autopilot docs/ai/specs/SPEC-XXX-workflow.md
+/speckit-pro:speckit-autopilot docs/ai/specs/.process/SPEC-XXX-workflow.md
 ```
 
 ### 4. Monitor

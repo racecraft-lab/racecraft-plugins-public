@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft-lab/racecraft-plugins-public/knowledge-use-receipt.schema.json",
+  "title": "SpecKit Pro knowledge use receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "receipt_version",
+    "snapshot_id",
+    "query",
+    "selected_concepts",
+    "verified_sources",
+    "producer",
+    "purpose",
+    "result"
+  ],
+  "properties": {
+    "receipt_version": { "const": "1.0" },
+    "snapshot_id": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "query": { "type": "string" },
+    "selected_concepts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "id", "sha256"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "id": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "verified_sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["skill"],
+      "properties": {
+        "skill": { "type": "string", "minLength": 1 },
+        "agent": { "type": "string", "minLength": 1 }
+      }
+    },
+    "purpose": { "type": "string", "minLength": 1 },
+    "result": { "type": "string", "minLength": 1 }
+  }
+}

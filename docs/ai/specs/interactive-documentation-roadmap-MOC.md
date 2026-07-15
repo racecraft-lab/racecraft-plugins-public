@@ -1,12 +1,16 @@
 ---
 up: "[Interactive Documentation Roadmap](interactive-documentation-technical-roadmap.md)"
-related:
-  - "[PRD](../../prd-interactive-documentation.md)"
-  - "[Traceability](../../traceability-interactive-documentation.md)"
+related: ["[PRD](../../prd-interactive-documentation.md)","[Traceability](../../traceability-interactive-documentation.md)"]
 status: "DOC-001 through DOC-011 plus DOC-013 and DOC-014 archived; DOC-012 and DOC-015 through DOC-021 pending"
 rank: 1
 spec_id: "interactive-documentation"
 structureVersion: 1
+type: "speckit-legacy-project-map"
+title: "Interactive Documentation Roadmap - Map of Content"
+description: "Generated compatibility view of the canonical OKF map."
+resource: "docs/ai/knowledge/projects/interactive-documentation/roadmap.md"
+x-speckit-authority: "generated-compatibility"
+x-speckit-generated-from: "docs/ai/knowledge/projects/interactive-documentation/roadmap.md"
 ---
 
 # Interactive Documentation Roadmap - Map of Content

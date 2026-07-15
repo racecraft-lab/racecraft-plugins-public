@@ -7,6 +7,12 @@ from typing import Any
 
 from ..envelope import diagnostic, response
 from .install import run_install_helper
+from .knowledge import (
+    run_knowledge_health,
+    run_knowledge_search,
+    run_knowledge_update_apply,
+    run_knowledge_update_plan,
+)
 from .mutation import empty_mutation, run_mutation_helper, run_spec_index_write
 from .pr_emission import run_pr_emission_helper
 from .promotion import promotion_record
@@ -193,6 +199,32 @@ HELPERS: dict[str, HelperEntry] = {
         authoritative_request("generate-spec-index-check"),
         ("write", "regenerate"),
         mutation_operation="generate-spec-index-write",
+    ),
+    "knowledge-health": HelperEntry(
+        "knowledge-health",
+        "knowledge-health",
+        None,
+        "python_authoritative",
+        "okf_profile",
+        authoritative_request("knowledge-health"),
+        mutation_operation="knowledge-update-apply",
+    ),
+    "knowledge-search": HelperEntry(
+        "knowledge-search",
+        "knowledge-search",
+        None,
+        "python_authoritative",
+        "okf_profile",
+        authoritative_request("knowledge-search"),
+    ),
+    "knowledge-update-plan": HelperEntry(
+        "knowledge-update-plan",
+        "knowledge-update-plan",
+        None,
+        "python_authoritative",
+        "okf_profile",
+        authoritative_request("knowledge-update-plan"),
+        mutation_operation="knowledge-update-apply",
     ),
     "o5-topology": HelperEntry(
         "o5-topology",
@@ -438,6 +470,17 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         ("current", "stale", "error", "write", "idempotence", "marker-safety"),
         rollback="Restore touched SPEC-MOC.md and roadmap-MOC files from version control before retrying.",
     ),
+    "knowledge-update-apply": MutationEntry(
+        "knowledge-update-apply",
+        "knowledge-update-apply",
+        ("dry_run", "apply"),
+        None,
+        "golden_only",
+        "okf_profile",
+        mutation_authoritative_request("knowledge-update-apply"),
+        ("init", "migrate", "rebuild", "promote", "supersede", "archive", "rollback"),
+        rollback="Create a fresh knowledge-update-plan; apply automatically restores every touched file on write failure.",
+    ),
     "plan-layers-marker-plan": MutationEntry(
         "plan-layers-marker-plan",
         "plan-layers-marker-plan",
@@ -539,6 +582,13 @@ def dispatch_helper(request: Any) -> dict[str, Any]:
             data=registry_report(HELPERS),
         )
 
+    if entry.helper_id == "knowledge-health":
+        return run_knowledge_health(entry, request)
+    if entry.helper_id == "knowledge-search":
+        return run_knowledge_search(entry, request)
+    if entry.helper_id == "knowledge-update-plan":
+        return run_knowledge_update_plan(entry, request)
+
     return run_registered_helper(entry, request)
 
 
@@ -581,6 +631,9 @@ def dispatch_mutation_helper(entry: MutationEntry, request: Any) -> dict[str, An
 
     if entry.helper_id == "generate-spec-index-write":
         return run_spec_index_write(entry, request)
+
+    if entry.helper_id == "knowledge-update-apply":
+        return run_knowledge_update_apply(entry, request)
 
     if entry.helper_id in {"doctor-preflight", "doctor-repair", "install-health-repair", "install-codex-agents"}:
         return run_install_helper(entry, request)

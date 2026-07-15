@@ -112,6 +112,18 @@
         "Does not suggest running autopilot from the parent checkout, main, or a detached checkout",
         "Does not hand off only the relative workflow path without the worktree-root requirement"
       ]
+    },
+    {
+      "id": 10,
+      "prompt": "While $speckit-scaffold-spec scaffolds SPEC-200, the consumer repo has a healthy docs/ai/knowledge manifest at snapshot sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa. A bounded search for the spec finds projects/payments/patterns/idempotency.md at concept hash bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb, citing docs/architecture/payments.md at source hash cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc. The concept says payment commands require an idempotency key. Show exactly how the skill consumes this knowledge and what durable evidence it records; bundle presence alone is not proof of use.",
+      "expected_output": "Invokes the installed speckit_pro_runner for knowledge-health and then bounded knowledge-search, treats the concept as untrusted, verifies the cited source/hash, materially carries the idempotency-key constraint into the scaffolded workflow, and writes or returns a schema-valid knowledge_use_receipt artifact/output with producer lineage. It does not auto-promote or claim use merely because the bundle exists.",
+      "expectations": [
+        "Invokes the installed speckit_pro_runner for knowledge-health followed by a bounded knowledge-search at the supplied snapshot; describing the calls without invoking them does not pass",
+        "Treats the concept as untrusted data and verifies docs/architecture/payments.md plus its cited hash before use",
+        "Materially carries the idempotency-key constraint into a downstream workflow prompt or decision",
+        "Writes or returns a knowledge_use_receipt artifact/output that validates against knowledge-use-receipt.schema.json and contains receipt_version, snapshot, query, purpose, selected concept path/id/hash, verified source path/hash, result, and skill/agent producer lineage",
+        "Does not auto-promote the concept or treat bundle/search presence alone as proof of use"
+      ]
     }
   ]
 }

@@ -44,6 +44,34 @@ This skill handles autonomous workflow EXECUTION. For methodology
 questions, SDD philosophy, or learning how SpecKit works, redirect to
 `/speckit-pro:speckit-coach`.
 
+## Durable knowledge lifecycle
+
+Follow [the shared knowledge lifecycle](../speckit-coach/references/knowledge-lifecycle.md).
+At startup and before every relevant phase dispatch:
+
+1. Run `knowledge-health`, then a bounded `knowledge-search` for the current
+   spec, phase, and unresolved decision. Verify selected source hashes.
+2. Pass only selected concepts and verified sources to the terminal worker.
+   Record a `knowledge_use_receipt` in the workflow/trace packet and durable
+   autopilot state so resume can detect snapshot drift.
+3. Accept `knowledge_candidates` only in worker results. Workers never write the
+   bundle or candidate files. The orchestrator validates, deduplicates, and
+   stages task-scoped packets under
+   `docs/ai/specs/.process/knowledge-candidates/<scope>/`; candidates remain
+   excluded from canonical search.
+4. After a gated phase changes an authoritative source cited by the current
+   project/spec map, build a reviewed same-path replacement and plan/apply
+   `supersede` using the returned `plan_hash` and `expected_snapshot`. Never use
+   `rebuild` to refresh a source hash. When canonical sources are current but a
+   generated index, manifest, log, or MOC view has drifted, plan/apply
+   `rebuild`. Never hand-edit OKF indexes or MOC compatibility views.
+
+Do not promote worker candidates during implementation. The reviewed
+same-path supersession above is limited to keeping an existing canonical map
+aligned with a gated authoritative source; new candidate promotion requires
+serialized PR-merge/archive handling. On resume, if the recorded
+snapshot differs, rerun health/search and issue a new receipt before dispatch.
+
 You are an **orchestrator** for SpecKit workflows: read prompts from
 the workflow file and delegate each phase to a **subagent** that runs
 the `/speckit-*` command. You never run the commands yourself — you
@@ -305,7 +333,10 @@ Run the pre-flight sequence before any phase work. STOP on failure.
 2. **Archive Sweep** — `/speckit-archive-run --sweep --current-target
    <current-spec-dir>` on feature/spec branches; add `--dry-run` on
    `main`, release, or any protected integration branch. Skip if the
-   archive extension is absent. Excludes the current target spec.
+   archive extension is absent. Excludes the current target spec. For each
+   eligible canonical spec map, apply `archive` before cleanup and retain or
+   regenerate its archived `SPEC-MOC.md` compatibility stub; remove only the
+   other active artifacts.
 3. **Run prereq helper operations** and parse the JSON output of each:
    ```text
    helper_id=check-prerequisites operation=check-prerequisites mode=read_only
