@@ -11,7 +11,7 @@ and continue with the first incomplete Post item.
 ## Contents
 
 - [Canonical Post Items (10-19)](#canonical-post-items-10-19) — full numbered table with runtime + command per row
-- [Combined Durable Plan](#combined-durable-plan) — four supporting rows that remain visible beside the numbered gates
+- [Combined Durable Plan](#combined-durable-plan) — two supporting rows that remain visible beside the numbered gates
 - [How Extension Commands Become Available](#how-extension-commands-become-available) — `$speckit-*` installation via `specify extension add`
 - [Parallel Group (Items 10-14)](#parallel-group-items-10-14) — Codex always uses parallel `spawn_agent` (no Agent Teams primitive)
 - [Rules](#rules) — extension dispatch, parent-session ownership, PR body, missing-extension behavior
@@ -30,8 +30,8 @@ in order; do not collapse or defer.
 | 12 | Verify Tasks Phantom Check | verify-tasks ext | `$speckit-verify-tasks` |
 | 13 | Code Review | (none) — built-in | spawn a subagent to independently review the diff `origin/main...HEAD`; report findings by severity |
 | 14 | Integration Suite | (none) | `PROJECT_COMMANDS.FULL_VERIFY` or detected full test command |
-| 15 | Final Reviewability Backstop | (none) | deferred helper; use current committed evidence or stop before PR side effects |
-| 16 | PR Packet/Body Generation | final backstop proceeded | run `pr-packet-output` for a grounded single packet; split packet output remains deferred |
+| 15 | Reviewability Diff Gate | (none) | use current committed evidence or stop before PR side effects |
+| 16 | PR Body Generation | reviewability, self-review, and UAT proceeded | run `pr-packet-output` for a grounded single packet; split packet output remains deferred |
 | 17 | PR Creation | current packet validation passed | single-PR path only when no split route and no current `pr_marker_plan`; `multi-pr-emission` for split-PR routes or marker-ready plans |
 | 18 | Review Remediation | (none) | parent session loop — inspect PR feedback, dispatch fixes as needed |
 | 19 | Retrospective | retrospective ext | `$speckit-retrospective-analyze` (FINAL STEP) |
@@ -39,21 +39,18 @@ in order; do not collapse or defer.
 ## Combined Durable Plan
 
 The numbered 10-19 gates and the supporting task-list rows are both
-authoritative. Codex materializes **14 distinct Post rows** in `update_plan` and
-`autopilot-state.json`: every numbered gate above, plus these four supporting
-evidence steps:
+authoritative. Codex materializes the same **12 distinct Post rows** as Claude
+Code in `update_plan` and `autopilot-state.json`: every numbered gate above,
+plus these two supporting evidence steps:
 
 ```text
-Post: Reviewability Diff Gate
 Post: Self-Review
 Post: UAT Runbook Generation
-Post: PR Body Generation
 ```
 
-The diff gate, self-review, and UAT rows feed numbered Post 15; the body row
-feeds numbered Post 16. Never delete the supporting rows because the numbered
-table groups their ownership, and never delete `Final Reviewability Backstop`
-or `PR Packet/Body Generation` because the supporting rows expose their work.
+Self-review and UAT feed numbered Post 16 after numbered Post 15 establishes
+the reviewability boundary. Never delete the supporting rows because each
+records independent evidence before packet/body generation.
 
 Extension items (10 Doctor, 11 Verify, 12 Verify-Tasks, 19
 Retrospective): Spawn `phase-executor` with instructions to run the
@@ -61,7 +58,7 @@ Retrospective): Spawn `phase-executor` with instructions to run the
 Code Review (13) is built-in — no extension; it runs as the
 parallel-group Track B subagent (see below), reviewing the diff and
 reporting findings by severity.
-Non-extension items 15, 16, 17, 18 and all four supporting rows: execute directly in the parent
+Non-extension items 15, 16, 17, 18 and both supporting rows: execute directly in the parent
 session. (Item 14 Integration Suite is also non-extension but runs in
 the parallel group's Track C verify-chain subagent — see below — not the
 parent session.)
@@ -129,7 +126,7 @@ background subagents as the fallback path. The 3-track structure
 - Missing optional extensions are logged and skipped only where their procedure
   explicitly declares a fail-open boundary. Do not generalize that permission
   to packet generation, push, PR creation, or PR reconciliation.
-- `Post: PR Packet/Body Generation` and `Post: PR Creation` are non-skippable.
+- `Post: PR Body Generation` and `Post: PR Creation` are non-skippable.
   A packet, push, authentication, network, or create/reconcile failure leaves
   the first affected row `in_progress` or `blocked`; it never becomes `skipped`
   and the workflow never becomes complete.
@@ -185,8 +182,8 @@ fingerprint status, ordered marker IDs, checkpoints, warnings, final
 marker_split or marker-plan-ready handoff, packet validation, and PR mappings
 before PR side effects. All evidence paths must be repo-relative.
 
-`pr-packet-output` is a `golden_only`, single-packet producer. Invoke it with
-`helper_id=pr-packet-output`, the same operation, `mode=apply`, and only these
+`pr-packet-output` is a `golden_only`, single-packet producer. Prepare it with
+`helper_id=pr-packet-output`, the same operation, and only these
 grounded input groups: source feature/packet/base refs; conventional title
 parts; summary/change/why/review prose; UAT text and repo-relative source;
 verification evidence; scope metrics, budget result, and non-goals; known gaps;
@@ -207,7 +204,13 @@ packet paths first. If either output already exists, never validate it for reuse
 it. Inspect and remove both body and packet artifacts. If either is tracked,
 commit its deletion, restore a clean committed worktree, and regenerate both
 from the grounded request.
-Apply mode fails closed with `secure_atomic_writes_unavailable` when
+Run the same grounded request in `dry_run` first. Commit an otherwise
+packet-free source checkpoint carrying the response's exact
+`required_source_commit_trailer`, rerun dry-run, and require the predicted
+fingerprint to be unchanged before apply. Apply fails closed with
+`protected_body_authorization_missing` unless the source commit independently
+authorizes the protected body. Apply mode also fails closed with
+`secure_atomic_writes_unavailable` when
 descriptor-relative no-follow writes and atomic no-clobber installation are
 unavailable. Do not substitute a path-based write; resume the same clean source
 revision in a supported POSIX environment.
@@ -314,7 +317,7 @@ Codex parent-session responsibilities:
 3. Read the persisted PRSG-008 layer plan from `autopilot-state.json` or the
    workflow evidence. It must be the exact `plan-layers` envelope with
    `status=ok`.
-4. After the final backstop proceeds, treat `multi-pr-emission` only as
+4. After the reviewability, self-review, and UAT boundary proceeds, treat `multi-pr-emission` only as
    `golden_only` command-plan capture. It does not emit packets or execute live
    PR mutations. Every slice packet must already exist at
    `specs/<feature>/.process/pr-packets/<packet-id>.json` and validate against

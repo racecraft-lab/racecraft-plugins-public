@@ -81,14 +81,14 @@
     {
       "id": 7,
       "prompt": "What happens during the post-implementation phase of the autopilot after all 7 SDD phases complete? List the specific steps in order, including which ones use extensions and which are built-in.",
-      "expected_output": "Lists all 14 Codex Post plan items in order, identifies the parallel group and serial tail, and distinguishes extension-backed items from built-in work. It states that generate-uat-skeleton, final-reviewability-backstop, and validate-pr-packet-write are deferred and detect-stack-manager-plan is out of scope. On a single route it runs golden_only pr-packet-output with grounded structured evidence to derive the feature-local body and packet, validates that packet with validate-pr-packet-read-only using data.stdout_json in memory/state, commits only the packet artifacts, reruns final verification and both validators, pushes the packet commit, and validates title/scope with validate-pr-workflow-contract before creation. Split packet output remains deferred.",
+      "expected_output": "Lists all 12 canonical Post plan items in order for both clients, identifies the parallel group and serial tail, and distinguishes extension-backed items from built-in work. It states that generate-uat-skeleton, final-reviewability-backstop, and validate-pr-packet-write are deferred and detect-stack-manager-plan is out of scope. On a single route it runs golden_only pr-packet-output in dry-run mode with grounded structured evidence, commits the exact protected-body authorization trailer in an otherwise packet-free source checkpoint, requires a stable repeat dry-run, and only then applies to derive the feature-local body and packet. It validates that packet with validate-pr-packet-read-only using data.stdout_json in memory/state, commits only the packet artifacts, reruns final verification and both validators, pushes the packet commit, and validates title/scope with validate-pr-workflow-contract before creation. Split packet output remains deferred.",
       "expectations": [
-        "Lists all 14 canonical Codex Post items from Doctor Extension Check through Retrospective without collapsing supporting rows",
+        "Lists all 12 canonical Post items from Doctor Extension Check through Retrospective in the same order as Claude Code",
         "Identifies Doctor, Verify Implementation, Verify Tasks Phantom Check, and Retrospective as extension-backed items and keeps Code Review plus Integration Suite built in",
         "Lists Self-Review (4-question audit) as an always-required built-in step before PR body generation",
         "Lists UAT Runbook Generation as mandatory and fail-open, states generate-uat-skeleton is deferred, reuses a committed source-derived runbook when present, and otherwise records skipped deferred evidence",
-        "Lists both Final Reviewability Backstop and PR Packet/Body Generation supporting rows in update_plan and autopilot-state.json",
-        "Runs golden_only pr-packet-output in apply mode for a single route and requires its derived packet path specs/<feature>/.process/pr-packets/<packet-id>.json",
+        "Keeps Reviewability Diff Gate and PR Body Generation as the canonical numbered rows, with Self-Review and UAT Runbook Generation as the two supporting rows in update_plan and autopilot-state.json",
+        "Runs golden_only pr-packet-output in dry_run mode for a single route, commits the exact required_source_commit_trailer in an otherwise packet-free source checkpoint, requires an unchanged repeat fingerprint, then applies and requires its derived packet path specs/<feature>/.process/pr-packets/<packet-id>.json",
         "Describes generate-pr-body only as a golden_only one-Markdown-body writer accepting output_path, title, and sections, not as packet emission",
         "Lists pre-create validation via runner helper validate-pr-packet-read-only and consumes current data.stdout_json with writes_state=false without claiming a validation file was written",
         "Lists pre-create PR workflow contract validation via runner helper validate-pr-workflow-contract with packet title and changed-file evidence",
@@ -96,7 +96,7 @@
         "Lists PR creation with gh pr create --base --head --title --body-file using packet target/title/body values",
         "Lists the parent-session review remediation loop",
         "States final-reviewability-backstop and detect-stack-manager-plan are not active installed helper calls, so current evidence and explicit gh fallback behavior apply",
-        "States malformed or invalid generated packets block before PR creation, while split packet output and write validation remain deferred; no post-create auto-repair fallback is used"
+        "States missing or stale protected-body source authorization, malformed or invalid generated packets block before PR creation, while split packet output and write validation remain deferred; no post-create auto-repair fallback is used"
       ]
     },
     {

@@ -377,8 +377,9 @@ opens one slice PR.
    paths must be repo-relative.
 6. For a single route, generate the packet only after the backstop proceeds.
    The packet ID must come from current workflow evidence; do not choose an
-   arbitrary stale ID. Send one runner request with
-   `helper_id=pr-packet-output`, the same operation, and `mode=apply`. Its
+   arbitrary stale ID. Prepare one runner request with
+   `helper_id=pr-packet-output` and the same operation; run it first with
+   `mode=dry_run`, then with `mode=apply` only after source authorization. Its
    `inputs` contract is:
    - `source_feature_dir`, `packet_id`, `base_ref`, and `base_branch`
    - `title_type`, schema-valid `title_scope`, and `title_description`
@@ -411,7 +412,13 @@ opens one slice PR.
    overwrite it. Inspect and remove both body and packet artifacts. If either
    is tracked, commit its deletion, restore a clean committed worktree, and
    regenerate both from the grounded request.
-   Apply mode fails closed with `secure_atomic_writes_unavailable` when
+   Run the same grounded request in `dry_run` first. Commit an otherwise
+   packet-free source checkpoint carrying the response's exact
+   `required_source_commit_trailer`, rerun dry-run, and require the predicted
+   fingerprint to be unchanged before apply. Apply fails closed with
+   `protected_body_authorization_missing` unless the source commit independently
+   authorizes the protected body. Apply mode also fails closed with
+   `secure_atomic_writes_unavailable` when
    descriptor-relative no-follow writes and atomic no-clobber installation are
    unavailable. Do not substitute a path-based write; resume the same clean
    source revision in a supported POSIX environment.

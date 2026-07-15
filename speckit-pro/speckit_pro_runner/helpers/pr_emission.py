@@ -12,10 +12,12 @@ from typing import Any
 from ..envelope import diagnostic, response
 from .mutation import dirty_worktree_diagnostic, empty_mutation, operation_records, run_mutation_helper
 from .read_only import (
+    PROTECTED_BODY_AUTHORIZATION_TRAILER,
     find_repo_root,
     is_relative_to,
     load_pr_packet_schema,
     pr_packet_schema_failures,
+    protected_body_authorization_value,
     protected_body_sha256,
     resolve_input_path,
     trusted_dir_exists,
@@ -191,6 +193,7 @@ def generate_pr_packet(entry: Any, request: Any) -> dict[str, Any]:
 
     title = f"{inputs['title_type']}({inputs['title_scope']}): {inputs['title_description']}"
     body = _render_packet_body(inputs, packet_path, changed_files)
+    body_fingerprint = protected_body_sha256(body)
     packet = _packet_record(
         inputs,
         body_path,
@@ -228,6 +231,47 @@ def generate_pr_packet(entry: Any, request: Any) -> dict[str, Any]:
             "expected_absent": True,
         },
     ]
+    authorization_trailer = f"{PROTECTED_BODY_AUTHORIZATION_TRAILER}: {body_fingerprint}"
+    if (
+        request.mode == "apply"
+        and protected_body_authorization_value(git_context["source_commit_message"]) != body_fingerprint
+    ):
+        mutation = empty_mutation(request.mode)
+        mutation["mutation_status"] = "blocked"
+        mutation["planned_operations"] = operation_records(operations)
+        mutation["planned_paths"] = [body_path, packet_path]
+        return response(
+            "missing_prerequisite",
+            request_id=request.request_id,
+            data={
+                "helper_id": entry.helper_id,
+                "operation": entry.operation,
+                "mode": request.mode,
+                "promotion_status": entry.promotion_status,
+                "comparison_mode": entry.comparison_mode,
+                "writes_state": False,
+                "body_file": body_path,
+                "packet_path": packet_path,
+                "protected_body_fingerprint": body_fingerprint,
+                "required_source_commit_trailer": authorization_trailer,
+                "mutation": mutation,
+            },
+            diagnostics=[
+                diagnostic(
+                    "protected_body_authorization_missing",
+                    "packet apply requires the predicted protected-body fingerprint on the source commit",
+                    details={
+                        "source_head_sha": git_context["source_head_sha"],
+                        "required_trailer": authorization_trailer,
+                    },
+                    remediation_summary="Authorize the dry-run fingerprint in an immutable source commit before packet apply.",
+                    remediation_actions=[
+                        "Run pr-packet-output in dry_run mode from the clean final source revision.",
+                        "Commit the reported required_source_commit_trailer without packet or body artifacts, then rerun dry_run and apply.",
+                    ],
+                )
+            ],
+        )
     return run_mutation_helper(
         entry,
         request,
@@ -238,6 +282,8 @@ def generate_pr_packet(entry: Any, request: Any) -> dict[str, Any]:
             "generated_title": title,
             "packet_id": inputs["packet_id"],
             "packet_path": packet_path,
+            "protected_body_fingerprint": body_fingerprint,
+            "required_source_commit_trailer": authorization_trailer,
             "validation_result_path": validation_path,
         },
     )
@@ -442,6 +488,7 @@ def _git_packet_context(
         diff_results = [
             run(["diff", "--name-only", "-z", f"{base_sha}...{source_head_sha}", "--"]),
             run(["diff", "--binary", "--full-index", f"{base_sha}...{source_head_sha}", "--"]),
+            run(["show", "-s", "--format=%B", source_head_sha]),
         ]
         final = [
             run(["symbolic-ref", "--quiet", "--short", "HEAD"]),
@@ -463,6 +510,7 @@ def _git_packet_context(
             final[1].stdout.decode("ascii", errors="strict").strip(),
             final[2].stdout.decode("ascii", errors="strict").strip(),
         )
+        source_commit_message = diff_results[2].stdout.decode("utf-8", errors="strict")
     except UnicodeDecodeError:
         return None, "unsupported_git_path_encoding"
     if final_values != (branch, base_sha, source_head_sha):
@@ -472,6 +520,7 @@ def _git_packet_context(
         "base_sha": base_sha,
         "source_head_sha": source_head_sha,
         "source_diff_sha256": hashlib.sha256(diff_results[1].stdout).hexdigest(),
+        "source_commit_message": source_commit_message,
         "head_branch": branch,
         "changed_files": changed_files,
     }, None

@@ -1018,7 +1018,9 @@ After G7 passes:
 ```text
 Step 1: From a clean worktree, run final verification and apply the final reviewability boundary:
   Use current committed reviewability evidence; if none is current, stop before PR side effects because final-reviewability-backstop is deferred.
-Step 2: For a single route, run pr-packet-output in apply mode with grounded structured evidence.
+Step 2: For a single route, run pr-packet-output in dry_run mode with grounded structured evidence.
+  Commit an otherwise packet-free source checkpoint with the exact required_source_commit_trailer, rerun dry_run, and require the protected fingerprint to be unchanged before apply.
+  Then run the same request in apply mode; protected_body_authorization_missing blocks if the immutable source trailer is absent or stale.
   It derives and writes the body first, then the authorizing packet at specs/<feature>/.process/pr-packets/<packet-id>.json.
   Do not pass raw output paths, content, operations, or split metadata. Split packet output remains deferred.
   If secure_atomic_writes_unavailable is returned, fail closed and resume the same clean source revision in a supported POSIX environment.

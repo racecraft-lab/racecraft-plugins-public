@@ -103,6 +103,32 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
         )
         return response("input_error", request_id=request.request_id, diagnostics=[diag])
 
+    if changed and not SECURE_DIR_FD_WRITES:
+        mutation["mutation_status"] = "blocked"
+        diag = diagnostic(
+            "secure_atomic_writes_unavailable",
+            "apply mode requires descriptor-relative no-follow atomic writes on this platform",
+            details={"helper_id": entry.helper_id, "platform": os.name},
+            remediation_summary="Run apply mode in an environment with secure descriptor-relative writes.",
+            remediation_actions=[
+                "Keep the current checkout unchanged.",
+                "Run the same apply request on a POSIX environment that supports dir_fd, O_NOFOLLOW, and hard-link installation.",
+            ],
+        )
+        return response(
+            "missing_prerequisite",
+            request_id=request.request_id,
+            data=_spec_index_write_data(
+                entry,
+                request,
+                mutation,
+                specs_present=specs_present,
+                rendered=rendered,
+                writes_state=False,
+            ),
+            diagnostics=[diag],
+        )
+
     conflict = _spec_index_source_conflict(changed, target_root)
     if conflict is not None:
         mutation["mutation_status"] = "blocked"
@@ -124,6 +150,10 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
         try:
             write_file_atomic(record.path, record.rendered, trust_root=target_root)
         except OSError as exc:
+            committed = bool(getattr(exc, "committed", False))
+            if committed:
+                mutation["applied_operations"].append(operation_record(operation))
+                mutation["touched_paths"].append(repo_relative(record.path, target_root))
             mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
             mutation["failure_operation"] = operation_record(operation)
             mutation["manual_remediation"] = [
@@ -137,6 +167,7 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
                     "helper_id": entry.helper_id,
                     "target": repo_relative(record.path, target_root),
                     "error": type(exc).__name__,
+                    "write_committed": committed,
                 },
                 remediation_summary="Reconcile any applied map writes and fix the target path before retrying.",
                 remediation_actions=mutation["manual_remediation"],

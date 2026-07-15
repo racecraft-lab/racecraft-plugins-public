@@ -8,7 +8,7 @@ list, Codex-specific persistence primitives.
 ## Contents
 
 - [Checklist Naming Pattern](#checklist-naming-pattern) — exact item-name templates parsed from the workflow file
-- [Canonical Post-Implementation Item List](#canonical-post-implementation-item-list) — 14-row combined durable Post plan + missing-extension behavior
+- [Canonical Post-Implementation Item List](#canonical-post-implementation-item-list) — 12-row durable Post plan + missing-extension behavior
 - [Item Naming Rules](#item-naming-rules) — same names across both stores, completed-then-in_progress sequencing
 - [Reference `autopilot-state.json` Schema](#reference-autopilot-statejson-schema) — full example JSON document
 
@@ -43,12 +43,10 @@ see all of them in the plan panel before Phase 1 starts. When an
 extension is missing, still create the item but mark it
 `skipped: <extension> not installed`.
 
-This is the combined Codex plan: the numbered 10-19 gates from
-`post-implementation-codex.md` plus the four mandatory supporting tasks that
-remain independently visible for resume safety. `Final Reviewability Backstop`
-owns the diff-gate/self-review/UAT boundary, and `PR Packet/Body Generation`
-owns the body-generation boundary; the supporting rows are evidence-producing
-steps, not substitutes for those numbered gates.
+This is the same 12-row canonical plan used by Claude Code. The numbered 10-19
+gates from `post-implementation-codex.md` include `Reviewability Diff Gate` and
+`PR Body Generation`; `Self-Review` and `UAT Runbook Generation` are the two
+independently visible supporting rows required for resume safety.
 
 ```text
   "Post: Doctor Extension Check"        ← doctor / speckit-utils ext
@@ -59,8 +57,6 @@ steps, not substitutes for those numbered gates.
   "Post: Reviewability Diff Gate"       ← always required (no ext)
   "Post: Self-Review"                   ← always required (no ext, 4-question audit)
   "Post: UAT Runbook Generation"        ← always required (no ext, skeleton script + author agent)
-  "Post: Final Reviewability Backstop"  ← numbered Post 15 gate
-  "Post: PR Packet/Body Generation"     ← numbered Post 16 gate
   "Post: PR Body Generation"            ← always required (no ext)
   "Post: PR Creation"                   ← always required (no ext)
   "Post: Review Remediation"            ← always required (no ext)
@@ -74,7 +70,7 @@ in the plan with status `skipped: <ext-name> not installed`. Never
 silently drop it.
 
 **Verify item-list completeness before starting Phase 1**: count
-the 14 entries above and confirm every single one is present in
+the 12 entries above and confirm every single one is present in
 both `update_plan` and `autopilot-state.json` (in addition to all
 Phase / Consensus items). If any are missing, ADD them before
 advancing. Then run
@@ -125,8 +121,6 @@ and do not advance unless it exits 0.
     {"step": "Post: Reviewability Diff Gate", "status": "pending"},
     {"step": "Post: Self-Review", "status": "pending"},
     {"step": "Post: UAT Runbook Generation", "status": "pending"},
-    {"step": "Post: Final Reviewability Backstop", "status": "pending"},
-    {"step": "Post: PR Packet/Body Generation", "status": "pending"},
     {"step": "Post: PR Body Generation", "status": "pending"},
     {"step": "Post: PR Creation", "status": "pending"},
     {"step": "Post: Review Remediation", "status": "pending"},

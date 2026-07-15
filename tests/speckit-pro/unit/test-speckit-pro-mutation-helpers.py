@@ -1222,6 +1222,50 @@ class MutationHelperTests(unittest.TestCase):
             self.assert_response(blocked, "input_error", 2)
             self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_input"])
 
+            completed, dry_run, stderr_records = run_runner(
+                helper_request("pr-packet-output", mode="dry_run", inputs=inputs),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assert_response(dry_run, "ok", 0)
+            self.assertEqual(stderr_records, [])
+            required_trailer = dry_run["data"]["required_source_commit_trailer"]
+            self.assertEqual(
+                required_trailer,
+                f"SpecKit-Pro-Protected-Body-SHA256: {dry_run['data']['protected_body_fingerprint']}",
+            )
+            completed, unauthorized_apply, stderr_records = run_runner(
+                helper_request("pr-packet-output", mode="apply", inputs=inputs),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 3)
+            self.assert_response(unauthorized_apply, "missing_prerequisite", 3)
+            self.assertEqual(
+                [diag["code"] for diag in stderr_records],
+                ["protected_body_authorization_missing"],
+            )
+            self.assertFalse((git_root / unauthorized_apply["data"]["body_file"]).exists())
+            self.assertFalse((git_root / unauthorized_apply["data"]["packet_path"]).exists())
+            self.run_git(
+                git_root,
+                "commit",
+                "--quiet",
+                "--allow-empty",
+                "-m",
+                "chore(g56r-001): authorize review packet body",
+                "-m",
+                required_trailer,
+            )
+            completed, authorized_dry_run, stderr_records = run_runner(
+                helper_request("pr-packet-output", mode="dry_run", inputs=inputs),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(
+                authorized_dry_run["data"]["protected_body_fingerprint"],
+                dry_run["data"]["protected_body_fingerprint"],
+            )
+
             completed, response, stderr_records = run_runner(
                 helper_request("pr-packet-output", mode="apply", inputs=inputs),
                 cwd=git_root,
@@ -1395,6 +1439,42 @@ class MutationHelperTests(unittest.TestCase):
             self.assertNotIn("body.protected_fingerprint", tampered_rules)
             body_path.write_text(body_before, encoding="utf-8")
             packet_path.write_text(packet_before, encoding="utf-8")
+
+            body_path.write_text(tampered_body, encoding="utf-8")
+            packet_path.write_text(json.dumps(tampered_packet, indent=2) + "\n", encoding="utf-8")
+            self.run_git(
+                git_root,
+                "add",
+                body_path.relative_to(git_root).as_posix(),
+                packet_path.relative_to(git_root).as_posix(),
+            )
+            self.run_git(git_root, "commit", "--quiet", "--amend", "--no-edit")
+            completed, committed_tamper_validation, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-read-only",
+                    operation="validate-pr-packet-read-only",
+                    mode="read_only",
+                    inputs={"packet_path": packet_path.relative_to(git_root).as_posix()},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 1)
+            committed_tamper_rules = {
+                failure["rule"]
+                for failure in committed_tamper_validation["data"]["stdout_json"]["failures"]
+            }
+            self.assertIn("source.body_authorization", committed_tamper_rules)
+            self.assertNotIn("source.worktree", committed_tamper_rules)
+            self.assertNotIn("body.protected_fingerprint", committed_tamper_rules)
+            body_path.write_text(body_before, encoding="utf-8")
+            packet_path.write_text(packet_before, encoding="utf-8")
+            self.run_git(
+                git_root,
+                "add",
+                body_path.relative_to(git_root).as_posix(),
+                packet_path.relative_to(git_root).as_posix(),
+            )
+            self.run_git(git_root, "commit", "--quiet", "--amend", "--no-edit")
 
             completed, existing_response, stderr_records = run_runner(
                 helper_request("pr-packet-output", mode="apply", inputs=inputs),
@@ -1667,6 +1747,7 @@ class MutationHelperTests(unittest.TestCase):
             completed(head_sha),
             completed(b"candidate.json\0"),
             completed(b"binary diff"),
+            completed(b"chore: authorize packet\n"),
             completed(branch),
             completed(base_sha),
             completed(head_sha),
@@ -1685,6 +1766,7 @@ class MutationHelperTests(unittest.TestCase):
             completed(head_sha),
             completed(b"invalid-\xff.json\0"),
             completed(b"binary diff"),
+            completed(b"chore: authorize packet\n"),
             completed(branch),
             completed(base_sha),
             completed(head_sha),

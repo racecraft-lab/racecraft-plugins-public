@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 import unittest
 from collections.abc import Callable
@@ -28,6 +29,8 @@ CODEX_REF = (
 )
 CLAUDE_SKILL = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "SKILL.md"
 CODEX_SKILL = REPO_ROOT / "speckit-pro" / "codex-skills" / "speckit-autopilot" / "SKILL.md"
+CLAUDE_TASK_LIST = CLAUDE_SKILL.parent / "references" / "task-list-canonical.md"
+CODEX_TASK_LIST = CODEX_SKILL.parent / "references" / "task-list-canonical-codex.md"
 BASELINE = (
     REPO_ROOT
     / "tests"
@@ -57,12 +60,38 @@ def baseline_inventory(path: Path) -> list[str]:
     return names
 
 
+def canonical_post_inventory(path: Path) -> list[tuple[str, str]]:
+    body = path.read_text(encoding="utf-8")
+    section = body.split("## Canonical Post-Implementation", 1)[1]
+    section = section.split("\n## ", 1)[0]
+    return [
+        (match.group(1), match.group(2).strip())
+        for match in re.finditer(r'^\s*"Post: ([^"]+)"\s+←\s+(.+)$', section, re.MULTILINE)
+    ]
+
+
 class PostImplementationReferenceTests(unittest.TestCase):
     def test_reference_contract(self) -> None:
         claude_body = CLAUDE_REF.read_text(encoding="utf-8")
         codex_body = CODEX_REF.read_text(encoding="utf-8")
         claude_skill = CLAUDE_SKILL.read_text(encoding="utf-8")
         codex_skill = CODEX_SKILL.read_text(encoding="utf-8")
+        claude_post_inventory = canonical_post_inventory(CLAUDE_TASK_LIST)
+        codex_post_inventory = canonical_post_inventory(CODEX_TASK_LIST)
+        expected_post_names = [
+            "Doctor Extension Check",
+            "Verify Implementation",
+            "Verify Tasks Phantom Check",
+            "Code Review",
+            "Integration Suite",
+            "Reviewability Diff Gate",
+            "Self-Review",
+            "UAT Runbook Generation",
+            "PR Body Generation",
+            "PR Creation",
+            "Review Remediation",
+            "Retrospective",
+        ]
 
         checks: list[tuple[str, Callable[[], None]]] = [
             (
@@ -232,17 +261,51 @@ class PostImplementationReferenceTests(unittest.TestCase):
                 ),
             ),
             (
+                "Claude and Codex declare the same canonical Post inventory",
+                lambda: self.assertEqual(codex_post_inventory, claude_post_inventory),
+            ),
+            (
+                "Canonical Post inventory has 12 unique ordered rows",
+                lambda: self.assertEqual(
+                    [name for name, _annotation in claude_post_inventory],
+                    expected_post_names,
+                ),
+            ),
+            (
+                "Canonical Post inventory declares matching required and extension-backed status",
+                lambda: self.assertTrue(
+                    len(claude_post_inventory) == len(set(claude_post_inventory)) == 12
+                    and all(
+                        "always required" in annotation
+                        for name, annotation in claude_post_inventory
+                        if name in {
+                            "Integration Suite",
+                            "Reviewability Diff Gate",
+                            "Self-Review",
+                            "UAT Runbook Generation",
+                            "PR Body Generation",
+                            "PR Creation",
+                            "Review Remediation",
+                        }
+                    )
+                ),
+            ),
+            (
                 "Claude commits packet artifacts before read-only authorization",
-                lambda: self.assertLess(
-                    claude_body.index("Stage only `packet.body_file`"),
-                    claude_body.index("Validate the\n   packet before any single-PR create attempt"),
+                lambda: self.assertTrue(
+                    "required_source_commit_trailer" in claude_body
+                    and "protected_body_authorization_missing" in claude_body
+                    and claude_body.index("Stage only `packet.body_file`")
+                    < claude_body.index("Validate the\n   packet before any single-PR create attempt")
                 ),
             ),
             (
                 "Codex commits packet artifacts before read-only authorization",
-                lambda: self.assertLess(
-                    codex_body.index("Stage only `packet.body_file`"),
-                    codex_body.index("Validate the current\npacket before any single-PR create attempt"),
+                lambda: self.assertTrue(
+                    "required_source_commit_trailer" in codex_body
+                    and "protected_body_authorization_missing" in codex_body
+                    and codex_body.index("Stage only `packet.body_file`")
+                    < codex_body.index("Validate the current\npacket before any single-PR create attempt")
                 ),
             ),
             (
@@ -286,7 +349,7 @@ class PostImplementationReferenceTests(unittest.TestCase):
                 lambda: self.assertTrue(
                     "Packet generation, push, and\n   PR creation are non-skippable" in claude_skill
                     and "packet generation, push, PR creation, or PR reconciliation" in codex_body
-                    and "`Post: PR Packet/Body Generation` and `Post: PR Creation` are non-skippable" in codex_body
+                    and "`Post: PR Body Generation` and `Post: PR Creation` are non-skippable" in codex_body
                 ),
             ),
         ]

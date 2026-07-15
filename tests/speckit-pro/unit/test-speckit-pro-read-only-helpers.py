@@ -853,6 +853,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 return completed()
             if args[:3] == ("diff", "--binary", "--full-index"):
                 return completed(b"source diff")
+            if args[:3] == ("show", "-s", "--format=%B"):
+                return completed(b"chore: authorize packet\n")
             if args[:3] == ("diff", "--name-only", "-z") and len(args) > 3 and args[3] != "--":
                 return completed(b"invalid-\xff.json\0")
             if args[0] in {"diff", "ls-files"}:

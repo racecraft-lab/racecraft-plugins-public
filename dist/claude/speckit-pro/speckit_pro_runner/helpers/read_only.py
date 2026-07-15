@@ -23,6 +23,7 @@ PLAN_LAYERS_CAPTURE_LIMIT_BYTES = 256 * 1024
 SUBPROCESS_TIMEOUT_SECONDS = 30
 BOUNDED_TEXT_INPUT_BYTES = 32 * 1024
 WINDOWS_DRIVE_RE = re.compile(r"^[A-Za-z]:[\\/]")
+PROTECTED_BODY_AUTHORIZATION_TRAILER = "SpecKit-Pro-Protected-Body-SHA256"
 PR_PACKET_SCHEMA_PATH = (
     Path(__file__).resolve().parents[2]
     / "skills"
@@ -2143,6 +2144,18 @@ def protected_body_sha256(body_text: str) -> str:
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
+def protected_body_authorization_value(commit_message: str) -> str | None:
+    values = [
+        match.group(1)
+        for line in commit_message.splitlines()
+        if (match := re.fullmatch(
+            rf"{re.escape(PROTECTED_BODY_AUTHORIZATION_TRAILER)}: ([a-f0-9]{{64}})",
+            line,
+        ))
+    ]
+    return values[0] if len(values) == 1 else None
+
+
 def legacy_protected_body_sha256(body_text: str) -> str:
     """Validate pre-profile packets using their original Summary-to-Known-Gaps span."""
 
@@ -2316,6 +2329,7 @@ def pr_packet_source_failures(
         "head_parents": ("rev-list", "--parents", "-n", "1", "HEAD"),
         "ancestor": ("merge-base", "--is-ancestor", source_head, "HEAD"),
         "source_diff": ("diff", "--binary", "--full-index", f"{base_sha}...{source_head}", "--"),
+        "source_message": ("show", "-s", "--format=%B", source_head),
         "changed": ("diff", "--name-only", "-z", f"{base_sha}...HEAD", "--"),
         "unstaged": ("diff", "--name-only", "-z", "--"),
         "staged": ("diff", "--cached", "--name-only", "-z", "--"),
@@ -2351,6 +2365,14 @@ def pr_packet_source_failures(
             "field": "scope_evidence.changed_files",
             "message": "Git metadata contains a path or ref that is not valid UTF-8.",
         }]
+    try:
+        source_message = decoded("source_message")
+    except UnicodeDecodeError:
+        return [{
+            "rule": "source.commit_encoding",
+            "field": "source_revision.source_head_sha",
+            "message": "The packet source commit message is not valid UTF-8.",
+        }]
     if branch_text != head_branch:
         failures.append({"rule": "source.head_branch", "field": "target.head_branch", "message": "Current branch differs from the packet head branch."})
     if base_text != base_sha:
@@ -2361,6 +2383,15 @@ def pr_packet_source_failures(
     assert source_diff_result is not None
     if hashlib.sha256(source_diff_result.stdout).hexdigest() != expected_diff:
         failures.append({"rule": "source.diff_fingerprint", "field": "source_revision.source_diff_fingerprint", "message": "Packet source diff fingerprint is stale."})
+    fingerprint = data.get("protected_body_fingerprint")
+    packet_body_sha = fingerprint.get("value") if isinstance(fingerprint, dict) else None
+    authorized_body_sha = protected_body_authorization_value(source_message)
+    if authorized_body_sha is None or authorized_body_sha != packet_body_sha:
+        failures.append({
+            "rule": "source.body_authorization",
+            "field": "protected_body_fingerprint.value",
+            "message": "Protected body fingerprint is not authorized by the immutable source commit trailer.",
+        })
 
     for output in sorted(allowed_outputs):
         tracked = _git_bytes(repo_root, "ls-files", "--error-unmatch", "--", output)

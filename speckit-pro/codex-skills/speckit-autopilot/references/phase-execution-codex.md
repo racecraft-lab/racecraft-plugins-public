@@ -373,7 +373,9 @@ fail-closed sequence:
 
 ```text
 final-reviewability boundary: use current committed reviewability evidence; if none is current, stop before PR side effects
-from a clean committed worktree, run pr-packet-output in apply mode with grounded structured evidence for a single route
+from a clean committed worktree, run pr-packet-output in dry_run mode with grounded structured evidence for a single route
+commit an otherwise packet-free source checkpoint with the exact required_source_commit_trailer, rerun dry_run, and require the protected fingerprint to be unchanged
+run the same request in apply mode; protected_body_authorization_missing blocks if the immutable source trailer is absent or stale
 require its derived specs/<feature>/.process/pr-packets/<packet-id>.json and body_file to exist
 if secure_atomic_writes_unavailable is returned, fail closed and resume the same clean source revision in a supported POSIX environment
 refine only declared editable prose, then git add only the packet and body and commit them as the single direct child of the recorded source revision

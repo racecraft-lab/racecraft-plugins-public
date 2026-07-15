@@ -601,7 +601,12 @@ detailed procedures in `references/post-implementation.md`:
    `base...HEAD`. On resume, if either body or packet already exists, never
    authorize reuse or overwrite.
    Inspect and remove both artifacts; if either is tracked, commit its deletion,
-   restore a clean committed worktree, and regenerate. Apply mode fails closed
+   restore a clean committed worktree, and regenerate. Before apply, run
+   `pr-packet-output` in `dry_run`, commit an otherwise packet-free source
+   checkpoint with the exact `required_source_commit_trailer`, rerun dry-run,
+   and require the fingerprint to be unchanged. Apply fails closed with
+   `protected_body_authorization_missing` unless that immutable source trailer
+   authorizes the predicted protected body. Apply mode also fails closed
    with `secure_atomic_writes_unavailable` when descriptor-relative no-follow
    writes and atomic no-clobber installation are unavailable. Do not substitute
    path-based writes; resume at the same clean source revision in a supported

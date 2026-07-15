@@ -11,6 +11,8 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -278,6 +280,63 @@ class GenerateSpecIndexTests(unittest.TestCase):
         except OSError as exc:
             self.skipTest(f"directory symlinks unavailable: {type(exc).__name__}")
         self.assertFalse(_spec_index_target_chain_is_safe(target, trust_root))
+
+    def test_apply_reports_secure_write_prerequisite_before_spec_index_mutation(self) -> None:
+        from speckit_pro_runner.helpers import mutation
+        from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+        root = self.copy_fixture("stale-fill")
+        request = SimpleNamespace(
+            request_id="test-spec-index-secure-writes",
+            helper_id="generate-spec-index-write",
+            operation="generate-spec-index-write",
+            mode="apply",
+            inputs={"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+        )
+        with (
+            patch.object(mutation, "SECURE_DIR_FD_WRITES", False),
+            patch.object(mutation, "write_file_atomic") as mocked_write,
+        ):
+            body = mutation.run_spec_index_write(
+                MUTATION_HELPERS["generate-spec-index-write"],
+                request,
+            )
+
+        self.assertEqual(body["status"], "missing_prerequisite")
+        self.assertEqual(body["diagnostics"][0]["code"], "secure_atomic_writes_unavailable")
+        self.assertEqual(body["data"]["mutation"]["mutation_status"], "blocked")
+        self.assertFalse(body["data"]["writes_state"])
+        mocked_write.assert_not_called()
+
+    def test_committed_spec_index_write_is_reported_after_directory_fsync_failure(self) -> None:
+        from speckit_pro_runner.helpers import mutation
+        from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+        root = self.copy_fixture("stale-fill")
+        request = SimpleNamespace(
+            request_id="test-spec-index-committed-before-fsync",
+            helper_id="generate-spec-index-write",
+            operation="generate-spec-index-write",
+            mode="apply",
+            inputs={"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+        )
+
+        def committed_then_fail(target: Path, content: str, *, trust_root: Path) -> None:
+            target.write_text(content, encoding="utf-8")
+            raise mutation.AtomicWriteError("directory fsync failed", committed=True)
+
+        with patch.object(mutation, "write_file_atomic", side_effect=committed_then_fail):
+            body = mutation.run_spec_index_write(
+                MUTATION_HELPERS["generate-spec-index-write"],
+                request,
+            )
+
+        result = body["data"]["mutation"]
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual(result["mutation_status"], "partial_failure")
+        self.assertEqual(result["touched_paths"], ["specs/prsg-901-stale/SPEC-MOC.md"])
+        self.assertTrue(body["data"]["writes_state"])
+        self.assertTrue(body["diagnostics"][0]["details"]["write_committed"])
 
     def test_write_registry_is_promoted_with_an_authoritative_python_request(self) -> None:
         completed, body = runner_request(

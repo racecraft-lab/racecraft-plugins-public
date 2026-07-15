@@ -624,7 +624,7 @@ later. For multi-prompt phases (Clarify, Checklist), create one item
 per prompt/session when known; otherwise create the phase discovery
 placeholder.
 
-**Item naming + combined post-impl list (14 mandatory rows including
+**Item naming + canonical post-impl list (12 mandatory rows including
 `Post: Doctor Extension Check` ... `Post: Retrospective` as the FINAL
 STEP) + reference `autopilot-state.json` schema:** see
 [task-list-canonical-codex.md](./references/task-list-canonical-codex.md).
@@ -788,11 +788,10 @@ through `Post: Retrospective` as the FINAL STEP). Items 10-14
 a parallel group; the serial tail (15-19) handles Reviewability → PR
 creation → Review Remediation → Retrospective.
 
-Codex also keeps four supporting rows visible beside the numbered tail:
-`Post: Reviewability Diff Gate`, `Post: Self-Review`,
-`Post: UAT Runbook Generation`, and `Post: PR Body Generation`. Together with
-the numbered gates this is the 14-row combined durable plan. The supporting
-rows feed Posts 15/16 and never replace them.
+Codex also keeps two supporting rows visible beside the numbered tail:
+`Post: Self-Review` and `Post: UAT Runbook Generation`. Together with the
+numbered gates this is the same 12-row canonical durable plan used by Claude
+Code. The supporting rows feed Post 16 and never replace it.
 
 Codex CLI does not have Agent Teams primitives — Codex always uses
 the parallel `spawn_agent` pattern (3 tracks fanned out in one tool
@@ -949,7 +948,12 @@ procedures in [post-implementation-codex.md](./references/post-implementation-co
    `base...HEAD`. On resume, if either body or packet already exists, never
    authorize reuse or overwrite.
    Inspect and remove both artifacts; if either is tracked, commit its deletion,
-   restore a clean committed worktree, and regenerate. Apply mode fails closed
+   restore a clean committed worktree, and regenerate. Before apply, run
+   `pr-packet-output` in `dry_run`, commit an otherwise packet-free source
+   checkpoint with the exact `required_source_commit_trailer`, rerun dry-run,
+   and require the fingerprint to be unchanged. Apply fails closed with
+   `protected_body_authorization_missing` unless that immutable source trailer
+   authorizes the predicted protected body. Apply mode also fails closed
    with `secure_atomic_writes_unavailable` when descriptor-relative no-follow
    writes and atomic no-clobber installation are unavailable. Do not substitute
    path-based writes; resume at the same clean source revision in a supported
@@ -1035,7 +1039,7 @@ incomplete; it can never be converted to `skipped`.
   MCP, constitution, Codex agent availability, implementation agent
   detection, command discovery, preset detection)
 - [Canonical Task List for Codex](./references/task-list-canonical-codex.md) —
-  Step 1.1 checklist naming pattern, 14 mandatory Post rows, item-naming
+  Step 1.1 checklist naming pattern, 12 mandatory Post rows, item-naming
   rules, reference `autopilot-state.json` schema
 - [Phase Execution for Codex](./references/phase-execution-codex.md) —
   PHASES order, agent mapping, main execution loop (11-step per-phase
