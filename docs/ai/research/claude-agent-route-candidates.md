@@ -354,13 +354,237 @@ budget; remains one spec, no split exception required.**
 
 ---
 
+## Statement classification (task T013)
+
+The record separates **four statement classes** with distinct visible tags. Official
+Anthropic documentation is the *only* admissible source for any claim about Anthropic
+platform behavior (FR-006).
+
+| Tag | Class | Admissible source / meaning |
+|-----|-------|-----------------------------|
+| `[FACT]` | verified fact | Either a **platform fact** (official Anthropic docs — the only source for a platform-behavior claim; carries source URL + access date `2026-07-14` + short verbatim quote, per FR-004/SC-002) **or** a **repository fact** (a direct observation of the pinned comparator tag / tracked tree, reproducible from the tag). Platform-behavior claims may *only* be platform facts. |
+| `[INFERENCE]` | reasonable inference | A conclusion composed from cited facts, not stated verbatim by any single source. Names its basis. |
+| `[POLICY]` | proposed SpecKit Pro policy | A value or rule this project proposes (e.g. a Claude-only helper field), not an Anthropic-documented fact. Deferred to the named CAR spec. |
+| `[ASSUMPTION]` | unverified assumption | A statement neither documented nor observed. The record contains none; any undocumented behavior is instead a capability question. |
+
+**Record-wide class map.** Every declarative statement in the record falls into exactly
+one `[FACT]`/`[INFERENCE]`/`[POLICY]`/`[ASSUMPTION]` class (SC-003). Capability questions
+(`CAP-Qn`) are *open probes*, not declarative claims: they are the deliberate home for
+unresolved / undocumented items (FR-005, FR-008) and carry none of the four labels.
+
+| Record section | Dominant class | Notes |
+|----------------|----------------|-------|
+| Preamble, *Immutable production comparator*, *Stdlib hashing method*, *Agent inventory*, *Codex helper source inventory*, *Route-policy surface inventory*, *Layer 6 Claude fixture gap*, *Agent-file hash triples*, *Reviewability checkpoint* | `[FACT]` (repository facts) | Direct observations read from `speckit-pro-v2.19.1` / the tracked tree, reproducible from the tag — not platform-behavior claims. |
+| *Codex helper source inventory* → the "Mapping-hypothesis note" | `[INFERENCE]` | `sandbox_mode: read-only` → shared read-only denylist; `gpt-5.3-codex-spark` → a fast Claude route (starting hypothesis `haiku` + explicit low effort) — probe-gated on CAP-Q3. |
+| *Codex helper source inventory* → the `maxTurns` deferral clause | `[POLICY]` | Claude-only field with no Codex source; proposed value deferred to CAR-010. |
+| *Primary-source fact table* | per-row tags | Each row carries its own `[FACT]`/`[INFERENCE]` tag inline. |
+| *Capability questions* | unclassified (open probes) | `CAP-Q1…CAP-Q6`; the explicit home for unresolved bindings and undocumented behaviors. |
+
+**No-overclaim assertions (FR-007).** No statement in this record claims a head-to-head
+benchmark result between any two models, and none claims a native fallback or automatic
+model-substitution feature beyond what the cited docs state. The only documented
+substitution behavior — allowlist alias substitution for the **main-session** `/model`
+and `--model` surfaces (row `RES-3`) — is recorded as a platform fact with its exact
+quote. The **subagent-frontmatter** unavailable-model behavior and the execution-time
+manifestation of alias re-pointing are recorded as capability questions (`CAP-Q5`,
+`CAP-Q6`), never as facts.
+
+**Conflict disposition (FR-005).** No unresolved conflict between two *current* official
+claims was found among the recorded facts. Temporal supersessions (e.g. fast mode's
+default moving from Opus 4.7 to Opus 4.8 across dated "what's new" entries — rows `FST-1`,
+`FST-2`) are recorded as the current value plus the superseded prior value, not as
+conflicts. Had a genuine conflict arisen, it would appear as a `CAP-Qn` with both claims
+quoted verbatim and neither labeled a platform fact.
+
+---
+
 ## Primary-source fact table
 
-<!-- authored in unit 2 (Group A fact table, tasks T010-T014): model IDs, the four aliases, subagent config fields, effort levels, model-resolution precedence, plugin-agent field support, fast mode, authentication modes, non-interactive telemetry — each with URL + access date + verbatim quote and a four-class label -->
+**Access date for every fact row below: 2026-07-14.** Every platform-fact row cites a
+current official Anthropic page (`docs.claude.com`, `code.claude.com`, or `claude.com`),
+carries a short verbatim quote, and bears exactly one class tag (FR-004, SC-002, SC-003).
+Row IDs (e.g. `ALS-opus`, `RES-3`) are stable anchors the manifest and later units cite.
+Inference rows name the facts they compose. Undocumented bindings/behaviors are not
+recorded here — they live in *Capability questions* as `CAP-Qn`.
+
+### 1. Model family and model IDs
+
+- **`MDL-1`** — The current Claude model family and their Claude API IDs are: **Claude Fable 5** (`claude-fable-5`), **Claude Opus 4.8** (`claude-opus-4-8`), **Claude Sonnet 5** (`claude-sonnet-5`), and **Claude Haiku 4.5** (`claude-haiku-4-5-20251001`, API alias `claude-haiku-4-5`). Only Haiku 4.5 carries a dated snapshot ID; the Opus/Sonnet/Fable API IDs equal their aliases. `[FACT]`
+  - Source: https://docs.claude.com/en/docs/about-claude/models/overview (accessed 2026-07-14)
+  - Quote: "Claude API ID | claude-fable-5 | claude-opus-4-8 | claude-sonnet-5 | claude-haiku-4-5-20251001" and "Claude API alias | claude-fable-5 | claude-opus-4-8 | claude-sonnet-5 | claude-haiku-4-5".
+- **`MDL-2`** — Positioning: Opus 4.8 is the default recommendation for complex agentic coding; Fable 5 is the highest-capability option. `[FACT]`
+  - Source: https://docs.claude.com/en/docs/about-claude/models/overview (accessed 2026-07-14)
+  - Quote: "If you're unsure which model to use, start with Claude Opus 4.8 for complex agentic coding and enterprise work. For workloads that need the highest available capability, use Claude Fable 5."
+- **`MDL-3`** — Modality of the current family (supports the manifest `required_capabilities.modality`): all current models take text and image input and produce text output. `[FACT]`
+  - Source: https://docs.claude.com/en/docs/about-claude/models/overview (accessed 2026-07-14)
+  - Quote: "All current Claude models support text and image input, text output, multilingual capabilities, and vision."
+
+### 2. Claude Code model aliases and expected resolved IDs
+
+The eleven current agents ship the Claude Code aliases `opus` and `sonnet` in frontmatter
+(repository fact — *Agent inventory*); `haiku` and `fable` are candidate aliases. The
+Claude Code aliases resolve to a *floating* target ("the latest X model" / "Claude Fable
+5"), re-pointable by environment variables and provider allowlists — the docs never bind
+an alias to a fixed dated ID. Therefore each alias's **documented behavior** is a
+`[FACT]`, its **expected resolved ID** is an `[INFERENCE]` composed with `MDL-1`, and its
+**environment-time binding** is a capability question (design Open Question 1; Edge Cases).
+Per FR-012 / Q6, **no legacy dated model snapshot is enumerated as a separate candidate** —
+candidates are the four aliases only, each with its expected resolved ID recorded alongside.
+
+- **`ALS-opus`** — The `opus` alias uses the latest Opus model. `[FACT]`
+  - Source: https://code.claude.com/docs/en/model-config (accessed 2026-07-14)
+  - Quote: "`opus` | Uses the latest Opus model for complex reasoning tasks".
+  - Expected resolved model ID: `claude-opus-4-8` (Opus 4.8 is the current latest Opus, `MDL-1`). `[INFERENCE]` — composed from `ALS-opus` + `MDL-1`; the exact environment-time binding is **`CAP-Q1`**.
+- **`ALS-sonnet`** — The `sonnet` alias uses the latest Sonnet model. `[FACT]`
+  - Source: https://code.claude.com/docs/en/model-config (accessed 2026-07-14)
+  - Quote: "`sonnet` | Uses the latest Sonnet model for daily coding tasks".
+  - Expected resolved model ID: `claude-sonnet-5` (Sonnet 5 is the current latest Sonnet, `MDL-1`). `[INFERENCE]` — binding probe **`CAP-Q2`**.
+- **`ALS-haiku`** — The `haiku` alias uses the fast, efficient Haiku model. `[FACT]`
+  - Source: https://code.claude.com/docs/en/model-config (accessed 2026-07-14)
+  - Quote: "`haiku` | Uses the fast and efficient Haiku model for simple tasks".
+  - Expected resolved model ID: `claude-haiku-4-5-20251001` (API alias `claude-haiku-4-5`; the current Haiku, `MDL-1`). `[INFERENCE]` — binding probe **`CAP-Q3`**.
+- **`ALS-fable`** — The `fable` alias uses Claude Fable 5. `[FACT]`
+  - Source: https://code.claude.com/docs/en/model-config (accessed 2026-07-14)
+  - Quote: "`fable` | Uses Claude Fable 5 for your hardest and longest-running tasks".
+  - Expected resolved model ID: `claude-fable-5` (`MDL-1`). `[INFERENCE]` — binding **and** environment-time availability (PRD OQ-4) probe **`CAP-Q4`**. `fable` stays an executor-class candidate regardless of announcement status (FR-013); excluded only by recorded probe/contract evidence.
+- **`ALS-context`** — The alias namespace also documents `best` ("Uses Fable 5 where your organization has access to it, otherwise the latest Opus model") and `default` ("Special value that clears any model override and reverts to the recommended model for your account type, or to the organization default model when an admin has set one. Not itself a model alias"). These are **not** CAR candidate aliases (FR-012 fixes the candidate set to `opus`/`sonnet`/`haiku`/`fable`). `[FACT]`
+  - Source: https://code.claude.com/docs/en/model-config (accessed 2026-07-14)
+  - Quote: as embedded above.
+- **`ALS-repoint`** — Alias resolution is re-pointable per family via environment variables, confirming the binding floats (basis for the invalidation triggers and `CAP-Q1…Q4`). `[FACT]`
+  - Source: https://code.claude.com/docs/en/model-config (accessed 2026-07-14)
+  - Quote: "`ANTHROPIC_DEFAULT_OPUS_MODEL` | The model to use for `opus`, or for `opusplan` when Plan Mode is active." and "`ANTHROPIC_DEFAULT_FABLE_MODEL` | The model to use for `fable`, and the model ID Claude Code recognizes as Fable 5 for automatic model fallback on third-party providers".
+
+### 3. Subagent configuration fields
+
+- **`SUB-model`** — The subagent `model` frontmatter field accepts the four aliases, a full model ID, or `inherit` (default). `[FACT]`
+  - Source: https://code.claude.com/docs/en/sub-agents (accessed 2026-07-14)
+  - Quote: "Model to use: `sonnet`, `opus`, `haiku`, `fable`, a full model ID (for example, `claude-opus-4-8`), or `inherit`. Defaults to `inherit`".
+- **`SUB-fields`** — The documented supported subagent frontmatter fields are: `name`, `description`, `tools`, `disallowedTools`, `model`, `permissionMode`, `mcpServers`, `hooks`, `maxTurns`, `skills`, `memory`, `effort`, `background`, `isolation`, `color`, `initialPrompt`. `[FACT]`
+  - Source: https://code.claude.com/docs/en/sub-agents (accessed 2026-07-14)
+  - Quotes (field descriptions, verbatim): `name` — "Unique identifier using lowercase letters and hyphens. Hooks receive this value as `agent_type`. The filename doesn't have to match"; `description` — "When Claude should delegate to this subagent"; `tools` — "Tools the subagent can use. Inherits all tools if omitted. To preload Skills into context, use the `skills` field rather than listing `Skill` here"; `disallowedTools` — "Tools to deny, removed from inherited or specified list"; `isolation` — "Set to `worktree` to run the subagent in a temporary git worktree… The worktree is automatically cleaned up if the subagent makes no changes"; `color` — "Display color for the subagent in the task list and transcript. Accepts `red`, `blue`, `green`, `yellow`, `purple`, `orange`, `pink`, or `cyan`". (`maxTurns`, `memory`, `background`, `skills`, `mcpServers`, `hooks`, `permissionMode`, `initialPrompt` appear in the same supported-fields list; `effort` is row `EFF-1`.)
+- **`SUB-permmodes`** — Documented `permissionMode` values. `[FACT]`
+  - Source: https://code.claude.com/docs/en/sub-agents (accessed 2026-07-14)
+  - Quote: "`default` | Standard permission checking with prompts"; "`acceptEdits` | Auto-accept file edits and common filesystem commands…"; "`auto` | Auto mode: a background classifier reviews commands and protected-directory writes"; "`dontAsk` | Auto-deny permission prompts (explicitly allowed tools still work)"; "`bypassPermissions` | Skip permission prompts"; "`plan` | Plan mode (read-only exploration)". (Note `SUB-permmodes` is honored only for non-plugin subagents — see `PLG-1`.)
+
+### 4. Effort / reasoning levels
+
+- **`EFF-1`** — The subagent `effort` field sets a per-agent effort level overriding the session level; documented levels are `low`, `medium`, `high`, `xhigh`, `max`, and available levels are model-dependent. `[FACT]`
+  - Source: https://code.claude.com/docs/en/sub-agents (accessed 2026-07-14)
+  - Quote: "Effort level when this subagent is active. Overrides the session effort level. Default: inherits from session. Options: `low`, `medium`, `high`, `xhigh`, `max`; available levels depend on the model".
+- **`EFF-2`** — The `/effort` command takes a level or `auto`, and the interactive level set additionally includes `ultracode`. `[FACT]`
+  - Source: https://code.claude.com/docs/en/commands (accessed 2026-07-14)
+  - Quote: "`/effort [level|auto]`" with levels "`low` `medium` `high` `xhigh` `max` `ultracode`".
+- **`EFF-3`** — Opus 4.8 defaults to high effort. `[FACT]`
+  - Source: https://code.claude.com/docs/en/whats-new/2026-w22 (accessed 2026-07-14)
+  - Quote: "It defaults to high effort; use `/effort xhigh` for harder tasks."
+  - Note: all eleven current agents ship `effort: max` (repository fact, *Agent inventory*); `max` is the top documented frontmatter level (`EFF-1`), above Opus 4.8's `high` default. `[INFERENCE]` — composed from `EFF-1` + `EFF-3` + inventory.
+
+### 5. Model-resolution precedence
+
+- **`RES-1`** — For subagents, `CLAUDE_CODE_SUBAGENT_MODEL` overrides both the Agent-tool `model` parameter and the subagent's `model` frontmatter; `inherit` restores normal resolution. `[FACT]`
+  - Source: https://code.claude.com/docs/en/model-config (accessed 2026-07-14)
+  - Quote: "The model to use for all subagents and agent teams. Overrides the per-invocation `model` parameter and the subagent definition's `model` frontmatter. Set to `inherit` to use normal model resolution instead".
+- **`RES-2`** — The subagent-model surfaces (order of the resolution chain). `[FACT]`
+  - Source: https://docs.claude.com/en/docs/claude-code/model-config (accessed 2026-07-14)
+  - Quote: "Subagent models: the `model` field in subagent frontmatter, the Agent tool's `model` parameter, `CLAUDE_CODE_SUBAGENT_MODEL`, and, on v2.1.197 and earlier, the model picker in the `/agents` wizard".
+- **`RES-3`** — Aliases resolve to the newest permitted family version; an allowlist can pin versions, and a substitution is announced — documented for the **main-session** `/model` and `--model` surfaces only. `[FACT]`
+  - Source: https://docs.claude.com/en/docs/claude-code/model-config (accessed 2026-07-14)
+  - Quote: "a model family alias, `opus`, `sonnet`, `haiku`, or `fable`, resolves to the newest version of its family that the allowlist permits. When the allowlist pins specific versions, for example `[\"sonnet\", \"claude-opus-4-6\"]`, both `/model opus` and `--model opus` select Claude Opus 4.6, the newest permitted Opus, and show a notice naming both the requested and substituted models."
+- **`RES-4`** — Main-session model surfaces. `[FACT]`
+  - Source: https://docs.claude.com/en/docs/claude-code/model-config (accessed 2026-07-14)
+  - Quote: "Main session model: `/model`, the `--model` flag, the `ANTHROPIC_MODEL` environment variable, the `model` setting, and the model restored when resuming a session".
+- **`RES-5`** — Selecting an unrecognized model id (via the `/model` custom-model surface) reports an error. This is documented for `/model`, **not** for subagent-frontmatter dispatch (see `CAP-Q5`). `[FACT]`
+  - Source: https://code.claude.com/docs/en/model-config (accessed 2026-07-14)
+  - Quote: "Model \"<name>\" is not a recognized model id."
+
+### 6. Plugin-agent field support
+
+The speckit-pro agents are **plugin-shipped** agents, so plugin-agent field support governs
+which of their frontmatter fields the platform honors.
+
+- **`PLG-1`** — Plugin agents honor a subset of subagent fields; `hooks`, `mcpServers`, and `permissionMode` are **not** supported for plugin-shipped agents. `[FACT]`
+  - Source: https://code.claude.com/docs/en/plugins-reference (accessed 2026-07-14)
+  - Quote: "Plugin agents support `name`, `description`, `model`, `effort`, `maxTurns`, `tools`, `disallowedTools`, `skills`, `memory`, `background`, and `isolation` frontmatter fields. The only valid `isolation` value is `\"worktree\"`. For security reasons, `hooks`, `mcpServers`, and `permissionMode` are not supported for plugin-shipped agents."
+- **`PLG-2`** — Plugin agents are addressed by a plugin-scoped name. `[FACT]`
+  - Source: https://code.claude.com/docs/en/plugins-reference (accessed 2026-07-14); corroborated by https://code.claude.com/docs/en/hooks (accessed 2026-07-14)
+  - Quote: "Agents appear in the @-mention typeahead under their scoped name, such as `my-plugin:code-reviewer`, once the plugin is enabled" and (hooks) "For subagents shipped by a plugin, this is the plugin-scoped identifier such as `my-plugin:reviewer`, not the bare frontmatter name."
+
+### 7. Fast mode
+
+- **`FST-1`** — Fast mode is a high-speed Opus configuration (same model quality, ~2.5x speed, higher per-token cost). `[FACT]`
+  - Source: https://code.claude.com/docs/en/whats-new/2026-w20 (accessed 2026-07-14)
+  - Quote: "Fast mode is a high-speed Opus configuration: the same model quality at about 2.5x the speed for a higher per-token cost, useful for rapid iteration and live debugging."
+- **`FST-2`** — Fast mode currently defaults to Opus 4.8 (superseding the earlier Opus 4.7 default), priced at 2x standard for ~2.5x speed. `[FACT]`
+  - Source: https://code.claude.com/docs/en/whats-new/2026-w22 (accessed 2026-07-14); https://claude.com/pricing (accessed 2026-07-14)
+  - Quote: "Fast mode now defaults to Opus 4.8 at $10/$50 per MTok: 2x the standard rate for about 2.5x the speed." and (pricing) "Get up to 2.5x faster speeds with fast mode for Opus 4.8 at 2x standard pricing."
+- **`FST-3`** — `/fast` toggles fast mode; in print mode (`-p`) it only works when the session was launched with `fastMode` in `--settings`. `[FACT]`
+  - Source: https://code.claude.com/docs/en/commands (accessed 2026-07-14)
+  - Quote: "Toggle fast mode on or off. In non-interactive mode (`-p`), `/fast` works only in a session launched with fast mode in its `--settings` value, for example `claude -p --settings '{\"fastMode\": true}'`… Requires Claude Code v2.1.205 or later".
+  - Note: fast mode is a **session-level** Opus configuration and is absent from the supported subagent frontmatter fields (`SUB-fields`, `PLG-1`), so it is orthogonal to per-agent route policy — a subagent does not opt into fast mode via frontmatter. `[INFERENCE]` — composed from `FST-1` + `SUB-fields`/`PLG-1`.
+
+### 8. Authentication modes
+
+- **`AUTH-1`** — Claude Code authenticates individuals, teams, and organizations. `[FACT]`
+  - Source: https://code.claude.com/docs/en/authentication (accessed 2026-07-14)
+  - Quote: "Log in to Claude Code and configure authentication for individuals, teams, and organizations."
+- **`AUTH-2`** — Documented authentication modes, in the page's precedence order: `CLAUDE_CODE_USE_BEDROCK` / `CLAUDE_CODE_USE_VERTEX` / `CLAUDE_CODE_USE_FOUNDRY` (cloud providers), `ANTHROPIC_AUTH_TOKEN` (sent as `Authorization: Bearer`), `ANTHROPIC_API_KEY` (sent as `X-Api-Key`), `apiKeyHelper`, `CLAUDE_CODE_OAUTH_TOKEN` (a long-lived token from `claude setup-token`), and interactive subscription login (`/login`). `[FACT]`
+  - Source: https://code.claude.com/docs/en/authentication (accessed 2026-07-14)
+  - Quote (the "Authentication precedence" identifiers, verbatim): "CLAUDE_CODE_USE_BEDROCK … CLAUDE_CODE_USE_VERTEX … CLAUDE_CODE_USE_FOUNDRY … ANTHROPIC_AUTH_TOKEN … Authorization: Bearer … ANTHROPIC_API_KEY … X-Api-Key … apiKeyHelper … CLAUDE_CODE_OAUTH_TOKEN … claude setup-token … /login".
+  - Note: agents inherit the session's auth mode; no agent requires a specific mode. The manifest `required_capabilities.client` is therefore "Claude Code, any supported auth mode." `[INFERENCE]` — composed from `AUTH-2` + `RES-2`.
+
+### 9. Non-interactive telemetry
+
+**These rows are the source for the *Telemetry requirements* section (task T022, later unit).**
+
+- **`TEL-1`** — `claude -p --output-format json` returns a structured payload with `result` (text), session id, usage metadata, `total_cost_usd`, and a per-model cost breakdown; `--json-schema` adds `structured_output`. `[FACT]`
+  - Source: https://code.claude.com/docs/en/headless (accessed 2026-07-14)
+  - Quote: "With `--output-format json`, the response payload includes `total_cost_usd` and a per-model cost breakdown…"; "`json`: structured JSON with result, session ID, and metadata"; "The response includes metadata about the request (session ID, usage, etc.) with the structured output in the `structured_output` field."
+- **`TEL-2`** — No effort field is documented among the `-p --output-format json` result fields; the effective reasoning effort applied is therefore not returned by the print-mode JSON result. `[INFERENCE]` — composed from the documented `TEL-1` field set (result / session id / usage / `total_cost_usd` / per-model cost / `structured_output`), which contains no effort field. Feeds the T022 "never-returned / derived" necessity label.
+- **`TEL-3`** — OpenTelemetry monitoring emits the `claude_code.cost.usage` metric whose attributes include `model`, `query_source` (`"main"`/`"subagent"`/`"auxiliary"`), `speed` (`"fast"`), `effort` (`"low"`/`"medium"`/`"high"`/`"xhigh"`/`"max"`), and `agent.name` — so per-subagent, per-model, per-effort cost is observable via OTel (a surface distinct from the `-p` JSON result). `[FACT]`
+  - Source: https://code.claude.com/docs/en/monitoring-usage (accessed 2026-07-14)
+  - Quote (verbatim metric + attribute identifiers): "`claude_code.cost.usage` … `model` … `query_source` `\"main\"` `\"subagent\"` `\"auxiliary\"` … `speed` `\"fast\"` … `effort` `\"low\"` `\"medium\"` `\"high\"` `\"xhigh\"` `\"max\"` … `agent.name`".
+- **`TEL-4`** — The OTel `claude_code.api_request` log event carries `model`, `cost_usd`, `duration_ms`, `input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_creation_tokens`, and `request_id`. `[FACT]`
+  - Source: https://code.claude.com/docs/en/monitoring-usage (accessed 2026-07-14)
+  - Quote (verbatim event + field identifiers): "`claude_code.api_request` … `model` … `cost_usd` … `duration_ms` … `input_tokens` … `output_tokens` … `cache_read_tokens` … `cache_creation_tokens` … `request_id`".
+- **`TEL-5`** — The model a subagent actually runs on is observable as the `resolvedModel` field (SubagentStart hook), which can differ from the requested `model`. For background subagents the tool response carries `resolvedModel` but no usage fields. `[FACT]`
+  - Source: https://code.claude.com/docs/en/hooks (accessed 2026-07-14)
+  - Quote: "The `resolvedModel` field names the model the subagent actually runs on, which can differ from the `model` value in `tool_input`, such as when `availableModels` or another override applies. It requires Claude Code v2.1.174 or later." and "For background subagents, the tool returns immediately after launching, so `tool_response` carries no usage fields. It has `status: \"async_launched\"`, `agentId`, `description`, `prompt`, `outputFile`, and `resolvedModel`."
+
+### 10. Pricing (cost context)
+
+- **`PRC-1`** — Current published per-model list prices ($/MTok input / output): Fable 5 $10 / $50; Opus 4.8 $5 / $25; Sonnet 5 $2 / $10 (introductory) then $3 / $15; Haiku 4.5 $1 / $5. `[FACT]`
+  - Source: https://claude.com/pricing (accessed 2026-07-14)
+  - Quote: "Fable 5 … Input $10/ MTok … Output $50/ MTok"; "Opus 4.8 … Input $5/ MTok … Output $25/ MTok"; "Sonnet 5 … Input $2/ MTok … Output $10/ MTok"; "Haiku 4.5 … Input $1/ MTok … Output $5/ MTok".
+- **`PRC-2`** — Sonnet 5 introductory pricing runs through 2026-08-31, then standard. `[FACT]`
+  - Source: https://www.anthropic.com/news/claude-sonnet-5 (accessed 2026-07-14)
+  - Quote: "Claude Sonnet 5 is available everywhere today at an introductory price of $2 per million input tokens and $10 per million output tokens through August 31, 2026. It then moves to standard pricing at $3 per million input tokens and $15 per million output tokens."
 
 ## Capability questions
 
-<!-- authored in a later unit (Group D capability-question section, task T024; questions raised across T010/T013/T014) -->
+Stable, contiguous probe IDs established by this unit (unit 2, tasks T010/T013/T014).
+Later units reference these IDs verbatim: the manifest `capability_questions` stubs (T020)
+and each tuple's `binding_question_ref` / `probe_question_ref` (T017) resolve here, and the
+dedicated capability-question prose pass (T024) expands each entry below without renumbering.
+Capability questions are **open probes**, not declarative statements — they carry none of
+the four class tags (per FR-005/FR-008) and hand undocumented bindings and behaviors to
+CAR-002 for probe design.
+
+Sources of these questions: unbound alias→dated-ID bindings (T010, rows `ALS-opus…fable`);
+inter-doc conflicts (T013 — **none found**, so no conflict-driven question); and the two
+undocumented behaviors (T014). No candidate is claimed executable before these are probed.
+
+| ID | Question (one-line) | Blocks |
+|----|---------------------|--------|
+| **`CAP-Q1`** | Does the `opus` Claude Code alias resolve to `claude-opus-4-8` in the pinned benchmark environment, and is that alias→dated-ID binding stable given "latest"-family resolution, allowlist pinning, and `ANTHROPIC_DEFAULT_OPUS_MODEL` re-pointing (`ALS-opus`, `RES-3`, `ALS-repoint`)? | CAR-002 probe of the `opus` route's environment-time resolved ID; gates candidate-tuple binding for the five `opus` executor agents (analyze/checklist/clarify/implement/phase). |
+| **`CAP-Q2`** | Does the `sonnet` alias resolve to `claude-sonnet-5` in the pinned environment, and is that binding stable under the same floating-resolution/allowlist/re-point risks (`ALS-sonnet`)? | CAR-002 probe of the `sonnet` route's resolved ID; gates candidate-tuple binding for the six `sonnet` analyst/validator/author agents (codebase/consensus/domain/gate/spec-context/uat). |
+| **`CAP-Q3`** | Does the `haiku` alias resolve to `claude-haiku-4-5-20251001` (alias `claude-haiku-4-5`) in the pinned environment (`ALS-haiku`)? | CAR-002 probe of the `haiku` route's resolved ID; gates the `autopilot-fast-helper` starting-hypothesis `haiku` + low-effort candidate tuple (helper Mapping-hypothesis note). |
+| **`CAP-Q4`** | Does the `fable` alias resolve to `claude-fable-5` **and** is `fable` available/accessible in the pinned benchmark environment (PRD OQ-4), given `best`/`fable` "where your organization has access" gating and `ANTHROPIC_DEFAULT_FABLE_MODEL` re-pointing (`ALS-fable`, `ALS-context`, `ALS-repoint`)? | CAR-002 probe of `fable`'s resolved ID and environment-time availability; gates `fable`'s executor-class candidate eligibility (FR-013) — `fable` is excluded only by recorded probe/contract evidence. |
+| **`CAP-Q5`** | When a subagent's `model` frontmatter names an **unavailable** model at dispatch, does Claude Code hard-error or silently substitute another model? (Documented only for the main-session `/model` custom-model surface — `RES-5`, the `model_not_found` API-retry category — never for subagent-frontmatter dispatch.) | CAR-002 probe of unavailable-model dispatch behavior; gates any CAR-003 fallback design that assumes a defined unavailable-model outcome. Recorded as a mandatory probe question, never assumed (FR-008). |
+| **`CAP-Q6`** | At a subagent's execution time, when a shipped alias has **re-pointed** to a new resolved model ID, is the new model silently used, does it hard-error, or is it otherwise handled? (Distinct from and additional to alias re-pointing's role as a recorded manifest invalidation trigger, FR-014; the docs surface the resolved model via `resolvedModel`/`TEL-5` and announce main-session substitution via `RES-3`, but do not document the subagent execution-time manifestation.) | CAR-002 probe of alias re-pointing's execution-time manifestation; gates CAR-003 route-stability assumptions and the semantics of the per-alias invalidation triggers. Recorded as a mandatory probe question, never assumed (FR-008). |
+
+Each `CAP-Qn` above states the **detection/probe** need only; the *Go / no-go handoff*
+(task T025, final section) carries any that remain unverified as no-go items or open
+questions, and asserts no dependency on CAR-002 results.
 
 ## Fixture backlog
 
