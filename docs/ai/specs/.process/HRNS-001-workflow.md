@@ -40,13 +40,15 @@ The design concept is the source of truth for these scoping decisions:
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | Create one P1 maintainer story and AC-1.* requirements |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Resolve row schema, research boundaries, and proof commands |
+| Specify | `/speckit-specify` | ✅ Complete | Created spec.md and requirements checklist; G1 routed to Clarify |
+| Clarify | `/speckit-clarify` | 🔄 In Progress | Resolve row schema, research boundaries, and proof commands |
 | Plan | `/speckit-plan` | ⏳ Pending | Design the canonical Markdown artifact and evidence workflow |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Data integrity, security, integration, and reliability |
 | Tasks | `/speckit-tasks` | ⏳ Pending | Evidence-first docs tasks bounded by the Design Concept |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Check cross-artifact scope and AC-1.* coverage |
+| Confidence Gate | G6.5 | ⏳ Pending | Record pre-Implement confidence and mode before implementation |
 | Implement | `/speckit-implement` | ⏳ Pending | Produce and validate the taxonomy artifact only |
+| Post | post-implementation | ⏳ Pending | Run canonical verification, PR, review, and retrospective items |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -60,6 +62,7 @@ The design concept is the source of truth for these scoping decisions:
 | G4 | After Checklist | Every true requirement gap is fixed or recorded as an explicit non-goal/deferment |
 | G5 | After Tasks | Tasks trace to every functional requirement and preserve the docs/process boundary |
 | G6 | After Analyze | No CRITICAL or HIGH inconsistency remains across Design Concept, spec, plan, and tasks |
+| G6.5 | Confidence Gate | Pre-Implement confidence is recorded and evaluated in advisory or strict mode |
 | G7 | After Implementation | AC crosswalk, surface coverage, candidate evidence, links, and applicable repo checks pass |
 
 ---
@@ -249,14 +252,15 @@ ungrounded dependency decision.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Pending; must trace to AC-1.1 through AC-1.10 |
-| User Stories | 1 planned P1 story |
-| Acceptance Scenarios | Pending |
+| Functional Requirements | 13 requirements; AC-1.1 through AC-1.10 coverage carried into Clarify |
+| User Stories | 1 P1 story |
+| Acceptance Scenarios | 5 scenarios |
+| G1 Result | 3 `[NEEDS CLARIFICATION]` markers remain; proceed to Clarify |
 
 ### Files Generated
 
-- [ ] `specs/hrns-001-harness-surface-inventory-gap-taxonomy/spec.md`
-- [ ] `specs/hrns-001-harness-surface-inventory-gap-taxonomy/checklists/requirements.md`
+- [x] `specs/hrns-001-harness-surface-inventory-gap-taxonomy/spec.md`
+- [x] `specs/hrns-001-harness-surface-inventory-gap-taxonomy/checklists/requirements.md`
 
 ### SpecKit Traceability Markers
 
@@ -626,9 +630,27 @@ Focus on:
 
 ---
 
+## Phase 6.5: Confidence Gate
+
+**When to run:** After Analyze and before Implement.
+
+| Field | Value |
+|-------|-------|
+| Mode | advisory |
+| Threshold | 0.90 |
+| Status | Pending |
+| Evidence | Most recent Phase 6 confidence emit in this workflow |
+
+The confidence gate records whether the spec, plan, tasks, and analyze results
+are clear enough for implementation. In advisory mode, a low score is logged
+with remediation notes but does not block Phase 7 unless a true G6 issue remains.
+
+---
+
 ## Phase 7: Implement
 
-**When to run:** After Analyze has no CRITICAL or HIGH findings.
+**When to run:** After Analyze has no CRITICAL or HIGH findings and the Phase
+6.5 confidence gate has been recorded.
 
 ### Implement Prompt
 
@@ -682,6 +704,25 @@ For each task:
 ---
 
 ## Post-Implementation Checklist
+
+### Canonical Post Rows
+
+- [ ] Post: Doctor Extension Check
+- [ ] Post: Verify Implementation
+- [ ] Post: Verify Tasks Phantom Check
+- [ ] Post: Code Review
+- [ ] Post: Integration Suite
+- [ ] Post: Reviewability Diff Gate
+- [ ] Post: Self-Review
+- [ ] Post: UAT Runbook Generation
+- [ ] Post: Final Reviewability Backstop
+- [ ] Post: PR Packet/Body Generation
+- [ ] Post: PR Body Generation
+- [ ] Post: PR Creation
+- [ ] Post: Review Remediation
+- [ ] Post: Retrospective
+
+### HRNS-001 Completion Checks
 
 - [ ] All tasks are complete and trace to US1 plus AC-1.1 through AC-1.10.
 - [ ] `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md` is the only
