@@ -724,6 +724,89 @@ class KnowledgeLayerTests(unittest.TestCase):
         self.assertEqual(body["diagnostics"][0]["code"], "unreadable_file")
         self.assertEqual(body["diagnostics"][0]["details"]["path"], operation["target"])
 
+    def test_apply_classifies_oversized_targets_as_repository_failures(self) -> None:
+        root = self.repo("apply-oversized")
+        plan = self.plan(root, "init")
+        target = root / plan["operations"][0]["target"]
+        oversized = b"x" * (knowledge_helper.MAX_PLAN_CONTENT_BYTES + 1)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(oversized)
+
+        body = self.apply_direct(root, plan)
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual(body["diagnostics"][0]["code"], "oversized_concept")
+        self.assertFalse(body["data"]["writes_state"])
+
+        target.unlink()
+        original_validate = knowledge_helper._validate_apply_operations
+
+        def grow_after_validation(repo_root: Path, operations: list[object]) -> None:
+            original_validate(repo_root, operations)
+            target.write_bytes(oversized)
+
+        with mock.patch.object(
+            knowledge_helper,
+            "_validate_apply_operations",
+            side_effect=grow_after_validation,
+        ):
+            body = self.apply_direct(root, plan)
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual(body["diagnostics"][0]["code"], "oversized_concept")
+        self.assertFalse(body["data"]["writes_state"])
+
+    def test_archive_requires_fresh_sources_through_apply(self) -> None:
+        root = self.repo("archive-source-freshness")
+        self.current_root = root
+        self.init(root)
+        source = self.write(root, "docs/archive-source.md", "Reviewed archive source.\n")
+        candidate = self.candidate("decisions/archive.md", "Archive Decision", [source])
+        completed, _ = self.apply(root, self.plan(root, "promote", candidate=candidate))
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        concept = root / "docs/ai/knowledge/decisions/archive.md"
+
+        source.write_text("Stale archive source.\n", encoding="utf-8")
+        completed, stale = run_helper(
+            root,
+            "knowledge-update-plan",
+            "read_only",
+            {
+                "action": "archive",
+                "timestamp": FIXED_TIME,
+                "concept_path": "decisions/archive.md",
+            },
+        )
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertEqual(stale["diagnostics"][0]["code"], "stale_source")
+
+        source.write_text("Reviewed archive source.\n", encoding="utf-8")
+        plan = self.plan(root, "archive", concept_path="decisions/archive.md")
+        before = file_snapshot(root)
+        original_preconditions = knowledge_helper._validate_source_preconditions
+
+        def change_before_result(
+            repo_root: Path,
+            accepted_plan: dict[str, object],
+            *,
+            phase: str,
+        ) -> None:
+            if phase == "resulting":
+                source.write_text("Changed during archive apply.\n", encoding="utf-8")
+            original_preconditions(repo_root, accepted_plan, phase=phase)
+
+        with mock.patch.object(
+            knowledge_helper,
+            "_validate_source_preconditions",
+            side_effect=change_before_result,
+        ):
+            body = self.apply_direct(root, plan)
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual(body["diagnostics"][0]["code"], "source_changed")
+        self.assertEqual(body["data"]["mutation"]["mutation_status"], "rolled_back")
+        self.assertNotIn('x-speckit-status: "archived"', concept.read_text(encoding="utf-8"))
+        after = file_snapshot(root)
+        after[source.relative_to(root).as_posix()] = before[source.relative_to(root).as_posix()]
+        self.assertEqual(after, before)
+
     def test_rollback_failure_reports_residual_writes(self) -> None:
         root = self.repo("rollback-failure")
         self.init(root)

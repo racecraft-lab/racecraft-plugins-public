@@ -297,7 +297,13 @@ def run_knowledge_update_apply(entry: Any, request: Any) -> dict[str, Any]:
             request.request_id,
             exc,
             expected_failure=exc.code
-            in {"plan_changed", "snapshot_changed", "source_changed", "unreadable_file"},
+            in {
+                "plan_changed",
+                "snapshot_changed",
+                "source_changed",
+                "unreadable_file",
+                "oversized_concept",
+            },
             data=_apply_data(entry, request, mutation, None),
         )
 
@@ -3085,9 +3091,10 @@ def _build_source_preconditions(
     operations_by_target = {str(operation["target"]): operation for operation in operations}
     records: dict[str, dict[str, str]] = {}
     for concept in concepts:
-        if concept.metadata.get("x-speckit-status") in {"archived", "superseded"}:
-            continue
         concept_is_planned = _knowledge_target(concept.relative_path) in operations_by_target
+        status = concept.metadata.get("x-speckit-status")
+        if status == "superseded" or (status == "archived" and not concept_is_planned):
+            continue
         for field, raw_path, recorded_digest in _source_token_records(concept):
             if field == "x-speckit-migration-sources" and not concept_is_planned:
                 continue
