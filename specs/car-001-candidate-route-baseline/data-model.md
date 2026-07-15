@@ -235,11 +235,15 @@ manifest carries the machine-referenceable stubs so tuples can point at them by
    `production_route_recorded_absence == true`; the other eleven have a non-null
    route and `false`.
 4. **Hash integrity (FR-010, FR-011, SC-007)**: `instruction_sha256` and
-   `full_file_sha256` are 64-hex; all hashes are computed over the agent file's
-   bytes at the pinned comparator tag (not the working tree) using the §3.2
-   frontmatter boundary; for the eleven current agents recomputing sha256 over
-   the frontmatter-stripped tag body reproduces `instruction_sha256`, and a pure
-   frontmatter route change does not change it.
+   `full_file_sha256` are 64-hex and computed over the comparator source at the
+   pinned tag (not the working tree). For the eleven current agents (`hash_source:
+   claude-agent-md`), that is the agent `.md` bytes using the §3.2 frontmatter
+   boundary — recomputing sha256 over the frontmatter-stripped tag body reproduces
+   `instruction_sha256`, and a pure frontmatter route change does not change it.
+   For `autopilot-fast-helper` (`hash_source: codex-toml-translation`, §3.2 helper
+   exception), `full_file_sha256` is over the Codex source toml and
+   `instruction_sha256` over the contract-equivalent translated body in
+   `platform_field_mapping`.
 5. **Eligibility/availability split (FR-015)**: every tuple has both
    `project_level_eligibility` and `environment_time_availability`;
    `environment_time_availability.status` is always `probe_required`.

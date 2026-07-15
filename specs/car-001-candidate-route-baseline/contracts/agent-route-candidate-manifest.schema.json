@@ -244,7 +244,10 @@
         {
           "if": { "properties": { "production_route_recorded_absence": { "const": true } } },
           "then": {
-            "properties": { "immutable_production_route": { "type": "null" } },
+            "properties": {
+              "immutable_production_route": { "type": "null" },
+              "agent_file_hashes": { "properties": { "hash_source": { "const": "codex-toml-translation" } } }
+            },
             "required": ["platform_field_mapping"]
           }
         },
@@ -253,7 +256,8 @@
           "then": {
             "properties": {
               "immutable_production_route": { "$ref": "#/$defs/route_tuple_field" },
-              "platform_field_mapping": false
+              "platform_field_mapping": false,
+              "agent_file_hashes": { "properties": { "hash_source": { "const": "claude-agent-md" } } }
             }
           }
         }

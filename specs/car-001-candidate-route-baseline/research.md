@@ -206,8 +206,12 @@ resolved here.
   `data-model.md`), and the machine contract (see
   `contracts/agent-route-candidate-manifest.schema.json`).
 - **Deferred by design to the implement phase (recorded, not assumed)**: the
-  live alias-to-resolved-model-ID bindings, `fable` resolution/availability, and
-  the undocumented unavailable-model behavior — each recorded as a fact (if the
-  docs bind it) or a `CAP-Qn` capability question (if they do not). The helper's
-  proposed `maxTurns` (and any other Claude-only subagent-field values) carried
-  as "proposed SpecKit Pro policy", finalized by CAR-010.
+  live alias-to-resolved-model-ID bindings and each resolved model's
+  effort-acceptance (`CAP-Q1`–`CAP-Q4`; effort levels are model-dependent per
+  `EFF-1`), `fable` resolution/availability (`CAP-Q4`), the undocumented
+  unavailable-model dispatch behavior (`CAP-Q5`), and the undocumented
+  execution-time manifestation of alias re-pointing (`CAP-Q6`) — each recorded as
+  a fact (if the docs bind it) or a `CAP-Qn` capability question (if they do
+  not). The helper's proposed `maxTurns` (and any other Claude-only
+  subagent-field values) carried as "proposed SpecKit Pro policy", finalized by
+  CAR-010.
