@@ -8,27 +8,27 @@
 
 ## Requirement Completeness
 
-- [ ] CHK001 Are living-update rules complete for later specs changing lifecycle state, owner, or closure evidence while preserving IDs? [Completeness, Spec §Assumptions]
-- [ ] CHK002 Are completion proof requirements complete for AC crosswalk, surface coverage, evidence coverage, loop coverage, link review, and deferment ownership? [Completeness, Spec §FR-013]
-- [ ] CHK003 Are self-improvement loop closure requirements complete enough to prevent missing approval evidence from becoming implicit approval? [Completeness, Spec §FR-009]
+- [x] CHK001 Are living-update rules complete for later specs changing lifecycle state, owner, or closure evidence while preserving IDs? [Completeness, Spec §Assumptions]
+- [x] CHK002 Are completion proof requirements complete for AC crosswalk, surface coverage, evidence coverage, loop coverage, link review, and deferment ownership? [Completeness, Spec §FR-013]
+- [x] CHK003 Are self-improvement loop closure requirements complete enough to prevent missing approval evidence from becoming implicit approval? [Completeness, Spec §FR-009]
 
 ## Requirement Clarity
 
-- [ ] CHK004 Is the lifecycle transition boundary clear for `unknown` to `planned`, `planned` to `implemented`, and `planned` to `external-owner` states? [Clarity, Data Model §Retained Gap]
-- [ ] CHK005 Are verification commands and applicability rules clear enough that docs-site validation is not accidentally required for non-site docs changes? [Clarity, Quickstart §Prerequisites]
-- [ ] CHK006 Is the no-new-validator rule clear while still requiring traceable documentation proof? [Clarity, Spec §FR-013]
+- [x] CHK004 Is the lifecycle transition boundary clear for `unknown` to `planned`, `planned` to `implemented`, and `planned` to `external-owner` states? [Clarity, Data Model §Retained Gap]
+- [x] CHK005 Are verification commands and applicability rules clear enough that docs-site validation is not accidentally required for non-site docs changes? [Clarity, Quickstart §Prerequisites]
+- [x] CHK006 Is the no-new-validator rule clear while still requiring traceable documentation proof? [Clarity, Spec §FR-013]
 
 ## Requirement Consistency
 
-- [ ] CHK007 Do the spec, plan, data model, and quickstart align on docs/process-only scope and no runtime/API contract? [Consistency, Plan §Structure Decision]
-- [ ] CHK008 Do completion proof requirements align with the PR packet requirements and measurable success criteria? [Consistency, Spec §FR-013, Spec §SC-005]
+- [x] CHK007 Do the spec, plan, data model, and quickstart align on docs/process-only scope and no runtime/API contract? [Consistency, Plan §Structure Decision]
+- [x] CHK008 Do completion proof requirements align with the PR packet requirements and measurable success criteria? [Consistency, Spec §FR-013, Spec §SC-005]
 
 ## Recovery and Maintenance Coverage
 
-- [ ] CHK009 Are requirements clear for stale, duplicate, obsolete, or intentionally deferred gaps so downstream specs can avoid rediscovery? [Coverage, Spec §FR-005]
-- [ ] CHK010 Are requirements clear for source conflicts where generated or derived artifacts disagree with authoritative source? [Coverage, Spec §Edge Cases]
-- [ ] CHK011 Are requirements clear for review-controlled updates without silent deletion, renumbering, or state forking? [Coverage, Spec §Assumptions]
+- [x] CHK009 Are requirements clear for stale, duplicate, obsolete, or intentionally deferred gaps so downstream specs can avoid rediscovery? [Coverage, Spec §FR-005]
+- [x] CHK010 Are requirements clear for source conflicts where generated or derived artifacts disagree with authoritative source? [Coverage, Spec §Edge Cases]
+- [x] CHK011 Are requirements clear for review-controlled updates without silent deletion, renumbering, or state forking? [Coverage, Spec §Assumptions]
 
 ## Acceptance Criteria Quality
 
-- [ ] CHK012 Can a reviewer objectively determine from the artifact whether HRNS-001 is complete without reading raw transcripts or chat history? [Measurability, Spec §Independent Test]
+- [x] CHK012 Can a reviewer objectively determine from the artifact whether HRNS-001 is complete without reading raw transcripts or chat history? [Measurability, Spec §Independent Test]

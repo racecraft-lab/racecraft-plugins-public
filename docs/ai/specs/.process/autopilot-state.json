@@ -3,8 +3,8 @@
   "feature_dir": "specs/hrns-001-harness-surface-inventory-gap-taxonomy",
   "spec_id": "HRNS-001",
   "branch": "hrns-001-harness-surface-inventory-gap-taxonomy",
-  "updated_at": "2026-07-15T23:14:32Z",
-  "active_step": "Phase 7: Implement - Pending task decomposition",
+  "updated_at": "2026-07-15T23:22:40Z",
+  "active_step": "Post: Doctor Extension Check",
   "confidence_gate_mode": "advisory",
   "project_commands": {
     "BUILD": "N/A",
@@ -165,6 +165,10 @@
       ],
       "items": 48,
       "gaps": 0,
+      "checkbox_completion": {
+        "completed": 48,
+        "incomplete": 0
+      },
       "g4": {
         "status": "pass",
         "markers": 0,
@@ -256,6 +260,36 @@
       },
       "recommended_action": "proceed",
       "request_id": "hrns-001-g65-confidence-gate-retry"
+    },
+    "implement": {
+      "status": "completed",
+      "artifacts": [
+        "docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md",
+        "specs/hrns-001-harness-surface-inventory-gap-taxonomy/tasks.md",
+        "specs/hrns-001-harness-surface-inventory-gap-taxonomy/quickstart.md",
+        "docs/ai/specs/.process/HRNS-001-workflow.md"
+      ],
+      "tasks": {
+        "total": 35,
+        "completed": 35,
+        "incomplete": 0
+      },
+      "validation": {
+        "placeholder_sweep": "pass",
+        "link_evidence_review": "reviewed",
+        "spec_index": {
+          "status": "current",
+          "request_id": "hrns-001-generate-spec-index-check-after-implement"
+        },
+        "diff_check": "pass",
+        "layer_1": {
+          "status": "pass",
+          "passed": 1428,
+          "total": 1428,
+          "command": "python3 tests/speckit-pro/run-all.py --layer 1"
+        }
+      },
+      "pr_packet": "recorded_in_workflow"
     }
   },
   "plan": [
@@ -283,8 +317,8 @@
     {"step": "Phase 6: Analyze", "status": "completed"},
     {"step": "Phase 6: Analyze - Consensus", "status": "completed"},
     {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
-    {"step": "Phase 7: Implement - Pending task decomposition", "status": "in_progress"},
-    {"step": "Post: Doctor Extension Check", "status": "pending"},
+    {"step": "Phase 7: Implement - Pending task decomposition", "status": "completed"},
+    {"step": "Post: Doctor Extension Check", "status": "in_progress"},
     {"step": "Post: Verify Implementation", "status": "pending"},
     {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
     {"step": "Post: Code Review", "status": "pending"},

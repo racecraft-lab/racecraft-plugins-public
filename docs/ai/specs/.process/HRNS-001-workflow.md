@@ -47,8 +47,8 @@ The design concept is the source of truth for these scoping decisions:
 | Tasks | `/speckit-tasks` | ✅ Complete | 35 evidence-first docs tasks generated; G5 passed |
 | Analyze | `/speckit-analyze` | ✅ Complete | A1 parallel marker issue resolved; no open findings |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory confidence gate passed: 0.97 >= 0.90 |
-| Implement | `/speckit-implement` | 🔄 In Progress | Produce and validate the taxonomy artifact only |
-| Post | post-implementation | ⏳ Pending | Run canonical verification, PR, review, and retrospective items |
+| Implement | `/speckit-implement` | ✅ Complete | Taxonomy artifact created; 35/35 tasks complete; validation passed |
+| Post | post-implementation | 🔄 In Progress | Run canonical verification, PR, review, and retrospective items |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -703,11 +703,11 @@ For each task:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| Foundation | | | |
-| US1 inventory | | | |
-| US1 candidate/safety evidence | | | |
-| US1 proof | | | |
-| Polish | | | |
+| Foundation | T001-T010 | 10/10 | Baseline authority, artifact skeleton, source/evidence schemas, row semantics, matrix schema, and loop rules recorded |
+| US1 inventory | T011-T019 | 9/9 | Current-state boundary, surface rows, canonical gap register, owners, knowledge lifecycle gaps, and loop closures recorded |
+| US1 candidate/safety evidence | T020-T025 | 6/6 | External candidate and OKF evidence matrix populated from dated primary sources |
+| US1 proof | T026-T027 | 2/2 | AC-1.1 through AC-1.10 crosswalk and non-adoption guardrail review completed |
+| Polish | T028-T035 | 8/8 | Placeholder sweep, link/evidence review, spec-index check, `git diff --check`, Layer 1, workflow/state, and PR packet draft completed |
 
 ---
 
@@ -732,24 +732,94 @@ For each task:
 
 ### HRNS-001 Completion Checks
 
-- [ ] All tasks are complete and trace to US1 plus AC-1.1 through AC-1.10.
-- [ ] `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md` is the only
+- [x] All tasks are complete and trace to US1 plus AC-1.1 through AC-1.10.
+- [x] `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md` is the only
       canonical taxonomy artifact.
-- [ ] Every retained gap has one stable ID, required tags/state/evidence,
+- [x] Every retained gap has one stable ID, required tags/state/evidence,
       owner workflow, dependency posture, and downstream ownership.
-- [ ] Every external row has dated primary evidence or an explicit `unknown`.
-- [ ] OKF normative/maturity/compatibility/extension posture is explicit.
-- [ ] Every self-improvement loop has a safe closure classification.
-- [ ] Generated distributions, caches, fixtures, raw transcripts, unreviewed
+- [x] Every external row has dated primary evidence or an explicit `unknown`.
+- [x] OKF normative/maturity/compatibility/extension posture is explicit.
+- [x] Every self-improvement loop has a safe closure classification.
+- [x] Generated distributions, caches, fixtures, raw transcripts, unreviewed
       chat, and derived indexes are not presented as authoritative evidence.
-- [ ] CAR/G56R-owned gaps are cross-referenced without duplicated ownership.
-- [ ] Markdown links and the AC crosswalk have been reviewed.
-- [ ] Plan-selected documentation checks pass.
-- [ ] Applicable structural validation passes:
+- [x] CAR/G56R-owned gaps are cross-referenced without duplicated ownership.
+- [x] Markdown links and the AC crosswalk have been reviewed.
+- [x] Plan-selected documentation checks pass.
+- [x] Applicable structural validation passes:
       `python3 tests/speckit-pro/run-all.py --layer 1`.
-- [ ] The PR packet names review scope, verification, and intentional deferrals.
-- [ ] No runtime, generated, installed-cache, or vendored file changed.
+- [x] The PR packet names review scope, verification, and intentional deferrals.
+- [x] No runtime, generated, installed-cache, or vendored file changed.
 - [ ] PR is created and reviewed before merge.
+
+### PR Packet Draft
+
+**What changed**
+
+- Added `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md` as the
+  canonical HRNS-001 surface inventory, gap taxonomy, external-candidate matrix,
+  self-improvement loop register, OKF posture record, and AC-1.* crosswalk.
+- Completed and marked HRNS-001 tasks/checklists and refreshed workflow/state
+  evidence.
+
+**Why**
+
+- Downstream HRNS specs need a shared source-grounded baseline before changing
+  context, helper/tool contracts, permissions, evals, traces, orchestration,
+  OKF knowledge, or drift repair behavior.
+
+**Non-goals**
+
+- No runtime helper, runner, policy, eval, trace, generated-payload,
+  installed-cache, vendored, or docs-site changes.
+- No external package installation, prototype, dependency adoption, telemetry,
+  or repository-content submission.
+- No CAR/G56R implementation or promotion of unmerged branch state as current
+  authority.
+
+**Review order**
+
+1. Review the taxonomy current-state boundary and evidence classes.
+2. Review the surface inventory and `HRNS-GAP-###` canonical rows.
+3. Review the external-candidate matrix and OKF posture.
+4. Review the AC-1.1 through AC-1.10 crosswalk and deferment ownership.
+5. Review workflow/state/task/checklist evidence.
+
+**Scope budget**
+
+- Primary surface: docs/process.
+- New canonical artifact: `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`.
+- Runtime/plugin source changes: none.
+- Atomicity route: `one-navigable-PR`, releasable `true`.
+
+**Traceability**
+
+- AC-1.1 maps to the surface inventory.
+- AC-1.2 through AC-1.5 map to the canonical gap register.
+- AC-1.6 and AC-1.10 map to the external-candidate matrix and OKF posture.
+- AC-1.7 maps to the self-improvement loop register.
+- AC-1.8 maps to evidence classes.
+- AC-1.9 maps to HRNS-GAP-008 through HRNS-GAP-013.
+
+**Verification**
+
+- Placeholder sweep: pass with quickstart exclusions for self-referential files.
+- Link/evidence review: taxonomy Markdown links enumerated and reviewed.
+- Spec index: `generate-spec-index-check` current.
+- Whitespace: `git diff --check` pass.
+- Layer 1: `python3 tests/speckit-pro/run-all.py --layer 1` pass,
+  1428/1428.
+
+**Known gaps and intentional deferrals**
+
+- Runtime/helper/capability contract work remains HRNS-003.
+- Permission/sandbox enforcement remains HRNS-004.
+- Eval readiness remains HRNS-005.
+- Trace/debug packets remain HRNS-006.
+- Long-horizon orchestration remains HRNS-007.
+- Drift/garbage collection remains HRNS-008.
+- OKF bundle initialization, ingest, query, lint, index interop, and exchange
+  remain HRNS-009 through HRNS-014.
+- CAR/G56R routing work remains in CAR/G56R lanes.
 
 ---
 

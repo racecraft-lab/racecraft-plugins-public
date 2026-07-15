@@ -8,27 +8,27 @@
 
 ## Requirement Completeness
 
-- [ ] CHK001 Are all required harness surface categories from AC-1.1 represented in the requirements or explicitly marked not applicable? [Completeness, Spec §FR-001]
-- [ ] CHK002 Are canonical gap row fields complete enough to support identity, ownership, evidence, dependency posture, safety closure, and downstream HRNS handoff? [Completeness, Spec §FR-003]
-- [ ] CHK003 Are evidence-class requirements complete for authoritative sources and excluded non-authoritative sources? [Completeness, Spec §FR-010]
+- [x] CHK001 Are all required harness surface categories from AC-1.1 represented in the requirements or explicitly marked not applicable? [Completeness, Spec §FR-001]
+- [x] CHK002 Are canonical gap row fields complete enough to support identity, ownership, evidence, dependency posture, safety closure, and downstream HRNS handoff? [Completeness, Spec §FR-003]
+- [x] CHK003 Are evidence-class requirements complete for authoritative sources and excluded non-authoritative sources? [Completeness, Spec §FR-010]
 
 ## Requirement Clarity
 
-- [ ] CHK004 Is the `HRNS-GAP-###` numbering rule clear about zero padding, stability, and non-reuse? [Clarity, Spec §FR-003]
-- [ ] CHK005 Are lifecycle states defined distinctly enough that `planned`, `deferred`, `duplicate`, `obsolete`, `unknown`, and `external-owner` cannot be confused? [Clarity, Spec §FR-005]
-- [ ] CHK006 Are source-authority precedence rules clear when source files and generated or derived copies disagree? [Clarity, Spec §FR-010]
+- [x] CHK004 Is the `HRNS-GAP-###` numbering rule clear about zero padding, stability, and non-reuse? [Clarity, Spec §FR-003]
+- [x] CHK005 Are lifecycle states defined distinctly enough that `planned`, `deferred`, `duplicate`, `obsolete`, `unknown`, and `external-owner` cannot be confused? [Clarity, Spec §FR-005]
+- [x] CHK006 Are source-authority precedence rules clear when source files and generated or derived copies disagree? [Clarity, Spec §FR-010]
 
 ## Requirement Consistency
 
-- [ ] CHK007 Do the spec, plan, and data model use the same canonical row fields and state names? [Consistency, Spec §FR-003, Plan §Phase 1 Design]
-- [ ] CHK008 Do CAR/G56R ownership rules consistently preserve HRNS inventory visibility without absorbing external-lane implementation work? [Consistency, Spec §FR-006]
+- [x] CHK007 Do the spec, plan, and data model use the same canonical row fields and state names? [Consistency, Spec §FR-003, Plan §Phase 1 Design]
+- [x] CHK008 Do CAR/G56R ownership rules consistently preserve HRNS inventory visibility without absorbing external-lane implementation work? [Consistency, Spec §FR-006]
 
 ## Acceptance Criteria Quality
 
-- [ ] CHK009 Can every AC-1.1 through AC-1.10 coverage claim be objectively mapped to a taxonomy section or row? [Measurability, Spec §SC-001]
-- [ ] CHK010 Are duplicate-row prevention requirements measurable enough to verify one canonical retained-gap row per gap? [Measurability, Spec §SC-004]
+- [x] CHK009 Can every AC-1.1 through AC-1.10 coverage claim be objectively mapped to a taxonomy section or row? [Measurability, Spec §SC-001]
+- [x] CHK010 Are duplicate-row prevention requirements measurable enough to verify one canonical retained-gap row per gap? [Measurability, Spec §SC-004]
 
 ## Edge Case Coverage
 
-- [ ] CHK011 Are requirements clear for gaps that touch multiple surfaces without duplicating ownership rows? [Coverage, Spec §Edge Cases]
-- [ ] CHK012 Are requirements clear for missing, stale, or unclear external evidence being recorded as `unknown`? [Coverage, Spec §Edge Cases]
+- [x] CHK011 Are requirements clear for gaps that touch multiple surfaces without duplicating ownership rows? [Coverage, Spec §Edge Cases]
+- [x] CHK012 Are requirements clear for missing, stale, or unclear external evidence being recorded as `unknown`? [Coverage, Spec §Edge Cases]

@@ -15,6 +15,8 @@ new validator.
 
 ```bash
 rg -n "\\[NEEDS CLARIFICATION\\]|ACTION REQUIRED|\\[FEATURE\\]|\\[DATE\\]|\\[###-feature-name\\]" \
+  --glob '!quickstart.md' \
+  --glob '!**/checklists/requirements.md' \
   specs/hrns-001-harness-surface-inventory-gap-taxonomy \
   docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md
 ```
