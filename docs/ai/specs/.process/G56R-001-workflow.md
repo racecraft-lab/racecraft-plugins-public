@@ -51,13 +51,15 @@ Grill Me is human-in-the-loop only. Once autopilot starts, clarification uses
 
 | Phase | Command | Status | Notes |
 |---|---|---|---|
-| Specify | `$speckit-specify` | Pending | Define the official-only evidence and twelve-role research contract |
-| Clarify | `$speckit-clarify` | Pending | Resolve execution-time source, parity-role, and handoff ambiguities |
+| Specify | `$speckit-specify` | Complete | Created spec and requirements checklist; G1 passed |
+| Clarify | `$speckit-clarify` | In Progress | Resolve execution-time source, parity-role, and handoff ambiguities |
 | Plan | `$speckit-plan` | Pending | Plan one canonical report and its deterministic validation |
 | Checklist | `$speckit-checklist` | Pending | Run all five user-selected operational domains |
 | Tasks | `$speckit-tasks` | Pending | Produce source-first documentation tasks only |
 | Analyze | `$speckit-analyze` | Pending | Reject authority, scope, traceability, and count drift |
+| Confidence Gate | G6.5 | Pending | Record advisory pre-implementation confidence after analysis and before report authoring |
 | Implement | `$speckit-implement` | Pending | Author and validate the canonical research report |
+| Post | Post-Implementation | Pending | Run durable verification, review, UAT, PR, remediation, and retrospective steps |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -71,6 +73,7 @@ Grill Me is human-in-the-loop only. Once autopilot starts, clarification uses
 | G4 | After Checklist | All true gaps from the five selected checklist domains are remediated or explicitly rejected as out of scope |
 | G5 | After Tasks | Every task maps to AC-1.*, uses official evidence or labeled project input, and creates no runtime behavior |
 | G6 | After Analyze | No critical or high authority, traceability, count, dependency-cycle, or scope-leakage finding remains |
+| G6.5 | Before Implement | Advisory confidence gate records the current evidence posture or no-data outcome without weakening G7 |
 | G7 | After Implement | Canonical report, strict go/no-go result, source links, count checks, diff hygiene, and repository validation pass |
 
 ---
@@ -282,15 +285,15 @@ state but cannot establish Codex platform facts or admit model/effort routes.
 
 | Metric | Value |
 |---|---|
-| Functional Requirements | Pending |
-| User Stories | 3 planned |
+| Functional Requirements | 18 |
+| User Stories | 4 |
 | Acceptance Criteria | AC-1.1 through AC-1.7 plus fixture and handoff completeness |
-| G1 Gate | Pending |
+| G1 Gate | Pass - `spec.md` exists with 0 markers |
 
 ### Files Generated
 
-- [ ] `specs/g56r-001-candidate-route-baseline/spec.md`
-- [ ] `specs/g56r-001-candidate-route-baseline/checklists/requirements.md`
+- [x] `specs/g56r-001-candidate-route-baseline/spec.md`
+- [x] `specs/g56r-001-candidate-route-baseline/checklists/requirements.md`
 
 ---
 
@@ -614,6 +617,19 @@ Focus on:
 G6 passes only when no `CRITICAL` or `HIGH` finding remains and every accepted
 lower-severity finding has a recorded disposition.
 
+## Phase 6.5: Confidence Gate
+
+**When to run:** After G6 passes and before implementation begins. This gate is
+advisory for G56R-001 and records whether current planning evidence is
+sufficient to proceed into report authoring.
+
+| Gate | Status | Evidence | Disposition |
+|---|---|---|---|
+| G6.5 | Pending | Pending | Pending |
+
+The confidence gate cannot admit undocumented platform claims, relax the
+official-documentation authority rule, or replace G7 verification.
+
 ---
 
 ## Phase 7: Implement
@@ -677,6 +693,25 @@ $speckit-implement
 | Role contracts and candidates | Pending | Pending | Twelve contracts and provisional source-bound routes |
 | Fixture and G56R-002 handoff | Pending | Pending | Exact fixture inventory, telemetry/capability backlog, and strict decision |
 | Verification | Pending | Pending | Traceability, scope, links, counts, and repository gates |
+
+---
+
+## Post
+
+| Item | Status | Notes |
+|---|---|---|
+| Post: Doctor Extension Check | Pending | Confirm extension/tooling health after implementation |
+| Post: Verify Implementation | Pending | Confirm G7 outputs and task completion |
+| Post: Verify Tasks Phantom Check | Pending | Confirm tasks are complete and no phantom work is reported |
+| Post: Code Review | Pending | Run review against changed artifacts |
+| Post: Integration Suite | Pending | Run the applicable repository verification suite |
+| Post: Reviewability Diff Gate | Pending | Confirm changed-file scope and reviewability expectations |
+| Post: Self-Review | Pending | Perform final local diff and hygiene review |
+| Post: UAT Runbook Generation | Pending | Produce or validate the UAT runbook if required |
+| Post: PR Body Generation | Pending | Generate the PR body from verified evidence |
+| Post: PR Creation | Pending | Open the PR only after verification is complete |
+| Post: Review Remediation | Pending | Address review feedback if present |
+| Post: Retrospective | Pending | Record final workflow outcome and lessons |
 
 ---
 

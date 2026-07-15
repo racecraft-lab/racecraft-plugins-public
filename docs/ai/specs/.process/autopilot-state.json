@@ -1,409 +1,277 @@
 {
-  "workflow_file": "docs/ai/specs/.process/HRNS-001-workflow.md",
-  "feature_dir": "specs/hrns-001-harness-surface-inventory-gap-taxonomy",
-  "spec_id": "HRNS-001",
-  "branch": "hrns-001-harness-surface-inventory-gap-taxonomy",
-  "updated_at": "2026-07-16T00:27:38Z",
-  "active_step": "Post: Review Remediation",
-  "confidence_gate_mode": "advisory",
-  "project_commands": {
-    "BUILD": "N/A",
-    "TYPECHECK": "N/A",
-    "LINT": "N/A",
-    "LINT_FIX": "N/A",
-    "UNIT_TEST": "N/A",
-    "INTEGRATION_TEST": "N/A",
-    "SINGLE_FILE_TEST": "N/A",
-    "SINGLE_FILE_INTEGRATION": "N/A",
-    "FULL_VERIFY": "N/A"
-  },
-  "preset_conventions": {
-    "has_presets": true,
-    "presets": [
-      {
-        "name": "speckit-pro-reviewability",
-        "version": "1.0.0"
-      }
-    ],
-    "extensions": "see .specify/extensions/.registry",
-    "hooks": "18 hook events configured"
+  "workflow_file": "docs/ai/specs/.process/G56R-001-workflow.md",
+  "spec_id": "G56R-001",
+  "feature_dir": "specs/g56r-001-candidate-route-baseline",
+  "updated_at": "2026-07-15T22:51:16Z",
+  "active_step": "Phase 2: Clarify - Source Ledger and Candidate Admission",
+  "settings": {
+    "auto_commit": "per-phase",
+    "confidence_gate_mode": "advisory",
+    "consensus_mode": "moderate",
+    "gate_failure": "stop"
   },
   "archive_sweep": {
     "status": "no_candidates",
     "execution_path": "extension_contract",
+    "archive_extension_installed": true,
     "invocation_available": true,
     "prerequisite_available": true,
     "prerequisite_mode": "codex_native_worktree_binding",
-    "archive_extension_installed": true,
-    "cleanup_mode": "feature_branch_sweep",
-    "current_target": "specs/hrns-001-harness-surface-inventory-gap-taxonomy",
+    "current_target": "specs/g56r-001-candidate-route-baseline",
     "eligible_previous_specs": [],
-    "excluded_current_spec": "specs/hrns-001-harness-surface-inventory-gap-taxonomy",
+    "excluded_current_spec": "specs/g56r-001-candidate-route-baseline",
     "active_specs_inventory": [
-      "specs/hrns-001-harness-surface-inventory-gap-taxonomy"
+      "specs/g56r-001-candidate-route-baseline"
     ],
-    "safeToApplyCleanup": false,
-    "note": "Archive extension contract was available. Sweep found no active previous spec directories; the current HRNS-001 target was excluded."
+    "cleanup_mode": "feature_branch_sweep",
+    "safeToApplyCleanup": false
   },
-  "preflight": {
-    "check_prerequisites": {
-      "status": "ok",
-      "all_pass": true,
-      "is_worktree": true,
+  "prerequisites": {
+    "all_pass": true,
+    "branch": "g56r-001-candidate-route-baseline",
+    "is_worktree": true,
+    "on_feature_branch": true,
+    "runner_branch_detection": {
+      "branch": "",
       "on_feature_branch": false,
-      "git_branch": "hrns-001-harness-surface-inventory-gap-taxonomy",
-      "capability_coverage": "advisory"
+      "detail": "Runner branch helper reported worktree=true, feature=false for this non-numeric branch; git branch --show-current confirmed the expected branch."
     },
-    "install_codex_agents": {
-      "status": "ok",
-      "mode": "dry_run",
+    "confidence_gate_mode": "advisory",
+    "codex_agents": {
+      "destination": "/Users/fredrickgabelmann/.codex/agents",
+      "model": "gpt-5.5",
       "mutation_status": "no_op",
-      "destination": "<CODEX_HOME>/agents",
-      "model": "gpt-5.5"
+      "agent_count": 10
     },
+    "project_commands": {
+      "BUILD": "N/A",
+      "TYPECHECK": "N/A",
+      "LINT": "N/A",
+      "LINT_FIX": "N/A",
+      "UNIT_TEST": "N/A",
+      "INTEGRATION_TEST": "N/A",
+      "SINGLE_FILE_TEST": "N/A",
+      "SINGLE_FILE_INTEGRATION": "N/A",
+      "FULL_VERIFY": "N/A"
+    },
+    "project_implementation_agent": "implement-executor",
+    "preset_conventions": {
+      "has_presets": true,
+      "preset": "speckit-pro-reviewability",
+      "version": "1.0.0",
+      "templates": [
+        "spec",
+        "plan",
+        "tasks"
+      ],
+      "hooks": "18 hook events configured"
+    },
+    "speckit_cli": "specify 0.11.8",
     "runner": {
-      "python": "Python 3.11.0",
-      "module": "speckit-pro-runner 0.1.0",
-      "source": "<installed-speckit-pro-plugin-cache>/speckit-pro/2.19.2"
+      "python": "python3",
+      "module": "speckit_pro_runner",
+      "pythonpath": "speckit-pro"
+    },
+    "capability_coverage": {
+      "status": "advisory_pass",
+      "detail": "Runner reported coverage for codebase context, library documentation, web/domain research, and source extraction. Missing optional coverage remains non-blocking unless no acceptable evidence path exists."
     }
   },
+  "capability_discovery": {
+    "subagent_orchestration": "multi_agent_v1.spawn_agent and multi_agent_v1.wait_agent available",
+    "codebase_context": "local file reads, ripgrep, and RepoPromptCE tools available",
+    "library_documentation": "context7-mcp skill available when library/API docs are needed",
+    "web_or_domain_research": "web and Tavily-backed skills available; official OpenAI docs remain the only authority for G56R-001 platform claims",
+    "source_extraction": "web extraction and local file reads available",
+    "repo_local_helpers": "PYTHONPATH=speckit-pro python3 -m speckit_pro_runner"
+  },
   "phase_results": {
-    "specify": {
+    "Phase 1: Specify": {
       "status": "completed",
-      "artifacts": [
-        "specs/hrns-001-harness-surface-inventory-gap-taxonomy/spec.md",
-        "specs/hrns-001-harness-surface-inventory-gap-taxonomy/checklists/requirements.md",
-        ".specify/feature.json"
+      "completed_at": "2026-07-15T22:51:16Z",
+      "executor_agent_id": "019f67ef-7168-71a2-b16f-0a3f704b1e8c",
+      "files_changed": [
+        "specs/g56r-001-candidate-route-baseline/spec.md",
+        "specs/g56r-001-candidate-route-baseline/checklists/requirements.md"
       ],
-      "functional_requirements": 13,
-      "user_stories": 1,
-      "acceptance_scenarios": 5,
-      "g1": {
-        "status": "expected_clarify",
-        "markers": 3,
-        "details": [
-          "HRNS-GAP ID format and canonical row fields",
-          "candidate set and evidence vocabulary",
-          "completion proof, documentation checks, and PR packet evidence"
-        ]
+      "metrics": {
+        "functional_requirements": 18,
+        "user_stories": 4,
+        "acceptance_scenarios": 8,
+        "agent_contract_ids": 12,
+        "current_fixtures": 3,
+        "missing_fixtures": 9
       },
-      "spec_index": {
-        "status": "applied",
-        "helper_id": "generate-spec-index-write",
-        "request_id": "hrns-001-generate-spec-index-apply-phase-1",
-        "touched_paths": [
-          "specs/hrns-001-harness-surface-inventory-gap-taxonomy/SPEC-MOC.md",
-          "docs/ai/specs/harness-engineering-uplift-roadmap-MOC.md"
-        ]
-      }
-    },
-    "clarify": {
-      "status": "completed",
-      "questions_answered": 4,
-      "sections_touched": [
-        "Clarifications",
-        "Functional Requirements",
-        "Key Entities",
-        "Assumptions",
-        "requirements checklist"
-      ],
-      "checklist": {
-        "before": "15/16",
-        "after": "16/16",
-        "newly_passing": [
-          "No [NEEDS CLARIFICATION] markers remain"
-        ],
-        "regressions": []
-      },
-      "g2": {
+      "gate": {
+        "id": "G1",
         "status": "pass",
-        "markers": 0,
-        "request_id": "hrns-001-g2-clarify-check"
+        "reason": "spec.md exists with 0 markers",
+        "markers": 0
       },
-      "marker_count": {
-        "status": "ok",
-        "total": 0,
-        "request_id": "hrns-001-marker-count-after-clarify"
-      }
-    },
-    "plan": {
-      "status": "completed",
-      "artifacts": [
-        "specs/hrns-001-harness-surface-inventory-gap-taxonomy/plan.md",
-        "specs/hrns-001-harness-surface-inventory-gap-taxonomy/research.md",
-        "specs/hrns-001-harness-surface-inventory-gap-taxonomy/data-model.md",
-        "specs/hrns-001-harness-surface-inventory-gap-taxonomy/quickstart.md"
-      ],
-      "contracts": "not_created_no_runtime_interface",
-      "g3": {
-        "status": "pass",
-        "markers": 0,
-        "request_id": "hrns-001-g3-plan-check"
-      },
-      "reviewability": {
-        "status": "pass",
-        "projected": 0,
-        "declared_entries": 8,
-        "request_id": "hrns-001-estimate-reviewable-loc-plan"
-      },
-      "spec_index": {
-        "status": "applied",
-        "helper_id": "generate-spec-index-write",
-        "request_id": "hrns-001-generate-spec-index-apply-phase-3",
-        "touched_paths": [
-          "specs/hrns-001-harness-surface-inventory-gap-taxonomy/SPEC-MOC.md"
-        ]
-      }
-    },
-    "checklist": {
-      "status": "completed",
-      "artifacts": [
-        "specs/hrns-001-harness-surface-inventory-gap-taxonomy/checklists/data-integrity.md",
-        "specs/hrns-001-harness-surface-inventory-gap-taxonomy/checklists/security.md",
-        "specs/hrns-001-harness-surface-inventory-gap-taxonomy/checklists/integration.md",
-        "specs/hrns-001-harness-surface-inventory-gap-taxonomy/checklists/reliability.md"
-      ],
-      "items": 48,
-      "gaps": 0,
-      "checkbox_completion": {
-        "completed": 48,
-        "incomplete": 0
-      },
-      "g4": {
-        "status": "pass",
-        "markers": 0,
-        "request_id": "hrns-001-g4-checklist-check"
-      },
-      "spec_index": {
-        "status": "applied",
-        "helper_id": "generate-spec-index-write",
-        "request_id": "hrns-001-generate-spec-index-apply-phase-4",
-        "touched_paths": [
-          "specs/hrns-001-harness-surface-inventory-gap-taxonomy/SPEC-MOC.md"
-        ]
-      }
-    },
-    "tasks": {
-      "status": "completed",
-      "artifacts": [
-        "specs/hrns-001-harness-surface-inventory-gap-taxonomy/tasks.md"
-      ],
-      "task_count": 35,
-      "phases": [
-        "Setup",
-        "Foundational",
-        "US1 implementation",
-        "Polish & Validation"
-      ],
-      "parallel_opportunities": [],
-      "user_stories": [
-        "US1"
-      ],
-      "g5": {
-        "status": "pass",
-        "markers": 0,
-        "task_count": 35,
-        "request_id": "hrns-001-g5-tasks-check"
-      },
-      "atomicity_route": {
-        "route": "one-navigable-PR",
-        "releasable": true,
-        "signals": [
-          "change-shape:modify-heavy"
-        ],
-        "warnings": [],
-        "request_id": "hrns-001-atomicity-route-after-tasks"
-      },
-      "spec_index": {
-        "status": "applied",
-        "helper_id": "generate-spec-index-write",
-        "request_id": "hrns-001-generate-spec-index-apply-phase-5",
-        "touched_paths": [
-          "specs/hrns-001-harness-surface-inventory-gap-taxonomy/SPEC-MOC.md"
-        ]
-      }
-    },
-    "analyze": {
-      "status": "completed",
-      "findings": [
-        {
-          "id": "A1",
-          "severity": "MEDIUM",
-          "category": "Inconsistency",
-          "summary": "Initial [P] markers wrote the same canonical Markdown artifact.",
-          "resolution": "Removed [P] markers and serialized implementation tasks."
-        }
-      ],
-      "open_findings": 0,
-      "remediation": [
-        "specs/hrns-001-harness-surface-inventory-gap-taxonomy/tasks.md",
-        "docs/ai/specs/.process/HRNS-001-workflow.md"
-      ],
-      "g6": {
-        "status": "pass",
-        "markers": 0,
-        "reason": "0 CRITICAL/HIGH findings",
-        "request_id": "hrns-001-g6-analyze-check"
-      }
-    },
-    "confidence_gate": {
-      "status": "pass",
-      "mode": "advisory",
-      "threshold": 0.9,
-      "composite": 0.97,
-      "criteria": {
-        "task_understanding": 0.96,
-        "approach_clarity": 0.94,
-        "requirements_alignment": 0.95,
-        "risk_assessment": 1.0,
-        "completeness": 1.0
-      },
-      "recommended_action": "proceed",
-      "request_id": "hrns-001-g65-confidence-gate-retry"
-    },
-    "implement": {
-      "status": "completed",
-      "artifacts": [
-        "docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md",
-        "specs/hrns-001-harness-surface-inventory-gap-taxonomy/tasks.md",
-        "specs/hrns-001-harness-surface-inventory-gap-taxonomy/quickstart.md",
-        "docs/ai/specs/.process/HRNS-001-workflow.md"
-      ],
-      "tasks": {
-        "total": 35,
-        "completed": 35,
-        "incomplete": 0
-      },
-      "validation": {
-        "placeholder_sweep": "pass",
-        "link_evidence_review": "reviewed",
-        "spec_index": {
-          "status": "current",
-          "request_id": "hrns-001-generate-spec-index-check-after-implement"
-        },
-        "diff_check": "pass",
-        "layer_1": {
-          "status": "pass",
-          "passed": 1428,
-          "total": 1428,
-          "command": "python3 tests/speckit-pro/run-all.py --layer 1"
-        }
-      },
-      "pr_packet": "recorded_in_workflow"
-    },
-    "post": {
-      "status": "pr_open_pending_review",
-      "completed_items": [
-        "Post: Doctor Extension Check",
-        "Post: Verify Implementation",
-        "Post: Verify Tasks Phantom Check",
-        "Post: Code Review",
-        "Post: Integration Suite",
-        "Post: Reviewability Diff Gate",
-        "Post: Self-Review",
-        "Post: UAT Runbook Generation",
-        "Post: Final Reviewability Backstop",
-        "Post: PR Packet/Body Generation",
-        "Post: PR Body Generation",
-        "Post: PR Creation"
-      ],
-      "pending_items": [
-        "Post: Review Remediation",
-        "Post: Retrospective"
-      ],
-      "pr": {
-        "status": "draft_open",
-        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/357",
-        "number": 357,
-        "base": "main",
-        "head": "hrns-001-harness-surface-inventory-gap-taxonomy"
-      },
-      "doctor": {
-        "status": "pass_with_warnings",
-        "warnings": [
-          ".specify/init-options.json has no ai_assistant value",
-          "HRNS feature directory does not use numbered-feature convention"
-        ]
-      },
-      "verify": {
-        "status": "pass",
-        "commands": [
-          "placeholder sweep",
-          "generate-spec-index-check",
-          "git diff --check",
-          "link/evidence review"
-        ]
-      },
-      "verify_tasks": {
-        "status": "pass",
-        "report": "specs/hrns-001-harness-surface-inventory-gap-taxonomy/verify-tasks-report.md",
-        "verified": 35,
-        "flagged": 0
-      },
-      "code_review": {
-        "status": "pass_after_remediation",
-        "high_findings": 2,
-        "medium_findings": 3,
-        "remediated": true
-      },
-      "integration_suite": {
-        "status": "pass",
-        "full_verify": "N/A",
-        "fallback": "python3 tests/speckit-pro/run-all.py --layer 1",
-        "passed": 1428,
-        "total": 1428
-      },
-      "uat": {
-        "status": "skipped",
-        "reason": "No committed feature-local UAT runbook; generate-uat-skeleton deferred"
-      },
-      "pr_packet": {
-        "status": "pass",
-        "packet": "specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001.json",
-        "body": "specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001/body.md",
-        "validation": "specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001/validation.json"
+      "unresolved_markers": {
+        "needs_clarification": 0,
+        "gap": 0,
+        "critical": 0,
+        "high": 0
       }
     }
   },
   "plan": [
-    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
-    {"step": "Phase 0: Prerequisites", "status": "completed"},
-    {"step": "Phase 1: Specify", "status": "completed"},
-    {"step": "Phase 2: Clarify - Gap Row Schema", "status": "completed"},
-    {"step": "Phase 2: Clarify - Gap Row Schema Consensus", "status": "completed"},
-    {"step": "Phase 2: Clarify - External Candidate Matrix", "status": "completed"},
-    {"step": "Phase 2: Clarify - External Candidate Matrix Consensus", "status": "completed"},
-    {"step": "Phase 2: Clarify - Completion Proof", "status": "completed"},
-    {"step": "Phase 2: Clarify - Completion Proof Consensus", "status": "completed"},
-    {"step": "Phase 2: Clarify - Cross-Lane Ownership and Lifecycle", "status": "completed"},
-    {"step": "Phase 2: Clarify - Cross-Lane Ownership and Lifecycle Consensus", "status": "completed"},
-    {"step": "Phase 3: Plan", "status": "completed"},
-    {"step": "Phase 4: Checklist - Data Integrity", "status": "completed"},
-    {"step": "Phase 4: Checklist - Data Integrity Consensus", "status": "completed"},
-    {"step": "Phase 4: Checklist - Security", "status": "completed"},
-    {"step": "Phase 4: Checklist - Security Consensus", "status": "completed"},
-    {"step": "Phase 4: Checklist - Integration", "status": "completed"},
-    {"step": "Phase 4: Checklist - Integration Consensus", "status": "completed"},
-    {"step": "Phase 4: Checklist - Reliability", "status": "completed"},
-    {"step": "Phase 4: Checklist - Reliability Consensus", "status": "completed"},
-    {"step": "Phase 5: Tasks", "status": "completed"},
-    {"step": "Phase 6: Analyze", "status": "completed"},
-    {"step": "Phase 6: Analyze - Consensus", "status": "completed"},
-    {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
-    {"step": "Phase 7: Implement - Pending task decomposition", "status": "completed"},
-    {"step": "Post: Doctor Extension Check", "status": "completed"},
-    {"step": "Post: Verify Implementation", "status": "completed"},
-    {"step": "Post: Verify Tasks Phantom Check", "status": "completed"},
-    {"step": "Post: Code Review", "status": "completed"},
-    {"step": "Post: Integration Suite", "status": "completed"},
-    {"step": "Post: Reviewability Diff Gate", "status": "completed"},
-    {"step": "Post: Self-Review", "status": "completed"},
-    {"step": "Post: UAT Runbook Generation", "status": "completed"},
-    {"step": "Post: Final Reviewability Backstop", "status": "completed"},
-    {"step": "Post: PR Packet/Body Generation", "status": "completed"},
-    {"step": "Post: PR Body Generation", "status": "completed"},
-    {"step": "Post: PR Creation", "status": "completed"},
-    {"step": "Post: Review Remediation", "status": "pending"},
-    {"step": "Post: Retrospective", "status": "pending"}
+    {
+      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 0: Prerequisites",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 1: Specify",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Source Ledger and Candidate Admission",
+      "status": "in_progress"
+    },
+    {
+      "step": "Phase 2: Clarify - Source Ledger and Candidate Admission Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Role Contracts and Parity Additions",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Role Contracts and Parity Additions Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Fixture and G56R-002 Handoff",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Fixture and G56R-002 Handoff Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 3: Plan",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - LLM Integration",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - LLM Integration Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Data Integrity",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Data Integrity Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Error Handling",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Error Handling Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Security",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Security Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Reliability",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Reliability Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 5: Tasks",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6: Analyze",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6: Analyze - Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6.5: Confidence Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Pending task decomposition",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Doctor Extension Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Implementation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Tasks Phantom Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Code Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Integration Suite",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Reviewability Diff Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Self-Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: UAT Runbook Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Final Reviewability Backstop",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Packet/Body Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Body Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Creation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Review Remediation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Retrospective",
+      "status": "pending"
+    }
   ]
 }
