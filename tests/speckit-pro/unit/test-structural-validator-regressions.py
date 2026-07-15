@@ -33,6 +33,25 @@ release_workflow = load_module("validate_release_workflow", "validate-release-wo
 plugin_payload = load_module("validate_plugin_payload", "validate-plugin-payload.py")
 pr_checks_sentinel = load_module("validate_pr_checks_sentinel", "validate-pr-checks-sentinel.py")
 skill_pointers = load_module("validate_skill_capability_pointers", "validate-skill-capability-pointers.py")
+agent_instructions = load_module("validate_agent_instructions", "validate-agent-instructions.py")
+
+
+def write_valid_agent_instruction_tree(root: Path) -> None:
+    agent_dirs = (
+        Path("."),
+        Path("speckit-pro"),
+        Path("tests/speckit-pro"),
+        Path("docs-site"),
+    )
+    for directory in agent_dirs:
+        target = root / directory
+        target.mkdir(parents=True, exist_ok=True)
+        (target / "AGENTS.md").write_text("# Rules\n\nKeep this short.\n", encoding="utf-8")
+        (target / "CLAUDE.md").write_text(agent_instructions.CLAUDE_WRAPPER, encoding="utf-8")
+        (target / "GEMINI.md").write_text(agent_instructions.GEMINI_WRAPPER, encoding="utf-8")
+    copilot = root / ".github" / "copilot-instructions.md"
+    copilot.parent.mkdir(parents=True, exist_ok=True)
+    copilot.write_text(agent_instructions.COPILOT_POINTER, encoding="utf-8")
 
 
 class Layer1ValidatorRegressionTests(unittest.TestCase):
@@ -62,6 +81,30 @@ class Layer1ValidatorRegressionTests(unittest.TestCase):
             skill_pointers._display_path(skill_pointers.REPO_ROOT / "dist" / "claude"),
             "dist/claude",
         )
+
+    def test_agent_instruction_validator_accepts_wrapper_only_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            write_valid_agent_instruction_tree(root)
+            self.assertEqual([], agent_instructions.collect_errors(root))
+
+    def test_agent_instruction_validator_rejects_claude_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            write_valid_agent_instruction_tree(root)
+            (root / "CLAUDE.md").write_text("@AGENTS.md\n\nExtra local rule.\n", encoding="utf-8")
+            errors = agent_instructions.collect_errors(root)
+            self.assertIn("CLAUDE.md must contain only '@AGENTS.md'", "\n".join(errors))
+
+    def test_agent_instruction_validator_rejects_unexpected_agent_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            write_valid_agent_instruction_tree(root)
+            extra = root / "docs" / "AGENTS.md"
+            extra.parent.mkdir(parents=True)
+            extra.write_text("# Extra\n", encoding="utf-8")
+            errors = agent_instructions.collect_errors(root)
+            self.assertIn("docs/AGENTS.md", "\n".join(errors))
 
     def test_archive_cleanup_title_guidance_uses_lowercase_spec_scope(self) -> None:
         paths = (

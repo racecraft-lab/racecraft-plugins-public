@@ -429,11 +429,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 12215,
+            "byte_count": 12301,
             "kind": "skill",
             "path": "skills/speckit-autopilot/references/prerequisites.md",
             "required": true,
-            "sha256": "5bbefd42292bbf62d5b75ea82ec6e6847c852bd07951a8b86749e178c9d71ed4",
+            "sha256": "0b66b496973da8a925178ec7d6c87ebe64a92331edb5f7d4f0b97b45c18707dc",
             "source_path": "speckit-pro/skills/speckit-autopilot/references/prerequisites.md",
             "transform": "none"
           },
@@ -456,11 +456,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 6607,
+            "byte_count": 6593,
             "kind": "skill",
             "path": "skills/speckit-autopilot/references/token-discipline.md",
             "required": true,
-            "sha256": "9ab2f595c32cd9ff44d9714dc999e1915253bfe1da036905c3417d960dba0181",
+            "sha256": "773a049111995f112e1ae8b58a73f425ba0a646be873a13f1068a01e32154202",
             "source_path": "speckit-pro/skills/speckit-autopilot/references/token-discipline.md",
             "transform": "none"
           },
@@ -1286,11 +1286,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 12215,
+            "byte_count": 12301,
             "kind": "skill",
             "path": "skills/speckit-autopilot/references/prerequisites.md",
             "required": true,
-            "sha256": "5bbefd42292bbf62d5b75ea82ec6e6847c852bd07951a8b86749e178c9d71ed4",
+            "sha256": "0b66b496973da8a925178ec7d6c87ebe64a92331edb5f7d4f0b97b45c18707dc",
             "source_path": "speckit-pro/skills/speckit-autopilot/references/prerequisites.md",
             "transform": "none"
           },
@@ -1313,11 +1313,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 6607,
+            "byte_count": 6593,
             "kind": "skill",
             "path": "skills/speckit-autopilot/references/token-discipline.md",
             "required": true,
-            "sha256": "9ab2f595c32cd9ff44d9714dc999e1915253bfe1da036905c3417d960dba0181",
+            "sha256": "773a049111995f112e1ae8b58a73f425ba0a646be873a13f1068a01e32154202",
             "source_path": "speckit-pro/skills/speckit-autopilot/references/token-discipline.md",
             "transform": "none"
           },
@@ -1746,7 +1746,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "f1f178d784a2727f3fafd3e794b23d7d877f1205f74d3d43094933dfff804e20",
+        "file_tree_hash": "9501314f78ff4de4364e03245a2f141f772e8b2815e9760d53462a73dfba18d1",
         "generated_root": "dist/claude/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
@@ -2221,20 +2221,20 @@
             "transform": "none"
           },
           {
-            "byte_count": 14105,
+            "byte_count": 14191,
             "kind": "skill",
             "path": "skills/speckit-autopilot/references/prerequisites-codex.md",
             "required": true,
-            "sha256": "1fad7c7f1346fdd37634a23e383c14ffc2ee029db1595b3f0503731f5f4ab61d",
+            "sha256": "7fa34772a48b02035fefc1c6649d2c7adc09106255d0584687022cb7f992acbf",
             "source_path": "speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md",
             "transform": "path_normalization"
           },
           {
-            "byte_count": 12190,
+            "byte_count": 12276,
             "kind": "skill",
             "path": "skills/speckit-autopilot/references/prerequisites.md",
             "required": true,
-            "sha256": "3ed0a43ef82270b0497c64ba9bb8dd013ebdf9065c465b0df2cd4bb7959bfad1",
+            "sha256": "4b1a106f4e775328ec1ce176d8d887f5939fcc02a9b9625f3199109592fa0879",
             "source_path": "speckit-pro/skills/speckit-autopilot/references/prerequisites.md",
             "transform": "none"
           },
@@ -2266,11 +2266,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 6607,
+            "byte_count": 6593,
             "kind": "skill",
             "path": "skills/speckit-autopilot/references/token-discipline.md",
             "required": true,
-            "sha256": "9ab2f595c32cd9ff44d9714dc999e1915253bfe1da036905c3417d960dba0181",
+            "sha256": "773a049111995f112e1ae8b58a73f425ba0a646be873a13f1068a01e32154202",
             "source_path": "speckit-pro/skills/speckit-autopilot/references/token-discipline.md",
             "transform": "none"
           },
@@ -3231,20 +3231,20 @@
             "transform": "none"
           },
           {
-            "byte_count": 14105,
+            "byte_count": 14191,
             "kind": "skill",
             "path": "skills/speckit-autopilot/references/prerequisites-codex.md",
             "required": true,
-            "sha256": "1fad7c7f1346fdd37634a23e383c14ffc2ee029db1595b3f0503731f5f4ab61d",
+            "sha256": "7fa34772a48b02035fefc1c6649d2c7adc09106255d0584687022cb7f992acbf",
             "source_path": "speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md",
             "transform": "path_normalization"
           },
           {
-            "byte_count": 12190,
+            "byte_count": 12276,
             "kind": "skill",
             "path": "skills/speckit-autopilot/references/prerequisites.md",
             "required": true,
-            "sha256": "3ed0a43ef82270b0497c64ba9bb8dd013ebdf9065c465b0df2cd4bb7959bfad1",
+            "sha256": "4b1a106f4e775328ec1ce176d8d887f5939fcc02a9b9625f3199109592fa0879",
             "source_path": "speckit-pro/skills/speckit-autopilot/references/prerequisites.md",
             "transform": "none"
           },
@@ -3276,11 +3276,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 6607,
+            "byte_count": 6593,
             "kind": "skill",
             "path": "skills/speckit-autopilot/references/token-discipline.md",
             "required": true,
-            "sha256": "9ab2f595c32cd9ff44d9714dc999e1915253bfe1da036905c3417d960dba0181",
+            "sha256": "773a049111995f112e1ae8b58a73f425ba0a646be873a13f1068a01e32154202",
             "source_path": "speckit-pro/skills/speckit-autopilot/references/token-discipline.md",
             "transform": "none"
           },
@@ -3781,7 +3781,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "2ec1eb85cdea7b9dc607f47bb2d0ffa85dd47fee6fad8e9767f21751d24c5f4d",
+        "file_tree_hash": "c847dff6b5bd2ca04ff35c6dbda61f92e397ceac7ec42ea259c3644e97ce005c",
         "generated_root": "dist/codex/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],

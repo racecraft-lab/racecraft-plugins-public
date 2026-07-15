@@ -27,8 +27,8 @@ Token discipline applies **only** to:
 Token discipline does **not** touch:
 
 - PR bodies, PR titles, commit messages, CHANGELOG entries
-  — these are public-readable, governed by
-  [CLAUDE.md §Contributing](../../../../CLAUDE.md#contributing--branching-strategy)
+  — these are public-readable and governed by the repository PR template,
+  workflow checks, and contributor docs
 - Workflow log entries that a human reviews
   (Self-Review block, Consensus Resolution Log, gate decisions)
 - Operator-facing status output, error messages, or progress

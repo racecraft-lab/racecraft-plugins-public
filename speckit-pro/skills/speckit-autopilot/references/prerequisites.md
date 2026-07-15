@@ -257,8 +257,9 @@ FULL_VERIFY. Commands set to `"N/A"` are skipped during
 verification. The script auto-detects Node.js, Rust, Go,
 Python, and Makefile projects.
 
-**Also check CLAUDE.md** for a "Build Commands" table — it's
-the most authoritative source and may override script results.
+Also read the project's agent instructions and nearby documentation for
+explicit command overrides. Do not expect a project `CLAUDE.md` to contain a
+command table; many projects use it only as an import wrapper.
 
 Record PROJECT_COMMANDS in the workflow file so they persist
 across context compactions. Pass them to every subagent.
