@@ -3,8 +3,8 @@
   "feature_dir": "specs/hrns-001-harness-surface-inventory-gap-taxonomy",
   "spec_id": "HRNS-001",
   "branch": "hrns-001-harness-surface-inventory-gap-taxonomy",
-  "updated_at": "2026-07-15T22:47:41Z",
-  "active_step": "Phase 2: Clarify - Gap Row Schema",
+  "updated_at": "2026-07-15T22:52:19Z",
+  "active_step": "Phase 3: Plan",
   "confidence_gate_mode": "advisory",
   "project_commands": {
     "BUILD": "N/A",
@@ -96,21 +96,50 @@
           "docs/ai/specs/harness-engineering-uplift-roadmap-MOC.md"
         ]
       }
+    },
+    "clarify": {
+      "status": "completed",
+      "questions_answered": 4,
+      "sections_touched": [
+        "Clarifications",
+        "Functional Requirements",
+        "Key Entities",
+        "Assumptions",
+        "requirements checklist"
+      ],
+      "checklist": {
+        "before": "15/16",
+        "after": "16/16",
+        "newly_passing": [
+          "No [NEEDS CLARIFICATION] markers remain"
+        ],
+        "regressions": []
+      },
+      "g2": {
+        "status": "pass",
+        "markers": 0,
+        "request_id": "hrns-001-g2-clarify-check"
+      },
+      "marker_count": {
+        "status": "ok",
+        "total": 0,
+        "request_id": "hrns-001-marker-count-after-clarify"
+      }
     }
   },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
     {"step": "Phase 1: Specify", "status": "completed"},
-    {"step": "Phase 2: Clarify - Gap Row Schema", "status": "in_progress"},
-    {"step": "Phase 2: Clarify - Gap Row Schema Consensus", "status": "pending"},
-    {"step": "Phase 2: Clarify - External Candidate Matrix", "status": "pending"},
-    {"step": "Phase 2: Clarify - External Candidate Matrix Consensus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Completion Proof", "status": "pending"},
-    {"step": "Phase 2: Clarify - Completion Proof Consensus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Cross-Lane Ownership and Lifecycle", "status": "pending"},
-    {"step": "Phase 2: Clarify - Cross-Lane Ownership and Lifecycle Consensus", "status": "pending"},
-    {"step": "Phase 3: Plan", "status": "pending"},
+    {"step": "Phase 2: Clarify - Gap Row Schema", "status": "completed"},
+    {"step": "Phase 2: Clarify - Gap Row Schema Consensus", "status": "completed"},
+    {"step": "Phase 2: Clarify - External Candidate Matrix", "status": "completed"},
+    {"step": "Phase 2: Clarify - External Candidate Matrix Consensus", "status": "completed"},
+    {"step": "Phase 2: Clarify - Completion Proof", "status": "completed"},
+    {"step": "Phase 2: Clarify - Completion Proof Consensus", "status": "completed"},
+    {"step": "Phase 2: Clarify - Cross-Lane Ownership and Lifecycle", "status": "completed"},
+    {"step": "Phase 2: Clarify - Cross-Lane Ownership and Lifecycle Consensus", "status": "completed"},
+    {"step": "Phase 3: Plan", "status": "in_progress"},
     {"step": "Phase 4: Checklist - Data Integrity", "status": "pending"},
     {"step": "Phase 4: Checklist - Data Integrity Consensus", "status": "pending"},
     {"step": "Phase 4: Checklist - Security", "status": "pending"},

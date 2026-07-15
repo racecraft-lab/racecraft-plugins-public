@@ -13,8 +13,8 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
-- [x] Requirements are testable and unambiguous except for explicit Phase 2 clarification markers
+- [x] No [NEEDS CLARIFICATION] markers remain
+- [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
 - [x] All acceptance scenarios are defined
@@ -31,7 +31,6 @@
 
 ## Notes
 
-- Three planned Phase 2 clarification markers remain:
-  row schema, external-candidate evidence vocabulary, and completion proof.
-  These align with the HRNS-001 workflow's Clarify phase and must be resolved
-  before planning completes.
+- Phase 2 clarification resolved the row schema, external-candidate evidence
+  vocabulary, completion proof, and cross-lane lifecycle update rules before
+  planning.

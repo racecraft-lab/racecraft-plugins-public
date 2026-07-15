@@ -8,6 +8,15 @@
 
 **Input**: User description: "Create a source-grounded harness surface inventory and gap taxonomy for SpecKit Pro, using the verified merged baseline as authority, without blocking on CAR or G56R."
 
+## Clarifications
+
+### Session 2026-07-15
+
+- Q: What canonical row shape should each retained gap use? → A: `HRNS-GAP-###` canonical row.
+- Q: What external-candidate boundary should HRNS-001 use? → A: Evidence matrix only.
+- Q: What proof makes HRNS-001 complete? → A: Traceable docs proof.
+- Q: How should CAR/G56R-owned gaps and later updates be handled? → A: Cross-reference owner; preserve IDs.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Trace Harness Gaps to Ownership (Priority: P1)
@@ -72,8 +81,11 @@ HRNS spec should handle each retained gap.
   surface category: skill, agent, command, helper, runner, generated payload,
   docs, workflow file, PR packet, test/eval, or release gate.
 - **FR-003**: The taxonomy MUST give every retained gap one stable `HRNS-GAP`
-  identity and one canonical row. [NEEDS CLARIFICATION] Finalize HRNS-GAP ID
-  format and canonical row fields.
+  identity using `HRNS-GAP-###` zero-padded numbering and one canonical row with
+  ID, title, summary, surface tags, taxonomy type, lifecycle state,
+  authoritative evidence, owner workflow, cross-roadmap owner, dependency
+  posture, downstream HRNS ownership, safety closure, closure evidence, and
+  notes/as-of date fields.
 - **FR-004**: The taxonomy MUST classify retained gaps by type, including
   context, tool contract, permission, sandbox, memory/state, orchestration,
   verification, observability, HITL, security, garbage collection, or an
@@ -82,15 +94,26 @@ HRNS spec should handle each retained gap.
   implemented, planned, deferred, duplicate, obsolete, or unknown.
 - **FR-006**: The taxonomy MUST record owner workflow, cross-roadmap ownership,
   downstream HRNS ownership, and CAR/G56R references without treating unmerged
-  work as authoritative current state.
+  work as authoritative current state. CAR/G56R-owned gaps MUST stay in one
+  HRNS row marked `planned` or `external-owner`, link only reference evidence
+  for unmerged work, and preserve implementation ownership in the CAR/G56R lane.
 - **FR-007**: The taxonomy MUST record dependency posture for every retained
   gap: repo-local convention, runner/helper change, generated-doc/test evidence,
   future explicit dependency decision, deferred, or unknown.
 - **FR-008**: The artifact MUST include an external-candidate matrix covering
   relevant schema, orchestration, eval, trace/observability, guardrail,
   workflow-runtime, coding-agent harness, and knowledge-format references.
-  [NEEDS CLARIFICATION] Finalize candidate set, primary-source types,
-  as-of/version fields, and recommendation vocabulary.
+  The starting candidate set MUST include Pydantic, JSON Schema,
+  OpenTelemetry/OpenInference, LangGraph, OpenAI Agents SDK, LangSmith,
+  Langfuse, Phoenix, Braintrust, promptfoo, Inspect AI, DSPy, and the pinned
+  OKF v0.1 specification/reference repository; optional rows MAY include PRD
+  non-goal examples only when dated primary evidence is captured. Each row MUST
+  cite official specifications, official documentation, source repositories,
+  release/maturity records, and license sources as applicable; record as-of
+  date, observed version or commit, maturity/normative status, unknown fields,
+  compatibility gaps, and recommendation vocabulary of `reference pattern`,
+  `future spike`, `optional adapter candidate`, `defer`, `reject`, or
+  `unknown`.
 - **FR-009**: The taxonomy MUST record self-improvement loop closure for any
   workflow that can generate or influence future harness behavior: human-in-the-
   loop, human-on-the-loop, fully automated, disallowed, or
@@ -108,8 +131,11 @@ HRNS spec should handle each retained gap.
   blocking/advisory/deferred disposition.
 - **FR-013**: The artifact MUST include an AC-1.1 through AC-1.10 crosswalk,
   surface coverage proof, evidence-class coverage proof, link review, and
-  intentional-deferment notes. [NEEDS CLARIFICATION] Finalize completion proof,
-  documentation checks, and PR packet evidence.
+  intentional-deferment notes. Completion proof MUST include AC-to-section/row
+  mapping, surface and evidence-class coverage tables, self-improvement loop
+  coverage, Markdown link review, explicit deferred-gap ownership, and the
+  smallest applicable existing repository checks selected in Plan; HRNS-001
+  MUST NOT add validator code solely to prove the taxonomy.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -151,6 +177,9 @@ HRNS spec should handle each retained gap.
   long-running SpecKit Pro agent behavior.
 - **Retained Gap**: A reviewed observation that remains relevant after
   duplicate, obsolete, and out-of-scope items are removed.
+- **Canonical Gap Row**: The single authoritative row for a retained gap,
+  identified as `HRNS-GAP-###`; IDs are stable, never reused after publication,
+  and referenced by surface summaries instead of duplicating ownership rows.
 - **External Candidate**: A third-party standard, framework, library, tool, or
   exemplar used as reference evidence for future harness decisions.
 - **Evidence Class**: A category describing whether a source is authoritative,
@@ -185,3 +214,5 @@ HRNS spec should handle each retained gap.
   preserving stable gap IDs and history.
 - Existing repository checks and link/crosswalk proof are sufficient for
   HRNS-001; new validator code is out of scope.
+- Later updates may change lifecycle state, owner, or closure evidence, but
+  published `HRNS-GAP-###` IDs are never silently renumbered, reused, or deleted.

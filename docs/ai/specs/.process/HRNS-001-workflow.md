@@ -41,8 +41,8 @@ The design concept is the source of truth for these scoping decisions:
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | Created spec.md and requirements checklist; G1 routed to Clarify |
-| Clarify | `/speckit-clarify` | 🔄 In Progress | Resolve row schema, research boundaries, and proof commands |
-| Plan | `/speckit-plan` | ⏳ Pending | Design the canonical Markdown artifact and evidence workflow |
+| Clarify | `/speckit-clarify` | ✅ Complete | Resolved row schema, research boundaries, proof commands, and lifecycle updates |
+| Plan | `/speckit-plan` | 🔄 In Progress | Design the canonical Markdown artifact and evidence workflow |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Data integrity, security, integration, and reliability |
 | Tasks | `/speckit-tasks` | ⏳ Pending | Evidence-first docs tasks bounded by the Design Concept |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Check cross-artifact scope and AC-1.* coverage |
@@ -324,10 +324,10 @@ states while preserving stable IDs and reviewed history.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Canonical gap row | | |
-| 2 | Candidate matrix | | |
-| 3 | Completion proof | | |
-| 4 | Cross-lane lifecycle | | |
+| 1 | Canonical gap row | 1 | `HRNS-GAP-###` IDs and canonical row fields are explicit |
+| 2 | Candidate matrix | 1 | Evidence-matrix-only boundary, starting candidate set, primary-source types, and recommendation vocabulary are explicit |
+| 3 | Completion proof | 1 | AC crosswalk, coverage proof, link review, deferment proof, and no-new-validator rule are explicit |
+| 4 | Cross-lane lifecycle | 1 | CAR/G56R external-owner handling, unmerged reference evidence, and stable-ID update rules are explicit |
 
 ---
 
