@@ -449,7 +449,7 @@
     "verify_tasks": {"status": "completed", "verified": 26, "flagged": 0, "report": "specs/g56r-001-candidate-route-baseline/verify-tasks-report.md"},
     "code_review": {"status": "pending_final_stable_head", "disposition": "pending", "risk": "low", "actionable_findings": 0, "adversarial_agents": ["spec_adversary", "evidence_adversary", "repair_adversary"]},
     "integration_suite": {"status": "completed", "completed_at": "2026-07-15T01:20:37Z", "preflight": "pass", "layer_1": "1427/1427", "layer_4": "1201/1201", "layer_5": "186/186", "integration": "257/257", "default": "2814/2814"},
-    "reviewability_diff": {"status": "completed", "route": "single_combined_pr", "files": 125, "insertions": 34268, "deletions": 8472, "exception": "specs/g56r-001-candidate-route-baseline/contracts/combined-pr-reviewability-exception.md", "reason": "user explicitly required one PR containing G56R-001 plus the durable cross-client SpecKit Pro repair"},
+    "reviewability_diff": {"status": "completed", "route": "single_combined_pr", "files": 126, "insertions": 34327, "deletions": 8472, "exception": "specs/g56r-001-candidate-route-baseline/contracts/combined-pr-reviewability-exception.md", "reason": "user explicitly required one PR containing G56R-001 plus the durable cross-client SpecKit Pro repair"},
     "self_review": {"status": "completed", "edge_case_gaps": 0, "requirement_orphans": 0, "task_orphans": 0, "silent_markers": 0, "tidiness_findings": 0},
     "uat_runbook": {"status": "skipped", "reason": "generate-uat-skeleton deferred; no committed source-derived runbook"},
     "final_reviewability_backstop": {"status": "completed", "disposition": "combined_pr_exception_recorded", "autopilot_continuation_required": false},

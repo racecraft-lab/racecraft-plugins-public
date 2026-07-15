@@ -784,7 +784,7 @@ metadata, generated release artifacts, or unrelated configuration.
 | Field | Result |
 |-------|--------|
 | Status | WARN; `pass: true` |
-| Full branch snapshot | final packet projection: 125 files, 34,268 additions, 8,472 deletions after rebasing onto current main |
+| Full branch snapshot | final packet projection: 126 files, 34,327 additions, 8,472 deletions after rebasing onto current main |
 | Original G56R boundary | Six paths: three delivery plus three validation; 0 production LOC/files |
 | Shared plugin source | 14 `speckit-pro/` source/trust-metadata paths, 1,172 additions and 132 deletions; four shared runtime helpers carry 824 lines of churn |
 | Generated parity | Claude, Codex, and installed-cache payload/proof copies are generator-owned and independently parity-checked |

@@ -64,7 +64,7 @@ live PR verification.
   257/257; Layer 1 1427/1427; Layer 4 1201/1201; Layer 5 186/186; default
   2814/2814; generated payload parity and release-artifact checks PASS.
 - Final combined review surface after rebasing onto current main and restoring
-  the final packet: 125 files, 34,268 additions, and 8,472 deletions. Within
+  the final packet: 126 files, 34,327 additions, and 8,472 deletions. Within
   that set, 14 shared
   `speckit-pro/` source/trust-metadata paths contribute 1,172 additions and 132
   deletions; four runtime helpers account for 824 lines of churn. Generated
