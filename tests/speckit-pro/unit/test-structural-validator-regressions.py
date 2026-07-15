@@ -37,13 +37,7 @@ agent_instructions = load_module("validate_agent_instructions", "validate-agent-
 
 
 def write_valid_agent_instruction_tree(root: Path) -> None:
-    agent_dirs = (
-        Path("."),
-        Path("speckit-pro"),
-        Path("tests/speckit-pro"),
-        Path("docs-site"),
-    )
-    for directory in agent_dirs:
+    for directory in agent_instructions.EXPECTED_AGENT_DIRS:
         target = root / directory
         target.mkdir(parents=True, exist_ok=True)
         (target / "AGENTS.md").write_text("# Rules\n\nKeep this short.\n", encoding="utf-8")
