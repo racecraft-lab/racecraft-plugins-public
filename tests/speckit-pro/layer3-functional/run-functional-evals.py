@@ -3,9 +3,10 @@
 
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
+
+from preview_helpers import eval_count, print_eval_prompts
 
 
 def plugin_root() -> Path:
@@ -29,23 +30,6 @@ def resolve_skill_path(root: Path, skill: str) -> Path | None:
     if codex_path.is_dir():
         return codex_path
     return None
-
-
-def eval_count(path: Path) -> str:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        return str(len(data.get("evals", [])))
-    except Exception:
-        return "?"
-
-
-def print_eval_prompts(path: Path) -> None:
-    data = json.loads(path.read_text(encoding="utf-8"))
-    for item in data.get("evals", []):
-        print(f"  [{item['id']}] {item['prompt'][:100]}...")
-        for expectation in item.get("expectations", []):
-            print(f"      - {expectation[:80]}")
-        print()
 
 
 def main(argv: list[str]) -> int:
