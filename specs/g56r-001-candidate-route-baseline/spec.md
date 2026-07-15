@@ -88,24 +88,24 @@ As the G56R-002/G56R-003 owner, I need an exact fixture and telemetry backlog so
 - **FR-005**: The artifact MUST label repository files, payloads, caches, fixtures, and Claude role definitions as `project_input` only.
 - **FR-006**: The artifact MUST mark unsupported platform facts as `undocumented` and reject or block any candidate depending on those facts.
 - **FR-007**: The artifact MUST record exactly twelve target role contract records: ten active Codex TOML source records and two Claude parity-only comparison records.
-- **FR-008**: Each role contract record MUST include source file, role intent, mutation expectations, grounding requirements, tools/skills/MCP needs, output contract, client surface, and representative future task.
+- **FR-008**: Each role contract record MUST include source file, production route or absence, declared model/effort/sandbox fields, instruction and full-file hashes, role boundary, safety and mutation expectations, grounding requirements, separate tool/skill/MCP contracts, source config bindings, output contract, client surface, representative future task, and effective-runtime fields marked for later verification.
 - **FR-009**: Claude parity-only roles `consensus-synthesizer` and `gate-validator` MUST be comparison records only and MUST NOT be described as active Codex agents.
 - **FR-010**: The artifact MUST evaluate the roadmap seed models `gpt-5.1`, `gpt-5.1-codex-max`, `gpt-5.2`, `gpt-5.2-codex`, and `gpt-5.2-codex-pro` only against current official OpenAI documentation.
 - **FR-011**: The artifact MUST record admitted provisional candidate route records with `candidate_route_id`, `agent_contract_id`, source bindings, required capabilities, unsupported facts, and invalidation rules.
 - **FR-012**: No candidate record MUST claim availability, executability, qualification, preference, efficiency, fallback behavior, or exact treatment before G56R-002/G56R-003 evidence exists.
 - **FR-013**: The artifact MUST record the fixture baseline as exactly three current prompt-emulation fixtures and nine missing executable role fixtures.
-- **FR-014**: Every fixture backlog record MUST include executable specification, telemetry need, success oracle, blocking dependency, and priority.
+- **FR-014**: Every fixture backlog record MUST include fixture ID, current status, executable specification, representative input, telemetry need, success oracle, blocking dependency, owner spec, priority, and invalidation triggers.
 - **FR-015**: Historical prompt-emulation evidence MUST be labeled `non_release_evidence`.
-- **FR-016**: The G56R-002 handoff MUST include capability questions, telemetry contract needs, invalidation rules, fixture backlog, and a go/no-go matrix.
+- **FR-016**: The G56R-002 handoff MUST include capability questions, telemetry contract needs, candidate and fixture invalidation rules, fixture backlog, and a go/no-go matrix.
 - **FR-017**: The final report traceability section MUST map every claim to `official_documentation`, `project_input`, `runtime_verification_needed`, `qualification_needed`, or `undocumented`.
 - **FR-018**: The report MUST end with a strict decision that is `GO` only for G56R-002 capability discovery and telemetry profiling when evidence completeness is satisfied, and `NO-GO` for route qualification or installation.
 
 ### Required Acceptance Criteria
 
 - **AC-1.1**: Official-source ledger with direct URLs, retrieval date, source family, invalidation triggers, and claim bindings.
-- **AC-1.2**: Exactly twelve role contract records with source file, role intent, mutation expectations, grounding requirements, tools/skills/MCP needs, output contract, client surface, and representative future task.
+- **AC-1.2**: Exactly twelve role contract records with source file, production route or absence, declared model/effort/sandbox fields, instruction and full-file hashes, role boundary, safety and mutation expectations, grounding requirements, separate tool/skill/MCP contracts, source config bindings, output contract, client surface, representative future task, and effective-runtime fields marked for later verification.
 - **AC-1.3**: Provisional candidate route records bind official-source IDs to role contract requirements and explicitly mark unsupported facts.
-- **AC-1.4**: Fixture backlog contains exactly three current and nine missing records with executable specification, telemetry need, success oracle, blocking dependency, and priority.
+- **AC-1.4**: Fixture backlog contains exactly three current and nine missing records with fixture ID, current status, executable specification, representative input, telemetry need, success oracle, blocking dependency, owner spec, priority, and invalidation triggers.
 - **AC-1.5**: No candidate claims availability, executability, qualification, preference, efficiency, or fallback behavior without official documentation and later phase evidence.
 - **AC-1.6**: G56R-002 handoff includes capability questions, telemetry contract, invalidation rules, fixture backlog, and go/no-go matrix.
 - **AC-1.7**: Final report traceability maps every claim to official documentation, project input, runtime verification needed, qualification needed, or undocumented status.
@@ -113,6 +113,11 @@ As the G56R-002/G56R-003 owner, I need an exact fixture and telemetry backlog so
 ### Official-Source Ledger Seed
 
 The implementation artifact must refresh these sources during its own authoring pass and must not rely on this spec as the evidence source.
+
+Each refreshed ledger record MUST include `source_url_requested`, canonical or
+redirected URL, `retrieved_at_utc`, retrieval method, source family,
+page/section title, supported surface, documented fact, claim binding, conflict
+status, access status, and invalidation trigger.
 
 | ID | Direct URL | Retrieved | Source family | Claim bindings | Invalidation triggers |
 |---|---|---:|---|---|---|
@@ -124,6 +129,7 @@ The implementation artifact must refresh these sources during its own authoring 
 | `OSL-006` | `https://developers.openai.com/codex/extend/mcp` | 2026-07-15 | Codex MCP | Local Codex MCP support, shared MCP config across desktop/CLI/IDE, stdio/HTTP support, plugin-provided MCP control | MCP transport, auth, plugin MCP, or shared-config behavior changes |
 | `OSL-007` | `https://developers.openai.com/apps-sdk/mcp-apps-in-chatgpt` | 2026-07-15 | ChatGPT Apps SDK | MCP app compatibility in ChatGPT and hosted app surface boundaries | Apps SDK or hosted MCP compatibility changes |
 | `OSL-008` | `https://developers.openai.com/api/docs/guides/latest-model` | 2026-07-15 | API model guidance and prompting | GPT-5.6 API model family, `gpt-5.6` alias, reasoning effort values, pro mode, prompting/migration guidance | Model family guidance changes, effort values change, prompting guidance changes |
+| `OSL-009` | `https://developers.openai.com/api/docs/deprecations` | 2026-07-15 | API model lifecycle | Deprecated, retiring, shut down, removed, or replacement model lifecycle facts for exact seed slugs | Deprecation wording changes, shutdown date changes, substitute model changes, seed slug disappears |
 
 ### Roadmap Seed Candidate Admission
 
@@ -132,14 +138,19 @@ The exact seed models named in the phase prompt are not automatically admitted. 
 | Seed model | G56R-001 status | Required report treatment |
 |---|---|---|
 | `gpt-5.1` | `undocumented_for_current_codex_route` | Do not admit unless an official current Codex source supports it for the pinned surface. |
-| `gpt-5.1-codex-max` | `undocumented` | Reject as a candidate unless an official current OpenAI source publishes this exact model or route construct. |
-| `gpt-5.2` | `deprecated_for_codex_chatgpt_sign_in` | Do not admit for new Codex sign-in route policy; API-key availability, if any, is a separate G56R-002 capability question and not route authority. |
-| `gpt-5.2-codex` | `undocumented` | Reject as a candidate unless an official current OpenAI source publishes this exact model. |
-| `gpt-5.2-codex-pro` | `undocumented` | Reject as a candidate unless an official current OpenAI source publishes this exact model or pro-route construct. |
+| `gpt-5.1-codex-max` | `rejected_deprecated_or_withdrawn` | Reject when current official lifecycle docs publish the exact slug as deprecated, retiring, shut down, removed, or replaced; record lifecycle state, surface, shutdown date, replacement model, and source binding. |
+| `gpt-5.2` | `rejected_deprecated_for_codex_chatgpt_sign_in` | Do not admit for new Codex sign-in route policy; API-key availability, if any, is a separate G56R-002 capability question and not route authority. |
+| `gpt-5.2-codex` | `rejected_deprecated_or_withdrawn` | Reject when current official lifecycle docs publish the exact slug as deprecated, retiring, shut down, removed, or replaced; record lifecycle state, surface, shutdown date, replacement model, and source binding. |
+| `gpt-5.2-codex-pro` | `rejected_undocumented` | Reject unless an official current OpenAI source publishes this exact model or pro-route construct; do not infer it from GPT-5.6 pro mode or adjacent model names. |
 
 ### Refreshed Provisional Candidate Pool
 
-The implementation artifact may admit these only as provisional route candidates and only with the official-source bindings shown. Runtime availability, exact treatment, quality, and fallback order remain unresolved.
+This table is a non-authoritative execution snapshot, not a fixed route set.
+The implementation artifact must refresh it from current official
+documentation, may add or remove candidates only with direct official evidence,
+and may admit entries only as provisional route candidates with official-source
+bindings. Runtime availability, exact treatment, quality, and fallback order
+remain unresolved.
 
 | Candidate model | Source binding | Provisional role fit | Unsupported or unresolved facts |
 |---|---|---|---|
@@ -159,10 +170,40 @@ Every candidate route record in the implementation artifact MUST use this minimu
 - `agent_contract_id`: one of the twelve role contracts below.
 - `official_source_ledger_ids`: at least one model source and one custom-agent/configuration source.
 - `model` and `model_reasoning_effort`: explicit tuple when admitted; effort may be `runtime_supported_effort_required` until G56R-002.
-- `role_contract_binding`: required reasoning depth, mutation boundary, grounding, tools/skills/MCP needs, output contract, and client surface.
+- `effort_surface_records`: per-surface evidence entries for `codex_model_guidance`, `custom_agent_toml`, `config_toml`, `app_server_catalog`, or `responses_api`, with source ledger ID, setting or field name, documented values, documented default or `not_documented_for_surface`, default scope, runtime-support requirement, and claim status.
+- `role_contract_binding`: required reasoning depth, role boundary, safety boundary, mutation boundary, grounding, tool contract, skill contract, MCP contract, output contract, source config bindings, and client surface.
 - `unsupported_facts`: list every missing fact as `undocumented`, `runtime_verification_needed`, or `qualification_needed`.
-- `candidate_status`: `admitted_for_discovery`, `rejected_undocumented`, `blocked_pending_capability`, or `project_input_only`.
+- `candidate_status`: `admitted_for_discovery`, `rejected_undocumented`, `rejected_deprecated_or_withdrawn`, `blocked_pending_capability`, or `project_input_only`.
+- `lifecycle_state`: `current`, `deprecated`, `retiring`, `shut_down`, `removed`, or `undocumented`, with `shutdown_date` and `replacement_model` when official lifecycle docs provide them.
 - `invalidation_rules`: documentation changes, model deprecation, source withdrawal, capability snapshot mismatch, telemetry-profile mismatch, instruction hash change, or fixture/scorer change.
+
+### Role Contract Record Shape
+
+Every `agent_contract_id` record in the implementation artifact MUST include
+these normalized fields:
+
+- `role`, `source_file`, `source_class`, and `client_surface`.
+- `production_route_status`: `active_codex_toml`, `parity_only_absent`, or
+  `project_input_only`.
+- `declared_toml_model`, `declared_toml_model_reasoning_effort`,
+  `declared_toml_sandbox_mode`, and `declared_toml_mutation_intent` for active
+  Codex TOML roles; parity-only roles use `absent`.
+- `instruction_sha256`, `full_file_sha256`, and `hash_source`.
+- `role_boundary`: in-scope actions, out-of-scope actions, and representative
+  future task.
+- `safety_contract`, `grounding_contract`, `mutation_contract`,
+  `tool_contract`, `skill_contract`, `mcp_contract`, `source_config_bindings`,
+  and `output_contract`.
+- `effective_runtime_permissions`, `effective_parent_overrides`, and
+  `effective_sandbox_and_approval_policy`, all set to
+  `runtime_verification_needed` in G56R-001.
+- `exact_treatment_boundary`: G56R-001 records declared source fields only;
+  G56R-002/G56R-003 must prove effective sandbox, approvals, model/effort,
+  parent configuration, loaded tools/skills/MCP, and telemetry before any route
+  can be qualified.
+- `platform_divergence` for `consensus-synthesizer` and `gate-validator`,
+  recording `active_codex_route_status=absent` and treating Claude model,
+  effort, and disallowed-tool metadata as `project_input` only.
 
 ### Role Contract Matrix
 
@@ -198,6 +239,36 @@ Every candidate route record in the implementation artifact MUST use this minimu
 | `consensus-synthesizer` | Missing executable fixture | Replay 1-, 2-, and 3-analyst consensus cases, including security override and all-disagree | Route, input analyst hashes, output hash, tokens, duration | Correct agreement, flags, and exact edit behavior | Future Codex parity TOML in G56R-009 | P1 |
 | `gate-validator` | Missing executable fixture | Execute supplied gate command returning JSON and verify verbatim pass/fail summary | Command execution, exit code, JSON output, route, duration | Verbatim JSON preserved; no remediation or artifact reads | Future Codex parity TOML in G56R-009 | P1 |
 
+Existing Claude prompt-emulation fixtures under
+`tests/speckit-pro/layer6-efficiency/fixtures/` are `project_input` and
+`non_release_evidence`. They do not count as current Codex executable fixtures
+and cannot qualify a route.
+
+### Fixture Backlog Record Shape
+
+Every fixture backlog record in the implementation artifact MUST include:
+
+- `fixture_backlog_id`: stable identifier, e.g.
+  `G56R-001-FB-<role>`.
+- `agent_contract_id` and role name.
+- `current_status`: `current_prompt_emulation_codex`,
+  `existing_claude_prompt_emulation_project_input`, or
+  `missing_executable_fixture`.
+- `current_source_path` when a prompt-emulation fixture exists.
+- `non_release_evidence`: true for all current prompt-emulation records.
+- `executable_specification`: future harness setup, materialized role,
+  representative input, expected tool/skill/MCP/sandbox needs, and allowed
+  mutation boundary.
+- `telemetry_requirements`: assigned route, effective route or null, model,
+  effort, parent-child attribution, loaded tools/skills/MCP, sandbox and
+  approval evidence, token vector, duration, retries, terminal state, and
+  missing-field classification.
+- `success_oracle`: observable pass criteria independent of model preference.
+- `blocking_dependency`: required future G56R spec, runner, materializer,
+  telemetry profile, or fixture harness.
+- `owner_spec`, `priority`, `invalidation_triggers`, and
+  `no_payload_created_in_g56r_001=true`.
+
 ### G56R-002 Handoff Contract
 
 The final report MUST hand off these questions and constraints:
@@ -207,15 +278,19 @@ The final report MUST hand off these questions and constraints:
 - Which provider capabilities are returned by `modelProvider/capabilities/read` for each admitted candidate?
 - Which surface can prove requested model, requested effort, effective model, effective effort, service reroute if documented, token usage, duration, and parent/child attribution?
 - Which telemetry fields are native, derived from controlled configuration, conditional, or unavailable?
+- Which evidence separates declared TOML model/effort/sandbox/mutation fields from effective runtime sandbox, approval policy, parent overrides, and loaded tool/skill/MCP state?
 - Which exact-treatment evidence proves a materialized custom-agent route matched its intended model, effort, instructions, sandbox, skills, MCP, tools, and parent configuration?
 - Which documented MCP/app/tool surfaces are available to each role under the pinned client?
 - Which `undocumented` or deprecated seed candidates remain rejected before capability probing?
+- Which candidate or fixture invalidation trigger requires source refresh,
+  capability rediscovery, telemetry-profile revision, fixture/scorer revision,
+  or no-go escalation before G56R-002 proceeds?
 
 ### G56R-002 Go/No-Go Matrix
 
 | Decision area | Required evidence | G56R-001 expected result |
 |---|---|---|
-| Proceed to G56R-002 capability discovery | Complete official-source ledger, twelve role contracts, candidate admission/rejection table, fixture backlog, telemetry questions | `GO` if all required records exist and no unsupported route is admitted |
+| Proceed to G56R-002 capability discovery | Complete official-source ledger, twelve role contracts, candidate admission/rejection table, fixture backlog, telemetry questions, and invalidation rules | `GO` if all required records exist, no unsupported route is admitted, current fixtures are labeled non-release, and every candidate has a capability question |
 | Proceed to executable candidate set | Runtime capability snapshot and telemetry profile | `NO-GO` in G56R-001; owned by G56R-002 |
 | Proceed to route qualification | Exact treatment, fixtures, scorer, analysis plan, executable corpus | `NO-GO` in G56R-001; owned by G56R-003+ |
 | Proceed to installer or fallback policy | Qualified preferred/fallback routes and resolver behavior | `NO-GO` in G56R-001; owned by G56R-006+ |
@@ -245,9 +320,9 @@ The final report MUST hand off these questions and constraints:
 ### Key Entities *(include if feature involves data)*
 
 - **OfficialSourceLedgerRecord**: Direct official OpenAI source URL, retrieval date, source family, documented facts, claim bindings, and invalidation triggers.
-- **AgentContractRecord**: One target role's source file, role intent, safety/mutation boundary, grounding, tool/skill/MCP needs, output contract, client surface, and representative future task.
+- **AgentContractRecord**: One target role's source file, production route or absence, declared TOML fields, instruction/full-file hashes, role boundary, safety/mutation boundary, grounding, separate tool/skill/MCP contracts, output contract, client surface, effective-runtime verification fields, and representative future task.
 - **CandidateRouteRecord**: Provisional model/effort tuple bound to an agent contract and official-source records, with unsupported facts, capability questions, and invalidation rules.
-- **FixtureBacklogRecord**: Current or missing fixture entry with executable specification, telemetry need, success oracle, blocking dependency, and priority.
+- **FixtureBacklogRecord**: Current or missing fixture entry with stable ID, source path, non-release evidence label, executable specification, representative input, telemetry need, success oracle, blocking dependency, owner spec, priority, and invalidation triggers.
 - **TraceabilityRecord**: Mapping from each claim to official documentation, project input, runtime verification needed, qualification needed, or undocumented status.
 - **GoNoGoDecision**: Strict G56R-002 handoff status and blocked downstream decisions.
 
@@ -255,11 +330,11 @@ The final report MUST hand off these questions and constraints:
 
 ### Measurable Outcomes
 
-- **SC-001**: Reviewer can count exactly 8 official-source ledger records, 12 role contract records, 12 fixture backlog records, and 0 unsupported admitted seed candidates in the research artifact.
-- **SC-002**: 100% of platform facts in the report map to an `official_source_ledger_id`; unsupported facts are explicitly labeled and cannot support a candidate.
-- **SC-003**: 100% of role contract records include source file, role intent, mutation expectations, grounding requirements, tools/skills/MCP needs, output contract, client surface, and representative future task.
-- **SC-004**: Fixture backlog contains exactly 3 current prompt-emulation records and exactly 9 missing executable-fixture records.
-- **SC-005**: Report ends with an explicit `GO` or `NO-GO` for G56R-002 capability discovery and explicit `NO-GO` for route qualification and installation.
+- **SC-001**: Reviewer can count exactly 9 official-source ledger records, 12 role contract records, 12 fixture backlog records, and 0 unsupported admitted seed candidates in the research artifact.
+- **SC-002**: 100% of platform facts in the report map to an `official_source_ledger_id`; unsupported or deprecated/withdrawn facts are explicitly labeled and cannot support a candidate.
+- **SC-003**: 100% of role contract records include source file, production route or absence, declared TOML fields, instruction/full-file hashes, role boundary, safety and mutation expectations, grounding requirements, separate tool/skill/MCP contracts, output contract, client surface, effective-runtime verification fields, and representative future task.
+- **SC-004**: Fixture backlog contains exactly 3 current Codex prompt-emulation records and exactly 9 missing executable-fixture records; any Claude prompt-emulation records are labeled `project_input` and `non_release_evidence` outside the current-Codex count.
+- **SC-005**: Report ends with an explicit `GO` or `NO-GO` for G56R-002 capability discovery and explicit `NO-GO` for route qualification and installation; `GO` requires complete source, contract, candidate, fixture, telemetry, capability-question, and invalidation records.
 - **SC-006**: Search for unresolved clarification, gap, and critical marker tokens in `spec.md` returns zero matches.
 
 ## Assumptions

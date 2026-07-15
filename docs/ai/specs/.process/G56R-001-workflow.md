@@ -52,8 +52,8 @@ Grill Me is human-in-the-loop only. Once autopilot starts, clarification uses
 | Phase | Command | Status | Notes |
 |---|---|---|---|
 | Specify | `$speckit-specify` | Complete | Created spec and requirements checklist; G1 passed |
-| Clarify | `$speckit-clarify` | In Progress | Resolve execution-time source, parity-role, and handoff ambiguities |
-| Plan | `$speckit-plan` | Pending | Plan one canonical report and its deterministic validation |
+| Clarify | `$speckit-clarify` | Complete | Resolved execution-time source, parity-role, fixture, and handoff ambiguities; G2 passed |
+| Plan | `$speckit-plan` | In Progress | Plan one canonical report and its deterministic validation |
 | Checklist | `$speckit-checklist` | Pending | Run all five user-selected operational domains |
 | Tasks | `$speckit-tasks` | Pending | Produce source-first documentation tasks only |
 | Analyze | `$speckit-analyze` | Pending | Reject authority, scope, traceability, and count drift |
@@ -326,9 +326,19 @@ $speckit-clarify Focus on executable fixture specifications, the exact three-cur
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---|---|---|---|
-| 1 | Source ledger and candidate admission | Pending | Pending |
-| 2 | Role contracts and parity additions | Pending | Pending |
-| 3 | Fixture and G56R-002 handoff | Pending | Pending |
+| 1 | Source ledger and candidate admission | 4 | Added required ledger metadata, deprecated/withdrawn seed status, per-surface effort/default treatment, and non-authoritative candidate snapshot wording |
+| 2 | Role contracts and parity additions | 5 | Added route/absence, declared TOML, hash, boundary, separate tool/skill/MCP, parity-divergence, and effective-runtime verification fields |
+| 3 | Fixture and G56R-002 handoff | 4 | Clarified Claude prompt-emulation fixture status, fixture record shape, telemetry requirements, invalidation triggers, and strict G56R-002 go/no-go criteria; run locally because agent thread cap blocked new executor spawn |
+
+---
+
+### Consensus Resolution Log
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|---|---|---|---|---|---|
+| 1 | Clarify | Deprecated or withdrawn seed status | [domain] | 1 | high-confidence | Added `rejected_deprecated_or_withdrawn` and lifecycle fields; kept unpublished exact slugs as `rejected_undocumented` | domain-researcher |
+| 2 | Clarify | Per-surface effort/default treatment | [domain] | 1 | high-confidence | Added `effort_surface_records` and required source-specific effort/default evidence | domain-researcher |
+| 3 | Clarify | Declared TOML vs effective runtime permissions | [security, domain, spec] | 1 | high-confidence | Added declared-source fields plus `runtime_verification_needed` effective permission fields; thread cap blocked extra analyst spawns, so parent verified official docs and project context directly | codebase-analyst + parent verification |
 
 ---
 

@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-001-workflow.md",
   "spec_id": "G56R-001",
   "feature_dir": "specs/g56r-001-candidate-route-baseline",
-  "updated_at": "2026-07-15T22:51:16Z",
-  "active_step": "Phase 2: Clarify - Source Ledger and Candidate Admission",
+  "updated_at": "2026-07-15T23:13:30Z",
+  "active_step": "Phase 3: Plan",
   "settings": {
     "auto_commit": "per-phase",
     "confidence_gate_mode": "advisory",
@@ -114,6 +114,101 @@
         "critical": 0,
         "high": 0
       }
+    },
+    "Phase 2: Clarify - Source Ledger and Candidate Admission": {
+      "status": "completed",
+      "completed_at": "2026-07-15T23:02:11Z",
+      "executor_agent_id": "019f67fb-ba6d-7333-939e-fc851de1acf9",
+      "questions": 4,
+      "accepted_answers": [
+        "Added required execution-time official-source ledger metadata.",
+        "Added distinct deprecated/withdrawn seed rejection status.",
+        "Required per-surface effort/default records instead of a global effort enum.",
+        "Clarified that the provisional candidate pool is a non-authoritative execution snapshot."
+      ],
+      "consensus": [
+        {
+          "item": "Deprecated or withdrawn seed status",
+          "categories": [
+            "domain"
+          ],
+          "round": 1,
+          "outcome": "high-confidence",
+          "analyst_agent_ids": [
+            "019f6800-ba28-7770-bafd-121f5061a610"
+          ]
+        },
+        {
+          "item": "Per-surface effort/default treatment",
+          "categories": [
+            "domain"
+          ],
+          "round": 1,
+          "outcome": "high-confidence",
+          "analyst_agent_ids": [
+            "019f6800-c21d-7583-b927-799abc90c39d"
+          ]
+        }
+      ],
+      "files_changed": [
+        "specs/g56r-001-candidate-route-baseline/spec.md"
+      ]
+    },
+    "Phase 2: Clarify - Role Contracts and Parity Additions": {
+      "status": "completed",
+      "completed_at": "2026-07-15T23:11:29Z",
+      "executor_agent_id": "019f6805-06e6-7013-af4c-964546752ee9",
+      "questions": 5,
+      "accepted_answers": [
+        "Added explicit production route or absence fields and instruction/full-file hashes.",
+        "Separated declared TOML model/effort/sandbox/mutation fields from effective runtime verification fields.",
+        "Encoded parity-only Codex route absence for consensus-synthesizer and gate-validator.",
+        "Separated tool, skill, and MCP contracts.",
+        "Added role-boundary fields with in-scope, out-of-scope, and representative task expectations."
+      ],
+      "consensus": [
+        {
+          "item": "Declared TOML vs effective runtime permissions",
+          "categories": [
+            "security",
+            "domain",
+            "spec"
+          ],
+          "round": 1,
+          "outcome": "high-confidence",
+          "analyst_agent_ids": [
+            "019f6809-c61c-7110-a3e1-ab94b899da02"
+          ],
+          "degradation": "multi_agent thread cap blocked additional spec-context and domain analyst spawns; parent verified project context and official OpenAI docs directly before applying edits."
+        }
+      ],
+      "files_changed": [
+        "specs/g56r-001-candidate-route-baseline/spec.md"
+      ]
+    },
+    "Phase 2: Clarify - Fixture and G56R-002 Handoff": {
+      "status": "completed",
+      "completed_at": "2026-07-15T23:13:30Z",
+      "executor_agent_id": null,
+      "execution_mode": "parent_fallback_due_thread_cap",
+      "questions": 4,
+      "accepted_answers": [
+        "Clarified that existing Claude prompt-emulation fixtures are project_input and non_release_evidence outside the current Codex fixture count.",
+        "Added fixture backlog record shape with stable ID, source path, representative input, telemetry requirements, owner spec, and invalidation triggers.",
+        "Expanded telemetry handoff requirements for assigned/effective route, tools/skills/MCP, sandbox/approvals, token vector, duration, retries, terminal state, and missing-field classification.",
+        "Tightened G56R-002 go/no-go criteria to require complete source, contract, candidate, fixture, telemetry, capability-question, and invalidation records."
+      ],
+      "consensus": [],
+      "gate": {
+        "id": "G2",
+        "status": "pass",
+        "reason": "0 [NEEDS CLARIFICATION] markers",
+        "markers": 0
+      },
+      "degradation": "multi_agent thread cap blocked clarify-executor spawn for Session 3; parent executed the read-only review locally using workflow, spec, PRD, roadmap, and layer6 fixture inventory.",
+      "files_changed": [
+        "specs/g56r-001-candidate-route-baseline/spec.md"
+      ]
     }
   },
   "plan": [
@@ -131,31 +226,31 @@
     },
     {
       "step": "Phase 2: Clarify - Source Ledger and Candidate Admission",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Source Ledger and Candidate Admission Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Role Contracts and Parity Additions",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Role Contracts and Parity Additions Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Fixture and G56R-002 Handoff",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Fixture and G56R-002 Handoff Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - LLM Integration",
