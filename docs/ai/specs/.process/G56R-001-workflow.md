@@ -766,18 +766,18 @@ metadata, generated release artifacts, or unrelated configuration.
 | Post: Doctor Extension Check | Complete | PASS: 5 checks; 5 PASS, 0 WARN, 0 FAIL |
 | Post: Verify Implementation | Complete | 26/26 tasks; checker PASS twice; focused 56/56; final uninterrupted default suite 2814/2814 |
 | Post: Verify Tasks Phantom Check | Complete | 26 VERIFIED, 0 flagged after adversarial reconciliation |
-| Post: Code Review | In progress | Final stable-head rereview pending after the spec adversary found and the parent remediated an unreachable pre-rebase research pin |
+| Post: Code Review | Complete | Three adversarial agents approved after the unreachable research pin and final aggregate mismatch were remediated |
 | Post: Integration Suite | Complete | Layer 1 1427/1427; Layer 4 1201/1201; Layer 5 186/186; integration 257/257; default 2814/2814 |
 | Post: Reviewability Diff Gate | Complete | User-authorized single combined PR; typed `Reviewability-Exception: infra` recorded without correctness/test waivers |
 | Post: Self-Review | Complete | 0 edge-case gaps, requirement/task orphans, silent markers, or tidiness findings |
 | Post: UAT Runbook Generation | Skipped | `skipped: generate-uat-skeleton deferred`; no committed source-derived runbook exists |
 | Post: Final Reviewability Backstop | Complete | Combined-PR exception recorded for the measured combined scope; no correctness, test, source-freshness, or PR-verification waiver |
-| Post: Adversarial Review and Durable PR Recovery | In progress | Tavily official/community research is complete; the final stable-head spec-adversary rereview is pending after D-09 remediation |
-| Post: PR Packet/Body Generation | In progress | Schema 1.1 packet regeneration is pending for the provenance-remediated source head |
+| Post: Adversarial Review and Durable PR Recovery | Complete | Tavily official/community research plus three independent agents approved G56R and cross-client autopilot hardening after D-09 remediation |
+| Post: PR Packet/Body Generation | Complete | Schema 1.1 packet binds the final remediated base/source revisions, full-index diff, and `whole_body_v2`; read-only validation passed |
 | Post: PR Body Generation | Complete | Packet-owned body contains all required headings and exactly one release-note block |
 | Post: PR Creation | Complete | Unique live PR [#348](https://github.com/racecraft-lab/racecraft-plugins-public/pull/348) verified with head `g56r-001-candidate-route-baseline` and base `main` |
 | Post: Review Remediation | Complete | PR #348: 10 duplicated empty-handler findings fixed through shared-source generation; 1 unsafe fallback request resolved with fail-closed security rationale; stale docs reference regenerated |
-| Post: Retrospective | In progress | 26/26 tasks and 100% spec adherence remain verified; final stable-head adversarial disposition is pending |
+| Post: Retrospective | Complete | 26/26 tasks, 100% spec adherence, 0 unresolved findings, and final adversarial remediation evidence recorded |
 
 ### Reviewability Diff Gate
 

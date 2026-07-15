@@ -170,7 +170,7 @@ from the adherence denominator.
 | D-06 | SIGNIFICANT | Resolved | The human inventory overclaimed Claude parity chains and omitted reciprocal links from the two real Claude payloads to shared consumers. Inventory checks now require the exact physical set and reciprocal links. | Narrative counting drifted beyond the plan's scoped parity sources. Validate both missing and unexpected entries against a frozen physical set. |
 | D-07 | MINOR | Resolved | The first terminal timestamp preceded material review fixes, and Tasks state attributed 26 tasks to the 22-task checkpoint. The final stop is re-frozen after remediation, and state distinguishes the initial and Analyze-remediated checkpoints. | Phase summaries were updated independently from source history. Derive checkpoint counts from the recorded commits before completion. |
 | D-08 | SIGNIFICANT | Resolved | Autopilot ended with PR creation marked skipped because packet output was deferred; old packets also lacked source-revision freshness. Shared runner helpers and both client contracts now make packet/push/verified PR creation fail closed, revision-bound, and idempotently reconciled. | Optional and required Post rows shared the same skip semantics. Encode terminal completion as a verified external invariant, not a prose convention. |
-| D-09 | SIGNIFICANT | Resolved | Final adversarial review found that the research narrative and manifest still named unreachable pre-rebase revision `7f8c1736…`. All project evidence now binds the equivalent rebased checkpoint `b03c4438…`; focused validation requires that revision to exist and be an ancestor of `HEAD`, and the CI test checkout fetches full history. | Rebase reconciliation updated phase checkpoints but not the repeated immutable research pin, while the checker proved only internal equality. Run commit reachability and ancestry validation after every history rewrite. |
+| D-09 | SIGNIFICANT | Resolved | Final adversarial review found that the research narrative and manifest still named unreachable pre-rebase revision `7f8c1736…`, and the task report retained the pre-regression final-suite aggregate. All project evidence now binds equivalent rebased checkpoint `b03c4438…`; focused validation requires that revision to exist and be a `HEAD` ancestor; CI fetches full history; every current aggregate is 2814/2814. | Rebase reconciliation updated phase checkpoints but not the repeated immutable research pin, while independent phase summaries allowed an old aggregate to survive. Run reachability, ancestry, and exhaustive cross-artifact total sweeps after every history rewrite or test-count change. |
 
 No G56R requirement was dropped, relaxed, or left partial. D-01/D-02 were
 resolved in the original implementation history; D-03 through D-07 and D-09
@@ -188,11 +188,11 @@ separately authorized plugin recovery required to finish the same autopilot run.
 
 ## Adversarial External Review
 
-Tavily-backed review and three independent adversarial agents produced one final
-provenance blocker, D-09, which is remediated in the source-bound candidate for
-stable-head rereview. Official OpenAI documentation remains the authority for
-platform behavior; community sources are nonbinding hardening and evaluation
-guidance.
+Tavily-backed review and three independent adversarial agents produced final
+provenance and aggregate-consistency blockers under D-09; both are resolved,
+and the stable-head disposition is APPROVE. Official OpenAI documentation
+remains the authority for platform behavior; community sources are nonbinding
+hardening and evaluation guidance.
 
 | Source | Alignment verdict | Disposition |
 |---|---|---|

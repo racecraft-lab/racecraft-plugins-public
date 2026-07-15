@@ -35,7 +35,7 @@ the current combined branch. No `before_verify-tasks` hook is registered.
 - The focused artifact test reports `56/56 passed`.
 - The exact two-file research guard test reports `11/11 passed`.
 - The integration suite reports `257/257 passed`.
-- The final uninterrupted default suite and handoff agree: Layer 1 `1427/1427`, Layer 4 `1200/1200`, Layer 5 `186/186`, and total `2813/2813`.
+- The final uninterrupted default suite and handoff agree: Layer 1 `1427/1427`, Layer 4 `1201/1201`, Layer 5 `186/186`, and total `2814/2814`.
 - `git diff --check` passes.
 - Semantic review found no stubs, placeholders, dead code, missing task evidence, or mismatch between completed tasks and current behavior.
 
