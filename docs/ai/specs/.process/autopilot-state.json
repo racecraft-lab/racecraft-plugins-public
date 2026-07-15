@@ -3,7 +3,7 @@
   "feature_dir": "specs/hrns-001-harness-surface-inventory-gap-taxonomy",
   "spec_id": "HRNS-001",
   "branch": "hrns-001-harness-surface-inventory-gap-taxonomy",
-  "updated_at": "2026-07-15T23:09:24Z",
+  "updated_at": "2026-07-15T23:13:07Z",
   "active_step": "Phase 6: Analyze",
   "confidence_gate_mode": "advisory",
   "project_commands": {
@@ -191,12 +191,7 @@
         "US1 implementation",
         "Polish & Validation"
       ],
-      "parallel_opportunities": [
-        "T004-T007",
-        "T012-T014",
-        "T020-T023",
-        "T029-T030"
-      ],
+      "parallel_opportunities": [],
       "user_stories": [
         "US1"
       ],
@@ -223,6 +218,29 @@
           "specs/hrns-001-harness-surface-inventory-gap-taxonomy/SPEC-MOC.md"
         ]
       }
+    },
+    "analyze": {
+      "status": "completed",
+      "findings": [
+        {
+          "id": "A1",
+          "severity": "MEDIUM",
+          "category": "Inconsistency",
+          "summary": "Initial [P] markers wrote the same canonical Markdown artifact.",
+          "resolution": "Removed [P] markers and serialized implementation tasks."
+        }
+      ],
+      "open_findings": 0,
+      "remediation": [
+        "specs/hrns-001-harness-surface-inventory-gap-taxonomy/tasks.md",
+        "docs/ai/specs/.process/HRNS-001-workflow.md"
+      ],
+      "g6": {
+        "status": "pass",
+        "markers": 0,
+        "reason": "0 CRITICAL/HIGH findings",
+        "request_id": "hrns-001-g6-analyze-check"
+      }
     }
   },
   "plan": [
@@ -247,9 +265,9 @@
     {"step": "Phase 4: Checklist - Reliability", "status": "completed"},
     {"step": "Phase 4: Checklist - Reliability Consensus", "status": "completed"},
     {"step": "Phase 5: Tasks", "status": "completed"},
-    {"step": "Phase 6: Analyze", "status": "in_progress"},
-    {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
-    {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
+    {"step": "Phase 6: Analyze", "status": "completed"},
+    {"step": "Phase 6: Analyze - Consensus", "status": "completed"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "in_progress"},
     {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
     {"step": "Post: Doctor Extension Check", "status": "pending"},
     {"step": "Post: Verify Implementation", "status": "pending"},

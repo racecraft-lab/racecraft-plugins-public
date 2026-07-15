@@ -26,10 +26,10 @@
 
 **Critical**: No gap classification or external recommendation should be written until this phase is complete.
 
-- [ ] T004 [P] Enumerate authoritative and excluded evidence classes from `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.specify/memory/constitution.md`, `docs/prd-harness-engineering-uplift.md`, and `docs/ai/specs/harness-engineering-uplift-technical-roadmap.md` in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
-- [ ] T005 [P] Enumerate plugin distribution surfaces from `speckit-pro/.claude-plugin/plugin.json`, `speckit-pro/.codex-plugin/plugin.json`, `speckit-pro/skills/`, `speckit-pro/codex-skills/`, `speckit-pro/agents/`, and `speckit-pro/codex-agents/` in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
-- [ ] T006 [P] Enumerate runner, helper, gate, hook, and generated-payload source surfaces from `speckit-pro/speckit_pro_runner/`, `speckit-pro/hooks/`, `speckit-pro/codex-hooks.json`, and `speckit-pro/scripts/curated-set.json` in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
-- [ ] T007 [P] Enumerate tests, evals, PR packet, release gate, docs-site, workflow, and SpecKit extension surfaces from `tests/speckit-pro/`, `.github/pull_request_template.md`, `.github/workflows/`, `docs-site/`, `.specify/extensions.yml`, and `.specify/extensions/` in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
+- [ ] T004 Enumerate authoritative and excluded evidence classes from `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.specify/memory/constitution.md`, `docs/prd-harness-engineering-uplift.md`, and `docs/ai/specs/harness-engineering-uplift-technical-roadmap.md` in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
+- [ ] T005 Enumerate plugin distribution surfaces from `speckit-pro/.claude-plugin/plugin.json`, `speckit-pro/.codex-plugin/plugin.json`, `speckit-pro/skills/`, `speckit-pro/codex-skills/`, `speckit-pro/agents/`, and `speckit-pro/codex-agents/` in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
+- [ ] T006 Enumerate runner, helper, gate, hook, and generated-payload source surfaces from `speckit-pro/speckit_pro_runner/`, `speckit-pro/hooks/`, `speckit-pro/codex-hooks.json`, and `speckit-pro/scripts/curated-set.json` in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
+- [ ] T007 Enumerate tests, evals, PR packet, release gate, docs-site, workflow, and SpecKit extension surfaces from `tests/speckit-pro/`, `.github/pull_request_template.md`, `.github/workflows/`, `docs-site/`, `.specify/extensions.yml`, and `.specify/extensions/` in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
 - [ ] T008 Define the canonical `HRNS-GAP-###` row schema, lifecycle values, taxonomy types, dependency posture values, owner fields, closure values, and stable-ID rules in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
 - [ ] T009 Define the external-candidate matrix schema, recommendation vocabulary, primary-evidence requirements, and `unknown` handling rules in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
 - [ ] T010 Define self-improvement loop closure semantics and fail-closed promotion rules in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
@@ -47,18 +47,18 @@
 ### Implementation for User Story 1
 
 - [ ] T011 [US1] Populate the current-state boundary and source precedence summary in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
-- [ ] T012 [P] [US1] Populate skill, command, agent, and Codex/Claude distribution rows from `speckit-pro/skills/`, `speckit-pro/codex-skills/`, `speckit-pro/agents/`, and `speckit-pro/codex-agents/` in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
-- [ ] T013 [P] [US1] Populate runner, helper, gate, hook, generated-payload, and install-inventory rows from `speckit-pro/speckit_pro_runner/`, `speckit-pro/hooks/`, `speckit-pro/codex-hooks.json`, and `speckit-pro/speckit_pro_runner/install_inventory.json` in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
-- [ ] T014 [P] [US1] Populate docs, workflow, PR packet, test/eval, release gate, and extension rows from `docs/`, `docs-site/`, `.github/pull_request_template.md`, `.github/workflows/`, `tests/speckit-pro/`, `.specify/extensions.yml`, and `.specify/extensions/` in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
+- [ ] T012 [US1] Populate skill, command, agent, and Codex/Claude distribution rows from `speckit-pro/skills/`, `speckit-pro/codex-skills/`, `speckit-pro/agents/`, and `speckit-pro/codex-agents/` in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
+- [ ] T013 [US1] Populate runner, helper, gate, hook, generated-payload, and install-inventory rows from `speckit-pro/speckit_pro_runner/`, `speckit-pro/hooks/`, `speckit-pro/codex-hooks.json`, and `speckit-pro/speckit_pro_runner/install_inventory.json` in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
+- [ ] T014 [US1] Populate docs, workflow, PR packet, test/eval, release gate, and extension rows from `docs/`, `docs-site/`, `.github/pull_request_template.md`, `.github/workflows/`, `tests/speckit-pro/`, `.specify/extensions.yml`, and `.specify/extensions/` in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
 - [ ] T015 [US1] Identify retained gaps from the surface inventory and assign stable `HRNS-GAP-###` canonical rows in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
 - [ ] T016 [US1] Classify each canonical gap row by surface tags, taxonomy type, lifecycle state, dependency posture, and authoritative evidence in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
 - [ ] T017 [US1] Record owner workflow, cross-roadmap owner, CAR/G56R reference posture, downstream HRNS owner, and intentional deferments for every canonical gap row in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
 - [ ] T018 [US1] Add knowledge initialization, incremental ingest and synthesis, query and compounding capture, structural conformance, health/drift, code-intelligence interoperability, external exchange, provenance, conflict handling, and cross-distribution parity rows in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
 - [ ] T019 [US1] Add self-improvement loop rows with approval boundary, promotion rule, closure evidence, and unknown/non-promotable handling in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
-- [ ] T020 [P] [US1] Research dated primary evidence for Pydantic and JSON Schema rows and record schema-candidate findings in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
-- [ ] T021 [P] [US1] Research dated primary evidence for OpenTelemetry, OpenInference, LangSmith, Langfuse, and Phoenix rows and record trace/observability findings in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
-- [ ] T022 [P] [US1] Research dated primary evidence for LangGraph, OpenAI Agents SDK, and the pinned OKF v0.1 knowledge-catalog reference and record orchestration/knowledge-format findings in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
-- [ ] T023 [P] [US1] Research dated primary evidence for Braintrust, promptfoo, Inspect AI, and DSPy rows and record eval/coding-agent findings in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
+- [ ] T020 [US1] Research dated primary evidence for Pydantic and JSON Schema rows and record schema-candidate findings in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
+- [ ] T021 [US1] Research dated primary evidence for OpenTelemetry, OpenInference, LangSmith, Langfuse, and Phoenix rows and record trace/observability findings in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
+- [ ] T022 [US1] Research dated primary evidence for LangGraph, OpenAI Agents SDK, and the pinned OKF v0.1 knowledge-catalog reference and record orchestration/knowledge-format findings in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
+- [ ] T023 [US1] Research dated primary evidence for Braintrust, promptfoo, Inspect AI, and DSPy rows and record eval/coding-agent findings in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
 - [ ] T024 [US1] Populate the complete external-candidate matrix with category, mapped HRNS surfaces, local-first fit, runtime dependency posture, telemetry/privacy posture, license/supply-chain risk, normative/reference status, observed version or commit, compatibility gaps, recommendation, as-of date, and `unknown` fields in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
 - [ ] T025 [US1] Add the OKF-specific row with pinned normative revision, draft maturity, reference-tooling compatibility evidence, known spec/tool mismatches, extension-preservation posture, and blocking/advisory/deferred disposition in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
 - [ ] T026 [US1] Add AC-1.1 through AC-1.10 crosswalk, surface coverage proof, evidence-class coverage proof, self-improvement loop coverage, and deferred-gap ownership proof in `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
@@ -73,8 +73,8 @@
 **Purpose**: Prove the artifact is reviewable, linked, current, and ready for PR packet generation.
 
 - [ ] T028 Update `specs/hrns-001-harness-surface-inventory-gap-taxonomy/SPEC-MOC.md` and `docs/ai/specs/harness-engineering-uplift-roadmap-MOC.md` through the existing spec-index helper after taxonomy content is final
-- [ ] T029 [P] Run the placeholder sweep from `specs/hrns-001-harness-surface-inventory-gap-taxonomy/quickstart.md` against `specs/hrns-001-harness-surface-inventory-gap-taxonomy/` and `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
-- [ ] T030 [P] Run the Markdown link/evidence review from `specs/hrns-001-harness-surface-inventory-gap-taxonomy/quickstart.md` against `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
+- [ ] T029 Run the placeholder sweep from `specs/hrns-001-harness-surface-inventory-gap-taxonomy/quickstart.md` against `specs/hrns-001-harness-surface-inventory-gap-taxonomy/` and `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
+- [ ] T030 Run the Markdown link/evidence review from `specs/hrns-001-harness-surface-inventory-gap-taxonomy/quickstart.md` against `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
 - [ ] T031 Run the generated spec-index check from `specs/hrns-001-harness-surface-inventory-gap-taxonomy/quickstart.md` and apply the existing spec-index helper if it reports stale generated maps
 - [ ] T032 Run `git diff --check` for `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`, `specs/hrns-001-harness-surface-inventory-gap-taxonomy/`, and `docs/ai/specs/.process/HRNS-001-workflow.md`
 - [ ] T033 Run `python3 tests/speckit-pro/run-all.py --layer 1` if final changed paths warrant structural validation, or record the docs-only skip rationale in `docs/ai/specs/.process/HRNS-001-workflow.md`
@@ -99,34 +99,23 @@
 ### Within User Story 1
 
 - T011 must happen before canonical gap and matrix conclusions.
-- T012, T013, and T014 can run in parallel because they inventory separate source surfaces before the final gap register is consolidated.
+- T012, T013, and T014 must be merged serially because they write the same canonical artifact.
 - T015 through T019 are sequential because canonical gap identity, ownership, and closure rows share one artifact.
-- T020 through T023 can run in parallel because they research independent candidate families, but their results must merge through T024 and T025.
+- T020 through T023 must be merged serially because they write the same external-candidate matrix.
 - T026 and T027 must run after all rows are complete.
 
 ### Parallel Opportunities
 
-- T004 through T007 can run in parallel after T001 through T003.
-- T012 through T014 can run in parallel after T011.
-- T020 through T023 can run in parallel after T019.
-- T029 and T030 can run in parallel after T028.
+- None in the executable task list. HRNS-001 intentionally writes one canonical Markdown artifact, so implementation updates are serialized to avoid ownership drift and merge conflicts.
 
 ---
 
 ## Parallel Example: User Story 1
 
-```text
-Task: "Populate skill, command, agent, and distribution rows in docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md"
-Task: "Populate runner, helper, gate, hook, generated-payload, and install-inventory rows in docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md"
-Task: "Populate docs, workflow, PR packet, test/eval, release gate, and extension rows in docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md"
-```
-
-```text
-Task: "Research Pydantic and JSON Schema candidate evidence in docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md"
-Task: "Research OpenTelemetry, OpenInference, LangSmith, Langfuse, and Phoenix candidate evidence in docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md"
-Task: "Research LangGraph, OpenAI Agents SDK, and OKF candidate evidence in docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md"
-Task: "Research Braintrust, promptfoo, Inspect AI, and DSPy candidate evidence in docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md"
-```
+No parallel implementation example is provided because all implementation tasks
+write `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`. Independent
+evidence reading may happen out of band, but the task list serializes artifact
+updates.
 
 ---
 
@@ -149,6 +138,6 @@ Task: "Research Braintrust, promptfoo, Inspect AI, and DSPy candidate evidence i
 
 ### Notes
 
-- `[P]` tasks touch different evidence areas but still write to the same final artifact; merge them sequentially if one agent is doing the implementation.
+- Do not add `[P]` markers unless a later task writes a separate file or is otherwise safe from shared-artifact write conflicts.
 - External candidates are evidence-only. HRNS-001 must not install, prototype, or adopt them.
 - CAR and G56R rows are allowed as reference/ownership rows, but unmerged CAR/G56R state is not authoritative current evidence.

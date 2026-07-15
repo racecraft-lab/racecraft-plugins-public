@@ -45,8 +45,8 @@ The design concept is the source of truth for these scoping decisions:
 | Plan | `/speckit-plan` | ✅ Complete | Created plan, research, data model, quickstart, and MOC refresh |
 | Checklist | `/speckit-checklist` | ✅ Complete | Data integrity, security, integration, and reliability checklists generated; G4 passed |
 | Tasks | `/speckit-tasks` | ✅ Complete | 35 evidence-first docs tasks generated; G5 passed |
-| Analyze | `/speckit-analyze` | 🔄 In Progress | Check cross-artifact scope and AC-1.* coverage |
-| Confidence Gate | G6.5 | ⏳ Pending | Record pre-Implement confidence and mode before implementation |
+| Analyze | `/speckit-analyze` | ✅ Complete | A1 parallel marker issue resolved; no open findings |
+| Confidence Gate | G6.5 | 🔄 In Progress | Record pre-Implement confidence and mode before implementation |
 | Implement | `/speckit-implement` | ⏳ Pending | Produce and validate the taxonomy artifact only |
 | Post | post-implementation | ⏳ Pending | Run canonical verification, PR, review, and retrospective items |
 
@@ -562,7 +562,7 @@ Focus on HRNS-001 requirements:
 |--------|-------|
 | Total Tasks | 35 |
 | Phases | Setup, Foundational, US1 implementation, Polish & Validation |
-| Parallel Opportunities | T004-T007, T012-T014, T020-T023, T029-T030 |
+| Parallel Opportunities | None; one canonical artifact keeps implementation writes serialized |
 | User Stories Covered | US1 |
 
 ---
@@ -626,7 +626,7 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| A1 | MEDIUM | Initial tasks used `[P]` markers for work that writes the same canonical Markdown artifact, creating a potential shared-file write conflict. | Resolved by removing `[P]` markers and recording serialized implementation in `tasks.md`. |
 
 ---
 
