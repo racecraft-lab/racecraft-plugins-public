@@ -686,7 +686,7 @@ def git_worktree_status(repo_root: Path) -> bool | dict[str, Any]:
     return bool(completed.stdout.strip())
 
 
-def write_file_atomic(target: Path, content: str, *, trust_root: Path | None = None) -> None:
+def write_file_atomic(target: Path, content: str | bytes, *, trust_root: Path | None = None) -> None:
     if trust_root is not None:
         if os.name == "posix":
             _write_file_atomic_posix(target, content, trust_root)
@@ -709,9 +709,9 @@ def write_file_atomic(target: Path, content: str, *, trust_root: Path | None = N
         descriptor, raw_tmp = tempfile.mkstemp(prefix=f".{target.name}.tmp-", dir=target.parent)
         tmp = Path(raw_tmp)
         os.fchmod(descriptor, target_mode)
-        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as fh:
+        with os.fdopen(descriptor, "wb") as fh:
             descriptor = -1
-            fh.write(ensure_final_newline(content))
+            fh.write(_atomic_payload(content))
             fh.flush()
             os.fsync(fh.fileno())
         if tmp.is_symlink() or not tmp.is_file():
@@ -748,7 +748,7 @@ def _write_relative_parts(target: Path, trust_root: Path) -> tuple[tuple[str, ..
     return parts[:-1], parts[-1]
 
 
-def _write_file_atomic_posix(target: Path, content: str, trust_root: Path) -> None:
+def _write_file_atomic_posix(target: Path, content: str | bytes, trust_root: Path) -> None:
     parents, leaf = _write_relative_parts(target, trust_root)
     directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
     descriptors: list[int] = []
@@ -792,7 +792,7 @@ def _write_file_atomic_posix(target: Path, content: str, trust_root: Path) -> No
             raise OSError("could not allocate a unique atomic-write temporary file")
         if target_mode is not None:
             os.fchmod(temporary_descriptor, target_mode)
-        payload = ensure_final_newline(content).encode("utf-8")
+        payload = _atomic_payload(content)
         offset = 0
         while offset < len(payload):
             offset += os.write(temporary_descriptor, payload[offset:])
@@ -825,7 +825,7 @@ def _write_file_atomic_posix(target: Path, content: str, trust_root: Path) -> No
                 pass
 
 
-def _write_file_atomic_windows(target: Path, content: str, trust_root: Path) -> None:
+def _write_file_atomic_windows(target: Path, content: str | bytes, trust_root: Path) -> None:
     # Windows lacks Python-level dir_fd mutation APIs. Pin every directory with
     # non-delete-sharing Win32 handles and rename the open temporary handle.
     import ctypes
@@ -1001,7 +1001,7 @@ def _write_file_atomic_windows(target: Path, content: str, trust_root: Path) -> 
             file_attribute_directory | file_attribute_reparse_point
         ):
             raise OSError("atomic-write temporary handle must be a regular non-reparse file")
-        payload = ensure_final_newline(content).encode("utf-8")
+        payload = _atomic_payload(content)
         offset = 0
         while offset < len(payload):
             chunk = payload[offset : offset + 64 * 1024]
@@ -1047,6 +1047,12 @@ def _write_file_atomic_windows(target: Path, content: str, trust_root: Path) -> 
 
 def ensure_final_newline(content: str) -> str:
     return content if content.endswith("\n") else f"{content}\n"
+
+
+def _atomic_payload(content: str | bytes) -> bytes:
+    if isinstance(content, bytes):
+        return content
+    return ensure_final_newline(content).encode("utf-8")
 
 
 def empty_mutation(mode: str) -> dict[str, Any]:

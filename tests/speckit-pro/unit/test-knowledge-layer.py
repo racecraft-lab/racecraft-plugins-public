@@ -310,6 +310,56 @@ class KnowledgeLayerTests(unittest.TestCase):
         self.assertEqual(external_target.read_text(encoding="utf-8"), "external\n")
         self.assertEqual((detached / "target.md").read_text(encoding="utf-8"), "after\n")
 
+    @unittest.skipUnless(os.name == "nt", "Windows atomic-write regression requires Win32")
+    def test_windows_atomic_writer_pins_parent_during_replace(self) -> None:
+        root = self.repo("windows-atomic-pin")
+        parent = root / "safe"
+        parent.mkdir()
+        target = parent / "target.md"
+        target.write_text("before\n", encoding="utf-8")
+        detached = root / "detached"
+        attempted = False
+        real_token_hex = mutation_helper.secrets.token_hex
+
+        def attempt_parent_rename(size: int) -> str:
+            nonlocal attempted
+            if not attempted:
+                attempted = True
+                with self.assertRaises(OSError):
+                    parent.rename(detached)
+            return real_token_hex(size)
+
+        with mock.patch.object(
+            mutation_helper.secrets,
+            "token_hex",
+            side_effect=attempt_parent_rename,
+        ):
+            mutation_helper.write_file_atomic(target, "after", trust_root=root)
+
+        self.assertTrue(attempted)
+        self.assertEqual(target.read_text(encoding="utf-8"), "after\n")
+        self.assertFalse(detached.exists())
+
+    @unittest.skipUnless(os.name == "nt", "Windows reparse regression requires Win32")
+    def test_windows_atomic_writer_rejects_reparse_parent(self) -> None:
+        root = self.repo("windows-atomic-reparse")
+        external = self.repo("windows-atomic-external")
+        external_target = external / "target.md"
+        external_target.write_text("external\n", encoding="utf-8")
+        reparse_parent = root / "linked"
+        try:
+            reparse_parent.symlink_to(external, target_is_directory=True)
+        except OSError as exc:
+            self.skipTest(f"directory symlink privilege unavailable: {type(exc).__name__}")
+
+        with self.assertRaises(OSError):
+            mutation_helper.write_file_atomic(
+                reparse_parent / "target.md",
+                "after",
+                trust_root=root,
+            )
+        self.assertEqual(external_target.read_text(encoding="utf-8"), "external\n")
+
     def test_reviewed_promotion_search_scope_and_source_freshness(self) -> None:
         root = self.repo("promotion")
         self.current_root = root
@@ -452,6 +502,77 @@ class KnowledgeLayerTests(unittest.TestCase):
         self.assertFalse(body["data"]["writes_state"])
         self.assertFalse(concept.exists())
 
+    def test_source_precondition_limit_matches_contract(self) -> None:
+        root = self.repo("source-precondition-limit")
+        digest = "0" * 64
+        records = [
+            {
+                "path": f"docs/source-{index:04d}.md",
+                "prior_sha256": digest,
+                "resulting_sha256": digest,
+            }
+            for index in range(knowledge_helper.MAX_SOURCE_PRECONDITIONS)
+        ]
+        schema = json.loads(
+            (
+                PLUGIN_ROOT
+                / "skills"
+                / "speckit-autopilot"
+                / "contracts"
+                / "knowledge-update-plan.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            schema["properties"]["source_preconditions"]["maxItems"],
+            knowledge_helper.MAX_SOURCE_PRECONDITIONS,
+        )
+        with (
+            mock.patch.object(
+                knowledge_helper,
+                "_source_path",
+                side_effect=lambda repo_root, raw: repo_root / raw,
+            ),
+            mock.patch.object(knowledge_helper, "_sha256_file", return_value=digest),
+        ):
+            knowledge_helper._validate_source_preconditions(
+                root,
+                {"source_preconditions": records},
+                phase="prior",
+            )
+            with self.assertRaises(knowledge_helper.KnowledgeError) as captured:
+                knowledge_helper._validate_source_preconditions(
+                    root,
+                    {"source_preconditions": [*records, records[0] | {"path": "docs/overflow.md"}]},
+                    phase="prior",
+                )
+        self.assertEqual(captured.exception.code, "invalid_plan")
+
+        concepts = [
+            SimpleNamespace(metadata={}, relative_path=f"decisions/source-{index}.md")
+            for index in range(2)
+        ]
+        source_records = [
+            [("x-speckit-sources", f"docs/source-{index}.md", digest)]
+            for index in range(2)
+        ]
+        with (
+            mock.patch.object(knowledge_helper, "MAX_SOURCE_PRECONDITIONS", 1),
+            mock.patch.object(
+                knowledge_helper,
+                "_source_token_records",
+                side_effect=source_records,
+            ),
+            mock.patch.object(
+                knowledge_helper,
+                "_source_path",
+                side_effect=lambda repo_root, raw: repo_root / raw,
+            ),
+            mock.patch.object(knowledge_helper, "_sha256_file", return_value=digest),
+        ):
+            with self.assertRaises(knowledge_helper.KnowledgeError) as construction_error:
+                knowledge_helper._build_source_preconditions(root, concepts, [])
+        self.assertEqual(construction_error.exception.code, "plan_too_large")
+
     def test_secrets_and_stale_plans_or_snapshots_fail_without_writes(self) -> None:
         root = self.repo("conflicts")
         self.current_root = root
@@ -534,6 +655,74 @@ class KnowledgeLayerTests(unittest.TestCase):
         self.assertFalse(body["data"]["writes_state"])
         self.assertEqual(file_snapshot(root), before)
         self.assertFalse((root / "docs" / "ai" / "knowledge").exists())
+
+    def test_rollback_restores_original_bytes_exactly(self) -> None:
+        root = self.repo("rollback-exact-bytes")
+        self.init(root)
+        log = root / "docs/ai/knowledge/log.md"
+        manifest = root / "docs/ai/knowledge/manifest.json"
+        original_log = b"\xffinvalid-log-without-final-newline"
+        original_manifest = b"invalid-manifest-without-final-newline"
+        log.write_bytes(original_log)
+        manifest.write_bytes(original_manifest)
+        plan = self.plan(root, "rebuild")
+        self.assertGreaterEqual(plan["operation_count"], 2)
+        real_writer = knowledge_helper.write_file_atomic
+        write_count = 0
+
+        def fail_after_one(
+            target: Path,
+            content: str | bytes,
+            *,
+            trust_root: Path | None = None,
+        ) -> None:
+            nonlocal write_count
+            if isinstance(content, bytes):
+                real_writer(target, content, trust_root=trust_root)
+                return
+            if write_count >= 1:
+                raise OSError("injected test write failure")
+            write_count += 1
+            real_writer(target, content, trust_root=trust_root)
+
+        with mock.patch.object(knowledge_helper, "write_file_atomic", side_effect=fail_after_one):
+            body = self.apply_direct(root, plan)
+
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual(body["data"]["mutation"]["mutation_status"], "rolled_back")
+        self.assertEqual(log.read_bytes(), original_log)
+        self.assertEqual(manifest.read_bytes(), original_manifest)
+
+    def test_apply_preserves_unreadable_target_diagnostic(self) -> None:
+        root = self.repo("apply-unreadable")
+        plan = self.plan(root, "init")
+        operation = plan["operations"][0]
+        unreadable = knowledge_helper.KnowledgeError(
+            "unreadable_file",
+            "knowledge update target could not be read",
+            details={"path": operation["target"], "error": "PermissionError"},
+        )
+        with mock.patch.object(
+            knowledge_helper,
+            "_read_apply_target",
+            side_effect=unreadable,
+        ):
+            body = self.apply_direct(root, plan)
+
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual(body["diagnostics"][0]["code"], "unreadable_file")
+        self.assertEqual(body["diagnostics"][0]["details"]["error"], "PermissionError")
+        self.assertFalse(body["data"]["writes_state"])
+
+        with mock.patch.object(
+            knowledge_helper,
+            "_validate_apply_operations",
+            side_effect=unreadable,
+        ):
+            body = self.apply_direct(root, plan)
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual(body["diagnostics"][0]["code"], "unreadable_file")
+        self.assertEqual(body["diagnostics"][0]["details"]["path"], operation["target"])
 
     def test_rollback_failure_reports_residual_writes(self) -> None:
         root = self.repo("rollback-failure")

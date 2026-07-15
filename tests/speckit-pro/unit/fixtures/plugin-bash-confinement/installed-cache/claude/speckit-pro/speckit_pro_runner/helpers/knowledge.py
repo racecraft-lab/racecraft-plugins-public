@@ -51,6 +51,7 @@ MAX_TITLE_CHARS = 256
 MAX_DESCRIPTION_CHARS = 2048
 MAX_TAGS = 64
 MAX_SOURCES = 20
+MAX_SOURCE_PRECONDITIONS = 4096
 MAX_PLAN_OPERATIONS = 256
 MAX_PLAN_CONTENT_BYTES = 2 * 1024 * 1024
 PROFILE_AUTHORITIES = {"reviewed", "source-backed"}
@@ -295,7 +296,8 @@ def run_knowledge_update_apply(entry: Any, request: Any) -> dict[str, Any]:
         return _error_response(
             request.request_id,
             exc,
-            expected_failure=exc.code in {"plan_changed", "snapshot_changed", "source_changed"},
+            expected_failure=exc.code
+            in {"plan_changed", "snapshot_changed", "source_changed", "unreadable_file"},
             data=_apply_data(entry, request, mutation, None),
         )
 
@@ -365,9 +367,18 @@ def run_knowledge_update_apply(entry: Any, request: Any) -> dict[str, Any]:
             if failed_target not in mutation["touched_paths"]:
                 mutation["touched_paths"].append(failed_target)
         source_failure = isinstance(exc, KnowledgeError) and exc.code == "source_changed"
-        return _error_response(
-            request.request_id,
-            KnowledgeError(
+        if isinstance(exc, KnowledgeError) and not source_failure:
+            failure = KnowledgeError(
+                exc.code,
+                str(exc),
+                details={
+                    **exc.details,
+                    "rollback_errors": rollback_errors,
+                    "residual_paths": residual_paths,
+                },
+            )
+        else:
+            failure = KnowledgeError(
                 "source_changed" if isinstance(exc, _SourceChangedError) or source_failure else "write_failure",
                 "knowledge update target changed and rollback was attempted"
                 if isinstance(exc, _SourceChangedError) or source_failure
@@ -377,7 +388,10 @@ def run_knowledge_update_apply(entry: Any, request: Any) -> dict[str, Any]:
                     "rollback_errors": rollback_errors,
                     "residual_paths": residual_paths,
                 },
-            ),
+            )
+        return _error_response(
+            request.request_id,
+            failure,
             expected_failure=True,
             data=_apply_data(entry, request, mutation, supplied_plan),
         )
@@ -3040,7 +3054,9 @@ def _read_apply_target(path: Path) -> bytes | None:
     try:
         return _read_optional_target(path)
     except KnowledgeError as exc:
-        raise _SourceChangedError(str(exc)) from exc
+        if exc.code == "unsafe_path":
+            raise _SourceChangedError(str(exc)) from exc
+        raise
 
 
 def _source_path(repo_root: Path, raw: str) -> Path:
@@ -3126,6 +3142,15 @@ def _build_source_preconditions(
                     details={"path": normalized},
                 )
             records[normalized] = record
+    if len(records) > MAX_SOURCE_PRECONDITIONS:
+        raise KnowledgeError(
+            "plan_too_large",
+            "knowledge update plan exceeds the source precondition limit",
+            details={
+                "source_precondition_count": len(records),
+                "source_precondition_limit": MAX_SOURCE_PRECONDITIONS,
+            },
+        )
     return [records[path] for path in sorted(records, key=lambda value: value.encode("utf-8"))]
 
 
@@ -3138,6 +3163,15 @@ def _validate_source_preconditions(
     preconditions = plan.get("source_preconditions")
     if not isinstance(preconditions, list) or phase not in {"prior", "resulting"}:
         raise KnowledgeError("invalid_plan", "knowledge plan source preconditions are invalid")
+    if len(preconditions) > MAX_SOURCE_PRECONDITIONS:
+        raise KnowledgeError(
+            "invalid_plan",
+            "knowledge plan exceeds the source precondition limit",
+            details={
+                "source_precondition_count": len(preconditions),
+                "source_precondition_limit": MAX_SOURCE_PRECONDITIONS,
+            },
+        )
     digest_key = f"{phase}_sha256"
     seen: set[str] = set()
     for index, record in enumerate(preconditions):
@@ -3200,11 +3234,13 @@ def _validate_apply_operations(repo_root: Path, operations: list[Any]) -> None:
         try:
             current = _read_optional_target(path)
         except KnowledgeError as exc:
-            raise KnowledgeError(
-                "source_changed",
-                "knowledge update target became unreadable after planning",
-                details={"target": target, "cause": exc.code},
-            ) from exc
+            if exc.code == "unsafe_path":
+                raise KnowledgeError(
+                    "source_changed",
+                    "knowledge update target changed type after planning",
+                    details={"target": target, "cause": exc.code},
+                ) from exc
+            raise
         actual_prior = _sha256_bytes(current) if current is not None else None
         if actual_prior != operation.get("prior_sha256"):
             raise KnowledgeError("source_changed", "knowledge update target changed after planning", details={"target": target})
@@ -3244,8 +3280,8 @@ def _rollback_writes(
                 if target.exists():
                     target.unlink()
             else:
-                write_file_atomic(target, before.decode("utf-8"), trust_root=repo_root)
-        except (OSError, UnicodeDecodeError) as exc:
+                write_file_atomic(target, before, trust_root=repo_root)
+        except OSError as exc:
             errors.append(f"{target.as_posix()}: {type(exc).__name__}")
     for directory in sorted(created_directories, key=lambda path: len(path.parts), reverse=True):
         try:
