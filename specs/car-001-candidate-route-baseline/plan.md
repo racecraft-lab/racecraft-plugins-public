@@ -9,8 +9,9 @@
 ## Summary
 
 CAR-001 is a read-only documentation research spike that produces a dated, cited
-baseline handoff so CAR-002 can freeze the executable candidate set against
-probed capabilities. The deliverable is **two artifacts** under
+baseline handoff so CAR-002 can freeze the project-eligible candidate set and
+design the capability probes; the executable subset follows successful probing
+and qualification. The deliverable is **two artifacts** under
 `docs/ai/research/`: a human-readable Markdown research record
 (`claude-agent-route-candidates.md`) and a separate machine-readable JSON
 manifest (`claude-agent-route-candidate-manifest.json`). The record holds the

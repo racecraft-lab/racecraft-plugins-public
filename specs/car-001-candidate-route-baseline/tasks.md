@@ -67,7 +67,7 @@ Per the design concept's Non-goals, no task in this spec may: edit agent frontma
 
 ## Phase 3: User Story 1 - Consume a dated, cited candidate-route baseline (Priority: P1) 🎯 MVP
 
-**Goal**: One research record + one machine-readable manifest that let a CAR-002 implementer freeze the executable candidate set — role contracts, immutable routes (or recorded absence), candidate tuples with alias+resolved-ID, statement-class labels, fixture backlog, telemetry requirements, and a self-contained go/no-go handoff — with zero shipped-default change.
+**Goal**: One research record + one machine-readable manifest that let a CAR-002 implementer freeze the project-eligible candidate set and design capability probes — role contracts, immutable routes (or recorded absence), candidate tuples with alias+resolved-ID, statement-class labels, fixture backlog, telemetry requirements, and a self-contained go/no-go handoff — with zero shipped-default change (the executable subset follows probing and qualification).
 
 **Independent Test**: Open the record and the JSON manifest and confirm each of the twelve agents has a complete entry; every recorded platform fact carries a source URL, an access date, and a short verbatim quote and is class-labeled; and the go/no-go handoff lists capability questions with stable IDs — all with no dependency on CAR-002 results and no shipped-default change.
 
