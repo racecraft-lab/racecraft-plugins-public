@@ -46,8 +46,8 @@ The design concept is the source of truth for these scoping decisions:
 | Checklist | `/speckit-checklist` | ✅ Complete | Data integrity, security, integration, and reliability checklists generated; G4 passed |
 | Tasks | `/speckit-tasks` | ✅ Complete | 35 evidence-first docs tasks generated; G5 passed |
 | Analyze | `/speckit-analyze` | ✅ Complete | A1 parallel marker issue resolved; no open findings |
-| Confidence Gate | G6.5 | 🔄 In Progress | Record pre-Implement confidence and mode before implementation |
-| Implement | `/speckit-implement` | ⏳ Pending | Produce and validate the taxonomy artifact only |
+| Confidence Gate | G6.5 | ✅ Complete | Advisory confidence gate passed: 0.97 >= 0.90 |
+| Implement | `/speckit-implement` | 🔄 In Progress | Produce and validate the taxonomy artifact only |
 | Post | post-implementation | ⏳ Pending | Run canonical verification, PR, review, and retrospective items |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -628,6 +628,14 @@ Focus on:
 |----|----------|-------|------------|
 | A1 | MEDIUM | Initial tasks used `[P]` markers for work that writes the same canonical Markdown artifact, creating a potential shared-file write conflict. | Resolved by removing `[P]` markers and recording serialized implementation in `tasks.md`. |
 
+📊 Confidence: 0.97
+
+- Task understanding: 0.96
+- Approach clarity: 0.94
+- Requirements alignment: 0.95
+- Risk assessment: 1.00
+- Completeness: 1.00
+
 ---
 
 ## Phase 6.5: Confidence Gate
@@ -638,8 +646,8 @@ Focus on:
 |-------|-------|
 | Mode | advisory |
 | Threshold | 0.90 |
-| Status | Pending |
-| Evidence | Most recent Phase 6 confidence emit in this workflow |
+| Status | Pass |
+| Evidence | `confidence-gate` request `hrns-001-g65-confidence-gate-retry`: composite 0.97; recommended action `proceed` |
 
 The confidence gate records whether the spec, plan, tasks, and analyze results
 are clear enough for implementation. In advisory mode, a low score is logged
