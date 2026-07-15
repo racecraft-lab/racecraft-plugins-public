@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-001-workflow.md",
   "spec_id": "G56R-001",
   "feature_dir": "specs/g56r-001-candidate-route-baseline",
-  "updated_at": "2026-07-15T23:25:12Z",
-  "active_step": "Phase 4: Checklist - LLM Integration",
+  "updated_at": "2026-07-15T23:29:14Z",
+  "active_step": "Phase 5: Tasks",
   "settings": {
     "auto_commit": "per-phase",
     "confidence_gate_mode": "advisory",
@@ -248,6 +248,53 @@
         "specs/g56r-001-candidate-route-baseline/contracts/codex-agent-route-candidates.contract.md",
         "specs/g56r-001-candidate-route-baseline/checklists/requirements.md"
       ]
+    },
+    "Phase 4: Domain Checklists": {
+      "status": "completed",
+      "completed_at": "2026-07-15T23:29:14Z",
+      "executor_agent_id": null,
+      "execution_mode": "parent_local_execution",
+      "checklists": {
+        "llm-integration": {
+          "items": 15,
+          "gaps": 1,
+          "resolution": "Workflow official candidate seed list aligned with clarified spec.md."
+        },
+        "data-integrity": {
+          "items": 15,
+          "gaps": 0,
+          "resolution": "No unresolved data-integrity requirement defects."
+        },
+        "error-handling": {
+          "items": 15,
+          "gaps": 0,
+          "resolution": "No unresolved error-handling requirement defects."
+        },
+        "security": {
+          "items": 15,
+          "gaps": 0,
+          "resolution": "No unresolved security requirement defects."
+        },
+        "reliability": {
+          "items": 15,
+          "gaps": 0,
+          "resolution": "No unresolved reliability requirement defects."
+        }
+      },
+      "gate": {
+        "id": "G4",
+        "status": "pass",
+        "reason": "0 [Gap] markers",
+        "markers": 0
+      },
+      "files_changed": [
+        "docs/ai/specs/.process/G56R-001-workflow.md",
+        "specs/g56r-001-candidate-route-baseline/checklists/llm-integration.md",
+        "specs/g56r-001-candidate-route-baseline/checklists/data-integrity.md",
+        "specs/g56r-001-candidate-route-baseline/checklists/error-handling.md",
+        "specs/g56r-001-candidate-route-baseline/checklists/security.md",
+        "specs/g56r-001-candidate-route-baseline/checklists/reliability.md"
+      ]
     }
   },
   "plan": [
@@ -293,47 +340,47 @@
     },
     {
       "step": "Phase 4: Checklist - LLM Integration",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - LLM Integration Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Data Integrity",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Data Integrity Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Error Handling",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Error Handling Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Security",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Security Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Reliability",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Reliability Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",

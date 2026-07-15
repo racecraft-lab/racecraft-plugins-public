@@ -54,8 +54,8 @@ Grill Me is human-in-the-loop only. Once autopilot starts, clarification uses
 | Specify | `$speckit-specify` | Complete | Created spec and requirements checklist; G1 passed |
 | Clarify | `$speckit-clarify` | Complete | Resolved execution-time source, parity-role, fixture, and handoff ambiguities; G2 passed |
 | Plan | `$speckit-plan` | Complete | Generated plan, research, data model, report contract, quickstart, and G3 pass evidence |
-| Checklist | `$speckit-checklist` | In Progress | Run all five user-selected operational domains |
-| Tasks | `$speckit-tasks` | Pending | Produce source-first documentation tasks only |
+| Checklist | `$speckit-checklist` | Complete | All five selected domains passed after one LLM seed-list drift was resolved |
+| Tasks | `$speckit-tasks` | In Progress | Produce source-first documentation tasks only |
 | Analyze | `$speckit-analyze` | Pending | Reject authority, scope, traceability, and count drift |
 | Confidence Gate | G6.5 | Pending | Record advisory pre-implementation confidence after analysis and before report authoring |
 | Implement | `$speckit-implement` | Pending | Author and validate the canonical research report |
@@ -190,11 +190,11 @@ artifact and no production code.
 The execution-time review starts from these roadmap IDs but does not presume
 that they remain eligible or complete:
 
-- `gpt-5.6-sol`
-- `gpt-5.6-terra`
-- `gpt-5.6-luna`
-- `gpt-5.5`
-- `gpt-5.3-codex-spark`
+- `gpt-5.1`
+- `gpt-5.1-codex-max`
+- `gpt-5.2`
+- `gpt-5.2-codex`
+- `gpt-5.2-codex-pro`
 
 Every retained or added candidate must have direct execution-snapshot official
 support, a role-contract rationale, and an explicit model/effort tuple. Every
@@ -513,14 +513,16 @@ Focus on G56R-001 requirements:
 
 | Checklist | Items | Gaps | Resolution |
 |---|---|---|---|
-| LLM integration | Pending | Pending | Pending |
-| Data integrity | Pending | Pending | Pending |
-| Error handling | Pending | Pending | Pending |
-| Security | Pending | Pending | Pending |
-| Reliability | Pending | Pending | Pending |
+| LLM integration | 15 | 1 | Workflow official candidate seed list aligned with clarified `spec.md`; checklist now passes |
+| Data integrity | 15 | 0 | No unresolved data-integrity requirement defects |
+| Error handling | 15 | 0 | No unresolved error-handling requirement defects |
+| Security | 15 | 0 | No unresolved security requirement defects |
+| Reliability | 15 | 0 | No unresolved reliability requirement defects |
 
 All true gaps must update `spec.md` or `plan.md`, then the affected checklist
 must be rerun before G4 passes.
+
+G4 passed with `0 [Gap] markers`.
 
 ---
 
