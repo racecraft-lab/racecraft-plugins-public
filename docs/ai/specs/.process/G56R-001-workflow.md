@@ -776,7 +776,7 @@ metadata, generated release artifacts, or unrelated configuration.
 | Post: PR Packet/Body Generation | Complete | Schema 1.1 packet binds base/source revisions, full-index diff, and `whole_body_v2`; read-only validation passed |
 | Post: PR Body Generation | Complete | Packet-owned body contains all required headings and exactly one release-note block |
 | Post: PR Creation | Complete | Unique live PR [#348](https://github.com/racecraft-lab/racecraft-plugins-public/pull/348) verified with head `g56r-001-candidate-route-baseline` and base `main` |
-| Post: Review Remediation | Complete | Mandatory live sweep found 0 unresolved review threads; final parent-session sweep remains part of handoff verification |
+| Post: Review Remediation | Complete | PR #348: 10 duplicated empty-handler findings fixed through shared-source generation; 1 unsafe fallback request resolved with fail-closed security rationale; stale docs reference regenerated |
 | Post: Retrospective | Complete | 26/26 tasks, 100% spec adherence, 0 unresolved findings, and recovery evidence recorded |
 
 ### Reviewability Diff Gate
@@ -784,7 +784,7 @@ metadata, generated release artifacts, or unrelated configuration.
 | Field | Result |
 |-------|--------|
 | Status | WARN; `pass: true` |
-| Full branch snapshot | final packet projection: 124 files, 34,228 additions, 8,469 deletions after rebasing onto current main |
+| Full branch snapshot | final packet projection: 125 files, 34,268 additions, 8,472 deletions after rebasing onto current main |
 | Original G56R boundary | Six paths: three delivery plus three validation; 0 production LOC/files |
 | Shared plugin source | 14 `speckit-pro/` source/trust-metadata paths, 1,172 additions and 132 deletions; four shared runtime helpers carry 824 lines of churn |
 | Generated parity | Claude, Codex, and installed-cache payload/proof copies are generator-owned and independently parity-checked |
@@ -863,6 +863,24 @@ that diff receives a fresh final review and suite run before PR creation.
   URL, title, head, and base. The mandatory review sweep found 0 unresolved
   threads. Packet artifacts are regenerated from this durable closeout state
   before final handoff so later state writes cannot invalidate source binding.
+
+### PR #348 Review and Check Remediation
+
+- `validate-docs` failed because
+  `docs-site/src/content/docs/reference/tests.md` did not include the current
+  test inventory. The repository generator refreshed that page and
+  `pnpm --dir docs-site reference:check` now passes.
+- Ten code-quality threads duplicated two intentional empty handlers across the
+  shared runner, Claude/Codex distributions, and installed-cache fixtures. Two
+  source comments now explain the benign directory-create race and best-effort
+  temp cleanup; generator-owned copies and hashes were refreshed.
+- One Copilot thread proposed a check-then-replace fallback when descriptor-
+  relative no-follow writes are unavailable. That change was rejected because
+  it restores the symlink-swap TOCTOU the repair closes. The intentional
+  fail-closed behavior remains explicit and is shared by both client payloads.
+- Remediation verification: focused mutation 33/33, payload confinement
+  121/121, docs reference current, generated release artifacts current,
+  integration 257/257, and final uninterrupted default suite 2813/2813.
 
 - [x] All tasks are complete or explicitly handed to the owning downstream spec.
 - [x] docs/ai/research/codex-agent-route-candidates.md exists.
