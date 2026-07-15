@@ -47,7 +47,7 @@ eligibility/availability split). Expected outcome either way: no violations.
 
 ```bash
 python3 - <<'PY'
-import json, pathlib
+import json
 man = json.load(open("docs/ai/research/claude-agent-route-candidate-manifest.json"))
 schema = json.load(open("specs/car-001-candidate-route-baseline/contracts/agent-route-candidate-manifest.schema.json"))
 try:
@@ -141,12 +141,29 @@ PY
 
 ### V7 — Zero shipped-byte change (SC-006, FR-024)
 
+No shipped plugin byte changes. Check the shipped payload surfaces against `main`:
+
 ```bash
-git status --porcelain speckit-pro dist tests
+git diff --stat main -- speckit-pro dist
 ```
 
-Expected: empty output. Nothing under `speckit-pro/`, `dist/`, or `tests/` is
-added, modified, or removed by the spike.
+Expected: empty output. Nothing under `speckit-pro/` or `dist/` (the shipped
+Claude/Codex plugin payload) is added, modified, or removed by the spike, so
+**0 production-code LOC** change.
+
+The one intentional edit under `tests/` is the docs-surface guard allowlist in
+`tests/speckit-pro/unit/test-speckit-pro-runner.py` (+9 lines), which admits the
+two `docs/ai/research/` deliverables as a conscious review checkpoint. It is
+repository test configuration, **not** a shipped payload byte, so SC-006 holds:
+
+```bash
+git diff --stat main -- tests
+```
+
+Expected: only `tests/speckit-pro/unit/test-speckit-pro-runner.py` changed. The
+whole-branch surface is 19 files — the two deliverables, the spec-driven-
+development artifacts under `specs/car-001-candidate-route-baseline/`, two
+`docs/ai/specs/` roadmap/index updates, and this one test-guard edit.
 
 ### V8 — Every platform fact is cited; statements are labeled (SC-002, SC-003)
 
@@ -156,6 +173,51 @@ that every statement is visibly labeled fact / inference / proposed policy /
 assumption (SC-003). Confirm the capability-question section uses stable
 `CAP-Qn` IDs and that the go/no-go handoff is the record's final section, is
 self-contained, and lists no dependency on CAR-002 results (SC-004, FR-022).
+
+### V9 — Semantic rules the JSON Schema cannot express (data-model §7 rules 9, 10)
+
+The schema enforces shape; the load-bearing cross-reference and coverage rules
+are review/quickstart-enforced (data-model §7 rules 9 and 10, and the §5
+helper-only `platform_field_mapping` rule). This check makes that enforcement
+real: it confirms `agent_name` matches its map key, every `CAP-Qn` a tuple
+references resolves to a declared capability question, `platform_field_mapping`
+and recorded absence occur only on the helper, every candidate `effort` is a
+documented level (record `EFF-1`), and every distinct candidate alias has an
+invalidation trigger naming it.
+
+```bash
+python3 - <<'PY'
+import json
+man = json.load(open("docs/ai/research/claude-agent-route-candidate-manifest.json"))
+agents = man["agents"]
+declared_q = {q["id"] for q in man["capability_questions"]}
+errs = []
+for name, e in agents.items():
+    if e["agent_name"] != name:
+        errs.append(f"{name}: agent_name {e['agent_name']!r} != key")
+    absent = e["production_route_recorded_absence"]
+    has_map = "platform_field_mapping" in e
+    if absent != (name == "autopilot-fast-helper"):
+        errs.append(f"{name}: unexpected recorded-absence {absent}")
+    if has_map != (name == "autopilot-fast-helper"):
+        errs.append(f"{name}: platform_field_mapping presence {has_map} (helper-only)")
+    aliases = set()
+    for t in e["candidate_routes"]:
+        aliases.add(t["alias"])
+        for ref in ("probe_question_ref", "binding_question_ref"):
+            qid = t["environment_time_availability"][ref]
+            if qid not in declared_q:
+                errs.append(f"{name}: {ref} {qid} not in capability_questions")
+        if t["effort"] not in {"low", "medium", "high", "xhigh", "max"}:
+            errs.append(f"{name}: undocumented effort {t['effort']!r}")
+    trigger_text = " ".join(e["invalidation_triggers"]).lower()
+    for a in aliases:
+        if a not in trigger_text:
+            errs.append(f"{name}: no invalidation trigger for alias {a!r}")
+assert not errs, "semantic violations:\n  " + "\n  ".join(errs)
+print("semantic rules: cross-references resolve, coverage complete (data-model §7 rules 9, 10)")
+PY
+```
 
 ## Success criteria mapping
 
@@ -167,3 +229,4 @@ self-contained, and lists no dependency on CAR-002 results (SC-004, FR-022).
 | V5 | SC-007 — instruction identity stable under route change |
 | V6 | Privacy constraint — no absolute paths in deliverables |
 | V8 | SC-002, SC-003, SC-004 — citation, labeling, self-contained handoff |
+| V9 | Data-model §7 rules 9, 10 — cross-reference integrity and per-alias invalidation-trigger coverage (the semantic rules JSON Schema cannot express) |

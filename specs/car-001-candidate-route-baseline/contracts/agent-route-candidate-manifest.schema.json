@@ -86,7 +86,7 @@
       "required": ["model", "effort"],
       "properties": {
         "model": { "enum": ["opus", "sonnet", "haiku", "fable"] },
-        "effort": { "enum": ["low", "medium", "high", "max"] }
+        "effort": { "enum": ["low", "medium", "high", "xhigh", "max"] }
       }
     },
     "candidate_route_tuple": {
@@ -102,7 +102,7 @@
       "properties": {
         "alias": { "enum": ["opus", "sonnet", "haiku", "fable"] },
         "expected_resolved_model_id": { "type": ["string", "null"] },
-        "effort": { "enum": ["low", "medium", "high", "max"] },
+        "effort": { "enum": ["low", "medium", "high", "xhigh", "max"] },
         "project_level_eligibility": {
           "type": "object",
           "additionalProperties": false,
@@ -116,7 +116,7 @@
         "environment_time_availability": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["status", "probe_question_ref"],
+          "required": ["status", "probe_question_ref", "binding_question_ref"],
           "properties": {
             "status": { "const": "probe_required" },
             "probe_question_ref": { "$ref": "#/$defs/cap_qn" },
@@ -124,22 +124,7 @@
           }
         },
         "tuple_rationale": { "type": "string" }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": ["expected_resolved_model_id"],
-            "properties": { "expected_resolved_model_id": { "type": "null" } }
-          },
-          "then": {
-            "properties": {
-              "environment_time_availability": {
-                "required": ["status", "probe_question_ref", "binding_question_ref"]
-              }
-            }
-          }
-        }
-      ]
+      }
     },
     "required_capabilities": {
       "type": "object",
@@ -264,7 +249,10 @@
         {
           "if": { "properties": { "production_route_recorded_absence": { "const": false } } },
           "then": {
-            "properties": { "immutable_production_route": { "$ref": "#/$defs/route_tuple_field" } }
+            "properties": {
+              "immutable_production_route": { "$ref": "#/$defs/route_tuple_field" },
+              "platform_field_mapping": false
+            }
           }
         }
       ]

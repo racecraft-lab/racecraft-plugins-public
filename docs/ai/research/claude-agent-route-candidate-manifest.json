@@ -18,28 +18,28 @@
   "capability_questions": [
     {
       "id": "CAP-Q1",
-      "question": "Does the `opus` Claude Code alias resolve to `claude-opus-4-8` in the pinned benchmark environment, and is that alias-to-dated-ID binding stable given latest-family resolution, allowlist pinning, and ANTHROPIC_DEFAULT_OPUS_MODEL re-pointing (ALS-opus, RES-3, ALS-repoint)?",
+      "question": "Does the `opus` Claude Code alias resolve to `claude-opus-4-8` in the pinned benchmark environment, and is that alias-to-dated-ID binding stable given latest-family resolution, allowlist pinning, and ANTHROPIC_DEFAULT_OPUS_MODEL re-pointing (ALS-opus, RES-3, ALS-repoint)? Also confirm the resolved model accepts and applies the candidate tuples' effort levels (EFF-1: available effort levels are model-dependent), so alias resolution alone does not certify a model/effort tuple.",
       "blocks": [
         "expected_resolved_model_id and environment-time binding for the opus candidate tuples of analyze-executor, checklist-executor, clarify-executor, implement-executor, and phase-executor (and the opus upshift candidate on the six sonnet analysts)"
       ]
     },
     {
       "id": "CAP-Q2",
-      "question": "Does the `sonnet` alias resolve to `claude-sonnet-5` in the pinned environment, and is that binding stable under the same floating-resolution, allowlist-pinning, and re-pointing risks (ALS-sonnet, RES-3, ALS-repoint)?",
+      "question": "Does the `sonnet` alias resolve to `claude-sonnet-5` in the pinned environment, and is that binding stable under the same floating-resolution, allowlist-pinning, and re-pointing risks (ALS-sonnet, RES-3, ALS-repoint)? Also confirm the resolved model accepts and applies the candidate tuples' effort levels (EFF-1: available effort levels are model-dependent), so alias resolution alone does not certify a model/effort tuple.",
       "blocks": [
         "expected_resolved_model_id and environment-time binding for the sonnet candidate tuples of codebase-analyst, consensus-synthesizer, domain-researcher, gate-validator, spec-context-analyst, and uat-runbook-author (and the sonnet candidate on the five executors and the helper's sonnet latency-oriented alternative)"
       ]
     },
     {
       "id": "CAP-Q3",
-      "question": "Does the `haiku` alias resolve to `claude-haiku-4-5-20251001` (API alias `claude-haiku-4-5`) in the pinned environment (ALS-haiku)?",
+      "question": "Does the `haiku` alias resolve to `claude-haiku-4-5-20251001` (API alias `claude-haiku-4-5`) in the pinned environment (ALS-haiku)? Also confirm the resolved model accepts and applies the candidate tuples' effort levels (EFF-1: available effort levels are model-dependent), so alias resolution alone does not certify a model/effort tuple.",
       "blocks": [
         "the autopilot-fast-helper starting-hypothesis haiku + low-effort candidate binding, and the haiku candidate tuples on the six sonnet-production analyst/validator/author roles (codebase/consensus/domain/gate/spec-context/uat) plus checklist-executor and clarify-executor"
       ]
     },
     {
       "id": "CAP-Q4",
-      "question": "Does the `fable` alias resolve to `claude-fable-5` AND is `fable` available/accessible in the pinned benchmark environment (PRD OQ-4), given best/fable 'where your organization has access' gating and ANTHROPIC_DEFAULT_FABLE_MODEL re-pointing (ALS-fable, ALS-context, ALS-repoint)?",
+      "question": "Does the `fable` alias resolve to `claude-fable-5` AND is `fable` available/accessible in the pinned benchmark environment (PRD OQ-4), given best/fable 'where your organization has access' gating and ANTHROPIC_DEFAULT_FABLE_MODEL re-pointing (ALS-fable, ALS-context, ALS-repoint)? Also confirm the resolved model accepts and applies the candidate tuples' effort levels (EFF-1: available effort levels are model-dependent), so alias resolution alone does not certify a model/effort tuple.",
       "blocks": [
         "fable executor-class candidate eligibility and environment-time availability across the five executors (analyze/checklist/clarify/implement/phase)"
       ]
@@ -86,7 +86,7 @@
           "effort": "max",
           "project_level_eligibility": {
             "eligible": true,
-            "basis": "Executor-class task-execution role; opus/max is the current shipped production route and matches the role's deep-reasoning demand.",
+            "basis": "Executor-class task-execution role; opus/max is the current shipped production route (repository fact at the pinned tag).",
             "evidence_class": "fact"
           },
           "environment_time_availability": {
@@ -206,7 +206,7 @@
           "effort": "max",
           "project_level_eligibility": {
             "eligible": true,
-            "basis": "Executor-class task-execution role; opus/max is the current shipped production route and matches the role's deep-reasoning demand.",
+            "basis": "Executor-class task-execution role; opus/max is the current shipped production route (repository fact at the pinned tag).",
             "evidence_class": "fact"
           },
           "environment_time_availability": {
@@ -337,7 +337,7 @@
           "effort": "max",
           "project_level_eligibility": {
             "eligible": true,
-            "basis": "Executor-class task-execution role; opus/max is the current shipped production route and matches the role's deep-reasoning demand.",
+            "basis": "Executor-class task-execution role; opus/max is the current shipped production route (repository fact at the pinned tag).",
             "evidence_class": "fact"
           },
           "environment_time_availability": {
@@ -934,7 +934,7 @@
           "effort": "max",
           "project_level_eligibility": {
             "eligible": true,
-            "basis": "Executor-class task-execution role; opus/max is the current shipped production route and matches the role's deep-reasoning demand.",
+            "basis": "Executor-class task-execution role; opus/max is the current shipped production route (repository fact at the pinned tag).",
             "evidence_class": "fact"
           },
           "environment_time_availability": {
@@ -1053,7 +1053,7 @@
           "effort": "max",
           "project_level_eligibility": {
             "eligible": true,
-            "basis": "Executor-class task-execution role; opus/max is the current shipped production route and matches the role's deep-reasoning demand.",
+            "basis": "Executor-class task-execution role; opus/max is the current shipped production route (repository fact at the pinned tag).",
             "evidence_class": "fact"
           },
           "environment_time_availability": {
@@ -1447,7 +1447,7 @@
           "disallowedTools"
         ],
         "tools": [
-          "no tools — advisory text only; uses only prompt context (no Write/Edit, no Skill/Agent/dispatch, no web or filesystem); read-only denylist posture"
+          "no tools — advisory text only; uses only prompt context (no Write/Edit, no Skill/Agent/dispatch, no web or filesystem); comprehensive no-tool denylist posture, stricter than the analysts' read-only denylist (which still permits reads/web), proposed and deferred to CAR-010"
         ],
         "skills": [],
         "client": [
@@ -1456,7 +1456,7 @@
           "any supported authentication mode (AUTH-2)"
         ]
       },
-      "candidate_rationale": "Net-new twelfth agent with no current Claude production route (recorded absence). Latency-first, text-only leaf helper: the Codex model gpt-5.3-codex-spark maps to the fast Claude route haiku + explicit low effort as the starting hypothesis (proposed policy, gated on CAP-Q3); sonnet + low effort is a reasoned co-equal latency-oriented alternative (CAP-Q2). High-capability aliases (opus, fable) are not carried — they contradict the speed-first contract (the helper exists to reduce latency and prompt size). All alias-to-ID bindings float and are probe-gated.",
+      "candidate_rationale": "Net-new twelfth agent with no current Claude production route (recorded absence). Latency-first, text-only leaf helper: the Codex model gpt-5.3-codex-spark maps to the fast Claude route haiku + explicit low effort as the starting hypothesis (proposed policy, gated on CAP-Q3); sonnet + low effort is a reasoned co-equal latency-oriented alternative (CAP-Q2). High-capability aliases (opus, fable) are not carried — they contradict the speed-first contract (the helper exists to reduce latency and prompt size). All alias-to-ID bindings float and are probe-gated. The proposed low effort is below the plugin's effort: max default policy, so it must clear that policy's quality bar via a Layer 6 benchmark (the CAR-003 fixture-pass record already listed in required_qualification_artifacts) before it may ship at low effort.",
       "known_incompatibilities": [
         {
           "subject": "opus and fable (candidate aliases)",
@@ -1497,9 +1497,9 @@
         },
         {
           "codex_field": "sandbox_mode = \"read-only\"",
-          "claude_equivalent": "shared read-only `disallowedTools` denylist posture (the eight-tool write/dispatch denylist used by the read-only analysts: Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, TeamCreate, SendMessage)",
-          "evidence_class": "inference",
-          "note": "No single Claude field named sandbox_mode; Codex read-only maps to the analyst/read-only Claude denylist posture. Plugin agents do not support permissionMode (PLG-1), so the denylist is the enforcement surface."
+          "claude_equivalent": "a comprehensive no-tool `disallowedTools` denylist posture, stricter than the analysts' eight-tool write/dispatch denylist: the helper's contract is prompt-context-only (developer_instructions rule 5), so it must additionally deny the read/research tools the analyst denylist still permits (Read, Grep, Glob, read-only Bash, WebSearch, WebFetch) on top of the write/dispatch denylist (Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, TeamCreate, SendMessage)",
+          "evidence_class": "proposed_policy",
+          "note": "No single Claude field named sandbox_mode, and Codex `read-only` under-specifies this helper: read-only still permits reads and web, but the helper contract forbids all tool, filesystem, and web use (uses only prompt context). The analyst eight-tool denylist is therefore NOT equivalent. The exact no-tool enforcement (a comprehensive denylist, since plugin agents omit a `tools:` allowlist and do not support permissionMode, PLG-1) is proposed SpecKit Pro policy, deferred to CAR-010 finalization alongside maxTurns (FR-018)."
         },
         {
           "codex_field": "developer_instructions",

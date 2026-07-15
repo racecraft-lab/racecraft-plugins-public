@@ -111,7 +111,7 @@ YAGNI). `full_file_sha256` covers the whole file including the frontmatter block
 |-------|------|----------|-------------|
 | `model` | array[string] | yes | Model-class requirements the role needs (e.g. reasoning depth); phrased as requirements, not a pinned model. |
 | `modality` | array[string] | yes | Required modalities (e.g. text; vision if the role needs it). |
-| `subagent_fields` | array[string] | yes | Required subagent configuration fields (e.g. `model`, `reasoning_effort`, tool scoping). Each is a fact-or-question per the record's classification. |
+| `subagent_fields` | array[string] | yes | Required subagent configuration fields (e.g. `model`, `effort`, tool scoping). `effort` is the subagent frontmatter field (record `SUB-fields`); `model_reasoning_effort` is only the Layer 6 `claude -p` CLI key, not a frontmatter field. Each is a fact-or-question per the record's classification. |
 | `tools` | array[string] | yes | Required tool surface (or the denylist posture for read-only roles). |
 | `skills` | array[string] | yes | Required skill access (empty array if none). |
 | `client` | array[string] | yes | Required client capabilities (e.g. non-interactive `claude -p`, plugin-agent field support). |
@@ -129,7 +129,7 @@ the skipped Clarify phase would have pinned down.
 |-------|------|----------|-------------|
 | `alias` | string enum `opus`\|`sonnet`\|`haiku`\|`fable` | yes | One of the four documented aliases (FR-012). No legacy dated snapshots as separate candidates. |
 | `expected_resolved_model_id` | string \| null | yes (nullable) | The dated model ID the alias is expected to resolve to per official docs. `null` when the docs do not bind the alias at research time — in which case `availability.binding_question_ref` MUST point to a `CAP-Qn` (Edge Cases). |
-| `effort` | string enum `low`\|`medium`\|`high`\|`max` | yes | The effort level for this tuple. Documented-fact or proposed-policy per the record's labeling. |
+| `effort` | string enum `low`\|`medium`\|`high`\|`xhigh`\|`max` | yes | The effort level for this tuple, drawn from the documented subagent effort levels (record `EFF-1`: `low`/`medium`/`high`/`xhigh`/`max`). Documented-fact or proposed-policy per the record's labeling. |
 | `project_level_eligibility` | object | yes | Recorded-now eligibility from role fit — see §4.1. |
 | `environment_time_availability` | object | yes | Explicitly deferred to CAR-002 probing — see §4.2. |
 | `tuple_rationale` | string | optional | Why this specific tuple is a candidate for the role. |
@@ -148,7 +148,7 @@ the skipped Clarify phase would have pinned down.
 |-------|------|----------|-------------|
 | `status` | string const `probe_required` | yes | This spike never resolves availability; it is always a CAR-002 probe outcome (AC-1.4, AC-1.5). No candidate is claimed executable before probing (FR-022). |
 | `probe_question_ref` | string (`CAP-Qn`) | yes | The capability question CAR-002 answers to establish availability. |
-| `binding_question_ref` | string (`CAP-Qn`) | conditional | Required when `expected_resolved_model_id` is `null` (the alias-to-ID binding is itself an open question), omitted otherwise. The contract enforces this via a conditional `allOf` on `candidate_route_tuple` (§7 rule 6). |
+| `binding_question_ref` | string (`CAP-Qn`) | yes | The capability question that resolves the alias-to-ID binding. Required on **every** candidate tuple: in this provisional manifest every `expected_resolved_model_id` is a recorded `[INFERENCE]` gated on a `CAP-Qn` (the docs bind each alias only to a floating "latest-family" target, never a settled dated ID), so no tuple's binding is officially fixed. The contract requires it unconditionally (§7 rule 6). |
 
 **Exclusion rule (FR-016)**: a model or effort is excluded from a candidate set
 only for recorded incompatibility (`known_incompatibilities`), recorded contract
@@ -156,6 +156,14 @@ failure, or predeclared dominance evidence — never by product-announcement
 status. `fable` therefore stays in executor-class candidate sets with an
 invalidation trigger and a capability question rather than being dropped
 (FR-013, Edge Cases).
+
+**Effort applicability (EFF-1)**: the documented subagent effort levels are
+model-dependent (record `EFF-1`: "available levels depend on the model"), so a
+tuple's `effort` is not established as valid by alias resolution alone. Each
+alias-binding probe (`CAP-Q1`–`CAP-Q4`) therefore also confirms the resolved
+model accepts and applies the tuple's effort level; a resolved model that
+rejects the tuple's effort is a recorded incompatibility (FR-016), not a silent
+drop.
 
 ---
 
@@ -226,11 +234,13 @@ manifest carries the machine-referenceable stubs so tuples can point at them by
 5. **Eligibility/availability split (FR-015)**: every tuple has both
    `project_level_eligibility` and `environment_time_availability`;
    `environment_time_availability.status` is always `probe_required`.
-6. **Unbound-alias rule (Edge Cases)**: whenever `expected_resolved_model_id`
-   is `null`, `environment_time_availability.binding_question_ref` references an
-   existing `CAP-Qn`. This is enforced structurally by the contract's conditional
-   `allOf` on `candidate_route_tuple` (a null `expected_resolved_model_id`
-   requires `binding_question_ref`), not by prose alone.
+6. **Binding-question rule (Edge Cases)**: every candidate tuple's
+   `environment_time_availability.binding_question_ref` references an existing
+   `CAP-Qn`. Because every `expected_resolved_model_id` in this provisional
+   manifest is an `[INFERENCE]` gated on a capability question (no alias is bound
+   to a settled dated ID at research time), the contract requires
+   `binding_question_ref` **unconditionally** on `candidate_route_tuple`, not
+   only when the expected ID is `null`.
 7. **No-executable-claim (FR-022)**: no field asserts a candidate is executable;
    executability is always gated behind `probe_required` + qualification
    artifacts.
@@ -238,7 +248,12 @@ manifest carries the machine-referenceable stubs so tuples can point at them by
    and `commit_sha` are present and match the pinned `2.19.1` identity.
 9. **Cross-reference integrity (Constitution VI)**: every `agent_contract_id`,
    `fixture_backlog_ref`, and `CAP-Qn` referenced in the manifest resolves to a
-   section in the record; no machine datum is duplicated as prose that can drift.
+   section in the record; no machine datum has two *authoritative* homes. The
+   record's *Agent inventory* route tuples and *Agent-file hash triples* are
+   explicit read-only **mirrors** of the authoritative manifest values (each
+   table states the mirror direction) and are kept drift-detectable by
+   recomputation from the pinned tag (rule 4, quickstart V5), not second
+   authoritative copies.
 10. **Invalidation-trigger coverage (FR-014)**: `invalidation_triggers` is
     candidate-specific and actionable — for every distinct alias in
     `candidate_routes` there is a trigger for that alias re-pointing, plus the
@@ -324,7 +339,7 @@ nesting here are normative; the values are placeholders.
       "required_capabilities": {
         "model": ["deep-reasoning"],
         "modality": ["text"],
-        "subagent_fields": ["model", "reasoning_effort"],
+        "subagent_fields": ["model", "effort"],
         "tools": ["Skill", "Read", "Write", "Bash"],
         "skills": ["speckit-*"],
         "client": ["claude -p non-interactive"]

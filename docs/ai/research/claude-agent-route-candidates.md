@@ -6,7 +6,11 @@ This is the human-readable research record for CAR-001. Its machine counterpart 
 the JSON manifest `docs/ai/research/claude-agent-route-candidate-manifest.json`.
 The record is the single source of evidence and
 rationale; the manifest is the single source of machine data. They cross-reference
-by `agent_name` and `agent_contract_id` and never duplicate data that can drift.
+by `agent_name` and `agent_contract_id`. Where the record reproduces machine values
+for human readability — the *Agent inventory* route tuples and the *Agent-file hash
+triples* — it does so as an explicit read-only **mirror** of the authoritative
+manifest (each such table states the mirror direction), kept drift-detectable by
+recomputation from the pinned tag; no machine datum has two authoritative homes.
 
 > **Evidence basis for the inventory sections below.** Every value in the
 > *Immutable production comparator*, *Agent inventory*, *Codex helper source
@@ -129,13 +133,13 @@ NotebookEdit, Skill, Agent, TeamCreate, SendMessage`.
 | analyze-executor | 100 | (none — inherits operator surface) | color: orange |
 | checklist-executor | 100 | (none) | color: yellow |
 | clarify-executor | 35 | the eight-tool denylist | color: pink |
-| codebase-analyst | 50 | the eight-tool denylist | `background: true` |
+| codebase-analyst | 50 | the eight-tool denylist | `color: blue`; `background: true` |
 | consensus-synthesizer | 15 | the eight-tool denylist | color: purple |
-| domain-researcher | 50 | the eight-tool denylist | `background: true` |
+| domain-researcher | 50 | the eight-tool denylist | `color: green`; `background: true` |
 | gate-validator | 10 | the eight-tool denylist | color: cyan |
-| implement-executor | 100 | `Skill` | `memory: project` |
+| implement-executor | 100 | `Skill` | `color: red`; `memory: project` |
 | phase-executor | 100 | (none) | color: cyan |
-| spec-context-analyst | 50 | the eight-tool denylist | `background: true` |
+| spec-context-analyst | 50 | the eight-tool denylist | `color: purple`; `background: true` |
 | uat-runbook-author | 30 | `Skill, Agent, TeamCreate, SendMessage` | color: cyan |
 
 ---
@@ -202,15 +206,22 @@ where "route policy" means the per-agent `model`/`effort` tuple, the tool-scopin
 denylist, the cross-platform agent set, and agent-type dispatch selection. Every path
 was verified to exist at `HEAD`/the tag; paths are repo-relative globs.
 
-**Scope note.** The model/effort/tool-scoping tuples are *encoded* in exactly one
-authored place — the Claude agent `.md` frontmatter (source) — and mirrored verbatim
-into the generated `dist/**` payload and the installed-cache fixture. The Codex
-`.toml` files encode the parallel Codex route (`model`/`sandbox_mode`). Everything
-else in the table *consumes* route policy (validates it, benchmarks it, or dispatches
-by agent-type). The autopilot skill and Layer 7 fixtures were verified **not** to
-hardcode any model alias or effort (a repo-wide search for `opus|sonnet|haiku|
-reasoning-effort` under `speckit-pro/skills/**` returned nothing) — they route by
-agent-type name only.
+**Scope note.** The per-agent machine route *tuple* (`model`/`effort`) is *encoded*
+in exactly one authored place — the Claude agent `.md` frontmatter (source) — and
+mirrored verbatim into the generated `dist/**` payload and the installed-cache
+fixture. The Codex `.toml` files encode the parallel Codex route
+(`model`/`sandbox_mode`). No other surface carries a machine-read per-agent route
+tuple; everything else in the table *consumes* route policy (validates it,
+benchmarks it, or dispatches by agent-type). The autopilot skill and coach docs
+**do** name model aliases and effort in *prose* — as orchestrator prerequisites
+(`SKILL.md` requires Opus for the orchestrator), fit-based routing *guidance*
+(`opus` for heavy reasoning, `sonnet` for read-and-report), and the plugin's
+`effort: max`-default policy — but this is governing documentation, not a per-agent
+route encoding: a repo-wide search for `opus|sonnet|haiku` under
+`speckit-pro/skills/**` returns 17 such prose matches across 5 files, none pinning a
+specific agent to a model/effort tuple. Those files dispatch agents by agent-type
+*name* at runtime and are inventoried as dispatch/governing-documentation surfaces
+(Table G), distinct from the authoritative frontmatter encode surface (A).
 
 ### A. Source — encodes route policy
 
@@ -260,11 +271,12 @@ agent-type name only.
 | `tests/speckit-pro/layer6-efficiency/fixtures-codex/` (`codebase-analyst`, `domain-researcher`, `spec-context-analyst`) | Codex-side Layer 6 fixtures. |
 | `tests/speckit-pro/layer6-efficiency/lib/quality-scorer.py`, `lib/token-counter.py`, `results-codex/consolidated-smoke-2026-05-25.json` | Harness support and historical smoke results. |
 
-### G. Agent-type dispatch consumers (select agent by name; do not encode model/effort)
+### G. Agent-type dispatch + governing documentation (select agent by name; describe route policy in prose, but encode no per-agent route tuple)
 
 | Surface | Consumes |
 |---------|----------|
-| `speckit-pro/skills/speckit-autopilot/SKILL.md` and `references/{agent-teams-integration,consensus-protocol,gate-validation,phase-execution,plugin-limitations,post-implementation,prerequisites}.md` | Dispatch agents by type-name during the autopilot workflow (agent identity only; verified to carry no model/effort literal). |
+| `speckit-pro/skills/speckit-autopilot/SKILL.md` and `references/{agent-teams-integration,consensus-protocol,gate-validation,phase-execution,plugin-limitations,post-implementation,prerequisites}.md` | Dispatch agents by type-name during the autopilot workflow (agent identity), and **document** route policy in prose — orchestrator model/effort prerequisites, fit-based routing guidance, and the `effort: max`-default policy (lower effort only where a Layer 6 benchmark proves quality parity). These prose mentions carry no per-agent route tuple; the authoritative per-agent encoding is the agent `.md` frontmatter (A). |
+| `speckit-pro/skills/speckit-coach/SKILL.md` | Methodology/coaching documentation: describes fit-based model routing (`opus` for heavy reasoning, `sonnet` for read-and-report) and the `effort: max`-default policy as guidance; encodes no per-agent route tuple. |
 | `speckit-pro/skills/grill-me/SKILL.md` | References agent names (human-in-the-loop; not autopilot dispatch). |
 | `tests/speckit-pro/layer7-integration/dispatch-fixtures/**` | Multi-agent dispatch-graph fixtures: which agent-type the orchestrator dispatches per phase (dispatch routing, not model/effort). |
 | Generated mirrors of the above under `dist/claude/**` and `dist/codex/**` | Payload copies of the dispatching skill references. |
@@ -331,12 +343,24 @@ Codex source toml (`hash_source: codex-toml-translation`).
 
 ## Reviewability checkpoint
 
-Recorded before deliverable authoring: **0 production-code LOC, 2 deliverable files**
+Recorded before deliverable authoring, on the **production-code** surface: **0
+production-code LOC, 2 research deliverable files**
 (`docs/ai/research/claude-agent-route-candidates.md` and
-`docs/ai/research/claude-agent-route-candidate-manifest.json`), **1 primary surface**
-(`docs/ai/research/`). All below the warn thresholds. Estimator advisory
-`{estimated_loc: 0, suggested_slices: 1, status: ok}` (spike flag). **Result: within
-budget; remains one spec, no split exception required.**
+`docs/ai/research/claude-agent-route-candidate-manifest.json`), **1 primary
+deliverable surface** (`docs/ai/research/`). All below the warn thresholds.
+Estimator advisory `{estimated_loc: 0, suggested_slices: 1, status: ok}` (spike
+flag). **Result: within budget; remains one spec, no split exception required.**
+
+For completeness, the *whole-branch* review surface is larger than the two
+deliverables: 19 changed files / +5447 lines — the two `docs/ai/research/`
+deliverables, the spec-driven-development artifacts under
+`specs/car-001-candidate-route-baseline/` (spec, plan, tasks, research, data-model,
+schema, quickstart, four checklists, SPEC-MOC), two `docs/ai/specs/` roadmap/index
+updates, and one +9-line docs-surface-guard allowlist edit in
+`tests/speckit-pro/unit/test-speckit-pro-runner.py`. None of that is shipped plugin
+payload or production code (quickstart V7), so the 0-production-LOC and
+zero-shipped-byte properties hold; the reviewability budget is measured on the
+production-code surface the estimator scored, not the review-artifact surface.
 
 ---
 
@@ -462,6 +486,7 @@ measured-overhead evidence exist. `[POLICY]`
 - **`EFF-1`** — The subagent `effort` field sets a per-agent effort level overriding the session level; documented levels are `low`, `medium`, `high`, `xhigh`, `max`, and available levels are model-dependent. `[FACT]`
   - Source: https://code.claude.com/docs/en/sub-agents (accessed 2026-07-14)
   - Quote: "Effort level when this subagent is active. Overrides the session effort level. Default: inherits from session. Options: `low`, `medium`, `high`, `xhigh`, `max`; available levels depend on the model".
+  - Note: because available levels are model-dependent, each candidate `(model, effort)` tuple's effort-acceptance is probed within `CAP-Q1`–`CAP-Q4` (see *Capability questions*), not assumed; the manifest/schema `effort` enum admits exactly these five documented levels (`ultracode` is a session-level `/effort` value only, `EFF-2`, not a subagent frontmatter option). `[INFERENCE]`
 - **`EFF-2`** — The `/effort` command takes a level or `auto`, and the interactive level set additionally includes `ultracode`. `[FACT]`
   - Source: https://code.claude.com/docs/en/commands (accessed 2026-07-14)
   - Quote: "`/effort [level|auto]`" with levels "`low` `medium` `high` `xhigh` `max` `ultracode`".
@@ -530,7 +555,7 @@ which of their frontmatter fields the platform honors.
 - **`TEL-1`** — `claude -p --output-format json` returns a structured payload with `result` (text), session id, usage metadata, `total_cost_usd`, and a per-model cost breakdown; `--json-schema` adds `structured_output`. `[FACT]`
   - Source: https://code.claude.com/docs/en/headless (accessed 2026-07-14)
   - Quote: "With `--output-format json`, the response payload includes `total_cost_usd` and a per-model cost breakdown…"; "`json`: structured JSON with result, session ID, and metadata"; "The response includes metadata about the request (session ID, usage, etc.) with the structured output in the `structured_output` field."
-- **`TEL-2`** — No effort field is documented among the `-p --output-format json` result fields; the effective reasoning effort applied is therefore not returned by the print-mode JSON result. `[INFERENCE]` — composed from the documented `TEL-1` field set (result / session id / usage / `total_cost_usd` / per-model cost / `structured_output`), which contains no effort field. Feeds the "never-returned / derived" necessity label.
+- **`TEL-2`** — No effort field is documented among the `-p --output-format json` result fields; the effective reasoning effort applied is therefore **not documented on the print-mode JSON result surface**. `[INFERENCE]` — composed from the documented `TEL-1` field set (result / session id / usage / `total_cost_usd` / per-model cost / `structured_output`), which lists no effort field. Because that documented list is non-exhaustive (the source says "session ID, usage, etc."), this establishes *undocumented-on-this-surface*, not proven-absent — so qualification treats it as unavailable on the `-p` surface and sources it out-of-band (`TEL-3` OTel) or by configuration, rather than asserting it can never appear. Feeds the "derived / out-of-band" necessity label.
 - **`TEL-3`** — OpenTelemetry monitoring emits the `claude_code.cost.usage` metric whose attributes include `model`, `query_source` (`"main"`/`"subagent"`/`"auxiliary"`), `speed` (`"fast"`), `effort` (`"low"`/`"medium"`/`"high"`/`"xhigh"`/`"max"`), and `agent.name` — so per-subagent, per-model, per-effort cost is observable via OTel (a surface distinct from the `-p` JSON result). `[FACT]`
   - Source: https://code.claude.com/docs/en/monitoring-usage (accessed 2026-07-14)
   - Quote (verbatim metric + attribute identifiers): "`claude_code.cost.usage` … `model` … `query_source` `\"main\"` `\"subagent\"` `\"auxiliary\"` … `speed` `\"fast\"` … `effort` `\"low\"` `\"medium\"` `\"high\"` `\"xhigh\"` `\"max\"` … `agent.name`".
@@ -574,6 +599,13 @@ undocumented behaviors. No candidate is claimed executable before these are prob
 Each `CAP-Qn` above states the **detection/probe** need only; the *Go / no-go handoff*
 (final section) carries any that remain unverified as no-go items or open
 questions, and asserts no dependency on CAR-002 results.
+
+**Effort acceptance (EFF-1).** Because available effort levels are model-dependent
+(`EFF-1`), each alias-binding probe (`CAP-Q1`–`CAP-Q4`) additionally confirms the
+resolved model accepts and applies the candidate tuple's effort level — resolving the
+alias binding alone does not certify a `(model, effort)` tuple. A resolved model that
+rejects the tuple's effort is a recorded incompatibility (FR-016), not a silent drop;
+so resolving `CAP-Q1`–`CAP-Q4` cannot leave a certified-but-invalid tuple.
 
 ### Capability-question prose (CAP-Q1…CAP-Q6)
 
@@ -864,9 +896,11 @@ From the `claude -p --output-format json` result payload (`TEL-1`):
 - **`result`** (the role's text output) — needed to score the run against the fixture's pass/fail signal
   (see *Fixture backlog*).
 - **session id** — transcript provenance and traceability across the candidate-tuple runs.
-- **`usage` metadata** (input/output/cache token counts) — the cost basis; `TEL-4`'s OTel
-  `claude_code.api_request` event enumerates `input_tokens`/`output_tokens`/`cache_read_tokens`/
-  `cache_creation_tokens` at the same granularity.
+- **`usage` metadata** — the cost basis. `TEL-1` documents that the `-p` result carries a `usage`
+  object but does not enumerate its exact sub-fields; the input/output/cache-read/cache-creation
+  token counts are enumerated on the **distinct** OTel `claude_code.api_request` surface (`TEL-4`).
+  Qualification captures token counts from whichever surface the run exposes; the precise `-p`
+  `usage` sub-field shape is not documented and is not asserted here.
 - **`total_cost_usd`** — the cost half of cost-quality route qualification.
 - **per-model cost breakdown** — attributes cost to the resolved model.
 - **`structured_output`** — mandatory **only for roles whose `output_format` is structured**
@@ -883,8 +917,9 @@ The binding-proof field (from a companion surface, not the top-level `-p` result
 ### Derived-from-configuration (known from the dispatched tuple, not read back)
 
 - **dispatched `model` alias and `effort`** — set by the fixture when it dispatches the candidate tuple, so
-  they are recorded by construction. `effort` in particular is **never** present in the
-  `-p --output-format json` result (`TEL-2`).
+  they are recorded by construction. `effort` in particular is **not documented on** the
+  `-p --output-format json` result surface (`TEL-2`), so it is taken as the configured value, not read
+  back from the result.
 - **agent identity / `query_source`** (`main`/`subagent`/`auxiliary`) — known from which agent the fixture
   dispatched; surfaced out-of-band as the OTel `claude_code.cost.usage` `agent.name`/`query_source`
   attributes (`TEL-3`), not the `-p` result.
@@ -897,10 +932,10 @@ The binding-proof field (from a companion surface, not the top-level `-p` result
 These MUST NOT be asserted from the `-p` result; where needed they come only from a distinct channel
 (OTel/hooks) or cannot be had:
 
-- **effective reasoning effort actually applied** — never returned by the `-p` JSON result (`TEL-2`). It is
-  knowable only as the *configured* value (derived-from-configuration, above) or observed out-of-band via
-  the OTel `claude_code.cost.usage` `effort` attribute (`TEL-3`); qualification MUST NOT read it back from
-  the `-p` result. This is the canonical never-returned / derived field.
+- **effective reasoning effort actually applied** — not documented on the `-p` JSON result surface
+  (`TEL-2`), so qualification MUST NOT read it back from the `-p` result. It is knowable only as the
+  *configured* value (derived-from-configuration, above) or observed out-of-band via the OTel
+  `claude_code.cost.usage` `effort` attribute (`TEL-3`). This is the canonical derived / out-of-band field.
 - **per-subagent cost/effort/speed attribution** — the `-p` result gives `total_cost_usd` plus a
   per-*model* breakdown, but per-*subagent* attribution (`query_source`, `effort`, `speed`, `agent.name`)
   lives only on the OTel surface (`claude_code.cost.usage`, `TEL-3`), a channel distinct from the `-p` result.
@@ -1020,8 +1055,9 @@ No mandatory fact was dropped or left in a silent or unclassifiable state; each 
   fixture backlog, the telemetry requirements, and the six capability questions — all dated and cited, with
   zero shipped-default change (SC-006).
 - **NO-GO — no candidate is executable yet.** No candidate route may be treated as executable until its
-  `CAP-Qn` is resolved by probing: each alias must be resolved to its dated model ID and confirmed available
-  in the benchmark environment (`CAP-Q1…CAP-Q4`), and the two undocumented dispatch behaviors (`CAP-Q5`,
+  `CAP-Qn` is resolved by probing: each alias must be resolved to its dated model ID, confirmed available,
+  and confirmed to accept the candidate tuple's effort (EFF-1) in the benchmark environment
+  (`CAP-Q1…CAP-Q4`), and the two undocumented dispatch behaviors (`CAP-Q5`,
   `CAP-Q6`) must be probed before any CAR-003 fallback or route-stability design relies on them. `fable`
   remains an executor-class candidate, excluded only by recorded probe or contract evidence (FR-013), never
   by product-announcement status.

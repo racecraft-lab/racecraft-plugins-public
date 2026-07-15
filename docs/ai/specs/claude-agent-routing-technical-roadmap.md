@@ -198,7 +198,7 @@ CAR-006 Route-policy Manifest, Materializer, Preflight, and Override
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| CAR-001 | Candidate Route Baseline and Role Contracts | 🔄 In Progress | [.process/CAR-001-workflow.md](.process/CAR-001-workflow.md) | Specify |
+| CAR-001 | Candidate Route Baseline and Role Contracts | 🔄 In Progress | [.process/CAR-001-workflow.md](.process/CAR-001-workflow.md) | In review (PR #350) |
 | CAR-002 | Capability Probing, Telemetry Profile, and Exact-Treatment Contract | Pending | - | Blocked by CAR-001 |
 | CAR-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Pending | - | Blocked by CAR-002 |
 | CAR-004 | Policy Controls and Adaptive Comparators | Pending | - | Blocked by CAR-003 |
