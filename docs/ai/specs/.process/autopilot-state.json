@@ -3,8 +3,8 @@
   "feature_dir": "specs/hrns-001-harness-surface-inventory-gap-taxonomy",
   "spec_id": "HRNS-001",
   "branch": "hrns-001-harness-surface-inventory-gap-taxonomy",
-  "updated_at": "2026-07-15T23:22:40Z",
-  "active_step": "Post: Doctor Extension Check",
+  "updated_at": "2026-07-15T23:36:00Z",
+  "active_step": "Post: PR Packet/Body Generation",
   "confidence_gate_mode": "advisory",
   "project_commands": {
     "BUILD": "N/A",
@@ -290,6 +290,66 @@
         }
       },
       "pr_packet": "recorded_in_workflow"
+    },
+    "post": {
+      "status": "blocked",
+      "completed_items": [
+        "Post: Doctor Extension Check",
+        "Post: Verify Implementation",
+        "Post: Verify Tasks Phantom Check",
+        "Post: Code Review",
+        "Post: Integration Suite",
+        "Post: Reviewability Diff Gate",
+        "Post: Self-Review",
+        "Post: UAT Runbook Generation",
+        "Post: Final Reviewability Backstop"
+      ],
+      "blocked_item": "Post: PR Packet/Body Generation",
+      "blocker": "No feature-local pr-packets JSON exists and pr-packet-output is deferred; PR body generation and PR creation are not authorized.",
+      "doctor": {
+        "status": "pass_with_warnings",
+        "warnings": [
+          ".specify/init-options.json has no ai_assistant value",
+          "HRNS feature directory does not use numbered-feature convention"
+        ]
+      },
+      "verify": {
+        "status": "pass",
+        "commands": [
+          "placeholder sweep",
+          "generate-spec-index-check",
+          "git diff --check",
+          "link/evidence review"
+        ]
+      },
+      "verify_tasks": {
+        "status": "pass",
+        "report": "specs/hrns-001-harness-surface-inventory-gap-taxonomy/verify-tasks-report.md",
+        "verified": 35,
+        "flagged": 0
+      },
+      "code_review": {
+        "status": "pass_after_remediation",
+        "high_findings": 2,
+        "medium_findings": 3,
+        "remediated": true
+      },
+      "integration_suite": {
+        "status": "pass",
+        "full_verify": "N/A",
+        "fallback": "python3 tests/speckit-pro/run-all.py --layer 1",
+        "passed": 1428,
+        "total": 1428
+      },
+      "uat": {
+        "status": "skipped",
+        "reason": "No committed feature-local UAT runbook; generate-uat-skeleton deferred"
+      },
+      "pr_packet": {
+        "status": "blocked",
+        "packet_dir": "specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets",
+        "reason": "packet missing and packet emission deferred"
+      }
     }
   },
   "plan": [
@@ -318,16 +378,16 @@
     {"step": "Phase 6: Analyze - Consensus", "status": "completed"},
     {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
     {"step": "Phase 7: Implement - Pending task decomposition", "status": "completed"},
-    {"step": "Post: Doctor Extension Check", "status": "in_progress"},
-    {"step": "Post: Verify Implementation", "status": "pending"},
-    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
-    {"step": "Post: Code Review", "status": "pending"},
-    {"step": "Post: Integration Suite", "status": "pending"},
-    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
-    {"step": "Post: Self-Review", "status": "pending"},
-    {"step": "Post: UAT Runbook Generation", "status": "pending"},
-    {"step": "Post: Final Reviewability Backstop", "status": "pending"},
-    {"step": "Post: PR Packet/Body Generation", "status": "pending"},
+    {"step": "Post: Doctor Extension Check", "status": "completed"},
+    {"step": "Post: Verify Implementation", "status": "completed"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "completed"},
+    {"step": "Post: Code Review", "status": "completed"},
+    {"step": "Post: Integration Suite", "status": "completed"},
+    {"step": "Post: Reviewability Diff Gate", "status": "completed"},
+    {"step": "Post: Self-Review", "status": "completed"},
+    {"step": "Post: UAT Runbook Generation", "status": "completed"},
+    {"step": "Post: Final Reviewability Backstop", "status": "completed"},
+    {"step": "Post: PR Packet/Body Generation", "status": "in_progress"},
     {"step": "Post: PR Body Generation", "status": "pending"},
     {"step": "Post: PR Creation", "status": "pending"},
     {"step": "Post: Review Remediation", "status": "pending"},

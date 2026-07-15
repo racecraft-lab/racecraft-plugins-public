@@ -48,7 +48,7 @@ The design concept is the source of truth for these scoping decisions:
 | Analyze | `/speckit-analyze` | ✅ Complete | A1 parallel marker issue resolved; no open findings |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory confidence gate passed: 0.97 >= 0.90 |
 | Implement | `/speckit-implement` | ✅ Complete | Taxonomy artifact created; 35/35 tasks complete; validation passed |
-| Post | post-implementation | 🔄 In Progress | Run canonical verification, PR, review, and retrospective items |
+| Post | post-implementation | ⚠️ Blocked | Blocked at PR packet generation boundary; packet emission is deferred |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -715,16 +715,16 @@ For each task:
 
 ### Canonical Post Rows
 
-- [ ] Post: Doctor Extension Check
-- [ ] Post: Verify Implementation
-- [ ] Post: Verify Tasks Phantom Check
-- [ ] Post: Code Review
-- [ ] Post: Integration Suite
-- [ ] Post: Reviewability Diff Gate
-- [ ] Post: Self-Review
-- [ ] Post: UAT Runbook Generation
-- [ ] Post: Final Reviewability Backstop
-- [ ] Post: PR Packet/Body Generation
+- [x] Post: Doctor Extension Check
+- [x] Post: Verify Implementation
+- [x] Post: Verify Tasks Phantom Check
+- [x] Post: Code Review
+- [x] Post: Integration Suite
+- [x] Post: Reviewability Diff Gate
+- [x] Post: Self-Review
+- [x] Post: UAT Runbook Generation
+- [x] Post: Final Reviewability Backstop
+- [ ] Post: PR Packet/Body Generation — blocked: feature-local PR packet JSON absent and packet emission is deferred
 - [ ] Post: PR Body Generation
 - [ ] Post: PR Creation
 - [ ] Post: Review Remediation
@@ -750,6 +750,39 @@ For each task:
 - [x] The PR packet names review scope, verification, and intentional deferrals.
 - [x] No runtime, generated, installed-cache, or vendored file changed.
 - [ ] PR is created and reviewed before merge.
+
+### Post Results
+
+| Post Item | Status | Evidence |
+|-----------|--------|----------|
+| Doctor Extension Check | Pass with warnings | 3 pass, 2 warnings: `.specify/init-options.json` lacks `ai_assistant`; HRNS feature dir naming differs from numbered-feature convention |
+| Verify Implementation | Pass | Placeholder sweep pass; spec index current; `git diff --check` pass; link/evidence review pass |
+| Verify Tasks Phantom Check | Pass | `specs/hrns-001-harness-surface-inventory-gap-taxonomy/verify-tasks-report.md`: 35 verified, 0 partial/weak/not_found/skipped |
+| Code Review | Pass after remediation | Review reported 2 HIGH and 3 MEDIUM issues; remediated closure evidence, candidate evidence fields, tracked counts, portable quickstart, lifecycle vocabulary, and roadmap/MOC status |
+| Integration Suite | Pass via fallback | `FULL_VERIFY=N/A`; Layer 1 fallback passed 1428/1428 |
+| Reviewability Diff Gate | Pass | Docs/process-only diff; no runtime/plugin source, generated payload, installed-cache, docs-site, or vendored changes |
+| Self-Review | Complete | See self-review block below |
+| UAT Runbook Generation | Skipped | No committed feature-local UAT runbook; `generate-uat-skeleton` is deferred |
+| Final Reviewability Backstop | Proceed | Current reviewability evidence is committed and docs/process bounded |
+| PR Packet/Body Generation | Blocked | No `specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/*.json`; `pr-packet-output` is deferred |
+
+### Self-Review
+
+1. **Tests executed?** `BUILD`, `TYPECHECK`, `LINT`, `UNIT_TEST`, and
+   `INTEGRATION_TEST` are `N/A` from detected project commands. Executed checks:
+   placeholder sweep, link/evidence review, `generate-spec-index-check`,
+   `git diff --check`, verify-tasks, and `python3 tests/speckit-pro/run-all.py
+   --layer 1` with 1428/1428 passing.
+2. **Edge cases?** HRNS-001 is docs/process only. Edge cases from `spec.md`
+   are covered in the taxonomy by CAR/G56R reference-only ownership,
+   multi-surface canonical rows, `unknown` external evidence handling,
+   unknown/non-promotable loop closure, and source-authority precedence.
+3. **Requirements matched?** FR-001 through FR-013 and SC-001 through SC-005
+   trace to completed tasks T001 through T035 and to the taxonomy AC crosswalk.
+   Verify-tasks found 35 verified tasks and no flagged items.
+4. **Follow-up & tidiness?** No actionable TODO/DEFERRED/OUT-OF-SCOPE markers
+   were found in HRNS-001 artifacts. Intentional deferrals are explicitly named
+   in the taxonomy and PR packet draft. Diff is docs/process scoped.
 
 ### PR Packet Draft
 

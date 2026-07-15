@@ -7,7 +7,7 @@
 # load-bearing: stale-index lint resolves it from this spec directory.
 up: "[Harness Engineering Uplift roadmap](../../docs/ai/specs/harness-engineering-uplift-technical-roadmap.md)"
 related: []                  # list of relative markdown links; carried, unenforced in v1
-status: ""                   # carried, unenforced in v1
+status: "Implemented; post gates in progress" # carried, unenforced in v1
 rank:                        # carried, unenforced in v1
 spec_id: "HRNS-001"         # namespace-matches the containing directory
 structureVersion: 1          # keep in sync with the lint scripts' hardcoded literal
@@ -37,4 +37,5 @@ the slice artifacts in the body below.
 - [checklists/requirements.md](checklists/requirements.md)
 - [checklists/security.md](checklists/security.md)
 - [quickstart.md](quickstart.md)
+- [verify-tasks-report.md](verify-tasks-report.md)
 <!-- GENERATED:BACKLINKS:END -->

@@ -91,7 +91,8 @@ HRNS spec should handle each retained gap.
   verification, observability, HITL, security, garbage collection, or an
   explicitly justified extension.
 - **FR-005**: The taxonomy MUST classify retained gaps by lifecycle state:
-  implemented, planned, deferred, duplicate, obsolete, or unknown.
+  implemented, planned, deferred, duplicate, obsolete, unknown, or
+  external-owner.
 - **FR-006**: The taxonomy MUST record owner workflow, cross-roadmap ownership,
   downstream HRNS ownership, and CAR/G56R references without treating unmerged
   work as authoritative current state. CAR/G56R-owned gaps MUST stay in one

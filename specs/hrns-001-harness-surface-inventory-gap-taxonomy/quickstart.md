@@ -26,8 +26,7 @@ Expected result: no matches.
 ## Scenario 2: Generated spec index is current
 
 ```bash
-PYTHONPATH=/Users/fredrickgabelmann/.codex/plugins/cache/racecraft-plugins-public/speckit-pro/2.19.2 \
-python3 -m speckit_pro_runner <<'JSON'
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner <<'JSON'
 {
   "schema_version": "1.0",
   "request_id": "hrns-001-generate-spec-index-check-final",
