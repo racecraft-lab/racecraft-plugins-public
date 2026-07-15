@@ -313,6 +313,15 @@ class PostImplementationReferenceTests(unittest.TestCase):
                 lambda: self.assertTrue(
                     "remote and push the packet commit only after every repeated check passes" in claude_body
                     and "gh pr list --state open --head <head> --base <base>" in claude_body
+                    and "baseRefName,title,body" in claude_body
+                    and "gh pr edit <number> --title <packet.generated_title.value> --body-file" in claude_body
+                    and "live_body_sha256" in claude_body
+                    and claude_body.index("compare the live title and body exactly")
+                    < claude_body.index("gh pr edit <number> --title <packet.generated_title.value>")
+                    < claude_body.index("Re-read the same fields after editing")
+                    < claude_body.index("Persist the number, URL, verified title")
+                    and "failed edit or residual mismatch leaves PR Creation incomplete" in claude_body
+                    and "in both durable state\n   stores" in claude_body
                 ),
             ),
             (
@@ -320,6 +329,15 @@ class PostImplementationReferenceTests(unittest.TestCase):
                 lambda: self.assertTrue(
                     "push the packet commit only after every repeated check passes" in codex_body
                     and "gh pr list --state open --head\n<head> --base <base>" in codex_body
+                    and "baseRefName,title,body" in codex_body
+                    and "gh pr edit <number> --title <packet.generated_title.value> --body-file" in codex_body
+                    and "live_body_sha256" in codex_body
+                    and codex_body.index("compare the live\ntitle and body exactly")
+                    < codex_body.index("gh pr edit <number> --title <packet.generated_title.value>")
+                    < codex_body.index("Re-read the same fields after editing")
+                    < codex_body.index("Persist the number, URL, verified title")
+                    and "failed edit or residual mismatch leaves `Post: PR\nCreation` incomplete" in codex_body
+                    and "workflow and `autopilot-state.json`" in codex_body
                 ),
             ),
             (

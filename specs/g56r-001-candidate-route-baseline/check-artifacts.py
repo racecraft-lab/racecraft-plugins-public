@@ -72,6 +72,18 @@ SEMANTIC_FIELDS = (
     "supported_client_assumptions",
     "representative_tasks",
 )
+HARD_CONTRACT_FIELDS = {
+    "role_boundary",
+    "authorization_boundaries",
+    "safety_requirements",
+    "grounding_requirements",
+    "mutation_policy",
+    "tool_requirements",
+    "skill_requirements",
+    "mcp_requirements",
+    "sandbox_expectations",
+    "output_contract",
+}
 CAPABILITY_FIELDS = {
     "model",
     "modalities",
@@ -613,6 +625,7 @@ def _validate_candidate(
 
     incompatibilities = candidate.get("known_incompatibilities")
     exclusion_effect = False
+    hard_contract_incompatibility = False
     if not isinstance(incompatibilities, list):
         errors.append(f"{location} known_incompatibilities must be an explicit array")
     else:
@@ -627,10 +640,28 @@ def _validate_candidate(
                 errors.append(
                     f"{location} incompatibility[{incompatibility_index}] evidence_ids must be non-empty"
                 )
+            contract_field = incompatibility.get("contract_field")
+            if contract_field not in SEMANTIC_FIELDS:
+                errors.append(
+                    f"{location} incompatibility[{incompatibility_index}] contract_field must name "
+                    "an agent contract semantic field"
+                )
+            description = incompatibility.get("description")
+            if not isinstance(description, str) or not description.strip():
+                errors.append(f"{location} incompatibility[{incompatibility_index}] description must be non-empty")
             if incompatibility.get("eligibility_effect") not in {"none", "exclude"}:
                 errors.append(f"{location} incompatibility[{incompatibility_index}] has invalid eligibility_effect")
+            if isinstance(contract_field, str) and contract_field in HARD_CONTRACT_FIELDS:
+                hard_contract_incompatibility = True
+                if incompatibility.get("eligibility_effect") != "exclude":
+                    errors.append(
+                        f"{location} incompatibility[{incompatibility_index}] hard contract field "
+                        "must use exclude eligibility_effect"
+                    )
             if incompatibility.get("eligibility_effect") == "exclude":
                 exclusion_effect = True
+    if hard_contract_incompatibility and eligibility_status != "excluded":
+        errors.append(f"{location} hard contract incompatibility must make the candidate excluded")
     if exclusion_effect and eligibility_status != "excluded":
         errors.append(f"{location} hard incompatibility with exclude effect must make the candidate excluded")
     if eligibility_status == "excluded" and not exclusion_effect:
@@ -1027,6 +1058,8 @@ def _validate_provenance(
             errors.append(f"{item} has invalid classification")
         if record.get("conflict_status") not in conflicts:
             errors.append(f"{item} has invalid conflict disposition")
+        if record.get("classification") == "conflict" and record.get("conflict_status") == "none":
+            errors.append(f"{item} conflict classification requires an explicit conflict disposition")
         if record.get("conflict_status") == "resolved_by_authority":
             resolution = record.get("authority_resolution")
             if _missing_fields(resolution, {"winning_evidence_id", "authority_basis"}):
@@ -1372,8 +1405,8 @@ def _validate_handoff(manifest: dict[str, Any], errors: list[str]) -> None:
         errors.append("handoff completed_artifacts must name the exact three research delivery files")
     unmet = handoff.get("unmet_conditions")
     blocking_conflict = any(
-        isinstance(value, dict) and value.get("conflict_status") == "blocking_no_go"
-        for _location, _key, value in _iter_values(manifest)
+        key == "conflict_status" and value == "blocking_no_go"
+        for _location, key, value in _iter_values(manifest)
     )
     if decision == "go":
         if any(status != "pass" for status in statuses) or unmet != [] or blocking_conflict:

@@ -285,13 +285,21 @@ gh pr create \
   --body-file <packet.body_file>
 ```
 
-After either a successful create or an ambiguous create failure, run the same
+After reuse, a successful create, or an ambiguous create failure, run the same
 exact head/base lookup again before retrying. Verify the single result with
-`gh pr view <number> --json number,url,state,headRefName,baseRefName`; require an
-open PR with the packet-owned head/base, then persist its number and URL in the
-workflow and `autopilot-state.json`. Zero matches, multiple matches, failed auth,
-or a mismatched view leaves `Post: PR Creation` incomplete and must not be
-reported as a completed autopilot run.
+`gh pr view <number> --json
+number,url,state,headRefName,baseRefName,title,body`; require an open PR with the
+packet-owned head/base. Read `packet.body_file` as UTF-8 and compare the live
+title and body exactly with `packet.generated_title.value` and that file. If
+either differs, the current validated packet authorizes exactly one
+`gh pr edit <number> --title <packet.generated_title.value> --body-file
+<packet.body_file>` reconciliation. Re-read the same fields after editing and
+require exact equality; a failed edit or residual mismatch leaves `Post: PR
+Creation` incomplete. Persist the number, URL, verified title, SHA-256 digest
+of the re-read UTF-8 body as `live_body_sha256`, and verification timestamp in
+the workflow and `autopilot-state.json`. Zero matches, multiple matches, failed
+auth, an unreadable packet body, or a mismatched view must not be reported as a
+completed autopilot run.
 A failed or ambiguous outcome leaves PR Creation incomplete and cannot be
 converted to a skip.
 

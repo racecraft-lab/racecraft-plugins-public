@@ -1061,6 +1061,36 @@ class G56R001ArtifactTests(unittest.TestCase):
                 any("hard incompatibility" in error for error in checker.validate_repository(root))
             )
 
+            ignored_hard_boundary = copy.deepcopy(manifest)
+            candidate = ignored_hard_boundary["agents"][0]["candidates"][0]
+            candidate["known_incompatibilities"] = [
+                {
+                    "contract_field": "safety_requirements",
+                    "description": "Cannot preserve the hard safety boundary.",
+                    "evidence_ids": ["project-analyze-executor"],
+                    "eligibility_effect": "none",
+                }
+            ]
+            write_artifacts(root, ignored_hard_boundary)
+            errors = checker.validate_repository(root)
+            self.assertTrue(any("must use exclude eligibility_effect" in error for error in errors), errors)
+            self.assertTrue(any("must make the candidate excluded" in error for error in errors), errors)
+
+            malformed_incompatibility = copy.deepcopy(manifest)
+            candidate = malformed_incompatibility["agents"][0]["candidates"][0]
+            candidate["known_incompatibilities"] = [
+                {
+                    "contract_field": "safety_requirement",
+                    "description": "",
+                    "evidence_ids": ["project-analyze-executor"],
+                    "eligibility_effect": "none",
+                }
+            ]
+            write_artifacts(root, malformed_incompatibility)
+            errors = checker.validate_repository(root)
+            self.assertTrue(any("contract_field must name" in error for error in errors), errors)
+            self.assertTrue(any("description must be non-empty" in error for error in errors), errors)
+
     def test_route_policy_inventory_links_and_mismatch_ownership_are_validated(self) -> None:
         checker = self.require_checker()
         with tempfile.TemporaryDirectory(prefix="g56r-001-artifacts-") as temporary:
@@ -1397,6 +1427,23 @@ class G56R001ArtifactTests(unittest.TestCase):
             write_artifacts(root, failed_gate)
             self.assertTrue(
                 any("handoff decision" in error for error in checker.validate_repository(root))
+            )
+
+            blocking_conflict = copy.deepcopy(manifest)
+            blocking_conflict["agents"][0]["provenance"][0]["conflict_status"] = "blocking_no_go"
+            write_artifacts(root, blocking_conflict)
+            self.assertTrue(
+                any("handoff decision" in error for error in checker.validate_repository(root))
+            )
+
+            undisposed_conflict = copy.deepcopy(manifest)
+            undisposed_conflict["agents"][0]["provenance"][0]["classification"] = "conflict"
+            write_artifacts(root, undisposed_conflict)
+            self.assertTrue(
+                any(
+                    "conflict classification requires an explicit conflict disposition" in error
+                    for error in checker.validate_repository(root)
+                )
             )
 
             malformed_no_go = copy.deepcopy(manifest)
