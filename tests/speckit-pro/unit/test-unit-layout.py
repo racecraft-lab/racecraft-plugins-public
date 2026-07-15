@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 import subprocess
@@ -97,6 +98,16 @@ class UnitLayoutTests(unittest.TestCase):
                     violations.append(
                         f"{path.relative_to(TEST_ROOT)}: {fixture_id!r} does not match {purpose!r}"
                     )
+        self.assertEqual(violations, [])
+
+    def test_unit_test_method_names_are_behavior_named(self) -> None:
+        violations: list[str] = []
+        for path in sorted(UNIT_ROOT.glob("test-*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
+                    if SPEC_ID_NAME.search(node.name):
+                        violations.append(f"{path.relative_to(TEST_ROOT)}::{node.name}")
         self.assertEqual(violations, [])
 
     def test_tracked_paths_have_no_legacy_layout_names(self) -> None:
