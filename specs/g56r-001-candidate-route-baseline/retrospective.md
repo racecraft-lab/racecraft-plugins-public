@@ -30,8 +30,9 @@ G56R-001 completed all 26 tasks and all 37 explicitly numbered requirements
 exactly 12 agents, 10 present routes, 2 explicit route absences, 3 current
 fixtures, and 9 missing fixtures. The corrected checker passes twice, and the
 focused adversarial suite records 55/55. The independent task audit still
-records 26 VERIFIED items; final combined-branch suite totals are refreshed
-immediately before PR creation.
+records 26 VERIFIED items. The final uninterrupted default suite records
+2813/2813, with Layer 1 at 1427/1427, Layer 4 at 1200/1200, and Layer 5 at
+186/186.
 
 Spec adherence is 100%. Two numbered requirements, FR-026 and SC-010, were
 modified during review to include the exact repository guard allowance and
@@ -58,10 +59,15 @@ live PR verification.
 - Terminal implementation interval: `2026-07-14T12:45:56-05:00` through
   `2026-07-14T17:43:58-05:00`, within the predeclared deadline of
   `2026-07-14T20:45:56-05:00`.
-- Current verification: checker PASS twice and focused artifacts 55/55. The
-  final runner guard, mutation/read-only/eval regressions, integration, Layer
-  1/4/5, default suite, generated payloads, and release-artifact check are
-  recorded after the combined branch is frozen.
+- Current verification: checker PASS twice; focused artifacts 55/55; runner
+  guard 11/11; mutation 33/33; read-only 48/48; eval 19/19; integration
+  257/257; Layer 1 1427/1427; Layer 4 1200/1200; Layer 5 186/186; default
+  2813/2813; generated payload parity and release-artifact checks PASS.
+- Final combined review surface after rebasing onto current main: 122 files,
+  33,748 additions, and 8,469 deletions. Within that set, 14 shared
+  `speckit-pro/` source/trust-metadata paths contribute 1,172 additions and 132
+  deletions; four runtime helpers account for 824 lines of churn. Generated
+  Claude, Codex, and installed-cache copies remain generator-owned evidence.
 
 ## Proposed Spec Changes
 
@@ -146,8 +152,8 @@ from the adherence denominator.
 
 | ID | Severity | State | Deviation and evidence | Root cause and prevention |
 |---|---|---|---|---|
-| D-01 | SIGNIFICANT | Resolved | Independent review found that the first checker could accept dangling candidate evidence, cross-surface evidence, narrower sanitization, and stale prose outside the normalized projection. Commit `7eab3c69` added referential integrity, surface/feature matching, expanded sanitization, and a deterministic human-prose hash with negative tests. | The initial RED matrix emphasized schema shape and projection equality but did not enumerate adversarial reference and prose-drift cases. Add those cases to the first checker-test inventory, before artifact population. |
-| D-02 | MINOR | Resolved | The first declared implementation boundary omitted the existing post-commit public-claim guard. Commit `7eab3c69` added four exact allowlist lines in `test-speckit-pro-runner.py` and reconciled FR-026, SC-010, plan, tasks, quickstart, data model, and contract docs from two to three validation paths. | Planning validated the new checker and suite membership before testing the committed research paths against the existing guard. Run the exact post-commit guard before freezing declared file operations. |
+| D-01 | SIGNIFICANT | Resolved | Independent review found that the first checker could accept dangling candidate evidence, cross-surface evidence, narrower sanitization, and stale prose outside the normalized projection. Commit `bd0d692c` added referential integrity, surface/feature matching, expanded sanitization, and a deterministic human-prose hash with negative tests. | The initial RED matrix emphasized schema shape and projection equality but did not enumerate adversarial reference and prose-drift cases. Add those cases to the first checker-test inventory, before artifact population. |
+| D-02 | MINOR | Resolved | The first declared implementation boundary omitted the existing post-commit public-claim guard. Commit `bd0d692c` added four exact allowlist lines in `test-speckit-pro-runner.py` and reconciled FR-026, SC-010, plan, tasks, quickstart, data model, and contract docs from two to three validation paths. | Planning validated the new checker and suite membership before testing the committed research paths against the existing guard. Run the exact post-commit guard before freezing declared file operations. |
 | D-03 | SIGNIFICANT | Resolved | The two Claude-derived instruction hashes initially excluded the blank LF after frontmatter, even though the normative body preserves it. Source-derived hashing and negative tests now bind the exact decoded body boundary. | The contract said “body” without defining the closing-frontmatter byte boundary. Freeze byte boundaries before recording hashes and make the checker derive them from source. |
 | D-04 | SIGNIFICANT | Resolved | Surface evidence initially summarized only four custom-agent records per agent instead of the required 7 features × 4 surfaces. The manifest now has exactly 28 unique pairs for each of 12 agents and rejects missing, duplicate, or unexpected pairs. | A summary-level completeness check was mistaken for the spec's feature-by-surface matrix. Encode the Cartesian set in the first RED suite. |
 | D-05 | SIGNIFICANT | Resolved | Official reasoning-effort pages expose different vocabularies. The final records name Subagents as the narrower CLI/desktop custom-agent authority, use App Server `model/list` and non-interactive configuration independently, and classify any intersection as policy. | The first remediation treated a conservative intersection as authority resolution. Resolutions now require a winning evidence ID and reject `not_stated` competitors. |
@@ -169,14 +175,29 @@ authorized plugin recovery required to finish the same autopilot run.
 | P-03 | POSITIVE | The existing public-claim guard was broadened by exactly two file paths, not by a directory prefix, and received a direct 11/11 proof. | Reuse exact allowlisting for future research-only artifacts. This already follows KISS/YAGNI and does not require a constitution amendment. |
 | P-04 | POSITIVE | PR packets bind base/source revisions, full-index diff identity, body normalization profile, and permitted packet-only dirty paths; completion then reconciles an existing PR before or after create. | Reuse this shared runner contract for both Codex and Claude Code autopilot. Treat a missing or ambiguous PR as incomplete, never skipped. |
 
+## Adversarial External Review
+
+Tavily-backed review and three independent adversarial agents found no residual
+G56R-001 or combined-repair blocker. Official OpenAI documentation remains the
+authority for platform behavior; community sources are nonbinding hardening
+and evaluation guidance.
+
+| Source | Alignment verdict | Disposition |
+|---|---|---|
+| [OpenAI Subagents](https://developers.openai.com/codex/subagents), [configuration](https://developers.openai.com/codex/config-reference), [App Server](https://developers.openai.com/codex/app-server), and [non-interactive mode](https://developers.openai.com/codex/noninteractive) | PASS | Final surface/feature records use the narrowest applicable official authority and preserve `not_stated` rather than inventing cross-surface support. |
+| [OWASP AI Agent Security](https://cheatsheetseries.owasp.org/cheatsheets/AI_Agent_Security_Cheat_Sheet.html) | PASS for frozen baseline | G56R-002/003 own untrusted-content boundaries and prompt-injection, tool-confusion, privilege, and prohibited-mutation fixtures. |
+| [W3C PROV-DM](https://www.w3.org/TR/prov-dm) and [SLSA build provenance](https://slsa.dev/spec/v1.2/build-provenance) | PASS | Stable IDs, revisions, derivations, hashes, and invalidation align; G56R-002 extends them into content-digested runtime snapshots and traces. |
+| [OpenTelemetry GenAI agent spans](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/gen-ai-agent-spans.md) | PASS with downstream version pin | G56R-002 owns a pinned typed adapter and preservation of unmapped provider fields because the convention is still developmental. |
+| [OpenAI evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices), [RouteLLM](https://openreview.net/forum?id=8sSqNntaMr), and [RouterBench](https://icml.cc/virtual/2024/39041) | PASS | The baseline makes no preference claim before measurement; G56R-003 owns held-out paired quality, latency, cost, uncertainty, and out-of-distribution qualification. |
+
 ## Constitution Compliance
 
 | Article | Result | Evidence |
 |---|---|---|
-| I. Plugin Structure Compliance | PASS pending final suite | Shared behavior stays in `speckit_pro_runner`; Codex and Claude skill/reference surfaces both consume it; repository tests remain under `tests/speckit-pro/`. |
-| II. Cross-Platform Runtime & Script Safety | PASS pending final suite | Runtime changes use Python 3.11 standard library, argument arrays, canonical Git object IDs, atomic writes, and trust-root symlink checks; no Bash or `jq` dependency was added. |
+| I. Plugin Structure Compliance | PASS | Shared behavior stays in `speckit_pro_runner`; Codex and Claude skill/reference surfaces both consume it; repository tests remain under `tests/speckit-pro/`. |
+| II. Cross-Platform Runtime & Script Safety | PASS | Runtime changes use Python 3.11 standard library, argument arrays, canonical Git object IDs, atomic writes, and trust-root symlink checks; no Bash or `jq` dependency was added. |
 | III. Semantic Versioning | PASS | No version file is hand-edited. The `fix` PR carries one release-note block so release automation owns the eventual bump and generated release artifacts. |
-| IV. Test Coverage Before Merge | PASS pending final suite | G56R has 55 focused cases; mutation, read-only, and both-client eval regressions cover the durable PR path. Full layer/integration/default totals are refreshed before creation. |
+| IV. Test Coverage Before Merge | PASS | G56R has 55 focused cases; mutation, read-only, and both-client eval regressions cover the durable PR path; the final uninterrupted default suite passes 2813/2813. |
 | V. Conventional Commits | PASS | Existing commits are conventional; remediation and packet commits will use narrow conventional scopes, and the PR title includes `G56R-001`. |
 | VI. KISS, Simplicity & YAGNI | PASS | The repair extends the existing runner/schema/reference path and existing tests; it adds no new shell, package, service, or duplicate client runtime. |
 
@@ -278,9 +299,9 @@ seeks to amend `spec.md`, it must pass a new explicit human confirmation gate.
   `docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md`.
 - Independent post-implementation evidence:
   `specs/g56r-001-candidate-route-baseline/verify-tasks-report.md`.
-- Implementation history: `15399458` published the baseline; `7eab3c69`
-  resolved independent-review findings; `003d0ea1` refreshed verification
-  evidence; `60dfff18` recorded the stable final suite totals.
+- Implementation history: `a0c955d5` published the baseline; `bd0d692c`
+  resolved independent-review findings; `ed94b81c` refreshed verification
+  evidence; `a7beee1e` recorded the stable pre-recovery suite totals.
 
 ## Required Self-Assessment
 

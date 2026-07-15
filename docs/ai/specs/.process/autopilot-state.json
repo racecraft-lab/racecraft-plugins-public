@@ -2,7 +2,7 @@
   "workflow_file": "docs/ai/specs/.process/G56R-001-workflow.md",
   "spec_id": "G56R-001",
   "feature_dir": "specs/g56r-001-candidate-route-baseline",
-  "updated_at": "2026-07-14T17:43:58-05:00",
+  "updated_at": "2026-07-14T19:01:39-05:00",
   "active_step": "Post: Adversarial Review and Durable PR Recovery",
   "status": "in_progress",
   "archive_sweep": {
@@ -75,7 +75,7 @@
     },
     "coverage_guard": {
       "status": "pass",
-      "plan_step_count": 41,
+      "plan_step_count": 42,
       "workflow_repaired": true
     },
     "tier2_relocation": {
@@ -105,7 +105,7 @@
       "doctor_hook": "core checks passed; plan/tasks warnings expected before later phases",
       "gate": {"id": "G1", "status": "pass", "reason": "spec.md exists with 0 markers"},
       "spec_index": {"status": "regenerated", "touched": ["specs/g56r-001-candidate-route-baseline/SPEC-MOC.md"]},
-      "checkpoint_commit": "e56d0454d4d3bf241497006e39778c8a46ac6c32"
+      "checkpoint_commit": "6cd17287d3e29c0c36119558b088cba347888f1a"
     },
     "clarify": {
       "status": "completed",
@@ -160,7 +160,7 @@
       "gate": {"id": "G2", "status": "pass", "reason": "0 [NEEDS CLARIFICATION] markers"},
       "post_hook": "optional_git_commit_skipped_parent_checkpoint_owner",
       "spec_index": {"status": "current_no_op", "touched": []},
-      "checkpoint_commit": "83181937dd48ea1a307a0c3c45b1012871de32a3"
+      "checkpoint_commit": "d2ed988bb902c01511071c3e72d61d209d068908"
     },
     "plan": {
       "status": "completed",
@@ -181,7 +181,7 @@
       "constitution": {"status": "pass", "layer_1": "1427/1427"},
       "post_hooks": "optional_traceability_not_invoked_git_skipped_parent_checkpoint_owner",
       "spec_index": {"status": "regenerated", "touched": ["specs/g56r-001-candidate-route-baseline/SPEC-MOC.md"]},
-      "checkpoint_commit": "b0f5e66ef16d64b88599e7eeb2797033fc5cecff"
+      "checkpoint_commit": "26799d1193cbc4aa8062dc5dfa64450e23d3509b"
     },
     "checklist": {
       "status": "completed",
@@ -258,7 +258,7 @@
       "gate": {"id": "G4", "status": "pass", "reason": "0 [Gap] markers"},
       "post_hook": "optional_git_commit_skipped_parent_checkpoint_owner",
       "spec_index": {"status": "regenerated", "touched": ["specs/g56r-001-candidate-route-baseline/SPEC-MOC.md"]},
-      "checkpoint_commit": "9c44a830425e6d9dc870636ed565275facb32c8c"
+      "checkpoint_commit": "73cd7d6da5d684c79d75b92f11be16dd44a8ebcf"
     },
     "tasks": {
       "status": "completed",
@@ -273,9 +273,9 @@
       "gate": {"id": "G5", "status": "pass", "reason": "22 tasks initially generated; Analyze remediation rerun produced and verified 26 tasks"},
       "post_hook": "optional_git_commit_skipped_parent_checkpoint_owner",
       "spec_index": {"status": "regenerated", "touched": ["specs/g56r-001-candidate-route-baseline/SPEC-MOC.md"]},
-      "checkpoint_commit": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
-      "initial_generation": {"task_count": 22, "task_range": "T001-T022", "checkpoint_commit": "1aaeca511c4685bf252ec511384ce0d98e135e27"},
-      "analyze_remediation_rerun": {"task_count": 26, "task_range": "T001-T026", "checkpoint_commit": "7f8c17369e15a359c6e24eea844c79a2d47d3bab"}
+      "checkpoint_commit": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
+      "initial_generation": {"task_count": 22, "task_range": "T001-T022", "checkpoint_commit": "703080b80929b284fd38c755d4c58da3fd7178e7"},
+      "analyze_remediation_rerun": {"task_count": 26, "task_range": "T001-T026", "checkpoint_commit": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda"}
     },
     "atomicity": {
       "route": "one-navigable-PR",
@@ -308,7 +308,7 @@
         "thresholds": {"warn": 400, "block": 800}
       },
       "spec_index": {"status": "current_no_op", "touched": []},
-      "checkpoint_commit": "7f8c17369e15a359c6e24eea844c79a2d47d3bab"
+      "checkpoint_commit": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda"
     },
     "confidence_gate": {
       "status": "completed",
@@ -427,9 +427,9 @@
         "focused": "55/55",
         "runner_guard": "11/11",
         "privacy": "10/10",
-        "layer_4": "1190/1190",
+        "layer_4": "1200/1200",
         "integration": "257/257",
-        "default": "2803/2803",
+        "default": "2813/2813",
         "checker_runs": ["pass", "pass"],
         "checker_summaries_identical": true,
         "git_diff_check": "pass"
@@ -444,16 +444,17 @@
   },
   "post_results": {
     "doctor": {"status": "completed", "result": "5 PASS, 0 WARN, 0 FAIL"},
-    "verify": {"status": "in_progress", "tasks": "26/26", "requirements": "27/27", "focused": "55/55", "final_suite": "in_progress"},
+    "verify": {"status": "completed", "tasks": "26/26", "requirements": "27/27", "focused": "55/55", "final_suite": "2813/2813"},
     "verify_tasks": {"status": "completed", "verified": 26, "flagged": 0, "report": "specs/g56r-001-candidate-route-baseline/verify-tasks-report.md"},
     "code_review": {"status": "completed", "disposition": "approve", "risk": "low", "actionable_findings": 0, "adversarial_agents": ["spec_adversary", "evidence_adversary", "repair_adversary"]},
-    "integration_suite": {"status": "in_progress", "preflight": "pass", "layer_1": "1427/1427", "layer_4": "in_progress", "layer_5": "186/186", "integration": "257/257", "default": "pending"},
-    "reviewability_diff": {"status": "in_progress", "route": "single_combined_pr", "exception": "specs/g56r-001-candidate-route-baseline/contracts/combined-pr-reviewability-exception.md", "reason": "user explicitly required one PR containing G56R-001 plus the durable cross-client SpecKit Pro repair"},
-    "self_review": {"status": "pending_rerun", "edge_case_gaps": 0, "requirement_orphans": 0, "task_orphans": 0, "silent_markers": 0, "tidiness_findings": 0},
+    "integration_suite": {"status": "completed", "completed_at": "2026-07-14T23:58:19Z", "preflight": "pass", "layer_1": "1427/1427", "layer_4": "1200/1200", "layer_5": "186/186", "integration": "257/257", "default": "2813/2813"},
+    "reviewability_diff": {"status": "completed", "route": "single_combined_pr", "files": 122, "insertions": 33748, "deletions": 8469, "exception": "specs/g56r-001-candidate-route-baseline/contracts/combined-pr-reviewability-exception.md", "reason": "user explicitly required one PR containing G56R-001 plus the durable cross-client SpecKit Pro repair"},
+    "self_review": {"status": "completed", "edge_case_gaps": 0, "requirement_orphans": 0, "task_orphans": 0, "silent_markers": 0, "tidiness_findings": 0},
     "uat_runbook": {"status": "skipped", "reason": "generate-uat-skeleton deferred; no committed source-derived runbook"},
-    "final_reviewability_backstop": {"status": "in_progress", "disposition": "combined_pr_exception_recorded", "autopilot_continuation_required": true},
+    "final_reviewability_backstop": {"status": "completed", "disposition": "combined_pr_exception_recorded", "autopilot_continuation_required": true},
     "adversarial_review": {"status": "completed", "disposition": "approve", "official_research": "Tavily live official documentation recheck complete", "community_research": "OWASP, W3C PROV-DM, SLSA, OpenTelemetry, OpenAI eval guidance, RouteLLM, and RouterBench reviewed; downstream recommendations only", "agents": ["spec_adversary", "evidence_adversary", "repair_adversary"]},
     "failure_recovery": {"status": "in_progress", "root_cause": "PR packet output was deferred and PR creation could terminate as a skip; legacy packets also lacked source-revision freshness protection", "durable_fix": "shared runner schema/helpers plus both Codex and Claude autopilot completion contracts make packet, push, and verified PR creation fail-closed and idempotently reconciled"},
+    "worktree_recovery": {"status": "completed", "incident": "Codex.app archived the outer checkout during verification", "invalid_interrupted_runs": 2, "restoration": "checkout unarchived and registered worktree restored", "final_uninterrupted_default": "2813/2813"},
     "pr_packet_body_generation": {"status": "pending", "reason": "generate only after final clean committed source state"},
     "pr_body_generation": {"status": "pending", "reason": "owned by the validated PR packet"},
     "pr_creation": {"status": "pending", "reason": "cannot complete without verified GitHub PR number, URL, head, and base"},
@@ -489,14 +490,14 @@
     {"step": "Phase 7: Implement T020-T022 - deps T014-T019; TDD projection agreement checks; PROJECT_COMMANDS focused unit, Layer 4, integration, full verify; COMPLETED_TASKS T001-T022", "status": "completed"},
     {"step": "Phase 7: Implement T023-T026 - deps T020-T022; TDD GREEN repeatability and full verification; PROJECT_COMMANDS focused unit, Layer 4, integration, full verify; COMPLETED_TASKS T001-T026", "status": "completed"},
     {"step": "Post: Doctor Extension Check", "status": "completed"},
-    {"step": "Post: Verify Implementation", "status": "pending"},
+    {"step": "Post: Verify Implementation", "status": "completed"},
     {"step": "Post: Verify Tasks Phantom Check", "status": "completed"},
     {"step": "Post: Code Review", "status": "completed"},
-    {"step": "Post: Integration Suite", "status": "pending"},
-    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
-    {"step": "Post: Self-Review", "status": "pending"},
+    {"step": "Post: Integration Suite", "status": "completed"},
+    {"step": "Post: Reviewability Diff Gate", "status": "completed"},
+    {"step": "Post: Self-Review", "status": "completed"},
     {"step": "Post: UAT Runbook Generation", "status": "skipped"},
-    {"step": "Post: Final Reviewability Backstop", "status": "pending"},
+    {"step": "Post: Final Reviewability Backstop", "status": "completed"},
     {"step": "Post: Adversarial Review and Durable PR Recovery", "status": "in_progress"},
     {"step": "Post: PR Packet/Body Generation", "status": "pending"},
     {"step": "Post: PR Body Generation", "status": "pending"},
