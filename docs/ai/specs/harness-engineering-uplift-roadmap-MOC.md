@@ -2,7 +2,7 @@
 up: "[SpecKit Pro Harness Engineering Uplift Roadmap](harness-engineering-uplift-technical-roadmap.md)"
 related:
   - "[SpecKit Pro Harness Engineering Uplift PRD](../../prd-harness-engineering-uplift.md)"
-status: "Draft; HRNS-001 ready to scaffold after maintainer acceptance"
+status: "Draft; 11-spec roadmap planned, HRNS-001 ready to scaffold after maintainer acceptance"
 rank:
 spec_id: "harness-engineering-uplift"
 structureVersion: 1
@@ -47,19 +47,39 @@ delegated-agent work inspectable without dumping raw logs into PRs.
 
 - HRNS-006 Trace, Debug, and Review Evidence Packets
 
-### Long-running Work
+### Resumable Work and Knowledge Projection
 
 Why: Long-horizon scaffold/autopilot/status/resolve-pr work needs resumable
 state, file ownership, stop conditions, and planner/evaluator separation before
-larger autonomous runs are safe.
+larger autonomous runs are safe. In parallel, canonical harness knowledge can
+be projected into a deterministic, on-demand OKF bundle once the shared
+contracts, controls, sensors, and evidence packets exist.
 
 - HRNS-007 Long-horizon Orchestration and Resumption Controls
+- HRNS-009 OKF v0.1 Canonical Knowledge Projection
+
+### External Knowledge Intake
+
+Why: External OKF bundles are untrusted data. Intake needs pinned conformance,
+bounded local validation, extension preservation, and explicit staging before
+any imported content can be considered for repository changes.
+
+- HRNS-010 Guarded External OKF Intake and Validation
+
+### Reconciliation and Reviewable Write-back
+
+Why: Bidirectional exchange needs three-way conflict detection, explicit
+deletion proposals, durable human decisions, and isolated branch/worktree
+output instead of direct writes or timestamp-based overwrite.
+
+- HRNS-011 Conflict-aware OKF Reconciliation and Reviewable Write-back
 
 ### Harness Maintenance
 
 Why: Harnesses drift. Prompts, docs, helper registries, generated payloads,
-examples, and sensors need bounded garbage collection that cites concrete repo
-evidence and avoids speculative cleanup.
+examples, sensors, OKF projections, intake state, and reconciliation evidence
+need bounded garbage collection that cites concrete repo evidence and avoids
+speculative cleanup.
 
 - HRNS-008 Harness Drift, Garbage Collection, and Self-healing Remediation
 
