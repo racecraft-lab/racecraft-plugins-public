@@ -310,6 +310,58 @@ class KnowledgeLayerTests(unittest.TestCase):
         self.assertEqual(external_target.read_text(encoding="utf-8"), "external\n")
         self.assertEqual((detached / "target.md").read_text(encoding="utf-8"), "after\n")
 
+    @unittest.skipUnless(
+        os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
+        "descriptor-relative removal regression requires POSIX dir_fd support",
+    )
+    def test_trusted_removal_cannot_follow_swapped_parent_symlinks(self) -> None:
+        root = self.repo("trusted-remove-file")
+        parent = root / "safe"
+        parent.mkdir()
+        target = parent / "created.md"
+        target.write_text("created\n", encoding="utf-8")
+        detached = root / "detached"
+        external = self.repo("trusted-remove-file-external")
+        external_target = external / "created.md"
+        external_target.write_text("external\n", encoding="utf-8")
+        real_unlink = os.unlink
+
+        def swap_then_unlink(path: str, *, dir_fd: int | None = None) -> None:
+            parent.rename(detached)
+            parent.symlink_to(external, target_is_directory=True)
+            real_unlink(path, dir_fd=dir_fd)
+
+        with mock.patch.object(mutation_helper.os, "unlink", side_effect=swap_then_unlink):
+            mutation_helper.remove_path_trusted(target, trust_root=root)
+
+        self.assertEqual(external_target.read_text(encoding="utf-8"), "external\n")
+        self.assertFalse((detached / "created.md").exists())
+
+        directory_root = self.repo("trusted-remove-directory")
+        directory_parent = directory_root / "safe"
+        directory_parent.mkdir()
+        created_directory = directory_parent / "created"
+        created_directory.mkdir()
+        detached_directory = directory_root / "detached"
+        external_directory = self.repo("trusted-remove-directory-external")
+        (external_directory / "created").mkdir()
+        real_rmdir = os.rmdir
+
+        def swap_then_rmdir(path: str, *, dir_fd: int | None = None) -> None:
+            directory_parent.rename(detached_directory)
+            directory_parent.symlink_to(external_directory, target_is_directory=True)
+            real_rmdir(path, dir_fd=dir_fd)
+
+        with mock.patch.object(mutation_helper.os, "rmdir", side_effect=swap_then_rmdir):
+            mutation_helper.remove_path_trusted(
+                created_directory,
+                trust_root=directory_root,
+                directory=True,
+            )
+
+        self.assertTrue((external_directory / "created").is_dir())
+        self.assertFalse((detached_directory / "created").exists())
+
     @unittest.skipUnless(os.name == "nt", "Windows atomic-write regression requires Win32")
     def test_windows_atomic_writer_pins_parent_during_replace(self) -> None:
         root = self.repo("windows-atomic-pin")
@@ -359,6 +411,18 @@ class KnowledgeLayerTests(unittest.TestCase):
                 trust_root=root,
             )
         self.assertEqual(external_target.read_text(encoding="utf-8"), "external\n")
+
+    @unittest.skipUnless(os.name == "nt", "Windows trusted-removal regression requires Win32")
+    def test_windows_trusted_removal_deletes_files_and_directories_by_handle(self) -> None:
+        root = self.repo("windows-trusted-remove")
+        target = self.write(root, "safe/created.md", "created\n")
+        mutation_helper.remove_path_trusted(target, trust_root=root)
+        self.assertFalse(target.exists())
+
+        directory = root / "safe" / "created"
+        directory.mkdir()
+        mutation_helper.remove_path_trusted(directory, trust_root=root, directory=True)
+        self.assertFalse(directory.exists())
 
     def test_reviewed_promotion_search_scope_and_source_freshness(self) -> None:
         root = self.repo("promotion")
@@ -578,6 +642,27 @@ class KnowledgeLayerTests(unittest.TestCase):
                 )
         self.assertEqual(construction_error.exception.code, "plan_too_large")
 
+    def test_legacy_up_fragment_contract_matches_runtime(self) -> None:
+        schema = json.loads(
+            (
+                PLUGIN_ROOT
+                / "skills"
+                / "speckit-autopilot"
+                / "contracts"
+                / "knowledge-candidate.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        legacy_up = "[Demo roadmap](../demo-roadmap-MOC.md#DEMO-001)"
+        pattern = schema["properties"]["legacy_up"]["pattern"]
+        self.assertIsNotNone(re.fullmatch(pattern, legacy_up))
+        self.assertTrue(
+            knowledge_helper._legacy_up_targets_project(
+                legacy_up,
+                "docs/ai/specs/DEMO-001/SPEC-MOC.md",
+                "demo",
+            )
+        )
+
     def test_secrets_and_stale_plans_or_snapshots_fail_without_writes(self) -> None:
         root = self.repo("conflicts")
         self.current_root = root
@@ -630,6 +715,71 @@ class KnowledgeLayerTests(unittest.TestCase):
         )
         self.assertNotEqual(completed.returncode, 0)
         self.assertEqual(snapshot_conflict["diagnostics"][0]["code"], "snapshot_changed")
+
+    def test_apply_lock_serializes_validation_writes_and_rollback(self) -> None:
+        root = self.repo("apply-lock")
+        plan = self.plan(root, "init")
+        before = file_snapshot(root)
+        real_writer = knowledge_helper.write_file_atomic
+        real_remove = knowledge_helper.remove_path_trusted
+        lock_diagnostics: list[str] = []
+        write_count = 0
+
+        def nested_apply_code() -> str:
+            nested = self.apply_direct(root, plan)
+            self.assertEqual(nested["status"], "expected_failure")
+            return str(nested["diagnostics"][0]["code"])
+
+        def serialize_then_fail(
+            target: Path,
+            content: str | bytes,
+            *,
+            trust_root: Path | None = None,
+        ) -> None:
+            nonlocal write_count
+            lock_diagnostics.append(nested_apply_code())
+            if write_count >= 1:
+                raise OSError("injected write failure after lock check")
+            write_count += 1
+            real_writer(target, content, trust_root=trust_root)
+
+        def serialize_remove(
+            target: Path,
+            *,
+            trust_root: Path,
+            directory: bool = False,
+        ) -> None:
+            lock_diagnostics.append(nested_apply_code())
+            real_remove(target, trust_root=trust_root, directory=directory)
+
+        with (
+            mock.patch.object(knowledge_helper, "write_file_atomic", side_effect=serialize_then_fail),
+            mock.patch.object(knowledge_helper, "remove_path_trusted", side_effect=serialize_remove),
+        ):
+            body = self.apply_direct(root, plan)
+
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual(body["data"]["mutation"]["mutation_status"], "rolled_back")
+        self.assertGreaterEqual(len(lock_diagnostics), 3)
+        self.assertEqual(set(lock_diagnostics), {"mutation_locked"})
+        self.assertEqual(file_snapshot(root), before)
+
+    def test_apply_recomputation_errors_are_repository_failures(self) -> None:
+        root = self.repo("apply-recompute-error")
+        self.current_root = root
+        self.init(root)
+        source = self.write(root, "docs/source.md", "Reviewed source.\n")
+        candidate = self.candidate("decisions/source.md", "Source Decision", [source])
+        completed, _ = self.apply(root, self.plan(root, "promote", candidate=candidate))
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        plan = self.plan(root, "rebuild")
+        concept = root / "docs/ai/knowledge/decisions/source.md"
+        concept.write_bytes(b"\xffinvalid-utf8")
+
+        body = self.apply_direct(root, plan)
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual(body["diagnostics"][0]["code"], "invalid_utf8")
+        self.assertFalse(body["data"]["writes_state"])
 
     def test_partial_apply_rolls_back_repository_files(self) -> None:
         root = self.repo("rollback")

@@ -34,7 +34,7 @@
     "legacy_view": { "type": "string", "minLength": 1 },
     "legacy_up": {
       "type": "string",
-      "pattern": "^\\[[^\\]\\r\\n]+\\]\\([^)\\r\\n]+-roadmap-MOC\\.md\\)$"
+      "pattern": "^\\[[^\\]\\r\\n]+\\]\\([^)\\r\\n]+-roadmap-MOC\\.md(?:#[^)\\r\\n]*)?\\)$"
     },
     "legacy_related": {
       "type": "array",

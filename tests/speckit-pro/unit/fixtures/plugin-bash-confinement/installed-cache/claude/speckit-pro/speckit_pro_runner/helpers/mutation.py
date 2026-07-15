@@ -748,6 +748,194 @@ def _write_relative_parts(target: Path, trust_root: Path) -> tuple[tuple[str, ..
     return parts[:-1], parts[-1]
 
 
+def remove_path_trusted(
+    target: Path,
+    *,
+    trust_root: Path,
+    directory: bool = False,
+) -> None:
+    """Remove one trusted path without following a swapped parent chain."""
+
+    if os.name == "posix":
+        _remove_path_trusted_posix(target, trust_root, directory=directory)
+        return
+    if os.name == "nt":
+        _remove_path_trusted_windows(target, trust_root, directory=directory)
+        return
+    raise OSError("trusted path removal is unsupported on this platform")
+
+
+def _remove_path_trusted_posix(target: Path, trust_root: Path, *, directory: bool) -> None:
+    parents, leaf = _write_relative_parts(target, trust_root)
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+    descriptors: list[int] = []
+    try:
+        descriptors.append(os.open(trust_root, directory_flags))
+        for part in parents:
+            try:
+                descriptors.append(os.open(part, directory_flags, dir_fd=descriptors[-1]))
+            except FileNotFoundError:
+                return
+        parent_descriptor = descriptors[-1]
+        try:
+            target_stat = os.stat(leaf, dir_fd=parent_descriptor, follow_symlinks=False)
+        except FileNotFoundError:
+            return
+        expected = stat.S_ISDIR(target_stat.st_mode) if directory else stat.S_ISREG(target_stat.st_mode)
+        if not expected:
+            raise OSError("trusted removal target has an unexpected file type")
+        if directory:
+            os.rmdir(leaf, dir_fd=parent_descriptor)
+        else:
+            os.unlink(leaf, dir_fd=parent_descriptor)
+        os.fsync(parent_descriptor)
+    finally:
+        for descriptor in reversed(descriptors):
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+
+
+def _remove_path_trusted_windows(target: Path, trust_root: Path, *, directory: bool) -> None:
+    import ctypes
+    from ctypes import wintypes
+
+    parents, leaf = _write_relative_parts(target, trust_root)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    invalid_handle = wintypes.HANDLE(-1).value
+    file_share_read = 0x00000001
+    file_share_write = 0x00000002
+    file_share_delete = 0x00000004
+    file_read_attributes = 0x00000080
+    delete_access = 0x00010000
+    open_existing = 3
+    file_flag_backup_semantics = 0x02000000
+    file_flag_open_reparse_point = 0x00200000
+    file_attribute_directory = 0x00000010
+    file_attribute_reparse_point = 0x00000400
+    file_attribute_tag_info = 9
+    file_disposition_info = 4
+
+    class FileAttributeTagInfo(ctypes.Structure):
+        _fields_ = [("FileAttributes", wintypes.DWORD), ("ReparseTag", wintypes.DWORD)]
+
+    class FileDispositionInfo(ctypes.Structure):
+        _fields_ = [("DeleteFile", wintypes.BOOL)]
+
+    kernel32.CreateFileW.restype = wintypes.HANDLE
+    kernel32.CreateFileW.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.HANDLE,
+    ]
+    kernel32.GetFileInformationByHandleEx.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_int,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+    ]
+    kernel32.GetFileInformationByHandleEx.restype = wintypes.BOOL
+    kernel32.SetFileInformationByHandle.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_int,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+    ]
+    kernel32.SetFileInformationByHandle.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+
+    def win_error(message: str) -> OSError:
+        return OSError(ctypes.get_last_error(), message)
+
+    def open_directory(path: Path) -> int:
+        handle = kernel32.CreateFileW(
+            str(path),
+            file_read_attributes,
+            file_share_read | file_share_write,
+            None,
+            open_existing,
+            file_flag_backup_semantics | file_flag_open_reparse_point,
+            None,
+        )
+        if handle == invalid_handle:
+            error = ctypes.get_last_error()
+            if error in {2, 3}:
+                raise FileNotFoundError(error, "trusted removal directory is missing")
+            raise win_error("could not pin trusted removal directory")
+        attributes = FileAttributeTagInfo()
+        if not kernel32.GetFileInformationByHandleEx(
+            handle,
+            file_attribute_tag_info,
+            ctypes.byref(attributes),
+            ctypes.sizeof(attributes),
+        ):
+            kernel32.CloseHandle(handle)
+            raise win_error("could not validate trusted removal directory")
+        if not attributes.FileAttributes & file_attribute_directory or attributes.FileAttributes & file_attribute_reparse_point:
+            kernel32.CloseHandle(handle)
+            raise OSError("trusted removal directory must be a non-reparse directory")
+        return int(handle)
+
+    root = Path(os.path.abspath(trust_root))
+    target_path = root.joinpath(*parents, leaf)
+    handles: list[int] = []
+    target_handle = invalid_handle
+    try:
+        anchor = Path(root.anchor)
+        current = anchor
+        handles.append(open_directory(current))
+        try:
+            for part in (*root.parts[1:], *parents):
+                current = current / part
+                handles.append(open_directory(current))
+        except FileNotFoundError:
+            return
+        target_handle = kernel32.CreateFileW(
+            str(target_path),
+            delete_access | file_read_attributes,
+            file_share_read | file_share_write | file_share_delete,
+            None,
+            open_existing,
+            file_flag_open_reparse_point | (file_flag_backup_semantics if directory else 0),
+            None,
+        )
+        if target_handle == invalid_handle:
+            error = ctypes.get_last_error()
+            if error in {2, 3}:
+                return
+            raise win_error("could not open trusted removal target")
+        attributes = FileAttributeTagInfo()
+        if not kernel32.GetFileInformationByHandleEx(
+            target_handle,
+            file_attribute_tag_info,
+            ctypes.byref(attributes),
+            ctypes.sizeof(attributes),
+        ):
+            raise win_error("could not validate trusted removal target")
+        is_directory = bool(attributes.FileAttributes & file_attribute_directory)
+        if attributes.FileAttributes & file_attribute_reparse_point or is_directory != directory:
+            raise OSError("trusted removal target has an unexpected file type")
+        disposition = FileDispositionInfo(True)
+        if not kernel32.SetFileInformationByHandle(
+            target_handle,
+            file_disposition_info,
+            ctypes.byref(disposition),
+            ctypes.sizeof(disposition),
+        ):
+            raise win_error("could not remove trusted target")
+    finally:
+        if target_handle != invalid_handle:
+            kernel32.CloseHandle(target_handle)
+        for handle in reversed(handles):
+            kernel32.CloseHandle(handle)
+
+
 def _write_file_atomic_posix(target: Path, content: str | bytes, trust_root: Path) -> None:
     parents, leaf = _write_relative_parts(target, trust_root)
     directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC

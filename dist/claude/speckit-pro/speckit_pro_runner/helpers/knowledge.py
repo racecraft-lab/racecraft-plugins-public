@@ -14,13 +14,22 @@ import os
 import posixpath
 import re
 import stat
+import tempfile
+import threading
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
-from typing import Any, Iterable
+from typing import Any, Iterable, Iterator
 
 from ..envelope import diagnostic, response
-from .mutation import empty_mutation, operation_records, validate_target_path, write_file_atomic
+from .mutation import (
+    empty_mutation,
+    operation_records,
+    remove_path_trusted,
+    validate_target_path,
+    write_file_atomic,
+)
 from .read_only import (
     SpecIndexRenderError,
     _spec_index_render_backlinks,
@@ -75,6 +84,8 @@ BASE_DIRECTORIES = (
 )
 RESERVED_MARKDOWN = {"index.md", "log.md"}
 ALLOWED_ACTIONS = {"init", "migrate", "rebuild", "promote", "supersede", "archive"}
+_KNOWLEDGE_LOCK_GUARD = threading.Lock()
+_ACTIVE_KNOWLEDGE_LOCKS: set[str] = set()
 CANDIDATE_FIELDS = frozenset(
     {
         "concept_path",
@@ -130,6 +141,10 @@ class KnowledgeError(ValueError):
         super().__init__(message)
         self.code = code
         self.details = details or {}
+
+
+class _RepositoryStateError(KnowledgeError):
+    """Internal marker for accepted-plan recomputation failures."""
 
 
 class _SourceChangedError(OSError):
@@ -265,39 +280,33 @@ def run_knowledge_update_apply(entry: Any, request: Any) -> dict[str, Any]:
         plan_request = supplied_plan.get("request")
         if not isinstance(plan_request, dict):
             raise KnowledgeError("invalid_plan", "knowledge update plan is missing its normalized request")
-        recompute_inputs = dict(plan_request)
-        recomputed = _build_plan(repo_root, recompute_inputs)
-        if recomputed.get("plan_hash") != supplied_plan.get("plan_hash"):
-            raise KnowledgeError(
-                "plan_changed",
-                "knowledge update plan no longer matches current sources",
-                details={
-                    "supplied_plan_hash": supplied_plan.get("plan_hash"),
-                    "recomputed_plan_hash": recomputed.get("plan_hash"),
-                },
-            )
-        current_snapshot = _snapshot_id(_load_concepts(repo_root))
-        if current_snapshot != supplied_plan.get("expected_snapshot"):
-            raise KnowledgeError(
-                "snapshot_changed",
-                "knowledge snapshot changed after the update plan was created",
-                details={
-                    "expected_snapshot": supplied_plan.get("expected_snapshot"),
-                    "actual_snapshot": current_snapshot,
-                },
-            )
-        operations = supplied_plan.get("operations", [])
-        if not isinstance(operations, list):
-            raise KnowledgeError("invalid_plan", "knowledge update plan operations must be an array")
-        _validate_apply_operations(repo_root, operations)
-        _validate_source_preconditions(repo_root, supplied_plan, phase="prior")
+        if request.mode == "apply":
+            with _knowledge_mutation_lock(repo_root):
+                return _run_accepted_knowledge_apply(
+                    entry,
+                    request,
+                    repo_root,
+                    supplied_plan,
+                    plan_request,
+                    mutation,
+                )
+        return _run_accepted_knowledge_apply(
+            entry,
+            request,
+            repo_root,
+            supplied_plan,
+            plan_request,
+            mutation,
+        )
     except KnowledgeError as exc:
         mutation["mutation_status"] = "blocked"
         return _error_response(
             request.request_id,
             exc,
-            expected_failure=exc.code
+            expected_failure=isinstance(exc, _RepositoryStateError)
+            or exc.code
             in {
+                "mutation_locked",
                 "plan_changed",
                 "snapshot_changed",
                 "source_changed",
@@ -309,6 +318,48 @@ def run_knowledge_update_apply(entry: Any, request: Any) -> dict[str, Any]:
             },
             data=_apply_data(entry, request, mutation, None),
         )
+
+
+def _run_accepted_knowledge_apply(
+    entry: Any,
+    request: Any,
+    repo_root: Path,
+    supplied_plan: dict[str, Any],
+    plan_request: dict[str, Any],
+    mutation: dict[str, Any],
+) -> dict[str, Any]:
+    recompute_inputs = dict(plan_request)
+    try:
+        recomputed = _build_plan(repo_root, recompute_inputs)
+    except KnowledgeError as exc:
+        raise _RepositoryStateError(exc.code, str(exc), details=exc.details) from exc
+    if recomputed.get("plan_hash") != supplied_plan.get("plan_hash"):
+        raise KnowledgeError(
+            "plan_changed",
+            "knowledge update plan no longer matches current sources",
+            details={
+                "supplied_plan_hash": supplied_plan.get("plan_hash"),
+                "recomputed_plan_hash": recomputed.get("plan_hash"),
+            },
+        )
+    try:
+        current_snapshot = _snapshot_id(_load_concepts(repo_root))
+    except KnowledgeError as exc:
+        raise _RepositoryStateError(exc.code, str(exc), details=exc.details) from exc
+    if current_snapshot != supplied_plan.get("expected_snapshot"):
+        raise KnowledgeError(
+            "snapshot_changed",
+            "knowledge snapshot changed after the update plan was created",
+            details={
+                "expected_snapshot": supplied_plan.get("expected_snapshot"),
+                "actual_snapshot": current_snapshot,
+            },
+        )
+    operations = supplied_plan.get("operations", [])
+    if not isinstance(operations, list):
+        raise KnowledgeError("invalid_plan", "knowledge update plan operations must be an array")
+    _validate_apply_operations(repo_root, operations)
+    _validate_source_preconditions(repo_root, supplied_plan, phase="prior")
 
     mutation["planned_operations"] = operation_records(operations)
     mutation["planned_paths"] = [str(op["target"]) for op in operations]
@@ -412,6 +463,102 @@ def run_knowledge_update_apply(entry: Any, request: Any) -> dict[str, Any]:
         request_id=request.request_id,
         data=_apply_data(entry, request, mutation, supplied_plan),
     )
+
+
+@contextmanager
+def _knowledge_mutation_lock(repo_root: Path) -> Iterator[None]:
+    canonical = os.path.normcase(str(repo_root.resolve(strict=False)))
+    lock_key = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    with _KNOWLEDGE_LOCK_GUARD:
+        if lock_key in _ACTIVE_KNOWLEDGE_LOCKS:
+            raise KnowledgeError(
+                "mutation_locked",
+                "another knowledge update is already applying to this repository",
+            )
+        _ACTIVE_KNOWLEDGE_LOCKS.add(lock_key)
+
+    descriptor = -1
+    mutex_handle: Any | None = None
+    kernel32: Any | None = None
+    acquired = False
+    try:
+        if os.name == "posix":
+            import fcntl
+
+            lock_path = Path(tempfile.gettempdir()) / f"speckit-pro-knowledge-{lock_key}.lock"
+            flags = (
+                os.O_RDWR
+                | os.O_CREAT
+                | getattr(os, "O_CLOEXEC", 0)
+                | getattr(os, "O_NOFOLLOW", 0)
+            )
+            descriptor = os.open(lock_path, flags, 0o600)
+            lock_stat = os.fstat(descriptor)
+            if not stat.S_ISREG(lock_stat.st_mode):
+                raise OSError("knowledge mutation lock must be a regular file")
+            if lock_stat.st_nlink != 1 or (
+                hasattr(os, "getuid") and lock_stat.st_uid != os.getuid()
+            ):
+                raise OSError("knowledge mutation lock has an unsafe identity")
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        elif os.name == "nt":
+            import ctypes
+            from ctypes import wintypes
+
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            kernel32.CreateMutexW.argtypes = [wintypes.LPVOID, wintypes.BOOL, wintypes.LPCWSTR]
+            kernel32.CreateMutexW.restype = wintypes.HANDLE
+            kernel32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+            kernel32.WaitForSingleObject.restype = wintypes.DWORD
+            kernel32.ReleaseMutex.argtypes = [wintypes.HANDLE]
+            kernel32.ReleaseMutex.restype = wintypes.BOOL
+            kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+            kernel32.CloseHandle.restype = wintypes.BOOL
+            mutex_handle = kernel32.CreateMutexW(
+                None,
+                False,
+                f"Local\\SpeckitProKnowledge-{lock_key}",
+            )
+            if not mutex_handle:
+                raise OSError(ctypes.get_last_error(), "could not create knowledge mutation mutex")
+            wait_result = kernel32.WaitForSingleObject(mutex_handle, 0)
+            if wait_result not in {0x00000000, 0x00000080}:
+                if wait_result == 0x00000102:
+                    raise BlockingIOError("knowledge mutation mutex is already held")
+                raise OSError("could not acquire knowledge mutation mutex")
+        else:
+            raise OSError("knowledge mutation locking is unsupported on this platform")
+        acquired = True
+    except (BlockingIOError, OSError) as exc:
+        if descriptor >= 0:
+            os.close(descriptor)
+        if mutex_handle and kernel32 is not None:
+            kernel32.CloseHandle(mutex_handle)
+        with _KNOWLEDGE_LOCK_GUARD:
+            _ACTIVE_KNOWLEDGE_LOCKS.discard(lock_key)
+        raise KnowledgeError(
+            "mutation_locked",
+            "could not acquire the exclusive knowledge mutation lock",
+            details={"error": type(exc).__name__},
+        ) from exc
+
+    try:
+        yield
+    finally:
+        try:
+            if acquired and os.name == "posix":
+                import fcntl
+
+                fcntl.flock(descriptor, fcntl.LOCK_UN)
+            elif acquired and os.name == "nt" and mutex_handle and kernel32 is not None:
+                kernel32.ReleaseMutex(mutex_handle)
+        finally:
+            if descriptor >= 0:
+                os.close(descriptor)
+            if mutex_handle and kernel32 is not None:
+                kernel32.CloseHandle(mutex_handle)
+            with _KNOWLEDGE_LOCK_GUARD:
+                _ACTIVE_KNOWLEDGE_LOCKS.discard(lock_key)
 
 
 def _target_repo_root(inputs: dict[str, Any]) -> Path:
@@ -3294,20 +3441,14 @@ def _rollback_writes(
     for target, before in reversed(backups):
         try:
             if before is None:
-                if not _safe_repository_chain(target, repo_root, allow_missing_leaf=True):
-                    raise OSError("rollback target chain became unsafe")
-                if target.exists():
-                    target.unlink()
+                remove_path_trusted(target, trust_root=repo_root)
             else:
                 write_file_atomic(target, before, trust_root=repo_root)
         except OSError as exc:
             errors.append(f"{target.as_posix()}: {type(exc).__name__}")
     for directory in sorted(created_directories, key=lambda path: len(path.parts), reverse=True):
         try:
-            if not _safe_repository_chain(directory, repo_root, allow_directory_leaf=True):
-                raise OSError("rollback directory chain became unsafe")
-            if directory.exists():
-                directory.rmdir()
+            remove_path_trusted(directory, trust_root=repo_root, directory=True)
         except OSError as exc:
             errors.append(f"{directory.as_posix()}: {type(exc).__name__}")
     return errors

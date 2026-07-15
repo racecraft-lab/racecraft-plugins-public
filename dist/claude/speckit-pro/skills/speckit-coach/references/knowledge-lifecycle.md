@@ -145,7 +145,7 @@ Workers never write the bundle or candidate files. A worker may return a
 - `producer.skill` plus the worker `producer.agent` when present
 - for map concepts, stable `id`, `project`, and `legacy_view`; a spec map also
   carries `legacy_up` as an exact Markdown link resolving to its project
-  roadmap MOC
+  roadmap MOC, optionally with a `#fragment` anchor
 
 The parent skill validates and deduplicates candidates, then stages them under
 `docs/ai/specs/.process/knowledge-candidates/<scope>/`. Candidate packets are
