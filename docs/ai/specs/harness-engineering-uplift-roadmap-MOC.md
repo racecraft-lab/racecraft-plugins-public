@@ -2,7 +2,7 @@
 up: "[SpecKit Pro Harness Engineering Uplift Roadmap](harness-engineering-uplift-technical-roadmap.md)"
 related:
   - "[SpecKit Pro Harness Engineering Uplift PRD](../../prd-harness-engineering-uplift.md)"
-status: "Draft; 11-spec roadmap planned, HRNS-001 ready to scaffold after maintainer acceptance"
+status: "Draft; 14-spec roadmap planned, HRNS-001 ready to scaffold after maintainer acceptance"
 rank:
 spec_id: "harness-engineering-uplift"
 structureVersion: 1
@@ -47,39 +47,50 @@ delegated-agent work inspectable without dumping raw logs into PRs.
 
 - HRNS-006 Trace, Debug, and Review Evidence Packets
 
-### Resumable Work and Knowledge Projection
+### Resumable Work and Knowledge Foundation
 
 Why: Long-horizon scaffold/autopilot/status/resolve-pr work needs resumable
 state, file ownership, stop conditions, and planner/evaluator separation before
 larger autonomous runs are safe. In parallel, canonical harness knowledge can
-be projected into a deterministic, on-demand OKF bundle once the shared
-contracts, controls, sensors, and evidence packets exist.
+gain a persistent, committed OKF foundation once the shared contracts,
+controls, sensors, and evidence packets exist.
 
 - HRNS-007 Long-horizon Orchestration and Resumption Controls
-- HRNS-009 OKF v0.1 Canonical Knowledge Projection
+- HRNS-009 Host Repository OKF Knowledge Contract and Initialization
 
-### External Knowledge Intake
+### Compounding Knowledge Lifecycle
 
-Why: External OKF bundles are untrusted data. Intake needs pinned conformance,
-bounded local validation, extension preservation, and explicit staging before
-any imported content can be considered for repository changes.
+Why: A persistent wiki compounds only when changed evidence updates affected
+concepts, queries remain source-grounded, and captured answers return through a
+reviewable proposal rather than becoming truth because they appeared in chat.
 
-- HRNS-010 Guarded External OKF Intake and Validation
+- HRNS-010 Incremental Evidence Ingest and Knowledge Synthesis
+- HRNS-011 Knowledge Query, Citation, and Compounding Capture
 
-### Reconciliation and Reviewable Write-back
+### Knowledge Health and Code Intelligence
 
-Why: Bidirectional exchange needs three-way conflict detection, explicit
+Why: Structural conformance, source-grounded health, and derived indexing are
+separate responsibilities. OKF remains useful as files while optional consumers
+can graph and vectorize concepts alongside code without owning canonical writes.
+
+- HRNS-012 Knowledge Conformance, Health, and Drift Maintenance
+- HRNS-013 Code-Intelligence and Vector-Index Interoperability
+
+### External Knowledge Exchange
+
+Why: External OKF bundles are untrusted data. Safe exchange needs bounded local
+validation, extension preservation, three-way conflict detection, explicit
 deletion proposals, durable human decisions, and isolated branch/worktree
 output instead of direct writes or timestamp-based overwrite.
 
-- HRNS-011 Conflict-aware OKF Reconciliation and Reviewable Write-back
+- HRNS-014 External OKF Exchange and Reviewable Reconciliation
 
 ### Harness Maintenance
 
 Why: Harnesses drift. Prompts, docs, helper registries, generated payloads,
-examples, sensors, OKF projections, intake state, and reconciliation evidence
-need bounded garbage collection that cites concrete repo evidence and avoids
-speculative cleanup.
+examples, sensors, synthesized knowledge, derived indexes, intake state, and
+reconciliation evidence need bounded garbage collection that cites concrete
+repo evidence and avoids speculative cleanup.
 
 - HRNS-008 Harness Drift, Garbage Collection, and Self-healing Remediation
 

@@ -31,14 +31,21 @@ boundaries, feedback sensors, evals, traces, human checkpoints, and recurring
 garbage collection. It does not require a heavyweight external harness
 framework or broad vendor product dependency.
 
-The same harness knowledge must also be portable across the Claude Code and
-Codex plugin distributions without creating a second source of truth. Today,
-canonical guidance is optimized for repository-native use and has no governed
-interchange contract for external knowledge tools. A conformant Open Knowledge
-Format (OKF) projection can make that knowledge inspectable and exchangeable,
-but only if projection, intake, reconciliation, provenance, conflict handling,
-and write-back remain deterministic, reviewable, and subordinate to the
-canonical repository documents.
+Every repository that adopts SpecKit Pro as its harness also needs durable,
+compounding project knowledge that survives chat compaction and individual
+agent sessions. Today, project evidence is spread across code, tests, agent
+guidance, specifications, decisions, plans, and workflow state, with no
+governed synthesis layer that agents can maintain and knowledge tools can
+consume.
+
+This PRD adopts the three-layer knowledge model proposed by Karpathy: source
+evidence remains authoritative for facts, a persistent agent-maintained wiki
+provides cited synthesis, and a repository-local schema governs ingest, query,
+lint, and maintenance. The wiki is committed as an Open Knowledge Format (OKF)
+bundle and shared by the Claude Code and Codex distributions. Code-intelligence
+systems may derive graph, lexical, or vector indexes from the same files, but
+those indexes remain reproducible local state rather than another knowledge
+authority.
 
 ## 2. Goals & Non-goals
 
@@ -72,13 +79,22 @@ canonical repository documents.
 - Define a full OKF v0.1 interoperability profile pinned to a reviewed
   specification revision, with structural conformance separated from knowledge
   health and hygiene.
-- Project all canonical harness knowledge into a deterministic, on-demand OKF
-  artifact without migrating or duplicating the authoritative source documents.
-- Give the Claude Code and Codex plugin distributions equivalent projection,
-  validation, intake, reconciliation, and review-packet contracts.
+- Initialize every repository that adopts SpecKit Pro as its harness with a
+  persistent, committed OKF knowledge bundle, using `docs/ai/knowledge/` as the
+  configurable default without mutating a repository merely because the plugin
+  was installed globally.
+- Maintain the bundle as a compounding project wiki through incremental ingest,
+  cited synthesis, query, reviewable answer capture, lint, and drift detection
+  while keeping source evidence authoritative for factual conflicts.
+- Give the Claude Code and Codex plugin distributions equivalent initialization,
+  ingest, query, lint, indexing-interoperability, external-exchange, and
+  review-packet contracts.
+- Let producer-neutral code-intelligence tools index OKF concepts and sections
+  alongside code symbols without making a vector service or a specific tool a
+  SpecKit Pro runtime dependency.
 - Support guarded bidirectional knowledge exchange while preserving source
   provenance, unknown OKF extensions, explicit conflict decisions, and human
-  review before canonical repository content changes.
+  review before committed project knowledge or source evidence changes.
 
 ### 2.2 Non-goals (out of scope)
 
@@ -103,17 +119,23 @@ canonical repository documents.
 - Making Google Cloud's knowledge-catalog reference agents, validator, server,
   client, or UI a required runtime dependency. The pinned OKF specification is
   normative; reference tooling is interoperability evidence only.
-- Migrating canonical repository documents into OKF, editing them in place, or
-  committing a duplicate OKF knowledge tree as another source of truth. The
-  projection is an on-demand generated artifact.
+- Migrating or rewriting source evidence solely to fit OKF, or allowing the
+  synthesized knowledge bundle to override contradictory source evidence
+  without an explicit reviewed resolution.
+- Mutating repositories merely because SpecKit Pro was installed, silently
+  initializing existing repositories, or maintaining knowledge through an
+  uncontrolled background writer on every filesystem event.
+- Committing CodeGraph, GitNexus, embedding, FTS, or other derived indexes. The
+  committed OKF bundle is portable source material; indexes are disposable and
+  regenerable consumers.
 - Treating imported knowledge as executable instructions, automatically
   fetching linked resources, invoking embedded commands, or sending repository
   content to a network service without an explicit governed operation.
 - Silently writing imported content back to canonical documents, automatically
   merging a write-back branch, choosing a conflict winner from timestamps, or
   inferring deletion because an incoming bundle omits a concept.
-- Implementing the OKF projection, intake, or reconciliation runtime in the PR
-  that updates this PRD, roadmap, and MOC.
+- Implementing the OKF lifecycle, code-intelligence adapters, intake, or
+  reconciliation runtime in the PR that updates this PRD, roadmap, and MOC.
 
 ## 3. Acceptance Criteria
 
@@ -146,14 +168,16 @@ canonical repository documents.
   human-on-the-loop, fully automated, or disallowed. Open-ended recursive
   self-improvement and self-modifying harness-control loops are classified as
   disallowed unless a later dedicated spec proves bounded safety controls.
-- **AC-1.8**: The inventory classifies every canonical knowledge source eligible
-  for OKF projection, including root and nested `AGENTS.md`, `CLAUDE.md`, and
-  `GEMINI.md`; the constitution; PRDs; technical roadmaps; roadmap MOCs; and
-  workflow/process documents. Generated distributions, caches, fixtures, and
-  other derived copies are explicitly excluded as canonical inputs.
-- **AC-1.9**: The gap taxonomy includes knowledge projection, structural
-  conformance, health/hygiene, external intake, provenance, reconciliation,
-  conflict handling, write-back, and cross-distribution parity as distinct
+- **AC-1.8**: The inventory classifies every source-evidence class eligible for
+  knowledge ingest, including code, tests, root and nested agent guidance, the
+  constitution, PRDs, technical roadmaps, roadmap MOCs, workflow/process
+  documents, ADRs, and approved issue/PR evidence. Generated distributions,
+  caches, fixtures, derived indexes, and unreviewed chat remain excluded as
+  authoritative evidence.
+- **AC-1.9**: The gap taxonomy includes knowledge initialization, incremental
+  ingest and synthesis, query and compounding capture, structural conformance,
+  health/drift, code-intelligence interoperability, external exchange,
+  provenance, conflict handling, and cross-distribution parity as distinct
   harness concerns.
 - **AC-1.10**: The external-candidate matrix records the normative OKF
   specification revision and maturity, reference-tooling compatibility evidence,
@@ -192,21 +216,22 @@ canonical repository documents.
   project guidance from active task-specific instructions or injected context.
   Switching focus is atomic, records the active task/spec identity, and avoids
   mutating root instructions or creating accidental PR diffs.
-- **AC-2.11**: Canonical repository documents remain authoritative. An OKF
-  bundle is a deterministic, on-demand projection with an explicit lifecycle;
-  it is not a committed mirror, resume authority, or independent source of
-  truth.
-- **AC-2.12**: Projection state records stable concept identity, canonical source
-  path, source digest, bundle/spec revision, and the base mapping required to
-  distinguish unchanged, locally changed, externally changed, and conflicting
-  content during later reconciliation.
-- **AC-2.13**: Coverage checks prove that every in-scope canonical source is
-  represented or explicitly excluded with a reason, and that generated plugin
-  payloads or distribution-specific copies cannot silently become projection
-  inputs.
-- **AC-2.14**: Interrupted projection, intake, and reconciliation operations can
-  resume from durable source/base/decision state without relying on chat history
-  or treating a partially generated bundle as canonical.
+- **AC-2.11**: Repository source evidence remains authoritative for factual
+  conflicts. The committed OKF bundle is a durable, first-class knowledge
+  product and default project-knowledge retrieval surface, not a disposable
+  projection or permission to rewrite its cited evidence.
+- **AC-2.12**: Knowledge state records stable concept identity, source paths and
+  anchors, source digests or revisions, bundle/spec revision, knowledge status,
+  and the mappings required to identify unchanged, stale, inferred, proposed,
+  externally changed, and conflicting content.
+- **AC-2.13**: Coverage checks prove that every in-scope evidence source is
+  represented, intentionally deferred, or explicitly excluded with a reason,
+  and that generated plugin payloads, indexes, or distribution-specific copies
+  cannot silently become evidence inputs.
+- **AC-2.14**: Interrupted initialization, ingest, query-capture, lint, indexing,
+  intake, and reconciliation operations can resume from durable
+  source/base/decision state without relying on chat history or treating a
+  partial synthesis as reviewed knowledge.
 
 ### 3.3 Helper, Tool, and Capability Contract *(-> HRNS-003)*
 
@@ -230,9 +255,10 @@ canonical repository documents.
   schemas as contract references. The decision distinguishes the
   Python-authoritative source, generated schemas, test fixtures, and runtime
   dependency impact.
-- **AC-3.8**: The helper registry defines separate governed operations for
-  canonical-to-OKF projection, OKF validation/intake, reconciliation planning,
-  and materializing an approved write-back proposal. Each operation declares
+- **AC-3.8**: The helper registry defines separate governed operations for OKF
+  initialization, incremental ingest/synthesis, query, answer capture, lint,
+  indexer interoperability, external validation/intake, reconciliation
+  planning, and materializing an approved proposal. Each operation declares
   mutability, schemas, path scope, network posture, artifacts, and exit states.
 - **AC-3.9**: The OKF producer/consumer contract supports the pinned v0.1
   minimum concept shape, emits recommended metadata when source evidence is
@@ -241,7 +267,7 @@ canonical repository documents.
 - **AC-3.10**: Consumers preserve unknown frontmatter fields and unknown concept
   types through intake and reconciliation unless a human-approved proposal
   explicitly transforms or removes them.
-- **AC-3.11**: Generated links are portable relative references, while intake
+- **AC-3.11**: Maintained links are portable relative references, while intake
   accepts both link forms permitted by the pinned specification and reports
   ambiguous or unsafe targets without fetching them.
 - **AC-3.12**: Claude Code and Codex distributions expose equivalent OKF
@@ -287,9 +313,10 @@ canonical repository documents.
   normalized paths, workspace confinement, encoding rules, symlink policy,
   secret handling, and explicit network-disabled behavior before parsing can
   affect repository state.
-- **AC-4.12**: Canonical knowledge documents and their mapping/base state are
-  protected harness-control surfaces. Imported content can affect them only
-  through an isolated, reviewable branch/worktree proposal with trace evidence.
+- **AC-4.12**: Source evidence, the committed OKF bundle, and knowledge
+  mapping/base state are protected harness surfaces. Agent synthesis can affect
+  them only within a declared workflow branch/worktree and reviewable proposal;
+  external content requires an isolated proposal with trace evidence.
 - **AC-4.13**: Missing incoming concepts never authorize deletion. Deletion
   requires an explicit tombstone or deletion proposal, provenance, impact
   preview, and human approval.
@@ -393,11 +420,12 @@ canonical repository documents.
   resume evidence came from a named checkpoint, workflow artifact, or emergency
   fallback.
 - **AC-6.10**: OKF trace packets record the pinned specification URI and commit,
-  bundle profile/version, canonical source revision, source and bundle digests,
-  operation mode, and distribution surface.
-- **AC-6.11**: Every projected or imported concept can be traced to its source
-  path or external provenance, stable identity, base-state entry, and any
-  normalization or transformation applied.
+  bundle profile/version, repository and source revision, source and concept
+  digests, operation mode, model/provider when synthesis occurs, and
+  distribution surface.
+- **AC-6.11**: Every maintained or imported concept can be traced to source
+  paths, anchors, external provenance, stable identity, base-state entry,
+  knowledge status, and any normalization or transformation applied.
 - **AC-6.12**: Reconciliation packets record local, base, and incoming evidence;
   the resulting unchanged/add/update/conflict/delete-proposal classification;
   and the human decision required before write-back.
@@ -436,12 +464,14 @@ canonical repository documents.
   safe-stop behavior. No loop may expand its own permissions, edit its own
   approval/eval gates, or merge/promote its own harness changes without a
   human-visible review packet.
-- **AC-7.10**: Projection, intake, and reconciliation workflows checkpoint
-  source revision, bundle identity, validation state, base mapping, unresolved
-  decisions, output worktree/branch, and the next safe action.
-- **AC-7.11**: Bidirectional synchronization produces a reviewable proposal in
-  an isolated branch/worktree and, when requested, a PR packet; it never writes
-  directly to the operator's active branch or merges its own result.
+- **AC-7.10**: Initialization, ingest, query capture, lint, indexing, intake, and
+  reconciliation workflows checkpoint source revision, bundle identity,
+  validation state, mappings, unresolved decisions, output worktree/branch, and
+  the next safe action.
+- **AC-7.11**: Internal knowledge maintenance targets the declared feature
+  branch/worktree so code and knowledge can be reviewed atomically. External
+  reconciliation produces a separate isolated proposal. Neither path merges,
+  pushes, or promotes its own result without distinct authorization.
 - **AC-7.12**: Reconciliation stops when both canonical and incoming knowledge
   changed from the recorded base, preserves both sides, and asks for an explicit
   resolution instead of applying timestamp-based last-write-wins behavior.
@@ -478,148 +508,242 @@ canonical repository documents.
   oversized, secret-bearing, orphaned, or no-longer-load-bearing context
   checkpoints. Cleanup requires a dry-run preview and preserves reviewable
   recovery evidence.
-- **AC-8.10**: Drift checks detect projection nondeterminism, incomplete
-  canonical-source coverage, stale base mappings, changed specification pins,
-  and divergence between Claude Code and Codex operation contracts.
+- **AC-8.10**: Drift checks detect incomplete evidence coverage, stale source
+  digests or mappings, changed specification/profile pins, unreviewed synthesis,
+  stale indexer contracts, and divergence between Claude Code and Codex
+  operation contracts.
 - **AC-8.11**: Health drift is classified separately from structural
   conformance and includes broken links, missing navigation indexes, stale or
   contradictory claims, citation quality, and orphaned concepts.
-- **AC-8.12**: Garbage collection detects stale generated OKF artifacts and
-  operation state without treating the on-demand projection as durable source
-  content or silently deleting canonical knowledge.
+- **AC-8.12**: Garbage collection distinguishes committed OKF concepts from
+  disposable index/cache artifacts and operation state; it never treats the
+  maintained bundle as generated trash or silently deletes project knowledge.
 - **AC-8.13**: Intake/reconciliation drift checks prove unknown fields and types
   remain preserved across supported round trips and flag lossy behavior as a
   blocking regression.
 - **AC-8.14**: Reference-tooling and specification drift are reviewed
   independently; a new upstream release does not silently move the normative
   pin or change conformance behavior.
-- **AC-8.15**: Cleanup never interprets an omitted incoming concept as deletion;
-  only an approved tombstone/deletion proposal can remove canonical content or
-  its identity mapping.
+- **AC-8.15**: Cleanup never interprets an omitted incoming concept, stale
+  citation, missing source, or absent index result as deletion; only an approved
+  tombstone/deletion proposal can remove committed knowledge, source evidence,
+  or an identity mapping.
+- **AC-8.16**: Vector, lexical, and graph indexes remain reproducible from code
+  plus committed OKF files and can be removed without knowledge loss.
 
-### 3.9 OKF v0.1 Canonical Knowledge Projection *(-> HRNS-009)*
+### 3.9 Host Repository OKF Knowledge Contract and Initialization *(-> HRNS-009)*
 
-- **AC-9.1**: The projection profile claims full conformance to OKF v0.1 as
+- **AC-9.1**: The repository profile claims full conformance to OKF v0.1 as
   defined by the GoogleCloudPlatform/knowledge-catalog `okf/SPEC.md` pinned at
-  commit `d44368c15e38e7c92481c5992e4f9b5b421a801d`. Moving the pin requires a
+  commit `d44368c15e38e7c92481c5992e4f9b5b421a801d`; moving the pin requires a
   reviewed compatibility change.
-- **AC-9.2**: One deterministic, on-demand operation projects all in-scope
-  canonical knowledge sources without changing their content or authority.
-- **AC-9.3**: The bundle records the profile/spec revision, repository/source
-  revision, source inventory, explicit exclusions, source digests, stable
-  concept identities, and source-to-concept mappings needed for audit and later
-  reconciliation.
-- **AC-9.4**: Every emitted concept satisfies the pinned minimum schema and uses
-  the recommended title, description, resource, tags, and timestamp fields only
-  when supported by canonical source evidence.
-- **AC-9.5**: Projection emits navigation indexes for progressive disclosure,
-  handles the root index/version contract explicitly, and may emit derived log
-  entries without making logs a second source of truth.
-- **AC-9.6**: Path, concept identity, and collision rules are stable across
-  repeated runs and across Claude Code and Codex, including canonical documents
-  with the same filename in different directories.
-- **AC-9.7**: Internal bundle links are emitted as portable relative references;
-  source and citation metadata retains enough provenance to return reviewers to
-  the canonical repository evidence.
-- **AC-9.8**: Identical repository input, profile pin, and configuration produce
-  byte-stable semantic output or a documented deterministic normalization for
-  fields whose source values legitimately vary.
-- **AC-9.9**: Structural-conformance results and knowledge-health findings are
-  emitted as separate artifacts or clearly separated report sections.
-- **AC-9.10**: The operation requires no Google reference runtime, external
-  service, network access, or new installed-plugin dependency.
-- **AC-9.11**: Claude Code and Codex entrypoints produce equivalent bundle
-  semantics, source coverage, conformance results, and trace evidence from the
-  same canonical checkout.
-- **AC-9.12**: Generated projection artifacts are disposable and excluded from
-  canonical source discovery; committing one does not make it authoritative or
-  eligible for recursive projection.
+- **AC-9.2**: Initializing SpecKit Pro as a repository harness creates or adopts
+  one committed OKF bundle. Existing repositories require an explicit migration
+  operation; global plugin installation alone never writes project files.
+- **AC-9.3**: The configurable default bundle path is `docs/ai/knowledge/`, kept
+  outside generated tool state and vendored `.specify/**` content.
+- **AC-9.4**: The initialized bundle contains a root `index.md`, a monotonic
+  `log.md`, and typed concept pages organized for progressive disclosure.
+- **AC-9.5**: Source artifacts remain authoritative evidence for factual
+  conflicts. The OKF bundle is the persistent, versioned synthesis and default
+  project-knowledge retrieval surface.
+- **AC-9.6**: The root index records the OKF/profile version and navigates every
+  concept or subordinate index without requiring an embedding service.
+- **AC-9.7**: The log is logically append-only and newest-first for OKF
+  conformance: new records are prepended and historical records are not edited
+  or deleted except through an explicit corrective entry.
+- **AC-9.8**: Every concept satisfies the pinned minimum schema and uses
+  recommended metadata plus namespaced producer fields for source references,
+  digests, knowledge status, and generator provenance when evidence supports it.
+- **AC-9.9**: Path, identity, and collision rules remain stable across branches,
+  worktrees, operating systems, and Claude Code/Codex entrypoints.
+- **AC-9.10**: A repository profile declares evidence classes, exclusions,
+  naming, concept types, citation requirements, review policy, and maintenance
+  checkpoints without expanding root agent instructions into a large manual.
+- **AC-9.11**: The OKF bundle is committed and reviewed with project work;
+  vector, lexical, graph, cache, and renderer outputs remain ignored,
+  reproducible local state.
+- **AC-9.12**: Initialization requires no Google reference runtime, external
+  service, network access, or mandatory code-intelligence dependency.
+- **AC-9.13**: Claude Code and Codex produce equivalent paths, profile semantics,
+  conformance results, diagnostics, and trace evidence from the same checkout.
+- **AC-9.14**: Reinitialization is idempotent, preserves accepted extensions and
+  content, and reports incompatible existing layouts rather than overwriting
+  them.
 
-### 3.10 Guarded External OKF Intake and Validation *(-> HRNS-010)*
+### 3.10 Incremental Evidence Ingest and Knowledge Synthesis *(-> HRNS-010)*
 
-- **AC-10.1**: Intake accepts conformant OKF v0.1 bundles, including concepts
-  with only the required `type` field and concepts with unknown types or
-  extension fields.
-- **AC-10.2**: Validation completes before imported content can influence a
-  canonical document, mapping/base state, workflow instruction, or generated
-  write-back proposal.
-- **AC-10.3**: The operation treats bundle content as untrusted data and does
-  not execute embedded instructions, commands, scripts, tools, or model prompts.
-- **AC-10.4**: Intake is local-first and network-disabled by default. Links,
-  resources, and citations are parsed and reported but never fetched
-  automatically.
-- **AC-10.5**: Bounded-input controls cover bytes, file and concept counts,
-  nesting depth, frontmatter/document size, encoding, normalized paths,
-  symlinks, workspace escape, duplicate identities, and decompression or parser
-  abuse where applicable.
-- **AC-10.6**: Structural conformance failures block intake, while specification
-  soft conditions and knowledge-health findings remain separately visible as
-  warnings or review items.
-- **AC-10.7**: Successful intake preserves unknown fields, unknown types,
-  Markdown bodies, legal OKF link forms, source provenance, and bundle identity
-  in a normalized staging artifact.
-- **AC-10.8**: Intake records the repository/base revision against which the
-  bundle will be reconciled and rejects missing, ambiguous, stale, or mismatched
-  base mappings until an operator chooses a safe recovery path.
-- **AC-10.9**: Omitted concepts are classified as absent input, not deletion
-  requests; only explicit deletion metadata can enter the later deletion-review
-  path.
-- **AC-10.10**: Validation reports are bounded, redact secrets, cite concept and
-  source locations, and distinguish malformed input, unsupported extensions,
-  unsafe paths, conformance failures, health findings, and policy denials.
-- **AC-10.11**: Reference-tooling comparison can report compatibility
-  differences but cannot reject spec-conformant input solely because the
-  reference implementation is stricter than the pinned specification.
-- **AC-10.12**: Claude Code and Codex intake surfaces apply the same limits,
-  validation profile, preservation rules, exit states, and evidence schema.
-- **AC-10.13**: A failed or cancelled intake leaves canonical documents
-  unchanged and produces either a bounded diagnostic artifact or a clean no-op.
+- **AC-10.1**: Ingest detects changed evidence through repository diffs and
+  content digests, then limits work to affected concepts instead of rebuilding
+  the entire knowledge base on every run.
+- **AC-10.2**: Durable forward and reverse mappings connect source paths and
+  anchors to every dependent concept, including many-to-many relationships.
+- **AC-10.3**: One changed source may update multiple entity, system, decision,
+  workflow, or concept pages plus their indexes and log entry.
+- **AC-10.4**: Synthesis produces a bounded reviewable proposal showing added,
+  updated, stale, conflicted, and unchanged concepts before promotion.
+- **AC-10.5**: New factual claims cite repository or approved external evidence;
+  unsupported claims are marked inferred or proposed rather than stated as fact.
+- **AC-10.6**: Namespaced provenance records source revisions, digests,
+  synthesis model/provider when available, operation ID, and knowledge status.
+- **AC-10.7**: Contradictory evidence is preserved and surfaced for resolution;
+  the agent does not silently choose a source or timestamp as winner.
+- **AC-10.8**: Source changes mark dependent concepts stale until reviewed
+  synthesis resolves them, while unaffected concepts retain their prior status.
+- **AC-10.9**: Maintenance runs in the workflow's declared branch/worktree so
+  knowledge and associated code/spec changes can be reviewed atomically.
+- **AC-10.10**: Filesystem or CodeGraph watch events may trigger local reindexing
+  but never authorize uncontrolled OKF synthesis or commits on every save.
+- **AC-10.11**: Source removal does not delete concepts automatically; it creates
+  a stale or explicit tombstone proposal with dependent-link impact.
+- **AC-10.12**: Every accepted ingest updates relevant indexes and prepends one
+  bounded operational log record without rewriting older history.
+- **AC-10.13**: Interrupted or cancelled ingest resumes from source digests,
+  affected-concept mappings, proposal state, and decisions without chat history.
+- **AC-10.14**: Claude Code and Codex apply the same change selection,
+  provenance, review, promotion, and safe-stop rules.
 
-### 3.11 Conflict-aware OKF Reconciliation and Reviewable Write-back *(-> HRNS-011)*
+### 3.11 Knowledge Query, Citation, and Compounding Capture *(-> HRNS-011)*
 
-- **AC-11.1**: Reconciliation compares recorded base, current canonical source,
-  and staged incoming knowledge rather than performing a two-way overwrite.
-- **AC-11.2**: Each concept is classified as unchanged, local-only change,
-  incoming-only change, compatible add, conflict, explicit deletion proposal,
-  unmapped, or invalid before any write-back is materialized.
-- **AC-11.3**: When both canonical and incoming content changed from the base,
-  reconciliation preserves both representations, stops automatic application,
-  and requests an explicit resolution.
-- **AC-11.4**: Timestamps, file ordering, source priority, and distribution type
-  are evidence only; none is an automatic last-write-wins authority.
-- **AC-11.5**: Missing incoming concepts never imply deletion. An explicit
-  tombstone/deletion proposal must identify the target, base evidence, reason,
-  dependent links, and expected impact.
-- **AC-11.6**: Operators can accept, reject, edit, or defer each proposed change
-  or bounded change group, and unresolved decisions survive resume without being
-  silently defaulted.
-- **AC-11.7**: Approved changes materialize only in a newly created isolated
-  branch/worktree with a bounded diff, source mapping updates, trace packet, and
-  verification plan; an optional PR remains draft until a human promotes it.
-- **AC-11.8**: Write-back is limited to mapped canonical sources and approved
-  additions. It cannot modify protected manifests, policy, hooks, registries,
-  generated distributions, or unrelated repository paths.
-- **AC-11.9**: Before materialization, the operation revalidates the repository
-  revision, bundle digest, spec pin, source mappings, selected decisions, path
-  scope, and latest user instruction.
-- **AC-11.10**: Reconciliation preserves unknown OKF fields and types in staged
-  state and reports any canonical-format limitation or lossy transform as a
-  blocking decision.
-- **AC-11.11**: The write-back packet links every diff hunk to incoming concept
-  provenance, base/local evidence, operator decision, and resulting canonical
-  source path.
-- **AC-11.12**: Claude Code and Codex surfaces produce equivalent reconciliation
-  classifications, safety stops, proposal diffs, and review evidence.
-- **AC-11.13**: The workflow never commits to an existing operator branch,
-  pushes, opens a PR, merges, deletes a source, or cleans the isolated worktree
-  without the authorization required for that distinct action.
-- **AC-11.14**: Cancellation and failure preserve a resumable decision packet or
-  a reviewable cleanup path and leave canonical repository content unchanged.
+- **AC-11.1**: Query reads `index.md` first for progressive disclosure and can
+  answer from repository-local OKF without a vector service.
+- **AC-11.2**: Query can combine knowledge concepts with code, tests, specs, and
+  other cited evidence when implementation detail is required.
+- **AC-11.3**: Answers cite the concepts used and their underlying source anchors
+  so a reviewer can distinguish synthesis from evidence.
+- **AC-11.4**: Results retain concept type, knowledge status, source revision,
+  freshness, and conflict indicators instead of flattening every match into
+  equally trusted text.
+- **AC-11.5**: Stale, inferred, proposed, contradictory, or insufficient
+  knowledge is identified explicitly in the answer.
+- **AC-11.6**: Optional lexical, graph, or vector retrieval may improve recall,
+  but query behavior degrades to file/index traversal rather than failing when
+  those consumers are unavailable.
+- **AC-11.7**: A useful query result can be filed back only as a cited,
+  reviewable concept proposal or update; it never becomes knowledge solely
+  because it appeared in chat.
+- **AC-11.8**: Answer capture records the originating question, cited evidence,
+  affected concepts, proposed status, and reviewer decision without storing raw
+  private transcripts by default.
+- **AC-11.9**: Query and capture enforce path scope, bounded excerpts, secret
+  handling, network posture, and protected-source rules.
+- **AC-11.10**: Query does not silently mutate, commit, push, or promote the
+  knowledge bundle.
+- **AC-11.11**: Query traces identify retrieval mode and whether each result came
+  from OKF, code intelligence, direct evidence, or an external source.
+- **AC-11.12**: Equivalent fixtures prove Claude Code and Codex return the same
+  source-grounded result classes and capture proposals for the same repository.
+
+### 3.12 Knowledge Conformance, Health, and Drift Maintenance *(-> HRNS-012)*
+
+- **AC-12.1**: Structural OKF conformance and project-knowledge health are
+  validated and reported as separate result classes.
+- **AC-12.2**: A pinned conformance corpus covers positive, negative,
+  minimum-valid, unknown-field, unknown-type, index, log, link, encoding, and
+  round-trip cases from the normative specification.
+- **AC-12.3**: Health lint reports broken links, missing navigation, stale source
+  digests, contradictory claims, missing citations, orphaned concepts, and
+  incomplete evidence coverage without redefining OKF validity.
+- **AC-12.4**: Index lint proves every concept is reachable or explicitly
+  excluded, and log lint proves newest-first monotonic history without mutation
+  of prior records.
+- **AC-12.5**: Source drift identifies concepts affected by changed, moved,
+  renamed, or removed evidence and distinguishes stale from invalid knowledge.
+- **AC-12.6**: Unknown fields, types, and legal link forms survive lint and
+  rewrite round trips unless a reviewed migration explicitly changes them.
+- **AC-12.7**: Deterministic lint and coverage checks do not depend on an LLM;
+  semantic contradiction review is advisory and records model/provider context.
+- **AC-12.8**: Remediation is emitted as bounded reviewable proposals or a no-op
+  report, never as an unreviewed broad rewrite.
+- **AC-12.9**: Lint never deletes by omission, failed retrieval, stale citation,
+  or absent index result; deletion requires an approved tombstone.
+- **AC-12.10**: Derived index drift is reported separately and can be repaired by
+  regeneration without changing committed OKF content.
+- **AC-12.11**: Specification-pin, producer-profile, and consumer-adapter drift
+  require reviewed compatibility decisions rather than silent upgrades.
+- **AC-12.12**: Conformance and health reports are bounded, source-located,
+  secret-safe, and suitable for workflow and PR evidence packets.
+- **AC-12.13**: Claude Code and Codex run equivalent conformance, lint, drift,
+  round-trip, and remediation fixtures.
+
+### 3.13 Code-Intelligence and Vector-Index Interoperability *(-> HRNS-013)*
+
+- **AC-13.1**: SpecKit Pro publishes a producer-neutral discovery and change
+  contract for the committed OKF bundle without requiring CodeGraph, GitNexus,
+  or any vector provider.
+- **AC-13.2**: Consumers can represent files, concepts, headings, and bounded
+  heading-aware chunks as distinct typed nodes rather than code-symbol text.
+- **AC-13.3**: Embedding input includes semantic body text plus evidence-backed
+  title, description, type, and tags, while retaining concept/path identity.
+- **AC-13.4**: OKF links become graph edges and source/citation references can
+  link concepts to repository files, symbols, tests, specs, and decisions.
+- **AC-13.5**: The interoperability vocabulary supports at least `REFERENCES`,
+  `DERIVED_FROM`, `DESCRIBES`, `IMPLEMENTS`, `VERIFIED_BY`, `SUPERSEDES`, and
+  `CONTRADICTS` without requiring every consumer to support every relation.
+- **AC-13.6**: Keyword/FTS indexing is the baseline; section embeddings and
+  hybrid retrieval are optional derived capabilities.
+- **AC-13.7**: `index.md` and `log.md` are excluded from semantic embeddings by
+  default to avoid duplicate navigation and operational-history noise.
+- **AC-13.8**: Generated graph/vector stores remain ignored, local-first,
+  model-scoped, and fully regenerable from code plus committed OKF files.
+- **AC-13.9**: Accepted OKF changes can notify or be detected by incremental
+  consumers, but a consumer reindex event never grants canonical write access.
+- **AC-13.10**: Hybrid results preserve code-versus-knowledge type, provenance,
+  freshness, and score components so retrieval does not erase trust boundaries.
+- **AC-13.11**: Indexing honors repository scope, ignore rules, secret policy,
+  configured network posture, and deletion semantics.
+- **AC-13.12**: Contract fixtures cover a CodeGraph-style first-class concept
+  adapter and a GitNexus-style Markdown-section adapter while remaining usable
+  by other consumers.
+- **AC-13.13**: Consumer incompatibility or absence is advisory and cannot block
+  core file/index-based knowledge workflows.
+- **AC-13.14**: Claude Code and Codex expose equivalent adapter discovery,
+  diagnostics, and result interpretation.
+
+### 3.14 External OKF Exchange and Reviewable Reconciliation *(-> HRNS-014)*
+
+- **AC-14.1**: Intake accepts conformant OKF v0.1 bundles, including type-only
+  concepts and unknown types or extension fields.
+- **AC-14.2**: External content is untrusted data, never executable instruction,
+  and validation is local-first and network-disabled by default.
+- **AC-14.3**: Bounded preflight covers bytes, files/concepts, nesting,
+  frontmatter/document size, encoding, normalized paths, symlinks, duplicate
+  identity, workspace escape, and parser/decompression abuse.
+- **AC-14.4**: Structural failures block intake while soft specification
+  conditions and knowledge-health findings remain separate review items.
+- **AC-14.5**: Normalized staging preserves unknown fields/types, bodies, legal
+  links, provenance, bundle identity, and the target repository/base revision.
+- **AC-14.6**: Reconciliation compares recorded base, current committed
+  knowledge and source evidence, and staged incoming concepts rather than
+  performing a two-way overwrite.
+- **AC-14.7**: Concepts are classified as unchanged, local-only, incoming-only,
+  compatible add, conflict, explicit deletion proposal, unmapped, or invalid.
+- **AC-14.8**: When both sides changed, both are preserved and the operation
+  stops for an explicit decision; timestamps and source priority never choose a
+  winner.
+- **AC-14.9**: Omission means absence, not deletion. A tombstone must identify
+  target, base evidence, reason, dependent links, and expected impact.
+- **AC-14.10**: Operators can accept, reject, edit, or defer bounded proposals,
+  and unresolved decisions remain resumable.
+- **AC-14.11**: Approved changes materialize only in a new isolated
+  branch/worktree with bounded diffs, mapping updates, verification, and trace
+  evidence; commit, push, PR, merge, and cleanup remain separate authorizations.
+- **AC-14.12**: Write-back is limited to mapped knowledge/source paths and cannot
+  modify protected manifests, policies, hooks, registries, generated payloads,
+  or unrelated files.
+- **AC-14.13**: Materialization revalidates repository revision, bundle digest,
+  spec/profile pin, mappings, decisions, path scope, and latest instruction.
+- **AC-14.14**: Lossy transformation of unknown extensions or unsupported
+  source formats blocks until an operator resolves it.
+- **AC-14.15**: Claude Code and Codex apply equivalent limits,
+  classifications, approvals, proposals, and safe stops.
+- **AC-14.16**: Failure or cancellation preserves a bounded diagnostic or
+  resumable decision packet and leaves committed repository content unchanged.
 
 ## 4. Migration Path
 
 - **Tier 1 (HRNS-001) - Harness taxonomy**: Freeze the surface inventory, gap
-  taxonomy, canonical knowledge inventory, and external-candidate evaluation
+  taxonomy, evidence/knowledge inventory, and external-candidate evaluation
   matrix that downstream specs use for shared boundaries.
 - **Tier 2 (HRNS-002 + HRNS-003) - Context and tool foundations**: Externalize
   durable state, then normalize helper/capability contracts and the governed
@@ -630,19 +754,21 @@ canonical repository documents.
 - **Tier 4 (HRNS-006) - Evidence packets**: Add bounded local trace records and
   review-packet summaries for helper, workflow, self-improvement, and future OKF
   operations.
-- **Tier 5 (HRNS-007 + HRNS-009) - Resumable work and canonical projection**:
-  Harden long-running orchestration while adding the deterministic, on-demand,
-  full-conformance OKF v0.1 projection. These specs may proceed in parallel
-  after their shared foundations are complete.
-- **Tier 6 (HRNS-010) - Guarded external intake**: Validate and stage untrusted
-  OKF bundles with bounded local-first controls, extension preservation, and no
-  canonical writes.
-- **Tier 7 (HRNS-011) - Reconciliation and reviewable write-back**: Add
-  three-way conflict handling, explicit deletion proposals, and isolated
-  branch/worktree output with human decisions and no automatic merge.
-- **Tier 8 (HRNS-008) - Harness maintenance**: Add bounded drift detection and
-  self-healing remediation for human-authored, self-generated, projected, and
-  externally reconciled harness artifacts.
+- **Tier 5 (HRNS-007 + HRNS-009) - Resumable work and knowledge foundation**:
+  Harden long-running orchestration while initializing the persistent,
+  committed OKF knowledge contract. These specs may proceed in parallel after
+  their shared foundations are complete.
+- **Tier 6 (HRNS-010) - Incremental synthesis**: Detect changed evidence,
+  synthesize affected concepts, and produce cited reviewable knowledge diffs.
+- **Tier 7 (HRNS-011 + HRNS-012 + HRNS-013) - Query, maintenance, and
+  interoperability**: Add source-grounded query/capture, conformance and health
+  lint, and producer-neutral code-intelligence/vector-index contracts in
+  parallel after the maintained bundle exists.
+- **Tier 8 (HRNS-014) - External exchange**: Validate, stage, reconcile, and
+  materialize guarded external OKF proposals with explicit conflict decisions.
+- **Tier 9 (HRNS-008) - Harness maintenance**: Add bounded drift detection and
+  self-healing remediation for human-authored, synthesized, indexed, imported,
+  and externally reconciled harness artifacts.
 
 ## 5. Constraints
 
@@ -672,11 +798,16 @@ canonical repository documents.
   interoperability evidence.
 - Require full pinned-spec conformance while preserving the distinction between
   structural validity and non-blocking health/hygiene findings.
-- Keep canonical repository documents authoritative and generate OKF only as an
-  on-demand, disposable projection with explicit source mappings and base state.
-- Cover root and nested agent guidance, the constitution, PRDs, technical
-  roadmaps, MOCs, and workflow/process docs; exclude generated distribution
-  copies, caches, fixtures, and generated OKF artifacts from canonical discovery.
+- Keep repository sources authoritative as evidence while maintaining one
+  persistent, committed OKF synthesis layer with explicit source mappings,
+  provenance, review state, and base state.
+- Initialize the bundle only through explicit repository harness adoption or
+  migration, using configurable `docs/ai/knowledge/` by default and keeping it
+  outside vendored `.specify/**` and generated `.codegraph/**` state.
+- Cover code, tests, root and nested agent guidance, the constitution, PRDs,
+  technical roadmaps, MOCs, workflows, ADRs, and approved issue/PR evidence;
+  exclude generated distributions, caches, fixtures, raw transcripts, and
+  derived indexes from authoritative discovery.
 - Preserve unknown OKF fields and concept types, accept the specification's
   minimum-valid concept, and avoid a compatibility dependency on stricter
   behavior in any reference validator.
@@ -687,6 +818,12 @@ canonical repository documents.
   deletion, and write-back never auto-merges.
 - Keep OKF contracts and verification equivalent across the Claude Code and
   Codex plugin distributions.
+- Keep graph, lexical, and vector interoperability producer-neutral and
+  optional. Committed Markdown remains usable when CodeGraph, GitNexus, an
+  embedding provider, or any other consumer is absent.
+- Keep all knowledge synthesis and answer capture reviewable in the declared
+  workflow branch/worktree; local file-watch events may reindex but do not
+  authorize synthesis, commits, pushes, or merges.
 - Keep advisory code-intelligence hooks fail-open unless a spec proves they are
   safe to make blocking.
 - Treat one-off discovery artifacts as planning inputs, not production runtime
@@ -727,6 +864,15 @@ canonical repository documents.
   restore instructions rather than committed raw transcripts; require explicit
   promotion, secret scanning, size caps, provenance, and human review before any
   shared checkpoint becomes team-consumable.
+- **OQ-9 (HRNS-009):** Where should the committed OKF bundle live?
+  Recommendation: default to configurable `docs/ai/knowledge/`; avoid vendored
+  `.specify/**` and consumer-owned generated directories such as `.codegraph/`.
+- **OQ-10 (HRNS-011):** When should a useful query answer compound into the
+  knowledge base? Recommendation: only through a cited proposal with explicit
+  status and normal branch review; never capture raw chat automatically.
+- **OQ-11 (HRNS-013):** Should SpecKit Pro implement tool-specific indexers?
+  Recommendation: publish and test a producer-neutral contract; keep CodeGraph,
+  GitNexus, and other consumer adapters in their owning projects.
 
 ## 7. SPEC Catalog Crosswalk
 
@@ -739,14 +885,17 @@ canonical repository documents.
 | Feedback Sensors and Eval Readiness Ladder | AC-5.* | HRNS-005 | HRNS-001, HRNS-003 | P1 |
 | Trace, Debug, and Review Evidence Packets | AC-6.* | HRNS-006 | HRNS-003, HRNS-004, HRNS-005 | P1 |
 | Long-horizon Orchestration and Resumption Controls | AC-7.* | HRNS-007 | HRNS-002, HRNS-006 | P2 |
-| Harness Drift, Garbage Collection, and Self-healing Remediation | AC-8.* | HRNS-008 | HRNS-002, HRNS-005, HRNS-006, HRNS-009, HRNS-010, HRNS-011 | P2 |
-| OKF v0.1 Canonical Knowledge Projection | AC-9.* | HRNS-009 | HRNS-001, HRNS-002, HRNS-003, HRNS-004, HRNS-005, HRNS-006 | P2 |
-| Guarded External OKF Intake and Validation | AC-10.* | HRNS-010 | HRNS-004, HRNS-005, HRNS-006, HRNS-009 | P2 |
-| Conflict-aware OKF Reconciliation and Reviewable Write-back | AC-11.* | HRNS-011 | HRNS-007, HRNS-010 | P2 |
+| Harness Drift, Garbage Collection, and Self-healing Remediation | AC-8.* | HRNS-008 | HRNS-002, HRNS-005, HRNS-006, HRNS-009 through HRNS-014 | P2 |
+| Host Repository OKF Knowledge Contract and Initialization | AC-9.* | HRNS-009 | HRNS-001, HRNS-002, HRNS-003, HRNS-004, HRNS-005, HRNS-006 | P2 |
+| Incremental Evidence Ingest and Knowledge Synthesis | AC-10.* | HRNS-010 | HRNS-005, HRNS-006, HRNS-009 | P2 |
+| Knowledge Query, Citation, and Compounding Capture | AC-11.* | HRNS-011 | HRNS-003, HRNS-005, HRNS-006, HRNS-009, HRNS-010 | P2 |
+| Knowledge Conformance, Health, and Drift Maintenance | AC-12.* | HRNS-012 | HRNS-005, HRNS-006, HRNS-009, HRNS-010 | P2 |
+| Code-Intelligence and Vector-Index Interoperability | AC-13.* | HRNS-013 | HRNS-003, HRNS-005, HRNS-006, HRNS-009, HRNS-010 | P2 |
+| External OKF Exchange and Reviewable Reconciliation | AC-14.* | HRNS-014 | HRNS-004, HRNS-006, HRNS-007, HRNS-009, HRNS-010, HRNS-012 | P2 |
 
 ## 8. Success Criteria
 
-1. Every acceptance criterion in AC-1.* through AC-11.* is either implemented,
+1. Every acceptance criterion in AC-1.* through AC-14.* is either implemented,
    verified, or intentionally deferred with a documented reason.
 2. Each HRNS spec stays within the roadmap reviewability budget or records a
    typed exception before implementation begins.
@@ -754,14 +903,17 @@ canonical repository documents.
    on raw chat history or unstated tool behavior.
 4. The active helper/runtime/test/review-packet surfaces become more legible and
    safer without adding a heavyweight external harness framework.
-5. All canonical harness knowledge can be projected on demand into a bundle
-   conforming to the pinned OKF v0.1 specification, with deterministic coverage,
-   source provenance, and separate structural/health results.
-6. External OKF knowledge can be validated, staged, reconciled, and proposed as
+5. Every repository that adopts SpecKit Pro as its harness has a committed,
+   conformant OKF knowledge base that compounds through cited, incremental,
+   reviewable maintenance while source evidence remains authoritative.
+6. Project knowledge remains queryable without a vector service and can be
+   indexed with code through producer-neutral lexical, graph, and vector
+   contracts without committing derived indexes.
+7. External OKF knowledge can be validated, staged, reconciled, and proposed as
    a bounded reviewable diff without executing imported content, losing unknown
    extensions, using timestamps as conflict authority, or deleting by omission.
-7. Claude Code and Codex distributions pass equivalent OKF contract,
-   conformance, safety, reconciliation, and trace-evidence checks.
+8. Claude Code and Codex distributions pass equivalent OKF initialization,
+   ingest, query, lint, interoperability, exchange, and trace-evidence checks.
 
 ## 9. References
 
@@ -779,6 +931,10 @@ canonical repository documents.
   https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f
 - **Pulumi knowledge-as-code and OKF analysis:**
   https://www.pulumi.com/blog/knowledge-as-code-the-memory-file-just-got-a-spec/
+- **CodeGraph local-first code-intelligence consumer:**
+  https://github.com/racecraft-lab/codegraph
+- **GitNexus Markdown ingestion reference:**
+  https://github.com/abhigyanpatwari/GitNexus
 - **Tracked upstream compatibility evidence:** validator/spec parity
   ([PR #145](https://github.com/GoogleCloudPlatform/knowledge-catalog/pull/145)),
   link interpretation
