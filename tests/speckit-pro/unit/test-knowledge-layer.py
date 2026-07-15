@@ -465,6 +465,158 @@ class KnowledgeLayerTests(unittest.TestCase):
 
     @unittest.skipUnless(
         os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
+        "new-file cleanup recovery regression requires POSIX dir_fd support",
+    )
+    def test_atomic_writer_removes_new_target_when_temporary_cleanup_fails(self) -> None:
+        root = self.repo("atomic-new-file-cleanup")
+        parent = root / "safe"
+        parent.mkdir()
+        target = parent / "target.md"
+        real_unlink = mutation_helper.os.unlink
+        unlinks = 0
+
+        def fail_first_unlink(path: str, *, dir_fd: int | None = None) -> None:
+            nonlocal unlinks
+            unlinks += 1
+            if unlinks == 1:
+                raise OSError("injected temporary cleanup failure")
+            real_unlink(path, dir_fd=dir_fd)
+
+        with (
+            mock.patch.object(mutation_helper.os, "unlink", side_effect=fail_first_unlink),
+            self.assertRaises(OSError),
+        ):
+            mutation_helper.write_file_atomic(
+                target,
+                "planned",
+                trust_root=root,
+                expected_prior=None,
+            )
+
+        self.assertFalse(target.exists())
+        self.assertEqual(list(parent.glob(".target.md.tmp-*")), [])
+
+    @unittest.skipUnless(
+        os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
+        "new-file cleanup recovery regression requires POSIX dir_fd support",
+    )
+    def test_atomic_writer_preserves_recovery_path_when_new_target_restore_fails(self) -> None:
+        root = self.repo("atomic-new-file-recovery")
+        parent = root / "safe"
+        parent.mkdir()
+        target = parent / "target.md"
+
+        with (
+            mock.patch.object(
+                mutation_helper.os,
+                "unlink",
+                side_effect=OSError("injected persistent cleanup failure"),
+            ),
+            self.assertRaises(mutation_helper.AtomicWriteRecoveryError) as captured,
+        ):
+            mutation_helper.write_file_atomic(
+                target,
+                "planned",
+                trust_root=root,
+                expected_prior=None,
+            )
+
+        self.assertEqual(captured.exception.committed_path, target)
+        self.assertEqual(target.read_text(encoding="utf-8"), "planned\n")
+        self.assertEqual(
+            captured.exception.recovery_path.read_text(encoding="utf-8"),
+            "planned\n",
+        )
+
+    @unittest.skipUnless(
+        os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
+        "post-commit durability regression requires POSIX dir_fd support",
+    )
+    def test_atomic_writer_reports_parent_fsync_failure_as_committed(self) -> None:
+        root = self.repo("atomic-parent-fsync")
+        target = self.write(root, "safe/target.md", "before\n")
+        real_fsync = mutation_helper.os.fsync
+        fsync_calls = 0
+
+        def fail_parent_fsync(descriptor: int) -> None:
+            nonlocal fsync_calls
+            fsync_calls += 1
+            if fsync_calls == 2:
+                raise OSError("injected parent fsync failure")
+            real_fsync(descriptor)
+
+        with (
+            mock.patch.object(mutation_helper.os, "fsync", side_effect=fail_parent_fsync),
+            self.assertRaises(mutation_helper.AtomicWriteCommittedError) as captured,
+        ):
+            mutation_helper.write_file_atomic(
+                target,
+                "planned",
+                trust_root=root,
+            )
+
+        self.assertEqual(captured.exception.committed_path, target)
+        self.assertEqual(target.read_text(encoding="utf-8"), "planned\n")
+
+    @unittest.skipUnless(
+        os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
+        "temporary identity regression requires POSIX dir_fd support",
+    )
+    def test_atomic_writer_restores_target_after_temporary_name_substitution(self) -> None:
+        root = self.repo("atomic-temporary-substitution")
+        parent = root / "safe"
+        parent.mkdir()
+        target = parent / "target.md"
+        target.write_text("before\n", encoding="utf-8")
+        real_exchange = mutation_helper._exchange_posix_names
+        exchanges = 0
+
+        def substitute_then_exchange(
+            parent_descriptor: int,
+            left: str,
+            right: str,
+        ) -> None:
+            nonlocal exchanges
+            if exchanges == 0:
+                os.rename(
+                    left,
+                    f"{left}.detached",
+                    src_dir_fd=parent_descriptor,
+                    dst_dir_fd=parent_descriptor,
+                )
+                injected = os.open(
+                    left,
+                    os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                    0o600,
+                    dir_fd=parent_descriptor,
+                )
+                try:
+                    os.write(injected, b"substituted\n")
+                    os.fsync(injected)
+                finally:
+                    os.close(injected)
+            exchanges += 1
+            real_exchange(parent_descriptor, left, right)
+
+        with (
+            mock.patch.object(
+                mutation_helper,
+                "_exchange_posix_names",
+                side_effect=substitute_then_exchange,
+            ),
+            self.assertRaises(mutation_helper.AtomicWriteConflictError),
+        ):
+            mutation_helper.write_file_atomic(
+                target,
+                "planned",
+                trust_root=root,
+            )
+
+        self.assertEqual(exchanges, 2)
+        self.assertEqual(target.read_text(encoding="utf-8"), "before\n")
+
+    @unittest.skipUnless(
+        os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
         "directory ownership regression requires POSIX dir_fd support",
     )
     def test_atomic_writer_reports_only_directories_it_created(self) -> None:
@@ -577,6 +729,68 @@ class KnowledgeLayerTests(unittest.TestCase):
         self.assertTrue(attempted)
         self.assertEqual(target.read_text(encoding="utf-8"), "after\n")
         self.assertFalse(detached.exists())
+
+    @unittest.skipUnless(os.name == "nt", "Windows temporary identity regression requires Win32")
+    def test_windows_atomic_writer_restores_after_temporary_name_substitution(self) -> None:
+        import ctypes
+
+        root = self.repo("windows-temporary-substitution")
+        parent = root / "safe"
+        parent.mkdir()
+        target = parent / "target.md"
+        target.write_text("before\n", encoding="utf-8")
+        detached = parent / ".detached-intended-payload"
+        real_kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        substituted = False
+
+        class CloseHandleProxy:
+            @property
+            def argtypes(self) -> object:
+                return real_kernel32.CloseHandle.argtypes
+
+            @argtypes.setter
+            def argtypes(self, value: object) -> None:
+                real_kernel32.CloseHandle.argtypes = value
+
+            @property
+            def restype(self) -> object:
+                return real_kernel32.CloseHandle.restype
+
+            @restype.setter
+            def restype(self, value: object) -> None:
+                real_kernel32.CloseHandle.restype = value
+
+            def __call__(self, handle: object) -> object:
+                nonlocal substituted
+                result = real_kernel32.CloseHandle(handle)
+                if not substituted:
+                    temporary = next(parent.glob(".target.md.tmp-*"))
+                    temporary.rename(detached)
+                    temporary.write_text("substituted\n", encoding="utf-8")
+                    substituted = True
+                return result
+
+        close_handle = CloseHandleProxy()
+
+        class Kernel32Proxy:
+            def __getattr__(self, name: str) -> object:
+                if name == "CloseHandle":
+                    return close_handle
+                return getattr(real_kernel32, name)
+
+        with (
+            mock.patch.object(ctypes, "WinDLL", return_value=Kernel32Proxy()),
+            self.assertRaises(mutation_helper.AtomicWriteConflictError),
+        ):
+            mutation_helper.write_file_atomic(
+                target,
+                "planned",
+                trust_root=root,
+            )
+
+        self.assertTrue(substituted)
+        self.assertEqual(target.read_text(encoding="utf-8"), "before\n")
+        self.assertEqual(detached.read_text(encoding="utf-8"), "planned\n")
 
     @unittest.skipUnless(os.name == "nt", "Windows metadata regression requires Win32")
     def test_windows_atomic_writer_preserves_existing_file_attributes(self) -> None:
@@ -1237,6 +1451,75 @@ class KnowledgeLayerTests(unittest.TestCase):
             mutation_helper.normalize_display(recovery),
         )
 
+    def test_legacy_writer_reports_post_commit_failure_as_live_mutation(self) -> None:
+        root = self.repo("legacy-writer-committed")
+        target = self.write(
+            root,
+            "docs/ai/specs/demo-roadmap-MOC.md",
+            "before\n",
+        )
+        rendered = mutation_helper.RenderedSpecIndexMap(
+            target,
+            "demo",
+            "before\n",
+            "after\n",
+        )
+        entry = MUTATION_HELPERS["generate-spec-index-write"]
+        request = SimpleNamespace(
+            request_id="test-legacy-spec-index-committed",
+            mode="apply",
+            inputs={"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+        )
+        with (
+            mock.patch.object(
+                mutation_helper,
+                "render_spec_index",
+                return_value=([rendered], True),
+            ),
+            mock.patch.object(
+                mutation_helper,
+                "write_file_atomic",
+                side_effect=mutation_helper.AtomicWriteCommittedError(
+                    "injected post-commit failure",
+                    target,
+                ),
+            ),
+        ):
+            body = mutation_helper.run_spec_index_write(entry, request)
+
+        mutation = body["data"]["mutation"]
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertTrue(body["data"]["writes_state"])
+        self.assertEqual(mutation["mutation_status"], "partial_failure")
+        self.assertTrue(mutation["live_mutation"])
+        self.assertEqual(mutation["touched_paths"], ["docs/ai/specs/demo-roadmap-MOC.md"])
+        self.assertEqual(
+            body["diagnostics"][0]["details"]["committed_path"],
+            mutation_helper.normalize_display(target),
+        )
+
+    def test_okf_spec_index_response_counts_canonical_rebuild_operations(self) -> None:
+        root = self.repo("okf-spec-index-count")
+        self.init(root)
+        (root / "docs" / "ai" / "knowledge" / "log.md").unlink()
+        entry = MUTATION_HELPERS["generate-spec-index-write"]
+        request = SimpleNamespace(
+            request_id="test-okf-spec-index-count",
+            mode="dry_run",
+            inputs={"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+        )
+
+        body = mutation_helper.run_spec_index_write(entry, request)
+
+        self.assertEqual(body["status"], "ok", body)
+        self.assertEqual(body["data"]["stale_map_count"], 0)
+        self.assertGreater(body["data"]["canonical_rebuild_operation_count"], 0)
+        self.assertEqual(
+            body["data"]["canonical_rebuild_operation_count"],
+            len(body["data"]["mutation"]["planned_operations"]),
+        )
+        self.assertEqual(body["data"]["mutation"]["mutation_status"], "planned")
+
     def test_hash_consistent_malformed_plan_request_is_input_error(self) -> None:
         root = self.repo("malformed-plan-request")
         plan = json.loads(json.dumps(self.plan(root, "init")))
@@ -1419,6 +1702,53 @@ class KnowledgeLayerTests(unittest.TestCase):
         self.assertEqual(body["status"], "expected_failure")
         self.assertEqual(body["diagnostics"][0]["code"], "write_failure")
         self.assertEqual(body["data"]["mutation"]["mutation_status"], "rolled_back")
+        self.assertFalse(body["data"]["writes_state"])
+        self.assertEqual(file_snapshot(root), before)
+        self.assertFalse((root / "docs" / "ai" / "knowledge").exists())
+
+    def test_knowledge_apply_rolls_back_a_reported_post_commit_failure(self) -> None:
+        root = self.repo("post-commit-rollback")
+        plan = self.plan(root, "init")
+        before = file_snapshot(root)
+        real_writer = knowledge_helper.write_file_atomic
+        failed = False
+
+        def commit_then_fail(
+            target: Path,
+            content: str,
+            *,
+            trust_root: Path | None = None,
+            expected_prior: bytes | None | object,
+            created_directory_records: dict[Path, tuple[int, int]] | None = None,
+        ) -> list[mutation_helper.CreatedDirectory]:
+            nonlocal failed
+            created = real_writer(
+                target,
+                content,
+                trust_root=trust_root,
+                expected_prior=expected_prior,
+                created_directory_records=created_directory_records,
+            )
+            if not failed:
+                failed = True
+                raise mutation_helper.AtomicWriteCommittedError(
+                    "injected post-commit failure",
+                    target,
+                )
+            return created
+
+        with mock.patch.object(
+            knowledge_helper,
+            "write_file_atomic",
+            side_effect=commit_then_fail,
+        ):
+            body = self.apply_direct(root, plan)
+
+        self.assertTrue(failed)
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual(body["diagnostics"][0]["code"], "write_failure")
+        self.assertEqual(body["data"]["mutation"]["mutation_status"], "rolled_back")
+        self.assertFalse(body["data"]["mutation"]["live_mutation"])
         self.assertFalse(body["data"]["writes_state"])
         self.assertEqual(file_snapshot(root), before)
         self.assertFalse((root / "docs" / "ai" / "knowledge").exists())

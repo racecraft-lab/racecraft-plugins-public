@@ -25,6 +25,7 @@ from typing import Any, Iterable, Iterator
 
 from ..envelope import diagnostic, response
 from .mutation import (
+    AtomicWriteCommittedError,
     AtomicWriteConflictError,
     AtomicWriteRecoveryError,
     empty_mutation,
@@ -584,8 +585,11 @@ def _run_accepted_knowledge_apply(
     except (KnowledgeError, OSError) as exc:
         rollback_errors = _rollback_writes(backups, repo_root, created_directories)
         residual_paths = _residual_mutation_paths(backups, created_directories)
+        committed_path: str | None = None
         recovery_path: str | None = None
-        if isinstance(exc, AtomicWriteRecoveryError):
+        if isinstance(exc, AtomicWriteCommittedError):
+            committed_path = normalize_display(exc.committed_path)
+        if isinstance(exc, AtomicWriteRecoveryError) and exc.recovery_path is not None:
             recovery_path = normalize_display(exc.recovery_path)
             residual_paths = sorted({*residual_paths, recovery_path})
         mutation["mutation_status"] = "partial_failure" if residual_paths else "rolled_back"
@@ -627,6 +631,7 @@ def _run_accepted_knowledge_apply(
                     "error": type(exc).__name__,
                     "rollback_errors": rollback_errors,
                     "residual_paths": residual_paths,
+                    **({"committed_path": committed_path} if committed_path is not None else {}),
                     **({"recovery_path": recovery_path} if recovery_path is not None else {}),
                 },
             )

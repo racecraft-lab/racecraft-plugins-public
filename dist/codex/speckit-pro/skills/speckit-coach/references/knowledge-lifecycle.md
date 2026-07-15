@@ -96,14 +96,17 @@ changed source, or validation failure must stop, attempt compare-and-swap
 rollback, and report any residual state as a partial failure.
 All canonical knowledge and compatibility-view writers must use
 the shared repository mutation lock, which serializes cooperating SpecKit Pro
-processes. Do not manually edit canonical knowledge or run an uncoordinated file
-writer while apply is active. Apply uses atomic no-replace creation. For an
-existing file it atomically captures the displaced file, verifies those exact
-bytes against the accepted plan, and restores them on mismatch; platforms or
-filesystems without a safe exchange or backup primitive fail closed. If
-automatic restoration fails, the displaced file is preserved under its recovery
-name and reported for manual reconciliation. A final state check detects later
-conflicts.
+processes. Generic mutation helpers reject canonical knowledge and generated
+MOC targets; use the registered knowledge or spec-index operation. Do not
+manually edit canonical knowledge or run an uncoordinated file writer while
+apply is active. Apply uses atomic no-replace creation. For an existing file it
+atomically captures the displaced file, verifies those exact bytes and the
+committed payload identity against the accepted plan, and restores them on
+mismatch; platforms or filesystems without a safe exchange or backup primitive
+fail closed. A failure after the final target becomes visible is rolled back or
+reported as a live partial mutation. If automatic restoration fails, recovery
+bytes are preserved under their recovery name and reported for manual
+reconciliation. A final state check detects later conflicts.
 `generate-spec-index-check` and
 `generate-spec-index-write` are compatibility adapters; use the knowledge
 operations for new flows.

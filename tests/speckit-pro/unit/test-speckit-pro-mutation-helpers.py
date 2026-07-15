@@ -768,6 +768,90 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(len(mutation["applied_operations"]), 1)
             self.assertEqual(mutation["touched_paths"], [rel])
 
+    def test_generic_mutation_rejects_protected_knowledge_surfaces(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        protected_targets = (
+            "docs/ai/knowledge/decisions/current.md",
+            "docs/ai/specs/platform-roadmap-MOC.md",
+            "docs/ai/specs/SPEC-001/SPEC-MOC.md",
+            "specs/SPEC-001/SPEC-MOC.md",
+        )
+        with tmp:
+            for target in protected_targets:
+                with self.subTest(target=target):
+                    completed, response, stderr_records = run_runner(
+                        helper_request(
+                            "mutation-foundation",
+                            mode="apply",
+                            inputs={
+                                "operations": [
+                                    {
+                                        "operation_id": "protected-write",
+                                        "kind": "write_file",
+                                        "target": target,
+                                        "content": "blocked\n",
+                                    }
+                                ]
+                            },
+                        ),
+                        cwd=git_root,
+                    )
+                    self.assertEqual(completed.returncode, 2)
+                    self.assert_response(response, "input_error", 2)
+                    self.assertEqual(
+                        [diag["code"] for diag in stderr_records],
+                        ["protected_knowledge_target"],
+                    )
+                    self.assertFalse((git_root / target).exists())
+
+    def test_generic_mutation_reports_post_commit_failure(self) -> None:
+        from speckit_pro_runner.helpers import mutation
+        from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            target = git_root / "generated" / "committed.md"
+            request = SimpleNamespace(
+                request_id="test-generic-committed-failure",
+                mode="apply",
+                inputs={
+                    "operations": [
+                        {
+                            "operation_id": "committed-write",
+                            "kind": "write_file",
+                            "target": "generated/committed.md",
+                            "content": "committed\n",
+                        }
+                    ]
+                },
+            )
+            with (
+                patch.object(mutation, "find_repo_root", return_value=git_root),
+                patch.object(mutation, "dirty_worktree_diagnostic", return_value=None),
+                patch.object(
+                    mutation,
+                    "write_file_atomic",
+                    side_effect=mutation.AtomicWriteCommittedError(
+                        "injected post-commit failure",
+                        target,
+                    ),
+                ),
+            ):
+                response = mutation.run_mutation_helper(
+                    MUTATION_HELPERS["mutation-foundation"],
+                    request,
+                )
+
+            self.assert_response(response, "expected_failure", 1)
+            state = response["data"]["mutation"]
+            self.assertEqual(state["mutation_status"], "partial_failure")
+            self.assertTrue(state["live_mutation"])
+            self.assertEqual(state["touched_paths"], ["generated/committed.md"])
+            self.assertEqual(
+                response["diagnostics"][0]["details"]["committed_path"],
+                mutation.normalize_display(target),
+            )
+
     def test_apply_rejects_dirty_worktree_without_touching_target(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
