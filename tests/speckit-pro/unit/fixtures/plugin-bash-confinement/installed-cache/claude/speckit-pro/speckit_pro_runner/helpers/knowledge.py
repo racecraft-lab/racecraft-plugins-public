@@ -303,6 +303,9 @@ def run_knowledge_update_apply(entry: Any, request: Any) -> dict[str, Any]:
                 "source_changed",
                 "unreadable_file",
                 "oversized_concept",
+                "oversized_source",
+                "stale_source",
+                "missing_source",
             },
             data=_apply_data(entry, request, mutation, None),
         )
@@ -1938,7 +1941,12 @@ def _build_plan(repo_root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
         log = _render_log(repo_root, action, timestamp, resulting_snapshot)
         explicit_operations.append((_knowledge_target("log.md"), log))
     operations = _materialize_operations(repo_root, explicit_operations)
-    source_preconditions = _build_source_preconditions(repo_root, concepts, operations)
+    source_preconditions = _build_source_preconditions(
+        repo_root,
+        concepts,
+        operations,
+        action=action,
+    )
     content_bytes = sum(len(str(operation["content"]).encode("utf-8")) for operation in operations)
     if len(operations) > MAX_PLAN_OPERATIONS or content_bytes > MAX_PLAN_CONTENT_BYTES:
         raise KnowledgeError(
@@ -3087,6 +3095,8 @@ def _build_source_preconditions(
     repo_root: Path,
     concepts: list[Concept],
     operations: list[dict[str, Any]],
+    *,
+    action: str,
 ) -> list[dict[str, str]]:
     operations_by_target = {str(operation["target"]): operation for operation in operations}
     records: dict[str, dict[str, str]] = {}
@@ -3096,7 +3106,9 @@ def _build_source_preconditions(
         if status == "superseded" or (status == "archived" and not concept_is_planned):
             continue
         for field, raw_path, recorded_digest in _source_token_records(concept):
-            if field == "x-speckit-migration-sources" and not concept_is_planned:
+            if field == "x-speckit-migration-sources" and (
+                action != "migrate" or not concept_is_planned
+            ):
                 continue
             path = _source_path(repo_root, raw_path)
             normalized = repo_relative(path, repo_root)

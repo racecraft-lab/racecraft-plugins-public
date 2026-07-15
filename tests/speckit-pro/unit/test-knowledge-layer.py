@@ -570,7 +570,12 @@ class KnowledgeLayerTests(unittest.TestCase):
             mock.patch.object(knowledge_helper, "_sha256_file", return_value=digest),
         ):
             with self.assertRaises(knowledge_helper.KnowledgeError) as construction_error:
-                knowledge_helper._build_source_preconditions(root, concepts, [])
+                knowledge_helper._build_source_preconditions(
+                    root,
+                    concepts,
+                    [],
+                    action="rebuild",
+                )
         self.assertEqual(construction_error.exception.code, "plan_too_large")
 
     def test_secrets_and_stale_plans_or_snapshots_fail_without_writes(self) -> None:
@@ -806,6 +811,67 @@ class KnowledgeLayerTests(unittest.TestCase):
         after = file_snapshot(root)
         after[source.relative_to(root).as_posix()] = before[source.relative_to(root).as_posix()]
         self.assertEqual(after, before)
+
+    def test_migrated_map_can_be_archived_without_revalidating_cutover_hashes(self) -> None:
+        root = self.repo("migrated-map-archive")
+        self.current_root = root
+        roadmap = self.write(
+            root,
+            "docs/ai/specs/demo-technical-roadmap.md",
+            "# Demo Technical Roadmap\n\n## DEMO-001\n\nReviewed behavior.\n",
+        )
+        self.write(
+            root,
+            "docs/ai/specs/demo-roadmap-MOC.md",
+            "# Demo Roadmap Map\n\nCurated pre-cutover grouping.\n",
+        )
+        completed, _ = self.apply(root, self.plan(root, "migrate", reviewed=True))
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        concept = root / "docs/ai/knowledge/projects/demo/roadmap.md"
+        self.assertIn("x-speckit-migration-sources", concept.read_text(encoding="utf-8"))
+
+        archive = self.plan(
+            root,
+            "archive",
+            concept_path="projects/demo/roadmap.md",
+            sources=[{
+                "path": roadmap.relative_to(root).as_posix(),
+                "section": "archived roadmap",
+                "sha256": sha256(roadmap),
+            }],
+        )
+        completed, _ = self.apply(root, archive)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn('x-speckit-status: "archived"', concept.read_text(encoding="utf-8"))
+
+    def test_apply_classifies_source_drift_as_repository_failure(self) -> None:
+        cases = {
+            "stale": "stale_source",
+            "missing": "missing_source",
+            "oversized": "oversized_source",
+        }
+        for case, expected_code in cases.items():
+            with self.subTest(case=case):
+                root = self.repo(f"apply-source-{case}")
+                self.current_root = root
+                self.init(root)
+                source = self.write(root, "docs/source.md", "Reviewed source.\n")
+                candidate = self.candidate("decisions/source.md", "Source Decision", [source])
+                completed, _ = self.apply(root, self.plan(root, "promote", candidate=candidate))
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                plan = self.plan(root, "rebuild")
+
+                if case == "stale":
+                    source.write_text("Changed source.\n", encoding="utf-8")
+                elif case == "missing":
+                    source.unlink()
+                else:
+                    source.write_bytes(b"x" * (knowledge_helper.MAX_SOURCE_BYTES + 1))
+
+                body = self.apply_direct(root, plan)
+                self.assertEqual(body["status"], "expected_failure")
+                self.assertEqual(body["diagnostics"][0]["code"], expected_code)
+                self.assertFalse(body["data"]["writes_state"])
 
     def test_rollback_failure_reports_residual_writes(self) -> None:
         root = self.repo("rollback-failure")
