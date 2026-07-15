@@ -44,8 +44,8 @@ The design concept is the source of truth for these scoping decisions:
 | Clarify | `/speckit-clarify` | ✅ Complete | Resolved row schema, research boundaries, proof commands, and lifecycle updates |
 | Plan | `/speckit-plan` | ✅ Complete | Created plan, research, data model, quickstart, and MOC refresh |
 | Checklist | `/speckit-checklist` | ✅ Complete | Data integrity, security, integration, and reliability checklists generated; G4 passed |
-| Tasks | `/speckit-tasks` | 🔄 In Progress | Evidence-first docs tasks bounded by the Design Concept |
-| Analyze | `/speckit-analyze` | ⏳ Pending | Check cross-artifact scope and AC-1.* coverage |
+| Tasks | `/speckit-tasks` | ✅ Complete | 35 evidence-first docs tasks generated; G5 passed |
+| Analyze | `/speckit-analyze` | 🔄 In Progress | Check cross-artifact scope and AC-1.* coverage |
 | Confidence Gate | G6.5 | ⏳ Pending | Record pre-Implement confidence and mode before implementation |
 | Implement | `/speckit-implement` | ⏳ Pending | Produce and validate the taxonomy artifact only |
 | Post | post-implementation | ⏳ Pending | Run canonical verification, PR, review, and retrospective items |
@@ -560,9 +560,9 @@ Focus on HRNS-001 requirements:
 
 | Metric | Value |
 |--------|-------|
-| Total Tasks | |
-| Phases | Foundation, US1 inventory, US1 candidate/safety, US1 proof, Polish |
-| Parallel Opportunities | |
+| Total Tasks | 35 |
+| Phases | Setup, Foundational, US1 implementation, Polish & Validation |
+| Parallel Opportunities | T004-T007, T012-T014, T020-T023, T029-T030 |
 | User Stories Covered | US1 |
 
 ---
@@ -575,10 +575,10 @@ does not create PRs or branches.
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
-| **Releasable** | | `true`, or `false` when release safety requires it |
-| **Signals** | | Decisive structural findings |
-| **Warnings** | | Release-safety warnings, if any |
+| **Route** | `one-navigable-PR` | `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
+| **Releasable** | `true` | `true`, or `false` when release safety requires it |
+| **Signals** | `change-shape:modify-heavy` | Decisive structural findings |
+| **Warnings** | none | Release-safety warnings, if any |
 
 ```text
 runner helper atomicity-route specs/hrns-001-harness-surface-inventory-gap-taxonomy

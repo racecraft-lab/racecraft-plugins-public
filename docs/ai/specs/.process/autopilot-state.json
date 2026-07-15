@@ -3,8 +3,8 @@
   "feature_dir": "specs/hrns-001-harness-surface-inventory-gap-taxonomy",
   "spec_id": "HRNS-001",
   "branch": "hrns-001-harness-surface-inventory-gap-taxonomy",
-  "updated_at": "2026-07-15T23:04:31Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-07-15T23:09:24Z",
+  "active_step": "Phase 6: Analyze",
   "confidence_gate_mode": "advisory",
   "project_commands": {
     "BUILD": "N/A",
@@ -178,6 +178,51 @@
           "specs/hrns-001-harness-surface-inventory-gap-taxonomy/SPEC-MOC.md"
         ]
       }
+    },
+    "tasks": {
+      "status": "completed",
+      "artifacts": [
+        "specs/hrns-001-harness-surface-inventory-gap-taxonomy/tasks.md"
+      ],
+      "task_count": 35,
+      "phases": [
+        "Setup",
+        "Foundational",
+        "US1 implementation",
+        "Polish & Validation"
+      ],
+      "parallel_opportunities": [
+        "T004-T007",
+        "T012-T014",
+        "T020-T023",
+        "T029-T030"
+      ],
+      "user_stories": [
+        "US1"
+      ],
+      "g5": {
+        "status": "pass",
+        "markers": 0,
+        "task_count": 35,
+        "request_id": "hrns-001-g5-tasks-check"
+      },
+      "atomicity_route": {
+        "route": "one-navigable-PR",
+        "releasable": true,
+        "signals": [
+          "change-shape:modify-heavy"
+        ],
+        "warnings": [],
+        "request_id": "hrns-001-atomicity-route-after-tasks"
+      },
+      "spec_index": {
+        "status": "applied",
+        "helper_id": "generate-spec-index-write",
+        "request_id": "hrns-001-generate-spec-index-apply-phase-5",
+        "touched_paths": [
+          "specs/hrns-001-harness-surface-inventory-gap-taxonomy/SPEC-MOC.md"
+        ]
+      }
     }
   },
   "plan": [
@@ -201,8 +246,8 @@
     {"step": "Phase 4: Checklist - Integration Consensus", "status": "completed"},
     {"step": "Phase 4: Checklist - Reliability", "status": "completed"},
     {"step": "Phase 4: Checklist - Reliability Consensus", "status": "completed"},
-    {"step": "Phase 5: Tasks", "status": "in_progress"},
-    {"step": "Phase 6: Analyze", "status": "pending"},
+    {"step": "Phase 5: Tasks", "status": "completed"},
+    {"step": "Phase 6: Analyze", "status": "in_progress"},
     {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
     {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
     {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
