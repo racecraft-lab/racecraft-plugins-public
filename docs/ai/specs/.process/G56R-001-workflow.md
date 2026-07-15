@@ -755,7 +755,7 @@ metadata, generated release artifacts, or unrelated configuration.
 | Evidence and inventory | T009–T013 | Complete | Reconciled official, project, and environment evidence; no blocking conflict; three owned downstream defects; focused test 45/45; completed tasks: T001–T013 |
 | Role contracts and candidates | T014–T019 | Complete | Twelve immutable semantic contracts, canonical identities, candidates, fixtures, telemetry, and owned unknowns recorded; completed tasks: T014–T019 |
 | Narrative and manifest | T020–T022 | Complete | Twelve lexical agent records and the exact normalized Markdown projection agree; focused test 45/45; completed tasks: T020–T022 |
-| Validation and handoff | T023–T026 | Complete | Terminal `go`; focused 56/56; checker PASS twice; final uninterrupted default suite 2814/2814; completed tasks: T023–T026 |
+| Validation and handoff | T023–T026 | Complete | Terminal `go`; focused 56/56; checker PASS twice; final uninterrupted default suite 2834/2834; completed tasks: T023–T026 |
 
 ---
 
@@ -764,19 +764,16 @@ metadata, generated release artifacts, or unrelated configuration.
 | Item | Status | Evidence |
 |------|--------|----------|
 | Post: Doctor Extension Check | Complete | PASS: 5 checks; 5 PASS, 0 WARN, 0 FAIL |
-| Post: Verify Implementation | Complete | 26/26 tasks; checker PASS twice; focused 56/56; final uninterrupted default suite 2814/2814 |
+| Post: Verify Implementation | Complete | 26/26 tasks; checker PASS twice; focused 56/56; final uninterrupted default suite 2834/2834 |
 | Post: Verify Tasks Phantom Check | Complete | 26 VERIFIED, 0 flagged after adversarial reconciliation |
-| Post: Code Review | Complete | Three adversarial agents approved after the unreachable research pin and final aggregate mismatch were remediated |
-| Post: Integration Suite | Complete | Layer 1 1427/1427; Layer 4 1201/1201; Layer 5 186/186; integration 257/257; default 2814/2814 |
+| Post: Code Review | Complete | Three adversarial agents approved; five RepoPrompt review passes closed every cited defect and the final source verdict was `ZERO FINDINGS` |
+| Post: Integration Suite | Complete | Layer 1 1427/1427; Layer 4 1221/1221; Layer 5 186/186; integration 257/257; default 2834/2834 |
 | Post: Reviewability Diff Gate | Complete | User-authorized single combined PR; typed `Reviewability-Exception: infra` recorded without correctness/test waivers |
 | Post: Self-Review | Complete | 0 edge-case gaps, requirement/task orphans, silent markers, or tidiness findings |
 | Post: UAT Runbook Generation | Skipped | `skipped: generate-uat-skeleton deferred`; no committed source-derived runbook exists |
-| Post: Final Reviewability Backstop | Complete | Combined-PR exception recorded for the measured combined scope; no correctness, test, source-freshness, or PR-verification waiver |
-| Post: Adversarial Review and Durable PR Recovery | Complete | Tavily official/community research plus three independent agents approved G56R and cross-client autopilot hardening after D-09 remediation |
-| Post: PR Packet/Body Generation | Complete | Schema 1.1 packet binds the final remediated base/source revisions, full-index diff, and `whole_body_v2`; read-only validation passed |
-| Post: PR Body Generation | Complete | Packet-owned body contains all required headings and exactly one release-note block |
+| Post: PR Body Generation | Complete | Schema 1.1 draft packet/body passed committed read-only validation with an independently authorized source-commit trailer; final artifacts are regenerated from this reconciled state |
 | Post: PR Creation | Complete | Unique live PR [#348](https://github.com/racecraft-lab/racecraft-plugins-public/pull/348) verified with head `g56r-001-candidate-route-baseline` and base `main` |
-| Post: Review Remediation | Complete | PR #348: 10 duplicated empty-handler findings fixed through shared-source generation; 1 unsafe fallback request resolved with fail-closed security rationale; stale docs reference regenerated; Linux heavy-preflight checkouts now fetch full history for the frozen-revision ancestry gate |
+| Post: Review Remediation | Complete | PR #348 threads are resolved; RepoPrompt findings closed source binding, body authorization, atomic no-clobber/durability reporting, secure capability preflight, UTF-8 handling, title validation, and exact 12-row Claude/Codex parity; final verdict `ZERO FINDINGS` |
 | Post: Retrospective | Complete | 26/26 tasks, 100% spec adherence, 0 unresolved findings, and final adversarial remediation evidence recorded |
 
 ### Reviewability Diff Gate
@@ -784,9 +781,9 @@ metadata, generated release artifacts, or unrelated configuration.
 | Field | Result |
 |-------|--------|
 | Status | WARN; `pass: true` |
-| Full branch snapshot | final packet projection: 127 files, 34,331 additions, 8,472 deletions after rebasing onto current main |
+| Full branch snapshot | final packet projection: 134 changed files under the user-authorized combined-PR exception |
 | Original G56R boundary | Six paths: three delivery plus three validation; 0 production LOC/files |
-| Shared plugin source | 14 `speckit-pro/` source/trust-metadata paths, 1,172 additions and 132 deletions; four shared runtime helpers carry 824 lines of churn |
+| Shared plugin source | 13 reviewable `speckit-pro/` source paths, 1,702 changed lines; generated payloads and trust metadata are counted separately |
 | Generated parity | Claude, Codex, and installed-cache payload/proof copies are generator-owned and independently parity-checked |
 | Gate taxonomy | The legacy estimator reports 0 production files because plugin Python/Markdown/JSON paths are outside its `src/app/lib/scripts` taxonomy; the explicit source counts above prevent that result from hiding plugin impact |
 | Atomicity | User-required `one-navigable-PR`; research evidence exposes the terminal failure and the shared repair proves the recovered path |
@@ -851,12 +848,14 @@ that diff receives a fresh final review and suite run before PR creation.
   combined route and waives no correctness or verification gate.
 - The failure mode was that `pr-packet-output` could be deferred and PR
   creation could terminate as a skip. A packet could also outlive the source
-  revision it described. The shared Python runner now emits revision-bound
-  schema 1.1 packets, while both Codex and Claude completion contracts make
-  packet validation, push, idempotent PR reconciliation, and verified PR
-  creation non-skippable.
-- Clean source commit `4642c167` produced a validated schema 1.1 packet and
-  packet-owned body. The rebased branch was pushed with an explicit OID lease,
+  revision it described or self-authorize changed protected prose. The shared
+  Python runner now emits revision-bound schema 1.1 packets whose protected
+  body is independently authorized by the immutable source commit. Both Codex
+  and Claude use the same 12-row Post inventory and make packet validation,
+  push, idempotent PR reconciliation, and verified PR creation non-skippable.
+- Draft source authorization commit `5b67f594` produced packet commit
+  `8b3743d5`; committed read-only validation passed with `pr_blocked=false`.
+  The rebased branch was pushed with an explicit OID lease,
   exact-head/base reconciliation returned no existing PR, and GitHub created
   [PR #348](https://github.com/racecraft-lab/racecraft-plugins-public/pull/348).
 - A post-create lookup returned exactly one open PR with the recorded number,
@@ -878,9 +877,23 @@ that diff receives a fresh final review and suite run before PR creation.
   relative no-follow writes are unavailable. That change was rejected because
   it restores the symlink-swap TOCTOU the repair closes. The intentional
   fail-closed behavior remains explicit and is shared by both client payloads.
-- Remediation verification: focused mutation 33/33, payload confinement
+- Remediation verification: focused mutation 37/37, read-only 49/49,
+  spec-index 12/12, Post parity 48/48, payload confinement
   121/121, docs reference current, generated release artifacts current,
-  integration 257/257, and final uninterrupted default suite 2814/2814.
+  integration 257/257, and final uninterrupted default suite 2834/2834.
+
+### Final RepoPrompt Adversarial Remediation
+
+- The first full pass found stale base binding, self-authorizing protected body
+  evidence, a no-overwrite race, ambiguous committed durability state, platform
+  prerequisite gaps, mutable Git snapshots, non-UTF-8 crashes, and multiline
+  title acceptance. A focused lifecycle pass also found Claude/Codex resume and
+  Post-ownership drift.
+- The next source pass found four residual gaps: committed protected-body
+  tampering, spec-index committed-state and platform-preflight behavior, and
+  contradictory Post inventories. The following pass found one missing
+  rename-at capability probe. Commits `ee1e6874` and `f7ad883a` closed them.
+- The final clean-source review at `f7ad883a` returned `ZERO FINDINGS`.
 
 ### Final Research-Pin Remediation
 
@@ -932,8 +945,8 @@ that diff receives a fresh final review and suite run before PR creation.
   after the first implementation checkpoint; exact guard coverage and all
   scope declarations were then reconciled in `bd0d692c`.
 - Adding the mandated verify-tasks report and durable recovery regressions
-  increased the manifest-driven Layer 4 count, requiring a final evidence
-  refresh before the uninterrupted 2813/2813 run.
+  increased the manifest-driven Layer 4 count, requiring repeated evidence
+  refreshes before the final uninterrupted 2834/2834 run.
 - Codex.app archived the outer worktree during two verification attempts. Both
   interrupted runs failed only after the checkout disappeared and are invalid
   infrastructure evidence; the worktree was unarchived, Git registration was
@@ -942,6 +955,10 @@ that diff receives a fresh final review and suite run before PR creation.
   and marked PR creation skipped. Adversarial recovery showed that completion
   must fail closed, and that packet source freshness must be cryptographically
   bound before any GitHub side effect.
+- A packet-owned checksum was insufficient because a clean packet commit could
+  change protected prose and recompute the checksum. The final flow dry-runs
+  the body, records its digest on an otherwise packet-free source commit, and
+  validates the committed packet against that independent authorization.
 - Rebase reconciliation updated phase checkpoint fields but missed the repeated
   research-wide immutable revision. The final gate now verifies Git object
   reachability and ancestry after history rewrites.

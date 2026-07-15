@@ -14,7 +14,7 @@ requirements:
   unspecified: 0
 findings:
   critical: 0
-  significant: 7
+  significant: 8
   minor: 2
   positive: 4
   unresolved: 0
@@ -31,7 +31,7 @@ exactly 12 agents, 10 present routes, 2 explicit route absences, 3 current
 fixtures, and 9 missing fixtures. The corrected checker passes twice, and the
 focused adversarial suite records 56/56. The independent task audit still
 records 26 VERIFIED items. The final uninterrupted default suite records
-2814/2814, with Layer 1 at 1427/1427, Layer 4 at 1201/1201, and Layer 5 at
+2834/2834, with Layer 1 at 1427/1427, Layer 4 at 1221/1221, and Layer 5 at
 186/186.
 
 Spec adherence is 100%. Two numbered requirements, FR-026 and SC-010, were
@@ -60,14 +60,13 @@ live PR verification.
   `2026-07-14T17:43:58-05:00`, within the predeclared deadline of
   `2026-07-14T20:45:56-05:00`.
 - Current verification: checker PASS twice; focused artifacts 56/56; runner
-  guard 11/11; mutation 33/33; read-only 48/48; eval 19/19; integration
-  257/257; Layer 1 1427/1427; Layer 4 1201/1201; Layer 5 186/186; default
-  2814/2814; generated payload parity and release-artifact checks PASS.
-- Final combined review surface after rebasing onto current main and restoring
-  the final packet: 127 files, 34,331 additions, and 8,472 deletions. Within
-  that set, 14 shared
-  `speckit-pro/` source/trust-metadata paths contribute 1,172 additions and 132
-  deletions; four runtime helpers account for 824 lines of churn. Generated
+  guard 11/11; mutation 37/37; read-only 49/49; spec-index 12/12; Post parity
+  48/48; eval 19/19; integration 257/257; Layer 1 1427/1427; Layer 4
+  1221/1221; Layer 5 186/186; default 2834/2834; generated payload parity and
+  release-artifact checks PASS.
+- Final combined review surface projects 134 changed files. Within that set,
+  13 reviewable `speckit-pro/` source paths account for 1,702 changed lines.
+  Generated
   Claude, Codex, and installed-cache copies remain generator-owned evidence.
 - PR recovery: source-bound schema 1.1 packet validation passed, exact
   head/base reconciliation found no prior PR, and GitHub created unique
@@ -77,7 +76,9 @@ live PR verification.
   duplicated empty-handler findings were fixed once in shared source and
   regenerated across client payloads; one proposed insecure fallback was
   resolved with the fail-closed TOCTOU rationale; both Linux heavy-preflight checkouts now fetch full history.
-  The post-fix default suite passes 2814/2814 and integration passes 257/257.
+  RepoPrompt then iterated through every remaining lifecycle defect until its
+  clean-source verdict was `ZERO FINDINGS`. The post-fix default suite passes
+  2834/2834 and integration passes 257/257.
 
 ## Proposed Spec Changes
 
@@ -141,7 +142,7 @@ from the adherence denominator.
 | SC-005 | Implemented | Official and project provenance is complete, current to the research date/revision, and conflict-labeled. |
 | SC-006 | Implemented | Four surfaces and three source-observation classes remain distinct; sanitization tests pass. |
 | SC-007 | Implemented | Fixture inventory and contracts reproduce the exact 3/9 split and non-release label. |
-| SC-008 | Implemented | Structured checker and 55 focused tests prove parsing, source-body identity, hashing, canonicalization, provenance matrices, and cross-artifact agreement. |
+| SC-008 | Implemented | Structured checker and 56 focused tests prove parsing, source-body identity, hashing, canonicalization, provenance matrices, and cross-artifact agreement. |
 | SC-009 | Implemented | Two identical checker runs and the admission binding reproduce the same `go` and downstream owners. |
 | SC-010 | Modified | The G56R slice is exactly 3 delivery plus 3 validation paths, including the exact guard allowance; its production impact remains zero. The later combined plugin recovery is separately authorized and not counted as G56R implementation scope. |
 
@@ -170,11 +171,12 @@ from the adherence denominator.
 | D-06 | SIGNIFICANT | Resolved | The human inventory overclaimed Claude parity chains and omitted reciprocal links from the two real Claude payloads to shared consumers. Inventory checks now require the exact physical set and reciprocal links. | Narrative counting drifted beyond the plan's scoped parity sources. Validate both missing and unexpected entries against a frozen physical set. |
 | D-07 | MINOR | Resolved | The first terminal timestamp preceded material review fixes, and Tasks state attributed 26 tasks to the 22-task checkpoint. The final stop is re-frozen after remediation, and state distinguishes the initial and Analyze-remediated checkpoints. | Phase summaries were updated independently from source history. Derive checkpoint counts from the recorded commits before completion. |
 | D-08 | SIGNIFICANT | Resolved | Autopilot ended with PR creation marked skipped because packet output was deferred; old packets also lacked source-revision freshness. Shared runner helpers and both client contracts now make packet/push/verified PR creation fail closed, revision-bound, and idempotently reconciled. | Optional and required Post rows shared the same skip semantics. Encode terminal completion as a verified external invariant, not a prose convention. |
-| D-09 | SIGNIFICANT | Resolved | Final adversarial review found that the research narrative and manifest still named unreachable pre-rebase revision `7f8c1736…`, and the task report retained the pre-regression final-suite aggregate. All project evidence now binds equivalent rebased checkpoint `b03c4438…`; focused validation requires that revision to exist and be a `HEAD` ancestor; CI fetches full history; every current aggregate is 2814/2814. | Rebase reconciliation updated phase checkpoints but not the repeated immutable research pin, while independent phase summaries allowed an old aggregate to survive. Run reachability, ancestry, and exhaustive cross-artifact total sweeps after every history rewrite or test-count change. |
+| D-09 | SIGNIFICANT | Resolved | Final adversarial review found that the research narrative and manifest still named unreachable pre-rebase revision `7f8c1736…`, and the task report retained the pre-regression final-suite aggregate. All project evidence now binds equivalent rebased checkpoint `b03c4438…`; focused validation requires that revision to exist and be a `HEAD` ancestor; CI fetches full history; every current aggregate is 2834/2834. | Rebase reconciliation updated phase checkpoints but not the repeated immutable research pin, while independent phase summaries allowed an old aggregate to survive. Run reachability, ancestry, and exhaustive cross-artifact total sweeps after every history rewrite or test-count change. |
+| D-10 | SIGNIFICANT | Resolved | Repeated RepoPrompt review found residual packet self-authorization, spec-index durability/prerequisite gaps, contradictory Claude/Codex Post inventories, and a missing rename-at capability probe. Source commits now independently authorize protected bodies; all mutation helpers preflight the complete descriptor-relative capability set and report committed writes; both clients share the exact 12-row inventory. The final review at `f7ad883a` returned `ZERO FINDINGS`. | Earlier regression tests proved dirty-worktree tampering but not a clean recomputed packet commit, and capability/parity checks sampled phrases rather than complete contracts. Test the fully committed adversarial path and compare canonical inventories/capability sets exactly. |
 
 No G56R requirement was dropped, relaxed, or left partial. D-01/D-02 were
 resolved in the original implementation history; D-03 through D-07 and D-09
-were found by the user-mandated Tavily and adversarial rereview. D-08 is the
+were found by the user-mandated Tavily and adversarial rereview. D-08 and D-10 are the
 separately authorized plugin recovery required to finish the same autopilot run.
 
 ## Innovations and Best Practices
@@ -184,13 +186,14 @@ separately authorized plugin recovery required to finish the same autopilot run.
 | P-01 | POSITIVE | The human narrative has a non-circular deterministic hash that excludes the normalized projection and substitutes its own marker, so prose drift cannot hide behind machine projection agreement. | Reuse for future dual human/machine research packets. Keep it feature-local unless a second concrete use appears; not yet a constitution candidate. |
 | P-02 | POSITIVE | Candidate rationale, eligibility, and incompatibility evidence must resolve inside that candidate's provenance, while surface claims require official evidence matching both surface and feature. | Reuse as an evidence-integrity checklist pattern in G56R-002/G56R-003. Prefer checklist guidance over a generic validation framework. |
 | P-03 | POSITIVE | The existing public-claim guard was broadened by exactly two file paths, not by a directory prefix, and received a direct 11/11 proof. | Reuse exact allowlisting for future research-only artifacts. This already follows KISS/YAGNI and does not require a constitution amendment. |
-| P-04 | POSITIVE | PR packets bind base/source revisions, full-index diff identity, body normalization profile, and permitted packet-only dirty paths; completion then reconciles an existing PR before or after create. | Reuse this shared runner contract for both Codex and Claude Code autopilot. Treat a missing or ambiguous PR as incomplete, never skipped. |
+| P-04 | POSITIVE | PR packets bind base/source revisions, full-index diff identity, body normalization profile, and an independent source-commit body authorization; completion then reconciles an existing PR before or after create. | Reuse this shared runner contract for both Codex and Claude Code autopilot. Treat a missing or ambiguous PR as incomplete, never skipped. |
 
 ## Adversarial External Review
 
 Tavily-backed review and three independent adversarial agents produced final
-provenance and aggregate-consistency blockers under D-09; both are resolved,
-and the stable-head disposition is APPROVE. Official OpenAI documentation
+provenance and aggregate-consistency blockers under D-09. RepoPrompt then
+iterated over the plugin recovery until its final clean-source review returned
+`ZERO FINDINGS`; all D-10 findings are resolved. Official OpenAI documentation
 remains the authority for platform behavior; community sources are nonbinding
 hardening and evaluation guidance.
 
@@ -209,7 +212,7 @@ hardening and evaluation guidance.
 | I. Plugin Structure Compliance | PASS | Shared behavior stays in `speckit_pro_runner`; Codex and Claude skill/reference surfaces both consume it; repository tests remain under `tests/speckit-pro/`. |
 | II. Cross-Platform Runtime & Script Safety | PASS | Runtime changes use Python 3.11 standard library, argument arrays, canonical Git object IDs, atomic writes, and trust-root symlink checks; no Bash or `jq` dependency was added. |
 | III. Semantic Versioning | PASS | No version file is hand-edited. The `fix` PR carries one release-note block so release automation owns the eventual bump and generated release artifacts. |
-| IV. Test Coverage Before Merge | PASS | G56R has 56 focused cases; mutation, read-only, and both-client eval regressions cover the durable PR path; the final uninterrupted default suite passes 2814/2814. |
+| IV. Test Coverage Before Merge | PASS | G56R has 56 focused cases; mutation, read-only, spec-index, and both-client parity regressions cover the durable PR path; the final uninterrupted default suite passes 2834/2834. |
 | V. Conventional Commits | PASS | Existing commits are conventional; remediation and packet commits will use narrow conventional scopes, and the PR title includes `G56R-001`. |
 | VI. KISS, Simplicity & YAGNI | PASS | The repair extends the existing runner/schema/reference path and existing tests; it adds no new shell, package, service, or duplicate client runtime. |
 
@@ -294,7 +297,7 @@ seeks to amend `spec.md`, it must pass a new explicit human confirmation gate.
 | `docs/ai/research/codex-agent-route-candidates.md` | Human evidence record, contracts, candidate catalog, fixtures, unknowns, handoff | FR-001-FR-025, FR-027; SC-001-SC-009 |
 | `docs/ai/research/codex-agent-route-candidate-manifest.json` | Versioned agent-centric machine projection and admission binding | FR-001-FR-025; SC-001-SC-009 |
 | `specs/g56r-001-candidate-route-baseline/check-artifacts.py` | Fixed-path offline completeness and agreement checker | FR-002-FR-026; SC-002-SC-009 |
-| `tests/speckit-pro/unit/test-g56r-001-artifacts.py` | 55 focused positive and negative artifact-contract tests | FR-002-FR-027; SC-002-SC-010 |
+| `tests/speckit-pro/unit/test-g56r-001-artifacts.py` | 56 focused positive and negative artifact-contract tests | FR-002-FR-027; SC-002-SC-010 |
 | `tests/speckit-pro/suite-manifest.json` | Single Layer 4 membership declaration | FR-026; SC-010 |
 | `tests/speckit-pro/unit/test-speckit-pro-runner.py` | Exact two-research-file public-claim guard allowance | FR-026; SC-010 |
 
@@ -316,13 +319,14 @@ seeks to amend `spec.md`, it must pass a new explicit human confirmation gate.
   `specs/g56r-001-candidate-route-baseline/verify-tasks-report.md`.
 - Implementation history: `a0c955d5` published the baseline; `bd0d692c`
   resolved independent-review findings; `ed94b81c` refreshed verification
-  evidence; `a7beee1e` recorded the stable pre-recovery suite totals.
+  evidence; `a7beee1e` recorded the stable pre-recovery suite totals;
+  `ee1e6874` and `f7ad883a` closed the final RepoPrompt lifecycle findings.
 
 ## Required Self-Assessment
 
 | Check | Result | Basis |
 |---|---|---|
-| Evidence completeness | PASS | D-01 through D-08 cite paths, behaviors, root causes, and verification; positive findings cite their implementations. |
+| Evidence completeness | PASS | D-01 through D-10 cite paths, behaviors, root causes, and verification; positive findings cite their implementations. |
 | Coverage integrity | PASS | Every FR-001-FR-027 and SC-001-SC-010 appears exactly once; the absence of NFR IDs is explicit. |
 | Metrics sanity | PASS | Completion is 26/26; adherence uses 35 implemented + 2 modified over 37 non-unspecified requirements. |
 | Severity consistency | PASS | No residual or constitutional issue is labeled below its impact; the significant and minor deviations are explicitly resolved. |
