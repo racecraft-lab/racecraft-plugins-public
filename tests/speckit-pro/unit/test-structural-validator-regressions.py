@@ -92,9 +92,9 @@ class Layer1ValidatorRegressionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             write_valid_agent_instruction_tree(root)
-            (root / "CLAUDE.md").write_text("@AGENTS.md\n\nExtra local rule.\n", encoding="utf-8")
+            (root / "CLAUDE.md").write_text("@./AGENTS.md\n\nExtra local rule.\n", encoding="utf-8")
             errors = agent_instructions.collect_errors(root)
-            self.assertIn("CLAUDE.md must contain only '@AGENTS.md'", "\n".join(errors))
+            self.assertIn("CLAUDE.md must contain only '@./AGENTS.md'", "\n".join(errors))
 
     def test_agent_instruction_validator_rejects_unexpected_agent_scope(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

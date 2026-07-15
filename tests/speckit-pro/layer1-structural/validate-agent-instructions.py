@@ -20,7 +20,7 @@ EXPECTED_AGENT_DIRS = (
     Path("tests/speckit-pro"),
     Path("docs-site"),
 )
-CLAUDE_WRAPPER = "@AGENTS.md\n"
+CLAUDE_WRAPPER = "@./AGENTS.md\n"
 GEMINI_WRAPPER = "@./AGENTS.md\n"
 COPILOT_POINTER = (
     "# Copilot Instructions\n"
