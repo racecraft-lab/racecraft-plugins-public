@@ -1002,8 +1002,11 @@ executable before capability probing** (FR-022, AC-1.5, SC-004).
 > **Self-containment assertion (read first).** This handoff is composed entirely from the pinned comparator
 > (`speckit-pro-v2.19.1`), the tracked repository tree, and cited official documentation. It consumes **no**
 > CAR-002 result, and it asserts **no** candidate route is executable before the capability questions below
-> are answered by probing. A CAR-002 implementer can freeze the executable candidate set from this record
-> and manifest alone, without re-deriving any role contract or re-reading agent source (SC-004).
+> are answered by probing. A CAR-002 implementer can freeze the candidate set — the role contracts, the
+> candidate tuples, and their recorded project-level eligibility — and design the capability probes from this
+> record and manifest alone, without re-deriving any role contract or re-reading agent source (SC-004); the
+> **executable** subset is established only after those probes and CAR-003 qualification, never from these
+> artifacts alone.
 
 *Statement class: `[INFERENCE]`/`[POLICY]` — this section composes the cited facts and the manifest into a
 handoff and states a go/no-go decision (proposed SpecKit Pro policy); it asserts no new platform fact.*
@@ -1053,8 +1056,8 @@ No mandatory fact was dropped or left in a silent or unclassifiable state; each 
 
 ### Decision
 
-- **GO — the baseline handoff is complete.** CAR-002 has everything it needs to design capability probes and
-  then freeze the executable candidate set: the provisional manifest, the role-contract catalog, the
+- **GO — the baseline handoff is complete.** CAR-002 has everything it needs to design capability probes and,
+  once those probes resolve the candidate routes, freeze the executable subset: the provisional manifest, the role-contract catalog, the
   candidate tuples (project-level eligibility recorded, environment-time availability probe-gated), the
   fixture backlog, the telemetry requirements, and the six capability questions — all dated and cited, with
   zero shipped-default change (SC-006).
