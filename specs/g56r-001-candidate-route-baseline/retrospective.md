@@ -64,7 +64,7 @@ live PR verification.
   257/257; Layer 1 1427/1427; Layer 4 1201/1201; Layer 5 186/186; default
   2814/2814; generated payload parity and release-artifact checks PASS.
 - Final combined review surface after rebasing onto current main and restoring
-  the final packet: 126 files, 34,327 additions, and 8,472 deletions. Within
+  the final packet: 127 files, 34,331 additions, and 8,472 deletions. Within
   that set, 14 shared
   `speckit-pro/` source/trust-metadata paths contribute 1,172 additions and 132
   deletions; four runtime helpers account for 824 lines of churn. Generated
@@ -76,8 +76,8 @@ live PR verification.
 - PR remediation: the stale generated test-reference page was refreshed; ten
   duplicated empty-handler findings were fixed once in shared source and
   regenerated across client payloads; one proposed insecure fallback was
-  resolved with the fail-closed TOCTOU rationale. The post-fix default suite
-  passes 2814/2814 and integration passes 257/257.
+  resolved with the fail-closed TOCTOU rationale; both Linux heavy-preflight checkouts now fetch full history.
+  The post-fix default suite passes 2814/2814 and integration passes 257/257.
 
 ## Proposed Spec Changes
 

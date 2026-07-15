@@ -776,7 +776,7 @@ metadata, generated release artifacts, or unrelated configuration.
 | Post: PR Packet/Body Generation | Complete | Schema 1.1 packet binds the final remediated base/source revisions, full-index diff, and `whole_body_v2`; read-only validation passed |
 | Post: PR Body Generation | Complete | Packet-owned body contains all required headings and exactly one release-note block |
 | Post: PR Creation | Complete | Unique live PR [#348](https://github.com/racecraft-lab/racecraft-plugins-public/pull/348) verified with head `g56r-001-candidate-route-baseline` and base `main` |
-| Post: Review Remediation | Complete | PR #348: 10 duplicated empty-handler findings fixed through shared-source generation; 1 unsafe fallback request resolved with fail-closed security rationale; stale docs reference regenerated |
+| Post: Review Remediation | Complete | PR #348: 10 duplicated empty-handler findings fixed through shared-source generation; 1 unsafe fallback request resolved with fail-closed security rationale; stale docs reference regenerated; Linux heavy-preflight checkouts now fetch full history for the frozen-revision ancestry gate |
 | Post: Retrospective | Complete | 26/26 tasks, 100% spec adherence, 0 unresolved findings, and final adversarial remediation evidence recorded |
 
 ### Reviewability Diff Gate
@@ -784,7 +784,7 @@ metadata, generated release artifacts, or unrelated configuration.
 | Field | Result |
 |-------|--------|
 | Status | WARN; `pass: true` |
-| Full branch snapshot | final packet projection: 126 files, 34,327 additions, 8,472 deletions after rebasing onto current main |
+| Full branch snapshot | final packet projection: 127 files, 34,331 additions, 8,472 deletions after rebasing onto current main |
 | Original G56R boundary | Six paths: three delivery plus three validation; 0 production LOC/files |
 | Shared plugin source | 14 `speckit-pro/` source/trust-metadata paths, 1,172 additions and 132 deletions; four shared runtime helpers carry 824 lines of churn |
 | Generated parity | Claude, Codex, and installed-cache payload/proof copies are generator-owned and independently parity-checked |
