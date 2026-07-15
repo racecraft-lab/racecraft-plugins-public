@@ -86,6 +86,8 @@ For `migrate`, reviewed cutover carries `reviewed: true` and
 `legacy_memory_reviewed: true`. For `promote`, plan inputs also carry `candidate`; for `supersede`,
 `concept_path` and `replacement`; for `archive`, `concept_path` and optional
 `sources`. An optional RFC 3339 `timestamp` with a timezone makes a plan reproducible.
+Legacy maps marked `superseded` without reciprocal replacement evidence migrate
+as canonical `archived` concepts and retain their exact legacy status metadata.
 
 For mutations, always run plan first, show its proposed operations and warnings,
 and apply only the exact accepted plan. The hash-bound plan includes source
@@ -98,8 +100,10 @@ processes. Do not manually edit canonical knowledge or run an uncoordinated file
 writer while apply is active. Apply uses atomic no-replace creation. For an
 existing file it atomically captures the displaced file, verifies those exact
 bytes against the accepted plan, and restores them on mismatch; platforms or
-filesystems without a safe exchange or backup primitive fail closed. A final
-state check detects later conflicts.
+filesystems without a safe exchange or backup primitive fail closed. If
+automatic restoration fails, the displaced file is preserved under its recovery
+name and reported for manual reconciliation. A final state check detects later
+conflicts.
 `generate-spec-index-check` and
 `generate-spec-index-write` are compatibility adapters; use the knowledge
 operations for new flows.

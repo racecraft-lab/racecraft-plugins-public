@@ -26,6 +26,7 @@ from typing import Any, Iterable, Iterator
 from ..envelope import diagnostic, response
 from .mutation import (
     AtomicWriteConflictError,
+    AtomicWriteRecoveryError,
     empty_mutation,
     operation_records,
     remove_path_trusted,
@@ -401,11 +402,24 @@ def run_knowledge_update_plan(entry: Any, request: Any) -> dict[str, Any]:
 def run_knowledge_update_apply(
     entry: Any,
     request: Any,
-    *,
-    mutation_lock_held: bool = False,
 ) -> dict[str, Any]:
     """Validate, recompute, and atomically apply a knowledge update plan."""
 
+    return _run_knowledge_update_apply(entry, request, acquire_lock=True)
+
+
+def _run_knowledge_update_apply_locked(entry: Any, request: Any) -> dict[str, Any]:
+    """Apply a request whose private caller already owns the knowledge lock."""
+
+    return _run_knowledge_update_apply(entry, request, acquire_lock=False)
+
+
+def _run_knowledge_update_apply(
+    entry: Any,
+    request: Any,
+    *,
+    acquire_lock: bool,
+) -> dict[str, Any]:
     mutation = empty_mutation(request.mode)
     try:
         repo_root = _target_repo_root(request.inputs)
@@ -429,7 +443,7 @@ def run_knowledge_update_apply(
         plan_request = supplied_plan.get("request")
         if not isinstance(plan_request, dict):
             raise KnowledgeError("invalid_plan", "knowledge update plan is missing its normalized request")
-        if request.mode == "apply" and not mutation_lock_held:
+        if request.mode == "apply" and acquire_lock:
             with _knowledge_mutation_lock(repo_root):
                 return _run_accepted_knowledge_apply(
                     entry,
@@ -570,9 +584,17 @@ def _run_accepted_knowledge_apply(
     except (KnowledgeError, OSError) as exc:
         rollback_errors = _rollback_writes(backups, repo_root, created_directories)
         residual_paths = _residual_mutation_paths(backups, created_directories)
+        recovery_path: str | None = None
+        if isinstance(exc, AtomicWriteRecoveryError):
+            recovery_path = normalize_display(exc.recovery_path)
+            residual_paths = sorted({*residual_paths, recovery_path})
         mutation["mutation_status"] = "partial_failure" if residual_paths else "rolled_back"
         mutation["live_mutation"] = bool(residual_paths)
         mutation["manual_remediation"] = [*rollback_errors, *[f"residual mutation: {path}" for path in residual_paths]]
+        if recovery_path is not None:
+            mutation["manual_remediation"].append(
+                f"preserved displaced bytes: {recovery_path}"
+            )
         if failure_operation is not None:
             mutation["failure_operation"] = {
                 "operation_id": failure_operation.get("operation_id"),
@@ -605,6 +627,7 @@ def _run_accepted_knowledge_apply(
                     "error": type(exc).__name__,
                     "rollback_errors": rollback_errors,
                     "residual_paths": residual_paths,
+                    **({"recovery_path": recovery_path} if recovery_path is not None else {}),
                 },
             )
         return _error_response(
@@ -4076,7 +4099,7 @@ def _canonical_lifecycle_status(raw: Any, *, reviewed: bool) -> str:
         return "review-required"
     normalized = str(raw or "").strip().lower()
     if normalized in {"archived", "superseded"}:
-        return normalized
+        return "archived"
     return "active"
 
 

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import os
 import re
@@ -283,29 +284,26 @@ class KnowledgeLayerTests(unittest.TestCase):
         external = self.repo("external")
         external_target = external / "target.md"
         external_target.write_text("external\n", encoding="utf-8")
-        real_replace = os.replace
+        real_exchange = mutation_helper._exchange_posix_names
         swapped = False
 
-        def swap_then_replace(
-            source: str,
-            destination: str,
-            *,
-            src_dir_fd: int | None = None,
-            dst_dir_fd: int | None = None,
+        def swap_then_exchange(
+            parent_descriptor: int,
+            left: str,
+            right: str,
         ) -> None:
             nonlocal swapped
             if not swapped:
                 parent.rename(detached)
                 parent.symlink_to(external, target_is_directory=True)
                 swapped = True
-            real_replace(
-                source,
-                destination,
-                src_dir_fd=src_dir_fd,
-                dst_dir_fd=dst_dir_fd,
-            )
+            real_exchange(parent_descriptor, left, right)
 
-        with mock.patch.object(mutation_helper.os, "replace", side_effect=swap_then_replace):
+        with mock.patch.object(
+            mutation_helper,
+            "_exchange_posix_names",
+            side_effect=swap_then_exchange,
+        ):
             mutation_helper.write_file_atomic(target, "after", trust_root=root)
 
         self.assertEqual(external_target.read_text(encoding="utf-8"), "external\n")
@@ -383,11 +381,87 @@ class KnowledgeLayerTests(unittest.TestCase):
                 target,
                 "planned",
                 trust_root=root,
-                expected_prior=b"before\n",
             )
 
         self.assertEqual(exchanges, 2)
         self.assertEqual(target.read_text(encoding="utf-8"), "concurrent\n")
+
+    @unittest.skipUnless(
+        os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
+        "atomic exchange recovery regression requires POSIX dir_fd support",
+    )
+    def test_atomic_writer_preserves_displaced_bytes_when_restore_fails(self) -> None:
+        root = self.repo("atomic-exchange-recovery")
+        parent = root / "safe"
+        parent.mkdir()
+        target = parent / "target.md"
+        target.write_text("before\n", encoding="utf-8")
+        real_exchange = mutation_helper._exchange_posix_names
+        exchanges = 0
+
+        def fail_restore(parent_descriptor: int, left: str, right: str) -> None:
+            nonlocal exchanges
+            if exchanges == 0:
+                target.write_text("concurrent\n", encoding="utf-8")
+                exchanges += 1
+                real_exchange(parent_descriptor, left, right)
+                return
+            exchanges += 1
+            raise OSError("injected exchange-back failure")
+
+        with (
+            mock.patch.object(
+                mutation_helper,
+                "_exchange_posix_names",
+                side_effect=fail_restore,
+            ),
+            self.assertRaises(mutation_helper.AtomicWriteRecoveryError) as captured,
+        ):
+            mutation_helper.write_file_atomic(
+                target,
+                "planned",
+                trust_root=root,
+            )
+
+        self.assertEqual(exchanges, 2)
+        self.assertEqual(target.read_text(encoding="utf-8"), "planned\n")
+        self.assertEqual(
+            captured.exception.recovery_path.read_text(encoding="utf-8"),
+            "concurrent\n",
+        )
+
+    @unittest.skipUnless(
+        os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
+        "atomic exchange cleanup regression requires POSIX dir_fd support",
+    )
+    def test_atomic_writer_restores_target_when_displaced_cleanup_fails(self) -> None:
+        root = self.repo("atomic-exchange-cleanup")
+        parent = root / "safe"
+        parent.mkdir()
+        target = parent / "target.md"
+        target.write_text("before\n", encoding="utf-8")
+        real_unlink = mutation_helper.os.unlink
+        unlinks = 0
+
+        def fail_first_unlink(path: str, *, dir_fd: int | None = None) -> None:
+            nonlocal unlinks
+            unlinks += 1
+            if unlinks == 1:
+                raise OSError("injected displaced cleanup failure")
+            real_unlink(path, dir_fd=dir_fd)
+
+        with (
+            mock.patch.object(mutation_helper.os, "unlink", side_effect=fail_first_unlink),
+            self.assertRaises(OSError),
+        ):
+            mutation_helper.write_file_atomic(
+                target,
+                "planned",
+                trust_root=root,
+            )
+
+        self.assertEqual(target.read_text(encoding="utf-8"), "before\n")
+        self.assertEqual(list(parent.glob(".target.md.tmp-*")), [])
 
     @unittest.skipUnless(
         os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
@@ -1109,6 +1183,59 @@ class KnowledgeLayerTests(unittest.TestCase):
 
         self.assertEqual(body["status"], "ok")
         self.assertEqual(target.read_text(encoding="utf-8"), "after\n")
+        self.assertNotIn(
+            "mutation_lock_held",
+            inspect.signature(knowledge_helper.run_knowledge_update_apply).parameters,
+        )
+
+    def test_legacy_writer_reports_preserved_displaced_bytes(self) -> None:
+        root = self.repo("legacy-writer-recovery")
+        target = self.write(
+            root,
+            "docs/ai/specs/demo-roadmap-MOC.md",
+            "before\n",
+        )
+        recovery = target.parent / ".demo-roadmap-MOC.md.tmp-recovery"
+        recovery.write_text("displaced\n", encoding="utf-8")
+        rendered = mutation_helper.RenderedSpecIndexMap(
+            target,
+            "demo",
+            "before\n",
+            "after\n",
+        )
+        entry = MUTATION_HELPERS["generate-spec-index-write"]
+        request = SimpleNamespace(
+            request_id="test-legacy-spec-index-recovery",
+            mode="apply",
+            inputs={"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+        )
+        with (
+            mock.patch.object(
+                mutation_helper,
+                "render_spec_index",
+                return_value=([rendered], True),
+            ),
+            mock.patch.object(
+                mutation_helper,
+                "write_file_atomic",
+                side_effect=mutation_helper.AtomicWriteRecoveryError(
+                    "injected recovery failure",
+                    recovery,
+                ),
+            ),
+        ):
+            body = mutation_helper.run_spec_index_write(entry, request)
+
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertTrue(body["data"]["writes_state"])
+        self.assertEqual(
+            body["data"]["mutation"]["mutation_status"],
+            "partial_failure",
+        )
+        self.assertEqual(
+            body["diagnostics"][0]["details"]["recovery_path"],
+            mutation_helper.normalize_display(recovery),
+        )
 
     def test_hash_consistent_malformed_plan_request_is_input_error(self) -> None:
         root = self.repo("malformed-plan-request")
@@ -1754,6 +1881,39 @@ class KnowledgeLayerTests(unittest.TestCase):
         self.assertNotEqual(completed.returncode, 0)
         self.assertEqual(body["diagnostics"][0]["code"], "review_required")
         self.assertFalse((root / "docs/ai/knowledge").exists())
+
+    def test_migration_archives_unlinked_legacy_superseded_status(self) -> None:
+        root = self.repo("migration-superseded-status")
+        self.write(
+            root,
+            "docs/ai/specs/demo-technical-roadmap.md",
+            "# Demo Technical Roadmap\n",
+        )
+        self.write(
+            root,
+            "docs/ai/specs/demo-roadmap-MOC.md",
+            "---\n"
+            "status: superseded\n"
+            "spec_id: DEMO\n"
+            "---\n"
+            "# Demo Roadmap\n",
+        )
+
+        plan = self.plan(root, "migrate", reviewed=True)
+        completed, body = self.apply(root, plan)
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(body["status"], "ok")
+        concept = (
+            root / "docs/ai/knowledge/projects/demo/roadmap.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn('x-speckit-status: "archived"', concept)
+        self.assertIn('x-speckit-legacy-status: "superseded"', concept)
+        _, health = run_helper(root, "knowledge-health", "read_only")
+        self.assertNotIn(
+            "broken_supersession",
+            {finding["code"] for finding in health["data"]["health"]["findings"]},
+        )
 
     def test_migration_preserves_legacy_memory_sections_and_moc_compatibility(self) -> None:
         root = self.repo("migration")

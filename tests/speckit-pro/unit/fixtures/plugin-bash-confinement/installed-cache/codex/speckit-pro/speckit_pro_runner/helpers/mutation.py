@@ -38,6 +38,14 @@ class AtomicWriteConflictError(OSError):
     """The target changed after its caller accepted the prior bytes."""
 
 
+class AtomicWriteRecoveryError(OSError):
+    """A displaced target was preserved because automatic restoration failed."""
+
+    def __init__(self, message: str, recovery_path: Path):
+        super().__init__(message)
+        self.recovery_path = recovery_path
+
+
 def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
     invocation_root_result = resolve_repo_root(request.inputs)
     if isinstance(invocation_root_result, dict):
@@ -84,7 +92,11 @@ def _run_spec_index_write_locked(
     target_root: Path,
 ) -> dict[str, Any]:
     if (target_root / "docs" / "ai" / "knowledge" / "manifest.json").is_file():
-        from .knowledge import KnowledgeError, _build_plan, run_knowledge_update_apply
+        from .knowledge import (
+            KnowledgeError,
+            _build_plan,
+            _run_knowledge_update_apply_locked,
+        )
 
         try:
             rendered, specs_present = render_spec_index(target_root)
@@ -108,11 +120,7 @@ def _run_spec_index_write_locked(
                 "expected_snapshot": plan["expected_snapshot"],
             },
         )
-        result = run_knowledge_update_apply(
-            entry,
-            apply_request,
-            mutation_lock_held=True,
-        )
+        result = _run_knowledge_update_apply_locked(entry, apply_request)
         data = result.get("data")
         if isinstance(data, dict) and isinstance(data.get("mutation"), dict):
             parity_data = _spec_index_write_data(
@@ -198,12 +206,26 @@ def _run_spec_index_write_locked(
                 expected_prior=record.original.encode("utf-8"),
             )
         except OSError as exc:
-            mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
+            recovery_failure = isinstance(exc, AtomicWriteRecoveryError)
+            mutation["mutation_status"] = (
+                "partial_failure"
+                if mutation["applied_operations"] or recovery_failure
+                else "blocked"
+            )
             mutation["failure_operation"] = operation_record(operation)
             mutation["manual_remediation"] = [
                 "Inspect touched_paths and the failed map.",
                 "Restore any already-written maps before retrying.",
             ]
+            if recovery_failure:
+                recovery_path = normalize_display(exc.recovery_path)
+                mutation["live_mutation"] = True
+                mutation["touched_paths"].append(
+                    repo_relative(record.path, target_root)
+                )
+                mutation["manual_remediation"].append(
+                    f"Preserve and reconcile displaced bytes at {recovery_path}."
+                )
             diag = diagnostic(
                 "write_failure",
                 "generate-spec-index-write could not complete an atomic map update",
@@ -211,6 +233,11 @@ def _run_spec_index_write_locked(
                     "helper_id": entry.helper_id,
                     "target": repo_relative(record.path, target_root),
                     "error": type(exc).__name__,
+                    **(
+                        {"recovery_path": normalize_display(exc.recovery_path)}
+                        if recovery_failure
+                        else {}
+                    ),
                 },
                 remediation_summary="Reconcile any applied map writes and fix the target path before retrying.",
                 remediation_actions=mutation["manual_remediation"],
@@ -224,7 +251,7 @@ def _run_spec_index_write_locked(
                     mutation,
                     specs_present=specs_present,
                     rendered=rendered,
-                    writes_state=bool(mutation["applied_operations"]),
+                    writes_state=bool(mutation["applied_operations"]) or recovery_failure,
                 ),
                 diagnostics=[diag],
             )
@@ -472,16 +499,37 @@ def run_mutation_helper(
             try:
                 write_file_atomic(target, str(op["content"]), trust_root=repo_root)
             except OSError as exc:
-                mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
+                recovery_failure = isinstance(exc, AtomicWriteRecoveryError)
+                mutation["mutation_status"] = (
+                    "partial_failure"
+                    if mutation["applied_operations"] or recovery_failure
+                    else "blocked"
+                )
                 mutation["failure_operation"] = operation_record(op)
                 mutation["manual_remediation"] = [
                     "Inspect the target path and parent directory.",
                     "Restore any applied_operations before retrying.",
                 ]
+                if recovery_failure:
+                    recovery_path = normalize_display(exc.recovery_path)
+                    mutation["live_mutation"] = True
+                    mutation["touched_paths"].append(repo_relative(target, repo_root))
+                    mutation["manual_remediation"].append(
+                        f"Preserve and reconcile displaced bytes at {recovery_path}."
+                    )
                 diag = diagnostic(
                     "write_failure",
                     "mutation helper could not complete an atomic file write",
-                    details={"helper_id": entry.helper_id, "operation_id": op["operation_id"], "error": type(exc).__name__},
+                    details={
+                        "helper_id": entry.helper_id,
+                        "operation_id": op["operation_id"],
+                        "error": type(exc).__name__,
+                        **(
+                            {"recovery_path": normalize_display(exc.recovery_path)}
+                            if recovery_failure
+                            else {}
+                        ),
+                    },
                     remediation_summary="Fix the target path or reconcile partial writes before retrying.",
                     remediation_actions=mutation["manual_remediation"],
                 )
@@ -1001,18 +1049,28 @@ def _remove_path_trusted_windows(target: Path, trust_root: Path, *, directory: b
             kernel32.CloseHandle(handle)
 
 
-def _read_posix_target(parent_descriptor: int, leaf: str, *, limit: int) -> bytes | None:
+def _read_posix_target(
+    parent_descriptor: int,
+    leaf: str,
+    *,
+    limit: int | None,
+) -> bytes | None:
     flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC
     try:
         descriptor = os.open(leaf, flags, dir_fd=parent_descriptor)
     except FileNotFoundError:
         return None
     try:
-        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+        target_stat = os.fstat(descriptor)
+        if not stat.S_ISREG(target_stat.st_mode):
             raise AtomicWriteConflictError("atomic write target changed type before commit")
+        read_limit = target_stat.st_size if limit is None else limit
         content = bytearray()
-        while len(content) <= limit:
-            chunk = os.read(descriptor, min(64 * 1024, limit + 1 - len(content)))
+        while len(content) <= read_limit:
+            chunk = os.read(
+                descriptor,
+                min(64 * 1024, read_limit + 1 - len(content)),
+            )
             if not chunk:
                 break
             content.extend(chunk)
@@ -1075,6 +1133,7 @@ def _write_file_atomic_posix(
     descriptors: list[int] = []
     temporary_descriptor = -1
     temporary_name: str | None = None
+    preserve_temporary = False
     created_directories: list[CreatedDirectory] = []
     committed = False
     try:
@@ -1138,6 +1197,12 @@ def _write_file_atomic_posix(
         os.fsync(temporary_descriptor)
         if not stat.S_ISREG(os.fstat(temporary_descriptor).st_mode):
             raise OSError("atomic-write temporary handle is not a regular file")
+        if expected_prior is _EXPECTED_PRIOR_UNSET:
+            expected_prior = _read_posix_target(
+                parent_descriptor,
+                leaf,
+                limit=None,
+            )
         if expected_prior is not _EXPECTED_PRIOR_UNSET:
             expected = expected_prior if isinstance(expected_prior, bytes) else None
             current = _read_posix_target(
@@ -1162,13 +1227,6 @@ def _write_file_atomic_posix(
                 ) from exc
             os.unlink(temporary_name, dir_fd=parent_descriptor)
             temporary_name = None
-        elif expected_prior is _EXPECTED_PRIOR_UNSET:
-            os.replace(
-                temporary_name,
-                leaf,
-                src_dir_fd=parent_descriptor,
-                dst_dir_fd=parent_descriptor,
-            )
         else:
             expected = expected_prior if isinstance(expected_prior, bytes) else b""
             _exchange_posix_names(parent_descriptor, temporary_name, leaf)
@@ -1186,11 +1244,26 @@ def _write_file_atomic_posix(
                 try:
                     _exchange_posix_names(parent_descriptor, temporary_name, leaf)
                 except OSError as restore_error:
-                    raise OSError(
-                        "atomic write could not restore the displaced target"
+                    preserve_temporary = True
+                    raise AtomicWriteRecoveryError(
+                        "atomic write could not restore the displaced target; displaced bytes were preserved",
+                        target.parent / temporary_name,
                     ) from restore_error
                 raise
-            os.unlink(temporary_name, dir_fd=parent_descriptor)
+            try:
+                os.unlink(temporary_name, dir_fd=parent_descriptor)
+            except OSError as cleanup_error:
+                try:
+                    _exchange_posix_names(parent_descriptor, temporary_name, leaf)
+                except OSError as restore_error:
+                    preserve_temporary = True
+                    raise AtomicWriteRecoveryError(
+                        "atomic write could not restore the target after displaced-file cleanup failed; displaced bytes were preserved",
+                        target.parent / temporary_name,
+                    ) from restore_error
+                raise OSError(
+                    "atomic write restored the target after displaced-file cleanup failed"
+                ) from cleanup_error
             temporary_name = None
         committed = True
         os.fsync(parent_descriptor)
@@ -1200,7 +1273,12 @@ def _write_file_atomic_posix(
                 os.close(temporary_descriptor)
             except OSError:
                 pass
-        if not committed and temporary_name is not None and descriptors:
+        if (
+            not committed
+            and temporary_name is not None
+            and descriptors
+            and not preserve_temporary
+        ):
             try:
                 os.unlink(temporary_name, dir_fd=descriptors[-1])
             except OSError:
@@ -1449,6 +1527,14 @@ def _write_file_atomic_windows(
             offset += written.value
         if not kernel32.FlushFileBuffers(temporary_handle):
             raise win_error("could not flush atomic-write temporary file")
+        if expected_prior is _EXPECTED_PRIOR_UNSET:
+            if target_exists:
+                try:
+                    expected_prior = target_path.read_bytes()
+                except FileNotFoundError:
+                    expected_prior = None
+            else:
+                expected_prior = None
         if expected_prior is not _EXPECTED_PRIOR_UNSET:
             expected = expected_prior if isinstance(expected_prior, bytes) else None
             current_attributes = kernel32.GetFileAttributesW(str(target_path))
@@ -1506,7 +1592,11 @@ def _write_file_atomic_windows(
                         None,
                         None,
                     ):
-                        raise win_error("could not restore unreadable displaced target")
+                        restore_error = win_error("could not restore unreadable displaced target")
+                        raise AtomicWriteRecoveryError(
+                            "atomic write could not restore an unreadable displaced target; displaced bytes were preserved",
+                            backup_path,
+                        ) from restore_error
                     backup_path = None
                     preserve_backup = False
                     raise OSError("could not validate displaced atomic-write target") from exc
@@ -1519,7 +1609,11 @@ def _write_file_atomic_windows(
                         None,
                         None,
                     ):
-                        raise win_error("could not restore displaced atomic-write target")
+                        restore_error = win_error("could not restore displaced atomic-write target")
+                        raise AtomicWriteRecoveryError(
+                            "atomic write could not restore the displaced target; displaced bytes were preserved",
+                            backup_path,
+                        ) from restore_error
                     backup_path = None
                     preserve_backup = False
                     raise AtomicWriteConflictError(
@@ -1535,7 +1629,11 @@ def _write_file_atomic_windows(
                         None,
                         None,
                     ):
-                        raise win_error("could not restore target after backup cleanup failure")
+                        restore_error = win_error("could not restore target after backup cleanup failure")
+                        raise AtomicWriteRecoveryError(
+                            "atomic write could not restore the target after backup cleanup failed; displaced bytes were preserved",
+                            backup_path,
+                        ) from restore_error
                     backup_path = None
                     preserve_backup = False
                     raise cleanup_error
