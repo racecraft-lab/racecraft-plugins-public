@@ -25,13 +25,22 @@ from .read_only import (
 )
 
 DEFAULT_ROLLBACK = "Review touched_paths and restore the previous file content before retrying."
-SECURE_DIR_FD_WRITES = (
-    os.name == "posix"
-    and hasattr(os, "O_DIRECTORY")
-    and hasattr(os, "O_NOFOLLOW")
-    and all(function in os.supports_dir_fd for function in (os.open, os.mkdir, os.stat, os.unlink, os.link))
-    and os.link in os.supports_follow_symlinks
-)
+
+
+def secure_dir_fd_writes_available() -> bool:
+    return (
+        os.name == "posix"
+        and hasattr(os, "O_DIRECTORY")
+        and hasattr(os, "O_NOFOLLOW")
+        and all(
+            function in os.supports_dir_fd
+            for function in (os.open, os.mkdir, os.stat, os.unlink, os.link, os.rename)
+        )
+        and os.link in os.supports_follow_symlinks
+    )
+
+
+SECURE_DIR_FD_WRITES = secure_dir_fd_writes_available()
 
 
 class AtomicWriteError(OSError):

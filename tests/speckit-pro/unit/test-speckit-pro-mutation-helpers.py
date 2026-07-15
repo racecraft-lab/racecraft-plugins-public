@@ -1703,6 +1703,11 @@ class MutationHelperTests(unittest.TestCase):
 
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
+            supports_without_rename = set(mutation.os.supports_dir_fd)
+            supports_without_rename.discard(mutation.os.rename)
+            with patch.object(mutation.os, "supports_dir_fd", supports_without_rename):
+                self.assertFalse(mutation.secure_dir_fd_writes_available())
+
             request = SimpleNamespace(
                 request_id="test-secure-write-prerequisite",
                 helper_id="mutation-foundation",
