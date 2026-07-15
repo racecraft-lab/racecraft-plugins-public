@@ -57,8 +57,8 @@ Grill Me is human-in-the-loop only. Once autopilot starts, clarification uses
 | Checklist | `$speckit-checklist` | Complete | All five selected domains passed after seed-list drift was resolved |
 | Tasks | `$speckit-tasks` | Complete | Generated 38 source-first documentation tasks; G5 passed |
 | Analyze | `$speckit-analyze` | Complete | Resolved seed-list drift and passed G6 |
-| Confidence Gate | G6.5 | In Progress | Record advisory pre-implementation confidence after analysis and before report authoring |
-| Implement | `$speckit-implement` | Pending | Author and validate the canonical research report |
+| Confidence Gate | G6.5 | Complete | Advisory no-data result recorded because Phase 6 ran locally without synthesizer confidence emit |
+| Implement | `$speckit-implement` | In Progress | Author and validate the canonical research report |
 | Post | Post-Implementation | Pending | Run durable verification, review, UAT, PR, remediation, and retrospective steps |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -638,7 +638,7 @@ sufficient to proceed into report authoring.
 
 | Gate | Status | Evidence | Disposition |
 |---|---|---|---|
-| G6.5 | Pending | Pending | Pending |
+| G6.5 | Advisory no-data | `confidence-gate` returned `NO_DATA` with `recommended_action=soft_skip` because no synthesizer confidence emit was present in the workflow | Proceed to implementation; G7 remains the binding verification gate |
 
 The confidence gate cannot admit undocumented platform claims, relax the
 official-documentation authority rule, or replace G7 verification.

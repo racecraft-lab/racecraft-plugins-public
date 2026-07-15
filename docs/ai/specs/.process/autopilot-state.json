@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-001-workflow.md",
   "spec_id": "G56R-001",
   "feature_dir": "specs/g56r-001-candidate-route-baseline",
-  "updated_at": "2026-07-15T23:36:08Z",
-  "active_step": "Phase 6.5: Confidence Gate",
+  "updated_at": "2026-07-15T23:37:33Z",
+  "active_step": "Phase 7: Implement",
   "settings": {
     "auto_commit": "per-phase",
     "confidence_gate_mode": "advisory",
@@ -360,6 +360,23 @@
         "docs/ai/specs/.process/G56R-001-workflow.md",
         "docs/ai/specs/.process/autopilot-state.json"
       ]
+    },
+    "Phase 6.5: Confidence Gate": {
+      "status": "completed",
+      "completed_at": "2026-07-15T23:37:33Z",
+      "mode": "advisory",
+      "helper_status": "expected_failure",
+      "helper_exit_code": 1,
+      "pass": null,
+      "composite": null,
+      "threshold": 0.9,
+      "reason": "no confidence emit found",
+      "recommended_action": "soft_skip",
+      "disposition": "Proceed to implementation; G7 remains the binding verification gate.",
+      "files_changed": [
+        "docs/ai/specs/.process/G56R-001-workflow.md",
+        "docs/ai/specs/.process/autopilot-state.json"
+      ]
     }
   },
   "plan": [
@@ -457,11 +474,11 @@
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Pending task decomposition",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Doctor Extension Check",
