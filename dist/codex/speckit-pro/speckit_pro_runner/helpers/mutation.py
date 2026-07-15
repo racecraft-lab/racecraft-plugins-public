@@ -29,8 +29,17 @@ SECURE_DIR_FD_WRITES = (
     os.name == "posix"
     and hasattr(os, "O_DIRECTORY")
     and hasattr(os, "O_NOFOLLOW")
-    and all(function in os.supports_dir_fd for function in (os.open, os.mkdir, os.stat, os.unlink))
+    and all(function in os.supports_dir_fd for function in (os.open, os.mkdir, os.stat, os.unlink, os.link))
+    and os.link in os.supports_follow_symlinks
 )
+
+
+class AtomicWriteError(OSError):
+    """Report whether an atomic install committed before durability failed."""
+
+    def __init__(self, message: str, *, committed: bool = False) -> None:
+        super().__init__(message)
+        self.committed = committed
 
 
 def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
@@ -368,6 +377,20 @@ def run_mutation_helper(
         mutation["mutation_status"] = "no_op"
         return response("ok", request_id=request.request_id, data=base_data)
 
+    if not SECURE_DIR_FD_WRITES and any(op["kind"] == "write_file" for op in normalized):
+        mutation["mutation_status"] = "blocked"
+        diag = diagnostic(
+            "secure_atomic_writes_unavailable",
+            "apply mode requires descriptor-relative no-follow atomic writes on this platform",
+            details={"helper_id": entry.helper_id, "platform": os.name},
+            remediation_summary="Run apply mode in an environment with secure descriptor-relative writes.",
+            remediation_actions=[
+                "Keep the current checkout unchanged.",
+                "Run the same apply request on a POSIX environment that supports dir_fd, O_NOFOLLOW, and hard-link installation.",
+            ],
+        )
+        return response("missing_prerequisite", request_id=request.request_id, data=base_data, diagnostics=[diag])
+
     command_plan_diag = command_plan_apply_diagnostic(normalized, entry.helper_id)
     if command_plan_diag is not None:
         mutation["mutation_status"] = "blocked"
@@ -410,8 +433,18 @@ def run_mutation_helper(
         if op["kind"] == "write_file":
             target = resolve_candidate_path(op["target"], repo_root)
             try:
-                write_file_atomic(target, str(op["content"]), trust_root=repo_root)
+                write_file_atomic(
+                    target,
+                    str(op["content"]),
+                    trust_root=repo_root,
+                    expected_absent=bool(op.get("expected_absent")),
+                )
             except OSError as exc:
+                rel = repo_relative(target, repo_root)
+                committed = bool(getattr(exc, "committed", False))
+                if committed:
+                    mutation["applied_operations"].append(operation_record(op))
+                    mutation["touched_paths"].append(rel)
                 mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
                 mutation["failure_operation"] = operation_record(op)
                 mutation["manual_remediation"] = [
@@ -421,7 +454,12 @@ def run_mutation_helper(
                 diag = diagnostic(
                     "write_failure",
                     "mutation helper could not complete an atomic file write",
-                    details={"helper_id": entry.helper_id, "operation_id": op["operation_id"], "error": type(exc).__name__},
+                    details={
+                        "helper_id": entry.helper_id,
+                        "operation_id": op["operation_id"],
+                        "error": type(exc).__name__,
+                        "write_committed": committed,
+                    },
                     remediation_summary="Fix the target path or reconcile partial writes before retrying.",
                     remediation_actions=mutation["manual_remediation"],
                 )
@@ -454,16 +492,20 @@ def normalize_operations(raw: Any) -> list[dict[str, Any]] | dict[str, Any]:
         if kind == "write_file":
             target = op.get("target")
             content = op.get("content")
+            expected_absent = op.get("expected_absent", False)
             if not isinstance(target, str) or not target:
                 return invalid_operation("write_file target is required", index=index)
             if not isinstance(content, str):
                 return invalid_operation("write_file content must be a string", index=index)
+            if not isinstance(expected_absent, bool):
+                return invalid_operation("write_file expected_absent must be a boolean", index=index)
             normalized.append(
                 {
                     "operation_id": operation_id,
                     "kind": "write_file",
                     "target": target,
                     "content": ensure_final_newline(content),
+                    "expected_absent": expected_absent,
                 }
             )
             continue
@@ -671,11 +713,17 @@ def git_worktree_status(repo_root: Path) -> bool | dict[str, Any]:
     return bool(completed.stdout.strip())
 
 
-def write_file_atomic(target: Path, content: str, *, trust_root: Path | None = None) -> None:
+def write_file_atomic(
+    target: Path,
+    content: str,
+    *,
+    trust_root: Path | None = None,
+    expected_absent: bool = False,
+) -> None:
     if trust_root is not None:
         if not _mutation_target_chain_is_safe(target, trust_root):
             raise OSError("unsafe target path")
-        _write_file_atomic_trusted(target, content, trust_root)
+        _write_file_atomic_trusted(target, content, trust_root, expected_absent=expected_absent)
         return
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp = target.with_name(f".{target.name}.tmp-{os.getpid()}")
@@ -684,7 +732,11 @@ def write_file_atomic(target: Path, content: str, *, trust_root: Path | None = N
             fh.write(ensure_final_newline(content))
             fh.flush()
             os.fsync(fh.fileno())
-        os.replace(tmp, target)
+        if expected_absent:
+            os.link(tmp, target, follow_symlinks=False)
+            tmp.unlink()
+        else:
+            os.replace(tmp, target)
     finally:
         if tmp.exists():
             try:
@@ -694,7 +746,13 @@ def write_file_atomic(target: Path, content: str, *, trust_root: Path | None = N
                 pass
 
 
-def _write_file_atomic_trusted(target: Path, content: str, trust_root: Path) -> None:
+def _write_file_atomic_trusted(
+    target: Path,
+    content: str,
+    trust_root: Path,
+    *,
+    expected_absent: bool = False,
+) -> None:
     """Write through pinned no-follow directory descriptors or fail closed."""
 
     if not SECURE_DIR_FD_WRITES:
@@ -751,9 +809,27 @@ def _write_file_atomic_trusted(target: Path, content: str, trust_root: Path) -> 
                 fh.write(ensure_final_newline(content))
                 fh.flush()
                 os.fsync(fh.fileno())
-            os.replace(tmp_name, target_name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
-            tmp_name = ""
-            os.fsync(parent_fd)
+            committed = False
+            try:
+                if expected_absent:
+                    os.link(
+                        tmp_name,
+                        target_name,
+                        src_dir_fd=parent_fd,
+                        dst_dir_fd=parent_fd,
+                        follow_symlinks=False,
+                    )
+                    committed = True
+                    os.unlink(tmp_name, dir_fd=parent_fd)
+                else:
+                    os.replace(tmp_name, target_name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+                    committed = True
+                tmp_name = ""
+                os.fsync(parent_fd)
+            except OSError as exc:
+                if committed:
+                    raise AtomicWriteError("atomic file install committed before durability failed", committed=True) from exc
+                raise
         finally:
             if tmp_fd >= 0:
                 os.close(tmp_fd)

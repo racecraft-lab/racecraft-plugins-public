@@ -370,8 +370,12 @@ table. Find the first phase with status `⏳ Pending` or
 If `--from-phase` is specified, start from that phase regardless of
 the status table.
 
-If all phases are `✅ Complete`, report "All phases complete" and
-stop.
+If all seven SDD phases are `✅ Complete`, inspect every canonical `Post:` row
+in the workflow and `autopilot-state.json`. Rebuild the durable Post plan and
+continue from the first missing, pending, or in-progress item. Report "All
+phases complete" and stop only after every required Post item is complete,
+every optional skip is authorized by its named procedure, and an exact
+head/base lookup verifies the recorded open PR.
 
 ### 1.1 Create Progress Task List
 
@@ -612,14 +616,19 @@ detailed procedures in `references/post-implementation.md`:
    `base...HEAD`. On resume, if either body or packet already exists, never
    authorize reuse or overwrite.
    Inspect and remove both artifacts; if either is tracked, commit its deletion,
-   restore a clean committed worktree, and regenerate. `generate-pr-body`
+   restore a clean committed worktree, and regenerate. Apply mode fails closed
+   with `secure_atomic_writes_unavailable` when descriptor-relative no-follow
+   writes and atomic no-clobber installation are unavailable. Do not substitute
+   path-based writes; resume at the same clean source revision in a supported
+   POSIX environment. `generate-pr-body`
    remains a separate one-Markdown-body helper and
-   does not create packet JSON or metadata. Run `validate-pr-packet-read-only`
-   against the just-generated single packet and consume
+   does not create packet JSON or metadata. Refine only declared editable
+   prose, then stage only the generated body and packet and commit them as the
+   single direct child of the recorded source revision. Run
+   `validate-pr-packet-read-only` against those committed, clean artifacts and consume
    only the current response `data.stdout_json` in memory and durable state.
    Continue only when it reports `status=passed`, `pr_blocked=false`, and the
-   response reports `writes_state=false`; no validation file is written. Stage
-   only the generated body and packet, then commit them. Re-run the full final
+   response reports `writes_state=false`; no validation file is written. Re-run the full final
    verification suite, final reviewability boundary, packet validation, and
    PR workflow validation against the committed artifacts. Push that packet
    commit only after every repeated check passes, then open the PR with packet fields through

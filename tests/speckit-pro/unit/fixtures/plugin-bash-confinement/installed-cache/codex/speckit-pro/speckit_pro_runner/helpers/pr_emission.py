@@ -213,12 +213,19 @@ def generate_pr_packet(entry: Any, request: Any) -> dict[str, Any]:
         return input_error(request, "derived PR packet violates its schema", details={"failures": failures[:8]})
 
     operations = [
-        {"operation_id": "pr-packet-output:body", "kind": "write_file", "target": body_path, "content": body},
+        {
+            "operation_id": "pr-packet-output:body",
+            "kind": "write_file",
+            "target": body_path,
+            "content": body,
+            "expected_absent": True,
+        },
         {
             "operation_id": "pr-packet-output:packet",
             "kind": "write_file",
             "target": packet_path,
             "content": json.dumps(packet, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            "expected_absent": True,
         },
     ]
     return run_mutation_helper(
@@ -269,6 +276,8 @@ def _packet_input_failure(inputs: dict[str, Any]) -> tuple[str, dict[str, Any]] 
         return "title_scope must match the feature identifier", {"field": "title_scope"}
     if len(inputs["title_description"]) < 8:
         return "title_description must be a public action phrase", {"field": "title_description"}
+    if "\n" in inputs["title_description"] or "\r" in inputs["title_description"]:
+        return "title_description must be a single line", {"field": "title_description"}
     if not _safe_ref(inputs["base_ref"]) or not _safe_ref(inputs["base_branch"]):
         return "base_ref and base_branch must be safe git refs", {"field": "base_ref"}
     if _SHA_LIKE.fullmatch(inputs["base_branch"]) or _SHA_LIKE.fullmatch(inputs["base_ref"].removeprefix("origin/")):
@@ -401,42 +410,68 @@ def _existing_packet_output(
 def _git_packet_context(
     repo_root: Path, base_ref: str
 ) -> tuple[dict[str, Any] | None, str | None]:
-    commands = (
-        ["symbolic-ref", "--quiet", "--short", "HEAD"],
-        ["rev-parse", "--verify", "--quiet", f"{base_ref}^{{commit}}"],
-        ["rev-parse", "--verify", "--quiet", "HEAD^{commit}"],
-        ["diff", "--name-only", "-z", f"{base_ref}...HEAD", "--"],
-        ["diff", "--binary", "--full-index", f"{base_ref}...HEAD", "--"],
-    )
-    results: list[subprocess.CompletedProcess[bytes]] = []
+    def run(command: list[str]) -> subprocess.CompletedProcess[bytes]:
+        return subprocess.run(
+            ["git", "-C", str(repo_root), *command],
+            capture_output=True,
+            shell=False,
+            check=False,
+            timeout=30,
+        )
+
     try:
-        for command in commands:
-            results.append(
-                subprocess.run(
-                    ["git", "-C", str(repo_root), *command],
-                    capture_output=True,
-                    shell=False,
-                    check=False,
-                    timeout=30,
-                )
-            )
+        initial = [
+            run(["symbolic-ref", "--quiet", "--short", "HEAD"]),
+            run(["rev-parse", "--verify", "--quiet", f"{base_ref}^{{commit}}"]),
+            run(["rev-parse", "--verify", "--quiet", "HEAD^{commit}"]),
+        ]
     except (OSError, subprocess.TimeoutExpired) as exc:
         return None, type(exc).__name__
-    if any(result.returncode != 0 for result in results):
+    if any(result.returncode != 0 for result in initial):
         return None, "detached_head_or_undiffable_base"
-    branch = results[0].stdout.decode("utf-8", errors="strict").strip()
+    try:
+        branch = initial[0].stdout.decode("utf-8", errors="strict").strip()
+        base_sha = initial[1].stdout.decode("ascii", errors="strict").strip()
+        source_head_sha = initial[2].stdout.decode("ascii", errors="strict").strip()
+    except UnicodeDecodeError:
+        return None, "unsupported_git_metadata_encoding"
     if not _safe_ref(branch):
         return None, "unsafe_head_branch"
-    changed_files = [
-        path
-        for path in results[3].stdout.decode("utf-8", errors="strict").split("\0")
-        if path
-    ]
+
+    try:
+        diff_results = [
+            run(["diff", "--name-only", "-z", f"{base_sha}...{source_head_sha}", "--"]),
+            run(["diff", "--binary", "--full-index", f"{base_sha}...{source_head_sha}", "--"]),
+        ]
+        final = [
+            run(["symbolic-ref", "--quiet", "--short", "HEAD"]),
+            run(["rev-parse", "--verify", "--quiet", f"{base_ref}^{{commit}}"]),
+            run(["rev-parse", "--verify", "--quiet", "HEAD^{commit}"]),
+        ]
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return None, type(exc).__name__
+    if any(result.returncode != 0 for result in (*diff_results, *final)):
+        return None, "git_refs_changed_during_packet_generation"
+    try:
+        changed_files = [
+            path
+            for path in diff_results[0].stdout.decode("utf-8", errors="strict").split("\0")
+            if path
+        ]
+        final_values = (
+            final[0].stdout.decode("utf-8", errors="strict").strip(),
+            final[1].stdout.decode("ascii", errors="strict").strip(),
+            final[2].stdout.decode("ascii", errors="strict").strip(),
+        )
+    except UnicodeDecodeError:
+        return None, "unsupported_git_path_encoding"
+    if final_values != (branch, base_sha, source_head_sha):
+        return None, "git_refs_changed_during_packet_generation"
     return {
         "base_ref": base_ref,
-        "base_sha": results[1].stdout.decode("ascii").strip(),
-        "source_head_sha": results[2].stdout.decode("ascii").strip(),
-        "source_diff_sha256": hashlib.sha256(results[4].stdout).hexdigest(),
+        "base_sha": base_sha,
+        "source_head_sha": source_head_sha,
+        "source_diff_sha256": hashlib.sha256(diff_results[1].stdout).hexdigest(),
         "head_branch": branch,
         "changed_files": changed_files,
     }, None
@@ -518,7 +553,7 @@ def _packet_record(
             "source_diff_fingerprint": {
                 "algorithm": "sha256",
                 "value": git_context["source_diff_sha256"],
-                "normalization": "git diff --binary --full-index <base-ref>...HEAD -- at packet generation",
+                "normalization": "git diff --binary --full-index <base-sha>...<source-head-sha> -- at packet generation",
             },
         },
         "source_feature_dir": feature_dir,

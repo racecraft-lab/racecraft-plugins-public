@@ -1021,10 +1021,11 @@ Step 1: From a clean worktree, run final verification and apply the final review
 Step 2: For a single route, run pr-packet-output in apply mode with grounded structured evidence.
   It derives and writes the body first, then the authorizing packet at specs/<feature>/.process/pr-packets/<packet-id>.json.
   Do not pass raw output paths, content, operations, or split metadata. Split packet output remains deferred.
-Step 3: Validate the just-generated packet with validate-pr-packet-read-only and consume data.stdout_json in memory/state.
+  If secure_atomic_writes_unavailable is returned, fail closed and resume the same clean source revision in a supported POSIX environment.
+Step 3: Refine only declared editable prose, then stage only the generated body and packet and commit them as the single direct child of the recorded source revision.
+Step 4: Validate the committed, clean packet with validate-pr-packet-read-only and consume data.stdout_json in memory/state.
   Require data.stdout_json.status=passed, data.stdout_json.pr_blocked=false, and response data.writes_state=false.
   No validation file is written.
-Step 4: Stage only the generated body and packet, then commit them.
 Step 5: Re-run the full final verification suite and final reviewability boundary against the committed packet artifacts.
   If remediation changes repository bytes or packet evidence, remove the stale artifacts and regenerate from a clean worktree before continuing.
 Step 6: Re-run validate-pr-packet-read-only, then validate title/scope with validate-pr-workflow-contract using the packet title.

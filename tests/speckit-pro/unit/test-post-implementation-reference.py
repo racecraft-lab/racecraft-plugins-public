@@ -26,6 +26,8 @@ CODEX_REF = (
     / "references"
     / "post-implementation-codex.md"
 )
+CLAUDE_SKILL = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "SKILL.md"
+CODEX_SKILL = REPO_ROOT / "speckit-pro" / "codex-skills" / "speckit-autopilot" / "SKILL.md"
 BASELINE = (
     REPO_ROOT
     / "tests"
@@ -59,6 +61,8 @@ class PostImplementationReferenceTests(unittest.TestCase):
     def test_reference_contract(self) -> None:
         claude_body = CLAUDE_REF.read_text(encoding="utf-8")
         codex_body = CODEX_REF.read_text(encoding="utf-8")
+        claude_skill = CLAUDE_SKILL.read_text(encoding="utf-8")
+        codex_skill = CODEX_SKILL.read_text(encoding="utf-8")
 
         checks: list[tuple[str, Callable[[], None]]] = [
             (
@@ -211,6 +215,78 @@ class PostImplementationReferenceTests(unittest.TestCase):
                 lambda: self.assertTrue(
                     "runner `restack` operation is\ndeferred, has no authoritative request" in codex_body
                     and "gh pr edit <number> --base <branch>" in codex_body
+                ),
+            ),
+            (
+                "Claude resume continues when SDD phases are complete but Post work is incomplete",
+                lambda: self.assertTrue(
+                    "If all seven SDD phases are `✅ Complete`" in claude_skill
+                    and "continue from the first missing, pending, or in-progress item" in claude_skill
+                ),
+            ),
+            (
+                "Codex resume continues when SDD phases are complete but Post work is incomplete",
+                lambda: self.assertTrue(
+                    "all seven SDD phases being complete is not sufficient to stop" in codex_body
+                    and "continue with the first incomplete Post item" in codex_body
+                ),
+            ),
+            (
+                "Claude commits packet artifacts before read-only authorization",
+                lambda: self.assertLess(
+                    claude_body.index("Stage only `packet.body_file`"),
+                    claude_body.index("Validate the\n   packet before any single-PR create attempt"),
+                ),
+            ),
+            (
+                "Codex commits packet artifacts before read-only authorization",
+                lambda: self.assertLess(
+                    codex_body.index("Stage only `packet.body_file`"),
+                    codex_body.index("Validate the current\npacket before any single-PR create attempt"),
+                ),
+            ),
+            (
+                "Claude pushes the packet commit before exact head-base PR creation",
+                lambda: self.assertTrue(
+                    "remote and push the packet commit only after every repeated check passes" in claude_body
+                    and "gh pr list --state open --head <head> --base <base>" in claude_body
+                ),
+            ),
+            (
+                "Codex pushes the packet commit before exact head-base PR creation",
+                lambda: self.assertTrue(
+                    "push the packet commit only after every repeated check passes" in codex_body
+                    and "gh pr list --state open --head\n<head> --base <base>" in codex_body
+                ),
+            ),
+            (
+                "Claude completion requires Retrospective Post reconciliation and live PR evidence",
+                lambda: self.assertTrue(
+                    "complete Retrospective, reconcile every canonical\nPost row" in claude_body
+                    and "The autopilot is DONE only after the final completion audit" in claude_body
+                ),
+            ),
+            (
+                "Codex completion requires every Post item and verified PR evidence",
+                lambda: self.assertTrue(
+                    "`Post: Retrospective` remains the final Post item" in codex_body
+                    and "exact head/base lookup" in codex_body
+                    and "must be completed before completion can be reported" in codex_body
+                ),
+            ),
+            (
+                "Codex assigns split emission to PR Creation item 17",
+                lambda: self.assertTrue(
+                    "`Post: PR Creation` (item 17) is multi-PR\nemission" in codex_body
+                    and "Post item 18 is multi-PR" not in codex_body
+                ),
+            ),
+            (
+                "Both clients forbid packet and PR terminal phases from becoming skips",
+                lambda: self.assertTrue(
+                    "Packet generation, push, and\n   PR creation are non-skippable" in claude_skill
+                    and "packet generation, push, PR creation, or PR reconciliation" in codex_body
+                    and "`Post: PR Packet/Body Generation` and `Post: PR Creation` are non-skippable" in codex_body
                 ),
             ),
         ]

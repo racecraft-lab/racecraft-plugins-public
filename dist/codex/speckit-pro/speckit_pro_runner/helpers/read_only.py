@@ -2271,7 +2271,15 @@ def pr_packet_source_failures(
             "message": "Packet source revision evidence is incomplete.",
         }]
     assert isinstance(source, dict) and isinstance(target, dict) and isinstance(scope, dict)
-    if target.get("base_branch") == target.get("head_branch"):
+    base_branch = target.get("base_branch")
+    head_branch = target.get("head_branch")
+    if not all(isinstance(value, str) and value and "\n" not in value and "\r" not in value for value in (base_branch, head_branch)):
+        return [{
+            "rule": "source.branch_names",
+            "field": "target",
+            "message": "Packet target branches must be non-empty single-line names.",
+        }]
+    if base_branch == head_branch:
         return [{
             "rule": "source.branch_distinct",
             "field": "target",
@@ -2289,11 +2297,23 @@ def pr_packet_source_failures(
             "field": "source_revision",
             "message": "Packet source revision values are incomplete.",
         }]
+    assert isinstance(base_ref, str) and isinstance(base_branch, str)
+    if base_ref not in {
+        f"refs/heads/{base_branch}",
+        f"refs/remotes/origin/{base_branch}",
+    }:
+        return [{
+            "rule": "source.base_branch",
+            "field": "target.base_branch",
+            "message": "Packet target base branch differs from its source-revision base ref.",
+        }]
 
+    packet_rel = packet_path.relative_to(repo_root).as_posix()
+    allowed_outputs = {packet_rel, body_file}
     commands = {
         "branch": ("symbolic-ref", "--quiet", "--short", "HEAD"),
         "base": ("rev-parse", "--verify", "--quiet", f"{base_ref}^{{commit}}"),
-        "head": ("rev-parse", "--verify", "--quiet", "HEAD^{commit}"),
+        "head_parents": ("rev-list", "--parents", "-n", "1", "HEAD"),
         "ancestor": ("merge-base", "--is-ancestor", source_head, "HEAD"),
         "source_diff": ("diff", "--binary", "--full-index", f"{base_sha}...{source_head}", "--"),
         "changed": ("diff", "--name-only", "-z", f"{base_sha}...HEAD", "--"),
@@ -2319,25 +2339,41 @@ def pr_packet_source_failures(
         return result.stdout.decode(encoding, errors="strict")
 
     failures: list[dict[str, Any]] = []
-    if decoded("branch").strip() != target.get("head_branch"):
+    try:
+        branch_text = decoded("branch").strip()
+        base_text = decoded("base", "ascii").strip()
+        head_parents = decoded("head_parents", "ascii").split()
+        changed_text = decoded("changed")
+        dirty_text = {name: decoded(name) for name in ("unstaged", "staged", "untracked")}
+    except UnicodeDecodeError:
+        return [{
+            "rule": "source.path_encoding",
+            "field": "scope_evidence.changed_files",
+            "message": "Git metadata contains a path or ref that is not valid UTF-8.",
+        }]
+    if branch_text != head_branch:
         failures.append({"rule": "source.head_branch", "field": "target.head_branch", "message": "Current branch differs from the packet head branch."})
-    if decoded("base", "ascii").strip() != base_sha:
+    if base_text != base_sha:
         failures.append({"rule": "source.base_sha", "field": "source_revision.base_sha", "message": "Packet base revision moved after generation."})
+    if len(head_parents) != 2 or head_parents[1] != source_head:
+        failures.append({"rule": "source.packet_commit", "field": "source_revision.source_head_sha", "message": "The current HEAD must be the single packet commit directly above its source revision."})
     source_diff_result = results["source_diff"]
     assert source_diff_result is not None
     if hashlib.sha256(source_diff_result.stdout).hexdigest() != expected_diff:
         failures.append({"rule": "source.diff_fingerprint", "field": "source_revision.source_diff_fingerprint", "message": "Packet source diff fingerprint is stale."})
 
-    packet_rel = packet_path.relative_to(repo_root).as_posix()
-    allowed_outputs = {packet_rel, body_file}
+    for output in sorted(allowed_outputs):
+        tracked = _git_bytes(repo_root, "ls-files", "--error-unmatch", "--", output)
+        if tracked is None or tracked.returncode != 0:
+            failures.append({"rule": "source.packet_commit", "field": "body_file", "message": "Packet and body artifacts must be committed before validation."})
+            break
     dirty_paths: set[str] = set()
-    for name in ("unstaged", "staged", "untracked"):
-        dirty_paths.update(path for path in decoded(name).split("\0") if path)
-    unexpected_dirty = sorted(dirty_paths - allowed_outputs)
-    if unexpected_dirty:
-        failures.append({"rule": "source.worktree", "field": "source_revision", "message": "Non-packet worktree changes make packet evidence stale."})
+    for text in dirty_text.values():
+        dirty_paths.update(path for path in text.split("\0") if path)
+    if dirty_paths:
+        failures.append({"rule": "source.worktree", "field": "source_revision", "message": "A dirty worktree makes committed packet evidence stale."})
 
-    changed = {path for path in decoded("changed").split("\0") if path} | allowed_outputs
+    changed = {path for path in changed_text.split("\0") if path}
     expected_changed = scope.get("changed_files")
     if not isinstance(expected_changed, list) or sorted(changed) != sorted(expected_changed):
         failures.append({"rule": "source.changed_files", "field": "scope_evidence.changed_files", "message": "Current base-to-head scope differs from the packet changed-file evidence."})

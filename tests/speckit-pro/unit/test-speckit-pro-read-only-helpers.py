@@ -818,6 +818,55 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 self.assertIsNone(
                     re.fullmatch(value_pattern, f"feat({scope}): Add packet validation")
                 )
+        self.assertIsNone(re.search(value_pattern, "feat(speckit-pro): Add packet validation\n"))
+
+    def test_pr_packet_source_validation_reports_non_utf8_git_paths(self) -> None:
+        from speckit_pro_runner.helpers import read_only
+
+        base_sha = "a" * 40
+        source_sha = "b" * 40
+        packet_sha = "c" * 40
+        data = {
+            "schema_version": "1.1.0",
+            "target": {"base_branch": "main", "head_branch": "packet-feature"},
+            "source_revision": {
+                "base_ref": "refs/heads/main",
+                "base_sha": base_sha,
+                "source_head_sha": source_sha,
+                "source_diff_fingerprint": {"value": "0" * 64},
+            },
+            "scope_evidence": {"changed_files": ["packet.json", "packet.md"]},
+            "body_file": "packet.md",
+        }
+
+        def completed(stdout: bytes = b"", returncode: int = 0) -> subprocess.CompletedProcess[bytes]:
+            return subprocess.CompletedProcess(args=[], returncode=returncode, stdout=stdout, stderr=b"")
+
+        def git_result(_root: Path, *args: str) -> subprocess.CompletedProcess[bytes]:
+            if args[:3] == ("symbolic-ref", "--quiet", "--short"):
+                return completed(b"packet-feature\n")
+            if args[0] == "rev-parse":
+                return completed(f"{base_sha}\n".encode("ascii"))
+            if args[0] == "rev-list":
+                return completed(f"{packet_sha} {source_sha}\n".encode("ascii"))
+            if args[0] == "merge-base":
+                return completed()
+            if args[:3] == ("diff", "--binary", "--full-index"):
+                return completed(b"source diff")
+            if args[:3] == ("diff", "--name-only", "-z") and len(args) > 3 and args[3] != "--":
+                return completed(b"invalid-\xff.json\0")
+            if args[0] in {"diff", "ls-files"}:
+                return completed()
+            raise AssertionError(args)
+
+        repo_root = Path("/repo")
+        with patch.object(read_only, "_git_bytes", side_effect=git_result):
+            failures = read_only.pr_packet_source_failures(
+                data,
+                repo_root / "packet.json",
+                repo_root,
+            )
+        self.assertEqual([failure["rule"] for failure in failures], ["source.path_encoding"])
 
     def test_validate_pr_packet_rejects_unsafe_missing_and_unreadable_body(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":

@@ -1267,6 +1267,23 @@ class MutationHelperTests(unittest.TestCase):
             self.assertTrue(body.endswith("\n"))
             self.assertTrue(packet_path.read_text(encoding="utf-8").endswith("\n"))
 
+            completed, uncommitted_validation, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-read-only",
+                    operation="validate-pr-packet-read-only",
+                    mode="read_only",
+                    inputs={"packet_path": packet_path.relative_to(git_root).as_posix()},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 1)
+            self.assertIn(
+                "source.packet_commit",
+                {failure["rule"] for failure in uncommitted_validation["data"]["stdout_json"]["failures"]},
+            )
+
+            self.run_git(git_root, "add", body_path.relative_to(git_root).as_posix(), packet_path.relative_to(git_root).as_posix())
+            self.run_git(git_root, "commit", "--quiet", "-m", "docs(g56r-001): add review packet")
             completed, validation, stderr_records = run_runner(
                 helper_request(
                     "validate-pr-packet-read-only",
@@ -1332,6 +1349,53 @@ class MutationHelperTests(unittest.TestCase):
 
             body_before = body_path.read_text(encoding="utf-8")
             packet_before = packet_path.read_text(encoding="utf-8")
+            mismatched_base = json.loads(packet_before)
+            mismatched_base["target"]["base_branch"] = "release"
+            packet_path.write_text(json.dumps(mismatched_base, indent=2) + "\n", encoding="utf-8")
+            completed, base_validation, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-read-only",
+                    operation="validate-pr-packet-read-only",
+                    mode="read_only",
+                    inputs={"packet_path": packet_path.relative_to(git_root).as_posix()},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 1)
+            self.assertIn(
+                "source.base_branch",
+                {failure["rule"] for failure in base_validation["data"]["stdout_json"]["failures"]},
+            )
+            packet_path.write_text(packet_before, encoding="utf-8")
+
+            from speckit_pro_runner.helpers.read_only import protected_body_sha256
+
+            tampered_body = body_before.replace(
+                "No known gaps for the single packet handoff.",
+                "Protected packet prose was changed.",
+            )
+            tampered_packet = json.loads(packet_before)
+            tampered_packet["protected_body_fingerprint"]["value"] = protected_body_sha256(tampered_body)
+            body_path.write_text(tampered_body, encoding="utf-8")
+            packet_path.write_text(json.dumps(tampered_packet, indent=2) + "\n", encoding="utf-8")
+            completed, tampered_validation, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-read-only",
+                    operation="validate-pr-packet-read-only",
+                    mode="read_only",
+                    inputs={"packet_path": packet_path.relative_to(git_root).as_posix()},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 1)
+            tampered_rules = {
+                failure["rule"] for failure in tampered_validation["data"]["stdout_json"]["failures"]
+            }
+            self.assertIn("source.worktree", tampered_rules)
+            self.assertNotIn("body.protected_fingerprint", tampered_rules)
+            body_path.write_text(body_before, encoding="utf-8")
+            packet_path.write_text(packet_before, encoding="utf-8")
+
             completed, existing_response, stderr_records = run_runner(
                 helper_request("pr-packet-output", mode="apply", inputs=inputs),
                 cwd=git_root,
@@ -1345,8 +1409,6 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(body_path.read_text(encoding="utf-8"), body_before)
             self.assertEqual(packet_path.read_text(encoding="utf-8"), packet_before)
 
-            self.run_git(git_root, "add", body_path.relative_to(git_root).as_posix(), packet_path.relative_to(git_root).as_posix())
-            self.run_git(git_root, "commit", "--quiet", "-m", "docs(g56r-001): add review packet")
             candidate = git_root / "candidate.json"
             candidate.write_text('{"candidate":"route-updated"}\n', encoding="utf-8")
             self.run_git(git_root, "add", candidate.relative_to(git_root).as_posix())
@@ -1403,6 +1465,7 @@ class MutationHelperTests(unittest.TestCase):
                 "feature traversal": {**baseline, "source_feature_dir": "specs/../outside"},
                 "scope mismatch": {**baseline, "title_scope": "spec-998"},
                 "base mismatch": {**baseline, "base_branch": "develop"},
+                "multiline title": {**baseline, "title_description": "Publish candidate route baseline\n"},
                 "unsupported remote": {**baseline, "base_ref": "upstream/integration-base"},
                 "full local ref": {**baseline, "base_ref": "refs/heads/integration-base"},
                 "sha object target": {**baseline, "base_ref": "deadbeef", "base_branch": "deadbeef"},
@@ -1467,6 +1530,169 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(stderr_records[0]["details"]["packet_exists"], False)
             self.assertEqual(existing.read_text(encoding="utf-8"), "existing packet body\n")
             self.assertFalse(existing.with_suffix(".json").exists())
+
+    @unittest.skipUnless(os.name == "posix", "descriptor-relative race test requires POSIX")
+    def test_atomic_expected_absent_write_never_clobbers_concurrent_winner(self) -> None:
+        from speckit_pro_runner.helpers import mutation
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            target = root / "packet.json"
+            original_link = mutation.os.link
+
+            def install_competitor(
+                source: str,
+                destination: str,
+                *,
+                src_dir_fd: int | None = None,
+                dst_dir_fd: int | None = None,
+                follow_symlinks: bool = True,
+            ) -> None:
+                target.write_text("concurrent winner\n", encoding="utf-8")
+                original_link(
+                    source,
+                    destination,
+                    src_dir_fd=src_dir_fd,
+                    dst_dir_fd=dst_dir_fd,
+                    follow_symlinks=follow_symlinks,
+                )
+
+            with patch.object(mutation.os, "link", side_effect=install_competitor):
+                with self.assertRaises(FileExistsError):
+                    mutation.write_file_atomic(
+                        target,
+                        "generated packet\n",
+                        trust_root=root,
+                        expected_absent=True,
+                    )
+            self.assertEqual(target.read_text(encoding="utf-8"), "concurrent winner\n")
+
+    @unittest.skipUnless(os.name == "posix", "descriptor-relative durability test requires POSIX")
+    def test_committed_write_is_reported_when_directory_fsync_fails(self) -> None:
+        from speckit_pro_runner.helpers import mutation
+        from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            target = git_root / "generated" / "packet.json"
+            operation = {
+                "operation_id": "committed-before-fsync",
+                "kind": "write_file",
+                "target": "generated/packet.json",
+                "content": "{}\n",
+                "expected_absent": True,
+            }
+            request = SimpleNamespace(
+                request_id="test-committed-before-fsync",
+                helper_id="mutation-foundation",
+                operation="mutation-foundation",
+                mode="apply",
+                inputs={},
+            )
+            real_fsync = mutation.os.fsync
+            fsync_calls = 0
+
+            def fail_directory_fsync(fd: int) -> None:
+                nonlocal fsync_calls
+                fsync_calls += 1
+                if fsync_calls == 2:
+                    raise OSError("injected directory fsync failure")
+                real_fsync(fd)
+
+            with (
+                patch.object(mutation, "find_repo_root", return_value=git_root),
+                patch.object(mutation.os, "fsync", side_effect=fail_directory_fsync),
+            ):
+                response = mutation.run_mutation_helper(
+                    MUTATION_HELPERS["mutation-foundation"],
+                    request,
+                    operations=[operation],
+                )
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertTrue(target.is_file())
+            result = response["data"]["mutation"]
+            self.assertEqual(result["mutation_status"], "partial_failure")
+            self.assertEqual(result["applied_operations"][0]["operation_id"], operation["operation_id"])
+            self.assertEqual(result["touched_paths"], [operation["target"]])
+            self.assertTrue(response["diagnostics"][0]["details"]["write_committed"])
+
+    def test_apply_reports_secure_write_prerequisite_before_mutation(self) -> None:
+        from speckit_pro_runner.helpers import mutation
+        from speckit_pro_runner.helpers.registry import MUTATION_HELPERS
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            request = SimpleNamespace(
+                request_id="test-secure-write-prerequisite",
+                helper_id="mutation-foundation",
+                operation="mutation-foundation",
+                mode="apply",
+                inputs={},
+            )
+            with (
+                patch.object(mutation, "find_repo_root", return_value=git_root),
+                patch.object(mutation, "SECURE_DIR_FD_WRITES", False),
+            ):
+                response = mutation.run_mutation_helper(
+                    MUTATION_HELPERS["mutation-foundation"],
+                    request,
+                    operations=[
+                        {
+                            "operation_id": "blocked-write",
+                            "kind": "write_file",
+                            "target": "generated/blocked.md",
+                            "content": "blocked\n",
+                        }
+                    ],
+                )
+
+            self.assert_response(response, "missing_prerequisite", 3)
+            self.assertEqual(response["diagnostics"][0]["code"], "secure_atomic_writes_unavailable")
+            self.assertFalse((git_root / "generated" / "blocked.md").exists())
+
+    def test_packet_git_context_uses_captured_revisions_and_rejects_non_utf8_paths(self) -> None:
+        from speckit_pro_runner.helpers import pr_emission
+
+        branch = b"packet-feature\n"
+        base_sha = b"a" * 40 + b"\n"
+        head_sha = b"b" * 40 + b"\n"
+
+        def completed(stdout: bytes) -> subprocess.CompletedProcess[bytes]:
+            return subprocess.CompletedProcess(args=[], returncode=0, stdout=stdout, stderr=b"")
+
+        stable_results = [
+            completed(branch),
+            completed(base_sha),
+            completed(head_sha),
+            completed(b"candidate.json\0"),
+            completed(b"binary diff"),
+            completed(branch),
+            completed(base_sha),
+            completed(head_sha),
+        ]
+        with patch.object(pr_emission.subprocess, "run", side_effect=stable_results) as mocked_run:
+            context, error = pr_emission._git_packet_context(Path("/repo"), "refs/heads/main")
+        self.assertIsNone(error)
+        self.assertEqual(context["changed_files"], ["candidate.json"])
+        expected_range = f"{'a' * 40}...{'b' * 40}"
+        self.assertIn(expected_range, mocked_run.call_args_list[3].args[0])
+        self.assertIn(expected_range, mocked_run.call_args_list[4].args[0])
+
+        invalid_path_results = [
+            completed(branch),
+            completed(base_sha),
+            completed(head_sha),
+            completed(b"invalid-\xff.json\0"),
+            completed(b"binary diff"),
+            completed(branch),
+            completed(base_sha),
+            completed(head_sha),
+        ]
+        with patch.object(pr_emission.subprocess, "run", side_effect=invalid_path_results):
+            context, error = pr_emission._git_packet_context(Path("/repo"), "refs/heads/main")
+        self.assertIsNone(context)
+        self.assertEqual(error, "unsupported_git_path_encoding")
 
     @unittest.skipUnless(os.name == "posix", "descriptor-relative race test requires POSIX")
     def test_atomic_mutation_write_blocks_parent_swap_before_temporary_write(self) -> None:

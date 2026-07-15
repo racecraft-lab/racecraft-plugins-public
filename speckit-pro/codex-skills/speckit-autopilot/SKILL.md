@@ -936,8 +936,9 @@ procedures in [post-implementation-codex.md](./references/post-implementation-co
    error writes state and stops without a packet. After a single-route proceed
    result, invoke the `golden_only` `pr-packet-output` helper in `apply` mode
    with grounded feature, title, UAT, verification, scope, gap, and source-marker
-   inputs. It derives the current branch, changed-file scope, body path, packet
-   path, protected fingerprint, and validation-result path, then atomically
+   inputs. It derives the current branch, immutable base/source HEAD SHAs,
+   source-diff fingerprint, changed-file scope, body path, packet path,
+   versioned protected fingerprint, and validation-result path, then atomically
    writes the body before the authorizing single-packet JSON at
    `specs/<feature>/.process/pr-packets/<packet-id>.json`. Callers must not pass
    raw output paths, content, operations, or split metadata. The helper supports
@@ -948,14 +949,19 @@ procedures in [post-implementation-codex.md](./references/post-implementation-co
    `base...HEAD`. On resume, if either body or packet already exists, never
    authorize reuse or overwrite.
    Inspect and remove both artifacts; if either is tracked, commit its deletion,
-   restore a clean committed worktree, and regenerate. `generate-pr-body`
+   restore a clean committed worktree, and regenerate. Apply mode fails closed
+   with `secure_atomic_writes_unavailable` when descriptor-relative no-follow
+   writes and atomic no-clobber installation are unavailable. Do not substitute
+   path-based writes; resume at the same clean source revision in a supported
+   POSIX environment. `generate-pr-body`
    remains a separate one-Markdown-body helper and
-   does not create packet JSON or metadata. Run `validate-pr-packet-read-only`
-   against the just-generated single packet and consume
+   does not create packet JSON or metadata. Refine only declared editable
+   prose, then stage only the generated body and packet and commit them as the
+   single direct child of the recorded source revision. Run
+   `validate-pr-packet-read-only` against those committed, clean artifacts and consume
    only the current response `data.stdout_json` in memory and durable state.
    Continue only when it reports `status=passed`, `pr_blocked=false`, and the
-   response reports `writes_state=false`; no validation file is written. Stage
-   only the generated body and packet, then commit them. Re-run the full final
+   response reports `writes_state=false`; no validation file is written. Re-run the full final
    verification suite, final reviewability boundary, packet validation, and
    PR workflow validation against the committed artifacts. Push that packet
    commit only after every repeated check passes, then open the PR with packet fields through

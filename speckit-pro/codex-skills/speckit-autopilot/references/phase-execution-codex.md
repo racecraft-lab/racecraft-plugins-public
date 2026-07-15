@@ -375,9 +375,10 @@ fail-closed sequence:
 final-reviewability boundary: use current committed reviewability evidence; if none is current, stop before PR side effects
 from a clean committed worktree, run pr-packet-output in apply mode with grounded structured evidence for a single route
 require its derived specs/<feature>/.process/pr-packets/<packet-id>.json and body_file to exist
-run validate-pr-packet-read-only for that packet and consume response data.stdout_json in memory/state
+if secure_atomic_writes_unavailable is returned, fail closed and resume the same clean source revision in a supported POSIX environment
+refine only declared editable prose, then git add only the packet and body and commit them as the single direct child of the recorded source revision
+run validate-pr-packet-read-only for those committed, clean artifacts and consume response data.stdout_json in memory/state
 require data.stdout_json.status=passed, data.stdout_json.pr_blocked=false, and response data.writes_state=false
-git add only the packet and body, then commit them
 rerun full final verification, the final reviewability boundary, validate-pr-packet-read-only, and validate-pr-workflow-contract
 push the packet commit
 create only with packet-owned --base, --head, --title, and --body-file values

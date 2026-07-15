@@ -162,9 +162,9 @@ fail-closed sequence:
 final-reviewability boundary: use current committed reviewability evidence; if none is current, stop before PR side effects
 for a single route, run pr-packet-output in apply mode with grounded structured evidence
 require its derived specs/<feature>/.process/pr-packets/<packet-id>.json and body_file to exist
-run validate-pr-packet-read-only for that packet and consume response data.stdout_json in memory/state
+refine only sanctioned prose, then git add only the packet and body and commit them as the single direct child of the recorded source revision
+run validate-pr-packet-read-only for those committed, clean artifacts and consume response data.stdout_json in memory/state
 require data.stdout_json.status=passed, data.stdout_json.pr_blocked=false, and response data.writes_state=false
-git add only the packet and body, then commit them
 rerun full final verification, the final reviewability boundary, validate-pr-packet-read-only, and validate-pr-workflow-contract
 push the packet commit
 create only with packet-owned --base, --head, --title, and --body-file values
@@ -207,6 +207,10 @@ packet paths first. If either output already exists, never validate it for reuse
 it. Inspect and remove both body and packet artifacts. If either is tracked,
 commit its deletion, restore a clean committed worktree, and regenerate both
 from the grounded request.
+Apply mode fails closed with `secure_atomic_writes_unavailable` when
+descriptor-relative no-follow writes and atomic no-clobber installation are
+unavailable. Do not substitute a path-based write; resume the same clean source
+revision in a supported POSIX environment.
 
 `generate-pr-body` is a body-only `golden_only` operation. Its complete input
 contract is `output_path`, `title`, and `sections`, and it writes one Markdown
@@ -234,8 +238,11 @@ Style rules:
   the `speckit-pro-review-packet-source` marker.
 - Do not add template comments, hidden TODOs, or ad hoc HTML comments.
 
-Validate the current packet before any single-PR create attempt with one runner
-JSON request using `helper_id=validate-pr-packet-read-only`, the same operation,
+Stage only `packet.body_file` and the generated packet path, then commit those
+artifacts as the single direct child of the recorded source revision. The
+packet and body must be tracked and the worktree clean. Validate the current
+packet before any single-PR create attempt with one runner JSON request using
+`helper_id=validate-pr-packet-read-only`, the same operation,
 `mode=read_only`, and the established feature-local packet path. Consume the
 current response's `data.stdout_json` in memory and durable workflow state.
 Continue only when it reports `status=passed` and `pr_blocked=false`, while the
@@ -253,8 +260,7 @@ only valid for non-spec plugin changes. Any split-contract failure means the
 single-PR path is forbidden. Continue only through the split workflow below,
 or stop blocked with the validator output.
 
-Stage only `packet.body_file` and the generated packet path, then commit those
-artifacts. Re-run the full final verification suite and final reviewability
+Re-run the full final verification suite and final reviewability
 boundary against the committed artifacts. Re-run
 `validate-pr-packet-read-only` and `validate-pr-workflow-contract`; if any
 remediation changes repository bytes or packet evidence, remove the stale
@@ -288,7 +294,7 @@ converted to a skip.
 
 ## Multi-PR Emission Workflow
 
-For specs whose atomicity route is `split-PR`, Post item 18 is multi-PR
+For specs whose atomicity route is `split-PR`, `Post: PR Creation` (item 17) is multi-PR
 emission. The PRSG-008 `plan-layers` output is the authoritative source of
 review order and slice membership. Codex MUST NOT infer, reroute, or re-slice
 work from changed files, reviewability warnings, or fallback heuristics.

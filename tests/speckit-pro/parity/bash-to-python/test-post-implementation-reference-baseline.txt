@@ -33,4 +33,14 @@
 033 Codex reference consumes read-only packet validation in memory
 034 Claude reference keeps restack deferred with explicit fallback
 035 Codex reference keeps restack deferred with explicit fallback
-TOTAL: 35
+036 Claude resume continues when SDD phases are complete but Post work is incomplete
+037 Codex resume continues when SDD phases are complete but Post work is incomplete
+038 Claude commits packet artifacts before read-only authorization
+039 Codex commits packet artifacts before read-only authorization
+040 Claude pushes the packet commit before exact head-base PR creation
+041 Codex pushes the packet commit before exact head-base PR creation
+042 Claude completion requires Retrospective Post reconciliation and live PR evidence
+043 Codex completion requires every Post item and verified PR evidence
+044 Codex assigns split emission to PR Creation item 17
+045 Both clients forbid packet and PR terminal phases from becoming skips
+TOTAL: 45

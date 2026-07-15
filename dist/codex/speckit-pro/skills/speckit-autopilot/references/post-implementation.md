@@ -411,6 +411,10 @@ opens one slice PR.
    overwrite it. Inspect and remove both body and packet artifacts. If either
    is tracked, commit its deletion, restore a clean committed worktree, and
    regenerate both from the grounded request.
+   Apply mode fails closed with `secure_atomic_writes_unavailable` when
+   descriptor-relative no-follow writes and atomic no-clobber installation are
+   unavailable. Do not substitute a path-based write; resume the same clean
+   source revision in a supported POSIX environment.
 6b. Require the generated packet's repo-relative `body_file` to be present and
    readable. `generate-pr-body` remains a separate body-only `golden_only` operation that
    accepts exactly `output_path`, `title`, and `sections` and writes one
@@ -436,8 +440,11 @@ opens one slice PR.
    - **Do not touch protected packet-owned sections or markers.**
    - Omit **Anything reviewers should know** entirely if there is nothing real
      to say. An empty section is worse than no section.
-6d. Validate the packet before any single-PR create attempt with one runner JSON
-   request using `helper_id=validate-pr-packet-read-only`, the same operation,
+6d. Stage only `packet.body_file` and the generated packet path, then commit
+   those artifacts as the single direct child of the recorded source revision.
+   The packet and body must be tracked and the worktree clean. Validate the
+   packet before any single-PR create attempt with one runner JSON request using
+   `helper_id=validate-pr-packet-read-only`, the same operation,
    `mode=read_only`, and
    `inputs.packet_path=specs/<feature>/.process/pr-packets/<packet-id>.json`.
    Consume the current response's `data.stdout_json` in memory and durable
@@ -460,8 +467,7 @@ opens one slice PR.
    split-contract failure means the single-PR path is forbidden: run
    `multi-pr-emission` with the current layer or marker plan, or stop
    blocked with the validator output.
-6f. Stage only `packet.body_file` and the generated packet path, then commit
-   those artifacts. Re-run the full final verification suite and final
+6f. Re-run the full final verification suite and final
    reviewability boundary against the committed packet artifacts. Re-run
    `validate-pr-packet-read-only` and `validate-pr-workflow-contract`; if any
    remediation changes repository bytes or packet evidence, remove the stale
@@ -700,9 +706,12 @@ cron fire runs in a fresh context with no memory of prior
 iterations. All values (PR number, repo, branch) must be
 hardcoded in the prompt, not referenced as variables.
 
-**After scheduling the loop, the autopilot is DONE.** Report the
-final summary with PR URL and note that review remediation is
-running in the background via `/loop`.
+After scheduling the loop, complete Retrospective, reconcile every canonical
+Post row between the workflow and durable state, and repeat the exact head/base
+PR lookup. The autopilot is DONE only after the final completion audit proves
+that no required Post item is missing or incomplete and the recorded open PR
+matches the packet. Then report the final summary with the PR URL and note that
+review remediation is running in the background via `/loop`.
 
 ## Self-Review Before Finalizing
 
