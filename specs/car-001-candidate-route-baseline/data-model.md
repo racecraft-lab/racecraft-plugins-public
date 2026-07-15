@@ -14,8 +14,9 @@ model; the two must stay in lockstep.
 
 Design invariants: the manifest is the single source of machine data and the
 record (`claude-agent-route-candidates.md`) the single source of evidence and
-rationale; they cross-reference by `agent_name` and `agent_contract_id`, and no
-machine datum has two authoritative homes — the record's explicitly labeled
+rationale; they cross-reference by `agent_name` (the manifest also carries a stable
+`agent_contract_id` that downstream specs bind to, which is not a record
+cross-reference), and no machine datum has two authoritative homes — the record's explicitly labeled
 read-only mirror tables (Agent inventory, hash triples) are permitted because
 they are recomputable and drift-detectable, not second authoritative copies
 (Constitution VI; §7 rule 9). All hashes are lowercase hex
@@ -66,7 +67,7 @@ required for all twelve agents unless the "Required" column says otherwise.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `agent_name` | string | yes | Canonical agent name; MUST equal the map key. |
-| `agent_contract_id` | string | yes | Stable identifier for this agent's role contract; the cross-reference key the record and downstream specs bind to. Stable across pure route changes. |
+| `agent_contract_id` | string | yes | Stable identifier for this agent's role contract that downstream specs (CAR-002/003/006) bind to; stable across pure route changes and unique across the twelve agents. The record cross-references entries by `agent_name`, not by this ID. |
 | `role_contract` | object | yes | The role-specific contract — see §3.1. |
 | `immutable_production_route` | object \| null | yes (nullable) | The current shipped route (`{model, effort}`) for the eleven current agents; `null` for `autopilot-fast-helper` (FR-010). When `null`, `production_route_recorded_absence` MUST be `true`. |
 | `production_route_recorded_absence` | boolean | yes | `true` only for the net-new helper (explicit absence, not omission); `false` for the eleven current agents. |
@@ -259,9 +260,11 @@ manifest carries the machine-referenceable stubs so tuples can point at them by
    artifacts.
 8. **Comparator pin (FR-009)**: `immutable_production_comparator.release_tag`
    and `commit_sha` are present and match the pinned `2.19.1` identity.
-9. **Cross-reference integrity (Constitution VI)**: every `agent_contract_id`,
-   `fixture_backlog_ref`, and `CAP-Qn` referenced in the manifest resolves to a
-   section in the record; no machine datum has two *authoritative* homes. The
+9. **Cross-reference integrity (Constitution VI)**: every `fixture_backlog_ref`
+   and `CAP-Qn` referenced in the manifest resolves to a section in the record,
+   and `agent_name` matches its map key; the manifest's `agent_contract_id` is a
+   stable downstream identifier (unique across the twelve agents), not a record
+   anchor. No machine datum has two *authoritative* homes. The
    record's *Agent inventory* route tuples and *Agent-file hash triples* are
    explicit read-only **mirrors** of the authoritative manifest values (each
    table states the mirror direction) and are kept drift-detectable by

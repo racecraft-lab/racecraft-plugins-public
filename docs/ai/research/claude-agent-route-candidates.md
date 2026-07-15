@@ -6,7 +6,9 @@ This is the human-readable research record for CAR-001. Its machine counterpart 
 the JSON manifest `docs/ai/research/claude-agent-route-candidate-manifest.json`.
 The record is the single source of evidence and
 rationale; the manifest is the single source of machine data. They cross-reference
-by `agent_name` and `agent_contract_id`. Where the record reproduces machine values
+by `agent_name`; the manifest additionally carries a stable `agent_contract_id` that
+downstream specs (CAR-002/003/006) bind to, which is not itself a record cross-reference.
+Where the record reproduces machine values
 for human readability — the *Agent inventory* route tuples and the *Agent-file hash
 triples* — it does so as an explicit read-only **mirror** of the authoritative
 manifest (each such table states the mirror direction), kept drift-detectable by

@@ -183,9 +183,10 @@ real: it confirms `agent_name` matches its map key, every `CAP-Qn` a tuple
 references resolves to a declared capability question, `platform_field_mapping`
 and recorded absence occur only on the helper, every candidate `effort` is a
 documented level (record `EFF-1`), every distinct candidate alias has an
-invalidation trigger naming it, and the helper's `platform_field_mapping` is
+invalidation trigger naming it, the helper's `platform_field_mapping` is
 non-empty and represents every field of the pinned Codex source toml
-(source-completeness, data-model §5).
+(source-completeness, data-model §5), and both the capability-question IDs and
+the twelve `agent_contract_id`s are unique.
 
 ```bash
 python3 - <<'PY'
@@ -197,6 +198,9 @@ declared_q = set(q_ids)
 errs = []
 if len(q_ids) != len(declared_q):
     errs.append(f"duplicate capability_question ids: {q_ids}")
+contract_ids = [e["agent_contract_id"] for e in agents.values()]
+if len(contract_ids) != len(set(contract_ids)):
+    errs.append(f"duplicate agent_contract_id: {contract_ids}")
 for name, e in agents.items():
     if e["agent_name"] != name:
         errs.append(f"{name}: agent_name {e['agent_name']!r} != key")
