@@ -27,14 +27,14 @@
       "id": "CAP-Q2",
       "question": "Does the `sonnet` alias resolve to `claude-sonnet-5` in the pinned environment, and is that binding stable under the same floating-resolution, allowlist-pinning, and re-pointing risks (ALS-sonnet, RES-3, ALS-repoint)?",
       "blocks": [
-        "expected_resolved_model_id and environment-time binding for the sonnet candidate tuples of codebase-analyst, consensus-synthesizer, domain-researcher, gate-validator, spec-context-analyst, and uat-runbook-author (and the sonnet candidate on the five executors and the helper fallback)"
+        "expected_resolved_model_id and environment-time binding for the sonnet candidate tuples of codebase-analyst, consensus-synthesizer, domain-researcher, gate-validator, spec-context-analyst, and uat-runbook-author (and the sonnet candidate on the five executors and the helper's sonnet latency-oriented alternative)"
       ]
     },
     {
       "id": "CAP-Q3",
       "question": "Does the `haiku` alias resolve to `claude-haiku-4-5-20251001` (API alias `claude-haiku-4-5`) in the pinned environment (ALS-haiku)?",
       "blocks": [
-        "the autopilot-fast-helper starting-hypothesis haiku + low-effort candidate binding, and the haiku candidate tuples on the six analyst roles"
+        "the autopilot-fast-helper starting-hypothesis haiku + low-effort candidate binding, and the haiku candidate tuples on the six sonnet-production analyst/validator/author roles (codebase/consensus/domain/gate/spec-context/uat) plus checklist-executor and clarify-executor"
       ]
     },
     {
@@ -163,7 +163,7 @@
       "known_incompatibilities": [
         {
           "subject": "haiku (candidate alias)",
-          "reason": "This executor's role requires deep reasoning (heavy Specify/Plan/Analyze/remediation or TDD execution); the `haiku` alias is documented as the fast, efficient model for simple tasks (ALS-haiku), a role-capability mismatch. Recorded incompatibility per FR-016 (not a benchmark result or product-announcement exclusion); `haiku` is therefore not carried as a candidate route for this agent.",
+          "reason": "This role runs /speckit-analyze and remediates findings at every severity through deep cross-artifact analysis and evidence-grounded remediation; the `haiku` alias is documented as the fast, efficient model for simple tasks (ALS-haiku), a role-capability mismatch for this quality-critical executor. Recorded incompatibility per FR-016 (not a benchmark result or product-announcement exclusion); `haiku` is therefore not carried as a candidate route for this agent.",
           "evidence_ref": "docs/ai/research/claude-agent-route-candidates.md#2-claude-code-model-aliases-and-expected-resolved-ids"
         }
       ],
@@ -247,6 +247,22 @@
             "binding_question_ref": "CAP-Q4"
           },
           "tuple_rationale": "Highest-capability executor candidate; binding and availability both open (CAP-Q4)."
+        },
+        {
+          "alias": "haiku",
+          "expected_resolved_model_id": "claude-haiku-4-5-20251001",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Bounded-domain checklist and gap-remediation role; haiku is an eligible bounded-work candidate screened per AC-5.1 when the tool and output contracts pass (ALS-haiku); no recorded incompatibility excludes it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q3",
+            "binding_question_ref": "CAP-Q3"
+          },
+          "tuple_rationale": "Bounded-work candidate screened per AC-5.1; effective effort levels are model-dependent (EFF-1) and probe-gated."
         }
       ],
       "required_capabilities": {
@@ -279,14 +295,8 @@
           "any supported authentication mode (AUTH-2)"
         ]
       },
-      "candidate_rationale": "Executor-class task-execution role (production route opus/max). opus/max matches the shipped route and the role's deep-reasoning demand (fact); fable/max is candidate-eligible for executor-class agents per FR-013 as the highest-capability option (MDL-2), carried with a floating-binding/availability probe (CAP-Q4); sonnet/max is a reasoned lower-cost executor candidate (ALS-sonnet) with no recorded incompatibility to exclude it (FR-016). The `haiku` alias is recorded as a known incompatibility for this deep-reasoning role (ALS-haiku positions it for simple tasks), not excluded by announcement status. All alias-to-ID bindings float and are probe-gated (CAP-Q1/Q2/Q4).",
-      "known_incompatibilities": [
-        {
-          "subject": "haiku (candidate alias)",
-          "reason": "This executor's role requires deep reasoning (heavy Specify/Plan/Analyze/remediation or TDD execution); the `haiku` alias is documented as the fast, efficient model for simple tasks (ALS-haiku), a role-capability mismatch. Recorded incompatibility per FR-016 (not a benchmark result or product-announcement exclusion); `haiku` is therefore not carried as a candidate route for this agent.",
-          "evidence_ref": "docs/ai/research/claude-agent-route-candidates.md#2-claude-code-model-aliases-and-expected-resolved-ids"
-        }
-      ],
+      "candidate_rationale": "Structured-work checklist and gap-remediation role (production route opus/max). opus/max matches the shipped route (fact); fable/max is candidate-eligible for executor-class agents per FR-013 as the highest-capability option (MDL-2), carried with a floating-binding/availability probe (CAP-Q4); sonnet/max is a reasoned lower-cost candidate (ALS-sonnet) with no recorded incompatibility to exclude it (FR-016); haiku/max is a bounded-work candidate screened per AC-5.1 when its tool and output contracts pass (ALS-haiku). No candidate alias is excluded for this role. All alias-to-ID bindings float and are probe-gated (CAP-Q1/Q2/Q3/Q4).",
+      "known_incompatibilities": [],
       "required_qualification_artifacts": [
         "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
         "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
@@ -296,6 +306,7 @@
         "The `opus` alias re-points to a new resolved model ID (currently expected `claude-opus-4-8` per CAP-Q1), invalidating this entry's `opus` candidate binding.",
         "The `sonnet` alias re-points to a new resolved model ID (currently expected `claude-sonnet-5` per CAP-Q2), invalidating this entry's `sonnet` candidate binding.",
         "The `fable` alias re-points to a new resolved model ID (currently expected `claude-fable-5` per CAP-Q4), invalidating this entry's `fable` candidate binding.",
+        "The `haiku` alias re-points to a new resolved model ID (currently expected `claude-haiku-4-5-20251001` per CAP-Q3), invalidating this entry's `haiku` candidate binding.",
         "The `checklist-executor` agent file at speckit-pro-v2.19.1 drifts from its recorded comparator hashes (full_file_sha256 `7c0129ca4a6e106f1f42a8b51c321b813db5340bed45644f822a96274274c2ea`; instruction_sha256 `8f6f512b76825cffe7078da685e6c728b48eb5e673d5c83913ca1e438e58e6e3`) — detect by recomputation; a pure frontmatter route change leaves instruction_sha256 unchanged (FR-011/SC-007)."
       ],
       "fixture_backlog_ref": "docs/ai/research/claude-agent-route-candidates.md#fixture-backlog-checklist-executor"
@@ -367,6 +378,22 @@
             "binding_question_ref": "CAP-Q4"
           },
           "tuple_rationale": "Highest-capability executor candidate; binding and availability both open (CAP-Q4)."
+        },
+        {
+          "alias": "haiku",
+          "expected_resolved_model_id": "claude-haiku-4-5-20251001",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Read-only question-preparation role; haiku is an eligible lighter route screened per AC-6.1 when the grounding, citation, and output contracts pass (ALS-haiku); no recorded incompatibility excludes it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q3",
+            "binding_question_ref": "CAP-Q3"
+          },
+          "tuple_rationale": "Lighter read-only candidate screened per AC-6.1; effective effort levels are model-dependent (EFF-1) and probe-gated."
         }
       ],
       "required_capabilities": {
@@ -397,14 +424,8 @@
           "any supported authentication mode (AUTH-2)"
         ]
       },
-      "candidate_rationale": "Executor-class task-execution role (production route opus/max). opus/max matches the shipped route and the role's deep-reasoning demand (fact); fable/max is candidate-eligible for executor-class agents per FR-013 as the highest-capability option (MDL-2), carried with a floating-binding/availability probe (CAP-Q4); sonnet/max is a reasoned lower-cost executor candidate (ALS-sonnet) with no recorded incompatibility to exclude it (FR-016). The `haiku` alias is recorded as a known incompatibility for this deep-reasoning role (ALS-haiku positions it for simple tasks), not excluded by announcement status. All alias-to-ID bindings float and are probe-gated (CAP-Q1/Q2/Q4).",
-      "known_incompatibilities": [
-        {
-          "subject": "haiku (candidate alias)",
-          "reason": "This executor's role requires deep reasoning (heavy Specify/Plan/Analyze/remediation or TDD execution); the `haiku` alias is documented as the fast, efficient model for simple tasks (ALS-haiku), a role-capability mismatch. Recorded incompatibility per FR-016 (not a benchmark result or product-announcement exclusion); `haiku` is therefore not carried as a candidate route for this agent.",
-          "evidence_ref": "docs/ai/research/claude-agent-route-candidates.md#2-claude-code-model-aliases-and-expected-resolved-ids"
-        }
-      ],
+      "candidate_rationale": "Read-only question-preparation role (production route opus/max), executor-class by production tier. opus/max matches the shipped route (fact); fable/max is candidate-eligible for executor-class agents per FR-013 as the highest-capability option (MDL-2), carried with a floating-binding/availability probe (CAP-Q4); sonnet/max is a reasoned lower-cost candidate (ALS-sonnet) with no recorded incompatibility to exclude it (FR-016); haiku/max is a lighter read-only candidate screened per AC-6.1 when its grounding, citation, and output contracts pass (ALS-haiku). No candidate alias is excluded for this role. All alias-to-ID bindings float and are probe-gated (CAP-Q1/Q2/Q3/Q4).",
+      "known_incompatibilities": [],
       "required_qualification_artifacts": [
         "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
         "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
@@ -414,6 +435,7 @@
         "The `opus` alias re-points to a new resolved model ID (currently expected `claude-opus-4-8` per CAP-Q1), invalidating this entry's `opus` candidate binding.",
         "The `sonnet` alias re-points to a new resolved model ID (currently expected `claude-sonnet-5` per CAP-Q2), invalidating this entry's `sonnet` candidate binding.",
         "The `fable` alias re-points to a new resolved model ID (currently expected `claude-fable-5` per CAP-Q4), invalidating this entry's `fable` candidate binding.",
+        "The `haiku` alias re-points to a new resolved model ID (currently expected `claude-haiku-4-5-20251001` per CAP-Q3), invalidating this entry's `haiku` candidate binding.",
         "The `clarify-executor` agent file at speckit-pro-v2.19.1 drifts from its recorded comparator hashes (full_file_sha256 `e18d74f13d312ad9547188728db57fb720468aae15b3b8ac7f478f0971fbafbe`; instruction_sha256 `89ceb775b4ce0b98b516466ba30ee6fda147b6524690ee1fcfa024ddff0b8cc3`) — detect by recomputation; a pure frontmatter route change leaves instruction_sha256 unchanged (FR-011/SC-007)."
       ],
       "fixture_backlog_ref": "docs/ai/research/claude-agent-route-candidates.md#fixture-backlog-clarify-executor"
@@ -988,7 +1010,7 @@
       "known_incompatibilities": [
         {
           "subject": "haiku (candidate alias)",
-          "reason": "This executor's role requires deep reasoning (heavy Specify/Plan/Analyze/remediation or TDD execution); the `haiku` alias is documented as the fast, efficient model for simple tasks (ALS-haiku), a role-capability mismatch. Recorded incompatibility per FR-016 (not a benchmark result or product-announcement exclusion); `haiku` is therefore not carried as a candidate route for this agent.",
+          "reason": "This role executes implementation tasks under strict TDD red-green-refactor with long-context code editing; the `haiku` alias is documented as the fast, efficient model for simple tasks (ALS-haiku), a role-capability mismatch for this quality-critical executor. Recorded incompatibility per FR-016 (not a benchmark result or product-announcement exclusion); `haiku` is therefore not carried as a candidate route for this agent.",
           "evidence_ref": "docs/ai/research/claude-agent-route-candidates.md#2-claude-code-model-aliases-and-expected-resolved-ids"
         }
       ],
@@ -1110,7 +1132,7 @@
       "known_incompatibilities": [
         {
           "subject": "haiku (candidate alias)",
-          "reason": "This executor's role requires deep reasoning (heavy Specify/Plan/Analyze/remediation or TDD execution); the `haiku` alias is documented as the fast, efficient model for simple tasks (ALS-haiku), a role-capability mismatch. Recorded incompatibility per FR-016 (not a benchmark result or product-announcement exclusion); `haiku` is therefore not carried as a candidate route for this agent.",
+          "reason": "This role executes the Specify, Plan, and Tasks phases, where Specify and Plan demand deep architectural reasoning; the `haiku` alias is documented as the fast, efficient model for simple tasks (ALS-haiku), a role-capability mismatch for this quality-critical executor. Recorded incompatibility per FR-016 (not a benchmark result or product-announcement exclusion); `haiku` is therefore not carried as a candidate route for this agent.",
           "evidence_ref": "docs/ai/research/claude-agent-route-candidates.md#2-claude-code-model-aliases-and-expected-resolved-ids"
         }
       ],
@@ -1399,7 +1421,7 @@
           "effort": "low",
           "project_level_eligibility": {
             "eligible": true,
-            "basis": "A reasoned fallback if haiku under-qualifies for triage/query-drafting quality; low effort preserves the latency-first contract (speed is the reason the helper exists).",
+            "basis": "A reasoned co-equal latency-oriented alternative for triage and query-drafting; low effort preserves the latency-first contract (speed is the reason the helper exists).",
             "evidence_class": "inference"
           },
           "environment_time_availability": {
@@ -1407,7 +1429,7 @@
             "probe_question_ref": "CAP-Q2",
             "binding_question_ref": "CAP-Q2"
           },
-          "tuple_rationale": "Fallback fast candidate at low effort if haiku is insufficient."
+          "tuple_rationale": "Co-equal latency-oriented candidate at low effort alongside the haiku starting hypothesis."
         }
       ],
       "required_capabilities": {
@@ -1434,7 +1456,7 @@
           "any supported authentication mode (AUTH-2)"
         ]
       },
-      "candidate_rationale": "Net-new twelfth agent with no current Claude production route (recorded absence). Latency-first, text-only leaf helper: the Codex model gpt-5.3-codex-spark maps to the fast Claude route haiku + explicit low effort as the starting hypothesis (proposed policy, gated on CAP-Q3); sonnet + low effort is a reasoned fallback if haiku under-qualifies for triage/drafting (CAP-Q2). High-capability aliases (opus, fable) are not carried — they contradict the speed-first contract (the helper exists to reduce latency and prompt size). All alias-to-ID bindings float and are probe-gated.",
+      "candidate_rationale": "Net-new twelfth agent with no current Claude production route (recorded absence). Latency-first, text-only leaf helper: the Codex model gpt-5.3-codex-spark maps to the fast Claude route haiku + explicit low effort as the starting hypothesis (proposed policy, gated on CAP-Q3); sonnet + low effort is a reasoned co-equal latency-oriented alternative (CAP-Q2). High-capability aliases (opus, fable) are not carried — they contradict the speed-first contract (the helper exists to reduce latency and prompt size). All alias-to-ID bindings float and are probe-gated.",
       "known_incompatibilities": [
         {
           "subject": "opus and fable (candidate aliases)",

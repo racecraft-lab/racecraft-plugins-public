@@ -3,17 +3,10 @@
 **Research date (access date): 2026-07-14** | **Spec: CAR-001** | **Branch: `car-001-candidate-route-baseline`**
 
 This is the human-readable research record for CAR-001. Its machine counterpart is
-the JSON manifest `docs/ai/research/claude-agent-route-candidate-manifest.json`
-(authored in a later unit). The record is the single source of evidence and
+the JSON manifest `docs/ai/research/claude-agent-route-candidate-manifest.json`.
+The record is the single source of evidence and
 rationale; the manifest is the single source of machine data. They cross-reference
 by `agent_name` and `agent_contract_id` and never duplicate data that can drift.
-
-> **Authoring status.** This record is assembled across five implementation units.
-> Unit 1 (this pass, tasks T001-T009) authored the comparator pin, the stdlib
-> hashing method, the agent inventory, the Codex-helper source inventory, the
-> route-policy surface sweep, the Layer 6 fixture-gap, the twelve hash triples, and
-> the reviewability checkpoint. Sections marked with an authoring placeholder are
-> filled by later units and must not be treated as complete yet.
 
 > **Evidence basis for the inventory sections below.** Every value in the
 > *Immutable production comparator*, *Agent inventory*, *Codex helper source
@@ -23,7 +16,7 @@ by `agent_name` and `agent_contract_id` and never duplicate data that can drift.
 > about Anthropic platform behavior. Platform facts (model-ID resolution, alias
 > bindings, effort semantics) belong to the *Primary-source fact table* and carry
 > URL + access date + verbatim quote; the four-class statement labeling is applied
-> across the whole record in a later unit (task T013). Recording `model: opus` here
+> across the whole record (see *Statement classification*). Recording `model: opus` here
 > means only "the shipped frontmatter contains the alias `opus`", never a claim
 > about what that alias resolves to.
 
@@ -42,7 +35,7 @@ forever from the tag.
 | Object type | `commit` (verified via `git cat-file -t`) |
 | `pin_rationale` | Latest published release at research time; the consumer-installable identity, reproducible from the tag. Per-agent content hashes make later frontmatter drift detectable at agent granularity. |
 
-**2.19.0 -> 2.19.1 reconciliation (task T002).** The design concept and scaffold-time
+**2.19.0 -> 2.19.1 reconciliation.** The design concept and scaffold-time
 spec named `speckit-pro-v2.19.0` as a 2026-07-13 snapshot; `speckit-pro-v2.19.1` is
 a real patch published later, descending from 2.19.0. The scoped diff
 
@@ -57,7 +50,7 @@ Pinning to 2.19.1 is a zero-data-impact refresh.
 
 ---
 
-## Stdlib hashing method (task T003)
+## Stdlib hashing method
 
 Python 3.11+ standard library only (`hashlib`, `subprocess` with an argv list and
 `shell=False`, and `tomllib` for the Codex helper). No new Bash, no third-party
@@ -81,7 +74,7 @@ line endings, or content. The leading blank line that follows the closing fence 
 retained (each agent body begins `\n# <Title>...`). `instruction_sha256 =
 sha256(body_bytes)`. Because routes (`model`/`effort`) live in frontmatter, a pure
 frontmatter route change leaves this hash unchanged (SC-007, verified by
-recomputation in a later unit, task T027).
+recomputation).
 
 **`full_file_sha256` (whole file).** `sha256` over the complete file bytes including
 the frontmatter block, for drift detection.
@@ -92,28 +85,17 @@ independently cross-checked by a second implementation (naive split on the first
 both implementations produce identical `instruction_sha256` values. Re-running the
 computation twice produced byte-identical output (reproducible).
 
-**Codex-helper provisional instruction hash — exact method so a later unit can
-reproduce and finalize it.** `autopilot-fast-helper` has no Claude `.md` at the tag;
-its contract-equivalent translated body does not exist yet (authored in unit 3). The
-**provisional** `instruction_sha256` recorded here is computed over the Codex source
-contract content as follows, and is flagged **provisional-pending-unit-3**:
-
-1. Read the toml bytes: `git show speckit-pro-v2.19.1:speckit-pro/codex-agents/autopilot-fast-helper.toml`.
-2. Parse with stdlib `tomllib.loads(<toml-text>)` and take the string value of the
-   `developer_instructions` key (TOML multi-line basic string; the parser applies the
-   standard trim of the newline immediately following the opening `"""`).
-3. Encode that string as UTF-8 and `sha256` it. The `developer_instructions` value is
-   **2645 bytes** UTF-8 at this tag; its `sha256` is the provisional
-   `instruction_sha256` in the hash-triples table.
-
-Unit 3 finalizes the helper's `instruction_sha256` by recomputing it over the
-Claude-flavored contract-equivalent translated body it authors, replacing this
-provisional value. `full_file_sha256` for the helper is already final: `sha256` over
-the entire source toml (2938 bytes) with `hash_source: codex-toml-translation`.
+**Codex-helper instruction hash — method.** `autopilot-fast-helper` has no Claude `.md`
+at the tag; its `instruction_sha256` is the `sha256` over the contract-equivalent
+translated Claude body carried in the manifest's `platform_field_mapping` (the
+frontmatter-stripped Claude agent body) — encode that string as UTF-8 and `sha256` it
+(Python 3.11 stdlib `hashlib`), reproducible by re-hashing the manifest value. Its
+`full_file_sha256` is `sha256` over the entire Codex source toml (2938 bytes) with
+`hash_source: codex-toml-translation`, for provenance.
 
 ---
 
-## Agent inventory (task T004)
+## Agent inventory
 
 Eleven current Claude agents at the pinned tag. The route tuple is `model` + `effort`
 from the agent-file YAML frontmatter; the role-prose source is the agent `.md` at the
@@ -158,10 +140,10 @@ NotebookEdit, Skill, Agent, TeamCreate, SendMessage`.
 
 ---
 
-## Codex helper source inventory (task T005)
+## Codex helper source inventory
 
 Every field in `speckit-pro-v2.19.1:speckit-pro/codex-agents/autopilot-fast-helper.toml`,
-enumerated so unit 3's `platform_field_mapping` table can be source-complete (no source
+enumerated so the manifest's `platform_field_mapping` table is source-complete (no source
 field silently dropped). This is the net-new twelfth agent; it has no Claude production
 route (recorded absence).
 
@@ -176,7 +158,7 @@ route (recorded absence).
 | `developer_instructions` | multi-line basic string (2645 bytes UTF-8); contract content enumerated below |
 
 **`developer_instructions` contract content** (the role prose, four bounded jobs, hard
-rules, and output formats that unit 3 translates contract-equivalently):
+rules, and output formats translated contract-equivalently in the manifest):
 
 - **Role prose** — "# Autopilot Fast Helper": a *latency-first text helper* for the
   top-level autopilot orchestrator; does one small advisory text task quickly then
@@ -205,7 +187,7 @@ rules, and output formats that unit 3 translates contract-equivalently):
   list), **Prompt Normalization** (`## Compact Context` — Question / Evidence block /
   Open uncertainty).
 
-Mapping-hypothesis note (recorded, probe-gated, for unit 3): `sandbox_mode: read-only`
+Mapping-hypothesis note (recorded, probe-gated): `sandbox_mode: read-only`
 -> the shared read-only tool denylist posture; `model: gpt-5.3-codex-spark` -> a fast
 Claude route (starting hypothesis `haiku` + explicit low effort), labeled and gated on
 a capability question. Claude-only subagent fields with no Codex source (e.g.
@@ -213,7 +195,7 @@ a capability question. Claude-only subagent fields with no Codex source (e.g.
 
 ---
 
-## Route-policy surface inventory (task T006, AC-1.1)
+## Route-policy surface inventory (AC-1.1)
 
 Every tracked, active surface that **encodes** or **consumes** agent route policy —
 where "route policy" means the per-agent `model`/`effort` tuple, the tool-scoping
@@ -296,7 +278,7 @@ agent-type name only.
 
 ---
 
-## Layer 6 Claude fixture gap (task T007)
+## Layer 6 Claude fixture gap
 
 Verified by listing `tests/speckit-pro/layer6-efficiency/fixtures/` (both the working
 tree and the pinned tag). Of the twelve agents, **2 have a current Claude Layer 6
@@ -310,16 +292,20 @@ fixture and 10 do not**.
 Note: a separate `fixtures-codex/` set covers three Codex-side agents
 (`codebase-analyst`, `domain-researcher`, `spec-context-analyst`); it does not change
 the Claude fixture gap above. This gap feeds the requirements-level fixture backlog
-and Layer 6 labeling authored in a later unit.
+and Layer 6 labeling below.
 
 ---
 
-## Agent-file hash triples (task T008)
+## Agent-file hash triples
 
-All twelve `{instruction_sha256, full_file_sha256, hash_source}` triples, computed from
-the pinned-tag bytes with the method above (Python 3.11 stdlib), reproduced identically
-across two runs. A later unit copies these verbatim into the manifest
-`agent_file_hashes`.
+All twelve `{instruction_sha256, full_file_sha256, hash_source}` triples, reproduced
+identically across two runs. The eleven current Claude agents' triples are computed from
+the pinned-tag agent-`.md` bytes (Python 3.11 stdlib) and carried verbatim in the
+manifest `agent_file_hashes`. The `autopilot-fast-helper` row is the one exception: its
+`full_file_sha256` is computed over the pinned-tag Codex source toml, while its finalized
+`instruction_sha256` is the `sha256` over the contract-equivalent translated Claude body
+authored in the manifest's `platform_field_mapping` — this table mirrors that manifest
+value rather than the manifest copying from the record.
 
 | Agent | `instruction_sha256` | `full_file_sha256` | `hash_source` |
 |-------|----------------------|--------------------|---------------|
@@ -334,16 +320,16 @@ across two runs. A later unit copies these verbatim into the manifest
 | phase-executor | `695d78c4dd80ee1c2a2f724dc62b1f67b55c710efbe12cc8ff7535af6a415a48` | `70bf046540039a16bf2fe1109d782c52f27c070ffaebc4c7a99f34347930179c` | claude-agent-md |
 | spec-context-analyst | `faf387eabec1866ca87119023b04950ceda6949e7963eb8ba99aaad1eb43fd48` | `6659fb1b08ecfbdb784ab7f47d7c5ac9f8ce45b705de9cfea5144ac573edbc4f` | claude-agent-md |
 | uat-runbook-author | `51a1b54a079eaf2325160dbfc5fd28548fcda6da3e88f62e800a60376f09c3e8` | `d4aeecbcc2fb486aac68bf0084460ff9c4c75cc5bb1ff74f9d2f728e6c9eb4ba` | claude-agent-md |
-| autopilot-fast-helper | `0da3103f276542e615f2257f90514d58e3af9a61e6c59555d9c611ea7aff2b95` *(PROVISIONAL — pending unit 3)* | `aa570f8ff51fa3cb7848d8c05253ddf5d080f5d4a2dbed9a55f0149fceb1296d` | codex-toml-translation |
+| autopilot-fast-helper | `e662963dbc3259fc48ec1aa04c5ed2c13cbfc6e0f48ea7e50775df8c601684f2` | `aa570f8ff51fa3cb7848d8c05253ddf5d080f5d4a2dbed9a55f0149fceb1296d` | codex-toml-translation |
 
-The helper's `instruction_sha256` is the provisional value over the 2645-byte
-`developer_instructions` string (method documented above); unit 3 finalizes it over
-the contract-equivalent translated body. Its `full_file_sha256` is over the 2938-byte
-source toml and is final.
+The helper's `instruction_sha256` is the `sha256` over the contract-equivalent
+translated Claude body carried in the manifest's `platform_field_mapping` (the
+frontmatter-stripped Claude agent body); its `full_file_sha256` is over the 2938-byte
+Codex source toml (`hash_source: codex-toml-translation`).
 
 ---
 
-## Reviewability checkpoint (task T009)
+## Reviewability checkpoint
 
 Recorded before deliverable authoring: **0 production-code LOC, 2 deliverable files**
 (`docs/ai/research/claude-agent-route-candidates.md` and
@@ -354,7 +340,7 @@ budget; remains one spec, no split exception required.**
 
 ---
 
-## Statement classification (task T013)
+## Statement classification
 
 The record separates **four statement classes** with distinct visible tags. Official
 Anthropic documentation is the *only* admissible source for any claim about Anthropic
@@ -403,7 +389,7 @@ quoted verbatim and neither labeled a platform fact.
 **Access date for every fact row below: 2026-07-14.** Every platform-fact row cites a
 current official Anthropic page (`docs.claude.com`, `code.claude.com`, or `claude.com`),
 carries a short verbatim quote, and bears exactly one class tag (FR-004, SC-002, SC-003).
-Row IDs (e.g. `ALS-opus`, `RES-3`) are stable anchors the manifest and later units cite.
+Row IDs (e.g. `ALS-opus`, `RES-3`) are stable anchors the manifest cites.
 Inference rows name the facts they compose. Undocumented bindings/behaviors are not
 recorded here — they live in *Capability questions* as `CAP-Qn`.
 
@@ -431,6 +417,11 @@ an alias to a fixed dated ID. Therefore each alias's **documented behavior** is 
 Per FR-012 / Q6, **no legacy dated model snapshot is enumerated as a separate candidate** —
 candidates are the four aliases only, each with its expected resolved ID recorded alongside.
 
+**Candidate-tuple scope (FR-027).** CAR-001 records model/effort candidate tuples only
+(FR-012/FR-014); AC-1.3's prompt/context candidates are deferred to CAR-003's
+prompt/context-interaction stage, because none are justified before capability probing and
+measured-overhead evidence exist. `[POLICY]`
+
 - **`ALS-opus`** — The `opus` alias uses the latest Opus model. `[FACT]`
   - Source: https://code.claude.com/docs/en/model-config (accessed 2026-07-14)
   - Quote: "`opus` | Uses the latest Opus model for complex reasoning tasks".
@@ -446,7 +437,7 @@ candidates are the four aliases only, each with its expected resolved ID recorde
 - **`ALS-fable`** — The `fable` alias uses Claude Fable 5. `[FACT]`
   - Source: https://code.claude.com/docs/en/model-config (accessed 2026-07-14)
   - Quote: "`fable` | Uses Claude Fable 5 for your hardest and longest-running tasks".
-  - Expected resolved model ID: `claude-fable-5` (`MDL-1`). `[INFERENCE]` — binding **and** environment-time availability (PRD OQ-4) probe **`CAP-Q4`**. `fable` stays an executor-class candidate regardless of announcement status (FR-013); excluded only by recorded probe/contract evidence.
+  - Expected resolved model ID: `claude-fable-5` (`MDL-1`). `[INFERENCE]` — binding **and** environment-time availability (PRD OQ-4) probe **`CAP-Q4`**. `fable` stays an executor-class candidate regardless of announcement status (FR-013); excluded only by recorded probe/contract evidence. Here "executor-class" means the five `opus`-pinned `-executor` agents by production tier (analyze/checklist/clarify/implement/phase), independent of mutation boundary — so read-only `clarify-executor` is executor-class by tier even though it performs no writes.
 - **`ALS-context`** — The alias namespace also documents `best` ("Uses Fable 5 where your organization has access to it, otherwise the latest Opus model") and `default` ("Special value that clears any model override and reverts to the recommended model for your account type, or to the organization default model when an admin has set one. Not itself a model alias"). These are **not** CAR candidate aliases (FR-012 fixes the candidate set to `opus`/`sonnet`/`haiku`/`fable`). `[FACT]`
   - Source: https://code.claude.com/docs/en/model-config (accessed 2026-07-14)
   - Quote: as embedded above.
@@ -534,12 +525,12 @@ which of their frontmatter fields the platform honors.
 
 ### 9. Non-interactive telemetry
 
-**These rows are the source for the *Telemetry requirements* section (task T022, later unit).**
+**These rows are the source for the *Telemetry requirements* section.**
 
 - **`TEL-1`** — `claude -p --output-format json` returns a structured payload with `result` (text), session id, usage metadata, `total_cost_usd`, and a per-model cost breakdown; `--json-schema` adds `structured_output`. `[FACT]`
   - Source: https://code.claude.com/docs/en/headless (accessed 2026-07-14)
   - Quote: "With `--output-format json`, the response payload includes `total_cost_usd` and a per-model cost breakdown…"; "`json`: structured JSON with result, session ID, and metadata"; "The response includes metadata about the request (session ID, usage, etc.) with the structured output in the `structured_output` field."
-- **`TEL-2`** — No effort field is documented among the `-p --output-format json` result fields; the effective reasoning effort applied is therefore not returned by the print-mode JSON result. `[INFERENCE]` — composed from the documented `TEL-1` field set (result / session id / usage / `total_cost_usd` / per-model cost / `structured_output`), which contains no effort field. Feeds the T022 "never-returned / derived" necessity label.
+- **`TEL-2`** — No effort field is documented among the `-p --output-format json` result fields; the effective reasoning effort applied is therefore not returned by the print-mode JSON result. `[INFERENCE]` — composed from the documented `TEL-1` field set (result / session id / usage / `total_cost_usd` / per-model cost / `structured_output`), which contains no effort field. Feeds the "never-returned / derived" necessity label.
 - **`TEL-3`** — OpenTelemetry monitoring emits the `claude_code.cost.usage` metric whose attributes include `model`, `query_source` (`"main"`/`"subagent"`/`"auxiliary"`), `speed` (`"fast"`), `effort` (`"low"`/`"medium"`/`"high"`/`"xhigh"`/`"max"`), and `agent.name` — so per-subagent, per-model, per-effort cost is observable via OTel (a surface distinct from the `-p` JSON result). `[FACT]`
   - Source: https://code.claude.com/docs/en/monitoring-usage (accessed 2026-07-14)
   - Quote (verbatim metric + attribute identifiers): "`claude_code.cost.usage` … `model` … `query_source` `\"main\"` `\"subagent\"` `\"auxiliary\"` … `speed` `\"fast\"` … `effort` `\"low\"` `\"medium\"` `\"high\"` `\"xhigh\"` `\"max\"` … `agent.name`".
@@ -561,39 +552,37 @@ which of their frontmatter fields the platform honors.
 
 ## Capability questions
 
-Stable, contiguous probe IDs established by this unit (unit 2, tasks T010/T013/T014).
-Later units reference these IDs verbatim: the manifest `capability_questions` stubs (T020)
-and each tuple's `binding_question_ref` / `probe_question_ref` (T017) resolve here, and the
-dedicated capability-question prose pass (T024) expands each entry below without renumbering.
-Capability questions are **open probes**, not declarative statements — they carry none of
-the four class tags (per FR-005/FR-008) and hand undocumented bindings and behaviors to
-CAR-002 for probe design.
+Stable, contiguous probe IDs. The manifest `capability_questions` and each candidate
+tuple's `binding_question_ref` / `probe_question_ref` resolve here. Capability questions
+are **open probes**, not declarative statements — they carry none of the four class tags
+(per FR-005/FR-008) and hand undocumented bindings and behaviors to CAR-002 for probe
+design.
 
-Sources of these questions: unbound alias→dated-ID bindings (T010, rows `ALS-opus…fable`);
-inter-doc conflicts (T013 — **none found**, so no conflict-driven question); and the two
-undocumented behaviors (T014). No candidate is claimed executable before these are probed.
+Sources of these questions: unbound alias→dated-ID bindings (rows `ALS-opus…fable`);
+inter-doc conflicts (**none found**, so no conflict-driven question); and the two
+undocumented behaviors. No candidate is claimed executable before these are probed.
 
 | ID | Question (one-line) | Blocks |
 |----|---------------------|--------|
 | **`CAP-Q1`** | Does the `opus` Claude Code alias resolve to `claude-opus-4-8` in the pinned benchmark environment, and is that alias→dated-ID binding stable given "latest"-family resolution, allowlist pinning, and `ANTHROPIC_DEFAULT_OPUS_MODEL` re-pointing (`ALS-opus`, `RES-3`, `ALS-repoint`)? | CAR-002 probe of the `opus` route's environment-time resolved ID; gates candidate-tuple binding for the five `opus` executor agents (analyze/checklist/clarify/implement/phase). |
 | **`CAP-Q2`** | Does the `sonnet` alias resolve to `claude-sonnet-5` in the pinned environment, and is that binding stable under the same floating-resolution/allowlist/re-point risks (`ALS-sonnet`)? | CAR-002 probe of the `sonnet` route's resolved ID; gates candidate-tuple binding for the six `sonnet` analyst/validator/author agents (codebase/consensus/domain/gate/spec-context/uat). |
-| **`CAP-Q3`** | Does the `haiku` alias resolve to `claude-haiku-4-5-20251001` (alias `claude-haiku-4-5`) in the pinned environment (`ALS-haiku`)? | CAR-002 probe of the `haiku` route's resolved ID; gates the `autopilot-fast-helper` starting-hypothesis `haiku` + low-effort candidate tuple (helper Mapping-hypothesis note). |
+| **`CAP-Q3`** | Does the `haiku` alias resolve to `claude-haiku-4-5-20251001` (alias `claude-haiku-4-5`) in the pinned environment (`ALS-haiku`)? | CAR-002 probe of the `haiku` route's resolved ID; gates the `autopilot-fast-helper` starting-hypothesis `haiku` + low-effort candidate tuple and the `haiku` candidate tuples on the six `sonnet`-production analyst/validator/author agents (codebase/consensus/domain/gate/spec-context/uat) plus `checklist-executor` and `clarify-executor`. |
 | **`CAP-Q4`** | Does the `fable` alias resolve to `claude-fable-5` **and** is `fable` available/accessible in the pinned benchmark environment (PRD OQ-4), given `best`/`fable` "where your organization has access" gating and `ANTHROPIC_DEFAULT_FABLE_MODEL` re-pointing (`ALS-fable`, `ALS-context`, `ALS-repoint`)? | CAR-002 probe of `fable`'s resolved ID and environment-time availability; gates `fable`'s executor-class candidate eligibility (FR-013) — `fable` is excluded only by recorded probe/contract evidence. |
 | **`CAP-Q5`** | When a subagent's `model` frontmatter names an **unavailable** model at dispatch, does Claude Code hard-error or silently substitute another model? (Documented only for the main-session `/model` custom-model surface — `RES-5`, the `model_not_found` API-retry category — never for subagent-frontmatter dispatch.) | CAR-002 probe of unavailable-model dispatch behavior; gates any CAR-003 fallback design that assumes a defined unavailable-model outcome. Recorded as a mandatory probe question, never assumed (FR-008). |
 | **`CAP-Q6`** | At a subagent's execution time, when a shipped alias has **re-pointed** to a new resolved model ID, is the new model silently used, does it hard-error, or is it otherwise handled? (Distinct from and additional to alias re-pointing's role as a recorded manifest invalidation trigger, FR-014; the docs surface the resolved model via `resolvedModel`/`TEL-5` and announce main-session substitution via `RES-3`, but do not document the subagent execution-time manifestation.) | CAR-002 probe of alias re-pointing's execution-time manifestation; gates CAR-003 route-stability assumptions and the semantics of the per-alias invalidation triggers. Recorded as a mandatory probe question, never assumed (FR-008). |
 
 Each `CAP-Qn` above states the **detection/probe** need only; the *Go / no-go handoff*
-(task T025, final section) carries any that remain unverified as no-go items or open
+(final section) carries any that remain unverified as no-go items or open
 questions, and asserts no dependency on CAR-002 results.
 
 ### Capability-question prose (CAP-Q1…CAP-Q6)
 
 Full prose for each capability question, consolidating the probes raised by the alias-binding
-rows (`ALS-opus…ALS-fable`, task T010), the inter-doc conflict scan (task T013 — none found, so
-no conflict-driven question), and the two undocumented behaviors (task T014). The IDs are stable
-and match the manifest `capability_questions` stubs verbatim; this pass adds prose and does not
-renumber. All six are **open probes**, not declarative claims — they carry none of the four class
-tags (FR-005/FR-008), and no candidate is claimed executable before they are answered.
+rows (`ALS-opus…ALS-fable`), the inter-doc conflict scan (none found, so no conflict-driven
+question), and the two undocumented behaviors. The IDs match the manifest
+`capability_questions` verbatim. All six are **open probes**, not declarative claims — they
+carry none of the four class tags (FR-005/FR-008), and no candidate is claimed executable
+before they are answered.
 
 - **`CAP-Q1` — `opus` environment-time binding.** Does the `opus` Claude Code alias resolve to
   `claude-opus-4-8` in the pinned benchmark environment, and is that alias-to-dated-ID binding
@@ -608,11 +597,13 @@ tags (FR-005/FR-008), and no candidate is claimed executable before they are ans
   floating-resolution, allowlist-pinning, and re-pointing risks (`ALS-sonnet`, `RES-3`,
   `ALS-repoint`)? **Blocks:** the `sonnet` candidate tuples for the six `sonnet` analyst/validator/
   author agents (codebase/consensus/domain/gate/spec-context/uat), the `sonnet` lower-cost candidate
-  on the five executors, and the helper's `sonnet` fallback.
+  on the five executors, and the helper's `sonnet` latency-oriented alternative.
 - **`CAP-Q3` — `haiku` environment-time binding.** Does the `haiku` alias resolve to
   `claude-haiku-4-5-20251001` (API alias `claude-haiku-4-5`) in the pinned environment (`ALS-haiku`,
   `MDL-1`)? **Blocks:** the `autopilot-fast-helper` starting-hypothesis `haiku` + low-effort candidate
-  binding, and the `haiku` candidate tuples on the six analyst roles.
+  binding, and the `haiku` candidate tuples on the six `sonnet`-production analyst/validator/author
+  roles (codebase/consensus/domain/gate/spec-context/uat) and on `checklist-executor` and
+  `clarify-executor`.
 - **`CAP-Q4` — `fable` binding and availability.** Does the `fable` alias resolve to `claude-fable-5`
   **and** is `fable` available/accessible in the pinned benchmark environment (PRD OQ-4), given the
   `best`/`fable` "where your organization has access" gating (`ALS-context`) and
