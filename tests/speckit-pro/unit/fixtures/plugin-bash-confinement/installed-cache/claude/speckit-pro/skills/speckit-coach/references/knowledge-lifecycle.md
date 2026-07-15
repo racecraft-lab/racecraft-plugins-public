@@ -90,7 +90,14 @@ For `migrate`, reviewed cutover carries `reviewed: true` and
 For mutations, always run plan first, show its proposed operations and warnings,
 and apply only the exact accepted plan. The hash-bound plan includes source
 preconditions that apply rechecks before and after writes. A stale snapshot,
-changed source, or validation failure must stop without partial writes.
+changed source, or validation failure must stop, attempt compare-and-swap
+rollback, and report any residual state as a partial failure.
+All canonical knowledge and compatibility-view writers must use
+`knowledge-update-apply`; its repository lock serializes cooperating SpecKit Pro
+processes. Do not manually edit canonical knowledge or run an uncoordinated file
+writer while apply is active. Apply uses atomic no-replace creation and a final
+state check to detect conflicts, but the filesystem does not provide a portable
+compare-and-swap replacement primitive for an uncooperative writer.
 `generate-spec-index-check` and
 `generate-spec-index-write` are compatibility adapters; use the knowledge
 operations for new flows.

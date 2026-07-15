@@ -28,6 +28,12 @@ from .read_only import (
 )
 
 DEFAULT_ROLLBACK = "Review touched_paths and restore the previous file content before retrying."
+_EXPECTED_PRIOR_UNSET = object()
+CreatedDirectory = tuple[Path, tuple[int, int]]
+
+
+class AtomicWriteConflictError(OSError):
+    """The target changed after its caller accepted the prior bytes."""
 
 
 def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
@@ -686,15 +692,34 @@ def git_worktree_status(repo_root: Path) -> bool | dict[str, Any]:
     return bool(completed.stdout.strip())
 
 
-def write_file_atomic(target: Path, content: str | bytes, *, trust_root: Path | None = None) -> None:
+def write_file_atomic(
+    target: Path,
+    content: str | bytes,
+    *,
+    trust_root: Path | None = None,
+    expected_prior: bytes | None | object = _EXPECTED_PRIOR_UNSET,
+    created_directory_records: dict[Path, tuple[int, int]] | None = None,
+) -> list[CreatedDirectory]:
     if trust_root is not None:
         if os.name == "posix":
-            _write_file_atomic_posix(target, content, trust_root)
-            return
+            return _write_file_atomic_posix(
+                target,
+                content,
+                trust_root,
+                expected_prior=expected_prior,
+                created_directory_records=created_directory_records,
+            )
         if os.name == "nt":
-            _write_file_atomic_windows(target, content, trust_root)
-            return
+            return _write_file_atomic_windows(
+                target,
+                content,
+                trust_root,
+                expected_prior=expected_prior,
+                created_directory_records=created_directory_records,
+            )
         raise OSError("trusted atomic writes are unsupported on this platform")
+    if expected_prior is not _EXPECTED_PRIOR_UNSET:
+        raise OSError("conditional atomic writes require a trust_root")
 
     target.parent.mkdir(parents=True, exist_ok=True)
     descriptor = -1
@@ -735,6 +760,7 @@ def write_file_atomic(target: Path, content: str | bytes, *, trust_root: Path | 
             except OSError:
                 # Best-effort cleanup only; the write outcome is already determined.
                 pass
+    return []
 
 
 def _write_relative_parts(target: Path, trust_root: Path) -> tuple[tuple[str, ...], str]:
@@ -936,22 +962,67 @@ def _remove_path_trusted_windows(target: Path, trust_root: Path, *, directory: b
             kernel32.CloseHandle(handle)
 
 
-def _write_file_atomic_posix(target: Path, content: str | bytes, trust_root: Path) -> None:
+def _read_posix_target(parent_descriptor: int, leaf: str, *, limit: int) -> bytes | None:
+    flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC
+    try:
+        descriptor = os.open(leaf, flags, dir_fd=parent_descriptor)
+    except FileNotFoundError:
+        return None
+    try:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            raise AtomicWriteConflictError("atomic write target changed type before commit")
+        content = bytearray()
+        while len(content) <= limit:
+            chunk = os.read(descriptor, min(64 * 1024, limit + 1 - len(content)))
+            if not chunk:
+                break
+            content.extend(chunk)
+        return bytes(content)
+    finally:
+        os.close(descriptor)
+
+
+def _write_file_atomic_posix(
+    target: Path,
+    content: str | bytes,
+    trust_root: Path,
+    *,
+    expected_prior: bytes | None | object,
+    created_directory_records: dict[Path, tuple[int, int]] | None,
+) -> list[CreatedDirectory]:
     parents, leaf = _write_relative_parts(target, trust_root)
     directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
     descriptors: list[int] = []
     temporary_descriptor = -1
     temporary_name: str | None = None
+    created_directories: list[CreatedDirectory] = []
     committed = False
     try:
         descriptors.append(os.open(trust_root, directory_flags))
-        for part in parents:
+        for index, part in enumerate(parents):
+            created = False
             try:
                 descriptor = os.open(part, directory_flags, dir_fd=descriptors[-1])
             except FileNotFoundError:
-                os.mkdir(part, mode=0o777, dir_fd=descriptors[-1])
+                try:
+                    os.mkdir(part, mode=0o777, dir_fd=descriptors[-1])
+                except FileExistsError:
+                    pass
+                else:
+                    created = True
                 descriptor = os.open(part, directory_flags, dir_fd=descriptors[-1])
             descriptors.append(descriptor)
+            if created:
+                directory_stat = os.fstat(descriptor)
+                created_directories.append(
+                    (
+                        trust_root.joinpath(*parents[: index + 1]),
+                        (directory_stat.st_dev, directory_stat.st_ino),
+                    )
+                )
+                if created_directory_records is not None:
+                    path, identity = created_directories[-1]
+                    created_directory_records.setdefault(path, identity)
         parent_descriptor = descriptors[-1]
         try:
             target_stat = os.stat(leaf, dir_fd=parent_descriptor, follow_symlinks=False)
@@ -987,12 +1058,37 @@ def _write_file_atomic_posix(target: Path, content: str | bytes, trust_root: Pat
         os.fsync(temporary_descriptor)
         if not stat.S_ISREG(os.fstat(temporary_descriptor).st_mode):
             raise OSError("atomic-write temporary handle is not a regular file")
-        os.replace(
-            temporary_name,
-            leaf,
-            src_dir_fd=parent_descriptor,
-            dst_dir_fd=parent_descriptor,
-        )
+        if expected_prior is not _EXPECTED_PRIOR_UNSET:
+            expected = expected_prior if isinstance(expected_prior, bytes) else None
+            current = _read_posix_target(
+                parent_descriptor,
+                leaf,
+                limit=len(expected) if expected is not None else 0,
+            )
+            if current != expected:
+                raise AtomicWriteConflictError("atomic write target changed before commit")
+        if expected_prior is None:
+            try:
+                os.link(
+                    temporary_name,
+                    leaf,
+                    src_dir_fd=parent_descriptor,
+                    dst_dir_fd=parent_descriptor,
+                    follow_symlinks=False,
+                )
+            except FileExistsError as exc:
+                raise AtomicWriteConflictError(
+                    "atomic write target was created before commit"
+                ) from exc
+            os.unlink(temporary_name, dir_fd=parent_descriptor)
+            temporary_name = None
+        else:
+            os.replace(
+                temporary_name,
+                leaf,
+                src_dir_fd=parent_descriptor,
+                dst_dir_fd=parent_descriptor,
+            )
         committed = True
         os.fsync(parent_descriptor)
     finally:
@@ -1011,9 +1107,25 @@ def _write_file_atomic_posix(target: Path, content: str | bytes, trust_root: Pat
                 os.close(descriptor)
             except OSError:
                 pass
+        if not committed:
+            for directory, identity in reversed(created_directories):
+                try:
+                    directory_stat = directory.lstat()
+                    if (directory_stat.st_dev, directory_stat.st_ino) == identity:
+                        directory.rmdir()
+                except OSError:
+                    pass
+    return created_directories
 
 
-def _write_file_atomic_windows(target: Path, content: str | bytes, trust_root: Path) -> None:
+def _write_file_atomic_windows(
+    target: Path,
+    content: str | bytes,
+    trust_root: Path,
+    *,
+    expected_prior: bytes | None | object,
+    created_directory_records: dict[Path, tuple[int, int]] | None,
+) -> list[CreatedDirectory]:
     # Windows lacks Python-level dir_fd mutation APIs. Pin every directory with
     # non-delete-sharing Win32 handles. ReplaceFileW preserves existing target
     # metadata; a new target is committed by renaming the open temporary handle.
@@ -1142,6 +1254,7 @@ def _write_file_atomic_windows(target: Path, content: str | bytes, trust_root: P
     root = Path(os.path.abspath(trust_root))
     target_path = root.joinpath(*parents, leaf)
     handles: list[int] = []
+    created_directories: list[CreatedDirectory] = []
     temporary_handle = invalid_handle
     temporary_path: Path | None = None
     committed = False
@@ -1149,14 +1262,26 @@ def _write_file_atomic_windows(target: Path, content: str | bytes, trust_root: P
         anchor = Path(root.anchor)
         current = anchor
         handles.append(open_directory(current))
-        for part in (*root.parts[1:], *parents):
+        root_parts = root.parts[1:]
+        for part in (*root_parts, *parents):
             current = current / part
+            created = False
             try:
                 handles.append(open_directory(current))
             except OSError:
-                if not kernel32.CreateDirectoryW(str(current), None) and ctypes.get_last_error() != 183:
+                if kernel32.CreateDirectoryW(str(current), None):
+                    created = True
+                elif ctypes.get_last_error() != 183:
                     raise win_error("could not create atomic-write directory")
                 handles.append(open_directory(current))
+            if created:
+                directory_stat = current.lstat()
+                created_directories.append(
+                    (current, (directory_stat.st_dev, directory_stat.st_ino))
+                )
+                if created_directory_records is not None:
+                    path, identity = created_directories[-1]
+                    created_directory_records.setdefault(path, identity)
         attributes = kernel32.GetFileAttributesW(str(target_path))
         target_exists = attributes != 0xFFFFFFFF
         if attributes == 0xFFFFFFFF:
@@ -1219,6 +1344,26 @@ def _write_file_atomic_windows(target: Path, content: str | bytes, trust_root: P
             offset += written.value
         if not kernel32.FlushFileBuffers(temporary_handle):
             raise win_error("could not flush atomic-write temporary file")
+        if expected_prior is not _EXPECTED_PRIOR_UNSET:
+            expected = expected_prior if isinstance(expected_prior, bytes) else None
+            current_attributes = kernel32.GetFileAttributesW(str(target_path))
+            if current_attributes == 0xFFFFFFFF:
+                if ctypes.get_last_error() not in {2, 3}:
+                    raise win_error("could not re-inspect atomic write target")
+                current_bytes = None
+            else:
+                if current_attributes & file_attribute_directory or current_attributes & file_attribute_reparse_point:
+                    raise AtomicWriteConflictError("atomic write target changed type before commit")
+                try:
+                    with target_path.open("rb") as current_file:
+                        current_bytes = current_file.read(
+                            (len(expected) if expected is not None else 0) + 1
+                        )
+                except FileNotFoundError:
+                    current_bytes = None
+            if current_bytes != expected:
+                raise AtomicWriteConflictError("atomic write target changed before commit")
+            target_exists = current_bytes is not None
         if target_exists:
             kernel32.CloseHandle(temporary_handle)
             temporary_handle = invalid_handle
@@ -1236,7 +1381,7 @@ def _write_file_atomic_windows(target: Path, content: str | bytes, trust_root: P
             name_offset = FileRenameInfo.FileName.offset
             rename_buffer = ctypes.create_string_buffer(name_offset + len(encoded_name))
             rename_info = ctypes.cast(rename_buffer, ctypes.POINTER(FileRenameInfo)).contents
-            rename_info.ReplaceIfExists = 1
+            rename_info.ReplaceIfExists = 0 if expected_prior is None else 1
             rename_info.RootDirectory = None
             rename_info.FileNameLength = len(encoded_name)
             ctypes.memmove(ctypes.addressof(rename_buffer) + name_offset, encoded_name, len(encoded_name))
@@ -1246,6 +1391,10 @@ def _write_file_atomic_windows(target: Path, content: str | bytes, trust_root: P
                 rename_buffer,
                 len(rename_buffer),
             ):
+                if expected_prior is None and ctypes.get_last_error() in {80, 183}:
+                    raise AtomicWriteConflictError(
+                        "atomic write target was created before commit"
+                    )
                 raise win_error("could not commit atomic-write temporary file")
         committed = True
     finally:
@@ -1255,6 +1404,15 @@ def _write_file_atomic_windows(target: Path, content: str | bytes, trust_root: P
             kernel32.DeleteFileW(str(temporary_path))
         for handle in reversed(handles):
             kernel32.CloseHandle(handle)
+        if not committed:
+            for directory, identity in reversed(created_directories):
+                try:
+                    directory_stat = directory.lstat()
+                    if (directory_stat.st_dev, directory_stat.st_ino) == identity:
+                        directory.rmdir()
+                except OSError:
+                    pass
+    return created_directories
 
 
 def ensure_final_newline(content: str) -> str:

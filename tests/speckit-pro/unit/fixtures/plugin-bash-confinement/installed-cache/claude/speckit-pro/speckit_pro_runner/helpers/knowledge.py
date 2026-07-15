@@ -16,6 +16,7 @@ import re
 import stat
 import tempfile
 import threading
+import unicodedata
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -24,6 +25,7 @@ from typing import Any, Iterable, Iterator
 
 from ..envelope import diagnostic, response
 from .mutation import (
+    AtomicWriteConflictError,
     empty_mutation,
     operation_records,
     remove_path_trusted,
@@ -53,6 +55,9 @@ PLAN_VERSION = "1.0"
 MAX_CONCEPT_BYTES = 1024 * 1024
 MAX_SOURCE_BYTES = 4 * MAX_CONCEPT_BYTES
 MAX_CONCEPTS = 4096
+MAX_KNOWLEDGE_SCAN_ENTRIES = 8 * MAX_CONCEPTS
+MAX_CANDIDATE_SCAN_ENTRIES = 2048
+MAX_DIRECTORY_ENTRIES = 8192
 DEFAULT_SEARCH_LIMIT = 20
 MAX_SEARCH_LIMIT = 100
 MAX_QUERY_BYTES = 4096
@@ -92,6 +97,7 @@ _RECOMPUTE_INPUT_ERROR_CODES = frozenset(
         "invalid_input",
         "invalid_plan",
         "plan_too_large",
+        "portable_path_collision",
         "sensitive_content",
         "unsafe_path",
     }
@@ -169,6 +175,83 @@ class Concept:
     metadata: dict[str, Any]
     body: str
     sha256: str
+
+
+def _bounded_tree_entries(
+    root: Path,
+    *,
+    limit: int,
+    code: str,
+    message: str,
+) -> list[Path]:
+    entries: list[Path] = []
+    pending = [root]
+    while pending:
+        directory = pending.pop()
+        try:
+            scanned = os.scandir(directory)
+        except OSError as exc:
+            raise KnowledgeError(
+                "unreadable_file",
+                "knowledge tree could not be enumerated",
+                details={"path": directory.as_posix(), "error": type(exc).__name__},
+            ) from exc
+        with scanned:
+            for entry in scanned:
+                path = Path(entry.path)
+                entries.append(path)
+                if len(entries) > limit:
+                    raise KnowledgeError(code, message, details={"limit": limit})
+                try:
+                    if entry.is_dir(follow_symlinks=False):
+                        pending.append(path)
+                except OSError as exc:
+                    raise KnowledgeError(
+                        "unreadable_file",
+                        "knowledge tree entry could not be inspected",
+                        details={"path": path.as_posix(), "error": type(exc).__name__},
+                    ) from exc
+    return sorted(entries, key=lambda item: item.as_posix().encode("utf-8"))
+
+
+def _portable_path_key(value: str) -> str:
+    return unicodedata.normalize("NFC", value.replace("\\", "/")).casefold()
+
+
+def _portable_path_findings(concepts: Iterable[Concept]) -> list[dict[str, Any]]:
+    owners: dict[str, list[str]] = {}
+    for concept in concepts:
+        owners.setdefault(_portable_path_key(concept.relative_path), []).append(
+            concept.relative_path
+        )
+    findings: list[dict[str, Any]] = []
+    for paths in owners.values():
+        if len(paths) < 2:
+            continue
+        for path in sorted(paths):
+            findings.append(
+                _finding(
+                    "portable_path_collision",
+                    path,
+                    "knowledge paths must be unique across case-insensitive and Unicode-normalizing filesystems",
+                    paths=sorted(paths),
+                )
+            )
+    return findings
+
+
+def _validate_portable_path_uniqueness(paths: Iterable[str]) -> None:
+    owners: dict[str, str] = {}
+    for path in paths:
+        key = _portable_path_key(path)
+        previous = owners.get(key)
+        if previous is not None and previous != path:
+            raise KnowledgeError(
+                "portable_path_collision",
+                "knowledge paths must be unique across case-insensitive and Unicode-normalizing filesystems",
+                details={"paths": sorted((previous, path))},
+            )
+        owners[key] = path
 
 
 def run_knowledge_health(entry: Any, request: Any) -> dict[str, Any]:
@@ -274,6 +357,7 @@ def run_knowledge_update_apply(entry: Any, request: Any) -> dict[str, Any]:
         supplied_plan = request.inputs.get("plan")
         if not isinstance(supplied_plan, dict):
             raise KnowledgeError("invalid_input", "inputs.plan must be a knowledge update plan object")
+        _validate_supplied_plan_structure(supplied_plan)
         _validate_plan_hash(supplied_plan)
         if request.inputs.get("plan_hash") != supplied_plan.get("plan_hash"):
             raise KnowledgeError(
@@ -290,7 +374,6 @@ def run_knowledge_update_apply(entry: Any, request: Any) -> dict[str, Any]:
         plan_request = supplied_plan.get("request")
         if not isinstance(plan_request, dict):
             raise KnowledgeError("invalid_plan", "knowledge update plan is missing its normalized request")
-        _validate_normalized_plan_request(plan_request)
         if request.mode == "apply":
             with _knowledge_mutation_lock(repo_root):
                 return _run_accepted_knowledge_apply(
@@ -400,7 +483,7 @@ def _run_accepted_knowledge_apply(
         )
 
     backups: list[tuple[Path, bytes | None, str]] = []
-    created_directories: set[Path] = set()
+    created_directories: dict[Path, tuple[int, int]] = {}
     failure_operation: dict[str, Any] | None = None
     try:
         for operation in operations:
@@ -414,11 +497,13 @@ def _run_accepted_knowledge_apply(
                 raise _SourceChangedError("knowledge update target changed immediately before write")
             resulting_hash = str(operation["content_sha256"])
             backups.append((target, before, resulting_hash))
-            parent = target.parent
-            while parent != repo_root and not parent.exists():
-                created_directories.add(parent)
-                parent = parent.parent
-            write_file_atomic(target, str(operation["content"]), trust_root=repo_root)
+            write_file_atomic(
+                target,
+                str(operation["content"]),
+                trust_root=repo_root,
+                expected_prior=before,
+                created_directory_records=created_directories,
+            )
             mutation["applied_operations"].append(
                 {"operation_id": operation["operation_id"], "kind": "write_file", "target": operation["target"]}
             )
@@ -426,6 +511,7 @@ def _run_accepted_knowledge_apply(
         failure_operation = None
         _validate_source_preconditions(repo_root, supplied_plan, phase="resulting")
         _validate_resulting_targets(backups, repo_root)
+        _validate_resulting_snapshot(repo_root, supplied_plan)
     except (KnowledgeError, OSError) as exc:
         rollback_errors = _rollback_writes(backups, repo_root, created_directories)
         residual_paths = _residual_mutation_paths(backups, created_directories)
@@ -441,7 +527,9 @@ def _run_accepted_knowledge_apply(
             failed_target = str(failure_operation.get("target"))
             if failed_target not in mutation["touched_paths"]:
                 mutation["touched_paths"].append(failed_target)
-        source_failure = isinstance(exc, KnowledgeError) and exc.code == "source_changed"
+        source_failure = (
+            isinstance(exc, KnowledgeError) and exc.code == "source_changed"
+        ) or isinstance(exc, AtomicWriteConflictError)
         if isinstance(exc, KnowledgeError) and not source_failure:
             failure = KnowledgeError(
                 exc.code,
@@ -910,7 +998,13 @@ def _load_concepts(repo_root: Path) -> list[Concept]:
     if root.is_symlink() or not root.is_dir() or not is_relative_to(root, repo_root):
         raise KnowledgeError("unsafe_path", "knowledge root must be a non-symlink repository directory")
     concepts: list[Concept] = []
-    for path in sorted(root.rglob("*.md"), key=lambda item: item.as_posix().encode("utf-8")):
+    paths = _bounded_tree_entries(
+        root,
+        limit=MAX_KNOWLEDGE_SCAN_ENTRIES,
+        code="oversized_bundle",
+        message="knowledge bundle exceeds the bounded tree-entry count",
+    )
+    for path in (item for item in paths if item.suffix == ".md"):
         relative = path.relative_to(root).as_posix()
         if path.name in RESERVED_MARKDOWN:
             continue
@@ -932,6 +1026,7 @@ def _load_concepts(repo_root: Path) -> list[Concept]:
                 "knowledge bundle exceeds the bounded concept count",
                 details={"limit": MAX_CONCEPTS},
             )
+    _validate_portable_path_uniqueness(concept.relative_path for concept in concepts)
     return concepts
 
 
@@ -943,8 +1038,16 @@ def _load_concepts_tolerant(repo_root: Path) -> tuple[list[Concept], list[dict[s
         return [], [_finding("unsafe_path", "docs/ai/knowledge", "knowledge root must be a regular repository directory")]
     concepts: list[Concept] = []
     findings: list[dict[str, Any]] = []
-    paths = sorted(root.rglob("*.md"), key=lambda item: item.as_posix().encode("utf-8"))
-    for path in paths:
+    try:
+        paths = _bounded_tree_entries(
+            root,
+            limit=MAX_KNOWLEDGE_SCAN_ENTRIES,
+            code="oversized_bundle",
+            message="knowledge bundle exceeds the bounded tree-entry count",
+        )
+    except KnowledgeError as exc:
+        return [], [_finding(exc.code, "docs/ai/knowledge", str(exc), **exc.details)]
+    for path in (item for item in paths if item.suffix == ".md"):
         relative = path.relative_to(root).as_posix()
         if path.name in RESERVED_MARKDOWN:
             continue
@@ -958,6 +1061,7 @@ def _load_concepts_tolerant(repo_root: Path) -> tuple[list[Concept], list[dict[s
         if len(concepts) > MAX_CONCEPTS:
             findings.append(_finding("oversized_bundle", relative, "knowledge bundle exceeds the bounded concept count", limit=MAX_CONCEPTS))
             break
+    findings.extend(_portable_path_findings(concepts))
     return concepts, findings
 
 
@@ -965,7 +1069,16 @@ def _reserved_file_findings(root: Path, initialized: bool) -> list[dict[str, Any
     if not initialized:
         return []
     findings: list[dict[str, Any]] = []
-    for path in sorted(root.rglob("index.md"), key=lambda item: item.as_posix().encode("utf-8")):
+    try:
+        paths = _bounded_tree_entries(
+            root,
+            limit=MAX_KNOWLEDGE_SCAN_ENTRIES,
+            code="oversized_bundle",
+            message="knowledge bundle exceeds the bounded tree-entry count",
+        )
+    except KnowledgeError as exc:
+        return [_finding(exc.code, "docs/ai/knowledge", str(exc), **exc.details)]
+    for path in (item for item in paths if item.name == "index.md"):
         relative = path.relative_to(root).as_posix()
         try:
             text = _read_utf8(path)
@@ -1450,6 +1563,8 @@ def _health_report(repo_root: Path, scope: str | None = None) -> dict[str, Any]:
         "unsupported_yaml",
         "invalid_utf8",
         "oversized_concept",
+        "oversized_bundle",
+        "portable_path_collision",
         "unsafe_reserved_file",
         "invalid_log_heading",
         "reserved_frontmatter",
@@ -1518,7 +1633,22 @@ def _candidate_inventory(
     findings: list[dict[str, Any]] = []
     paths: list[str] = []
     valid = 0
-    files = sorted(root.rglob("*"), key=lambda path: path.as_posix().encode("utf-8"))
+    try:
+        files = _bounded_tree_entries(
+            root,
+            limit=MAX_CANDIDATE_SCAN_ENTRIES,
+            code="candidate_inventory_too_large",
+            message="candidate inventory exceeds the bounded tree-entry count",
+        )
+    except KnowledgeError as exc:
+        finding = _finding(exc.code, repo_relative(root, repo_root), str(exc), **exc.details)
+        return {
+            "packet_count": 0,
+            "valid_count": 0,
+            "invalid_count": 1,
+            "pending_review_count": 0,
+            "paths": [],
+        }, [finding]
     for path in files:
         if path.is_dir() and not path.is_symlink():
             continue
@@ -2058,7 +2188,11 @@ def _build_plan(repo_root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
         if archive_sources is not None:
             if not isinstance(archive_sources, list) or not archive_sources:
                 raise KnowledgeError("invalid_input", "archive sources must be a non-empty source array")
-            normalized_sources = _validated_sources(repo_root, archive_sources)
+            normalized_sources = _validated_sources(
+                repo_root,
+                archive_sources,
+                require_evidence=True,
+            )
             updates["resource"] = normalized_sources[0]["path"]
             updates["x-speckit-sources"] = [
                 f"{source['path']}|{source['sha256']}" for source in normalized_sources
@@ -2092,6 +2226,7 @@ def _build_plan(repo_root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
         if action == "migrate":
             _synchronize_legacy_source_hashes(virtual, explicit_operations)
 
+    _validate_portable_path_uniqueness(virtual)
     concepts = _concepts_from_virtual(repo_root, virtual)
     _validate_profile_for_plan(concepts)
     resulting_snapshot = _snapshot_id(concepts)
@@ -2274,11 +2409,11 @@ def _migration_records(
             "timestamp": timestamp,
             "x-speckit-id": str(metadata.get("spec_id") or slug),
             "x-speckit-project": slug,
-            "x-speckit-authority": "reviewed" if has_legacy_view or migration_reviewed else "source-backed",
+            "x-speckit-authority": "reviewed" if migration_reviewed else "source-backed",
             "x-speckit-status": _canonical_lifecycle_status(
-                metadata.get("status"), reviewed=has_legacy_view or migration_reviewed
+                metadata.get("status"), reviewed=migration_reviewed
             ),
-            "x-speckit-confidence": "high" if has_legacy_view or migration_reviewed else "low",
+            "x-speckit-confidence": "high" if migration_reviewed else "low",
             "x-speckit-sensitivity": "internal",
             "x-speckit-producer-skill": "knowledge-migration",
             "x-speckit-producer-agent": "speckit-pro-runner",
@@ -2299,7 +2434,7 @@ def _migration_records(
             concept_metadata["x-speckit-legacy-up"] = metadata["up"]
         if isinstance(metadata.get("related"), list):
             concept_metadata["x-speckit-legacy-related"] = metadata["related"]
-        if has_legacy_view or migration_reviewed:
+        if migration_reviewed:
             concept_metadata["x-speckit-legacy-view"] = legacy_view
         curated = _rebase_markdown_links(
             _curated_moc_body(body),
@@ -2317,8 +2452,10 @@ def _migration_records(
             f"{curated.strip()}\n"
         )
         migrated[relative] = _render_concept(concept_metadata, concept_body)
-        if not has_legacy_view and not migration_reviewed:
-            warnings.append(f"{repo_relative(roadmap, repo_root)} has no roadmap MOC; created a review-required candidate map")
+        if not migration_reviewed:
+            warnings.append(
+                f"{repo_relative(source, repo_root)} was imported as a review-required project map; rerun migrate with reviewed true to transfer compatibility-view ownership"
+            )
 
     for spec_moc in _safe_spec_mocs(repo_root):
         source_text = _read_utf8(spec_moc)
@@ -2354,15 +2491,22 @@ def _migration_records(
             "timestamp": timestamp,
             "x-speckit-id": spec_id,
             "x-speckit-project": project,
-            "x-speckit-authority": "reviewed",
-            "x-speckit-status": _canonical_lifecycle_status(metadata.get("status"), reviewed=True),
-            "x-speckit-confidence": "high",
+            "x-speckit-authority": "reviewed" if migration_reviewed else "source-backed",
+            "x-speckit-status": _canonical_lifecycle_status(
+                metadata.get("status"), reviewed=migration_reviewed
+            ),
+            "x-speckit-confidence": "high" if migration_reviewed else "low",
             "x-speckit-sensitivity": "internal",
             "x-speckit-producer-skill": "knowledge-migration",
             "x-speckit-producer-agent": "speckit-pro-runner",
-            "x-speckit-legacy-view": source_relative,
             "x-speckit-migration-sources": [f"{source_relative}|{_sha256_text(source_text)}"],
         }
+        if migration_reviewed:
+            concept_metadata["x-speckit-legacy-view"] = source_relative
+        else:
+            warnings.append(
+                f"{source_relative} was imported as a review-required spec map; rerun migrate with reviewed true to transfer compatibility-view ownership"
+            )
         if isinstance(metadata.get("up"), str) and metadata["up"]:
             concept_metadata["x-speckit-legacy-up"] = metadata["up"]
         if isinstance(metadata.get("status"), str) and metadata["status"]:
@@ -2388,7 +2532,13 @@ def _safe_spec_mocs(repo_root: Path) -> list[Path]:
     candidates: set[Path] = set()
     for base in (repo_root / "specs", repo_root / "docs" / "ai" / "specs"):
         if base.is_dir() and not base.is_symlink():
-            for path in base.rglob("SPEC-MOC.md"):
+            entries = _bounded_tree_entries(
+                base,
+                limit=MAX_KNOWLEDGE_SCAN_ENTRIES,
+                code="migration_too_large",
+                message="SpecKit MOC inventory exceeds the bounded tree-entry count",
+            )
+            for path in (item for item in entries if item.name == "SPEC-MOC.md"):
                 if is_relative_to(path, repo_root) and path.is_file() and not path.is_symlink():
                     candidates.add(path)
     return sorted(candidates, key=lambda path: path.as_posix().encode("utf-8"))
@@ -3234,7 +3384,9 @@ def _log_needs_repair(path: Path) -> bool:
 
 def _materialize_operations(repo_root: Path, requested: list[tuple[str, str]]) -> list[dict[str, Any]]:
     deduplicated: dict[str, str] = {}
+    _validate_portable_path_uniqueness(target for target, _ in requested)
     for target, content in requested:
+        _validate_portable_target_spelling(repo_root, target)
         normalized = content if content.endswith("\n") else f"{content}\n"
         if target in deduplicated and deduplicated[target] != normalized:
             raise KnowledgeError(
@@ -3261,6 +3413,49 @@ def _materialize_operations(repo_root: Path, requested: list[tuple[str, str]]) -
             }
         )
     return operations
+
+
+def _validate_portable_target_spelling(repo_root: Path, target: str) -> None:
+    current = repo_root
+    for part in PurePosixPath(target.replace("\\", "/")).parts:
+        if not current.is_dir() or current.is_symlink():
+            return
+        exact = False
+        aliases: list[str] = []
+        count = 0
+        try:
+            scanned = os.scandir(current)
+        except OSError as exc:
+            raise KnowledgeError(
+                "unreadable_file",
+                "knowledge update target parent could not be enumerated",
+                details={"path": current.as_posix(), "error": type(exc).__name__},
+            ) from exc
+        with scanned:
+            for entry in scanned:
+                count += 1
+                if count > MAX_DIRECTORY_ENTRIES:
+                    raise KnowledgeError(
+                        "oversized_bundle",
+                        "knowledge update target parent exceeds the bounded entry count",
+                        details={"path": current.as_posix(), "limit": MAX_DIRECTORY_ENTRIES},
+                    )
+                if entry.name == part:
+                    exact = True
+                elif _portable_path_key(entry.name) == _portable_path_key(part):
+                    aliases.append(entry.name)
+        if aliases:
+            raise KnowledgeError(
+                "portable_path_collision",
+                "knowledge update target collides with an existing portable path alias",
+                details={
+                    "target": target,
+                    "aliases": sorted((current / name).as_posix() for name in aliases),
+                },
+            )
+        if not exact:
+            return
+        current /= part
 
 
 def _read_optional_target(path: Path) -> bytes | None:
@@ -3511,7 +3706,7 @@ def _allowed_plan_target(target: str) -> bool:
 def _rollback_writes(
     backups: list[tuple[Path, bytes | None, str]],
     repo_root: Path,
-    created_directories: set[Path],
+    created_directories: dict[Path, tuple[int, int]],
 ) -> list[str]:
     errors: list[str] = []
     for target, before, resulting_hash in reversed(backups):
@@ -3529,12 +3724,27 @@ def _rollback_writes(
             if before is None:
                 remove_path_trusted(target, trust_root=repo_root)
             else:
-                write_file_atomic(target, before, trust_root=repo_root)
+                write_file_atomic(
+                    target,
+                    before,
+                    trust_root=repo_root,
+                    expected_prior=current,
+                )
         except (KnowledgeError, OSError) as exc:
             errors.append(f"{target.as_posix()}: {type(exc).__name__}")
-    for directory in sorted(created_directories, key=lambda path: len(path.parts), reverse=True):
+    for directory, identity in sorted(
+        created_directories.items(),
+        key=lambda item: len(item[0].parts),
+        reverse=True,
+    ):
         try:
+            directory_stat = directory.lstat()
+            if (directory_stat.st_dev, directory_stat.st_ino) != identity:
+                errors.append(f"{directory.as_posix()}: concurrent directory preserved")
+                continue
             remove_path_trusted(directory, trust_root=repo_root, directory=True)
+        except FileNotFoundError:
+            continue
         except OSError as exc:
             errors.append(f"{directory.as_posix()}: {type(exc).__name__}")
     return errors
@@ -3542,7 +3752,7 @@ def _rollback_writes(
 
 def _residual_mutation_paths(
     backups: list[tuple[Path, bytes | None, str]],
-    created_directories: set[Path],
+    created_directories: dict[Path, tuple[int, int]],
 ) -> list[str]:
     residual: set[str] = set()
     for target, before, _ in backups:
@@ -3596,6 +3806,24 @@ def _validate_resulting_targets(
                 "knowledge update target changed after write",
                 details={"target": repo_relative(target, repo_root)},
             )
+
+
+def _validate_resulting_snapshot(repo_root: Path, plan: dict[str, Any]) -> None:
+    try:
+        actual = _snapshot_id(_load_concepts(repo_root))
+    except KnowledgeError as exc:
+        raise KnowledgeError(
+            "source_changed",
+            "knowledge concept tree became invalid after write",
+            details={"cause": exc.code},
+        ) from exc
+    expected = plan.get("resulting_snapshot")
+    if actual != expected:
+        raise KnowledgeError(
+            "source_changed",
+            "knowledge snapshot changed after write",
+            details={"expected": expected, "actual": actual},
+        )
 
 
 def _safe_repository_chain(
@@ -3800,6 +4028,163 @@ def _sha256_bytes(value: bytes) -> str:
 def _plan_hash(plan: dict[str, Any]) -> str:
     material = {key: value for key, value in plan.items() if key != "plan_hash"}
     return f"sha256:{hashlib.sha256(json.dumps(material, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode('utf-8')).hexdigest()}"
+
+
+def _validate_supplied_plan_structure(plan: dict[str, Any]) -> None:
+    required = {
+        "plan_version",
+        "profile",
+        "action",
+        "scope",
+        "request",
+        "expected_snapshot",
+        "resulting_snapshot",
+        "operation_count",
+        "operations",
+        "source_preconditions",
+        "warnings",
+        "plan_hash",
+    }
+    if set(plan) != required:
+        raise KnowledgeError("invalid_plan", "knowledge update plan fields are invalid")
+    if plan.get("plan_version") != PLAN_VERSION or plan.get("profile") != KNOWLEDGE_PROFILE:
+        raise KnowledgeError("invalid_plan", "knowledge update plan version or profile is unsupported")
+    if plan.get("action") not in ALLOWED_ACTIONS:
+        raise KnowledgeError("invalid_plan", "knowledge update plan action is invalid")
+    for field in ("expected_snapshot", "resulting_snapshot", "plan_hash"):
+        if not isinstance(plan.get(field), str) or re.fullmatch(
+            r"sha256:[a-f0-9]{64}", str(plan.get(field))
+        ) is None:
+            raise KnowledgeError("invalid_plan", f"knowledge update plan {field} is invalid")
+
+    plan_request = plan.get("request")
+    if not isinstance(plan_request, dict):
+        raise KnowledgeError("invalid_plan", "knowledge update plan request must be an object")
+    _validate_normalized_plan_request(plan_request)
+    scope = plan.get("scope")
+    if not isinstance(scope, str) or not scope:
+        raise KnowledgeError("invalid_plan", "knowledge update plan scope is invalid")
+    try:
+        normalized_scope = _normalized_scope(scope)
+    except KnowledgeError as exc:
+        raise KnowledgeError(
+            "invalid_plan",
+            "knowledge update plan scope is invalid",
+            details={"cause": exc.code},
+        ) from exc
+    request_scope = plan_request.get("scope")
+    if plan.get("action") != plan_request.get("action") or (normalized_scope or "all") != scope:
+        raise KnowledgeError("invalid_plan", "knowledge update plan action or scope is not normalized")
+    if (request_scope or "all") != scope:
+        raise KnowledgeError("invalid_plan", "knowledge update plan scope does not match its request")
+
+    operations = plan.get("operations")
+    operation_count = plan.get("operation_count")
+    if (
+        not isinstance(operations, list)
+        or isinstance(operation_count, bool)
+        or not isinstance(operation_count, int)
+        or operation_count != len(operations)
+        or len(operations) > MAX_PLAN_OPERATIONS
+    ):
+        raise KnowledgeError("invalid_plan", "knowledge update plan operation count is invalid")
+    operation_ids: set[str] = set()
+    targets: list[str] = []
+    content_bytes = 0
+    operation_fields = {
+        "operation_id",
+        "kind",
+        "target",
+        "prior_sha256",
+        "content_sha256",
+        "content",
+    }
+    for index, operation in enumerate(operations):
+        if not isinstance(operation, dict) or set(operation) != operation_fields:
+            raise KnowledgeError(
+                "invalid_plan",
+                "knowledge update operation fields are invalid",
+                details={"operation_index": index},
+            )
+        operation_id = operation.get("operation_id")
+        target = operation.get("target")
+        content = operation.get("content")
+        prior = operation.get("prior_sha256")
+        resulting = operation.get("content_sha256")
+        if (
+            not isinstance(operation_id, str)
+            or not operation_id
+            or operation_id in operation_ids
+            or operation.get("kind") != "write_file"
+            or not isinstance(target, str)
+            or not target
+            or not isinstance(content, str)
+            or (prior is not None and (not isinstance(prior, str) or re.fullmatch(r"[a-f0-9]{64}", prior) is None))
+            or not isinstance(resulting, str)
+            or re.fullmatch(r"[a-f0-9]{64}", resulting) is None
+            or _sha256_text(content) != resulting
+        ):
+            raise KnowledgeError(
+                "invalid_plan",
+                "knowledge update operation is malformed",
+                details={"operation_index": index},
+            )
+        operation_ids.add(operation_id)
+        targets.append(target)
+        content_bytes += len(content.encode("utf-8"))
+    if content_bytes > MAX_PLAN_CONTENT_BYTES:
+        raise KnowledgeError("invalid_plan", "knowledge update plan content exceeds the bounded limit")
+    if len(set(targets)) != len(targets):
+        raise KnowledgeError("invalid_plan", "knowledge update plan targets are duplicated")
+    try:
+        _validate_portable_path_uniqueness(targets)
+    except KnowledgeError as exc:
+        raise KnowledgeError(
+            "invalid_plan",
+            "knowledge update plan targets contain a portable path collision",
+            details=exc.details,
+        ) from exc
+
+    preconditions = plan.get("source_preconditions")
+    if not isinstance(preconditions, list) or len(preconditions) > MAX_SOURCE_PRECONDITIONS:
+        raise KnowledgeError("invalid_plan", "knowledge update plan source preconditions are invalid")
+    source_paths: set[str] = set()
+    for index, record in enumerate(preconditions):
+        if not isinstance(record, dict) or set(record) != {
+            "path",
+            "prior_sha256",
+            "resulting_sha256",
+        }:
+            raise KnowledgeError(
+                "invalid_plan",
+                "knowledge update plan source precondition fields are invalid",
+                details={"source_index": index},
+            )
+        path = record.get("path")
+        if (
+            not isinstance(path, str)
+            or not path
+            or path in source_paths
+            or any(
+                not isinstance(record.get(field), str)
+                or re.fullmatch(r"[a-f0-9]{64}", str(record.get(field))) is None
+                for field in ("prior_sha256", "resulting_sha256")
+            )
+        ):
+            raise KnowledgeError(
+                "invalid_plan",
+                "knowledge update plan source precondition is malformed or duplicated",
+                details={"source_index": index},
+            )
+        source_paths.add(path)
+
+    warnings = plan.get("warnings")
+    if (
+        not isinstance(warnings, list)
+        or any(not isinstance(warning, str) for warning in warnings)
+        or warnings != sorted(set(warnings))
+    ):
+        raise KnowledgeError("invalid_plan", "knowledge update plan warnings are invalid")
 
 
 def _validate_plan_hash(plan: dict[str, Any]) -> None:

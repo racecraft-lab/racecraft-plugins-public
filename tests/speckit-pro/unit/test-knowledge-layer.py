@@ -312,6 +312,74 @@ class KnowledgeLayerTests(unittest.TestCase):
 
     @unittest.skipUnless(
         os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
+        "conditional atomic-write regression requires POSIX dir_fd support",
+    )
+    def test_atomic_writer_does_not_replace_a_concurrently_created_target(self) -> None:
+        root = self.repo("atomic-no-replace")
+        parent = root / "safe"
+        parent.mkdir()
+        target = parent / "target.md"
+        real_link = os.link
+
+        def create_then_link(
+            source: str,
+            destination: str,
+            *,
+            src_dir_fd: int | None = None,
+            dst_dir_fd: int | None = None,
+            follow_symlinks: bool = True,
+        ) -> None:
+            target.write_text("concurrent\n", encoding="utf-8")
+            real_link(
+                source,
+                destination,
+                src_dir_fd=src_dir_fd,
+                dst_dir_fd=dst_dir_fd,
+                follow_symlinks=follow_symlinks,
+            )
+
+        with (
+            mock.patch.object(mutation_helper.os, "link", side_effect=create_then_link),
+            self.assertRaises(mutation_helper.AtomicWriteConflictError),
+        ):
+            mutation_helper.write_file_atomic(
+                target,
+                "planned",
+                trust_root=root,
+                expected_prior=None,
+            )
+        self.assertEqual(target.read_text(encoding="utf-8"), "concurrent\n")
+
+    @unittest.skipUnless(
+        os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
+        "directory ownership regression requires POSIX dir_fd support",
+    )
+    def test_atomic_writer_reports_only_directories_it_created(self) -> None:
+        root = self.repo("atomic-directory-ownership")
+        target = root / "external" / "nested" / "target.md"
+        real_mkdir = os.mkdir
+
+        def concurrent_mkdir(
+            path: str,
+            mode: int = 0o777,
+            *,
+            dir_fd: int | None = None,
+        ) -> None:
+            real_mkdir(path, mode=mode, dir_fd=dir_fd)
+            raise FileExistsError(path)
+
+        with mock.patch.object(mutation_helper.os, "mkdir", side_effect=concurrent_mkdir):
+            created = mutation_helper.write_file_atomic(
+                target,
+                "planned",
+                trust_root=root,
+                expected_prior=None,
+            )
+        self.assertEqual(created, [])
+        self.assertEqual(target.read_text(encoding="utf-8"), "planned\n")
+
+    @unittest.skipUnless(
+        os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
         "descriptor-relative removal regression requires POSIX dir_fd support",
     )
     def test_trusted_removal_cannot_follow_swapped_parent_symlinks(self) -> None:
@@ -631,6 +699,44 @@ class KnowledgeLayerTests(unittest.TestCase):
             any("concurrent change preserved" in note for note in mutation["manual_remediation"])
         )
 
+    def test_final_snapshot_detects_an_unplanned_concept_edit(self) -> None:
+        root = self.repo("final-snapshot-race")
+        self.current_root = root
+        self.init(root)
+        source = self.write(root, "docs/source.md", "Reviewed source.\n")
+        candidate = self.candidate("decisions/final-race.md", "Final Race", [source])
+        completed, _ = self.apply(root, self.plan(root, "promote", candidate=candidate))
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        concept = root / "docs/ai/knowledge/decisions/final-race.md"
+        index = root / "docs/ai/knowledge/index.md"
+        index.write_text("stale index\n", encoding="utf-8")
+        plan = self.plan(root, "rebuild")
+        original_validate = knowledge_helper._validate_resulting_targets
+
+        def edit_after_target_validation(
+            backups: list[tuple[Path, bytes | None, str]],
+            repo_root: Path,
+        ) -> None:
+            original_validate(backups, repo_root)
+            concept.write_text(
+                concept.read_text(encoding="utf-8") + "\nExternal concurrent edit.\n",
+                encoding="utf-8",
+            )
+
+        with mock.patch.object(
+            knowledge_helper,
+            "_validate_resulting_targets",
+            side_effect=edit_after_target_validation,
+        ):
+            body = self.apply_direct(root, plan)
+
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual(body["diagnostics"][0]["code"], "source_changed")
+        self.assertEqual(body["data"]["mutation"]["mutation_status"], "rolled_back")
+        self.assertFalse(body["data"]["writes_state"])
+        self.assertEqual(index.read_text(encoding="utf-8"), "stale index\n")
+        self.assertIn("External concurrent edit.", concept.read_text(encoding="utf-8"))
+
     def test_source_precondition_limit_matches_contract(self) -> None:
         root = self.repo("source-precondition-limit")
         digest = "0" * 64
@@ -706,6 +812,27 @@ class KnowledgeLayerTests(unittest.TestCase):
                     action="rebuild",
                 )
         self.assertEqual(construction_error.exception.code, "plan_too_large")
+
+    def test_tree_inventories_stop_at_their_entry_limits(self) -> None:
+        root = self.repo("bounded-inventories")
+        for index in range(3):
+            self.write(
+                root,
+                f"docs/ai/knowledge/decisions/item-{index}.md",
+                f"# Item {index}\n",
+            )
+        with mock.patch.object(knowledge_helper, "MAX_KNOWLEDGE_SCAN_ENTRIES", 2):
+            with self.assertRaises(knowledge_helper.KnowledgeError) as captured:
+                knowledge_helper._load_concepts(root)
+        self.assertEqual(captured.exception.code, "oversized_bundle")
+
+        candidate_root = root / "docs/ai/specs/.process/knowledge-candidates"
+        candidate_root.mkdir(parents=True)
+        for index in range(3):
+            (candidate_root / f"candidate-{index}.json").write_text("{}", encoding="utf-8")
+        with mock.patch.object(knowledge_helper, "MAX_CANDIDATE_SCAN_ENTRIES", 2):
+            _, findings = knowledge_helper._candidate_inventory(root)
+        self.assertEqual(findings[0]["code"], "candidate_inventory_too_large")
 
     def test_legacy_up_fragment_contract_matches_runtime(self) -> None:
         schema = json.loads(
@@ -800,13 +927,21 @@ class KnowledgeLayerTests(unittest.TestCase):
             content: str | bytes,
             *,
             trust_root: Path | None = None,
-        ) -> None:
+            expected_prior: bytes | None | object,
+            created_directory_records: dict[Path, tuple[int, int]] | None = None,
+        ) -> list[mutation_helper.CreatedDirectory]:
             nonlocal write_count
             lock_diagnostics.append(nested_apply_code())
             if write_count >= 1:
                 raise OSError("injected write failure after lock check")
             write_count += 1
-            real_writer(target, content, trust_root=trust_root)
+            return real_writer(
+                target,
+                content,
+                trust_root=trust_root,
+                expected_prior=expected_prior,
+                created_directory_records=created_directory_records,
+            )
 
         def serialize_remove(
             target: Path,
@@ -849,6 +984,20 @@ class KnowledgeLayerTests(unittest.TestCase):
         self.assertEqual(body["data"]["mutation"]["mutation_status"], "blocked")
         self.assertFalse((root / "docs" / "ai" / "knowledge").exists())
 
+        malformed = json.loads(json.dumps(self.plan(root, "init")))
+        malformed["unexpected"] = True
+        malformed["plan_hash"] = knowledge_helper._plan_hash(malformed)
+        body = self.apply_direct(root, malformed)
+        self.assertEqual(body["status"], "input_error")
+        self.assertEqual(body["diagnostics"][0]["code"], "invalid_plan")
+
+        malformed = json.loads(json.dumps(self.plan(root, "init")))
+        malformed["operation_count"] += 1
+        malformed["plan_hash"] = knowledge_helper._plan_hash(malformed)
+        body = self.apply_direct(root, malformed)
+        self.assertEqual(body["status"], "input_error")
+        self.assertEqual(body["diagnostics"][0]["code"], "invalid_plan")
+
     def test_apply_recomputation_errors_are_repository_failures(self) -> None:
         root = self.repo("apply-recompute-error")
         self.current_root = root
@@ -866,6 +1015,28 @@ class KnowledgeLayerTests(unittest.TestCase):
         self.assertEqual(body["diagnostics"][0]["code"], "invalid_utf8")
         self.assertFalse(body["data"]["writes_state"])
 
+    def test_portable_path_aliases_cannot_overwrite_concepts(self) -> None:
+        root = self.repo("portable-path-alias")
+        self.current_root = root
+        self.init(root)
+        source = self.write(root, "docs/source.md", "Reviewed source.\n")
+        original = self.candidate("decisions/Foo.md", "Original", [source])
+        completed, _ = self.apply(root, self.plan(root, "promote", candidate=original))
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        original_path = root / "docs/ai/knowledge/decisions/Foo.md"
+        original_bytes = original_path.read_bytes()
+
+        alias = self.candidate("decisions/foo.md", "Alias", [source])
+        completed, body = run_helper(
+            root,
+            "knowledge-update-plan",
+            "read_only",
+            {"action": "promote", "timestamp": FIXED_TIME, "candidate": alias},
+        )
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertEqual(body["diagnostics"][0]["code"], "portable_path_collision")
+        self.assertEqual(original_path.read_bytes(), original_bytes)
+
     def test_partial_apply_rolls_back_repository_files(self) -> None:
         root = self.repo("rollback")
         plan = self.plan(root, "init")
@@ -880,12 +1051,25 @@ class KnowledgeLayerTests(unittest.TestCase):
         real_writer = knowledge_helper.write_file_atomic
         write_count = 0
 
-        def fail_after_one(target: Path, content: str, *, trust_root: Path | None = None) -> None:
+        def fail_after_one(
+            target: Path,
+            content: str,
+            *,
+            trust_root: Path | None = None,
+            expected_prior: bytes | None | object,
+            created_directory_records: dict[Path, tuple[int, int]] | None = None,
+        ) -> list[mutation_helper.CreatedDirectory]:
             nonlocal write_count
             if write_count >= 1:
                 raise OSError("injected test write failure")
             write_count += 1
-            real_writer(target, content, trust_root=trust_root)
+            return real_writer(
+                target,
+                content,
+                trust_root=trust_root,
+                expected_prior=expected_prior,
+                created_directory_records=created_directory_records,
+            )
 
         with mock.patch.object(knowledge_helper, "write_file_atomic", side_effect=fail_after_one):
             body = self.apply_direct(root, plan)
@@ -915,15 +1099,28 @@ class KnowledgeLayerTests(unittest.TestCase):
             content: str | bytes,
             *,
             trust_root: Path | None = None,
-        ) -> None:
+            expected_prior: bytes | None | object,
+            created_directory_records: dict[Path, tuple[int, int]] | None = None,
+        ) -> list[mutation_helper.CreatedDirectory]:
             nonlocal write_count
             if isinstance(content, bytes):
-                real_writer(target, content, trust_root=trust_root)
-                return
+                return real_writer(
+                    target,
+                    content,
+                    trust_root=trust_root,
+                    expected_prior=expected_prior,
+                    created_directory_records=created_directory_records,
+                )
             if write_count >= 1:
                 raise OSError("injected test write failure")
             write_count += 1
-            real_writer(target, content, trust_root=trust_root)
+            return real_writer(
+                target,
+                content,
+                trust_root=trust_root,
+                expected_prior=expected_prior,
+                created_directory_records=created_directory_records,
+            )
 
         with mock.patch.object(knowledge_helper, "write_file_atomic", side_effect=fail_after_one):
             body = self.apply_direct(root, plan)
@@ -1003,6 +1200,20 @@ class KnowledgeLayerTests(unittest.TestCase):
         completed, _ = self.apply(root, self.plan(root, "promote", candidate=candidate))
         self.assertEqual(completed.returncode, 0, completed.stderr)
         concept = root / "docs/ai/knowledge/decisions/archive.md"
+
+        completed, invalid_evidence = run_helper(
+            root,
+            "knowledge-update-plan",
+            "read_only",
+            {
+                "action": "archive",
+                "timestamp": FIXED_TIME,
+                "concept_path": "decisions/archive.md",
+                "sources": [{"path": source.relative_to(root).as_posix()}],
+            },
+        )
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertEqual(invalid_evidence["diagnostics"][0]["code"], "invalid_input")
 
         source.write_text("Stale archive source.\n", encoding="utf-8")
         completed, stale = run_helper(
@@ -1124,12 +1335,20 @@ class KnowledgeLayerTests(unittest.TestCase):
             content: str,
             *,
             trust_root: Path | None = None,
-        ) -> None:
+            expected_prior: bytes | None | object,
+            created_directory_records: dict[Path, tuple[int, int]] | None = None,
+        ) -> list[mutation_helper.CreatedDirectory]:
             nonlocal write_count
             write_count += 1
             if write_count >= 2:
                 raise OSError("injected rollback failure")
-            real_writer(target, content, trust_root=trust_root)
+            return real_writer(
+                target,
+                content,
+                trust_root=trust_root,
+                expected_prior=expected_prior,
+                created_directory_records=created_directory_records,
+            )
 
         with mock.patch.object(
             knowledge_helper,
@@ -1327,6 +1546,15 @@ class KnowledgeLayerTests(unittest.TestCase):
         completed, pending = self.apply(root, pending_migration)
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(pending["data"]["mutation"]["mutation_status"], "applied")
+        pending_project = root / "docs/ai/knowledge/projects/demo/roadmap.md"
+        pending_spec = root / "docs/ai/knowledge/projects/demo/specs/spec-101.md"
+        for pending_map in (pending_project, pending_spec):
+            pending_text = pending_map.read_text(encoding="utf-8")
+            self.assertIn('x-speckit-authority: "source-backed"', pending_text)
+            self.assertIn('x-speckit-status: "review-required"', pending_text)
+            self.assertNotIn("x-speckit-legacy-view", pending_text)
+        self.assertNotIn("x-speckit-generated-from:", roadmap_moc.read_text(encoding="utf-8"))
+        self.assertNotIn("x-speckit-generated-from:", spec_moc.read_text(encoding="utf-8"))
 
         memory_review = self.plan(root, "migrate", legacy_memory_reviewed=True)
         completed, reviewed_memory = self.apply(root, memory_review)
