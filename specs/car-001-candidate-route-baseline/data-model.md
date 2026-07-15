@@ -266,8 +266,9 @@ manifest carries the machine-referenceable stubs so tuples can point at them by
 9. **Cross-reference integrity (Constitution VI)**: every `fixture_backlog_ref`
    and `CAP-Qn` referenced in the manifest resolves to a section in the record,
    and `agent_name` matches its map key — the quickstart validator (V9) loads the
-   record and verifies every fixture-backlog anchor and capability-question ID
-   resolves to a heading. The manifest's `agent_contract_id` is a stable
+   record and verifies every fixture-backlog anchor resolves to a record heading
+   and every capability-question ID has a dedicated entry in the record's
+   capability-question section. The manifest's `agent_contract_id` is a stable
    downstream identifier (unique across the twelve agents), not a record anchor.
    No machine datum has two *authoritative* homes. The
    record's *Agent inventory* route tuples and *Agent-file hash triples* are

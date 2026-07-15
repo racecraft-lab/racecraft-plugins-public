@@ -187,8 +187,10 @@ invalidation trigger naming it, the helper's `platform_field_mapping` is
 non-empty and represents every field of the pinned Codex source toml
 (source-completeness, data-model §5), both the capability-question IDs and
 the twelve `agent_contract_id`s are unique, the comparator is pinned to the
-exact `speckit-pro-v2.19.1` tag and commit, and every `fixture_backlog_ref`
-anchor and capability-question ID resolves to a heading in the record.
+exact `speckit-pro-v2.19.1` tag and commit, every `fixture_backlog_ref` anchor
+resolves to a record heading and each capability-question ID has a dedicated
+record entry, and each agent carries both per-alias re-pointing and
+comparator-drift invalidation triggers.
 
 ```bash
 python3 - <<'PY'
@@ -228,7 +230,10 @@ for name, e in agents.items():
     trigger_text = " ".join(e["invalidation_triggers"]).lower()
     for a in aliases:
         if a not in trigger_text:
-            errs.append(f"{name}: no invalidation trigger for alias {a!r}")
+            errs.append(f"{name}: no re-pointing invalidation trigger for alias {a!r}")
+    if not any(re.search(r"drift", t, re.I) and re.search(r"hash|sha256", t, re.I)
+               for t in e["invalidation_triggers"]):
+        errs.append(f"{name}: no comparator-drift invalidation trigger")
 # Helper platform_field_mapping is non-empty and source-complete vs the pinned Codex toml (data-model §5).
 helper = agents["autopilot-fast-helper"]
 pfm = helper.get("platform_field_mapping", [])
@@ -253,8 +258,8 @@ for name, e in agents.items():
     if not anchor or path != record_path or anchor not in heading_slugs:
         errs.append(f"{name}: fixture_backlog_ref {e['fixture_backlog_ref']!r} does not resolve to a record heading")
 for qid in declared_q:
-    if qid not in record_text:
-        errs.append(f"{qid}: capability question not present in the record")
+    if not re.search(r"(?m)^[|\-]\s*\*\*`" + re.escape(qid) + r"`", record_text):
+        errs.append(f"{qid}: no dedicated capability-question entry in the record")
 assert not errs, "semantic violations:\n  " + "\n  ".join(errs)
 print("semantic rules: cross-refs + record anchors resolve, coverage + source-completeness verified (data-model §5, §7 rules 9, 10)")
 PY
