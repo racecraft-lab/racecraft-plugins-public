@@ -42,8 +42,8 @@ The design concept is the source of truth for these scoping decisions:
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | Created spec.md and requirements checklist; G1 routed to Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | Resolved row schema, research boundaries, proof commands, and lifecycle updates |
-| Plan | `/speckit-plan` | 🔄 In Progress | Design the canonical Markdown artifact and evidence workflow |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Data integrity, security, integration, and reliability |
+| Plan | `/speckit-plan` | ✅ Complete | Created plan, research, data model, quickstart, and MOC refresh |
+| Checklist | `/speckit-checklist` | 🔄 In Progress | Data integrity, security, integration, and reliability |
 | Tasks | `/speckit-tasks` | ⏳ Pending | Evidence-first docs tasks bounded by the Design Concept |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Check cross-artifact scope and AC-1.* coverage |
 | Confidence Gate | G6.5 | ⏳ Pending | Record pre-Implement confidence and mode before implementation |
@@ -404,11 +404,11 @@ states while preserving stable IDs and reviewed history.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Canonical document structure and evidence workflow |
-| `research.md` | ⏳ | Primary-source candidate and OKF evidence decisions |
-| `data-model.md` | ⏳ | Conceptual Markdown row/field semantics only, not runtime schema |
-| `contracts/` | Not expected | No runtime/API contract in HRNS-001 |
-| `quickstart.md` | ⏳ | Reproducible inventory and docs-verification procedure |
+| `plan.md` | ✅ | Canonical document structure and evidence workflow |
+| `research.md` | ✅ | Primary-source candidate and OKF evidence decisions |
+| `data-model.md` | ✅ | Conceptual Markdown row/field semantics only, not runtime schema |
+| `contracts/` | Skipped | No runtime/API/helper contract in HRNS-001 |
+| `quickstart.md` | ✅ | Reproducible inventory and docs-verification procedure |
 
 ---
 
