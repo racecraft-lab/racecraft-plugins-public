@@ -86,7 +86,7 @@ zero data impact. spec.md FR-009 + Assumption and plan.md are reconciled to
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains (traceability, data-integrity, research-rigor); 11 gaps → 0; no consensus needed (all high-confidence) |
 | Tasks | `/speckit-tasks` | ✅ Complete | 32 tasks, 4 phases, 11 `[P]`; FR 27/27 + SC 8/8 covered; atomicity route = one-navigable-PR (releasable), layer plan skipped |
 | Analyze | `/speckit-analyze` | ✅ Complete | 2 findings (1 MEDIUM, 1 LOW), both remediated; 0 CRITICAL/HIGH; no consensus needed |
-| Implement | `/speckit-implement` | 🔄 In Progress | G6.5 confidence 0.98 (proceed); task-level dispatch in 5 authoring units |
+| Implement | `/speckit-implement` | ✅ Complete | **G7 PASS** — record + manifest authored; default suite 2734/2734 green; manifest schema-valid, 11 agent hashes independently reproduce from the pinned tag, zero shipped-byte change |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -686,10 +686,13 @@ evidence-then-claim:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Inventory | | | |
-| 2 - Fact table | | | |
-| 3 - Contracts + manifest | | | |
-| 4 - Backlog, telemetry, handoff | | | |
+| 1 - Inventory + hashes | T001–T009 | ✅ | 11 route tuples + 12 hash triples (reproduced from tag); AC-1.1 surface sweep (24 surfaces); Layer 6 gap 2 current / 10 missing |
+| 2 - Fact table + CAP-Qs | T010–T014 | ✅ | Official-doc citations (URL + access date + verbatim quote) — sample re-verified live against docs.claude.com / code.claude.com; CAP-Q1–Q6; four-class labeling |
+| 3 - Manifest | T015–T020 | ✅ | 12 entries; schema VIOLATIONS 0; 11 agent hashes independently recomputed from the tag = 0 mismatches; no dangling CAP-Q refs; `fable` in all 5 executor sets |
+| 4 - Backlog, telemetry, handoff | T021–T025 | ✅ | 12 requirements-level fixture-backlog entries (anchors match manifest 1:1); telemetry requirements; Layer 6 bare-prompt-emulation labeling; go/no-go handoff (final section) |
+| Verify (G7) | T026–T032 | ✅ | Schema conformance, hash recompute, privacy scan, zero shipped-byte + suite **2734/2734**, non-goal audit, cross-reference integrity |
+
+**Implementation execution note — one intentional repository test edit.** The two deliverables live under `docs/ai/research/` per binding design decision Q2/FR-001. The XPLAT-008 docs-surface guard (`tests/speckit-pro/unit/test-speckit-pro-runner.py::test_no_cutover_or_public_claim_surfaces_changed`) admits changed `docs/` files only under `docs/ai/specs/`, `docs/prd-`, `docs/roadmap-`, or an explicit allowlist — and it already allowlists a prior `docs/ai/research/` research spike. Following that exact precedent, a dedicated `allowed_car001_research_exact` set was added listing the two new deliverables, so the guard admits them as a conscious review checkpoint. This is a **repo-only test guard, not a shipped `speckit-pro/` payload**, so SC-006 (zero shipped-byte change) holds; the runner test returns 11/11 and the generated docs `tests.md` reference is unchanged (`reference:check` clean).
 
 ---
 
