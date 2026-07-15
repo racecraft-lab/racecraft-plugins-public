@@ -1862,6 +1862,58 @@ deleted. Exact PR titles, merged-at timestamps, merge commits, and head branches
 are recorded in
 `.specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md`.
 
+---
+
+## CAR-001 Candidate Route Baseline and Role Contracts
+
+### Provenance
+
+| Spec | PR | Title | Merged at | Merge commit |
+|------|----|-------|-----------|--------------|
+| CAR-001 | #350 | `docs(speckit-pro): add the Claude agent route-candidate research baseline` | 2026-07-15T13:42:16Z | `725be949b856724a073622900bd168d29b2f4603` |
+
+### Summary
+
+CAR-001 shipped the Claude agent route-candidate baseline and role-contract
+handoff for the CAR-001..CAR-011 sequence. The merged research record and JSON
+manifest cover all twelve named agents, pin the immutable comparator to
+`speckit-pro-v2.19.1`, distinguish project-level route eligibility from
+environment-time availability, record capability questions for CAR-002, label
+bare prompt emulation as non-release evidence, and keep all executable-route
+claims deferred until probing and qualification.
+
+### Canonical Artifacts
+
+- `docs/ai/research/claude-agent-route-candidates.md`
+- `docs/ai/research/claude-agent-route-candidate-manifest.json`
+- `docs/ai/specs/.process/CAR-001-workflow.md`
+- `docs/ai/specs/.process/CAR-001-design-concept.md`
+- `docs/ai/specs/claude-agent-routing-technical-roadmap.md`
+- `docs/ai/specs/claude-agent-routing-roadmap-MOC.md`
+
+### Recovery Commands
+
+```text
+git show 725be949b856724a073622900bd168d29b2f4603:specs/car-001-candidate-route-baseline/spec.md
+git show 725be949b856724a073622900bd168d29b2f4603:specs/car-001-candidate-route-baseline/plan.md
+git show 725be949b856724a073622900bd168d29b2f4603:specs/car-001-candidate-route-baseline/tasks.md
+git show 725be949b856724a073622900bd168d29b2f4603:specs/car-001-candidate-route-baseline/research.md
+git show 725be949b856724a073622900bd168d29b2f4603:specs/car-001-candidate-route-baseline/data-model.md
+git show 725be949b856724a073622900bd168d29b2f4603:specs/car-001-candidate-route-baseline/quickstart.md
+git show 725be949b856724a073622900bd168d29b2f4603:specs/car-001-candidate-route-baseline/contracts/agent-route-candidate-manifest.schema.json
+git show 725be949b856724a073622900bd168d29b2f4603:specs/car-001-candidate-route-baseline/checklists/requirements.md
+git show 725be949b856724a073622900bd168d29b2f4603:specs/car-001-candidate-route-baseline/checklists/traceability.md
+git show 725be949b856724a073622900bd168d29b2f4603:specs/car-001-candidate-route-baseline/checklists/research-rigor.md
+git show 725be949b856724a073622900bd168d29b2f4603:specs/car-001-candidate-route-baseline/checklists/data-integrity.md
+git show 725be949b856724a073622900bd168d29b2f4603:specs/car-001-candidate-route-baseline/SPEC-MOC.md
+git show 725be949b856724a073622900bd168d29b2f4603:docs/ai/specs/.process/CAR-001-workflow.md
+git show 725be949b856724a073622900bd168d29b2f4603:docs/ai/specs/.process/CAR-001-design-concept.md
+git checkout 725be949b856724a073622900bd168d29b2f4603 -- specs/car-001-candidate-route-baseline
+```
+
+The detailed archive and verification record is stored in
+`.specify/memory/archive-reports/2026-07-15-car-001-post-merge-hygiene.md`.
+
 ### Summary
 
 XPLAT-010 replaced active repository Bash orchestration, validators, helpers,

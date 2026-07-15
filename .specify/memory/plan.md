@@ -1546,3 +1546,45 @@ and raw spec artifacts remain recoverable from the final merge commit. The
 separate constitution amendment completed through PR #331 at
 `b537e3b43ca20d8f6e8b6e9430d797444462f2e9` before archive cleanup. Public native
 claims remain blocked by the XPLAT-008 UAT matrix.
+
+## CAR-001 Candidate Route Baseline and Role Contracts
+
+[Source: specs/car-001-candidate-route-baseline]
+
+CAR-001 completed the first Claude agent-routing research spike. It produced
+the durable Markdown research record and JSON candidate-route manifest under
+`docs/ai/research/`, leaving shipped plugin bytes unchanged and preserving the
+spec workflow/design evidence under `docs/ai/specs/.process/`.
+
+### Technical Approach
+
+- Treat CAR-001 as a documentation research spike: no production-code files, no
+  generated payload rebuild, and no agent default mutation.
+- Pin route and instruction identity to the consumer-installable
+  `speckit-pro-v2.19.1` comparator at
+  `e343aa2e4ebcb2d48c501f285d7072cfd55722da`.
+- Compute manifest hashes with Python 3.11+ standard-library methods and keep
+  hash identity reproducible from the pinned tag.
+- Record current platform facts, capability questions, role contracts,
+  fixture-backlog requirements, telemetry requirements, and go/no-go handoff
+  boundaries for CAR-002/CAR-003/CAR-006.
+- Keep executable-route and fallback-ordering claims deferred until downstream
+  probing, exact-treatment replay, and qualification specs.
+
+### Testing Strategy
+
+The merged PR verified JSON validity/schema conformance, hash reproducibility,
+absolute-path privacy checks, zero shipped-byte change, default deterministic
+suite coverage, non-goal guardrails, and PR check gates. The archive cleanup
+reruns JSON validation for `autopilot-state.json`, the SpecKit index write/check
+operations, active-spec inventory, diff hygiene, and Layer 1 structural
+validation.
+
+### Cleanup Notes
+
+`specs/car-001-candidate-route-baseline` was removed from active `specs/**` in
+the post-merge cleanup after PR #350 merged on 2026-07-15. The canonical
+artifacts are `docs/ai/research/claude-agent-route-candidates.md` and
+`docs/ai/research/claude-agent-route-candidate-manifest.json`; CAR-002 is now
+the next ready spec in the Claude routing roadmap. Recovery commands and
+provenance are recorded in the CAR-001 archive report.
