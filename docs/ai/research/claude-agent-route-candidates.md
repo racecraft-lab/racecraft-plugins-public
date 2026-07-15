@@ -1057,7 +1057,7 @@ No mandatory fact was dropped or left in a silent or unclassifiable state; each 
 ### Decision
 
 - **GO — the baseline handoff is complete.** CAR-002 has everything it needs to design capability probes and,
-  once those probes resolve the candidate routes, freeze the executable subset: the provisional manifest, the role-contract catalog, the
+  once those probes resolve the candidate routes, freeze the probe-cleared (capability-compatible) subset — the executable subset itself follows successful CAR-003 qualification: the provisional manifest, the role-contract catalog, the
   candidate tuples (project-level eligibility recorded, environment-time availability probe-gated), the
   fixture backlog, the telemetry requirements, and the six capability questions — all dated and cited, with
   zero shipped-default change (SC-006).
