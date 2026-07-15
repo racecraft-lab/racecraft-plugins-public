@@ -1,0 +1,302 @@
+{
+  "body_file": "specs/g56r-001-candidate-route-baseline/.process/pr-packets/g56r-001-single.md",
+  "editable_fields": [
+    {
+      "end_marker": "<!-- speckit-pro-editable:summary:end -->",
+      "field_id": "summary",
+      "heading": "Summary",
+      "start_marker": "<!-- speckit-pro-editable:summary:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:what_changed:end -->",
+      "field_id": "what_changed",
+      "heading": "What Changed",
+      "start_marker": "<!-- speckit-pro-editable:what_changed:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:why_it_matters:end -->",
+      "field_id": "why_it_matters",
+      "heading": "Why It Matters",
+      "start_marker": "<!-- speckit-pro-editable:why_it_matters:start -->"
+    }
+  ],
+  "generated_title": {
+    "description": "complete route baseline and guarantee PR creation",
+    "rejected_candidates": [
+      {
+        "reason": "Feature directories are evidence, not titles.",
+        "value": "g56r-001-candidate-route-baseline"
+      },
+      {
+        "reason": "Branch names are target metadata, not title descriptions.",
+        "value": "g56r-001-candidate-route-baseline"
+      }
+    ],
+    "scope": "g56r-001",
+    "source_evidence": {
+      "kind": "feature_spec",
+      "source": "specs/g56r-001-candidate-route-baseline/spec.md",
+      "summary": "Feature title and requested action define the public PR title."
+    },
+    "type": "fix",
+    "value": "fix(g56r-001): complete route baseline and guarantee PR creation"
+  },
+  "mode": "single",
+  "packet_id": "g56r-001-single",
+  "protected_body_fingerprint": {
+    "algorithm": "sha256",
+    "elided_fields": [
+      "summary",
+      "what_changed",
+      "why_it_matters"
+    ],
+    "normalization": "entire rendered body from first line through EOF; LF; trailing whitespace trimmed; final newline ensured; declared editable bodies elided before sha256.",
+    "normalization_profile": "whole_body_v2",
+    "value": "46704d92a21959a7dc2d4d2140a07f03962bc06efa24652246a73519fb73d5dc"
+  },
+  "required_headings": [
+    "Summary",
+    "What Changed",
+    "Why It Matters",
+    "How To Review",
+    "How To UAT",
+    "Verification",
+    "Scope",
+    "Known Gaps"
+  ],
+  "schema_version": "1.1.0",
+  "scope_evidence": {
+    "budget_result": "exception",
+    "changed_files": [
+      ".github/workflows/container-preflight.yml",
+      ".github/workflows/pr-checks.yml",
+      "dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json",
+      "dist/claude/speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+      "dist/claude/speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+      "dist/claude/speckit-pro/skills/speckit-autopilot/templates/pr-description-template.md",
+      "dist/claude/speckit-pro/speckit_pro_runner/helpers/mutation.py",
+      "dist/claude/speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
+      "dist/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py",
+      "dist/claude/speckit-pro/speckit_pro_runner/helpers/registry.py",
+      "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution-codex.md",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation-codex.md",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/references/task-list-canonical-codex.md",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/templates/pr-description-template.md",
+      "dist/codex/speckit-pro/speckit_pro_runner/helpers/mutation.py",
+      "dist/codex/speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
+      "dist/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py",
+      "dist/codex/speckit-pro/speckit_pro_runner/helpers/registry.py",
+      "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "docs-site/src/content/docs/reference/tests.md",
+      "docs/ai/research/codex-agent-route-candidate-manifest.json",
+      "docs/ai/research/codex-agent-route-candidates.md",
+      "docs/ai/specs/.process/G56R-001-design-concept.md",
+      "docs/ai/specs/.process/G56R-001-workflow.md",
+      "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json",
+      "docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json",
+      "docs/ai/specs/.process/XPLAT-009-release-readiness-result.json",
+      "docs/ai/specs/.process/autopilot-state.json",
+      "docs/ai/specs/codex-gpt-5-6-agent-routing-roadmap-MOC.md",
+      "docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md",
+      "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+      "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+      "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md",
+      "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",
+      "speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json",
+      "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+      "speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+      "speckit-pro/skills/speckit-autopilot/templates/pr-description-template.md",
+      "speckit-pro/speckit_pro_runner/helpers/mutation.py",
+      "speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
+      "speckit-pro/speckit_pro_runner/helpers/read_only.py",
+      "speckit-pro/speckit_pro_runner/helpers/registry.py",
+      "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "specs/g56r-001-candidate-route-baseline/.process/pr-packets/g56r-001-single.json",
+      "specs/g56r-001-candidate-route-baseline/.process/pr-packets/g56r-001-single.md",
+      "specs/g56r-001-candidate-route-baseline/SPEC-MOC.md",
+      "specs/g56r-001-candidate-route-baseline/check-artifacts.py",
+      "specs/g56r-001-candidate-route-baseline/checklists/integration.md",
+      "specs/g56r-001-candidate-route-baseline/checklists/llm-integration.md",
+      "specs/g56r-001-candidate-route-baseline/checklists/reliability.md",
+      "specs/g56r-001-candidate-route-baseline/checklists/requirements.md",
+      "specs/g56r-001-candidate-route-baseline/checklists/security.md",
+      "specs/g56r-001-candidate-route-baseline/contracts/agent-route-candidate-manifest.md",
+      "specs/g56r-001-candidate-route-baseline/contracts/combined-pr-reviewability-exception.md",
+      "specs/g56r-001-candidate-route-baseline/data-model.md",
+      "specs/g56r-001-candidate-route-baseline/plan.md",
+      "specs/g56r-001-candidate-route-baseline/quickstart.md",
+      "specs/g56r-001-candidate-route-baseline/research.md",
+      "specs/g56r-001-candidate-route-baseline/retrospective.md",
+      "specs/g56r-001-candidate-route-baseline/spec.md",
+      "specs/g56r-001-candidate-route-baseline/tasks.md",
+      "specs/g56r-001-candidate-route-baseline/verify-tasks-report.md",
+      "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+      "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+      "tests/speckit-pro/layer8-parity/01-post-impl-parity/README.md",
+      "tests/speckit-pro/layer8-parity/01-post-impl-parity/expected-equivalence.json",
+      "tests/speckit-pro/layer8-parity/01-post-impl-parity/tolerance.json",
+      "tests/speckit-pro/layer8-parity/01-post-impl-parity/workflow.md",
+      "tests/speckit-pro/layer8-parity/README.md",
+      "tests/speckit-pro/parity/bash-to-python/test-post-implementation-reference-baseline.txt",
+      "tests/speckit-pro/suite-manifest.json",
+      "tests/speckit-pro/unit/fixtures/mutation-helpers/fixture-manifest.json",
+      "tests/speckit-pro/unit/fixtures/mutation-helpers/promotion-records.json",
+      "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/pr-packet-output.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-file-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-mutable.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-source-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-mutable.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-partial-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-root-mismatch.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-same-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-single-product.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-source-mismatch.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-traversal-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/templates/pr-description-template.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/helpers/mutation.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/helpers/registry.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution-codex.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation-codex.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/references/task-list-canonical-codex.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/templates/pr-description-template.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/helpers/mutation.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/helpers/registry.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "tests/speckit-pro/unit/fixtures/pr-packet-feature/specs/prsg-012-reviewer-ready-pr-packet-contract/contracts/pr-packet.schema.json",
+      "tests/speckit-pro/unit/fixtures/pr-packet/invalid-missing-evidence.json",
+      "tests/speckit-pro/unit/fixtures/pr-packet/invalid-protected-edit.json",
+      "tests/speckit-pro/unit/fixtures/pr-packet/invalid-title-token.json",
+      "tests/speckit-pro/unit/fixtures/pr-packet/valid-single.json",
+      "tests/speckit-pro/unit/fixtures/pr-packet/valid-split.json",
+      "tests/speckit-pro/unit/test-eval-runner-skill-selection.py",
+      "tests/speckit-pro/unit/test-g56r-001-artifacts.py",
+      "tests/speckit-pro/unit/test-generate-spec-index.py",
+      "tests/speckit-pro/unit/test-post-implementation-reference.py",
+      "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py",
+      "tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py",
+      "tests/speckit-pro/unit/test-speckit-pro-runner.py"
+    ],
+    "non_goals": [
+      "Routing qualification and fallback ordering remain owned by downstream G56R specs.",
+      "This change does not expand public native-platform support claims.",
+      "The research baseline does not mutate production routes or claim an empirically preferred candidate."
+    ],
+    "production_files": 13,
+    "reviewable_loc": 1702,
+    "total_files": 134
+  },
+  "source_feature_dir": "specs/g56r-001-candidate-route-baseline",
+  "source_markers": [
+    {
+      "marker_id": "feature-contract",
+      "rendered_text": "Source: the G56R-001 specification defines the frozen route-baseline acceptance contract.",
+      "source": "specs/g56r-001-candidate-route-baseline/spec.md"
+    },
+    {
+      "marker_id": "task-contract",
+      "rendered_text": "Source: the G56R-001 tasks define the completed T001 through T026 execution contract.",
+      "source": "specs/g56r-001-candidate-route-baseline/tasks.md"
+    },
+    {
+      "marker_id": "adversarial-review",
+      "rendered_text": "Source: the retrospective records adversarial findings, official documentation alignment, and community best-practice disposition.",
+      "source": "specs/g56r-001-candidate-route-baseline/retrospective.md"
+    },
+    {
+      "marker_id": "autopilot-recovery",
+      "rendered_text": "Source: the workflow records every autopilot phase and the mandatory verified-PR recovery boundary.",
+      "source": "docs/ai/specs/.process/G56R-001-workflow.md"
+    }
+  ],
+  "source_revision": {
+    "base_ref": "refs/remotes/origin/main",
+    "base_sha": "587057efeff856bad020b38dc11c7e9214f2c078",
+    "source_diff_fingerprint": {
+      "algorithm": "sha256",
+      "normalization": "git diff --binary --full-index <base-sha>...<source-head-sha> -- at packet generation",
+      "value": "b71316fa57b319d4244b6750aafc9a15e6d4e00eaa49549f6b30755ef3bd6b4c"
+    },
+    "source_head_sha": "5b67f5941bc31981b03879f359a0d16725f962ad"
+  },
+  "target": {
+    "base_branch": "main",
+    "head_branch": "g56r-001-candidate-route-baseline"
+  },
+  "uat": {
+    "how_to_uat": "Run the focused G56R checker tests, runner mutation and read-only tests, integration suite, and default deterministic suite documented in the verification section.",
+    "uat_runbook_heading": "## UAT Runbook",
+    "uat_source": "specs/g56r-001-candidate-route-baseline/quickstart.md"
+  },
+  "validation_result_path": "specs/g56r-001-candidate-route-baseline/.process/pr-packets/g56r-001-single/validation.json",
+  "verification_evidence": [
+    {
+      "kind": "default_suite",
+      "result": "2834/2834 passed",
+      "source": "tests/speckit-pro/run-all.py",
+      "summary": "Final uninterrupted default deterministic suite passed Layer 1, Layer 4, and Layer 5."
+    },
+    {
+      "kind": "integration_suite",
+      "result": "257/257 passed",
+      "source": "tests/speckit-pro/run-all.py",
+      "summary": "Replay integration fixtures passed after the cross-client recovery changes."
+    },
+    {
+      "kind": "focused_test",
+      "result": "56/56 passed",
+      "source": "tests/speckit-pro/unit/test-g56r-001-artifacts.py",
+      "summary": "G56R artifact contract and adversarial negative cases passed."
+    },
+    {
+      "kind": "runner_regressions",
+      "result": "37/37 passed",
+      "source": "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py",
+      "summary": "Source-bound packet output and secure atomic mutation regressions passed."
+    },
+    {
+      "kind": "runner_regressions",
+      "result": "49/49 passed",
+      "source": "tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py",
+      "summary": "Packet freshness and read-only validation regressions passed."
+    },
+    {
+      "kind": "runner_regressions",
+      "result": "12/12 passed",
+      "source": "tests/speckit-pro/unit/test-generate-spec-index.py",
+      "summary": "Spec-index secure-write prerequisite and committed-state regressions passed."
+    },
+    {
+      "kind": "cross_client_parity",
+      "result": "48/48 passed",
+      "source": "tests/speckit-pro/unit/test-post-implementation-reference.py",
+      "summary": "Claude Code and Codex Post lifecycle and packet authorization contracts passed."
+    }
+  ]
+}
