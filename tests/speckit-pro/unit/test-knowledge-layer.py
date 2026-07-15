@@ -392,6 +392,37 @@ class KnowledgeLayerTests(unittest.TestCase):
         self.assertEqual(target.read_text(encoding="utf-8"), "after\n")
         self.assertFalse(detached.exists())
 
+    @unittest.skipUnless(os.name == "nt", "Windows metadata regression requires Win32")
+    def test_windows_atomic_writer_preserves_existing_file_attributes(self) -> None:
+        import ctypes
+        from ctypes import wintypes
+
+        root = self.repo("windows-atomic-metadata")
+        target = self.write(root, "safe/target.md", "before\n")
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.GetFileAttributesW.argtypes = [wintypes.LPCWSTR]
+        kernel32.GetFileAttributesW.restype = wintypes.DWORD
+        kernel32.SetFileAttributesW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD]
+        kernel32.SetFileAttributesW.restype = wintypes.BOOL
+        invalid_attributes = 0xFFFFFFFF
+        hidden_attribute = 0x00000002
+        original_attributes = kernel32.GetFileAttributesW(str(target))
+        self.assertNotEqual(original_attributes, invalid_attributes)
+        self.assertTrue(
+            kernel32.SetFileAttributesW(
+                str(target),
+                original_attributes | hidden_attribute,
+            )
+        )
+        try:
+            mutation_helper.write_file_atomic(target, "after", trust_root=root)
+            resulting_attributes = kernel32.GetFileAttributesW(str(target))
+            self.assertNotEqual(resulting_attributes, invalid_attributes)
+            self.assertTrue(resulting_attributes & hidden_attribute)
+            self.assertEqual(target.read_text(encoding="utf-8"), "after\n")
+        finally:
+            kernel32.SetFileAttributesW(str(target), original_attributes)
+
     @unittest.skipUnless(os.name == "nt", "Windows reparse regression requires Win32")
     def test_windows_atomic_writer_rejects_reparse_parent(self) -> None:
         root = self.repo("windows-atomic-reparse")
@@ -565,6 +596,40 @@ class KnowledgeLayerTests(unittest.TestCase):
         self.assertEqual(body["data"]["mutation"]["mutation_status"], "rolled_back")
         self.assertFalse(body["data"]["writes_state"])
         self.assertFalse(concept.exists())
+
+    def test_concurrent_target_edit_is_preserved_during_rollback(self) -> None:
+        root = self.repo("concurrent-target-edit")
+        plan = self.plan(root, "init")
+        target = root / str(plan["operations"][0]["target"])
+        concurrent_content = "external concurrent edit\n"
+        original_preconditions = knowledge_helper._validate_source_preconditions
+
+        def change_written_target(
+            repo_root: Path,
+            accepted_plan: dict[str, object],
+            *,
+            phase: str,
+        ) -> None:
+            if phase == "resulting":
+                target.write_text(concurrent_content, encoding="utf-8")
+            original_preconditions(repo_root, accepted_plan, phase=phase)
+
+        with mock.patch.object(
+            knowledge_helper,
+            "_validate_source_preconditions",
+            side_effect=change_written_target,
+        ):
+            body = self.apply_direct(root, plan)
+
+        mutation = body["data"]["mutation"]
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual(body["diagnostics"][0]["code"], "source_changed")
+        self.assertEqual(mutation["mutation_status"], "partial_failure")
+        self.assertTrue(body["data"]["writes_state"])
+        self.assertEqual(target.read_text(encoding="utf-8"), concurrent_content)
+        self.assertTrue(
+            any("concurrent change preserved" in note for note in mutation["manual_remediation"])
+        )
 
     def test_source_precondition_limit_matches_contract(self) -> None:
         root = self.repo("source-precondition-limit")
@@ -763,6 +828,26 @@ class KnowledgeLayerTests(unittest.TestCase):
         self.assertGreaterEqual(len(lock_diagnostics), 3)
         self.assertEqual(set(lock_diagnostics), {"mutation_locked"})
         self.assertEqual(file_snapshot(root), before)
+
+    def test_windows_knowledge_mutex_name_is_cross_session(self) -> None:
+        self.assertEqual(
+            knowledge_helper._windows_knowledge_mutex_name("abc123"),
+            "Global\\SpeckitProKnowledge-abc123",
+        )
+
+    def test_hash_consistent_malformed_plan_request_is_input_error(self) -> None:
+        root = self.repo("malformed-plan-request")
+        plan = json.loads(json.dumps(self.plan(root, "init")))
+        plan["request"]["timestamp"] = 123
+        plan["plan_hash"] = knowledge_helper._plan_hash(plan)
+
+        body = self.apply_direct(root, plan)
+
+        self.assertEqual(body["status"], "input_error")
+        self.assertEqual(body["diagnostics"][0]["code"], "invalid_plan")
+        self.assertFalse(body["data"]["writes_state"])
+        self.assertEqual(body["data"]["mutation"]["mutation_status"], "blocked")
+        self.assertFalse((root / "docs" / "ai" / "knowledge").exists())
 
     def test_apply_recomputation_errors_are_repository_failures(self) -> None:
         root = self.repo("apply-recompute-error")

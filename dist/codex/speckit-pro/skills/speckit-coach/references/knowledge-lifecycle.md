@@ -88,7 +88,7 @@ For `migrate`, reviewed cutover carries `reviewed: true` and
 `sources`. An optional RFC 3339 `timestamp` with a timezone makes a plan reproducible.
 
 For mutations, always run plan first, show its proposed operations and warnings,
-and apply only the exact accepted plan. The signed plan includes source
+and apply only the exact accepted plan. The hash-bound plan includes source
 preconditions that apply rechecks before and after writes. A stale snapshot,
 changed source, or validation failure must stop without partial writes.
 `generate-spec-index-check` and

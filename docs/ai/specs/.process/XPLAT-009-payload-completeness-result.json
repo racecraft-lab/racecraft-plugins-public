@@ -258,11 +258,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 2588,
+            "byte_count": 5067,
             "kind": "skill",
             "path": "skills/speckit-autopilot/contracts/knowledge-update-plan.schema.json",
             "required": true,
-            "sha256": "4adfee02c91d4d002fe86699e9491aab42bf6118cdbb70d377a9741553d5d828",
+            "sha256": "d9d4013c57c320326c4f88cd8a2e567138944c3c4acacdfffa055fbdf5c15ffc",
             "source_path": "speckit-pro/skills/speckit-autopilot/contracts/knowledge-update-plan.schema.json",
             "transform": "none"
           },
@@ -600,11 +600,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 9339,
+            "byte_count": 9343,
             "kind": "skill",
             "path": "skills/speckit-coach/references/knowledge-lifecycle.md",
             "required": true,
-            "sha256": "7edd324427dcc1d7119d433296a9306a7c10d3b63d6267154236d6a933bbf991",
+            "sha256": "e5489332c353fc4d1f781804a4841bd8a09e87478d6c21c95b712a08cf989628",
             "source_path": "speckit-pro/skills/speckit-coach/references/knowledge-lifecycle.md",
             "transform": "none"
           },
@@ -852,20 +852,20 @@
             "transform": "none"
           },
           {
-            "byte_count": 166084,
+            "byte_count": 170823,
             "kind": "runner",
             "path": "speckit_pro_runner/helpers/knowledge.py",
             "required": true,
-            "sha256": "f50ecac88ba5d8cfdec5a56a552293a397c388e9b534b46bdbab4a1ce9f51c2f",
+            "sha256": "4059fd080e1e2414b2f6a76d25e6848bd4efd6373cb81901920e0b00fd37e636",
             "source_path": "speckit-pro/speckit_pro_runner/helpers/knowledge.py",
             "transform": "none"
           },
           {
-            "byte_count": 53342,
+            "byte_count": 54204,
             "kind": "runner",
             "path": "speckit_pro_runner/helpers/mutation.py",
             "required": true,
-            "sha256": "23eadfc1815e5f1fcc87ecf5401c7f71ea1805aef960068646bffaa155658f9f",
+            "sha256": "9a474d14f6fe516bad69bee6e3c49dd3d3df2e9b190d069a57352972b683fe5e",
             "source_path": "speckit-pro/speckit_pro_runner/helpers/mutation.py",
             "transform": "none"
           },
@@ -928,7 +928,7 @@
             "kind": "trust_metadata",
             "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
             "required": true,
-            "sha256": "6c59b3bd3570cfaae6ea857b0e720d9ada77ee0fd5f1d6d2c78b9a89f731cdde",
+            "sha256": "a3fb348fd0e49edf67a97fcbb34857c03c4a71ee31c8b84e9b73245f9e4b7382",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
             "transform": "none"
           },
@@ -937,7 +937,7 @@
             "kind": "checksum",
             "path": "speckit_pro_runner/speckit-pro-runner.sha256",
             "required": true,
-            "sha256": "2b8d5e0467493a36dec777e857b195155be9227381fa78a42b885d5bda6653b1",
+            "sha256": "231bfa6903d82ac130e74c73858e31183b5f358311ae2c93218b819772326e9f",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
             "transform": "none"
           }
@@ -1169,11 +1169,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 2588,
+            "byte_count": 5067,
             "kind": "skill",
             "path": "skills/speckit-autopilot/contracts/knowledge-update-plan.schema.json",
             "required": true,
-            "sha256": "4adfee02c91d4d002fe86699e9491aab42bf6118cdbb70d377a9741553d5d828",
+            "sha256": "d9d4013c57c320326c4f88cd8a2e567138944c3c4acacdfffa055fbdf5c15ffc",
             "source_path": "speckit-pro/skills/speckit-autopilot/contracts/knowledge-update-plan.schema.json",
             "transform": "none"
           },
@@ -1511,11 +1511,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 9339,
+            "byte_count": 9343,
             "kind": "skill",
             "path": "skills/speckit-coach/references/knowledge-lifecycle.md",
             "required": true,
-            "sha256": "7edd324427dcc1d7119d433296a9306a7c10d3b63d6267154236d6a933bbf991",
+            "sha256": "e5489332c353fc4d1f781804a4841bd8a09e87478d6c21c95b712a08cf989628",
             "source_path": "speckit-pro/skills/speckit-coach/references/knowledge-lifecycle.md",
             "transform": "none"
           },
@@ -1763,20 +1763,20 @@
             "transform": "none"
           },
           {
-            "byte_count": 166084,
+            "byte_count": 170823,
             "kind": "runner",
             "path": "speckit_pro_runner/helpers/knowledge.py",
             "required": true,
-            "sha256": "f50ecac88ba5d8cfdec5a56a552293a397c388e9b534b46bdbab4a1ce9f51c2f",
+            "sha256": "4059fd080e1e2414b2f6a76d25e6848bd4efd6373cb81901920e0b00fd37e636",
             "source_path": "speckit-pro/speckit_pro_runner/helpers/knowledge.py",
             "transform": "none"
           },
           {
-            "byte_count": 53342,
+            "byte_count": 54204,
             "kind": "runner",
             "path": "speckit_pro_runner/helpers/mutation.py",
             "required": true,
-            "sha256": "23eadfc1815e5f1fcc87ecf5401c7f71ea1805aef960068646bffaa155658f9f",
+            "sha256": "9a474d14f6fe516bad69bee6e3c49dd3d3df2e9b190d069a57352972b683fe5e",
             "source_path": "speckit-pro/speckit_pro_runner/helpers/mutation.py",
             "transform": "none"
           },
@@ -1839,7 +1839,7 @@
             "kind": "trust_metadata",
             "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
             "required": true,
-            "sha256": "6c59b3bd3570cfaae6ea857b0e720d9ada77ee0fd5f1d6d2c78b9a89f731cdde",
+            "sha256": "a3fb348fd0e49edf67a97fcbb34857c03c4a71ee31c8b84e9b73245f9e4b7382",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
             "transform": "none"
           },
@@ -1848,13 +1848,13 @@
             "kind": "checksum",
             "path": "speckit_pro_runner/speckit-pro-runner.sha256",
             "required": true,
-            "sha256": "2b8d5e0467493a36dec777e857b195155be9227381fa78a42b885d5bda6653b1",
+            "sha256": "231bfa6903d82ac130e74c73858e31183b5f358311ae2c93218b819772326e9f",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
             "transform": "none"
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "7cbf17fbf92aaf3d18a32cafcdb10caf01efd9b1ffb56ef03ab78c00524a6be4",
+        "file_tree_hash": "48f914c09b7dfd2b8d8662fa520bb3bcd23d650effb4908f727b2a2fc23763c3",
         "generated_root": "dist/claude/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
@@ -2131,11 +2131,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 2588,
+            "byte_count": 5067,
             "kind": "skill",
             "path": "skills/speckit-autopilot/contracts/knowledge-update-plan.schema.json",
             "required": true,
-            "sha256": "4adfee02c91d4d002fe86699e9491aab42bf6118cdbb70d377a9741553d5d828",
+            "sha256": "d9d4013c57c320326c4f88cd8a2e567138944c3c4acacdfffa055fbdf5c15ffc",
             "source_path": "speckit-pro/skills/speckit-autopilot/contracts/knowledge-update-plan.schema.json",
             "transform": "none"
           },
@@ -2536,11 +2536,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 9339,
+            "byte_count": 9343,
             "kind": "skill",
             "path": "skills/speckit-coach/references/knowledge-lifecycle.md",
             "required": true,
-            "sha256": "7edd324427dcc1d7119d433296a9306a7c10d3b63d6267154236d6a933bbf991",
+            "sha256": "e5489332c353fc4d1f781804a4841bd8a09e87478d6c21c95b712a08cf989628",
             "source_path": "speckit-pro/skills/speckit-coach/references/knowledge-lifecycle.md",
             "transform": "none"
           },
@@ -2842,20 +2842,20 @@
             "transform": "none"
           },
           {
-            "byte_count": 166084,
+            "byte_count": 170823,
             "kind": "runner",
             "path": "speckit_pro_runner/helpers/knowledge.py",
             "required": true,
-            "sha256": "f50ecac88ba5d8cfdec5a56a552293a397c388e9b534b46bdbab4a1ce9f51c2f",
+            "sha256": "4059fd080e1e2414b2f6a76d25e6848bd4efd6373cb81901920e0b00fd37e636",
             "source_path": "speckit-pro/speckit_pro_runner/helpers/knowledge.py",
             "transform": "none"
           },
           {
-            "byte_count": 53342,
+            "byte_count": 54204,
             "kind": "runner",
             "path": "speckit_pro_runner/helpers/mutation.py",
             "required": true,
-            "sha256": "23eadfc1815e5f1fcc87ecf5401c7f71ea1805aef960068646bffaa155658f9f",
+            "sha256": "9a474d14f6fe516bad69bee6e3c49dd3d3df2e9b190d069a57352972b683fe5e",
             "source_path": "speckit-pro/speckit_pro_runner/helpers/mutation.py",
             "transform": "none"
           },
@@ -2918,7 +2918,7 @@
             "kind": "trust_metadata",
             "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
             "required": true,
-            "sha256": "6c59b3bd3570cfaae6ea857b0e720d9ada77ee0fd5f1d6d2c78b9a89f731cdde",
+            "sha256": "a3fb348fd0e49edf67a97fcbb34857c03c4a71ee31c8b84e9b73245f9e4b7382",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
             "transform": "none"
           },
@@ -2927,7 +2927,7 @@
             "kind": "checksum",
             "path": "speckit_pro_runner/speckit-pro-runner.sha256",
             "required": true,
-            "sha256": "2b8d5e0467493a36dec777e857b195155be9227381fa78a42b885d5bda6653b1",
+            "sha256": "231bfa6903d82ac130e74c73858e31183b5f358311ae2c93218b819772326e9f",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
             "transform": "none"
           }
@@ -3195,11 +3195,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 2588,
+            "byte_count": 5067,
             "kind": "skill",
             "path": "skills/speckit-autopilot/contracts/knowledge-update-plan.schema.json",
             "required": true,
-            "sha256": "4adfee02c91d4d002fe86699e9491aab42bf6118cdbb70d377a9741553d5d828",
+            "sha256": "d9d4013c57c320326c4f88cd8a2e567138944c3c4acacdfffa055fbdf5c15ffc",
             "source_path": "speckit-pro/skills/speckit-autopilot/contracts/knowledge-update-plan.schema.json",
             "transform": "none"
           },
@@ -3600,11 +3600,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 9339,
+            "byte_count": 9343,
             "kind": "skill",
             "path": "skills/speckit-coach/references/knowledge-lifecycle.md",
             "required": true,
-            "sha256": "7edd324427dcc1d7119d433296a9306a7c10d3b63d6267154236d6a933bbf991",
+            "sha256": "e5489332c353fc4d1f781804a4841bd8a09e87478d6c21c95b712a08cf989628",
             "source_path": "speckit-pro/skills/speckit-coach/references/knowledge-lifecycle.md",
             "transform": "none"
           },
@@ -3906,20 +3906,20 @@
             "transform": "none"
           },
           {
-            "byte_count": 166084,
+            "byte_count": 170823,
             "kind": "runner",
             "path": "speckit_pro_runner/helpers/knowledge.py",
             "required": true,
-            "sha256": "f50ecac88ba5d8cfdec5a56a552293a397c388e9b534b46bdbab4a1ce9f51c2f",
+            "sha256": "4059fd080e1e2414b2f6a76d25e6848bd4efd6373cb81901920e0b00fd37e636",
             "source_path": "speckit-pro/speckit_pro_runner/helpers/knowledge.py",
             "transform": "none"
           },
           {
-            "byte_count": 53342,
+            "byte_count": 54204,
             "kind": "runner",
             "path": "speckit_pro_runner/helpers/mutation.py",
             "required": true,
-            "sha256": "23eadfc1815e5f1fcc87ecf5401c7f71ea1805aef960068646bffaa155658f9f",
+            "sha256": "9a474d14f6fe516bad69bee6e3c49dd3d3df2e9b190d069a57352972b683fe5e",
             "source_path": "speckit-pro/speckit_pro_runner/helpers/mutation.py",
             "transform": "none"
           },
@@ -3982,7 +3982,7 @@
             "kind": "trust_metadata",
             "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
             "required": true,
-            "sha256": "6c59b3bd3570cfaae6ea857b0e720d9ada77ee0fd5f1d6d2c78b9a89f731cdde",
+            "sha256": "a3fb348fd0e49edf67a97fcbb34857c03c4a71ee31c8b84e9b73245f9e4b7382",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
             "transform": "none"
           },
@@ -3991,13 +3991,13 @@
             "kind": "checksum",
             "path": "speckit_pro_runner/speckit-pro-runner.sha256",
             "required": true,
-            "sha256": "2b8d5e0467493a36dec777e857b195155be9227381fa78a42b885d5bda6653b1",
+            "sha256": "231bfa6903d82ac130e74c73858e31183b5f358311ae2c93218b819772326e9f",
             "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
             "transform": "none"
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "d6ca06eaf126cfdbb2d5f12563527b130a8809a8d128e366223011037d959005",
+        "file_tree_hash": "84d43d4491b040fddf792a64e51a85ed7b0b9a8bd4fbdc421ad704dada93f63f",
         "generated_root": "dist/codex/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],

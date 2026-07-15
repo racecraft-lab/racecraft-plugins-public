@@ -86,6 +86,16 @@ RESERVED_MARKDOWN = {"index.md", "log.md"}
 ALLOWED_ACTIONS = {"init", "migrate", "rebuild", "promote", "supersede", "archive"}
 _KNOWLEDGE_LOCK_GUARD = threading.Lock()
 _ACTIVE_KNOWLEDGE_LOCKS: set[str] = set()
+_RECOMPUTE_INPUT_ERROR_CODES = frozenset(
+    {
+        "invalid_candidate_packet",
+        "invalid_input",
+        "invalid_plan",
+        "plan_too_large",
+        "sensitive_content",
+        "unsafe_path",
+    }
+)
 CANDIDATE_FIELDS = frozenset(
     {
         "concept_path",
@@ -280,6 +290,7 @@ def run_knowledge_update_apply(entry: Any, request: Any) -> dict[str, Any]:
         plan_request = supplied_plan.get("request")
         if not isinstance(plan_request, dict):
             raise KnowledgeError("invalid_plan", "knowledge update plan is missing its normalized request")
+        _validate_normalized_plan_request(plan_request)
         if request.mode == "apply":
             with _knowledge_mutation_lock(repo_root):
                 return _run_accepted_knowledge_apply(
@@ -332,6 +343,8 @@ def _run_accepted_knowledge_apply(
     try:
         recomputed = _build_plan(repo_root, recompute_inputs)
     except KnowledgeError as exc:
+        if exc.code in _RECOMPUTE_INPUT_ERROR_CODES:
+            raise
         raise _RepositoryStateError(exc.code, str(exc), details=exc.details) from exc
     if recomputed.get("plan_hash") != supplied_plan.get("plan_hash"):
         raise KnowledgeError(
@@ -386,7 +399,7 @@ def _run_accepted_knowledge_apply(
             data=_apply_data(entry, request, mutation, supplied_plan),
         )
 
-    backups: list[tuple[Path, bytes | None]] = []
+    backups: list[tuple[Path, bytes | None, str]] = []
     created_directories: set[Path] = set()
     failure_operation: dict[str, Any] | None = None
     try:
@@ -399,7 +412,8 @@ def _run_accepted_knowledge_apply(
             before_hash = _sha256_bytes(before) if before is not None else None
             if before_hash != operation.get("prior_sha256"):
                 raise _SourceChangedError("knowledge update target changed immediately before write")
-            backups.append((target, before))
+            resulting_hash = str(operation["content_sha256"])
+            backups.append((target, before, resulting_hash))
             parent = target.parent
             while parent != repo_root and not parent.exists():
                 created_directories.add(parent)
@@ -411,6 +425,7 @@ def _run_accepted_knowledge_apply(
             mutation["touched_paths"].append(str(operation["target"]))
         failure_operation = None
         _validate_source_preconditions(repo_root, supplied_plan, phase="resulting")
+        _validate_resulting_targets(backups, repo_root)
     except (KnowledgeError, OSError) as exc:
         rollback_errors = _rollback_writes(backups, repo_root, created_directories)
         residual_paths = _residual_mutation_paths(backups, created_directories)
@@ -517,7 +532,7 @@ def _knowledge_mutation_lock(repo_root: Path) -> Iterator[None]:
             mutex_handle = kernel32.CreateMutexW(
                 None,
                 False,
-                f"Local\\SpeckitProKnowledge-{lock_key}",
+                _windows_knowledge_mutex_name(lock_key),
             )
             if not mutex_handle:
                 raise OSError(ctypes.get_last_error(), "could not create knowledge mutation mutex")
@@ -559,6 +574,10 @@ def _knowledge_mutation_lock(repo_root: Path) -> Iterator[None]:
                 kernel32.CloseHandle(mutex_handle)
             with _KNOWLEDGE_LOCK_GUARD:
                 _ACTIVE_KNOWLEDGE_LOCKS.discard(lock_key)
+
+
+def _windows_knowledge_mutex_name(lock_key: str) -> str:
+    return f"Global\\SpeckitProKnowledge-{lock_key}"
 
 
 def _target_repo_root(inputs: dict[str, Any]) -> Path:
@@ -2145,6 +2164,63 @@ def _normalized_plan_request(
     return result
 
 
+def _validate_normalized_plan_request(request: dict[str, Any]) -> None:
+    action = request.get("action")
+    required_by_action = {
+        "init": set(),
+        "rebuild": set(),
+        "migrate": {"legacy_memory_reviewed", "reviewed"},
+        "promote": {"candidate"},
+        "supersede": {"concept_path", "replacement"},
+        "archive": {"concept_path"},
+    }
+    if action not in required_by_action:
+        raise KnowledgeError("invalid_plan", "knowledge plan request action is invalid")
+    required = {"action", "timestamp", *required_by_action[action]}
+    allowed = {"action", "timestamp", "scope", *required_by_action[action]}
+    if action == "archive":
+        allowed.add("sources")
+    if not required.issubset(request) or not set(request).issubset(allowed):
+        raise KnowledgeError("invalid_plan", "knowledge plan normalized request fields are invalid")
+
+    timestamp = request.get("timestamp")
+    if not isinstance(timestamp, str):
+        raise KnowledgeError("invalid_plan", "knowledge plan request timestamp must be a string")
+    try:
+        normalized_timestamp = _normalized_timestamp(timestamp)
+        normalized_scope = _normalized_scope(request.get("scope"))
+    except KnowledgeError as exc:
+        raise KnowledgeError(
+            "invalid_plan",
+            "knowledge plan normalized request contains invalid values",
+            details={"cause": exc.code},
+        ) from exc
+    if normalized_timestamp != timestamp or (
+        "scope" in request and normalized_scope != request.get("scope")
+    ):
+        raise KnowledgeError("invalid_plan", "knowledge plan request values are not normalized")
+
+    if action == "migrate" and any(
+        not isinstance(request.get(field), bool)
+        for field in ("legacy_memory_reviewed", "reviewed")
+    ):
+        raise KnowledgeError("invalid_plan", "knowledge plan migration flags must be booleans")
+    if action == "promote" and not isinstance(request.get("candidate"), dict):
+        raise KnowledgeError("invalid_plan", "knowledge plan promote candidate must be an object")
+    if action == "supersede" and (
+        not isinstance(request.get("concept_path"), str)
+        or not request.get("concept_path")
+        or not isinstance(request.get("replacement"), dict)
+    ):
+        raise KnowledgeError("invalid_plan", "knowledge plan supersede request is invalid")
+    if action == "archive" and (
+        not isinstance(request.get("concept_path"), str)
+        or not request.get("concept_path")
+        or ("sources" in request and not isinstance(request.get("sources"), list))
+    ):
+        raise KnowledgeError("invalid_plan", "knowledge plan archive request is invalid")
+
+
 def _migration_records(
     repo_root: Path,
     virtual: dict[str, str],
@@ -3433,18 +3509,28 @@ def _allowed_plan_target(target: str) -> bool:
 
 
 def _rollback_writes(
-    backups: list[tuple[Path, bytes | None]],
+    backups: list[tuple[Path, bytes | None, str]],
     repo_root: Path,
     created_directories: set[Path],
 ) -> list[str]:
     errors: list[str] = []
-    for target, before in reversed(backups):
+    for target, before, resulting_hash in reversed(backups):
         try:
+            if not _safe_write_target_chain(target, repo_root):
+                raise _SourceChangedError("knowledge update target chain became unsafe")
+            current = _read_apply_target(target)
+            current_hash = _sha256_bytes(current) if current is not None else None
+            before_hash = _sha256_bytes(before) if before is not None else None
+            if current_hash == before_hash:
+                continue
+            if current_hash != resulting_hash:
+                errors.append(f"{target.as_posix()}: concurrent change preserved")
+                continue
             if before is None:
                 remove_path_trusted(target, trust_root=repo_root)
             else:
                 write_file_atomic(target, before, trust_root=repo_root)
-        except OSError as exc:
+        except (KnowledgeError, OSError) as exc:
             errors.append(f"{target.as_posix()}: {type(exc).__name__}")
     for directory in sorted(created_directories, key=lambda path: len(path.parts), reverse=True):
         try:
@@ -3455,11 +3541,11 @@ def _rollback_writes(
 
 
 def _residual_mutation_paths(
-    backups: list[tuple[Path, bytes | None]],
+    backups: list[tuple[Path, bytes | None, str]],
     created_directories: set[Path],
 ) -> list[str]:
     residual: set[str] = set()
-    for target, before in backups:
+    for target, before, _ in backups:
         try:
             mode = target.lstat().st_mode
         except FileNotFoundError:
@@ -3489,6 +3575,27 @@ def _residual_mutation_paths(
         except OSError:
             residual.add(directory.as_posix())
     return sorted(residual, key=lambda value: value.encode("utf-8"))
+
+
+def _validate_resulting_targets(
+    backups: list[tuple[Path, bytes | None, str]],
+    repo_root: Path,
+) -> None:
+    for target, _, resulting_hash in backups:
+        if not _safe_write_target_chain(target, repo_root):
+            raise KnowledgeError(
+                "source_changed",
+                "knowledge update target changed after write",
+                details={"target": repo_relative(target, repo_root)},
+            )
+        current = _read_apply_target(target)
+        current_hash = _sha256_bytes(current) if current is not None else None
+        if current_hash != resulting_hash:
+            raise KnowledgeError(
+                "source_changed",
+                "knowledge update target changed after write",
+                details={"target": repo_relative(target, repo_root)},
+            )
 
 
 def _safe_repository_chain(

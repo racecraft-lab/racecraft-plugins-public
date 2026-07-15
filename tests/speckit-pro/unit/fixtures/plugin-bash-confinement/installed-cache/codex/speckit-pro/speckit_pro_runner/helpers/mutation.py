@@ -1015,7 +1015,8 @@ def _write_file_atomic_posix(target: Path, content: str | bytes, trust_root: Pat
 
 def _write_file_atomic_windows(target: Path, content: str | bytes, trust_root: Path) -> None:
     # Windows lacks Python-level dir_fd mutation APIs. Pin every directory with
-    # non-delete-sharing Win32 handles and rename the open temporary handle.
+    # non-delete-sharing Win32 handles. ReplaceFileW preserves existing target
+    # metadata; a new target is committed by renaming the open temporary handle.
     import ctypes
     from ctypes import wintypes
 
@@ -1089,6 +1090,15 @@ def _write_file_atomic_windows(target: Path, content: str | bytes, trust_root: P
     kernel32.SetFileInformationByHandle.restype = wintypes.BOOL
     kernel32.GetFileAttributesW.argtypes = [wintypes.LPCWSTR]
     kernel32.GetFileAttributesW.restype = wintypes.DWORD
+    kernel32.ReplaceFileW.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.LPCWSTR,
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.LPVOID,
+    ]
+    kernel32.ReplaceFileW.restype = wintypes.BOOL
     kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
     kernel32.CloseHandle.restype = wintypes.BOOL
     kernel32.DeleteFileW.argtypes = [wintypes.LPCWSTR]
@@ -1148,6 +1158,7 @@ def _write_file_atomic_windows(target: Path, content: str | bytes, trust_root: P
                     raise win_error("could not create atomic-write directory")
                 handles.append(open_directory(current))
         attributes = kernel32.GetFileAttributesW(str(target_path))
+        target_exists = attributes != 0xFFFFFFFF
         if attributes == 0xFFFFFFFF:
             if ctypes.get_last_error() not in {2, 3}:
                 raise win_error("could not inspect atomic write target")
@@ -1208,21 +1219,34 @@ def _write_file_atomic_windows(target: Path, content: str | bytes, trust_root: P
             offset += written.value
         if not kernel32.FlushFileBuffers(temporary_handle):
             raise win_error("could not flush atomic-write temporary file")
-        encoded_name = str(target_path).encode("utf-16-le")
-        name_offset = FileRenameInfo.FileName.offset
-        rename_buffer = ctypes.create_string_buffer(name_offset + len(encoded_name))
-        rename_info = ctypes.cast(rename_buffer, ctypes.POINTER(FileRenameInfo)).contents
-        rename_info.ReplaceIfExists = 1
-        rename_info.RootDirectory = None
-        rename_info.FileNameLength = len(encoded_name)
-        ctypes.memmove(ctypes.addressof(rename_buffer) + name_offset, encoded_name, len(encoded_name))
-        if not kernel32.SetFileInformationByHandle(
-            temporary_handle,
-            file_rename_info,
-            rename_buffer,
-            len(rename_buffer),
-        ):
-            raise win_error("could not commit atomic-write temporary file")
+        if target_exists:
+            kernel32.CloseHandle(temporary_handle)
+            temporary_handle = invalid_handle
+            if not kernel32.ReplaceFileW(
+                str(target_path),
+                str(temporary_path),
+                None,
+                0,
+                None,
+                None,
+            ):
+                raise win_error("could not replace atomic-write target")
+        else:
+            encoded_name = str(target_path).encode("utf-16-le")
+            name_offset = FileRenameInfo.FileName.offset
+            rename_buffer = ctypes.create_string_buffer(name_offset + len(encoded_name))
+            rename_info = ctypes.cast(rename_buffer, ctypes.POINTER(FileRenameInfo)).contents
+            rename_info.ReplaceIfExists = 1
+            rename_info.RootDirectory = None
+            rename_info.FileNameLength = len(encoded_name)
+            ctypes.memmove(ctypes.addressof(rename_buffer) + name_offset, encoded_name, len(encoded_name))
+            if not kernel32.SetFileInformationByHandle(
+                temporary_handle,
+                file_rename_info,
+                rename_buffer,
+                len(rename_buffer),
+            ):
+                raise win_error("could not commit atomic-write temporary file")
         committed = True
     finally:
         if temporary_handle != invalid_handle:
