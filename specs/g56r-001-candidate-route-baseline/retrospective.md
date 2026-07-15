@@ -63,11 +63,16 @@ live PR verification.
   guard 11/11; mutation 33/33; read-only 48/48; eval 19/19; integration
   257/257; Layer 1 1427/1427; Layer 4 1200/1200; Layer 5 186/186; default
   2813/2813; generated payload parity and release-artifact checks PASS.
-- Final combined review surface after rebasing onto current main: 122 files,
-  33,748 additions, and 8,469 deletions. Within that set, 14 shared
+- Final combined review surface after rebasing onto current main and restoring
+  the final packet: 124 files, 34,228 additions, and 8,469 deletions. Within
+  that set, 14 shared
   `speckit-pro/` source/trust-metadata paths contribute 1,172 additions and 132
   deletions; four runtime helpers account for 824 lines of churn. Generated
   Claude, Codex, and installed-cache copies remain generator-owned evidence.
+- PR recovery: source-bound schema 1.1 packet validation passed, exact
+  head/base reconciliation found no prior PR, and GitHub created unique
+  [PR #348](https://github.com/racecraft-lab/racecraft-plugins-public/pull/348).
+  Post-create metadata and the first unresolved-thread sweep both verified.
 
 ## Proposed Spec Changes
 

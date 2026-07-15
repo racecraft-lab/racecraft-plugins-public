@@ -46,7 +46,7 @@ clarifications use /speckit-clarify and consensus, never grill-me.
 | Analyze | /speckit-analyze | ✅ Complete | Four initial findings resolved; rerun clean; G6 passed |
 | Confidence Gate | G6.5 | ✅ Complete | Composite 0.99 exceeded the 0.90 advisory threshold |
 | Implement | /speckit-implement | ✅ Complete | T001–T026 complete; terminal G56R-002 handoff is `go` |
-| Post | Autopilot post-implementation items | 🔄 In Progress | Adversarial remediation is green locally; final suites, packet generation, and verified PR creation remain |
+| Post | Autopilot post-implementation items | ✅ Complete | All required Post items completed; exact head/base lookup verified PR #348 |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -755,7 +755,7 @@ metadata, generated release artifacts, or unrelated configuration.
 | Evidence and inventory | T009–T013 | Complete | Reconciled official, project, and environment evidence; no blocking conflict; three owned downstream defects; focused test 45/45; completed tasks: T001–T013 |
 | Role contracts and candidates | T014–T019 | Complete | Twelve immutable semantic contracts, canonical identities, candidates, fixtures, telemetry, and owned unknowns recorded; completed tasks: T014–T019 |
 | Narrative and manifest | T020–T022 | Complete | Twelve lexical agent records and the exact normalized Markdown projection agree; focused test 45/45; completed tasks: T020–T022 |
-| Validation and handoff | T023–T026 | Complete | Terminal `go`; latest focused 55/55 and checker PASS twice with identical summaries; runner guard and full suites are being refreshed for the combined branch; completed tasks: T023–T026 |
+| Validation and handoff | T023–T026 | Complete | Terminal `go`; focused 55/55; checker PASS twice; final uninterrupted default suite 2813/2813; completed tasks: T023–T026 |
 
 ---
 
@@ -771,20 +771,20 @@ metadata, generated release artifacts, or unrelated configuration.
 | Post: Reviewability Diff Gate | Complete | User-authorized single combined PR; typed `Reviewability-Exception: infra` recorded without correctness/test waivers |
 | Post: Self-Review | Complete | 0 edge-case gaps, requirement/task orphans, silent markers, or tidiness findings |
 | Post: UAT Runbook Generation | Skipped | `skipped: generate-uat-skeleton deferred`; no committed source-derived runbook exists |
-| Post: Final Reviewability Backstop | Complete | Combined-PR exception recorded for the measured 122-file pre-packet scope; autopilot must continue through verified PR creation |
-| Post: Adversarial Review and Durable PR Recovery | In Progress | Tavily official/community research plus three independent agents drove G56R and cross-client autopilot hardening |
-| Post: PR Packet/Body Generation | Pending | Generate schema 1.1 packet only from the final clean committed source state |
-| Post: PR Body Generation | Pending | Packet-owned body must validate against the source revision and whole-body fingerprint |
-| Post: PR Creation | Pending | Non-skippable; complete only after GitHub returns a verified PR number, URL, head, and base |
-| Post: Review Remediation | Pending | Requires the live PR and its current checks/review state |
-| Post: Retrospective | In Progress | G56R remains 100% complete; adversarial and failure-recovery evidence is being added |
+| Post: Final Reviewability Backstop | Complete | Combined-PR exception recorded for the measured combined scope; no correctness, test, source-freshness, or PR-verification waiver |
+| Post: Adversarial Review and Durable PR Recovery | Complete | Tavily official/community research plus three independent agents approved G56R and cross-client autopilot hardening |
+| Post: PR Packet/Body Generation | Complete | Schema 1.1 packet binds base/source revisions, full-index diff, and `whole_body_v2`; read-only validation passed |
+| Post: PR Body Generation | Complete | Packet-owned body contains all required headings and exactly one release-note block |
+| Post: PR Creation | Complete | Unique live PR [#348](https://github.com/racecraft-lab/racecraft-plugins-public/pull/348) verified with head `g56r-001-candidate-route-baseline` and base `main` |
+| Post: Review Remediation | Complete | Mandatory live sweep found 0 unresolved review threads; final parent-session sweep remains part of handoff verification |
+| Post: Retrospective | Complete | 26/26 tasks, 100% spec adherence, 0 unresolved findings, and recovery evidence recorded |
 
 ### Reviewability Diff Gate
 
 | Field | Result |
 |-------|--------|
 | Status | WARN; `pass: true` |
-| Full branch snapshot | `origin/main...HEAD`: 122 files, 33,748 additions, 8,469 deletions after rebasing onto current main |
+| Full branch snapshot | final packet projection: 124 files, 34,228 additions, 8,469 deletions after rebasing onto current main |
 | Original G56R boundary | Six paths: three delivery plus three validation; 0 production LOC/files |
 | Shared plugin source | 14 `speckit-pro/` source/trust-metadata paths, 1,172 additions and 132 deletions; four shared runtime helpers carry 824 lines of churn |
 | Generated parity | Claude, Codex, and installed-cache payload/proof copies are generator-owned and independently parity-checked |
@@ -855,11 +855,14 @@ that diff receives a fresh final review and suite run before PR creation.
   schema 1.1 packets, while both Codex and Claude completion contracts make
   packet validation, push, idempotent PR reconciliation, and verified PR
   creation non-skippable.
-- PR packet/body generation and PR creation are pending. They remain incomplete
-  until a clean source commit produces a validated packet and GitHub returns a
-  verified PR number, URL, head, and base. A failed or ambiguous outcome cannot
-  be converted to a skip.
-- Review remediation remains pending until that live PR exists.
+- Clean source commit `4642c167` produced a validated schema 1.1 packet and
+  packet-owned body. The rebased branch was pushed with an explicit OID lease,
+  exact-head/base reconciliation returned no existing PR, and GitHub created
+  [PR #348](https://github.com/racecraft-lab/racecraft-plugins-public/pull/348).
+- A post-create lookup returned exactly one open PR with the recorded number,
+  URL, title, head, and base. The mandatory review sweep found 0 unresolved
+  threads. Packet artifacts are regenerated from this durable closeout state
+  before final handoff so later state writes cannot invalidate source binding.
 
 - [x] All tasks are complete or explicitly handed to the owning downstream spec.
 - [x] docs/ai/research/codex-agent-route-candidates.md exists.

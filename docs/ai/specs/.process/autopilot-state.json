@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/G56R-001-workflow.md",
   "spec_id": "G56R-001",
   "feature_dir": "specs/g56r-001-candidate-route-baseline",
-  "updated_at": "2026-07-14T19:01:39-05:00",
-  "active_step": "Post: Adversarial Review and Durable PR Recovery",
-  "status": "in_progress",
+  "updated_at": "2026-07-14T19:13:20-05:00",
+  "active_step": "Complete",
+  "status": "completed",
   "archive_sweep": {
     "status": "no_candidates",
     "execution_path": "extension_contract",
@@ -439,7 +439,7 @@
         "status": "pass",
         "reason": "T001-T026 complete; terminal go reproduced by two identical checker runs"
       },
-      "checkpoint_commit": "pending_final_remediation_commit"
+      "checkpoint_commit": "4642c1676a26465c22a96309db70b8c50e6be326"
     }
   },
   "post_results": {
@@ -448,18 +448,18 @@
     "verify_tasks": {"status": "completed", "verified": 26, "flagged": 0, "report": "specs/g56r-001-candidate-route-baseline/verify-tasks-report.md"},
     "code_review": {"status": "completed", "disposition": "approve", "risk": "low", "actionable_findings": 0, "adversarial_agents": ["spec_adversary", "evidence_adversary", "repair_adversary"]},
     "integration_suite": {"status": "completed", "completed_at": "2026-07-14T23:58:19Z", "preflight": "pass", "layer_1": "1427/1427", "layer_4": "1200/1200", "layer_5": "186/186", "integration": "257/257", "default": "2813/2813"},
-    "reviewability_diff": {"status": "completed", "route": "single_combined_pr", "files": 122, "insertions": 33748, "deletions": 8469, "exception": "specs/g56r-001-candidate-route-baseline/contracts/combined-pr-reviewability-exception.md", "reason": "user explicitly required one PR containing G56R-001 plus the durable cross-client SpecKit Pro repair"},
+    "reviewability_diff": {"status": "completed", "route": "single_combined_pr", "files": 124, "insertions": 34228, "deletions": 8469, "exception": "specs/g56r-001-candidate-route-baseline/contracts/combined-pr-reviewability-exception.md", "reason": "user explicitly required one PR containing G56R-001 plus the durable cross-client SpecKit Pro repair"},
     "self_review": {"status": "completed", "edge_case_gaps": 0, "requirement_orphans": 0, "task_orphans": 0, "silent_markers": 0, "tidiness_findings": 0},
     "uat_runbook": {"status": "skipped", "reason": "generate-uat-skeleton deferred; no committed source-derived runbook"},
-    "final_reviewability_backstop": {"status": "completed", "disposition": "combined_pr_exception_recorded", "autopilot_continuation_required": true},
+    "final_reviewability_backstop": {"status": "completed", "disposition": "combined_pr_exception_recorded", "autopilot_continuation_required": false},
     "adversarial_review": {"status": "completed", "disposition": "approve", "official_research": "Tavily live official documentation recheck complete", "community_research": "OWASP, W3C PROV-DM, SLSA, OpenTelemetry, OpenAI eval guidance, RouteLLM, and RouterBench reviewed; downstream recommendations only", "agents": ["spec_adversary", "evidence_adversary", "repair_adversary"]},
-    "failure_recovery": {"status": "in_progress", "root_cause": "PR packet output was deferred and PR creation could terminate as a skip; legacy packets also lacked source-revision freshness protection", "durable_fix": "shared runner schema/helpers plus both Codex and Claude autopilot completion contracts make packet, push, and verified PR creation fail-closed and idempotently reconciled"},
+    "failure_recovery": {"status": "completed", "root_cause": "PR packet output was deferred and PR creation could terminate as a skip; legacy packets also lacked source-revision freshness protection", "durable_fix": "shared runner schema/helpers plus both Codex and Claude autopilot completion contracts make packet, push, and verified PR creation fail-closed and idempotently reconciled"},
     "worktree_recovery": {"status": "completed", "incident": "Codex.app archived the outer checkout during verification", "invalid_interrupted_runs": 2, "restoration": "checkout unarchived and registered worktree restored", "final_uninterrupted_default": "2813/2813"},
-    "pr_packet_body_generation": {"status": "pending", "reason": "generate only after final clean committed source state"},
-    "pr_body_generation": {"status": "pending", "reason": "owned by the validated PR packet"},
-    "pr_creation": {"status": "pending", "reason": "cannot complete without verified GitHub PR number, URL, head, and base"},
-    "review_remediation": {"status": "pending", "reason": "requires the live PR"},
-    "retrospective": {"status": "in_progress", "report": "specs/g56r-001-candidate-route-baseline/retrospective.md", "completion_rate": 100, "spec_adherence": 100, "critical_findings": 0, "unresolved_findings": 0, "proposed_spec_changes": 0}
+    "pr_packet_body_generation": {"status": "completed", "schema_version": "1.1.0", "packet_id": "g56r-001-single", "packet_path": "specs/g56r-001-candidate-route-baseline/.process/pr-packets/g56r-001-single.json", "body_path": "specs/g56r-001-candidate-route-baseline/.process/pr-packets/g56r-001-single.md", "source_binding": "base SHA, source head SHA, full-index diff fingerprint, and whole_body_v2", "validation": "passed; pr_blocked=false"},
+    "pr_body_generation": {"status": "completed", "required_headings": 8, "release_note_blocks": 1, "owner": "validated source-bound packet"},
+    "pr_creation": {"status": "completed", "number": 348, "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/348", "title": "fix(g56r-001): complete route baseline and guarantee PR creation", "head": "g56r-001-candidate-route-baseline", "base": "main", "creation_head_sha": "eb30e36b1a9b6c453f7da247ee2e000f52f862a2", "created_at": "2026-07-15T00:10:53Z", "exact_open_pr_count": 1, "verified": true},
+    "review_remediation": {"status": "completed", "initial_unresolved_threads": 0, "monitoring_mode": "parent_session_live_sweep", "last_sweep": "2026-07-15T00:13:20Z"},
+    "retrospective": {"status": "completed", "report": "specs/g56r-001-candidate-route-baseline/retrospective.md", "completion_rate": 100, "spec_adherence": 100, "critical_findings": 0, "unresolved_findings": 0, "proposed_spec_changes": 0}
   },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
@@ -498,11 +498,11 @@
     {"step": "Post: Self-Review", "status": "completed"},
     {"step": "Post: UAT Runbook Generation", "status": "skipped"},
     {"step": "Post: Final Reviewability Backstop", "status": "completed"},
-    {"step": "Post: Adversarial Review and Durable PR Recovery", "status": "in_progress"},
-    {"step": "Post: PR Packet/Body Generation", "status": "pending"},
-    {"step": "Post: PR Body Generation", "status": "pending"},
-    {"step": "Post: PR Creation", "status": "pending"},
-    {"step": "Post: Review Remediation", "status": "pending"},
-    {"step": "Post: Retrospective", "status": "pending"}
+    {"step": "Post: Adversarial Review and Durable PR Recovery", "status": "completed"},
+    {"step": "Post: PR Packet/Body Generation", "status": "completed"},
+    {"step": "Post: PR Body Generation", "status": "completed"},
+    {"step": "Post: PR Creation", "status": "completed"},
+    {"step": "Post: Review Remediation", "status": "completed"},
+    {"step": "Post: Retrospective", "status": "completed"}
   ]
 }
