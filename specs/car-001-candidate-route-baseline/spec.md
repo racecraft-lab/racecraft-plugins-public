@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "CAR-001 Candidate Route Baseline and Role Contracts — a dated, cited research record plus a versioned machine-readable candidate-route manifest covering all twelve named agents, produced as a read-only research spike so CAR-002 can freeze the executable candidate set against probed capabilities. Design decisions recorded in docs/ai/specs/.process/CAR-001-design-concept.md; acceptance criteria AC-1.1 through AC-1.7 in docs/prd-claude-agent-routing.md."
+**Input**: User description: "CAR-001 Candidate Route Baseline and Role Contracts — a dated, cited research record plus a versioned machine-readable candidate-route manifest covering all twelve named agents, produced as a read-only research spike so CAR-002 can freeze the candidate set against probed capabilities. Design decisions recorded in docs/ai/specs/.process/CAR-001-design-concept.md; acceptance criteria AC-1.1 through AC-1.7 in docs/prd-claude-agent-routing.md."
 
 ## User Scenarios & Testing *(mandatory)*
 
