@@ -311,6 +311,46 @@ class KnowledgeLayerTests(unittest.TestCase):
 
     @unittest.skipUnless(
         os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
+        "descriptor-relative trusted-read regression requires POSIX dir_fd support",
+    )
+    def test_trusted_source_read_cannot_follow_a_swapped_parent_symlink(self) -> None:
+        root = self.repo("trusted-source-race")
+        docs = root / "docs"
+        docs.mkdir()
+        source = docs / "source.md"
+        source.write_text("trusted\n", encoding="utf-8")
+        detached = root / "detached-docs"
+        external = self.repo("trusted-source-external")
+        external_source = external / "source.md"
+        external_source.write_text("external\n", encoding="utf-8")
+        real_open = knowledge_helper.os.open
+        swapped = False
+
+        def swap_then_open(
+            path: object,
+            flags: int,
+            mode: int = 0o777,
+            *,
+            dir_fd: int | None = None,
+        ) -> int:
+            nonlocal swapped
+            if path == "docs" and dir_fd is not None and not swapped:
+                docs.rename(detached)
+                docs.symlink_to(external, target_is_directory=True)
+                swapped = True
+            return real_open(path, flags, mode, dir_fd=dir_fd)
+
+        with (
+            mock.patch.object(knowledge_helper.os, "open", side_effect=swap_then_open),
+            self.assertRaises(knowledge_helper.KnowledgeError),
+        ):
+            knowledge_helper._sha256_file(source, trust_root=root)
+
+        self.assertTrue(swapped)
+        self.assertEqual(external_source.read_text(encoding="utf-8"), "external\n")
+
+    @unittest.skipUnless(
+        os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
         "conditional atomic-write regression requires POSIX dir_fd support",
     )
     def test_atomic_writer_does_not_replace_a_concurrently_created_target(self) -> None:
@@ -617,6 +657,128 @@ class KnowledgeLayerTests(unittest.TestCase):
 
     @unittest.skipUnless(
         os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
+        "temporary payload regression requires POSIX dir_fd support",
+    )
+    def test_atomic_writer_restores_target_after_temporary_payload_tamper(self) -> None:
+        root = self.repo("atomic-temporary-payload")
+        parent = root / "safe"
+        parent.mkdir()
+        target = parent / "target.md"
+        target.write_text("before\n", encoding="utf-8")
+        real_exchange = mutation_helper._exchange_posix_names
+        exchanges = 0
+
+        def tamper_then_exchange(
+            parent_descriptor: int,
+            left: str,
+            right: str,
+        ) -> None:
+            nonlocal exchanges
+            if exchanges == 0:
+                descriptor = os.open(
+                    left,
+                    os.O_WRONLY | os.O_TRUNC | os.O_NOFOLLOW,
+                    dir_fd=parent_descriptor,
+                )
+                try:
+                    os.write(descriptor, b"tampered\n")
+                    os.fsync(descriptor)
+                finally:
+                    os.close(descriptor)
+            exchanges += 1
+            real_exchange(parent_descriptor, left, right)
+
+        with (
+            mock.patch.object(
+                mutation_helper,
+                "_exchange_posix_names",
+                side_effect=tamper_then_exchange,
+            ),
+            self.assertRaises(mutation_helper.AtomicWriteConflictError),
+        ):
+            mutation_helper.write_file_atomic(target, "planned", trust_root=root)
+
+        self.assertEqual(exchanges, 2)
+        self.assertEqual(target.read_text(encoding="utf-8"), "before\n")
+
+    @unittest.skipUnless(
+        os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
+        "post-cleanup identity regression requires POSIX dir_fd support",
+    )
+    def test_atomic_writer_reports_a_target_substitution_after_cleanup(self) -> None:
+        root = self.repo("atomic-post-cleanup-substitution")
+        parent = root / "safe"
+        parent.mkdir()
+        target = parent / "target.md"
+        target.write_text("before\n", encoding="utf-8")
+        detached = parent / "detached-planned.md"
+        real_cleanup = mutation_helper._unlink_posix_name_if_identity
+        substituted = False
+
+        def substitute_after_cleanup(
+            parent_descriptor: int,
+            leaf: str,
+            expected_identity: tuple[int, int],
+        ) -> None:
+            nonlocal substituted
+            real_cleanup(parent_descriptor, leaf, expected_identity)
+            if not substituted:
+                target.rename(detached)
+                target.write_text("concurrent\n", encoding="utf-8")
+                substituted = True
+
+        with (
+            mock.patch.object(
+                mutation_helper,
+                "_unlink_posix_name_if_identity",
+                side_effect=substitute_after_cleanup,
+            ),
+            self.assertRaises(mutation_helper.AtomicWriteCommittedError),
+        ):
+            mutation_helper.write_file_atomic(target, "planned", trust_root=root)
+
+        self.assertTrue(substituted)
+        self.assertEqual(target.read_text(encoding="utf-8"), "concurrent\n")
+        self.assertEqual(detached.read_text(encoding="utf-8"), "planned\n")
+
+    @unittest.skipUnless(
+        os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
+        "concurrent mode regression requires POSIX dir_fd support",
+    )
+    def test_atomic_writer_preserves_a_concurrent_target_mode_change(self) -> None:
+        root = self.repo("atomic-concurrent-mode")
+        target = self.write(root, "safe/target.md", "before\n")
+        target.chmod(0o640)
+        real_exchange = mutation_helper._exchange_posix_names
+        exchanges = 0
+
+        def chmod_then_exchange(
+            parent_descriptor: int,
+            left: str,
+            right: str,
+        ) -> None:
+            nonlocal exchanges
+            if exchanges == 0:
+                target.chmod(0o600)
+            exchanges += 1
+            real_exchange(parent_descriptor, left, right)
+
+        with (
+            mock.patch.object(
+                mutation_helper,
+                "_exchange_posix_names",
+                side_effect=chmod_then_exchange,
+            ),
+            self.assertRaises(mutation_helper.AtomicWriteConflictError),
+        ):
+            mutation_helper.write_file_atomic(target, "planned", trust_root=root)
+
+        self.assertEqual(exchanges, 2)
+        self.assertEqual(target.read_text(encoding="utf-8"), "before\n")
+        self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o600)
+
+    @unittest.skipUnless(
+        os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
         "directory ownership regression requires POSIX dir_fd support",
     )
     def test_atomic_writer_reports_only_directories_it_created(self) -> None:
@@ -791,6 +953,61 @@ class KnowledgeLayerTests(unittest.TestCase):
         self.assertTrue(substituted)
         self.assertEqual(target.read_text(encoding="utf-8"), "before\n")
         self.assertEqual(detached.read_text(encoding="utf-8"), "planned\n")
+
+    @unittest.skipUnless(os.name == "nt", "Windows temporary payload regression requires Win32")
+    def test_windows_atomic_writer_restores_after_temporary_payload_tamper(self) -> None:
+        import ctypes
+
+        root = self.repo("windows-temporary-payload")
+        parent = root / "safe"
+        parent.mkdir()
+        target = parent / "target.md"
+        target.write_text("before\n", encoding="utf-8")
+        real_kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        tampered = False
+
+        class CloseHandleProxy:
+            @property
+            def argtypes(self) -> object:
+                return real_kernel32.CloseHandle.argtypes
+
+            @argtypes.setter
+            def argtypes(self, value: object) -> None:
+                real_kernel32.CloseHandle.argtypes = value
+
+            @property
+            def restype(self) -> object:
+                return real_kernel32.CloseHandle.restype
+
+            @restype.setter
+            def restype(self, value: object) -> None:
+                real_kernel32.CloseHandle.restype = value
+
+            def __call__(self, handle: object) -> object:
+                nonlocal tampered
+                result = real_kernel32.CloseHandle(handle)
+                if not tampered:
+                    temporary = next(parent.glob(".target.md.tmp-*"))
+                    temporary.write_text("tampered\n", encoding="utf-8")
+                    tampered = True
+                return result
+
+        close_handle = CloseHandleProxy()
+
+        class Kernel32Proxy:
+            def __getattr__(self, name: str) -> object:
+                if name == "CloseHandle":
+                    return close_handle
+                return getattr(real_kernel32, name)
+
+        with (
+            mock.patch.object(ctypes, "WinDLL", return_value=Kernel32Proxy()),
+            self.assertRaises(mutation_helper.AtomicWriteConflictError),
+        ):
+            mutation_helper.write_file_atomic(target, "planned", trust_root=root)
+
+        self.assertTrue(tampered)
+        self.assertEqual(target.read_text(encoding="utf-8"), "before\n")
 
     @unittest.skipUnless(os.name == "nt", "Windows metadata regression requires Win32")
     def test_windows_atomic_writer_preserves_existing_file_attributes(self) -> None:
@@ -1031,6 +1248,57 @@ class KnowledgeLayerTests(unittest.TestCase):
             any("concurrent change preserved" in note for note in mutation["manual_remediation"])
         )
 
+    def test_rollback_removal_preserves_a_same_content_substitution(self) -> None:
+        root = self.repo("rollback-identity-substitution")
+        plan = self.plan(root, "init")
+        target = root / str(plan["operations"][0]["target"])
+        detached = root / "detached-created-target"
+        original_validate = knowledge_helper._validate_resulting_snapshot
+        original_read = knowledge_helper._read_apply_target_with_identity
+        swapped = False
+
+        def fail_after_writes(
+            repo_root: Path,
+            accepted_plan: dict[str, object],
+        ) -> None:
+            original_validate(repo_root, accepted_plan)
+            raise knowledge_helper.KnowledgeError(
+                "source_changed",
+                "injected rollback",
+            )
+
+        def swap_after_read(
+            path: Path,
+            repo_root: Path,
+        ) -> tuple[bytes | None, tuple[int, int] | None]:
+            nonlocal swapped
+            current, identity = original_read(path, repo_root)
+            if path == target and current is not None and not swapped:
+                path.rename(detached)
+                path.write_bytes(current)
+                swapped = True
+            return current, identity
+
+        with (
+            mock.patch.object(
+                knowledge_helper,
+                "_validate_resulting_snapshot",
+                side_effect=fail_after_writes,
+            ),
+            mock.patch.object(
+                knowledge_helper,
+                "_read_apply_target_with_identity",
+                side_effect=swap_after_read,
+            ),
+        ):
+            body = self.apply_direct(root, plan)
+
+        self.assertTrue(swapped)
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual(body["data"]["mutation"]["mutation_status"], "partial_failure")
+        self.assertTrue(target.exists())
+        self.assertTrue(detached.exists())
+
     def test_final_snapshot_detects_an_unplanned_concept_edit(self) -> None:
         root = self.repo("final-snapshot-race")
         self.current_root = root
@@ -1068,6 +1336,33 @@ class KnowledgeLayerTests(unittest.TestCase):
         self.assertFalse(body["data"]["writes_state"])
         self.assertEqual(index.read_text(encoding="utf-8"), "stale index\n")
         self.assertIn("External concurrent edit.", concept.read_text(encoding="utf-8"))
+
+    def test_final_target_verification_detects_a_generated_file_edit(self) -> None:
+        root = self.repo("final-target-race")
+        self.init(root)
+        index = root / "docs/ai/knowledge/index.md"
+        index.write_text("stale index\n", encoding="utf-8")
+        plan = self.plan(root, "rebuild")
+        original_snapshot = knowledge_helper._validate_resulting_snapshot
+
+        def edit_after_snapshot(
+            repo_root: Path,
+            accepted_plan: dict[str, object],
+        ) -> None:
+            original_snapshot(repo_root, accepted_plan)
+            index.write_text("concurrent generated edit\n", encoding="utf-8")
+
+        with mock.patch.object(
+            knowledge_helper,
+            "_validate_resulting_snapshot",
+            side_effect=edit_after_snapshot,
+        ):
+            body = self.apply_direct(root, plan)
+
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual(body["diagnostics"][0]["code"], "source_changed")
+        self.assertEqual(body["data"]["mutation"]["mutation_status"], "partial_failure")
+        self.assertEqual(index.read_text(encoding="utf-8"), "concurrent generated edit\n")
 
     def test_source_precondition_limit_matches_contract(self) -> None:
         root = self.repo("source-precondition-limit")
@@ -1309,9 +1604,15 @@ class KnowledgeLayerTests(unittest.TestCase):
             *,
             trust_root: Path,
             directory: bool = False,
+            expected_identity: tuple[int, int] | None = None,
         ) -> None:
             lock_diagnostics.append(nested_apply_code())
-            real_remove(target, trust_root=trust_root, directory=directory)
+            real_remove(
+                target,
+                trust_root=trust_root,
+                directory=directory,
+                expected_identity=expected_identity,
+            )
 
         with (
             mock.patch.object(knowledge_helper, "write_file_atomic", side_effect=serialize_then_fail),

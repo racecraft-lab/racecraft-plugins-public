@@ -561,7 +561,7 @@ def _run_accepted_knowledge_apply(
             target = repo_root / str(operation["target"])
             if not _safe_write_target_chain(target, repo_root):
                 raise OSError("knowledge update target chain became unsafe")
-            before = _read_apply_target(target)
+            before = _read_apply_target(target, trust_root=repo_root)
             before_hash = _sha256_bytes(before) if before is not None else None
             if before_hash != operation.get("prior_sha256"):
                 raise _SourceChangedError("knowledge update target changed immediately before write")
@@ -582,6 +582,7 @@ def _run_accepted_knowledge_apply(
         _validate_source_preconditions(repo_root, supplied_plan, phase="resulting")
         _validate_resulting_targets(backups, repo_root)
         _validate_resulting_snapshot(repo_root, supplied_plan)
+        _validate_resulting_targets(backups, repo_root)
     except (KnowledgeError, OSError) as exc:
         rollback_errors = _rollback_writes(backups, repo_root, created_directories)
         residual_paths = _residual_mutation_paths(backups, created_directories)
@@ -774,17 +775,41 @@ def _knowledge_root(repo_root: Path) -> Path:
     return repo_root / Path(*KNOWLEDGE_RELATIVE_ROOT.parts)
 
 
-def _read_utf8(path: Path, *, limit: int = MAX_CONCEPT_BYTES) -> str:
-    raw = _read_regular_bytes(path, limit=limit, oversized_code="oversized_concept")
+def _read_utf8(
+    path: Path,
+    *,
+    limit: int = MAX_CONCEPT_BYTES,
+    trust_root: Path | None = None,
+) -> str:
+    raw = _read_regular_bytes(
+        path,
+        limit=limit,
+        oversized_code="oversized_concept",
+        trust_root=trust_root,
+    )
     try:
         return raw.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise KnowledgeError("invalid_utf8", "knowledge files must be valid UTF-8", details={"path": path.as_posix()}) from exc
 
 
-def _read_regular_bytes(path: Path, *, limit: int, oversized_code: str) -> bytes:
+def _read_regular_bytes(
+    path: Path,
+    *,
+    limit: int,
+    oversized_code: str,
+    trust_root: Path | None = None,
+) -> bytes:
     descriptor = -1
     try:
+        if trust_root is not None:
+            with _trusted_read_descriptor(path, trust_root) as trusted_descriptor:
+                return _read_bounded_descriptor(
+                    trusted_descriptor,
+                    path,
+                    limit=limit,
+                    oversized_code=oversized_code,
+                )
         before = path.lstat()
         if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
             raise KnowledgeError(
@@ -801,27 +826,12 @@ def _read_regular_bytes(path: Path, *, limit: int, oversized_code: str) -> bytes
                 "knowledge source changed while it was being opened",
                 details={"path": path.as_posix()},
             )
-        if opened.st_size > limit:
-            raise KnowledgeError(
-                oversized_code,
-                "knowledge source exceeds its bounded file size",
-                details={"path": path.as_posix(), "limit_bytes": limit, "size_bytes": opened.st_size},
-            )
-        chunks: list[bytes] = []
-        size = 0
-        while True:
-            chunk = os.read(descriptor, min(64 * 1024, limit + 1 - size))
-            if not chunk:
-                break
-            chunks.append(chunk)
-            size += len(chunk)
-            if size > limit:
-                raise KnowledgeError(
-                    oversized_code,
-                    "knowledge source exceeds its bounded file size",
-                    details={"path": path.as_posix(), "limit_bytes": limit, "size_bytes": size},
-                )
-        return b"".join(chunks)
+        return _read_bounded_descriptor(
+            descriptor,
+            path,
+            limit=limit,
+            oversized_code=oversized_code,
+        )
     except KnowledgeError:
         raise
     except OSError as exc:
@@ -836,6 +846,189 @@ def _read_regular_bytes(path: Path, *, limit: int, oversized_code: str) -> bytes
                 os.close(descriptor)
             except OSError:
                 pass
+
+
+def _read_bounded_descriptor(
+    descriptor: int,
+    path: Path,
+    *,
+    limit: int,
+    oversized_code: str,
+) -> bytes:
+    opened = os.fstat(descriptor)
+    if not stat.S_ISREG(opened.st_mode):
+        raise KnowledgeError(
+            "unsafe_path",
+            "knowledge sources must be regular non-symlink files",
+            details={"path": path.as_posix()},
+        )
+    if opened.st_size > limit:
+        raise KnowledgeError(
+            oversized_code,
+            "knowledge source exceeds its bounded file size",
+            details={"path": path.as_posix(), "limit_bytes": limit, "size_bytes": opened.st_size},
+        )
+    chunks: list[bytes] = []
+    size = 0
+    while True:
+        chunk = os.read(descriptor, min(64 * 1024, limit + 1 - size))
+        if not chunk:
+            break
+        chunks.append(chunk)
+        size += len(chunk)
+        if size > limit:
+            raise KnowledgeError(
+                oversized_code,
+                "knowledge source exceeds its bounded file size",
+                details={"path": path.as_posix(), "limit_bytes": limit, "size_bytes": size},
+            )
+    return b"".join(chunks)
+
+
+@contextmanager
+def _trusted_read_descriptor(path: Path, trust_root: Path) -> Iterator[int]:
+    try:
+        relative = path.relative_to(trust_root)
+    except ValueError as exc:
+        raise KnowledgeError(
+            "unsafe_path",
+            "knowledge source is outside the repository trust root",
+            details={"path": path.as_posix()},
+        ) from exc
+    if not relative.parts:
+        raise KnowledgeError(
+            "unsafe_path",
+            "knowledge source must name a file inside the repository",
+            details={"path": path.as_posix()},
+        )
+    if os.name == "posix":
+        directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+        descriptors: list[int] = []
+        file_descriptor = -1
+        try:
+            descriptors.append(os.open(trust_root, directory_flags))
+            for part in relative.parts[:-1]:
+                descriptors.append(
+                    os.open(part, directory_flags, dir_fd=descriptors[-1])
+                )
+            file_descriptor = os.open(
+                relative.parts[-1],
+                os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                dir_fd=descriptors[-1],
+            )
+            yield file_descriptor
+        finally:
+            if file_descriptor >= 0:
+                os.close(file_descriptor)
+            for item in reversed(descriptors):
+                os.close(item)
+        return
+    if os.name == "nt":
+        with _trusted_read_descriptor_windows(path, trust_root) as descriptor:
+            yield descriptor
+        return
+    raise KnowledgeError(
+        "unsafe_path",
+        "trusted knowledge reads are unsupported on this platform",
+        details={"path": path.as_posix()},
+    )
+
+
+@contextmanager
+def _trusted_read_descriptor_windows(
+    path: Path,
+    trust_root: Path,
+) -> Iterator[int]:
+    import ctypes
+    import msvcrt
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    invalid_handle = wintypes.HANDLE(-1).value
+    file_share_read = 0x00000001
+    generic_read = 0x80000000
+    open_existing = 3
+    file_flag_backup_semantics = 0x02000000
+    file_flag_open_reparse_point = 0x00200000
+    file_attribute_directory = 0x00000010
+    file_attribute_reparse_point = 0x00000400
+    file_attribute_tag_info = 9
+
+    class FileAttributeTagInfo(ctypes.Structure):
+        _fields_ = [("FileAttributes", wintypes.DWORD), ("ReparseTag", wintypes.DWORD)]
+
+    kernel32.CreateFileW.restype = wintypes.HANDLE
+    kernel32.CreateFileW.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.HANDLE,
+    ]
+    kernel32.GetFileInformationByHandleEx.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_int,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+    ]
+    kernel32.GetFileInformationByHandleEx.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+
+    def open_checked(candidate: Path, *, directory: bool) -> int:
+        handle = kernel32.CreateFileW(
+            str(candidate),
+            0 if directory else generic_read,
+            file_share_read,
+            None,
+            open_existing,
+            file_flag_open_reparse_point | (file_flag_backup_semantics if directory else 0),
+            None,
+        )
+        if handle == invalid_handle:
+            raise OSError(ctypes.get_last_error(), "could not pin knowledge source path")
+        attributes = FileAttributeTagInfo()
+        if not kernel32.GetFileInformationByHandleEx(
+            handle,
+            file_attribute_tag_info,
+            ctypes.byref(attributes),
+            ctypes.sizeof(attributes),
+        ):
+            kernel32.CloseHandle(handle)
+            raise OSError(ctypes.get_last_error(), "could not validate knowledge source path")
+        is_directory = bool(attributes.FileAttributes & file_attribute_directory)
+        if attributes.FileAttributes & file_attribute_reparse_point or is_directory != directory:
+            kernel32.CloseHandle(handle)
+            raise OSError("knowledge source path contains a reparse point")
+        return int(handle)
+
+    root = Path(os.path.abspath(trust_root))
+    relative = path.relative_to(trust_root)
+    current = Path(root.anchor)
+    handles: list[int] = []
+    file_handle = invalid_handle
+    descriptor = -1
+    try:
+        handles.append(open_checked(current, directory=True))
+        for part in (*root.parts[1:], *relative.parts[:-1]):
+            current /= part
+            handles.append(open_checked(current, directory=True))
+        file_handle = open_checked(current / relative.parts[-1], directory=False)
+        descriptor = msvcrt.open_osfhandle(
+            file_handle,
+            os.O_RDONLY | getattr(os, "O_BINARY", 0),
+        )
+        file_handle = invalid_handle
+        yield descriptor
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        elif file_handle != invalid_handle:
+            kernel32.CloseHandle(file_handle)
+        for handle in reversed(handles):
+            kernel32.CloseHandle(handle)
 
 
 def _split_frontmatter(text: str) -> tuple[dict[str, Any], str]:
@@ -1091,7 +1284,7 @@ def _load_concepts(repo_root: Path) -> list[Concept]:
         relative = path.relative_to(root).as_posix()
         if path.name in RESERVED_MARKDOWN:
             continue
-        text = _read_utf8(path)
+        text = _read_utf8(path, trust_root=repo_root)
         metadata, body = _split_frontmatter(text)
         concepts.append(
             Concept(
@@ -1135,7 +1328,7 @@ def _load_concepts_tolerant(repo_root: Path) -> tuple[list[Concept], list[dict[s
         if path.name in RESERVED_MARKDOWN:
             continue
         try:
-            text = _read_utf8(path)
+            text = _read_utf8(path, trust_root=repo_root)
             metadata, body = _split_frontmatter(text)
         except KnowledgeError as exc:
             findings.append(_finding(exc.code, relative, str(exc), **exc.details))
@@ -1148,7 +1341,11 @@ def _load_concepts_tolerant(repo_root: Path) -> tuple[list[Concept], list[dict[s
     return concepts, findings
 
 
-def _reserved_file_findings(root: Path, initialized: bool) -> list[dict[str, Any]]:
+def _reserved_file_findings(
+    root: Path,
+    repo_root: Path,
+    initialized: bool,
+) -> list[dict[str, Any]]:
     if not initialized:
         return []
     findings: list[dict[str, Any]] = []
@@ -1164,7 +1361,7 @@ def _reserved_file_findings(root: Path, initialized: bool) -> list[dict[str, Any
     for path in (item for item in paths if item.name == "index.md"):
         relative = path.relative_to(root).as_posix()
         try:
-            text = _read_utf8(path)
+            text = _read_utf8(path, trust_root=repo_root)
         except KnowledgeError:
             findings.append(_finding("unsafe_reserved_file", relative, "reserved index must be regular UTF-8 Markdown"))
             continue
@@ -1189,7 +1386,7 @@ def _reserved_file_findings(root: Path, initialized: bool) -> list[dict[str, Any
         findings.append(_finding("missing_log", "log.md", "initialized knowledge bundle has no change log"))
     else:
         try:
-            log_text = _read_utf8(log_path)
+            log_text = _read_utf8(log_path, trust_root=repo_root)
         except KnowledgeError:
             findings.append(_finding("unsafe_reserved_file", "log.md", "reserved log must be regular UTF-8 Markdown"))
         else:
@@ -1578,7 +1775,13 @@ def _health_report(repo_root: Path, scope: str | None = None) -> dict[str, Any]:
         findings.append(_finding("missing_manifest", "manifest.json", "initialized knowledge bundle has no manifest"))
     elif manifest_path.is_file():
         try:
-            manifest = json.loads(_read_utf8(manifest_path, limit=4 * MAX_CONCEPT_BYTES))
+            manifest = json.loads(
+                _read_utf8(
+                    manifest_path,
+                    limit=4 * MAX_CONCEPT_BYTES,
+                    trust_root=repo_root,
+                )
+            )
         except (KnowledgeError, json.JSONDecodeError):
             findings.append(_finding("invalid_manifest", "manifest.json", "manifest is not valid bounded UTF-8 JSON"))
         if isinstance(manifest, dict):
@@ -1617,7 +1820,7 @@ def _health_report(repo_root: Path, scope: str | None = None) -> dict[str, Any]:
                 findings.append(_finding("legacy_memory_pending_review", "manifest.json", "legacy memory records still require reviewed cutover"))
         elif manifest is not None:
             findings.append(_finding("invalid_manifest", "manifest.json", "manifest root must be an object"))
-    findings.extend(_reserved_file_findings(root, initialized))
+    findings.extend(_reserved_file_findings(root, repo_root, initialized))
     stale_indexes = _stale_indexes(repo_root, all_concepts, scope=scope) if initialized else []
     for path in stale_indexes:
         findings.append(_finding("stale_index", path, "generated knowledge index is stale or missing"))
@@ -1752,7 +1955,9 @@ def _candidate_inventory(
             findings.append(_finding("invalid_candidate_packet", relative, "candidate packets must be regular JSON files"))
             continue
         try:
-            packet = json.loads(_read_utf8(path, limit=64 * 1024))
+            packet = json.loads(
+                _read_utf8(path, limit=64 * 1024, trust_root=repo_root)
+            )
         except (KnowledgeError, json.JSONDecodeError):
             findings.append(_finding("invalid_candidate_packet", relative, "candidate packet is not bounded valid JSON"))
             continue
@@ -1907,7 +2112,7 @@ def _manifest_source_findings(
                 continue
             expected = source.get("sha256")
             try:
-                actual = _sha256_file(path)
+                actual = _sha256_file(path, trust_root=repo_root)
             except KnowledgeError as exc:
                 findings.append(
                     _finding(
@@ -2321,7 +2526,10 @@ def _build_plan(repo_root: Path, inputs: dict[str, Any]) -> dict[str, Any]:
     manifest = _render_manifest(repo_root, concepts, resulting_snapshot, timestamp)
     explicit_operations.append((_knowledge_target("manifest.json"), manifest))
     material_operations = _materialize_operations(repo_root, explicit_operations)
-    if material_operations or _log_needs_repair(_knowledge_root(repo_root) / "log.md"):
+    if material_operations or _log_needs_repair(
+        _knowledge_root(repo_root) / "log.md",
+        repo_root,
+    ):
         log = _render_log(repo_root, action, timestamp, resulting_snapshot)
         explicit_operations.append((_knowledge_target("log.md"), log))
     operations = _materialize_operations(repo_root, explicit_operations)
@@ -2512,7 +2720,7 @@ def _migration_records(
         slug = roadmap.name[: -len("-technical-roadmap.md")]
         source = moc_by_slug.get(slug, roadmap)
         has_legacy_view = source.name.endswith("-roadmap-MOC.md")
-        source_text = _read_utf8(source)
+        source_text = _read_utf8(source, trust_root=repo_root)
         metadata, body = _split_frontmatter(source_text)
         title = _first_heading(body) or _humanize_slug(slug)
         relative = f"projects/{slug}/roadmap.md"
@@ -2536,7 +2744,7 @@ def _migration_records(
             "x-speckit-producer-agent": "speckit-pro-runner",
             "x-speckit-sources": [
                 f"{repo_relative(roadmap, repo_root)}|"
-                f"{_sha256_text(source_text) if source == roadmap else _sha256_file(roadmap)}",
+                f"{_sha256_text(source_text) if source == roadmap else _sha256_file(roadmap, trust_root=repo_root)}",
             ],
         }
         if has_legacy_view:
@@ -2576,7 +2784,7 @@ def _migration_records(
             )
 
     for spec_moc in _safe_spec_mocs(repo_root):
-        source_text = _read_utf8(spec_moc)
+        source_text = _read_utf8(spec_moc, trust_root=repo_root)
         metadata, body = _split_frontmatter(source_text)
         spec_id = str(metadata.get("spec_id") or spec_moc.parent.name)
         project = _project_from_up(
@@ -2637,7 +2845,7 @@ def _migration_records(
         if isinstance(metadata.get("related"), list):
             concept_metadata["x-speckit-legacy-related"] = metadata["related"]
         concept_metadata["x-speckit-sources"] = [
-            f"{durable_source_relative}|{_sha256_file(durable_source)}"
+            f"{durable_source_relative}|{_sha256_file(durable_source, trust_root=repo_root)}"
         ]
         curated = _rebase_markdown_links(
             _curated_moc_body(body),
@@ -2681,7 +2889,7 @@ def _legacy_memory_records(
         source = memory_root / name
         if not source.is_file() or source.is_symlink():
             continue
-        text = _read_utf8(source)
+        text = _read_utf8(source, trust_root=repo_root)
         source_relative = repo_relative(source, repo_root)
         source_hash = _sha256_text(text)
         for title, section in _markdown_sections(text, fallback_title=source.stem):
@@ -2833,7 +3041,10 @@ def _legacy_compatibility_operations(repo_root: Path, virtual: dict[str, str]) -
                 details={"legacy_view": legacy},
             )
         if target.is_file():
-            source_text = rendered_sources.get(target, _read_utf8(target))
+            source_text = rendered_sources.get(
+                target,
+                _read_utf8(target, trust_root=repo_root),
+            )
         else:
             source_text = _new_legacy_view(metadata, target)
         canonical = _knowledge_target(relative)
@@ -2934,7 +3145,7 @@ def _legacy_compatibility_findings(
         if not path.is_file() or path.is_symlink():
             findings.append(_finding("missing_compatibility_view", target, "legacy MOC compatibility view is missing"))
             continue
-        if _read_utf8(path) != expected:
+        if _read_utf8(path, trust_root=repo_root) != expected:
             findings.append(_finding("compatibility_drift", target, "legacy MOC differs from its canonical OKF projection"))
     return findings
 
@@ -3240,7 +3451,7 @@ def _validated_sources(
             ) from exc
         if not is_relative_to(path, repo_root) or not path.is_file() or path.is_symlink():
             raise KnowledgeError("missing_source", "candidate source must be a regular repository file", details={"path": raw_path})
-        actual = _sha256_file(path)
+        actual = _sha256_file(path, trust_root=repo_root)
         expected = source.get("sha256")
         if require_evidence and (
             not isinstance(expected, str) or re.fullmatch(r"[a-f0-9]{64}", expected) is None
@@ -3398,7 +3609,11 @@ def _stale_indexes(
             continue
         path = root / relative
         try:
-            actual = _read_utf8(path) if path.is_file() and not path.is_symlink() else None
+            actual = (
+                _read_utf8(path, trust_root=repo_root)
+                if path.is_file() and not path.is_symlink()
+                else None
+            )
         except KnowledgeError:
             actual = None
         if actual != expected:
@@ -3432,7 +3647,7 @@ def _render_manifest(repo_root: Path, concepts: list[Concept], snapshot: str, ti
             if isinstance(resource, str) and resource and "://" not in resource:
                 source_path = (repo_root / resource).resolve(strict=False)
                 if is_relative_to(source_path, repo_root) and source_path.is_file() and not source_path.is_symlink():
-                    entry["sources"].append({"path": repo_relative(source_path, repo_root), "sha256": _sha256_file(source_path)})
+                    entry["sources"].append({"path": repo_relative(source_path, repo_root), "sha256": _sha256_file(source_path, trust_root=repo_root)})
         entries.append(entry)
     legacy_memory = []
     memory_root = repo_root / ".specify" / "memory"
@@ -3440,7 +3655,7 @@ def _render_manifest(repo_root: Path, concepts: list[Concept], snapshot: str, ti
         for name in ("spec.md", "plan.md", "changelog.md"):
             path = memory_root / name
             if path.is_file() and not path.is_symlink():
-                legacy_memory.append({"path": repo_relative(path, repo_root), "sha256": _sha256_file(path)})
+                legacy_memory.append({"path": repo_relative(path, repo_root), "sha256": _sha256_file(path, trust_root=repo_root)})
     represented_sources = {
         (source.get("path"), source.get("sha256"))
         for entry in entries
@@ -3467,7 +3682,13 @@ def _render_manifest(repo_root: Path, concepts: list[Concept], snapshot: str, ti
     current_path = _knowledge_root(repo_root) / "manifest.json"
     if current_path.is_file() and not current_path.is_symlink():
         try:
-            current = json.loads(_read_utf8(current_path, limit=4 * MAX_CONCEPT_BYTES))
+            current = json.loads(
+                _read_utf8(
+                    current_path,
+                    limit=4 * MAX_CONCEPT_BYTES,
+                    trust_root=repo_root,
+                )
+            )
         except (KnowledgeError, json.JSONDecodeError):
             current = None
         if isinstance(current, dict):
@@ -3485,7 +3706,7 @@ def _render_log(repo_root: Path, action: str, timestamp: str, snapshot: str) -> 
     previous = ""
     if path.is_file() and not path.is_symlink():
         try:
-            previous = _read_utf8(path)
+            previous = _read_utf8(path, trust_root=repo_root)
         except KnowledgeError:
             previous = ""
         if previous.startswith("# Knowledge Change Log") and all(
@@ -3510,11 +3731,11 @@ def _render_log(repo_root: Path, action: str, timestamp: str, snapshot: str) -> 
     return f"# Knowledge Change Log\n\n{rendered}\n"
 
 
-def _log_needs_repair(path: Path) -> bool:
+def _log_needs_repair(path: Path, repo_root: Path) -> bool:
     if not path.is_file() or path.is_symlink():
         return True
     try:
-        text = _read_utf8(path)
+        text = _read_utf8(path, trust_root=repo_root)
     except KnowledgeError:
         return True
     if not text.startswith("# Knowledge Change Log"):
@@ -3541,7 +3762,7 @@ def _materialize_operations(repo_root: Path, requested: list[tuple[str, str]]) -
     operations: list[dict[str, Any]] = []
     for index, (target, content) in enumerate(sorted(deduplicated.items()), start=1):
         path = repo_root / target
-        prior = _read_optional_target(path)
+        prior = _read_optional_target(path, trust_root=repo_root)
         encoded = content.encode("utf-8")
         if prior == encoded:
             continue
@@ -3601,7 +3822,11 @@ def _validate_portable_target_spelling(repo_root: Path, target: str) -> None:
         current /= part
 
 
-def _read_optional_target(path: Path) -> bytes | None:
+def _read_optional_target(
+    path: Path,
+    *,
+    trust_root: Path | None = None,
+) -> bytes | None:
     try:
         mode = path.lstat().st_mode
     except FileNotFoundError:
@@ -3622,16 +3847,45 @@ def _read_optional_target(path: Path) -> bytes | None:
         path,
         limit=MAX_PLAN_CONTENT_BYTES,
         oversized_code="oversized_concept",
+        trust_root=trust_root,
     )
 
 
-def _read_apply_target(path: Path) -> bytes | None:
+def _read_apply_target(
+    path: Path,
+    *,
+    trust_root: Path | None = None,
+) -> bytes | None:
     try:
-        return _read_optional_target(path)
+        return _read_optional_target(path, trust_root=trust_root)
     except KnowledgeError as exc:
         if exc.code == "unsafe_path":
             raise _SourceChangedError(str(exc)) from exc
         raise
+
+
+def _read_apply_target_with_identity(
+    path: Path,
+    repo_root: Path,
+) -> tuple[bytes | None, tuple[int, int] | None]:
+    try:
+        with _trusted_read_descriptor(path, repo_root) as descriptor:
+            opened = os.fstat(descriptor)
+            current = _read_bounded_descriptor(
+                descriptor,
+                path,
+                limit=MAX_PLAN_CONTENT_BYTES,
+                oversized_code="oversized_concept",
+            )
+    except FileNotFoundError:
+        return None, None
+    except KnowledgeError:
+        raise
+    except OSError as exc:
+        raise _SourceChangedError(
+            "knowledge update target changed during rollback validation"
+        ) from exc
+    return current, (opened.st_dev, opened.st_ino)
 
 
 def _source_path(repo_root: Path, raw: str) -> Path:
@@ -3674,7 +3928,7 @@ def _build_source_preconditions(
                 continue
             path = _source_path(repo_root, raw_path)
             normalized = repo_relative(path, repo_root)
-            actual = _sha256_file(path)
+            actual = _sha256_file(path, trust_root=repo_root)
             operation = operations_by_target.get(normalized)
             if operation is None:
                 if actual != recorded_digest:
@@ -3781,7 +4035,10 @@ def _validate_source_preconditions(
             )
         seen.add(raw_path)
         try:
-            actual = _sha256_file(_source_path(repo_root, raw_path))
+            actual = _sha256_file(
+                _source_path(repo_root, raw_path),
+                trust_root=repo_root,
+            )
         except KnowledgeError as exc:
             raise KnowledgeError(
                 "source_changed",
@@ -3813,7 +4070,7 @@ def _validate_apply_operations(repo_root: Path, operations: list[Any]) -> None:
             raise KnowledgeError(str(path_diag.get("code", "unsafe_path")), str(path_diag.get("message", "unsafe update path")), details=path_diag.get("details", {}))
         path = repo_root / target
         try:
-            current = _read_optional_target(path)
+            current = _read_optional_target(path, trust_root=repo_root)
         except KnowledgeError as exc:
             if exc.code == "unsafe_path":
                 raise KnowledgeError(
@@ -3857,7 +4114,10 @@ def _rollback_writes(
         try:
             if not _safe_write_target_chain(target, repo_root):
                 raise _SourceChangedError("knowledge update target chain became unsafe")
-            current = _read_apply_target(target)
+            current, current_identity = _read_apply_target_with_identity(
+                target,
+                repo_root,
+            )
             current_hash = _sha256_bytes(current) if current is not None else None
             before_hash = _sha256_bytes(before) if before is not None else None
             if current_hash == before_hash:
@@ -3866,7 +4126,11 @@ def _rollback_writes(
                 errors.append(f"{target.as_posix()}: concurrent change preserved")
                 continue
             if before is None:
-                remove_path_trusted(target, trust_root=repo_root)
+                remove_path_trusted(
+                    target,
+                    trust_root=repo_root,
+                    expected_identity=current_identity,
+                )
             else:
                 write_file_atomic(
                     target,
@@ -3886,7 +4150,12 @@ def _rollback_writes(
             if (directory_stat.st_dev, directory_stat.st_ino) != identity:
                 errors.append(f"{directory.as_posix()}: concurrent directory preserved")
                 continue
-            remove_path_trusted(directory, trust_root=repo_root, directory=True)
+            remove_path_trusted(
+                directory,
+                trust_root=repo_root,
+                directory=True,
+                expected_identity=identity,
+            )
         except FileNotFoundError:
             continue
         except OSError as exc:
@@ -3942,7 +4211,7 @@ def _validate_resulting_targets(
                 "knowledge update target changed after write",
                 details={"target": repo_relative(target, repo_root)},
             )
-        current = _read_apply_target(target)
+        current = _read_apply_target(target, trust_root=repo_root)
         current_hash = _sha256_bytes(current) if current is not None else None
         if current_hash != resulting_hash:
             raise KnowledgeError(
@@ -4155,9 +4424,19 @@ def _sha256_text(value: str) -> str:
     return _sha256_bytes(value.encode("utf-8"))
 
 
-def _sha256_file(path: Path, *, limit: int = MAX_SOURCE_BYTES) -> str:
+def _sha256_file(
+    path: Path,
+    *,
+    limit: int = MAX_SOURCE_BYTES,
+    trust_root: Path | None = None,
+) -> str:
     return _sha256_bytes(
-        _read_regular_bytes(path, limit=limit, oversized_code="oversized_source")
+        _read_regular_bytes(
+            path,
+            limit=limit,
+            oversized_code="oversized_source",
+            trust_root=trust_root,
+        )
     )
 
 

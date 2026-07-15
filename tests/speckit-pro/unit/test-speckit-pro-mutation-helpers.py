@@ -772,9 +772,13 @@ class MutationHelperTests(unittest.TestCase):
         tmp, git_root = self.temp_clean_git_repo()
         protected_targets = (
             "docs/ai/knowledge/decisions/current.md",
+            "DOCS/AI/KNOWLEDGE/decisions/current.md",
+            "docs/ai/knowledge./decisions/current.md",
             "docs/ai/specs/platform-roadmap-MOC.md",
+            "DOCS/AI/SPECS/platform-roadmap-moc.MD",
             "docs/ai/specs/SPEC-001/SPEC-MOC.md",
             "specs/SPEC-001/SPEC-MOC.md",
+            "SPECS/SPEC-001/spec-moc.MD",
         )
         with tmp:
             for target in protected_targets:

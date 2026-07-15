@@ -8,6 +8,7 @@ import secrets
 import stat
 import sys
 import tempfile
+import unicodedata
 from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
 from typing import Any
@@ -717,19 +718,23 @@ def protected_knowledge_target_diagnostic(
 ) -> dict[str, Any] | None:
     relative = repo_relative(resolve_candidate_path(raw, repo_root), repo_root)
     path = PurePosixPath(relative.replace("\\", "/"))
-    protected = path.parts[:3] == ("docs", "ai", "knowledge")
+    portable_parts = tuple(
+        unicodedata.normalize("NFC", part).rstrip(" .").casefold()
+        for part in path.parts
+    )
+    protected = portable_parts[:3] == ("docs", "ai", "knowledge")
     protected = protected or (
-        len(path.parts) == 4
-        and path.parts[:3] == ("docs", "ai", "specs")
-        and path.name.endswith("-roadmap-MOC.md")
+        len(portable_parts) == 4
+        and portable_parts[:3] == ("docs", "ai", "specs")
+        and portable_parts[-1].endswith("-roadmap-moc.md")
     )
     protected = protected or (
-        path.name == "SPEC-MOC.md"
+        portable_parts[-1] == "spec-moc.md"
         and (
-            (len(path.parts) >= 3 and path.parts[0] == "specs")
+            (len(portable_parts) >= 3 and portable_parts[0] == "specs")
             or (
-                len(path.parts) >= 5
-                and path.parts[:3] == ("docs", "ai", "specs")
+                len(portable_parts) >= 5
+                and portable_parts[:3] == ("docs", "ai", "specs")
             )
         )
     )
@@ -961,19 +966,36 @@ def remove_path_trusted(
     *,
     trust_root: Path,
     directory: bool = False,
+    expected_identity: tuple[int, int] | None = None,
 ) -> None:
     """Remove one trusted path without following a swapped parent chain."""
 
     if os.name == "posix":
-        _remove_path_trusted_posix(target, trust_root, directory=directory)
+        _remove_path_trusted_posix(
+            target,
+            trust_root,
+            directory=directory,
+            expected_identity=expected_identity,
+        )
         return
     if os.name == "nt":
-        _remove_path_trusted_windows(target, trust_root, directory=directory)
+        _remove_path_trusted_windows(
+            target,
+            trust_root,
+            directory=directory,
+            expected_identity=expected_identity,
+        )
         return
     raise OSError("trusted path removal is unsupported on this platform")
 
 
-def _remove_path_trusted_posix(target: Path, trust_root: Path, *, directory: bool) -> None:
+def _remove_path_trusted_posix(
+    target: Path,
+    trust_root: Path,
+    *,
+    directory: bool,
+    expected_identity: tuple[int, int] | None,
+) -> None:
     parents, leaf = _write_relative_parts(target, trust_root)
     directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
     descriptors: list[int] = []
@@ -992,6 +1014,13 @@ def _remove_path_trusted_posix(target: Path, trust_root: Path, *, directory: boo
         expected = stat.S_ISDIR(target_stat.st_mode) if directory else stat.S_ISREG(target_stat.st_mode)
         if not expected:
             raise OSError("trusted removal target has an unexpected file type")
+        if expected_identity is not None and (
+            target_stat.st_dev,
+            target_stat.st_ino,
+        ) != expected_identity:
+            raise AtomicWriteConflictError(
+                "trusted removal target changed after rollback validation"
+            )
         if directory:
             os.rmdir(leaf, dir_fd=parent_descriptor)
         else:
@@ -1005,7 +1034,13 @@ def _remove_path_trusted_posix(target: Path, trust_root: Path, *, directory: boo
                 pass
 
 
-def _remove_path_trusted_windows(target: Path, trust_root: Path, *, directory: bool) -> None:
+def _remove_path_trusted_windows(
+    target: Path,
+    trust_root: Path,
+    *,
+    directory: bool,
+    expected_identity: tuple[int, int] | None,
+) -> None:
     import ctypes
     from ctypes import wintypes
 
@@ -1014,7 +1049,6 @@ def _remove_path_trusted_windows(target: Path, trust_root: Path, *, directory: b
     invalid_handle = wintypes.HANDLE(-1).value
     file_share_read = 0x00000001
     file_share_write = 0x00000002
-    file_share_delete = 0x00000004
     file_read_attributes = 0x00000080
     delete_access = 0x00010000
     open_existing = 3
@@ -1107,7 +1141,7 @@ def _remove_path_trusted_windows(target: Path, trust_root: Path, *, directory: b
         target_handle = kernel32.CreateFileW(
             str(target_path),
             delete_access | file_read_attributes,
-            file_share_read | file_share_write | file_share_delete,
+            file_share_read | file_share_write,
             None,
             open_existing,
             file_flag_open_reparse_point | (file_flag_backup_semantics if directory else 0),
@@ -1129,6 +1163,12 @@ def _remove_path_trusted_windows(target: Path, trust_root: Path, *, directory: b
         is_directory = bool(attributes.FileAttributes & file_attribute_directory)
         if attributes.FileAttributes & file_attribute_reparse_point or is_directory != directory:
             raise OSError("trusted removal target has an unexpected file type")
+        if expected_identity is not None:
+            target_stat = target_path.stat(follow_symlinks=False)
+            if (target_stat.st_dev, target_stat.st_ino) != expected_identity:
+                raise AtomicWriteConflictError(
+                    "trusted removal target changed after rollback validation"
+                )
         disposition = FileDispositionInfo(True)
         if not kernel32.SetFileInformationByHandle(
             target_handle,
@@ -1172,6 +1212,22 @@ def _read_posix_target(
         return bytes(content)
     finally:
         os.close(descriptor)
+
+
+def _read_posix_descriptor(descriptor: int, *, limit: int) -> bytes:
+    content = bytearray()
+    offset = 0
+    while len(content) <= limit:
+        chunk = os.pread(
+            descriptor,
+            min(64 * 1024, limit + 1 - len(content)),
+            offset,
+        )
+        if not chunk:
+            break
+        content.extend(chunk)
+        offset += len(chunk)
+    return bytes(content)
 
 
 def _posix_regular_identity(
@@ -1250,6 +1306,7 @@ def _write_file_atomic_posix(
     descriptors: list[int] = []
     temporary_descriptor = -1
     temporary_name: str | None = None
+    temporary_identity: tuple[int, int] | None = None
     preserve_temporary = False
     created_directories: list[CreatedDirectory] = []
     committed = False
@@ -1284,12 +1341,14 @@ def _write_file_atomic_posix(
             target_stat = os.stat(leaf, dir_fd=parent_descriptor, follow_symlinks=False)
         except FileNotFoundError:
             target_mode = None
+            target_identity = None
         else:
             if not stat.S_ISREG(target_stat.st_mode):
                 raise OSError("atomic write target must be a regular non-symlink file")
             target_mode = stat.S_IMODE(target_stat.st_mode)
+            target_identity = (target_stat.st_dev, target_stat.st_ino)
 
-        temporary_flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC
+        temporary_flags = os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC
         for _ in range(128):
             candidate = f".{leaf}.tmp-{secrets.token_hex(8)}"
             try:
@@ -1331,6 +1390,21 @@ def _write_file_atomic_posix(
             )
             if current != expected:
                 raise AtomicWriteConflictError("atomic write target changed before commit")
+            if expected is not None:
+                current_stat = os.stat(
+                    leaf,
+                    dir_fd=parent_descriptor,
+                    follow_symlinks=False,
+                )
+                if (
+                    not stat.S_ISREG(current_stat.st_mode)
+                    or (current_stat.st_dev, current_stat.st_ino)
+                    != target_identity
+                    or stat.S_IMODE(current_stat.st_mode) != target_mode
+                ):
+                    raise AtomicWriteConflictError(
+                        "atomic write target metadata changed before commit"
+                    )
         if expected_prior is None:
             try:
                 os.link(
@@ -1349,10 +1423,38 @@ def _write_file_atomic_posix(
                 try:
                     _unlink_posix_name_if_identity(
                         parent_descriptor,
+                        temporary_name,
+                        temporary_identity,
+                    )
+                except OSError as cleanup_error:
+                    preserve_temporary = True
+                    raise AtomicWriteRecoveryError(
+                        "atomic write new target name was substituted; recovery bytes were preserved",
+                        target.parent / temporary_name,
+                        committed_path=target,
+                    ) from cleanup_error
+                temporary_name = None
+                raise AtomicWriteConflictError(
+                    "atomic-write new target name changed before commit"
+                )
+            if (
+                _read_posix_descriptor(
+                    temporary_descriptor,
+                    limit=len(payload),
+                )
+                != payload
+            ):
+                try:
+                    _unlink_posix_name_if_identity(
+                        parent_descriptor,
                         leaf,
                         linked_identity,
                     )
-                    os.unlink(temporary_name, dir_fd=parent_descriptor)
+                    _unlink_posix_name_if_identity(
+                        parent_descriptor,
+                        temporary_name,
+                        linked_identity,
+                    )
                 except OSError as restore_error:
                     preserve_temporary = True
                     raise AtomicWriteRecoveryError(
@@ -1365,7 +1467,11 @@ def _write_file_atomic_posix(
                     "atomic-write temporary name changed before commit"
                 )
             try:
-                os.unlink(temporary_name, dir_fd=parent_descriptor)
+                _unlink_posix_name_if_identity(
+                    parent_descriptor,
+                    temporary_name,
+                    temporary_identity,
+                )
             except OSError as cleanup_error:
                 try:
                     _unlink_posix_name_if_identity(
@@ -1373,7 +1479,11 @@ def _write_file_atomic_posix(
                         leaf,
                         temporary_identity,
                     )
-                    os.unlink(temporary_name, dir_fd=parent_descriptor)
+                    _unlink_posix_name_if_identity(
+                        parent_descriptor,
+                        temporary_name,
+                        temporary_identity,
+                    )
                 except OSError as restore_error:
                     preserve_temporary = True
                     raise AtomicWriteRecoveryError(
@@ -1388,6 +1498,11 @@ def _write_file_atomic_posix(
             temporary_name = None
         else:
             expected = expected_prior if isinstance(expected_prior, bytes) else b""
+            if target_identity is None or target_mode is None:
+                raise AtomicWriteConflictError(
+                    "atomic write target disappeared before commit"
+                )
+            displaced_identity = target_identity
             _exchange_posix_names(parent_descriptor, temporary_name, leaf)
             try:
                 if (
@@ -1396,6 +1511,30 @@ def _write_file_atomic_posix(
                 ):
                     raise AtomicWriteConflictError(
                         "atomic-write temporary name changed before commit"
+                    )
+                if (
+                    _read_posix_descriptor(
+                        temporary_descriptor,
+                        limit=len(payload),
+                    )
+                    != payload
+                ):
+                    raise AtomicWriteConflictError(
+                        "atomic-write temporary payload changed before commit"
+                    )
+                displaced_stat = os.stat(
+                    temporary_name,
+                    dir_fd=parent_descriptor,
+                    follow_symlinks=False,
+                )
+                if (
+                    not stat.S_ISREG(displaced_stat.st_mode)
+                    or (displaced_stat.st_dev, displaced_stat.st_ino)
+                    != displaced_identity
+                    or stat.S_IMODE(displaced_stat.st_mode) != target_mode
+                ):
+                    raise AtomicWriteConflictError(
+                        "atomic write displaced target metadata did not match"
                     )
                 displaced = _read_posix_target(
                     parent_descriptor,
@@ -1408,7 +1547,21 @@ def _write_file_atomic_posix(
                     )
             except (AtomicWriteConflictError, OSError):
                 try:
+                    if (
+                        _posix_regular_identity(parent_descriptor, temporary_name)
+                        != displaced_identity
+                    ):
+                        raise AtomicWriteConflictError(
+                            "displaced recovery name changed before restoration"
+                        )
                     _exchange_posix_names(parent_descriptor, temporary_name, leaf)
+                    if (
+                        _posix_regular_identity(parent_descriptor, leaf)
+                        != displaced_identity
+                    ):
+                        raise AtomicWriteConflictError(
+                            "atomic write could not verify the restored target identity"
+                        )
                 except OSError as restore_error:
                     preserve_temporary = True
                     raise AtomicWriteRecoveryError(
@@ -1418,10 +1571,32 @@ def _write_file_atomic_posix(
                     ) from restore_error
                 raise
             try:
-                os.unlink(temporary_name, dir_fd=parent_descriptor)
+                _unlink_posix_name_if_identity(
+                    parent_descriptor,
+                    temporary_name,
+                    displaced_identity,
+                )
             except OSError as cleanup_error:
                 try:
+                    if (
+                        _posix_regular_identity(parent_descriptor, temporary_name)
+                        != displaced_identity
+                        or _posix_regular_identity(parent_descriptor, leaf)
+                        != temporary_identity
+                    ):
+                        raise AtomicWriteConflictError(
+                            "atomic write names changed before cleanup restoration"
+                        )
                     _exchange_posix_names(parent_descriptor, temporary_name, leaf)
+                    if (
+                        _posix_regular_identity(parent_descriptor, leaf)
+                        != displaced_identity
+                        or _posix_regular_identity(parent_descriptor, temporary_name)
+                        != temporary_identity
+                    ):
+                        raise AtomicWriteConflictError(
+                            "atomic write could not verify cleanup restoration"
+                        )
                 except OSError as restore_error:
                     preserve_temporary = True
                     raise AtomicWriteRecoveryError(
@@ -1433,6 +1608,29 @@ def _write_file_atomic_posix(
                     "atomic write restored the target after displaced-file cleanup failed"
                 ) from cleanup_error
             temporary_name = None
+        final_stat = os.stat(
+            leaf,
+            dir_fd=parent_descriptor,
+            follow_symlinks=False,
+        )
+        if (
+            not stat.S_ISREG(final_stat.st_mode)
+            or (final_stat.st_dev, final_stat.st_ino) != temporary_identity
+            or _read_posix_descriptor(
+                temporary_descriptor,
+                limit=len(payload),
+            )
+            != payload
+            or (
+                target_mode is not None
+                and stat.S_IMODE(final_stat.st_mode) != target_mode
+            )
+        ):
+            committed = True
+            raise AtomicWriteCommittedError(
+                "atomic write target identity, payload, or mode changed after commit",
+                target,
+            )
         committed = True
         try:
             os.fsync(parent_descriptor)
@@ -1454,7 +1652,12 @@ def _write_file_atomic_posix(
             and not preserve_temporary
         ):
             try:
-                os.unlink(temporary_name, dir_fd=descriptors[-1])
+                if temporary_identity is not None:
+                    _unlink_posix_name_if_identity(
+                        descriptors[-1],
+                        temporary_name,
+                        temporary_identity,
+                    )
             except OSError:
                 pass
         for descriptor in reversed(descriptors):
@@ -1492,6 +1695,7 @@ def _write_file_atomic_windows(
     invalid_handle = wintypes.HANDLE(-1).value
     file_share_read = 0x00000001
     file_share_write = 0x00000002
+    file_share_delete = 0x00000004
     open_existing = 3
     create_new = 1
     file_flag_backup_semantics = 0x02000000
@@ -1500,11 +1704,13 @@ def _write_file_atomic_windows(
     file_attribute_directory = 0x00000010
     file_attribute_reparse_point = 0x00000400
     file_read_attributes = 0x00000080
+    generic_read = 0x80000000
     generic_write = 0x40000000
     delete_access = 0x00010000
     file_attribute_tag_info = 9
     file_id_info = 18
     file_rename_info = 3
+    file_disposition_info = 4
 
     class FileAttributeTagInfo(ctypes.Structure):
         _fields_ = [("FileAttributes", wintypes.DWORD), ("ReparseTag", wintypes.DWORD)]
@@ -1519,6 +1725,9 @@ def _write_file_atomic_windows(
             ("FileNameLength", wintypes.DWORD),
             ("FileName", wintypes.WCHAR * 1),
         ]
+
+    class FileDispositionInfo(ctypes.Structure):
+        _fields_ = [("DeleteFile", wintypes.BOOL)]
 
     kernel32.CreateFileW.restype = wintypes.HANDLE
     kernel32.CreateFileW.argtypes = [
@@ -1547,6 +1756,14 @@ def _write_file_atomic_windows(
         wintypes.LPVOID,
     ]
     kernel32.WriteFile.restype = wintypes.BOOL
+    kernel32.ReadFile.argtypes = [
+        wintypes.HANDLE,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
+        wintypes.LPVOID,
+    ]
+    kernel32.ReadFile.restype = wintypes.BOOL
     kernel32.FlushFileBuffers.argtypes = [wintypes.HANDLE]
     kernel32.FlushFileBuffers.restype = wintypes.BOOL
     kernel32.SetFileInformationByHandle.argtypes = [
@@ -1607,11 +1824,19 @@ def _write_file_atomic_windows(
             raise OSError("atomic-write directory must be a non-reparse directory")
         return int(handle)
 
-    def open_regular_identity(path: Path) -> tuple[int, tuple[int, bytes]]:
+    def open_regular_identity(
+        path: Path,
+        *,
+        delete: bool = False,
+    ) -> tuple[int, tuple[int, bytes]]:
         handle = kernel32.CreateFileW(
             str(path),
-            file_read_attributes,
-            file_share_read | file_share_write,
+            generic_read | file_read_attributes | (delete_access if delete else 0),
+            (
+                file_share_read | file_share_write | file_share_delete
+                if delete
+                else file_share_read
+            ),
             None,
             open_existing,
             file_flag_open_reparse_point,
@@ -1646,6 +1871,36 @@ def _write_file_atomic_windows(
             bytes(identity.FileId),
         )
 
+    def read_handle_bytes(handle: int, *, limit: int) -> bytes:
+        content = bytearray()
+        while len(content) <= limit:
+            size = min(64 * 1024, limit + 1 - len(content))
+            buffer = ctypes.create_string_buffer(size)
+            read = wintypes.DWORD()
+            if not kernel32.ReadFile(
+                handle,
+                buffer,
+                size,
+                ctypes.byref(read),
+                None,
+            ):
+                raise win_error("could not read pinned atomic-write target")
+            if read.value == 0:
+                break
+            content.extend(buffer.raw[: read.value])
+        return bytes(content)
+
+    def path_has_identity(path: Path, expected: tuple[int, bytes]) -> bool:
+        handle = invalid_handle
+        try:
+            handle, actual = open_regular_identity(path)
+            return actual == expected
+        except OSError:
+            return False
+        finally:
+            if handle != invalid_handle:
+                kernel32.CloseHandle(handle)
+
     root = Path(os.path.abspath(trust_root))
     target_path = root.joinpath(*parents, leaf)
     handles: list[int] = []
@@ -1654,6 +1909,7 @@ def _write_file_atomic_windows(
     temporary_path: Path | None = None
     backup_path: Path | None = None
     preserve_backup = False
+    backup_handle = invalid_handle
     committed_handle = invalid_handle
     committed = False
     try:
@@ -1692,7 +1948,7 @@ def _write_file_atomic_windows(
             temporary_handle = kernel32.CreateFileW(
                 str(candidate),
                 generic_write | delete_access,
-                file_share_read | file_share_write,
+                file_share_read,
                 None,
                 create_new,
                 file_attribute_normal | file_flag_open_reparse_point,
@@ -1800,11 +2056,38 @@ def _write_file_atomic_windows(
                 preserve_backup = True
                 expected = expected_prior if isinstance(expected_prior, bytes) else b""
                 try:
+                    backup_handle, backup_identity = open_regular_identity(
+                        backup_path,
+                        delete=True,
+                    )
+                    displaced = read_handle_bytes(
+                        backup_handle,
+                        limit=len(expected),
+                    )
+                except OSError as exc:
+                    raise AtomicWriteRecoveryError(
+                        "atomic write could not pin displaced recovery bytes",
+                        backup_path,
+                        committed_path=target_path,
+                    ) from exc
+                if displaced != expected:
+                    raise AtomicWriteRecoveryError(
+                        "atomic write displaced recovery bytes did not match the accepted target",
+                        backup_path,
+                        committed_path=target_path,
+                    )
+                try:
                     committed_handle, committed_identity = open_regular_identity(
                         target_path
                     )
+                    committed_payload = read_handle_bytes(
+                        committed_handle,
+                        limit=len(payload),
+                    )
                 except OSError as exc:
-                    if not kernel32.ReplaceFileW(
+                    kernel32.CloseHandle(backup_handle)
+                    backup_handle = invalid_handle
+                    if not path_has_identity(backup_path, backup_identity) or not kernel32.ReplaceFileW(
                         str(target_path),
                         str(backup_path),
                         str(temporary_path),
@@ -1825,10 +2108,15 @@ def _write_file_atomic_windows(
                     raise AtomicWriteConflictError(
                         "atomic-write committed target identity could not be verified"
                     ) from exc
-                if committed_identity != temporary_identity_value:
+                if (
+                    committed_identity != temporary_identity_value
+                    or committed_payload != payload
+                ):
                     kernel32.CloseHandle(committed_handle)
                     committed_handle = invalid_handle
-                    if not kernel32.ReplaceFileW(
+                    kernel32.CloseHandle(backup_handle)
+                    backup_handle = invalid_handle
+                    if not path_has_identity(backup_path, backup_identity) or not kernel32.ReplaceFileW(
                         str(target_path),
                         str(backup_path),
                         str(temporary_path),
@@ -1847,58 +2135,23 @@ def _write_file_atomic_windows(
                     backup_path = None
                     preserve_backup = False
                     raise AtomicWriteConflictError(
-                        "atomic-write temporary name changed before commit"
+                        "atomic-write temporary identity or payload changed before commit"
                     )
-                try:
-                    with backup_path.open("rb") as displaced_file:
-                        displaced = displaced_file.read(len(expected) + 1)
-                except OSError as exc:
-                    kernel32.CloseHandle(committed_handle)
-                    committed_handle = invalid_handle
-                    if not kernel32.ReplaceFileW(
-                        str(target_path),
-                        str(backup_path),
-                        str(temporary_path),
-                        0,
-                        None,
-                        None,
-                    ):
-                        restore_error = win_error("could not restore unreadable displaced target")
-                        raise AtomicWriteRecoveryError(
-                            "atomic write could not restore an unreadable displaced target; displaced bytes were preserved",
-                            backup_path,
-                            committed_path=target_path,
-                        ) from restore_error
-                    backup_path = None
-                    preserve_backup = False
-                    raise OSError("could not validate displaced atomic-write target") from exc
-                if displaced != expected:
-                    kernel32.CloseHandle(committed_handle)
-                    committed_handle = invalid_handle
-                    if not kernel32.ReplaceFileW(
-                        str(target_path),
-                        str(backup_path),
-                        str(temporary_path),
-                        0,
-                        None,
-                        None,
-                    ):
-                        restore_error = win_error("could not restore displaced atomic-write target")
-                        raise AtomicWriteRecoveryError(
-                            "atomic write could not restore the displaced target; displaced bytes were preserved",
-                            backup_path,
-                            committed_path=target_path,
-                        ) from restore_error
-                    backup_path = None
-                    preserve_backup = False
-                    raise AtomicWriteConflictError(
-                        "atomic write displaced bytes that did not match the accepted target"
+                disposition = FileDispositionInfo(True)
+                if not kernel32.SetFileInformationByHandle(
+                    backup_handle,
+                    file_disposition_info,
+                    ctypes.byref(disposition),
+                    ctypes.sizeof(disposition),
+                ):
+                    cleanup_error = win_error(
+                        "could not remove validated atomic-write backup"
                     )
-                if not kernel32.DeleteFileW(str(backup_path)):
-                    cleanup_error = win_error("could not remove validated atomic-write backup")
                     kernel32.CloseHandle(committed_handle)
                     committed_handle = invalid_handle
-                    if not kernel32.ReplaceFileW(
+                    kernel32.CloseHandle(backup_handle)
+                    backup_handle = invalid_handle
+                    if not path_has_identity(backup_path, backup_identity) or not kernel32.ReplaceFileW(
                         str(target_path),
                         str(backup_path),
                         str(temporary_path),
@@ -1906,7 +2159,9 @@ def _write_file_atomic_windows(
                         None,
                         None,
                     ):
-                        restore_error = win_error("could not restore target after backup cleanup failure")
+                        restore_error = win_error(
+                            "could not restore target after backup cleanup failure"
+                        )
                         raise AtomicWriteRecoveryError(
                             "atomic write could not restore the target after backup cleanup failed; displaced bytes were preserved",
                             backup_path,
@@ -1915,6 +2170,14 @@ def _write_file_atomic_windows(
                     backup_path = None
                     preserve_backup = False
                     raise cleanup_error
+                kernel32.CloseHandle(backup_handle)
+                backup_handle = invalid_handle
+                if kernel32.GetFileAttributesW(str(backup_path)) != 0xFFFFFFFF:
+                    raise AtomicWriteRecoveryError(
+                        "atomic write backup name was replaced during cleanup and was preserved",
+                        backup_path,
+                        committed_path=target_path,
+                    )
                 kernel32.CloseHandle(committed_handle)
                 committed_handle = invalid_handle
                 backup_path = None
@@ -1941,6 +2204,8 @@ def _write_file_atomic_windows(
                 raise win_error("could not commit atomic-write temporary file")
         committed = True
     finally:
+        if backup_handle != invalid_handle:
+            kernel32.CloseHandle(backup_handle)
         if committed_handle != invalid_handle:
             kernel32.CloseHandle(committed_handle)
         if temporary_handle != invalid_handle:
