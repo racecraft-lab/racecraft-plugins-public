@@ -59,7 +59,7 @@ Primary sources: [PR Checks workflow](https://github.com/racecraft-lab/racecraft
 Good titles keep both pieces: the Conventional Commit prefix and plain English
 after the colon. Avoid internal-only codes in the title or body.
 
-Primary sources: [pull request template](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.github/pull_request_template.md), [PR Checks workflow](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.github/workflows/pr-checks.yml), and [CLAUDE.md PR title and body guidance](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/CLAUDE.md#contributing--branching-strategy).
+Primary sources: [pull request template](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.github/pull_request_template.md) and [PR Checks workflow](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.github/workflows/pr-checks.yml).
 
 ## Maintainer Release Readiness
 
@@ -167,7 +167,7 @@ explain the GitHub-token reason, scope it to this repository's workflow comments
 and GitHub's recursion guard behavior rather than treating it as a general
 platform rule for every event.
 
-Primary sources: [Release workflow](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.github/workflows/release.yml), [release PR synchronizer](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/sync_release_pr.py), [artifact refresh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/refresh-release-artifacts.py), [release-note composer](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/compose-release-notes.py), and [CLAUDE.md release process](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/CLAUDE.md#release-process).
+Primary sources: [Release workflow](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.github/workflows/release.yml), [release PR synchronizer](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/sync_release_pr.py), [artifact refresh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/refresh-release-artifacts.py), and [release-note composer](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/compose-release-notes.py).
 
 ## Current PR Checks Behavior
 
@@ -218,4 +218,4 @@ Before requesting review, confirm:
 - The PR body is public-readable and includes validation evidence, known gaps,
   and rollback notes.
 
-Primary sources: [CLAUDE.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/CLAUDE.md), [PR Checks workflow](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.github/workflows/pr-checks.yml), [Release workflow](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.github/workflows/release.yml), and [docs-site/package.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/docs-site/package.json).
+Primary sources: [AGENTS.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/AGENTS.md), [PR Checks workflow](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.github/workflows/pr-checks.yml), [Release workflow](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/.github/workflows/release.yml), and [docs-site/package.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/docs-site/package.json).
