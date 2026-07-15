@@ -1,0 +1,1519 @@
+{
+  "schema_version": "1.0.0",
+  "manifest_kind": "agent_route_candidate_manifest",
+  "generated_at": "2026-07-14",
+  "provisional": true,
+  "immutable_production_comparator": {
+    "release_tag": "speckit-pro-v2.19.1",
+    "commit_sha": "e343aa2e4ebcb2d48c501f285d7072cfd55722da",
+    "pin_rationale": "Latest published speckit-pro release at research time; the consumer-installable identity, reproducible forever from the tag. Per-agent content hashes make later frontmatter drift detectable at agent granularity (FR-009).",
+    "reconciliation_note": "2.19.0 was the 2026-07-13 scaffold snapshot; 2.19.1 is the real patch published later that day, descending from 2.19.0. The scoped diff of speckit-pro/agents and speckit-pro/codex-agents between the two tags is empty (byte-identical), so every route tuple, instruction hash, and full-file hash recorded here is unchanged by the refresh — a zero-data-impact refresh."
+  },
+  "alias_universe": [
+    "opus",
+    "sonnet",
+    "haiku",
+    "fable"
+  ],
+  "capability_questions": [
+    {
+      "id": "CAP-Q1",
+      "question": "Does the `opus` Claude Code alias resolve to `claude-opus-4-8` in the pinned benchmark environment, and is that alias-to-dated-ID binding stable given latest-family resolution, allowlist pinning, and ANTHROPIC_DEFAULT_OPUS_MODEL re-pointing (ALS-opus, RES-3, ALS-repoint)? Also confirm the resolved model accepts and applies the candidate tuples' effort levels (EFF-1: available effort levels are model-dependent), so alias resolution alone does not certify a model/effort tuple.",
+      "blocks": [
+        "expected_resolved_model_id and environment-time binding for the opus candidate tuples of analyze-executor, checklist-executor, clarify-executor, implement-executor, and phase-executor (and the opus upshift candidate on the six sonnet analysts)"
+      ]
+    },
+    {
+      "id": "CAP-Q2",
+      "question": "Does the `sonnet` alias resolve to `claude-sonnet-5` in the pinned environment, and is that binding stable under the same floating-resolution, allowlist-pinning, and re-pointing risks (ALS-sonnet, RES-3, ALS-repoint)? Also confirm the resolved model accepts and applies the candidate tuples' effort levels (EFF-1: available effort levels are model-dependent), so alias resolution alone does not certify a model/effort tuple.",
+      "blocks": [
+        "expected_resolved_model_id and environment-time binding for the sonnet candidate tuples of codebase-analyst, consensus-synthesizer, domain-researcher, gate-validator, spec-context-analyst, and uat-runbook-author (and the sonnet candidate on the five executors and the helper's sonnet latency-oriented alternative)"
+      ]
+    },
+    {
+      "id": "CAP-Q3",
+      "question": "Does the `haiku` alias resolve to `claude-haiku-4-5-20251001` (API alias `claude-haiku-4-5`) in the pinned environment (ALS-haiku)? Also confirm the resolved model accepts and applies the candidate tuples' effort levels (EFF-1: available effort levels are model-dependent), so alias resolution alone does not certify a model/effort tuple.",
+      "blocks": [
+        "the autopilot-fast-helper starting-hypothesis haiku + low-effort candidate binding, and the haiku candidate tuples on the six sonnet-production analyst/validator/author roles (codebase/consensus/domain/gate/spec-context/uat) plus checklist-executor and clarify-executor"
+      ]
+    },
+    {
+      "id": "CAP-Q4",
+      "question": "Does the `fable` alias resolve to `claude-fable-5` AND is `fable` available/accessible in the pinned benchmark environment (PRD OQ-4), given best/fable 'where your organization has access' gating and ANTHROPIC_DEFAULT_FABLE_MODEL re-pointing (ALS-fable, ALS-context, ALS-repoint)? Also confirm the resolved model accepts and applies the candidate tuples' effort levels (EFF-1: available effort levels are model-dependent), so alias resolution alone does not certify a model/effort tuple.",
+      "blocks": [
+        "fable executor-class candidate eligibility and environment-time availability across the five executors (analyze/checklist/clarify/implement/phase)"
+      ]
+    },
+    {
+      "id": "CAP-Q5",
+      "question": "When a subagent's `model` frontmatter names an unavailable model at dispatch, does Claude Code hard-error or silently substitute another model? Documented only for the main-session /model custom-model surface (RES-5), never for subagent-frontmatter dispatch.",
+      "blocks": [
+        "any CAR-003 fallback design that assumes a defined unavailable-model dispatch outcome for the twelve agents"
+      ]
+    },
+    {
+      "id": "CAP-Q6",
+      "question": "At a subagent's execution time, when a shipped alias has re-pointed to a new resolved model ID, is the new model silently used, does it hard-error, or is it otherwise handled? The docs surface the resolved model via resolvedModel (TEL-5) and announce main-session substitution (RES-3) but do not document the subagent execution-time manifestation.",
+      "blocks": [
+        "CAR-003 route-stability assumptions and the execution-time semantics of the per-alias re-pointing invalidation triggers recorded on every agent entry"
+      ]
+    }
+  ],
+  "agents": {
+    "analyze-executor": {
+      "agent_name": "analyze-executor",
+      "agent_contract_id": "car.analyze-executor.v1",
+      "role_contract": {
+        "summary": "Runs /speckit-analyze, then researches and remediates every finding at all severities (CRITICAL/HIGH/MEDIUM/LOW), applying evidence-grounded fixes to the feature's spec/plan/tasks artifacts.",
+        "mutation_boundary": "Read-write on the feature's spec.md/plan.md/tasks.md artifacts (applies remediations); inherits the full operator tool surface with no disallowedTools denylist.",
+        "output_format": "Structured analysis-and-remediation summary: findings by severity, fixes applied, and residual gaps.",
+        "source_ref": "speckit-pro/agents/analyze-executor.md"
+      },
+      "immutable_production_route": {
+        "model": "opus",
+        "effort": "max"
+      },
+      "production_route_recorded_absence": false,
+      "agent_file_hashes": {
+        "instruction_sha256": "6230b2e8dc80ecdebdef64da461e465ce9129073f1fa9359821023aedc2bf35d",
+        "full_file_sha256": "e3ae8f36aa0cf1ad3343c6d68d8118d71781632e85871338cbdf846eb5c0c535",
+        "hash_source": "claude-agent-md"
+      },
+      "candidate_routes": [
+        {
+          "alias": "opus",
+          "expected_resolved_model_id": "claude-opus-4-8",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Executor-class task-execution role; opus/max is the current shipped production route (repository fact at the pinned tag).",
+            "evidence_class": "fact"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q1",
+            "binding_question_ref": "CAP-Q1"
+          },
+          "tuple_rationale": "Matches the shipped opus/max production route."
+        },
+        {
+          "alias": "sonnet",
+          "expected_resolved_model_id": "claude-sonnet-5",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Capable general coding model (ALS-sonnet); a reasoned lower-cost executor candidate with no recorded incompatibility to exclude it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q2",
+            "binding_question_ref": "CAP-Q2"
+          },
+          "tuple_rationale": "Reasoned lower-cost executor alternative to probe against opus."
+        },
+        {
+          "alias": "fable",
+          "expected_resolved_model_id": "claude-fable-5",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Executor-class role; fable is candidate-eligible for task-execution agents (FR-013) as the highest-capability option (MDL-2).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q4",
+            "binding_question_ref": "CAP-Q4"
+          },
+          "tuple_rationale": "Highest-capability executor candidate; binding and availability both open (CAP-Q4)."
+        }
+      ],
+      "required_capabilities": {
+        "model": [
+          "deep cross-artifact analysis reasoning",
+          "evidence-grounded remediation"
+        ],
+        "modality": [
+          "text"
+        ],
+        "subagent_fields": [
+          "model",
+          "effort",
+          "maxTurns"
+        ],
+        "tools": [
+          "Skill (runs /speckit-analyze)",
+          "Read",
+          "Write",
+          "Edit",
+          "Bash",
+          "full operator surface — no disallowedTools denylist"
+        ],
+        "skills": [
+          "speckit-analyze"
+        ],
+        "client": [
+          "Claude Code with plugin-agent field support (PLG-1)",
+          "non-interactive claude -p headless output (CAR-003 evaluation; TEL-1)",
+          "any supported authentication mode (AUTH-2)"
+        ]
+      },
+      "candidate_rationale": "Executor-class task-execution role (production route opus/max). opus/max matches the shipped route and the role's deep-reasoning demand (fact); fable/max is candidate-eligible for executor-class agents per FR-013 as the highest-capability option (MDL-2), carried with a floating-binding/availability probe (CAP-Q4); sonnet/max is a reasoned lower-cost executor candidate (ALS-sonnet) with no recorded incompatibility to exclude it (FR-016). The `haiku` alias is recorded as a known incompatibility for this deep-reasoning role (ALS-haiku positions it for simple tasks), not excluded by announcement status. All alias-to-ID bindings float and are probe-gated (CAP-Q1/Q2/Q4).",
+      "known_incompatibilities": [
+        {
+          "subject": "haiku (candidate alias)",
+          "reason": "This role runs /speckit-analyze and remediates findings at every severity through deep cross-artifact analysis and evidence-grounded remediation; the `haiku` alias is documented as the fast, efficient model for simple tasks (ALS-haiku), a role-capability mismatch for this quality-critical executor. Recorded incompatibility per FR-016 (not a benchmark result or product-announcement exclusion); `haiku` is therefore not carried as a candidate route for this agent.",
+          "evidence_ref": "docs/ai/research/claude-agent-route-candidates.md#2-claude-code-model-aliases-and-expected-resolved-ids"
+        }
+      ],
+      "required_qualification_artifacts": [
+        "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
+        "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
+      ],
+      "invalidation_triggers": [
+        "The `opus` alias re-points to a new resolved model ID (currently expected `claude-opus-4-8` per CAP-Q1), invalidating this entry's `opus` candidate binding.",
+        "The `sonnet` alias re-points to a new resolved model ID (currently expected `claude-sonnet-5` per CAP-Q2), invalidating this entry's `sonnet` candidate binding.",
+        "The `fable` alias re-points to a new resolved model ID (currently expected `claude-fable-5` per CAP-Q4), invalidating this entry's `fable` candidate binding.",
+        "The `analyze-executor` agent file at speckit-pro-v2.19.1 drifts from its recorded comparator hashes (full_file_sha256 `e3ae8f36aa0cf1ad3343c6d68d8118d71781632e85871338cbdf846eb5c0c535`; instruction_sha256 `6230b2e8dc80ecdebdef64da461e465ce9129073f1fa9359821023aedc2bf35d`) — detect by recomputation; a pure frontmatter route change leaves instruction_sha256 unchanged (FR-011/SC-007)."
+      ],
+      "fixture_backlog_ref": "docs/ai/research/claude-agent-route-candidates.md#fixture-backlog-analyze-executor"
+    },
+    "checklist-executor": {
+      "agent_name": "checklist-executor",
+      "agent_contract_id": "car.checklist-executor.v1",
+      "role_contract": {
+        "summary": "Runs a single /speckit-checklist domain, then researches and remediates any [Gap] markers, applying evidence-grounded fixes to spec.md or plan.md.",
+        "mutation_boundary": "Read-write on spec.md/plan.md (applies gap fixes); inherits the full operator tool surface with no disallowedTools denylist.",
+        "output_format": "Checklist-domain result: gaps found, evidence, and fixes applied.",
+        "source_ref": "speckit-pro/agents/checklist-executor.md"
+      },
+      "immutable_production_route": {
+        "model": "opus",
+        "effort": "max"
+      },
+      "production_route_recorded_absence": false,
+      "agent_file_hashes": {
+        "instruction_sha256": "8f6f512b76825cffe7078da685e6c728b48eb5e673d5c83913ca1e438e58e6e3",
+        "full_file_sha256": "7c0129ca4a6e106f1f42a8b51c321b813db5340bed45644f822a96274274c2ea",
+        "hash_source": "claude-agent-md"
+      },
+      "candidate_routes": [
+        {
+          "alias": "opus",
+          "expected_resolved_model_id": "claude-opus-4-8",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Executor-class task-execution role; opus/max is the current shipped production route (repository fact at the pinned tag).",
+            "evidence_class": "fact"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q1",
+            "binding_question_ref": "CAP-Q1"
+          },
+          "tuple_rationale": "Matches the shipped opus/max production route."
+        },
+        {
+          "alias": "sonnet",
+          "expected_resolved_model_id": "claude-sonnet-5",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Capable general coding model (ALS-sonnet); a reasoned lower-cost executor candidate with no recorded incompatibility to exclude it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q2",
+            "binding_question_ref": "CAP-Q2"
+          },
+          "tuple_rationale": "Reasoned lower-cost executor alternative to probe against opus."
+        },
+        {
+          "alias": "fable",
+          "expected_resolved_model_id": "claude-fable-5",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Executor-class role; fable is candidate-eligible for task-execution agents (FR-013) as the highest-capability option (MDL-2).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q4",
+            "binding_question_ref": "CAP-Q4"
+          },
+          "tuple_rationale": "Highest-capability executor candidate; binding and availability both open (CAP-Q4)."
+        },
+        {
+          "alias": "haiku",
+          "expected_resolved_model_id": "claude-haiku-4-5-20251001",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Bounded-domain checklist and gap-remediation role; haiku is an eligible bounded-work candidate screened per AC-5.1 when the tool and output contracts pass (ALS-haiku); no recorded incompatibility excludes it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q3",
+            "binding_question_ref": "CAP-Q3"
+          },
+          "tuple_rationale": "Bounded-work candidate screened per AC-5.1; effective effort levels are model-dependent (EFF-1) and probe-gated."
+        }
+      ],
+      "required_capabilities": {
+        "model": [
+          "gap-analysis reasoning",
+          "evidence-grounded remediation"
+        ],
+        "modality": [
+          "text"
+        ],
+        "subagent_fields": [
+          "model",
+          "effort",
+          "maxTurns"
+        ],
+        "tools": [
+          "Skill (runs /speckit-checklist)",
+          "Read",
+          "Write",
+          "Edit",
+          "Bash",
+          "full operator surface — no disallowedTools denylist"
+        ],
+        "skills": [
+          "speckit-checklist"
+        ],
+        "client": [
+          "Claude Code with plugin-agent field support (PLG-1)",
+          "non-interactive claude -p headless output (CAR-003 evaluation; TEL-1)",
+          "any supported authentication mode (AUTH-2)"
+        ]
+      },
+      "candidate_rationale": "Structured-work checklist and gap-remediation role (production route opus/max). opus/max matches the shipped route (fact); fable/max is candidate-eligible for executor-class agents per FR-013 as the highest-capability option (MDL-2), carried with a floating-binding/availability probe (CAP-Q4); sonnet/max is a reasoned lower-cost candidate (ALS-sonnet) with no recorded incompatibility to exclude it (FR-016); haiku/max is a bounded-work candidate screened per AC-5.1 when its tool and output contracts pass (ALS-haiku). No candidate alias is excluded for this role. All alias-to-ID bindings float and are probe-gated (CAP-Q1/Q2/Q3/Q4).",
+      "known_incompatibilities": [],
+      "required_qualification_artifacts": [
+        "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
+        "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
+      ],
+      "invalidation_triggers": [
+        "The `opus` alias re-points to a new resolved model ID (currently expected `claude-opus-4-8` per CAP-Q1), invalidating this entry's `opus` candidate binding.",
+        "The `sonnet` alias re-points to a new resolved model ID (currently expected `claude-sonnet-5` per CAP-Q2), invalidating this entry's `sonnet` candidate binding.",
+        "The `fable` alias re-points to a new resolved model ID (currently expected `claude-fable-5` per CAP-Q4), invalidating this entry's `fable` candidate binding.",
+        "The `haiku` alias re-points to a new resolved model ID (currently expected `claude-haiku-4-5-20251001` per CAP-Q3), invalidating this entry's `haiku` candidate binding.",
+        "The `checklist-executor` agent file at speckit-pro-v2.19.1 drifts from its recorded comparator hashes (full_file_sha256 `7c0129ca4a6e106f1f42a8b51c321b813db5340bed45644f822a96274274c2ea`; instruction_sha256 `8f6f512b76825cffe7078da685e6c728b48eb5e673d5c83913ca1e438e58e6e3`) — detect by recomputation; a pure frontmatter route change leaves instruction_sha256 unchanged (FR-011/SC-007)."
+      ],
+      "fixture_backlog_ref": "docs/ai/research/claude-agent-route-candidates.md#fixture-backlog-checklist-executor"
+    },
+    "clarify-executor": {
+      "agent_name": "clarify-executor",
+      "agent_contract_id": "car.clarify-executor.v1",
+      "role_contract": {
+        "summary": "Prepares a single Clarify question set for the autopilot: inspects the workflow prompt, spec, and repo evidence and returns prioritized questions with recommended answers and evidence for the parent orchestrator to apply. Never edits artifacts and never waits on a user.",
+        "mutation_boundary": "Read-only: never edits artifacts and never dispatches; the eight-tool write/dispatch denylist applies (Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, TeamCreate, SendMessage).",
+        "output_format": "Prioritized clarify question set: each question with a recommended answer and supporting evidence for the orchestrator to apply.",
+        "source_ref": "speckit-pro/agents/clarify-executor.md"
+      },
+      "immutable_production_route": {
+        "model": "opus",
+        "effort": "max"
+      },
+      "production_route_recorded_absence": false,
+      "agent_file_hashes": {
+        "instruction_sha256": "89ceb775b4ce0b98b516466ba30ee6fda147b6524690ee1fcfa024ddff0b8cc3",
+        "full_file_sha256": "e18d74f13d312ad9547188728db57fb720468aae15b3b8ac7f478f0971fbafbe",
+        "hash_source": "claude-agent-md"
+      },
+      "candidate_routes": [
+        {
+          "alias": "opus",
+          "expected_resolved_model_id": "claude-opus-4-8",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Executor-class task-execution role; opus/max is the current shipped production route (repository fact at the pinned tag).",
+            "evidence_class": "fact"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q1",
+            "binding_question_ref": "CAP-Q1"
+          },
+          "tuple_rationale": "Matches the shipped opus/max production route."
+        },
+        {
+          "alias": "sonnet",
+          "expected_resolved_model_id": "claude-sonnet-5",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Capable general coding model (ALS-sonnet); a reasoned lower-cost executor candidate with no recorded incompatibility to exclude it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q2",
+            "binding_question_ref": "CAP-Q2"
+          },
+          "tuple_rationale": "Reasoned lower-cost executor alternative to probe against opus."
+        },
+        {
+          "alias": "fable",
+          "expected_resolved_model_id": "claude-fable-5",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Executor-class role; fable is candidate-eligible for task-execution agents (FR-013) as the highest-capability option (MDL-2).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q4",
+            "binding_question_ref": "CAP-Q4"
+          },
+          "tuple_rationale": "Highest-capability executor candidate; binding and availability both open (CAP-Q4)."
+        },
+        {
+          "alias": "haiku",
+          "expected_resolved_model_id": "claude-haiku-4-5-20251001",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Read-only question-preparation role; haiku is an eligible lighter route screened per AC-6.1 when the grounding, citation, and output contracts pass (ALS-haiku); no recorded incompatibility excludes it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q3",
+            "binding_question_ref": "CAP-Q3"
+          },
+          "tuple_rationale": "Lighter read-only candidate screened per AC-6.1; effective effort levels are model-dependent (EFF-1) and probe-gated."
+        }
+      ],
+      "required_capabilities": {
+        "model": [
+          "question-prioritization reasoning",
+          "evidence gathering"
+        ],
+        "modality": [
+          "text"
+        ],
+        "subagent_fields": [
+          "model",
+          "effort",
+          "maxTurns",
+          "disallowedTools"
+        ],
+        "tools": [
+          "Read",
+          "Grep",
+          "Glob",
+          "Bash (read-only inspection)",
+          "read-only: the eight-tool write/dispatch denylist applies (Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, TeamCreate, SendMessage)"
+        ],
+        "skills": [],
+        "client": [
+          "Claude Code with plugin-agent field support (PLG-1)",
+          "non-interactive claude -p headless output (CAR-003 evaluation; TEL-1)",
+          "any supported authentication mode (AUTH-2)"
+        ]
+      },
+      "candidate_rationale": "Read-only question-preparation role (production route opus/max), executor-class by production tier. opus/max matches the shipped route (fact); fable/max is candidate-eligible for executor-class agents per FR-013 as the highest-capability option (MDL-2), carried with a floating-binding/availability probe (CAP-Q4); sonnet/max is a reasoned lower-cost candidate (ALS-sonnet) with no recorded incompatibility to exclude it (FR-016); haiku/max is a lighter read-only candidate screened per AC-6.1 when its grounding, citation, and output contracts pass (ALS-haiku). No candidate alias is excluded for this role. All alias-to-ID bindings float and are probe-gated (CAP-Q1/Q2/Q3/Q4).",
+      "known_incompatibilities": [],
+      "required_qualification_artifacts": [
+        "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
+        "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
+      ],
+      "invalidation_triggers": [
+        "The `opus` alias re-points to a new resolved model ID (currently expected `claude-opus-4-8` per CAP-Q1), invalidating this entry's `opus` candidate binding.",
+        "The `sonnet` alias re-points to a new resolved model ID (currently expected `claude-sonnet-5` per CAP-Q2), invalidating this entry's `sonnet` candidate binding.",
+        "The `fable` alias re-points to a new resolved model ID (currently expected `claude-fable-5` per CAP-Q4), invalidating this entry's `fable` candidate binding.",
+        "The `haiku` alias re-points to a new resolved model ID (currently expected `claude-haiku-4-5-20251001` per CAP-Q3), invalidating this entry's `haiku` candidate binding.",
+        "The `clarify-executor` agent file at speckit-pro-v2.19.1 drifts from its recorded comparator hashes (full_file_sha256 `e18d74f13d312ad9547188728db57fb720468aae15b3b8ac7f478f0971fbafbe`; instruction_sha256 `89ceb775b4ce0b98b516466ba30ee6fda147b6524690ee1fcfa024ddff0b8cc3`) — detect by recomputation; a pure frontmatter route change leaves instruction_sha256 unchanged (FR-011/SC-007)."
+      ],
+      "fixture_backlog_ref": "docs/ai/research/claude-agent-route-candidates.md#fixture-backlog-clarify-executor"
+    },
+    "codebase-analyst": {
+      "agent_name": "codebase-analyst",
+      "agent_contract_id": "car.codebase-analyst.v1",
+      "role_contract": {
+        "summary": "Analyzes the existing codebase to resolve a question, gap, or finding from the perspective of established code patterns and conventions; returns a structured answer with file-level evidence. Used in autopilot consensus rounds.",
+        "mutation_boundary": "Read-only: the eight-tool write/dispatch denylist applies (Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, TeamCreate, SendMessage); runs in the background (background: true).",
+        "output_format": "Structured answer with file-level codebase evidence.",
+        "source_ref": "speckit-pro/agents/codebase-analyst.md"
+      },
+      "immutable_production_route": {
+        "model": "sonnet",
+        "effort": "max"
+      },
+      "production_route_recorded_absence": false,
+      "agent_file_hashes": {
+        "instruction_sha256": "c22addc989966637c7ecae0320f1692eda6168fd70ae2fa186deda927c8ffc8f",
+        "full_file_sha256": "1cde5a8820173271d55d3077282caf9a4ad76bc92d90966e55b9fc70c587bac3",
+        "hash_source": "claude-agent-md"
+      },
+      "candidate_routes": [
+        {
+          "alias": "sonnet",
+          "expected_resolved_model_id": "claude-sonnet-5",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Non-executor analysis/validation/authoring role; sonnet/max is the current shipped production route (ALS-sonnet).",
+            "evidence_class": "fact"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q2",
+            "binding_question_ref": "CAP-Q2"
+          },
+          "tuple_rationale": "Matches the shipped sonnet/max production route."
+        },
+        {
+          "alias": "opus",
+          "expected_resolved_model_id": "claude-opus-4-8",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "A reasoned higher-capability upshift candidate for deeper analysis or synthesis (MDL-2); no recorded incompatibility to exclude it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q1",
+            "binding_question_ref": "CAP-Q1"
+          },
+          "tuple_rationale": "Higher-capability upshift candidate to probe against sonnet."
+        },
+        {
+          "alias": "haiku",
+          "expected_resolved_model_id": "claude-haiku-4-5-20251001",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "A reasoned faster, lower-cost candidate for this support role (ALS-haiku, PRC-1); no recorded incompatibility to exclude it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q3",
+            "binding_question_ref": "CAP-Q3"
+          },
+          "tuple_rationale": "Faster/cheaper support-role candidate; effective effort levels are model-dependent (EFF-1) and probe-gated."
+        }
+      ],
+      "required_capabilities": {
+        "model": [
+          "codebase pattern-analysis reasoning"
+        ],
+        "modality": [
+          "text"
+        ],
+        "subagent_fields": [
+          "model",
+          "effort",
+          "maxTurns",
+          "disallowedTools",
+          "background"
+        ],
+        "tools": [
+          "Read",
+          "Grep",
+          "Glob",
+          "Bash (read-only)",
+          "read-only: eight-tool write/dispatch denylist (Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, TeamCreate, SendMessage); background:true"
+        ],
+        "skills": [],
+        "client": [
+          "Claude Code with plugin-agent field support (PLG-1)",
+          "non-interactive claude -p headless output (CAR-003 evaluation; TEL-1)",
+          "any supported authentication mode (AUTH-2)"
+        ]
+      },
+      "candidate_rationale": "Non-executor codebase-pattern analysis role (production route sonnet/max). sonnet/max matches the shipped route (fact); opus/max is a reasoned higher-capability upshift candidate (MDL-2); haiku/max is a reasoned faster, lower-cost candidate for this support role (ALS-haiku, PRC-1). The `fable` alias is recorded as not role-eligible — fable is candidate-eligible for executor-class (task-execution) agents only (spec Assumptions; FR-013) — not excluded by announcement status (FR-016). All alias-to-ID bindings float and are probe-gated (CAP-Q1/Q2/Q3).",
+      "known_incompatibilities": [
+        {
+          "subject": "fable (candidate alias)",
+          "reason": "`fable` is candidate-eligible for executor-class (task-execution) agents only (spec Assumptions; FR-013); this is a non-executor analysis/validation/authoring role, and the `fable` alias targets the hardest, longest-running tasks (ALS-fable). Recorded incompatibility per FR-016 (not a product-announcement exclusion); `fable` is therefore not carried as a candidate route for this agent.",
+          "evidence_ref": "docs/ai/research/claude-agent-route-candidates.md#2-claude-code-model-aliases-and-expected-resolved-ids"
+        }
+      ],
+      "required_qualification_artifacts": [
+        "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
+        "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
+      ],
+      "invalidation_triggers": [
+        "The `sonnet` alias re-points to a new resolved model ID (currently expected `claude-sonnet-5` per CAP-Q2), invalidating this entry's `sonnet` candidate binding.",
+        "The `opus` alias re-points to a new resolved model ID (currently expected `claude-opus-4-8` per CAP-Q1), invalidating this entry's `opus` candidate binding.",
+        "The `haiku` alias re-points to a new resolved model ID (currently expected `claude-haiku-4-5-20251001` per CAP-Q3), invalidating this entry's `haiku` candidate binding.",
+        "The `codebase-analyst` agent file at speckit-pro-v2.19.1 drifts from its recorded comparator hashes (full_file_sha256 `1cde5a8820173271d55d3077282caf9a4ad76bc92d90966e55b9fc70c587bac3`; instruction_sha256 `c22addc989966637c7ecae0320f1692eda6168fd70ae2fa186deda927c8ffc8f`) — detect by recomputation; a pure frontmatter route change leaves instruction_sha256 unchanged (FR-011/SC-007)."
+      ],
+      "fixture_backlog_ref": "docs/ai/research/claude-agent-route-candidates.md#fixture-backlog-codebase-analyst"
+    },
+    "consensus-synthesizer": {
+      "agent_name": "consensus-synthesizer",
+      "agent_contract_id": "car.consensus-synthesizer.v1",
+      "role_contract": {
+        "summary": "Synthesizes the three consensus analysts' outputs into one actionable answer with a confidence assessment: applies the 2-of-3 agreement rule, flags all-disagree cases for human review, and produces exact artifact edits for the orchestrator to apply.",
+        "mutation_boundary": "Read-only: emits proposed artifact edits as text but does not apply them (the eight-tool write/dispatch denylist applies, Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, TeamCreate, SendMessage); the orchestrator applies edits.",
+        "output_format": "Synthesized answer with confidence assessment and exact proposed artifact edits.",
+        "source_ref": "speckit-pro/agents/consensus-synthesizer.md"
+      },
+      "immutable_production_route": {
+        "model": "sonnet",
+        "effort": "max"
+      },
+      "production_route_recorded_absence": false,
+      "agent_file_hashes": {
+        "instruction_sha256": "c4ac8820002ba3f24ca5192384a1f76f126183f147c4f3b23b00b4e12235a52c",
+        "full_file_sha256": "548b9eeb69b6c3f8b8f5429a9ae567d456e4a4ddd1482efe1c1e947e84737327",
+        "hash_source": "claude-agent-md"
+      },
+      "candidate_routes": [
+        {
+          "alias": "sonnet",
+          "expected_resolved_model_id": "claude-sonnet-5",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Non-executor analysis/validation/authoring role; sonnet/max is the current shipped production route (ALS-sonnet).",
+            "evidence_class": "fact"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q2",
+            "binding_question_ref": "CAP-Q2"
+          },
+          "tuple_rationale": "Matches the shipped sonnet/max production route."
+        },
+        {
+          "alias": "opus",
+          "expected_resolved_model_id": "claude-opus-4-8",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "A reasoned higher-capability upshift candidate for deeper analysis or synthesis (MDL-2); no recorded incompatibility to exclude it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q1",
+            "binding_question_ref": "CAP-Q1"
+          },
+          "tuple_rationale": "Higher-capability upshift candidate to probe against sonnet."
+        },
+        {
+          "alias": "haiku",
+          "expected_resolved_model_id": "claude-haiku-4-5-20251001",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "A reasoned faster, lower-cost candidate for this support role (ALS-haiku, PRC-1); no recorded incompatibility to exclude it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q3",
+            "binding_question_ref": "CAP-Q3"
+          },
+          "tuple_rationale": "Faster/cheaper support-role candidate; effective effort levels are model-dependent (EFF-1) and probe-gated."
+        }
+      ],
+      "required_capabilities": {
+        "model": [
+          "multi-input synthesis reasoning",
+          "confidence assessment"
+        ],
+        "modality": [
+          "text"
+        ],
+        "subagent_fields": [
+          "model",
+          "effort",
+          "maxTurns",
+          "disallowedTools"
+        ],
+        "tools": [
+          "Read",
+          "Grep",
+          "Glob",
+          "read-only: eight-tool write/dispatch denylist (Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, TeamCreate, SendMessage)"
+        ],
+        "skills": [],
+        "client": [
+          "Claude Code with plugin-agent field support (PLG-1)",
+          "non-interactive claude -p headless output (CAR-003 evaluation; TEL-1)",
+          "any supported authentication mode (AUTH-2)"
+        ]
+      },
+      "candidate_rationale": "Non-executor consensus synthesis role (production route sonnet/max). sonnet/max matches the shipped route (fact); opus/max is a reasoned higher-capability upshift candidate (MDL-2); haiku/max is a reasoned faster, lower-cost candidate for this support role (ALS-haiku, PRC-1). The `fable` alias is recorded as not role-eligible — fable is candidate-eligible for executor-class (task-execution) agents only (spec Assumptions; FR-013) — not excluded by announcement status (FR-016). All alias-to-ID bindings float and are probe-gated (CAP-Q1/Q2/Q3).",
+      "known_incompatibilities": [
+        {
+          "subject": "fable (candidate alias)",
+          "reason": "`fable` is candidate-eligible for executor-class (task-execution) agents only (spec Assumptions; FR-013); this is a non-executor analysis/validation/authoring role, and the `fable` alias targets the hardest, longest-running tasks (ALS-fable). Recorded incompatibility per FR-016 (not a product-announcement exclusion); `fable` is therefore not carried as a candidate route for this agent.",
+          "evidence_ref": "docs/ai/research/claude-agent-route-candidates.md#2-claude-code-model-aliases-and-expected-resolved-ids"
+        }
+      ],
+      "required_qualification_artifacts": [
+        "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
+        "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
+      ],
+      "invalidation_triggers": [
+        "The `sonnet` alias re-points to a new resolved model ID (currently expected `claude-sonnet-5` per CAP-Q2), invalidating this entry's `sonnet` candidate binding.",
+        "The `opus` alias re-points to a new resolved model ID (currently expected `claude-opus-4-8` per CAP-Q1), invalidating this entry's `opus` candidate binding.",
+        "The `haiku` alias re-points to a new resolved model ID (currently expected `claude-haiku-4-5-20251001` per CAP-Q3), invalidating this entry's `haiku` candidate binding.",
+        "The `consensus-synthesizer` agent file at speckit-pro-v2.19.1 drifts from its recorded comparator hashes (full_file_sha256 `548b9eeb69b6c3f8b8f5429a9ae567d456e4a4ddd1482efe1c1e947e84737327`; instruction_sha256 `c4ac8820002ba3f24ca5192384a1f76f126183f147c4f3b23b00b4e12235a52c`) — detect by recomputation; a pure frontmatter route change leaves instruction_sha256 unchanged (FR-011/SC-007)."
+      ],
+      "fixture_backlog_ref": "docs/ai/research/claude-agent-route-candidates.md#fixture-backlog-consensus-synthesizer"
+    },
+    "domain-researcher": {
+      "agent_name": "domain-researcher",
+      "agent_contract_id": "car.domain-researcher.v1",
+      "role_contract": {
+        "summary": "Researches industry best practices and official documentation to resolve a question, gap, or finding with an evidence-based recommendation. Used across Clarify, Checklist, and Analyze consensus phases.",
+        "mutation_boundary": "Read-only: the eight-tool write/dispatch denylist applies (Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, TeamCreate, SendMessage); runs in the background (background: true).",
+        "output_format": "Recommendation backed by external documentation and community best-practice citations.",
+        "source_ref": "speckit-pro/agents/domain-researcher.md"
+      },
+      "immutable_production_route": {
+        "model": "sonnet",
+        "effort": "max"
+      },
+      "production_route_recorded_absence": false,
+      "agent_file_hashes": {
+        "instruction_sha256": "b831b9929674fe3b6dbc3d33559622219157dc4d319bf3c3b0bdae4a131c010c",
+        "full_file_sha256": "be7237202cdc187443a2c246eaef72e9f566a496162b227ee9e4ff41b8481896",
+        "hash_source": "claude-agent-md"
+      },
+      "candidate_routes": [
+        {
+          "alias": "sonnet",
+          "expected_resolved_model_id": "claude-sonnet-5",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Non-executor analysis/validation/authoring role; sonnet/max is the current shipped production route (ALS-sonnet).",
+            "evidence_class": "fact"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q2",
+            "binding_question_ref": "CAP-Q2"
+          },
+          "tuple_rationale": "Matches the shipped sonnet/max production route."
+        },
+        {
+          "alias": "opus",
+          "expected_resolved_model_id": "claude-opus-4-8",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "A reasoned higher-capability upshift candidate for deeper analysis or synthesis (MDL-2); no recorded incompatibility to exclude it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q1",
+            "binding_question_ref": "CAP-Q1"
+          },
+          "tuple_rationale": "Higher-capability upshift candidate to probe against sonnet."
+        },
+        {
+          "alias": "haiku",
+          "expected_resolved_model_id": "claude-haiku-4-5-20251001",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "A reasoned faster, lower-cost candidate for this support role (ALS-haiku, PRC-1); no recorded incompatibility to exclude it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q3",
+            "binding_question_ref": "CAP-Q3"
+          },
+          "tuple_rationale": "Faster/cheaper support-role candidate; effective effort levels are model-dependent (EFF-1) and probe-gated."
+        }
+      ],
+      "required_capabilities": {
+        "model": [
+          "external-documentation research reasoning"
+        ],
+        "modality": [
+          "text"
+        ],
+        "subagent_fields": [
+          "model",
+          "effort",
+          "maxTurns",
+          "disallowedTools",
+          "background"
+        ],
+        "tools": [
+          "Read",
+          "WebSearch",
+          "WebFetch",
+          "read-only: eight-tool write/dispatch denylist (Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, TeamCreate, SendMessage); background:true"
+        ],
+        "skills": [],
+        "client": [
+          "Claude Code with plugin-agent field support (PLG-1)",
+          "non-interactive claude -p headless output (CAR-003 evaluation; TEL-1)",
+          "any supported authentication mode (AUTH-2)"
+        ]
+      },
+      "candidate_rationale": "Non-executor external-documentation research role (production route sonnet/max). sonnet/max matches the shipped route (fact); opus/max is a reasoned higher-capability upshift candidate (MDL-2); haiku/max is a reasoned faster, lower-cost candidate for this support role (ALS-haiku, PRC-1). The `fable` alias is recorded as not role-eligible — fable is candidate-eligible for executor-class (task-execution) agents only (spec Assumptions; FR-013) — not excluded by announcement status (FR-016). All alias-to-ID bindings float and are probe-gated (CAP-Q1/Q2/Q3).",
+      "known_incompatibilities": [
+        {
+          "subject": "fable (candidate alias)",
+          "reason": "`fable` is candidate-eligible for executor-class (task-execution) agents only (spec Assumptions; FR-013); this is a non-executor analysis/validation/authoring role, and the `fable` alias targets the hardest, longest-running tasks (ALS-fable). Recorded incompatibility per FR-016 (not a product-announcement exclusion); `fable` is therefore not carried as a candidate route for this agent.",
+          "evidence_ref": "docs/ai/research/claude-agent-route-candidates.md#2-claude-code-model-aliases-and-expected-resolved-ids"
+        }
+      ],
+      "required_qualification_artifacts": [
+        "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
+        "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
+      ],
+      "invalidation_triggers": [
+        "The `sonnet` alias re-points to a new resolved model ID (currently expected `claude-sonnet-5` per CAP-Q2), invalidating this entry's `sonnet` candidate binding.",
+        "The `opus` alias re-points to a new resolved model ID (currently expected `claude-opus-4-8` per CAP-Q1), invalidating this entry's `opus` candidate binding.",
+        "The `haiku` alias re-points to a new resolved model ID (currently expected `claude-haiku-4-5-20251001` per CAP-Q3), invalidating this entry's `haiku` candidate binding.",
+        "The `domain-researcher` agent file at speckit-pro-v2.19.1 drifts from its recorded comparator hashes (full_file_sha256 `be7237202cdc187443a2c246eaef72e9f566a496162b227ee9e4ff41b8481896`; instruction_sha256 `b831b9929674fe3b6dbc3d33559622219157dc4d319bf3c3b0bdae4a131c010c`) — detect by recomputation; a pure frontmatter route change leaves instruction_sha256 unchanged (FR-011/SC-007)."
+      ],
+      "fixture_backlog_ref": "docs/ai/research/claude-agent-route-candidates.md#fixture-backlog-domain-researcher"
+    },
+    "gate-validator": {
+      "agent_name": "gate-validator",
+      "agent_contract_id": "car.gate-validator.v1",
+      "role_contract": {
+        "summary": "Runs gate-validation commands (marker checks, metric thresholds) and returns pass/fail with structured JSON evidence. Validates gates G0-G7 after each autopilot phase, offloading mechanical work from the orchestrator.",
+        "mutation_boundary": "Read-only: runs validation commands and reports results; the eight-tool write/dispatch denylist applies (Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, TeamCreate, SendMessage).",
+        "output_format": "Pass/fail gate result with structured JSON evidence.",
+        "source_ref": "speckit-pro/agents/gate-validator.md"
+      },
+      "immutable_production_route": {
+        "model": "sonnet",
+        "effort": "max"
+      },
+      "production_route_recorded_absence": false,
+      "agent_file_hashes": {
+        "instruction_sha256": "abba902b8e48ee4ba1ed3cf82c0350ebf11ba3586f6295c1881f841b5465b87e",
+        "full_file_sha256": "ecfa70143aa02c943474f23d38cd5c0b01ca1fabae7d2a899c45d35eb7bb5f0d",
+        "hash_source": "claude-agent-md"
+      },
+      "candidate_routes": [
+        {
+          "alias": "sonnet",
+          "expected_resolved_model_id": "claude-sonnet-5",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Non-executor analysis/validation/authoring role; sonnet/max is the current shipped production route (ALS-sonnet).",
+            "evidence_class": "fact"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q2",
+            "binding_question_ref": "CAP-Q2"
+          },
+          "tuple_rationale": "Matches the shipped sonnet/max production route."
+        },
+        {
+          "alias": "opus",
+          "expected_resolved_model_id": "claude-opus-4-8",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "A reasoned higher-capability upshift candidate for deeper analysis or synthesis (MDL-2); no recorded incompatibility to exclude it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q1",
+            "binding_question_ref": "CAP-Q1"
+          },
+          "tuple_rationale": "Higher-capability upshift candidate to probe against sonnet."
+        },
+        {
+          "alias": "haiku",
+          "expected_resolved_model_id": "claude-haiku-4-5-20251001",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "A reasoned faster, lower-cost candidate for this support role (ALS-haiku, PRC-1); no recorded incompatibility to exclude it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q3",
+            "binding_question_ref": "CAP-Q3"
+          },
+          "tuple_rationale": "Faster/cheaper support-role candidate; effective effort levels are model-dependent (EFF-1) and probe-gated."
+        }
+      ],
+      "required_capabilities": {
+        "model": [
+          "mechanical validation reasoning (marker and threshold checks)"
+        ],
+        "modality": [
+          "text"
+        ],
+        "subagent_fields": [
+          "model",
+          "effort",
+          "maxTurns",
+          "disallowedTools"
+        ],
+        "tools": [
+          "Read",
+          "Bash (runs gate-validation commands)",
+          "Grep",
+          "read-only: eight-tool write/dispatch denylist (Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, TeamCreate, SendMessage)"
+        ],
+        "skills": [],
+        "client": [
+          "Claude Code with plugin-agent field support (PLG-1)",
+          "non-interactive claude -p headless output (CAR-003 evaluation; TEL-1)",
+          "any supported authentication mode (AUTH-2)"
+        ]
+      },
+      "candidate_rationale": "Non-executor mechanical gate validation role (production route sonnet/max). sonnet/max matches the shipped route (fact); opus/max is a reasoned higher-capability upshift candidate (MDL-2); haiku/max is a reasoned faster, lower-cost candidate for this support role (ALS-haiku, PRC-1). The `fable` alias is recorded as not role-eligible — fable is candidate-eligible for executor-class (task-execution) agents only (spec Assumptions; FR-013) — not excluded by announcement status (FR-016). All alias-to-ID bindings float and are probe-gated (CAP-Q1/Q2/Q3).",
+      "known_incompatibilities": [
+        {
+          "subject": "fable (candidate alias)",
+          "reason": "`fable` is candidate-eligible for executor-class (task-execution) agents only (spec Assumptions; FR-013); this is a non-executor analysis/validation/authoring role, and the `fable` alias targets the hardest, longest-running tasks (ALS-fable). Recorded incompatibility per FR-016 (not a product-announcement exclusion); `fable` is therefore not carried as a candidate route for this agent.",
+          "evidence_ref": "docs/ai/research/claude-agent-route-candidates.md#2-claude-code-model-aliases-and-expected-resolved-ids"
+        }
+      ],
+      "required_qualification_artifacts": [
+        "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
+        "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
+      ],
+      "invalidation_triggers": [
+        "The `sonnet` alias re-points to a new resolved model ID (currently expected `claude-sonnet-5` per CAP-Q2), invalidating this entry's `sonnet` candidate binding.",
+        "The `opus` alias re-points to a new resolved model ID (currently expected `claude-opus-4-8` per CAP-Q1), invalidating this entry's `opus` candidate binding.",
+        "The `haiku` alias re-points to a new resolved model ID (currently expected `claude-haiku-4-5-20251001` per CAP-Q3), invalidating this entry's `haiku` candidate binding.",
+        "The `gate-validator` agent file at speckit-pro-v2.19.1 drifts from its recorded comparator hashes (full_file_sha256 `ecfa70143aa02c943474f23d38cd5c0b01ca1fabae7d2a899c45d35eb7bb5f0d`; instruction_sha256 `abba902b8e48ee4ba1ed3cf82c0350ebf11ba3586f6295c1881f841b5465b87e`) — detect by recomputation; a pure frontmatter route change leaves instruction_sha256 unchanged (FR-011/SC-007)."
+      ],
+      "fixture_backlog_ref": "docs/ai/research/claude-agent-route-candidates.md#fixture-backlog-gate-validator"
+    },
+    "implement-executor": {
+      "agent_name": "implement-executor",
+      "agent_contract_id": "car.implement-executor.v1",
+      "role_contract": {
+        "summary": "Executes a single implementation task using strict TDD red-green-refactor: writes failing tests first, verifies they FAIL, writes the minimum implementation to pass, then refactors. Returns structured TDD evidence.",
+        "mutation_boundary": "Read-write on the task's test and implementation files (TDD); the Skill tool is denied (disallowedTools: Skill); uses project memory (memory: project).",
+        "output_format": "Structured TDD evidence: failing test, FAIL verification, minimal implementation, and refactor.",
+        "source_ref": "speckit-pro/agents/implement-executor.md"
+      },
+      "immutable_production_route": {
+        "model": "opus",
+        "effort": "max"
+      },
+      "production_route_recorded_absence": false,
+      "agent_file_hashes": {
+        "instruction_sha256": "91e0dbf81cb5f0adec0056af0f21e38426cd8f3684e40fd9e0a1cf2cdd1c2548",
+        "full_file_sha256": "e5ae7f409d4c487e06790afa6b2b8609407a3a31f9dd8fc0358e21b72893d921",
+        "hash_source": "claude-agent-md"
+      },
+      "candidate_routes": [
+        {
+          "alias": "opus",
+          "expected_resolved_model_id": "claude-opus-4-8",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Executor-class task-execution role; opus/max is the current shipped production route (repository fact at the pinned tag).",
+            "evidence_class": "fact"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q1",
+            "binding_question_ref": "CAP-Q1"
+          },
+          "tuple_rationale": "Matches the shipped opus/max production route."
+        },
+        {
+          "alias": "sonnet",
+          "expected_resolved_model_id": "claude-sonnet-5",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Capable general coding model (ALS-sonnet); a reasoned lower-cost executor candidate with no recorded incompatibility to exclude it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q2",
+            "binding_question_ref": "CAP-Q2"
+          },
+          "tuple_rationale": "Reasoned lower-cost executor alternative to probe against opus."
+        },
+        {
+          "alias": "fable",
+          "expected_resolved_model_id": "claude-fable-5",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Executor-class role; fable is candidate-eligible for task-execution agents (FR-013) as the highest-capability option (MDL-2).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q4",
+            "binding_question_ref": "CAP-Q4"
+          },
+          "tuple_rationale": "Highest-capability executor candidate; binding and availability both open (CAP-Q4)."
+        }
+      ],
+      "required_capabilities": {
+        "model": [
+          "TDD implementation reasoning",
+          "long-context code editing"
+        ],
+        "modality": [
+          "text"
+        ],
+        "subagent_fields": [
+          "model",
+          "effort",
+          "maxTurns",
+          "disallowedTools",
+          "memory"
+        ],
+        "tools": [
+          "Read",
+          "Write",
+          "Edit",
+          "Bash",
+          "full operator surface except Skill (disallowedTools: Skill)"
+        ],
+        "skills": [],
+        "client": [
+          "Claude Code with plugin-agent field support (PLG-1)",
+          "non-interactive claude -p headless output (CAR-003 evaluation; TEL-1)",
+          "any supported authentication mode (AUTH-2)"
+        ]
+      },
+      "candidate_rationale": "Executor-class task-execution role (production route opus/max). opus/max matches the shipped route and the role's deep-reasoning demand (fact); fable/max is candidate-eligible for executor-class agents per FR-013 as the highest-capability option (MDL-2), carried with a floating-binding/availability probe (CAP-Q4); sonnet/max is a reasoned lower-cost executor candidate (ALS-sonnet) with no recorded incompatibility to exclude it (FR-016). The `haiku` alias is recorded as a known incompatibility for this deep-reasoning role (ALS-haiku positions it for simple tasks), not excluded by announcement status. All alias-to-ID bindings float and are probe-gated (CAP-Q1/Q2/Q4).",
+      "known_incompatibilities": [
+        {
+          "subject": "haiku (candidate alias)",
+          "reason": "This role executes implementation tasks under strict TDD red-green-refactor with long-context code editing; the `haiku` alias is documented as the fast, efficient model for simple tasks (ALS-haiku), a role-capability mismatch for this quality-critical executor. Recorded incompatibility per FR-016 (not a benchmark result or product-announcement exclusion); `haiku` is therefore not carried as a candidate route for this agent.",
+          "evidence_ref": "docs/ai/research/claude-agent-route-candidates.md#2-claude-code-model-aliases-and-expected-resolved-ids"
+        }
+      ],
+      "required_qualification_artifacts": [
+        "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
+        "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
+      ],
+      "invalidation_triggers": [
+        "The `opus` alias re-points to a new resolved model ID (currently expected `claude-opus-4-8` per CAP-Q1), invalidating this entry's `opus` candidate binding.",
+        "The `sonnet` alias re-points to a new resolved model ID (currently expected `claude-sonnet-5` per CAP-Q2), invalidating this entry's `sonnet` candidate binding.",
+        "The `fable` alias re-points to a new resolved model ID (currently expected `claude-fable-5` per CAP-Q4), invalidating this entry's `fable` candidate binding.",
+        "The `implement-executor` agent file at speckit-pro-v2.19.1 drifts from its recorded comparator hashes (full_file_sha256 `e5ae7f409d4c487e06790afa6b2b8609407a3a31f9dd8fc0358e21b72893d921`; instruction_sha256 `91e0dbf81cb5f0adec0056af0f21e38426cd8f3684e40fd9e0a1cf2cdd1c2548`) — detect by recomputation; a pure frontmatter route change leaves instruction_sha256 unchanged (FR-011/SC-007)."
+      ],
+      "fixture_backlog_ref": "docs/ai/research/claude-agent-route-candidates.md#fixture-backlog-implement-executor"
+    },
+    "phase-executor": {
+      "agent_name": "phase-executor",
+      "agent_contract_id": "car.phase-executor.v1",
+      "role_contract": {
+        "summary": "Executes a single SpecKit phase (Specify, Plan, or Tasks) by running the /speckit-* command via the Skill tool at high reasoning effort. Returns a concise summary of files created, metrics, markers, and errors.",
+        "mutation_boundary": "Read-write: produces the phase artifacts (spec.md/plan.md/tasks.md) via the Skill-invoked /speckit-* command; no cross-spec writes.",
+        "output_format": "Concise phase-result summary: files created, metrics, markers found, and errors.",
+        "source_ref": "speckit-pro/agents/phase-executor.md"
+      },
+      "immutable_production_route": {
+        "model": "opus",
+        "effort": "max"
+      },
+      "production_route_recorded_absence": false,
+      "agent_file_hashes": {
+        "instruction_sha256": "695d78c4dd80ee1c2a2f724dc62b1f67b55c710efbe12cc8ff7535af6a415a48",
+        "full_file_sha256": "70bf046540039a16bf2fe1109d782c52f27c070ffaebc4c7a99f34347930179c",
+        "hash_source": "claude-agent-md"
+      },
+      "candidate_routes": [
+        {
+          "alias": "opus",
+          "expected_resolved_model_id": "claude-opus-4-8",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Executor-class task-execution role; opus/max is the current shipped production route (repository fact at the pinned tag).",
+            "evidence_class": "fact"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q1",
+            "binding_question_ref": "CAP-Q1"
+          },
+          "tuple_rationale": "Matches the shipped opus/max production route."
+        },
+        {
+          "alias": "sonnet",
+          "expected_resolved_model_id": "claude-sonnet-5",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Capable general coding model (ALS-sonnet); a reasoned lower-cost executor candidate with no recorded incompatibility to exclude it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q2",
+            "binding_question_ref": "CAP-Q2"
+          },
+          "tuple_rationale": "Reasoned lower-cost executor alternative to probe against opus."
+        },
+        {
+          "alias": "fable",
+          "expected_resolved_model_id": "claude-fable-5",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Executor-class role; fable is candidate-eligible for task-execution agents (FR-013) as the highest-capability option (MDL-2).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q4",
+            "binding_question_ref": "CAP-Q4"
+          },
+          "tuple_rationale": "Highest-capability executor candidate; binding and availability both open (CAP-Q4)."
+        }
+      ],
+      "required_capabilities": {
+        "model": [
+          "deep architectural reasoning (Specify/Plan)",
+          "mechanical decomposition (Tasks)"
+        ],
+        "modality": [
+          "text"
+        ],
+        "subagent_fields": [
+          "model",
+          "effort",
+          "maxTurns"
+        ],
+        "tools": [
+          "Skill (runs /speckit-specify, /speckit-plan, /speckit-tasks)",
+          "Read",
+          "Write",
+          "Edit",
+          "Bash",
+          "full operator surface — no disallowedTools denylist"
+        ],
+        "skills": [
+          "speckit-specify",
+          "speckit-plan",
+          "speckit-tasks"
+        ],
+        "client": [
+          "Claude Code with plugin-agent field support (PLG-1)",
+          "non-interactive claude -p headless output (CAR-003 evaluation; TEL-1)",
+          "any supported authentication mode (AUTH-2)"
+        ]
+      },
+      "candidate_rationale": "Executor-class task-execution role (production route opus/max). opus/max matches the shipped route and the role's deep-reasoning demand (fact); fable/max is candidate-eligible for executor-class agents per FR-013 as the highest-capability option (MDL-2), carried with a floating-binding/availability probe (CAP-Q4); sonnet/max is a reasoned lower-cost executor candidate (ALS-sonnet) with no recorded incompatibility to exclude it (FR-016). The `haiku` alias is recorded as a known incompatibility for this deep-reasoning role (ALS-haiku positions it for simple tasks), not excluded by announcement status. All alias-to-ID bindings float and are probe-gated (CAP-Q1/Q2/Q4).",
+      "known_incompatibilities": [
+        {
+          "subject": "haiku (candidate alias)",
+          "reason": "This role executes the Specify, Plan, and Tasks phases, where Specify and Plan demand deep architectural reasoning; the `haiku` alias is documented as the fast, efficient model for simple tasks (ALS-haiku), a role-capability mismatch for this quality-critical executor. Recorded incompatibility per FR-016 (not a benchmark result or product-announcement exclusion); `haiku` is therefore not carried as a candidate route for this agent.",
+          "evidence_ref": "docs/ai/research/claude-agent-route-candidates.md#2-claude-code-model-aliases-and-expected-resolved-ids"
+        }
+      ],
+      "required_qualification_artifacts": [
+        "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
+        "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
+      ],
+      "invalidation_triggers": [
+        "The `opus` alias re-points to a new resolved model ID (currently expected `claude-opus-4-8` per CAP-Q1), invalidating this entry's `opus` candidate binding.",
+        "The `sonnet` alias re-points to a new resolved model ID (currently expected `claude-sonnet-5` per CAP-Q2), invalidating this entry's `sonnet` candidate binding.",
+        "The `fable` alias re-points to a new resolved model ID (currently expected `claude-fable-5` per CAP-Q4), invalidating this entry's `fable` candidate binding.",
+        "The `phase-executor` agent file at speckit-pro-v2.19.1 drifts from its recorded comparator hashes (full_file_sha256 `70bf046540039a16bf2fe1109d782c52f27c070ffaebc4c7a99f34347930179c`; instruction_sha256 `695d78c4dd80ee1c2a2f724dc62b1f67b55c710efbe12cc8ff7535af6a415a48`) — detect by recomputation; a pure frontmatter route change leaves instruction_sha256 unchanged (FR-011/SC-007)."
+      ],
+      "fixture_backlog_ref": "docs/ai/research/claude-agent-route-candidates.md#fixture-backlog-phase-executor"
+    },
+    "spec-context-analyst": {
+      "agent_name": "spec-context-analyst",
+      "agent_contract_id": "car.spec-context-analyst.v1",
+      "role_contract": {
+        "summary": "Analyzes the project constitution, technical roadmap, and prior spec artifacts to resolve a question, gap, or finding from the perspective of established project decisions and principles. Used across consensus phases.",
+        "mutation_boundary": "Read-only: the eight-tool write/dispatch denylist applies (Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, TeamCreate, SendMessage); runs in the background (background: true).",
+        "output_format": "Answer grounded in project decisions and specifications.",
+        "source_ref": "speckit-pro/agents/spec-context-analyst.md"
+      },
+      "immutable_production_route": {
+        "model": "sonnet",
+        "effort": "max"
+      },
+      "production_route_recorded_absence": false,
+      "agent_file_hashes": {
+        "instruction_sha256": "faf387eabec1866ca87119023b04950ceda6949e7963eb8ba99aaad1eb43fd48",
+        "full_file_sha256": "6659fb1b08ecfbdb784ab7f47d7c5ac9f8ce45b705de9cfea5144ac573edbc4f",
+        "hash_source": "claude-agent-md"
+      },
+      "candidate_routes": [
+        {
+          "alias": "sonnet",
+          "expected_resolved_model_id": "claude-sonnet-5",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Non-executor analysis/validation/authoring role; sonnet/max is the current shipped production route (ALS-sonnet).",
+            "evidence_class": "fact"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q2",
+            "binding_question_ref": "CAP-Q2"
+          },
+          "tuple_rationale": "Matches the shipped sonnet/max production route."
+        },
+        {
+          "alias": "opus",
+          "expected_resolved_model_id": "claude-opus-4-8",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "A reasoned higher-capability upshift candidate for deeper analysis or synthesis (MDL-2); no recorded incompatibility to exclude it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q1",
+            "binding_question_ref": "CAP-Q1"
+          },
+          "tuple_rationale": "Higher-capability upshift candidate to probe against sonnet."
+        },
+        {
+          "alias": "haiku",
+          "expected_resolved_model_id": "claude-haiku-4-5-20251001",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "A reasoned faster, lower-cost candidate for this support role (ALS-haiku, PRC-1); no recorded incompatibility to exclude it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q3",
+            "binding_question_ref": "CAP-Q3"
+          },
+          "tuple_rationale": "Faster/cheaper support-role candidate; effective effort levels are model-dependent (EFF-1) and probe-gated."
+        }
+      ],
+      "required_capabilities": {
+        "model": [
+          "project-context analysis reasoning"
+        ],
+        "modality": [
+          "text"
+        ],
+        "subagent_fields": [
+          "model",
+          "effort",
+          "maxTurns",
+          "disallowedTools",
+          "background"
+        ],
+        "tools": [
+          "Read",
+          "Grep",
+          "Glob",
+          "read-only: eight-tool write/dispatch denylist (Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, TeamCreate, SendMessage); background:true"
+        ],
+        "skills": [],
+        "client": [
+          "Claude Code with plugin-agent field support (PLG-1)",
+          "non-interactive claude -p headless output (CAR-003 evaluation; TEL-1)",
+          "any supported authentication mode (AUTH-2)"
+        ]
+      },
+      "candidate_rationale": "Non-executor project-context analysis role (production route sonnet/max). sonnet/max matches the shipped route (fact); opus/max is a reasoned higher-capability upshift candidate (MDL-2); haiku/max is a reasoned faster, lower-cost candidate for this support role (ALS-haiku, PRC-1). The `fable` alias is recorded as not role-eligible — fable is candidate-eligible for executor-class (task-execution) agents only (spec Assumptions; FR-013) — not excluded by announcement status (FR-016). All alias-to-ID bindings float and are probe-gated (CAP-Q1/Q2/Q3).",
+      "known_incompatibilities": [
+        {
+          "subject": "fable (candidate alias)",
+          "reason": "`fable` is candidate-eligible for executor-class (task-execution) agents only (spec Assumptions; FR-013); this is a non-executor analysis/validation/authoring role, and the `fable` alias targets the hardest, longest-running tasks (ALS-fable). Recorded incompatibility per FR-016 (not a product-announcement exclusion); `fable` is therefore not carried as a candidate route for this agent.",
+          "evidence_ref": "docs/ai/research/claude-agent-route-candidates.md#2-claude-code-model-aliases-and-expected-resolved-ids"
+        }
+      ],
+      "required_qualification_artifacts": [
+        "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
+        "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
+      ],
+      "invalidation_triggers": [
+        "The `sonnet` alias re-points to a new resolved model ID (currently expected `claude-sonnet-5` per CAP-Q2), invalidating this entry's `sonnet` candidate binding.",
+        "The `opus` alias re-points to a new resolved model ID (currently expected `claude-opus-4-8` per CAP-Q1), invalidating this entry's `opus` candidate binding.",
+        "The `haiku` alias re-points to a new resolved model ID (currently expected `claude-haiku-4-5-20251001` per CAP-Q3), invalidating this entry's `haiku` candidate binding.",
+        "The `spec-context-analyst` agent file at speckit-pro-v2.19.1 drifts from its recorded comparator hashes (full_file_sha256 `6659fb1b08ecfbdb784ab7f47d7c5ac9f8ce45b705de9cfea5144ac573edbc4f`; instruction_sha256 `faf387eabec1866ca87119023b04950ceda6949e7963eb8ba99aaad1eb43fd48`) — detect by recomputation; a pure frontmatter route change leaves instruction_sha256 unchanged (FR-011/SC-007)."
+      ],
+      "fixture_backlog_ref": "docs/ai/research/claude-agent-route-candidates.md#fixture-backlog-spec-context-analyst"
+    },
+    "uat-runbook-author": {
+      "agent_name": "uat-runbook-author",
+      "agent_contract_id": "car.uat-runbook-author.v1",
+      "role_contract": {
+        "summary": "Rewrites a deterministic UAT runbook skeleton into a plain-English, executable acceptance runbook a non-engineer can follow: concrete numbered steps with observable expected results, plain setup prose, and a real FR-coverage mapping. Edits the skeleton in place; fail-open.",
+        "mutation_boundary": "Read-write on the UAT runbook skeleton file only (edits in place); fail-open — on any trouble it leaves the skeleton untouched and never blocks PR creation; disallowedTools: Skill, Agent, TeamCreate, SendMessage.",
+        "output_format": "Edited-in-place UAT runbook: numbered steps with observable expected results, plain setup prose, and a real FR-coverage matrix.",
+        "source_ref": "speckit-pro/agents/uat-runbook-author.md"
+      },
+      "immutable_production_route": {
+        "model": "sonnet",
+        "effort": "max"
+      },
+      "production_route_recorded_absence": false,
+      "agent_file_hashes": {
+        "instruction_sha256": "51a1b54a079eaf2325160dbfc5fd28548fcda6da3e88f62e800a60376f09c3e8",
+        "full_file_sha256": "d4aeecbcc2fb486aac68bf0084460ff9c4c75cc5bb1ff74f9d2f728e6c9eb4ba",
+        "hash_source": "claude-agent-md"
+      },
+      "candidate_routes": [
+        {
+          "alias": "sonnet",
+          "expected_resolved_model_id": "claude-sonnet-5",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Non-executor analysis/validation/authoring role; sonnet/max is the current shipped production route (ALS-sonnet).",
+            "evidence_class": "fact"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q2",
+            "binding_question_ref": "CAP-Q2"
+          },
+          "tuple_rationale": "Matches the shipped sonnet/max production route."
+        },
+        {
+          "alias": "opus",
+          "expected_resolved_model_id": "claude-opus-4-8",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "A reasoned higher-capability upshift candidate for deeper analysis or synthesis (MDL-2); no recorded incompatibility to exclude it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q1",
+            "binding_question_ref": "CAP-Q1"
+          },
+          "tuple_rationale": "Higher-capability upshift candidate to probe against sonnet."
+        },
+        {
+          "alias": "haiku",
+          "expected_resolved_model_id": "claude-haiku-4-5-20251001",
+          "effort": "max",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "A reasoned faster, lower-cost candidate for this support role (ALS-haiku, PRC-1); no recorded incompatibility to exclude it (FR-016).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q3",
+            "binding_question_ref": "CAP-Q3"
+          },
+          "tuple_rationale": "Faster/cheaper support-role candidate; effective effort levels are model-dependent (EFF-1) and probe-gated."
+        }
+      ],
+      "required_capabilities": {
+        "model": [
+          "plain-English rewriting reasoning"
+        ],
+        "modality": [
+          "text"
+        ],
+        "subagent_fields": [
+          "model",
+          "effort",
+          "maxTurns",
+          "disallowedTools"
+        ],
+        "tools": [
+          "Read",
+          "Edit",
+          "Write",
+          "edits the skeleton in place; disallowedTools: Skill, Agent, TeamCreate, SendMessage; fail-open"
+        ],
+        "skills": [],
+        "client": [
+          "Claude Code with plugin-agent field support (PLG-1)",
+          "non-interactive claude -p headless output (CAR-003 evaluation; TEL-1)",
+          "any supported authentication mode (AUTH-2)"
+        ]
+      },
+      "candidate_rationale": "Non-executor UAT runbook authoring role (production route sonnet/max). sonnet/max matches the shipped route (fact); opus/max is a reasoned higher-capability upshift candidate (MDL-2); haiku/max is a reasoned faster, lower-cost candidate for this support role (ALS-haiku, PRC-1). The `fable` alias is recorded as not role-eligible — fable is candidate-eligible for executor-class (task-execution) agents only (spec Assumptions; FR-013) — not excluded by announcement status (FR-016). All alias-to-ID bindings float and are probe-gated (CAP-Q1/Q2/Q3).",
+      "known_incompatibilities": [
+        {
+          "subject": "fable (candidate alias)",
+          "reason": "`fable` is candidate-eligible for executor-class (task-execution) agents only (spec Assumptions; FR-013); this is a non-executor analysis/validation/authoring role, and the `fable` alias targets the hardest, longest-running tasks (ALS-fable). Recorded incompatibility per FR-016 (not a product-announcement exclusion); `fable` is therefore not carried as a candidate route for this agent.",
+          "evidence_ref": "docs/ai/research/claude-agent-route-candidates.md#2-claude-code-model-aliases-and-expected-resolved-ids"
+        }
+      ],
+      "required_qualification_artifacts": [
+        "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
+        "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
+      ],
+      "invalidation_triggers": [
+        "The `sonnet` alias re-points to a new resolved model ID (currently expected `claude-sonnet-5` per CAP-Q2), invalidating this entry's `sonnet` candidate binding.",
+        "The `opus` alias re-points to a new resolved model ID (currently expected `claude-opus-4-8` per CAP-Q1), invalidating this entry's `opus` candidate binding.",
+        "The `haiku` alias re-points to a new resolved model ID (currently expected `claude-haiku-4-5-20251001` per CAP-Q3), invalidating this entry's `haiku` candidate binding.",
+        "The `uat-runbook-author` agent file at speckit-pro-v2.19.1 drifts from its recorded comparator hashes (full_file_sha256 `d4aeecbcc2fb486aac68bf0084460ff9c4c75cc5bb1ff74f9d2f728e6c9eb4ba`; instruction_sha256 `51a1b54a079eaf2325160dbfc5fd28548fcda6da3e88f62e800a60376f09c3e8`) — detect by recomputation; a pure frontmatter route change leaves instruction_sha256 unchanged (FR-011/SC-007)."
+      ],
+      "fixture_backlog_ref": "docs/ai/research/claude-agent-route-candidates.md#fixture-backlog-uat-runbook-author"
+    },
+    "autopilot-fast-helper": {
+      "agent_name": "autopilot-fast-helper",
+      "agent_contract_id": "car.autopilot-fast-helper.v1",
+      "role_contract": {
+        "summary": "Optional latency-first, text-only leaf helper for the top-level SpecKit autopilot orchestrator: performs exactly one small advisory text task per invocation (compress, triage, draft search queries, or normalize prompt context), then returns control. Advisory only; not an executor, reviewer, or decision-maker.",
+        "mutation_boundary": "Strictly read-only and non-mutating: never edits files, proposes patches, runs commands, spawns agents, or makes final decisions; uses only the context in the prompt (no tool output, web search, or filesystem exploration). Codex sandbox_mode=read-only under-specifies this: the prompt-context-only contract maps to a comprehensive no-tool disallowedTools denylist (also denying reads/web, stricter than the analysts' read-only denylist), proposed and deferred to CAR-010.",
+        "output_format": "One of four compact, paste-ready formats matching the requested job: `## Fast Brief` (Core issue / Relevant evidence / Suggested next agent), `## Fast Triage` (Primary bucket / Why / Escalate?), `## Query Drafts` (bullet list), or `## Compact Context` (Question / Evidence block / Open uncertainty).",
+        "source_ref": "speckit-pro/codex-agents/autopilot-fast-helper.toml"
+      },
+      "immutable_production_route": null,
+      "production_route_recorded_absence": true,
+      "agent_file_hashes": {
+        "instruction_sha256": "e662963dbc3259fc48ec1aa04c5ed2c13cbfc6e0f48ea7e50775df8c601684f2",
+        "full_file_sha256": "aa570f8ff51fa3cb7848d8c05253ddf5d080f5d4a2dbed9a55f0149fceb1296d",
+        "hash_source": "codex-toml-translation"
+      },
+      "candidate_routes": [
+        {
+          "alias": "haiku",
+          "expected_resolved_model_id": "claude-haiku-4-5-20251001",
+          "effort": "low",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "Starting-hypothesis mapping of the Codex model gpt-5.3-codex-spark (near-instant text-only) to the fast Claude route haiku + explicit low effort (ALS-haiku), matching the latency-first leaf-helper contract.",
+            "evidence_class": "proposed_policy"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q3",
+            "binding_question_ref": "CAP-Q3"
+          },
+          "tuple_rationale": "Primary hypothesis: codex-spark -> haiku + low effort; gated on CAP-Q3."
+        },
+        {
+          "alias": "sonnet",
+          "expected_resolved_model_id": "claude-sonnet-5",
+          "effort": "low",
+          "project_level_eligibility": {
+            "eligible": true,
+            "basis": "A reasoned co-equal latency-oriented alternative for triage and query-drafting; low effort preserves the latency-first contract (speed is the reason the helper exists).",
+            "evidence_class": "inference"
+          },
+          "environment_time_availability": {
+            "status": "probe_required",
+            "probe_question_ref": "CAP-Q2",
+            "binding_question_ref": "CAP-Q2"
+          },
+          "tuple_rationale": "Co-equal latency-oriented candidate at low effort alongside the haiku starting hypothesis."
+        }
+      ],
+      "required_capabilities": {
+        "model": [
+          "fast, near-instant text-only compression/triage/query-drafting",
+          "low latency (speed is the reason it exists)"
+        ],
+        "modality": [
+          "text"
+        ],
+        "subagent_fields": [
+          "model",
+          "effort",
+          "maxTurns (proposed)",
+          "disallowedTools"
+        ],
+        "tools": [
+          "no tools — advisory text only; uses only prompt context (no Write/Edit, no Skill/Agent/dispatch, no web or filesystem); comprehensive no-tool denylist posture, stricter than the analysts' read-only denylist (which still permits reads/web), proposed and deferred to CAR-010"
+        ],
+        "skills": [],
+        "client": [
+          "Claude Code with plugin-agent field support (PLG-1)",
+          "non-interactive claude -p headless output (CAR-003 evaluation; TEL-1)",
+          "any supported authentication mode (AUTH-2)"
+        ]
+      },
+      "candidate_rationale": "Net-new twelfth agent with no current Claude production route (recorded absence). Latency-first, text-only leaf helper: the Codex model gpt-5.3-codex-spark maps to the fast Claude route haiku + explicit low effort as the starting hypothesis (proposed policy, gated on CAP-Q3); sonnet + low effort is a reasoned co-equal latency-oriented alternative (CAP-Q2). High-capability aliases (opus, fable) are not carried — they contradict the speed-first contract (the helper exists to reduce latency and prompt size). All alias-to-ID bindings float and are probe-gated. The proposed low effort is below the plugin's effort: max default policy, so it must clear that policy's quality bar via a Layer 6 benchmark (the CAR-003 fixture-pass record already listed in required_qualification_artifacts) before it may ship at low effort.",
+      "known_incompatibilities": [
+        {
+          "subject": "opus and fable (candidate aliases)",
+          "reason": "The helper is a latency-first leaf helper whose reason for existing is speed and prompt-size reduction; the opus and fable aliases target complex/hardest, longest-running work (ALS-opus, ALS-fable) and contradict that contract. Recorded incompatibility per FR-016 (not a product-announcement exclusion); neither is carried as a candidate route for the helper.",
+          "evidence_ref": "docs/ai/research/claude-agent-route-candidates.md#2-claude-code-model-aliases-and-expected-resolved-ids"
+        }
+      ],
+      "required_qualification_artifacts": [
+        "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
+        "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5).",
+        "CAR-010 finalization of the proposed `maxTurns` value and any other Claude-only helper field carried as proposed SpecKit Pro policy (FR-018)."
+      ],
+      "invalidation_triggers": [
+        "The `haiku` alias re-points to a new resolved model ID (currently expected `claude-haiku-4-5-20251001` per CAP-Q3), invalidating this entry's `haiku` candidate binding.",
+        "The `sonnet` alias re-points to a new resolved model ID (currently expected `claude-sonnet-5` per CAP-Q2), invalidating this entry's `sonnet` candidate binding.",
+        "The autopilot-fast-helper Codex source toml at speckit-pro-v2.19.1 drifts from its recorded full_file_sha256 `aa570f8ff51fa3cb7848d8c05253ddf5d080f5d4a2dbed9a55f0149fceb1296d`, or the contract-equivalent translated body drifts from its recorded instruction_sha256 `e662963dbc3259fc48ec1aa04c5ed2c13cbfc6e0f48ea7e50775df8c601684f2` — detect by recomputation (FR-011)."
+      ],
+      "fixture_backlog_ref": "docs/ai/research/claude-agent-route-candidates.md#fixture-backlog-autopilot-fast-helper",
+      "platform_field_mapping": [
+        {
+          "codex_field": "name",
+          "claude_equivalent": "agent frontmatter `name` (dispatched under the plugin-scoped id `speckit-pro:autopilot-fast-helper`, PLG-2)",
+          "evidence_class": "fact",
+          "note": "Direct equivalent; plugin-shipped agents are addressed by their plugin-scoped name (PLG-2)."
+        },
+        {
+          "codex_field": "description",
+          "claude_equivalent": "agent frontmatter `description`",
+          "evidence_class": "fact",
+          "note": "Direct equivalent; drives when the orchestrator delegates to the subagent (SUB-fields)."
+        },
+        {
+          "codex_field": "model = \"gpt-5.3-codex-spark\"",
+          "claude_equivalent": "`haiku` alias + explicit `effort: low` (starting hypothesis)",
+          "evidence_class": "proposed_policy",
+          "note": "Mapping hypothesis, not a documented equivalence: codex-spark (near-instant, text-only) -> the fast Claude route haiku + low effort (ALS-haiku); gated on CAP-Q3. Labeled proposed SpecKit Pro policy."
+        },
+        {
+          "codex_field": "sandbox_mode = \"read-only\"",
+          "claude_equivalent": "a comprehensive no-tool `disallowedTools` denylist posture, stricter than the analysts' eight-tool write/dispatch denylist: the helper's contract is prompt-context-only (developer_instructions rule 5), so it must additionally deny the read/research tools the analyst denylist still permits (Read, Grep, Glob, read-only Bash, WebSearch, WebFetch) on top of the write/dispatch denylist (Write, Edit, MultiEdit, NotebookEdit, Skill, Agent, TeamCreate, SendMessage)",
+          "evidence_class": "proposed_policy",
+          "note": "No single Claude field named sandbox_mode, and Codex `read-only` under-specifies this helper: read-only still permits reads and web, but the helper contract forbids all tool, filesystem, and web use (uses only prompt context). The analyst eight-tool denylist is therefore NOT equivalent. The exact no-tool enforcement (a comprehensive denylist, since plugin agents omit a `tools:` allowlist and do not support permissionMode, PLG-1) is proposed SpecKit Pro policy, deferred to CAR-010 finalization alongside maxTurns (FR-018)."
+        },
+        {
+          "codex_field": "developer_instructions",
+          "claude_equivalent": "# Autopilot Fast Helper\n\nYou are a latency-first, text-only helper for the top-level SpecKit autopilot orchestrator. You exist to do one small piece of advisory text work quickly, then return control.\n\n## Your Allowed Jobs\n\nDo exactly one of these bounded tasks per invocation:\n\n1. Compress a long executor or workflow summary into a short, parent-friendly brief.\n2. Triage an unresolved item into one of these buckets: `codebase`, `spec-context`, `domain-research`, or `mixed`.\n3. Draft search queries for follow-up research by a stronger agent or the parent orchestrator.\n4. Normalize prompt context into a compact evidence block that fits cleanly into a later agent prompt.\n\n## Your Role\n\nYou are not an executor, reviewer, or decision-maker. You are a small text-only helper that reduces prompt size and speeds up orchestration when the parent already knows what kind of help it needs.\n\n## Rules\n\n1. Advisory text only. Return text that helps the parent think faster; never claim to have fixed, validated, or resolved the underlying issue.\n2. Do not make final decisions. You must not decide a gate outcome, choose a consensus winner, approve or reject an artifact edit, or substitute for a real executor or consensus analyst.\n3. Do not mutate anything. Never edit files, propose patches, run commands, or act like you own the task.\n4. Do not spawn agents or ask for more work. You are a leaf worker: return one result and stop.\n5. Use only the context in the prompt. Do not depend on tool output, web search, or filesystem exploration. If the prompt lacks enough context, say so briefly and return the smallest useful fallback.\n6. Prefer compact output. Keep the result short, structured, and easy for the parent to paste into another prompt. Speed is the reason you exist.\n\n## Output Formats\n\nUse the format that matches the requested job.\n\n- Compression -> `## Fast Brief`: Core issue (one sentence) / Relevant evidence (bullets) / Suggested next agent (`codebase` | `spec-context` | `domain-research` | `parent-direct`).\n- Triage -> `## Fast Triage`: Primary bucket (`codebase` | `spec-context` | `domain-research` | `mixed`) / Why (one sentence) / Escalate? (`yes` | `no`).\n- Query Drafting -> `## Query Drafts`: a bullet list of draft queries.\n- Prompt Normalization -> `## Compact Context`: Question / Evidence block (bullets) / Open uncertainty (one sentence or \"None\").\n",
+          "evidence_class": "inference",
+          "note": "Contract-equivalent translation (role prose, the four bounded jobs, hard rules, and output formats) carried verbatim as this claude_equivalent value; it is the frontmatter-stripped Claude agent body. instruction_sha256 in agent_file_hashes = Python 3.11 stdlib hashlib.sha256 over the UTF-8 bytes of this exact string, reproducible by re-hashing it (finalizes unit 1's provisional 2645-byte developer_instructions hash per data-model section 3.2). full_file_sha256 = sha256 of the 2938-byte source toml at speckit-pro-v2.19.1 for provenance (hash_source: codex-toml-translation)."
+        },
+        {
+          "codex_field": "(none — Claude-only field, no Codex equivalent)",
+          "claude_equivalent": "`maxTurns: 2` (proposed)",
+          "evidence_class": "proposed_policy",
+          "note": "Proposed SpecKit Pro policy: a leaf worker does exactly one advisory task then returns, so a small maxTurns bound (proposed 2) suffices; no Codex source field. Deferred to CAR-010 for finalization (FR-018)."
+        }
+      ]
+    }
+  }
+}

@@ -198,7 +198,7 @@ CAR-006 Route-policy Manifest, Materializer, Preflight, and Override
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| CAR-001 | Candidate Route Baseline and Role Contracts | Pending | - | Ready to scaffold |
+| CAR-001 | Candidate Route Baseline and Role Contracts | 🔄 In Progress | [.process/CAR-001-workflow.md](.process/CAR-001-workflow.md) | In review (PR #350) |
 | CAR-002 | Capability Probing, Telemetry Profile, and Exact-Treatment Contract | Pending | - | Blocked by CAR-001 |
 | CAR-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Pending | - | Blocked by CAR-002 |
 | CAR-004 | Policy Controls and Adaptive Comparators | Pending | - | Blocked by CAR-003 |
@@ -249,8 +249,10 @@ Budget result: research spike; time-boxed, LOC sizing not applicable
   enters executor-class candidate sets and is excluded only by recorded probe
   or contract evidence.
 - Record the immutable production-route inputs (the eleven current frontmatter
-  tuples with resolved IDs at the pinned plugin version) that CAR-003 will
-  bind into the sole candidate and integrated comparator before screening.
+  alias/effort tuples and content hashes at the pinned plugin version; each
+  alias→dated-ID resolution is deferred to CAR-002 probing, not recorded as
+  settled) that CAR-003 will bind into the sole candidate and integrated
+  comparator before screening.
 - Build a primary-source fact table from official Anthropic subagent,
   model-configuration, effort, fast-mode, authentication, cost/monitoring, and
   pricing documentation. Label every undocumented behavior - including what
@@ -383,8 +385,10 @@ below when scaffolded
   alpha/power/multiplicity, task-level clustering, attrition thresholds, and
   `inconclusive => no qualification`.
 - Bind the immutable production comparator: repository revision, plugin
-  version, the eleven current frontmatter tuples with resolved IDs,
-  instruction hashes, mutation contracts, client version, and corpus snapshot.
+  version, the eleven current frontmatter alias/effort tuples (dated-ID
+  resolution supplied by the CAR-002 runtime capability snapshot, not the
+  frontmatter), instruction hashes, mutation contracts, client version, and
+  corpus snapshot.
 - Implement A1 (documented-default effort screening), A2 (within-model effort
   boundary search), A3 (frozen pair comparison), Stage B (bounded prompt
   interaction), and Stage C (cohort locks) with the predeclared price-weighted
@@ -741,8 +745,10 @@ split when scaffolded
 - Author `speckit-pro/agents/autopilot-fast-helper.md` as a net-new named
   plugin agent per current official subagent documentation, mirroring the
   Codex helper's contract: read-only, advisory, bounded to context
-  compression, triage of large tool outputs, and search/query drafting, with
-  the shared read-only `disallowedTools` denylist and a small `maxTurns`.
+  compression, triage of large tool outputs, and search/query drafting, with a
+  comprehensive no-tool `disallowedTools` denylist (prompt-context-only — denies
+  reads/web too, stricter than the analysts' read-only denylist; the exact list
+  finalized here) and a small `maxTurns`.
 - Materialize an explicit starting route hypothesis of `haiku` with explicit
   low effort; never ship an omitted or inherited value for routed fields.
 - Screen every probed latency-oriented candidate under the same route and
