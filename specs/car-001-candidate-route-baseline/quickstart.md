@@ -192,8 +192,11 @@ python3 - <<'PY'
 import json, subprocess, tomllib
 man = json.load(open("docs/ai/research/claude-agent-route-candidate-manifest.json"))
 agents = man["agents"]
-declared_q = {q["id"] for q in man["capability_questions"]}
+q_ids = [q["id"] for q in man["capability_questions"]]
+declared_q = set(q_ids)
 errs = []
+if len(q_ids) != len(declared_q):
+    errs.append(f"duplicate capability_question ids: {q_ids}")
 for name, e in agents.items():
     if e["agent_name"] != name:
         errs.append(f"{name}: agent_name {e['agent_name']!r} != key")

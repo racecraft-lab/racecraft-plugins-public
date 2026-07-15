@@ -9,11 +9,15 @@ was intentionally skipped for that reason. All nine design branches were walked
 in the binding design concept
 (`docs/ai/specs/.process/CAR-001-design-concept.md`, Q1–Q9); each is recorded
 below in Decision / Rationale / Alternatives form. The only genuinely open items
-are **execution-time documentation facts** (alias-to-resolved-model-ID bindings,
-undocumented unavailable-model behavior, `fable` resolution). The spec routes
-each of these to the capability-question list by construction (FR-008, FR-021,
-Edge Cases), so they are not planning unknowns — they are deliverable content the
-implement phase records as `CAP-Qn` questions when the docs do not bind them.
+are **execution-time documentation facts**: the alias-to-resolved-model-ID
+bindings and each resolved model's effort-acceptance (`CAP-Q1`–`CAP-Q4`;
+available effort levels are model-dependent per `EFF-1`), the undocumented
+unavailable-model dispatch behavior (`CAP-Q5`), `fable` resolution and
+availability (`CAP-Q4`), and the undocumented execution-time manifestation of
+alias re-pointing (`CAP-Q6`). The spec routes each of these to the
+capability-question list by construction (FR-008, FR-021, Edge Cases), so they
+are not planning unknowns — they are deliverable content the implement phase
+records as `CAP-Qn` questions when the docs do not bind them.
 
 ## Decisions (from the binding design concept, Q1–Q9)
 

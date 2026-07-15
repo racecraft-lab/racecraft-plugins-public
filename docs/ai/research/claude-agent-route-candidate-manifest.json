@@ -170,7 +170,7 @@
       "required_qualification_artifacts": [
         "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
         "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
-        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing `resolvedModel` and the per-model cost breakdown as route-qualification telemetry (TEL-1, TEL-5)."
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
       ],
       "invalidation_triggers": [
         "The `opus` alias re-points to a new resolved model ID (currently expected `claude-opus-4-8` per CAP-Q1), invalidating this entry's `opus` candidate binding.",
@@ -300,7 +300,7 @@
       "required_qualification_artifacts": [
         "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
         "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
-        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing `resolvedModel` and the per-model cost breakdown as route-qualification telemetry (TEL-1, TEL-5)."
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
       ],
       "invalidation_triggers": [
         "The `opus` alias re-points to a new resolved model ID (currently expected `claude-opus-4-8` per CAP-Q1), invalidating this entry's `opus` candidate binding.",
@@ -429,7 +429,7 @@
       "required_qualification_artifacts": [
         "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
         "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
-        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing `resolvedModel` and the per-model cost breakdown as route-qualification telemetry (TEL-1, TEL-5)."
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
       ],
       "invalidation_triggers": [
         "The `opus` alias re-points to a new resolved model ID (currently expected `claude-opus-4-8` per CAP-Q1), invalidating this entry's `opus` candidate binding.",
@@ -548,7 +548,7 @@
       "required_qualification_artifacts": [
         "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
         "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
-        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing `resolvedModel` and the per-model cost breakdown as route-qualification telemetry (TEL-1, TEL-5)."
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
       ],
       "invalidation_triggers": [
         "The `sonnet` alias re-points to a new resolved model ID (currently expected `claude-sonnet-5` per CAP-Q2), invalidating this entry's `sonnet` candidate binding.",
@@ -665,7 +665,7 @@
       "required_qualification_artifacts": [
         "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
         "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
-        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing `resolvedModel` and the per-model cost breakdown as route-qualification telemetry (TEL-1, TEL-5)."
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
       ],
       "invalidation_triggers": [
         "The `sonnet` alias re-points to a new resolved model ID (currently expected `claude-sonnet-5` per CAP-Q2), invalidating this entry's `sonnet` candidate binding.",
@@ -782,7 +782,7 @@
       "required_qualification_artifacts": [
         "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
         "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
-        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing `resolvedModel` and the per-model cost breakdown as route-qualification telemetry (TEL-1, TEL-5)."
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
       ],
       "invalidation_triggers": [
         "The `sonnet` alias re-points to a new resolved model ID (currently expected `claude-sonnet-5` per CAP-Q2), invalidating this entry's `sonnet` candidate binding.",
@@ -898,7 +898,7 @@
       "required_qualification_artifacts": [
         "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
         "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
-        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing `resolvedModel` and the per-model cost breakdown as route-qualification telemetry (TEL-1, TEL-5)."
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
       ],
       "invalidation_triggers": [
         "The `sonnet` alias re-points to a new resolved model ID (currently expected `claude-sonnet-5` per CAP-Q2), invalidating this entry's `sonnet` candidate binding.",
@@ -1017,7 +1017,7 @@
       "required_qualification_artifacts": [
         "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
         "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
-        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing `resolvedModel` and the per-model cost breakdown as route-qualification telemetry (TEL-1, TEL-5)."
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
       ],
       "invalidation_triggers": [
         "The `opus` alias re-points to a new resolved model ID (currently expected `claude-opus-4-8` per CAP-Q1), invalidating this entry's `opus` candidate binding.",
@@ -1139,7 +1139,7 @@
       "required_qualification_artifacts": [
         "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
         "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
-        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing `resolvedModel` and the per-model cost breakdown as route-qualification telemetry (TEL-1, TEL-5)."
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
       ],
       "invalidation_triggers": [
         "The `opus` alias re-points to a new resolved model ID (currently expected `claude-opus-4-8` per CAP-Q1), invalidating this entry's `opus` candidate binding.",
@@ -1256,7 +1256,7 @@
       "required_qualification_artifacts": [
         "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
         "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
-        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing `resolvedModel` and the per-model cost breakdown as route-qualification telemetry (TEL-1, TEL-5)."
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
       ],
       "invalidation_triggers": [
         "The `sonnet` alias re-points to a new resolved model ID (currently expected `claude-sonnet-5` per CAP-Q2), invalidating this entry's `sonnet` candidate binding.",
@@ -1372,7 +1372,7 @@
       "required_qualification_artifacts": [
         "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
         "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
-        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing `resolvedModel` and the per-model cost breakdown as route-qualification telemetry (TEL-1, TEL-5)."
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5)."
       ],
       "invalidation_triggers": [
         "The `sonnet` alias re-points to a new resolved model ID (currently expected `claude-sonnet-5` per CAP-Q2), invalidating this entry's `sonnet` candidate binding.",
@@ -1467,7 +1467,7 @@
       "required_qualification_artifacts": [
         "CAR-002 capability-probe results resolving each candidate alias in candidate_routes to its dated model ID and confirming environment-time availability (the CAP-Qn referenced by each tuple).",
         "CAR-003 fixture pass record exercising this agent's role contract, tool surface, mutation boundary, and output format (per fixture_backlog_ref).",
-        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing `resolvedModel` and the per-model cost breakdown as route-qualification telemetry (TEL-1, TEL-5).",
+        "Non-interactive `claude -p --output-format json` transcript per candidate tuple capturing the per-model cost breakdown from the `-p` result, plus `resolvedModel` from the SubagentStart hook / Agent-tool response (TEL-5, a companion surface — not the `-p` JSON result), as route-qualification telemetry (TEL-1, TEL-5).",
         "CAR-010 finalization of the proposed `maxTurns` value and any other Claude-only helper field carried as proposed SpecKit Pro policy (FR-018)."
       ],
       "invalidation_triggers": [

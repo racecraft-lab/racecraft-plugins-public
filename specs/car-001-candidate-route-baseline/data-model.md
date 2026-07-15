@@ -101,7 +101,13 @@ MUST be computed over the agent file's bytes **as published at the pinned
 comparator tag** (`speckit-pro-v2.19.1`, commit
 `e343aa2e4ebcb2d48c501f285d7072cfd55722da`), never the working-tree copy, so the
 recorded identity provably represents the immutable comparator and is
-reproducible from the tag. **Frontmatter** is the leading YAML block delimited by
+reproducible from the tag. **Helper exception:** `autopilot-fast-helper` has no
+Claude agent file at the tag (`hash_source: codex-toml-translation`), so its
+`full_file_sha256` is computed over the pinned Codex source toml bytes and its
+`instruction_sha256` over the contract-equivalent translated Claude body carried
+in `platform_field_mapping` (reproducible by re-hashing that exact string); the
+"agent file bytes at the tag" rule above applies to the eleven current Claude
+agents. **Frontmatter** is the leading YAML block delimited by
 the first pair of `---` fence lines (the file's opening `---` line and its
 closing `---` line); the **instruction body** is everything after that closing
 fence line, hashed verbatim — byte-for-byte, no normalization of whitespace,
