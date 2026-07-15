@@ -47,8 +47,8 @@ missing any required field.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `release_tag` | string | yes | The pinned release tag: `speckit-pro-v2.19.1` (latest published at research time). |
-| `commit_sha` | string (40-hex) | yes | The tag's commit SHA: `e343aa2e4ebcb2d48c501f285d7072cfd55722da`. |
+| `release_tag` | `const` string | yes | The pinned release tag `speckit-pro-v2.19.1` (latest published at research time), pinned in the schema via `const`. |
+| `commit_sha` | `const` string | yes | The tag's commit SHA `e343aa2e4ebcb2d48c501f285d7072cfd55722da`, pinned in the schema via `const`. |
 | `pin_rationale` | string | yes | Why this tag is the comparator (consumer-installable identity; reproducible). |
 | `reconciliation_note` | string | optional | Records the 2.19.0 → 2.19.1 reconciliation: 2.19.0 was the 2026-07-13 scaffold snapshot; 2.19.1 is the latest published at research time; `agents/` and `codex-agents/` are byte-identical between the two, so all tuples and hashes are unchanged. |
 
@@ -259,7 +259,10 @@ manifest carries the machine-referenceable stubs so tuples can point at them by
    executability is always gated behind `probe_required` + qualification
    artifacts.
 8. **Comparator pin (FR-009)**: `immutable_production_comparator.release_tag`
-   and `commit_sha` are present and match the pinned `2.19.1` identity.
+   and `commit_sha` are pinned to the exact `2.19.1` identity
+   (`speckit-pro-v2.19.1` / `e343aa2e4ebcb2d48c501f285d7072cfd55722da`),
+   enforced in the contract via `const` and re-checked by the quickstart
+   validator so the pin holds even without `jsonschema`.
 9. **Cross-reference integrity (Constitution VI)**: every `fixture_backlog_ref`
    and `CAP-Qn` referenced in the manifest resolves to a section in the record,
    and `agent_name` matches its map key; the manifest's `agent_contract_id` is a

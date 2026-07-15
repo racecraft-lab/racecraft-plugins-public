@@ -185,8 +185,9 @@ and recorded absence occur only on the helper, every candidate `effort` is a
 documented level (record `EFF-1`), every distinct candidate alias has an
 invalidation trigger naming it, the helper's `platform_field_mapping` is
 non-empty and represents every field of the pinned Codex source toml
-(source-completeness, data-model §5), and both the capability-question IDs and
-the twelve `agent_contract_id`s are unique.
+(source-completeness, data-model §5), both the capability-question IDs and
+the twelve `agent_contract_id`s are unique, and the comparator is pinned to the
+exact `speckit-pro-v2.19.1` tag and commit.
 
 ```bash
 python3 - <<'PY'
@@ -201,6 +202,10 @@ if len(q_ids) != len(declared_q):
 contract_ids = [e["agent_contract_id"] for e in agents.values()]
 if len(contract_ids) != len(set(contract_ids)):
     errs.append(f"duplicate agent_contract_id: {contract_ids}")
+comp = man["immutable_production_comparator"]
+if (comp["release_tag"] != "speckit-pro-v2.19.1"
+        or comp["commit_sha"] != "e343aa2e4ebcb2d48c501f285d7072cfd55722da"):
+    errs.append(f"comparator pin drift: {comp['release_tag']} / {comp['commit_sha']}")
 for name, e in agents.items():
     if e["agent_name"] != name:
         errs.append(f"{name}: agent_name {e['agent_name']!r} != key")
