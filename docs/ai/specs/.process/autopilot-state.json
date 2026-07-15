@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-001-workflow.md",
   "spec_id": "G56R-001",
   "feature_dir": "specs/g56r-001-candidate-route-baseline",
-  "updated_at": "2026-07-15T23:32:56Z",
-  "active_step": "Phase 6: Analyze",
+  "updated_at": "2026-07-15T23:36:08Z",
+  "active_step": "Phase 6.5: Confidence Gate",
   "settings": {
     "auto_commit": "per-phase",
     "confidence_gate_mode": "advisory",
@@ -258,7 +258,7 @@
         "llm-integration": {
           "items": 15,
           "gaps": 1,
-          "resolution": "Workflow official candidate seed list aligned with clarified spec.md."
+          "resolution": "Spec and workflow official candidate seed lists aligned with the current technical roadmap."
         },
         "data-integrity": {
           "items": 15,
@@ -284,7 +284,7 @@
       "gate": {
         "id": "G4",
         "status": "pass",
-        "reason": "0 [Gap] markers",
+        "reason": "0 checklist gap markers",
         "markers": 0
       },
       "files_changed": [
@@ -332,6 +332,33 @@
       "files_changed": [
         "specs/g56r-001-candidate-route-baseline/tasks.md",
         "docs/ai/specs/.process/G56R-001-workflow.md"
+      ]
+    },
+    "Phase 6: Analyze": {
+      "status": "completed",
+      "completed_at": "2026-07-15T23:36:08Z",
+      "executor_agent_id": null,
+      "execution_mode": "parent_local_execution",
+      "findings": [
+        {
+          "id": "A1",
+          "severity": "HIGH",
+          "status": "resolved",
+          "issue": "Current roadmap seed models drifted from spec.md FR-010 and the workflow seed list.",
+          "resolution": "Aligned spec.md and workflow to the current roadmap seed set and preserved older model names only as historical exclusions."
+        }
+      ],
+      "gate": {
+        "id": "G6",
+        "status": "pass",
+        "reason": "0 CRITICAL/HIGH findings",
+        "markers": 0
+      },
+      "files_changed": [
+        "specs/g56r-001-candidate-route-baseline/spec.md",
+        "specs/g56r-001-candidate-route-baseline/checklists/llm-integration.md",
+        "docs/ai/specs/.process/G56R-001-workflow.md",
+        "docs/ai/specs/.process/autopilot-state.json"
       ]
     }
   },
@@ -422,15 +449,15 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement - Pending task decomposition",

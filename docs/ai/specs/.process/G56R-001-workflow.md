@@ -54,10 +54,10 @@ Grill Me is human-in-the-loop only. Once autopilot starts, clarification uses
 | Specify | `$speckit-specify` | Complete | Created spec and requirements checklist; G1 passed |
 | Clarify | `$speckit-clarify` | Complete | Resolved execution-time source, parity-role, fixture, and handoff ambiguities; G2 passed |
 | Plan | `$speckit-plan` | Complete | Generated plan, research, data model, report contract, quickstart, and G3 pass evidence |
-| Checklist | `$speckit-checklist` | Complete | All five selected domains passed after one LLM seed-list drift was resolved |
+| Checklist | `$speckit-checklist` | Complete | All five selected domains passed after seed-list drift was resolved |
 | Tasks | `$speckit-tasks` | Complete | Generated 38 source-first documentation tasks; G5 passed |
-| Analyze | `$speckit-analyze` | In Progress | Reject authority, scope, traceability, and count drift |
-| Confidence Gate | G6.5 | Pending | Record advisory pre-implementation confidence after analysis and before report authoring |
+| Analyze | `$speckit-analyze` | Complete | Resolved seed-list drift and passed G6 |
+| Confidence Gate | G6.5 | In Progress | Record advisory pre-implementation confidence after analysis and before report authoring |
 | Implement | `$speckit-implement` | Pending | Author and validate the canonical research report |
 | Post | Post-Implementation | Pending | Run durable verification, review, UAT, PR, remediation, and retrospective steps |
 
@@ -190,11 +190,11 @@ artifact and no production code.
 The execution-time review starts from these roadmap IDs but does not presume
 that they remain eligible or complete:
 
-- `gpt-5.1`
-- `gpt-5.1-codex-max`
-- `gpt-5.2`
-- `gpt-5.2-codex`
-- `gpt-5.2-codex-pro`
+- `gpt-5.6-sol`
+- `gpt-5.6-terra`
+- `gpt-5.6-luna`
+- `gpt-5.5`
+- `gpt-5.3-codex-spark`
 
 Every retained or added candidate must have direct execution-snapshot official
 support, a role-contract rationale, and an explicit model/effort tuple. Every
@@ -513,7 +513,7 @@ Focus on G56R-001 requirements:
 
 | Checklist | Items | Gaps | Resolution |
 |---|---|---|---|
-| LLM integration | 15 | 1 | Workflow official candidate seed list aligned with clarified `spec.md`; checklist now passes |
+| LLM integration | 15 | 1 | `spec.md` and workflow official candidate seed lists aligned with the current roadmap seed set; checklist now passes |
 | Data integrity | 15 | 0 | No unresolved data-integrity requirement defects |
 | Error handling | 15 | 0 | No unresolved error-handling requirement defects |
 | Security | 15 | 0 | No unresolved security requirement defects |
@@ -522,7 +522,7 @@ Focus on G56R-001 requirements:
 All true gaps must update `spec.md` or `plan.md`, then the affected checklist
 must be rerun before G4 passes.
 
-G4 passed with `0 [Gap] markers`.
+G4 passed with zero checklist gap markers.
 
 ---
 
@@ -625,7 +625,7 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |---|---|---|---|
-| Pending | Pending | Pending | Pending |
+| A1 | HIGH | Current roadmap seed models drifted from `spec.md` FR-010 and the workflow seed list | Resolved by aligning `spec.md` and workflow to the current roadmap seed set and preserving older model names only as historical exclusions |
 
 G6 passes only when no `CRITICAL` or `HIGH` finding remains and every accepted
 lower-severity finding has a recorded disposition.

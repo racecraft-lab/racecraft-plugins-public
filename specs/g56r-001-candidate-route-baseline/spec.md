@@ -90,7 +90,7 @@ As the G56R-002/G56R-003 owner, I need an exact fixture and telemetry backlog so
 - **FR-007**: The artifact MUST record exactly twelve target role contract records: ten active Codex TOML source records and two Claude parity-only comparison records.
 - **FR-008**: Each role contract record MUST include source file, production route or absence, declared model/effort/sandbox fields, instruction and full-file hashes, role boundary, safety and mutation expectations, grounding requirements, separate tool/skill/MCP contracts, source config bindings, output contract, client surface, representative future task, and effective-runtime fields marked for later verification.
 - **FR-009**: Claude parity-only roles `consensus-synthesizer` and `gate-validator` MUST be comparison records only and MUST NOT be described as active Codex agents.
-- **FR-010**: The artifact MUST evaluate the roadmap seed models `gpt-5.1`, `gpt-5.1-codex-max`, `gpt-5.2`, `gpt-5.2-codex`, and `gpt-5.2-codex-pro` only against current official OpenAI documentation.
+- **FR-010**: The artifact MUST evaluate the current roadmap seed models `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, and `gpt-5.3-codex-spark` only against current official OpenAI documentation; historical seed inputs may be recorded only as rejected, blocked, or undocumented exclusions.
 - **FR-011**: The artifact MUST record admitted provisional candidate route records with `candidate_route_id`, `agent_contract_id`, source bindings, required capabilities, unsupported facts, and invalidation rules.
 - **FR-012**: No candidate record MUST claim availability, executability, qualification, preference, efficiency, fallback behavior, or exact treatment before G56R-002/G56R-003 evidence exists.
 - **FR-013**: The artifact MUST record the fixture baseline as exactly three current prompt-emulation fixtures and nine missing executable role fixtures.
@@ -133,9 +133,23 @@ status, access status, and invalidation trigger.
 
 ### Roadmap Seed Candidate Admission
 
-The exact seed models named in the phase prompt are not automatically admitted. Current official Codex documentation is decisive.
+The current roadmap seed models are not automatically admitted. Current official Codex documentation is decisive.
 
 | Seed model | G56R-001 status | Required report treatment |
+|---|---|---|
+| `gpt-5.6-sol` | `execution_snapshot_review_required` | Evaluate against refreshed official source records and admit only as a provisional discovery candidate when role contract and source bindings support it. |
+| `gpt-5.6-terra` | `execution_snapshot_review_required` | Evaluate against refreshed official source records and admit only as a provisional discovery candidate when role contract and source bindings support it. |
+| `gpt-5.6-luna` | `execution_snapshot_review_required` | Evaluate against refreshed official source records and admit only as a provisional discovery candidate when role contract and source bindings support it. |
+| `gpt-5.5` | `execution_snapshot_review_required` | Treat as an immutable comparator where project inventory records it and retain as a candidate only while current official documentation supports it. |
+| `gpt-5.3-codex-spark` | `execution_snapshot_review_required` | Treat as an optional-helper candidate only when current official documentation, account/surface constraints, and role contract all support it. |
+
+### Historical Seed Exclusions
+
+These entries came from earlier roadmap drafts or adjacent naming patterns. They
+are not the current roadmap seed set and cannot be admitted unless current
+official documentation independently supports them.
+
+| Historical input | G56R-001 status | Required report treatment |
 |---|---|---|
 | `gpt-5.1` | `undocumented_for_current_codex_route` | Do not admit unless an official current Codex source supports it for the pinned surface. |
 | `gpt-5.1-codex-max` | `rejected_deprecated_or_withdrawn` | Reject when current official lifecycle docs publish the exact slug as deprecated, retiring, shut down, removed, or replaced; record lifecycle state, surface, shutdown date, replacement model, and source binding. |
