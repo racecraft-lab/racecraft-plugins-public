@@ -726,19 +726,39 @@ An independent reviewer audited the two deliverables against spec.md, the PRD AC
 
 ---
 
+## Post-PR Review-Remediation Loop (rp-review-cli)
+
+After PR #350 opened, an operator-directed `/rp-review-cli` loop (RepoPrompt oracle, `--mode review` over the two deliverables + all `specs/car-001-candidate-route-baseline/` artifacts; the technical roadmap was excluded as out-of-PR-scope forward methodology) ran the deliverable through **13 review rounds**; round 13 returned **NO MATERIAL FINDINGS**. Every round's findings were independently verified, remediated, re-verified (suite 2734/2734 + manifest schema-valid + all 11 agent hashes reproduce from `speckit-pro-v2.19.1`), committed, and pushed. Findings per round (also cleared the 5 Copilot inline threads in round 1): 13 → 8 → 6 → 2 → 1 → 1 → 1 → 2 → 1 → 1 → 1 → 1 → **0**.
+
+| Round | Commit | Theme fixed |
+|-------|--------|-------------|
+| 1 | `e4ab9849` | route-policy inventory falsehood (a skills search returns 17 matches, not "nothing"); added `xhigh` to the effort enum; effort-acceptance probe; telemetry overclaim; helper no-tool contract; `binding_question_ref` rule; `reasoning_effort`→`effort`; new quickstart V9 validator; no-duplication invariant; fact-label purity; missing agent colors; V7 accounting; roadmap status |
+| 2 | `e3e899e5` | propagated the helper no-tool contract to every reference; V9 source-completeness + schema `minItems`; roadmap comparator "resolved IDs"→aliases; data-model invariant; CAP-Q5/AUTH-2 citations |
+| 3 | `83add92c` | helper hash exception in FR-011/§3.2; AUTH-2 → `[POLICY]`; `resolvedModel` telemetry surface; CAP-Q table scope; research summary; schema `minLength`; duplicate-id V9 checks |
+| 4 | `bdaecbf3` | helper hash exception into FR-014/§7-rule-4; schema `hash_source`↔absence conditional; research "Resolved vs. deferred" |
+| 5 | `6b669c6a` | cross-reference invariant (record keys by `agent_name`; `agent_contract_id` is downstream-only); V9 `agent_contract_id` uniqueness |
+| 6 | `20f696fe` | comparator `const`-pinned in the schema + re-checked in V9 |
+| 7 | `4cad690f` | V9 now loads the record and resolves every fixture-backlog anchor + CAP-Q id |
+| 8 | `cca04b3b` | V9 dedicated-entry CAP-Q check + per-agent comparator-drift trigger check |
+| 9–12 | `9ecbbd3a`, `93f1b3c0`, `afcfec94`, `e9984be3` | removed/refined the "executable candidate set" overclaim across the handoff self-containment assertion, the GO/NO-GO decision, SC-004, plan.md, tasks.md, and the spec seed — executability now uniformly deferred to probing **and** CAR-003 qualification |
+
+**Deferred to the roadmap owner (surfaced, not edited):** two round-2 findings touch pre-existing *forward-methodology* wording in `claude-agent-routing-technical-roadmap.md`, outside PR #350's one-line roadmap diff — the CAR-002 telemetry "never a returned value" line (conflicts with TEL-3: OTel exposes effort) and the effort-search "documented default (`high`)" rule (EFF-3 documents `high` only for Opus 4.8; EFF-1 says levels are model-dependent). Recorded here as a follow-up rather than silently rewriting the roadmap's plan for future specs.
+
+---
+
 ## Lessons Learned
 
 ### What Worked Well
 
--
+- The independent-review + rp-review-cli loop caught defects the automated gates and authoring agents could not: a factually wrong evidence claim (the "search returned nothing" line — the search actually returns 17 matches), several rules that were *stated as enforced* but were not, a mislabeled statement class, and a subtle executability overclaim. Independent hash recomputation from the pinned tag and a steadily-growing stdlib validator turned each "review-enforced" rule into a mechanically-checked one.
 
 ### Challenges Encountered
 
--
+- RepoPrompt's heavy `builder` context step timed out on this large repo (~15 min then a dropped MCP connection); the lighter `chat --mode review` over an explicit file selection was the reliable path. Several rounds were pure *propagation* of a prior round's fix — the same phrasing surviving in another artifact (e.g. the "executable candidate set" overclaim reappearing in SC-004, then plan/tasks, then the spec seed across four rounds). A whole-repo grep for the fixed phrase after each themed change would have collapsed those into one round.
 
 ### Patterns to Reuse
 
--
+- For a deliverable with strict internal-consistency invariants, grow a single stdlib validator (here, quickstart V9) that mechanically enforces every rule the prose claims is "review-enforced" — cross-reference resolution against the record, id uniqueness, per-alias + drift trigger coverage, source-completeness, and `const` pins. Each review round that surfaces a stated-but-unchecked rule becomes a new assertion (with a negative test). And after any themed wording fix, grep **all** artifacts, not just the reviewed subset, for the same phrase.
 
 ---
 
