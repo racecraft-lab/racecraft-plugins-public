@@ -1,7 +1,8 @@
 # SpecKit Pro Harness Engineering Uplift Implementation Roadmap
 
 **Turn SpecKit Pro harness needs into reviewable hardening specs for context,
-tools, permissions, evals, traces, orchestration, and drift repair.**
+tools, permissions, evals, traces, orchestration, portable knowledge, and drift
+repair.**
 
 This document defines the **SPEC catalog** for the harness-engineering uplift:
 an ordered set of specifications derived from the source PRD. Each SPEC maps
@@ -13,14 +14,14 @@ as its input.
 **Source PRD:** [../../prd-harness-engineering-uplift.md](../../prd-harness-engineering-uplift.md)
 **Roadmap MOC:** [harness-engineering-uplift-roadmap-MOC.md](harness-engineering-uplift-roadmap-MOC.md)
 **Spec ID prefix:** `HRNS-###`
-**Status:** Draft. Added 2026-07-03 and updated 2026-07-04 to describe the
-SpecKit Pro harness hardening lane.
+**Status:** Draft. Added 2026-07-03 and updated 2026-07-15 to include the pinned
+OKF v0.1 repository-knowledge lifecycle and indexing-interoperability lane.
 
 ---
 
 ## Roadmap Overview
 
-The feature is decomposed into **8 specifications** across **6 spec dependency
+The feature is decomposed into **14 specifications** across **9 spec dependency
 tiers**. A separate follow-on scaffold lane turns accepted roadmap items into
 reviewable implementation branches.
 
@@ -30,14 +31,18 @@ reviewable implementation branches.
 | 2 | HRNS-002, HRNS-003 | Durable context/state and helper/tool contract foundations | Parallel after HRNS-001 |
 | 3 | HRNS-004, HRNS-005 | Permission/sandbox controls and eval readiness | Parallel after HRNS-003 where needed |
 | 4 | HRNS-006 | Trace/debug packet contract spanning helpers, evals, and permissions | Sequential after HRNS-003 through HRNS-005 |
-| 5 | HRNS-007 | Long-horizon orchestration and resumption controls | Sequential after HRNS-002 and HRNS-006 |
-| 6 | HRNS-008 | Harness drift and garbage-collection remediation loop | Sequential after HRNS-002, HRNS-005, and HRNS-006 |
+| 5 | HRNS-007, HRNS-009 | Long-horizon orchestration and persistent OKF knowledge foundation | Parallel after shared foundations through HRNS-006 |
+| 6 | HRNS-010 | Incremental evidence ingest and cited knowledge synthesis | Sequential after the persistent bundle contract |
+| 7 | HRNS-011, HRNS-012, HRNS-013 | Query/capture, knowledge maintenance, and indexer interoperability | Parallel after maintained knowledge exists |
+| 8 | HRNS-014 | Guarded external OKF exchange and reconciliation | Sequential after controls, orchestration, synthesis, and lint |
+| 9 | HRNS-008 | Harness drift and garbage-collection remediation loop | Final maintenance layer after the full knowledge lifecycle |
 
 **Follow-on scaffold lane:** After maintainers accept this roadmap, scaffold ready
 HRNS specs as reviewable implementation branches in the selected priority order.
 
 **Execution Order:** HRNS-001 -> HRNS-002 + HRNS-003 -> HRNS-004 + HRNS-005 ->
-HRNS-006 -> HRNS-007 -> HRNS-008
+HRNS-006 -> HRNS-007 + HRNS-009 -> HRNS-010 -> HRNS-011 + HRNS-012 +
+HRNS-013 -> HRNS-014 -> HRNS-008
 
 **Dependency Constraints:**
 
@@ -55,9 +60,24 @@ HRNS-006 -> HRNS-007 -> HRNS-008
   summarize helper selection, authorization, and verification evidence.
 - HRNS-007 requires HRNS-002 and HRNS-006 because resumption needs durable state
   plus traceable handoff evidence.
-- HRNS-008 requires HRNS-002, HRNS-005, and HRNS-006 because drift detection
-  depends on current context contracts, sensor coverage, and trace/debug
-  evidence.
+- HRNS-009 requires HRNS-001 through HRNS-006 foundations because canonical
+  evidence classification, durable mapping state, governed operations,
+  authorization, conformance sensors, and provenance traces must exist before
+  repository initialization becomes an installed harness capability. It can
+  proceed in parallel with HRNS-007 after HRNS-006.
+- HRNS-010 requires HRNS-005, HRNS-006, and HRNS-009 because incremental
+  synthesis needs the committed bundle profile, evaluation rules, and traceable
+  source mappings.
+- HRNS-011, HRNS-012, and HRNS-013 require HRNS-009 and HRNS-010 because query,
+  maintenance, and consumer indexing need an initialized bundle plus accepted
+  ingest semantics. Their additional helper, eval, and trace dependencies are
+  listed in their specification sections.
+- HRNS-014 requires HRNS-004, HRNS-006, HRNS-007, HRNS-009, HRNS-010, and
+  HRNS-012 because external exchange needs protected surfaces, evidence,
+  resumable isolated proposals, maintained knowledge, and trusted lint.
+- HRNS-008 requires HRNS-002, HRNS-005, HRNS-006, and HRNS-009 through HRNS-014
+  because final drift maintenance must understand context, traces, committed
+  knowledge, synthesis, query capture, lint, derived indexes, and exchange.
 
 ## Reviewability Contract
 
@@ -114,6 +134,86 @@ The harness hardening lane centers on these requirements:
 - Keep the first-release implementation dependency posture conservative:
   repo-local contracts and Python runner/helper surfaces first, with any larger
   runtime dependency requiring its own explicit decision.
+- Treat project knowledge as a governed harness surface: initialization,
+  evidence discovery, incremental synthesis, query/capture, lint, indexing,
+  reconciliation, conflict decisions, and write-back evidence need named owners.
+- Preserve an explicit authority split: repository sources are authoritative
+  evidence, while one committed OKF bundle is the persistent, versioned
+  synthesis and default project-knowledge retrieval surface.
+- Keep lexical, graph, and vector indexes disposable and producer-neutral so the
+  committed Markdown remains useful without CodeGraph, GitNexus, or an embedding
+  provider.
+- Apply identical knowledge contracts to Claude Code and Codex so distribution
+  wrappers cannot change validity, safety, preservation, or conflict behavior.
+
+## OKF v0.1 Repository Knowledge Profile
+
+The OKF lane uses the following decisions as scaffold-time constraints:
+
+- **Normative authority:** Full conformance targets
+  [OKF v0.1 `SPEC.md`](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/d44368c15e38e7c92481c5992e4f9b5b421a801d/okf/SPEC.md)
+  pinned at commit `d44368c15e38e7c92481c5992e4f9b5b421a801d`.
+  Moving the pin is a reviewed compatibility change. Google Cloud reference
+  agents, validator, server, client, and UI are interoperability evidence, not
+  normative dependencies.
+- **Authority and lifecycle:** Repository code, tests, specifications, decisions,
+  and other approved sources remain authoritative evidence. The OKF bundle is a
+  committed, agent-maintained synthesis reviewed with project work; it cannot
+  silently override contradictory evidence.
+- **Initialization and location:** Explicit harness adoption creates or adopts
+  one bundle at configurable `docs/ai/knowledge/` by default. Global plugin
+  installation never mutates a repository. Keep the bundle outside vendored
+  `.specify/**` and consumer-owned generated state such as `.codegraph/**`.
+- **Evidence coverage:** Inventory code, tests, root and nested `AGENTS.md`,
+  `CLAUDE.md`, and `GEMINI.md`; `.specify/memory/constitution.md`; PRDs;
+  technical roadmaps; MOCs; workflows; ADRs; and approved issue/PR evidence.
+  Generated distributions, caches, fixtures, raw transcripts, and derived
+  indexes are non-authoritative inputs.
+- **Producer profile:** Maintain valid UTF-8 Markdown concepts with YAML
+  frontmatter, the required `type`, and recommended title, description,
+  resource, tags, or timestamp only where evidence supports them. Namespaced
+  extension fields carry source anchors/digests, status, and producer provenance.
+  Stable source mapping and identity rules prevent filename collisions.
+- **Consumer profile:** Accept the minimum valid `type`-only concept, unknown
+  concept types, unknown frontmatter fields, and both legal OKF link forms.
+  Preserve extensions and bodies through staging/reconciliation; lossy handling
+  is blocking.
+- **Version, index, and log interpretation:** Record the pinned profile/spec
+  version at root-index scope without imposing a `version` field on ordinary
+  concepts. Maintain indexes for progressive disclosure. Treat `log.md` as
+  logically append-only and newest-first: prepend new records and preserve old
+  records, using a corrective entry rather than rewriting history.
+- **Link portability:** Emit relative internal links so raw repository and local
+  renderers remain portable. Intake accepts both pinned-spec forms, reports
+  broken or ambiguous targets, and never fetches a target automatically.
+- **Conformance versus health:** Structural validity follows the pinned spec.
+  Spec-defined soft conditions remain warnings. Broken links, missing useful
+  indexes, stale or contradictory claims, citation quality, and coverage are a
+  separate health/hygiene report.
+- **Ingest and synthesis:** Detect changed evidence from Git and content digests,
+  update only affected concepts/indexes/log, require citations for factual
+  claims, mark inference explicitly, and emit reviewable proposals in the
+  declared feature branch/worktree rather than writing on every file event.
+- **Query and compounding:** Query works from files/indexes without vectors,
+  identifies stale or conflicting knowledge, cites concepts and evidence, and
+  files useful answers back only as reviewed proposals.
+- **Indexer interoperability:** Consumers may create concept/section nodes,
+  graph edges, FTS entries, or heading-aware embeddings. Generated stores are
+  ignored and reproducible; reindex permission never grants OKF write ownership.
+- **Untrusted intake:** External frontmatter, Markdown, links, citations, and
+  command-like text are data, not instructions. Intake is bounded,
+  workspace-confined, local-first, and network-disabled by default.
+- **Bidirectional synchronization:** Reconcile recorded base, current canonical
+  source, and incoming staged knowledge. Materialize approved changes only as a
+  bounded proposal in a new branch/worktree with review evidence; never write
+  directly to the active branch or auto-merge.
+- **Conflict and deletion policy:** If local and incoming content both changed,
+  preserve both and stop for an explicit decision. Timestamps never choose the
+  winner. Omission never means deletion; require an explicit tombstone/deletion
+  proposal and human approval.
+- **Distribution parity:** Claude Code and Codex may expose native wrappers, but
+  operation schemas, safety metadata, profile pin, results, fixtures, and trace
+  semantics must remain equivalent.
 
 ---
 
@@ -126,7 +226,13 @@ HRNS-003 -> HRNS-004 Permission, Sandbox, and Authorization
 HRNS-001 + HRNS-003 -> HRNS-005 Feedback Sensors and Eval Readiness
 HRNS-003 + HRNS-004 + HRNS-005 -> HRNS-006 Trace, Debug, and Review Evidence Packets
 HRNS-002 + HRNS-006 -> HRNS-007 Long-Horizon Orchestration
-HRNS-002 + HRNS-005 + HRNS-006 -> HRNS-008 Harness Drift and Garbage Collection
+HRNS-001 + HRNS-002 + HRNS-003 + HRNS-004 + HRNS-005 + HRNS-006 -> HRNS-009 Host OKF Knowledge Foundation
+HRNS-005 + HRNS-006 + HRNS-009 -> HRNS-010 Incremental Ingest and Synthesis
+HRNS-003 + HRNS-005 + HRNS-006 + HRNS-009 + HRNS-010 -> HRNS-011 Query and Capture
+HRNS-005 + HRNS-006 + HRNS-009 + HRNS-010 -> HRNS-012 Knowledge Conformance and Drift
+HRNS-003 + HRNS-005 + HRNS-006 + HRNS-009 + HRNS-010 -> HRNS-013 Code-Intelligence Interoperability
+HRNS-004 + HRNS-006 + HRNS-007 + HRNS-009 + HRNS-010 + HRNS-012 -> HRNS-014 External Exchange and Reconciliation
+HRNS-002 + HRNS-005 + HRNS-006 + HRNS-009 + HRNS-010 + HRNS-011 + HRNS-012 + HRNS-013 + HRNS-014 -> HRNS-008 Harness Drift and Garbage Collection
 ```
 
 ---
@@ -142,7 +248,13 @@ HRNS-002 + HRNS-005 + HRNS-006 -> HRNS-008 Harness Drift and Garbage Collection
 | HRNS-005 | Feedback Sensors and Eval Readiness Ladder | Pending | - | Blocked by HRNS-001 and HRNS-003 |
 | HRNS-006 | Trace, Debug, and Review Evidence Packets | Pending | - | Blocked by HRNS-003, HRNS-004, and HRNS-005 |
 | HRNS-007 | Long-horizon Orchestration and Resumption Controls | Pending | - | Blocked by HRNS-002 and HRNS-006 |
-| HRNS-008 | Harness Drift, Garbage Collection, and Self-healing Remediation | Pending | - | Blocked by HRNS-002, HRNS-005, and HRNS-006 |
+| HRNS-008 | Harness Drift, Garbage Collection, and Self-healing Remediation | Pending | - | Final layer; blocked by HRNS-002, HRNS-005, HRNS-006, and HRNS-009 through HRNS-014 |
+| HRNS-009 | Host Repository OKF Knowledge Contract and Initialization | Pending | - | Blocked by HRNS-001 through HRNS-006 |
+| HRNS-010 | Incremental Evidence Ingest and Knowledge Synthesis | Pending | - | Blocked by HRNS-005, HRNS-006, and HRNS-009 |
+| HRNS-011 | Knowledge Query, Citation, and Compounding Capture | Pending | - | Blocked by HRNS-003, HRNS-005, HRNS-006, HRNS-009, and HRNS-010 |
+| HRNS-012 | Knowledge Conformance, Health, and Drift Maintenance | Pending | - | Blocked by HRNS-005, HRNS-006, HRNS-009, and HRNS-010 |
+| HRNS-013 | Code-Intelligence and Vector-Index Interoperability | Pending | - | Blocked by HRNS-003, HRNS-005, HRNS-006, HRNS-009, and HRNS-010 |
+| HRNS-014 | External OKF Exchange and Reviewable Reconciliation | Pending | - | Blocked by HRNS-004, HRNS-006, HRNS-007, HRNS-009, HRNS-010, and HRNS-012 |
 
 **Status Legend:** Pending | Ready | In Progress | In Review | Complete | Complete / Archived | Blocked
 
@@ -152,7 +264,7 @@ HRNS-002 + HRNS-005 + HRNS-006 -> HRNS-008 Harness Drift and Garbage Collection
 
 ### HRNS-001: Harness Surface Inventory and Gap Taxonomy
 
-**Priority:** P1 | **Depends On:** None | **Enables:** HRNS-002, HRNS-003, HRNS-005, HRNS-008
+**Priority:** P1 | **Depends On:** None | **Enables:** HRNS-002, HRNS-003, HRNS-005, HRNS-009
 
 **Goal:** Create the durable surface inventory and gap taxonomy that downstream
 HRNS specs use to avoid rediscovering workflow boundaries.
@@ -171,6 +283,9 @@ Budget result: within budget
 - Map retained concepts to SpecKit Pro surfaces: skills, agents, commands,
   helpers, runner, generated payloads, docs, workflow files, PR packets, tests,
   evals, and release gates.
+- Inventory every evidence class eligible for knowledge ingest and explicitly
+  classify generated distributions, caches, fixtures, raw transcripts, and
+  derived indexes as non-authoritative inputs.
 - Define the gap taxonomy used by later specs: context, tool contract,
   permission, sandbox, memory/state, orchestration, verification,
   observability, HITL, security, and garbage collection.
@@ -178,9 +293,10 @@ Budget result: within budget
   generated-doc/test change, or explicit future dependency decision.
 - Add an external-candidate evaluation matrix covering relevant schema,
   orchestration, eval, trace/observability, guardrail, workflow-runtime, and
-  coding-agent harness references. Each row records mapped HRNS surfaces,
-  local-first fit, runtime dependency posture, telemetry/privacy posture,
-  licensing/supply-chain risk, and recommendation.
+  coding-agent harness and knowledge-format references. Each row records mapped
+  HRNS surfaces, local-first fit, runtime dependency posture,
+  telemetry/privacy posture, licensing/supply-chain risk, normative/reference
+  status, compatibility gaps, and recommendation.
 - Classify self-improvement loop closure for workflows that can generate future
   harness behavior: human-in-the-loop, human-on-the-loop, fully automated, or
   disallowed. Flag open-ended recursive self-improvement and self-modifying
@@ -212,8 +328,16 @@ Budget result: within budget
 - A durable taxonomy artifact exists and covers every SpecKit Pro harness surface
   named in PRD AC-1.*.
 - The taxonomy includes the external-candidate matrix needed by HRNS-003,
-  HRNS-004, HRNS-005, HRNS-006, HRNS-007, and HRNS-008 before those specs make
-  implementation or dependency decisions.
+  HRNS-004, HRNS-005, HRNS-006, HRNS-007, HRNS-008, HRNS-009, HRNS-010, and
+  HRNS-011 through HRNS-014 before those specs make implementation or
+  dependency decisions.
+- Evidence coverage and exclusions include code, tests, agent guidance,
+  constitution, PRDs, technical roadmaps, MOCs, workflows, ADRs, approved
+  issue/PR evidence, generated copies, caches, fixtures, transcripts, and
+  derived index artifacts.
+- The OKF evaluation row records the pinned normative revision, draft maturity,
+  reference-tooling posture, known compatibility gaps, and full-conformance
+  decision used by HRNS-009 through HRNS-014.
 - The taxonomy names every self-improvement loop class discovered in current
   skills, agents, helpers, generated payloads, evals, and workflow files, and
   records its permitted closure level or disallowed status.
@@ -226,7 +350,7 @@ Budget result: within budget
 
 ### HRNS-002: Progressive Context and Durable State Contract
 
-**Priority:** P1 | **Depends On:** HRNS-001 | **Enables:** HRNS-007, HRNS-008
+**Priority:** P1 | **Depends On:** HRNS-001 | **Enables:** HRNS-007, HRNS-008, HRNS-009
 
 **Goal:** Make SpecKit Pro workflow entrypoints short, repo-grounded maps that
 externalize long-running state into durable artifacts.
@@ -258,6 +382,10 @@ Budget result: within budget
   generated task-specific guidance, injected resume context, and default/fresh
   task state must be distinguishable and switchable without changing root
   instructions or producing accidental PR diffs.
+- Define authoritative evidence versus committed synthesized knowledge and
+  disposable consumer indexes, including source discovery, exclusions, stable
+  concept identity, source digests, mapping/base state, branch ownership, and
+  partial-operation recovery.
 
 **Out of Scope:**
 
@@ -282,6 +410,9 @@ Budget result: within budget
   restore semantics are specified for long-running workflows.
 - Task/spec switching records the active focus and rejects stale injected context
   before resume without mutating canonical project guidance.
+- Knowledge lifecycle state distinguishes authoritative evidence, committed
+  synthesis, generated consumer state, recorded base, and staged external input,
+  and cannot elevate partial synthesis or an index into accepted knowledge.
 - Verification includes a focused docs/reference check or fixture proving stale
   roadmap, workflow, feature, generated payload, or archive pointers are caught.
 
@@ -289,7 +420,7 @@ Budget result: within budget
 
 ### HRNS-003: Helper, Tool, and Capability Contract
 
-**Priority:** P1 | **Depends On:** HRNS-001 | **Enables:** HRNS-004, HRNS-005, HRNS-006
+**Priority:** P1 | **Depends On:** HRNS-001 | **Enables:** HRNS-004, HRNS-005, HRNS-006, HRNS-009, HRNS-011, HRNS-013
 
 **Goal:** Normalize helper/tool contracts so agents can discover capabilities,
 understand mutability, dry-run safely, and self-correct from structured errors.
@@ -315,6 +446,12 @@ Budget result: within budget
   schemas, and existing repo-local runner metadata. Record whether SpecKit Pro
   should keep schemas Python-authoritative, generate machine-readable schemas,
   or introduce an optional validation adapter.
+- Reserve separate operation contracts for OKF initialization, incremental
+  ingest/synthesis, query, answer capture, lint, indexer discovery, external
+  validation/intake, reconciliation planning, and approved proposal
+  materialization. Include schemas, mutability, path/network posture, artifacts,
+  exit states, and Claude/Codex parity requirements without implementing those
+  operations in this foundational spec.
 
 **Out of Scope:**
 
@@ -343,12 +480,16 @@ Budget result: within budget
 - A schema-contract decision names the canonical source of truth, generated
   artifact format, validation path, dependency posture, and fixtures proving
   contract drift is detected.
+- The registry can represent the future OKF lifecycle operations and their
+  type-only, unknown-extension, citation, link-preservation, and consumer-
+  discovery expectations without coupling them to Google reference tooling,
+  CodeGraph, GitNexus, or distribution-specific semantics.
 
 ---
 
 ### HRNS-004: Permission, Sandbox, and Pre-action Authorization Controls
 
-**Priority:** P1 | **Depends On:** HRNS-003 | **Enables:** HRNS-006, release-readiness hardening
+**Priority:** P1 | **Depends On:** HRNS-003 | **Enables:** HRNS-006, HRNS-009, HRNS-014, release-readiness hardening
 
 **Goal:** Add structural helper risk metadata, runtime preflight, pre-action
 authorization, safe-stop semantics, and protected harness-control boundaries.
@@ -377,6 +518,13 @@ Budget result: within budget
 - Define shared-context promotion gates: secret scan, size cap, provenance
   check, storage-class check, human confirmation, and clean git-footprint
   behavior before any context checkpoint is committed or distributed to a team.
+- Classify external OKF bundles and all embedded text as untrusted data, then
+  define bounded-input, path-normalization, workspace-confinement, symlink,
+  parser-abuse, secret, and network-disabled controls for later intake.
+- Protect source evidence, committed OKF files, source mappings, and
+  reconciliation base state. Internal synthesis is limited to a declared
+  feature branch/worktree; external write-back requires an isolated reviewable
+  proposal.
 
 **Out of Scope:**
 
@@ -410,12 +558,15 @@ Budget result: within budget
 - Shared-context promotion guidance includes explicit block/warn behavior for
   secrets, oversize artifacts, missing provenance, and accidental personal-state
   diffs.
+- External-knowledge policy rejects instruction execution, automatic resource
+  fetching, timestamp-based conflict authority, deletion by omission,
+  write-scope expansion, and self-merging proposals.
 
 ---
 
 ### HRNS-005: Feedback Sensors and Eval Readiness Ladder
 
-**Priority:** P1 | **Depends On:** HRNS-001, HRNS-003 | **Enables:** HRNS-006, HRNS-008
+**Priority:** P1 | **Depends On:** HRNS-001, HRNS-003 | **Enables:** HRNS-006, HRNS-008, HRNS-009, HRNS-010, HRNS-011, HRNS-012, HRNS-013, HRNS-014
 
 **Goal:** Define fixture-first verification and eval expectations for SpecKit
 Pro skills, helpers, workflows, and review packets.
@@ -457,6 +608,16 @@ Budget result: within budget
   tests, formal or executable verifiers, and fixture parity outrank calibrated
   rubrics and LLM judges; intrinsic self-assessment may propose changes but
   cannot approve harness-control changes.
+- Define the version-pinned OKF conformance-corpus contract needed by HRNS-009,
+  HRNS-012, and HRNS-014: positive/negative, minimum-valid, unknown-extension,
+  index, log, link, encoding, and round-trip cases derived from the normative
+  spec.
+- Separate structural conformance from health/hygiene findings such as broken
+  links, missing useful indexes, stale or contradictory claims, weak citations,
+  and coverage gaps. Keep spec-defined soft conditions non-blocking.
+- Define equivalent Claude Code and Codex fixture expectations and advisory
+  differential checks against Google reference tooling without letting a
+  stricter reference validator redefine validity.
 
 **Out of Scope:**
 
@@ -496,12 +657,15 @@ Budget result: within budget
 - Test/eval inventory guidance includes banned vacuous patterns such as
   placeholder assertions, broad OR fallbacks, conditional file-existence guards,
   and self-fulfilling setup.
+- The OKF corpus can distinguish pinned-spec failures, soft warnings, health
+  findings, extension-preservation regressions, reference-tool differences, and
+  Claude/Codex parity failures.
 
 ---
 
 ### HRNS-006: Trace, Debug, and Review Evidence Packets
 
-**Priority:** P1 | **Depends On:** HRNS-003, HRNS-004, HRNS-005 | **Enables:** HRNS-007, HRNS-008
+**Priority:** P1 | **Depends On:** HRNS-003, HRNS-004, HRNS-005 | **Enables:** HRNS-007, HRNS-008, HRNS-009, HRNS-010, HRNS-011, HRNS-012, HRNS-013, HRNS-014
 
 **Goal:** Add bounded local trace/debug records and PR-packet summaries for
 helper, workflow, eval, and delegated-agent behavior.
@@ -534,6 +698,11 @@ Budget result: within budget
   baseline, context-health zone, burn-rate estimate where available,
   compaction/auto-save event, restore source, and whether the source was named,
   workflow-derived, or emergency fallback.
+- Reserve OKF trace fields for normative spec/profile revision, repository and
+  source revisions, source/concept digests, source-to-concept identity, knowledge
+  status, synthesis model/provider where available, base mapping, distribution
+  surface, validation results, preserved extensions, retrieval mode,
+  normalization, reconciliation classification, and operator decisions.
 
 **Out of Scope:**
 
@@ -563,12 +732,15 @@ Budget result: within budget
   rejected without raw log dumps, secrets, or reliance on chat history alone.
 - Context-continuity fixtures prove compaction/resume evidence can be summarized
   without committing raw personal transcripts or leaking secrets.
+- OKF trace fixtures can reproduce initialization, ingest, query/capture, lint,
+  indexing, and exchange decisions and connect each proposed diff to source or
+  base/local/incoming evidence without storing unbounded content or secrets.
 
 ---
 
 ### HRNS-007: Long-horizon Orchestration and Resumption Controls
 
-**Priority:** P2 | **Depends On:** HRNS-002, HRNS-006 | **Enables:** safer multi-agent/autopilot operation
+**Priority:** P2 | **Depends On:** HRNS-002, HRNS-006 | **Enables:** HRNS-014, safer multi-agent/autopilot operation
 
 **Goal:** Harden long-running SpecKit Pro workflows with explicit checkpoints,
 file ownership, worktree boundaries, planner/evaluator separation, and stop
@@ -601,6 +773,10 @@ Budget result: within budget
   resource caps, modification scope, rollback checkpoints, promotion gates,
   and safe-stop behavior for loops that generate, critique, refine, or test
   future harness behavior.
+- Define reusable orchestration semantics for external-knowledge proposals:
+  isolated branch/worktree creation, source and bundle revalidation, durable
+  unresolved decisions, latest-user-instruction precedence, optional draft PR
+  handoff, and separate authorization for commit/push/PR/merge/cleanup actions.
 
 **Out of Scope:**
 
@@ -631,15 +807,19 @@ Budget result: within budget
 - Self-improvement loops record budget, scope, checkpoint, rollback, promotion,
   and safe-stop state before execution and reject stale or self-authorizing
   state before resume.
+- Reviewable proposal orchestration cannot write to an existing operator branch,
+  overwrite a competing proposal, auto-merge, or discard unresolved conflict
+  evidence during resume or cleanup.
 
 ---
 
 ### HRNS-008: Harness Drift, Garbage Collection, and Self-healing Remediation
 
-**Priority:** P2 | **Depends On:** HRNS-002, HRNS-005, HRNS-006 | **Enables:** ongoing harness maintenance
+**Priority:** P2 | **Depends On:** HRNS-002, HRNS-005, HRNS-006, HRNS-009, HRNS-010, HRNS-011, HRNS-012, HRNS-013, HRNS-014 | **Enables:** ongoing harness maintenance
 
-**Goal:** Add a bounded, repo-evidence-backed garbage-collection loop for stale or
-contradictory harness artifacts.
+**Goal:** Add the final bounded, repo-evidence-backed garbage-collection loop
+for stale, contradictory, synthesized, indexed, imported, or
+reconciliation-derived harness artifacts.
 
 **Reviewability Budget:** Primary surface: docs/process |
 Projected reviewable LOC: 190 |
@@ -665,6 +845,14 @@ Budget result: within budget
   and any agent-authored feedback memories used by later workflows.
 - Include context checkpoint drift checks for stale, duplicate, oversized,
   secret-bearing, orphaned, or no-longer-load-bearing checkpoints and summaries.
+- Detect incomplete evidence coverage, changed normative pins, stale source/base
+  mappings, unreviewed synthesis, lost unknown extensions, stale indexer
+  contracts, and Claude/Codex contract divergence.
+- Report structural conformance drift separately from broken links, missing
+  useful indexes, stale/contradictory claims, citation quality, and other
+  knowledge-health findings.
+- Apply no-deletion-by-omission and explicit-tombstone rules during cleanup of
+  imported concepts, source mappings, and reconciliation state.
 
 **Out of Scope:**
 
@@ -674,6 +862,9 @@ Budget result: within budget
   trusted evidence without external validation or explicit provenance.
 - Deleting context checkpoints, emergency saves, or shared summaries without a
   dry-run preview and recovery evidence.
+- Treating committed OKF concepts as generated trash, moving the normative pin
+  automatically, or deleting knowledge/source evidence because an external
+  bundle, citation, or derived index omitted it.
 
 **Key Files:**
 
@@ -698,6 +889,440 @@ Budget result: within budget
   stale, duplicate, unsafe to reuse, cleanup candidate, or no-op archive.
 - Context checkpoint findings are classified as active, stale, duplicate,
   oversized, secret-bearing, orphaned, cleanup candidate, or no-op archive.
+- OKF findings classify evidence coverage, mapping, synthesis, query capture,
+  lint, indexing, intake, reconciliation, extension, reference-tool,
+  conformance, health, and distribution-parity drift separately and produce
+  bounded reviewable remediation or no-op evidence.
+
+---
+
+### HRNS-009: Host Repository OKF Knowledge Contract and Initialization
+
+**Priority:** P2 | **Depends On:** HRNS-001, HRNS-002, HRNS-003, HRNS-004, HRNS-005, HRNS-006 | **Enables:** HRNS-010, HRNS-011, HRNS-012, HRNS-013, HRNS-014, HRNS-008
+
+**Goal:** Initialize every repository that adopts SpecKit Pro as its harness
+with one persistent, committed OKF v0.1 knowledge bundle and one shared
+Claude Code/Codex maintenance profile.
+
+**Reviewability Budget:** Primary surface: harness/adapter |
+Projected reviewable LOC: 280 |
+Production files: 6 |
+Total files: 14 |
+Budget result: within budget
+
+**Estimate Basis:** Pre-scaffold estimate: 2 stories, 14 functional
+requirements, 7 key files/surfaces, modify work, 1 suggested slice.
+
+**Vertical-slice rationale:** Repository profile -> idempotent initialization ->
+pinned conformance evidence is one independently useful foundation; splitting
+it would leave an unmanaged or unverifiable knowledge directory.
+
+**Scope:**
+
+- Implement the compatibility profile pinned to
+  `d44368c15e38e7c92481c5992e4f9b5b421a801d`, with no Google reference runtime
+  or external-service dependency.
+- Add an explicit repository adoption/migration operation. Global plugin
+  installation alone performs no writes.
+- Default the configurable bundle to `docs/ai/knowledge/`, outside vendored
+  `.specify/**` and consumer-owned generated directories such as `.codegraph/`.
+- Create/adopt root `index.md`, monotonic newest-first `log.md`, typed concept
+  directories, and a compact repository profile for evidence classes, naming,
+  citations, review, and maintenance checkpoints.
+- Record the authority split: source artifacts are factual evidence; the
+  committed bundle is persistent reviewed synthesis and the default
+  project-knowledge retrieval surface.
+- Define stable concept path/identity and collision rules plus namespaced
+  producer metadata for source anchors/digests, knowledge status, and
+  provenance.
+- Make initialization local-only, network-free, idempotent, extension-preserving,
+  and explicit about incompatible existing layouts.
+- Keep graph, lexical, vector, cache, and rendered outputs outside the committed
+  bundle and reproducible from repository files.
+- Expose equivalent Claude Code and Codex operations, schemas, safety metadata,
+  bundle semantics, diagnostics, and conformance/trace evidence.
+
+**Out of Scope:**
+
+- Evidence synthesis, query, lint, indexing adapters, and external exchange;
+  handled by HRNS-010 through HRNS-014.
+- Rewriting source evidence into OKF or treating synthesized concepts as
+  permission to override cited sources.
+- Adopting Google knowledge-catalog agents, validator, server, client, or UI as
+  required installed-plugin runtime components.
+- Initializing arbitrary repositories during plugin install or automatically
+  fetching resource/citation targets.
+
+**Key Files / Surfaces:**
+
+- `speckit-pro/speckit_pro_runner/` - Python-authoritative repository profile,
+  initialization/adoption operation, and deterministic artifact handling.
+- `speckit-pro/skills/` and `speckit-pro/codex-skills/` - Claude Code and Codex
+  install-facing initialization/migration guidance.
+- `tests/speckit-pro/unit/` - Idempotency, path, layout, conformance,
+  extension-preservation, no-network, no-install-write, and parity fixtures.
+- `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md` - Evidence-class
+  inventory and OKF adoption posture from HRNS-001.
+
+**Done When:**
+
+- Explicit harness adoption creates or safely adopts one conformant committed
+  bundle at the configured path and records the evidence/synthesis authority
+  split.
+- Repeated initialization is a no-op apart from bounded diagnostics and never
+  loses accepted concepts or extensions.
+- Global plugin install, missing optional consumers, and network-disabled
+  operation cannot mutate or block a repository.
+- Claude Code and Codex parity fixtures prove equivalent layout, profile,
+  idempotency, diagnostics, conformance, and traces.
+
+---
+
+### HRNS-010: Incremental Evidence Ingest and Knowledge Synthesis
+
+**Priority:** P2 | **Depends On:** HRNS-005, HRNS-006, HRNS-009 | **Enables:** HRNS-011, HRNS-012, HRNS-013, HRNS-014, HRNS-008
+
+**Goal:** Maintain the committed OKF bundle as a compounding project wiki by
+detecting changed evidence and proposing cited updates only to affected
+concepts, indexes, and operational history.
+
+**Reviewability Budget:** Primary surface: harness/adapter |
+Projected reviewable LOC: 320 |
+Production files: 7 |
+Total files: 16 |
+Budget result: within budget
+
+**Estimate Basis:** Pre-scaffold estimate: 3 stories, 14 functional
+requirements, 8 key files/surfaces, modify work, 1 suggested slice.
+
+**Vertical-slice rationale:** Change selection -> cited synthesis proposal ->
+review/promotion state is one usable maintenance cycle; splitting it would leave
+either stale detection with no remediation or ungrounded writes.
+
+**Scope:**
+
+- Discover changed evidence with Git state and content digests, then use durable
+  source-to-concept and concept-to-source mappings to select affected pages.
+- Cover code, tests, specs, decisions, guidance, plans, workflows, and approved
+  external evidence from the repository profile.
+- Permit one source to update multiple concept/entity/system/decision pages plus
+  relevant indexes and one newest-first log record.
+- Require source anchors for factual claims, mark inference/proposals explicitly,
+  and preserve contradictory evidence for review instead of selecting a winner.
+- Produce bounded added/updated/stale/conflicted/unchanged proposals in the
+  declared feature branch/worktree so code and knowledge review atomically.
+- Record source/model/operation provenance, knowledge status, mappings, digests,
+  and reviewer decisions in durable resumable state.
+- Mark affected concepts stale when evidence changes; retain unaffected concepts
+  and never delete from source removal without an explicit tombstone proposal.
+- Allow watcher events to request derived reindexing only; never use them as
+  authority for synthesis, commit, push, or merge.
+- Expose equivalent Claude Code/Codex change selection, synthesis constraints,
+  review gates, promotion rules, diagnostics, and traces.
+
+**Out of Scope:**
+
+- Query/answer capture, full lint, consumer indexing adapters, and external
+  exchange; handled by HRNS-011 through HRNS-014.
+- Uncontrolled synthesis on every file event or unattended promotion to main.
+- Treating agent inference, chat, timestamps, or a generated index as factual
+  authority.
+- Automatic deletion because evidence moved, disappeared, or stopped matching.
+
+**Key Files / Surfaces:**
+
+- `speckit-pro/speckit_pro_runner/` - Evidence inventory, change selection,
+  mapping/digest state, proposal orchestration, and bounded diagnostics.
+- `speckit-pro/skills/` and `speckit-pro/codex-skills/` - Claude Code and Codex
+  ingest, citation, review, and promotion boundaries.
+- `tests/speckit-pro/unit/` - Change-map, citation, multi-page, stale/conflict,
+  tombstone, resume, branch-scope, no-watch-write, and parity fixtures.
+- HRNS-009 repository profile and bundle contract - layout, identity, evidence
+  classes, and conformance inputs.
+
+**Done When:**
+
+- Changed evidence selects only affected concepts and produces a source-cited,
+  bounded proposal with deterministic mappings and explicit statuses.
+- Accepted proposals update concepts, indexes, and one immutable-history log
+  record in the declared branch/worktree without silently rewriting evidence.
+- Contradictions, source removal, interruption, and repeated watch events cannot
+  trigger an unreviewed overwrite, deletion, commit, push, or merge.
+- Claude Code and Codex fixtures prove equivalent selection, proposals,
+  provenance, resume behavior, promotion, and safe stops.
+
+---
+
+### HRNS-011: Knowledge Query, Citation, and Compounding Capture
+
+**Priority:** P2 | **Depends On:** HRNS-003, HRNS-005, HRNS-006, HRNS-009, HRNS-010 | **Enables:** HRNS-008
+
+**Goal:** Answer project questions from maintained OKF plus cited evidence and
+allow valuable answers to compound only through explicit reviewable proposals.
+
+**Reviewability Budget:** Primary surface: harness/adapter |
+Projected reviewable LOC: 235 |
+Production files: 5 |
+Total files: 13 |
+Budget result: within budget
+
+**Estimate Basis:** Pre-scaffold estimate: 2 stories, 12 functional
+requirements, 6 key files/surfaces, modify work, 1 suggested slice.
+
+**Vertical-slice rationale:** Progressive retrieval -> source-grounded answer ->
+optional capture proposal forms one complete compounding query workflow.
+
+**Scope:**
+
+- Read `index.md` first, traverse concepts progressively, and work without an
+  embedding service or code-intelligence consumer.
+- Combine maintained concepts with code/tests/specs and other cited evidence for
+  implementation detail while preserving source/result type and freshness.
+- Cite concepts and underlying source anchors in answers and surface stale,
+  inferred, proposed, contradictory, or insufficient knowledge explicitly.
+- Support optional lexical, graph, and vector retrieval with file traversal as
+  the graceful baseline.
+- Capture a useful answer only as a bounded concept proposal that records the
+  question, citations, affected concepts, proposed status, and reviewer decision.
+- Keep raw private transcripts out of committed state by default and enforce
+  excerpt, path, secret, network, and protected-source limits.
+- Make query read-only by default; capture never commits, pushes, or promotes its
+  own proposal.
+- Trace retrieval mode and result origin and expose equivalent Claude
+  Code/Codex result and capture semantics.
+
+**Out of Scope:**
+
+- Implementing a vector database or tool-specific adapter; handled by HRNS-013
+  and consumer repositories.
+- Treating chat output, retrieval score, or uncited inference as accepted
+  knowledge.
+- Automatic capture of every query or direct mutation/commit during query.
+
+**Key Files / Surfaces:**
+
+- `speckit-pro/speckit_pro_runner/` - Progressive query, source fusion,
+  citations, capture proposal, and trace lineage.
+- `speckit-pro/skills/` and `speckit-pro/codex-skills/` - Human decision,
+  query/capture, review, and promotion guidance.
+- `tests/speckit-pro/unit/` - File-only, stale/conflict, citation, optional
+  consumer, capture, no-mutation, secret, and parity fixtures.
+
+**Done When:**
+
+- Queries answer from repository files alone, cite concepts/evidence, and retain
+  trust/freshness status when optional retrieval consumers are present.
+- Capture creates only a bounded cited proposal and cannot silently mutate,
+  commit, push, or promote knowledge.
+- Claude Code and Codex parity fixtures prove equivalent answers, provenance,
+  degraded behavior, captures, diagnostics, and traces.
+
+---
+
+### HRNS-012: Knowledge Conformance, Health, and Drift Maintenance
+
+**Priority:** P2 | **Depends On:** HRNS-005, HRNS-006, HRNS-009, HRNS-010 | **Enables:** HRNS-014, HRNS-008
+
+**Goal:** Keep the committed knowledge base structurally conformant, source
+grounded, navigable, and reviewably repairable without confusing health findings
+with OKF validity.
+
+**Reviewability Budget:** Primary surface: harness/adapter |
+Projected reviewable LOC: 255 |
+Production files: 6 |
+Total files: 14 |
+Budget result: within budget
+
+**Estimate Basis:** Pre-scaffold estimate: 2 stories, 13 functional
+requirements, 7 key files/surfaces, modify work, 1 suggested slice.
+
+**Vertical-slice rationale:** Pinned conformance -> evidence/graph health ->
+bounded remediation is one complete maintenance boundary.
+
+**Scope:**
+
+- Implement the pinned conformance corpus and keep structural failures separate
+  from soft specification conditions and project-knowledge health.
+- Lint links, indexes, monotonic newest-first log history, citations, source
+  digests, contradictions, orphaned concepts, and evidence coverage.
+- Identify concepts affected by moved, renamed, changed, or removed evidence and
+  classify stale separately from invalid.
+- Preserve unknown fields/types and legal links through round trips.
+- Keep deterministic lint LLM-free; record model/provider context for optional
+  semantic contradiction review.
+- Produce bounded source-located remediation proposals or no-op evidence and
+  require explicit tombstones for deletion.
+- Report derived index/profile/adapter drift separately from committed-content
+  drift and expose equivalent Claude Code/Codex behavior.
+
+**Out of Scope:**
+
+- Broad autonomous rewriting, automatic deletion, or treating semantic review
+  as deterministic proof.
+- Implementing a code-intelligence consumer or external exchange workflow.
+- Silently advancing the normative specification/profile pin.
+
+**Key Files / Surfaces:**
+
+- `speckit-pro/speckit_pro_runner/` - Conformance, health, drift, and bounded
+  remediation reporting.
+- `tests/speckit-pro/unit/` - Pinned corpus, links, index/log, source drift,
+  contradiction, orphan, round-trip, tombstone, and parity fixtures.
+- HRNS-009/010 bundle, profile, mapping, provenance, and proposal contracts.
+
+**Done When:**
+
+- Reports distinguish structural validity, soft warnings, knowledge health,
+  evidence drift, and derived-index drift with source-located evidence.
+- Unknown extensions survive, old log records remain immutable, and no lint
+  result can delete or broadly rewrite committed knowledge.
+- Remediation is bounded and reviewable, and Claude Code/Codex fixtures prove
+  equivalent findings, no-op behavior, and safe stops.
+
+---
+
+### HRNS-013: Code-Intelligence and Vector-Index Interoperability
+
+**Priority:** P2 | **Depends On:** HRNS-003, HRNS-005, HRNS-006, HRNS-009, HRNS-010 | **Enables:** HRNS-008
+
+**Goal:** Publish a producer-neutral contract that lets code-intelligence tools
+index OKF concepts and sections alongside code while preserving provenance,
+trust boundaries, and a file-only fallback.
+
+**Reviewability Budget:** Primary surface: harness/adapter |
+Projected reviewable LOC: 260 |
+Production files: 6 |
+Total files: 14 |
+Budget result: within budget
+
+**Estimate Basis:** Pre-scaffold estimate: 2 stories, 14 functional
+requirements, 7 key files/surfaces, modify work, 1 suggested slice.
+
+**Vertical-slice rationale:** Discovery/change contract -> typed graph/chunk
+profile -> consumer fixtures is one independently testable interoperability
+boundary without taking ownership of consumer implementations.
+
+**Scope:**
+
+- Publish bundle discovery, changed-concept, identity, metadata, and deletion
+  semantics without requiring a specific indexer or embedding provider.
+- Define typed file/concept/heading/chunk nodes and heading-aware embedding input
+  from body plus evidence-backed title, description, type, and tags.
+- Map OKF links and source citations to graph edges including `REFERENCES`,
+  `DERIVED_FROM`, `DESCRIBES`, `IMPLEMENTS`, `VERIFIED_BY`, `SUPERSEDES`, and
+  `CONTRADICTS` as optional interoperable relations.
+- Make keyword/FTS the baseline, section vectors optional, and `index.md` plus
+  `log.md` excluded from semantic embeddings by default.
+- Require result type, provenance, freshness, and score-component preservation
+  in hybrid retrieval.
+- Keep consumer stores ignored, model-scoped, local-first, and regenerable; a
+  reindex event never grants canonical write ownership.
+- Add contract fixtures for CodeGraph-style concept nodes and GitNexus-style
+  Markdown sections while remaining producer/consumer neutral.
+- Keep missing or incompatible consumers advisory and expose equivalent Claude
+  Code/Codex discovery and diagnostics.
+
+**Out of Scope:**
+
+- Implementing or vendoring CodeGraph, GitNexus, a vector database, model, or
+  tool-specific adapter in SpecKit Pro.
+- Requiring vectors for query or committing generated indexes.
+- Allowing consumers to synthesize or write canonical OKF without the governed
+  maintenance workflow.
+
+**Key Files / Surfaces:**
+
+- `speckit-pro/speckit_pro_runner/` - Discovery/change contract and adapter
+  diagnostics.
+- `speckit-pro/skills/` and `speckit-pro/codex-skills/` - Optional consumer and
+  degraded-mode guidance.
+- `tests/speckit-pro/unit/` - Typed-node, chunk, edge, delete, no-consumer,
+  no-write, privacy, and distribution-parity fixtures.
+- `docs/` - Producer-neutral interoperability profile and consumer examples.
+
+**Done When:**
+
+- A conforming consumer can discover changed concepts, create typed graph/FTS
+  and optional vector entries, connect them to code evidence, and regenerate its
+  store without modifying the bundle.
+- File/index-based query remains functional when every optional consumer is
+  absent.
+- CodeGraph-style and GitNexus-style fixtures pass the same producer contract,
+  and Claude Code/Codex diagnostics remain equivalent.
+
+---
+
+### HRNS-014: External OKF Exchange and Reviewable Reconciliation
+
+**Priority:** P2 | **Depends On:** HRNS-004, HRNS-006, HRNS-007, HRNS-009, HRNS-010, HRNS-012 | **Enables:** HRNS-008
+
+**Goal:** Validate external OKF as untrusted data, reconcile it against recorded
+base and current repository knowledge, and materialize only approved changes in
+an isolated reviewable proposal.
+
+**Reviewability Budget:** Primary surface: harness/adapter |
+Projected reviewable LOC: 330 |
+Production files: 7 |
+Total files: 17 |
+Budget result: within budget
+
+**Estimate Basis:** Pre-scaffold estimate: 3 stories, 16 functional
+requirements, 8 key files/surfaces, modify work, 1 suggested slice.
+
+**Vertical-slice rationale:** Bounded intake -> three-way classification ->
+explicit decisions -> isolated proposal is one complete safe exchange boundary.
+
+**Scope:**
+
+- Preflight and validate conformant minimum and extension-bearing bundles with
+  bounded size/path/parser controls, local-first no-network behavior, and no
+  instruction execution.
+- Preserve unknown fields/types, bodies, links, provenance, identity, and the
+  intended repository/base revision in normalized staging.
+- Keep structural failures, soft warnings, health findings, and reference-tool
+  differences distinct.
+- Compare recorded base, current knowledge/source evidence, and incoming
+  concepts; classify unchanged, local-only, incoming-only, compatible add,
+  conflict, explicit deletion proposal, unmapped, and invalid.
+- Preserve both changed sides and require explicit accept/reject/edit/defer
+  decisions; timestamps and source priority never choose a winner.
+- Treat omission as absence and require a provenance-bearing tombstone with
+  dependent-link impact for deletion.
+- Revalidate repository/bundle/profile/mapping/decision/path/user-instruction
+  state before materializing only approved paths in a new branch/worktree.
+- Keep commit, push, draft PR, promotion, merge, deletion, and cleanup as
+  separately authorized actions and preserve resumable decision evidence.
+- Expose equivalent Claude Code/Codex limits, classifications, approvals,
+  proposals, diagnostics, and safe stops.
+
+**Out of Scope:**
+
+- Automatic fetching, instruction execution, conflict resolution, direct active
+  branch writes, PR promotion/merge, timestamp overwrite, or deletion by
+  omission.
+- Mutation of protected or unrelated paths through imported knowledge.
+- Lossy extension handling or redesign of source formats solely for intake.
+
+**Key Files / Surfaces:**
+
+- `speckit-pro/speckit_pro_runner/` - Intake preflight, parser/validator,
+  normalized staging, three-way classifier, decisions, materialization, and
+  bounded diagnostics.
+- `speckit-pro/skills/` and `speckit-pro/codex-skills/` - Human decisions,
+  worktree/branch, optional draft PR, and resume guidance.
+- `tests/speckit-pro/unit/` - Conformance, hostile input, extension, conflict,
+  tombstone, stale base, path scope, no-auto-merge, resume, and parity fixtures.
+
+**Done When:**
+
+- Valid external bundles stage with provenance intact; malformed or unsafe input
+  fails before repository effects.
+- Three-way classification never resolves conflict/deletion without explicit
+  review and approved changes appear only in a new isolated branch/worktree.
+- Failure, cancellation, and stale state leave committed content unchanged and
+  preserve a bounded diagnostic, resumable decision packet, or cleanup path.
+- Claude Code and Codex parity fixtures prove equivalent validation,
+  classifications, proposals, approval boundaries, and evidence.
 
 ---
 
@@ -708,11 +1333,28 @@ Budget result: within budget
 | Runtime substrate | Python 3.11+ standard-library runner from the XPLAT lane remains the target for installed-plugin helper behavior. |
 | Test suite | `python3 tests/speckit-pro/run-all.py` default deterministic layers; focused Python validators as needed during implementation. |
 | Existing helper pattern | XPLAT-005 read-only helper registry, Python-authoritative helper records, request fixtures, and parity checks. |
-| Source-of-truth docs | `AGENTS.md`, `CLAUDE.md`, `.specify/memory/constitution.md`, PRDs, technical roadmaps, roadmap MOCs, and workflow files. |
+| Evidence sources | Code, tests, root/nested `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md`; `.specify/memory/constitution.md`; PRDs; technical roadmaps; roadmap MOCs; workflows; ADRs; and approved issue/PR evidence. Generated distributions, caches, fixtures, raw transcripts, installed payloads, and derived indexes remain non-authoritative. |
+| Normative OKF profile | Full OKF v0.1 conformance pinned to knowledge-catalog `okf/SPEC.md` commit `d44368c15e38e7c92481c5992e4f9b5b421a801d`; reference tooling is interoperability evidence only. |
+| OKF artifact posture | Persistent committed synthesis at configurable `docs/ai/knowledge/` by default, local-first and network-free, with explicit provenance/mappings/base state; source evidence remains factual authority. |
+| Derived index posture | CodeGraph, GitNexus, lexical, graph, vector, cache, and rendered outputs are optional, ignored, model-scoped, and regenerable from code plus committed OKF. |
+| Distribution contract | Claude Code and Codex wrappers share initialization, ingest, query, lint, interoperability, exchange, safety, fixture, and trace semantics. |
 
 ## Scaffold Notes
 
 - Start with `HRNS-001` so later specs share one durable harness taxonomy.
+- Proceed in dependency order: `HRNS-002` + `HRNS-003`, then `HRNS-004` +
+  `HRNS-005`, then `HRNS-006`.
+- `HRNS-007` and `HRNS-009` may scaffold in parallel after their shared
+  foundations are complete because orchestration and repository initialization
+  own separable primary surfaces.
+- Do not scaffold `HRNS-010` before the bundle profile/conformance evidence
+  exists. After `HRNS-010`, `HRNS-011`, `HRNS-012`, and `HRNS-013` may proceed
+  in parallel on query, maintenance, and consumer-contract surfaces.
+- Do not scaffold `HRNS-014` before knowledge lint and reusable
+  worktree/resume controls exist.
+- Keep `HRNS-008` final so its drift taxonomy covers synthesis, query capture,
+  lint, indexing, intake/reconciliation, extension preservation,
+  spec/reference drift, and both plugin distributions.
 - Avoid editing active XPLAT runtime files from HRNS specs unless the selected
   HRNS spec explicitly owns a helper/runner contract change.
 - Preserve the current `specs/` archive hygiene pattern: active spec folders are
