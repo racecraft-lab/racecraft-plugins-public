@@ -711,6 +711,7 @@ def _write_file_atomic_trusted(target: Path, content: str, trust_root: Path) -> 
                 try:
                     os.mkdir(part, mode=0o755, dir_fd=parent_fd)
                 except FileExistsError:
+                    # Another actor won the create race; the no-follow open below validates the directory.
                     pass
                 next_fd = os.open(part, directory_flags, dir_fd=parent_fd)
             os.close(parent_fd)
@@ -760,6 +761,7 @@ def _write_file_atomic_trusted(target: Path, content: str, trust_root: Path) -> 
                 try:
                     os.unlink(tmp_name, dir_fd=parent_fd)
                 except FileNotFoundError:
+                    # A completed replace or concurrent cleanup may already have removed the temp file.
                     pass
     finally:
         os.close(parent_fd)
