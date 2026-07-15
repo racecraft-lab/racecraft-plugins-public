@@ -55,8 +55,8 @@ Grill Me is human-in-the-loop only. Once autopilot starts, clarification uses
 | Clarify | `$speckit-clarify` | Complete | Resolved execution-time source, parity-role, fixture, and handoff ambiguities; G2 passed |
 | Plan | `$speckit-plan` | Complete | Generated plan, research, data model, report contract, quickstart, and G3 pass evidence |
 | Checklist | `$speckit-checklist` | Complete | All five selected domains passed after one LLM seed-list drift was resolved |
-| Tasks | `$speckit-tasks` | In Progress | Produce source-first documentation tasks only |
-| Analyze | `$speckit-analyze` | Pending | Reject authority, scope, traceability, and count drift |
+| Tasks | `$speckit-tasks` | Complete | Generated 38 source-first documentation tasks; G5 passed |
+| Analyze | `$speckit-analyze` | In Progress | Reject authority, scope, traceability, and count drift |
 | Confidence Gate | G6.5 | Pending | Record advisory pre-implementation confidence after analysis and before report authoring |
 | Implement | `$speckit-implement` | Pending | Author and validate the canonical research report |
 | Post | Post-Implementation | Pending | Run durable verification, review, UAT, PR, remediation, and retrospective steps |
@@ -549,11 +549,11 @@ $speckit-tasks
 ## Documentation Phases
 1. Foundation: freeze official-source snapshot metadata and report skeleton.
 2. US1 Evidence: complete official ledger and project-input surface inventory.
-3. US2 Contracts and Candidates: complete twelve role contracts, instruction
-   hashes, and provisional document-eligible candidate routes.
-4. US3 Handoff: complete executable fixture specifications, telemetry
+3. US2 Contracts: complete twelve role contracts and instruction hashes.
+4. US3 Candidates: complete provisional document-eligible candidate routes.
+5. US4 Handoff: complete executable fixture specifications, telemetry
    requirements, capability questions, invalidation rules, and go/no-go result.
-5. Polish: run traceability, count, link, scope, diff, and repository checks.
+6. Polish: run traceability, count, link, scope, diff, and repository checks.
 
 ## Constraints
 - Create no runtime code, helper, JSON manifest, schema, agent TOML, fixture
@@ -572,10 +572,11 @@ $speckit-tasks
 
 | Metric | Value |
 |---|---|
-| Total Tasks | Pending |
-| Phases | 5 planned |
-| Parallel Opportunities | Pending |
-| User Stories Covered | US1, US2, and US3 required |
+| Total Tasks | 38 |
+| Phases | 7 generated: setup, foundational, US1, US2, US3, US4, polish |
+| Parallel Opportunities | 0 marked `[P]` because the implementation output is one shared report |
+| User Stories Covered | US1, US2, US3, and US4 |
+| G5 Gate | Pass - 38 tasks found |
 
 ---
 
@@ -587,10 +588,10 @@ decision only; it does not create PRs or split branches.
 
 | Field | Value | Meaning |
 |---|---|---|
-| Route | Pending after G5 | Expected to remain one documentation PR unless task structure proves otherwise |
-| Releasable | Pending after G5 | Must reflect classifier evidence |
-| Signals | Pending after G5 | Structural findings behind the route |
-| Warnings | Pending after G5 | Release-safety warnings, if any |
+| Route | `one-navigable-PR` | Keep as one documentation PR |
+| Releasable | `true` | Classifier found no release-safety warning |
+| Signals | `change-shape:modify-heavy` | Structural finding behind the route |
+| Warnings | none | No release-safety warnings |
 
 ---
 
