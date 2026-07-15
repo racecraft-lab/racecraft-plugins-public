@@ -265,9 +265,11 @@ manifest carries the machine-referenceable stubs so tuples can point at them by
    validator so the pin holds even without `jsonschema`.
 9. **Cross-reference integrity (Constitution VI)**: every `fixture_backlog_ref`
    and `CAP-Qn` referenced in the manifest resolves to a section in the record,
-   and `agent_name` matches its map key; the manifest's `agent_contract_id` is a
-   stable downstream identifier (unique across the twelve agents), not a record
-   anchor. No machine datum has two *authoritative* homes. The
+   and `agent_name` matches its map key — the quickstart validator (V9) loads the
+   record and verifies every fixture-backlog anchor and capability-question ID
+   resolves to a heading. The manifest's `agent_contract_id` is a stable
+   downstream identifier (unique across the twelve agents), not a record anchor.
+   No machine datum has two *authoritative* homes. The
    record's *Agent inventory* route tuples and *Agent-file hash triples* are
    explicit read-only **mirrors** of the authoritative manifest values (each
    table states the mirror direction) and are kept drift-detectable by

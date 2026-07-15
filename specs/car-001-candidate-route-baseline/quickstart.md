@@ -186,12 +186,13 @@ documented level (record `EFF-1`), every distinct candidate alias has an
 invalidation trigger naming it, the helper's `platform_field_mapping` is
 non-empty and represents every field of the pinned Codex source toml
 (source-completeness, data-model §5), both the capability-question IDs and
-the twelve `agent_contract_id`s are unique, and the comparator is pinned to the
-exact `speckit-pro-v2.19.1` tag and commit.
+the twelve `agent_contract_id`s are unique, the comparator is pinned to the
+exact `speckit-pro-v2.19.1` tag and commit, and every `fixture_backlog_ref`
+anchor and capability-question ID resolves to a heading in the record.
 
 ```bash
 python3 - <<'PY'
-import json, subprocess, tomllib
+import json, re, subprocess, tomllib
 man = json.load(open("docs/ai/research/claude-agent-route-candidate-manifest.json"))
 agents = man["agents"]
 q_ids = [q["id"] for q in man["capability_questions"]]
@@ -241,8 +242,21 @@ else:
     for f in tomllib.loads(toml_bytes.decode("utf-8")):
         if not any(m == f or m.startswith(f + " ") or m.startswith(f + "=") for m in mapped):
             errs.append(f"autopilot-fast-helper: source field {f!r} not represented in platform_field_mapping")
+# Rule 9: every fixture_backlog_ref anchor and every CAP-Qn resolves into the record.
+record_path = "docs/ai/research/claude-agent-route-candidates.md"
+record_text = open(record_path, encoding="utf-8").read()
+def _slug(h):
+    return re.sub(r"[^\w\s-]", "", h.lower()).strip().replace(" ", "-")
+heading_slugs = {_slug(m.group(1)) for m in re.finditer(r"(?m)^#+\s+(.+?)\s*$", record_text)}
+for name, e in agents.items():
+    path, _, anchor = e["fixture_backlog_ref"].partition("#")
+    if not anchor or path != record_path or anchor not in heading_slugs:
+        errs.append(f"{name}: fixture_backlog_ref {e['fixture_backlog_ref']!r} does not resolve to a record heading")
+for qid in declared_q:
+    if qid not in record_text:
+        errs.append(f"{qid}: capability question not present in the record")
 assert not errs, "semantic violations:\n  " + "\n  ".join(errs)
-print("semantic rules: cross-refs resolve, coverage + helper source-completeness verified (data-model §5, §7 rules 9, 10)")
+print("semantic rules: cross-refs + record anchors resolve, coverage + source-completeness verified (data-model §5, §7 rules 9, 10)")
 PY
 ```
 
