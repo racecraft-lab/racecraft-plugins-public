@@ -705,7 +705,7 @@ evidence-then-claim:
 - [x] Privacy scan: no absolute local paths in authored artifacts
 - [x] No changes under speckit-pro/ payload dirs, dist/, or installed-cache mirrors (one repo-only test-guard allowlist edit, documented above — not a shipped payload)
 - [x] Manual verification complete (independent code review of AC-1.1…AC-1.7 + FR/SC compliance; findings remediated + re-verified)
-- [ ] PR created (plain-English title with conventional-commit prefix) — in progress
+- [x] PR created: **[#350](https://github.com/racecraft-lab/racecraft-plugins-public/pull/350)** — `docs(speckit-pro): add the Claude agent route-candidate research baseline`; OPEN, MERGEABLE. CI: validate-pr-title / validate-docs / validate-release-note / artifact-consistency / CodeQL all green; plugin test + container preflight run the same suite confirmed green locally.
 - [ ] Merged to main branch — **human-only; the autopilot never merges**
 
 ## Self-Review + Independent Code Review
