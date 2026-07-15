@@ -12,7 +12,8 @@ structureVersion: 1
 
 # Codex Agent Model Routing and Graceful Fallback - Map of Content
 
-Navigation map for evidence-backed per-agent model routing and graceful fallback.
+Navigation map for official-documentation-grounded per-agent model routing and
+graceful fallback.
 
 All routing evidence follows the shared vendor-official source contract and
 schema-v2 candidate-manifest shape before downstream specifications begin.
@@ -21,15 +22,17 @@ schema-v2 candidate-manifest shape before downstream specifications begin.
 
 ### Candidate and Role Contracts
 
-Why: Establish candidate model and effort routes plus the immutable safety,
-tool, mutation, and output contracts for every named agent.
+Why: Admit model and effort candidates only from official OpenAI documentation,
+then pair them with the immutable project safety, tool, mutation, and output
+contracts for every named agent.
 
 - [G56R-001 Candidate Route Baseline and Role Contracts](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-001-candidate-route-baseline-and-role-contracts)
 
 ### Capability and Treatment Evidence
 
-Why: Discover model and effort capabilities, prove exact treatment, and define
-the telemetry needed for reproducible route evaluation.
+Why: Use officially documented discovery and telemetry schemas to narrow runtime
+availability, prove exact treatment, and define reproducible route evaluation
+without promoting local observations to platform facts.
 
 - [G56R-002 Capability Discovery, Telemetry Profile, and Exact-Treatment Contract](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-002-capability-discovery-telemetry-profile-and-exact-treatment-contract)
 
