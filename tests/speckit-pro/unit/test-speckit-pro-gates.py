@@ -144,7 +144,7 @@ def run_plugin_bash_confinement_case(
     *,
     max_findings: int | None = None,
     skip_source_scan: bool = False,
-    skip_installed_root_scan: bool = False,
+    skip_repo_source_scan: bool = False,
 ) -> dict[str, Any]:
     from speckit_pro_runner.gates import active_path_guard, registry
 
@@ -164,12 +164,12 @@ def run_plugin_bash_confinement_case(
         operation="zero-bash-guard",
         inputs=inputs,
     )
-    if not skip_source_scan and not skip_installed_root_scan:
+    if not skip_source_scan and not skip_repo_source_scan:
         return active_path_guard.run_zero_bash_guard(entry, request, REPO_ROOT)
     with ExitStack() as stack:
         if skip_source_scan:
             stack.enter_context(patch.object(active_path_guard, "source_files", return_value=[]))
-        if skip_installed_root_scan:
+        if skip_repo_source_scan:
             stack.enter_context(patch.object(active_path_guard, "scan_repo_sources", return_value=[]))
         return active_path_guard.run_zero_bash_guard(entry, request, REPO_ROOT)
 
@@ -1784,7 +1784,7 @@ class GateFoundationTests(unittest.TestCase):
                 response = run_plugin_bash_confinement_case(
                     case_id,
                     skip_source_scan=case_id in scan_root_only_cases,
-                    skip_installed_root_scan=True,
+                    skip_repo_source_scan=True,
                 )
                 self.assert_response(response, "expected_failure")
                 self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["zero_bash_guard_blocked"])
@@ -1843,7 +1843,7 @@ class GateFoundationTests(unittest.TestCase):
                     case_id,
                     max_findings=20,
                     skip_source_scan=case_id in scan_root_only_cases,
-                    skip_installed_root_scan=True,
+                    skip_repo_source_scan=True,
                 )
                 self.assert_response(response, "expected_failure")
                 actual_categories = {finding["category"] for finding in response["data"]["findings"]}
