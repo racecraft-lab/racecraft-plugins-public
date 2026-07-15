@@ -14,7 +14,7 @@ requirements:
   unspecified: 0
 findings:
   critical: 0
-  significant: 6
+  significant: 7
   minor: 2
   positive: 4
   unresolved: 0
@@ -29,16 +29,16 @@ G56R-001 completed all 26 tasks and all 37 explicitly numbered requirements
 (27 FR, 0 NFR, and 10 SC). The final artifacts reproduce a `go` handoff with
 exactly 12 agents, 10 present routes, 2 explicit route absences, 3 current
 fixtures, and 9 missing fixtures. The corrected checker passes twice, and the
-focused adversarial suite records 55/55. The independent task audit still
+focused adversarial suite records 56/56. The independent task audit still
 records 26 VERIFIED items. The final uninterrupted default suite records
-2813/2813, with Layer 1 at 1427/1427, Layer 4 at 1200/1200, and Layer 5 at
+2814/2814, with Layer 1 at 1427/1427, Layer 4 at 1201/1201, and Layer 5 at
 186/186.
 
 Spec adherence is 100%. Two numbered requirements, FR-026 and SC-010, were
 modified during review to include the exact repository guard allowance and
 then fully implemented. Later adversarial review found additional evidence,
 hash-boundary, inventory, provenance, and checkpoint defects; all are resolved
-in the final artifacts and checker. There are no residual G56R requirement
+in the final artifacts and validation gates. There are no residual G56R requirement
 deviations or unowned findings.
 
 The original G56R implementation remains a six-path, 0-production-LOC research
@@ -59,10 +59,10 @@ live PR verification.
 - Terminal implementation interval: `2026-07-14T12:45:56-05:00` through
   `2026-07-14T17:43:58-05:00`, within the predeclared deadline of
   `2026-07-14T20:45:56-05:00`.
-- Current verification: checker PASS twice; focused artifacts 55/55; runner
+- Current verification: checker PASS twice; focused artifacts 56/56; runner
   guard 11/11; mutation 33/33; read-only 48/48; eval 19/19; integration
-  257/257; Layer 1 1427/1427; Layer 4 1200/1200; Layer 5 186/186; default
-  2813/2813; generated payload parity and release-artifact checks PASS.
+  257/257; Layer 1 1427/1427; Layer 4 1201/1201; Layer 5 186/186; default
+  2814/2814; generated payload parity and release-artifact checks PASS.
 - Final combined review surface after rebasing onto current main and restoring
   the final packet: 125 files, 34,268 additions, and 8,472 deletions. Within
   that set, 14 shared
@@ -77,7 +77,7 @@ live PR verification.
   duplicated empty-handler findings were fixed once in shared source and
   regenerated across client payloads; one proposed insecure fallback was
   resolved with the fail-closed TOCTOU rationale. The post-fix default suite
-  passes 2813/2813 and integration passes 257/257.
+  passes 2814/2814 and integration passes 257/257.
 
 ## Proposed Spec Changes
 
@@ -96,7 +96,7 @@ implementation matches the refined text.
 | Requirement | Status | Implementation and verification evidence |
 |---|---|---|
 | FR-001 | Implemented | The dated Markdown narrative and versioned JSON manifest exist; T020-T022; checker PASS. |
-| FR-002 | Implemented | The manifest and normalized projection contain the exact 12-agent set; T004/T020; focused 55/55. |
+| FR-002 | Implemented | The manifest and normalized projection contain the exact 12-agent set; T004/T020; focused 56/56. |
 | FR-003 | Implemented | Ten agents have bound present routes and the two parity roles have cited absences; T014/T015/T020. |
 | FR-004 | Implemented | The narrative and per-agent records contain stable, reciprocal route-policy inventory entries with mismatch ownership; T011. |
 | FR-005 | Implemented | Tracked, cached, and installed observations are distinct and tracked source remains authoritative; T012. |
@@ -111,7 +111,7 @@ implementation matches the refined text.
 | FR-014 | Implemented | Treatments retain unchanged controls and require evidence-backed bounded hypotheses; T017. |
 | FR-015 | Implemented | Preference and fallback signals remain unqualified hypotheses with no final order; T017. |
 | FR-016 | Implemented | Official evidence covers identifiers, custom agents, reasoning, discovery, telemetry, reroutes, and non-interactive output; T010. |
-| FR-017 | Implemented | Platform and project provenance includes locator, date/revision, surface, scope, applicability, conflict, role, and invalidation fields; T009/T010. |
+| FR-017 | Implemented | Platform and project provenance includes locator, date/revision, surface, scope, applicability, conflict, role, and invalidation fields; the pinned revision exists and is a HEAD ancestor; T009/T010 plus focused reachability coverage. |
 | FR-018 | Implemented | Facts, inferences, policy, assumptions, conflicts, and environment observations remain visibly classified; T009/T013. |
 | FR-019 | Implemented | Conflicts follow frozen authority and have blocking or owned nonblocking dispositions; T013. |
 | FR-020 | Implemented | CLI, desktop app, app server, and non-interactive records are independent and require surface-and-feature-matched official evidence; T009/T010 plus review hardening. |
@@ -120,7 +120,7 @@ implementation matches the refined text.
 | FR-023 | Implemented | Telemetry, owned unknowns, immutable admission binding, content hash, and G56R-002 snapshot ownership are published; T019/T021/T025. |
 | FR-024 | Implemented | Eleven objective completion checks pass and reproduce `go` without changing eligibility or qualification state; T007/T008/T023/T025/T026. |
 | FR-025 | Implemented | Start, stop, and deadline are RFC 3339 ordered timestamps, and the terminal packet was emitted before deadline; T001/T025. |
-| FR-026 | Modified | The G56R slice adds the exact two-file runner-guard allowance to the Python checker, focused Layer 4 test, and suite declaration; T002-T008/T023/T024; focused 55/55 and checker PASS twice. |
+| FR-026 | Modified | The G56R slice adds the exact two-file runner-guard allowance to the Python checker, focused Layer 4 test, and suite declaration; T002-T008/T023/T024; focused 56/56 and checker PASS twice. |
 | FR-027 | Implemented | The six implementation paths contain no runtime probe, score, qualification, route mutation, source-defect repair, or production change; T009/T017/T023. |
 
 ### Non-Functional Requirements
@@ -170,11 +170,12 @@ from the adherence denominator.
 | D-06 | SIGNIFICANT | Resolved | The human inventory overclaimed Claude parity chains and omitted reciprocal links from the two real Claude payloads to shared consumers. Inventory checks now require the exact physical set and reciprocal links. | Narrative counting drifted beyond the plan's scoped parity sources. Validate both missing and unexpected entries against a frozen physical set. |
 | D-07 | MINOR | Resolved | The first terminal timestamp preceded material review fixes, and Tasks state attributed 26 tasks to the 22-task checkpoint. The final stop is re-frozen after remediation, and state distinguishes the initial and Analyze-remediated checkpoints. | Phase summaries were updated independently from source history. Derive checkpoint counts from the recorded commits before completion. |
 | D-08 | SIGNIFICANT | Resolved | Autopilot ended with PR creation marked skipped because packet output was deferred; old packets also lacked source-revision freshness. Shared runner helpers and both client contracts now make packet/push/verified PR creation fail closed, revision-bound, and idempotently reconciled. | Optional and required Post rows shared the same skip semantics. Encode terminal completion as a verified external invariant, not a prose convention. |
+| D-09 | SIGNIFICANT | Resolved | Final adversarial review found that the research narrative and manifest still named unreachable pre-rebase revision `7f8c1736…`. All project evidence now binds the equivalent rebased checkpoint `b03c4438…`; focused validation requires that revision to exist and be an ancestor of `HEAD`, and the CI test checkout fetches full history. | Rebase reconciliation updated phase checkpoints but not the repeated immutable research pin, while the checker proved only internal equality. Run commit reachability and ancestry validation after every history rewrite. |
 
 No G56R requirement was dropped, relaxed, or left partial. D-01/D-02 were
-resolved in the original implementation history; D-03 through D-07 were found
-by the user-mandated Tavily and adversarial rereview. D-08 is the separately
-authorized plugin recovery required to finish the same autopilot run.
+resolved in the original implementation history; D-03 through D-07 and D-09
+were found by the user-mandated Tavily and adversarial rereview. D-08 is the
+separately authorized plugin recovery required to finish the same autopilot run.
 
 ## Innovations and Best Practices
 
@@ -187,10 +188,11 @@ authorized plugin recovery required to finish the same autopilot run.
 
 ## Adversarial External Review
 
-Tavily-backed review and three independent adversarial agents found no residual
-G56R-001 or combined-repair blocker. Official OpenAI documentation remains the
-authority for platform behavior; community sources are nonbinding hardening
-and evaluation guidance.
+Tavily-backed review and three independent adversarial agents produced one final
+provenance blocker, D-09, which is remediated in the source-bound candidate for
+stable-head rereview. Official OpenAI documentation remains the authority for
+platform behavior; community sources are nonbinding hardening and evaluation
+guidance.
 
 | Source | Alignment verdict | Disposition |
 |---|---|---|
@@ -207,7 +209,7 @@ and evaluation guidance.
 | I. Plugin Structure Compliance | PASS | Shared behavior stays in `speckit_pro_runner`; Codex and Claude skill/reference surfaces both consume it; repository tests remain under `tests/speckit-pro/`. |
 | II. Cross-Platform Runtime & Script Safety | PASS | Runtime changes use Python 3.11 standard library, argument arrays, canonical Git object IDs, atomic writes, and trust-root symlink checks; no Bash or `jq` dependency was added. |
 | III. Semantic Versioning | PASS | No version file is hand-edited. The `fix` PR carries one release-note block so release automation owns the eventual bump and generated release artifacts. |
-| IV. Test Coverage Before Merge | PASS | G56R has 55 focused cases; mutation, read-only, and both-client eval regressions cover the durable PR path; the final uninterrupted default suite passes 2813/2813. |
+| IV. Test Coverage Before Merge | PASS | G56R has 56 focused cases; mutation, read-only, and both-client eval regressions cover the durable PR path; the final uninterrupted default suite passes 2814/2814. |
 | V. Conventional Commits | PASS | Existing commits are conventional; remediation and packet commits will use narrow conventional scopes, and the PR title includes `G56R-001`. |
 | VI. KISS, Simplicity & YAGNI | PASS | The repair extends the existing runner/schema/reference path and existing tests; it adds no new shell, package, service, or duplicate client runtime. |
 
@@ -257,17 +259,20 @@ retrospective remain workflow evidence rather than product scope.
    dangling evidence IDs, wrong-surface evidence, prose-only contradiction,
    broad absolute paths, local identities, and credential-shaped values in the
    initial RED suite.
-3. **MEDIUM — Budget artifact volume separately from production LOC.** A
+3. **HIGH — Revalidate immutable evidence after history rewrites.** Require the
+   pinned revision to resolve to a commit and remain an ancestor of the final
+   branch head after every rebase or cherry-pick.
+4. **MEDIUM — Budget artifact volume separately from production LOC.** A
    0-production-LOC spike can still create a 13,432-line review surface. Future
    spikes should record both production LOC and expected research/fixture data
    volume while preserving the one-navigable-PR atomicity test.
-4. **MEDIUM — Preserve local evidence ownership.** G56R-002 and G56R-003 should
+5. **MEDIUM — Preserve local evidence ownership.** G56R-002 and G56R-003 should
    reuse candidate-local provenance resolution and surface/feature matching so
    qualification cannot inherit evidence from another candidate or client.
-5. **LOW — Keep narrow exceptions exact.** Continue preferring file-level
+6. **LOW — Keep narrow exceptions exact.** Continue preferring file-level
    guard allowances and focused direct tests over directory prefixes or a
    reusable exception framework.
-6. **DOWNSTREAM — Harden runtime evidence, not this frozen baseline.** Tavily
+7. **DOWNSTREAM — Harden runtime evidence, not this frozen baseline.** Tavily
    review against OWASP agent security, W3C PROV-DM, SLSA provenance,
    OpenTelemetry GenAI conventions, OpenAI evaluation guidance, RouteLLM, and
    RouterBench found no G56R-001 blocker. G56R-002 should treat retrieved,

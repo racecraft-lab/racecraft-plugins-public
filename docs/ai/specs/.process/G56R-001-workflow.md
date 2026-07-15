@@ -755,7 +755,7 @@ metadata, generated release artifacts, or unrelated configuration.
 | Evidence and inventory | T009–T013 | Complete | Reconciled official, project, and environment evidence; no blocking conflict; three owned downstream defects; focused test 45/45; completed tasks: T001–T013 |
 | Role contracts and candidates | T014–T019 | Complete | Twelve immutable semantic contracts, canonical identities, candidates, fixtures, telemetry, and owned unknowns recorded; completed tasks: T014–T019 |
 | Narrative and manifest | T020–T022 | Complete | Twelve lexical agent records and the exact normalized Markdown projection agree; focused test 45/45; completed tasks: T020–T022 |
-| Validation and handoff | T023–T026 | Complete | Terminal `go`; focused 55/55; checker PASS twice; final uninterrupted default suite 2813/2813; completed tasks: T023–T026 |
+| Validation and handoff | T023–T026 | Complete | Terminal `go`; focused 56/56; checker PASS twice; final uninterrupted default suite 2814/2814; completed tasks: T023–T026 |
 
 ---
 
@@ -764,20 +764,20 @@ metadata, generated release artifacts, or unrelated configuration.
 | Item | Status | Evidence |
 |------|--------|----------|
 | Post: Doctor Extension Check | Complete | PASS: 5 checks; 5 PASS, 0 WARN, 0 FAIL |
-| Post: Verify Implementation | Complete | 26/26 tasks; checker PASS twice; focused 55/55; final uninterrupted default suite 2813/2813 |
+| Post: Verify Implementation | Complete | 26/26 tasks; checker PASS twice; focused 56/56; final uninterrupted default suite 2814/2814 |
 | Post: Verify Tasks Phantom Check | Complete | 26 VERIFIED, 0 flagged after adversarial reconciliation |
-| Post: Code Review | Complete | Three adversarial agents approved after G56R and cross-client runtime remediations |
-| Post: Integration Suite | Complete | Layer 1 1427/1427; Layer 4 1200/1200; Layer 5 186/186; integration 257/257; default 2813/2813 |
+| Post: Code Review | In progress | Final stable-head rereview pending after the spec adversary found and the parent remediated an unreachable pre-rebase research pin |
+| Post: Integration Suite | Complete | Layer 1 1427/1427; Layer 4 1201/1201; Layer 5 186/186; integration 257/257; default 2814/2814 |
 | Post: Reviewability Diff Gate | Complete | User-authorized single combined PR; typed `Reviewability-Exception: infra` recorded without correctness/test waivers |
 | Post: Self-Review | Complete | 0 edge-case gaps, requirement/task orphans, silent markers, or tidiness findings |
 | Post: UAT Runbook Generation | Skipped | `skipped: generate-uat-skeleton deferred`; no committed source-derived runbook exists |
 | Post: Final Reviewability Backstop | Complete | Combined-PR exception recorded for the measured combined scope; no correctness, test, source-freshness, or PR-verification waiver |
-| Post: Adversarial Review and Durable PR Recovery | Complete | Tavily official/community research plus three independent agents approved G56R and cross-client autopilot hardening |
-| Post: PR Packet/Body Generation | Complete | Schema 1.1 packet binds base/source revisions, full-index diff, and `whole_body_v2`; read-only validation passed |
+| Post: Adversarial Review and Durable PR Recovery | In progress | Tavily official/community research is complete; the final stable-head spec-adversary rereview is pending after D-09 remediation |
+| Post: PR Packet/Body Generation | In progress | Schema 1.1 packet regeneration is pending for the provenance-remediated source head |
 | Post: PR Body Generation | Complete | Packet-owned body contains all required headings and exactly one release-note block |
 | Post: PR Creation | Complete | Unique live PR [#348](https://github.com/racecraft-lab/racecraft-plugins-public/pull/348) verified with head `g56r-001-candidate-route-baseline` and base `main` |
 | Post: Review Remediation | Complete | PR #348: 10 duplicated empty-handler findings fixed through shared-source generation; 1 unsafe fallback request resolved with fail-closed security rationale; stale docs reference regenerated |
-| Post: Retrospective | Complete | 26/26 tasks, 100% spec adherence, 0 unresolved findings, and recovery evidence recorded |
+| Post: Retrospective | In progress | 26/26 tasks and 100% spec adherence remain verified; final stable-head adversarial disposition is pending |
 
 ### Reviewability Diff Gate
 
@@ -801,7 +801,7 @@ that diff receives a fresh final review and suite run before PR creation.
 1. **Tests executed?** Yes. At `2026-07-14T23:58:19Z`, the final uninterrupted
    default run passed preflight plus L1 1427/1427, L4 1200/1200, and L5
    186/186 for 2813/2813 total. The direct integration command passed 257/257;
-   focused artifacts now pass 55/55 after adversarial hardening; the historical
+   focused artifacts passed 55/55 at that checkpoint; the historical
    checkpoint runner guard passed 11/11. The
    initial direct Layer 4 command also ran and passed before the final expanded
    suite. BUILD, TYPECHECK, and LINT are explicitly `N/A` in PROJECT_COMMANDS,
@@ -880,7 +880,20 @@ that diff receives a fresh final review and suite run before PR creation.
   fail-closed behavior remains explicit and is shared by both client payloads.
 - Remediation verification: focused mutation 33/33, payload confinement
   121/121, docs reference current, generated release artifacts current,
-  integration 257/257, and final uninterrupted default suite 2813/2813.
+  integration 257/257, and final uninterrupted default suite 2814/2814.
+
+### Final Research-Pin Remediation
+
+- The final spec adversary found that the narrative, manifest, and normalized
+  projection still named pre-rebase revision `7f8c1736…`, which is not present
+  in the rebased branch history.
+- The equivalent frozen checkpoint is `b03c4438…`; it resolves to a commit and
+  is an ancestor of the current branch head. Every repeated project-evidence
+  revision and both artifact hashes were refreshed around that checkpoint.
+- Focused Layer 4 validation now fails unless the pinned revision exists and is
+  a `HEAD` ancestor. The PR test job fetches full history so a shallow checkout
+  cannot bypass this proof. The checker itself remains offline, read-only, and
+  subprocess-free as required by the accepted plan.
 
 - [x] All tasks are complete or explicitly handed to the owning downstream spec.
 - [x] docs/ai/research/codex-agent-route-candidates.md exists.
@@ -929,6 +942,9 @@ that diff receives a fresh final review and suite run before PR creation.
   and marked PR creation skipped. Adversarial recovery showed that completion
   must fail closed, and that packet source freshness must be cryptographically
   bound before any GitHub side effect.
+- Rebase reconciliation updated phase checkpoint fields but missed the repeated
+  research-wide immutable revision. The final gate now verifies Git object
+  reachability and ancestry after history rewrites.
 - Official documentation describes reasoning controls differently across
   configuration, Subagents, App Server, and non-interactive surfaces. The final
   evidence record preserves that distinction: Subagents is the narrower

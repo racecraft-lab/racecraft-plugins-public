@@ -9,6 +9,7 @@ import hashlib
 import importlib.util
 import json
 import re
+import subprocess
 import sys
 import tempfile
 import unicodedata
@@ -753,6 +754,37 @@ class G56R001ArtifactTests(unittest.TestCase):
                 {"http", "httpx", "openai", "requests", "socket", "subprocess", "urllib"}
             ),
             imported_roots,
+        )
+
+    def test_canonical_research_revision_is_a_reachable_head_ancestor(self) -> None:
+        manifest = json.loads((REPO_ROOT / MANIFEST_PATH).read_text(encoding="utf-8"))
+        revision = manifest["handoff"]["admission_binding"]["research_revision"]
+        self.assertRegex(revision, r"^[0-9a-f]{40}$")
+
+        exists = subprocess.run(
+            ["git", "-C", str(REPO_ROOT), "cat-file", "-e", f"{revision}^{{commit}}"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        self.assertEqual(
+            exists.returncode,
+            0,
+            f"pinned research revision is not a reachable commit: {revision}",
+        )
+
+        ancestor = subprocess.run(
+            ["git", "-C", str(REPO_ROOT), "merge-base", "--is-ancestor", revision, "HEAD"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        self.assertEqual(
+            ancestor.returncode,
+            0,
+            f"pinned research revision is not an ancestor of HEAD: {revision}",
         )
 
     def test_missing_artifact_check_is_read_only(self) -> None:

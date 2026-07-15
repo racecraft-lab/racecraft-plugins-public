@@ -50,7 +50,7 @@
               "tracked source or pinned revision changes"
             ],
             "repository_path": "speckit-pro/codex-agents/analyze-executor.toml",
-            "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "evidence_role": "canonical tracked agent definition"
           }
         ],
@@ -135,7 +135,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/codex-agents/analyze-executor.toml",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "canonical tracked agent definition"
             },
             {
@@ -283,7 +283,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/codex-agents/analyze-executor.toml",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "canonical tracked agent definition"
             },
             {
@@ -357,7 +357,7 @@
                 "roadmap candidate hypotheses or pinned revision changes"
               ],
               "repository_path": "docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "accepted candidate-route starting hypothesis"
             }
           ],
@@ -425,7 +425,7 @@
             "RP-PAYLOAD-CODEX-uat-runbook-author",
             "RP-PAYLOAD-PROOF"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -546,7 +546,7 @@
             "RP-SKILL-SCAFFOLD"
           ],
           "downstream_entry_ids": [],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "mismatch",
           "defect_owner": "G56R-009"
@@ -604,7 +604,7 @@
             "RP-CACHE-PERSONAL-uat-runbook-author",
             "RP-VAL-DERIVED"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -821,7 +821,7 @@
           "downstream_entry_ids": [
             "RP-EVAL-L3"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -879,7 +879,7 @@
           "downstream_entry_ids": [
             "RP-EVAL-L3"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "mismatch",
           "defect_owner": "G56R-009"
@@ -926,7 +926,7 @@
           "downstream_entry_ids": [
             "RP-INSTALL-RUNNER"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -962,7 +962,7 @@
             "RP-VAL-CAPABILITIES",
             "RP-VAL-SOURCE"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -1034,7 +1034,7 @@
             "RP-PAYLOAD-PROOF"
           ],
           "downstream_entry_ids": [],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -1052,7 +1052,7 @@
           "surface": "repository",
           "version": "2.19.1",
           "repository_path": "speckit-pro/codex-agents/analyze-executor.toml",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "canonical tracked agent definition",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -1471,7 +1471,7 @@
             "tracked source or pinned revision changes"
           ],
           "repository_path": "speckit-pro/codex-agents/analyze-executor.toml",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "canonical tracked agent definition"
         },
         {
@@ -2057,7 +2057,7 @@
               "tracked source or pinned revision changes"
             ],
             "repository_path": "speckit-pro/codex-agents/autopilot-fast-helper.toml",
-            "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "evidence_role": "canonical tracked agent definition"
           }
         ],
@@ -2142,7 +2142,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/codex-agents/autopilot-fast-helper.toml",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "canonical tracked agent definition"
             },
             {
@@ -2337,7 +2337,7 @@
             "RP-VAL-CAPABILITIES",
             "RP-VAL-SOURCE"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -2355,7 +2355,7 @@
           "surface": "repository",
           "version": "2.19.1",
           "repository_path": "speckit-pro/codex-agents/autopilot-fast-helper.toml",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "canonical tracked agent definition",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -2774,7 +2774,7 @@
             "tracked source or pinned revision changes"
           ],
           "repository_path": "speckit-pro/codex-agents/autopilot-fast-helper.toml",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "canonical tracked agent definition"
         },
         {
@@ -3359,7 +3359,7 @@
               "tracked source or pinned revision changes"
             ],
             "repository_path": "speckit-pro/codex-agents/checklist-executor.toml",
-            "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "evidence_role": "canonical tracked agent definition"
           }
         ],
@@ -3444,7 +3444,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/codex-agents/checklist-executor.toml",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "canonical tracked agent definition"
             },
             {
@@ -3592,7 +3592,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/codex-agents/checklist-executor.toml",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "canonical tracked agent definition"
             },
             {
@@ -3666,7 +3666,7 @@
                 "roadmap candidate hypotheses or pinned revision changes"
               ],
               "repository_path": "docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "accepted candidate-route starting hypothesis"
             }
           ],
@@ -3805,7 +3805,7 @@
             "RP-VAL-CAPABILITIES",
             "RP-VAL-SOURCE"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -3823,7 +3823,7 @@
           "surface": "repository",
           "version": "2.19.1",
           "repository_path": "speckit-pro/codex-agents/checklist-executor.toml",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "canonical tracked agent definition",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -4242,7 +4242,7 @@
             "tracked source or pinned revision changes"
           ],
           "repository_path": "speckit-pro/codex-agents/checklist-executor.toml",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "canonical tracked agent definition"
         },
         {
@@ -4827,7 +4827,7 @@
               "tracked source or pinned revision changes"
             ],
             "repository_path": "speckit-pro/codex-agents/clarify-executor.toml",
-            "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "evidence_role": "canonical tracked agent definition"
           }
         ],
@@ -4912,7 +4912,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/codex-agents/clarify-executor.toml",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "canonical tracked agent definition"
             },
             {
@@ -5060,7 +5060,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/codex-agents/clarify-executor.toml",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "canonical tracked agent definition"
             },
             {
@@ -5134,7 +5134,7 @@
                 "roadmap candidate hypotheses or pinned revision changes"
               ],
               "repository_path": "docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "accepted candidate-route starting hypothesis"
             }
           ],
@@ -5272,7 +5272,7 @@
           "downstream_entry_ids": [
             "RP-EVAL-L3"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -5309,7 +5309,7 @@
             "RP-VAL-CAPABILITIES",
             "RP-VAL-SOURCE"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -5327,7 +5327,7 @@
           "surface": "repository",
           "version": "2.19.1",
           "repository_path": "speckit-pro/codex-agents/clarify-executor.toml",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "canonical tracked agent definition",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -5746,7 +5746,7 @@
             "tracked source or pinned revision changes"
           ],
           "repository_path": "speckit-pro/codex-agents/clarify-executor.toml",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "canonical tracked agent definition"
         },
         {
@@ -6331,7 +6331,7 @@
               "tracked source or pinned revision changes"
             ],
             "repository_path": "speckit-pro/codex-agents/codebase-analyst.toml",
-            "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "evidence_role": "canonical tracked agent definition"
           }
         ],
@@ -6416,7 +6416,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/codex-agents/codebase-analyst.toml",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "canonical tracked agent definition"
             },
             {
@@ -6564,7 +6564,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/codex-agents/codebase-analyst.toml",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "canonical tracked agent definition"
             },
             {
@@ -6638,7 +6638,7 @@
                 "roadmap candidate hypotheses or pinned revision changes"
               ],
               "repository_path": "docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "accepted candidate-route starting hypothesis"
             }
           ],
@@ -6707,7 +6707,7 @@
             "RP-SRC-CODEX-spec-context-analyst"
           ],
           "downstream_entry_ids": [],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -6808,7 +6808,7 @@
             "RP-VAL-CAPABILITIES",
             "RP-VAL-SOURCE"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -6826,7 +6826,7 @@
           "surface": "repository",
           "version": "2.19.1",
           "repository_path": "speckit-pro/codex-agents/codebase-analyst.toml",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "canonical tracked agent definition",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -7245,7 +7245,7 @@
             "tracked source or pinned revision changes"
           ],
           "repository_path": "speckit-pro/codex-agents/codebase-analyst.toml",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "canonical tracked agent definition"
         },
         {
@@ -7811,7 +7811,7 @@
           {
             "contract_field": "role_boundary",
             "claude_repository_path": "speckit-pro/agents/consensus-synthesizer.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "# Consensus Synthesizer, L17-L26; ## Rules, L32-L101",
             "mapping_status": "preserved",
             "justification": "Core role is platform-neutral.",
@@ -7820,7 +7820,7 @@
           {
             "contract_field": "authorization_boundaries",
             "claude_repository_path": "speckit-pro/agents/consensus-synthesizer.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "## Rules rule 1, L32-L61; rule 3, L75-L80; rule 7, L97-L101",
             "mapping_status": "preserved",
             "justification": "The body separates synthesis, application, and human authority.",
@@ -7829,7 +7829,7 @@
           {
             "contract_field": "safety_requirements",
             "claude_repository_path": "speckit-pro/agents/consensus-synthesizer.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "Security override, L55-L61; escape detection, L63-L73; dissent, L92-L95; HITL prohibition, L97-L101",
             "mapping_status": "preserved",
             "justification": "Safety semantics are platform-neutral.",
@@ -7838,7 +7838,7 @@
           {
             "contract_field": "grounding_requirements",
             "claude_repository_path": "speckit-pro/agents/consensus-synthesizer.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "## Rules rules 4-6, L82-L95",
             "mapping_status": "preserved",
             "justification": "The supplied-evidence boundary is explicit.",
@@ -7847,7 +7847,7 @@
           {
             "contract_field": "mutation_policy",
             "claude_repository_path": "speckit-pro/agents/consensus-synthesizer.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "## Rules rule 3, L75-L80; output edit block, L146-L153",
             "mapping_status": "preserved",
             "justification": "The no-application boundary is explicit.",
@@ -7856,7 +7856,7 @@
           {
             "contract_field": "tool_requirements",
             "claude_repository_path": "speckit-pro/agents/consensus-synthesizer.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "Input contract, L105-L127; no-own-analysis rule, L87-L90",
             "mapping_status": "codex_adapted",
             "justification": "Functional restrictions are retained without Claude tool-list syntax.",
@@ -7865,7 +7865,7 @@
           {
             "contract_field": "skill_requirements",
             "claude_repository_path": "speckit-pro/agents/consensus-synthesizer.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "## Rules rule 7, L97-L101",
             "mapping_status": "codex_adapted",
             "justification": "The named HITL prohibition is retained without Claude Skill-tool mechanics.",
@@ -7874,7 +7874,7 @@
           {
             "contract_field": "mcp_requirements",
             "claude_repository_path": "speckit-pro/agents/consensus-synthesizer.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "Instruction body L17-L182; no MCP behavior specified",
             "mapping_status": "not_applicable",
             "justification": "The source is silent on MCP, so none is inferred.",
@@ -7883,7 +7883,7 @@
           {
             "contract_field": "sandbox_expectations",
             "claude_repository_path": "speckit-pro/agents/consensus-synthesizer.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "Exact-edit/no-application boundary, L75-L80; no-own-analysis rule, L87-L90",
             "mapping_status": "codex_adapted",
             "justification": "Behavioral no-write semantics are mapped without asserting a Codex route setting.",
@@ -7892,7 +7892,7 @@
           {
             "contract_field": "output_contract",
             "claude_repository_path": "speckit-pro/agents/consensus-synthesizer.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "## Output Format, L129-L154; Phase-6 confidence block, L156-L182",
             "mapping_status": "preserved",
             "justification": "The platform-neutral output schemas are complete.",
@@ -7901,7 +7901,7 @@
           {
             "contract_field": "supported_client_assumptions",
             "claude_repository_path": "speckit-pro/agents/consensus-synthesizer.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "Routing assumption, L23-L26; input format, L105-L127",
             "mapping_status": "codex_adapted",
             "justification": "Claude routing transport is excluded; only the semantic invocation contract remains.",
@@ -7910,7 +7910,7 @@
           {
             "contract_field": "representative_tasks",
             "claude_repository_path": "speckit-pro/agents/consensus-synthesizer.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "N-based rules, L32-L61; exact edits, L75-L80; Phase-6 synthesis, L156-L182",
             "mapping_status": "preserved",
             "justification": "These are direct examples of the defined role.",
@@ -7948,7 +7948,7 @@
               "tracked source or pinned revision changes"
             ],
             "repository_path": "speckit-pro/agents/consensus-synthesizer.md",
-            "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "evidence_role": "semantic parity source and cited route absence"
           }
         ],
@@ -8039,7 +8039,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/agents/consensus-synthesizer.md",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "semantic parity source and cited route absence"
             },
             {
@@ -8113,7 +8113,7 @@
                 "roadmap candidate hypotheses or pinned revision changes"
               ],
               "repository_path": "docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "accepted candidate-route starting hypothesis"
             }
           ],
@@ -8150,7 +8150,7 @@
             "RP-SRC-CLAUDE-gate-validator"
           ],
           "downstream_entry_ids": [],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -8208,7 +8208,7 @@
           "downstream_entry_ids": [
             "RP-EVAL-L7"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -8244,7 +8244,7 @@
             "RP-VAL-CAPABILITIES",
             "RP-VAL-SOURCE"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -8262,7 +8262,7 @@
           "surface": "repository",
           "version": "2.19.1",
           "repository_path": "speckit-pro/agents/consensus-synthesizer.md",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "semantic parity source and expected Codex-route absence",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -8681,7 +8681,7 @@
             "tracked source or pinned revision changes"
           ],
           "repository_path": "speckit-pro/agents/consensus-synthesizer.md",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "semantic parity source and cited route absence"
         },
         {
@@ -9266,7 +9266,7 @@
               "tracked source or pinned revision changes"
             ],
             "repository_path": "speckit-pro/codex-agents/domain-researcher.toml",
-            "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "evidence_role": "canonical tracked agent definition"
           }
         ],
@@ -9351,7 +9351,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/codex-agents/domain-researcher.toml",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "canonical tracked agent definition"
             },
             {
@@ -9499,7 +9499,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/codex-agents/domain-researcher.toml",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "canonical tracked agent definition"
             },
             {
@@ -9573,7 +9573,7 @@
                 "roadmap candidate hypotheses or pinned revision changes"
               ],
               "repository_path": "docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "accepted candidate-route starting hypothesis"
             }
           ],
@@ -9714,7 +9714,7 @@
             "RP-VAL-CAPABILITIES",
             "RP-VAL-SOURCE"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -9762,7 +9762,7 @@
             "RP-SRC-CODEX-uat-runbook-author"
           ],
           "downstream_entry_ids": [],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -9780,7 +9780,7 @@
           "surface": "repository",
           "version": "2.19.1",
           "repository_path": "speckit-pro/codex-agents/domain-researcher.toml",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "canonical tracked agent definition",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -10199,7 +10199,7 @@
             "tracked source or pinned revision changes"
           ],
           "repository_path": "speckit-pro/codex-agents/domain-researcher.toml",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "canonical tracked agent definition"
         },
         {
@@ -10764,7 +10764,7 @@
           {
             "contract_field": "role_boundary",
             "claude_repository_path": "speckit-pro/agents/gate-validator.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "# Gate Validator, L15-L19",
             "mapping_status": "preserved",
             "justification": "Core role is platform-neutral.",
@@ -10773,7 +10773,7 @@
           {
             "contract_field": "authorization_boundaries",
             "claude_repository_path": "speckit-pro/agents/gate-validator.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "## Rules rules 1-3, L25-L38",
             "mapping_status": "preserved",
             "justification": "Decision authority is explicitly assigned to the parent.",
@@ -10782,7 +10782,7 @@
           {
             "contract_field": "safety_requirements",
             "claude_repository_path": "speckit-pro/agents/gate-validator.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "Exact-command rule, L25-L29; no-remediation/context rules, L36-L42",
             "mapping_status": "preserved",
             "justification": "The hard execution boundary is explicit.",
@@ -10791,7 +10791,7 @@
           {
             "contract_field": "grounding_requirements",
             "claude_repository_path": "speckit-pro/agents/gate-validator.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "## Rules 1-2, L25-L34; rule 4, L40-L42",
             "mapping_status": "preserved",
             "justification": "The authoritative-input boundary is explicit.",
@@ -10800,7 +10800,7 @@
           {
             "contract_field": "mutation_policy",
             "claude_repository_path": "speckit-pro/agents/gate-validator.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "## Rules rule 3, L36-L38",
             "mapping_status": "preserved",
             "justification": "The no-mutation rule is explicit.",
@@ -10809,7 +10809,7 @@
           {
             "contract_field": "tool_requirements",
             "claude_repository_path": "speckit-pro/agents/gate-validator.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "## Rules rule 1, L25-L29; JSON rule, L31-L34; interpreter note, L55-L56",
             "mapping_status": "preserved",
             "justification": "The functional tool contract is already platform-neutral.",
@@ -10818,7 +10818,7 @@
           {
             "contract_field": "skill_requirements",
             "claude_repository_path": "speckit-pro/agents/gate-validator.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "Instruction body L15-L69; no skill invocation specified",
             "mapping_status": "not_applicable",
             "justification": "The body is silent on skills; Claude frontmatter mechanics are excluded.",
@@ -10827,7 +10827,7 @@
           {
             "contract_field": "mcp_requirements",
             "claude_repository_path": "speckit-pro/agents/gate-validator.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "Instruction body L15-L69; no MCP behavior specified",
             "mapping_status": "not_applicable",
             "justification": "The source is silent on MCP.",
@@ -10836,7 +10836,7 @@
           {
             "contract_field": "sandbox_expectations",
             "claude_repository_path": "speckit-pro/agents/gate-validator.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "Mechanical/no-remediation boundary, L17-L19 and L36-L42",
             "mapping_status": "codex_adapted",
             "justification": "No-write semantics are mapped without copying Claude tool controls or asserting a Codex route setting.",
@@ -10845,7 +10845,7 @@
           {
             "contract_field": "output_contract",
             "claude_repository_path": "speckit-pro/agents/gate-validator.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "JSON rule, L31-L34; ## Output Format, L58-L69",
             "mapping_status": "preserved",
             "justification": "The exact output is platform-neutral.",
@@ -10854,7 +10854,7 @@
           {
             "contract_field": "supported_client_assumptions",
             "claude_repository_path": "speckit-pro/agents/gate-validator.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "Parent-command contract, L25-L27; input example/interpreter note, L46-L56",
             "mapping_status": "codex_adapted",
             "justification": "Semantic invocation requirements are retained while Claude transport is excluded.",
@@ -10863,7 +10863,7 @@
           {
             "contract_field": "representative_tasks",
             "claude_repository_path": "speckit-pro/agents/gate-validator.md",
-            "claude_repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "claude_repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "claude_exact_locator": "Role, L17-L19; ## Rules 1-2, L25-L34",
             "mapping_status": "preserved",
             "justification": "These tasks directly express the defined role.",
@@ -10900,7 +10900,7 @@
               "tracked source or pinned revision changes"
             ],
             "repository_path": "speckit-pro/agents/gate-validator.md",
-            "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "evidence_role": "semantic parity source and cited route absence"
           }
         ],
@@ -10991,7 +10991,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/agents/gate-validator.md",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "semantic parity source and cited route absence"
             },
             {
@@ -11065,7 +11065,7 @@
                 "roadmap candidate hypotheses or pinned revision changes"
               ],
               "repository_path": "docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "accepted candidate-route starting hypothesis"
             }
           ],
@@ -11137,7 +11137,7 @@
             "RP-VAL-CAPABILITIES",
             "RP-VAL-SOURCE"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -11155,7 +11155,7 @@
           "surface": "repository",
           "version": "2.19.1",
           "repository_path": "speckit-pro/agents/gate-validator.md",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "semantic parity source and expected Codex-route absence",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -11574,7 +11574,7 @@
             "tracked source or pinned revision changes"
           ],
           "repository_path": "speckit-pro/agents/gate-validator.md",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "semantic parity source and cited route absence"
         },
         {
@@ -12159,7 +12159,7 @@
               "tracked source or pinned revision changes"
             ],
             "repository_path": "speckit-pro/codex-agents/implement-executor.toml",
-            "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "evidence_role": "canonical tracked agent definition"
           }
         ],
@@ -12244,7 +12244,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/codex-agents/implement-executor.toml",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "canonical tracked agent definition"
             },
             {
@@ -12392,7 +12392,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/codex-agents/implement-executor.toml",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "canonical tracked agent definition"
             },
             {
@@ -12466,7 +12466,7 @@
                 "roadmap candidate hypotheses or pinned revision changes"
               ],
               "repository_path": "docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "accepted candidate-route starting hypothesis"
             }
           ],
@@ -12605,7 +12605,7 @@
             "RP-VAL-CAPABILITIES",
             "RP-VAL-SOURCE"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -12623,7 +12623,7 @@
           "surface": "repository",
           "version": "2.19.1",
           "repository_path": "speckit-pro/codex-agents/implement-executor.toml",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "canonical tracked agent definition",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -13042,7 +13042,7 @@
             "tracked source or pinned revision changes"
           ],
           "repository_path": "speckit-pro/codex-agents/implement-executor.toml",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "canonical tracked agent definition"
         },
         {
@@ -13627,7 +13627,7 @@
               "tracked source or pinned revision changes"
             ],
             "repository_path": "speckit-pro/codex-agents/phase-executor.toml",
-            "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "evidence_role": "canonical tracked agent definition"
           }
         ],
@@ -13712,7 +13712,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/codex-agents/phase-executor.toml",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "canonical tracked agent definition"
             },
             {
@@ -13860,7 +13860,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/codex-agents/phase-executor.toml",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "canonical tracked agent definition"
             },
             {
@@ -13934,7 +13934,7 @@
                 "roadmap candidate hypotheses or pinned revision changes"
               ],
               "repository_path": "docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "accepted candidate-route starting hypothesis"
             }
           ],
@@ -14064,7 +14064,7 @@
           "downstream_entry_ids": [
             "RP-EVAL-L3"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -14119,7 +14119,7 @@
           "downstream_entry_ids": [
             "RP-EVAL-L3"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -14156,7 +14156,7 @@
             "RP-VAL-CAPABILITIES",
             "RP-VAL-SOURCE"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -14174,7 +14174,7 @@
           "surface": "repository",
           "version": "2.19.1",
           "repository_path": "speckit-pro/codex-agents/phase-executor.toml",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "canonical tracked agent definition",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -14593,7 +14593,7 @@
             "tracked source or pinned revision changes"
           ],
           "repository_path": "speckit-pro/codex-agents/phase-executor.toml",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "canonical tracked agent definition"
         },
         {
@@ -15178,7 +15178,7 @@
               "tracked source or pinned revision changes"
             ],
             "repository_path": "speckit-pro/codex-agents/spec-context-analyst.toml",
-            "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "evidence_role": "canonical tracked agent definition"
           }
         ],
@@ -15263,7 +15263,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/codex-agents/spec-context-analyst.toml",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "canonical tracked agent definition"
             },
             {
@@ -15411,7 +15411,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/codex-agents/spec-context-analyst.toml",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "canonical tracked agent definition"
             },
             {
@@ -15485,7 +15485,7 @@
                 "roadmap candidate hypotheses or pinned revision changes"
               ],
               "repository_path": "docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "accepted candidate-route starting hypothesis"
             }
           ],
@@ -15626,7 +15626,7 @@
             "RP-VAL-CAPABILITIES",
             "RP-VAL-SOURCE"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -15644,7 +15644,7 @@
           "surface": "repository",
           "version": "2.19.1",
           "repository_path": "speckit-pro/codex-agents/spec-context-analyst.toml",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "canonical tracked agent definition",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -16063,7 +16063,7 @@
             "tracked source or pinned revision changes"
           ],
           "repository_path": "speckit-pro/codex-agents/spec-context-analyst.toml",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "canonical tracked agent definition"
         },
         {
@@ -16648,7 +16648,7 @@
               "tracked source or pinned revision changes"
             ],
             "repository_path": "speckit-pro/codex-agents/uat-runbook-author.toml",
-            "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+            "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
             "evidence_role": "canonical tracked agent definition"
           }
         ],
@@ -16733,7 +16733,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/codex-agents/uat-runbook-author.toml",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "canonical tracked agent definition"
             },
             {
@@ -16881,7 +16881,7 @@
                 "tracked source or pinned revision changes"
               ],
               "repository_path": "speckit-pro/codex-agents/uat-runbook-author.toml",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "canonical tracked agent definition"
             },
             {
@@ -16955,7 +16955,7 @@
                 "roadmap candidate hypotheses or pinned revision changes"
               ],
               "repository_path": "docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md",
-              "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+              "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
               "evidence_role": "accepted candidate-route starting hypothesis"
             }
           ],
@@ -17094,7 +17094,7 @@
             "RP-VAL-CAPABILITIES",
             "RP-VAL-SOURCE"
           ],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -17146,7 +17146,7 @@
             "RP-SRC-CODEX-uat-runbook-author"
           ],
           "downstream_entry_ids": [],
-          "revision_or_version": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "revision_or_version": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "observed_on": "2026-07-14",
           "mismatch_status": "mismatch",
           "defect_owner": "G56R-008"
@@ -17164,7 +17164,7 @@
           "surface": "repository",
           "version": "2.19.1",
           "repository_path": "speckit-pro/codex-agents/uat-runbook-author.toml",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "canonical tracked agent definition",
           "mismatch_status": "matches",
           "defect_owner": null
@@ -17583,7 +17583,7 @@
             "tracked source or pinned revision changes"
           ],
           "repository_path": "speckit-pro/codex-agents/uat-runbook-author.toml",
-          "repository_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+          "repository_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
           "evidence_role": "canonical tracked agent definition"
         },
         {
@@ -18182,7 +18182,7 @@
         "status": "pass",
         "evidence_ids": [
           "G56R-CHECKER-PASS-1",
-          "G56R-FOCUSED-55"
+          "G56R-FOCUSED-56"
         ]
       },
       {
@@ -18234,7 +18234,7 @@
         "status": "pass",
         "evidence_ids": [
           "G56R-CHECKER-PASS-1",
-          "G56R-FOCUSED-55"
+          "G56R-FOCUSED-56"
         ]
       },
       {
@@ -18269,7 +18269,7 @@
         "status": "pass",
         "evidence_ids": [
           "G56R-CHECKER-PASS-1",
-          "G56R-FOCUSED-55"
+          "G56R-FOCUSED-56"
         ]
       },
       {
@@ -18329,7 +18329,7 @@
     "admission_binding": {
       "manifest_type": "agent_route_candidate_manifest",
       "manifest_version": 1,
-      "research_revision": "7f8c17369e15a359c6e24eea844c79a2d47d3bab",
+      "research_revision": "b03c44384aec976ef3f1c88a864ebdbdfe6eaeda",
       "production_routes": [
         {
           "agent_name": "analyze-executor",
@@ -18731,7 +18731,7 @@
         "status": "required_at_admission",
         "required_binding": "Create or select a versioned runtime capability snapshot, preserve this project-eligible candidate set, and bind its ID before executable admission."
       },
-      "manifest_content_hash": "sha256:dd74647af70ca48f7aa66d7e9287e60f4e96d99da41c11a06b0fcf0ad478f878"
+      "manifest_content_hash": "sha256:9e42aec865aec4511a6ddc64622c6937058321461e27855783d3c183cb5fbf7f"
     }
   }
 }

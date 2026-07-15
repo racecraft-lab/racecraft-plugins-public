@@ -32,7 +32,7 @@ the current combined branch. No `before_verify-tasks` hook is registered.
 - All task-referenced implementation paths exist and appear in the selected Git scope.
 - The G56R implementation boundary is exactly three delivery paths plus three validation paths: four new and two modified, with zero production paths. The user-required shared plugin recovery does not redefine that task boundary.
 - Two successive feature-checker runs report `PASS (12 agents; 10 present; 2 absent; 3 current fixtures; 9 missing)`.
-- The focused artifact test reports `55/55 passed`.
+- The focused artifact test reports `56/56 passed`.
 - The exact two-file research guard test reports `11/11 passed`.
 - The integration suite reports `257/257 passed`.
 - The final uninterrupted default suite and handoff agree: Layer 1 `1427/1427`, Layer 4 `1200/1200`, Layer 5 `186/186`, and total `2813/2813`.
@@ -70,7 +70,7 @@ None.
 | T021 | ✅ VERIFIED | Manifest contains the complete candidate, evidence, surface, fixture, telemetry, and unknown structures. |
 | T022 | ✅ VERIFIED | Narrative normalized projection agrees with the manifest under the passing checker. |
 | T023 | ✅ VERIFIED | Feature checker passes without probing, scoring, qualification, mutation, or source-defect repair. |
-| T024 | ✅ VERIFIED | Focused 55/55, runner 11/11, integration 257/257, and current handoff aggregate counts are aligned. |
+| T024 | ✅ VERIFIED | Focused 56/56, runner 11/11, integration 257/257, and current handoff aggregate counts are aligned. |
 | T025 | ✅ VERIFIED | Narrative and manifest publish the reproducible `go` handoff, stop time, admission binding, traceability, and rollback notes. |
 | T026 | ✅ VERIFIED | Two checker runs are identical, diff validation passes, and the original G56R scope is exactly three delivery plus three validation paths; the combined PR has an explicit typed exception. |
 
