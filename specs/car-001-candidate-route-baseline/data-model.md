@@ -14,8 +14,11 @@ model; the two must stay in lockstep.
 
 Design invariants: the manifest is the single source of machine data and the
 record (`claude-agent-route-candidates.md`) the single source of evidence and
-rationale; they cross-reference by `agent_name` and `agent_contract_id` and never
-duplicate data that can drift (Constitution VI). All hashes are lowercase hex
+rationale; they cross-reference by `agent_name` and `agent_contract_id`, and no
+machine datum has two authoritative homes — the record's explicitly labeled
+read-only mirror tables (Agent inventory, hash triples) are permitted because
+they are recomputable and drift-detectable, not second authoritative copies
+(Constitution VI; §7 rule 9). All hashes are lowercase hex
 sha256 computed with the Python 3.11+ standard library (FR-011, FR-025).
 
 ---
@@ -180,7 +183,7 @@ constraints:
 - The entry MUST carry an explicit **platform-field mapping table** (recorded in
   the manifest as `platform_field_mapping`, an array of
   `{codex_field, claude_equivalent, evidence_class, note}`), mapping e.g.
-  `sandbox_mode: read-only` → the shared read-only `disallowedTools` denylist and
+  `sandbox_mode: read-only` → a comprehensive no-tool `disallowedTools` denylist (prompt-context-only; stricter than the analysts' read-only denylist) and
   `codex-spark` → `haiku` + explicit low effort (starting hypotheses, labeled).
   The table MUST be **source-complete** (FR-017): every field in
   `speckit-pro/codex-agents/autopilot-fast-helper.toml` — `model`, `sandbox_mode`,

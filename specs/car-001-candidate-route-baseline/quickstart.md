@@ -182,12 +182,14 @@ helper-only `platform_field_mapping` rule). This check makes that enforcement
 real: it confirms `agent_name` matches its map key, every `CAP-Qn` a tuple
 references resolves to a declared capability question, `platform_field_mapping`
 and recorded absence occur only on the helper, every candidate `effort` is a
-documented level (record `EFF-1`), and every distinct candidate alias has an
-invalidation trigger naming it.
+documented level (record `EFF-1`), every distinct candidate alias has an
+invalidation trigger naming it, and the helper's `platform_field_mapping` is
+non-empty and represents every field of the pinned Codex source toml
+(source-completeness, data-model §5).
 
 ```bash
 python3 - <<'PY'
-import json
+import json, subprocess, tomllib
 man = json.load(open("docs/ai/research/claude-agent-route-candidate-manifest.json"))
 agents = man["agents"]
 declared_q = {q["id"] for q in man["capability_questions"]}
@@ -214,8 +216,21 @@ for name, e in agents.items():
     for a in aliases:
         if a not in trigger_text:
             errs.append(f"{name}: no invalidation trigger for alias {a!r}")
+# Helper platform_field_mapping is non-empty and source-complete vs the pinned Codex toml (data-model §5).
+helper = agents["autopilot-fast-helper"]
+pfm = helper.get("platform_field_mapping", [])
+if not pfm:
+    errs.append("autopilot-fast-helper: platform_field_mapping is empty")
+else:
+    toml_bytes = subprocess.run(
+        ["git", "show", "speckit-pro-v2.19.1:speckit-pro/codex-agents/autopilot-fast-helper.toml"],
+        capture_output=True, check=True).stdout
+    mapped = [r["codex_field"] for r in pfm]
+    for f in tomllib.loads(toml_bytes.decode("utf-8")):
+        if not any(m == f or m.startswith(f + " ") or m.startswith(f + "=") for m in mapped):
+            errs.append(f"autopilot-fast-helper: source field {f!r} not represented in platform_field_mapping")
 assert not errs, "semantic violations:\n  " + "\n  ".join(errs)
-print("semantic rules: cross-references resolve, coverage complete (data-model §7 rules 9, 10)")
+print("semantic rules: cross-refs resolve, coverage + helper source-completeness verified (data-model §5, §7 rules 9, 10)")
 PY
 ```
 

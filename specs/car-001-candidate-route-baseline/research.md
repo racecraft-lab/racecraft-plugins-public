@@ -122,8 +122,10 @@ implement phase records as `CAP-Qn` questions when the docs do not bind them.
   the manifest entry incomplete); re-author fresh for Claude idioms (breaks the
   parity audit trail).
 - **Mapping hypotheses to verify at execution time**: `sandbox_mode` read-only →
-  the shared read-only `disallowedTools` denylist; `codex-spark` → `haiku` +
-  explicit low effort (starting hypothesis, labeled and probe-gated).
+  a comprehensive no-tool `disallowedTools` denylist (the helper's contract is
+  prompt-context-only, so it denies reads/web too — stricter than the analysts'
+  read-only denylist; proposed policy, deferred to CAR-010); `codex-spark` →
+  `haiku` + explicit low effort (starting hypothesis, labeled and probe-gated).
 
 ### D8 — Fixture backlog: requirements-level entries only (Q8)
 

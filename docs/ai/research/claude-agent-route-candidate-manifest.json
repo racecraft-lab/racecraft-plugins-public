@@ -1387,7 +1387,7 @@
       "agent_contract_id": "car.autopilot-fast-helper.v1",
       "role_contract": {
         "summary": "Optional latency-first, text-only leaf helper for the top-level SpecKit autopilot orchestrator: performs exactly one small advisory text task per invocation (compress, triage, draft search queries, or normalize prompt context), then returns control. Advisory only; not an executor, reviewer, or decision-maker.",
-        "mutation_boundary": "Strictly read-only and non-mutating: never edits files, proposes patches, runs commands, spawns agents, or makes final decisions; uses only the context in the prompt (no tool output, web search, or filesystem exploration). Codex sandbox_mode=read-only maps to the shared read-only disallowedTools denylist posture.",
+        "mutation_boundary": "Strictly read-only and non-mutating: never edits files, proposes patches, runs commands, spawns agents, or makes final decisions; uses only the context in the prompt (no tool output, web search, or filesystem exploration). Codex sandbox_mode=read-only under-specifies this: the prompt-context-only contract maps to a comprehensive no-tool disallowedTools denylist (also denying reads/web, stricter than the analysts' read-only denylist), proposed and deferred to CAR-010.",
         "output_format": "One of four compact, paste-ready formats matching the requested job: `## Fast Brief` (Core issue / Relevant evidence / Suggested next agent), `## Fast Triage` (Primary bucket / Why / Escalate?), `## Query Drafts` (bullet list), or `## Compact Context` (Question / Evidence block / Open uncertainty).",
         "source_ref": "speckit-pro/codex-agents/autopilot-fast-helper.toml"
       },

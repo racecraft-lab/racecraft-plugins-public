@@ -192,7 +192,8 @@ rules, and output formats translated contract-equivalently in the manifest):
   Open uncertainty).
 
 Mapping-hypothesis note (recorded, probe-gated): `sandbox_mode: read-only`
--> the shared read-only tool denylist posture; `model: gpt-5.3-codex-spark` -> a fast
+-> a comprehensive no-tool denylist posture (prompt-context-only; stricter than the analysts'
+read-only denylist, which still permits reads/web — proposed, deferred to CAR-010); `model: gpt-5.3-codex-spark` -> a fast
 Claude route (starting hypothesis `haiku` + explicit low effort), labeled and gated on
 a capability question. Claude-only subagent fields with no Codex source (e.g.
 `maxTurns`) are deferred to CAR-010 as proposed policy.
@@ -385,7 +386,7 @@ unresolved / undocumented items (FR-005, FR-008) and carry none of the four labe
 | Record section | Dominant class | Notes |
 |----------------|----------------|-------|
 | Preamble, *Immutable production comparator*, *Stdlib hashing method*, *Agent inventory*, *Codex helper source inventory*, *Route-policy surface inventory*, *Layer 6 Claude fixture gap*, *Agent-file hash triples*, *Reviewability checkpoint* | `[FACT]` (repository facts) | Direct observations read from `speckit-pro-v2.19.1` / the tracked tree, reproducible from the tag — not platform-behavior claims. |
-| *Codex helper source inventory* → the "Mapping-hypothesis note" | `[INFERENCE]` | `sandbox_mode: read-only` → shared read-only denylist; `gpt-5.3-codex-spark` → a fast Claude route (starting hypothesis `haiku` + explicit low effort) — probe-gated on CAP-Q3. |
+| *Codex helper source inventory* → the "Mapping-hypothesis note" | `[INFERENCE]`/`[POLICY]` | `sandbox_mode: read-only` → a comprehensive no-tool denylist (prompt-context-only; stricter than the analysts' read-only denylist — proposed, CAR-010); `gpt-5.3-codex-spark` → a fast Claude route (starting hypothesis `haiku` + explicit low effort) — probe-gated on CAP-Q3. |
 | *Codex helper source inventory* → the `maxTurns` deferral clause | `[POLICY]` | Claude-only field with no Codex source; proposed value deferred to CAR-010. |
 | *Primary-source fact table* | per-row tags | Each row carries its own `[FACT]`/`[INFERENCE]` tag inline. |
 | *Capability questions* | unclassified (open probes) | `CAP-Q1…CAP-Q6`; the explicit home for unresolved bindings and undocumented behaviors. |
@@ -546,7 +547,7 @@ which of their frontmatter fields the platform honors.
 - **`AUTH-2`** — Documented authentication modes, in the page's precedence order: `CLAUDE_CODE_USE_BEDROCK` / `CLAUDE_CODE_USE_VERTEX` / `CLAUDE_CODE_USE_FOUNDRY` (cloud providers), `ANTHROPIC_AUTH_TOKEN` (sent as `Authorization: Bearer`), `ANTHROPIC_API_KEY` (sent as `X-Api-Key`), `apiKeyHelper`, `CLAUDE_CODE_OAUTH_TOKEN` (a long-lived token from `claude setup-token`), and interactive subscription login (`/login`). `[FACT]`
   - Source: https://code.claude.com/docs/en/authentication (accessed 2026-07-14)
   - Quote (the "Authentication precedence" identifiers, verbatim): "CLAUDE_CODE_USE_BEDROCK … CLAUDE_CODE_USE_VERTEX … CLAUDE_CODE_USE_FOUNDRY … ANTHROPIC_AUTH_TOKEN … Authorization: Bearer … ANTHROPIC_API_KEY … X-Api-Key … apiKeyHelper … CLAUDE_CODE_OAUTH_TOKEN … claude setup-token … /login".
-  - Note: agents inherit the session's auth mode; no agent requires a specific mode. The manifest `required_capabilities.client` is therefore "Claude Code, any supported auth mode." `[INFERENCE]` — composed from `AUTH-2` + `RES-2`.
+  - Note: the shipped agents configure no per-agent authentication, so in the evaluation environment they run under the session's auth mode (any of `AUTH-2`'s documented modes); the manifest `required_capabilities.client` is therefore "Claude Code, any supported auth mode." `[ASSUMPTION]` — `AUTH-2` enumerates the modes, but subagent auth *inheritance* is not separately documented, so this is a proposed evaluation-environment assumption, not a cited fact.
 
 ### 9. Non-interactive telemetry
 
@@ -593,7 +594,7 @@ undocumented behaviors. No candidate is claimed executable before these are prob
 | **`CAP-Q2`** | Does the `sonnet` alias resolve to `claude-sonnet-5` in the pinned environment, and is that binding stable under the same floating-resolution/allowlist/re-point risks (`ALS-sonnet`)? | CAR-002 probe of the `sonnet` route's resolved ID; gates candidate-tuple binding for the six `sonnet` analyst/validator/author agents (codebase/consensus/domain/gate/spec-context/uat). |
 | **`CAP-Q3`** | Does the `haiku` alias resolve to `claude-haiku-4-5-20251001` (alias `claude-haiku-4-5`) in the pinned environment (`ALS-haiku`)? | CAR-002 probe of the `haiku` route's resolved ID; gates the `autopilot-fast-helper` starting-hypothesis `haiku` + low-effort candidate tuple and the `haiku` candidate tuples on the six `sonnet`-production analyst/validator/author agents (codebase/consensus/domain/gate/spec-context/uat) plus `checklist-executor` and `clarify-executor`. |
 | **`CAP-Q4`** | Does the `fable` alias resolve to `claude-fable-5` **and** is `fable` available/accessible in the pinned benchmark environment (PRD OQ-4), given `best`/`fable` "where your organization has access" gating and `ANTHROPIC_DEFAULT_FABLE_MODEL` re-pointing (`ALS-fable`, `ALS-context`, `ALS-repoint`)? | CAR-002 probe of `fable`'s resolved ID and environment-time availability; gates `fable`'s executor-class candidate eligibility (FR-013) — `fable` is excluded only by recorded probe/contract evidence. |
-| **`CAP-Q5`** | When a subagent's `model` frontmatter names an **unavailable** model at dispatch, does Claude Code hard-error or silently substitute another model? (Documented only for the main-session `/model` custom-model surface — `RES-5`, the `model_not_found` API-retry category — never for subagent-frontmatter dispatch.) | CAR-002 probe of unavailable-model dispatch behavior; gates any CAR-003 fallback design that assumes a defined unavailable-model outcome. Recorded as a mandatory probe question, never assumed (FR-008). |
+| **`CAP-Q5`** | When a subagent's `model` frontmatter names an **unavailable** model at dispatch, does Claude Code hard-error or silently substitute another model? (Documented only for the main-session `/model` custom-model surface — `RES-5` records that an unrecognized model id reports an error there — never for subagent-frontmatter dispatch.) | CAR-002 probe of unavailable-model dispatch behavior; gates any CAR-003 fallback design that assumes a defined unavailable-model outcome. Recorded as a mandatory probe question, never assumed (FR-008). |
 | **`CAP-Q6`** | At a subagent's execution time, when a shipped alias has **re-pointed** to a new resolved model ID, is the new model silently used, does it hard-error, or is it otherwise handled? (Distinct from and additional to alias re-pointing's role as a recorded manifest invalidation trigger, FR-014; the docs surface the resolved model via `resolvedModel`/`TEL-5` and announce main-session substitution via `RES-3`, but do not document the subagent execution-time manifestation.) | CAR-002 probe of alias re-pointing's execution-time manifestation; gates CAR-003 route-stability assumptions and the semantics of the per-alias invalidation triggers. Recorded as a mandatory probe question, never assumed (FR-008). |
 
 Each `CAP-Qn` above states the **detection/probe** need only; the *Go / no-go handoff*
@@ -646,7 +647,7 @@ before they are answered.
 - **`CAP-Q5` — unavailable-model dispatch (undocumented).** When a subagent's `model` frontmatter
   names an **unavailable** model at dispatch, does Claude Code hard-error or silently substitute
   another model? The error path is documented only for the main-session `/model` custom-model surface
-  (`RES-5`, the `model_not_found` category) — **never** for subagent-frontmatter dispatch. Recorded as
+  (`RES-5`: an unrecognized model id reports an error on the `/model` surface) — **never** for subagent-frontmatter dispatch. Recorded as
   a mandatory probe question, never assumed (FR-008). **Blocks:** any CAR-003 fallback design that
   assumes a defined unavailable-model dispatch outcome for the twelve agents.
 - **`CAP-Q6` — alias re-pointing execution-time manifestation (undocumented).** At a subagent's
@@ -863,8 +864,8 @@ platform fact and no benchmark result is asserted.*
   (3) draft search queries; (4) normalize prompt context; plus an insufficient-context input to exercise
   the "say so briefly and return the smallest useful fallback" rule.
 - **Required evidence** — *Tool surface:* **no tools** — advisory text only; uses only prompt context (no
-  `Write`/`Edit`, no `Skill`/`Agent`/dispatch, no web or filesystem); read-only denylist posture (Codex
-  `sandbox_mode: read-only` maps to the shared read-only denylist per the helper's `platform_field_mapping`).
+  `Write`/`Edit`, no `Skill`/`Agent`/dispatch, no web or filesystem); a comprehensive no-tool denylist posture (Codex
+  `sandbox_mode: read-only` under-specifies this — the prompt-context-only contract also denies reads/web, stricter than the analysts' read-only denylist; proposed and deferred to CAR-010 per the helper's `platform_field_mapping`).
   *Mutation boundary:* strictly read-only and non-mutating — never edits files, proposes patches, runs
   commands, spawns agents, or makes final decisions. *Output format:* exactly one of the four compact,
   paste-ready formats matching the job — `## Fast Brief`, `## Fast Triage`, `## Query Drafts`, or
