@@ -24,6 +24,7 @@
       "scripts": [
         { "path": "tests/speckit-pro/layer1-structural/validate-plugin.py", "label": "validate-plugin", "baseline": "tests/speckit-pro/parity/bash-to-python/validate-plugin-baseline.txt" },
         { "path": "tests/speckit-pro/layer1-structural/validate-plugin-payload.py", "label": "validate-plugin-payload", "baseline": "tests/speckit-pro/parity/bash-to-python/validate-plugin-payload-baseline.txt" },
+        { "path": "tests/speckit-pro/layer1-structural/validate-agent-instructions.py", "label": "validate-agent-instructions", "baseline": null },
         { "path": "tests/speckit-pro/layer1-structural/validate-agents.py", "label": "validate-agents", "baseline": "tests/speckit-pro/parity/bash-to-python/validate-agents-baseline.txt" },
         { "path": "tests/speckit-pro/layer1-structural/validate-skills.py", "label": "validate-skills", "baseline": "tests/speckit-pro/parity/bash-to-python/validate-skills-baseline.txt" },
         { "path": "tests/speckit-pro/layer1-structural/validate-hooks.py", "label": "validate-hooks", "baseline": "tests/speckit-pro/parity/bash-to-python/validate-hooks-baseline.txt" },

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import ast
+from contextlib import ExitStack
 import importlib.util
 import json
 import os
@@ -23,13 +24,13 @@ FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "runner-gates"
 CONTRACT_DIR = FIXTURE_DIR / "contracts"
 PROMOTION_RECORDS = FIXTURE_DIR / "promotion-records.json"
 REQUESTS_DIR = FIXTURE_DIR / "requests"
-XPLAT_008_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "installed-plugin-release"
-XPLAT_008_CONTRACT_DIR = XPLAT_008_FIXTURE_DIR / "contracts"
-XPLAT_008_REQUESTS_DIR = XPLAT_008_FIXTURE_DIR / "requests"
-XPLAT_008_PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/installed-plugin-release/promotion-records.json"
-XPLAT_009_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "plugin-bash-confinement"
-XPLAT_009_REQUESTS_DIR = XPLAT_009_FIXTURE_DIR / "requests"
-XPLAT_009_CONTRACT_DIR = XPLAT_009_FIXTURE_DIR / "contracts"
+INSTALLED_RELEASE_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "installed-plugin-release"
+INSTALLED_RELEASE_CONTRACT_DIR = INSTALLED_RELEASE_FIXTURE_DIR / "contracts"
+INSTALLED_RELEASE_REQUESTS_DIR = INSTALLED_RELEASE_FIXTURE_DIR / "requests"
+INSTALLED_RELEASE_PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/installed-plugin-release/promotion-records.json"
+PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "plugin-bash-confinement"
+PLUGIN_BASH_CONFINEMENT_REQUESTS_DIR = PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "requests"
+PLUGIN_BASH_CONFINEMENT_CONTRACT_DIR = PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "contracts"
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
@@ -100,20 +101,77 @@ def fixture_cases(name: str) -> dict[str, Any]:
     return json.loads((FIXTURE_DIR / f"{name}-cases.json").read_text(encoding="utf-8"))
 
 
-def xplat008_fixture_request(name: str) -> dict[str, Any]:
-    return json.loads((XPLAT_008_REQUESTS_DIR / f"{name}.json").read_text(encoding="utf-8"))
+def installed_release_fixture_request(name: str) -> dict[str, Any]:
+    return json.loads((INSTALLED_RELEASE_REQUESTS_DIR / f"{name}.json").read_text(encoding="utf-8"))
 
 
-def xplat008_fixture_cases(name: str) -> dict[str, Any]:
-    return json.loads((XPLAT_008_FIXTURE_DIR / f"{name}-cases.json").read_text(encoding="utf-8"))
+def installed_release_fixture_cases(name: str) -> dict[str, Any]:
+    return json.loads((INSTALLED_RELEASE_FIXTURE_DIR / f"{name}-cases.json").read_text(encoding="utf-8"))
 
 
-def xplat009_fixture_request(name: str) -> dict[str, Any]:
-    return json.loads((XPLAT_009_REQUESTS_DIR / f"{name}.json").read_text(encoding="utf-8"))
+def plugin_bash_confinement_fixture_request(name: str) -> dict[str, Any]:
+    return json.loads((PLUGIN_BASH_CONFINEMENT_REQUESTS_DIR / f"{name}.json").read_text(encoding="utf-8"))
 
 
-def xplat009_fixture_cases(name: str) -> dict[str, Any]:
-    return json.loads((XPLAT_009_FIXTURE_DIR / f"{name}-cases.json").read_text(encoding="utf-8"))
+def plugin_bash_confinement_fixture_cases(name: str) -> dict[str, Any]:
+    return json.loads((PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / f"{name}-cases.json").read_text(encoding="utf-8"))
+
+
+def run_installed_release_readiness_case(case_id: str, *, live_evidence: dict[str, Any] | None = None) -> dict[str, Any]:
+    from speckit_pro_runner.gates import registry, release as release_gate
+
+    entry = next(
+        operation
+        for operation in registry.all_gate_operations()
+        if operation.operation == "release-readiness-xplat008"
+    )
+    request = SimpleNamespace(
+        request_id=f"test-installed-release-readiness-{case_id}",
+        operation="release-readiness-xplat008",
+        inputs={
+            "case_file": "tests/speckit-pro/unit/fixtures/installed-plugin-release/release-readiness-cases.json",
+            "case_id": case_id,
+        },
+    )
+    if live_evidence is None:
+        return release_gate.release_readiness_xplat008(entry, request, REPO_ROOT)
+    with patch.object(release_gate, "live_xplat008_gate_evidence", return_value=live_evidence):
+        return release_gate.release_readiness_xplat008(entry, request, REPO_ROOT)
+
+
+def run_plugin_bash_confinement_case(
+    case_id: str,
+    *,
+    max_findings: int | None = None,
+    skip_source_scan: bool = False,
+    skip_repo_source_scan: bool = False,
+) -> dict[str, Any]:
+    from speckit_pro_runner.gates import active_path_guard, registry
+
+    entry = next(
+        operation
+        for operation in registry.all_gate_operations()
+        if operation.operation == "zero-bash-guard"
+    )
+    inputs: dict[str, Any] = {
+        "case_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/zero-bash-guard-cases.json",
+        "case_id": case_id,
+    }
+    if max_findings is not None:
+        inputs["max_findings"] = max_findings
+    request = SimpleNamespace(
+        request_id=f"test-zero-bash-guard-{case_id}",
+        operation="zero-bash-guard",
+        inputs=inputs,
+    )
+    if not skip_source_scan and not skip_repo_source_scan:
+        return active_path_guard.run_zero_bash_guard(entry, request, REPO_ROOT)
+    with ExitStack() as stack:
+        if skip_source_scan:
+            stack.enter_context(patch.object(active_path_guard, "source_files", return_value=[]))
+        if skip_repo_source_scan:
+            stack.enter_context(patch.object(active_path_guard, "scan_repo_sources", return_value=[]))
+        return active_path_guard.run_zero_bash_guard(entry, request, REPO_ROOT)
 
 
 def python_argv(source: str) -> list[str]:
@@ -185,10 +243,10 @@ class GateFoundationTests(unittest.TestCase):
             self.assertFalse(path.is_absolute(), artifact["path"])
             self.assertNotIn("..", path.parts)
 
-    def assert_xplat008_promotion_metadata(self, response: dict[str, Any], case_file: str) -> None:
-        self.assertEqual(response["data"]["gate"]["promotion_record"], XPLAT_008_PROMOTION_RECORD)
+    def assert_installed_release_promotion_metadata(self, response: dict[str, Any], case_file: str) -> None:
+        self.assertEqual(response["data"]["gate"]["promotion_record"], INSTALLED_RELEASE_PROMOTION_RECORD)
         artifacts = response["data"].get("artifacts", [])
-        self.assertIn({"path": XPLAT_008_PROMOTION_RECORD, "kind": "promotion_record"}, artifacts)
+        self.assertIn({"path": INSTALLED_RELEASE_PROMOTION_RECORD, "kind": "promotion_record"}, artifacts)
         self.assertIn({"path": case_file, "kind": "fixture"}, artifacts)
         self.assertEqual(len({artifact["path"] for artifact in artifacts}), len(artifacts))
 
@@ -201,7 +259,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertFalse(any(arg.lower().endswith(".sh") for arg in argv))
 
     def assert_payload_completeness_contract_subset(self, results: list[dict[str, Any]]) -> None:
-        schema = json.loads((XPLAT_008_CONTRACT_DIR / "payload-completeness.schema.json").read_text(encoding="utf-8"))
+        schema = json.loads((INSTALLED_RELEASE_CONTRACT_DIR / "payload-completeness.schema.json").read_text(encoding="utf-8"))
         required = set(schema["required"])
         allowed = set(schema["properties"])
         file_required = set(schema["$defs"]["payload_file"]["required"])
@@ -218,7 +276,7 @@ class GateFoundationTests(unittest.TestCase):
                         self.assertFalse(path.startswith("/") or ".." in path.split("/") or ":" in path.split("/")[0], path)
 
     def assert_release_readiness_contract_subset(self, readiness: dict[str, Any]) -> None:
-        schema = json.loads((XPLAT_008_CONTRACT_DIR / "release-readiness.schema.json").read_text(encoding="utf-8"))
+        schema = json.loads((INSTALLED_RELEASE_CONTRACT_DIR / "release-readiness.schema.json").read_text(encoding="utf-8"))
         check_schema = schema["$defs"]["check"]["properties"]
         check_ids = set(check_schema["check_id"]["enum"])
         blocker_classes = set(check_schema["blocker_class"]["enum"])
@@ -252,7 +310,7 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertIsInstance(record["interpreter_resolution"]["invocation_argv_prefix"], list)
 
     def assert_uat_matrix_contract_subset(self, matrix: dict[str, Any]) -> None:
-        schema = json.loads((XPLAT_008_CONTRACT_DIR / "uat-matrix.schema.json").read_text(encoding="utf-8"))
+        schema = json.loads((INSTALLED_RELEASE_CONTRACT_DIR / "uat-matrix.schema.json").read_text(encoding="utf-8"))
         self.assertLessEqual(set(schema["required"]), set(matrix))
         self.assertFalse(set(matrix) - set(schema["properties"]))
         check_ids = set(schema["$defs"]["check"]["properties"]["check_id"]["enum"])
@@ -292,7 +350,7 @@ class GateFoundationTests(unittest.TestCase):
         runtime_operations = {
             "runner-invocation",
         }
-        xplat008_guard_operations = {
+        installed_release_guard_operations = {
             "active-runtime-guard",
         }
         us1_operations = {
@@ -334,7 +392,7 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertEqual(operation.story, "US1")
                 self.assertTrue(operation.implemented)
                 self.assertEqual(operation.promotion_status, "python_authoritative")
-            elif operation.operation in xplat008_guard_operations:
+            elif operation.operation in installed_release_guard_operations:
                 self.assertEqual(operation.group, "guard")
                 self.assertEqual(operation.story, "US1")
                 self.assertTrue(operation.implemented)
@@ -507,8 +565,8 @@ class GateFoundationTests(unittest.TestCase):
         ]:
             self.assertIn(label, active_cases["coverage"])
 
-    def test_xplat008_runner_invocation_fixtures_cover_interpreter_resolution(self) -> None:
-        cases = xplat008_fixture_cases("runner-invocation")
+    def test_installed_release_runner_invocation_fixtures_cover_interpreter_resolution(self) -> None:
+        cases = installed_release_fixture_cases("runner-invocation")
         self.assertEqual(cases["schema_version"], "1.0")
         self.assertEqual(cases["feature_id"], "XPLAT-008")
         self.assertEqual(
@@ -538,15 +596,15 @@ class GateFoundationTests(unittest.TestCase):
                 attempted = [item["candidate"] for item in case["candidate_results"]]
                 self.assertEqual(attempted, expected_candidates[platform][: len(attempted)])
 
-        request = xplat008_fixture_request("runner-invocation")
+        request = installed_release_fixture_request("runner-invocation")
         self.assertEqual(request["helper_id"], "runner-invocation")
         self.assertEqual(request["operation"], "runner-invocation")
         self.assertEqual(request["mode"], "read_only")
         self.assertEqual(request["inputs"]["case_id"], "live-host-runtime-info")
 
-    def test_xplat008_runner_invocation_records_have_no_shell_fallback(self) -> None:
-        contract = json.loads((XPLAT_008_CONTRACT_DIR / "runner-invocation.schema.json").read_text(encoding="utf-8"))
-        release_contract = json.loads((XPLAT_008_CONTRACT_DIR / "release-readiness.schema.json").read_text(encoding="utf-8"))
+    def test_installed_release_runner_invocation_records_have_no_shell_fallback(self) -> None:
+        contract = json.loads((INSTALLED_RELEASE_CONTRACT_DIR / "runner-invocation.schema.json").read_text(encoding="utf-8"))
+        release_contract = json.loads((INSTALLED_RELEASE_CONTRACT_DIR / "release-readiness.schema.json").read_text(encoding="utf-8"))
         argv_contract = contract["properties"]["invocation"]["properties"]["argv"]
         self.assertEqual(len(argv_contract["oneOf"]), 3)
         self.assertEqual(contract["$defs"]["diagnostic"]["properties"]["remediation"]["type"], "object")
@@ -668,7 +726,7 @@ class GateFoundationTests(unittest.TestCase):
                 self.assert_response(response, "ok")
                 self.assert_status_exit_mapping(completed, response)
                 self.assertEqual(stderr_records, [])
-                self.assert_xplat008_promotion_metadata(
+                self.assert_installed_release_promotion_metadata(
                     response,
                     "tests/speckit-pro/unit/fixtures/installed-plugin-release/runner-invocation-cases.json",
                 )
@@ -721,7 +779,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assert_response(response, "ok")
         self.assert_status_exit_mapping(completed, response)
         self.assertEqual(stderr_records, [])
-        self.assert_xplat008_promotion_metadata(
+        self.assert_installed_release_promotion_metadata(
             response,
             "tests/speckit-pro/unit/fixtures/installed-plugin-release/runner-invocation-cases.json",
         )
@@ -824,7 +882,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(record["invocation"]["argv"], [])
         self.assertFalse(record["invocation"]["shell_used"])
 
-    def test_xplat008_active_runtime_guard_fixtures_block_only_active_runtime_findings(self) -> None:
+    def test_installed_release_active_runtime_guard_fixtures_block_only_active_runtime_findings(self) -> None:
         from speckit_pro_runner.gates import active_path_guard
 
         self.assertEqual(
@@ -898,7 +956,7 @@ class GateFoundationTests(unittest.TestCase):
             "blocking_active_runtime",
         )
 
-        cases = xplat008_fixture_cases("active-runtime-guard")
+        cases = installed_release_fixture_cases("active-runtime-guard")
         self.assertEqual(cases["schema_version"], "1.0")
         self.assertEqual(cases["feature_id"], "XPLAT-008")
         self.assertEqual(
@@ -1392,7 +1450,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assert_response(response, "missing_prerequisite")
         self.assertEqual([diag["code"] for diag in stderr_records], ["missing_prerequisite"])
         self.assertEqual(response["data"]["gate"]["comparison_ids"], ["xplat-008-active-runtime-guard"])
-        self.assert_xplat008_promotion_metadata(
+        self.assert_installed_release_promotion_metadata(
             response,
             "tests/speckit-pro/unit/fixtures/installed-plugin-release/active-runtime-guard-cases.json",
         )
@@ -1476,8 +1534,8 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(stderr_records, [])
         self.assertEqual(response["data"]["blocking_count"], 0)
 
-    def test_xplat008_payload_completeness_fixtures_cover_release_payload_blockers(self) -> None:
-        cases = xplat008_fixture_cases("payload-completeness")
+    def test_installed_release_payload_completeness_fixtures_cover_release_payload_blockers(self) -> None:
+        cases = installed_release_fixture_cases("payload-completeness")
         self.assertEqual(cases["schema_version"], "1.0")
         self.assertEqual(cases["feature_id"], "XPLAT-008")
         self.assertEqual(
@@ -1506,21 +1564,21 @@ class GateFoundationTests(unittest.TestCase):
         ]:
             self.assertIn(label, cases["coverage"])
 
-        request = xplat008_fixture_request("payload-completeness")
+        request = installed_release_fixture_request("payload-completeness")
         self.assertEqual(request["helper_id"], "payload-gate")
         self.assertEqual(request["operation"], "payload-completeness")
         self.assertEqual(request["mode"], "read_only")
 
-        apply_request = xplat008_fixture_request("payload-completeness-apply")
+        apply_request = installed_release_fixture_request("payload-completeness-apply")
         self.assertEqual(apply_request["helper_id"], "payload-gate")
         self.assertEqual(apply_request["operation"], "payload-completeness")
         self.assertEqual(apply_request["mode"], "apply")
         self.assertTrue(apply_request["inputs"]["apply_dist"])
 
-    def test_xplat009_zero_bash_guard_fixtures_cover_source_payload_and_cache_proof(self) -> None:
+    def test_plugin_bash_confinement_zero_bash_guard_fixtures_cover_source_payload_and_cache_proof(self) -> None:
         from speckit_pro_runner.gates import active_path_guard
 
-        cases = xplat009_fixture_cases("zero-bash-guard")
+        cases = plugin_bash_confinement_fixture_cases("zero-bash-guard")
         self.assertEqual(cases["schema_version"], "1.0")
         self.assertEqual(cases["feature_id"], "XPLAT-009")
         self.assertEqual(
@@ -1570,7 +1628,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(final_case["installed_cache_proof"], "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json")
         self.assertEqual(
             json.loads((REPO_ROOT / final_case["installed_cache_proof"]).read_text(encoding="utf-8")),
-            json.loads((XPLAT_009_FIXTURE_DIR / "installed-cache-proof.json").read_text(encoding="utf-8")),
+            json.loads((PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "installed-cache-proof.json").read_text(encoding="utf-8")),
         )
         self.assertTrue(active_path_guard.command_argv_contains_forbidden(["/usr/bin/env", "-S bash -lc jq -r . package.json"]))
         self.assertTrue(active_path_guard.command_argv_contains_forbidden(["sh", "-c", "python -m speckit_pro_runner"]))
@@ -1596,7 +1654,7 @@ class GateFoundationTests(unittest.TestCase):
             oversized = Path(tmp) / "large-install"
             oversized.write_text("#!/usr/bin/env bash\n" + ("#" * (active_path_guard.MAX_SCAN_BYTES + 1)), encoding="utf-8")
             self.assertEqual(active_path_guard.count_prohibited_script_files(oversized), 1)
-        with tempfile.TemporaryDirectory(prefix=".xplat009-large-script-", dir=PLUGIN_ROOT) as tmp:
+        with tempfile.TemporaryDirectory(prefix=".plugin-bash-confinement-large-script-", dir=PLUGIN_ROOT) as tmp:
             temp_root = Path(tmp)
             large_suffix_script = temp_root / "install.sh"
             large_suffix_script.write_text("#!/usr/bin/env bash\n" + ("#" * (active_path_guard.MAX_SCAN_BYTES + 1)), encoding="utf-8")
@@ -1618,7 +1676,7 @@ class GateFoundationTests(unittest.TestCase):
                 },
                 script_paths,
             )
-        with tempfile.TemporaryDirectory(prefix=".xplat009-symlink-", dir=PLUGIN_ROOT) as tmp:
+        with tempfile.TemporaryDirectory(prefix=".plugin-bash-confinement-symlink-", dir=PLUGIN_ROOT) as tmp:
             temp_root = Path(tmp)
             with tempfile.TemporaryDirectory() as outside:
                 outside_script = Path(outside) / "install"
@@ -1665,7 +1723,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(response["data"]["feature_id"], "XPLAT-009")
         self.assertEqual(response["data"]["status"], "fail")
 
-        completed, response, stderr_records = run_runner(xplat009_fixture_request("zero-bash-guard"))
+        completed, response, stderr_records = run_runner(plugin_bash_confinement_fixture_request("zero-bash-guard"))
         self.assertEqual(completed.returncode, 0)
         self.assert_response(response, "ok")
         self.assertEqual(stderr_records, [])
@@ -1680,6 +1738,14 @@ class GateFoundationTests(unittest.TestCase):
         self.assertTrue(result["installed_cache_proof"]["source_derived"])
         self.assertFalse(result["installed_cache_proof"]["mutable_user_cache"])
 
+        scan_root_only_cases = {
+            "missing-scan-root",
+            "missing-required-scan-root",
+            "traversal-scan-root",
+            "malformed-scan-root",
+            "empty-scan-roots",
+            "non-list-scan-roots",
+        }
         for case_id in [
             "blocking-active-source",
             "blocking-active-allowlist-entry",
@@ -1715,19 +1781,13 @@ class GateFoundationTests(unittest.TestCase):
             "missing-mutable-installed-cache-proof",
         ]:
             with self.subTest(case_id=case_id):
-                completed, response, stderr_records = run_runner(
-                    gate_request(
-                        "active-path-guard",
-                        "zero-bash-guard",
-                        inputs={
-                            "case_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/zero-bash-guard-cases.json",
-                            "case_id": case_id,
-                        },
-                    )
+                response = run_plugin_bash_confinement_case(
+                    case_id,
+                    skip_source_scan=case_id in scan_root_only_cases,
+                    skip_repo_source_scan=True,
                 )
-                self.assertEqual(completed.returncode, 1)
                 self.assert_response(response, "expected_failure")
-                self.assertEqual([diag["code"] for diag in stderr_records], ["zero_bash_guard_blocked"])
+                self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["zero_bash_guard_blocked"])
                 self.assertGreater(response["data"]["blocking_count"], 0)
                 self.assertTrue(
                     all(finding["classification"] == "blocking_zero_bash" for finding in response["data"]["findings"])
@@ -1779,18 +1839,13 @@ class GateFoundationTests(unittest.TestCase):
         exact_category_cases = {case_id for case_id in expected_categories if case_id.endswith("-installed-cache-proof")}
         for case_id, categories in expected_categories.items():
             with self.subTest(case_id=f"{case_id}-categories"):
-                completed, response, _ = run_runner(
-                    gate_request(
-                        "active-path-guard",
-                        "zero-bash-guard",
-                        inputs={
-                            "case_file": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/zero-bash-guard-cases.json",
-                            "case_id": case_id,
-                            "max_findings": 20,
-                        },
-                    )
+                response = run_plugin_bash_confinement_case(
+                    case_id,
+                    max_findings=20,
+                    skip_source_scan=case_id in scan_root_only_cases,
+                    skip_repo_source_scan=True,
                 )
-                self.assertEqual(completed.returncode, 1)
+                self.assert_response(response, "expected_failure")
                 actual_categories = {finding["category"] for finding in response["data"]["findings"]}
                 if case_id in exact_category_cases:
                     self.assertEqual(actual_categories, categories)
@@ -1862,12 +1917,12 @@ class GateFoundationTests(unittest.TestCase):
         self.assertIn(("command_string_subprocess", 16), dynamic_python_records)
         self.assertIn("getstatusoutput", dynamic_python_records[("command_string_subprocess", 16)])
 
-        self.assert_xplat009_zero_bash_contracts_match_fixtures(clean_response)
+        self.assert_plugin_bash_confinement_contracts_match_fixtures(clean_response)
 
-    def test_xplat009_installed_cache_proof_blocks_empty_payload_roots(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="xplat009-empty-", dir=REPO_ROOT / "dist" / "claude") as claude_root:
-            with tempfile.TemporaryDirectory(prefix="xplat009-empty-", dir=REPO_ROOT / "dist" / "codex") as codex_root:
-                with tempfile.TemporaryDirectory(prefix=".xplat009-proof-", dir=REPO_ROOT) as proof_root:
+    def test_plugin_bash_confinement_installed_cache_proof_blocks_empty_payload_roots(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="plugin-bash-confinement-empty-", dir=REPO_ROOT / "dist" / "claude") as claude_root:
+            with tempfile.TemporaryDirectory(prefix="plugin-bash-confinement-empty-", dir=REPO_ROOT / "dist" / "codex") as codex_root:
+                with tempfile.TemporaryDirectory(prefix=".plugin-bash-confinement-proof-", dir=REPO_ROOT) as proof_root:
                     proof_dir = Path(proof_root)
                     proof_file = proof_dir / "installed-cache-proof-empty.json"
                     case_file = proof_dir / "zero-bash-empty-root-case.json"
@@ -1949,12 +2004,12 @@ class GateFoundationTests(unittest.TestCase):
         categories = {finding["category"] for finding in response["data"]["findings"]}
         self.assertLessEqual({"source_payload_root", "installed_root"}, categories)
 
-    def test_xplat009_installed_cache_proof_blocks_schema_drift(self) -> None:
+    def test_plugin_bash_confinement_installed_cache_proof_blocks_schema_drift(self) -> None:
         proof = json.loads((REPO_ROOT / "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json").read_text(encoding="utf-8"))
         proof["proofs"][0].pop("surface")
         proof["proofs"][1]["product"] = "cursor"
         proof["proofs"][1]["unexpected_field"] = "drift"
-        with tempfile.TemporaryDirectory(prefix=".xplat009-proof-schema-", dir=REPO_ROOT) as proof_root:
+        with tempfile.TemporaryDirectory(prefix=".plugin-bash-confinement-proof-schema-", dir=REPO_ROOT) as proof_root:
             proof_dir = Path(proof_root)
             proof_file = proof_dir / "installed-cache-proof-schema-drift.json"
             case_file = proof_dir / "zero-bash-proof-schema-drift-case.json"
@@ -2000,13 +2055,13 @@ class GateFoundationTests(unittest.TestCase):
         categories = {finding["category"] for finding in response["data"]["findings"]}
         self.assertLessEqual({"surface", "product", "malformed"}, categories)
 
-    def test_xplat009_installed_cache_proof_scans_cache_text(self) -> None:
+    def test_plugin_bash_confinement_installed_cache_proof_scans_cache_text(self) -> None:
         installed_root = REPO_ROOT / "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro"
-        with tempfile.TemporaryDirectory(prefix=".xplat009-active-cache-", dir=installed_root) as cache_root:
+        with tempfile.TemporaryDirectory(prefix=".plugin-bash-confinement-active-cache-", dir=installed_root) as cache_root:
             cache_file = Path(cache_root) / "README.md"
             cache_file.write_text("Run Bash before continuing.\\n", encoding="utf-8")
 
-            completed, response, _ = run_runner(xplat009_fixture_request("zero-bash-guard"))
+            completed, response, _ = run_runner(plugin_bash_confinement_fixture_request("zero-bash-guard"))
 
         self.assertEqual(completed.returncode, 1)
         self.assert_response(response, "expected_failure")
@@ -2018,8 +2073,8 @@ class GateFoundationTests(unittest.TestCase):
         self.assertTrue(cache_findings)
         self.assertIn("bash", {finding["category"] for finding in cache_findings})
 
-    def test_xplat009_zero_bash_guard_allows_missing_optional_installed_cache_proof(self) -> None:
-        with tempfile.TemporaryDirectory(prefix=".xplat009-optional-proof-", dir=REPO_ROOT) as scan_root:
+    def test_plugin_bash_confinement_zero_bash_guard_allows_missing_optional_installed_cache_proof(self) -> None:
+        with tempfile.TemporaryDirectory(prefix=".plugin-bash-confinement-optional-proof-", dir=REPO_ROOT) as scan_root:
             scan_dir = Path(scan_root)
             (scan_dir / "README.md").write_text("Python runner only.\n", encoding="utf-8")
             case_file = scan_dir / "zero-bash-optional-proof-case.json"
@@ -2061,8 +2116,8 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(response["data"]["installed_cache_proof"]["proof_count"], 0)
         self.assertEqual(response["data"]["blocking_count"], 0)
 
-    def test_xplat009_zero_bash_guard_blocks_physical_uppercase_script_files(self) -> None:
-        with tempfile.TemporaryDirectory(prefix=".xplat009-uppercase-", dir=REPO_ROOT) as scan_root:
+    def test_plugin_bash_confinement_zero_bash_guard_blocks_physical_uppercase_script_files(self) -> None:
+        with tempfile.TemporaryDirectory(prefix=".plugin-bash-confinement-uppercase-", dir=REPO_ROOT) as scan_root:
             scan_dir = Path(scan_root)
             (scan_dir / "RUN.SH").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
             case_file = scan_dir / "zero-bash-uppercase-case.json"
@@ -2102,13 +2157,13 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual([diag["code"] for diag in stderr_records], ["zero_bash_guard_blocked"])
         self.assertIn("script_file", {finding["category"] for finding in response["data"]["findings"]})
 
-    def assert_xplat009_zero_bash_contracts_match_fixtures(self, response: dict[str, Any]) -> None:
-        request_schema = json.loads((XPLAT_009_CONTRACT_DIR / "zero-bash-guard-request.schema.json").read_text(encoding="utf-8"))
-        result_schema = json.loads((XPLAT_009_CONTRACT_DIR / "zero-bash-guard-result.schema.json").read_text(encoding="utf-8"))
-        proof_schema = json.loads((XPLAT_009_CONTRACT_DIR / "installed-cache-proof.schema.json").read_text(encoding="utf-8"))
-        allowlist_schema = json.loads((XPLAT_009_CONTRACT_DIR / "historical-allowlist-entry.schema.json").read_text(encoding="utf-8"))
+    def assert_plugin_bash_confinement_contracts_match_fixtures(self, response: dict[str, Any]) -> None:
+        request_schema = json.loads((PLUGIN_BASH_CONFINEMENT_CONTRACT_DIR / "zero-bash-guard-request.schema.json").read_text(encoding="utf-8"))
+        result_schema = json.loads((PLUGIN_BASH_CONFINEMENT_CONTRACT_DIR / "zero-bash-guard-result.schema.json").read_text(encoding="utf-8"))
+        proof_schema = json.loads((PLUGIN_BASH_CONFINEMENT_CONTRACT_DIR / "installed-cache-proof.schema.json").read_text(encoding="utf-8"))
+        allowlist_schema = json.loads((PLUGIN_BASH_CONFINEMENT_CONTRACT_DIR / "historical-allowlist-entry.schema.json").read_text(encoding="utf-8"))
 
-        request = xplat009_fixture_request("zero-bash-guard")
+        request = plugin_bash_confinement_fixture_request("zero-bash-guard")
         self.assertLessEqual(set(request_schema["required"]), set(request))
         self.assertEqual(request_schema["properties"]["operation"]["const"], request["operation"])
         self.assertEqual(request_schema["properties"]["mode"]["const"], request["mode"])
@@ -2129,7 +2184,7 @@ class GateFoundationTests(unittest.TestCase):
             self.assertIn(finding["classification"], finding_schema["properties"]["classification"]["enum"])
             self.assertIn(finding["surface"], finding_schema["properties"]["surface"]["enum"])
 
-        proof = json.loads((XPLAT_009_FIXTURE_DIR / "installed-cache-proof.json").read_text(encoding="utf-8"))
+        proof = json.loads((PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "installed-cache-proof.json").read_text(encoding="utf-8"))
         self.assertLessEqual(set(proof_schema["required"]), set(proof))
         self.assertEqual({item["product"] for item in proof["proofs"]}, {"claude", "codex"})
         proof_item_schema = proof_schema["$defs"]["proof"]
@@ -2138,7 +2193,7 @@ class GateFoundationTests(unittest.TestCase):
             self.assertFalse(set(item) - set(proof_item_schema["properties"]))
             self.assertNotEqual(item["installed_root"], item["source_payload_root"])
 
-        allowlist = json.loads((XPLAT_009_FIXTURE_DIR / "allowlist.json").read_text(encoding="utf-8"))
+        allowlist = json.loads((PLUGIN_BASH_CONFINEMENT_FIXTURE_DIR / "allowlist.json").read_text(encoding="utf-8"))
         entry_schema = allowlist_schema["$defs"]["entry"]
         for item in allowlist["entries"]:
             self.assertLessEqual(set(entry_schema["required"]), set(item))
@@ -2146,7 +2201,7 @@ class GateFoundationTests(unittest.TestCase):
             self.assertIn("categories", item)
             self.assertNotIn("category", item)
 
-    def test_xplat008_payload_completeness_blocks_seeded_negative_cases(self) -> None:
+    def test_installed_release_payload_completeness_blocks_seeded_negative_cases(self) -> None:
         for case_id in ["missing-runner-file", "stale-metadata", "extra-file", "path-leak", "transform-mismatch"]:
             with self.subTest(case_id=case_id):
                 completed, response, stderr_records = run_runner(
@@ -2189,7 +2244,7 @@ class GateFoundationTests(unittest.TestCase):
                 self.assert_response(response, "input_error")
                 self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_payload_surface_selection"])
 
-    def test_xplat008_payload_completeness_apply_builds_runner_payloads_without_shell(self) -> None:
+    def test_installed_release_payload_completeness_apply_builds_runner_payloads_without_shell(self) -> None:
         from speckit_pro_runner.gates import payloads as payload_gate
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -2260,12 +2315,12 @@ class GateFoundationTests(unittest.TestCase):
             self.assertEqual(result["script_file_count"], 2)
             self.assertEqual(result["status"], "fail")
 
-    def test_xplat008_payload_completeness_current_dist_passes_after_runner_rebuild(self) -> None:
-        completed, response, stderr_records = run_runner(xplat008_fixture_request("payload-completeness"))
+    def test_installed_release_payload_completeness_current_dist_passes_after_runner_rebuild(self) -> None:
+        completed, response, stderr_records = run_runner(installed_release_fixture_request("payload-completeness"))
         self.assertEqual(completed.returncode, 0)
         self.assert_response(response, "ok")
         self.assertEqual(stderr_records, [])
-        self.assert_xplat008_promotion_metadata(
+        self.assert_installed_release_promotion_metadata(
             response,
             "tests/speckit-pro/unit/fixtures/installed-plugin-release/payload-completeness-cases.json",
         )
@@ -2283,7 +2338,7 @@ class GateFoundationTests(unittest.TestCase):
             self.assertFalse(result["path_leaks"])
         self.assert_payload_completeness_contract_subset(response["data"]["payload_completeness"])
 
-    def test_xplat008_payload_completeness_detects_stale_runner_trust_metadata(self) -> None:
+    def test_installed_release_payload_completeness_detects_stale_runner_trust_metadata(self) -> None:
         from speckit_pro_runner.gates import payloads as payload_gate
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -2303,8 +2358,8 @@ class GateFoundationTests(unittest.TestCase):
             },
         )
 
-    def test_xplat008_release_readiness_fixtures_cover_release_blockers(self) -> None:
-        promotion_records = json.loads((XPLAT_008_FIXTURE_DIR / "promotion-records.json").read_text(encoding="utf-8"))
+    def test_installed_release_readiness_fixtures_cover_release_blockers(self) -> None:
+        promotion_records = json.loads((INSTALLED_RELEASE_FIXTURE_DIR / "promotion-records.json").read_text(encoding="utf-8"))
         self.assertEqual(promotion_records["schema_version"], "1.0")
         self.assertEqual(promotion_records["feature_id"], "XPLAT-008")
         self.assertEqual(promotion_records["promotion_status"], "installed_cutover_release_authoritative")
@@ -2313,15 +2368,15 @@ class GateFoundationTests(unittest.TestCase):
             {record["gate_id"] for record in promotion_records["records"]},
         )
         case_ids_by_operation = {
-            "runner-invocation": {case["case_id"] for case in xplat008_fixture_cases("runner-invocation")["cases"]},
-            "active-runtime-guard": {case["case_id"] for case in xplat008_fixture_cases("active-runtime-guard")["cases"]},
-            "payload-completeness": {case["case_id"] for case in xplat008_fixture_cases("payload-completeness")["cases"]},
-            "release-readiness-xplat008": {case["case_id"] for case in xplat008_fixture_cases("release-readiness")["cases"]},
+            "runner-invocation": {case["case_id"] for case in installed_release_fixture_cases("runner-invocation")["cases"]},
+            "active-runtime-guard": {case["case_id"] for case in installed_release_fixture_cases("active-runtime-guard")["cases"]},
+            "payload-completeness": {case["case_id"] for case in installed_release_fixture_cases("payload-completeness")["cases"]},
+            "release-readiness-xplat008": {case["case_id"] for case in installed_release_fixture_cases("release-readiness")["cases"]},
         }
         for record in promotion_records["records"]:
             with self.subTest(promotion=record["python_operation"]):
                 self.assertLessEqual(set(record["fixture_ids"]), case_ids_by_operation[record["python_operation"]])
-        cases = xplat008_fixture_cases("release-readiness")
+        cases = installed_release_fixture_cases("release-readiness")
         self.assertEqual(cases["schema_version"], "1.0")
         self.assertEqual(cases["feature_id"], "XPLAT-008")
         self.assertEqual(
@@ -2351,11 +2406,11 @@ class GateFoundationTests(unittest.TestCase):
                 "broad-reinstall-rejected",
             },
         )
-        request = xplat008_fixture_request("release-readiness")
+        request = installed_release_fixture_request("release-readiness")
         self.assertEqual(request["helper_id"], "release-readiness")
         self.assertEqual(request["operation"], "release-readiness-xplat008")
         self.assertEqual(request["mode"], "read_only")
-        runner_request = xplat008_fixture_request("runner-invocation")
+        runner_request = installed_release_fixture_request("runner-invocation")
         self.assertEqual(runner_request["inputs"]["case_id"], "live-host-runtime-info")
         release_workflow = (REPO_ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
         for request_name in [
@@ -2366,8 +2421,8 @@ class GateFoundationTests(unittest.TestCase):
         ]:
             self.assertIn(f"tests/speckit-pro/unit/fixtures/installed-plugin-release/requests/{request_name}", release_workflow)
 
-    def test_xplat008_uat_matrix_fixtures_cover_native_rows_and_blockers(self) -> None:
-        cases = xplat008_fixture_cases("uat-matrix")
+    def test_installed_release_uat_matrix_fixtures_cover_native_rows_and_blockers(self) -> None:
+        cases = installed_release_fixture_cases("uat-matrix")
         self.assertEqual(cases["schema_version"], "1.0")
         self.assertEqual(cases["feature_id"], "XPLAT-008")
         ready_rows = cases["base_case"]["rows"]
@@ -2401,12 +2456,12 @@ class GateFoundationTests(unittest.TestCase):
             },
             {case["case_id"] for case in cases["cases"]},
         )
-        request = xplat008_fixture_request("uat-matrix")
+        request = installed_release_fixture_request("uat-matrix")
         self.assertEqual(request["helper_id"], "release-readiness")
         self.assertEqual(request["operation"], "uat-matrix")
 
-    def test_xplat008_uat_matrix_reports_pass_and_seeded_blockers(self) -> None:
-        completed, response, stderr_records = run_runner(xplat008_fixture_request("uat-matrix"))
+    def test_installed_release_uat_matrix_reports_pass_and_seeded_blockers(self) -> None:
+        completed, response, stderr_records = run_runner(installed_release_fixture_request("uat-matrix"))
         self.assertEqual(completed.returncode, 0)
         self.assert_response(response, "ok")
         self.assertEqual(stderr_records, [])
@@ -2442,8 +2497,8 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertEqual([diag["code"] for diag in stderr_records], ["uat_matrix_blocked"])
                 self.assertGreater(response["data"]["uat_matrix"]["blocking_count"], 0)
 
-    def test_xplat008_install_health_repair_reports_safe_and_manual_outcomes(self) -> None:
-        cases = xplat008_fixture_cases("install-health-repair")
+    def test_installed_release_install_health_repair_reports_safe_and_manual_outcomes(self) -> None:
+        cases = installed_release_fixture_cases("install-health-repair")
         self.assertEqual(cases["schema_version"], "1.0")
         self.assertEqual(cases["feature_id"], "XPLAT-008")
         self.assertLessEqual(
@@ -2462,7 +2517,7 @@ class GateFoundationTests(unittest.TestCase):
             {case["case_id"] for case in cases["cases"]},
         )
 
-        completed, response, stderr_records = run_runner(xplat008_fixture_request("install-health-repair"))
+        completed, response, stderr_records = run_runner(installed_release_fixture_request("install-health-repair"))
         self.assertEqual(completed.returncode, 0)
         self.assert_response(response, "ok")
         self.assertEqual(stderr_records, [])
@@ -2517,8 +2572,8 @@ class GateFoundationTests(unittest.TestCase):
         self.assert_response(response, "expected_failure")
         self.assertEqual([diag["code"] for diag in stderr_records], ["install_health_repair_blocked"])
 
-    def test_xplat008_release_readiness_default_request_passes_after_native_uat_completion(self) -> None:
-        completed, response, stderr_records = run_runner(xplat008_fixture_request("release-readiness"))
+    def test_installed_release_readiness_default_request_passes_after_native_uat_completion(self) -> None:
+        completed, response, stderr_records = run_runner(installed_release_fixture_request("release-readiness"))
         self.assertEqual(completed.returncode, 0)
         self.assert_response(response, "ok")
         self.assertEqual(stderr_records, [])
@@ -2535,7 +2590,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertTrue(all("script_file_count" in item for item in readiness["payload_results"]))
         self.assert_release_readiness_contract_subset(readiness)
 
-    def test_xplat008_release_readiness_pending_native_uat_still_blocks(self) -> None:
+    def test_installed_release_readiness_pending_native_uat_still_blocks(self) -> None:
         completed, response, stderr_records = run_runner(
             gate_request(
                 "release-readiness",
@@ -2557,12 +2612,12 @@ class GateFoundationTests(unittest.TestCase):
         self.assertTrue(any(check["check_id"] == "uat-matrix" and check["blocking"] for check in readiness["checks"]))
         self.assert_release_readiness_contract_subset(readiness)
 
-    def test_xplat008_release_readiness_ready_fixture_passes_and_seeded_blockers(self) -> None:
-        completed, response, stderr_records = run_runner(xplat008_fixture_request("release-readiness-ready"))
+    def test_installed_release_readiness_ready_fixture_passes(self) -> None:
+        completed, response, stderr_records = run_runner(installed_release_fixture_request("release-readiness-ready"))
         self.assertEqual(completed.returncode, 0)
         self.assert_response(response, "ok")
         self.assertEqual(stderr_records, [])
-        self.assert_xplat008_promotion_metadata(
+        self.assert_installed_release_promotion_metadata(
             response,
             "tests/speckit-pro/unit/fixtures/installed-plugin-release/release-readiness-cases.json",
         )
@@ -2600,6 +2655,7 @@ class GateFoundationTests(unittest.TestCase):
         )
         self.assert_release_readiness_contract_subset(readiness)
 
+    def test_installed_release_readiness_seeded_blocker_cases_fail(self) -> None:
         blocker_cases = [
             "active-shell-dependency",
             "incomplete-payload",
@@ -2624,23 +2680,13 @@ class GateFoundationTests(unittest.TestCase):
         ]
         for case_id in blocker_cases:
             with self.subTest(case_id=case_id):
-                completed, response, stderr_records = run_runner(
-                    gate_request(
-                        "release-readiness",
-                        "release-readiness-xplat008",
-                        inputs={
-                            "case_file": "tests/speckit-pro/unit/fixtures/installed-plugin-release/release-readiness-cases.json",
-                            "case_id": case_id,
-                        },
-                    )
-                )
-                self.assertEqual(completed.returncode, 1)
+                response = run_installed_release_readiness_case(case_id, live_evidence={})
                 self.assert_response(response, "expected_failure")
-                self.assertEqual([diag["code"] for diag in stderr_records], ["release_readiness_xplat008_blocked"])
+                self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["release_readiness_xplat008_blocked"])
                 self.assertGreater(response["data"]["release_readiness"]["blocking_count"], 0)
                 self.assert_release_readiness_contract_subset(response["data"]["release_readiness"])
 
-    def test_xplat008_release_readiness_handles_partial_failure_records(self) -> None:
+    def test_installed_release_readiness_handles_partial_failure_records(self) -> None:
         from speckit_pro_runner.gates import release as release_gate
 
         checks = release_gate.computed_xplat008_checks(

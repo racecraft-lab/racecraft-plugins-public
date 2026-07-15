@@ -9,7 +9,9 @@ predecessor executes 13 assertions; the count-parity baseline is pinned at
 
 from __future__ import annotations
 
+import contextlib
 import inspect
+import io
 import json
 import os
 import re
@@ -24,6 +26,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TESTS_ROOT = REPO_ROOT / "tests" / "speckit-pro"
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
+LAYER3_FUNCTIONAL_ROOT = TESTS_ROOT / "layer3-functional"
 FUNCTIONAL_SCRIPT = TESTS_ROOT / "layer3-functional" / "run-functional-evals.py"
 TRIGGER_SCRIPT = TESTS_ROOT / "layer2-trigger" / "run-trigger-evals.py"
 CODEX_FUNCTIONAL_SCRIPT = TESTS_ROOT / "layer3-functional" / "run-functional-evals-codex.py"
@@ -38,6 +41,9 @@ LAYER8_ROOT = TESTS_ROOT / "layer8-parity"
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
+if str(LAYER3_FUNCTIONAL_ROOT) not in sys.path:
+    sys.path.insert(0, str(LAYER3_FUNCTIONAL_ROOT))
+from preview_helpers import eval_count, print_eval_prompts  # noqa: E402
 from speckit_pro_runner.helpers.pr_emission import generate_pr_body  # noqa: E402
 from speckit_pro_runner.helpers.registry import HELPERS, MUTATION_HELPERS  # noqa: E402
 
@@ -567,6 +573,46 @@ def write_fake_skill_creator(root: Path) -> Path:
 
 
 class EvalRunnerSkillSelectionTests(unittest.TestCase):
+    def test_functional_preview_helpers_handle_invalid_eval_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            invalid_json = root / "invalid.json"
+            invalid_json.write_text("{", encoding="utf-8")
+
+            self.assertEqual(eval_count(invalid_json), "?")
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                print_eval_prompts(invalid_json)
+            self.assertIn("ERROR: Unable to read eval file", stderr.getvalue())
+            self.assertNotIn("Traceback", stderr.getvalue())
+
+            invalid_entries = root / "invalid-entries.json"
+            invalid_entries.write_text(
+                json.dumps(
+                    {
+                        "evals": [
+                            {"id": 1, "prompt": "preview me", "expectations": ["first expectation"]},
+                            {"id": "missing-prompt", "expectations": ["no prompt"]},
+                            "not an object",
+                            {"id": "bad-expectation", "prompt": "skip bad expectation", "expectations": [5]},
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            self.assertEqual(eval_count(invalid_entries), "4")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                print_eval_prompts(invalid_entries)
+            self.assertIn("[1] preview me...", stdout.getvalue())
+            self.assertIn("- first expectation", stdout.getvalue())
+            self.assertIn("ERROR: Skipping eval entry 2", stderr.getvalue())
+            self.assertIn("ERROR: Skipping eval entry 3", stderr.getvalue())
+            self.assertIn("ERROR: Skipping eval entry 4 expectation", stderr.getvalue())
+            self.assertNotIn("Traceback", stderr.getvalue())
+
     def test_codex_archive_sweep_execution_contract(self) -> None:
         prerequisites = (
             PLUGIN_ROOT / "codex-skills/speckit-autopilot/references/prerequisites-codex.md"
