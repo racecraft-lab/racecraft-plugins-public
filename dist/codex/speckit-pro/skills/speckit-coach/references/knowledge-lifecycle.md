@@ -93,11 +93,13 @@ preconditions that apply rechecks before and after writes. A stale snapshot,
 changed source, or validation failure must stop, attempt compare-and-swap
 rollback, and report any residual state as a partial failure.
 All canonical knowledge and compatibility-view writers must use
-`knowledge-update-apply`; its repository lock serializes cooperating SpecKit Pro
+the shared repository mutation lock, which serializes cooperating SpecKit Pro
 processes. Do not manually edit canonical knowledge or run an uncoordinated file
-writer while apply is active. Apply uses atomic no-replace creation and a final
-state check to detect conflicts, but the filesystem does not provide a portable
-compare-and-swap replacement primitive for an uncooperative writer.
+writer while apply is active. Apply uses atomic no-replace creation. For an
+existing file it atomically captures the displaced file, verifies those exact
+bytes against the accepted plan, and restores them on mismatch; platforms or
+filesystems without a safe exchange or backup primitive fail closed. A final
+state check detects later conflicts.
 `generate-spec-index-check` and
 `generate-spec-index-write` are compatibility adapters; use the knowledge
 operations for new flows.

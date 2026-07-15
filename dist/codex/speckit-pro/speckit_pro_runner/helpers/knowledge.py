@@ -214,6 +214,56 @@ def _bounded_tree_entries(
     return sorted(entries, key=lambda item: item.as_posix().encode("utf-8"))
 
 
+def _bounded_directory_files(
+    root: Path,
+    *,
+    limit: int,
+    code: str,
+    message: str,
+) -> list[Path]:
+    files: list[Path] = []
+    count = 0
+    try:
+        scanned = os.scandir(root)
+    except OSError as exc:
+        raise KnowledgeError(
+            "unreadable_file",
+            "knowledge directory could not be enumerated",
+            details={"path": root.as_posix(), "error": type(exc).__name__},
+        ) from exc
+    with scanned:
+        for entry in scanned:
+            count += 1
+            if count > limit:
+                raise KnowledgeError(code, message, details={"limit": limit})
+            try:
+                if entry.is_file(follow_symlinks=False):
+                    files.append(Path(entry.path))
+            except OSError as exc:
+                raise KnowledgeError(
+                    "unreadable_file",
+                    "knowledge directory entry could not be inspected",
+                    details={"path": entry.path, "error": type(exc).__name__},
+                ) from exc
+    return sorted(files, key=lambda item: item.as_posix().encode("utf-8"))
+
+
+def _validated_path_text(raw: Any, field: str) -> str:
+    if not isinstance(raw, str) or not raw or "\x00" in raw:
+        raise KnowledgeError(
+            "invalid_input",
+            f"{field} must be a non-empty filesystem-safe path string",
+        )
+    try:
+        os.fsencode(raw)
+    except UnicodeError as exc:
+        raise KnowledgeError(
+            "invalid_input",
+            f"{field} contains characters that cannot be represented by the filesystem",
+        ) from exc
+    return raw
+
+
 def _portable_path_key(value: str) -> str:
     return unicodedata.normalize("NFC", value.replace("\\", "/")).casefold()
 
@@ -348,7 +398,12 @@ def run_knowledge_update_plan(entry: Any, request: Any) -> dict[str, Any]:
     )
 
 
-def run_knowledge_update_apply(entry: Any, request: Any) -> dict[str, Any]:
+def run_knowledge_update_apply(
+    entry: Any,
+    request: Any,
+    *,
+    mutation_lock_held: bool = False,
+) -> dict[str, Any]:
     """Validate, recompute, and atomically apply a knowledge update plan."""
 
     mutation = empty_mutation(request.mode)
@@ -374,7 +429,7 @@ def run_knowledge_update_apply(entry: Any, request: Any) -> dict[str, Any]:
         plan_request = supplied_plan.get("request")
         if not isinstance(plan_request, dict):
             raise KnowledgeError("invalid_plan", "knowledge update plan is missing its normalized request")
-        if request.mode == "apply":
+        if request.mode == "apply" and not mutation_lock_held:
             with _knowledge_mutation_lock(repo_root):
                 return _run_accepted_knowledge_apply(
                     entry,
@@ -2340,20 +2395,50 @@ def _validate_normalized_plan_request(request: dict[str, Any]) -> None:
         for field in ("legacy_memory_reviewed", "reviewed")
     ):
         raise KnowledgeError("invalid_plan", "knowledge plan migration flags must be booleans")
-    if action == "promote" and not isinstance(request.get("candidate"), dict):
-        raise KnowledgeError("invalid_plan", "knowledge plan promote candidate must be an object")
+    if action == "promote" and (
+        not isinstance(request.get("candidate"), dict)
+        or request["candidate"].get("state") != "reviewed"
+        or request["candidate"].get("reviewed") is not True
+    ):
+        raise KnowledgeError("invalid_plan", "knowledge plan promote candidate must be reviewed")
     if action == "supersede" and (
         not isinstance(request.get("concept_path"), str)
         or not request.get("concept_path")
         or not isinstance(request.get("replacement"), dict)
+        or request["replacement"].get("state") != "reviewed"
+        or request["replacement"].get("reviewed") is not True
     ):
-        raise KnowledgeError("invalid_plan", "knowledge plan supersede request is invalid")
+        raise KnowledgeError("invalid_plan", "knowledge plan supersede replacement must be reviewed")
     if action == "archive" and (
         not isinstance(request.get("concept_path"), str)
         or not request.get("concept_path")
         or ("sources" in request and not isinstance(request.get("sources"), list))
     ):
         raise KnowledgeError("invalid_plan", "knowledge plan archive request is invalid")
+
+
+def _legacy_roadmap_inventory(repo_root: Path) -> tuple[list[Path], list[Path]]:
+    specs_root = repo_root / "docs" / "ai" / "specs"
+    if not specs_root.is_dir() or specs_root.is_symlink():
+        return [], []
+    files = _bounded_directory_files(
+        specs_root,
+        limit=MAX_KNOWLEDGE_SCAN_ENTRIES,
+        code="migration_too_large",
+        message="roadmap migration inventory exceeds the bounded entry count",
+    )
+    roadmaps = [path for path in files if path.name.endswith("-technical-roadmap.md")]
+    mocs = [path for path in files if path.name.endswith("-roadmap-MOC.md")]
+    return roadmaps, mocs
+
+
+def _enforce_migration_concept_limit(records: dict[str, str]) -> None:
+    if len(records) > MAX_CONCEPTS:
+        raise KnowledgeError(
+            "migration_too_large",
+            "knowledge migration exceeds the bounded concept count",
+            details={"limit": MAX_CONCEPTS},
+        )
 
 
 def _migration_records(
@@ -2371,14 +2456,20 @@ def _migration_records(
         repo_root, timestamp, reviewed=legacy_memory_reviewed
     )
     migrated.update(memory_records)
+    _enforce_migration_concept_limit(migrated)
     warnings.extend(memory_warnings)
-    specs_root = repo_root / "docs" / "ai" / "specs"
-    specs_available = specs_root.is_dir() and not specs_root.is_symlink()
-    moc_paths = sorted(specs_root.glob("*-roadmap-MOC.md"), key=lambda path: path.name.encode("utf-8")) if specs_available else []
-    roadmap_paths = sorted(specs_root.glob("*-technical-roadmap.md"), key=lambda path: path.name.encode("utf-8")) if specs_available else []
+    roadmap_paths, moc_paths = _legacy_roadmap_inventory(repo_root)
     moc_by_slug = {path.name[: -len("-roadmap-MOC.md")]: path for path in moc_paths}
     roadmap_by_slug = {
         path.name[: -len("-technical-roadmap.md")]: path for path in roadmap_paths
+    }
+    project_paths_by_slug = {
+        slug: tuple(
+            path
+            for path in (roadmap_by_slug.get(slug), moc_by_slug.get(slug))
+            if path is not None
+        )
+        for slug in set(roadmap_by_slug) | set(moc_by_slug)
     }
     orphan_mocs = sorted(set(moc_by_slug) - set(roadmap_by_slug))
     if orphan_mocs:
@@ -2389,8 +2480,6 @@ def _migration_records(
                 "paths": [repo_relative(moc_by_slug[slug], repo_root) for slug in orphan_mocs]
             },
         )
-    project_source_by_slug = dict(roadmap_by_slug)
-    project_source_by_slug.update(moc_by_slug)
     for roadmap in roadmap_paths:
         slug = roadmap.name[: -len("-technical-roadmap.md")]
         source = moc_by_slug.get(slug, roadmap)
@@ -2452,6 +2541,7 @@ def _migration_records(
             f"{curated.strip()}\n"
         )
         migrated[relative] = _render_concept(concept_metadata, concept_body)
+        _enforce_migration_concept_limit(migrated)
         if not migration_reviewed:
             warnings.append(
                 f"{repo_relative(source, repo_root)} was imported as a review-required project map; rerun migrate with reviewed true to transfer compatibility-view ownership"
@@ -2461,7 +2551,12 @@ def _migration_records(
         source_text = _read_utf8(spec_moc)
         metadata, body = _split_frontmatter(source_text)
         spec_id = str(metadata.get("spec_id") or spec_moc.parent.name)
-        project = _project_from_up(metadata.get("up"), project_source_by_slug)
+        project = _project_from_up(
+            metadata.get("up"),
+            spec_moc,
+            repo_root,
+            project_paths_by_slug,
+        )
         if project is None:
             raise KnowledgeError(
                 "review_required",
@@ -2525,6 +2620,7 @@ def _migration_records(
             concept_metadata,
             f"# {title}\n\n## Curated map\n\n{curated}\n",
         )
+        _enforce_migration_concept_limit(migrated)
     return migrated, legacy_updates, warnings
 
 
@@ -2628,13 +2724,26 @@ def _markdown_sections(text: str, *, fallback_title: str) -> list[tuple[str, str
     return sections
 
 
-def _project_from_up(raw: Any, moc_by_slug: dict[str, Path]) -> str | None:
-    if not isinstance(raw, str):
+def _project_from_up(
+    raw: Any,
+    source: Path,
+    repo_root: Path,
+    project_paths: dict[str, tuple[Path, ...]],
+) -> str | None:
+    if not isinstance(raw, str) or not raw.strip() or "\x00" in raw:
         return None
-    match = re.search(r"\(([^)]+)\)", raw)
-    target = PurePosixPath((match.group(1) if match else raw).replace("\\", "/")).name
-    for slug, path in moc_by_slug.items():
-        if target in {path.name, f"{slug}-technical-roadmap.md"}:
+    match = re.fullmatch(r"\[[^\]\r\n]+\]\(([^)\r\n]+)\)", raw.strip())
+    target = (match.group(1) if match else raw).strip().split("#", 1)[0]
+    if not target or target.startswith("/") or "://" in target:
+        return None
+    source_relative = repo_relative(source, repo_root)
+    resolved = posixpath.normpath(
+        posixpath.join(posixpath.dirname(source_relative), target.replace("\\", "/"))
+    )
+    if resolved == ".." or resolved.startswith("../"):
+        return None
+    for slug, paths in project_paths.items():
+        if any(resolved == repo_relative(path, repo_root) for path in paths):
             return slug
     return None
 
@@ -2997,8 +3106,7 @@ def _promoted_concept(repo_root: Path, raw: Any, timestamp: str) -> tuple[str, s
 
 
 def _validated_legacy_view(raw: Any, *, concept_type: str) -> str:
-    if not isinstance(raw, str) or not raw:
-        raise KnowledgeError("invalid_input", "legacy_view must be a non-empty repo-relative path")
+    raw = _validated_path_text(raw, "legacy_view")
     path = PurePosixPath(raw.replace("\\", "/"))
     if path.is_absolute() or ".." in path.parts or len(path.parts) < 2:
         raise KnowledgeError("unsafe_path", "legacy_view must stay inside the consumer repository")
@@ -3028,7 +3136,7 @@ def _validated_legacy_view(raw: Any, *, concept_type: str) -> str:
 
 
 def _legacy_up_targets_project(raw: Any, legacy_view: str, project: str) -> bool:
-    if not isinstance(raw, str) or not raw.strip() or not project:
+    if not isinstance(raw, str) or not raw.strip() or "\x00" in raw or not project:
         return False
     match = re.fullmatch(r"\[[^\]\r\n]+\]\(([^)\r\n]+)\)", raw.strip())
     if match is None:
@@ -3093,8 +3201,15 @@ def _validated_sources(
                 "candidate source line_end must be greater than or equal to line_start",
                 details={"source_index": index},
             )
-        raw_path = source["path"]
-        path = (repo_root / raw_path).resolve(strict=False)
+        raw_path = _validated_path_text(source["path"], "candidate source path")
+        try:
+            path = (repo_root / raw_path).resolve(strict=False)
+        except (OSError, ValueError, UnicodeError) as exc:
+            raise KnowledgeError(
+                "invalid_input",
+                "candidate source path could not be represented safely",
+                details={"source_index": index},
+            ) from exc
         if not is_relative_to(path, repo_root) or not path.is_file() or path.is_symlink():
             raise KnowledgeError("missing_source", "candidate source must be a regular repository file", details={"path": raw_path})
         actual = _sha256_file(path)
@@ -3134,8 +3249,7 @@ def _render_source_evidence(source: dict[str, Any]) -> str:
 
 
 def _validated_concept_path(raw: Any) -> str:
-    if not isinstance(raw, str) or not raw:
-        raise KnowledgeError("invalid_input", "concept_path must be a non-empty repo-relative concept path")
+    raw = _validated_path_text(raw, "concept_path")
     normalized = PurePosixPath(raw.replace("\\", "/"))
     if normalized.is_absolute() or ".." in normalized.parts or len(normalized.parts) < 2:
         raise KnowledgeError("unsafe_path", "concept_path must stay under an allowed knowledge category")
@@ -3165,6 +3279,7 @@ def _normalized_scope(raw: Any) -> str | None:
         return None
     if not isinstance(raw, str):
         raise KnowledgeError("invalid_input", "scope must be a knowledge category or path prefix")
+    raw = _validated_path_text(raw, "scope")
     path = PurePosixPath(raw.replace("\\", "/").strip("/"))
     if path.is_absolute() or ".." in path.parts or not path.parts:
         raise KnowledgeError("unsafe_path", "scope must stay under an allowed knowledge category")
@@ -3492,6 +3607,7 @@ def _read_apply_target(path: Path) -> bytes | None:
 
 
 def _source_path(repo_root: Path, raw: str) -> Path:
+    raw = _validated_path_text(raw, "knowledge source path")
     relative = PurePosixPath(raw.replace("\\", "/"))
     if relative.is_absolute() or not relative.parts or ".." in relative.parts:
         raise KnowledgeError(
@@ -3904,9 +4020,7 @@ def _apply_data(entry: Any, request: Any, mutation: dict[str, Any], plan: dict[s
 
 
 def _migration_coverage(repo_root: Path, concepts: list[Concept]) -> dict[str, Any]:
-    specs_root = repo_root / "docs" / "ai" / "specs"
-    roadmaps = list(specs_root.glob("*-technical-roadmap.md")) if specs_root.is_dir() else []
-    mocs = list(specs_root.glob("*-roadmap-MOC.md")) if specs_root.is_dir() else []
+    roadmaps, mocs = _legacy_roadmap_inventory(repo_root)
     spec_mocs = _safe_spec_mocs(repo_root)
     resources = {concept.metadata.get("resource") for concept in concepts}
     source_paths = {
@@ -3951,10 +4065,8 @@ def _has_legacy_knowledge(repo_root: Path) -> bool:
         (memory_root / name).is_file() for name in ("spec.md", "plan.md", "changelog.md")
     ):
         return True
-    specs_root = repo_root / "docs" / "ai" / "specs"
-    if specs_root.is_dir() and not specs_root.is_symlink() and any(
-        [*specs_root.glob("*-technical-roadmap.md"), *specs_root.glob("*-roadmap-MOC.md")]
-    ):
+    roadmaps, mocs = _legacy_roadmap_inventory(repo_root)
+    if roadmaps or mocs:
         return True
     return bool(_safe_spec_mocs(repo_root))
 

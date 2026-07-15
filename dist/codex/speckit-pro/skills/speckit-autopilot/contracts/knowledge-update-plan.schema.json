@@ -88,7 +88,17 @@
         "action": { "const": "promote" },
         "timestamp": { "type": "string", "format": "date-time" },
         "scope": { "type": "string", "minLength": 1 },
-        "candidate": { "$ref": "knowledge-candidate.schema.json" }
+        "candidate": {
+          "allOf": [
+            { "$ref": "knowledge-candidate.schema.json" },
+            {
+              "properties": {
+                "state": { "const": "reviewed" },
+                "reviewed": { "const": true }
+              }
+            }
+          ]
+        }
       }
     },
     "supersedeRequest": {
@@ -100,7 +110,17 @@
         "timestamp": { "type": "string", "format": "date-time" },
         "scope": { "type": "string", "minLength": 1 },
         "concept_path": { "type": "string", "minLength": 1 },
-        "replacement": { "$ref": "knowledge-candidate.schema.json" }
+        "replacement": {
+          "allOf": [
+            { "$ref": "knowledge-candidate.schema.json" },
+            {
+              "properties": {
+                "state": { "const": "reviewed" },
+                "reviewed": { "const": true }
+              }
+            }
+          ]
+        }
       }
     },
     "archiveRequest": {

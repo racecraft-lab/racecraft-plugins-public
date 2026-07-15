@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
@@ -352,6 +353,44 @@ class KnowledgeLayerTests(unittest.TestCase):
 
     @unittest.skipUnless(
         os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
+        "conditional atomic exchange regression requires POSIX dir_fd support",
+    )
+    def test_atomic_writer_restores_the_exact_displaced_concurrent_target(self) -> None:
+        root = self.repo("atomic-exchange-cas")
+        parent = root / "safe"
+        parent.mkdir()
+        target = parent / "target.md"
+        target.write_text("before\n", encoding="utf-8")
+        real_exchange = mutation_helper._exchange_posix_names
+        exchanges = 0
+
+        def race_then_exchange(parent_descriptor: int, left: str, right: str) -> None:
+            nonlocal exchanges
+            if exchanges == 0:
+                target.write_text("concurrent\n", encoding="utf-8")
+            exchanges += 1
+            real_exchange(parent_descriptor, left, right)
+
+        with (
+            mock.patch.object(
+                mutation_helper,
+                "_exchange_posix_names",
+                side_effect=race_then_exchange,
+            ),
+            self.assertRaises(mutation_helper.AtomicWriteConflictError),
+        ):
+            mutation_helper.write_file_atomic(
+                target,
+                "planned",
+                trust_root=root,
+                expected_prior=b"before\n",
+            )
+
+        self.assertEqual(exchanges, 2)
+        self.assertEqual(target.read_text(encoding="utf-8"), "concurrent\n")
+
+    @unittest.skipUnless(
+        os.name == "posix" and hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
         "directory ownership regression requires POSIX dir_fd support",
     )
     def test_atomic_writer_reports_only_directories_it_created(self) -> None:
@@ -454,7 +493,12 @@ class KnowledgeLayerTests(unittest.TestCase):
             "token_hex",
             side_effect=attempt_parent_rename,
         ):
-            mutation_helper.write_file_atomic(target, "after", trust_root=root)
+            mutation_helper.write_file_atomic(
+                target,
+                "after",
+                trust_root=root,
+                expected_prior=b"before\n",
+            )
 
         self.assertTrue(attempted)
         self.assertEqual(target.read_text(encoding="utf-8"), "after\n")
@@ -834,6 +878,35 @@ class KnowledgeLayerTests(unittest.TestCase):
             _, findings = knowledge_helper._candidate_inventory(root)
         self.assertEqual(findings[0]["code"], "candidate_inventory_too_large")
 
+        migration_root = self.repo("bounded-migration-inventory")
+        for index in range(3):
+            self.write(
+                migration_root,
+                f"docs/ai/specs/project-{index}-technical-roadmap.md",
+                f"# Project {index}\n",
+            )
+        with mock.patch.object(knowledge_helper, "MAX_KNOWLEDGE_SCAN_ENTRIES", 2):
+            with self.assertRaises(knowledge_helper.KnowledgeError) as captured:
+                knowledge_helper._legacy_roadmap_inventory(migration_root)
+        self.assertEqual(captured.exception.code, "migration_too_large")
+
+        concept_root = self.repo("bounded-migration-concepts")
+        self.write(
+            concept_root,
+            ".specify/memory/spec.md",
+            "# Memory\n\n## One\n\nFirst.\n\n## Two\n\nSecond.\n",
+        )
+        with mock.patch.object(knowledge_helper, "MAX_CONCEPTS", 1):
+            with self.assertRaises(knowledge_helper.KnowledgeError) as captured:
+                knowledge_helper._migration_records(
+                    concept_root,
+                    {},
+                    FIXED_TIME,
+                    legacy_memory_reviewed=False,
+                    migration_reviewed=False,
+                )
+        self.assertEqual(captured.exception.code, "migration_too_large")
+
     def test_legacy_up_fragment_contract_matches_runtime(self) -> None:
         schema = json.loads(
             (
@@ -970,6 +1043,73 @@ class KnowledgeLayerTests(unittest.TestCase):
             "Global\\SpeckitProKnowledge-abc123",
         )
 
+    def test_legacy_spec_index_writer_uses_the_knowledge_mutation_lock(self) -> None:
+        root = self.repo("legacy-writer-lock")
+        target = self.write(
+            root,
+            "docs/ai/specs/demo-roadmap-MOC.md",
+            "before\n",
+        )
+        rendered = mutation_helper.RenderedSpecIndexMap(
+            target,
+            "demo",
+            "before\n",
+            "after\n",
+        )
+        lock_active = False
+
+        @contextmanager
+        def tracked_lock(repo_root: Path):
+            nonlocal lock_active
+            self.assertEqual(repo_root, root)
+            lock_active = True
+            try:
+                yield
+            finally:
+                lock_active = False
+
+        def guarded_writer(
+            write_target: Path,
+            content: str,
+            *,
+            trust_root: Path | None = None,
+            expected_prior: bytes | None | object,
+            created_directory_records: dict[Path, tuple[int, int]] | None = None,
+        ) -> list[mutation_helper.CreatedDirectory]:
+            self.assertTrue(lock_active)
+            self.assertEqual(trust_root, root)
+            self.assertEqual(expected_prior, b"before\n")
+            write_target.write_text(content, encoding="utf-8")
+            return []
+
+        entry = MUTATION_HELPERS["generate-spec-index-write"]
+        request = SimpleNamespace(
+            request_id="test-legacy-spec-index-lock",
+            mode="apply",
+            inputs={"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+        )
+        with (
+            mock.patch.object(
+                knowledge_helper,
+                "_knowledge_mutation_lock",
+                side_effect=tracked_lock,
+            ),
+            mock.patch.object(
+                mutation_helper,
+                "render_spec_index",
+                return_value=([rendered], True),
+            ),
+            mock.patch.object(
+                mutation_helper,
+                "write_file_atomic",
+                side_effect=guarded_writer,
+            ),
+        ):
+            body = mutation_helper.run_spec_index_write(entry, request)
+
+        self.assertEqual(body["status"], "ok")
+        self.assertEqual(target.read_text(encoding="utf-8"), "after\n")
+
     def test_hash_consistent_malformed_plan_request_is_input_error(self) -> None:
         root = self.repo("malformed-plan-request")
         plan = json.loads(json.dumps(self.plan(root, "init")))
@@ -997,6 +1137,38 @@ class KnowledgeLayerTests(unittest.TestCase):
         body = self.apply_direct(root, malformed)
         self.assertEqual(body["status"], "input_error")
         self.assertEqual(body["diagnostics"][0]["code"], "invalid_plan")
+
+    def test_accepted_plan_contract_requires_reviewed_candidates(self) -> None:
+        root = self.repo("accepted-plan-reviewed-candidate")
+        self.current_root = root
+        self.init(root)
+        source = self.write(root, "docs/source.md", "Reviewed source.\n")
+        candidate = self.candidate("decisions/reviewed.md", "Reviewed", [source])
+        plan = json.loads(json.dumps(self.plan(root, "promote", candidate=candidate)))
+        plan["request"]["candidate"]["state"] = "proposed"
+        plan["request"]["candidate"]["reviewed"] = False
+        plan["plan_hash"] = knowledge_helper._plan_hash(plan)
+
+        body = self.apply_direct(root, plan)
+
+        self.assertEqual(body["status"], "input_error")
+        self.assertEqual(body["diagnostics"][0]["code"], "invalid_plan")
+        schema = json.loads(
+            (
+                PLUGIN_ROOT
+                / "skills"
+                / "speckit-autopilot"
+                / "contracts"
+                / "knowledge-update-plan.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        for request_name, property_name in (
+            ("promoteRequest", "candidate"),
+            ("supersedeRequest", "replacement"),
+        ):
+            reviewed = schema["$defs"][request_name]["properties"][property_name]["allOf"][1]["properties"]
+            self.assertEqual(reviewed["state"]["const"], "reviewed")
+            self.assertIs(reviewed["reviewed"]["const"], True)
 
     def test_apply_recomputation_errors_are_repository_failures(self) -> None:
         root = self.repo("apply-recompute-error")
@@ -1036,6 +1208,50 @@ class KnowledgeLayerTests(unittest.TestCase):
         self.assertNotEqual(completed.returncode, 0)
         self.assertEqual(body["diagnostics"][0]["code"], "portable_path_collision")
         self.assertEqual(original_path.read_bytes(), original_bytes)
+
+    def test_filesystem_path_inputs_reject_nul_and_unencodable_text(self) -> None:
+        root = self.repo("invalid-filesystem-paths")
+        self.current_root = root
+        source = self.write(root, "docs/source.md", "Reviewed source.\n")
+        before = file_snapshot(root)
+
+        candidate = self.candidate("decisions/valid.md", "Valid", [source])
+        candidate["concept_path"] = "decisions/invalid\x00.md"
+        completed, body = run_helper(
+            root,
+            "knowledge-update-plan",
+            "read_only",
+            {"action": "promote", "timestamp": FIXED_TIME, "candidate": candidate},
+        )
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertEqual(body["status"], "input_error")
+        self.assertEqual(body["diagnostics"][0]["code"], "invalid_input")
+
+        candidate = self.candidate("decisions/valid.md", "Valid", [source])
+        candidate["sources"][0]["path"] = "docs/source\x00.md"
+        completed, body = run_helper(
+            root,
+            "knowledge-update-plan",
+            "read_only",
+            {"action": "promote", "timestamp": FIXED_TIME, "candidate": candidate},
+        )
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertEqual(body["status"], "input_error")
+        self.assertEqual(body["diagnostics"][0]["code"], "invalid_input")
+
+        with self.assertRaises(knowledge_helper.KnowledgeError) as captured:
+            knowledge_helper._validated_legacy_view(
+                "docs/ai/specs/invalid\x00-roadmap-MOC.md",
+                concept_type="speckit-project-map",
+            )
+        self.assertEqual(captured.exception.code, "invalid_input")
+        with self.assertRaises(knowledge_helper.KnowledgeError) as captured:
+            knowledge_helper._validated_sources(
+                root,
+                [{"path": "docs/\ud800.md"}],
+            )
+        self.assertEqual(captured.exception.code, "invalid_input")
+        self.assertEqual(file_snapshot(root), before)
 
     def test_partial_apply_rolls_back_repository_files(self) -> None:
         root = self.repo("rollback")
@@ -1500,6 +1716,44 @@ class KnowledgeLayerTests(unittest.TestCase):
             {finding["code"] for finding in drift["data"]["health"]["advisories"]},
         )
         self.assertTrue(drift["data"]["health"]["profile_healthy"])
+
+    def test_migration_resolves_legacy_up_links_by_full_path(self) -> None:
+        root = self.repo("migration-up-path")
+        self.write(
+            root,
+            "docs/ai/specs/demo-technical-roadmap.md",
+            "# Demo Technical Roadmap\n",
+        )
+        self.write(
+            root,
+            "docs/ai/specs/demo-roadmap-MOC.md",
+            "# Demo Roadmap\n",
+        )
+        self.write(
+            root,
+            "other/demo-roadmap-MOC.md",
+            "# Unrelated Roadmap\n",
+        )
+        self.write(
+            root,
+            "specs/SPEC-101/SPEC-MOC.md",
+            "---\n"
+            "up: \"[Wrong Demo](../../other/demo-roadmap-MOC.md)\"\n"
+            "spec_id: SPEC-101\n"
+            "---\n"
+            "# SPEC-101\n",
+        )
+
+        completed, body = run_helper(
+            root,
+            "knowledge-update-plan",
+            "read_only",
+            {"action": "migrate", "timestamp": FIXED_TIME, "reviewed": True},
+        )
+
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertEqual(body["diagnostics"][0]["code"], "review_required")
+        self.assertFalse((root / "docs/ai/knowledge").exists())
 
     def test_migration_preserves_legacy_memory_sections_and_moc_compatibility(self) -> None:
         root = self.repo("migration")

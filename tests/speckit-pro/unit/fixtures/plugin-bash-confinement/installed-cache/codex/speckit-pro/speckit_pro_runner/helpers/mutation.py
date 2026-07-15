@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import errno
 import os
 import secrets
 import stat
+import sys
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -53,6 +55,34 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
         )
         return response("input_error", request_id=request.request_id, diagnostics=[diag])
 
+    from .knowledge import KnowledgeError, _knowledge_mutation_lock
+
+    try:
+        with _knowledge_mutation_lock(target_root):
+            return _run_spec_index_write_locked(
+                entry,
+                request,
+                invocation_root,
+                target_root,
+            )
+    except KnowledgeError as exc:
+        status = "expected_failure" if exc.code == "mutation_locked" else "input_error"
+        diag = diagnostic(
+            exc.code,
+            str(exc),
+            details=exc.details,
+            remediation_summary="Retry after the active knowledge mutation completes.",
+            remediation_actions=["Wait for the current SpecKit Pro writer to finish.", "Retry the request."],
+        )
+        return response(status, request_id=request.request_id, diagnostics=[diag])
+
+
+def _run_spec_index_write_locked(
+    entry: Any,
+    request: Any,
+    invocation_root: Path,
+    target_root: Path,
+) -> dict[str, Any]:
     if (target_root / "docs" / "ai" / "knowledge" / "manifest.json").is_file():
         from .knowledge import KnowledgeError, _build_plan, run_knowledge_update_apply
 
@@ -78,7 +108,11 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
                 "expected_snapshot": plan["expected_snapshot"],
             },
         )
-        result = run_knowledge_update_apply(entry, apply_request)
+        result = run_knowledge_update_apply(
+            entry,
+            apply_request,
+            mutation_lock_held=True,
+        )
         data = result.get("data")
         if isinstance(data, dict) and isinstance(data.get("mutation"), dict):
             parity_data = _spec_index_write_data(
@@ -157,7 +191,12 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
 
     for record, operation in zip(changed, operations):
         try:
-            write_file_atomic(record.path, record.rendered, trust_root=target_root)
+            write_file_atomic(
+                record.path,
+                record.rendered,
+                trust_root=target_root,
+                expected_prior=record.original.encode("utf-8"),
+            )
         except OSError as exc:
             mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
             mutation["failure_operation"] = operation_record(operation)
@@ -982,6 +1021,47 @@ def _read_posix_target(parent_descriptor: int, leaf: str, *, limit: int) -> byte
         os.close(descriptor)
 
 
+def _exchange_posix_names(parent_descriptor: int, left: str, right: str) -> None:
+    """Atomically exchange two names or fail before changing either name."""
+
+    import ctypes
+
+    libc = ctypes.CDLL(None, use_errno=True)
+    left_bytes = os.fsencode(left)
+    right_bytes = os.fsencode(right)
+    if sys.platform.startswith("linux"):
+        exchange = getattr(libc, "renameat2", None)
+        flag = 0x00000002  # RENAME_EXCHANGE
+    elif sys.platform == "darwin":
+        exchange = getattr(libc, "renameatx_np", None)
+        flag = 0x00000002  # RENAME_SWAP
+    else:
+        exchange = None
+        flag = 0
+    if exchange is None:
+        raise OSError(
+            errno.ENOTSUP,
+            "safe existing-file replacement is unsupported on this POSIX platform",
+        )
+    exchange.argtypes = [
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_uint,
+    ]
+    exchange.restype = ctypes.c_int
+    if exchange(
+        parent_descriptor,
+        left_bytes,
+        parent_descriptor,
+        right_bytes,
+        flag,
+    ) != 0:
+        error = ctypes.get_errno()
+        raise OSError(error, "could not atomically exchange existing-file names")
+
+
 def _write_file_atomic_posix(
     target: Path,
     content: str | bytes,
@@ -1082,13 +1162,36 @@ def _write_file_atomic_posix(
                 ) from exc
             os.unlink(temporary_name, dir_fd=parent_descriptor)
             temporary_name = None
-        else:
+        elif expected_prior is _EXPECTED_PRIOR_UNSET:
             os.replace(
                 temporary_name,
                 leaf,
                 src_dir_fd=parent_descriptor,
                 dst_dir_fd=parent_descriptor,
             )
+        else:
+            expected = expected_prior if isinstance(expected_prior, bytes) else b""
+            _exchange_posix_names(parent_descriptor, temporary_name, leaf)
+            try:
+                displaced = _read_posix_target(
+                    parent_descriptor,
+                    temporary_name,
+                    limit=len(expected),
+                )
+                if displaced != expected:
+                    raise AtomicWriteConflictError(
+                        "atomic write displaced bytes that did not match the accepted target"
+                    )
+            except (AtomicWriteConflictError, OSError):
+                try:
+                    _exchange_posix_names(parent_descriptor, temporary_name, leaf)
+                except OSError as restore_error:
+                    raise OSError(
+                        "atomic write could not restore the displaced target"
+                    ) from restore_error
+                raise
+            os.unlink(temporary_name, dir_fd=parent_descriptor)
+            temporary_name = None
         committed = True
         os.fsync(parent_descriptor)
     finally:
@@ -1257,6 +1360,8 @@ def _write_file_atomic_windows(
     created_directories: list[CreatedDirectory] = []
     temporary_handle = invalid_handle
     temporary_path: Path | None = None
+    backup_path: Path | None = None
+    preserve_backup = False
     committed = False
     try:
         anchor = Path(root.anchor)
@@ -1367,15 +1472,75 @@ def _write_file_atomic_windows(
         if target_exists:
             kernel32.CloseHandle(temporary_handle)
             temporary_handle = invalid_handle
+            if expected_prior is not _EXPECTED_PRIOR_UNSET:
+                for _ in range(128):
+                    candidate = current / f".{leaf}.backup-{secrets.token_hex(8)}"
+                    if kernel32.GetFileAttributesW(str(candidate)) == 0xFFFFFFFF:
+                        if ctypes.get_last_error() in {2, 3}:
+                            backup_path = candidate
+                            break
+                        raise win_error("could not inspect atomic-write backup path")
+                if backup_path is None:
+                    raise OSError("could not allocate a unique atomic-write backup path")
             if not kernel32.ReplaceFileW(
                 str(target_path),
                 str(temporary_path),
-                None,
+                str(backup_path) if backup_path is not None else None,
                 0,
                 None,
                 None,
             ):
                 raise win_error("could not replace atomic-write target")
+            if backup_path is not None:
+                preserve_backup = True
+                expected = expected_prior if isinstance(expected_prior, bytes) else b""
+                try:
+                    with backup_path.open("rb") as displaced_file:
+                        displaced = displaced_file.read(len(expected) + 1)
+                except OSError as exc:
+                    if not kernel32.ReplaceFileW(
+                        str(target_path),
+                        str(backup_path),
+                        str(temporary_path),
+                        0,
+                        None,
+                        None,
+                    ):
+                        raise win_error("could not restore unreadable displaced target")
+                    backup_path = None
+                    preserve_backup = False
+                    raise OSError("could not validate displaced atomic-write target") from exc
+                if displaced != expected:
+                    if not kernel32.ReplaceFileW(
+                        str(target_path),
+                        str(backup_path),
+                        str(temporary_path),
+                        0,
+                        None,
+                        None,
+                    ):
+                        raise win_error("could not restore displaced atomic-write target")
+                    backup_path = None
+                    preserve_backup = False
+                    raise AtomicWriteConflictError(
+                        "atomic write displaced bytes that did not match the accepted target"
+                    )
+                if not kernel32.DeleteFileW(str(backup_path)):
+                    cleanup_error = win_error("could not remove validated atomic-write backup")
+                    if not kernel32.ReplaceFileW(
+                        str(target_path),
+                        str(backup_path),
+                        str(temporary_path),
+                        0,
+                        None,
+                        None,
+                    ):
+                        raise win_error("could not restore target after backup cleanup failure")
+                    backup_path = None
+                    preserve_backup = False
+                    raise cleanup_error
+                backup_path = None
+                preserve_backup = False
         else:
             encoded_name = str(target_path).encode("utf-16-le")
             name_offset = FileRenameInfo.FileName.offset
@@ -1402,6 +1567,8 @@ def _write_file_atomic_windows(
             kernel32.CloseHandle(temporary_handle)
         if not committed and temporary_path is not None:
             kernel32.DeleteFileW(str(temporary_path))
+        if backup_path is not None and not preserve_backup:
+            kernel32.DeleteFileW(str(backup_path))
         for handle in reversed(handles):
             kernel32.CloseHandle(handle)
         if not committed:
