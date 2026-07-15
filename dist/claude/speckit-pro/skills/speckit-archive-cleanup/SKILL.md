@@ -118,6 +118,15 @@ checks if plugin or generated payload files changed. Typical checks:
 If a check cannot run, report the exact command and the reason. Do not claim the
 archive is fully verified when generated files or structural checks are stale.
 
+## Git And PR Titles
+
+For archive-only cleanup commits and PRs, use a lower-case Conventional Commit
+scope derived from the completed spec ID. For example, archive cleanup for
+`CAR-001` should use `docs(car-001): archive post-merge state`, not
+`docs(CAR-001): archive post-merge state`. The repository PR title gate checks
+the final PR title, so apply the same lower-case scope to `gh pr create` or
+`gh pr edit --title`.
+
 ## Final Report
 
 Report:

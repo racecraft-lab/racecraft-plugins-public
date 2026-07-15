@@ -213,11 +213,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 6159,
+            "byte_count": 6581,
             "kind": "skill",
             "path": "skills/speckit-archive-cleanup/SKILL.md",
             "required": true,
-            "sha256": "3dab4eeb6d2450039abed4e0db305aed37a45176a4caf3d78c8f0d34265232e1",
+            "sha256": "7f1ae0a4a18ef194ba6e94996cd708ea6cd4bdc6e7d8417d502d975c9811dd55",
             "source_path": "speckit-pro/skills/speckit-archive-cleanup/SKILL.md",
             "transform": "claude_guard_strip"
           },
@@ -1070,11 +1070,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 6159,
+            "byte_count": 6581,
             "kind": "skill",
             "path": "skills/speckit-archive-cleanup/SKILL.md",
             "required": true,
-            "sha256": "3dab4eeb6d2450039abed4e0db305aed37a45176a4caf3d78c8f0d34265232e1",
+            "sha256": "7f1ae0a4a18ef194ba6e94996cd708ea6cd4bdc6e7d8417d502d975c9811dd55",
             "source_path": "speckit-pro/skills/speckit-archive-cleanup/SKILL.md",
             "transform": "claude_guard_strip"
           },
@@ -1746,7 +1746,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "693c537227363b56b3a91c9f6e4d1240367ed26e59fa36cfcfa4c30edd73433c",
+        "file_tree_hash": "f1f178d784a2727f3fafd3e794b23d7d877f1205f74d3d43094933dfff804e20",
         "generated_root": "dist/claude/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
@@ -1960,11 +1960,11 @@
             "transform": "path_normalization"
           },
           {
-            "byte_count": 7509,
+            "byte_count": 7823,
             "kind": "skill",
             "path": "skills/speckit-archive-cleanup/SKILL.md",
             "required": true,
-            "sha256": "8d7bc07c20ea656be466a5d0dfec14deb0049b923d04fa733cc94b821f37b3a6",
+            "sha256": "bf4f163b464f76b9fdf20c5f9344e12af2ca1a5727207210f5196e01c8451172",
             "source_path": "speckit-pro/codex-skills/speckit-archive-cleanup/SKILL.md",
             "transform": "codex_overlay"
           },
@@ -2970,11 +2970,11 @@
             "transform": "path_normalization"
           },
           {
-            "byte_count": 7509,
+            "byte_count": 7823,
             "kind": "skill",
             "path": "skills/speckit-archive-cleanup/SKILL.md",
             "required": true,
-            "sha256": "8d7bc07c20ea656be466a5d0dfec14deb0049b923d04fa733cc94b821f37b3a6",
+            "sha256": "bf4f163b464f76b9fdf20c5f9344e12af2ca1a5727207210f5196e01c8451172",
             "source_path": "speckit-pro/codex-skills/speckit-archive-cleanup/SKILL.md",
             "transform": "codex_overlay"
           },
@@ -3781,7 +3781,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "f04af1563928405f380b9003cfcd8fdca9bbfabdd60548afe158a08e3fd33fea",
+        "file_tree_hash": "2ec1eb85cdea7b9dc607f47bb2d0ffa85dd47fee6fad8e9767f21751d24c5f4d",
         "generated_root": "dist/codex/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
