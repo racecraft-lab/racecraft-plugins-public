@@ -63,6 +63,24 @@ class Layer1ValidatorRegressionTests(unittest.TestCase):
             "dist/claude",
         )
 
+    def test_archive_cleanup_title_guidance_uses_lowercase_spec_scope(self) -> None:
+        paths = (
+            REPO_ROOT / "speckit-pro/skills/speckit-archive-cleanup/SKILL.md",
+            REPO_ROOT / "speckit-pro/codex-skills/speckit-archive-cleanup/SKILL.md",
+            REPO_ROOT / "dist/claude/speckit-pro/skills/speckit-archive-cleanup/SKILL.md",
+            REPO_ROOT / "dist/codex/speckit-pro/skills/speckit-archive-cleanup/SKILL.md",
+            REPO_ROOT
+            / "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-archive-cleanup/SKILL.md",
+            REPO_ROOT
+            / "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-archive-cleanup/SKILL.md",
+        )
+        for path in paths:
+            with self.subTest(msg=f"{path.relative_to(REPO_ROOT)} uses lower-case archive PR title guidance"):
+                text = path.read_text(encoding="utf-8")
+                self.assertIn("docs(car-001): archive post-merge state", text)
+                self.assertNotIn("docs(SPEC-ID): archive post-merge state", text)
+                self.assertNotIn("docs(CAR-001): archive post-merge state` for archive-only", text)
+
 
 def main() -> int:
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(Layer1ValidatorRegressionTests)

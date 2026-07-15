@@ -2086,3 +2086,49 @@ schema and planner inputs were preserved under purpose-based test fixtures.
 Process evidence remains under `docs/ai/specs/.process/XPLAT-010-*`; exact
 provenance and recovery commands are recorded in
 `.specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md`.
+
+## CAR-001 Candidate Route Baseline and Role Contracts
+
+[Source: specs/car-001-candidate-route-baseline]
+
+CAR-001 shipped the dated Claude agent route-candidate baseline for the
+CAR-001..CAR-011 routing sequence. The durable deliverables are the
+human-readable research record
+`docs/ai/research/claude-agent-route-candidates.md` and the provisional
+machine-readable manifest
+`docs/ai/research/claude-agent-route-candidate-manifest.json`.
+
+### Requirements Preserved
+
+- The baseline covers all twelve named agents: eleven current Claude agents and
+  the `autopilot-fast-helper` contract translated from the Codex helper source.
+- Platform facts in the record carry official-source evidence, access dates,
+  and statement-class labels; undocumented behaviors are captured as
+  stable-ID capability questions for CAR-002 instead of assumptions.
+- The manifest pins the immutable production comparator to
+  `speckit-pro-v2.19.1` at
+  `e343aa2e4ebcb2d48c501f285d7072cfd55722da`, records role contracts,
+  candidate route tuples, instruction hashes, required capabilities, and
+  invalidation triggers, and separates project-level eligibility from
+  environment-time availability.
+- The current Layer 6 Claude evaluation path is labeled bare prompt emulation
+  and historical results are labeled non-release evidence until CAR-003 proves
+  exact treatment through the shared materializer.
+- CAR-001 changes no shipped agent defaults, generated payloads, plugin
+  runtime, or installed-user behavior.
+
+### Success Criteria
+
+CAR-001 is successful because PR #350 merged the research record and manifest,
+all PR checks passed, and CAR-002 can now use the artifacts to freeze the
+project-eligible candidate set and design capability probes without
+re-deriving role contracts or claiming executability before probing.
+
+### Cleanup Note
+
+Archived into project memory on 2026-07-15 after PR #350 merged at
+`725be949b856724a073622900bd168d29b2f4603`. The active
+`specs/car-001-candidate-route-baseline/` folder was removed from `specs/**`;
+process evidence remains under `docs/ai/specs/.process/CAR-001-*`. Recovery
+commands and provenance are recorded in
+`.specify/memory/archive-reports/2026-07-15-car-001-post-merge-hygiene.md`.

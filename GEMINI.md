@@ -1,6 +1,6 @@
 # Racecraft Plugins Public Development Guidelines
 
-Auto-generated from feature plans on archival. Last updated: 2026-07-11
+Auto-generated from feature plans on archival. Last updated: 2026-07-15
 
 ## Project Structure
 
@@ -51,6 +51,12 @@ specs/<NNN>/                        # per-feature spec dirs; per-feature exhaust
 - **Reviewability surface budget**: the gate's `surface_for_path()` shards a change
   into ≥2 surfaces by filename. A genuinely single-logical-surface change can clear
   the resulting blocker with a ratified `split exception` phrase in an in-scope `.md`.
+- **CAR-001 archive boundary**: the Claude routing baseline is complete and
+  archived. The canonical artifacts are
+  `docs/ai/research/claude-agent-route-candidates.md` and
+  `docs/ai/research/claude-agent-route-candidate-manifest.json`; do not recover
+  active `specs/car-001-candidate-route-baseline/` unless intentionally
+  reconstructing archived spec evidence from PR #350.
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

@@ -177,10 +177,14 @@ skipped check and the practical impact.
 
 ## Git And Final Response
 
-Commit intentionally after verification. A typical commit title is
-`docs(SPEC-ID): archive post-merge state` for archive-only work, or a separate
-`feat(skills): add archive cleanup workflow` commit when this workflow becomes
-a plugin skill.
+Commit intentionally after verification. For archive-only cleanup commits and
+PRs, use a lower-case Conventional Commit scope derived from the completed spec
+ID. For example, archive cleanup for `CAR-001` should use
+`docs(car-001): archive post-merge state`, not
+`docs(CAR-001): archive post-merge state`. The repository PR title gate checks
+the final PR title, so apply the same lower-case scope to `gh pr create` or
+`gh pr edit --title`. Use a separate `feat(skills): add archive cleanup
+workflow` commit only when this workflow becomes a plugin skill.
 
 If you stage, commit, push, or create a PR in Codex Desktop, emit the matching
 Codex git directives only after the action succeeds. In the final response,

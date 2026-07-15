@@ -14,8 +14,8 @@ PRD and is prepared for `$speckit-scaffold-spec CAR-NNN`.
 **Roadmap MOC:** [claude-agent-routing-roadmap-MOC.md](claude-agent-routing-roadmap-MOC.md)
 **Spec ID prefix:** `CAR-###`
 **Proposed branch:** `claude/agent-routing-fallback`
-**Status:** Draft; dependency graph approved 2026-07-12; CAR-001 ready to
-scaffold
+**Status:** Draft; dependency graph approved 2026-07-12; CAR-001 complete and
+archived; CAR-002 ready to scaffold
 
 **Parity note:** This roadmap is the Claude half of the shared twelve-agent
 catalog. The Codex half lives in the companion Codex routing roadmap (PR #330
@@ -45,8 +45,9 @@ CAR-005 -> CAR-006 -> CAR-007 + CAR-008 + CAR-009 + CAR-010 ->
 CAR-011
 
 **Implementation boundary:** This sequence has no external prerequisite, but
-its internal dependencies still apply: only CAR-001 is immediately
-scaffoldable. No installer exists or is introduced on the Claude side - agents
+its internal dependencies still apply: CAR-001 is complete and archived, so
+CAR-002 is the next immediately scaffoldable spec. No installer exists or is
+introduced on the Claude side - agents
 auto-load from the shipped payload - so CAR-006 builds the route-policy
 manifest, materializer drift gate, and read-only session-preflight resolver
 instead of a copy step.
@@ -198,8 +199,8 @@ CAR-006 Route-policy Manifest, Materializer, Preflight, and Override
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| CAR-001 | Candidate Route Baseline and Role Contracts | 🔄 In Progress | [.process/CAR-001-workflow.md](.process/CAR-001-workflow.md) | In review (PR #350) |
-| CAR-002 | Capability Probing, Telemetry Profile, and Exact-Treatment Contract | Pending | - | Blocked by CAR-001 |
+| CAR-001 | Candidate Route Baseline and Role Contracts | Complete / Archived | [.process/CAR-001-workflow.md](.process/CAR-001-workflow.md) | Archived after PR #350 |
+| CAR-002 | Capability Probing, Telemetry Profile, and Exact-Treatment Contract | Ready | - | Ready to scaffold |
 | CAR-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Pending | - | Blocked by CAR-002 |
 | CAR-004 | Policy Controls and Adaptive Comparators | Pending | - | Blocked by CAR-003 |
 | CAR-005 | Model Availability, Fallback, and Recovery Simulation | Pending | - | Blocked by CAR-004 |
@@ -219,6 +220,12 @@ CAR-006 Route-policy Manifest, Materializer, Preflight, and Override
 ### CAR-001: Candidate Route Baseline and Role Contracts
 
 **Priority:** P1 | **Depends On:** None | **Enables:** CAR-002
+
+**Implementation Status:** Complete / Archived. PR #350 merged on 2026-07-15 at
+`725be949b856724a073622900bd168d29b2f4603`; the active spec folder was removed
+in `.specify/memory/archive-reports/2026-07-15-car-001-post-merge-hygiene.md`.
+Canonical artifacts now live at `docs/ai/research/claude-agent-route-candidates.md`
+and `docs/ai/research/claude-agent-route-candidate-manifest.json`.
 
 **Goal:** Produce the dated, cited candidate-route and role-contract handoff
 needed for capability probing without changing shipped defaults.
