@@ -7,8 +7,8 @@
 #
 # Hosted interpreter source: actions/python-versions release
 # 3.13.14-27320626148 supplies exact Windows x64 and ARM64 artifacts.
-# setup-python v6.2.0 immutable commit:
-# a309ff8b426b58ec0e2a45f0f869d46889d02405.
+# setup-python v6.3.0 immutable commit:
+# ece7cb06caefa5fff74198d8649806c4678c61a1.
 # Linux container source: docker-library/python revision
 # 4d216ad3beb5b697c4049071c82fc375acb8abad, Python 3.11.15 on Debian
 # Bookworm. The pinned OCI index contains native linux/amd64 and linux/arm64/v8
