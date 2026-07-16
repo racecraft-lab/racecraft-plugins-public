@@ -1092,6 +1092,11 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertEqual(result["exit_code"], 2)
         self.assertEqual(payload["error_class"], "unsupported_platform")
         self.assertEqual(payload["failures"][0]["rule"], "input.unsupported_platform")
+        schema = json.loads(PR_PACKET_SCHEMA.read_text(encoding="utf-8"))
+        self.assertEqual(
+            read_only.json_schema_failures(payload, schema["$defs"]["validation_result"], schema, "validation_result"),
+            [],
+        )
 
     def test_validate_pr_packet_rejects_packet_id_that_disagrees_with_filename(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":

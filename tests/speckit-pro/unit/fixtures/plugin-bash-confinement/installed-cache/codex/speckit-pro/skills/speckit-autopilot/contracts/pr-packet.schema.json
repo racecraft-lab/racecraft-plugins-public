@@ -426,7 +426,7 @@
         },
         "error_class": {
           "type": "string",
-          "enum": ["none", "validation_failure", "input_error"]
+          "enum": ["none", "validation_failure", "input_error", "unsupported_platform"]
         },
         "exit_code": {
           "type": "integer",
