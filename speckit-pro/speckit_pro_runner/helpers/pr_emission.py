@@ -124,6 +124,7 @@ def validate_pr_packet_write(entry: Any, request: Any) -> dict[str, Any]:
         "kind": "write_file",
         "target": validation_result_path,
         "content": pretty_json(validation_result),
+        "source_fingerprints": validation_result.get("source_fingerprints"),
     }
     return run_mutation_helper(
         entry,
@@ -515,6 +516,26 @@ def normalize_generated_title(inputs: dict[str, Any]) -> dict[str, Any]:
         missing = [field for field in required if field not in raw]
         if missing:
             return invalid_packet_input("generated_title is missing required fields", field="generated_title", details={"missing": missing})
+        extra = sorted(set(raw) - set(required))
+        if extra:
+            return invalid_packet_input("generated_title contains unsupported fields", field="generated_title", details={"fields": extra})
+        invalid = validate_string_fields(raw, ["value", "type", "scope", "description"])
+        if invalid:
+            return invalid_packet_input("generated_title contains invalid string fields", field="generated_title", details={"fields": invalid})
+        source_evidence = normalize_evidence_record(raw.get("source_evidence"), field="generated_title.source_evidence")
+        if isinstance(source_evidence, dict) and "diagnostic" in source_evidence:
+            return source_evidence
+        rejected_candidates = raw.get("rejected_candidates")
+        if not isinstance(rejected_candidates, list) or any(
+            not isinstance(item, dict)
+            or validate_string_fields(item, ["value", "reason"])
+            or set(item) - {"value", "reason"}
+            for item in rejected_candidates
+        ):
+            return invalid_packet_input(
+                "generated_title.rejected_candidates must be objects with value and reason strings",
+                field="generated_title.rejected_candidates",
+            )
         return raw
 
     title_type = inputs.get("title_type") or "feat"
@@ -545,6 +566,28 @@ def normalize_generated_title(inputs: dict[str, Any]) -> dict[str, Any]:
 def normalize_scope_evidence(inputs: dict[str, Any]) -> dict[str, Any]:
     raw = inputs.get("scope_evidence")
     if isinstance(raw, dict):
+        required = ["reviewable_loc", "production_files", "total_files", "budget_result", "changed_files", "non_goals"]
+        missing = [field for field in required if field not in raw]
+        if missing:
+            return invalid_packet_input("scope_evidence is missing required fields", field="scope_evidence", details={"missing": missing})
+        invalid_ints = [
+            field
+            for field in ("reviewable_loc", "production_files", "total_files")
+            if not isinstance(raw.get(field), int) or raw.get(field) < 0
+        ]
+        if invalid_ints:
+            return invalid_packet_input("scope_evidence count fields must be non-negative integers", field="scope_evidence", details={"fields": invalid_ints})
+        if raw.get("budget_result") not in {"within_budget", "warning", "blocked", "exception"}:
+            return invalid_packet_input("scope_evidence.budget_result is invalid", field="scope_evidence.budget_result")
+        changed_files = raw.get("changed_files")
+        if not isinstance(changed_files, list) or not changed_files or not all(isinstance(item, str) and item for item in changed_files):
+            return invalid_packet_input("scope_evidence.changed_files must be a non-empty string array", field="scope_evidence.changed_files")
+        non_goals = raw.get("non_goals")
+        if not isinstance(non_goals, list) or not non_goals or not all(isinstance(item, str) and item for item in non_goals):
+            return invalid_packet_input("scope_evidence.non_goals must be a non-empty string array", field="scope_evidence.non_goals")
+        extra = sorted(set(raw) - set(required))
+        if extra:
+            return invalid_packet_input("scope_evidence contains unsupported fields", field="scope_evidence", details={"fields": extra})
         return raw
     changed_files = inputs.get("changed_files")
     if not isinstance(changed_files, list) or not changed_files or not all(isinstance(item, str) and item for item in changed_files):
@@ -563,8 +606,14 @@ def normalize_scope_evidence(inputs: dict[str, Any]) -> dict[str, Any]:
 
 
 def normalize_evidence_list(raw: Any, *, fallback: Any, default_kind: str, default_source: str) -> list[dict[str, str]] | dict[str, Any]:
-    if isinstance(raw, list) and raw and all(isinstance(item, dict) for item in raw):
-        return raw
+    if isinstance(raw, list) and raw:
+        normalized: list[dict[str, str]] = []
+        for index, item in enumerate(raw):
+            evidence = normalize_evidence_record(item, field=f"verification_evidence[{index}]")
+            if isinstance(evidence, dict) and "diagnostic" in evidence:
+                return evidence
+            normalized.append(evidence)
+        return normalized
     lines = string_lines(fallback)
     if not lines:
         return invalid_packet_input("verification_evidence or verification must contain at least one item", field="verification_evidence")
@@ -580,8 +629,19 @@ def normalize_evidence_list(raw: Any, *, fallback: Any, default_kind: str, defau
 
 
 def normalize_source_markers(raw: Any, packet_id: str, title: str, source_feature_dir: str) -> list[dict[str, str]] | dict[str, Any]:
-    if isinstance(raw, list) and raw and all(isinstance(item, dict) for item in raw):
-        return raw
+    if isinstance(raw, list) and raw:
+        normalized: list[dict[str, str]] = []
+        for index, item in enumerate(raw):
+            if not isinstance(item, dict):
+                return invalid_packet_input("source_markers entries must be objects", field=f"source_markers[{index}]")
+            invalid = validate_string_fields(item, ["marker_id", "rendered_text", "source"])
+            if invalid:
+                return invalid_packet_input("source_markers entries require marker_id, rendered_text, and source strings", field=f"source_markers[{index}]", details={"fields": invalid})
+            extra = sorted(set(item) - {"marker_id", "rendered_text", "source"})
+            if extra:
+                return invalid_packet_input("source_markers entries contain unsupported fields", field=f"source_markers[{index}]", details={"fields": extra})
+            normalized.append({"marker_id": item["marker_id"], "rendered_text": item["rendered_text"], "source": item["source"]})
+        return normalized
     return [{"marker_id": packet_id, "rendered_text": title, "source": source_feature_dir}]
 
 
@@ -623,6 +683,10 @@ def build_packet_body(
         how_to_review,
         "",
         "## How To UAT",
+        "",
+        how_to_uat,
+        "",
+        "## UAT Runbook",
         "",
         how_to_uat,
         "",
@@ -687,6 +751,28 @@ def list_of_objects(raw: Any) -> list[dict[str, str]]:
     if isinstance(raw, list) and all(isinstance(item, dict) for item in raw):
         return raw
     return []
+
+
+def normalize_evidence_record(raw: Any, *, field: str) -> dict[str, str] | dict[str, Any]:
+    if not isinstance(raw, dict):
+        return invalid_packet_input("evidence records must be objects", field=field)
+    invalid = validate_string_fields(raw, ["kind", "source", "summary"])
+    if invalid:
+        return invalid_packet_input("evidence records require kind, source, and summary strings", field=field, details={"fields": invalid})
+    result = raw.get("result")
+    if result is not None and not isinstance(result, str):
+        return invalid_packet_input("evidence result must be a string when provided", field=f"{field}.result")
+    extra = sorted(set(raw) - {"kind", "source", "summary", "result"})
+    if extra:
+        return invalid_packet_input("evidence records contain unsupported fields", field=field, details={"fields": extra})
+    normalized = {"kind": raw["kind"], "source": raw["source"], "summary": raw["summary"]}
+    if isinstance(result, str):
+        normalized["result"] = result
+    return normalized
+
+
+def validate_string_fields(record: dict[str, Any], fields: list[str]) -> list[str]:
+    return [field for field in fields if not isinstance(record.get(field), str) or not record.get(field)]
 
 
 def int_value(raw: Any, fallback: int) -> int:

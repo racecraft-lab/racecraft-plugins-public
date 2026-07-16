@@ -31,7 +31,7 @@ in order; do not collapse or defer.
 | 13 | Code Review | (none) — built-in | spawn a subagent to independently review the diff `origin/main...HEAD`; report findings by severity |
 | 14 | Integration Suite | (none) | `PROJECT_COMMANDS.FULL_VERIFY` or detected full test command |
 | 15 | Final Reviewability Backstop | (none) | deferred helper; use current committed evidence or stop before PR side effects |
-| 16 | PR Packet/Body Generation | final backstop proceeded | require an existing current `specs/<feature>/.process/pr-packets/<packet-id>.json`; stop if absent because packet emission is deferred |
+| 16 | PR Packet/Body Generation | final backstop proceeded | emit or refresh current `specs/<feature>/.process/pr-packets/<packet-id>.json` with `pr-packet-output` `dry_run` then `apply`; stop if emission or validation fails |
 | 17 | PR Creation | current packet validation passed | single-PR path only when no split route and no current `pr_marker_plan`; `multi-pr-emission` for split-PR routes or marker-ready plans |
 | 18 | Review Remediation | (none) | parent session loop — inspect PR feedback, dispatch fixes as needed |
 | 19 | Retrospective | retrospective ext | `$speckit-retrospective-analyze` (FINAL STEP) |
@@ -123,9 +123,11 @@ background subagents as the fallback path. The 3-track structure
   skill sigil and SPEC context.
 - Built-in verification, git, push, PR creation, and review polling stay in the
   parent session so the orchestrator owns durable state and final reporting.
-- PR creation requires an existing schema-valid feature-local packet and the
-  repo-relative body file it references. No active helper creates or repairs
-  packet metadata.
+- PR creation requires a current schema-valid feature-local packet and the
+  repo-relative body file it references. The active `golden_only`
+  `pr-packet-output` helper creates or refreshes packet JSON and packet-owned
+  body content; `validate-pr-packet-write` persists validation only after
+  rerunning current read-only validation.
 - Missing optional extensions are logged and skipped. Do not fail the entire
   autopilot because an optional extension command is unavailable.
 - Never mark the workflow complete until every planned Post item is completed or

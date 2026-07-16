@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import hashlib
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -935,9 +936,9 @@ class MutationHelperTests(unittest.TestCase):
     def test_partial_failure_reports_applied_operation_and_manual_remediation(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
-            first = git_root / "first.md"
+            first = git_root / "nested" / "new" / "first.md"
             second = git_root / "second.md"
-            first_rel = "first.md"
+            first_rel = "nested/new/first.md"
             second_rel = "second.md"
             completed, response, stderr_records = run_runner(
                 helper_request(
@@ -963,6 +964,80 @@ class MutationHelperTests(unittest.TestCase):
             self.assertFalse(response["data"]["writes_state"])
             self.assertFalse(first.exists())
             self.assertFalse(second.exists())
+            self.assertFalse((git_root / "nested").exists())
+
+    def test_apply_write_preserves_existing_file_mode_and_rechecks_source_fingerprints(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            source = git_root / "source.md"
+            source.write_text("source\n", encoding="utf-8")
+            target = git_root / "tool.sh"
+            target.write_text("#!/bin/sh\n", encoding="utf-8")
+            target.chmod(0o755)
+            self.run_git(git_root, "add", "source.md", "tool.sh")
+            self.run_git(git_root, "commit", "--quiet", "-m", "sources")
+
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "mutation-foundation",
+                    mode="apply",
+                    inputs={
+                        "operations": [
+                            {
+                                "operation_id": "update-target",
+                                "kind": "write_file",
+                                "target": "tool.sh",
+                                "content": "#!/bin/sh\necho updated\n",
+                                "source_fingerprints": {
+                                    "source": {
+                                        "path": "source.md",
+                                        "algorithm": "sha256",
+                                        "sha256": "0" * 64,
+                                        "size_bytes": 999,
+                                    }
+                                },
+                            }
+                        ]
+                    },
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 1)
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["source_changed"])
+            self.assertEqual(target.read_text(encoding="utf-8"), "#!/bin/sh\n")
+
+            source_bytes = source.read_bytes()
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "mutation-foundation",
+                    mode="apply",
+                    inputs={
+                        "operations": [
+                            {
+                                "operation_id": "update-target",
+                                "kind": "write_file",
+                                "target": "tool.sh",
+                                "content": "#!/bin/sh\necho updated\n",
+                                "source_fingerprints": {
+                                    "source": {
+                                        "path": "source.md",
+                                        "algorithm": "sha256",
+                                        "sha256": hashlib.sha256(source_bytes).hexdigest(),
+                                        "size_bytes": len(source_bytes),
+                                    }
+                                },
+                            }
+                        ]
+                    },
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+            self.assertEqual(os.stat(target).st_mode & 0o777, 0o755)
+            self.assertTrue(response["data"]["mutation"]["live_mutation"])
 
     def test_doctor_preflight_detects_missing_files_and_repair_uses_fake_home(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
@@ -1183,6 +1258,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(stderr_records, [])
             mutation = response["data"]["mutation"]
             self.assertEqual(mutation["mutation_status"], "applied")
+            self.assertTrue(mutation["live_mutation"])
             self.assertEqual(
                 mutation["touched_paths"],
                 [inputs["body_file"], inputs["packet_path"]],
@@ -1195,6 +1271,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertTrue(body_path.is_file())
             self.assertFalse(validation_path.exists())
             self.assertIn("## Summary", body_path.read_text(encoding="utf-8"))
+            self.assertIn("## UAT Runbook", body_path.read_text(encoding="utf-8"))
             packet = json.loads(packet_path.read_text(encoding="utf-8"))
             self.assertEqual(packet["packet_id"], "prsg-999")
             self.assertEqual(packet["generated_title"]["value"], "feat(PRSG-999): Generate reviewer packet")
@@ -1214,6 +1291,8 @@ class MutationHelperTests(unittest.TestCase):
             validation_result = response["data"]["stdout_json"]
             self.assertEqual(validation_result["status"], "passed")
             self.assertFalse(validation_result["pr_blocked"])
+            self.assertIn("source_fingerprints", validation_result)
+            self.assertEqual(set(validation_result["source_fingerprints"]), {"body", "packet"})
 
             completed, response, stderr_records = run_runner(
                 helper_request(
@@ -1248,6 +1327,7 @@ class MutationHelperTests(unittest.TestCase):
             persisted = json.loads(validation_path.read_text(encoding="utf-8"))
             self.assertEqual(persisted["packet_id"], "prsg-999")
             self.assertEqual(persisted["status"], "passed")
+            self.assertEqual(set(persisted["source_fingerprints"]), {"body", "packet"})
 
     def test_pr_packet_output_rejects_mismatched_paths_invalid_mode_and_invalid_body(self) -> None:
         base_inputs = {
@@ -1267,6 +1347,9 @@ class MutationHelperTests(unittest.TestCase):
             "validation_escape": {"validation_result_path": "specs/prsg-999-packet/.process/pr-packets/other/validation.json"},
             "invalid_mode": {"mode": "splti"},
             "invalid_body": {"body": "hello\n"},
+            "invalid_scope_evidence": {"scope_evidence": {"changed_files": ["README.md"]}},
+            "invalid_verification_evidence": {"verification_evidence": [{"kind": "verification", "source": "tests"}]},
+            "invalid_source_markers": {"source_markers": [{"marker_id": "prsg-999", "source": "specs/prsg-999-packet"}]},
         }
         for name, override in cases.items():
             with self.subTest(name=name):

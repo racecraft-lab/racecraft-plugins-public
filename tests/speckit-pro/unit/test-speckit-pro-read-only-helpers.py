@@ -901,6 +901,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 self.assertEqual(completed.returncode, 0)
                 self.assert_response(response, "ok", 0)
                 self.assertEqual(response["data"]["stdout_json"]["status"], "passed")
+                self.assertEqual(set(response["data"]["stdout_json"]["source_fingerprints"]), {"body", "packet"})
                 self.assertFalse(response["data"]["writes_state"])
                 self.assertEqual(response["data"]["promotion_status"], "python_authoritative")
                 self.assertEqual(stderr_records, [])
@@ -954,6 +955,69 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertFalse(response["data"]["writes_state"])
         self.assertEqual(response["data"]["promotion_status"], "python_authoritative")
         self.assertEqual(stderr_records, [])
+
+    def test_validate_pr_packet_fingerprint_covers_pre_h1_trailing_and_crossed_markers(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
+            self.skipTest("validate-pr-packet protected body coverage case")
+        valid_packet = json.loads((PR_PACKET_FIXTURE_DIR / "valid-single.json").read_text(encoding="utf-8"))
+        body_text = (PR_PACKET_FIXTURE_DIR / "bodies" / "valid-single.md").read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            cases = {
+                "pre_h1": (
+                    "<!-- unexpected protected preface -->\n" + body_text,
+                    {"body.protected_fingerprint"},
+                ),
+                "trailing": (
+                    body_text + "\n## Release Notes\n\nUnexpected protected trailer.\n",
+                    {"body.protected_fingerprint"},
+                ),
+                "crossed_marker": (
+                    body_text.replace(
+                        "<!-- speckit-pro-editable:summary:end -->\n\nSource:",
+                        "Source:",
+                        1,
+                    ).replace(
+                        "<!-- speckit-pro-editable:what_changed:start -->",
+                        "<!-- speckit-pro-editable:what_changed:start -->\n<!-- speckit-pro-editable:summary:end -->",
+                        1,
+                    ),
+                    {"body.editable_markers"},
+                ),
+            }
+            for name, (mutated_body, expected_rules) in cases.items():
+                with self.subTest(name=name):
+                    body = project_path / f"{name}.md"
+                    body.write_text(mutated_body, encoding="utf-8")
+                    packet = project_path / f"{name}.json"
+                    packet.write_text(
+                        json.dumps(
+                            {
+                                **valid_packet,
+                                "packet_id": f"{name}-packet",
+                                "body_file": body.relative_to(REPO_ROOT).as_posix(),
+                                "validation_result_path": (
+                                    "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/"
+                                    f"pr-packets/{name}-packet/validation.json"
+                                ),
+                            }
+                        ),
+                        encoding="utf-8",
+                    )
+                    completed, response, stderr_records = run_runner(
+                        helper_request(
+                            "validate-pr-packet-read-only",
+                            {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                        )
+                    )
+                    self.assertEqual(completed.returncode, 1)
+                    self.assert_response(response, "expected_failure", 1)
+                    rules = {
+                        failure["rule"]
+                        for failure in response["data"]["stdout_json"]["failures"]
+                    }
+                    self.assertTrue(expected_rules.issubset(rules))
+                    self.assertEqual(stderr_records, response["diagnostics"])
 
     def test_validate_pr_workflow_contract_changed_files_is_canonicalized_and_evaluated(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-workflow-contract":

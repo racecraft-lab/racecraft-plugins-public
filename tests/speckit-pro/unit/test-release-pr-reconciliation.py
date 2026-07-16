@@ -75,6 +75,27 @@ def row(product: str, tree_hash: str) -> dict:
 
 
 class ReleasePrReconciliationTests(unittest.TestCase):
+    def test_mirror_tree_by_content_detects_mode_only_drift(self) -> None:
+        if os.name == "nt":
+            self.skipTest("POSIX mode drift regression")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source_root = root / "source"
+            target_root = root / "target"
+            source_root.mkdir()
+            target_root.mkdir()
+            source = source_root / "tool.sh"
+            target = target_root / "tool.sh"
+            source.write_text("#!/bin/sh\n", encoding="utf-8")
+            target.write_text("#!/bin/sh\n", encoding="utf-8")
+            source.chmod(0o755)
+            target.chmod(0o644)
+
+            changed = refresh.mirror_tree_by_content(source_root, target_root, root)
+
+            self.assertEqual(changed, ["target/tool.sh"])
+            self.assertEqual(os.stat(target).st_mode & 0o777, 0o755)
+
     def test_action_output_takes_precedence(self) -> None:
         created = [{"number": 302, "title": "release", "headBranchName": "release-please--branches--main--components--speckit-pro"}]
         unrelated = [{"number": 99, "title": "other", "headRefName": "feature/not-release", "baseRefName": "main"}]

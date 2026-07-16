@@ -42,7 +42,7 @@
       "why_it_matters"
     ],
     "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
-    "value": "66d48fe81f7fa20bdea59ced964d66aa91c6fc29eb2b9b4a31ccf310f58e229b"
+    "value": "e718d9a5f3962a594ef2f374babc980b0a97915e7b96af14b0a5e86e5f56b248"
   },
   "required_headings": [
     "Summary",
@@ -61,7 +61,9 @@
       "dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md",
       "dist/claude/speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
       "dist/claude/speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+      "dist/claude/speckit-pro/speckit_pro_runner/helpers/mutation.py",
       "dist/claude/speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
+      "dist/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py",
       "dist/claude/speckit-pro/speckit_pro_runner/helpers/registry.py",
       "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
       "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
@@ -70,7 +72,9 @@
       "dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
       "dist/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation-codex.md",
       "dist/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+      "dist/codex/speckit-pro/speckit_pro_runner/helpers/mutation.py",
       "dist/codex/speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
+      "dist/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py",
       "dist/codex/speckit-pro/speckit_pro_runner/helpers/registry.py",
       "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
       "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
@@ -83,13 +87,16 @@
       "docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md",
       "docs/ai/specs/harness-engineering-uplift-roadmap-MOC.md",
       "docs/ai/specs/harness-engineering-uplift-technical-roadmap.md",
+      "scripts/refresh-release-artifacts.py",
       "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
       "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
       "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md",
       "speckit-pro/skills/speckit-autopilot/SKILL.md",
       "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
       "speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+      "speckit-pro/speckit_pro_runner/helpers/mutation.py",
       "speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
+      "speckit-pro/speckit_pro_runner/helpers/read_only.py",
       "speckit-pro/speckit_pro_runner/helpers/registry.py",
       "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
       "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
@@ -111,6 +118,10 @@
       "specs/hrns-001-harness-surface-inventory-gap-taxonomy/verify-tasks-report.md",
       "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
       "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+      "tests/speckit-pro/layer8-parity/01-post-impl-parity/README.md",
+      "tests/speckit-pro/layer8-parity/01-post-impl-parity/expected-equivalence.json",
+      "tests/speckit-pro/layer8-parity/01-post-impl-parity/tolerance.json",
+      "tests/speckit-pro/layer8-parity/01-post-impl-parity/workflow.md",
       "tests/speckit-pro/unit/fixtures/mutation-helpers/fixture-manifest.json",
       "tests/speckit-pro/unit/fixtures/mutation-helpers/promotion-records.json",
       "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/pr-packet-output.json",
@@ -130,7 +141,9 @@
       "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/SKILL.md",
       "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
       "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/helpers/mutation.py",
       "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/helpers/read_only.py",
       "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/helpers/registry.py",
       "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
       "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
@@ -139,20 +152,31 @@
       "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
       "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation-codex.md",
       "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/helpers/mutation.py",
       "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/helpers/read_only.py",
       "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/helpers/registry.py",
       "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
       "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
-      "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py"
+      "tests/speckit-pro/unit/fixtures/pr-packet/bodies/valid-single-edited.md",
+      "tests/speckit-pro/unit/fixtures/pr-packet/bodies/valid-single.md",
+      "tests/speckit-pro/unit/fixtures/pr-packet/bodies/valid-split.md",
+      "tests/speckit-pro/unit/fixtures/pr-packet/valid-single.json",
+      "tests/speckit-pro/unit/fixtures/pr-packet/valid-split.json",
+      "tests/speckit-pro/unit/fixtures/read-only-helpers/fixture-manifest.json",
+      "tests/speckit-pro/unit/test-eval-runner-skill-selection.py",
+      "tests/speckit-pro/unit/test-release-pr-reconciliation.py",
+      "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py",
+      "tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py"
     ],
     "non_goals": [
       "No runtime adoption of external harness libraries.",
       "No live GitHub mutation inside the runner; gh pr create remains the explicit PR side effect.",
       "No restack or split-PR execution change beyond packet preparation support."
     ],
-    "production_files": 10,
+    "production_files": 11,
     "reviewable_loc": 0,
-    "total_files": 86
+    "total_files": 110
   },
   "source_feature_dir": "specs/hrns-001-harness-surface-inventory-gap-taxonomy",
   "source_markers": [
@@ -177,43 +201,49 @@
       "kind": "verification",
       "result": "pass",
       "source": "validation",
-      "summary": "python3 -m unittest -v tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py passed 33/33."
+      "summary": "python3 -m unittest -v tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py passed 34/34."
     },
     {
       "kind": "verification",
       "result": "pass",
       "source": "validation",
-      "summary": "python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper validate-pr-packet-read-only passed 48/48."
+      "summary": "python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper validate-pr-packet-read-only passed 49/49."
     },
     {
       "kind": "verification",
       "result": "pass",
       "source": "validation",
-      "summary": "python3 -m unittest -v tests/speckit-pro/unit/test-eval-runner-skill-selection.py passed 5/5."
+      "summary": "python3 -m unittest -v tests/speckit-pro/unit/test-release-pr-reconciliation.py passed 40/40."
     },
     {
       "kind": "verification",
       "result": "pass",
       "source": "validation",
-      "summary": "python3 -m unittest -v tests/speckit-pro/unit/test-privacy-scan.py passed 1/1."
+      "summary": "python3 -m unittest -v tests/speckit-pro/unit/test-eval-runner-skill-selection.py tests/speckit-pro/unit/test-privacy-scan.py passed 6/6."
     },
     {
       "kind": "verification",
       "result": "pass",
       "source": "validation",
-      "summary": "python3 -m unittest -v tests/speckit-pro/unit/test-post-implementation-reference.py passed 1/1."
+      "summary": "python3 -m unittest -v tests/speckit-pro/unit/test-post-implementation-reference.py tests/speckit-pro/unit/test-parity-runner.py tests/speckit-pro/unit/test-parity-extractors.py tests/speckit-pro/unit/test-parity-judge.py passed 5/5."
     },
     {
       "kind": "verification",
       "result": "pass",
       "source": "validation",
-      "summary": "python3 -m unittest -v tests/speckit-pro/unit/test-parity-runner.py tests/speckit-pro/unit/test-parity-extractors.py tests/speckit-pro/unit/test-parity-judge.py passed 4/4."
+      "summary": "SPECKIT_SKIP_TOOLCHAIN_CHECK=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json passed Layers 1/4/5/7/8."
     },
     {
       "kind": "verification",
       "result": "pass",
       "source": "validation",
-      "summary": "TITLE='fix(speckit-pro): Enable PR packet emission' BASE_REF='main' PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness-live-github.json passed."
+      "summary": "python3 tests/speckit-pro/run-all.py passed 2774/2774."
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "git diff --check passed."
     },
     {
       "kind": "verification",

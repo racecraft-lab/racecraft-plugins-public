@@ -436,7 +436,11 @@ def mirror_tree_by_content(source_root: Path, target_root: Path, repo_root: Path
 
     for rel, source_path in sorted(source_files.items()):
         target_path = target_root / rel
-        if rel in target_files and sha256_file(target_path) == sha256_file(source_path):
+        if (
+            rel in target_files
+            and sha256_file(target_path) == sha256_file(source_path)
+            and normalized_file_mode(target_path) == normalized_file_mode(source_path)
+        ):
             continue
         target_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source_path, target_path)
@@ -444,6 +448,10 @@ def mirror_tree_by_content(source_root: Path, target_root: Path, repo_root: Path
 
     remove_empty_dirs(target_root)
     return changed
+
+
+def normalized_file_mode(path: Path) -> int:
+    return stat.S_IMODE(path.stat().st_mode)
 
 
 def remove_empty_dirs(root: Path) -> None:

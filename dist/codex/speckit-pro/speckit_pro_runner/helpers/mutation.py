@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import stat
 import uuid
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -386,6 +387,33 @@ def run_mutation_helper(
 
         if op["kind"] == "write_file":
             target = resolve_candidate_path(op["target"], repo_root)
+            rel = repo_relative(target, repo_root)
+            source_precondition_changed = operation_source_fingerprint_diagnostic(op, repo_root)
+            if source_precondition_changed is not None:
+                mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
+                mutation["failure_operation"] = operation_record(op)
+                rollback_errors = rollback_applied_writes(mutation["touched_paths"], snapshots, repo_root)
+                mutation["manual_remediation"] = [
+                    "Inspect the source packet/body files used by this mutation.",
+                    "Retry after validation and write preconditions are refreshed from current content.",
+                ]
+                if rollback_errors:
+                    mutation["manual_remediation"].append("Manual rollback is required for the reported rollback errors.")
+                base_data["writes_state"] = bool(rollback_errors)
+                return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[source_precondition_changed])
+            source_changed = snapshot_changed_diagnostic(rel, target, snapshots, repo_root)
+            if source_changed is not None:
+                mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
+                mutation["failure_operation"] = operation_record(op)
+                rollback_errors = rollback_applied_writes(mutation["touched_paths"], snapshots, repo_root)
+                mutation["manual_remediation"] = [
+                    "Inspect the target path and parent directory.",
+                    "Retry after the write target is stable.",
+                ]
+                if rollback_errors:
+                    mutation["manual_remediation"].append("Manual rollback is required for the reported rollback errors.")
+                base_data["writes_state"] = bool(rollback_errors)
+                return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[source_changed])
             try:
                 write_file_atomic(target, str(op["content"]), trust_root=repo_root)
             except OSError as exc:
@@ -414,13 +442,13 @@ def run_mutation_helper(
                 )
                 base_data["writes_state"] = bool(rollback_errors)
                 return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[diag])
-            rel = repo_relative(target, repo_root)
             mutation["applied_operations"].append(operation_record(op))
             mutation["touched_paths"].append(rel)
         else:
             mutation["skipped_operations"].append(operation_record(op))
 
     mutation["mutation_status"] = "applied" if mutation["applied_operations"] else "no_op"
+    mutation["live_mutation"] = bool(mutation["applied_operations"])
     base_data["writes_state"] = bool(mutation["applied_operations"])
     return response("ok", request_id=request.request_id, data=base_data)
 
@@ -447,13 +475,22 @@ def normalize_operations(raw: Any) -> list[dict[str, Any]] | dict[str, Any]:
                 return invalid_operation("write_file target is required", index=index)
             if not isinstance(content, str):
                 return invalid_operation("write_file content must be a string", index=index)
+            source_fingerprints = op.get("source_fingerprints")
+            if source_fingerprints is not None:
+                source_fingerprints_result = normalize_source_fingerprints(source_fingerprints, index=index)
+                if isinstance(source_fingerprints_result, dict) and "diagnostic" in source_fingerprints_result:
+                    return source_fingerprints_result["diagnostic"]
+                source_fingerprints = source_fingerprints_result
+            normalized_op = {
+                "operation_id": operation_id,
+                "kind": "write_file",
+                "target": target,
+                "content": ensure_final_newline(content),
+            }
+            if source_fingerprints is not None:
+                normalized_op["source_fingerprints"] = source_fingerprints
             normalized.append(
-                {
-                    "operation_id": operation_id,
-                    "kind": "write_file",
-                    "target": target,
-                    "content": ensure_final_newline(content),
-                }
+                normalized_op
             )
             continue
         command = op.get("command")
@@ -474,6 +511,38 @@ def invalid_operation(message: str, *, index: int | None = None) -> dict[str, An
         remediation_summary="Send normalized mutation operation records.",
         remediation_actions=["Use kind write_file or command_plan.", "Retry with operation_id and required fields."],
     )
+
+
+def normalize_source_fingerprints(raw: Any, *, index: int) -> dict[str, Any]:
+    if not isinstance(raw, dict) or not raw:
+        return {"diagnostic": invalid_operation("source_fingerprints must be a non-empty object", index=index)}
+    normalized: dict[str, Any] = {}
+    for label, record in raw.items():
+        if not isinstance(label, str) or not label:
+            return {"diagnostic": invalid_operation("source_fingerprints keys must be non-empty strings", index=index)}
+        if not isinstance(record, dict):
+            return {"diagnostic": invalid_operation("source_fingerprints records must be objects", index=index)}
+        path = record.get("path")
+        sha256 = record.get("sha256")
+        size_bytes = record.get("size_bytes")
+        algorithm = record.get("algorithm", "sha256")
+        if not isinstance(path, str) or not path:
+            return {"diagnostic": invalid_operation("source_fingerprints records require path", index=index)}
+        if algorithm != "sha256" or not isinstance(sha256, str) or not re_fullmatch_sha256(sha256):
+            return {"diagnostic": invalid_operation("source_fingerprints records require sha256", index=index)}
+        if not isinstance(size_bytes, int) or size_bytes < 0:
+            return {"diagnostic": invalid_operation("source_fingerprints records require non-negative size_bytes", index=index)}
+        normalized[label] = {
+            "path": path,
+            "algorithm": "sha256",
+            "sha256": sha256,
+            "size_bytes": size_bytes,
+        }
+    return normalized
+
+
+def re_fullmatch_sha256(value: str) -> bool:
+    return len(value) == 64 and all(char in "0123456789abcdef" for char in value)
 
 
 def validate_target_path(raw: str, repo_root: Path) -> dict[str, Any] | None:
@@ -663,8 +732,8 @@ def git_worktree_status(repo_root: Path) -> bool | dict[str, Any]:
 def capture_write_snapshots(
     operations: list[dict[str, Any]],
     repo_root: Path,
-) -> dict[str, bytes | None] | dict[str, Any]:
-    snapshots: dict[str, bytes | None] = {}
+) -> dict[str, dict[str, Any]] | dict[str, Any]:
+    snapshots: dict[str, dict[str, Any]] = {}
     for op in operations:
         if op["kind"] != "write_file":
             continue
@@ -673,13 +742,7 @@ def capture_write_snapshots(
         if rel in snapshots:
             continue
         try:
-            ensure_safe_write_parent(target, repo_root, create=False)
-            if target.exists():
-                if target.is_symlink() or not target.is_file():
-                    raise OSError("unsafe existing target")
-                snapshots[rel] = target.read_bytes()
-            else:
-                snapshots[rel] = None
+            snapshots[rel] = snapshot_write_target(target, repo_root)
         except OSError as exc:
             return {
                 "diagnostic": diagnostic(
@@ -693,32 +756,40 @@ def capture_write_snapshots(
     return snapshots
 
 
-def rollback_applied_writes(touched_paths: list[str], snapshots: dict[str, bytes | None], repo_root: Path) -> list[str]:
+def rollback_applied_writes(touched_paths: list[str], snapshots: dict[str, dict[str, Any]], repo_root: Path) -> list[str]:
     errors: list[str] = []
     for rel in reversed(touched_paths):
         target = resolve_candidate_path(rel, repo_root)
         try:
-            original = snapshots.get(rel)
-            if original is None:
+            original = snapshots.get(rel) or {"exists": False, "created_parent_dirs": []}
+            if not original.get("exists"):
                 safe_unlink(target, repo_root)
+                remove_created_parent_dirs(original.get("created_parent_dirs", []), repo_root)
             else:
-                write_bytes_atomic(target, original, trust_root=repo_root)
+                write_bytes_atomic(
+                    target,
+                    original["content"],
+                    trust_root=repo_root,
+                    mode=original.get("mode"),
+                )
         except OSError as exc:
             errors.append(f"{rel}:{type(exc).__name__}")
     return errors
 
 
 def safe_unlink(target: Path, trust_root: Path) -> None:
-    ensure_safe_write_parent(target, trust_root)
-    parent_fd = os.open(target.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0))
+    opened = open_safe_parent_fd(target, trust_root, create=False)
+    if opened is None:
+        return
+    parent_fd, target_name, _created_dirs = opened
     try:
         try:
-            mode = os.stat(target.name, dir_fd=parent_fd, follow_symlinks=False).st_mode
+            mode = os.stat(target_name, dir_fd=parent_fd, follow_symlinks=False).st_mode
         except FileNotFoundError:
             return
         if stat.S_ISDIR(mode):
             raise OSError("refusing to unlink directory")
-        os.unlink(target.name, dir_fd=parent_fd)
+        os.unlink(target_name, dir_fd=parent_fd)
         try:
             os.fsync(parent_fd)
         except OSError:
@@ -731,33 +802,40 @@ def write_file_atomic(target: Path, content: str, *, trust_root: Path | None = N
     write_bytes_atomic(target, ensure_final_newline(content).encode("utf-8"), trust_root=trust_root)
 
 
-def write_bytes_atomic(target: Path, content: bytes, *, trust_root: Path | None = None) -> None:
-    if trust_root is not None:
-        ensure_safe_write_parent(target, trust_root)
-    else:
+def write_bytes_atomic(target: Path, content: bytes, *, trust_root: Path | None = None, mode: int | None = None) -> None:
+    if trust_root is None:
         target.parent.mkdir(parents=True, exist_ok=True)
-    tmp_name = f".{target.name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
-    parent_fd = os.open(target.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0))
+        tmp_name = f".{target.name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
+        parent_fd = os.open(target.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0))
+        target_name = target.name
+    else:
+        opened = open_safe_parent_fd(target, trust_root, create=True)
+        if opened is None:
+            raise OSError("target parent missing")
+        parent_fd, target_name, _created_dirs = opened
+        tmp_name = f".{target_name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
     tmp_fd = -1
     try:
         if trust_root is not None:
-            ensure_safe_write_target_fd(parent_fd, target.name)
+            ensure_safe_write_target_fd(parent_fd, target_name)
+        write_mode = mode if mode is not None else current_file_mode_fd(parent_fd, target_name)
+        if write_mode is None:
+            write_mode = 0o666
         tmp_fd = os.open(
             tmp_name,
             os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
-            0o600,
+            write_mode,
             dir_fd=parent_fd,
         )
+        os.fchmod(tmp_fd, write_mode)
         with os.fdopen(tmp_fd, "wb") as fh:
             tmp_fd = -1
             fh.write(content)
             fh.flush()
             os.fsync(fh.fileno())
         if trust_root is not None:
-            ensure_safe_write_parent(target, trust_root)
-        if trust_root is not None:
-            ensure_safe_write_target_fd(parent_fd, target.name)
-        os.replace(tmp_name, target.name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+            ensure_safe_write_target_fd(parent_fd, target_name)
+        os.replace(tmp_name, target_name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
         try:
             os.fsync(parent_fd)
         except OSError:
@@ -779,6 +857,12 @@ def write_bytes_atomic(target: Path, content: bytes, *, trust_root: Path | None 
 
 
 def ensure_safe_write_parent(target: Path, trust_root: Path, *, create: bool = True) -> None:
+    opened = open_safe_parent_fd(target, trust_root, create=create)
+    if opened is not None:
+        os.close(opened[0])
+
+
+def open_safe_parent_fd(target: Path, trust_root: Path, *, create: bool) -> tuple[int, str, list[str]] | None:
     trust_root = trust_root.resolve(strict=False)
     target = target if target.is_absolute() else trust_root / target
     try:
@@ -787,21 +871,42 @@ def ensure_safe_write_parent(target: Path, trust_root: Path, *, create: bool = T
         raise OSError("target escapes trust root") from exc
     if not relative.parts or any(part in {"", ".", ".."} for part in relative.parts):
         raise OSError("unsafe target path")
-    current = trust_root
-    root_mode = current.lstat().st_mode
+    target_name = relative.parts[-1]
+    if "/" in target_name or target_name in {"", ".", ".."}:
+        raise OSError("unsafe target name")
+    root_mode = trust_root.lstat().st_mode
     if stat.S_ISLNK(root_mode) or not stat.S_ISDIR(root_mode):
         raise OSError("unsafe trust root")
-    for part in relative.parts[:-1]:
-        current = current / part
-        try:
-            mode = current.lstat().st_mode
-        except FileNotFoundError:
-            if not create:
-                continue
-            current.mkdir()
-            mode = current.lstat().st_mode
-        if stat.S_ISLNK(mode) or not stat.S_ISDIR(mode):
-            raise OSError("unsafe parent path")
+
+    parent_fd = os.open(trust_root, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0))
+    created_dirs: list[str] = []
+    current_rel = Path()
+    try:
+        for part in relative.parts[:-1]:
+            current_rel = current_rel / part
+            try:
+                next_fd = os.open(
+                    part,
+                    os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0),
+                    dir_fd=parent_fd,
+                )
+            except FileNotFoundError:
+                if not create:
+                    os.close(parent_fd)
+                    return None
+                os.mkdir(part, 0o777, dir_fd=parent_fd)
+                created_dirs.append(current_rel.as_posix())
+                next_fd = os.open(
+                    part,
+                    os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0),
+                    dir_fd=parent_fd,
+                )
+            os.close(parent_fd)
+            parent_fd = next_fd
+    except Exception:
+        os.close(parent_fd)
+        raise
+    return parent_fd, target_name, created_dirs
 
 
 def ensure_safe_write_target_fd(parent_fd: int, name: str) -> None:
@@ -813,6 +918,178 @@ def ensure_safe_write_target_fd(parent_fd: int, name: str) -> None:
         return
     if stat.S_ISLNK(mode) or not stat.S_ISREG(mode):
         raise OSError("unsafe existing target")
+
+
+def current_file_mode_fd(parent_fd: int, name: str) -> int | None:
+    try:
+        file_stat = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+    except FileNotFoundError:
+        return None
+    if stat.S_ISLNK(file_stat.st_mode) or not stat.S_ISREG(file_stat.st_mode):
+        raise OSError("unsafe existing target")
+    return stat.S_IMODE(file_stat.st_mode)
+
+
+def snapshot_write_target(target: Path, repo_root: Path) -> dict[str, Any]:
+    created_parent_dirs = missing_parent_dirs(target, repo_root)
+    opened = open_safe_parent_fd(target, repo_root, create=False)
+    if opened is None:
+        return {
+            "exists": False,
+            "content": None,
+            "mode": None,
+            "digest": None,
+            "created_parent_dirs": created_parent_dirs,
+        }
+    parent_fd, target_name, _created_dirs = opened
+    try:
+        try:
+            fd = os.open(target_name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0), dir_fd=parent_fd)
+        except FileNotFoundError:
+            return {
+                "exists": False,
+                "content": None,
+                "mode": None,
+                "digest": None,
+                "created_parent_dirs": created_parent_dirs,
+            }
+        try:
+            file_stat = os.fstat(fd)
+            if stat.S_ISLNK(file_stat.st_mode) or not stat.S_ISREG(file_stat.st_mode):
+                raise OSError("unsafe existing target")
+            with os.fdopen(fd, "rb") as stream:
+                fd = -1
+                content = stream.read()
+        finally:
+            if fd >= 0:
+                os.close(fd)
+        return {
+            "exists": True,
+            "content": content,
+            "mode": stat.S_IMODE(file_stat.st_mode),
+            "digest": hashlib.sha256(content).hexdigest(),
+            "created_parent_dirs": created_parent_dirs,
+        }
+    finally:
+        os.close(parent_fd)
+
+
+def snapshot_changed_diagnostic(rel: str, target: Path, snapshots: dict[str, dict[str, Any]], repo_root: Path) -> dict[str, Any] | None:
+    original = snapshots.get(rel)
+    if original is None:
+        return None
+    current = snapshot_write_target(target, repo_root)
+    if original.get("exists") != current.get("exists"):
+        changed = True
+    elif original.get("exists"):
+        changed = original.get("digest") != current.get("digest") or original.get("mode") != current.get("mode")
+    else:
+        changed = False
+    if not changed:
+        return None
+    return diagnostic(
+        "source_changed",
+        "mutation helper refused to overwrite a target that changed after snapshot capture",
+        details={"target": rel},
+        remediation_summary="Retry from a stable repository tree.",
+        remediation_actions=["Inspect the target path.", "Retry apply mode after concurrent edits stop."],
+    )
+
+
+def operation_source_fingerprint_diagnostic(operation: dict[str, Any], repo_root: Path) -> dict[str, Any] | None:
+    fingerprints = operation.get("source_fingerprints")
+    if not isinstance(fingerprints, dict):
+        return None
+    for label, expected in sorted(fingerprints.items()):
+        if not isinstance(expected, dict):
+            return source_fingerprint_changed(label, "malformed")
+        path_value = expected.get("path")
+        if not isinstance(path_value, str) or not path_value:
+            return source_fingerprint_changed(label, "missing-path")
+        target = resolve_candidate_path(path_value, repo_root)
+        if validate_target_path(path_value, repo_root) is not None:
+            return source_fingerprint_changed(label, "unsafe-path")
+        opened = open_safe_parent_fd(target, repo_root, create=False)
+        if opened is None:
+            return source_fingerprint_changed(label, "missing-parent")
+        parent_fd, target_name, _created_dirs = opened
+        try:
+            try:
+                fd = os.open(target_name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0), dir_fd=parent_fd)
+            except FileNotFoundError:
+                return source_fingerprint_changed(label, "missing-file")
+            try:
+                file_stat = os.fstat(fd)
+                if stat.S_ISLNK(file_stat.st_mode) or not stat.S_ISREG(file_stat.st_mode):
+                    return source_fingerprint_changed(label, "unsafe-file")
+                with os.fdopen(fd, "rb") as stream:
+                    fd = -1
+                    content = stream.read()
+            finally:
+                if fd >= 0:
+                    os.close(fd)
+        finally:
+            os.close(parent_fd)
+        current_sha256 = hashlib.sha256(content).hexdigest()
+        if expected.get("sha256") != current_sha256 or expected.get("size_bytes") != len(content):
+            return source_fingerprint_changed(label, "content-changed", path=repo_relative(target, repo_root))
+    return None
+
+
+def source_fingerprint_changed(label: str, reason: str, *, path: str | None = None) -> dict[str, Any]:
+    details = {"source": label, "reason": reason}
+    if path is not None:
+        details["path"] = path
+    return diagnostic(
+        "source_changed",
+        "mutation helper refused to write because a source fingerprint changed after validation",
+        details=details,
+        remediation_summary="Rerun read-only validation and retry the write from the current packet/body content.",
+        remediation_actions=["Regenerate or refresh the validation result.", "Retry the mutation helper from a clean, stable worktree."],
+    )
+
+
+def missing_parent_dirs(target: Path, repo_root: Path) -> list[str]:
+    repo_root = repo_root.resolve(strict=False)
+    target = target if target.is_absolute() else repo_root / target
+    try:
+        relative = target.relative_to(repo_root)
+    except ValueError as exc:
+        raise OSError("target escapes trust root") from exc
+    missing: list[str] = []
+    current = repo_root
+    missing_started = False
+    for part in relative.parts[:-1]:
+        current = current / part
+        rel = current.relative_to(repo_root).as_posix()
+        if missing_started:
+            missing.append(rel)
+            continue
+        try:
+            mode = current.lstat().st_mode
+        except FileNotFoundError:
+            missing_started = True
+            missing.append(rel)
+            continue
+        if stat.S_ISLNK(mode) or not stat.S_ISDIR(mode):
+            raise OSError("unsafe parent path")
+    return missing
+
+
+def remove_created_parent_dirs(relative_dirs: list[str], repo_root: Path) -> None:
+    for rel in reversed(relative_dirs):
+        if not isinstance(rel, str) or not rel:
+            continue
+        path = resolve_candidate_path(rel, repo_root)
+        try:
+            path.rmdir()
+        except FileNotFoundError:
+            continue
+        except OSError:
+            # Only remove directories that are still empty; any residual content
+            # must remain for manual inspection and keeps writes_state true when
+            # rollback reports the write failure.
+            continue
 
 
 def ensure_final_newline(content: str) -> str:

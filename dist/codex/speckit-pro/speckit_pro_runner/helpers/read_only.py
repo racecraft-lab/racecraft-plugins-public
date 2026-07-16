@@ -2122,20 +2122,9 @@ def schema_failure(keyword: str, field: str, message: str) -> dict[str, Any]:
 
 def protected_body_sha256(body_text: str) -> str:
     normalized: list[str] = []
-    in_packet = False
     editable_field = ""
-    seen_known_gaps = False
-    known_gaps_body_seen = False
     for raw_line in body_text.splitlines():
         line = raw_line.rstrip(" \t\r")
-        if not in_packet and re.fullmatch(r"#\s+\S.*", line):
-            in_packet = True
-        if not in_packet:
-            continue
-        if seen_known_gaps and known_gaps_body_seen and not line:
-            break
-        if seen_known_gaps and re.match(r"^#{1,6}\s+", line):
-            break
         start = re.fullmatch(r"<!-- speckit-pro-editable:(summary|what_changed|why_it_matters):start -->", line)
         if not editable_field and start:
             editable_field = start.group(1)
@@ -2148,10 +2137,6 @@ def protected_body_sha256(body_text: str) -> str:
         if editable_field:
             continue
         normalized.append(line)
-        if line == "## Known Gaps":
-            seen_known_gaps = True
-        elif seen_known_gaps and line:
-            known_gaps_body_seen = True
     content = "\n".join(normalized)
     if normalized:
         content += "\n"
@@ -2210,18 +2195,21 @@ def packet_body_structure_failures(data: dict[str, Any], body_text: str) -> list
 
     editable_fields = data.get("editable_fields")
     if isinstance(editable_fields, list):
+        spans: list[tuple[int, int, str]] = []
+        heading_indices = [(index, line[3:].strip()) for index, line in enumerate(lines) if line.startswith("## ")]
         for field in editable_fields:
             if not isinstance(field, dict):
                 continue
             field_id = field.get("field_id")
+            heading = field.get("heading")
             start_marker = field.get("start_marker")
             end_marker = field.get("end_marker")
-            if not isinstance(field_id, str) or not isinstance(start_marker, str) or not isinstance(end_marker, str):
+            if not isinstance(field_id, str) or not isinstance(heading, str) or not isinstance(start_marker, str) or not isinstance(end_marker, str):
                 failures.append(
                     {
                         "rule": "body.editable_markers",
                         "field": "editable_fields",
-                        "message": "Editable field records must include field_id, start_marker, and end_marker.",
+                        "message": "Editable field records must include field_id, heading, start_marker, and end_marker.",
                     }
                 )
                 continue
@@ -2233,6 +2221,63 @@ def packet_body_structure_failures(data: dict[str, Any], body_text: str) -> list
                         "rule": "body.editable_markers",
                         "field": "body_file",
                         "message": f"Rendered body must contain one balanced editable marker pair for {field_id}.",
+                    }
+                )
+                continue
+            section_starts = [index for index, found in heading_indices if found == heading]
+            if len(section_starts) != 1:
+                failures.append(
+                    {
+                        "rule": "body.editable_markers",
+                        "field": "body_file",
+                        "message": f"Editable field {field_id} must map to one declared heading section.",
+                    }
+                )
+                continue
+            section_start = section_starts[0]
+            next_headings = [index for index, _found in heading_indices if index > section_start]
+            section_end = next_headings[0] if next_headings else len(lines)
+            start_index = starts[0]
+            end_index = ends[0]
+            if not (section_start < start_index < end_index < section_end):
+                failures.append(
+                    {
+                        "rule": "body.editable_markers",
+                        "field": "body_file",
+                        "message": f"Editable markers for {field_id} must stay inside the {heading} section.",
+                    }
+                )
+                continue
+            if any(re.match(r"^#{1,6}\s+", line) for line in lines[start_index + 1 : end_index]):
+                failures.append(
+                    {
+                        "rule": "body.editable_markers",
+                        "field": "body_file",
+                        "message": f"Editable markers for {field_id} must not enclose headings.",
+                    }
+                )
+                continue
+            spans.append((start_index, end_index, field_id))
+        for previous, current in zip(sorted(spans), sorted(spans)[1:]):
+            if previous[1] >= current[0]:
+                failures.append(
+                    {
+                        "rule": "body.editable_markers",
+                        "field": "body_file",
+                        "message": f"Editable marker spans must not overlap: {previous[2]} and {current[2]}.",
+                    }
+                )
+    uat = data.get("uat")
+    if isinstance(uat, dict):
+        uat_heading = uat.get("uat_runbook_heading")
+        if isinstance(uat_heading, str) and uat_heading:
+            matches = [line for line in lines if line == uat_heading]
+            if len(matches) != 1:
+                failures.append(
+                    {
+                        "rule": "body.uat_runbook_heading",
+                        "field": "uat.uat_runbook_heading",
+                        "message": f"Rendered body must contain declared UAT heading exactly once: {uat_heading}",
                     }
                 )
     return failures
@@ -2336,13 +2381,44 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
         if path_diag is not None:
             failures.append({"rule": "input.path.body_file", "field": "body_file", "message": path_diag["message"]})
     failures.extend(pr_packet_body_failures(data, repo_root))
+    source_fingerprints = pr_packet_source_fingerprints(packet, data, repo_root)
     if failures:
         rules = ",".join(sorted({failure["rule"] for failure in failures}))
         stderr_line = f"validate-pr-packet-read-only: validation_failure: {packet_id}: {rules}: {validation_path}"
         remediation = [f"[{failure['rule']}] Regenerate packet evidence before PR creation." for failure in failures]
-        obj = packet_result("failed", "validation_failure", 1, packet_id, data.get("mode"), (generated_title or {}).get("value"), body_file, validation_path, True, stderr_line, failures, remediation, target or {})
+        obj = packet_result(
+            "failed",
+            "validation_failure",
+            1,
+            packet_id,
+            data.get("mode"),
+            (generated_title or {}).get("value"),
+            body_file,
+            validation_path,
+            True,
+            stderr_line,
+            failures,
+            remediation,
+            target or {},
+            source_fingerprints=source_fingerprints,
+        )
         return make_result(pretty_json_text(obj), stderr_line + "\n", 1)
-    obj = packet_result("passed", "none", 0, packet_id, data.get("mode"), (generated_title or {}).get("value"), body_file, validation_path, False, "", [], [], target or {})
+    obj = packet_result(
+        "passed",
+        "none",
+        0,
+        packet_id,
+        data.get("mode"),
+        (generated_title or {}).get("value"),
+        body_file,
+        validation_path,
+        False,
+        "",
+        [],
+        [],
+        target or {},
+        source_fingerprints=source_fingerprints,
+    )
     return make_result(pretty_json_text(obj))
 
 
@@ -2360,6 +2436,8 @@ def packet_result(
     failures: list[dict[str, Any]],
     remediation: list[str],
     target: dict[str, Any] | None = None,
+    *,
+    source_fingerprints: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     target_obj = None
     if target and (target.get("base_branch") or target.get("head_branch")):
@@ -2369,7 +2447,7 @@ def packet_result(
         if failures
         else [{"rule": "packet.validation", "status": "passed", "evidence": "no failures"}]
     )
-    return {
+    result = {
         "schema_version": "1.0.0",
         "error_class": error_class,
         "exit_code": exit_code,
@@ -2380,11 +2458,44 @@ def packet_result(
         "status": status,
         "title_value": title,
         "body_file": body_file,
+        "validation_result_path": validation_path,
         "rule_outcomes": rule_outcomes,
         "pr_blocked": blocked,
         "failures": failures,
         "remediation_evidence": remediation,
         "timestamp": os.environ.get("SPECKIT_PR_PACKET_TIMESTAMP") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    if source_fingerprints:
+        result["source_fingerprints"] = source_fingerprints
+    return result
+
+
+def pr_packet_source_fingerprints(packet_path: Path, data: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    fingerprints: dict[str, Any] = {}
+    packet_record = file_fingerprint(packet_path, repo_root)
+    if packet_record is not None:
+        fingerprints["packet"] = packet_record
+    body_file = data.get("body_file")
+    if isinstance(body_file, str) and body_file and validate_path_value("validate-pr-packet-read-only", "body_file", body_file, repo_root) is None:
+        body_path = resolve_input_path(body_file, repo_root)
+        body_record = file_fingerprint(body_path, repo_root)
+        if body_record is not None:
+            fingerprints["body"] = body_record
+    return fingerprints
+
+
+def file_fingerprint(path: Path, repo_root: Path) -> dict[str, Any] | None:
+    if not trusted_file_exists(path, repo_root):
+        return None
+    try:
+        content = path.read_bytes()
+    except OSError:
+        return None
+    return {
+        "path": repo_relative(path, repo_root),
+        "algorithm": "sha256",
+        "sha256": hashlib.sha256(content).hexdigest(),
+        "size_bytes": len(content),
     }
 
 
