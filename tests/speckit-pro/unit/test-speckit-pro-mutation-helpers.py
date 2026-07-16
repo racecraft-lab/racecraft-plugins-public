@@ -835,6 +835,21 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(response["data"]["mutation"]["dirty_worktree"], True)
             self.assertFalse(target.exists())
 
+    def test_mutation_lock_does_not_write_to_untrusted_gitdir_file_target(self) -> None:
+        from speckit_pro_runner.helpers import mutation
+
+        with tempfile.TemporaryDirectory() as repo, tempfile.TemporaryDirectory() as external_gitdir:
+            repo_root = Path(repo)
+            external = Path(external_gitdir)
+            (repo_root / ".git").write_text(f"gitdir: {external}\n", encoding="utf-8")
+
+            lock = mutation.acquire_mutation_lock(repo_root)
+            try:
+                self.assertFalse((external / "speckit-pro-mutation.lock").exists())
+                self.assertTrue(mutation.mutation_lock_path(repo_root).is_file())
+            finally:
+                lock.release()
+
     def test_apply_rejects_when_git_status_cannot_prove_clean_worktree(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:

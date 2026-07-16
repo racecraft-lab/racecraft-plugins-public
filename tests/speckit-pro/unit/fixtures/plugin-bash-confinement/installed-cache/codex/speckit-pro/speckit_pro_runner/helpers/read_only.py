@@ -2387,6 +2387,29 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
     raw = str(inputs.get("packet_path") or "")
     packet = resolve_input_path(raw, repo_root)
     packet_id = packet.stem if raw else "missing-packet-path"
+    if raw and not descriptor_read_supported():
+        stderr_line = f"validate-pr-packet-read-only: unsupported_platform: {packet_id}: input.unsupported_platform: no-path"
+        obj = packet_result(
+            "failed",
+            "unsupported_platform",
+            2,
+            packet_id,
+            None,
+            None,
+            None,
+            "no-path",
+            True,
+            stderr_line,
+            [
+                {
+                    "rule": "input.unsupported_platform",
+                    "field": "packet",
+                    "message": "validate-pr-packet-read-only requires descriptor-safe no-follow reads on this platform.",
+                }
+            ],
+            ["[input.unsupported_platform] Run packet validation on Linux or macOS until a Windows-safe reader is implemented."],
+        )
+        return make_result(pretty_json_text(obj), stderr_line + "\n", 2)
     if not raw or not trusted_file_exists(packet, repo_root):
         message = "missing packet path" if not raw else f"packet not found or unreadable: {raw}"
         stderr_line = f"validate-pr-packet-read-only: input_error: {packet_id}: input.error: no-path"

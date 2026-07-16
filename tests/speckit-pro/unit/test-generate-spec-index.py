@@ -204,6 +204,46 @@ class GenerateSpecIndexTests(unittest.TestCase):
         self.assertEqual(moc.read_text(encoding="utf-8"), "concurrent\n")
         self.assertFalse(body["data"]["mutation"]["live_mutation"])
 
+    def test_write_acquires_lock_before_rendering_sources(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        root = self.copy_fixture("stale-fill")
+        lock_acquired = False
+        real_acquire = mutation.acquire_mutation_lock
+        real_render = mutation.render_spec_index
+
+        def tracking_acquire(repo_root: Path) -> mutation.MutationApplyLock:
+            nonlocal lock_acquired
+            lock = real_acquire(repo_root)
+            lock_acquired = True
+            return lock
+
+        def assert_locked_render(target_root: Path):
+            self.assertTrue(lock_acquired)
+            return real_render(target_root)
+
+        request = RunnerRequest(
+            "test-spec-index-lock-before-render",
+            "generate-spec-index-write",
+            "generate-spec-index-write",
+            "apply",
+            {"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+        )
+        old_cwd = Path.cwd()
+        os.chdir(REPO_ROOT)
+        try:
+            with (
+                patch.object(mutation, "acquire_mutation_lock", side_effect=tracking_acquire),
+                patch.object(mutation, "render_spec_index", side_effect=assert_locked_render),
+            ):
+                body = mutation.run_spec_index_write(registry.MUTATION_HELPERS["generate-spec-index-write"], request)
+        finally:
+            os.chdir(old_cwd)
+
+        self.assertEqual(body["status"], "ok")
+        self.assertEqual(body["data"]["mutation"]["mutation_status"], "applied")
+
     def test_current_marker_spelling_is_rendered_and_preserved(self) -> None:
         root = self.copy_fixture("stale-fill")
         moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"

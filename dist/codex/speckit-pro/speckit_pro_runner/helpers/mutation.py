@@ -6,6 +6,7 @@ import os
 import stat
 import uuid
 import hashlib
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -77,33 +78,33 @@ def unsupported_mutation_platform(helper_id: str) -> dict[str, Any]:
     )
 
 
-def git_control_dir(repo_root: Path) -> Path:
-    dotgit = repo_root / ".git"
-    mode = dotgit.lstat().st_mode
-    if stat.S_ISLNK(mode):
-        raise OSError("unsafe git control path")
-    if stat.S_ISDIR(mode):
-        return dotgit
-    if not stat.S_ISREG(mode):
-        raise OSError("unsupported git control path")
-    text = dotgit.read_text(encoding="utf-8")
-    prefix = "gitdir:"
-    if not text.startswith(prefix):
-        raise OSError("unsupported git control file")
-    raw = text[len(prefix) :].strip()
-    if not raw:
-        raise OSError("empty git control path")
-    path = Path(raw)
-    git_dir = path if path.is_absolute() else (repo_root / path)
-    if not git_dir.is_dir():
-        raise OSError("missing git control directory")
-    return git_dir
+def mutation_lock_dir() -> Path:
+    root = Path(tempfile.gettempdir()) / "speckit-pro-mutation-locks"
+    try:
+        os.mkdir(root, 0o700)
+    except FileExistsError:
+        mode = root.lstat().st_mode
+        if stat.S_ISLNK(mode) or not stat.S_ISDIR(mode):
+            raise OSError("unsafe mutation lock directory")
+        owner = getattr(os, "getuid", lambda: None)()
+        root_stat = root.stat(follow_symlinks=False)
+        if owner is not None and root_stat.st_uid != owner:
+            raise OSError("mutation lock directory owner mismatch")
+        if stat.S_IMODE(root_stat.st_mode) & 0o077:
+            os.chmod(root, 0o700)
+    return root
+
+
+def mutation_lock_path(repo_root: Path) -> Path:
+    canonical = repo_root.resolve(strict=False)
+    digest = hashlib.sha256(str(canonical).encode("utf-8")).hexdigest()
+    return mutation_lock_dir() / f"{digest}.lock"
 
 
 def acquire_mutation_lock(repo_root: Path) -> MutationApplyLock:
     import fcntl
 
-    lock_path = git_control_dir(repo_root) / "speckit-pro-mutation.lock"
+    lock_path = mutation_lock_path(repo_root)
     fd = os.open(
         lock_path,
         os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0),
@@ -134,6 +135,49 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
         )
         return response("input_error", request_id=request.request_id, diagnostics=[diag])
 
+    if request.mode not in {"dry_run", "apply"}:
+        diag = diagnostic(
+            "unsupported_mode",
+            "generate-spec-index-write requires dry_run or apply mode",
+            details={"helper_id": entry.helper_id, "mode": request.mode},
+            remediation_summary="Choose a registered mutation mode.",
+            remediation_actions=["Use dry_run to inspect planned paths.", "Use apply to regenerate stale maps."],
+        )
+        return response("input_error", request_id=request.request_id, diagnostics=[diag])
+
+    mutation_lock: MutationApplyLock | None = None
+    if request.mode == "apply" and descriptor_mutation_supported():
+        try:
+            mutation_lock = acquire_mutation_lock(invocation_root)
+        except OSError as exc:
+            mutation = empty_mutation(request.mode)
+            mutation["mutation_status"] = "blocked"
+            diag = diagnostic(
+                "mutation_lock_unavailable",
+                "generate-spec-index-write could not acquire the repository mutation lock",
+                details={"helper_id": entry.helper_id, "error": type(exc).__name__},
+                remediation_summary="Retry after the repository mutation lock directory is available and stable.",
+                remediation_actions=["Inspect the application mutation lock directory.", "Retry apply mode after concurrent mutation work finishes."],
+            )
+            return response(
+                "expected_failure",
+                request_id=request.request_id,
+                data=_spec_index_write_data(
+                    entry,
+                    request,
+                    mutation,
+                    specs_present=False,
+                    rendered=[],
+                    writes_state=False,
+                ),
+                diagnostics=[diag],
+            )
+
+    def spec_index_response(status: str, **kwargs: Any) -> dict[str, Any]:
+        if mutation_lock is not None:
+            mutation_lock.release()
+        return response(status, **kwargs)
+
     try:
         rendered, specs_present = render_spec_index(target_root)
     except SpecIndexRenderError as exc:
@@ -144,7 +188,7 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
             remediation_summary="Repair the reported generated-zone marker or PRS manifest before writing.",
             remediation_actions=["Correct the malformed source file.", "Run generate-spec-index-check again."],
         )
-        return response("input_error", request_id=request.request_id, diagnostics=[diag])
+        return spec_index_response("input_error", request_id=request.request_id, diagnostics=[diag])
 
     changed = [record for record in rendered if record.changed]
     operations = _spec_index_write_operations(changed, target_root)
@@ -167,20 +211,10 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
             ),
         )
 
-    if request.mode != "apply":
-        diag = diagnostic(
-            "unsupported_mode",
-            "generate-spec-index-write requires dry_run or apply mode",
-            details={"helper_id": entry.helper_id, "mode": request.mode},
-            remediation_summary="Choose a registered mutation mode.",
-            remediation_actions=["Use dry_run to inspect planned paths.", "Use apply to regenerate stale maps."],
-        )
-        return response("input_error", request_id=request.request_id, diagnostics=[diag])
-
     if changed and not descriptor_mutation_supported():
         mutation["mutation_status"] = "blocked"
         diag = unsupported_mutation_platform(entry.helper_id)
-        return response(
+        return spec_index_response(
             "expected_failure",
             request_id=request.request_id,
             data=_spec_index_write_data(
@@ -194,42 +228,10 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
             diagnostics=[diag],
         )
 
-    mutation_lock: MutationApplyLock | None = None
-    if changed:
-        try:
-            mutation_lock = acquire_mutation_lock(invocation_root)
-        except OSError as exc:
-            mutation["mutation_status"] = "blocked"
-            diag = diagnostic(
-                "mutation_lock_unavailable",
-                "generate-spec-index-write could not acquire the repository mutation lock",
-                details={"helper_id": entry.helper_id, "error": type(exc).__name__},
-                remediation_summary="Retry after the repository control directory is available and stable.",
-                remediation_actions=["Inspect the repository .git control path.", "Retry apply mode after concurrent mutation work finishes."],
-            )
-            return response(
-                "expected_failure",
-                request_id=request.request_id,
-                data=_spec_index_write_data(
-                    entry,
-                    request,
-                    mutation,
-                    specs_present=specs_present,
-                    rendered=rendered,
-                    writes_state=False,
-                ),
-                diagnostics=[diag],
-            )
-
-    def locked_spec_index_response(status: str, **kwargs: Any) -> dict[str, Any]:
-        if mutation_lock is not None:
-            mutation_lock.release()
-        return response(status, **kwargs)
-
     conflict = _spec_index_source_conflict(changed, target_root)
     if conflict is not None:
         mutation["mutation_status"] = "blocked"
-        return locked_spec_index_response(
+        return spec_index_response(
             "expected_failure",
             request_id=request.request_id,
             data=_spec_index_write_data(
@@ -246,7 +248,7 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
     snapshots = capture_write_snapshots(operations, target_root)
     if isinstance(snapshots, dict) and "diagnostic" in snapshots:
         mutation["mutation_status"] = "blocked"
-        return locked_spec_index_response(
+        return spec_index_response(
             "expected_failure",
             request_id=request.request_id,
             data=_spec_index_write_data(
@@ -280,7 +282,7 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
                 remediation_summary="Retry from a stable generated-map tree.",
                 remediation_actions=mutation["manual_remediation"],
             )
-            return locked_spec_index_response(
+            return spec_index_response(
                 "expected_failure",
                 request_id=request.request_id,
                 data=_spec_index_write_data(
@@ -313,7 +315,7 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
                 remediation_summary="Reconcile any applied map writes and fix the target path before retrying.",
                 remediation_actions=mutation["manual_remediation"],
             )
-            return locked_spec_index_response(
+            return spec_index_response(
                 "expected_failure",
                 request_id=request.request_id,
                 data=_spec_index_write_data(
@@ -330,7 +332,7 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
         mutation["touched_paths"].append(rel)
 
     mutation["mutation_status"] = "applied" if changed else "no_op"
-    return locked_spec_index_response(
+    return spec_index_response(
         "ok",
         request_id=request.request_id,
         data=_spec_index_write_data(

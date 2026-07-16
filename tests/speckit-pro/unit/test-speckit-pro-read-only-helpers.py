@@ -1072,6 +1072,22 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertEqual(response["data"]["promotion_status"], "python_authoritative")
         self.assertEqual(stderr_records, [])
 
+    def test_validate_pr_packet_reports_unsupported_platform_for_descriptorless_reads(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
+            self.skipTest("validate-pr-packet unsupported-platform case")
+        from speckit_pro_runner.helpers import read_only
+
+        valid_packet_path = PR_PACKET_FIXTURE_DIR / "valid-single.json"
+        with patch.object(read_only, "descriptor_read_supported", return_value=False):
+            result = read_only.validate_pr_packet_read_only(
+                {"packet_path": valid_packet_path.relative_to(REPO_ROOT).as_posix()},
+                REPO_ROOT,
+            )
+        payload = json.loads(result["stdout"])
+        self.assertEqual(result["exit_code"], 2)
+        self.assertEqual(payload["error_class"], "unsupported_platform")
+        self.assertEqual(payload["failures"][0]["rule"], "input.unsupported_platform")
+
     def test_validate_pr_packet_rejects_packet_id_that_disagrees_with_filename(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
             self.skipTest("validate-pr-packet identity case")
