@@ -1199,6 +1199,7 @@ def _spec_index_directories(specs_dir: Path, repo_root: Path) -> list[Path]:
                 try:
                     os.close(fd)
                 except OSError:
+                    # Best-effort descriptor cleanup; the scan result is already determined.
                     pass
             continue
         try:
@@ -1380,6 +1381,7 @@ def _spec_index_walk_regular_files(root: Path, repo_root: Path) -> list[Path]:
                 try:
                     os.close(fd)
                 except OSError:
+                    # Best-effort descriptor cleanup; traversal will fail separately if the path is unsafe.
                     pass
                 visit(entry)
             elif stat.S_ISREG(mode):
@@ -3402,6 +3404,7 @@ def trusted_file_exists(path: Path, repo_root: Path) -> bool:
         try:
             os.close(fd)
         except OSError:
+            # Best-effort descriptor cleanup; existence checks should not fail on close errors.
             pass
 
 
@@ -3416,6 +3419,7 @@ def trusted_dir_exists(path: Path, repo_root: Path) -> bool:
             try:
                 os.close(fd)
             except OSError:
+                # Best-effort descriptor cleanup; existence checks should not fail on close errors.
                 pass
     return path.is_dir() and path_stays_in_trust_boundary(path, repo_root)
 
@@ -3459,6 +3463,7 @@ def trusted_bytes_descriptor(path: Path, repo_root: Path) -> bytes | None:
         try:
             os.close(fd)
         except OSError:
+            # Best-effort descriptor cleanup after a completed or failed read.
             pass
 
 
@@ -3481,6 +3486,7 @@ def trusted_regular_file_bytes_and_mode(path: Path, repo_root: Path) -> tuple[by
         try:
             os.close(fd)
         except OSError:
+            # Best-effort descriptor cleanup after a completed or failed snapshot.
             pass
 
 
@@ -3573,6 +3579,7 @@ def trusted_open_directory(path: Path, repo_root: Path) -> int | None:
         try:
             os.close(current_fd)
         except OSError:
+            # Best-effort cleanup while returning an unsupported/unsafe directory result.
             pass
         return None
 
@@ -3589,6 +3596,7 @@ def trusted_dir_entries(path: Path, repo_root: Path) -> list[str] | None:
         try:
             os.close(fd)
         except OSError:
+            # Best-effort descriptor cleanup after listing directory entries.
             pass
 
 
