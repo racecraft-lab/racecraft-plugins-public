@@ -739,6 +739,15 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.assertEqual(response["data"]["stdout_json"]["failures"][0]["rule"], "input.error")
             self.assertEqual(stderr_records, response["diagnostics"])
 
+            packet.write_bytes(b'{"schema_version":"1.0.0","packet_id":"bad-\xff"}\n')
+            completed, response, stderr_records = run_runner(
+                helper_request("validate-pr-packet-read-only", {"packet_path": packet.relative_to(REPO_ROOT).as_posix()})
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assert_response(response, "input_error", 2)
+            self.assertEqual(response["data"]["stdout_json"]["failures"][0]["rule"], "input.utf8")
+            self.assertEqual(stderr_records, response["diagnostics"])
+
             packet.write_text("[]\n", encoding="utf-8")
             completed, response, stderr_records = run_runner(
                 helper_request("validate-pr-packet-read-only", {"packet_path": packet.relative_to(REPO_ROOT).as_posix()})
@@ -792,6 +801,55 @@ class ReadOnlyHelperTests(unittest.TestCase):
         missing_fields = {failure["field"] for failure in failures}
         self.assertTrue({"target", "generated_title", "body_file"}.issubset(missing_fields))
         self.assertEqual(stderr_records, response["diagnostics"])
+
+    def test_validate_pr_packet_enforces_validation_result_source_fingerprint_schema(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
+            self.skipTest("validate-pr-packet schema source fingerprint case")
+        valid_packet_path = PR_PACKET_FIXTURE_DIR / "valid-single.json"
+        completed, response, _stderr_records = run_runner(
+            helper_request(
+                "validate-pr-packet-read-only",
+                {"packet_path": valid_packet_path.relative_to(REPO_ROOT).as_posix()},
+            )
+        )
+        self.assertEqual(completed.returncode, 0)
+        validation_result = response["data"]["stdout_json"]
+        valid_packet = json.loads(valid_packet_path.read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            packet = Path(project) / "source-fingerprints.json"
+            for name, source_fingerprints, expected_rule in (
+                ("empty", {}, "packet.schema.min_properties"),
+                ("malformed", {"packet": {"path": "source-fingerprints.json"}}, "packet.schema.required"),
+            ):
+                with self.subTest(name=name):
+                    packet.write_text(
+                        json.dumps(
+                            {
+                                **valid_packet,
+                                "packet_id": "source-fingerprints",
+                                "validation_result_path": (
+                                    "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/"
+                                    "pr-packets/source-fingerprints/validation.json"
+                                ),
+                                "validation_result": {
+                                    **validation_result,
+                                    "source_fingerprints": source_fingerprints,
+                                },
+                            }
+                        ),
+                        encoding="utf-8",
+                    )
+                    completed, response, stderr_records = run_runner(
+                        helper_request(
+                            "validate-pr-packet-read-only",
+                            {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                        )
+                    )
+                    self.assertEqual(completed.returncode, 1)
+                    self.assert_response(response, "expected_failure", 1)
+                    rules = {failure["rule"] for failure in response["data"]["stdout_json"]["failures"]}
+                    self.assertIn(expected_rule, rules)
+                    self.assertEqual(stderr_records, response["diagnostics"])
 
     def test_pr_packet_schema_accepts_established_scopes_and_rejects_mixed_case(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
@@ -885,6 +943,37 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertEqual(result["exit_code"], 1)
         failures = json.loads(result["stdout"])["failures"]
         self.assertIn("body.readable", {failure["rule"] for failure in failures})
+
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            body = project_path / "invalid-utf8.md"
+            body.write_bytes((PR_PACKET_FIXTURE_DIR / "bodies" / "valid-single.md").read_bytes() + b"\xff")
+            packet = project_path / "invalid-body-utf8.json"
+            packet.write_text(
+                json.dumps(
+                    {
+                        **valid_packet,
+                        "packet_id": "invalid-body-utf8",
+                        "body_file": body.relative_to(REPO_ROOT).as_posix(),
+                        "validation_result_path": (
+                            "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/"
+                            "pr-packets/invalid-body-utf8/validation.json"
+                        ),
+                    }
+                ),
+                encoding="utf-8",
+            )
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-read-only",
+                    {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                )
+            )
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure", 1)
+        failures = response["data"]["stdout_json"]["failures"]
+        self.assertIn("body.utf8", {failure["rule"] for failure in failures})
+        self.assertEqual(stderr_records, response["diagnostics"])
 
     def test_validate_pr_packet_rejects_validation_result_path_not_owned_by_packet(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":

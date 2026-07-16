@@ -2008,6 +2008,10 @@ def json_schema_failures(
     if isinstance(value, dict):
         properties = schema.get("properties") if isinstance(schema.get("properties"), dict) else {}
         required = schema.get("required") if isinstance(schema.get("required"), list) else []
+        minimum_properties = schema.get("minProperties")
+        if isinstance(minimum_properties, int) and len(value) < minimum_properties:
+            noun = "property" if minimum_properties == 1 else "properties"
+            failures.append(schema_failure("min_properties", field, f"Object must contain at least {minimum_properties} {noun}."))
         for key in required:
             if isinstance(key, str) and key not in value:
                 missing_field = schema_child_field(field, key)
@@ -2032,6 +2036,17 @@ def json_schema_failures(
                         "additional_properties",
                         extra_field,
                         f"Schema does not allow packet field: {extra_field}.",
+                    )
+                )
+        elif isinstance(schema.get("additionalProperties"), dict):
+            additional_schema = schema["additionalProperties"]
+            for key in sorted(value.keys() - properties.keys()):
+                failures.extend(
+                    json_schema_failures(
+                        value[key],
+                        additional_schema,
+                        root_schema,
+                        schema_child_field(field, str(key)),
                     )
                 )
 
@@ -2321,7 +2336,21 @@ def pr_packet_body_validation(data: dict[str, Any], repo_root: Path) -> dict[str
             "body_path": body_path,
             "body_bytes": None,
         }
-    body_text = body_bytes.decode("utf-8", errors="replace")
+    try:
+        body_text = body_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        return {
+            "failures": [
+                {
+                    "rule": "body.utf8",
+                    "field": "body_file",
+                    "message": f"Rendered body file must be valid UTF-8: {body_file}",
+                }
+            ],
+            "body_required": True,
+            "body_path": body_path,
+            "body_bytes": body_bytes,
+        }
     structure_failures = packet_body_structure_failures(data, body_text)
     failures = structure_failures[:]
     fingerprint = data.get("protected_body_fingerprint")
@@ -2358,7 +2387,13 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
         obj = packet_result("failed", "input_error", 2, packet_id, None, None, None, "no-path", True, stderr_line, [{"rule": "input.error", "field": "packet", "message": f"packet is unreadable: {raw}"}], ["[input.error] Provide a readable JSON PR packet with a feature-local validation_result_path."])
         return make_result(pretty_json_text(obj), stderr_line + "\n", 2)
     try:
-        data = json.loads(packet_bytes.decode("utf-8", errors="replace"))
+        packet_text = packet_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        stderr_line = f"validate-pr-packet-read-only: input_error: {packet_id}: input.error: no-path"
+        obj = packet_result("failed", "input_error", 2, packet_id, None, None, None, "no-path", True, stderr_line, [{"rule": "input.utf8", "field": "packet", "message": f"packet JSON must be valid UTF-8: {raw}"}], ["[input.utf8] Save the PR packet JSON as valid UTF-8 and retry validation."])
+        return make_result(pretty_json_text(obj), stderr_line + "\n", 2)
+    try:
+        data = json.loads(packet_text)
     except json.JSONDecodeError:
         stderr_line = f"validate-pr-packet-read-only: input_error: {packet_id}: input.error: no-path"
         obj = packet_result("failed", "input_error", 2, packet_id, None, None, None, "no-path", True, stderr_line, [{"rule": "input.error", "field": "packet", "message": f"packet JSON is malformed: {raw}"}], ["[input.error] Provide a readable JSON PR packet with a feature-local validation_result_path."])

@@ -301,6 +301,12 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
     elif mode not in {"single", "split"}:
         return invalid_packet_input("mode must be single or split when provided", field="mode")
 
+    uat = {
+        "how_to_uat": markdown_block(inputs.get("how_to_uat"), "No manual UAT runbook was provided; use verification evidence for this PR."),
+        "uat_runbook_heading": "## UAT Runbook",
+        "uat_source": str(inputs.get("uat_source") or "packet-input"),
+    }
+
     body = inputs.get("body")
     if isinstance(body, str) and body.strip():
         rendered_body = ensure_final_newline(body)
@@ -311,7 +317,7 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
             what_changed=markdown_list(inputs.get("what_changed"), ["See changed-file scope evidence in the packet."]),
             why_it_matters=markdown_block(inputs.get("why_it_matters"), "This prepares the completed SpecKit work for review."),
             how_to_review=markdown_list(inputs.get("how_to_review"), ["Review the changed files and verification evidence in order."]),
-            how_to_uat=markdown_block(inputs.get("how_to_uat"), "No manual UAT runbook was provided; use verification evidence for this PR."),
+            how_to_uat=uat["how_to_uat"],
             verification=markdown_list(inputs.get("verification"), [item["summary"] for item in verification_evidence]),
             scope=markdown_list(inputs.get("scope"), scope_evidence["changed_files"]),
             known_gaps=markdown_list(inputs.get("known_gaps"), ["No known gaps for this PR."]),
@@ -322,6 +328,7 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
             "generated_title": generated_title,
             "required_headings": required_headings(),
             "editable_fields": editable_fields(),
+            "uat": uat,
         },
         rendered_body,
     )
@@ -345,11 +352,7 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
         "required_headings": required_headings(),
         "verification_evidence": verification_evidence,
         "scope_evidence": scope_evidence,
-        "uat": {
-            "how_to_uat": markdown_block(inputs.get("how_to_uat"), "No manual UAT runbook was provided; use verification evidence for this PR."),
-            "uat_runbook_heading": "## UAT Runbook",
-            "uat_source": str(inputs.get("uat_source") or "packet-input"),
-        },
+        "uat": uat,
         "source_markers": source_markers,
         "editable_fields": editable_fields(),
         "protected_body_fingerprint": {

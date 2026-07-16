@@ -1138,8 +1138,14 @@ class MutationHelperTests(unittest.TestCase):
             )
             real_write = mutation.write_file_atomic
 
-            def mutate_source_after_write(target: Path, content: str, *, trust_root: Path | None = None) -> dict[str, object]:
-                result = real_write(target, content, trust_root=trust_root)
+            def mutate_source_after_write(
+                target: Path,
+                content: str,
+                *,
+                trust_root: Path | None = None,
+                expected_snapshot: dict[str, object] | None = None,
+            ) -> dict[str, object]:
+                result = real_write(target, content, trust_root=trust_root, expected_snapshot=expected_snapshot)
                 source.write_text("changed\n", encoding="utf-8")
                 return result
 
@@ -1182,6 +1188,56 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(diag["code"], "source_changed")
             self.assertEqual(errors, ["target.md:source_changed"])
             self.assertEqual(target.read_text(encoding="utf-8"), "concurrent\n")
+
+    def test_apply_rejects_target_swap_between_snapshot_and_replace(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            target = git_root / "target.md"
+            target.write_text("original\n", encoding="utf-8")
+            self.run_git(git_root, "add", "target.md")
+            self.run_git(git_root, "commit", "--quiet", "-m", "target")
+            calls = 0
+            real_ensure = mutation.ensure_safe_write_target_fd
+
+            def swap_before_final_guard(parent_fd: int, name: str) -> None:
+                nonlocal calls
+                calls += 1
+                if calls == 2:
+                    target.write_text("concurrent\n", encoding="utf-8")
+                real_ensure(parent_fd, name)
+
+            request = RunnerRequest(
+                "test-target-swap-before-replace",
+                "mutation-foundation",
+                "mutation-foundation",
+                "apply",
+                {
+                    "operations": [
+                        {
+                            "operation_id": "update-target",
+                            "kind": "write_file",
+                            "target": "target.md",
+                            "content": "updated\n",
+                        }
+                    ]
+                },
+            )
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with patch.object(mutation, "ensure_safe_write_target_fd", side_effect=swap_before_final_guard):
+                    response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["source_changed"])
+            self.assertEqual(target.read_text(encoding="utf-8"), "concurrent\n")
+            self.assertFalse(response["data"]["mutation"]["live_mutation"])
+            self.assertFalse(response["data"]["writes_state"])
 
     def test_write_failure_cleanup_errors_mark_writes_state(self) -> None:
         from speckit_pro_runner.envelope import RunnerRequest
@@ -1283,6 +1339,19 @@ class MutationHelperTests(unittest.TestCase):
             (residual_dir / "residual.txt").write_text("leftover\n", encoding="utf-8")
             cleanup_errors = mutation.remove_created_parent_dirs(["nested", "nested/created"], git_root)
             self.assertEqual(cleanup_errors, ["nested/created:OSError", "nested:OSError"])
+
+            with tempfile.TemporaryDirectory() as outside:
+                outside_root = Path(outside)
+                outside_created = outside_root / "created"
+                outside_created.mkdir()
+                swapped = git_root / "swapped"
+                try:
+                    swapped.symlink_to(outside_root, target_is_directory=True)
+                except (OSError, NotImplementedError):
+                    self.skipTest("symlink creation is unavailable")
+                cleanup_errors = mutation.remove_created_parent_dirs(["swapped", "swapped/created"], git_root)
+                self.assertTrue(outside_created.is_dir())
+                self.assertTrue(any(error.startswith("swapped/created:") for error in cleanup_errors))
 
     def test_doctor_preflight_detects_missing_files_and_repair_uses_fake_home(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
@@ -1589,6 +1658,8 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(set(persisted["source_fingerprints"]), {"body", "packet"})
 
     def test_pr_packet_output_rejects_mismatched_paths_invalid_mode_and_invalid_body(self) -> None:
+        from speckit_pro_runner.helpers.pr_emission import build_packet_body
+
         base_inputs = {
             "packet_path": "specs/prsg-999-packet/.process/pr-packets/prsg-999.json",
             "source_feature_dir": "specs/prsg-999-packet",
@@ -1599,6 +1670,17 @@ class MutationHelperTests(unittest.TestCase):
             "changed_files": ["specs/prsg-999-packet/spec.md"],
             "verification": ["python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py passed"],
         }
+        body_without_uat_runbook = build_packet_body(
+            "feat(PRSG-999): Generate reviewer packet",
+            summary="Summary.",
+            what_changed="- Change.",
+            why_it_matters="Reason.",
+            how_to_review="- Review.",
+            how_to_uat="No manual UAT.",
+            verification="- Tests passed.",
+            scope="- specs/prsg-999-packet/spec.md",
+            known_gaps="- None.",
+        ).replace("\n## UAT Runbook\n\nNo manual UAT.\n", "\n", 1)
         cases = {
             "feature_mismatch": {"source_feature_dir": "specs/other-feature"},
             "packet_id_mismatch": {"packet_id": "other-packet"},
@@ -1606,6 +1688,7 @@ class MutationHelperTests(unittest.TestCase):
             "validation_escape": {"validation_result_path": "specs/prsg-999-packet/.process/pr-packets/other/validation.json"},
             "invalid_mode": {"mode": "splti"},
             "invalid_body": {"body": "hello\n"},
+            "custom_body_missing_uat_runbook": {"body": body_without_uat_runbook},
             "invalid_scope_evidence": {"scope_evidence": {"changed_files": ["README.md"]}},
             "invalid_verification_evidence": {"verification_evidence": [{"kind": "verification", "source": "tests"}]},
             "invalid_source_markers": {"source_markers": [{"marker_id": "prsg-999", "source": "specs/prsg-999-packet"}]},

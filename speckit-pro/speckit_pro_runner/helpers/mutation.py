@@ -29,6 +29,34 @@ from .read_only import (
 DEFAULT_ROLLBACK = "Review touched_paths and restore the previous file content before retrying."
 
 
+class WritePreconditionChanged(OSError):
+    """Raised when a write target no longer matches its captured snapshot."""
+
+
+class MutationApplyLock:
+    def __init__(self, fd: int) -> None:
+        self.fd = fd
+        self.released = False
+
+    def release(self) -> None:
+        if self.released:
+            return
+        try:
+            import fcntl
+
+            fcntl.flock(self.fd, fcntl.LOCK_UN)
+        finally:
+            os.close(self.fd)
+            self.released = True
+
+    def __del__(self) -> None:
+        if not self.released:
+            try:
+                self.release()
+            except OSError:
+                pass
+
+
 def atomic_write_cleanup_errors(exc: OSError) -> list[str]:
     errors = getattr(exc, "cleanup_errors", None)
     return errors if isinstance(errors, list) else []
@@ -46,6 +74,46 @@ def unsupported_mutation_platform(helper_id: str) -> dict[str, Any]:
         remediation_summary="Run apply-mode mutation helpers on a platform with descriptor-relative no-follow filesystem APIs.",
         remediation_actions=["Retry on Linux or macOS.", "Use dry_run on unsupported platforms."],
     )
+
+
+def git_control_dir(repo_root: Path) -> Path:
+    dotgit = repo_root / ".git"
+    mode = dotgit.lstat().st_mode
+    if stat.S_ISLNK(mode):
+        raise OSError("unsafe git control path")
+    if stat.S_ISDIR(mode):
+        return dotgit
+    if not stat.S_ISREG(mode):
+        raise OSError("unsupported git control path")
+    text = dotgit.read_text(encoding="utf-8")
+    prefix = "gitdir:"
+    if not text.startswith(prefix):
+        raise OSError("unsupported git control file")
+    raw = text[len(prefix) :].strip()
+    if not raw:
+        raise OSError("empty git control path")
+    path = Path(raw)
+    git_dir = path if path.is_absolute() else (repo_root / path)
+    if not git_dir.is_dir():
+        raise OSError("missing git control directory")
+    return git_dir
+
+
+def acquire_mutation_lock(repo_root: Path) -> MutationApplyLock:
+    import fcntl
+
+    lock_path = git_control_dir(repo_root) / "speckit-pro-mutation.lock"
+    fd = os.open(
+        lock_path,
+        os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0),
+        0o600,
+    )
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+    except Exception:
+        os.close(fd)
+        raise
+    return MutationApplyLock(fd)
 
 
 def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
@@ -404,10 +472,27 @@ def run_mutation_helper(
         )
         return response("input_error", request_id=request.request_id, data=base_data, diagnostics=[diag])
 
+    try:
+        mutation_lock = acquire_mutation_lock(repo_root)
+    except OSError as exc:
+        mutation["mutation_status"] = "blocked"
+        diag = diagnostic(
+            "mutation_lock_unavailable",
+            "mutation helper could not acquire the repository mutation lock",
+            details={"helper_id": entry.helper_id, "error": type(exc).__name__},
+            remediation_summary="Retry after the repository control directory is available and stable.",
+            remediation_actions=["Inspect the repository .git control path.", "Retry apply mode after concurrent mutation work finishes."],
+        )
+        return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[diag])
+
+    def locked_response(status: str, **kwargs: Any) -> dict[str, Any]:
+        mutation_lock.release()
+        return response(status, **kwargs)
+
     snapshots = capture_write_snapshots(normalized, repo_root)
     if isinstance(snapshots, dict) and "diagnostic" in snapshots:
         mutation["mutation_status"] = "blocked"
-        return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[snapshots["diagnostic"]])
+        return locked_response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[snapshots["diagnostic"]])
 
     for index, op in enumerate(normalized):
         if isinstance(simulate_failure_after, int) and index >= simulate_failure_after:
@@ -430,7 +515,7 @@ def run_mutation_helper(
                 remediation_actions=mutation["manual_remediation"],
             )
             base_data["writes_state"] = bool(rollback_errors)
-            return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[diag])
+            return locked_response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[diag])
 
         if op["kind"] == "write_file":
             target = resolve_candidate_path(op["target"], repo_root)
@@ -448,7 +533,7 @@ def run_mutation_helper(
                 if rollback_errors:
                     mutation["manual_remediation"].append("Manual rollback is required for the reported rollback errors.")
                 base_data["writes_state"] = bool(rollback_errors)
-                return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[source_precondition_changed])
+                return locked_response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[source_precondition_changed])
             source_changed = snapshot_changed_diagnostic(rel, target, snapshots, repo_root)
             if source_changed is not None:
                 mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
@@ -462,10 +547,36 @@ def run_mutation_helper(
                 if rollback_errors:
                     mutation["manual_remediation"].append("Manual rollback is required for the reported rollback errors.")
                 base_data["writes_state"] = bool(rollback_errors)
-                return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[source_changed])
+                return locked_response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[source_changed])
             try:
                 mutation["live_mutation"] = True
-                write_result = write_file_atomic(target, str(op["content"]), trust_root=repo_root)
+                write_result = write_file_atomic(target, str(op["content"]), trust_root=repo_root, expected_snapshot=snapshots.get(rel))
+            except WritePreconditionChanged:
+                mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
+                mutation["failure_operation"] = operation_record(op)
+                rollback_errors = rollback_applied_writes(mutation["touched_paths"], snapshots, repo_root)
+                mutation["live_mutation"] = bool(mutation["applied_operations"])
+                mutation["manual_remediation"] = [
+                    "Inspect the target path and parent directory.",
+                    "Retry after the write target is stable.",
+                ]
+                if rollback_errors:
+                    mutation["manual_remediation"].append("Manual rollback is required for the reported rollback errors.")
+                base_data["writes_state"] = bool(rollback_errors)
+                return locked_response(
+                    "expected_failure",
+                    request_id=request.request_id,
+                    data=base_data,
+                    diagnostics=[
+                        diagnostic(
+                            "source_changed",
+                            "mutation helper refused to overwrite a target that changed during atomic write",
+                            details={"target": rel},
+                            remediation_summary="Retry from a stable repository tree.",
+                            remediation_actions=["Inspect the target path.", "Retry apply mode after concurrent edits stop."],
+                        )
+                    ],
+                )
             except OSError as exc:
                 mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
                 mutation["failure_operation"] = operation_record(op)
@@ -492,7 +603,7 @@ def run_mutation_helper(
                     remediation_actions=mutation["manual_remediation"],
                 )
                 base_data["writes_state"] = bool(rollback_errors)
-                return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[diag])
+                return locked_response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[diag])
             mutation["applied_operations"].append(operation_record(op))
             mutation["touched_paths"].append(rel)
             applied_snapshot = snapshot_changed_diagnostic_after_write(
@@ -515,7 +626,7 @@ def run_mutation_helper(
                 if rollback_errors:
                     mutation["manual_remediation"].append("Manual rollback is required for the reported rollback errors.")
                 base_data["writes_state"] = bool(rollback_errors)
-                return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[applied_snapshot])
+                return locked_response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[applied_snapshot])
             source_postcondition_changed = operation_source_fingerprint_diagnostic(op, repo_root)
             if source_postcondition_changed is not None:
                 mutation["mutation_status"] = "partial_failure"
@@ -529,14 +640,14 @@ def run_mutation_helper(
                 if rollback_errors:
                     mutation["manual_remediation"].append("Manual rollback is required for the reported rollback errors.")
                 base_data["writes_state"] = bool(rollback_errors)
-                return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[source_postcondition_changed])
+                return locked_response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[source_postcondition_changed])
         else:
             mutation["skipped_operations"].append(operation_record(op))
 
     mutation["mutation_status"] = "applied" if mutation["applied_operations"] else "no_op"
     mutation["live_mutation"] = bool(mutation["applied_operations"])
     base_data["writes_state"] = bool(mutation["applied_operations"])
-    return response("ok", request_id=request.request_id, data=base_data)
+    return locked_response("ok", request_id=request.request_id, data=base_data)
 
 
 def normalize_operations(raw: Any) -> list[dict[str, Any]] | dict[str, Any]:
@@ -857,7 +968,7 @@ def rollback_applied_writes(touched_paths: list[str], snapshots: dict[str, dict[
                 errors.append(f"{rel}:source_changed")
                 continue
             if not original.get("exists"):
-                safe_unlink(target, repo_root)
+                safe_unlink(target, repo_root, expected_snapshot=applied_snapshot_for_rollback(original))
                 errors.extend(remove_created_parent_dirs(original.get("created_parent_dirs", []), repo_root))
             else:
                 write_bytes_atomic(
@@ -865,13 +976,24 @@ def rollback_applied_writes(touched_paths: list[str], snapshots: dict[str, dict[
                     original["content"],
                     trust_root=repo_root,
                     mode=original.get("mode"),
+                    expected_snapshot=applied_snapshot_for_rollback(original),
                 )
+        except WritePreconditionChanged:
+            errors.append(f"{rel}:source_changed")
         except OSError as exc:
             errors.append(f"{rel}:{type(exc).__name__}")
     return errors
 
 
-def safe_unlink(target: Path, trust_root: Path) -> None:
+def applied_snapshot_for_rollback(original: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "exists": True,
+        "digest": original.get("applied_digest"),
+        "mode": original.get("applied_mode"),
+    }
+
+
+def safe_unlink(target: Path, trust_root: Path, *, expected_snapshot: dict[str, Any] | None = None) -> None:
     opened = open_safe_parent_fd(target, trust_root, create=False)
     if opened is None:
         return
@@ -883,6 +1005,8 @@ def safe_unlink(target: Path, trust_root: Path) -> None:
             return
         if stat.S_ISDIR(mode):
             raise OSError("refusing to unlink directory")
+        if expected_snapshot is not None:
+            ensure_write_target_matches_snapshot_fd(parent_fd, target_name, expected_snapshot)
         os.unlink(target_name, dir_fd=parent_fd)
         try:
             os.fsync(parent_fd)
@@ -893,11 +1017,29 @@ def safe_unlink(target: Path, trust_root: Path) -> None:
         os.close(parent_fd)
 
 
-def write_file_atomic(target: Path, content: str, *, trust_root: Path | None = None) -> dict[str, Any]:
-    return write_bytes_atomic(target, ensure_final_newline(content).encode("utf-8"), trust_root=trust_root)
+def write_file_atomic(
+    target: Path,
+    content: str,
+    *,
+    trust_root: Path | None = None,
+    expected_snapshot: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return write_bytes_atomic(
+        target,
+        ensure_final_newline(content).encode("utf-8"),
+        trust_root=trust_root,
+        expected_snapshot=expected_snapshot,
+    )
 
 
-def write_bytes_atomic(target: Path, content: bytes, *, trust_root: Path | None = None, mode: int | None = None) -> dict[str, Any]:
+def write_bytes_atomic(
+    target: Path,
+    content: bytes,
+    *,
+    trust_root: Path | None = None,
+    mode: int | None = None,
+    expected_snapshot: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     created_dirs: list[str] = []
     if trust_root is None:
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -936,6 +1078,8 @@ def write_bytes_atomic(target: Path, content: bytes, *, trust_root: Path | None 
                 os.fsync(fh.fileno())
             if trust_root is not None:
                 ensure_safe_write_target_fd(parent_fd, target_name)
+            if expected_snapshot is not None:
+                ensure_write_target_matches_snapshot_fd(parent_fd, target_name, expected_snapshot)
             os.replace(tmp_name, target_name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
             replaced = True
             try:
@@ -1089,6 +1233,43 @@ def snapshot_write_target(target: Path, repo_root: Path) -> dict[str, Any]:
         }
     finally:
         os.close(parent_fd)
+
+
+def snapshot_write_target_fd(parent_fd: int, target_name: str) -> dict[str, Any]:
+    try:
+        fd = os.open(target_name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0), dir_fd=parent_fd)
+    except FileNotFoundError:
+        return {"exists": False, "content": None, "mode": None, "digest": None}
+    try:
+        file_stat = os.fstat(fd)
+        if stat.S_ISLNK(file_stat.st_mode) or not stat.S_ISREG(file_stat.st_mode):
+            raise OSError("unsafe existing target")
+        with os.fdopen(fd, "rb") as stream:
+            fd = -1
+            content = stream.read()
+    finally:
+        if fd >= 0:
+            os.close(fd)
+    return {
+        "exists": True,
+        "content": content,
+        "mode": stat.S_IMODE(file_stat.st_mode),
+        "digest": hashlib.sha256(content).hexdigest(),
+    }
+
+
+def write_target_matches_snapshot(current: dict[str, Any], expected: dict[str, Any]) -> bool:
+    expected_exists = bool(expected.get("exists"))
+    if expected_exists != bool(current.get("exists")):
+        return False
+    if not expected_exists:
+        return True
+    return current.get("digest") == expected.get("digest") and current.get("mode") == expected.get("mode")
+
+
+def ensure_write_target_matches_snapshot_fd(parent_fd: int, target_name: str, expected: dict[str, Any]) -> None:
+    if not write_target_matches_snapshot(snapshot_write_target_fd(parent_fd, target_name), expected):
+        raise WritePreconditionChanged("write target changed after snapshot capture")
 
 
 def snapshot_changed_diagnostic(rel: str, target: Path, snapshots: dict[str, dict[str, Any]], repo_root: Path) -> dict[str, Any] | None:
@@ -1259,9 +1440,21 @@ def remove_created_parent_dirs(relative_dirs: list[str], repo_root: Path) -> lis
     for rel in reversed(relative_dirs):
         if not isinstance(rel, str) or not rel:
             continue
-        path = resolve_candidate_path(rel, repo_root)
+        target = resolve_candidate_path(rel, repo_root)
         try:
-            path.rmdir()
+            opened = open_safe_parent_fd(target, repo_root, create=False)
+            if opened is None:
+                continue
+            parent_fd, target_name, _created_dirs = opened
+            try:
+                os.rmdir(target_name, dir_fd=parent_fd)
+                try:
+                    os.fsync(parent_fd)
+                except OSError:
+                    # Directory fsync is best-effort after cleanup; rmdir already succeeded.
+                    pass
+            finally:
+                os.close(parent_fd)
         except FileNotFoundError:
             continue
         except OSError as exc:
