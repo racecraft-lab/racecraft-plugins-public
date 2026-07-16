@@ -2,7 +2,7 @@
   "workflow_file": "docs/ai/specs/.process/G56R-001-workflow.md",
   "spec_id": "G56R-001",
   "feature_dir": "specs/g56r-001-candidate-route-baseline",
-  "updated_at": "2026-07-16T00:25:00Z",
+  "updated_at": "2026-07-16T00:30:00Z",
   "active_step": "Complete: PR creation skipped - missing feature-local PR packet",
   "settings": {
     "auto_commit": "per-phase",
@@ -410,7 +410,8 @@
         "docs/ai/research/codex-agent-route-candidates.md",
         "specs/g56r-001-candidate-route-baseline/tasks.md",
         "docs/ai/specs/.process/autopilot-state.json"
-      ]
+      ],
+      "canonical_report_commit": "b776814a"
     }
   },
   "plan": [
@@ -615,6 +616,7 @@
       "report": "specs/g56r-001-candidate-route-baseline/retrospective.md",
       "critical_findings": 0,
       "proposed_spec_changes": 0
-    }
+    },
+    "implementation_commit": "b776814a"
   }
 }

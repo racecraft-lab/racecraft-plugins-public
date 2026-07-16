@@ -814,7 +814,7 @@ tests/speckit-pro/layer6-efficiency/       # Read-only fixture-gap inputs
 
 Populate this section only after G7:
 
-- Canonical report commit: Pending implementation commit
+- Canonical report commit: `b776814a`
 - Frozen `official_source_ledger_id`: `OSL-001` through `OSL-009`
 - `agent_route_candidate_manifest` version: `agent_route_candidate_manifest.v0.1`
 - G56R-002 handoff decision: `GO` for capability discovery and telemetry profiling only; `NO-GO` for executable candidate set, route qualification, installer behavior, resolver behavior, preferred routes, and fallback policy
