@@ -793,6 +793,7 @@ def safe_unlink(target: Path, trust_root: Path) -> None:
         try:
             os.fsync(parent_fd)
         except OSError:
+            # Directory fsync is best-effort after unlink; cleanup already succeeded.
             pass
     finally:
         os.close(parent_fd)
@@ -839,6 +840,7 @@ def write_bytes_atomic(target: Path, content: bytes, *, trust_root: Path | None 
         try:
             os.fsync(parent_fd)
         except OSError:
+            # Directory fsync is best-effort after replace; the atomic swap already succeeded.
             pass
     finally:
         if tmp_fd >= 0:
@@ -849,6 +851,7 @@ def write_bytes_atomic(target: Path, content: bytes, *, trust_root: Path | None 
         try:
             os.unlink(tmp_name, dir_fd=parent_fd)
         except FileNotFoundError:
+            # The temp name is absent after successful replace; cleanup is already complete.
             pass
         except OSError:
             # Best-effort cleanup only; the write outcome is already determined.
