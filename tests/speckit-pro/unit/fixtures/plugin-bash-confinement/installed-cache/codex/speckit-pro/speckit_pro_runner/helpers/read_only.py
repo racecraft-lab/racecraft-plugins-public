@@ -3335,7 +3335,6 @@ def trusted_open_regular_file(path: Path, repo_root: Path) -> int | None:
         file_stat = os.fstat(fd)
         if stat.S_ISLNK(file_stat.st_mode) or not stat.S_ISREG(file_stat.st_mode):
             os.close(fd)
-            fd = -1
             return None
         return fd
     except (OSError, NotImplementedError):
