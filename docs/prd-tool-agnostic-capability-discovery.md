@@ -1,10 +1,10 @@
 # PRD: Tool-Agnostic Capability Discovery for SpecKit Pro
 
-**Status**: Draft
+**Status**: Complete / Archived - TACD-001 through TACD-004 shipped
 **Source**: Interactive `speckit-prd` + `grill-me` session on 2026-06-17
 **Created**: 2026-06-17
-**Last updated**: 2026-06-18
-**Target window**: Next SpecKit Pro roadmap slot after DOC-006 archive
+**Last updated**: 2026-07-16
+**Target window**: Completed through TACD-004 on 2026-06-22.
 **Spec ID prefix**: `TACD-###` (Tool-Agnostic Capability Discovery)
 
 ---

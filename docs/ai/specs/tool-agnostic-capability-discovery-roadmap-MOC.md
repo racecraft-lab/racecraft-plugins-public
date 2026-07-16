@@ -2,7 +2,7 @@
 up: "[Tool-Agnostic Capability Discovery Roadmap](tool-agnostic-capability-discovery-technical-roadmap.md)"
 related:
   - "[Tool-Agnostic Capability Discovery PRD](../../prd-tool-agnostic-capability-discovery.md)"
-status: "TACD-004 complete"
+status: "TACD-001 through TACD-004 complete/archived"
 rank:
 spec_id: "tool-agnostic-capability-discovery"
 structureVersion: 1

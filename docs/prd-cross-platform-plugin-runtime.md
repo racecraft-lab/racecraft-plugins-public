@@ -1,8 +1,9 @@
 # PRD: Cross-Platform Plugin Runtime for SpecKit Pro
 
-**Status**: Draft
+**Status**: Complete / Archived - XPLAT-001 through XPLAT-010 complete; public
+native-platform claims remain held by the XPLAT-008 UAT matrix
 **Created**: 2026-06-24
-**Last updated**: 2026-07-07
+**Last updated**: 2026-07-16
 **Owner**: Racecraft Lab
 **Spec ID prefix**: `XPLAT-###`
 **Technical roadmap**: [docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md](ai/specs/cross-platform-plugin-runtime-technical-roadmap.md)
