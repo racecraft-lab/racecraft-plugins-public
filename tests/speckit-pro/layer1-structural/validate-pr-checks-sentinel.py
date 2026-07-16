@@ -51,7 +51,8 @@ WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
 
 CHECKOUT_PIN_RE = re.compile(r"uses: actions/checkout@[0-9a-f]{40}")
 UPLOAD_ARTIFACT_PIN = "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
-SETUP_PYTHON_PIN = "actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405"
+SETUP_PYTHON_PIN = "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1"
+SETUP_PYTHON_VERSION_COMMENT = "# v6.3.0"
 HOSTED_PYTHON_VERSION = 'HOSTED_PYTHON_VERSION: "3.13.14"'
 CONTAINER_IMAGE_PIN = (
     "python:3.11.15-bookworm@sha256:"
@@ -678,7 +679,7 @@ jobs:
             upload_count = sum(EXPECTED_UPLOAD_COUNTS.values())
             self.assertEqual(upload_count, content.count(f"uses: {UPLOAD_ARTIFACT_PIN}"))
             self.assertEqual(6, content.count(f"uses: {SETUP_PYTHON_PIN}"))
-            self.assertEqual(6, content.count("# v6.2.0"))
+            self.assertEqual(6, content.count(SETUP_PYTHON_VERSION_COMMENT))
             self.assertEqual(2, content.count(f"image: {CONTAINER_IMAGE_PIN}"))
             action_refs = re.findall(r"(?m)^\s+uses: ([^\s]+)", content)
             self.assertTrue(action_refs)
