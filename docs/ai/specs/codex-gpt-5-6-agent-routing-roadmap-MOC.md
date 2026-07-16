@@ -4,7 +4,7 @@ related:
   - "[Codex Agent Model Routing and Graceful Fallback PRD](../../prd-codex-gpt-5-6-agent-routing.md)"
   - "[Shared Agent Routing Evidence Parity Contract](agent-routing-parity-contract.md)"
   - "[Shared Candidate Manifest Schema](../research/agent-route-candidate-manifest.schema.json)"
-status: "Draft; G56R-001 in review on PR #360; stacked on evidence foundation PR #362"
+status: "Draft; G56R-001 in review on PR #360; evidence foundation merged via PR #362"
 rank:
 spec_id: "codex-gpt-5-6-agent-routing"
 structureVersion: 1

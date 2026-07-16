@@ -881,7 +881,7 @@ selection and G56R-011 composes the aggregates.
 - **Official documentation discovery:** [Codex manual](https://developers.openai.com/codex/codex-manual.md)
 - **Codex custom agents and subagents:** [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents)
 - **Codex model discovery, provider capabilities, token usage, and conditional reroute events:** [App server](https://learn.chatgpt.com/docs/app-server)
-- **Codex model and reasoning guidance:** [Models](https://learn.chatgpt.com/docs/models)
+- **Codex model and reasoning guidance:** [Models](https://developers.openai.com/codex/models)
 - **Codex configuration fields and inheritance:** [Configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference)
 - **Codex non-interactive JSONL lifecycle, item, and error events:** [Non-interactive mode](https://learn.chatgpt.com/docs/non-interactive-mode)
 - **Current model-selection and prompting guidance:** [Latest model](https://developers.openai.com/api/docs/guides/latest-model)

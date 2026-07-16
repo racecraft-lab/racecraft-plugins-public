@@ -250,14 +250,18 @@ def validate_manifest(manifest: dict[str, object], schema: dict[str, object]) ->
         raise ManifestContractError("immutable_production_comparator: invalid commit SHA")
 
     ids = {
-        field: require_unique_ids(manifest[field], id_field, field)
+        field: (
+            set()
+            if field == "capability_questions" and not manifest[field]
+            else require_unique_ids(manifest[field], id_field, field)
+        )
         for field, id_field in ID_FIELDS.items()
     }
     source_ids = ids["official_source_ledger"]
     effort_ids = ids["effort_surface_records"]
     agent_ids = ids["agent_contracts"]
     fixture_ids = ids["fixture_backlog"]
-    question_ids = ids["capability_questions"] if manifest["capability_questions"] else set()
+    question_ids = ids["capability_questions"]
 
     sources = manifest["official_source_ledger"]
     if {source["source_family"] for source in sources} != SHARED_SOURCE_FAMILIES:
@@ -399,6 +403,27 @@ class AgentRouteResearchParityTests(unittest.TestCase):
         manifest["candidate_routes"][0]["official_source_ledger_ids"] = ["MISSING-SOURCE"]
         with self.assertRaisesRegex(ManifestContractError, "unresolved refs"):
             validate_manifest(manifest, self.schema)
+
+    def test_empty_capability_questions_satisfies_shared_contract(self) -> None:
+        manifest = copy.deepcopy(self.manifests[0])
+        manifest["capability_questions"] = []
+        for route in manifest["candidate_routes"]:
+            route["capability_question_refs"] = []
+
+        validate_manifest(manifest, self.schema)
+
+    def test_other_id_arrays_remain_nonempty(self) -> None:
+        for field in ID_FIELDS:
+            if field == "capability_questions":
+                continue
+            with self.subTest(field=field):
+                manifest = copy.deepcopy(self.manifests[0])
+                manifest[field] = []
+                with self.assertRaisesRegex(
+                    ManifestContractError,
+                    rf"^{field}: expected a non-empty list$",
+                ):
+                    validate_manifest(manifest, self.schema)
 
     def test_platform_only_top_level_field_is_rejected(self) -> None:
         manifest = copy.deepcopy(self.manifests[0])
