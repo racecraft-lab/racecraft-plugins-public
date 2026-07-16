@@ -125,6 +125,20 @@ class GenerateSpecIndexTests(unittest.TestCase):
         self.assertIn("prs.json", error_body["data"]["stderr"]["text"])
         self.assertEqual(error_completed.stderr.count("\n"), 1)
 
+    def test_check_reports_large_json_integer_without_crashing(self) -> None:
+        root = self.copy_fixture("stale-fill")
+        prs = root / "specs" / "prsg-901-stale" / ".process" / "prs.json"
+        payload = json.loads(prs.read_text(encoding="utf-8"))
+        payload["schemaVersion"] = int("9" * 400)
+        prs.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+        completed, body = check_request(root)
+
+        self.assertEqual(completed.returncode, 2, completed.stderr)
+        self.assertEqual(body["status"], "input_error")
+        self.assertIn("unsupported schemaVersion", body["data"]["stderr"]["text"])
+        self.assertNotIn("Traceback", completed.stderr)
+
     def test_write_plans_applies_and_is_idempotent_without_touching_curated_content(self) -> None:
         root = self.copy_fixture("stale-fill")
         moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"

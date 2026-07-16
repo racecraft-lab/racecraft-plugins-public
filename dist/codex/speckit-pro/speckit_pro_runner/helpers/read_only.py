@@ -1193,9 +1193,13 @@ def _spec_index_directories(specs_dir: Path) -> list[Path]:
 
 
 def _spec_index_json_integer(value: Any) -> bool:
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
+    if isinstance(value, bool):
         return False
-    return math.isfinite(float(value)) and float(value).is_integer()
+    if isinstance(value, int):
+        return True
+    if isinstance(value, float):
+        return math.isfinite(value) and value.is_integer()
+    return False
 
 
 def _spec_index_required_string(record: dict[str, Any], field: str) -> str:
