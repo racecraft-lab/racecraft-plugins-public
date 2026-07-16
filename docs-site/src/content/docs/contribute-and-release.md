@@ -47,8 +47,10 @@ Primary sources: [PR Checks workflow](https://github.com/racecraft-lab/racecraft
 2. Edit the smallest source surface that owns the behavior or content.
 3. Do not hand-edit generated payloads, generated reference pages, or
    marketplace version fields unless the PR is specifically a generated sync.
-4. Use a Conventional Commit PR title:
-   `<type>(<optional scope>): <plain English description>`.
+4. Use a scoped Conventional Commit PR title:
+   `<type>(<lowercase scope>): <plain English description>`. The live title
+   gate requires the scope even though the generic Conventional Commits syntax
+   permits omitting it.
 5. For a `feat` or `fix`, include exactly one non-empty fenced `release-note`
    block unless the `release-note/skip` label applies. Write consumer-facing
    prose; PR Checks sanitize and validate the block before merge.

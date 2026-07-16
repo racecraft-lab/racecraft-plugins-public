@@ -314,6 +314,11 @@ Budget result: re-estimate at scaffold; synthetic traces precede live use
 
 **Scope:**
 
+- Revalidate the official-source ledger before freezing candidates, including
+  the direct GPT-5.6 prompting guide as API-surface authority for prompt
+  treatment only. It cannot establish Codex custom-agent fields, availability,
+  defaults, telemetry, or exact treatment; a changed or inaccessible source
+  invalidates only the claims bound to it.
 - Implement or bind the pinned client integration to app-server `model/list`
   and `modelProvider/capabilities/read`. Capture model IDs, supported efforts, relevant
   capabilities, client/surface, evidence method, raw response, and timestamp in
@@ -424,6 +429,17 @@ fixture/scorer/statistical work
   A1/A2/A3; only shortlisted pairs enter Stage B. After selecting the final
   instruction hash, requalify every committed preferred and fallback route
   under that same hash before Stage C.
+- In Stage B, start every ablation from the unchanged baseline, vary one
+  predeclared instruction/example/tool-description/context group at a time, and
+  rerun the same representative evaluations. Record baseline and candidate
+  instruction hashes, changed group IDs, normalized instruction bytes,
+  available token estimate, and contradiction-review result. Permit removal of
+  repeated or behavior-neutral process scaffolding only when the variant keeps
+  the complete role contract: outcome, success and stop conditions, safety,
+  business, grounding, permissions, mutation, contextual tool routing, output
+  shape, and validation. Outcome-first wording may replace discretionary
+  narration but not required SDD phases, dependency rules, approvals, or
+  verification.
 - Freeze all non-candidate parent routes, agent routes, prompts, tools, context,
   repository snapshot, validators, retries, and acceptance behavior for per-
   agent attribution. Unpinned/adaptive experiments are policy-level controls.
@@ -915,6 +931,7 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
 - **Codex configuration:** [Configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference)
 - **Codex non-interactive JSON events:** [Non-interactive mode](https://learn.chatgpt.com/docs/non-interactive-mode)
 - **Prompt guidance:** [GPT-5.6 prompting best practices](https://developers.openai.com/api/docs/guides/latest-model#prompting-best-practices)
+- **Prompt migration and ablation guidance:** [Prompting guidance for GPT-5.6 Sol](https://developers.openai.com/api/docs/guides/prompt-guidance-gpt-5p6.md)
 - **Cross-platform parity source (Claude agent definitions):**
   `speckit-pro/agents/consensus-synthesizer.md` and
   `speckit-pro/agents/gate-validator.md`

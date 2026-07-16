@@ -38,6 +38,9 @@ own failure patterns.
 - Decide the relevant check before coding.
 - Prefer the smallest useful check while iterating, then run the broader gate
   when the changed surface warrants it.
+- Before creating a PR or marking it ready, validate the exact final title with
+  the repository release-readiness gate. The live gate requires
+  `<type>(<lowercase-scope>): <plain English description>`.
 - If verification cannot run, report the exact command and reason.
 
 ## Repository Orientation
