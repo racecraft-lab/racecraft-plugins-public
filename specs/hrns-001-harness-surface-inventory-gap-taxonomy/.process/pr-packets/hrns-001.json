@@ -1,0 +1,207 @@
+{
+  "body_file": "specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001/body.md",
+  "editable_fields": [
+    {
+      "end_marker": "<!-- speckit-pro-editable:summary:end -->",
+      "field_id": "summary",
+      "heading": "Summary",
+      "start_marker": "<!-- speckit-pro-editable:summary:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:what_changed:end -->",
+      "field_id": "what_changed",
+      "heading": "What Changed",
+      "start_marker": "<!-- speckit-pro-editable:what_changed:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:why_it_matters:end -->",
+      "field_id": "why_it_matters",
+      "heading": "Why It Matters",
+      "start_marker": "<!-- speckit-pro-editable:why_it_matters:start -->"
+    }
+  ],
+  "generated_title": {
+    "description": "Add harness gap taxonomy",
+    "rejected_candidates": [],
+    "scope": "HRNS-001",
+    "source_evidence": {
+      "kind": "workflow",
+      "source": "autopilot-state",
+      "summary": "Title generated from active SpecKit workflow evidence."
+    },
+    "type": "feat",
+    "value": "feat(HRNS-001): Add harness gap taxonomy"
+  },
+  "mode": "single",
+  "packet_id": "hrns-001",
+  "protected_body_fingerprint": {
+    "algorithm": "sha256",
+    "elided_fields": [
+      "summary",
+      "what_changed",
+      "why_it_matters"
+    ],
+    "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
+    "value": "7e4b3910c5aad7eaf6f82f3ca6ba17c9f1a0821bafc3572ab73889742a8bd804"
+  },
+  "required_headings": [
+    "Summary",
+    "What Changed",
+    "Why It Matters",
+    "How To Review",
+    "How To UAT",
+    "Verification",
+    "Scope",
+    "Known Gaps"
+  ],
+  "schema_version": "1.0.0",
+  "scope_evidence": {
+    "budget_result": "exception",
+    "changed_files": [
+      "dist/claude/speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "dist/claude/speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+      "dist/claude/speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+      "dist/claude/speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
+      "dist/claude/speckit-pro/speckit_pro_runner/helpers/registry.py",
+      "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution-codex.md",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation-codex.md",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+      "dist/codex/speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
+      "dist/codex/speckit-pro/speckit_pro_runner/helpers/registry.py",
+      "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "docs/ai/specs/.process/HRNS-001-design-concept.md",
+      "docs/ai/specs/.process/HRNS-001-workflow.md",
+      "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json",
+      "docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json",
+      "docs/ai/specs/.process/XPLAT-009-release-readiness-result.json",
+      "docs/ai/specs/.process/autopilot-state.json",
+      "docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md",
+      "docs/ai/specs/harness-engineering-uplift-roadmap-MOC.md",
+      "docs/ai/specs/harness-engineering-uplift-technical-roadmap.md",
+      "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+      "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+      "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md",
+      "speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+      "speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+      "speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
+      "speckit-pro/speckit_pro_runner/helpers/registry.py",
+      "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001.json",
+      "specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001/body.md",
+      "specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001/validation.json",
+      "specs/hrns-001-harness-surface-inventory-gap-taxonomy/SPEC-MOC.md",
+      "specs/hrns-001-harness-surface-inventory-gap-taxonomy/checklists/data-integrity.md",
+      "specs/hrns-001-harness-surface-inventory-gap-taxonomy/checklists/integration.md",
+      "specs/hrns-001-harness-surface-inventory-gap-taxonomy/checklists/reliability.md",
+      "specs/hrns-001-harness-surface-inventory-gap-taxonomy/checklists/requirements.md",
+      "specs/hrns-001-harness-surface-inventory-gap-taxonomy/checklists/security.md",
+      "specs/hrns-001-harness-surface-inventory-gap-taxonomy/data-model.md",
+      "specs/hrns-001-harness-surface-inventory-gap-taxonomy/plan.md",
+      "specs/hrns-001-harness-surface-inventory-gap-taxonomy/quickstart.md",
+      "specs/hrns-001-harness-surface-inventory-gap-taxonomy/research.md",
+      "specs/hrns-001-harness-surface-inventory-gap-taxonomy/spec.md",
+      "specs/hrns-001-harness-surface-inventory-gap-taxonomy/tasks.md",
+      "specs/hrns-001-harness-surface-inventory-gap-taxonomy/verify-tasks-report.md",
+      "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+      "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+      "tests/speckit-pro/unit/fixtures/mutation-helpers/fixture-manifest.json",
+      "tests/speckit-pro/unit/fixtures/mutation-helpers/promotion-records.json",
+      "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/pr-packet-output.json",
+      "tests/speckit-pro/unit/fixtures/mutation-helpers/requests/validate-pr-packet-write.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-file-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-mutable.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-source-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-mutable.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-partial-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-root-mismatch.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-same-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-single-product.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-source-mismatch.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-traversal-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/helpers/registry.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution-codex.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation-codex.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/helpers/registry.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py"
+    ],
+    "non_goals": [
+      "No runtime adoption of external harness libraries.",
+      "No live GitHub mutation inside the runner; gh pr create remains the explicit PR side effect.",
+      "No restack or split-PR execution change beyond packet preparation support."
+    ],
+    "production_files": 10,
+    "reviewable_loc": 0,
+    "total_files": 86
+  },
+  "source_feature_dir": "specs/hrns-001-harness-surface-inventory-gap-taxonomy",
+  "source_markers": [
+    {
+      "marker_id": "hrns-001",
+      "rendered_text": "feat(HRNS-001): Add harness gap taxonomy",
+      "source": "specs/hrns-001-harness-surface-inventory-gap-taxonomy"
+    }
+  ],
+  "target": {
+    "base_branch": "main",
+    "head_branch": "hrns-001-harness-surface-inventory-gap-taxonomy"
+  },
+  "uat": {
+    "how_to_uat": "No manual product UAT is required. Re-run the packet-emission unit test, Layer 1 structural validation, and packet validators listed in Verification.",
+    "uat_runbook_heading": "## UAT Runbook",
+    "uat_source": "HRNS-001 packet generated by pr-packet-output"
+  },
+  "validation_result_path": "specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001/validation.json",
+  "verification_evidence": [
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py passed 31/31."
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "python3 tests/speckit-pro/run-all.py --layer 1 passed 1428/1428."
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "python3 -m json.tool passed for edited Claude/Codex eval and packet request fixtures."
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "git diff --check passed."
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "HRNS-001 verify-tasks report recorded 35/35 verified tasks before packet emission."
+    }
+  ]
+}

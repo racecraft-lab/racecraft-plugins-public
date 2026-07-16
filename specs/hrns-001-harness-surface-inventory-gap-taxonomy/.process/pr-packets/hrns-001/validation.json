@@ -1,0 +1,26 @@
+{
+  "body_file": "specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001/body.md",
+  "error_class": "none",
+  "exit_code": 0,
+  "failures": [],
+  "mode": "single",
+  "packet_id": "hrns-001",
+  "pr_blocked": false,
+  "remediation_evidence": [],
+  "rule_outcomes": [
+    {
+      "evidence": "no failures",
+      "rule": "packet.validation",
+      "status": "passed"
+    }
+  ],
+  "schema_version": "1.0.0",
+  "status": "passed",
+  "stderr_line": "",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "hrns-001-harness-surface-inventory-gap-taxonomy"
+  },
+  "timestamp": "2026-07-16T00:23:32Z",
+  "title_value": "feat(HRNS-001): Add harness gap taxonomy"
+}
