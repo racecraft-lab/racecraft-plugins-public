@@ -1,14 +1,17 @@
 # Contract: Codex Agent Route Candidates Report
 
-This is a planning-only Markdown contract for
-`docs/ai/research/codex-agent-route-candidates.md`. It is not a runtime schema,
-generated manifest, fixture payload, or installer input.
+This contract governs the canonical human report and its sole schema-v2
+planning-manifest companion. Neither artifact is runtime configuration, a
+generated payload, a fixture payload, or an installer input.
 
 ## Artifact
 
 | Field | Value |
 |---|---|
 | Path | `docs/ai/research/codex-agent-route-candidates.md` |
+| Machine companion | `docs/ai/research/codex-agent-route-candidate-manifest.json` |
+| Shared schema | `docs/ai/research/agent-route-candidate-manifest.schema.json` (`2.0.0`) |
+| Shared parity contract | `docs/ai/specs/agent-routing-parity-contract.md` |
 | Authority | Official OpenAI documentation for platform facts; repository files as `project_input` only |
 | Runtime effect | None |
 | Payload effect | None |
@@ -39,6 +42,11 @@ The report must contain these reviewable sections:
 
 ## Record Count Contract
 
+The table below preserves the completed v0.1 human-report count contract. The
+active schema-v2 manifest count contract is: 21 official sources, 5 effort
+surfaces, 17 project inputs, 12 agent contracts, 23 candidate routes, 12
+fixtures, 24 traceability records, and 5 decisions.
+
 | Record | Required Count |
 |---|---:|
 | `OfficialSourceLedgerRecord` | 9 |
@@ -64,6 +72,19 @@ The report must contain these reviewable sections:
   labeled `qualification_needed` or excluded.
 - Every unsupported, conflicting, withdrawn, or absent platform fact must be
   labeled `undocumented` or rejected.
+
+## Machine Companion Contract
+
+- The manifest validates against schema `2.0.0` with `platform=codex` and
+  `spec_id=G56R-001`.
+- It uses only shared schema fields and the five shared evidence classes.
+- All 25 legacy source-fact IDs have explicit dispositions; none is silently
+  deleted or renumbered.
+- The 21 current source records use only allowlisted official OpenAI domains.
+- All source, role, candidate, fixture, traceability, and decision references
+  resolve within the manifest.
+- No candidate is executable or preferred; later capability and qualification
+  evidence remains required.
 
 ## Candidate Contract
 
@@ -160,3 +181,5 @@ The report is complete only when:
   explicitly `NO-GO` for G56R-001
 - changed-file scope confirms no runtime, installer, payload, cache, fixture
   payload, generated artifact, or version change
+- the schema-v2 companion passes shared schema, source-domain, cross-reference,
+  historical-disposition, and cross-platform structural-parity validation

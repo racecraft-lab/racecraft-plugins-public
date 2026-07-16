@@ -1,7 +1,21 @@
 # Data Model: G56R-001 Candidate Route Baseline
 
 This model defines planning-time record shapes for the canonical Markdown
-report. It is not a runtime schema and does not create a generated manifest.
+report and its schema-v2 planning companion. The shared JSON Schema validates
+the evidence package; neither the schema nor manifest is runtime configuration,
+a generated payload, or an installer input.
+
+## Machine Companion
+
+- Manifest: `docs/ai/research/codex-agent-route-candidate-manifest.json`
+- Schema: `docs/ai/research/agent-route-candidate-manifest.schema.json`
+- Contract: `docs/ai/specs/agent-routing-parity-contract.md`
+- Current platform: `codex`
+- Current schema version: `2.0.0`
+
+The manifest maps these record shapes into the same top-level and record-level
+structure used by CAR-001. Platform differences are values and explicit
+statuses, not schema differences.
 
 ## Authority Classes
 

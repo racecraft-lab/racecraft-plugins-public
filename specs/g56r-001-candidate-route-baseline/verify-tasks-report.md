@@ -5,6 +5,31 @@
 **Completed tasks**: 38 / 38
 **Feature directory**: `specs/g56r-001-candidate-route-baseline`
 
+## 2026-07-16 Evidence-Parity Amendment Verification
+
+The original 38-task verification below remains the v0.1 completion record.
+Amendment tasks T039 through T043 are complete; T044 remains open only for
+stack publication.
+
+| Check | Result |
+|---|---|
+| Current official OpenAI source ledger | pass; 21 of 21 current allowlisted sources captured |
+| Schema-v2 manifest counts | pass; 21 sources, 5 effort surfaces, 17 project inputs, 12 contracts, 23 candidates, 12 fixtures, 24 traceability records, 5 decisions |
+| Legacy source-fact dispositions | pass; 25 of 25 recorded |
+| Shared parity validator | pass; 8/8 |
+| JSON parsing | pass; manifest and autopilot state |
+| `git diff --check` | pass |
+| Layer 1 validation | pass; 1428/1428 |
+| Full repository suite | pass; 2811/2811 |
+| Docs reference validation | pass; reference pages current |
+
+Current content hashes:
+
+- report SHA-256:
+  `b429a568ebc780bf638e6891eff6532deefae97c3ed4e5ef86cc7eced1436289`
+- planning manifest SHA-256:
+  `71d2ee129d5ca0fd407382ac5102566efe4c0321541514ee0eece38b29d6117d`
+
 Fresh-session advisory: the initial Post review fallback ran in the parent
 session, and later RepoPrompt reviews (`review-g56r-baseline-BEB0E5`,
 `review-g56r-baseline-CB60BD`, `review-g56r-baseline-74D6A9`,

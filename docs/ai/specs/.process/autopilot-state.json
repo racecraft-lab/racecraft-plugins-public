@@ -2,13 +2,45 @@
   "workflow_file": "docs/ai/specs/.process/G56R-001-workflow.md",
   "spec_id": "G56R-001",
   "feature_dir": "specs/g56r-001-candidate-route-baseline",
-  "updated_at": "2026-07-16T11:29:19Z",
-  "active_step": "Post: Draft PR #360 opened by explicit user instruction",
+  "updated_at": "2026-07-16T14:24:08Z",
+  "active_step": "Post: Evidence-parity amendment publication pending",
   "settings": {
     "auto_commit": "per-phase",
     "confidence_gate_mode": "advisory",
     "consensus_mode": "moderate",
     "gate_failure": "stop"
+  },
+  "evidence_parity_amendment": {
+    "status": "validation_complete_publication_pending",
+    "started_at": "2026-07-16T14:17:07Z",
+    "foundation_pr": 362,
+    "dependent_pr": 360,
+    "authority": "current allowlisted official OpenAI documentation only",
+    "shared_contract": "docs/ai/specs/agent-routing-parity-contract.md",
+    "shared_schema": "docs/ai/research/agent-route-candidate-manifest.schema.json",
+    "canonical_report": "docs/ai/research/codex-agent-route-candidates.md",
+    "planning_manifest": "docs/ai/research/codex-agent-route-candidate-manifest.json",
+    "schema_version": "2.0.0",
+    "current_counts": {
+      "official_source_records": 21,
+      "effort_surface_records": 5,
+      "project_input_records": 17,
+      "agent_contract_records": 12,
+      "candidate_route_records": 23,
+      "fixture_backlog_records": 12,
+      "traceability_records": 24,
+      "decision_records": 5,
+      "legacy_fact_dispositions": 25
+    },
+    "validation": {
+      "shared_parity_validator": "pass",
+      "diff_check": "pass",
+      "layer1": "1428/1428 passed",
+      "full_suite": "2811/2811 passed",
+      "docs_reference_check": "pass; reference pages current",
+      "report_sha256": "b429a568ebc780bf638e6891eff6532deefae97c3ed4e5ef86cc7eced1436289",
+      "planning_manifest_sha256": "71d2ee129d5ca0fd407382ac5102566efe4c0321541514ee0eece38b29d6117d"
+    }
   },
   "archive_sweep": {
     "status": "no_candidates",
@@ -599,6 +631,18 @@
     {
       "step": "Post: Retrospective",
       "status": "completed"
+    },
+    {
+      "step": "Post: Evidence Parity - Rebase onto PR #362",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Evidence Parity - OpenAI source refresh and schema-v2 package",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Evidence Parity - Verify and publish stacked PR #360",
+      "status": "in_progress"
     }
   ],
   "post_results": {

@@ -2,9 +2,93 @@
 
 **Spec**: G56R-001 Candidate Route Baseline and Role Contracts
 **Snapshot date**: 2026-07-16
-**Artifact version**: `agent_route_candidate_manifest.v0.1`
+**Original report artifact version**: `agent_route_candidate_manifest.v0.1`
+**Current machine schema**: `2.0.0`
 **Authority rule**: Official OpenAI documentation is the only authority for
 platform facts. Repository files are `project_input` only.
+
+## Current v2 Evidence-Parity Amendment
+
+**Current snapshot:** `G56R-001-SNAPSHOT-2026-07-16-V2`
+**Machine manifest:**
+[`codex-agent-route-candidate-manifest.json`](codex-agent-route-candidate-manifest.json)
+**Shared schema:**
+[`agent-route-candidate-manifest.schema.json`](agent-route-candidate-manifest.schema.json)
+**Shared contract:**
+[`agent-routing-parity-contract.md`](../specs/agent-routing-parity-contract.md)
+**Immutable comparator:** `speckit-pro-v2.19.2` at
+`587057efeff856bad020b38dc11c7e9214f2c078`
+
+This amendment is the current G56R-001 authority for downstream consumers. It
+adds the same schema-v2 evidence structure used by CAR-001 while preserving the
+original report-only handoff below and at commit
+`fe9d7cda2ae96247391b62cd43c8897262245f97`.
+
+Platform claims are admitted only from canonical OpenAI documentation under
+`learn.chatgpt.com/docs/**`, `developers.openai.com/codex/**`,
+`developers.openai.com/api/docs/**`, or `platform.openai.com/docs/**`.
+Repository state, live discovery, probes, and evaluations retain their separate
+project, runtime-verification, and qualification roles; none can create an
+undocumented platform fact or candidate.
+
+### Current Official-Source Ledger
+
+| Source ID | Matrix family | Canonical official document | Retrieved at UTC | Body SHA-256 |
+|---|---|---|---|---|
+| `OPENAI-DOC-001` | `documentation_discovery` | `https://learn.chatgpt.com/docs/codex-manual.md` | `2026-07-16T14:03:32Z` | `084f81886e62bd0d8eafdc9cbc0b297f026880dbd212bf55796759fe9115ccc9` |
+| `OPENAI-DOC-002` | `model_catalog` | `https://learn.chatgpt.com/docs/models` | `2026-07-16T14:03:33Z` | `01dfd5f6e7d67308cf2d2897256d3b1442b1cef8a1db165e6989c520dd073e1e` |
+| `OPENAI-DOC-003` | `subagent_configuration` | `https://learn.chatgpt.com/docs/agent-configuration/subagents` | `2026-07-16T14:03:33Z` | `18fda902a30f9563e20645ed0549193ef4bc15b330e7bd6e3e0397b23055714c` |
+| `OPENAI-DOC-004` | `model_configuration_and_resolution` | `https://learn.chatgpt.com/docs/config-file/config-reference` | `2026-07-16T14:03:33Z` | `483eb6d8baa3ceee65d2196ba41cecad1ee6be87bdf37b7886d3e60b39c426d2` |
+| `OPENAI-DOC-005` | `hooks_and_effective_route` | `https://learn.chatgpt.com/docs/hooks` | `2026-07-16T14:03:34Z` | `be2be47332edbc2de3170da674f838ffcf9cd5d0e777c93240bb344b91129f84` |
+| `OPENAI-DOC-006` | `telemetry_and_observability` | `https://learn.chatgpt.com/docs/app-server` | `2026-07-16T14:03:34Z` | `0aeafcfd075e3aa463341fe08e0a5a29f4b8c8d17778423d4b5c45941181a373` |
+| `OPENAI-DOC-007` | `noninteractive_output` | `https://learn.chatgpt.com/docs/non-interactive-mode` | `2026-07-16T14:03:35Z` | `e5f9d89f239bdbb4e15d2c4eac317f66a12cf79a6a168ba0245e509ce433b69c` |
+| `OPENAI-DOC-008` | `tools_and_mcp` | `https://learn.chatgpt.com/docs/extend/mcp` | `2026-07-16T14:03:35Z` | `80963d1ff2ed16f9739527a3bc64a0918fde9b5c053b5d0f6d0009a07e37aae7` |
+| `OPENAI-DOC-009` | `authentication` | `https://learn.chatgpt.com/docs/auth` | `2026-07-16T14:03:35Z` | `0ff352b1ad2b2085db5d7b78b699c4081024c7607b4933886f220e3b17ed78bd` |
+| `OPENAI-DOC-010` | `permissions_and_sandboxing` | `https://learn.chatgpt.com/docs/agent-approvals-security` | `2026-07-16T14:03:35Z` | `ad62dbe0c921a25849b901d1bac79e7ec49af4ba1b255c6beffe8f13ea37cdce` |
+| `OPENAI-DOC-011` | `model_pricing` | `https://learn.chatgpt.com/docs/pricing` | `2026-07-16T14:03:36Z` | `b1fe88e5d02fe30974742f59ec546f4bc08dd61742b254fe3eeafd9a1a0f324e` |
+| `OPENAI-DOC-012` | `administrative_analytics` | `https://learn.chatgpt.com/docs/enterprise/analytics-api` | `2026-07-16T14:03:36Z` | `ac53417415d816c67161b364de04e1c13534181ed76918425d41ee6316c7e151` |
+| `OPENAI-DOC-013` | `model_lifecycle` | `https://developers.openai.com/api/docs/deprecations` | `2026-07-16T14:03:36Z` | `c9afecea6c0d8e9e4cb93abe7823a9348fb13d7a6f6f6f66960bcfd3dbf18dd4` |
+| `OPENAI-DOC-014` | `effort_controls` | `https://developers.openai.com/api/docs/guides/latest-model` | `2026-07-16T14:03:37Z` | `214b2e623fe154d5908ff433a1ea6d3987a08098e114842045b5c99ec1141b1a` |
+| `OPENAI-DOC-015` | `skills_and_delegation` | `https://learn.chatgpt.com/docs/build-skills` | `2026-07-16T14:03:37Z` | `fb2b03951f078fb5fac8c8528ef51e2c3ae12db9377cbd8c499a2a9839585642` |
+| `OPENAI-DOC-016` | `plugin_agent_contract` | `https://learn.chatgpt.com/docs/agent-configuration/agents-md` | `2026-07-16T14:03:37Z` | `c5c7ce87abe8f4dfec2119676510fb28581e5c200739ef6b9f83c3c0ad11e86e` |
+| `OPENAI-DOC-017` | `feature_and_provider_availability` | `https://learn.chatgpt.com/docs/enterprise/workspace-model-availability` | `2026-07-16T14:03:38Z` | `32f1c2576adaf8aa3d804bd2a97d788d204d931a1fd30dfb0dc2eb8afd9c5d3a` |
+| `OPENAI-DOC-018` | `interactive_commands` | `https://learn.chatgpt.com/docs/developer-commands?surface=cli` | `2026-07-16T14:03:38Z` | `6612502c70407b9555c964273fd63450ef63664d13e8e4c480367724a679d0f1` |
+| `OPENAI-DOC-019` | `fast_mode` | `https://learn.chatgpt.com/docs/agent-configuration/speed` | `2026-07-16T14:03:38Z` | `8604ea2a184d474f7193c650792a585598585090e474853a27877a987c95ba70` |
+| `OPENAI-DOC-020` | `cost_management` | `https://learn.chatgpt.com/docs/enterprise/usage-limits` | `2026-07-16T14:03:38Z` | `b777217b0483d1693cff70d93fee88ccd50dca1892d228add7d7de14e6f32ccf` |
+| `OPENAI-DOC-021` | `statusline_diagnostics` | `https://learn.chatgpt.com/docs/developer-commands?surface=cli#configure-footer-items-with-statusline` | `2026-07-16T14:03:39Z` | `6612502c70407b9555c964273fd63450ef63664d13e8e4c480367724a679d0f1` |
+
+Each machine record also contains the requested URL, HTTP status, byte count,
+bounded normalized extract and hash, supported surfaces, exact facts, claim
+bindings, gaps, conflict/access status, and invalidation triggers.
+
+### Parity And Historical Disposition
+
+| Contract item | Current result |
+|---|---|
+| Shared schema | `2.0.0`; exact top-level and record-level parity with CAR-001 |
+| Source matrix | 21 of 21 shared families represented by current OpenAI documentation |
+| Agent contracts | 12 of 12 shared names, including two recorded Codex absences |
+| Candidate routes | 23 source-bound, provisional, and non-executable records |
+| Fixture backlog | 12 records, exactly one per shared agent |
+| Telemetry and questions | 15 telemetry requirements and 10 open capability questions |
+| Original source facts | 23 `confirmed_current`; 2 Apps SDK facts preserved but withdrawn as Codex route authority |
+| Runtime behavior | unchanged; no route is executable, preferred, qualified, or installed |
+
+The original design Q3 selected a single report and rejected a JSON artifact.
+The approved cross-platform parity plan supersedes only that packaging decision:
+the report remains canonical human evidence and the new manifest supplies the
+shared machine contract. The original source rows, extracts, hashes, decisions,
+and verification narrative below remain historical evidence and are not
+silently rewritten.
+
+**Consumption gate:** G56R-002 remains blocked until PR #362 and this v2
+amendment merge, the manifest passes deterministic parity validation, and all
+official sources are revalidated for the consuming scaffold.
+
+> Historical boundary: The remaining sections preserve the original
+> report-only G56R-001 handoff. Its `OSL-*` identifiers and nine-source counts
+> describe that snapshot; downstream work must consume the `OPENAI-DOC-*`
+> schema-v2 ledger above.
 
 ## Scope And Non-Goals
 

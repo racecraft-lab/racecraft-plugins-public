@@ -23,7 +23,7 @@
 
 ## Requirement Consistency
 
-- [x] CHK010 Do the spec, plan, and workflow agree that the implementation artifact is one canonical report? [Consistency, Spec FR-001, Plan Summary, Workflow Report Architecture]
+- [x] CHK010 Do the spec, plan, and workflow agree that the implementation package is one canonical human report plus one shared-schema planning manifest with no runtime effect? [Consistency, Spec FR-001, Plan Summary, Workflow Evidence-Parity Amendment]
 - [x] CHK011 Do the spec, workflow, and technical roadmap agree on the five current roadmap seed model IDs after checklist remediation? [Consistency, Spec FR-010, Workflow Official Candidate Seed]
 - [x] CHK012 Do candidate requirements consistently prohibit claims of availability, executability, qualification, preference, efficiency, fallback behavior, and exact treatment? [Consistency, Spec FR-012, Plan Implementation Approach]
 

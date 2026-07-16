@@ -8,6 +8,21 @@
 
 **Input**: User description: "Create the G56R-001 specification for a documentation-only research spike that prepares the candidate model/effort route baseline and role-contract matrix for G56R-002."
 
+## 2026-07-16 Evidence-Parity Amendment
+
+The active G56R-001 evidence package contains the canonical human report and
+one schema-v2 planning manifest. The manifest validates against
+`docs/ai/research/agent-route-candidate-manifest.schema.json` under
+`docs/ai/specs/agent-routing-parity-contract.md`. It is planning evidence only,
+not runtime configuration, and preserves all report-only v0.1 records as
+historical execution evidence.
+
+The current machine baseline contains 21 official OpenAI source records, 5
+effort-surface records, 17 project-input records, 12 role contracts, 23
+candidate routes, 12 fixture records, 24 traceability records, and 5 decisions.
+G56R-002 cannot consume it until schema, source, reference, and historical
+disposition validation passes and PR #362 merges.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Freeze Official Evidence (Priority: P1)
@@ -16,7 +31,7 @@ As the G56R program owner, I need a dated official-source ledger so every platfo
 
 **Why this priority**: Candidate admission is unsafe unless platform claims fail closed when current official documentation does not support them.
 
-**Independent Test**: Review `docs/ai/research/codex-agent-route-candidates.md` and confirm every platform claim has an `official_source_ledger_id`, source family, retrieval method, requested URL, canonical URL, retrieval date, durable retrieval evidence, page or section locator, short excerpt anchor, bounded source-fact extract, extract hash, invalidation trigger, and claim binding.
+**Independent Test**: Review `docs/ai/research/codex-agent-route-candidates.md` and `docs/ai/research/codex-agent-route-candidate-manifest.json`; confirm every platform claim has an `official_source_ledger_id`, source family, retrieval method, requested URL, canonical URL, retrieval date, durable retrieval evidence, page or section locator, bounded source extract and hash, invalidation trigger, and claim binding.
 
 **Acceptance Scenarios**:
 
@@ -46,7 +61,7 @@ As a route evaluator, I need provisional candidate records that bind documented 
 
 **Why this priority**: G56R-002 needs a bounded model-candidate set and exact effort questions, but executable model/effort tuples, qualification, and availability belong to later phases.
 
-**Independent Test**: For each role contract, inspect its candidate records and verify every source-bound model record cites an official source, blocks executable model/effort tuples until capability discovery, marks unsupported facts explicitly, and selects no preferred or fallback order.
+**Independent Test**: For each role contract, inspect the report and schema-v2 manifest candidate records; verify every source-bound model record cites an official source, blocks executable model/effort tuples until capability discovery, marks unsupported facts explicitly, and selects no preferred or fallback order.
 
 **Acceptance Scenarios**:
 
@@ -81,9 +96,9 @@ As the G56R-002/G56R-003 owner, I need an exact fixture and telemetry backlog so
 
 ### Functional Requirements
 
-- **FR-001**: The implementation artifact MUST be `docs/ai/research/codex-agent-route-candidates.md`.
-- **FR-002**: The implementation artifact MUST be documentation-only and MUST NOT change runtime behavior, agent TOMLs, installers, payloads, cache proofs, generated payloads, versions, or live model evaluation state.
-- **FR-003**: The artifact MUST include an official-source ledger with source family, retrieval method, requested URLs, canonical URLs, retrieval date, durable retrieval evidence, page or section locators, short excerpt anchors, bounded source-fact extracts, extract hashes, invalidation triggers, and claim bindings for every platform fact.
+- **FR-001**: The implementation artifacts MUST be the canonical report `docs/ai/research/codex-agent-route-candidates.md` and its sole schema-v2 planning companion `docs/ai/research/codex-agent-route-candidate-manifest.json`.
+- **FR-002**: The implementation artifacts MUST be planning evidence only and MUST NOT change runtime behavior, agent TOMLs, installers, payloads, cache proofs, generated payloads, versions, or live model evaluation state.
+- **FR-003**: The evidence package MUST include an official-source ledger with source family, retrieval method, requested URLs, canonical URLs, retrieval date, durable retrieval evidence, page or section locators, bounded source-fact extracts, extract hashes, invalidation triggers, and claim bindings for every platform fact.
 - **FR-004**: The artifact MUST treat official OpenAI documentation as the only authority for platform and model facts.
 - **FR-005**: The artifact MUST label repository files, active route-policy skill/runner surfaces, payloads, caches, fixtures, and Claude role definitions as `project_input` only.
 - **FR-006**: The artifact MUST mark unsupported platform facts as `undocumented` and reject or block any candidate depending on those facts.
@@ -97,8 +112,8 @@ As the G56R-002/G56R-003 owner, I need an exact fixture and telemetry backlog so
 - **FR-014**: Every fixture backlog record MUST include fixture ID, current status, executable specification, representative input, telemetry need, success oracle, blocking dependency, owner spec, priority, and invalidation triggers.
 - **FR-015**: Historical prompt-emulation evidence MUST be labeled `non_release_evidence`.
 - **FR-016**: The G56R-002 handoff MUST include capability questions, telemetry contract needs including terminal state and missing-field classification, candidate and fixture invalidation rules, fixture backlog, and a go/no-go matrix.
-- **FR-017**: The final report traceability section MUST map every claim to `official_documentation`, `project_input`, `runtime_verification_needed`, `qualification_needed`, or `undocumented`.
-- **FR-018**: The report MUST end with a strict decision that is `GO` only for G56R-002 capability discovery and telemetry profiling when evidence completeness is satisfied, and `NO-GO` for route qualification or installation.
+- **FR-017**: The final evidence-package traceability records MUST map every claim to `official_documentation`, `project_input`, `runtime_verification_needed`, `qualification_needed`, or `undocumented`.
+- **FR-018**: The evidence package MUST record a strict decision that is `GO` only for G56R-002 capability discovery and telemetry profiling when evidence completeness is satisfied, and `NO-GO` for route qualification or installation.
 
 ### Required Acceptance Criteria
 
@@ -363,8 +378,8 @@ The final report MUST hand off these questions and constraints:
 
 ### Measurable Outcomes
 
-- **SC-001**: Reviewer can count exactly 9 official-source ledger records, 25 source fact binding rows, 25 source fact extract rows, 5 effort-surface records, 12 role contract records, 12 fixture backlog records, and 0 unsupported admitted seed candidates in the research artifact.
-- **SC-002**: 100% of platform facts in the report map to an `official_source_ledger_id`; unsupported or deprecated/withdrawn facts are explicitly labeled and cannot support a candidate.
+- **SC-001**: Reviewer can distinguish the preserved v0.1 report counts from the current schema-v2 manifest counts and confirm the current manifest has exactly 21 official-source, 5 effort-surface, 17 project-input, 12 role-contract, 23 candidate-route, 12 fixture, 24 traceability, and 5 decision records with 0 unsupported admitted seed candidates.
+- **SC-002**: 100% of current platform facts in the evidence package map to an `official_source_ledger_id`; unsupported or deprecated/withdrawn facts are explicitly labeled and cannot support a candidate.
 - **SC-003**: 100% of role contract records include source file, production route or absence, declared TOML fields, instruction/full-file hashes, instruction hash extraction and encoding rules, hash validation result, role boundary, safety and mutation expectations, grounding requirements, separate tool/skill/MCP contracts, output contract, client surface, effective-runtime verification fields, and representative future task.
 - **SC-004**: Fixture backlog contains exactly 3 current Codex prompt-emulation records and exactly 9 missing executable-fixture records; any Claude prompt-emulation records are labeled `project_input` and `non_release_evidence` outside the current-Codex count.
 - **SC-005**: Report ends with an explicit `GO` or `NO-GO` for G56R-002 capability discovery and explicit `NO-GO` for route qualification and installation; `GO` requires complete source, contract, candidate, fixture, telemetry, capability-question, and invalidation records.

@@ -4,14 +4,23 @@
 
 **Input**: Feature specification from `specs/g56r-001-candidate-route-baseline/spec.md`
 
+## 2026-07-16 Evidence-Parity Amendment
+
+The original one-report plan remains historical. The active implementation
+surface is now one canonical human report plus one schema-v2 planning manifest,
+governed by the shared CAR/G56R parity contract and schema. The manifest is not
+runtime configuration or an installer input. It adds no runtime, payload,
+cache, generated-artifact, agent, or version behavior.
+
 ## Summary
 
-G56R-001 is a documentation-only research spike that prepares one canonical
-official-source candidate-route baseline for G56R-002. The implementation will
-author `docs/ai/research/codex-agent-route-candidates.md` with a dated official
-OpenAI source ledger, twelve role contract records, provisional route records,
-fixture backlog records, telemetry questions, invalidation rules, and a strict
-go/no-go handoff.
+G56R-001 is a planning-evidence research spike that prepares one canonical
+official-source candidate-route baseline for G56R-002. The implementation
+authors `docs/ai/research/codex-agent-route-candidates.md` and its sole
+schema-v2 planning companion with a dated official OpenAI source ledger,
+twelve role contract records, provisional route records, fixture backlog
+records, telemetry questions, invalidation rules, and a strict go/no-go
+handoff.
 
 The plan keeps platform facts grounded in official OpenAI documentation only.
 Repository files define project inputs, current role inventory, and fixture
@@ -27,8 +36,9 @@ verification uses Python 3.11+ standard-library tooling only.
 templates, existing repository validation, official OpenAI documentation, and
 read-only project inputs.
 
-**Storage**: Repository Markdown files only. No runtime storage, JSON manifest,
-database, cache, payload, or generated artifact is introduced.
+**Storage**: Repository Markdown plus one governed JSON planning manifest. No
+runtime storage, runtime manifest, database, cache, payload, or generated
+artifact is introduced.
 
 **Testing**: Focused document checks, stable-ID/count review, traceability
 review, link/scope review, `git diff --check`, Layer 1 validation, then the
@@ -40,22 +50,24 @@ installed into plugin runtime surfaces.
 **Project Type**: Documentation-only research spike.
 
 **Performance Goals**: Deterministic reviewability rather than runtime
-performance: exact counts for 9 source records, 5 effort-surface records, 16
-project-input records, 12 role contracts, 23 candidate route records, 12
-fixture backlog records, 24 traceability records, 4 go/no-go decisions, no
-unsupported admitted seed candidates, and zero production runtime files.
+performance: the current schema-v2 manifest has exact counts of 21 source
+records, 5 effort-surface records, 17 project-input records, 12 role contracts,
+23 candidate route records, 12 fixture backlog records, 24 traceability
+records, 5 decisions, no unsupported admitted seed candidates, and zero
+production runtime files.
 
 **Constraints**: Official OpenAI documentation is the only authority for
 platform facts. Project inputs must be labeled `project_input`. The report must
 create no runtime behavior, model probes, live evaluation, fixture payloads,
 agent definitions, installer changes, generated payloads, cache proofs,
-version changes, schema files, helper scripts, or fallback policy.
+version changes, platform-specific or runtime schema files, helper scripts, or
+fallback policy. The shared planning schema and manifest are allowed.
 
-**Scale/Scope**: One canonical implementation report with a bounded planning
-package. The report covers 9 official-source ledger records, 5 effort-surface
-records, 16 project-input records, 12 role contract records, 23
-source-bound blocked or comparator route records, 12 fixture backlog records, 24
-traceability records, and 4 go/no-go decisions.
+**Scale/Scope**: One canonical implementation report, one governed planning
+manifest, and a bounded planning package. The current manifest covers 21
+official-source ledger records, 5 effort-surface records, 17 project-input
+records, 12 role contract records, 23 source-bound blocked or comparator route
+records, 12 fixture backlog records, 24 traceability records, and 5 decisions.
 
 **Reviewability Budget**: Primary surface: docs/process. Secondary surfaces:
 repository test guard allowlist only when the new research path must be
@@ -69,6 +81,7 @@ and not above the 25-file block threshold.
 ## Declared File Operations
 
 - NEW docs/ai/research/codex-agent-route-candidates.md
+- NEW docs/ai/research/codex-agent-route-candidate-manifest.json
 - NEW specs/g56r-001-candidate-route-baseline/ planning package, including
   spec, plan, research, data model, contract, quickstart, checklists, tasks,
   verification report, retrospective, and SPEC-MOC
@@ -94,7 +107,7 @@ and not above the 25-file block threshold.
 | III. Semantic Versioning | Pass | No plugin or marketplace version files are in scope. |
 | IV. Test Coverage Before Merge | Pass | The implementation phase will run focused document checks, Layer 1 validation, and the default repository suite before completion. |
 | V. Conventional Commits | Pass | Phase commits use repository-approved conventional commit subjects. |
-| VI. KISS, Simplicity, and YAGNI | Pass | One canonical report keeps the source ledger, contracts, candidates, fixtures, telemetry questions, and decision matrix in one reviewable artifact. |
+| VI. KISS, Simplicity, and YAGNI | Pass | One canonical human report and one shared-schema planning manifest keep the evidence reviewable without introducing a runtime policy artifact. |
 
 No constitution violation or split exception is required.
 
@@ -119,7 +132,8 @@ specs/g56r-001-candidate-route-baseline/
 
 ```text
 docs/ai/research/
-└── codex-agent-route-candidates.md
+├── codex-agent-route-candidates.md
+└── codex-agent-route-candidate-manifest.json
 ```
 
 ### Read-Only Project Inputs
@@ -142,17 +156,17 @@ dist/codex/speckit-pro/
 dist/claude/speckit-pro/
 ```
 
-**Structure Decision**: Use the existing feature planning directory for
-planning artifacts and produce exactly one implementation artifact under
-`docs/ai/research/`. All plugin, payload, cache, fixture, installer, and
-version surfaces remain read-only.
+**Structure Decision**: Use the existing feature planning directory and
+produce exactly one human report plus one governed planning manifest under
+`docs/ai/research/`. All plugin, payload, cache, fixture, installer, and version
+surfaces remain read-only.
 
 ## Phase 0: Research
 
 Resolve planning decisions in `research.md` before authoring tasks:
 
 - official-source snapshot and invalidation policy
-- one-report architecture
+- report-plus-governed-manifest evidence architecture
 - stable record IDs and relationships
 - active route-policy project-input inventory with stable IDs
 - candidate admission and rejection classifications

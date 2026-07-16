@@ -11,11 +11,28 @@ critical_findings: 0
 
 ## Executive Summary
 
-G56R-001 completed as a documentation-only research spike. The implementation
-produced one canonical report and did not change runtime, agent, installer,
-payload, cache, fixture payload, schema, helper script, generated artifact, or
-version surfaces. Review remediation also updates the repository changed-surface
-guard allowlist for the new Codex research report path.
+G56R-001 originally completed as a documentation-only research spike with one
+canonical report. The 2026-07-16 evidence-parity amendment preserves that
+report and adds one schema-v2 planning manifest governed by the shared CAR/G56R
+contract. Neither phase changes runtime, agent, installer, payload, cache,
+fixture payload, platform-specific/runtime schema, helper script, generated
+artifact, or version behavior.
+
+## 2026-07-16 Evidence-Parity Amendment
+
+- Revalidated 21 current official OpenAI documentation pages across the shared
+  research matrix and recorded canonical URLs, timestamps, body hashes, bounded
+  extracts, and claim bindings.
+- Added a schema-v2 Codex planning manifest with the same structure as CAR-001:
+  12 role contracts, 23 candidate routes, 12 fixtures, and complete
+  traceability and decision records.
+- Preserved all 25 legacy source facts with explicit dispositions. The two
+  Apps-SDK-scoped facts remain historical but are withdrawn as Codex route
+  authority because their source is outside the strict Codex allowlist.
+- Kept all candidates provisional and all runtime capability, qualification,
+  preference, and fallback claims deferred.
+- Validation passed: parity validator 8/8, Layer 1 1428/1428, full suite
+  2811/2811, and docs reference pages current.
 
 ## Requirement Coverage
 
@@ -29,6 +46,9 @@ guard allowlist for the new Codex research report path.
 | Fixture backlog | Complete; 3 current and 9 missing records |
 | G56R-002 handoff | Complete; capability questions, telemetry needs, invalidation rules, and strict go/no-go decision |
 | No-runtime boundary | Preserved |
+| Current schema-v2 official-source ledger | Complete; 21 records |
+| Historical dispositions | Complete; 25 of 25 legacy facts |
+| Shared structural parity | Complete; shared schema and record shape |
 
 ## Success Criteria Assessment
 
@@ -45,17 +65,18 @@ guard allowlist for the new Codex research report path.
 
 | Planned architecture | Actual result | Drift |
 |---|---|---|
-| One canonical implementation report under `docs/ai/research/` | One report created at `docs/ai/research/codex-agent-route-candidates.md`; review remediation also required roadmap, PRD, workflow, autopilot state, and feature-package updates to keep the documentation contract consistent | Accepted docs/process scope expansion; runtime production files remain zero |
+| One canonical implementation report under `docs/ai/research/` | One report created at `docs/ai/research/codex-agent-route-candidates.md`; the dated parity amendment adds one governed machine companion while preserving the report as canonical human evidence | Accepted packaging supersession; runtime production files remain zero |
 | Planning artifacts under the feature directory | Feature specs, checklists, tasks, verify-tasks report, and retrospective remain under the feature directory | None |
 | No runtime or payload changes | No runtime or payload changes were made; one unit-test guard allowlist admits the new research report path | None |
 
 ## Significant Deviations
 
-The actual branch diff is 25 docs/process/test-guard files rather than the
-initial one-report implementation estimate. The expansion is intentional review
-remediation and remains within the documented reviewability backstop because it
-adds no runtime, installer, payload, cache, fixture payload, schema, helper
-script, generated artifact, or version changes.
+The dependent PR diff is 25 docs/process/test-guard files rather than the
+initial one-report implementation estimate. The expansion is intentional
+review and evidence-parity remediation and remains within the documented
+reviewability backstop because it adds no runtime, installer, payload, cache,
+fixture payload, platform-specific/runtime schema, helper script, generated
+artifact, or version changes.
 
 ## Process Notes
 
@@ -76,7 +97,9 @@ No constitution violations found.
 
 ## Proposed Spec Changes
 
-None.
+Accepted and applied: replace the report-only packaging constraint with one
+canonical human report plus one shared-schema planning manifest. No product
+requirement, role contract, candidate boundary, or runtime scope changed.
 
 ## Lessons Learned
 
@@ -91,5 +114,5 @@ None.
 ## Follow-Up
 
 - G56R-002 should refresh official documentation before consuming this snapshot.
-- PR packet emission remains deferred for this run; create or enable the
-  feature-local PR packet before any automated PR creation.
+- Merge the shared evidence foundation PR #362 before dependent PR #360.
+- Refresh official OpenAI documentation before G56R-002 consumes the manifest.

@@ -1,5 +1,14 @@
 # Phase 0 Research: G56R-001 Candidate Route Baseline
 
+## 2026-07-16 Evidence-Parity Amendment
+
+The approved CAR/G56R parity plan preserves the canonical report and adds one
+schema-v2 planning manifest. This supersedes only Decision 2's report-only
+packaging choice. The rejection of a runtime policy manifest and a
+platform-specific runtime schema remains unchanged. The shared manifest/schema
+pair is planning evidence used for structural validation and downstream
+handoff gating.
+
 ## Decision 1: Freeze An Execution-Time Official Source Snapshot
 
 **Decision**: The implementation report refreshes official OpenAI documentation
@@ -17,7 +26,7 @@ refresh through review would make the report unstable and hard to audit.
 - Continuous refresh: rejected because it creates review churn and undermines a
   dated evidence baseline.
 
-## Decision 2: Publish One Canonical Report
+## Decision 2: Publish One Canonical Report (Historical)
 
 **Decision**: The implementation produces one report at
 `docs/ai/research/codex-agent-route-candidates.md`.
@@ -33,6 +42,11 @@ with stable cross-references.
 - Report plus runtime JSON manifest: rejected because G56R-001 is
   documentation-only and must not introduce runtime policy artifacts.
 
+**2026-07-16 supersession**: Keep the report canonical for human review and
+add exactly one machine-readable planning companion governed by
+`agent-route-candidate-manifest.schema.json`. It is not the rejected runtime
+policy manifest.
+
 ## Decision 3: Use Stable Record IDs Instead Of Free-Form Claims
 
 **Decision**: The report uses stable IDs for
@@ -47,8 +61,9 @@ handoff validation deterministic.
 
 - Narrative-only report: rejected because reviewers could not mechanically
   confirm exact counts or bindings.
-- Runtime schema file: rejected because schema enforcement is out of scope for
-  this research spike.
+- Runtime schema file: rejected because runtime policy enforcement is out of
+  scope. The later shared planning schema is allowed only for evidence-package
+  validation.
 
 ## Decision 4: Treat Roadmap And Legacy Models As Inputs, Not An Approved Set
 

@@ -4,15 +4,15 @@
 
 **Prerequisites**: `plan.md`, `spec.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`
 
-**Tests**: This is a documentation-only research spike. Verification tasks prove source authority, exact counts, traceability, scope hygiene, and repository validation.
+**Tests**: This is a planning-evidence research spike. Verification tasks prove source authority, schema validity, exact counts, cross-references, historical dispositions, traceability, scope hygiene, and repository validation.
 
-**Reviewability**: The planned implementation output was one Markdown report with 0 projected production LOC and 0 production files. Review remediation also updates process artifacts, one observability checklist artifact, and one repository test guard allowlist. If implementation touches runtime, payload, cache, fixture payload, installer, generated artifact, helper script, schema, or version files, stop and split or re-plan before continuing.
+**Reviewability**: The original implementation output was one Markdown report with 0 projected production LOC and 0 production files. The 2026-07-16 parity amendment adds exactly one shared-schema planning manifest; it does not add a runtime or platform-specific schema. Review remediation also updates process artifacts, one observability checklist artifact, and one repository test guard allowlist. If implementation touches runtime, payload, cache, fixture payload, installer, generated artifact, helper script, platform-specific/runtime schema, or version files, stop and split or re-plan before continuing.
 
 **Organization**: Tasks are grouped by user story so each story can be reviewed independently.
 
 ## Format: `[ID] [P?] [Story] Description`
 
-- **[P]**: Not used in this task list because the implementation output is one shared report file.
+- **[P]**: Not used in the original task list because report edits shared one file; amendment work remains sequential to keep the report and manifest synchronized.
 - **[Story]**: Which user story the task belongs to.
 - Every task names the exact target path.
 
@@ -111,13 +111,27 @@
 **Purpose**: Prove the final report satisfies acceptance criteria and repository scope.
 
 - [x] T031 Map every functional requirement and success criterion to stable traceability records, report sections, and verification evidence in `docs/ai/research/codex-agent-route-candidates.md`
-- [x] T032 Run unresolved marker search across `specs/g56r-001-candidate-route-baseline` and `docs/ai/research/codex-agent-route-candidates.md`
+- [x] T032 Run unresolved marker search across `specs/g56r-001-candidate-route-baseline`, `docs/ai/research/codex-agent-route-candidates.md`, and the planning manifest
 - [x] T033 Run exact count review for 9 source records, 5 effort-surface records, 16 project-input records, 12 role contracts, 23 candidate route records, 12 fixture records, 24 traceability records, 4 go/no-go decisions, 3 current fixtures, 9 missing fixtures, and 0 unsupported admitted seed candidates in `docs/ai/research/codex-agent-route-candidates.md`
-- [x] T034 Run changed-file review and confirm no runtime, agent, installer, payload, cache, fixture payload, generated artifact, schema, helper script, or version file changed in `docs/ai/research/codex-agent-route-candidates.md`
+- [x] T034 Run changed-file review and confirm no runtime, agent, installer, payload, cache, fixture payload, generated artifact, platform-specific/runtime schema, helper script, or version file changed; the shared planning schema/manifest pair is the sole packaging amendment
 - [x] T035 Run `git diff --check` and record the result for `docs/ai/research/codex-agent-route-candidates.md`
 - [x] T036 Run `python3 tests/speckit-pro/run-all.py --layer 1` and record the result for `docs/ai/research/codex-agent-route-candidates.md`
 - [x] T037 Run `python3 tests/speckit-pro/run-all.py` and record the result for `docs/ai/research/codex-agent-route-candidates.md`
 - [x] T038 Prepare PR review packet source covering what changed, why, non-goals, review order, scope budget, traceability, verification, known gaps, and rollback or flag notes in `docs/ai/research/codex-agent-route-candidates.md`
+
+---
+
+## Phase 8: 2026-07-16 Evidence-Parity Amendment
+
+**Purpose**: Bring G56R-001 into structural parity with CAR-001 using current
+official OpenAI documentation while preserving the completed v0.1 record.
+
+- [x] T039 Adopt `docs/ai/specs/agent-routing-parity-contract.md` and `docs/ai/research/agent-route-candidate-manifest.schema.json` from the shared evidence foundation PR #362
+- [x] T040 Retrieve and hash 21 current allowlisted official OpenAI documentation sources spanning every shared research-matrix family
+- [x] T041 Add `docs/ai/research/codex-agent-route-candidate-manifest.json` with schema version `2.0.0`, 12 agent contracts, 23 candidates, and explicit dispositions for all 25 legacy source facts
+- [x] T042 Amend the canonical report, design decision, workflow, spec, plan, research, data model, contract, quickstart, checklist, retrospective, and verification records without rewriting historical execution evidence
+- [x] T043 Run `python3 tests/speckit-pro/unit/test-agent-route-research-parity.py` and confirm schema, authority-domain, cross-reference, legacy-disposition, and CAR/G56R structural-parity checks pass
+- [ ] T044 Run diff hygiene, Layer 1, full repository validation, docs reference validation, then publish PR #360 as a clean stack on PR #362
 
 ---
 
@@ -166,5 +180,6 @@ No tasks are marked `[P]` because the implementation has a single shared report 
 
 If any task requires runtime probing, route qualification, fallback ordering,
 installer behavior, payload changes, cache proof changes, generated artifacts,
-fixture payloads, helper scripts, schema files, or version edits, stop and
-return to planning.
+fixture payloads, helper scripts, platform-specific/runtime schema files, or
+version edits, stop and return to planning. The shared planning schema and its
+single G56R manifest are explicitly allowed by the parity amendment.

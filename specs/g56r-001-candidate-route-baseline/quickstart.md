@@ -1,8 +1,8 @@
 # Quickstart: Implement And Verify G56R-001
 
-Use this guide when implementing the canonical report from the completed task
-list. It assumes the current working directory is the dedicated G56R-001
-worktree.
+Use this guide when implementing or refreshing the canonical report and its
+schema-v2 planning companion from the completed task list. It assumes the
+current working directory is the dedicated G56R-001 worktree.
 
 ## 1. Confirm Scope
 
@@ -17,8 +17,9 @@ Expected branch:
 g56r-001-candidate-route-baseline
 ```
 
-Only G56R-001 planning/process files, the canonical report, and the repository
-test guard allowlist for the new research path should change.
+Only G56R-001 planning/process files, the canonical report, its planning
+manifest, and the repository validation surface for the evidence paths should
+change.
 
 ## 2. Refresh Official Sources
 
@@ -48,12 +49,13 @@ find tests/speckit-pro/layer6-efficiency -maxdepth 3 -type f
 Use them only for role intent, declared source fields, fixture state, and
 historical context.
 
-## 4. Author The Report
+## 4. Author The Evidence Package
 
-Create:
+Create or refresh:
 
 ```text
 docs/ai/research/codex-agent-route-candidates.md
+docs/ai/research/codex-agent-route-candidate-manifest.json
 ```
 
 Required sections:
@@ -75,6 +77,10 @@ Required sections:
 - traceability matrix with stable traceability IDs
 - strict go/no-go decision records with stable decision IDs and invalidation rules
 
+The JSON companion must validate against
+`docs/ai/research/agent-route-candidate-manifest.schema.json`, preserve legacy
+fact dispositions, and use the same shared structure as the CAR-001 manifest.
+
 ## 5. Run Focused Checks
 
 Marker check the feature directory and canonical report using the current
@@ -95,22 +101,24 @@ git diff --name-only
 Repository gates:
 
 ```bash
+python3 tests/speckit-pro/unit/test-agent-route-research-parity.py
 python3 tests/speckit-pro/run-all.py --layer 1
 python3 tests/speckit-pro/run-all.py
 ```
 
 ## 6. Review Counts And Decisions
 
-Confirm the report contains:
+Confirm the preserved v0.1 report retains its historical counts. Confirm the
+current schema-v2 manifest contains:
 
-- 9 official-source ledger records
+- 21 official-source ledger records
 - 5 effort-surface records
-- 16 project-input records
+- 17 project-input records
 - 12 role contract records
 - 23 candidate route records
 - 12 fixture backlog records
 - 24 traceability records
-- 4 go/no-go decision records
+- 5 decision records
 - 3 current Codex prompt-emulation fixture records
 - 9 missing executable fixture records
 - 0 unsupported admitted seed candidates

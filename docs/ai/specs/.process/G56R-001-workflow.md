@@ -6,6 +6,26 @@
 
 ---
 
+## 2026-07-16 Evidence-Parity Amendment
+
+The completed v0.1 workflow below remains historical execution evidence. The
+approved CAR/G56R parity plan adds a post-completion evidence package:
+
+- canonical human report:
+  `docs/ai/research/codex-agent-route-candidates.md`
+- schema-v2 planning manifest:
+  `docs/ai/research/codex-agent-route-candidate-manifest.json`
+- shared contract: `docs/ai/specs/agent-routing-parity-contract.md`
+- shared schema:
+  `docs/ai/research/agent-route-candidate-manifest.schema.json`
+
+This amendment supersedes only the original report-only packaging decision.
+It introduces no runtime manifest, route policy, installer input, generated
+payload, cache change, or version change. G56R-002 remains blocked until the
+shared foundation PR #362 and this amendment pass validation and merge.
+
+---
+
 ## How to Use This Workflow
 
 Run this workflow from the dedicated G56R-001 worktree:
@@ -34,7 +54,9 @@ Re-read it before each phase. Its accepted decisions are:
 - Treat the five roadmap model IDs as a seed, not a closed list; add, retain,
   or remove candidates only when current official documentation supports it.
 - Publish one canonical report at
-  `docs/ai/research/codex-agent-route-candidates.md`.
+  `docs/ai/research/codex-agent-route-candidates.md` and one schema-v2 planning
+  manifest at
+  `docs/ai/research/codex-agent-route-candidate-manifest.json`.
 - Require complete claim-to-source and role-contract traceability before the
   G56R-002 handoff; unsupported platform facts fail closed as `undocumented`.
 - Define executable fixture specifications without creating or running live
@@ -62,6 +84,7 @@ Grill Me is human-in-the-loop only. Once autopilot starts, clarification uses
 | Confidence Gate | G6.5 | Complete | Advisory no-data result recorded because Phase 6 ran locally without synthesizer confidence emit |
 | Implement | `$speckit-implement` | Complete | Authored and validated the canonical research report; G7 passed |
 | Post | Post-Implementation | Complete | RepoPrompt review loop is clean; G56R-002 remains blocked until merge complete |
+| Evidence Parity Amendment | Post-completion amendment | In Progress | All local gates pass; stacked-PR publication remains |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -150,7 +173,7 @@ artifact and no production code.
 | Semantic Versioning | Do not edit plugin or marketplace versions | Diff review |
 | Test Coverage Before Merge | Validate links, structure, counts, placeholders, spec MOC, and the deterministic repository suite | Focused structural checks, Layer 1, then `python3 tests/speckit-pro/run-all.py` |
 | Conventional Commits | Use repository-approved conventional commit subjects | Git history and PR-title review |
-| KISS, Simplicity, YAGNI | Keep all research records in one canonical report; add no runtime manifest or speculative abstraction | Plan complexity review and G6 analysis |
+| KISS, Simplicity, YAGNI | Keep one canonical human report plus one shared-schema planning manifest; add no runtime manifest or speculative abstraction | Plan complexity review, G6 analysis, and parity amendment validation |
 
 ---
 
@@ -267,8 +290,9 @@ state but cannot establish Codex platform facts or admit model/effort routes.
 - Label repository, payload, cache, fixture, and Claude-definition evidence as
   `project_input`.
 - Mark absent or conflicting official support `undocumented` and fail closed.
-- Cover all twelve named agents in one canonical report with stable ledger,
-  contract, candidate, and fixture identifiers.
+- Cover all twelve named agents in one canonical report and its schema-v2
+  planning companion with stable ledger, contract, candidate, and fixture
+  identifiers.
 - Define three current and nine missing fixtures as executable specifications;
   do not create or run live fixture payloads.
 - Require `llm-integration`, `data-integrity`, `error-handling`, `security`,
@@ -369,7 +393,9 @@ $speckit-plan
 
 ## Constraints
 - Produce one canonical report at
-  `docs/ai/research/codex-agent-route-candidates.md`.
+  `docs/ai/research/codex-agent-route-candidates.md` and one schema-v2 planning
+  manifest at
+  `docs/ai/research/codex-agent-route-candidate-manifest.json`.
 - Record `official_source_ledger_id`, twelve `agent_contract_id` records, a
   versioned `agent_route_candidate_manifest`, and provisional
   `candidate_route_id` records.
@@ -383,8 +409,9 @@ $speckit-plan
   fallback order.
 - Fixture records define stable IDs, representative inputs, expected signals,
   ownership, and later acceptance checks without creating payload files.
-- Add no script, schema file, runtime JSON, agent definition, test fixture,
-  generated payload, installation change, or version change.
+- Add no script, platform-specific or runtime schema, runtime JSON, agent
+  definition, test fixture, generated payload, installation change, or version
+  change. The shared planning schema and its evidence manifest are allowed.
 
 ## Report Architecture
 1. Scope, evidence classes, snapshot metadata, and bounded claims.
@@ -413,7 +440,7 @@ $speckit-plan
 
 | Artifact | Status | Notes |
 |---|---|---|
-| `plan.md` | Complete | Documentation execution flow and declared file operation for the one canonical report |
+| `plan.md` | Complete | Original one-report execution flow; the dated parity amendment adds one governed planning manifest |
 | `research.md` | Complete | Source, classification, ID, candidate-admission, fixture, and validation decisions |
 | `data-model.md` | Complete | Ledger, role, candidate, effort-surface, fixture, traceability, and handoff record fields |
 | `contracts/` | Complete | Planning-only Markdown report contract; no runtime schema |
@@ -583,8 +610,10 @@ $speckit-tasks
 6. Polish: run traceability, count, link, scope, diff, and repository checks.
 
 ## Constraints
-- Create no runtime code, helper, JSON manifest, schema, agent TOML, fixture
-  payload, generated payload, cache proof, install output, or version change.
+- Create no runtime code, helper, runtime JSON manifest, platform-specific or
+  runtime schema, agent TOML, fixture payload, generated payload, cache proof,
+  install output, or version change. The shared planning manifest/schema pair
+  is the sole packaging amendment.
 - Use only the frozen official ledger for platform facts and candidate
   admission; label every repository-derived fact `project_input`.
 - Preserve exactly twelve agent contracts and exactly three-current/nine-missing
@@ -644,8 +673,8 @@ Focus on:
    probes, live evaluation, qualification, preference, fallback ordering, or
    release claims.
 6. Dependency-cycle risk: G56R-001 must end without requiring G56R-002 evidence.
-7. Reviewability: one canonical report, no speculative supporting artifacts,
-   and no unplanned production surface.
+7. Reviewability: one canonical report, one governed planning manifest, no
+   speculative supporting artifacts, and no unplanned production surface.
 ```
 
 ### Analysis Results
@@ -800,7 +829,7 @@ evidence.
 ## Post-Implementation Checklist
 
 - [x] All tasks are complete in `tasks.md`.
-- [x] `docs/ai/research/codex-agent-route-candidates.md` is the only new implementation artifact outside the feature planning directory; review remediation added one checklist artifact inside the feature directory.
+- [x] `docs/ai/research/codex-agent-route-candidates.md` remains the canonical human report; the parity amendment adds only `docs/ai/research/codex-agent-route-candidate-manifest.json` as its governed planning companion.
 - [x] The official-source ledger is dated, versioned, revalidated at execution, and contains source family, retrieval method, requested URLs, canonical official URLs, durable retrieval evidence, page or section locators, short excerpt anchors, bounded source-fact extracts, extract hashes, documented facts, and invalidation triggers for every platform claim.
 - [x] Every repository, route-policy skill/runner surface, payload, cache, fixture, and Claude-definition fact is labeled `project_input`.
 - [x] Exactly twelve unique `agent_contract_id` records exist and cover the named catalog.
@@ -811,7 +840,7 @@ evidence.
 - [x] Historical prompt-emulation evidence is labeled `non_release_evidence`.
 - [x] All six user-selected requirement-quality checklists have zero unresolved true gaps.
 - [x] Relative links, stable IDs, counts, and source bindings pass focused validation.
-- [x] `git diff --check` passes and changed-file review confirms no runtime, agent, installer, payload, cache, fixture payload, generated artifact, schema, helper script, or version change.
+- [x] `git diff --check` passes and changed-file review confirms no runtime, agent, installer, payload, cache, fixture payload, generated artifact, platform-specific or runtime schema, helper script, or version change.
 - [x] `python3 tests/speckit-pro/run-all.py --layer 1` passes.
 - [x] `python3 tests/speckit-pro/run-all.py` passes with zero failures.
 
@@ -822,6 +851,7 @@ evidence.
 ```text
 docs/ai/research/
   codex-agent-route-candidates.md          # G56R-001 canonical implementation output
+  codex-agent-route-candidate-manifest.json # Schema-v2 planning evidence companion
 docs/ai/specs/.process/
   G56R-001-design-concept.md               # Setup interview record
   G56R-001-workflow.md                     # Durable workflow state
@@ -849,7 +879,14 @@ Populate this section only after G7:
 - Final verified report content SHA-256: `272a495da0adf429acbaa6bfb759ec03a0afa7f73eaf49ee76270b3fbba83602`
 - Frozen `official_source_ledger_id`: `OSL-001` through `OSL-009`
 - Frozen `effort_surface_record_id`: `G56R-001-ESR-001` through `G56R-001-ESR-005`
-- `agent_route_candidate_manifest` version: `agent_route_candidate_manifest.v0.1`
+- Historical report-embedded `agent_route_candidate_manifest` version: `agent_route_candidate_manifest.v0.1`
+- Current planning manifest schema version: `2.0.0`
+- Current official-source ledger: `OPENAI-DOC-001` through `OPENAI-DOC-021`
+- Shared evidence foundation: draft PR #362
+- Current report SHA-256: `b429a568ebc780bf638e6891eff6532deefae97c3ed4e5ef86cc7eced1436289`
+- Current planning manifest SHA-256: `71d2ee129d5ca0fd407382ac5102566efe4c0321541514ee0eece38b29d6117d`
+- Evidence-parity verification: validator 8/8, Layer 1 1428/1428,
+  full suite 2811/2811, and docs reference check passed
 - G56R-002 handoff decision: `GO` for capability discovery and telemetry profiling only; `NO-GO` for executable candidate set, route qualification, installer behavior, resolver behavior, preferred routes, and fallback policy
 - Verification summary: G7 passed with all 38 tasks complete; `git diff --check`, Layer 1, and full suite passed
 - Remaining invalidation or follow-up items: Refresh official documentation before G56R-002 if source content, model lifecycle, app-server capability schema, telemetry schema, role source hashes, or fixture inputs change

@@ -18,12 +18,26 @@ stop_reason: "natural"
 > **Questions asked:** 6
 > **Stop reason:** natural
 
+## 2026-07-16 Evidence-Parity Amendment
+
+The original interview remains the historical G56R-001 setup record. The
+approved CAR/G56R parity plan supersedes only Q3's packaging decision: the
+canonical human report now has one schema-v2 planning-manifest companion at
+`docs/ai/research/codex-agent-route-candidate-manifest.json`. The companion
+validates against the shared planning schema and contract, is not runtime
+configuration, and does not affect installers, payloads, caches, or versions.
+
+- Shared contract: `docs/ai/specs/agent-routing-parity-contract.md`
+- Shared schema: `docs/ai/research/agent-route-candidate-manifest.schema.json`
+- Historical integrity: the original answer and alternatives below remain
+  unchanged as execution evidence.
+
 ## Goals
 
 - Ground every Codex platform fact and candidate admission in current official OpenAI documentation only.
 - Revalidate official sources when G56R-001 executes, record retrieval dates, and freeze that evidence for the spec.
 - Treat the five roadmap model IDs as a seed that may change only when execution-time official documentation supports the change.
-- Publish one canonical research report containing the official-source ledger, all twelve project-input role contracts, provisional candidate routes, fixture backlog, and G56R-002 handoff.
+- Publish one canonical human research report and one schema-v2 planning manifest containing the official-source ledger, all twelve project-input role contracts, provisional candidate routes, fixture backlog, and G56R-002 handoff.
 - Define executable fixture specifications without creating or running live fixture payloads.
 - Require strict claim-to-source and role-contract traceability, plus the full operational requirement-quality checklist set.
 
@@ -80,6 +94,10 @@ stop_reason: "natural"
 - Report plus JSON: Add a machine-readable candidate manifest now, expanding the research spike beyond documentation-only output.
 
 **User's answer:** One canonical report (Recommended)
+
+**2026-07-16 supersession:** Preserve the canonical report, and add exactly one
+machine-readable planning manifest governed by the shared CAR/G56R schema. The
+original rejection of a *runtime* JSON manifest remains in force.
 
 ---
 
