@@ -1247,6 +1247,103 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(errors, ["target.md:source_changed"])
             self.assertEqual(target.read_text(encoding="utf-8"), "concurrent\n")
 
+    def test_rollback_preserves_parent_created_after_snapshot(self) -> None:
+        from speckit_pro_runner.helpers import mutation
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            git_root = git_root.resolve()
+            parent = git_root / "nested"
+            target = parent / "new.md"
+            snapshots = {"nested/new.md": mutation.snapshot_write_target(target, git_root)}
+            self.assertEqual(snapshots["nested/new.md"]["created_parent_dirs"], ["nested"])
+            parent.mkdir()
+
+            write_result = mutation.write_file_atomic(
+                target,
+                "applied\n",
+                trust_root=git_root,
+                expected_snapshot=snapshots["nested/new.md"],
+            )
+            diag = mutation.snapshot_changed_diagnostic_after_write(
+                "nested/new.md",
+                target,
+                snapshots,
+                git_root,
+                expected_digest=str(write_result["digest"]),
+                expected_mode=write_result["mode"],
+                expected_created_parent_dirs=write_result["created_parent_dirs"],
+            )
+            errors = mutation.rollback_applied_writes(["nested/new.md"], snapshots, git_root)
+
+            self.assertIsNone(diag)
+            self.assertEqual(write_result["created_parent_dirs"], [])
+            self.assertEqual(errors, [])
+            self.assertFalse(target.exists())
+            self.assertTrue(parent.is_dir())
+
+    def test_apply_tracks_successful_write_when_final_parent_close_fails(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            request = RunnerRequest(
+                "test-final-parent-close-after-replace",
+                "mutation-foundation",
+                "mutation-foundation",
+                "apply",
+                {
+                    "operations": [
+                        {
+                            "operation_id": "write-new",
+                            "kind": "write_file",
+                            "target": "new.md",
+                            "content": "new\n",
+                        }
+                    ]
+                },
+            )
+            real_replace = mutation.os.replace
+            real_close = mutation.os.close
+            replace_seen = False
+            failed_fd: int | None = None
+
+            def tracking_replace(*args, **kwargs):
+                nonlocal replace_seen
+                result = real_replace(*args, **kwargs)
+                replace_seen = True
+                return result
+
+            def fail_first_close_after_replace(fd: int) -> None:
+                nonlocal failed_fd
+                if replace_seen and failed_fd is None:
+                    failed_fd = fd
+                    raise OSError("injected close failure")
+                real_close(fd)
+
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with (
+                    patch.object(mutation.os, "replace", side_effect=tracking_replace),
+                    patch.object(mutation.os, "close", side_effect=fail_first_close_after_replace),
+                ):
+                    response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
+            finally:
+                os.chdir(old_cwd)
+                if failed_fd is not None:
+                    try:
+                        real_close(failed_fd)
+                    except OSError:
+                        pass
+
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(response["data"]["mutation"]["applied_operations"][0]["operation_id"], "write-new")
+            self.assertEqual(response["data"]["mutation"]["touched_paths"], ["new.md"])
+            self.assertTrue(response["data"]["writes_state"])
+            self.assertEqual((git_root / "new.md").read_text(encoding="utf-8"), "new\n")
+
     def test_apply_rejects_target_swap_between_snapshot_and_replace(self) -> None:
         from speckit_pro_runner.envelope import RunnerRequest
         from speckit_pro_runner.helpers import mutation, registry

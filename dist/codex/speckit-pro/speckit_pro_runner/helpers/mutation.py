@@ -371,6 +371,7 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
             target_root,
             expected_digest=write_result["digest"],
             expected_mode=write_result["mode"],
+            expected_created_parent_dirs=write_result["created_parent_dirs"],
         )
         if applied_snapshot is not None:
             mutation["mutation_status"] = "partial_failure"
@@ -957,6 +958,7 @@ def run_mutation_helper(
                 repo_root,
                 expected_digest=write_result["digest"],
                 expected_mode=write_result["mode"],
+                expected_created_parent_dirs=write_result["created_parent_dirs"],
             )
             if applied_snapshot is not None:
                 mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
@@ -1313,7 +1315,7 @@ def rollback_applied_writes(touched_paths: list[str], snapshots: dict[str, dict[
                 continue
             if not original.get("exists"):
                 safe_unlink(target, repo_root, expected_snapshot=applied_snapshot_for_rollback(original))
-                errors.extend(remove_created_parent_dirs(original.get("created_parent_dirs", []), repo_root))
+                errors.extend(remove_created_parent_dirs(original.get("applied_created_parent_dirs", []), repo_root))
             else:
                 write_bytes_atomic(
                     target,
@@ -1449,11 +1451,21 @@ def write_bytes_atomic(
         except OSError:
             # Best-effort cleanup only; the write outcome is already determined.
             pass
-        os.close(parent_fd)
+        close_error: OSError | None = None
+        try:
+            os.close(parent_fd)
+        except OSError as exc:
+            close_error = exc
+        if close_error is not None and not replaced:
+            if failure is None:
+                raise close_error
+            cleanup_errors = atomic_write_cleanup_errors(failure)
+            cleanup_errors.append(f"parent_fd:{type(close_error).__name__}")
+            setattr(failure, "cleanup_errors", cleanup_errors)
         if trust_root is not None and failure is not None and not replaced and created_dirs:
             cleanup_errors = remove_created_parent_dirs(created_dirs, trust_root)
             if cleanup_errors:
-                setattr(failure, "cleanup_errors", cleanup_errors)
+                setattr(failure, "cleanup_errors", [*atomic_write_cleanup_errors(failure), *cleanup_errors])
     return {
         "digest": hashlib.sha256(content).hexdigest(),
         "mode": applied_mode,
@@ -1655,6 +1667,7 @@ def snapshot_changed_diagnostic_after_write(
     *,
     expected_digest: str,
     expected_mode: int | None,
+    expected_created_parent_dirs: list[str] | None = None,
 ) -> dict[str, Any] | None:
     original = snapshots.setdefault(rel, {"exists": False, "created_parent_dirs": []})
     try:
@@ -1685,6 +1698,7 @@ def snapshot_changed_diagnostic_after_write(
         )
     original["applied_digest"] = expected_digest
     original["applied_mode"] = expected_mode
+    original["applied_created_parent_dirs"] = expected_created_parent_dirs or []
     return None
 
 
