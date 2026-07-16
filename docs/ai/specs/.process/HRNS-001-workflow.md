@@ -48,7 +48,7 @@ The design concept is the source of truth for these scoping decisions:
 | Analyze | `/speckit-analyze` | ✅ Complete | A1 parallel marker issue resolved; no open findings |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory confidence gate passed: 0.97 >= 0.90 |
 | Implement | `/speckit-implement` | ✅ Complete | Taxonomy artifact created; 35/35 tasks complete; validation passed |
-| Post | post-implementation | 🔄 In Progress | PR packet/body generation and draft PR creation complete; review remediation and retrospective remain pending |
+| Post | post-implementation | ✅ Complete | PR #357 merged with green CI and all review threads resolved; archive report records the final retrospective boundary |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -727,8 +727,8 @@ For each task:
 - [x] Post: PR Packet/Body Generation
 - [x] Post: PR Body Generation
 - [x] Post: PR Creation
-- [ ] Post: Review Remediation
-- [ ] Post: Retrospective
+- [x] Post: Review Remediation
+- [x] Post: Retrospective
 
 ### HRNS-001 Completion Checks
 
@@ -752,7 +752,7 @@ For each task:
       required an intentional SpecKit Pro plugin fix, with generated release
       artifacts and installed-cache fixtures refreshed for both Claude Code and
       Codex.
-- [ ] PR is created; review remains required before merge.
+- [x] PR #357 merged with all checks passing and all review threads resolved.
 
 ### Post Results
 
@@ -770,6 +770,8 @@ For each task:
 | PR Packet/Body Generation | Pass | `speckit-pro-runner helpers pr-packet-output apply` emitted `specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001.json`, body markdown, and validation result |
 | PR Body Generation | Pass | PR body committed at `specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001/body.md` |
 | PR Creation | Pass | Draft PR opened: https://github.com/racecraft-lab/racecraft-plugins-public/pull/357 |
+| Review Remediation | Pass | All 44 review threads resolved before merge; required CI and both Linux container sentinels passed |
+| Retrospective | Complete at archive | Post-merge outcome and recovery evidence recorded in `.specify/memory/archive-reports/2026-07-16-hrns-001-post-merge-hygiene.md`; no separate feature-local retrospective was merged |
 
 ### Self-Review
 

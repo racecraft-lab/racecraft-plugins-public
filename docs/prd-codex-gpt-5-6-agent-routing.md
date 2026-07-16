@@ -1,6 +1,6 @@
 # PRD: Codex Agent Model Routing and Graceful Fallback
 
-**Status**: Active - not yet implemented
+**Status**: Active - G56R-001 complete; G56R-002 ready
 **Source**: Maintainer request plus current official OpenAI documentation,
 revalidated under the evidence-authority contract below
 **Created**: 2026-07-09
