@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-pr-packet-output",
+  "helper_id": "pr-packet-output",
+  "operation": "pr-packet-output",
+  "mode": "dry_run",
+  "inputs": {
+    "packet_path": "specs/prsg-998-fixture/.process/pr-packets/prsg-998.json",
+    "body_file": "specs/prsg-998-fixture/.process/pr-packets/prsg-998/body.md",
+    "validation_result_path": "specs/prsg-998-fixture/.process/pr-packets/prsg-998/validation.json",
+    "source_feature_dir": "specs/prsg-998-fixture",
+    "target": {
+      "base_branch": "main",
+      "head_branch": "agent/prsg-998-fixture"
+    },
+    "title_type": "feat",
+    "title_scope": "PRSG-998",
+    "title_description": "Generate packet fixture",
+    "changed_files": [
+      "specs/prsg-998-fixture/spec.md"
+    ],
+    "verification": [
+      "python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py passed"
+    ],
+    "summary": "Fixture request for generated PR packet output.",
+    "what_changed": [
+      "Writes PR body markdown.",
+      "Writes machine-readable packet JSON.",
+      "Writes validation result JSON."
+    ],
+    "why_it_matters": "Autopilot can publish completed work without a missing packet-emission blocker.",
+    "how_to_review": [
+      "Inspect packet JSON.",
+      "Run validate-pr-packet-read-only."
+    ],
+    "how_to_uat": "No manual UAT is required for this fixture.",
+    "known_gaps": [
+      "No known gaps for this fixture."
+    ],
+    "non_goals": [
+      "No live GitHub PR mutation is performed by this helper."
+    ]
+  }
+}

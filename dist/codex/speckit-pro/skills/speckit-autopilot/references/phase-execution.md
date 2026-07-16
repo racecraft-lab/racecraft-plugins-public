@@ -1021,11 +1021,10 @@ Step 2: Detect remote name: git remote -v
 Step 3: Push branch: git push -u <remote> <branch>
 Step 4: Apply final reviewability boundary:
   Use current committed reviewability evidence; if none is current, stop before PR side effects because final-reviewability-backstop is deferred.
-Step 5: Require a current packet at specs/<feature>/.process/pr-packets/<packet-id>.json.
-  pr-packet-output is deferred; if no current schema-valid packet already exists, STOP before gh pr create.
-Step 6: Validate that packet with validate-pr-packet-read-only and consume data.stdout_json in memory/state.
+Step 5: Emit or refresh the current packet at specs/<feature>/.process/pr-packets/<packet-id>.json.
+  Run pr-packet-output in dry_run, then apply with current title, target, changed-file, verification, UAT, non-goal, and known-gap evidence.
+Step 6: Validate that packet with validate-pr-packet-read-only, consume data.stdout_json in memory/state, and persist it with validate-pr-packet-write.
   Require data.stdout_json.status=passed, data.stdout_json.pr_blocked=false, and response data.writes_state=false.
-  No validation file is written.
 Step 7: Validate title/scope with validate-pr-workflow-contract using the packet title.
 Step 8: Create the PR only from packet fields:
   gh pr create --base <packet.target.base_branch> --head <packet.target.head_branch> \

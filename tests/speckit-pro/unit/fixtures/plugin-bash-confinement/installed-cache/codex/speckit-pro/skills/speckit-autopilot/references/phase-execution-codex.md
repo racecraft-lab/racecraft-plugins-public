@@ -402,11 +402,12 @@ fingerprint status, ordered marker IDs, checkpoints, warnings, final
 marker_split or marker-plan-ready handoff, packet validation, and PR mappings
 before PR side effects.
 
-The `pr-packet-output` and `validate-pr-packet-write` operations are deferred.
-If the feature-local packet or its referenced body is missing, stale, malformed,
-or invalid, stop before `gh pr create` and report the deferred packet-emission
-blocker. The read-only validator returns its result in `data.stdout_json`; it
-does not persist `validation.json` or any other validation artifact.
+Use `pr-packet-output` to emit or refresh the feature-local packet and
+packet-owned body before `gh pr create`. If the packet or body is missing,
+stale, malformed, or invalid, rerun packet output with current title, target,
+changed-file, verification, UAT, non-goal, and known-gap evidence. The
+read-only validator returns its result in `data.stdout_json`; persist that
+just-run passing result with `validate-pr-packet-write`.
 
 `generate-pr-body` is a body-only `golden_only` operation. Its complete input
 contract is `output_path`, `title`, and `sections`, and it writes one Markdown

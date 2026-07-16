@@ -1148,6 +1148,91 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(mutation["applied_operations"], [])
             self.assertFalse(mutation["live_mutation"])
 
+    def test_pr_packet_output_apply_emits_valid_packet_body_and_validation_file(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            inputs = {
+                "packet_path": "specs/prsg-999-packet/.process/pr-packets/prsg-999.json",
+                "body_file": "specs/prsg-999-packet/.process/pr-packets/prsg-999/body.md",
+                "validation_result_path": "specs/prsg-999-packet/.process/pr-packets/prsg-999/validation.json",
+                "source_feature_dir": "specs/prsg-999-packet",
+                "target": {"base_branch": "main", "head_branch": "agent/prsg-999-packet"},
+                "title_type": "feat",
+                "title_scope": "PRSG-999",
+                "title_description": "Generate reviewer packet",
+                "changed_files": ["specs/prsg-999-packet/spec.md"],
+                "verification": ["python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py passed"],
+                "summary": "Adds a generated reviewer packet for a completed SpecKit workflow.",
+                "what_changed": ["Writes the PR body.", "Writes the PR packet JSON.", "Writes the validation result."],
+                "why_it_matters": "Autopilot can continue to PR creation without inventing packet metadata.",
+                "how_to_review": ["Inspect the emitted packet.", "Run validate-pr-packet-read-only."],
+                "how_to_uat": "No manual UAT is required for this fixture.",
+                "known_gaps": ["No known gaps for this fixture."],
+                "non_goals": ["No live GitHub PR mutation is performed by this helper."],
+            }
+
+            completed, response, stderr_records = run_runner(
+                helper_request("pr-packet-output", mode="apply", inputs=inputs),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+            mutation = response["data"]["mutation"]
+            self.assertEqual(mutation["mutation_status"], "applied")
+            self.assertEqual(
+                mutation["touched_paths"],
+                [inputs["body_file"], inputs["packet_path"], inputs["validation_result_path"]],
+            )
+
+            packet_path = git_root / inputs["packet_path"]
+            body_path = git_root / inputs["body_file"]
+            validation_path = git_root / inputs["validation_result_path"]
+            self.assertTrue(packet_path.is_file())
+            self.assertTrue(body_path.is_file())
+            self.assertTrue(validation_path.is_file())
+            self.assertIn("## Summary", body_path.read_text(encoding="utf-8"))
+            packet = json.loads(packet_path.read_text(encoding="utf-8"))
+            self.assertEqual(packet["packet_id"], "prsg-999")
+            self.assertEqual(packet["generated_title"]["value"], "feat(PRSG-999): Generate reviewer packet")
+            self.assertEqual(packet["target"], inputs["target"])
+
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-read-only",
+                    mode="read_only",
+                    inputs={"packet_path": inputs["packet_path"]},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+            validation_result = response["data"]["stdout_json"]
+            self.assertEqual(validation_result["status"], "passed")
+            self.assertFalse(validation_result["pr_blocked"])
+
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-write",
+                    mode="apply",
+                    inputs={
+                        "packet_path": inputs["packet_path"],
+                        "validation_result_path": inputs["validation_result_path"],
+                        "validation_result": validation_result,
+                    },
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+            self.assertEqual(response["data"]["mutation"]["mutation_status"], "applied")
+            self.assertTrue(validation_path.is_file())
+            persisted = json.loads(validation_path.read_text(encoding="utf-8"))
+            self.assertEqual(persisted["packet_id"], "prsg-999")
+            self.assertEqual(persisted["status"], "passed")
+
     def test_contract_schemas_match_runner_fixture_envelopes(self) -> None:
         request_schema = json.loads(REQUEST_SCHEMA.read_text(encoding="utf-8"))
         result_schema = json.loads(RESULT_SCHEMA.read_text(encoding="utf-8"))

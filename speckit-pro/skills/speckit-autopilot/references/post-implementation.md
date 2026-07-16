@@ -369,21 +369,19 @@ opens one slice PR.
    checkpoints, warnings, final marker_split or marker-plan-ready handoff,
    packet validation, and PR mappings before any PR side effect. All evidence
    paths must be repo-relative.
-6. Require an existing packet only after the backstop proceeds. Resolve its
-   established path as
-   `specs/<feature>/.process/pr-packets/<packet-id>.json`. The packet ID must
-   come from current workflow or marker-plan evidence; do not synthesize a
-   packet or choose an arbitrary stale file. `pr-packet-output` and
-   `validate-pr-packet-write` are deferred, so no current runner operation can
-   create or repair the packet. If a current schema-valid packet is absent,
-   stop before every `gh pr create` variant and report the deferred
-   packet-emission blocker.
-6b. Require the existing packet's repo-relative `body_file` to be present and
-   readable. `generate-pr-body` is a body-only `golden_only` operation that
-   accepts exactly `output_path`, `title`, and `sections` and writes one
-   Markdown body. It does not emit packet JSON, packet metadata, template
-   markers, validation evidence, or PR commands, so its output cannot replace
-   the required packet or authorize PR creation.
+6. After the backstop proceeds, emit or refresh the packet at
+   `specs/<feature>/.process/pr-packets/<packet-id>.json` with the runner
+   mutation helper `pr-packet-output`. The packet ID and title evidence must
+   come from current workflow or marker-plan evidence; do not choose an
+   arbitrary stale file. Run `pr-packet-output` in `dry_run` first, then
+   `apply` only with current packet path, body path, base/head target, title,
+   changed-file scope, verification evidence, UAT text, non-goals, and known
+   gaps. The helper writes the packet JSON, packet-owned body file, and
+   validation-result JSON. `generate-pr-body` is a body-only `golden_only`
+   operation and cannot replace the packet.
+6b. Require the emitted packet's repo-relative `body_file` to be present and
+   readable. If body prose needs refinement, edit only the declared editable
+   regions described below, then rerun validation before PR creation.
 6c. **Refine only declared editable prose in plain English.** If the current
    packet declares editable fields and its existing body contains their exact
    marker pairs, edit only those regions with content drawn from `spec.md`,
@@ -408,10 +406,10 @@ opens one slice PR.
    Consume the current response's `data.stdout_json` in memory and durable
    workflow state. Continue only when `data.stdout_json.status=passed`,
    `data.stdout_json.pr_blocked=false`, and response `data.writes_state=false`.
-   This helper never writes `validation.json` or the packet's
-   `validation_result_path`; prior validation artifacts are evidence only and
+   Then run `validate-pr-packet-write` with the just-run `data.stdout_json` to
+   persist the packet's `validation_result_path`. Prior validation artifacts
    never authorize PR creation. Exit 1 or 2 blocks before PR creation with the
-   returned in-memory diagnostics.
+   returned diagnostics.
 6e. Validate the PR workflow contract before any single-PR create attempt:
    send one read-only runner request for `validate-pr-workflow-contract` with
    `inputs.title=<packet.generated_title.value>` and `inputs.repo_root=.`. Let
@@ -438,11 +436,11 @@ opens one slice PR.
    `pr_marker_plan` marked emission-ready, use the layer/marker plan as the only
    ordering and membership source after the final backstop proceeds.
    `multi-pr-emission` is `golden_only` command-plan capture: it does not emit
-   packets or execute live PR mutations. Every slice packet must already exist
-   at
-   `specs/<feature>/.process/pr-packets/<packet-id>.json`. If any required
-   packet is absent or invalid, stop before PR side effects and report that
-   `pr-packet-output` is deferred.
+   packets or execute live PR mutations. Every slice packet must be emitted or
+   refreshed at `specs/<feature>/.process/pr-packets/<packet-id>.json` with
+   `pr-packet-output`, rerun through read-only validation, and paired with
+   persisted current validation evidence before PR side effects. Stop only if
+   emission or validation fails.
    For marker emission, `--feature-branch` is the emitted branch prefix. If
    that prefix would collide with an existing parent branch ref, pass a
    non-conflicting prefix through `--feature-branch` and the authoritative
