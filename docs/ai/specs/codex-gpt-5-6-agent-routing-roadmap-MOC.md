@@ -2,7 +2,9 @@
 up: "[Codex Agent Model Routing and Graceful Fallback Implementation Roadmap](codex-gpt-5-6-agent-routing-technical-roadmap.md)"
 related:
   - "[Codex Agent Model Routing and Graceful Fallback PRD](../../prd-codex-gpt-5-6-agent-routing.md)"
-status: "Draft; G56R-001 ready to scaffold"
+  - "[Shared Agent Routing Evidence Parity Contract](agent-routing-parity-contract.md)"
+  - "[Shared Candidate Manifest Schema](../research/agent-route-candidate-manifest.schema.json)"
+status: "Draft; G56R-001 in review on PR #360; blocked on evidence foundation"
 rank:
 spec_id: "codex-gpt-5-6-agent-routing"
 structureVersion: 1
@@ -11,6 +13,9 @@ structureVersion: 1
 # Codex Agent Model Routing and Graceful Fallback - Map of Content
 
 Navigation map for evidence-backed per-agent model routing and graceful fallback.
+
+All routing evidence follows the shared vendor-official source contract and
+schema-v2 candidate-manifest shape before downstream specifications begin.
 
 ## Epics (curated)
 

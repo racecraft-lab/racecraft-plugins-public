@@ -11,9 +11,12 @@ is prepared for `$speckit-scaffold-spec G56R-NNN`.
 
 **Source PRD:** [../../prd-codex-gpt-5-6-agent-routing.md](../../prd-codex-gpt-5-6-agent-routing.md)
 **Roadmap MOC:** [codex-gpt-5-6-agent-routing-roadmap-MOC.md](codex-gpt-5-6-agent-routing-roadmap-MOC.md)
+**Shared parity contract:** [agent-routing-parity-contract.md](agent-routing-parity-contract.md)
+**Shared manifest schema:** [../research/agent-route-candidate-manifest.schema.json](../research/agent-route-candidate-manifest.schema.json)
 **Spec ID prefix:** `G56R-###`
 **Proposed branch:** `codex/agent-routing-fallback`
-**Status:** Draft; G56R-001 ready to scaffold
+**Status:** Draft; G56R-001 in review on PR #360; blocked on the shared
+official-source evidence foundation
 
 **Legacy identifier note:** `G56R` and the existing filenames are retained for
 traceability. They do not limit the candidate catalog to GPT-5.6.
@@ -41,13 +44,25 @@ G56R-005 -> G56R-006 -> G56R-007 + G56R-008 + G56R-009 + G56R-010 ->
 G56R-011
 
 **Implementation boundary:** This sequence has no external prerequisite, but its
-internal dependencies still apply: only G56R-001 is immediately scaffoldable.
+internal dependencies still apply: G56R-001 is in review and must rebase onto
+the shared official-source evidence foundation before it can complete.
 A route-agnostic Python `install-codex-agents` helper is active for safe static
 agent refreshes. G56R-006 later extends that baseline with capability-aware
 resolution, materialization, and atomic policy installation; it must not
 reintroduce a deleted Bash helper. The baseline's optional `gpt-5.4` rewrite is
 legacy static compatibility only: it does not qualify model routes or runtime
 capabilities, and G56R-006 replaces it with strict route-aware resolution.
+
+### Evidence authority
+
+G56R evidence must satisfy the shared parity contract and manifest schema.
+Platform capability claims may cite only canonical OpenAI documentation under
+`learn.chatgpt.com/docs/**`, `developers.openai.com/codex/**`,
+`developers.openai.com/api/docs/**`, or `platform.openai.com/docs/**`.
+Repository state, pinned runtime captures, and governed evaluations remain
+authoritative for production qualification, but cannot establish undocumented
+platform behavior. The schema-v2 G56R-001 handoff is the active baseline for
+downstream specifications.
 
 ### Candidate-route starting hypotheses
 
@@ -192,7 +207,7 @@ G56R-006 Resolver, Materializer, Installer, and Strict Override
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| G56R-001 | Candidate Route Baseline and Role Contracts | Pending | - | Ready to scaffold |
+| G56R-001 | Candidate Route Baseline and Role Contracts | In Review | [.process/G56R-001-workflow.md](.process/G56R-001-workflow.md) | Rebase PR #360 onto the evidence foundation |
 | G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | Pending | - | Blocked by G56R-001 |
 | G56R-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Pending | - | Blocked by G56R-002 |
 | G56R-004 | Policy Controls and Adaptive Comparators | Pending | - | Blocked by G56R-003 |

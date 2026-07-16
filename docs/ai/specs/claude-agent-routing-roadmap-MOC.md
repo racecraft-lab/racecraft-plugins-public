@@ -2,7 +2,9 @@
 up: "[Claude Code Agent Model Routing and Graceful Fallback Implementation Roadmap](claude-agent-routing-technical-roadmap.md)"
 related:
   - "[Claude Code Agent Model Routing and Graceful Fallback PRD](../../prd-claude-agent-routing.md)"
-status: "Draft; CAR-001 complete and archived; CAR-002 ready to scaffold"
+  - "[Shared Agent Routing Evidence Parity Contract](agent-routing-parity-contract.md)"
+  - "[Shared Candidate Manifest Schema](../research/agent-route-candidate-manifest.schema.json)"
+status: "Draft; CAR-001 evidence parity amendment in review; CAR-002 blocked"
 rank:
 spec_id: "claude-agent-routing"
 structureVersion: 1
@@ -12,6 +14,9 @@ structureVersion: 1
 
 Navigation map for evidence-backed per-agent model routing and graceful
 fallback on the Claude side of the shared twelve-agent catalog.
+
+All routing evidence follows the shared vendor-official source contract and
+schema-v2 candidate-manifest shape before downstream specifications begin.
 
 ## Epics (curated)
 

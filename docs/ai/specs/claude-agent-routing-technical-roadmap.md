@@ -12,10 +12,12 @@ PRD and is prepared for `$speckit-scaffold-spec CAR-NNN`.
 
 **Source PRD:** [../../prd-claude-agent-routing.md](../../prd-claude-agent-routing.md)
 **Roadmap MOC:** [claude-agent-routing-roadmap-MOC.md](claude-agent-routing-roadmap-MOC.md)
+**Shared parity contract:** [agent-routing-parity-contract.md](agent-routing-parity-contract.md)
+**Shared manifest schema:** [../research/agent-route-candidate-manifest.schema.json](../research/agent-route-candidate-manifest.schema.json)
 **Spec ID prefix:** `CAR-###`
 **Proposed branch:** `claude/agent-routing-fallback`
-**Status:** Draft; dependency graph approved 2026-07-12; CAR-001 complete and
-archived; CAR-002 ready to scaffold
+**Status:** Draft; dependency graph approved 2026-07-12; CAR-001 evidence
+parity amendment in review; CAR-002 blocked until that amendment merges
 
 **Parity note:** This roadmap is the Claude half of the shared twelve-agent
 catalog. The Codex half lives in the companion Codex routing roadmap (PR #330
@@ -45,12 +47,23 @@ CAR-005 -> CAR-006 -> CAR-007 + CAR-008 + CAR-009 + CAR-010 ->
 CAR-011
 
 **Implementation boundary:** This sequence has no external prerequisite, but
-its internal dependencies still apply: CAR-001 is complete and archived, so
-CAR-002 is the next immediately scaffoldable spec. No installer exists or is
-introduced on the Claude side - agents
+its internal dependencies still apply: CAR-001 implementation is complete and
+archived, while its official-source evidence parity amendment must merge before
+CAR-002 can be scaffolded. No installer exists or is introduced on the Claude
+side - agents
 auto-load from the shipped payload - so CAR-006 builds the route-policy
 manifest, materializer drift gate, and read-only session-preflight resolver
 instead of a copy step.
+
+### Evidence authority
+
+CAR evidence must satisfy the shared parity contract and manifest schema.
+Platform capability claims may cite only canonical Anthropic documentation
+under `code.claude.com/docs/**` or `platform.claude.com/docs/**`. Repository
+state, pinned runtime captures, and governed evaluations remain authoritative
+for production qualification, but cannot establish undocumented platform
+behavior. The historical CAR-001 report remains available for provenance; its
+v2 amendment is the active handoff for downstream specifications.
 
 ### Candidate-route starting hypotheses
 
@@ -199,8 +212,8 @@ CAR-006 Route-policy Manifest, Materializer, Preflight, and Override
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| CAR-001 | Candidate Route Baseline and Role Contracts | Complete / Archived | [.process/CAR-001-workflow.md](.process/CAR-001-workflow.md) | Archived after PR #350 |
-| CAR-002 | Capability Probing, Telemetry Profile, and Exact-Treatment Contract | Ready | - | Ready to scaffold |
+| CAR-001 | Candidate Route Baseline and Role Contracts | Evidence Amendment In Review | [.process/CAR-001-workflow.md](.process/CAR-001-workflow.md) | Merge official-source v2 amendment |
+| CAR-002 | Capability Probing, Telemetry Profile, and Exact-Treatment Contract | Blocked | - | Revalidate the merged v2 source ledger |
 | CAR-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Pending | - | Blocked by CAR-002 |
 | CAR-004 | Policy Controls and Adaptive Comparators | Pending | - | Blocked by CAR-003 |
 | CAR-005 | Model Availability, Fallback, and Recovery Simulation | Pending | - | Blocked by CAR-004 |
@@ -221,11 +234,15 @@ CAR-006 Route-policy Manifest, Materializer, Preflight, and Override
 
 **Priority:** P1 | **Depends On:** None | **Enables:** CAR-002
 
-**Implementation Status:** Complete / Archived. PR #350 merged on 2026-07-15 at
+**Implementation Status:** Runtime-neutral research spike complete / archived;
+official-source evidence parity amendment in review. PR #350 merged on
+2026-07-15 at
 `725be949b856724a073622900bd168d29b2f4603`; the active spec folder was removed
 in `.specify/memory/archive-reports/2026-07-15-car-001-post-merge-hygiene.md`.
 Canonical artifacts now live at `docs/ai/research/claude-agent-route-candidates.md`
-and `docs/ai/research/claude-agent-route-candidate-manifest.json`.
+and `docs/ai/research/claude-agent-route-candidate-manifest.json`. CAR-002 must
+consume the schema-v2 amendment and pass its source-ledger gate before it can
+begin capability probing.
 
 **Goal:** Produce the dated, cited candidate-route and role-contract handoff
 needed for capability probing without changing shipped defaults.
