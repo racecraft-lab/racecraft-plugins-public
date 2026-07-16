@@ -14,8 +14,9 @@ as its input.
 **Source PRD:** [../../prd-harness-engineering-uplift.md](../../prd-harness-engineering-uplift.md)
 **Roadmap MOC:** [harness-engineering-uplift-roadmap-MOC.md](harness-engineering-uplift-roadmap-MOC.md)
 **Spec ID prefix:** `HRNS-###`
-**Status:** Draft. Added 2026-07-03 and updated 2026-07-15 to include the pinned
-OKF v0.1 repository-knowledge lifecycle and indexing-interoperability lane.
+**Status:** Active. HRNS-001 is complete and archived; HRNS-002 and HRNS-003
+are ready. The roadmap includes the pinned OKF v0.1 repository-knowledge
+lifecycle and indexing-interoperability lane.
 
 ---
 
@@ -241,15 +242,15 @@ HRNS-002 + HRNS-005 + HRNS-006 + HRNS-009 + HRNS-010 + HRNS-011 + HRNS-012 + HRN
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| HRNS-001 | Harness Surface Inventory and Gap Taxonomy | Post-Implementation | [.process/HRNS-001-workflow.md](.process/HRNS-001-workflow.md) | Complete post-implementation gates and PR publication |
-| HRNS-002 | Progressive Context and Durable State Contract | Pending | - | Blocked by HRNS-001 |
-| HRNS-003 | Helper, Tool, and Capability Contract | Pending | - | Blocked by HRNS-001 |
+| HRNS-001 | Harness Surface Inventory and Gap Taxonomy | Complete / Archived | [.process/HRNS-001-workflow.md](.process/HRNS-001-workflow.md) | PR #357 merged; canonical taxonomy lives at `harness-engineering-uplift-gap-taxonomy.md` |
+| HRNS-002 | Progressive Context and Durable State Contract | Ready | - | Ready after HRNS-001 |
+| HRNS-003 | Helper, Tool, and Capability Contract | Ready | - | Ready after HRNS-001 |
 | HRNS-004 | Permission, Sandbox, and Pre-action Authorization Controls | Pending | - | Blocked by HRNS-003 |
-| HRNS-005 | Feedback Sensors and Eval Readiness Ladder | Pending | - | Blocked by HRNS-001 and HRNS-003 |
+| HRNS-005 | Feedback Sensors and Eval Readiness Ladder | Pending | - | Blocked by HRNS-003 |
 | HRNS-006 | Trace, Debug, and Review Evidence Packets | Pending | - | Blocked by HRNS-003, HRNS-004, and HRNS-005 |
 | HRNS-007 | Long-horizon Orchestration and Resumption Controls | Pending | - | Blocked by HRNS-002 and HRNS-006 |
 | HRNS-008 | Harness Drift, Garbage Collection, and Self-healing Remediation | Pending | - | Final layer; blocked by HRNS-002, HRNS-005, HRNS-006, and HRNS-009 through HRNS-014 |
-| HRNS-009 | Host Repository OKF Knowledge Contract and Initialization | Pending | - | Blocked by HRNS-001 through HRNS-006 |
+| HRNS-009 | Host Repository OKF Knowledge Contract and Initialization | Pending | - | Blocked by HRNS-002 through HRNS-006 |
 | HRNS-010 | Incremental Evidence Ingest and Knowledge Synthesis | Pending | - | Blocked by HRNS-005, HRNS-006, and HRNS-009 |
 | HRNS-011 | Knowledge Query, Citation, and Compounding Capture | Pending | - | Blocked by HRNS-003, HRNS-005, HRNS-006, HRNS-009, and HRNS-010 |
 | HRNS-012 | Knowledge Conformance, Health, and Drift Maintenance | Pending | - | Blocked by HRNS-005, HRNS-006, HRNS-009, and HRNS-010 |
