@@ -262,6 +262,53 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
             diagnostics=[snapshots["diagnostic"]],
         )
 
+    try:
+        current_rendered, current_specs_present = render_spec_index(target_root)
+    except SpecIndexRenderError as exc:
+        mutation["mutation_status"] = "blocked"
+        diag = diagnostic(
+            "source_changed",
+            "generate-spec-index-write could not re-render sources before commit",
+            details={"helper_id": entry.helper_id, "error": type(exc).__name__},
+            remediation_summary="Retry after spec-index sources are stable.",
+            remediation_actions=["Inspect spec-index source files.", "Retry apply mode after concurrent edits stop."],
+        )
+        return spec_index_response(
+            "expected_failure",
+            request_id=request.request_id,
+            data=_spec_index_write_data(
+                entry,
+                request,
+                mutation,
+                specs_present=specs_present,
+                rendered=rendered,
+                writes_state=False,
+            ),
+            diagnostics=[diag],
+        )
+    if spec_index_render_signature(current_rendered, target_root) != spec_index_render_signature(rendered, target_root) or current_specs_present != specs_present:
+        mutation["mutation_status"] = "blocked"
+        diag = diagnostic(
+            "source_changed",
+            "generate-spec-index-write refused to commit stale rendered maps",
+            details={"helper_id": entry.helper_id, "repo_root": repo_relative(target_root, target_root)},
+            remediation_summary="Retry after spec-index sources are stable.",
+            remediation_actions=["Inspect spec-index source files.", "Retry apply mode after concurrent edits stop."],
+        )
+        return spec_index_response(
+            "expected_failure",
+            request_id=request.request_id,
+            data=_spec_index_write_data(
+                entry,
+                request,
+                mutation,
+                specs_present=specs_present,
+                rendered=rendered,
+                writes_state=False,
+            ),
+            diagnostics=[diag],
+        )
+
     for record, operation in zip(changed, operations):
         rel = repo_relative(record.path, target_root)
         try:
@@ -343,6 +390,13 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
             rendered=rendered,
             writes_state=bool(changed),
         ),
+    )
+
+
+def spec_index_render_signature(rendered: list[RenderedSpecIndexMap], target_root: Path) -> tuple[tuple[str, str, str], ...]:
+    return tuple(
+        (repo_relative(record.path, target_root), record.original, record.rendered)
+        for record in sorted(rendered, key=lambda item: repo_relative(item.path, target_root))
     )
 
 

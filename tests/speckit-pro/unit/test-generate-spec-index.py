@@ -244,6 +244,47 @@ class GenerateSpecIndexTests(unittest.TestCase):
         self.assertEqual(body["status"], "ok")
         self.assertEqual(body["data"]["mutation"]["mutation_status"], "applied")
 
+    def test_write_rejects_render_dependency_change_between_render_and_commit(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        root = self.copy_fixture("stale-fill")
+        moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"
+        before = moc.read_text(encoding="utf-8")
+        prs = root / "specs" / "prsg-901-stale" / ".process" / "prs.json"
+        real_render = mutation.render_spec_index
+        calls = 0
+
+        def mutate_prs_after_initial_render(target_root: Path):
+            nonlocal calls
+            rendered = real_render(target_root)
+            calls += 1
+            if calls == 1:
+                payload = json.loads(prs.read_text(encoding="utf-8"))
+                payload["records"][0]["pr"] = 999
+                prs.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+            return rendered
+
+        request = RunnerRequest(
+            "test-spec-index-render-source-changed",
+            "generate-spec-index-write",
+            "generate-spec-index-write",
+            "apply",
+            {"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+        )
+        old_cwd = Path.cwd()
+        os.chdir(REPO_ROOT)
+        try:
+            with patch.object(mutation, "render_spec_index", side_effect=mutate_prs_after_initial_render):
+                body = mutation.run_spec_index_write(registry.MUTATION_HELPERS["generate-spec-index-write"], request)
+        finally:
+            os.chdir(old_cwd)
+
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual([diag["code"] for diag in body["diagnostics"]], ["source_changed"])
+        self.assertEqual(moc.read_text(encoding="utf-8"), before)
+        self.assertFalse(body["data"]["writes_state"])
+
     def test_current_marker_spelling_is_rendered_and_preserved(self) -> None:
         root = self.copy_fixture("stale-fill")
         moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"
