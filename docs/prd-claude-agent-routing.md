@@ -1,17 +1,48 @@
 # PRD: Claude Code Agent Model Routing and Graceful Fallback
 
 **Status**: Active - not yet implemented
-**Source**: Maintainer request plus official Anthropic documentation and
-research passes completed 2026-07-12; structural mirror of the Codex routing
-PRD (PR #330 head `4e478906`, amended by the parity PR #338)
+**Source**: Maintainer request plus current official Anthropic documentation
+retrieved 2026-07-16 under the evidence-authority contract below
 **Created**: 2026-07-12
-**Last updated**: 2026-07-12
+**Last updated**: 2026-07-16
 **Target window**: Next SpecKit Pro minor release after the evaluation and
 route-policy specifications in this roadmap are implemented
 **Parity note**: This PRD is the Claude half of the shared twelve-agent
 catalog. The Codex half is defined by the companion Codex routing PRD; the two
 documents mirror each other and diverge only for platform-specific
 implementation requirements.
+
+---
+
+## Evidence Authority
+
+- The shared
+  [agent-routing parity contract](ai/specs/agent-routing-parity-contract.md)
+  governs structure, evidence classes, source records, historical integrity,
+  and fail-closed behavior for CAR and G56R.
+- Official Anthropic documentation under `code.claude.com/docs/**` and
+  `platform.claude.com/docs/**` is the sole authority for Claude Code and
+  Claude platform facts, including model IDs and positioning, supported
+  configuration fields, effort controls, telemetry fields, lifecycle, and
+  client-surface behavior.
+- Repository files, generated payloads, installed caches, and Codex agent
+  definitions are project inputs used to inventory the current implementation
+  and define SpecKit Pro role contracts. They cannot establish an Anthropic
+  model, capability, configuration field, telemetry field, or native behavior.
+- Responses from documented runtime methods and bounded invocation probes may
+  verify environment availability or exact treatment for an already
+  documented candidate. They cannot add a candidate or broaden a platform
+  claim.
+- Controlled SpecKit Pro evaluations may qualify and rank document-eligible
+  routes against project role contracts. Those results are product
+  qualification evidence, not authority for platform behavior.
+- If official documentation does not establish a required platform fact, the
+  fact is `undocumented` and the dependent claim or route fails closed. Support
+  articles, marketing pages, news posts, repository inference, runtime success,
+  and neighboring-model analogy cannot promote it to a platform fact.
+- The official-source ledger is versioned and revalidated before each CAR
+  scaffold that consumes it and again before release. A changed, conflicting,
+  inaccessible, or withdrawn source invalidates bound candidates and claims.
 
 ---
 
@@ -231,44 +262,50 @@ plugin release.
   `autopilot-fast-helper` whose contract derives from the Codex helper under
   the parity principle) and every active source, skill, validation,
   evaluation, generated-payload, and installed-cache surface that encodes or
-  consumes their route policy.
-- **AC-1.2**: The record cites current official Anthropic documentation for
-  model IDs and aliases, subagent configuration fields, effort levels,
-  model-resolution precedence, plugin-agent field support, fast mode,
-  authentication modes, and non-interactive telemetry. Conflicting claims are
-  rejected or explicitly unresolved.
+  consumes their route policy. The inventory is labeled `project_input` and
+  cannot establish Anthropic platform facts or candidate eligibility.
+- **AC-1.2 - Official-source ledger**: The record cites only current official
+  Anthropic documentation for every shared research-matrix family: model IDs,
+  aliases and lifecycle, subagent and plugin fields, effort controls, skills,
+  tools, permissions, hooks, noninteractive output, telemetry, authentication,
+  availability, fast mode, pricing, cost, and analytics. Every platform claim
+  records its source-ledger ID, canonical URL, retrieval timestamp, supported
+  surface, exact fact, bounded extract and hash, claim binding, gap, and
+  invalidation trigger. Conflicting or absent claims are blocked or marked
+  `undocumented`.
 - **AC-1.3**: Every agent has an immutable production route (recorded as
   absent for the net-new helper), a role-specific contract, candidate
-  model/effort tuples from probed capabilities, prompt/context candidates when
-  justified, and a fixture backlog. A model or effort is excluded only for
-  recorded incompatibility, contract failure, or predeclared dominance
-  evidence; `fable` enters executor-class candidate sets and is excluded only
-  by recorded probe or contract evidence, never by product-announcement
-  status.
+  routes admitted only by the official-source ledger, prompt/context candidates
+  when justified, and a fixture backlog. CAR-001 records model/effort tuples as
+  non-executable until the documented alias, model-specific effort support,
+  environment availability, and exact treatment are verified. Runtime probes
+  may narrow availability but cannot introduce a model or effort outside the
+  official ledger. A route is excluded only for recorded incompatibility,
+  contract failure, or predeclared dominance evidence.
 - **AC-1.4**: Platform facts, reasonable inferences, proposed SpecKit Pro
-  policies, and unverified assumptions are visibly separated. No head-to-head
-  benchmark or native fallback feature is claimed where none is documented.
-  The undocumented behavior when frontmatter names an unavailable model is
-  recorded as a mandatory probe question, not assumed.
+  policies, project inputs, runtime observations, qualification evidence, and
+  undocumented facts are visibly separated under the shared five-class
+  contract. Only official documentation may support a platform fact. No
+  head-to-head benchmark or native fallback feature is claimed where none is
+  documented.
 - **AC-1.5 — Research completion without a dependency cycle**: The time-boxed
-  research spike ends with a provisional candidate-route manifest,
+  research spike ends with an official-source ledger, provisional
+  candidate-route manifest,
   role-contract catalog, fixture backlog, telemetry requirements, unresolved
   capability questions, and a go/no-go handoff to CAR-002. It does not depend
   on CAR-002 results, change shipped defaults, or claim that a candidate is
   executable before capability probing.
 - **AC-1.6 — Candidate route and fallback manifest**: Before scored screening,
-  CAR-001 publishes a versioned `agent_route_candidate_manifest` covering all
-  twelve named agents; the net-new helper enters with a contract derived from
-  the Codex helper and no current Claude production route. For each agent it
-  records the immutable production route or its recorded absence; every
-  candidate model/effort tuple with both the shipped alias and the expected
-  resolved model ID; required model, modality, subagent-field, tool, skill,
-  and client capabilities; `agent_contract_id`; prompt/instruction hash;
-  candidate rationale; known incompatibilities; required qualification
-  artifacts; and invalidation triggers. It distinguishes project-level
-  candidate eligibility from environment-time availability. CAR-002 later
-  binds the manifest to a versioned runtime capability snapshot and freezes
-  the executable candidate set before CAR-003 scores outcomes.
+  CAR-001 publishes a Schema `2.0.0` `agent_route_candidate_manifest` covering
+  all twelve named agents under the same top-level and record-level contract as
+  G56R-001. It records the immutable comparator, source ledger, effort
+  surfaces, project inputs, role contracts, source-bound candidates, fixtures,
+  telemetry, capability questions, traceability, decisions, historical fact
+  dispositions, and invalidation rules. Platform differences remain values,
+  explicit statuses, nulls, or empty arrays rather than platform-only schema
+  fields. CAR-002 later binds the manifest to a versioned runtime capability
+  snapshot and freezes the executable candidate set before CAR-003 scores
+  outcomes.
 - **AC-1.7 — Current harness baseline**: The research record labels the
   current Layer 6 Claude path - a frontmatter-stripped agent body piped to
   `claude -p --model` - as bare prompt emulation and labels all historical
@@ -886,9 +923,9 @@ plugin release.
    every required agent, plus the helper and no-helper paths. Direct harness
    injection, generic substitution, or unused results do not satisfy release.
 8. Source, generated payload, installed cache, active guidance, replay
-   evidence, UAT, rollback, and final identities agree. Only capability-based
-   routing claims supported by the pinned client range and evidence are
-   published.
+   evidence, UAT, rollback, and final identities agree. Platform claims require
+   current official Anthropic documentation; qualification claims require the
+   pinned client and evaluation evidence.
 
 ## 9. References
 
@@ -898,6 +935,10 @@ plugin release.
 - **Project standards:** [AGENTS.md](../AGENTS.md) and [CLAUDE.md](../CLAUDE.md)
 - **Codex parity sibling:** [prd-codex-gpt-5-6-agent-routing.md](prd-codex-gpt-5-6-agent-routing.md)
   (PR #330, amended by the parity PR #338)
+- **Shared parity contract:** [agent-routing-parity-contract.md](ai/specs/agent-routing-parity-contract.md)
+- **Shared manifest schema:** [agent-route-candidate-manifest.schema.json](ai/research/agent-route-candidate-manifest.schema.json)
+- **Official documentation discovery:** [Claude Code documentation index](https://code.claude.com/docs/llms.txt)
+- **Models and lifecycle:** [Models overview](https://platform.claude.com/docs/en/about-claude/models/overview) and [Model deprecations](https://platform.claude.com/docs/en/about-claude/model-deprecations)
 - **Subagent configuration, model field, and resolution precedence:** [Subagents](https://code.claude.com/docs/en/sub-agents)
 - **Model configuration and aliases:** [Model configuration](https://code.claude.com/docs/en/model-config)
 - **Reasoning effort levels and defaults:** [Effort](https://platform.claude.com/docs/en/build-with-claude/effort)
@@ -907,6 +948,7 @@ plugin release.
 - **OpenTelemetry monitoring:** [Monitoring usage](https://code.claude.com/docs/en/monitoring-usage)
 - **Statusline rate-limit fields (diagnostic only):** [Statusline](https://code.claude.com/docs/en/statusline)
 - **API pricing incl. cache-write and cache-read rates (diagnostic-derived coefficients):** [Pricing](https://platform.claude.com/docs/en/about-claude/pricing)
-- **Subscription limit structure (non-goal context):** [Models, usage, and limits in Claude Code](https://support.claude.com/en/articles/14552983-models-usage-and-limits-in-claude-code)
-- **Fable 5 and Mythos 5 availability:** [Introducing Claude Fable 5 and Claude Mythos 5](https://www.anthropic.com/news/claude-fable-5-mythos-5)
 - **Claude Code Analytics Admin API (aggregate, non-goal context):** [Claude Code Analytics API](https://platform.claude.com/docs/en/manage-claude/claude-code-analytics-api)
+- **Historical context only, not platform authority:** The original CAR-001
+  report preserves the prior support, marketing, news, and legacy redirect
+  references with v2 fact dispositions.

@@ -1,6 +1,7 @@
 # Claude Agent Route Candidate Baseline and Role Contracts
 
-**Research date (access date): 2026-07-14** | **Spec: CAR-001** | **Branch: `car-001-candidate-route-baseline`**
+**Original research date: 2026-07-14** | **Official-source parity refresh:
+2026-07-16** | **Spec: CAR-001**
 
 This is the human-readable research record for CAR-001. Its machine counterpart is
 the JSON manifest `docs/ai/research/claude-agent-route-candidate-manifest.json`.
@@ -28,7 +29,122 @@ recomputation from the pinned tag; no machine datum has two authoritative homes.
 
 ---
 
-## Immutable production comparator
+## Current v2 evidence-parity amendment
+
+**Current snapshot:** `CAR-001-SNAPSHOT-2026-07-16-V2`
+**Manifest schema:** `2.0.0`
+**Shared contract:**
+[`agent-routing-parity-contract.md`](../specs/agent-routing-parity-contract.md)
+**Current comparator:** `speckit-pro-v2.19.2` at
+`587057efeff856bad020b38dc11c7e9214f2c078`
+
+This section is the current authority for CAR-001 consumers. The rest of this
+report preserves the merged 2026-07-14 CAR-001 research narrative and remains
+historically attributable to manifest `1.0.0`. Git commit
+`725be949b856724a073622900bd168d29b2f4603` contains the original report and
+manifest byte-for-byte.
+
+The v2 amendment makes CAR and G56R structurally equivalent while retaining
+platform-specific content. The canonical Claude manifest now validates against
+the same schema as the Codex manifest and carries separate source-ledger,
+effort-surface, project-input, agent-contract, candidate-route, fixture,
+telemetry, capability-question, traceability, decision, and invalidation
+records.
+
+### Evidence authority
+
+Only current documentation whose canonical URL is under
+`code.claude.com/docs/` or `platform.claude.com/docs/` may establish an
+Anthropic platform fact or admit a CAR candidate. Legacy `docs.claude.com`
+URLs remain historical requested URLs only. Support articles, marketing pages,
+news posts, release announcements, repository observations, runtime probes,
+and evaluations cannot establish platform behavior.
+
+Repository and release observations remain `project_input`. Runtime discovery
+may verify environment availability for a documented candidate. Controlled
+evaluation may qualify a documented and executable route. If documentation is
+missing, conflicting, inaccessible, or withdrawn, the dependent claim or route
+is `undocumented` and fails closed.
+
+### Official Anthropic source ledger
+
+All 21 pages below returned HTTP 200 during the live refresh. The machine
+manifest records the exact UTC retrieval time, response byte count, full body
+SHA-256, locator, bounded normalized extract and hash, claim bindings, gaps,
+and invalidation rules for every row.
+
+| ID | Source family | Canonical documentation |
+|---|---|---|
+| `ANTH-DOC-001` | Documentation discovery | https://code.claude.com/docs/llms.txt |
+| `ANTH-DOC-002` | Model catalog | https://platform.claude.com/docs/en/about-claude/models/overview |
+| `ANTH-DOC-003` | Model lifecycle | https://platform.claude.com/docs/en/about-claude/model-deprecations |
+| `ANTH-DOC-004` | Model configuration and resolution | https://code.claude.com/docs/en/model-config |
+| `ANTH-DOC-005` | Subagent configuration | https://code.claude.com/docs/en/sub-agents |
+| `ANTH-DOC-006` | Plugin-agent contract | https://code.claude.com/docs/en/plugins-reference |
+| `ANTH-DOC-007` | Effort controls | https://platform.claude.com/docs/en/build-with-claude/effort |
+| `ANTH-DOC-008` | Skills and delegation | https://code.claude.com/docs/en/skills |
+| `ANTH-DOC-009` | Tools and MCP | https://code.claude.com/docs/en/tools-reference |
+| `ANTH-DOC-010` | Permissions and sandboxing | https://code.claude.com/docs/en/permissions |
+| `ANTH-DOC-011` | Hooks and effective-route evidence | https://code.claude.com/docs/en/hooks |
+| `ANTH-DOC-012` | Noninteractive output | https://code.claude.com/docs/en/headless |
+| `ANTH-DOC-013` | Telemetry and observability | https://code.claude.com/docs/en/monitoring-usage |
+| `ANTH-DOC-014` | Authentication | https://code.claude.com/docs/en/authentication |
+| `ANTH-DOC-015` | Feature and provider availability | https://code.claude.com/docs/en/feature-availability |
+| `ANTH-DOC-016` | Fast mode | https://code.claude.com/docs/en/fast-mode |
+| `ANTH-DOC-017` | Cost management | https://code.claude.com/docs/en/costs |
+| `ANTH-DOC-018` | Model pricing | https://platform.claude.com/docs/en/about-claude/pricing |
+| `ANTH-DOC-019` | Status-line diagnostics | https://code.claude.com/docs/en/statusline |
+| `ANTH-DOC-020` | Administrative analytics | https://platform.claude.com/docs/en/manage-claude/claude-code-analytics-api |
+| `ANTH-DOC-021` | Interactive commands | https://code.claude.com/docs/en/commands |
+
+### Source-family completeness
+
+| Required family | Current source IDs | Disposition |
+|---|---|---|
+| Documentation discovery | `ANTH-DOC-001` | Complete |
+| Models, aliases, lifecycle, and provider scope | `ANTH-DOC-002` through `ANTH-DOC-004`, `ANTH-DOC-015` | Complete; environment availability remains probe-gated |
+| Subagents, plugin fields, skills, and delegation | `ANTH-DOC-005`, `ANTH-DOC-006`, `ANTH-DOC-008` | Complete for documented fields |
+| Effort values, defaults, and scope | `ANTH-DOC-005`, `ANTH-DOC-007`, `ANTH-DOC-021` | Complete; model-specific acceptance remains probe-gated |
+| Tools, MCP, permissions, and mutation | `ANTH-DOC-009`, `ANTH-DOC-010` | Complete for platform surfaces; role contracts remain project inputs |
+| Hooks and effective-route evidence | `ANTH-DOC-011` | Complete with the `TEL-5` correction below |
+| Noninteractive output and errors | `ANTH-DOC-012` | Complete; effective effort remains undocumented on the print result |
+| Telemetry and attribution | `ANTH-DOC-011` through `ANTH-DOC-013` | Complete for documented fields; pinned-client presence remains conditional |
+| Authentication and product availability | `ANTH-DOC-014`, `ANTH-DOC-015` | Complete; account entitlement remains runtime-specific |
+| Fast mode, pricing, costs, and diagnostics | `ANTH-DOC-016` through `ANTH-DOC-020` | Complete; routing use is prohibited or diagnostic-only where recorded |
+
+### Legacy fact dispositions
+
+The v2 manifest preserves and disposes all 34 stable v1 fact IDs. Thirty-three
+are `confirmed_current` against canonical Anthropic documentation. `TEL-5` is
+`changed`: current hooks documentation places `resolvedModel` on the Agent tool
+response, not on the `SubagentStart` hook input. The historical wording remains
+below and in the merged snapshot, while `CAR-V2-TEL-005` is the current claim.
+
+Rows that previously relied on news, pricing-marketing, or legacy redirect
+pages now bind stable documentation instead: fast mode uses `ANTH-DOC-016`,
+pricing uses `ANTH-DOC-018`, and model/configuration rows use the canonical
+platform or Claude Code pages. No legacy fact was deleted or renumbered.
+
+### Comparator reconciliation
+
+The latest published release at refresh time is `speckit-pro-v2.19.2`. The
+scoped diff from `speckit-pro-v2.19.1` through `speckit-pro-v2.19.2` under
+`speckit-pro/agents` and `speckit-pro/codex-agents` is empty. The existing role
+instructions, route tuples, and hashes therefore remain byte-equivalent while
+the immutable comparator advances.
+
+### Current consumption decision
+
+- **GO after merge:** CAR-002 may consume the v2 manifest after the parity
+  validator passes on `main` and the source ledger is revalidated at scaffold
+  time.
+- **NO-GO before merge or refresh:** no candidate is executable or preferred;
+  unresolved alias binding, availability, effort treatment, and dispatch
+  questions remain assigned to CAR-002 and CAR-003.
+
+---
+
+## Historical v1 immutable production comparator (preserved)
 
 All agent bytes hashed and inventoried in this record are read from a single pinned
 release identity, never the working tree, so the recorded identity is reproducible
@@ -411,7 +527,7 @@ quoted verbatim and neither labeled a platform fact.
 
 ---
 
-## Primary-source fact table
+## Historical v1 primary-source fact table (preserved)
 
 **Access date for every fact row below: 2026-07-14.** Every platform-fact row cites a
 current official Anthropic page (`docs.claude.com`, `code.claude.com`, or `claude.com`),
@@ -992,7 +1108,7 @@ and performs none; it records the label and the lift condition only.
 `run-efficiency-benchmarks.py` at the pinned tag); the `non_release_evidence` labeling and the CAR-003 lift
 condition are proposed SpecKit Pro policy `[POLICY]`. No platform fact or benchmark result is asserted.*
 
-## Go / no-go handoff
+## Historical v1 go / no-go handoff (preserved)
 
 The record's final section: the self-contained handoff to CAR-002. It **enumerates the six required
 elements** (FR-022), records any mandatory fact left unverified within the single-run timebox as a no-go
