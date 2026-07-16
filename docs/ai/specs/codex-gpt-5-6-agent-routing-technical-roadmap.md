@@ -16,7 +16,8 @@ is prepared for `$speckit-scaffold-spec G56R-NNN`.
 **Spec ID prefix:** `G56R-###`
 **Proposed branch:** `codex/agent-routing-fallback`
 **Status:** Active; G56R-001 is complete and archived after PR #360 merged on
-the shared official-source evidence foundation from PR #362; G56R-002 is ready
+the shared official-source evidence foundation from PR #362;
+[G56R-002](.process/G56R-002-workflow.md) is in progress
 
 **Legacy identifier note:** `G56R` and the existing filenames are retained for
 traceability. They do not limit the candidate catalog to GPT-5.6.
@@ -214,7 +215,7 @@ G56R-006 Resolver, Materializer, Installer, and Strict Override
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
 | G56R-001 | Candidate Route Baseline and Role Contracts | Complete / Archived | [.process/G56R-001-workflow.md](.process/G56R-001-workflow.md) | PR #360 merged; canonical evidence lives under `docs/ai/research/` |
-| G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | Ready | - | Ready after G56R-001; refresh source invalidation checks at scaffold |
+| G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | In Progress | [.process/G56R-002-workflow.md](.process/G56R-002-workflow.md) | Scaffold complete; start Specify from the dedicated worktree |
 | G56R-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Pending | - | Blocked by G56R-002 |
 | G56R-004 | Policy Controls and Adaptive Comparators | Pending | - | Blocked by G56R-003 |
 | G56R-005 | Model Availability, Fallback, and Recovery Simulation | Pending | - | Blocked by G56R-004 |
