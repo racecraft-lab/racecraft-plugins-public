@@ -262,31 +262,17 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
             diagnostics=[snapshots["diagnostic"]],
         )
 
-    try:
-        current_rendered, current_specs_present = render_spec_index(target_root)
-    except SpecIndexRenderError as exc:
-        mutation["mutation_status"] = "blocked"
-        diag = diagnostic(
-            "source_changed",
-            "generate-spec-index-write could not re-render sources before commit",
-            details={"helper_id": entry.helper_id, "error": type(exc).__name__},
-            remediation_summary="Retry after spec-index sources are stable.",
-            remediation_actions=["Inspect spec-index source files.", "Retry apply mode after concurrent edits stop."],
-        )
-        return spec_index_response(
-            "expected_failure",
-            request_id=request.request_id,
-            data=_spec_index_write_data(
-                entry,
-                request,
-                mutation,
-                specs_present=specs_present,
-                rendered=rendered,
-                writes_state=False,
-            ),
-            diagnostics=[diag],
-        )
-    if spec_index_render_signature(current_rendered, target_root) != spec_index_render_signature(rendered, target_root) or current_specs_present != specs_present:
+    current_rendered, current_specs_present, current_dependency_signature = _spec_index_precommit_render_guard(
+        target_root,
+        changed,
+    )
+    if (
+        current_rendered is None
+        or current_dependency_signature is None
+        or current_specs_present is None
+        or spec_index_render_signature(current_rendered, target_root) != spec_index_render_signature(rendered, target_root)
+        or current_specs_present != specs_present
+    ):
         mutation["mutation_status"] = "blocked"
         diag = diagnostic(
             "source_changed",
@@ -308,12 +294,13 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
             ),
             diagnostics=[diag],
         )
+    expected_output_signature = spec_index_render_output_signature(current_rendered, target_root)
 
     for record, operation in zip(changed, operations):
         rel = repo_relative(record.path, target_root)
         try:
             mutation["live_mutation"] = True
-            write_file_atomic(record.path, record.rendered, trust_root=target_root, expected_snapshot=snapshots.get(rel))
+            write_result = write_file_atomic(record.path, record.rendered, trust_root=target_root, expected_snapshot=snapshots.get(rel))
         except WritePreconditionChanged:
             mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
             mutation["failure_operation"] = operation_record(operation)
@@ -377,6 +364,76 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
             )
         mutation["applied_operations"].append(operation_record(operation))
         mutation["touched_paths"].append(rel)
+        applied_snapshot = snapshot_changed_diagnostic_after_write(
+            rel,
+            record.path,
+            snapshots,
+            target_root,
+            expected_digest=write_result["digest"],
+            expected_mode=write_result["mode"],
+        )
+        if applied_snapshot is not None:
+            mutation["mutation_status"] = "partial_failure"
+            mutation["failure_operation"] = operation_record(operation)
+            rollback_errors = rollback_applied_writes(mutation["touched_paths"], snapshots, target_root)
+            mutation["live_mutation"] = True
+            mutation["manual_remediation"] = [
+                "Inspect touched_paths and the changed map.",
+                "Retry after generated map targets are stable.",
+            ]
+            if rollback_errors:
+                mutation["manual_remediation"].append("Manual rollback is required for the reported rollback errors.")
+            else:
+                mutation["rollback_notes"] = ["Already-applied maps were rolled back before returning source_changed."]
+            return spec_index_response(
+                "expected_failure",
+                request_id=request.request_id,
+                data=_spec_index_write_data(
+                    entry,
+                    request,
+                    mutation,
+                    specs_present=specs_present,
+                    rendered=rendered,
+                    writes_state=bool(rollback_errors),
+                ),
+                diagnostics=[applied_snapshot],
+            )
+
+    if changed:
+        postcondition = _spec_index_postcommit_source_diagnostic(
+            target_root,
+            changed,
+            current_specs_present,
+            expected_output_signature,
+            current_dependency_signature,
+        )
+        if postcondition is not None:
+            mutation["mutation_status"] = "partial_failure"
+            mutation["failure_operation"] = mutation["applied_operations"][-1] if mutation["applied_operations"] else None
+            rollback_errors = rollback_applied_writes(mutation["touched_paths"], snapshots, target_root)
+            mutation["live_mutation"] = True
+            mutation["manual_remediation"] = [
+                "Inspect spec-index source files and refreshed generated maps.",
+                "Retry apply mode after concurrent edits stop.",
+            ]
+            if rollback_errors:
+                mutation["manual_remediation"].append("Manual rollback is required for the reported rollback errors.")
+            else:
+                mutation["rollback_notes"] = ["Already-applied maps were rolled back before returning source_changed."]
+            postcondition["details"]["rollback_errors"] = rollback_errors
+            return spec_index_response(
+                "expected_failure",
+                request_id=request.request_id,
+                data=_spec_index_write_data(
+                    entry,
+                    request,
+                    mutation,
+                    specs_present=specs_present,
+                    rendered=rendered,
+                    writes_state=bool(rollback_errors),
+                ),
+                diagnostics=[postcondition],
+            )
 
     mutation["mutation_status"] = "applied" if changed else "no_op"
     return spec_index_response(
@@ -398,6 +455,158 @@ def spec_index_render_signature(rendered: list[RenderedSpecIndexMap], target_roo
         (repo_relative(record.path, target_root), record.original, record.rendered)
         for record in sorted(rendered, key=lambda item: repo_relative(item.path, target_root))
     )
+
+
+def spec_index_render_output_signature(rendered: list[RenderedSpecIndexMap], target_root: Path) -> tuple[tuple[str, str], ...]:
+    return tuple(
+        (repo_relative(record.path, target_root), record.rendered)
+        for record in sorted(rendered, key=lambda item: repo_relative(item.path, target_root))
+    )
+
+
+def _spec_index_precommit_render_guard(
+    target_root: Path,
+    changed: list[RenderedSpecIndexMap],
+) -> tuple[list[RenderedSpecIndexMap] | None, bool | None, tuple[tuple[str, str, str], ...] | None]:
+    try:
+        current_rendered, current_specs_present = render_spec_index(target_root)
+        dependency_signature = spec_index_render_dependency_signature(target_root, changed)
+    except SpecIndexRenderError:
+        return None, None, None
+    return current_rendered, current_specs_present, dependency_signature
+
+
+def _spec_index_postcommit_source_diagnostic(
+    target_root: Path,
+    changed: list[RenderedSpecIndexMap],
+    expected_specs_present: bool,
+    expected_output_signature: tuple[tuple[str, str], ...],
+    expected_dependency_signature: tuple[tuple[str, str, str], ...],
+) -> dict[str, Any] | None:
+    try:
+        current_rendered, current_specs_present = render_spec_index(target_root)
+        current_dependency_signature = spec_index_render_dependency_signature(target_root, changed)
+    except SpecIndexRenderError as exc:
+        return diagnostic(
+            "source_changed",
+            "generate-spec-index-write could not re-render sources after commit",
+            details={"error": type(exc).__name__},
+            remediation_summary="Retry after spec-index sources are stable.",
+            remediation_actions=["Inspect spec-index source files.", "Retry apply mode after concurrent edits stop."],
+        )
+    if current_specs_present != expected_specs_present:
+        return diagnostic(
+            "source_changed",
+            "generate-spec-index-write detected a specs directory change after commit",
+            details={"expected_specs_present": expected_specs_present, "current_specs_present": current_specs_present},
+            remediation_summary="Retry after spec-index sources are stable.",
+            remediation_actions=["Inspect the specs directory.", "Retry apply mode after concurrent edits stop."],
+        )
+    if spec_index_render_output_signature(current_rendered, target_root) != expected_output_signature:
+        return diagnostic(
+            "source_changed",
+            "generate-spec-index-write detected a rendered map source change after commit",
+            details={"repo_root": repo_relative(target_root, target_root)},
+            remediation_summary="Retry after spec-index sources are stable.",
+            remediation_actions=["Inspect spec-index source files.", "Retry apply mode after concurrent edits stop."],
+        )
+    if current_dependency_signature != expected_dependency_signature:
+        return diagnostic(
+            "source_changed",
+            "generate-spec-index-write detected a render dependency change after commit",
+            details={"repo_root": repo_relative(target_root, target_root)},
+            remediation_summary="Retry after spec-index sources are stable.",
+            remediation_actions=["Inspect spec-index source files.", "Retry apply mode after concurrent edits stop."],
+        )
+    return None
+
+
+def spec_index_render_dependency_signature(
+    target_root: Path,
+    changed: list[RenderedSpecIndexMap],
+) -> tuple[tuple[str, str, str], ...]:
+    excluded = {repo_relative(record.path, target_root) for record in changed}
+    records: list[tuple[str, str, str]] = []
+
+    def add_file(path: Path) -> None:
+        rel = repo_relative(path, target_root)
+        if rel in excluded:
+            return
+        try:
+            mode = path.lstat().st_mode
+        except FileNotFoundError:
+            records.append((rel, "missing", ""))
+            return
+        except OSError as exc:
+            raise SpecIndexRenderError(f"could not inspect spec-index dependency: {path} ({type(exc).__name__})") from exc
+        if stat.S_ISLNK(mode):
+            records.append((rel, "symlink", ""))
+            return
+        if not stat.S_ISREG(mode):
+            records.append((rel, "other", str(stat.S_IFMT(mode))))
+            return
+        try:
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError as exc:
+            raise SpecIndexRenderError(f"could not read spec-index dependency: {path} ({type(exc).__name__})") from exc
+        records.append((rel, f"file:{stat.S_IMODE(mode):o}", digest))
+
+    def walk_tree(root: Path) -> None:
+        rel = repo_relative(root, target_root)
+        try:
+            mode = root.lstat().st_mode
+        except FileNotFoundError:
+            records.append((rel, "missing", ""))
+            return
+        except OSError as exc:
+            raise SpecIndexRenderError(f"could not inspect spec-index dependency directory: {root} ({type(exc).__name__})") from exc
+        if stat.S_ISLNK(mode):
+            records.append((rel, "symlink", ""))
+            return
+        if not stat.S_ISDIR(mode):
+            records.append((rel, "other", str(stat.S_IFMT(mode))))
+            return
+        records.append((rel, "dir", ""))
+        try:
+            children = sorted(root.iterdir(), key=lambda item: item.name.encode("utf-8"))
+        except OSError as exc:
+            raise SpecIndexRenderError(f"could not scan spec-index dependency directory: {root} ({type(exc).__name__})") from exc
+        for child in children:
+            try:
+                child_mode = child.lstat().st_mode
+            except OSError as exc:
+                raise SpecIndexRenderError(f"could not inspect spec-index dependency: {child} ({type(exc).__name__})") from exc
+            if stat.S_ISDIR(child_mode):
+                walk_tree(child)
+            else:
+                add_file(child)
+
+    walk_tree(target_root / "specs")
+    home_dir = target_root / "docs" / "ai" / "specs"
+    try:
+        home_mode = home_dir.lstat().st_mode
+    except FileNotFoundError:
+        records.append((repo_relative(home_dir, target_root), "missing", ""))
+    except OSError as exc:
+        raise SpecIndexRenderError(f"could not inspect roadmap-MOC dependency directory: {home_dir} ({type(exc).__name__})") from exc
+    else:
+        home_rel = repo_relative(home_dir, target_root)
+        if stat.S_ISLNK(home_mode):
+            records.append((home_rel, "symlink", ""))
+        elif stat.S_ISDIR(home_mode):
+            records.append((home_rel, "dir", ""))
+            try:
+                home_entries = sorted(home_dir.iterdir(), key=lambda item: item.name.encode("utf-8"))
+            except OSError as exc:
+                raise SpecIndexRenderError(f"could not scan roadmap-MOC dependency directory: {home_dir} ({type(exc).__name__})") from exc
+            for home in home_entries:
+                if home.name.endswith("-roadmap-MOC.md"):
+                    add_file(home)
+        else:
+            records.append((home_rel, "other", str(stat.S_IFMT(home_mode))))
+    add_file(target_root / ".specify" / "structure-version.json")
+    add_file(target_root / ".specify" / "feature.json")
+    return tuple(sorted(records))
 
 
 def _spec_index_write_operations(

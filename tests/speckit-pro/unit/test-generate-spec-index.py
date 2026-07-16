@@ -285,6 +285,48 @@ class GenerateSpecIndexTests(unittest.TestCase):
         self.assertEqual(moc.read_text(encoding="utf-8"), before)
         self.assertFalse(body["data"]["writes_state"])
 
+    def test_write_rolls_back_render_dependency_change_immediately_before_replace(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        root = self.copy_fixture("stale-fill")
+        moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"
+        before = moc.read_text(encoding="utf-8")
+        prs = root / "specs" / "prsg-901-stale" / ".process" / "prs.json"
+        real_write = mutation.write_file_atomic
+        calls = 0
+
+        def mutate_prs_before_replace(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                payload = json.loads(prs.read_text(encoding="utf-8"))
+                payload["records"][0]["pr"] = 1000
+                prs.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+            return real_write(*args, **kwargs)
+
+        request = RunnerRequest(
+            "test-spec-index-render-source-changed-before-replace",
+            "generate-spec-index-write",
+            "generate-spec-index-write",
+            "apply",
+            {"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+        )
+        old_cwd = Path.cwd()
+        os.chdir(REPO_ROOT)
+        try:
+            with patch.object(mutation, "write_file_atomic", side_effect=mutate_prs_before_replace):
+                body = mutation.run_spec_index_write(registry.MUTATION_HELPERS["generate-spec-index-write"], request)
+        finally:
+            os.chdir(old_cwd)
+
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual([diag["code"] for diag in body["diagnostics"]], ["source_changed"])
+        self.assertEqual(body["data"]["mutation"]["mutation_status"], "partial_failure")
+        self.assertEqual(body["data"]["mutation"]["touched_paths"], ["specs/prsg-901-stale/SPEC-MOC.md"])
+        self.assertEqual(moc.read_text(encoding="utf-8"), before)
+        self.assertFalse(body["data"]["writes_state"])
+
     def test_current_marker_spelling_is_rendered_and_preserved(self) -> None:
         root = self.copy_fixture("stale-fill")
         moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"
