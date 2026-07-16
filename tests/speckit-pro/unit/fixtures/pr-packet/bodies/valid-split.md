@@ -1,5 +1,7 @@
 <!-- speckit-pro-review-packet-source: tests/speckit-pro/unit/fixtures/pr-packet/valid-split.json -->
 
+# feat(PRSG-012): Validate reviewer packet slices
+
 ## Summary
 
 <!-- speckit-pro-editable:summary:start -->

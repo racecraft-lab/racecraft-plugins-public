@@ -31,7 +31,7 @@ in order; do not collapse or defer.
 | 13 | Code Review | (none) — built-in | spawn a subagent to independently review the diff `origin/main...HEAD`; report findings by severity |
 | 14 | Integration Suite | (none) | `PROJECT_COMMANDS.FULL_VERIFY` or detected full test command |
 | 15 | Final Reviewability Backstop | (none) | deferred helper; use current committed evidence or stop before PR side effects |
-| 16 | PR Packet/Body Generation | final backstop proceeded | require an existing current `specs/<feature>/.process/pr-packets/<packet-id>.json`; stop if absent because packet emission is deferred |
+| 16 | PR Packet/Body Generation | final backstop proceeded | emit or refresh current `specs/<feature>/.process/pr-packets/<packet-id>.json` with `pr-packet-output` `dry_run` then `apply`; stop if emission or validation fails |
 | 17 | PR Creation | current packet validation passed | single-PR path only when no split route and no current `pr_marker_plan`; `multi-pr-emission` for split-PR routes or marker-ready plans |
 | 18 | Review Remediation | (none) | parent session loop — inspect PR feedback, dispatch fixes as needed |
 | 19 | Retrospective | retrospective ext | `$speckit-retrospective-analyze` (FINAL STEP) |
@@ -123,9 +123,11 @@ background subagents as the fallback path. The 3-track structure
   skill sigil and SPEC context.
 - Built-in verification, git, push, PR creation, and review polling stay in the
   parent session so the orchestrator owns durable state and final reporting.
-- PR creation requires an existing schema-valid feature-local packet and the
-  repo-relative body file it references. No active helper creates or repairs
-  packet metadata.
+- PR creation requires a current schema-valid feature-local packet and the
+  repo-relative body file it references. The active `golden_only`
+  `pr-packet-output` helper creates or refreshes packet JSON and packet-owned
+  body content; `validate-pr-packet-write` persists validation only after
+  rerunning current read-only validation.
 - Missing optional extensions are logged and skipped. Do not fail the entire
   autopilot because an optional extension command is unavailable.
 - Never mark the workflow complete until every planned Post item is completed or
@@ -153,9 +155,11 @@ fail-closed sequence:
 
 ```text
 final-reviewability boundary: use current committed reviewability evidence; if none is current, stop before PR side effects
-require specs/<feature>/.process/pr-packets/<packet-id>.json to already exist and be current
+emit or refresh specs/<feature>/.process/pr-packets/<packet-id>.json with pr-packet-output dry_run then apply
 run validate-pr-packet-read-only for that packet and consume response data.stdout_json in memory/state
 require data.stdout_json.status=passed, data.stdout_json.pr_blocked=false, and response data.writes_state=false
+checkpoint packet/body artifacts so validate-pr-packet-write runs from a clean worktree
+run validate-pr-packet-write; apply mode reruns read-only validation before persisting validation_result_path
 run validate-pr-workflow-contract with the packet title and current repository diff
 create only with packet-owned --base, --head, --title, and --body-file values
 ```
@@ -175,11 +179,13 @@ fingerprint status, ordered marker IDs, checkpoints, warnings, final
 marker_split or marker-plan-ready handoff, packet validation, and PR mappings
 before PR side effects. All evidence paths must be repo-relative.
 
-`pr-packet-output` and `validate-pr-packet-write` are deferred. If the current
-schema-valid packet or its repo-relative `body_file` is absent, stale,
-malformed, or unreadable, stop before `gh pr create` and report the deferred
-packet-emission blocker. Do not synthesize a packet or choose an arbitrary
-older packet.
+Use `pr-packet-output` to emit or refresh the current feature-local packet and
+packet-owned body before `gh pr create`. The packet path remains
+`specs/<feature>/.process/pr-packets/<packet-id>.json`, and the packet ID,
+title, target branches, changed-file scope, verification evidence, UAT text,
+non-goals, and known gaps must come from current workflow or marker-plan
+evidence. Run `pr-packet-output` in `dry_run` first, then `apply`. Do not choose
+an arbitrary older packet.
 
 `generate-pr-body` is a body-only `golden_only` operation. Its complete input
 contract is `output_path`, `title`, and `sections`, and it writes one Markdown
@@ -212,10 +218,13 @@ JSON request using `helper_id=validate-pr-packet-read-only`, the same operation,
 `mode=read_only`, and the established feature-local packet path. Consume the
 current response's `data.stdout_json` in memory and durable workflow state.
 Continue only when it reports `status=passed` and `pr_blocked=false`, while the
-outer response reports `data.writes_state=false`. The helper does not persist
-`validation.json` or `validation_result_path`; prior validation artifacts never
-authorize PR creation. Exit 1 or 2 blocks before PR creation with the returned
-diagnostics.
+outer response reports `data.writes_state=false`. If any required packet is
+absent or invalid, stop before PR creation with the validator diagnostics.
+Commit or otherwise checkpoint the packet/body artifacts so the worktree is
+clean, then run `validate-pr-packet-write`; apply mode reruns read-only
+validation before persisting the packet's `validation_result_path`. Prior
+validation artifacts never authorize PR creation. Exit 1 or 2 blocks before PR
+creation with the returned diagnostics.
 
 Validate the PR workflow contract before any single-PR create attempt. The
 read-only `validate-pr-workflow-contract` helper checks the actual PR title against the
@@ -261,11 +270,11 @@ Codex parent-session responsibilities:
    `status=ok`.
 4. After the final backstop proceeds, treat `multi-pr-emission` only as
    `golden_only` command-plan capture. It does not emit packets or execute live
-   PR mutations. Every slice packet must already exist at
-   `specs/<feature>/.process/pr-packets/<packet-id>.json` and validate against
-   current marker evidence before `gh pr create` or equivalent PR side effects.
-   If any packet is absent or invalid, stop and report that `pr-packet-output`
-   is deferred.
+   PR mutations. Every slice packet must be emitted or refreshed at
+   `specs/<feature>/.process/pr-packets/<packet-id>.json` with
+   `pr-packet-output`, validated against current marker evidence, and paired
+   with persisted current validation evidence before `gh pr create` or
+   equivalent PR side effects. Stop only if emission or validation fails.
    For marker emission, `--feature-branch` is the emitted branch prefix. If
    that prefix would collide with an existing parent branch ref, pass a
    non-conflicting prefix through `--feature-branch` and the authoritative
@@ -302,7 +311,8 @@ command, exit status, evidence path, stderr/stdout tail, and keep
 `next_slice_id` on the blocked slice. Each existing slice packet must also pass
 a fresh `validate-pr-packet-read-only` request before `gh pr create`; consume
 `data.stdout_json` in memory/state and do not claim a validation file was
-written. A validation failure blocks on the same slice without opening or
+written. If any required packet is absent or invalid, stop before PR creation
+with the validator diagnostics. A validation failure blocks on the same slice without opening or
 repairing a PR. A later failed slice must not rewind,
 invalidate, or mark earlier opened slice PRs as blocked.
 

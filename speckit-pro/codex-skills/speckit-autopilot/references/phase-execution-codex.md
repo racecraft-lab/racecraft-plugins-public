@@ -373,9 +373,11 @@ fail-closed sequence:
 
 ```text
 final-reviewability boundary: use current committed reviewability evidence; if none is current, stop before PR side effects
-require specs/<feature>/.process/pr-packets/<packet-id>.json to already exist and be current
+emit or refresh specs/<feature>/.process/pr-packets/<packet-id>.json with pr-packet-output dry_run then apply
 run validate-pr-packet-read-only for that packet and consume response data.stdout_json in memory/state
 require data.stdout_json.status=passed, data.stdout_json.pr_blocked=false, and response data.writes_state=false
+checkpoint packet/body artifacts so validate-pr-packet-write runs from a clean worktree
+run validate-pr-packet-write; apply mode reruns read-only validation before persisting validation_result_path
 run validate-pr-workflow-contract with the packet title
 create only with packet-owned --base, --head, --title, and --body-file values
 ```
@@ -402,11 +404,15 @@ fingerprint status, ordered marker IDs, checkpoints, warnings, final
 marker_split or marker-plan-ready handoff, packet validation, and PR mappings
 before PR side effects.
 
-The `pr-packet-output` and `validate-pr-packet-write` operations are deferred.
-If the feature-local packet or its referenced body is missing, stale, malformed,
-or invalid, stop before `gh pr create` and report the deferred packet-emission
-blocker. The read-only validator returns its result in `data.stdout_json`; it
-does not persist `validation.json` or any other validation artifact.
+Use `pr-packet-output` to emit or refresh the feature-local packet and
+packet-owned body before `gh pr create`. If the packet or body is missing,
+stale, malformed, or invalid, rerun packet output with current title, target,
+changed-file, verification, UAT, non-goal, and known-gap evidence. The
+read-only validator returns its result in `data.stdout_json` and does not
+persist state. If any required packet is absent or invalid, stop before PR
+creation with the validator diagnostics. Checkpoint packet/body artifacts so
+`validate-pr-packet-write` runs from a clean worktree; apply mode reruns
+read-only validation before persisting `validation_result_path`.
 
 `generate-pr-body` is a body-only `golden_only` operation. Its complete input
 contract is `output_path`, `title`, and `sections`, and it writes one Markdown

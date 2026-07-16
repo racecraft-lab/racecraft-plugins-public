@@ -43,6 +43,22 @@
       "rollback": "Retry the registered generate-pr-body operation in dry_run mode before applying again."
     },
     {
+      "helper_id": "pr-packet-output",
+      "promotion_status": "golden_only",
+      "fixture_ids": ["pr-packet-output-apply"],
+      "bash_reference_ids": [],
+      "authoritative_python_command": "python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py",
+      "rollback": "Retry the registered pr-packet-output operation in dry_run mode before applying again."
+    },
+    {
+      "helper_id": "validate-pr-packet-write",
+      "promotion_status": "golden_only",
+      "fixture_ids": ["validate-pr-packet-write-apply"],
+      "bash_reference_ids": ["validate-pr-packet"],
+      "authoritative_python_command": "python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py",
+      "rollback": "Retry validate-pr-packet-write from a clean worktree; apply mode reruns read-only validation before persisting."
+    },
+    {
       "helper_id": "multi-pr-emission",
       "promotion_status": "golden_only",
       "fixture_ids": ["fake-gh-command-capture"],

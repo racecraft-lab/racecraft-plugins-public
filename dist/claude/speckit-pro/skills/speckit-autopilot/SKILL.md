@@ -582,17 +582,20 @@ detailed procedures in `references/post-implementation.md`:
    until a valid slice PR stack is emitted or a typed exception is committed.
    Never report completion while `autopilot_continuation.required=true`; a gate
    error writes state and stops without a packet. After a proceed result,
-   require a current schema-valid packet to already exist at
-   `specs/<feature>/.process/pr-packets/<packet-id>.json`. Packet emission is not
-   available: `pr-packet-output` and `validate-pr-packet-write` are deferred,
-   and `generate-pr-body` writes only one Markdown body from `output_path`,
-   `title`, and `sections`. It does not create packet JSON or metadata. If the
-   current packet or its referenced body does not already exist, stop before
-   `gh pr create` and report the deferred packet-emission blocker.
-   Run `validate-pr-packet-read-only` against the existing packet and consume
-   only the current response `data.stdout_json` in memory and durable state.
-   Continue only when it reports `status=passed`, `pr_blocked=false`, and the
-   response reports `writes_state=false`; no validation file is written. Open
+   emit or refresh the feature-local packet at
+   `specs/<feature>/.process/pr-packets/<packet-id>.json` with
+   `pr-packet-output`. Run it in `dry_run` first, then `apply` only after the
+   packet path, body path, base/head target, title, changed-file scope,
+   verification evidence, UAT text, non-goals, and known gaps are current.
+   `pr-packet-output` writes the packet JSON and packet-owned body file, and
+   declares the validation-result path; `generate-pr-body` remains body-only and is not a
+   packet substitute. Run `validate-pr-packet-read-only` against the emitted
+   packet and consume only the current response `data.stdout_json` in memory
+   and durable state. Continue only when it reports `status=passed`,
+   `pr_blocked=false`, and the response reports `writes_state=false`. Commit or
+   otherwise checkpoint the packet/body artifacts so the worktree is clean, then
+   run `validate-pr-packet-write`; apply mode reruns read-only validation before
+   persisting the packet's `validation_result_path`. Open
    the PR with packet fields through
    `gh pr create --base --head --title --body-file`; never derive the title
    from the branch, write the body from scratch, pass inline `--body`, reuse
@@ -603,9 +606,9 @@ detailed procedures in `references/post-implementation.md`:
    include multi-PR candidate commands or final marker-split evidence for more
    than one PR, the single-PR path is forbidden. `multi-pr-emission` may capture
    a `golden_only` command plan, but it does not emit packets or execute PRs.
-   Continue only when every required feature-local packet already exists and
-   passes the same read-only validation; otherwise stop blocked with the
-   validator evidence and deferred packet-emission gap. Push, create PR, update
+   Continue only when every required feature-local packet has been emitted or
+   refreshed through `pr-packet-output`, passes the same read-only validation,
+   and has current persisted validation evidence. Push, create PR, update
    workflow file.
    Required evidence prompts: gate status/mode/exit/evidence path,
    fingerprint status, ordered marker IDs, checkpoints, warnings, final
@@ -688,9 +691,16 @@ registered helper or gate operation IDs below.
 - `generate-pr-body` — `golden_only` body writer accepting exactly
   `output_path`, `title`, and `sections`; it writes one Markdown body and does
   not emit packet JSON, metadata, markers, validation evidence, or PR commands.
+- `pr-packet-output` — `golden_only` packet emitter accepting structured
+  packet fields; it writes the feature-local packet JSON, packet-owned body
+  file, and declared validation-result path used before PR creation.
 - `validate-pr-packet-read-only` — Validate an existing feature-local packet and
   return the result in `data.stdout_json` with `writes_state=false`; it does not
   persist validation state.
+- `validate-pr-packet-write` — Rerun read-only packet validation in apply mode,
+  then persist that current passing result to the packet's
+  `validation_result_path`; do not use caller-supplied or stale validation
+  results.
 - `validate-pr-workflow-contract` — Validate PR title and changed-file scope.
 - `detect-commands`, `detect-presets`, and `count-markers` — Provide
   deterministic command, preset, and marker evidence through runner-owned
@@ -698,7 +708,6 @@ registered helper or gate operation IDs below.
 - `generate-uat-skeleton` and `final-reviewability-backstop` — Registered but
   deferred for installed workflows; follow the deferred guidance above instead
   of invoking them.
-- `pr-packet-output`, `validate-pr-packet-write`,
-  `relocate-process-artifacts`, and `restack` — Registered but deferred with no
+- `relocate-process-artifacts` and `restack` — Registered but deferred with no
   active invocation contract. Do not invoke them or infer capability from
   generic runner plumbing.

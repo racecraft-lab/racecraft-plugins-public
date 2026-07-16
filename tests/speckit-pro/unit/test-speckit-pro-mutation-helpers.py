@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import hashlib
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -768,6 +769,60 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(len(mutation["applied_operations"]), 1)
             self.assertEqual(mutation["touched_paths"], [rel])
 
+    def test_apply_rechecks_all_applied_targets_before_success(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            first = git_root / "generated" / "first.md"
+            second = git_root / "generated" / "second.md"
+            request = RunnerRequest(
+                "test-final-applied-target-recheck",
+                "mutation-foundation",
+                "mutation-foundation",
+                "apply",
+                {
+                    "operations": [
+                        {
+                            "operation_id": "write-first",
+                            "kind": "write_file",
+                            "target": "generated/first.md",
+                            "content": "first\n",
+                        },
+                        {
+                            "operation_id": "write-second",
+                            "kind": "write_file",
+                            "target": "generated/second.md",
+                            "content": "second\n",
+                        },
+                    ]
+                },
+            )
+            real_write = mutation.write_file_atomic
+
+            def mutate_first_after_second(target: Path, content: str | bytes, **kwargs):
+                result = real_write(target, content, **kwargs)
+                if Path(target).name == second.name:
+                    first.write_text("concurrent\n", encoding="utf-8")
+                return result
+
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with patch.object(mutation, "write_file_atomic", side_effect=mutate_first_after_second):
+                    response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["source_changed"])
+            self.assertEqual(response["data"]["mutation"]["mutation_status"], "partial_failure")
+            self.assertEqual(response["data"]["mutation"]["touched_paths"], ["generated/first.md", "generated/second.md"])
+            self.assertEqual(first.read_text(encoding="utf-8"), "concurrent\n")
+            self.assertFalse(second.exists())
+            self.assertTrue(response["data"]["writes_state"])
+
     def test_apply_rejects_dirty_worktree_without_touching_target(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
@@ -787,8 +842,67 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 1)
             self.assert_response(response, "expected_failure", 1)
             self.assertEqual([diag["code"] for diag in stderr_records], ["dirty_worktree"])
+            self.assertFalse(response["data"]["writes_state"])
             self.assertEqual(response["data"]["mutation"]["dirty_worktree"], True)
             self.assertFalse(target.exists())
+
+    def test_apply_rechecks_dirty_worktree_after_lock_acquisition(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            target = git_root / "generated" / "locked-dirty.md"
+            real_acquire = mutation.acquire_mutation_lock
+
+            def dirty_after_lock(root: Path) -> mutation.MutationApplyLock:
+                lock = real_acquire(root)
+                (git_root / "concurrent-untracked.txt").write_text("dirty\n", encoding="utf-8")
+                return lock
+
+            request = RunnerRequest(
+                "test-dirty-after-lock",
+                "mutation-foundation",
+                "mutation-foundation",
+                "apply",
+                {
+                    "operations": [
+                        {
+                            "operation_id": "write-after-lock",
+                            "kind": "write_file",
+                            "target": "generated/locked-dirty.md",
+                            "content": "blocked\n",
+                        }
+                    ]
+                },
+            )
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with patch.object(mutation, "acquire_mutation_lock", side_effect=dirty_after_lock):
+                    response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["dirty_worktree"])
+            self.assertEqual(response["data"]["mutation"]["dirty_worktree"], True)
+            self.assertFalse(target.exists())
+
+    def test_mutation_lock_does_not_write_to_untrusted_gitdir_file_target(self) -> None:
+        from speckit_pro_runner.helpers import mutation
+
+        with tempfile.TemporaryDirectory() as repo, tempfile.TemporaryDirectory() as external_gitdir:
+            repo_root = Path(repo)
+            external = Path(external_gitdir)
+            (repo_root / ".git").write_text(f"gitdir: {external}\n", encoding="utf-8")
+
+            lock = mutation.acquire_mutation_lock(repo_root)
+            try:
+                self.assertFalse((external / "speckit-pro-mutation.lock").exists())
+                self.assertTrue(mutation.mutation_lock_path(repo_root).is_file())
+            finally:
+                lock.release()
 
     def test_apply_rejects_when_git_status_cannot_prove_clean_worktree(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
@@ -815,6 +929,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 1)
             self.assert_response(response, "expected_failure", 1)
             self.assertEqual([diag["code"] for diag in stderr_records], ["git_status_unavailable"])
+            self.assertFalse(response["data"]["writes_state"])
             self.assertEqual(response["data"]["mutation"]["dirty_worktree"], False)
             self.assertFalse(target.exists())
 
@@ -930,12 +1045,41 @@ class MutationHelperTests(unittest.TestCase):
             self.assertFalse(parent.exists())
             self.assertFalse(child.exists())
 
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "mutation-foundation",
+                    mode="apply",
+                    inputs={
+                        "operations": [
+                            {
+                                "operation_id": "same-id",
+                                "kind": "write_file",
+                                "target": "generated/parent.md",
+                                "content": "parent\n",
+                            },
+                            {
+                                "operation_id": "same-id",
+                                "kind": "write_file",
+                                "target": "generated/parent.md/child.md",
+                                "content": "child\n",
+                            },
+                        ]
+                    },
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assert_response(response, "input_error", 2)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_input"])
+            self.assertFalse(parent.exists())
+            self.assertFalse(child.exists())
+
     def test_partial_failure_reports_applied_operation_and_manual_remediation(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
-            first = git_root / "first.md"
+            first = git_root / "nested" / "new" / "first.md"
             second = git_root / "second.md"
-            first_rel = "first.md"
+            first_rel = "nested/new/first.md"
             second_rel = "second.md"
             completed, response, stderr_records = run_runner(
                 helper_request(
@@ -958,8 +1102,557 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual([op["operation_id"] for op in mutation["applied_operations"]], ["first"])
             self.assertEqual(mutation["failure_operation"]["operation_id"], "second")
             self.assertTrue(mutation["manual_remediation"])
-            self.assertTrue(first.exists())
+            self.assertTrue(mutation["live_mutation"])
+            self.assertFalse(response["data"]["writes_state"])
+            self.assertFalse(first.exists())
             self.assertFalse(second.exists())
+            self.assertFalse((git_root / "nested").exists())
+
+    def test_apply_write_preserves_existing_file_mode_and_rechecks_source_fingerprints(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            source = git_root / "source.md"
+            source.write_text("source\n", encoding="utf-8")
+            target = git_root / "tool.sh"
+            target.write_text("#!/bin/sh\n", encoding="utf-8")
+            target.chmod(0o755)
+            self.run_git(git_root, "add", "source.md", "tool.sh")
+            self.run_git(git_root, "commit", "--quiet", "-m", "sources")
+
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "mutation-foundation",
+                    mode="apply",
+                    inputs={
+                        "operations": [
+                            {
+                                "operation_id": "update-target",
+                                "kind": "write_file",
+                                "target": "tool.sh",
+                                "content": "#!/bin/sh\necho updated\n",
+                                "source_fingerprints": {
+                                    "source": {
+                                        "path": "source.md",
+                                        "algorithm": "sha256",
+                                        "sha256": "0" * 64,
+                                        "size_bytes": 999,
+                                    }
+                                },
+                            }
+                        ]
+                    },
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 1)
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["source_changed"])
+            self.assertEqual(target.read_text(encoding="utf-8"), "#!/bin/sh\n")
+
+            source_bytes = source.read_bytes()
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "mutation-foundation",
+                    mode="apply",
+                    inputs={
+                        "operations": [
+                            {
+                                "operation_id": "update-target",
+                                "kind": "write_file",
+                                "target": "tool.sh",
+                                "content": "#!/bin/sh\necho updated\n",
+                                "source_fingerprints": {
+                                    "source": {
+                                        "path": "source.md",
+                                        "algorithm": "sha256",
+                                        "sha256": hashlib.sha256(source_bytes).hexdigest(),
+                                        "size_bytes": len(source_bytes),
+                                    }
+                                },
+                            }
+                        ]
+                    },
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+            self.assertEqual(os.stat(target).st_mode & 0o777, 0o755)
+            self.assertTrue(response["data"]["mutation"]["live_mutation"])
+
+    @unittest.skipIf(os.name == "nt", "POSIX umask behavior is not portable to Windows")
+    def test_apply_write_respects_umask_for_new_files(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            target = git_root / "new.md"
+            old_umask = os.umask(0o077)
+            try:
+                completed, response, stderr_records = run_runner(
+                    helper_request(
+                        "mutation-foundation",
+                        mode="apply",
+                        inputs={
+                            "operations": [
+                                {
+                                    "operation_id": "new-file",
+                                    "kind": "write_file",
+                                    "target": "new.md",
+                                    "content": "created\n",
+                                }
+                            ]
+                        },
+                    ),
+                    cwd=git_root,
+                )
+            finally:
+                os.umask(old_umask)
+
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+            self.assertEqual(os.stat(target).st_mode & 0o777, 0o600)
+
+    def test_apply_rechecks_source_fingerprints_after_write_and_rolls_back(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            source = git_root / "source.md"
+            source.write_text("source\n", encoding="utf-8")
+            self.run_git(git_root, "add", "source.md")
+            self.run_git(git_root, "commit", "--quiet", "-m", "source")
+            source_bytes = source.read_bytes()
+            request = RunnerRequest(
+                "test-post-write-source-recheck",
+                "mutation-foundation",
+                "mutation-foundation",
+                "apply",
+                {
+                    "operations": [
+                        {
+                            "operation_id": "write-validation",
+                            "kind": "write_file",
+                            "target": "validation.json",
+                            "content": "{}\n",
+                            "source_fingerprints": {
+                                "packet": {
+                                    "path": "source.md",
+                                    "algorithm": "sha256",
+                                    "sha256": hashlib.sha256(source_bytes).hexdigest(),
+                                    "size_bytes": len(source_bytes),
+                                }
+                            },
+                        }
+                    ]
+                },
+            )
+            real_write = mutation.write_file_atomic
+
+            def mutate_source_after_write(
+                target: Path,
+                content: str,
+                *,
+                trust_root: Path | None = None,
+                expected_snapshot: dict[str, object] | None = None,
+            ) -> dict[str, object]:
+                result = real_write(target, content, trust_root=trust_root, expected_snapshot=expected_snapshot)
+                source.write_text("changed\n", encoding="utf-8")
+                return result
+
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with patch.object(mutation, "write_file_atomic", side_effect=mutate_source_after_write):
+                    response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["source_changed"])
+            self.assertFalse((git_root / "validation.json").exists())
+            self.assertTrue(response["data"]["mutation"]["live_mutation"])
+            self.assertFalse(response["data"]["writes_state"])
+
+    def test_post_write_snapshot_rejects_concurrent_replacement(self) -> None:
+        from speckit_pro_runner.helpers import mutation
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            git_root = git_root.resolve()
+            target = git_root / "target.md"
+            snapshots = {"target.md": mutation.snapshot_write_target(target, git_root)}
+            write_result = mutation.write_file_atomic(target, "applied\n", trust_root=git_root)
+            target.write_text("concurrent\n", encoding="utf-8")
+
+            diag = mutation.snapshot_changed_diagnostic_after_write(
+                "target.md",
+                target,
+                snapshots,
+                git_root,
+                expected_digest=str(write_result["digest"]),
+                expected_mode=write_result["mode"],
+            )
+            errors = mutation.rollback_applied_writes(["target.md"], snapshots, git_root)
+
+            self.assertIsNotNone(diag)
+            self.assertEqual(diag["code"], "source_changed")
+            self.assertEqual(errors, ["target.md:source_changed"])
+            self.assertEqual(target.read_text(encoding="utf-8"), "concurrent\n")
+
+    def test_rollback_preserves_parent_created_after_snapshot(self) -> None:
+        from speckit_pro_runner.helpers import mutation
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            git_root = git_root.resolve()
+            parent = git_root / "nested"
+            target = parent / "new.md"
+            snapshots = {"nested/new.md": mutation.snapshot_write_target(target, git_root)}
+            self.assertEqual(snapshots["nested/new.md"]["created_parent_dirs"], ["nested"])
+            parent.mkdir()
+
+            write_result = mutation.write_file_atomic(
+                target,
+                "applied\n",
+                trust_root=git_root,
+                expected_snapshot=snapshots["nested/new.md"],
+            )
+            diag = mutation.snapshot_changed_diagnostic_after_write(
+                "nested/new.md",
+                target,
+                snapshots,
+                git_root,
+                expected_digest=str(write_result["digest"]),
+                expected_mode=write_result["mode"],
+                expected_created_parent_dirs=write_result["created_parent_dirs"],
+            )
+            errors = mutation.rollback_applied_writes(["nested/new.md"], snapshots, git_root)
+
+            self.assertIsNone(diag)
+            self.assertEqual(write_result["created_parent_dirs"], [])
+            self.assertEqual(errors, [])
+            self.assertFalse(target.exists())
+            self.assertTrue(parent.is_dir())
+
+    def test_apply_tracks_successful_write_when_final_parent_close_fails(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            request = RunnerRequest(
+                "test-final-parent-close-after-replace",
+                "mutation-foundation",
+                "mutation-foundation",
+                "apply",
+                {
+                    "operations": [
+                        {
+                            "operation_id": "write-new",
+                            "kind": "write_file",
+                            "target": "new.md",
+                            "content": "new\n",
+                        }
+                    ]
+                },
+            )
+            real_replace = mutation.os.replace
+            real_close = mutation.os.close
+            replace_seen = False
+            failed_fd: int | None = None
+
+            def tracking_replace(*args, **kwargs):
+                nonlocal replace_seen
+                result = real_replace(*args, **kwargs)
+                replace_seen = True
+                return result
+
+            def fail_first_close_after_replace(fd: int) -> None:
+                nonlocal failed_fd
+                if replace_seen and failed_fd is None:
+                    failed_fd = fd
+                    raise OSError("injected close failure")
+                real_close(fd)
+
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with (
+                    patch.object(mutation.os, "replace", side_effect=tracking_replace),
+                    patch.object(mutation.os, "close", side_effect=fail_first_close_after_replace),
+                ):
+                    response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
+            finally:
+                os.chdir(old_cwd)
+                if failed_fd is not None:
+                    try:
+                        real_close(failed_fd)
+                    except OSError:
+                        pass
+
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(response["data"]["mutation"]["applied_operations"][0]["operation_id"], "write-new")
+            self.assertEqual(response["data"]["mutation"]["touched_paths"], ["new.md"])
+            self.assertTrue(response["data"]["writes_state"])
+            self.assertEqual((git_root / "new.md").read_text(encoding="utf-8"), "new\n")
+
+    def test_apply_cleans_parent_created_before_traversal_failure(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            request = RunnerRequest(
+                "test-created-parent-traversal-failure",
+                "mutation-foundation",
+                "mutation-foundation",
+                "apply",
+                {
+                    "operations": [
+                        {
+                            "operation_id": "write-new",
+                            "kind": "write_file",
+                            "target": "nested/new.md",
+                            "content": "new\n",
+                        }
+                    ]
+                },
+            )
+            real_open = mutation.os.open
+
+            def fail_reopen_created_parent(path, *args, **kwargs):
+                if path == "nested" and (git_root / "nested").exists():
+                    raise OSError("injected parent traversal failure")
+                return real_open(path, *args, **kwargs)
+
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with patch.object(mutation.os, "open", side_effect=fail_reopen_created_parent):
+                    response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["write_failure"])
+            self.assertFalse((git_root / "nested").exists())
+            self.assertFalse(response["data"]["writes_state"])
+
+    def test_apply_reports_temp_unlink_failure_after_failed_replace(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            request = RunnerRequest(
+                "test-temp-unlink-cleanup-failure",
+                "mutation-foundation",
+                "mutation-foundation",
+                "apply",
+                {
+                    "operations": [
+                        {
+                            "operation_id": "write-new",
+                            "kind": "write_file",
+                            "target": "new.md",
+                            "content": "new\n",
+                        }
+                    ]
+                },
+            )
+            real_unlink = mutation.os.unlink
+
+            def fail_replace(*args, **kwargs):
+                raise OSError("injected replace failure")
+
+            def fail_temp_unlink(path, *args, **kwargs):
+                if isinstance(path, str) and path.startswith(".new.md.tmp-"):
+                    raise OSError("injected temp cleanup failure")
+                return real_unlink(path, *args, **kwargs)
+
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with (
+                    patch.object(mutation.os, "replace", side_effect=fail_replace),
+                    patch.object(mutation.os, "unlink", side_effect=fail_temp_unlink),
+                ):
+                    response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["write_failure"])
+            self.assertTrue(any(error.endswith(":OSError") for error in response["diagnostics"][0]["details"]["rollback_errors"]))
+            self.assertTrue(response["data"]["writes_state"])
+            self.assertEqual(len(list(git_root.glob(".new.md.tmp-*"))), 1)
+            self.assertFalse((git_root / "new.md").exists())
+
+    def test_apply_rejects_target_swap_between_snapshot_and_replace(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            target = git_root / "target.md"
+            target.write_text("original\n", encoding="utf-8")
+            self.run_git(git_root, "add", "target.md")
+            self.run_git(git_root, "commit", "--quiet", "-m", "target")
+            calls = 0
+            real_ensure = mutation.ensure_safe_write_target_fd
+
+            def swap_before_final_guard(parent_fd: int, name: str) -> None:
+                nonlocal calls
+                calls += 1
+                if calls == 2:
+                    target.write_text("concurrent\n", encoding="utf-8")
+                real_ensure(parent_fd, name)
+
+            request = RunnerRequest(
+                "test-target-swap-before-replace",
+                "mutation-foundation",
+                "mutation-foundation",
+                "apply",
+                {
+                    "operations": [
+                        {
+                            "operation_id": "update-target",
+                            "kind": "write_file",
+                            "target": "target.md",
+                            "content": "updated\n",
+                        }
+                    ]
+                },
+            )
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with patch.object(mutation, "ensure_safe_write_target_fd", side_effect=swap_before_final_guard):
+                    response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["source_changed"])
+            self.assertEqual(target.read_text(encoding="utf-8"), "concurrent\n")
+            self.assertFalse(response["data"]["mutation"]["live_mutation"])
+            self.assertFalse(response["data"]["writes_state"])
+
+    def test_write_failure_cleanup_errors_mark_writes_state(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            request = RunnerRequest(
+                "test-cleanup-errors",
+                "mutation-foundation",
+                "mutation-foundation",
+                "apply",
+                {
+                    "operations": [
+                        {
+                            "operation_id": "write-new",
+                            "kind": "write_file",
+                            "target": "nested/new.md",
+                            "content": "new\n",
+                        }
+                    ]
+                },
+            )
+            injected = OSError("injected")
+            setattr(injected, "cleanup_errors", ["nested:OSError"])
+
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with patch.object(mutation, "write_file_atomic", side_effect=injected):
+                    response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["write_failure"])
+            self.assertEqual(response["diagnostics"][0]["details"]["rollback_errors"], ["nested:OSError"])
+            self.assertTrue(response["data"]["mutation"]["live_mutation"])
+            self.assertTrue(response["data"]["writes_state"])
+
+    def test_apply_file_writes_fail_closed_on_unsupported_descriptor_platform(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            request = RunnerRequest(
+                "test-unsupported-platform",
+                "mutation-foundation",
+                "mutation-foundation",
+                "apply",
+                {
+                    "operations": [
+                        {
+                            "operation_id": "write-new",
+                            "kind": "write_file",
+                            "target": "new.md",
+                            "content": "new\n",
+                        }
+                    ]
+                },
+            )
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with patch.object(mutation, "descriptor_mutation_supported", return_value=False):
+                    response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["unsupported_platform"])
+            self.assertFalse(response["data"]["mutation"]["live_mutation"])
+            self.assertFalse(response["data"]["writes_state"])
+            self.assertFalse((git_root / "new.md").exists())
+
+    def test_rollback_refuses_concurrent_edits_and_reports_directory_cleanup_errors(self) -> None:
+        from speckit_pro_runner.helpers import mutation
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            git_root = git_root.resolve()
+            target = git_root / "existing.md"
+            target.write_text("original\n", encoding="utf-8")
+            snapshots = {"existing.md": mutation.snapshot_write_target(target, git_root)}
+            mutation.write_file_atomic(target, "applied\n", trust_root=git_root)
+            applied = mutation.snapshot_write_target(target, git_root)
+            snapshots["existing.md"]["applied_digest"] = applied["digest"]
+            snapshots["existing.md"]["applied_mode"] = applied["mode"]
+            target.write_text("concurrent\n", encoding="utf-8")
+
+            errors = mutation.rollback_applied_writes(["existing.md"], snapshots, git_root)
+
+            self.assertEqual(errors, ["existing.md:source_changed"])
+            self.assertEqual(target.read_text(encoding="utf-8"), "concurrent\n")
+
+            residual_dir = git_root / "nested" / "created"
+            residual_dir.mkdir(parents=True)
+            (residual_dir / "residual.txt").write_text("leftover\n", encoding="utf-8")
+            cleanup_errors = mutation.remove_created_parent_dirs(["nested", "nested/created"], git_root)
+            self.assertEqual(cleanup_errors, ["nested/created:OSError", "nested:OSError"])
+
+            with tempfile.TemporaryDirectory() as outside:
+                outside_root = Path(outside)
+                outside_created = outside_root / "created"
+                outside_created.mkdir()
+                swapped = git_root / "swapped"
+                try:
+                    swapped.symlink_to(outside_root, target_is_directory=True)
+                except (OSError, NotImplementedError):
+                    self.skipTest("symlink creation is unavailable")
+                cleanup_errors = mutation.remove_created_parent_dirs(["swapped", "swapped/created"], git_root)
+                self.assertTrue(outside_created.is_dir())
+                self.assertTrue(any(error.startswith("swapped/created:") for error in cleanup_errors))
 
     def test_doctor_preflight_detects_missing_files_and_repair_uses_fake_home(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
@@ -1147,6 +1840,203 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(mutation["mutation_status"], "blocked")
             self.assertEqual(mutation["applied_operations"], [])
             self.assertFalse(mutation["live_mutation"])
+
+    def test_pr_packet_output_apply_emits_valid_packet_and_body_then_persists_validation(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            inputs = {
+                "packet_path": "specs/prsg-999-packet/.process/pr-packets/prsg-999.json",
+                "body_file": "specs/prsg-999-packet/.process/pr-packets/prsg-999/body.md",
+                "validation_result_path": "specs/prsg-999-packet/.process/pr-packets/prsg-999/validation.json",
+                "source_feature_dir": "specs/prsg-999-packet",
+                "target": {"base_branch": "main", "head_branch": "agent/prsg-999-packet"},
+                "title_type": "feat",
+                "title_scope": "PRSG-999",
+                "title_description": "Generate reviewer packet",
+                "changed_files": ["specs/prsg-999-packet/spec.md"],
+                "verification": ["python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py passed"],
+                "summary": "Adds a generated reviewer packet for a completed SpecKit workflow.",
+                "what_changed": ["Writes the PR body.", "Writes the PR packet JSON.", "Declares the validation result path."],
+                "why_it_matters": "Autopilot can continue to PR creation without inventing packet metadata.",
+                "how_to_review": ["Inspect the emitted packet.", "Run validate-pr-packet-read-only."],
+                "how_to_uat": "No manual UAT is required for this fixture.",
+                "known_gaps": ["No known gaps for this fixture."],
+                "non_goals": ["No live GitHub PR mutation is performed by this helper."],
+            }
+
+            completed, response, stderr_records = run_runner(
+                helper_request("pr-packet-output", mode="apply", inputs=inputs),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+            mutation = response["data"]["mutation"]
+            self.assertEqual(mutation["mutation_status"], "applied")
+            self.assertTrue(mutation["live_mutation"])
+            self.assertEqual(
+                mutation["touched_paths"],
+                [inputs["body_file"], inputs["packet_path"]],
+            )
+
+            packet_path = git_root / inputs["packet_path"]
+            body_path = git_root / inputs["body_file"]
+            validation_path = git_root / inputs["validation_result_path"]
+            self.assertTrue(packet_path.is_file())
+            self.assertTrue(body_path.is_file())
+            self.assertFalse(validation_path.exists())
+            self.assertIn("## Summary", body_path.read_text(encoding="utf-8"))
+            self.assertIn("## UAT Runbook", body_path.read_text(encoding="utf-8"))
+            packet = json.loads(packet_path.read_text(encoding="utf-8"))
+            self.assertEqual(packet["packet_id"], "prsg-999")
+            self.assertEqual(packet["generated_title"]["value"], "feat(PRSG-999): Generate reviewer packet")
+            self.assertEqual(packet["target"], inputs["target"])
+
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-read-only",
+                    mode="read_only",
+                    inputs={"packet_path": inputs["packet_path"]},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+            validation_result = response["data"]["stdout_json"]
+            self.assertEqual(validation_result["status"], "passed")
+            self.assertFalse(validation_result["pr_blocked"])
+            self.assertIn("source_fingerprints", validation_result)
+            self.assertEqual(set(validation_result["source_fingerprints"]), {"body", "packet"})
+            packet["validation_result"] = validation_result
+            packet_path.write_text(json.dumps(packet, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-read-only",
+                    mode="read_only",
+                    inputs={"packet_path": inputs["packet_path"]},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-write",
+                    mode="apply",
+                    inputs={"packet_path": inputs["packet_path"]},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 1)
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["dirty_worktree"])
+            self.assertFalse(validation_path.exists())
+
+            self.run_git(git_root, "add", inputs["body_file"], inputs["packet_path"])
+            self.run_git(git_root, "commit", "--quiet", "-m", "packet artifacts")
+
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-write",
+                    mode="apply",
+                    inputs={"packet_path": inputs["packet_path"]},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+            self.assertEqual(response["data"]["mutation"]["mutation_status"], "applied")
+            self.assertEqual(response["data"]["validation_source"], "validate-pr-packet-read-only")
+            self.assertTrue(validation_path.is_file())
+            persisted = json.loads(validation_path.read_text(encoding="utf-8"))
+            self.assertEqual(persisted["packet_id"], "prsg-999")
+            self.assertEqual(persisted["status"], "passed")
+            self.assertEqual(set(persisted["source_fingerprints"]), {"body", "packet"})
+
+    def test_pr_packet_output_rejects_mismatched_paths_invalid_mode_and_invalid_body(self) -> None:
+        from speckit_pro_runner.helpers.pr_emission import build_packet_body
+
+        base_inputs = {
+            "packet_path": "specs/prsg-999-packet/.process/pr-packets/prsg-999.json",
+            "source_feature_dir": "specs/prsg-999-packet",
+            "target": {"base_branch": "main", "head_branch": "agent/prsg-999-packet"},
+            "title_type": "feat",
+            "title_scope": "PRSG-999",
+            "title_description": "Generate reviewer packet",
+            "changed_files": ["specs/prsg-999-packet/spec.md"],
+            "verification": ["python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py passed"],
+        }
+        body_without_uat_runbook = build_packet_body(
+            "feat(PRSG-999): Generate reviewer packet",
+            summary="Summary.",
+            what_changed="- Change.",
+            why_it_matters="Reason.",
+            how_to_review="- Review.",
+            how_to_uat="No manual UAT.",
+            verification="- Tests passed.",
+            scope="- specs/prsg-999-packet/spec.md",
+            known_gaps="- None.",
+        ).replace("\n## UAT Runbook\n\nNo manual UAT.\n", "\n", 1)
+        cases = {
+            "feature_mismatch": {"source_feature_dir": "specs/other-feature"},
+            "packet_id_mismatch": {"packet_id": "other-packet"},
+            "body_escape": {"body_file": "README.md"},
+            "validation_escape": {"validation_result_path": "specs/prsg-999-packet/.process/pr-packets/other/validation.json"},
+            "invalid_mode": {"mode": "splti"},
+            "invalid_body": {"body": "hello\n"},
+            "custom_body_missing_uat_runbook": {"body": body_without_uat_runbook},
+            "invalid_scope_evidence": {"scope_evidence": {"changed_files": ["README.md"]}},
+            "invalid_verification_evidence": {"verification_evidence": [{"kind": "verification", "source": "tests"}]},
+            "invalid_source_markers": {"source_markers": [{"marker_id": "prsg-999", "source": "specs/prsg-999-packet"}]},
+            "invalid_rejected_title_candidate": {"rejected_title_candidates": [{"value": "bad"}]},
+            "invalid_budget_result": {"budget_result": "surprise"},
+            "invalid_split_slice": {"mode": "split", "split_slice": {"slice_id": "slice-1"}},
+        }
+        for name, override in cases.items():
+            with self.subTest(name=name):
+                completed, response, stderr_records = run_runner(
+                    helper_request("pr-packet-output", inputs={**base_inputs, **override})
+                )
+                self.assertEqual(completed.returncode, 2)
+                self.assert_response(response, "input_error", 2)
+                self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_input"])
+
+    def test_validate_pr_packet_write_ignores_fabricated_validation_and_requires_current_packet_pass(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            packet_rel = "specs/prsg-997-bad/.process/pr-packets/prsg-997.json"
+            validation_rel = "specs/prsg-997-bad/.process/pr-packets/prsg-997/validation.json"
+            packet_path = git_root / packet_rel
+            packet_path.parent.mkdir(parents=True)
+            packet_path.write_text('{"schema_version":"1.0.0"}\n', encoding="utf-8")
+            self.run_git(git_root, "add", packet_rel)
+            self.run_git(git_root, "commit", "--quiet", "-m", "invalid packet")
+
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-write",
+                    mode="apply",
+                    inputs={
+                        "packet_path": packet_rel,
+                        "validation_result": {
+                            "schema_version": "1.0.0",
+                            "packet_id": "prsg-997",
+                            "status": "passed",
+                            "pr_blocked": False,
+                        },
+                    },
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 1)
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["packet_validation_failed"])
+            self.assertFalse((git_root / validation_rel).exists())
 
     def test_contract_schemas_match_runner_fixture_envelopes(self) -> None:
         request_schema = json.loads(REQUEST_SCHEMA.read_text(encoding="utf-8"))

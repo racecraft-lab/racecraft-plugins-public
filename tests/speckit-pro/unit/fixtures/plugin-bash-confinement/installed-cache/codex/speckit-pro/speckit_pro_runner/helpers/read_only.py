@@ -1083,9 +1083,15 @@ class RenderedSpecIndexMap:
         return self.original != self.rendered
 
 
-def _spec_index_read_text(path: Path) -> str:
+def _spec_index_read_text(path: Path, repo_root: Path | None = None) -> str:
     try:
-        return path.read_bytes().decode("utf-8")
+        if repo_root is None:
+            data = path.read_bytes()
+        else:
+            data = trusted_bytes(path, repo_root)
+            if data is None:
+                raise OSError("descriptor-safe read failed")
+        return data.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise SpecIndexRenderError(f"file is not valid UTF-8: {path}") from exc
     except OSError as exc:
@@ -1164,7 +1170,9 @@ def _spec_index_home_owns(home_path: Path, home_text: str, candidate_text: str) 
     )
 
 
-def _spec_index_path_state(path: Path, label: str) -> str:
+def _spec_index_path_state(path: Path, label: str, repo_root: Path) -> str:
+    if not descriptor_read_supported():
+        raise SpecIndexRenderError("descriptor-safe spec-index reads are unsupported on this platform")
     try:
         mode = path.lstat().st_mode
     except FileNotFoundError:
@@ -1176,26 +1184,43 @@ def _spec_index_path_state(path: Path, label: str) -> str:
     return "regular"
 
 
-def _spec_index_directories(specs_dir: Path) -> list[Path]:
-    try:
-        entries = sorted(specs_dir.iterdir(), key=lambda path: path.name.encode("utf-8"))
-    except OSError as exc:
-        raise SpecIndexRenderError(f"could not scan specs directory: {specs_dir} ({type(exc).__name__})") from exc
+def _spec_index_directories(specs_dir: Path, repo_root: Path) -> list[Path]:
+    names = trusted_dir_entries(specs_dir, repo_root)
+    if names is None:
+        raise SpecIndexRenderError(f"could not scan specs directory: {specs_dir} (descriptor-safe read failed)")
+    entries = sorted((specs_dir / name for name in names), key=lambda path: path.name.encode("utf-8"))
     directories: list[Path] = []
     for entry in entries:
+        fd = trusted_open_directory(entry, repo_root)
+        if fd is not None:
+            try:
+                directories.append(entry)
+            finally:
+                try:
+                    os.close(fd)
+                except OSError:
+                    # Best-effort descriptor cleanup; the scan result is already determined.
+                    pass
+            continue
         try:
             mode = entry.lstat().st_mode
         except OSError as exc:
             raise SpecIndexRenderError(f"could not inspect spec path: {entry} ({type(exc).__name__})") from exc
+        if stat.S_ISLNK(mode):
+            continue
         if stat.S_ISDIR(mode):
-            directories.append(entry)
+            raise SpecIndexRenderError(f"could not scan spec path: {entry} (descriptor-safe read failed)")
     return directories
 
 
 def _spec_index_json_integer(value: Any) -> bool:
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
+    if isinstance(value, bool):
         return False
-    return math.isfinite(float(value)) and float(value).is_integer()
+    if isinstance(value, int):
+        return True
+    if isinstance(value, float):
+        return math.isfinite(value) and value.is_integer()
+    return False
 
 
 def _spec_index_required_string(record: dict[str, Any], field: str) -> str:
@@ -1215,22 +1240,13 @@ def _spec_index_jq_text(value: Any) -> str:
     return str(value)
 
 
-def _spec_index_render_prs(spec_dir: Path) -> list[str]:
+def _spec_index_render_prs(spec_dir: Path, repo_root: Path) -> list[str]:
     manifest = spec_dir / ".process" / "prs.json"
-    process_dir = manifest.parent
-    if process_dir.is_symlink():
-        raise SpecIndexRenderError(f"unreadable PRS manifest: {manifest}")
-    try:
-        mode = manifest.lstat().st_mode
-    except FileNotFoundError:
+    if _spec_index_path_state(manifest, "PRS manifest", repo_root) == "missing":
         return []
-    except OSError as exc:
-        raise SpecIndexRenderError(f"unreadable PRS manifest: {manifest} ({type(exc).__name__})") from exc
-    if stat.S_ISLNK(mode) or not stat.S_ISREG(mode):
-        raise SpecIndexRenderError(f"unreadable PRS manifest: {manifest}")
     try:
-        payload = json.loads(_spec_index_read_text(manifest))
-    except json.JSONDecodeError as exc:
+        payload = json.loads(_spec_index_read_text(manifest, repo_root))
+    except (json.JSONDecodeError, ValueError) as exc:
         raise SpecIndexRenderError(
             f"malformed PRS manifest (invalid JSON or missing records[]): {manifest}"
         ) from exc
@@ -1337,16 +1353,16 @@ def _spec_index_render_prs(spec_dir: Path) -> list[str]:
     return [row for _, _, _, _, row in sortable]
 
 
-def _spec_index_walk_regular_files(root: Path) -> list[Path]:
+def _spec_index_walk_regular_files(root: Path, repo_root: Path) -> list[Path]:
     files: list[Path] = []
 
     def visit(directory: Path) -> None:
-        try:
-            entries = sorted(directory.iterdir(), key=lambda path: path.name.encode("utf-8"))
-        except OSError as exc:
+        names = trusted_dir_entries(directory, repo_root)
+        if names is None:
             raise SpecIndexRenderError(
-                f"could not scan spec artifacts: {directory} ({type(exc).__name__})"
-            ) from exc
+                f"could not scan spec artifacts: {directory} (descriptor-safe read failed)"
+            )
+        entries = sorted((directory / name for name in names), key=lambda path: path.name.encode("utf-8"))
         for entry in entries:
             try:
                 mode = entry.lstat().st_mode
@@ -1357,17 +1373,32 @@ def _spec_index_walk_regular_files(root: Path) -> list[Path]:
             if stat.S_ISLNK(mode):
                 continue
             if stat.S_ISDIR(mode):
+                fd = trusted_open_directory(entry, repo_root)
+                if fd is None:
+                    raise SpecIndexRenderError(
+                        f"could not scan spec artifacts: {entry} (descriptor-safe read failed)"
+                    )
+                try:
+                    os.close(fd)
+                except OSError:
+                    # Best-effort descriptor cleanup; traversal will fail separately if the path is unsafe.
+                    pass
                 visit(entry)
             elif stat.S_ISREG(mode):
-                files.append(entry)
+                if trusted_regular_file_bytes_and_mode(entry, repo_root) is not None:
+                    files.append(entry)
+                else:
+                    raise SpecIndexRenderError(
+                        f"could not inspect spec artifact: {entry} (descriptor-safe read failed)"
+                    )
 
     visit(root)
     return files
 
 
-def _spec_index_render_backlinks(spec_dir: Path) -> list[str]:
+def _spec_index_render_backlinks(spec_dir: Path, repo_root: Path) -> list[str]:
     records: list[tuple[int, bytes, str]] = []
-    for path in _spec_index_walk_regular_files(spec_dir):
+    for path in _spec_index_walk_regular_files(spec_dir, repo_root):
         relative = path.relative_to(spec_dir).as_posix()
         if relative == "SPEC-MOC.md":
             continue
@@ -1397,8 +1428,8 @@ def _spec_index_render_backlinks(spec_dir: Path) -> list[str]:
 def _spec_index_repo_structure_current(repo_root: Path) -> bool:
     marker = repo_root / ".specify" / "structure-version.json"
     try:
-        payload = json.loads(_spec_index_read_text(marker))
-    except (SpecIndexRenderError, json.JSONDecodeError):
+        payload = json.loads(_spec_index_read_text(marker, repo_root))
+    except (SpecIndexRenderError, json.JSONDecodeError, ValueError):
         return False
     if not isinstance(payload, dict):
         return False
@@ -1409,8 +1440,8 @@ def _spec_index_repo_structure_current(repo_root: Path) -> bool:
 def _spec_index_active_feature(repo_root: Path) -> str:
     feature = repo_root / ".specify" / "feature.json"
     try:
-        payload = json.loads(_spec_index_read_text(feature))
-    except (SpecIndexRenderError, json.JSONDecodeError):
+        payload = json.loads(_spec_index_read_text(feature, repo_root))
+    except (SpecIndexRenderError, json.JSONDecodeError, ValueError):
         return ""
     if not isinstance(payload, dict):
         return ""
@@ -1432,12 +1463,12 @@ def _spec_index_render_home_index(
     home_text: str,
 ) -> list[str]:
     sortable: list[tuple[bytes, bytes, str]] = []
-    spec_dirs = _spec_index_directories(specs_dir)
+    spec_dirs = _spec_index_directories(specs_dir, repo_root)
     for spec_dir in spec_dirs:
         moc = spec_dir / "SPEC-MOC.md"
-        if _spec_index_path_state(moc, "SPEC-MOC.md") == "missing":
+        if _spec_index_path_state(moc, "SPEC-MOC.md", repo_root) == "missing":
             continue
-        moc_text = _spec_index_read_text(moc)
+        moc_text = _spec_index_read_text(moc, repo_root)
         if not _spec_index_is_gated(moc_text) or not _spec_index_home_owns(home_path, home_text, moc_text):
             continue
         has_id, spec_id = _spec_index_scalar(moc_text, "spec_id")
@@ -1461,8 +1492,8 @@ def _spec_index_render_home_index(
         for spec_dir in spec_dirs:
             branch = spec_dir.name
             moc = spec_dir / "SPEC-MOC.md"
-            moc_state = _spec_index_path_state(moc, "SPEC-MOC.md")
-            if moc_state == "regular" and _spec_index_is_gated(_spec_index_read_text(moc)):
+            moc_state = _spec_index_path_state(moc, "SPEC-MOC.md", repo_root)
+            if moc_state == "regular" and _spec_index_is_gated(_spec_index_read_text(moc, repo_root)):
                 continue
             if _spec_index_candidate_out_of_scope(branch):
                 continue
@@ -1472,13 +1503,13 @@ def _spec_index_render_home_index(
                 continue
             spec_file = spec_dir / "spec.md"
             try:
-                mode = spec_file.lstat().st_mode
-            except (FileNotFoundError, OSError):
+                spec_state = _spec_index_path_state(spec_file, "spec.md", repo_root)
+            except SpecIndexRenderError:
                 continue
-            if stat.S_ISLNK(mode) or not stat.S_ISREG(mode):
+            if spec_state == "missing":
                 continue
             try:
-                spec_text = _spec_index_read_text(spec_file)
+                spec_text = _spec_index_read_text(spec_file, repo_root)
             except SpecIndexRenderError:
                 continue
             if not _spec_index_home_owns(home_path, home_text, spec_text):
@@ -1575,14 +1606,14 @@ def _spec_index_rebuild_map(
     if positions["index"] is not None and is_home:
         bodies["index"] = _spec_index_render_home_index(repo_root, specs_dir, path, text)
     if positions["prs"] is not None:
-        bodies["prs"] = _spec_index_render_prs(spec_dir)
+        bodies["prs"] = _spec_index_render_prs(spec_dir, repo_root)
     if positions["backlinks"] is not None:
-        bodies["backlinks"] = _spec_index_render_backlinks(spec_dir)
+        bodies["backlinks"] = _spec_index_render_backlinks(spec_dir, repo_root)
 
     all_absent = all(positions[zone] is None for zone in SPEC_INDEX_ZONE_ORDER)
     if all_absent:
-        bodies["prs"] = _spec_index_render_prs(spec_dir)
-        bodies["backlinks"] = _spec_index_render_backlinks(spec_dir)
+        bodies["prs"] = _spec_index_render_prs(spec_dir, repo_root)
+        bodies["backlinks"] = _spec_index_render_backlinks(spec_dir, repo_root)
         while lines and not lines[-1].strip():
             lines.pop()
         if lines:
@@ -1615,6 +1646,8 @@ def render_spec_index(repo_root: Path) -> tuple[list[RenderedSpecIndexMap], bool
     """Render every in-scope map in memory; never mutate the repository."""
 
     root = repo_root.resolve(strict=False)
+    if not descriptor_read_supported():
+        raise SpecIndexRenderError("descriptor-safe spec-index reads are unsupported on this platform")
     specs_dir = root / "specs"
     try:
         specs_mode = specs_dir.lstat().st_mode
@@ -1630,11 +1663,11 @@ def render_spec_index(repo_root: Path) -> tuple[list[RenderedSpecIndexMap], bool
         return [], False
 
     rendered: list[RenderedSpecIndexMap] = []
-    for spec_dir in _spec_index_directories(specs_dir):
+    for spec_dir in _spec_index_directories(specs_dir, root):
         moc = spec_dir / "SPEC-MOC.md"
-        if _spec_index_path_state(moc, "SPEC-MOC.md") == "missing":
+        if _spec_index_path_state(moc, "SPEC-MOC.md", root) == "missing":
             continue
-        original = _spec_index_read_text(moc)
+        original = _spec_index_read_text(moc, root)
         if not _spec_index_is_gated(original):
             continue
         rebuilt = _spec_index_rebuild_map(
@@ -1664,18 +1697,18 @@ def render_spec_index(repo_root: Path) -> tuple[list[RenderedSpecIndexMap], bool
         if not stat.S_ISDIR(home_mode):
             home_entries = []
         else:
-            try:
-                home_entries = sorted(home_dir.iterdir(), key=lambda path: path.name.encode("utf-8"))
-            except OSError as exc:
+            home_names = trusted_dir_entries(home_dir, root)
+            if home_names is None:
                 raise SpecIndexRenderError(
-                    f"could not scan roadmap-MOC directory: {home_dir} ({type(exc).__name__})"
-                ) from exc
+                    f"could not scan roadmap-MOC directory: {home_dir} (descriptor-safe read failed)"
+                )
+            home_entries = sorted((home_dir / name for name in home_names), key=lambda path: path.name.encode("utf-8"))
     for home in home_entries:
         if not home.name.endswith("-roadmap-MOC.md"):
             continue
-        if _spec_index_path_state(home, "roadmap-MOC home note") == "missing":
+        if _spec_index_path_state(home, "roadmap-MOC home note", root) == "missing":
             continue
-        original = _spec_index_read_text(home)
+        original = _spec_index_read_text(home, root)
         if not _spec_index_is_gated(original):
             continue
         rebuilt = _spec_index_rebuild_map(
@@ -2008,6 +2041,10 @@ def json_schema_failures(
     if isinstance(value, dict):
         properties = schema.get("properties") if isinstance(schema.get("properties"), dict) else {}
         required = schema.get("required") if isinstance(schema.get("required"), list) else []
+        minimum_properties = schema.get("minProperties")
+        if isinstance(minimum_properties, int) and len(value) < minimum_properties:
+            noun = "property" if minimum_properties == 1 else "properties"
+            failures.append(schema_failure("min_properties", field, f"Object must contain at least {minimum_properties} {noun}."))
         for key in required:
             if isinstance(key, str) and key not in value:
                 missing_field = schema_child_field(field, key)
@@ -2032,6 +2069,17 @@ def json_schema_failures(
                         "additional_properties",
                         extra_field,
                         f"Schema does not allow packet field: {extra_field}.",
+                    )
+                )
+        elif isinstance(schema.get("additionalProperties"), dict):
+            additional_schema = schema["additionalProperties"]
+            for key in sorted(value.keys() - properties.keys()):
+                failures.extend(
+                    json_schema_failures(
+                        value[key],
+                        additional_schema,
+                        root_schema,
+                        schema_child_field(field, str(key)),
                     )
                 )
 
@@ -2122,20 +2170,9 @@ def schema_failure(keyword: str, field: str, message: str) -> dict[str, Any]:
 
 def protected_body_sha256(body_text: str) -> str:
     normalized: list[str] = []
-    in_packet = False
     editable_field = ""
-    seen_known_gaps = False
-    known_gaps_body_seen = False
     for raw_line in body_text.splitlines():
         line = raw_line.rstrip(" \t\r")
-        if not in_packet and line == "## Summary":
-            in_packet = True
-        if not in_packet:
-            continue
-        if seen_known_gaps and known_gaps_body_seen and not line:
-            break
-        if seen_known_gaps and re.match(r"^#{1,6}\s+", line):
-            break
         start = re.fullmatch(r"<!-- speckit-pro-editable:(summary|what_changed|why_it_matters):start -->", line)
         if not editable_field and start:
             editable_field = start.group(1)
@@ -2148,66 +2185,283 @@ def protected_body_sha256(body_text: str) -> str:
         if editable_field:
             continue
         normalized.append(line)
-        if line == "## Known Gaps":
-            seen_known_gaps = True
-        elif seen_known_gaps and line:
-            known_gaps_body_seen = True
     content = "\n".join(normalized)
     if normalized:
         content += "\n"
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
+def packet_body_structure_failures(data: dict[str, Any], body_text: str) -> list[dict[str, Any]]:
+    failures: list[dict[str, Any]] = []
+    lines = [line.rstrip(" \t\r") for line in body_text.splitlines()]
+    title = data.get("generated_title")
+    expected_title = title.get("value") if isinstance(title, dict) else None
+    h1_positions = [(index, line) for index, line in enumerate(lines) if re.fullmatch(r"#\s+\S.*", line)]
+    h1_lines = [line for _index, line in h1_positions]
+    if isinstance(expected_title, str) and expected_title:
+        expected_h1 = f"# {expected_title}"
+        if h1_lines != [expected_h1]:
+            failures.append(
+                {
+                    "rule": "body.title",
+                    "field": "body_file",
+                    "message": "Rendered body must contain exactly one H1 matching generated_title.value before Summary.",
+                }
+            )
+        else:
+            summary_positions = [index for index, line in enumerate(lines) if line == "## Summary"]
+            if summary_positions and h1_positions[0][0] > summary_positions[0]:
+                failures.append(
+                    {
+                        "rule": "body.title",
+                        "field": "body_file",
+                        "message": "Rendered body H1 must appear before the Summary section.",
+                    }
+                )
+    elif len(h1_lines) != 1:
+        failures.append(
+            {
+                "rule": "body.title",
+                "field": "body_file",
+                "message": "Rendered body must contain exactly one H1 title.",
+            }
+        )
+
+    required_headings = data.get("required_headings")
+    if isinstance(required_headings, list) and all(isinstance(item, str) and item for item in required_headings):
+        heading_lines = [line[3:].strip() for line in lines if line.startswith("## ")]
+        positions: list[int] = []
+        for heading in required_headings:
+            matches = [index for index, found in enumerate(heading_lines) if found == heading]
+            if len(matches) != 1:
+                failures.append(
+                    {
+                        "rule": "body.required_headings",
+                        "field": "body_file",
+                        "message": f"Rendered body must contain required heading exactly once: {heading}",
+                    }
+                )
+                continue
+            positions.append(matches[0])
+        if positions and positions != sorted(positions):
+            failures.append(
+                {
+                    "rule": "body.required_headings",
+                    "field": "body_file",
+                    "message": "Rendered body required headings must appear in packet order.",
+                }
+            )
+
+    editable_fields = data.get("editable_fields")
+    if isinstance(editable_fields, list):
+        spans: list[tuple[int, int, str]] = []
+        heading_indices = [(index, line[3:].strip()) for index, line in enumerate(lines) if line.startswith("## ")]
+        for field in editable_fields:
+            if not isinstance(field, dict):
+                continue
+            field_id = field.get("field_id")
+            heading = field.get("heading")
+            start_marker = field.get("start_marker")
+            end_marker = field.get("end_marker")
+            if not isinstance(field_id, str) or not isinstance(heading, str) or not isinstance(start_marker, str) or not isinstance(end_marker, str):
+                failures.append(
+                    {
+                        "rule": "body.editable_markers",
+                        "field": "editable_fields",
+                        "message": "Editable field records must include field_id, heading, start_marker, and end_marker.",
+                    }
+                )
+                continue
+            starts = [index for index, line in enumerate(lines) if line == start_marker]
+            ends = [index for index, line in enumerate(lines) if line == end_marker]
+            if len(starts) != 1 or len(ends) != 1 or starts[0] >= ends[0]:
+                failures.append(
+                    {
+                        "rule": "body.editable_markers",
+                        "field": "body_file",
+                        "message": f"Rendered body must contain one balanced editable marker pair for {field_id}.",
+                    }
+                )
+                continue
+            section_starts = [index for index, found in heading_indices if found == heading]
+            if len(section_starts) != 1:
+                failures.append(
+                    {
+                        "rule": "body.editable_markers",
+                        "field": "body_file",
+                        "message": f"Editable field {field_id} must map to one declared heading section.",
+                    }
+                )
+                continue
+            section_start = section_starts[0]
+            next_headings = [index for index, _found in heading_indices if index > section_start]
+            section_end = next_headings[0] if next_headings else len(lines)
+            start_index = starts[0]
+            end_index = ends[0]
+            if not (section_start < start_index < end_index < section_end):
+                failures.append(
+                    {
+                        "rule": "body.editable_markers",
+                        "field": "body_file",
+                        "message": f"Editable markers for {field_id} must stay inside the {heading} section.",
+                    }
+                )
+                continue
+            if any(re.match(r"^#{1,6}\s+", line) for line in lines[start_index + 1 : end_index]):
+                failures.append(
+                    {
+                        "rule": "body.editable_markers",
+                        "field": "body_file",
+                        "message": f"Editable markers for {field_id} must not enclose headings.",
+                    }
+                )
+                continue
+            spans.append((start_index, end_index, field_id))
+        for previous, current in zip(sorted(spans), sorted(spans)[1:]):
+            if previous[1] >= current[0]:
+                failures.append(
+                    {
+                        "rule": "body.editable_markers",
+                        "field": "body_file",
+                        "message": f"Editable marker spans must not overlap: {previous[2]} and {current[2]}.",
+                    }
+                )
+    uat = data.get("uat")
+    if isinstance(uat, dict):
+        uat_heading = uat.get("uat_runbook_heading")
+        if isinstance(uat_heading, str) and uat_heading:
+            matches = [line for line in lines if line == uat_heading]
+            if len(matches) != 1:
+                failures.append(
+                    {
+                        "rule": "body.uat_runbook_heading",
+                        "field": "uat.uat_runbook_heading",
+                        "message": f"Rendered body must contain declared UAT heading exactly once: {uat_heading}",
+                    }
+                )
+    return failures
+
+
 def pr_packet_body_failures(data: dict[str, Any], repo_root: Path) -> list[dict[str, Any]]:
+    return pr_packet_body_validation(data, repo_root)["failures"]
+
+
+def pr_packet_body_validation(data: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     body_file = data.get("body_file")
     if not isinstance(body_file, str) or not body_file:
-        return []
+        return {"failures": [], "body_required": False, "body_path": None, "body_bytes": None}
     if validate_path_value("validate-pr-packet-read-only", "body_file", body_file, repo_root) is not None:
-        return []
+        return {"failures": [], "body_required": True, "body_path": None, "body_bytes": None}
     body_path = resolve_input_path(body_file, repo_root)
     if not trusted_file_exists(body_path, repo_root):
-        return [
-            {
-                "rule": "body.path",
-                "field": "body_file",
-                "message": f"Rendered body file is missing or is not a regular file: {body_file}",
-            }
-        ]
-    body_text = trusted_text(body_path, repo_root)
-    if body_text is None:
-        return [
-            {
-                "rule": "body.readable",
-                "field": "body_file",
-                "message": f"Rendered body file is unreadable: {body_file}",
-            }
-        ]
+        return {
+            "failures": [
+                {
+                    "rule": "body.path",
+                    "field": "body_file",
+                    "message": f"Rendered body file is missing or is not a regular file: {body_file}",
+                }
+            ],
+            "body_required": True,
+            "body_path": body_path,
+            "body_bytes": None,
+        }
+    body_bytes = trusted_bytes(body_path, repo_root)
+    if body_bytes is None:
+        return {
+            "failures": [
+                {
+                    "rule": "body.readable",
+                    "field": "body_file",
+                    "message": f"Rendered body file is unreadable: {body_file}",
+                }
+            ],
+            "body_required": True,
+            "body_path": body_path,
+            "body_bytes": None,
+        }
+    try:
+        body_text = body_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        return {
+            "failures": [
+                {
+                    "rule": "body.utf8",
+                    "field": "body_file",
+                    "message": f"Rendered body file must be valid UTF-8: {body_file}",
+                }
+            ],
+            "body_required": True,
+            "body_path": body_path,
+            "body_bytes": body_bytes,
+        }
+    structure_failures = packet_body_structure_failures(data, body_text)
+    failures = structure_failures[:]
     fingerprint = data.get("protected_body_fingerprint")
     expected = fingerprint.get("value") if isinstance(fingerprint, dict) else None
     if isinstance(expected, str) and re.fullmatch(r"[a-f0-9]{64}", expected):
         if protected_body_sha256(body_text) != expected:
-            return [
+            failures.append(
                 {
                     "rule": "body.protected_fingerprint",
                     "field": "body_file",
                     "message": "Protected body fingerprint changed outside sanctioned editable prose fields.",
                 }
-            ]
-    return []
+            )
+    return {
+        "failures": failures,
+        "body_required": True,
+        "body_path": body_path,
+        "body_bytes": body_bytes,
+    }
 
 
 def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     raw = str(inputs.get("packet_path") or "")
     packet = resolve_input_path(raw, repo_root)
     packet_id = packet.stem if raw else "missing-packet-path"
+    if raw and not descriptor_read_supported():
+        stderr_line = f"validate-pr-packet-read-only: unsupported_platform: {packet_id}: input.unsupported_platform: no-path"
+        obj = packet_result(
+            "failed",
+            "unsupported_platform",
+            2,
+            packet_id,
+            None,
+            None,
+            None,
+            "no-path",
+            True,
+            stderr_line,
+            [
+                {
+                    "rule": "input.unsupported_platform",
+                    "field": "packet",
+                    "message": "validate-pr-packet-read-only requires descriptor-safe no-follow reads on this platform.",
+                }
+            ],
+            ["[input.unsupported_platform] Run packet validation on Linux or macOS until a Windows-safe reader is implemented."],
+        )
+        return make_result(pretty_json_text(obj), stderr_line + "\n", 2)
     if not raw or not trusted_file_exists(packet, repo_root):
         message = "missing packet path" if not raw else f"packet not found or unreadable: {raw}"
         stderr_line = f"validate-pr-packet-read-only: input_error: {packet_id}: input.error: no-path"
         obj = packet_result("failed", "input_error", 2, packet_id, None, None, None, "no-path", True, stderr_line, [{"rule": "input.error", "field": "packet", "message": message}], ["[input.error] Provide a readable JSON PR packet with a feature-local validation_result_path."])
         return make_result(pretty_json_text(obj), stderr_line + "\n", 2)
+    packet_bytes = trusted_bytes(packet, repo_root)
+    if packet_bytes is None:
+        stderr_line = f"validate-pr-packet-read-only: input_error: {packet_id}: input.error: no-path"
+        obj = packet_result("failed", "input_error", 2, packet_id, None, None, None, "no-path", True, stderr_line, [{"rule": "input.error", "field": "packet", "message": f"packet is unreadable: {raw}"}], ["[input.error] Provide a readable JSON PR packet with a feature-local validation_result_path."])
+        return make_result(pretty_json_text(obj), stderr_line + "\n", 2)
     try:
-        data = json.loads(trusted_text(packet, repo_root) or "")
-    except json.JSONDecodeError:
+        packet_text = packet_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        stderr_line = f"validate-pr-packet-read-only: input_error: {packet_id}: input.error: no-path"
+        obj = packet_result("failed", "input_error", 2, packet_id, None, None, None, "no-path", True, stderr_line, [{"rule": "input.utf8", "field": "packet", "message": f"packet JSON must be valid UTF-8: {raw}"}], ["[input.utf8] Save the PR packet JSON as valid UTF-8 and retry validation."])
+        return make_result(pretty_json_text(obj), stderr_line + "\n", 2)
+    try:
+        data = json.loads(packet_text)
+    except (json.JSONDecodeError, ValueError):
         stderr_line = f"validate-pr-packet-read-only: input_error: {packet_id}: input.error: no-path"
         obj = packet_result("failed", "input_error", 2, packet_id, None, None, None, "no-path", True, stderr_line, [{"rule": "input.error", "field": "packet", "message": f"packet JSON is malformed: {raw}"}], ["[input.error] Provide a readable JSON PR packet with a feature-local validation_result_path."])
         return make_result(pretty_json_text(obj), stderr_line + "\n", 2)
@@ -2221,6 +2475,45 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
         obj = packet_result("failed", "input_error", 2, packet_id, None, None, None, "no-path", True, stderr_line, [{"rule": "input.schema", "field": "packet", "message": schema_error or "PR packet schema is unavailable."}], ["[input.schema] Restore the bundled PR packet schema before validation."])
         return make_result(pretty_json_text(obj), stderr_line + "\n", 2)
     failures = pr_packet_schema_failures(data, schema)
+    packet_id_value = data.get("packet_id")
+    if isinstance(packet_id_value, str) and packet_id_value != packet_id:
+        failures.append({"rule": "input.identity.packet_id", "field": "packet_id", "message": "packet_id must match the packet filename."})
+    source_feature_dir = data.get("source_feature_dir")
+    canonical_packet_identity_paths: dict[str, str] | None = None
+    packet_rel = repo_relative(packet, repo_root)
+    if packet_rel.startswith("specs/") or "/.process/pr-packets/" in packet_rel:
+        from .pr_emission import canonical_packet_paths, packet_path_parts
+
+        packet_parts = packet_path_parts(packet_rel)
+        if packet_parts is None:
+            failures.append(
+                {
+                    "rule": "input.identity.packet_path",
+                    "field": "packet_path",
+                    "message": "packet_path must be <source_feature_dir>/.process/pr-packets/<packet_id>.json.",
+                }
+            )
+        else:
+            canonical_packet_identity_paths = canonical_packet_paths(
+                packet_parts["source_feature_dir"],
+                packet_parts["packet_id"],
+            )
+            if source_feature_dir != packet_parts["source_feature_dir"]:
+                failures.append(
+                    {
+                        "rule": "input.identity.source_feature_dir",
+                        "field": "source_feature_dir",
+                        "message": "source_feature_dir must match the packet_path feature directory.",
+                    }
+                )
+            if packet_id_value != packet_parts["packet_id"]:
+                failures.append(
+                    {
+                        "rule": "input.identity.packet_path",
+                        "field": "packet_path",
+                        "message": "packet_path packet id must match packet_id.",
+                    }
+                )
     scope_evidence = data.get("scope_evidence")
     generated_title = data.get("generated_title")
     target = data.get("target")
@@ -2245,6 +2538,24 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
         path_diag = validate_path_value("validate-pr-packet-read-only", "validation_result_path", validation_path, repo_root)
         if path_diag is not None:
             failures.append({"rule": "input.path.validation_result_path", "field": "validation_result_path", "message": path_diag["message"]})
+        elif canonical_packet_identity_paths is not None and validation_path != canonical_packet_identity_paths["validation_result_path"]:
+            failures.append(
+                {
+                    "rule": "input.identity.validation_result_path",
+                    "field": "validation_result_path",
+                    "message": "validation_result_path must be owned by packet_path.",
+                }
+            )
+        elif isinstance(source_feature_dir, str) and source_feature_dir and isinstance(packet_id_value, str) and packet_id_value:
+            expected_validation_path = f"{source_feature_dir}/.process/pr-packets/{packet_id_value}/validation.json"
+            if validation_path != expected_validation_path:
+                failures.append(
+                    {
+                        "rule": "input.identity.validation_result_path",
+                        "field": "validation_result_path",
+                        "message": "validation_result_path must be owned by source_feature_dir and packet_id.",
+                    }
+                )
     body_file = data.get("body_file")
     if body_file is not None and not isinstance(body_file, str):
         failures.append({"rule": "input.path.body_file", "field": "body_file", "message": "body_file must be a string when present."})
@@ -2253,14 +2564,65 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
         path_diag = validate_path_value("validate-pr-packet-read-only", "body_file", body_file, repo_root)
         if path_diag is not None:
             failures.append({"rule": "input.path.body_file", "field": "body_file", "message": path_diag["message"]})
-    failures.extend(pr_packet_body_failures(data, repo_root))
+        elif canonical_packet_identity_paths is not None and body_file != canonical_packet_identity_paths["body_file"]:
+            failures.append(
+                {
+                    "rule": "input.identity.body_file",
+                    "field": "body_file",
+                    "message": "body_file must be owned by packet_path.",
+                }
+            )
+    body_result = pr_packet_body_validation(data, repo_root)
+    failures.extend(body_result["failures"])
+    source_fingerprints = pr_packet_source_fingerprints(
+        packet,
+        data,
+        repo_root,
+        packet_bytes=packet_bytes,
+        body_path=body_result.get("body_path"),
+        body_bytes=body_result.get("body_bytes"),
+    )
+    if "packet" not in source_fingerprints:
+        failures.append({"rule": "source_fingerprint.packet", "field": "packet", "message": "Packet fingerprint could not be computed from validated bytes."})
+    if body_result.get("body_required") and "body" not in source_fingerprints:
+        failures.append({"rule": "source_fingerprint.body", "field": "body_file", "message": "Body fingerprint could not be computed from validated bytes."})
     if failures:
         rules = ",".join(sorted({failure["rule"] for failure in failures}))
         stderr_line = f"validate-pr-packet-read-only: validation_failure: {packet_id}: {rules}: {validation_path}"
         remediation = [f"[{failure['rule']}] Regenerate packet evidence before PR creation." for failure in failures]
-        obj = packet_result("failed", "validation_failure", 1, packet_id, data.get("mode"), (generated_title or {}).get("value"), body_file, validation_path, True, stderr_line, failures, remediation, target or {})
+        obj = packet_result(
+            "failed",
+            "validation_failure",
+            1,
+            packet_id,
+            data.get("mode"),
+            (generated_title or {}).get("value"),
+            body_file,
+            validation_path,
+            True,
+            stderr_line,
+            failures,
+            remediation,
+            target or {},
+            source_fingerprints=source_fingerprints,
+        )
         return make_result(pretty_json_text(obj), stderr_line + "\n", 1)
-    obj = packet_result("passed", "none", 0, packet_id, data.get("mode"), (generated_title or {}).get("value"), body_file, validation_path, False, "", [], [], target or {})
+    obj = packet_result(
+        "passed",
+        "none",
+        0,
+        packet_id,
+        data.get("mode"),
+        (generated_title or {}).get("value"),
+        body_file,
+        validation_path,
+        False,
+        "",
+        [],
+        [],
+        target or {},
+        source_fingerprints=source_fingerprints,
+    )
     return make_result(pretty_json_text(obj))
 
 
@@ -2278,6 +2640,8 @@ def packet_result(
     failures: list[dict[str, Any]],
     remediation: list[str],
     target: dict[str, Any] | None = None,
+    *,
+    source_fingerprints: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     target_obj = None
     if target and (target.get("base_branch") or target.get("head_branch")):
@@ -2287,7 +2651,7 @@ def packet_result(
         if failures
         else [{"rule": "packet.validation", "status": "passed", "evidence": "no failures"}]
     )
-    return {
+    result = {
         "schema_version": "1.0.0",
         "error_class": error_class,
         "exit_code": exit_code,
@@ -2298,11 +2662,50 @@ def packet_result(
         "status": status,
         "title_value": title,
         "body_file": body_file,
+        "validation_result_path": validation_path,
         "rule_outcomes": rule_outcomes,
         "pr_blocked": blocked,
         "failures": failures,
         "remediation_evidence": remediation,
         "timestamp": os.environ.get("SPECKIT_PR_PACKET_TIMESTAMP") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    if source_fingerprints:
+        result["source_fingerprints"] = source_fingerprints
+    return result
+
+
+def pr_packet_source_fingerprints(
+    packet_path: Path,
+    data: dict[str, Any],
+    repo_root: Path,
+    *,
+    packet_bytes: bytes | None = None,
+    body_path: Path | None = None,
+    body_bytes: bytes | None = None,
+) -> dict[str, Any]:
+    fingerprints: dict[str, Any] = {}
+    packet_record = file_fingerprint(packet_path, repo_root, content=packet_bytes)
+    if packet_record is not None:
+        fingerprints["packet"] = packet_record
+    if body_path is not None:
+        body_record = file_fingerprint(body_path, repo_root, content=body_bytes)
+        if body_record is not None:
+            fingerprints["body"] = body_record
+    return fingerprints
+
+
+def file_fingerprint(path: Path, repo_root: Path, *, content: bytes | None = None) -> dict[str, Any] | None:
+    if not trusted_file_exists(path, repo_root):
+        return None
+    if content is None:
+        content = trusted_bytes(path, repo_root)
+        if content is None:
+            return None
+    return {
+        "path": repo_relative(path, repo_root),
+        "algorithm": "sha256",
+        "sha256": hashlib.sha256(content).hexdigest(),
+        "size_bytes": len(content),
     }
 
 
@@ -2992,10 +3395,32 @@ def repo_relative(path: Path, repo_root: Path) -> str:
 
 
 def trusted_file_exists(path: Path, repo_root: Path) -> bool:
-    return path.is_file() and path_stays_in_trust_boundary(path, repo_root)
+    fd = trusted_open_regular_file(path, repo_root)
+    if fd is None:
+        return False
+    try:
+        return True
+    finally:
+        try:
+            os.close(fd)
+        except OSError:
+            # Best-effort descriptor cleanup; existence checks should not fail on close errors.
+            pass
 
 
 def trusted_dir_exists(path: Path, repo_root: Path) -> bool:
+    if descriptor_read_supported():
+        fd = trusted_open_directory(path, repo_root)
+        if fd is None:
+            return False
+        try:
+            return True
+        finally:
+            try:
+                os.close(fd)
+            except OSError:
+                # Best-effort descriptor cleanup; existence checks should not fail on close errors.
+                pass
     return path.is_dir() and path_stays_in_trust_boundary(path, repo_root)
 
 
@@ -3005,14 +3430,178 @@ def path_stays_in_trust_boundary(path: Path, repo_root: Path) -> bool:
 
 
 def trusted_text(path: Path, repo_root: Path | None = None) -> str | None:
-    if repo_root is not None and not path_stays_in_trust_boundary(path, repo_root):
-        return None
-    if not path.is_file():
-        return None
+    content = trusted_bytes(path, repo_root)
+    return None if content is None else content.decode("utf-8", errors="replace")
+
+
+def trusted_bytes(path: Path, repo_root: Path | None = None) -> bytes | None:
+    if repo_root is not None:
+        return trusted_bytes_descriptor(path, repo_root)
     try:
-        return path.read_text(encoding="utf-8", errors="replace")
+        if not path.is_file():
+            return None
+        return path.read_bytes()
     except OSError:
         return None
+
+
+def trusted_bytes_descriptor(path: Path, repo_root: Path) -> bytes | None:
+    fd = trusted_open_regular_file(path, repo_root)
+    if fd is None:
+        return None
+    try:
+        chunks: list[bytes] = []
+        while True:
+            chunk = os.read(fd, 1024 * 1024)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        return b"".join(chunks)
+    except OSError:
+        return None
+    finally:
+        try:
+            os.close(fd)
+        except OSError:
+            # Best-effort descriptor cleanup after a completed or failed read.
+            pass
+
+
+def trusted_regular_file_bytes_and_mode(path: Path, repo_root: Path) -> tuple[bytes, int] | None:
+    fd = trusted_open_regular_file(path, repo_root)
+    if fd is None:
+        return None
+    try:
+        file_stat = os.fstat(fd)
+        chunks: list[bytes] = []
+        while True:
+            chunk = os.read(fd, 1024 * 1024)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        return b"".join(chunks), stat.S_IMODE(file_stat.st_mode)
+    except OSError:
+        return None
+    finally:
+        try:
+            os.close(fd)
+        except OSError:
+            # Best-effort descriptor cleanup after a completed or failed snapshot.
+            pass
+
+
+def trusted_open_regular_file(path: Path, repo_root: Path) -> int | None:
+    if not descriptor_read_supported():
+        return None
+    repo_root = repo_root.resolve(strict=False)
+    target = path if path.is_absolute() else repo_root / path
+    try:
+        relative = target.relative_to(repo_root)
+    except ValueError:
+        return None
+    if not relative.parts or any(part in {"", ".", ".."} for part in relative.parts):
+        return None
+    target_name = relative.parts[-1]
+    if target_name in {"", ".", ".."} or "/" in target_name:
+        return None
+    try:
+        root_mode = repo_root.lstat().st_mode
+        if stat.S_ISLNK(root_mode) or not stat.S_ISDIR(root_mode):
+            return None
+        parent_fd = os.open(repo_root, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | os.O_NOFOLLOW)
+    except (OSError, NotImplementedError):
+        return None
+    fd = -1
+    try:
+        for part in relative.parts[:-1]:
+            next_fd = os.open(
+                part,
+                os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | os.O_NOFOLLOW,
+                dir_fd=parent_fd,
+            )
+            os.close(parent_fd)
+            parent_fd = next_fd
+        fd = os.open(target_name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=parent_fd)
+        file_stat = os.fstat(fd)
+        if stat.S_ISLNK(file_stat.st_mode) or not stat.S_ISREG(file_stat.st_mode):
+            os.close(fd)
+            return None
+        return fd
+    except (OSError, NotImplementedError):
+        if fd >= 0:
+            try:
+                os.close(fd)
+            except OSError:
+                # Close failures during an already-failed guarded open are best-effort cleanup.
+                pass
+        return None
+    finally:
+        try:
+            os.close(parent_fd)
+        except OSError:
+            # The caller should see the original read result, not a best-effort close failure.
+            pass
+
+
+def trusted_open_directory(path: Path, repo_root: Path) -> int | None:
+    if not descriptor_read_supported():
+        return None
+    repo_root = repo_root.resolve(strict=False)
+    target = path if path.is_absolute() else repo_root / path
+    try:
+        relative = target.relative_to(repo_root)
+    except ValueError:
+        return None
+    if any(part in {"", ".", ".."} for part in relative.parts):
+        return None
+    try:
+        root_mode = repo_root.lstat().st_mode
+        if stat.S_ISLNK(root_mode) or not stat.S_ISDIR(root_mode):
+            return None
+        current_fd = os.open(repo_root, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | os.O_NOFOLLOW)
+    except (OSError, NotImplementedError):
+        return None
+    try:
+        for part in relative.parts:
+            next_fd = os.open(
+                part,
+                os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | os.O_NOFOLLOW,
+                dir_fd=current_fd,
+            )
+            os.close(current_fd)
+            current_fd = next_fd
+        dir_stat = os.fstat(current_fd)
+        if stat.S_ISLNK(dir_stat.st_mode) or not stat.S_ISDIR(dir_stat.st_mode):
+            os.close(current_fd)
+            return None
+        return current_fd
+    except (OSError, NotImplementedError):
+        try:
+            os.close(current_fd)
+        except OSError:
+            # Best-effort cleanup while returning an unsupported/unsafe directory result.
+            pass
+        return None
+
+
+def trusted_dir_entries(path: Path, repo_root: Path) -> list[str] | None:
+    fd = trusted_open_directory(path, repo_root)
+    if fd is None:
+        return None
+    try:
+        return os.listdir(fd)
+    except OSError:
+        return None
+    finally:
+        try:
+            os.close(fd)
+        except OSError:
+            # Best-effort descriptor cleanup after listing directory entries.
+            pass
+
+
+def descriptor_read_supported() -> bool:
+    return os.name != "nt" and hasattr(os, "O_NOFOLLOW")
 
 
 def trusted_lines(path: Path, repo_root: Path | None = None) -> list[str]:

@@ -49,7 +49,7 @@
     },
     "workflow.pr_packet_validation.blocker": {
       "tolerance": "exact",
-      "rationale": "Both paths report the same deferred pr-packet-output capability gap."
+      "rationale": "Both paths report the same packet-emission state before validation or PR creation."
     },
     "workflow.multi_pr_emission.row_count": {
       "tolerance": "exact",
