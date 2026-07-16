@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-001-workflow.md",
   "spec_id": "G56R-001",
   "feature_dir": "specs/g56r-001-candidate-route-baseline",
-  "updated_at": "2026-07-15T23:37:33Z",
-  "active_step": "Phase 7: Implement",
+  "updated_at": "2026-07-16T00:25:00Z",
+  "active_step": "Complete: PR creation skipped - missing feature-local PR packet",
   "settings": {
     "auto_commit": "per-phase",
     "confidence_gate_mode": "advisory",
@@ -38,7 +38,7 @@
     },
     "confidence_gate_mode": "advisory",
     "codex_agents": {
-      "destination": "/Users/fredrickgabelmann/.codex/agents",
+      "destination": "$CODEX_HOME/agents",
       "model": "gpt-5.5",
       "mutation_status": "no_op",
       "agent_count": 10
@@ -89,7 +89,7 @@
     "Phase 1: Specify": {
       "status": "completed",
       "completed_at": "2026-07-15T22:51:16Z",
-      "executor_agent_id": "019f67ef-7168-71a2-b16f-0a3f704b1e8c",
+      "executor_agent_id": "phase-executor-specify-session",
       "files_changed": [
         "specs/g56r-001-candidate-route-baseline/spec.md",
         "specs/g56r-001-candidate-route-baseline/checklists/requirements.md"
@@ -118,7 +118,7 @@
     "Phase 2: Clarify - Source Ledger and Candidate Admission": {
       "status": "completed",
       "completed_at": "2026-07-15T23:02:11Z",
-      "executor_agent_id": "019f67fb-ba6d-7333-939e-fc851de1acf9",
+      "executor_agent_id": "clarify-executor-source-session",
       "questions": 4,
       "accepted_answers": [
         "Added required execution-time official-source ledger metadata.",
@@ -135,7 +135,7 @@
           "round": 1,
           "outcome": "high-confidence",
           "analyst_agent_ids": [
-            "019f6800-ba28-7770-bafd-121f5061a610"
+            "domain-researcher-source-consensus"
           ]
         },
         {
@@ -146,7 +146,7 @@
           "round": 1,
           "outcome": "high-confidence",
           "analyst_agent_ids": [
-            "019f6800-c21d-7583-b927-799abc90c39d"
+            "domain-researcher-effort-consensus"
           ]
         }
       ],
@@ -157,7 +157,7 @@
     "Phase 2: Clarify - Role Contracts and Parity Additions": {
       "status": "completed",
       "completed_at": "2026-07-15T23:11:29Z",
-      "executor_agent_id": "019f6805-06e6-7013-af4c-964546752ee9",
+      "executor_agent_id": "clarify-executor-role-session",
       "questions": 5,
       "accepted_answers": [
         "Added explicit production route or absence fields and instruction/full-file hashes.",
@@ -177,7 +177,7 @@
           "round": 1,
           "outcome": "high-confidence",
           "analyst_agent_ids": [
-            "019f6809-c61c-7110-a3e1-ab94b899da02"
+            "codebase-analyst-role-consensus"
           ],
           "degradation": "multi_agent thread cap blocked additional spec-context and domain analyst spawns; parent verified project context and official OpenAI docs directly before applying edits."
         }
@@ -202,7 +202,7 @@
       "gate": {
         "id": "G2",
         "status": "pass",
-        "reason": "0 [NEEDS CLARIFICATION] markers",
+        "reason": "0 clarification markers",
         "markers": 0
       },
       "degradation": "multi_agent thread cap blocked clarify-executor spawn for Session 3; parent executed the read-only review locally using workflow, spec, PRD, roadmap, and layer6 fixture inventory.",
@@ -377,6 +377,40 @@
         "docs/ai/specs/.process/G56R-001-workflow.md",
         "docs/ai/specs/.process/autopilot-state.json"
       ]
+    },
+    "Phase 7: Implement": {
+      "status": "completed",
+      "completed_at": "2026-07-16T00:05:00Z",
+      "execution_mode": "parent_local_execution",
+      "task_count": 38,
+      "gate": {
+        "id": "G7",
+        "status": "pass",
+        "reason": "All 38 tasks complete",
+        "markers": 0,
+        "total": 38,
+        "done": 38
+      },
+      "verification": {
+        "marker_search": "pass",
+        "exact_counts": {
+          "official_source_records": 9,
+          "agent_contract_records": 12,
+          "candidate_route_records": 12,
+          "fixture_backlog_records": 12,
+          "current_fixtures": 3,
+          "missing_fixtures": 9,
+          "unsupported_admitted_seed_candidates": 0
+        },
+        "diff_check": "pass",
+        "layer1": "1428/1428 passed",
+        "full_suite": "2768/2768 passed"
+      },
+      "files_changed": [
+        "docs/ai/research/codex-agent-route-candidates.md",
+        "specs/g56r-001-candidate-route-baseline/tasks.md",
+        "docs/ai/specs/.process/autopilot-state.json"
+      ]
     }
   },
   "plan": [
@@ -478,63 +512,109 @@
     },
     {
       "step": "Phase 7: Implement - Pending task decomposition",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "skipped: generate-uat-skeleton deferred and no runbook exists"
     },
     {
       "step": "Post: Final Reviewability Backstop",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: PR Packet/Body Generation",
-      "status": "pending"
+      "status": "skipped: no current feature-local PR packet; pr-packet-output deferred"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "skipped: packet-owned body file absent"
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "skipped: no PR side effect allowed without valid packet"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "skipped: no PR opened"
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "completed"
     }
-  ]
+  ],
+  "post_results": {
+    "doctor_extension_check": {
+      "status": "pass",
+      "mode": "parent_fallback",
+      "summary": "templates 5/5, agent directory present, 29 skills, runner manifest valid, constitution present, feature complete"
+    },
+    "verify_implementation": {
+      "status": "pass",
+      "g7": "All 38 tasks complete",
+      "layer1": "1428/1428 passed",
+      "full_suite": "2768/2768 passed"
+    },
+    "verify_tasks": {
+      "status": "pass",
+      "report": "specs/g56r-001-candidate-route-baseline/verify-tasks-report.md",
+      "verified": 38,
+      "flagged": 0
+    },
+    "code_review": {
+      "status": "pass_parent_fallback",
+      "repo_prompt_dispatch": "transport_closed",
+      "findings": 0
+    },
+    "reviewability": {
+      "status": "pass",
+      "evidence": "reviewability-gate setup mode passed against specs/g56r-001-candidate-route-baseline/plan.md"
+    },
+    "uat_runbook_generation": {
+      "status": "skipped",
+      "reason": "no committed runbook exists and generate-uat-skeleton is deferred"
+    },
+    "pr_packet_body_generation": {
+      "status": "skipped",
+      "reason": "no current feature-local PR packet exists and pr-packet-output is deferred"
+    },
+    "pr_creation": {
+      "status": "skipped",
+      "reason": "valid packet and packet-owned body are required before gh pr create"
+    },
+    "retrospective": {
+      "status": "complete",
+      "report": "specs/g56r-001-candidate-route-baseline/retrospective.md",
+      "critical_findings": 0,
+      "proposed_spec_changes": 0
+    }
+  }
 }
