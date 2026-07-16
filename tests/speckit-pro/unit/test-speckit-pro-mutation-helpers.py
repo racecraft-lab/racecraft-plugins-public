@@ -792,6 +792,49 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(response["data"]["mutation"]["dirty_worktree"], True)
             self.assertFalse(target.exists())
 
+    def test_apply_rechecks_dirty_worktree_after_lock_acquisition(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            target = git_root / "generated" / "locked-dirty.md"
+            real_acquire = mutation.acquire_mutation_lock
+
+            def dirty_after_lock(root: Path) -> mutation.MutationApplyLock:
+                lock = real_acquire(root)
+                (git_root / "concurrent-untracked.txt").write_text("dirty\n", encoding="utf-8")
+                return lock
+
+            request = RunnerRequest(
+                "test-dirty-after-lock",
+                "mutation-foundation",
+                "mutation-foundation",
+                "apply",
+                {
+                    "operations": [
+                        {
+                            "operation_id": "write-after-lock",
+                            "kind": "write_file",
+                            "target": "generated/locked-dirty.md",
+                            "content": "blocked\n",
+                        }
+                    ]
+                },
+            )
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with patch.object(mutation, "acquire_mutation_lock", side_effect=dirty_after_lock):
+                    response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["dirty_worktree"])
+            self.assertEqual(response["data"]["mutation"]["dirty_worktree"], True)
+            self.assertFalse(target.exists())
+
     def test_apply_rejects_when_git_status_cannot_prove_clean_worktree(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:

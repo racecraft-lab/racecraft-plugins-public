@@ -1111,6 +1111,9 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.skipTest("validate-pr-packet protected body coverage case")
         valid_packet = json.loads((PR_PACKET_FIXTURE_DIR / "valid-single.json").read_text(encoding="utf-8"))
         body_text = (PR_PACKET_FIXTURE_DIR / "bodies" / "valid-single.md").read_text(encoding="utf-8")
+        body_lines = body_text.splitlines()
+        h1_index = next(index for index, line in enumerate(body_lines) if line.startswith("# "))
+        late_h1_body = "\n".join(body_lines[:h1_index] + body_lines[h1_index + 1 :] + [body_lines[h1_index]]) + "\n"
         with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
             project_path = Path(project)
             cases = {
@@ -1121,6 +1124,10 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 "trailing": (
                     body_text + "\n## Release Notes\n\nUnexpected protected trailer.\n",
                     {"body.protected_fingerprint"},
+                ),
+                "late_h1": (
+                    late_h1_body,
+                    {"body.title", "body.protected_fingerprint"},
                 ),
                 "crossed_marker": (
                     body_text.replace(

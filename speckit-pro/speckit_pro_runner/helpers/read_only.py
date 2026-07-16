@@ -2163,7 +2163,8 @@ def packet_body_structure_failures(data: dict[str, Any], body_text: str) -> list
     lines = [line.rstrip(" \t\r") for line in body_text.splitlines()]
     title = data.get("generated_title")
     expected_title = title.get("value") if isinstance(title, dict) else None
-    h1_lines = [line for line in lines if re.fullmatch(r"#\s+\S.*", line)]
+    h1_positions = [(index, line) for index, line in enumerate(lines) if re.fullmatch(r"#\s+\S.*", line)]
+    h1_lines = [line for _index, line in h1_positions]
     if isinstance(expected_title, str) and expected_title:
         expected_h1 = f"# {expected_title}"
         if h1_lines != [expected_h1]:
@@ -2174,6 +2175,16 @@ def packet_body_structure_failures(data: dict[str, Any], body_text: str) -> list
                     "message": "Rendered body must contain exactly one H1 matching generated_title.value before Summary.",
                 }
             )
+        else:
+            summary_positions = [index for index, line in enumerate(lines) if line == "## Summary"]
+            if summary_positions and h1_positions[0][0] > summary_positions[0]:
+                failures.append(
+                    {
+                        "rule": "body.title",
+                        "field": "body_file",
+                        "message": "Rendered body H1 must appear before the Summary section.",
+                    }
+                )
     elif len(h1_lines) != 1:
         failures.append(
             {

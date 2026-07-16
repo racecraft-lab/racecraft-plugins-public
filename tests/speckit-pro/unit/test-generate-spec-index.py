@@ -11,6 +11,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -165,6 +166,43 @@ class GenerateSpecIndexTests(unittest.TestCase):
         self.assertEqual(second_body["data"]["mutation"]["mutation_status"], "no_op")
         self.assertFalse(second_body["data"]["writes_state"])
         self.assertEqual(moc.read_bytes(), first_write)
+
+    def test_write_rejects_target_swap_between_conflict_check_and_replace(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        root = self.copy_fixture("stale-fill")
+        moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"
+        calls = 0
+        real_ensure = mutation.ensure_safe_write_target_fd
+
+        def swap_before_final_guard(parent_fd: int, name: str) -> None:
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                moc.write_text("concurrent\n", encoding="utf-8")
+            real_ensure(parent_fd, name)
+
+        request = RunnerRequest(
+            "test-spec-index-target-swap",
+            "generate-spec-index-write",
+            "generate-spec-index-write",
+            "apply",
+            {"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+        )
+        old_cwd = Path.cwd()
+        os.chdir(REPO_ROOT)
+        try:
+            with patch.object(mutation, "ensure_safe_write_target_fd", side_effect=swap_before_final_guard):
+                body = mutation.run_spec_index_write(registry.MUTATION_HELPERS["generate-spec-index-write"], request)
+        finally:
+            os.chdir(old_cwd)
+
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual(body["exit_code"], 1)
+        self.assertEqual([diag["code"] for diag in body["diagnostics"]], ["source_changed"])
+        self.assertEqual(moc.read_text(encoding="utf-8"), "concurrent\n")
+        self.assertFalse(body["data"]["mutation"]["live_mutation"])
 
     def test_current_marker_spelling_is_rendered_and_preserved(self) -> None:
         root = self.copy_fixture("stale-fill")

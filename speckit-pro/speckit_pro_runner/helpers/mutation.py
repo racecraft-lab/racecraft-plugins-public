@@ -193,10 +193,42 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
             diagnostics=[diag],
         )
 
+    mutation_lock: MutationApplyLock | None = None
+    if changed:
+        try:
+            mutation_lock = acquire_mutation_lock(invocation_root)
+        except OSError as exc:
+            mutation["mutation_status"] = "blocked"
+            diag = diagnostic(
+                "mutation_lock_unavailable",
+                "generate-spec-index-write could not acquire the repository mutation lock",
+                details={"helper_id": entry.helper_id, "error": type(exc).__name__},
+                remediation_summary="Retry after the repository control directory is available and stable.",
+                remediation_actions=["Inspect the repository .git control path.", "Retry apply mode after concurrent mutation work finishes."],
+            )
+            return response(
+                "expected_failure",
+                request_id=request.request_id,
+                data=_spec_index_write_data(
+                    entry,
+                    request,
+                    mutation,
+                    specs_present=specs_present,
+                    rendered=rendered,
+                    writes_state=False,
+                ),
+                diagnostics=[diag],
+            )
+
+    def locked_spec_index_response(status: str, **kwargs: Any) -> dict[str, Any]:
+        if mutation_lock is not None:
+            mutation_lock.release()
+        return response(status, **kwargs)
+
     conflict = _spec_index_source_conflict(changed, target_root)
     if conflict is not None:
         mutation["mutation_status"] = "blocked"
-        return response(
+        return locked_spec_index_response(
             "expected_failure",
             request_id=request.request_id,
             data=_spec_index_write_data(
@@ -210,10 +242,56 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
             diagnostics=[conflict],
         )
 
+    snapshots = capture_write_snapshots(operations, target_root)
+    if isinstance(snapshots, dict) and "diagnostic" in snapshots:
+        mutation["mutation_status"] = "blocked"
+        return locked_spec_index_response(
+            "expected_failure",
+            request_id=request.request_id,
+            data=_spec_index_write_data(
+                entry,
+                request,
+                mutation,
+                specs_present=specs_present,
+                rendered=rendered,
+                writes_state=False,
+            ),
+            diagnostics=[snapshots["diagnostic"]],
+        )
+
     for record, operation in zip(changed, operations):
+        rel = repo_relative(record.path, target_root)
         try:
             mutation["live_mutation"] = True
-            write_file_atomic(record.path, record.rendered, trust_root=target_root)
+            write_file_atomic(record.path, record.rendered, trust_root=target_root, expected_snapshot=snapshots.get(rel))
+        except WritePreconditionChanged:
+            mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
+            mutation["failure_operation"] = operation_record(operation)
+            mutation["live_mutation"] = bool(mutation["applied_operations"])
+            mutation["manual_remediation"] = [
+                "Inspect touched_paths and the changed map.",
+                "Retry after generated map targets are stable.",
+            ]
+            diag = diagnostic(
+                "source_changed",
+                "generate-spec-index-write refused to overwrite a map that changed during atomic write",
+                details={"helper_id": entry.helper_id, "target": rel},
+                remediation_summary="Retry from a stable generated-map tree.",
+                remediation_actions=mutation["manual_remediation"],
+            )
+            return locked_spec_index_response(
+                "expected_failure",
+                request_id=request.request_id,
+                data=_spec_index_write_data(
+                    entry,
+                    request,
+                    mutation,
+                    specs_present=specs_present,
+                    rendered=rendered,
+                    writes_state=bool(mutation["applied_operations"]),
+                ),
+                diagnostics=[diag],
+            )
         except OSError as exc:
             mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
             mutation["failure_operation"] = operation_record(operation)
@@ -234,7 +312,7 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
                 remediation_summary="Reconcile any applied map writes and fix the target path before retrying.",
                 remediation_actions=mutation["manual_remediation"],
             )
-            return response(
+            return locked_spec_index_response(
                 "expected_failure",
                 request_id=request.request_id,
                 data=_spec_index_write_data(
@@ -248,10 +326,10 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
                 diagnostics=[diag],
             )
         mutation["applied_operations"].append(operation_record(operation))
-        mutation["touched_paths"].append(repo_relative(record.path, target_root))
+        mutation["touched_paths"].append(rel)
 
     mutation["mutation_status"] = "applied" if changed else "no_op"
-    return response(
+    return locked_spec_index_response(
         "ok",
         request_id=request.request_id,
         data=_spec_index_write_data(
@@ -455,12 +533,6 @@ def run_mutation_helper(
         mutation["mutation_status"] = "blocked"
         return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[command_plan_diag])
 
-    dirty_diag = dirty_worktree_diagnostic(request.inputs, repo_root)
-    if dirty_diag is not None:
-        mutation["mutation_status"] = "blocked"
-        mutation["dirty_worktree"] = dirty_diag["code"] == "dirty_worktree"
-        return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[dirty_diag])
-
     simulate_failure_after = request.inputs.get("simulate_failure_after")
     if simulate_failure_after is not None and not isinstance(simulate_failure_after, int):
         diag = diagnostic(
@@ -488,6 +560,12 @@ def run_mutation_helper(
     def locked_response(status: str, **kwargs: Any) -> dict[str, Any]:
         mutation_lock.release()
         return response(status, **kwargs)
+
+    dirty_diag = dirty_worktree_diagnostic(request.inputs, repo_root)
+    if dirty_diag is not None:
+        mutation["mutation_status"] = "blocked"
+        mutation["dirty_worktree"] = dirty_diag["code"] == "dirty_worktree"
+        return locked_response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[dirty_diag])
 
     snapshots = capture_write_snapshots(normalized, repo_root)
     if isinstance(snapshots, dict) and "diagnostic" in snapshots:
