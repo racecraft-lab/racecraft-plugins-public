@@ -1234,7 +1234,7 @@ def _spec_index_render_prs(spec_dir: Path) -> list[str]:
         raise SpecIndexRenderError(f"unreadable PRS manifest: {manifest}")
     try:
         payload = json.loads(_spec_index_read_text(manifest))
-    except json.JSONDecodeError as exc:
+    except (json.JSONDecodeError, ValueError) as exc:
         raise SpecIndexRenderError(
             f"malformed PRS manifest (invalid JSON or missing records[]): {manifest}"
         ) from exc
@@ -2432,7 +2432,7 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
         return make_result(pretty_json_text(obj), stderr_line + "\n", 2)
     try:
         data = json.loads(packet_text)
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, ValueError):
         stderr_line = f"validate-pr-packet-read-only: input_error: {packet_id}: input.error: no-path"
         obj = packet_result("failed", "input_error", 2, packet_id, None, None, None, "no-path", True, stderr_line, [{"rule": "input.error", "field": "packet", "message": f"packet JSON is malformed: {raw}"}], ["[input.error] Provide a readable JSON PR packet with a feature-local validation_result_path."])
         return make_result(pretty_json_text(obj), stderr_line + "\n", 2)

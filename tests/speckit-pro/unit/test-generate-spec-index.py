@@ -139,6 +139,24 @@ class GenerateSpecIndexTests(unittest.TestCase):
         self.assertIn("unsupported schemaVersion", body["data"]["stderr"]["text"])
         self.assertNotIn("Traceback", completed.stderr)
 
+    def test_check_reports_oversized_json_integer_without_crashing(self) -> None:
+        max_digits = getattr(sys, "get_int_max_str_digits", lambda: 0)()
+        if max_digits <= 0:
+            self.skipTest("Python JSON integer digit limit is disabled")
+        root = self.copy_fixture("stale-fill")
+        prs = root / "specs" / "prsg-901-stale" / ".process" / "prs.json"
+        prs.write_text(
+            '{"schemaVersion": ' + ("9" * (max_digits + 1)) + ', "records": []}\n',
+            encoding="utf-8",
+        )
+
+        completed, body = check_request(root)
+
+        self.assertEqual(completed.returncode, 2, completed.stderr)
+        self.assertEqual(body["status"], "input_error")
+        self.assertIn("invalid JSON", body["data"]["stderr"]["text"])
+        self.assertNotIn("Traceback", completed.stderr)
+
     def test_write_plans_applies_and_is_idempotent_without_touching_curated_content(self) -> None:
         root = self.copy_fixture("stale-fill")
         moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"

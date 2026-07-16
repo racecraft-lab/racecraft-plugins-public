@@ -776,6 +776,33 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertIn("input.path.body_file", rules)
         self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
 
+    def test_validate_pr_packet_reports_oversized_json_integer_as_input_error(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
+            self.skipTest("validate-pr-packet oversized integer case")
+        max_digits = getattr(sys, "get_int_max_str_digits", lambda: 0)()
+        if max_digits <= 0:
+            self.skipTest("Python JSON integer digit limit is disabled")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            packet = Path(project) / "packet.json"
+            packet.write_text(
+                '{"packet_id": "oversized-integer", "oversized": '
+                + ("9" * (max_digits + 1))
+                + "}\n",
+                encoding="utf-8",
+            )
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-read-only",
+                    {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                )
+            )
+
+        self.assertEqual(completed.returncode, 2)
+        self.assert_response(response, "input_error", 2)
+        self.assertEqual(response["data"]["stdout_json"]["failures"][0]["rule"], "input.error")
+        self.assertNotIn("Traceback", completed.stderr)
+        self.assertEqual(stderr_records, response["diagnostics"])
+
     def test_validate_pr_packet_rejects_schema_minimal_false_pass(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
             self.skipTest("validate-pr-packet schema case")
