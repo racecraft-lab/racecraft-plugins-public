@@ -1,6 +1,6 @@
 # PRD: Claude Code Agent Model Routing and Graceful Fallback
 
-**Status**: Active - not yet implemented
+**Status**: Active - CAR-001 complete/archived; CAR-002 ready
 **Source**: Maintainer request plus current official Anthropic documentation
 retrieved 2026-07-16 under the evidence-authority contract below
 **Created**: 2026-07-12

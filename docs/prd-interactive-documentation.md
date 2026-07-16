@@ -2,7 +2,8 @@
 
 **Date:** 2026-06-12  
 **Owner:** Racecraft maintainers  
-**Status:** Ready for SPEC decomposition  
+**Status:** Active - DOC-001 through DOC-011 plus DOC-013 and DOC-014 are
+complete/archived; DOC-012 and DOC-015 through DOC-021 remain pending
 **Target repository:** https://github.com/racecraft-lab/racecraft-plugins-public  
 **Target surfaces:** Claude Code marketplace, Codex marketplace, `speckit-pro` plugin docs, static documentation site
 

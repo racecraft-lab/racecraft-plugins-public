@@ -1,11 +1,10 @@
 # PRD: PR-Size Governance for speckit-pro
 
-**Status**: Active — not yet implemented
+**Status**: Complete - PRSG-001 through PRSG-014 shipped
 **Source**: [`docs/ai/research/spec-pr-size-governance-research.md`](ai/research/spec-pr-size-governance-research.md) (research synthesis) + [`docs/ai/specs/pr-size-governance-technical-roadmap.md`](ai/specs/pr-size-governance-technical-roadmap.md) (locked roadmap)
 **Created**: 2026-06-04
-**Last updated**: 2026-06-11
-**Target window**: Near-term. The headline win lands at PRSG-009; PRSG-012
-hardens the generated PR review packet after split-PR emission exists.
+**Last updated**: 2026-07-16
+**Target window**: Completed through PRSG-014 on 2026-06-14.
 
 ---
 

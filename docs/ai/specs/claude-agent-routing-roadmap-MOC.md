@@ -4,7 +4,7 @@ related:
   - "[Claude Code Agent Model Routing and Graceful Fallback PRD](../../prd-claude-agent-routing.md)"
   - "[Shared Agent Routing Evidence Parity Contract](agent-routing-parity-contract.md)"
   - "[Shared Candidate Manifest Schema](../research/agent-route-candidate-manifest.schema.json)"
-status: "Draft; CAR-001 evidence parity amendment in review; CAR-002 blocked"
+status: "Active; CAR-001 complete/archived; CAR-002 ready"
 rank:
 spec_id: "claude-agent-routing"
 structureVersion: 1

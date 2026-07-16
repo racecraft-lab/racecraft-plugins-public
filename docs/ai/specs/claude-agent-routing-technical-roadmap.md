@@ -16,8 +16,8 @@ PRD and is prepared for `$speckit-scaffold-spec CAR-NNN`.
 **Shared manifest schema:** [../research/agent-route-candidate-manifest.schema.json](../research/agent-route-candidate-manifest.schema.json)
 **Spec ID prefix:** `CAR-###`
 **Proposed branch:** `claude/agent-routing-fallback`
-**Status:** Draft; dependency graph approved 2026-07-12; CAR-001 evidence
-parity amendment in review; CAR-002 blocked until that amendment merges
+**Status:** Active; dependency graph approved 2026-07-12; CAR-001 is complete
+and archived after PRs #350 and #362; CAR-002 is ready to scaffold
 
 **Parity note:** This roadmap is the Claude half of the shared twelve-agent
 catalog. The Codex half lives in the companion Codex routing roadmap (PR #330
@@ -47,9 +47,10 @@ CAR-005 -> CAR-006 -> CAR-007 + CAR-008 + CAR-009 + CAR-010 ->
 CAR-011
 
 **Implementation boundary:** This sequence has no external prerequisite, but
-its internal dependencies still apply: CAR-001 implementation is complete and
-archived, while its official-source evidence parity amendment must merge before
-CAR-002 can be scaffolded. No installer exists or is introduced on the Claude
+its internal dependencies still apply: CAR-001 implementation and its
+official-source evidence parity amendment are complete and archived. CAR-002
+is ready to scaffold and must revalidate the merged v2 source ledger before
+capability probing begins. No installer exists or is introduced on the Claude
 side - agents
 auto-load from the shipped payload - so CAR-006 builds the route-policy
 manifest, materializer drift gate, and read-only session-preflight resolver
@@ -212,8 +213,8 @@ CAR-006 Route-policy Manifest, Materializer, Preflight, and Override
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| CAR-001 | Candidate Route Baseline and Role Contracts | Evidence Amendment In Review | [.process/CAR-001-workflow.md](.process/CAR-001-workflow.md) | Merge official-source v2 amendment |
-| CAR-002 | Capability Probing, Telemetry Profile, and Exact-Treatment Contract | Blocked | - | Revalidate the merged v2 source ledger |
+| CAR-001 | Candidate Route Baseline and Role Contracts | Complete / Archived | [.process/CAR-001-workflow.md](.process/CAR-001-workflow.md) | PR #350 and evidence-parity amendment PR #362 merged; canonical evidence lives under `docs/ai/research/` |
+| CAR-002 | Capability Probing, Telemetry Profile, and Exact-Treatment Contract | Ready | - | Ready after CAR-001; revalidate the merged v2 source ledger at scaffold |
 | CAR-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Pending | - | Blocked by CAR-002 |
 | CAR-004 | Policy Controls and Adaptive Comparators | Pending | - | Blocked by CAR-003 |
 | CAR-005 | Model Availability, Fallback, and Recovery Simulation | Pending | - | Blocked by CAR-004 |
@@ -234,15 +235,15 @@ CAR-006 Route-policy Manifest, Materializer, Preflight, and Override
 
 **Priority:** P1 | **Depends On:** None | **Enables:** CAR-002
 
-**Implementation Status:** Runtime-neutral research spike complete / archived;
-official-source evidence parity amendment in review. PR #350 merged on
-2026-07-15 at
+**Implementation Status:** Complete / Archived. The runtime-neutral research
+spike merged in PR #350 on 2026-07-15 at
 `725be949b856724a073622900bd168d29b2f4603`; the active spec folder was removed
 in `.specify/memory/archive-reports/2026-07-15-car-001-post-merge-hygiene.md`.
 Canonical artifacts now live at `docs/ai/research/claude-agent-route-candidates.md`
-and `docs/ai/research/claude-agent-route-candidate-manifest.json`. CAR-002 must
-consume the schema-v2 amendment and pass its source-ledger gate before it can
-begin capability probing.
+and `docs/ai/research/claude-agent-route-candidate-manifest.json`. The
+official-source evidence parity amendment merged in PR #362 on 2026-07-16.
+CAR-002 must consume that schema-v2 amendment and pass its source-ledger gate
+before it begins capability probing.
 
 **Goal:** Produce the dated, cited candidate-route and role-contract handoff
 needed for capability probing without changing shipped defaults.
