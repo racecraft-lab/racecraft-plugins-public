@@ -54,6 +54,7 @@ class MutationApplyLock:
             try:
                 self.release()
             except OSError:
+                # Destructors cannot surface cleanup failures safely; explicit callers release directly.
                 pass
 
 
