@@ -870,14 +870,14 @@ class ReadOnlyHelperTests(unittest.TestCase):
             )
             from speckit_pro_runner.helpers import read_only
 
-            original_trusted_text = read_only.trusted_text
+            original_trusted_bytes = read_only.trusted_bytes
 
-            def unreadable_body(path: Path, root: Path | None = None) -> str | None:
+            def unreadable_body(path: Path, root: Path | None = None) -> bytes | None:
                 if path.resolve(strict=False) == body.resolve(strict=False):
                     return None
-                return original_trusted_text(path, root)
+                return original_trusted_bytes(path, root)
 
-            with patch.object(read_only, "trusted_text", side_effect=unreadable_body):
+            with patch.object(read_only, "trusted_bytes", side_effect=unreadable_body):
                 result = read_only.validate_pr_packet_read_only(
                     {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
                     REPO_ROOT,
@@ -955,6 +955,40 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertFalse(response["data"]["writes_state"])
         self.assertEqual(response["data"]["promotion_status"], "python_authoritative")
         self.assertEqual(stderr_records, [])
+
+    def test_validate_pr_packet_rejects_packet_id_that_disagrees_with_filename(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
+            self.skipTest("validate-pr-packet identity case")
+        valid_packet = json.loads((PR_PACKET_FIXTURE_DIR / "valid-single.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            packet = Path(project) / "expected-id.json"
+            packet.write_text(
+                json.dumps(
+                    {
+                        **valid_packet,
+                        "packet_id": "wrong-id",
+                        "validation_result_path": (
+                            "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/"
+                            "pr-packets/expected-id/validation.json"
+                        ),
+                    }
+                ),
+                encoding="utf-8",
+            )
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-read-only",
+                    {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                )
+            )
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure", 1)
+        rules = {
+            failure["rule"]
+            for failure in response["data"]["stdout_json"]["failures"]
+        }
+        self.assertIn("input.identity.packet_id", rules)
+        self.assertEqual(stderr_records, response["diagnostics"])
 
     def test_validate_pr_packet_fingerprint_covers_pre_h1_trailing_and_crossed_markers(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":

@@ -13,6 +13,7 @@ Adds the HRNS-001 harness surface inventory and gap taxonomy, and fixes the Spec
 - Promotes pr-packet-output and validate-pr-packet-write so autopilot can create the required machine-readable packet before opening a PR.
 - Hardens packet validation persistence with packet/body source fingerprints so stale validations cannot be written after source drift.
 - Hardens mutation writes against symlink/path races, preserves file modes, rolls back created directories, and reports live mutations accurately.
+- Tightens rollback so concurrent edits are not overwritten and cleanup residue is reported instead of hidden.
 - Tightens protected PR-body hashing and marker validation so pre-H1 content, trailing content, and crossed editable markers are covered.
 - Updates Claude Code and Codex autopilot guidance, eval expectations, packaged dist payloads, and installed-cache proof fixtures.
 - Adds runner and release-artifact tests proving packet emission, read-only validation, persisted validation, rollback behavior, and mode-drift detection.
@@ -42,13 +43,13 @@ No manual product UAT is required. Re-run the packet-emission, read-only packet 
 
 ## Verification
 
-- python3 -m unittest -v tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py passed 34/34.
-- python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper validate-pr-packet-read-only passed 49/49.
+- python3 -m unittest -v tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py passed 35/35.
+- python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper validate-pr-packet-read-only passed 50/50.
 - python3 -m unittest -v tests/speckit-pro/unit/test-release-pr-reconciliation.py passed 40/40.
 - python3 -m unittest -v tests/speckit-pro/unit/test-eval-runner-skill-selection.py tests/speckit-pro/unit/test-privacy-scan.py passed 6/6.
 - python3 -m unittest -v tests/speckit-pro/unit/test-post-implementation-reference.py tests/speckit-pro/unit/test-parity-runner.py tests/speckit-pro/unit/test-parity-extractors.py tests/speckit-pro/unit/test-parity-judge.py passed 5/5.
 - SPECKIT_SKIP_TOOLCHAIN_CHECK=1 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/run-default-suite.json passed Layers 1/4/5/7/8.
-- python3 tests/speckit-pro/run-all.py passed 2774/2774.
+- python3 tests/speckit-pro/run-all.py passed 2776/2776 after the final regression tests were added.
 - git diff --check passed.
 - HRNS-001 verify-tasks report recorded 35/35 verified tasks before packet emission.
 

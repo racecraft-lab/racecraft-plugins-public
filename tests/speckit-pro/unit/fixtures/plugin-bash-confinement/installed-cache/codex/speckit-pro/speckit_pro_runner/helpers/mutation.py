@@ -439,11 +439,24 @@ def run_mutation_helper(
                     },
                     remediation_summary="Fix the target path or reconcile partial writes before retrying.",
                     remediation_actions=mutation["manual_remediation"],
-                )
+            )
                 base_data["writes_state"] = bool(rollback_errors)
                 return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[diag])
             mutation["applied_operations"].append(operation_record(op))
             mutation["touched_paths"].append(rel)
+            applied_snapshot = snapshot_changed_diagnostic_after_write(rel, target, snapshots, repo_root)
+            if applied_snapshot is not None:
+                mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
+                mutation["failure_operation"] = operation_record(op)
+                rollback_errors = rollback_applied_writes(mutation["touched_paths"], snapshots, repo_root)
+                mutation["manual_remediation"] = [
+                    "Inspect the target path and parent directory.",
+                    "Retry after the write target is stable.",
+                ]
+                if rollback_errors:
+                    mutation["manual_remediation"].append("Manual rollback is required for the reported rollback errors.")
+                base_data["writes_state"] = bool(rollback_errors)
+                return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[applied_snapshot])
         else:
             mutation["skipped_operations"].append(operation_record(op))
 
@@ -459,6 +472,7 @@ def normalize_operations(raw: Any) -> list[dict[str, Any]] | dict[str, Any]:
     if not isinstance(raw, list):
         return invalid_operation("operations must be an array")
     normalized: list[dict[str, Any]] = []
+    seen_operation_ids: set[str] = set()
     for index, op in enumerate(raw):
         if not isinstance(op, dict):
             return invalid_operation("each operation must be an object", index=index)
@@ -466,6 +480,9 @@ def normalize_operations(raw: Any) -> list[dict[str, Any]] | dict[str, Any]:
         kind = op.get("kind")
         if not isinstance(operation_id, str) or not operation_id:
             return invalid_operation("operation_id is required", index=index)
+        if operation_id in seen_operation_ids:
+            return invalid_operation("operation_id values must be unique", index=index)
+        seen_operation_ids.add(operation_id)
         if kind not in {"write_file", "command_plan"}:
             return invalid_operation("operation kind is unsupported", index=index)
         if kind == "write_file":
@@ -621,9 +638,9 @@ def validate_batch_write_conflicts(operations: list[dict[str, Any]], repo_root: 
             )
         seen[target] = op["operation_id"]
 
-    for parent_op, parent_target in write_targets:
-        for child_op, child_target in write_targets:
-            if parent_op["operation_id"] == child_op["operation_id"]:
+    for parent_index, (parent_op, parent_target) in enumerate(write_targets):
+        for child_index, (child_op, child_target) in enumerate(write_targets):
+            if parent_index == child_index:
                 continue
             if is_relative_to(child_target, parent_target):
                 return conflicting_operations(
@@ -762,9 +779,13 @@ def rollback_applied_writes(touched_paths: list[str], snapshots: dict[str, dict[
         target = resolve_candidate_path(rel, repo_root)
         try:
             original = snapshots.get(rel) or {"exists": False, "created_parent_dirs": []}
+            current = snapshot_write_target(target, repo_root)
+            if not target_matches_applied_snapshot(current, original):
+                errors.append(f"{rel}:source_changed")
+                continue
             if not original.get("exists"):
                 safe_unlink(target, repo_root)
-                remove_created_parent_dirs(original.get("created_parent_dirs", []), repo_root)
+                errors.extend(remove_created_parent_dirs(original.get("created_parent_dirs", []), repo_root))
             else:
                 write_bytes_atomic(
                     target,
@@ -981,7 +1002,16 @@ def snapshot_changed_diagnostic(rel: str, target: Path, snapshots: dict[str, dic
     original = snapshots.get(rel)
     if original is None:
         return None
-    current = snapshot_write_target(target, repo_root)
+    try:
+        current = snapshot_write_target(target, repo_root)
+    except OSError as exc:
+        return diagnostic(
+            "source_changed",
+            "mutation helper could not re-snapshot a write target before apply",
+            details={"target": rel, "error": type(exc).__name__},
+            remediation_summary="Retry from a stable repository tree.",
+            remediation_actions=["Inspect the target path.", "Remove symlinks or concurrent edits.", "Retry apply mode."],
+        )
     if original.get("exists") != current.get("exists"):
         changed = True
     elif original.get("exists"):
@@ -999,6 +1029,39 @@ def snapshot_changed_diagnostic(rel: str, target: Path, snapshots: dict[str, dic
     )
 
 
+def snapshot_changed_diagnostic_after_write(rel: str, target: Path, snapshots: dict[str, dict[str, Any]], repo_root: Path) -> dict[str, Any] | None:
+    original = snapshots.setdefault(rel, {"exists": False, "created_parent_dirs": []})
+    try:
+        applied = snapshot_write_target(target, repo_root)
+    except OSError as exc:
+        return diagnostic(
+            "source_changed",
+            "mutation helper could not snapshot the applied write for rollback safety",
+            details={"target": rel, "error": type(exc).__name__},
+            remediation_summary="Inspect the target path before retrying.",
+            remediation_actions=["Review the target file.", "Manually reconcile any partial write.", "Retry from a stable repository tree."],
+        )
+    if not applied.get("exists"):
+        return diagnostic(
+            "source_changed",
+            "mutation helper wrote a target but could not verify the applied file for rollback safety",
+            details={"target": rel},
+            remediation_summary="Inspect the target path before retrying.",
+            remediation_actions=["Review the target file.", "Manually reconcile any partial write.", "Retry from a stable repository tree."],
+        )
+    original["applied_digest"] = applied.get("digest")
+    original["applied_mode"] = applied.get("mode")
+    return None
+
+
+def target_matches_applied_snapshot(current: dict[str, Any], original: dict[str, Any]) -> bool:
+    applied_digest = original.get("applied_digest")
+    applied_mode = original.get("applied_mode")
+    if not applied_digest:
+        return False
+    return bool(current.get("exists")) and current.get("digest") == applied_digest and current.get("mode") == applied_mode
+
+
 def operation_source_fingerprint_diagnostic(operation: dict[str, Any], repo_root: Path) -> dict[str, Any] | None:
     fingerprints = operation.get("source_fingerprints")
     if not isinstance(fingerprints, dict):
@@ -1012,7 +1075,10 @@ def operation_source_fingerprint_diagnostic(operation: dict[str, Any], repo_root
         target = resolve_candidate_path(path_value, repo_root)
         if validate_target_path(path_value, repo_root) is not None:
             return source_fingerprint_changed(label, "unsafe-path")
-        opened = open_safe_parent_fd(target, repo_root, create=False)
+        try:
+            opened = open_safe_parent_fd(target, repo_root, create=False)
+        except OSError as exc:
+            return source_fingerprint_changed(label, type(exc).__name__)
         if opened is None:
             return source_fingerprint_changed(label, "missing-parent")
         parent_fd, target_name, _created_dirs = opened
@@ -1079,7 +1145,8 @@ def missing_parent_dirs(target: Path, repo_root: Path) -> list[str]:
     return missing
 
 
-def remove_created_parent_dirs(relative_dirs: list[str], repo_root: Path) -> None:
+def remove_created_parent_dirs(relative_dirs: list[str], repo_root: Path) -> list[str]:
+    errors: list[str] = []
     for rel in reversed(relative_dirs):
         if not isinstance(rel, str) or not rel:
             continue
@@ -1088,11 +1155,9 @@ def remove_created_parent_dirs(relative_dirs: list[str], repo_root: Path) -> Non
             path.rmdir()
         except FileNotFoundError:
             continue
-        except OSError:
-            # Only remove directories that are still empty; any residual content
-            # must remain for manual inspection and keeps writes_state true when
-            # rollback reports the write failure.
-            continue
+        except OSError as exc:
+            errors.append(f"{rel}:{type(exc).__name__}")
+    return errors
 
 
 def ensure_final_newline(content: str) -> str:

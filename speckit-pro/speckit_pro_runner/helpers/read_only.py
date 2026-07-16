@@ -2284,29 +2284,44 @@ def packet_body_structure_failures(data: dict[str, Any], body_text: str) -> list
 
 
 def pr_packet_body_failures(data: dict[str, Any], repo_root: Path) -> list[dict[str, Any]]:
+    return pr_packet_body_validation(data, repo_root)["failures"]
+
+
+def pr_packet_body_validation(data: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     body_file = data.get("body_file")
     if not isinstance(body_file, str) or not body_file:
-        return []
+        return {"failures": [], "body_required": False, "body_path": None, "body_bytes": None}
     if validate_path_value("validate-pr-packet-read-only", "body_file", body_file, repo_root) is not None:
-        return []
+        return {"failures": [], "body_required": True, "body_path": None, "body_bytes": None}
     body_path = resolve_input_path(body_file, repo_root)
     if not trusted_file_exists(body_path, repo_root):
-        return [
-            {
-                "rule": "body.path",
-                "field": "body_file",
-                "message": f"Rendered body file is missing or is not a regular file: {body_file}",
-            }
-        ]
-    body_text = trusted_text(body_path, repo_root)
-    if body_text is None:
-        return [
-            {
-                "rule": "body.readable",
-                "field": "body_file",
-                "message": f"Rendered body file is unreadable: {body_file}",
-            }
-        ]
+        return {
+            "failures": [
+                {
+                    "rule": "body.path",
+                    "field": "body_file",
+                    "message": f"Rendered body file is missing or is not a regular file: {body_file}",
+                }
+            ],
+            "body_required": True,
+            "body_path": body_path,
+            "body_bytes": None,
+        }
+    body_bytes = trusted_bytes(body_path, repo_root)
+    if body_bytes is None:
+        return {
+            "failures": [
+                {
+                    "rule": "body.readable",
+                    "field": "body_file",
+                    "message": f"Rendered body file is unreadable: {body_file}",
+                }
+            ],
+            "body_required": True,
+            "body_path": body_path,
+            "body_bytes": None,
+        }
+    body_text = body_bytes.decode("utf-8", errors="replace")
     structure_failures = packet_body_structure_failures(data, body_text)
     failures = structure_failures[:]
     fingerprint = data.get("protected_body_fingerprint")
@@ -2320,7 +2335,12 @@ def pr_packet_body_failures(data: dict[str, Any], repo_root: Path) -> list[dict[
                     "message": "Protected body fingerprint changed outside sanctioned editable prose fields.",
                 }
             )
-    return failures
+    return {
+        "failures": failures,
+        "body_required": True,
+        "body_path": body_path,
+        "body_bytes": body_bytes,
+    }
 
 
 def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
@@ -2332,8 +2352,13 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
         stderr_line = f"validate-pr-packet-read-only: input_error: {packet_id}: input.error: no-path"
         obj = packet_result("failed", "input_error", 2, packet_id, None, None, None, "no-path", True, stderr_line, [{"rule": "input.error", "field": "packet", "message": message}], ["[input.error] Provide a readable JSON PR packet with a feature-local validation_result_path."])
         return make_result(pretty_json_text(obj), stderr_line + "\n", 2)
+    packet_bytes = trusted_bytes(packet, repo_root)
+    if packet_bytes is None:
+        stderr_line = f"validate-pr-packet-read-only: input_error: {packet_id}: input.error: no-path"
+        obj = packet_result("failed", "input_error", 2, packet_id, None, None, None, "no-path", True, stderr_line, [{"rule": "input.error", "field": "packet", "message": f"packet is unreadable: {raw}"}], ["[input.error] Provide a readable JSON PR packet with a feature-local validation_result_path."])
+        return make_result(pretty_json_text(obj), stderr_line + "\n", 2)
     try:
-        data = json.loads(trusted_text(packet, repo_root) or "")
+        data = json.loads(packet_bytes.decode("utf-8", errors="replace"))
     except json.JSONDecodeError:
         stderr_line = f"validate-pr-packet-read-only: input_error: {packet_id}: input.error: no-path"
         obj = packet_result("failed", "input_error", 2, packet_id, None, None, None, "no-path", True, stderr_line, [{"rule": "input.error", "field": "packet", "message": f"packet JSON is malformed: {raw}"}], ["[input.error] Provide a readable JSON PR packet with a feature-local validation_result_path."])
@@ -2348,6 +2373,9 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
         obj = packet_result("failed", "input_error", 2, packet_id, None, None, None, "no-path", True, stderr_line, [{"rule": "input.schema", "field": "packet", "message": schema_error or "PR packet schema is unavailable."}], ["[input.schema] Restore the bundled PR packet schema before validation."])
         return make_result(pretty_json_text(obj), stderr_line + "\n", 2)
     failures = pr_packet_schema_failures(data, schema)
+    packet_id_value = data.get("packet_id")
+    if isinstance(packet_id_value, str) and packet_id_value != packet_id:
+        failures.append({"rule": "input.identity.packet_id", "field": "packet_id", "message": "packet_id must match the packet filename."})
     scope_evidence = data.get("scope_evidence")
     generated_title = data.get("generated_title")
     target = data.get("target")
@@ -2380,8 +2408,20 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
         path_diag = validate_path_value("validate-pr-packet-read-only", "body_file", body_file, repo_root)
         if path_diag is not None:
             failures.append({"rule": "input.path.body_file", "field": "body_file", "message": path_diag["message"]})
-    failures.extend(pr_packet_body_failures(data, repo_root))
-    source_fingerprints = pr_packet_source_fingerprints(packet, data, repo_root)
+    body_result = pr_packet_body_validation(data, repo_root)
+    failures.extend(body_result["failures"])
+    source_fingerprints = pr_packet_source_fingerprints(
+        packet,
+        data,
+        repo_root,
+        packet_bytes=packet_bytes,
+        body_path=body_result.get("body_path"),
+        body_bytes=body_result.get("body_bytes"),
+    )
+    if "packet" not in source_fingerprints:
+        failures.append({"rule": "source_fingerprint.packet", "field": "packet", "message": "Packet fingerprint could not be computed from validated bytes."})
+    if body_result.get("body_required") and "body" not in source_fingerprints:
+        failures.append({"rule": "source_fingerprint.body", "field": "body_file", "message": "Body fingerprint could not be computed from validated bytes."})
     if failures:
         rules = ",".join(sorted({failure["rule"] for failure in failures}))
         stderr_line = f"validate-pr-packet-read-only: validation_failure: {packet_id}: {rules}: {validation_path}"
@@ -2470,27 +2510,33 @@ def packet_result(
     return result
 
 
-def pr_packet_source_fingerprints(packet_path: Path, data: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+def pr_packet_source_fingerprints(
+    packet_path: Path,
+    data: dict[str, Any],
+    repo_root: Path,
+    *,
+    packet_bytes: bytes | None = None,
+    body_path: Path | None = None,
+    body_bytes: bytes | None = None,
+) -> dict[str, Any]:
     fingerprints: dict[str, Any] = {}
-    packet_record = file_fingerprint(packet_path, repo_root)
+    packet_record = file_fingerprint(packet_path, repo_root, content=packet_bytes)
     if packet_record is not None:
         fingerprints["packet"] = packet_record
-    body_file = data.get("body_file")
-    if isinstance(body_file, str) and body_file and validate_path_value("validate-pr-packet-read-only", "body_file", body_file, repo_root) is None:
-        body_path = resolve_input_path(body_file, repo_root)
-        body_record = file_fingerprint(body_path, repo_root)
+    if body_path is not None:
+        body_record = file_fingerprint(body_path, repo_root, content=body_bytes)
         if body_record is not None:
             fingerprints["body"] = body_record
     return fingerprints
 
 
-def file_fingerprint(path: Path, repo_root: Path) -> dict[str, Any] | None:
+def file_fingerprint(path: Path, repo_root: Path, *, content: bytes | None = None) -> dict[str, Any] | None:
     if not trusted_file_exists(path, repo_root):
         return None
-    try:
-        content = path.read_bytes()
-    except OSError:
-        return None
+    if content is None:
+        content = trusted_bytes(path, repo_root)
+        if content is None:
+            return None
     return {
         "path": repo_relative(path, repo_root),
         "algorithm": "sha256",
@@ -3204,6 +3250,17 @@ def trusted_text(path: Path, repo_root: Path | None = None) -> str | None:
         return None
     try:
         return path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+
+
+def trusted_bytes(path: Path, repo_root: Path | None = None) -> bytes | None:
+    if repo_root is not None and not path_stays_in_trust_boundary(path, repo_root):
+        return None
+    if not path.is_file():
+        return None
+    try:
+        return path.read_bytes()
     except OSError:
         return None
 

@@ -15,9 +15,11 @@ from .mutation import (
 )
 from .read_only import (
     find_repo_root,
+    load_pr_packet_schema,
     normalize_display,
     packet_body_structure_failures,
     protected_body_sha256,
+    pr_packet_schema_failures,
     validate_pr_packet_read_only,
 )
 
@@ -364,6 +366,14 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
             return invalid_packet_input("split_slice is required when mode is split", field="split_slice")
         packet["split_slice"] = split_slice
 
+    schema_failures = generated_packet_schema_failures(packet)
+    if schema_failures:
+        return invalid_packet_input(
+            "constructed packet does not satisfy the PR packet schema",
+            field="packet",
+            details={"failures": schema_failures},
+        )
+
     return {
         "packet": packet,
         "body": rendered_body,
@@ -507,6 +517,13 @@ def validation_result_placeholder(packet_id: str, validation_result_path: str) -
         "remediation_evidence": ["dry_run only; apply mode reruns validate-pr-packet-read-only before writing"],
         "validation_result_path": validation_result_path,
     }
+
+
+def generated_packet_schema_failures(packet: dict[str, Any]) -> list[dict[str, Any]]:
+    schema, schema_error = load_pr_packet_schema()
+    if schema is None:
+        return [{"rule": "input.schema", "field": "packet", "message": schema_error or "PR packet schema is unavailable."}]
+    return pr_packet_schema_failures(packet, schema)
 
 
 def normalize_generated_title(inputs: dict[str, Any]) -> dict[str, Any]:

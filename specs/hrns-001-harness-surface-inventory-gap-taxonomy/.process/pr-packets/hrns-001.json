@@ -42,7 +42,7 @@
       "why_it_matters"
     ],
     "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
-    "value": "e718d9a5f3962a594ef2f374babc980b0a97915e7b96af14b0a5e86e5f56b248"
+    "value": "98e02c00e00c2ccc69255fb606545feaf43b8147636b892641ef5ebbc7e08c88"
   },
   "required_headings": [
     "Summary",
@@ -201,13 +201,13 @@
       "kind": "verification",
       "result": "pass",
       "source": "validation",
-      "summary": "python3 -m unittest -v tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py passed 34/34."
+      "summary": "python3 -m unittest -v tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py passed 35/35."
     },
     {
       "kind": "verification",
       "result": "pass",
       "source": "validation",
-      "summary": "python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper validate-pr-packet-read-only passed 49/49."
+      "summary": "python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper validate-pr-packet-read-only passed 50/50."
     },
     {
       "kind": "verification",
@@ -237,7 +237,7 @@
       "kind": "verification",
       "result": "pass",
       "source": "validation",
-      "summary": "python3 tests/speckit-pro/run-all.py passed 2774/2774."
+      "summary": "python3 tests/speckit-pro/run-all.py passed 2776/2776 after the final regression tests were added."
     },
     {
       "kind": "verification",

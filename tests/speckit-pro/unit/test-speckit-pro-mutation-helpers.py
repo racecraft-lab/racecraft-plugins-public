@@ -933,6 +933,35 @@ class MutationHelperTests(unittest.TestCase):
             self.assertFalse(parent.exists())
             self.assertFalse(child.exists())
 
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "mutation-foundation",
+                    mode="apply",
+                    inputs={
+                        "operations": [
+                            {
+                                "operation_id": "same-id",
+                                "kind": "write_file",
+                                "target": "generated/parent.md",
+                                "content": "parent\n",
+                            },
+                            {
+                                "operation_id": "same-id",
+                                "kind": "write_file",
+                                "target": "generated/parent.md/child.md",
+                                "content": "child\n",
+                            },
+                        ]
+                    },
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assert_response(response, "input_error", 2)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_input"])
+            self.assertFalse(parent.exists())
+            self.assertFalse(child.exists())
+
     def test_partial_failure_reports_applied_operation_and_manual_remediation(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
@@ -1038,6 +1067,32 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(stderr_records, [])
             self.assertEqual(os.stat(target).st_mode & 0o777, 0o755)
             self.assertTrue(response["data"]["mutation"]["live_mutation"])
+
+    def test_rollback_refuses_concurrent_edits_and_reports_directory_cleanup_errors(self) -> None:
+        from speckit_pro_runner.helpers import mutation
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            git_root = git_root.resolve()
+            target = git_root / "existing.md"
+            target.write_text("original\n", encoding="utf-8")
+            snapshots = {"existing.md": mutation.snapshot_write_target(target, git_root)}
+            mutation.write_file_atomic(target, "applied\n", trust_root=git_root)
+            applied = mutation.snapshot_write_target(target, git_root)
+            snapshots["existing.md"]["applied_digest"] = applied["digest"]
+            snapshots["existing.md"]["applied_mode"] = applied["mode"]
+            target.write_text("concurrent\n", encoding="utf-8")
+
+            errors = mutation.rollback_applied_writes(["existing.md"], snapshots, git_root)
+
+            self.assertEqual(errors, ["existing.md:source_changed"])
+            self.assertEqual(target.read_text(encoding="utf-8"), "concurrent\n")
+
+            residual_dir = git_root / "nested" / "created"
+            residual_dir.mkdir(parents=True)
+            (residual_dir / "residual.txt").write_text("leftover\n", encoding="utf-8")
+            cleanup_errors = mutation.remove_created_parent_dirs(["nested", "nested/created"], git_root)
+            self.assertEqual(cleanup_errors, ["nested/created:OSError", "nested:OSError"])
 
     def test_doctor_preflight_detects_missing_files_and_repair_uses_fake_home(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
@@ -1350,6 +1405,9 @@ class MutationHelperTests(unittest.TestCase):
             "invalid_scope_evidence": {"scope_evidence": {"changed_files": ["README.md"]}},
             "invalid_verification_evidence": {"verification_evidence": [{"kind": "verification", "source": "tests"}]},
             "invalid_source_markers": {"source_markers": [{"marker_id": "prsg-999", "source": "specs/prsg-999-packet"}]},
+            "invalid_rejected_title_candidate": {"rejected_title_candidates": [{"value": "bad"}]},
+            "invalid_budget_result": {"budget_result": "surprise"},
+            "invalid_split_slice": {"mode": "split", "split_slice": {"slice_id": "slice-1"}},
         }
         for name, override in cases.items():
             with self.subTest(name=name):
