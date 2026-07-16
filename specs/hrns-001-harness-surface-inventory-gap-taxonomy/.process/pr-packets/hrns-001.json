@@ -21,16 +21,16 @@
     }
   ],
   "generated_title": {
-    "description": "Add harness gap taxonomy",
+    "description": "Enable PR packet emission",
     "rejected_candidates": [],
-    "scope": "HRNS-001",
+    "scope": "speckit-pro",
     "source_evidence": {
       "kind": "workflow",
       "source": "autopilot-state",
-      "summary": "Title generated from active SpecKit workflow evidence."
+      "summary": "Title updated from live release-readiness validation after packet-emission remediation became the PR-blocking change."
     },
-    "type": "feat",
-    "value": "feat(HRNS-001): Add harness gap taxonomy"
+    "type": "fix",
+    "value": "fix(speckit-pro): Enable PR packet emission"
   },
   "mode": "single",
   "packet_id": "hrns-001",
@@ -42,7 +42,7 @@
       "why_it_matters"
     ],
     "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
-    "value": "7e4b3910c5aad7eaf6f82f3ca6ba17c9f1a0821bafc3572ab73889742a8bd804"
+    "value": "66d48fe81f7fa20bdea59ced964d66aa91c6fc29eb2b9b4a31ccf310f58e229b"
   },
   "required_headings": [
     "Summary",
@@ -158,7 +158,7 @@
   "source_markers": [
     {
       "marker_id": "hrns-001",
-      "rendered_text": "feat(HRNS-001): Add harness gap taxonomy",
+      "rendered_text": "fix(speckit-pro): Enable PR packet emission",
       "source": "specs/hrns-001-harness-surface-inventory-gap-taxonomy"
     }
   ],
@@ -177,25 +177,43 @@
       "kind": "verification",
       "result": "pass",
       "source": "validation",
-      "summary": "python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py passed 31/31."
+      "summary": "python3 -m unittest -v tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py passed 33/33."
     },
     {
       "kind": "verification",
       "result": "pass",
       "source": "validation",
-      "summary": "python3 tests/speckit-pro/run-all.py --layer 1 passed 1428/1428."
+      "summary": "python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper validate-pr-packet-read-only passed 48/48."
     },
     {
       "kind": "verification",
       "result": "pass",
       "source": "validation",
-      "summary": "python3 -m json.tool passed for edited Claude/Codex eval and packet request fixtures."
+      "summary": "python3 -m unittest -v tests/speckit-pro/unit/test-eval-runner-skill-selection.py passed 5/5."
     },
     {
       "kind": "verification",
       "result": "pass",
       "source": "validation",
-      "summary": "git diff --check passed."
+      "summary": "python3 -m unittest -v tests/speckit-pro/unit/test-privacy-scan.py passed 1/1."
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "python3 -m unittest -v tests/speckit-pro/unit/test-post-implementation-reference.py passed 1/1."
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "python3 -m unittest -v tests/speckit-pro/unit/test-parity-runner.py tests/speckit-pro/unit/test-parity-extractors.py tests/speckit-pro/unit/test-parity-judge.py passed 4/4."
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "TITLE='fix(speckit-pro): Enable PR packet emission' BASE_REF='main' PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness-live-github.json passed."
     },
     {
       "kind": "verification",

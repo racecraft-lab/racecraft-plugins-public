@@ -10,14 +10,23 @@ from typing import Any
 from ..envelope import diagnostic, response
 from .mutation import (
     empty_mutation,
-    operation_record,
     operation_records,
-    resolve_candidate_path,
     run_mutation_helper,
-    validate_target_path,
-    write_file_atomic,
 )
-from .read_only import find_repo_root, normalize_display, packet_result, protected_body_sha256, repo_relative
+from .read_only import (
+    find_repo_root,
+    normalize_display,
+    packet_body_structure_failures,
+    protected_body_sha256,
+    validate_pr_packet_read_only,
+)
+
+
+PACKET_SLUG = r"[a-z0-9][a-z0-9._-]*"
+SOURCE_FEATURE_PATTERN = re.compile(rf"^specs/(?P<feature>{PACKET_SLUG})$")
+PACKET_PATH_PATTERN = re.compile(
+    rf"^(?P<source_feature_dir>specs/{PACKET_SLUG})/\.process/pr-packets/(?P<packet_id>{PACKET_SLUG})\.json$"
+)
 
 
 def run_pr_emission_helper(entry: Any, request: Any) -> dict[str, Any]:
@@ -60,7 +69,6 @@ def generate_pr_packet(entry: Any, request: Any) -> dict[str, Any]:
 
     packet = packet_input["packet"]
     body = packet_input["body"]
-    validation = packet_input["validation"]
     packet_path = packet_input["packet_path"]
     body_file = packet["body_file"]
     validation_result_path = packet["validation_result_path"]
@@ -78,12 +86,6 @@ def generate_pr_packet(entry: Any, request: Any) -> dict[str, Any]:
             "target": packet_path,
             "content": pretty_json(packet),
         },
-        {
-            "operation_id": "pr-packet-output:validation",
-            "kind": "write_file",
-            "target": validation_result_path,
-            "content": pretty_json(validation),
-        },
     ]
     return run_mutation_helper(
         entry,
@@ -100,23 +102,22 @@ def generate_pr_packet(entry: Any, request: Any) -> dict[str, Any]:
 
 
 def validate_pr_packet_write(entry: Any, request: Any) -> dict[str, Any]:
-    packet_path = request.inputs.get("packet_path")
-    validation_result = request.inputs.get("validation_result")
-    validation_result_path = request.inputs.get("validation_result_path")
-    if not isinstance(packet_path, str) or not packet_path:
-        return input_error(request, "packet_path is required")
-    if not isinstance(validation_result, dict):
-        return input_error(request, "validation_result must be an object produced by validate-pr-packet-read-only")
-    if not isinstance(validation_result_path, str) or not re.fullmatch(
-        r"specs/[^/]+/\.process/pr-packets/[^/]+/validation\.json",
-        validation_result_path,
-    ):
-        return input_error(
-            request,
-            "validation_result_path must match specs/<feature>/.process/pr-packets/<packet-id>/validation.json",
-        )
-    if validation_result.get("status") != "passed" or validation_result.get("pr_blocked") is not False:
-        return input_error(request, "validation_result must be a passing, unblocked PR packet validation result")
+    packet_input = normalize_packet_write_input(request)
+    if isinstance(packet_input, dict) and "diagnostic" in packet_input:
+        return response("input_error", request_id=request.request_id, diagnostics=[packet_input["diagnostic"]])
+
+    packet_path = packet_input["packet_path"]
+    validation_result_path = packet_input["validation_result_path"]
+    packet_id = packet_input["packet_id"]
+    validation_result = validation_result_placeholder(packet_id, validation_result_path)
+    validation_source = "dry_run_plan"
+
+    if request.mode == "apply":
+        validation = current_packet_validation(packet_path)
+        if isinstance(validation, dict) and "diagnostic" in validation:
+            return response("expected_failure", request_id=request.request_id, diagnostics=[validation["diagnostic"]])
+        validation_result = validation
+        validation_source = "validate-pr-packet-read-only"
 
     operation = {
         "operation_id": "validate-pr-packet-write:validation",
@@ -124,14 +125,15 @@ def validate_pr_packet_write(entry: Any, request: Any) -> dict[str, Any]:
         "target": validation_result_path,
         "content": pretty_json(validation_result),
     }
-    return run_validation_write(
+    return run_mutation_helper(
         entry,
         request,
-        operation,
-        {
+        operations=[operation],
+        extra_data={
             "packet_path": packet_path,
             "validation_result_path": validation_result_path,
-            "packet_id": validation_result.get("packet_id"),
+            "packet_id": packet_id,
+            "validation_source": validation_source,
         },
     )
 
@@ -226,34 +228,39 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
     inputs = request.inputs
     packet_path = inputs.get("packet_path")
     source_feature_dir = inputs.get("source_feature_dir")
-    if not isinstance(packet_path, str) or not re.fullmatch(
-        r"specs/[^/]+/\.process/pr-packets/[a-z0-9][a-z0-9._-]*\.json",
-        packet_path,
-    ):
+    packet_parts = packet_path_parts(packet_path)
+    if packet_parts is None:
         return invalid_packet_input(
             "packet_path must match specs/<feature>/.process/pr-packets/<packet-id>.json",
             field="packet_path",
         )
-    if not isinstance(source_feature_dir, str) or not re.fullmatch(r"specs/[^/]+", source_feature_dir):
+    if not isinstance(source_feature_dir, str) or SOURCE_FEATURE_PATTERN.fullmatch(source_feature_dir) is None:
         return invalid_packet_input("source_feature_dir must match specs/<feature>", field="source_feature_dir")
+    if source_feature_dir != packet_parts["source_feature_dir"]:
+        return invalid_packet_input("packet_path and source_feature_dir must refer to the same feature", field="packet_path")
 
     packet_id = inputs.get("packet_id")
     if packet_id is None:
-        packet_id = packet_path.rsplit("/", 1)[1].removesuffix(".json")
-    if not isinstance(packet_id, str) or not re.fullmatch(r"[a-z0-9][a-z0-9._-]*", packet_id):
+        packet_id = packet_parts["packet_id"]
+    if not isinstance(packet_id, str) or not re.fullmatch(PACKET_SLUG, packet_id):
         return invalid_packet_input("packet_id must be lowercase alphanumeric with dot, dash, or underscore separators", field="packet_id")
+    if packet_id != packet_parts["packet_id"]:
+        return invalid_packet_input("packet_id must match the packet_path filename", field="packet_id")
 
-    body_file = inputs.get("body_file") or f"{source_feature_dir}/.process/pr-packets/{packet_id}/body.md"
-    validation_result_path = inputs.get("validation_result_path") or f"{source_feature_dir}/.process/pr-packets/{packet_id}/validation.json"
-    if not isinstance(body_file, str) or not body_file.endswith(".md"):
-        return invalid_packet_input("body_file must be a repo-relative markdown path", field="body_file")
-    if not isinstance(validation_result_path, str) or not re.fullmatch(
-        r"specs/[^/]+/\.process/pr-packets/[^/]+/validation\.json",
-        validation_result_path,
-    ):
+    canonical_paths = canonical_packet_paths(source_feature_dir, packet_id)
+    body_file = inputs.get("body_file") or canonical_paths["body_file"]
+    validation_result_path = inputs.get("validation_result_path") or canonical_paths["validation_result_path"]
+    if body_file != canonical_paths["body_file"]:
         return invalid_packet_input(
-            "validation_result_path must match specs/<feature>/.process/pr-packets/<packet-id>/validation.json",
+            "body_file must be the canonical packet-owned body path",
+            field="body_file",
+            details={"expected": canonical_paths["body_file"]},
+        )
+    if validation_result_path != canonical_paths["validation_result_path"]:
+        return invalid_packet_input(
+            "validation_result_path must be the canonical packet-owned validation path",
             field="validation_result_path",
+            details={"expected": canonical_paths["validation_result_path"]},
         )
 
     target = inputs.get("target")
@@ -285,6 +292,12 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
     if isinstance(source_markers, dict) and "diagnostic" in source_markers:
         return source_markers
 
+    mode = inputs.get("mode")
+    if mode is None:
+        mode = "single"
+    elif mode not in {"single", "split"}:
+        return invalid_packet_input("mode must be single or split when provided", field="mode")
+
     body = inputs.get("body")
     if isinstance(body, str) and body.strip():
         rendered_body = ensure_final_newline(body)
@@ -301,41 +314,32 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
             known_gaps=markdown_list(inputs.get("known_gaps"), ["No known gaps for this PR."]),
         )
 
-    fingerprint = protected_body_sha256(rendered_body)
-    validation = packet_result(
-        "passed",
-        "none",
-        0,
-        packet_id,
-        inputs.get("mode") if inputs.get("mode") in {"single", "split"} else "single",
-        generated_title["value"],
-        body_file,
-        validation_result_path,
-        False,
-        "",
-        [],
-        [],
-        {"base_branch": base_branch, "head_branch": head_branch},
+    body_failures = packet_body_structure_failures(
+        {
+            "generated_title": generated_title,
+            "required_headings": required_headings(),
+            "editable_fields": editable_fields(),
+        },
+        rendered_body,
     )
+    if body_failures:
+        return invalid_packet_input(
+            "body must contain the generated H1 title, required headings, and balanced editable markers",
+            field="body",
+            details={"failures": body_failures},
+        )
+
+    fingerprint = protected_body_sha256(rendered_body)
 
     packet: dict[str, Any] = {
         "schema_version": "1.0.0",
         "packet_id": packet_id,
-        "mode": inputs.get("mode") if inputs.get("mode") in {"single", "split"} else "single",
+        "mode": mode,
         "target": {"base_branch": base_branch, "head_branch": head_branch},
         "source_feature_dir": source_feature_dir,
         "generated_title": generated_title,
         "body_file": body_file,
-        "required_headings": [
-            "Summary",
-            "What Changed",
-            "Why It Matters",
-            "How To Review",
-            "How To UAT",
-            "Verification",
-            "Scope",
-            "Known Gaps",
-        ],
+        "required_headings": required_headings(),
         "verification_evidence": verification_evidence,
         "scope_evidence": scope_evidence,
         "uat": {
@@ -362,8 +366,145 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
     return {
         "packet": packet,
         "body": rendered_body,
-        "validation": validation,
         "packet_path": packet_path,
+    }
+
+
+def normalize_packet_write_input(request: Any) -> dict[str, Any]:
+    packet_path = request.inputs.get("packet_path")
+    packet_parts = packet_path_parts(packet_path)
+    if packet_parts is None:
+        return invalid_packet_input(
+            "packet_path must match specs/<feature>/.process/pr-packets/<packet-id>.json",
+            field="packet_path",
+        )
+    canonical_paths = canonical_packet_paths(packet_parts["source_feature_dir"], packet_parts["packet_id"])
+    validation_result_path = request.inputs.get("validation_result_path") or canonical_paths["validation_result_path"]
+    if validation_result_path != canonical_paths["validation_result_path"]:
+        return invalid_packet_input(
+            "validation_result_path must be the canonical packet-owned validation path",
+            field="validation_result_path",
+            details={"expected": canonical_paths["validation_result_path"]},
+        )
+    return {
+        "packet_path": packet_path,
+        "packet_id": packet_parts["packet_id"],
+        "validation_result_path": validation_result_path,
+    }
+
+
+def packet_path_parts(packet_path: Any) -> dict[str, str] | None:
+    if not isinstance(packet_path, str):
+        return None
+    match = PACKET_PATH_PATTERN.fullmatch(packet_path)
+    if match is None:
+        return None
+    return {"source_feature_dir": match.group("source_feature_dir"), "packet_id": match.group("packet_id")}
+
+
+def canonical_packet_paths(source_feature_dir: str, packet_id: str) -> dict[str, str]:
+    return {
+        "packet_path": f"{source_feature_dir}/.process/pr-packets/{packet_id}.json",
+        "body_file": f"{source_feature_dir}/.process/pr-packets/{packet_id}/body.md",
+        "validation_result_path": f"{source_feature_dir}/.process/pr-packets/{packet_id}/validation.json",
+    }
+
+
+def required_headings() -> list[str]:
+    return [
+        "Summary",
+        "What Changed",
+        "Why It Matters",
+        "How To Review",
+        "How To UAT",
+        "Verification",
+        "Scope",
+        "Known Gaps",
+    ]
+
+
+def current_packet_validation(packet_path: str) -> dict[str, Any]:
+    repo_root = find_repo_root(Path.cwd())
+    if repo_root is None:
+        return {
+            "diagnostic": diagnostic(
+                "missing_prerequisite",
+                "could not locate repository root for PR packet validation write",
+                details={"cwd": normalize_display(Path.cwd())},
+                remediation_summary="Retry from a SpecKit Pro source checkout.",
+                remediation_actions=["Run the request from the repository root.", "Verify speckit_pro_runner exists."],
+            )
+        }
+    result = validate_pr_packet_read_only({"packet_path": packet_path}, repo_root)
+    try:
+        validation_result = json.loads(str(result.get("stdout") or ""))
+    except json.JSONDecodeError:
+        validation_result = None
+    if result.get("exit_code") != 0 or not isinstance(validation_result, dict):
+        return {
+            "diagnostic": diagnostic(
+                "packet_validation_failed",
+                "validate-pr-packet-write refused to persist a packet that does not currently pass read-only validation",
+                details={
+                    "packet_path": packet_path,
+                    "exit_code": result.get("exit_code"),
+                    "stderr": str(result.get("stderr") or "").strip(),
+                },
+                remediation_summary="Regenerate or repair the packet and body, then retry validation persistence.",
+                remediation_actions=[
+                    "Run validate-pr-packet-read-only for the packet.",
+                    "Fix the reported packet validation failures.",
+                    "Retry validate-pr-packet-write from a clean worktree.",
+                ],
+            )
+        }
+
+    expected = normalize_packet_write_input(
+        type("PacketWriteRequest", (), {"inputs": {"packet_path": packet_path}})()
+    )
+    if isinstance(expected, dict) and "diagnostic" in expected:
+        return expected
+    failures: list[str] = []
+    if validation_result.get("status") != "passed":
+        failures.append("status")
+    if validation_result.get("pr_blocked") is not False:
+        failures.append("pr_blocked")
+    if validation_result.get("packet_id") != expected["packet_id"]:
+        failures.append("packet_id")
+    if validation_result.get("validation_result_path") not in {None, expected["validation_result_path"]}:
+        failures.append("validation_result_path")
+    if validation_result.get("body_file") not in {None, canonical_packet_paths(expected["packet_path"].rsplit("/.process/", 1)[0], expected["packet_id"])["body_file"]}:
+        failures.append("body_file")
+    if failures:
+        return {
+            "diagnostic": diagnostic(
+                "packet_validation_failed",
+                "current packet validation result does not match the packet write target",
+                details={"packet_path": packet_path, "fields": failures},
+                remediation_summary="Regenerate the packet and rerun validation before persisting.",
+                remediation_actions=["Retry pr-packet-output.", "Run validate-pr-packet-write again."],
+            )
+        }
+    return validation_result
+
+
+def validation_result_placeholder(packet_id: str, validation_result_path: str) -> dict[str, Any]:
+    return {
+        "schema_version": "1.0.0",
+        "error_class": "dry_run",
+        "exit_code": 0,
+        "stderr_line": "",
+        "packet_id": packet_id,
+        "mode": None,
+        "target": None,
+        "status": "planned",
+        "title_value": None,
+        "body_file": None,
+        "rule_outcomes": [],
+        "pr_blocked": True,
+        "failures": [],
+        "remediation_evidence": ["dry_run only; apply mode reruns validate-pr-packet-read-only before writing"],
+        "validation_result_path": validation_result_path,
     }
 
 
@@ -558,71 +699,6 @@ def ensure_final_newline(text: str) -> str:
 
 def pretty_json(data: dict[str, Any]) -> str:
     return json.dumps(data, indent=2, sort_keys=True) + "\n"
-
-
-def run_validation_write(entry: Any, request: Any, operation: dict[str, Any], extra_data: dict[str, Any]) -> dict[str, Any]:
-    repo_root = find_repo_root(Path.cwd())
-    if repo_root is None:
-        return response(
-            "missing_prerequisite",
-            request_id=request.request_id,
-            diagnostics=[
-                diagnostic(
-                    "missing_prerequisite",
-                    "could not locate repository root for PR packet validation write",
-                    details={"cwd": normalize_display(Path.cwd())},
-                    remediation_summary="Retry from a SpecKit Pro source checkout.",
-                    remediation_actions=["Run the request from the repository root.", "Verify speckit_pro_runner exists."],
-                )
-            ],
-        )
-
-    mutation = empty_mutation(request.mode)
-    mutation["planned_operations"] = operation_records([operation])
-    target = resolve_candidate_path(operation["target"], repo_root)
-    mutation["planned_paths"] = [repo_relative(target, repo_root)]
-    data = {
-        "helper_id": entry.helper_id,
-        "operation": entry.operation,
-        "mode": request.mode,
-        "promotion_status": entry.promotion_status,
-        "comparison_mode": entry.comparison_mode,
-        "writes_state": False,
-        "mutation": mutation,
-        **extra_data,
-    }
-
-    path_diag = validate_target_path(operation["target"], repo_root)
-    if path_diag is not None:
-        return response("input_error", request_id=request.request_id, data=data, diagnostics=[path_diag])
-
-    if request.mode == "dry_run":
-        mutation["mutation_status"] = "planned"
-        return response("ok", request_id=request.request_id, data=data)
-
-    try:
-        write_file_atomic(target, str(operation["content"]))
-    except OSError as exc:
-        mutation["mutation_status"] = "blocked"
-        mutation["failure_operation"] = operation_record(operation)
-        mutation["manual_remediation"] = [
-            "Inspect the validation_result_path parent directory.",
-            "Retry validate-pr-packet-write after the packet path is stable.",
-        ]
-        diag = diagnostic(
-            "write_failure",
-            "validate-pr-packet-write could not persist the validation result",
-            details={"helper_id": entry.helper_id, "target": repo_relative(target, repo_root), "error": type(exc).__name__},
-            remediation_summary="Fix the validation result path or reconcile the packet artifacts before retrying.",
-            remediation_actions=mutation["manual_remediation"],
-        )
-        return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diag])
-
-    mutation["mutation_status"] = "applied"
-    mutation["applied_operations"].append(operation_record(operation))
-    mutation["touched_paths"].append(repo_relative(target, repo_root))
-    data["writes_state"] = True
-    return response("ok", request_id=request.request_id, data=data)
 
 
 def invalid_packet_input(message: str, *, field: str, details: dict[str, Any] | None = None) -> dict[str, Any]:

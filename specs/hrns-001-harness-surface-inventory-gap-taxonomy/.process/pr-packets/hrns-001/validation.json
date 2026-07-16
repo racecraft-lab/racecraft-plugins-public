@@ -21,6 +21,6 @@
     "base_branch": "main",
     "head_branch": "hrns-001-harness-surface-inventory-gap-taxonomy"
   },
-  "timestamp": "2026-07-16T00:23:32Z",
-  "title_value": "feat(HRNS-001): Add harness gap taxonomy"
+  "timestamp": "2026-07-16T01:09:06Z",
+  "title_value": "fix(speckit-pro): Enable PR packet emission"
 }

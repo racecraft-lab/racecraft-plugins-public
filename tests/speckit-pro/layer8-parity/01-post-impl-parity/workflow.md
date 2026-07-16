@@ -44,12 +44,13 @@ durable schemaVersion 2 PRS manifest across Path A and Path B runs.)
 
 ## PR Packet Validation Evidence
 
-The fixture intentionally supplies no current packet. Autopilot updates this
-row, but it must remain blocked before validation or PR creation.
+The fixture intentionally starts with no current packet. Autopilot updates this
+row after `pr-packet-output` emits or refreshes the packet, then validates it
+before PR creation.
 
 | Status | Packet Path | Validator Result | Writes State | Blocker |
 |--------|-------------|------------------|--------------|---------|
-| pending | `specs/parity-01-post-impl/.process/pr-packets/<packet-id>.json` | not_run | false | `pr-packet-output` deferred |
+| pending | `specs/parity-01-post-impl/.process/pr-packets/<packet-id>.json` | not_run | false | packet emission pending |
 
 ## Required Invariants
 
@@ -58,7 +59,7 @@ row, but it must remain blocked before validation or PR creation.
 | shared_packet_schema | speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json |
 | shared_packet_validator_helper_id | validate-pr-packet-read-only |
 | required_packet_path | specs/<feature>/.process/pr-packets/<packet-id>.json |
-| packet_emission_promotion_status | deferred |
+| packet_emission_promotion_status | golden_only |
 | validation_result_source | data.stdout_json |
 | validation_writes_state | false |
 | validation_artifact_written | false |
@@ -83,9 +84,10 @@ Reviewability Diff Gate, Self-Review, UAT Runbook Generation, PR Body
 Generation, PR Creation, Review Remediation, and Retrospective. The
 `generate-uat-skeleton` and `final-reviewability-backstop` helpers are
 deferred: reuse committed UAT and reviewability evidence when current, or
-record the documented deferred outcome before PR side effects. Packet
-emission is deferred. Because this fixture has no current schema-valid packet at
-the feature-local path, both routes stop before `validate-pr-packet-read-only`,
+record the documented deferred outcome before PR side effects. Packet emission
+uses the active `pr-packet-output` helper. Because this fixture starts with no
+current schema-valid packet at the feature-local path, both routes must emit or
+refresh that packet before `validate-pr-packet-read-only`,
 `validate-pr-workflow-contract`, or `gh pr create`. `generate-pr-body` remains a
 body-only operation accepting `output_path`, `title`, and `sections`; it cannot
 fill the packet gap. Split routes may use `multi-pr-emission` only for

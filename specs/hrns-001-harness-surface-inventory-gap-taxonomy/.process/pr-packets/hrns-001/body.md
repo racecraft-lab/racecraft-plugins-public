@@ -1,4 +1,4 @@
-# feat(HRNS-001): Add harness gap taxonomy
+# fix(speckit-pro): Enable PR packet emission
 
 ## Summary
 
@@ -34,10 +34,13 @@ No manual product UAT is required. Re-run the packet-emission unit test, Layer 1
 
 ## Verification
 
-- python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py passed 31/31.
-- python3 tests/speckit-pro/run-all.py --layer 1 passed 1428/1428.
-- python3 -m json.tool passed for edited Claude/Codex eval and packet request fixtures.
-- git diff --check passed.
+- python3 -m unittest -v tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py passed 33/33.
+- python3 tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py --helper validate-pr-packet-read-only passed 48/48.
+- python3 -m unittest -v tests/speckit-pro/unit/test-eval-runner-skill-selection.py passed 5/5.
+- python3 -m unittest -v tests/speckit-pro/unit/test-privacy-scan.py passed 1/1.
+- python3 -m unittest -v tests/speckit-pro/unit/test-post-implementation-reference.py passed 1/1.
+- python3 -m unittest -v tests/speckit-pro/unit/test-parity-runner.py tests/speckit-pro/unit/test-parity-extractors.py tests/speckit-pro/unit/test-parity-judge.py passed 4/4.
+- TITLE='fix(speckit-pro): Enable PR packet emission' BASE_REF='main' PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/unit/fixtures/runner-gates/requests/release-readiness-live-github.json passed.
 - HRNS-001 verify-tasks report recorded 35/35 verified tasks before packet emission.
 
 ## Scope
@@ -51,3 +54,9 @@ No manual product UAT is required. Re-run the packet-emission unit test, Layer 1
 
 - final-reviewability-backstop remains deferred; this PR uses current committed reviewability evidence.
 - multi-pr-emission remains command-plan only and does not execute live GitHub PR mutations.
+
+## Release note
+
+```release-note
+SpecKit Pro autopilot can now emit reviewer PR packets and persist current validation evidence for Claude Code and Codex workflows, preventing completed work from being blocked by missing packet metadata.
+```

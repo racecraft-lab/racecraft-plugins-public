@@ -787,6 +787,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 1)
             self.assert_response(response, "expected_failure", 1)
             self.assertEqual([diag["code"] for diag in stderr_records], ["dirty_worktree"])
+            self.assertFalse(response["data"]["writes_state"])
             self.assertEqual(response["data"]["mutation"]["dirty_worktree"], True)
             self.assertFalse(target.exists())
 
@@ -815,6 +816,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 1)
             self.assert_response(response, "expected_failure", 1)
             self.assertEqual([diag["code"] for diag in stderr_records], ["git_status_unavailable"])
+            self.assertFalse(response["data"]["writes_state"])
             self.assertEqual(response["data"]["mutation"]["dirty_worktree"], False)
             self.assertFalse(target.exists())
 
@@ -958,7 +960,8 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual([op["operation_id"] for op in mutation["applied_operations"]], ["first"])
             self.assertEqual(mutation["failure_operation"]["operation_id"], "second")
             self.assertTrue(mutation["manual_remediation"])
-            self.assertTrue(first.exists())
+            self.assertFalse(response["data"]["writes_state"])
+            self.assertFalse(first.exists())
             self.assertFalse(second.exists())
 
     def test_doctor_preflight_detects_missing_files_and_repair_uses_fake_home(self) -> None:
@@ -1148,7 +1151,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(mutation["applied_operations"], [])
             self.assertFalse(mutation["live_mutation"])
 
-    def test_pr_packet_output_apply_emits_valid_packet_body_and_validation_file(self) -> None:
+    def test_pr_packet_output_apply_emits_valid_packet_and_body_then_persists_validation(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
             inputs = {
@@ -1163,7 +1166,7 @@ class MutationHelperTests(unittest.TestCase):
                 "changed_files": ["specs/prsg-999-packet/spec.md"],
                 "verification": ["python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py passed"],
                 "summary": "Adds a generated reviewer packet for a completed SpecKit workflow.",
-                "what_changed": ["Writes the PR body.", "Writes the PR packet JSON.", "Writes the validation result."],
+                "what_changed": ["Writes the PR body.", "Writes the PR packet JSON.", "Declares the validation result path."],
                 "why_it_matters": "Autopilot can continue to PR creation without inventing packet metadata.",
                 "how_to_review": ["Inspect the emitted packet.", "Run validate-pr-packet-read-only."],
                 "how_to_uat": "No manual UAT is required for this fixture.",
@@ -1182,7 +1185,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(mutation["mutation_status"], "applied")
             self.assertEqual(
                 mutation["touched_paths"],
-                [inputs["body_file"], inputs["packet_path"], inputs["validation_result_path"]],
+                [inputs["body_file"], inputs["packet_path"]],
             )
 
             packet_path = git_root / inputs["packet_path"]
@@ -1190,7 +1193,7 @@ class MutationHelperTests(unittest.TestCase):
             validation_path = git_root / inputs["validation_result_path"]
             self.assertTrue(packet_path.is_file())
             self.assertTrue(body_path.is_file())
-            self.assertTrue(validation_path.is_file())
+            self.assertFalse(validation_path.exists())
             self.assertIn("## Summary", body_path.read_text(encoding="utf-8"))
             packet = json.loads(packet_path.read_text(encoding="utf-8"))
             self.assertEqual(packet["packet_id"], "prsg-999")
@@ -1216,11 +1219,23 @@ class MutationHelperTests(unittest.TestCase):
                 helper_request(
                     "validate-pr-packet-write",
                     mode="apply",
-                    inputs={
-                        "packet_path": inputs["packet_path"],
-                        "validation_result_path": inputs["validation_result_path"],
-                        "validation_result": validation_result,
-                    },
+                    inputs={"packet_path": inputs["packet_path"]},
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 1)
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["dirty_worktree"])
+            self.assertFalse(validation_path.exists())
+
+            self.run_git(git_root, "add", inputs["body_file"], inputs["packet_path"])
+            self.run_git(git_root, "commit", "--quiet", "-m", "packet artifacts")
+
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-write",
+                    mode="apply",
+                    inputs={"packet_path": inputs["packet_path"]},
                 ),
                 cwd=git_root,
             )
@@ -1228,10 +1243,71 @@ class MutationHelperTests(unittest.TestCase):
             self.assert_response(response, "ok", 0)
             self.assertEqual(stderr_records, [])
             self.assertEqual(response["data"]["mutation"]["mutation_status"], "applied")
+            self.assertEqual(response["data"]["validation_source"], "validate-pr-packet-read-only")
             self.assertTrue(validation_path.is_file())
             persisted = json.loads(validation_path.read_text(encoding="utf-8"))
             self.assertEqual(persisted["packet_id"], "prsg-999")
             self.assertEqual(persisted["status"], "passed")
+
+    def test_pr_packet_output_rejects_mismatched_paths_invalid_mode_and_invalid_body(self) -> None:
+        base_inputs = {
+            "packet_path": "specs/prsg-999-packet/.process/pr-packets/prsg-999.json",
+            "source_feature_dir": "specs/prsg-999-packet",
+            "target": {"base_branch": "main", "head_branch": "agent/prsg-999-packet"},
+            "title_type": "feat",
+            "title_scope": "PRSG-999",
+            "title_description": "Generate reviewer packet",
+            "changed_files": ["specs/prsg-999-packet/spec.md"],
+            "verification": ["python3 tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py passed"],
+        }
+        cases = {
+            "feature_mismatch": {"source_feature_dir": "specs/other-feature"},
+            "packet_id_mismatch": {"packet_id": "other-packet"},
+            "body_escape": {"body_file": "README.md"},
+            "validation_escape": {"validation_result_path": "specs/prsg-999-packet/.process/pr-packets/other/validation.json"},
+            "invalid_mode": {"mode": "splti"},
+            "invalid_body": {"body": "hello\n"},
+        }
+        for name, override in cases.items():
+            with self.subTest(name=name):
+                completed, response, stderr_records = run_runner(
+                    helper_request("pr-packet-output", inputs={**base_inputs, **override})
+                )
+                self.assertEqual(completed.returncode, 2)
+                self.assert_response(response, "input_error", 2)
+                self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_input"])
+
+    def test_validate_pr_packet_write_ignores_fabricated_validation_and_requires_current_packet_pass(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            packet_rel = "specs/prsg-997-bad/.process/pr-packets/prsg-997.json"
+            validation_rel = "specs/prsg-997-bad/.process/pr-packets/prsg-997/validation.json"
+            packet_path = git_root / packet_rel
+            packet_path.parent.mkdir(parents=True)
+            packet_path.write_text('{"schema_version":"1.0.0"}\n', encoding="utf-8")
+            self.run_git(git_root, "add", packet_rel)
+            self.run_git(git_root, "commit", "--quiet", "-m", "invalid packet")
+
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-write",
+                    mode="apply",
+                    inputs={
+                        "packet_path": packet_rel,
+                        "validation_result": {
+                            "schema_version": "1.0.0",
+                            "packet_id": "prsg-997",
+                            "status": "passed",
+                            "pr_blocked": False,
+                        },
+                    },
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 1)
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["packet_validation_failed"])
+            self.assertFalse((git_root / validation_rel).exists())
 
     def test_contract_schemas_match_runner_fixture_envelopes(self) -> None:
         request_schema = json.loads(REQUEST_SCHEMA.read_text(encoding="utf-8"))

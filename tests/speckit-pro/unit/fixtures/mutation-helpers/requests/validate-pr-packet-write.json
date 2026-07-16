@@ -5,33 +5,6 @@
   "operation": "validate-pr-packet-write",
   "mode": "dry_run",
   "inputs": {
-    "packet_path": "specs/prsg-998-fixture/.process/pr-packets/prsg-998.json",
-    "validation_result_path": "specs/prsg-998-fixture/.process/pr-packets/prsg-998/validation.json",
-    "validation_result": {
-      "schema_version": "1.0.0",
-      "error_class": "none",
-      "exit_code": 0,
-      "stderr_line": "",
-      "packet_id": "prsg-998",
-      "mode": "single",
-      "target": {
-        "base_branch": "main",
-        "head_branch": "agent/prsg-998-fixture"
-      },
-      "status": "passed",
-      "title_value": "feat(PRSG-998): Generate packet fixture",
-      "body_file": "specs/prsg-998-fixture/.process/pr-packets/prsg-998/body.md",
-      "rule_outcomes": [
-        {
-          "rule": "packet.validation",
-          "status": "passed",
-          "evidence": "no failures"
-        }
-      ],
-      "pr_blocked": false,
-      "failures": [],
-      "remediation_evidence": [],
-      "timestamp": "2026-07-15T00:00:00Z"
-    }
+    "packet_path": "specs/prsg-998-fixture/.process/pr-packets/prsg-998.json"
   }
 }

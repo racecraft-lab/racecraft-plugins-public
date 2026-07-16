@@ -64,12 +64,11 @@ EXPECTED_DEFERRED_HELPERS = frozenset(
     {
         "ensure-reviewability-preset",
         "migrate-structure",
-        "pr-packet-output",
         "relocate-process-artifacts",
         "restack",
-        "validate-pr-packet-write",
     }
 )
+EXPECTED_ACTIVE_PACKET_HELPERS = frozenset({"pr-packet-output", "validate-pr-packet-write"})
 PACKET_PATH_CONTRACT = "specs/<feature>/.process/pr-packets/<packet-id>.json"
 SAFE_NEGATION_MARKERS = (
     "do not",
@@ -284,6 +283,16 @@ def runtime_registry_violations() -> list[str]:
             violations.append(f"registry: {helper_id} status={entry.promotion_status}, expected deferred")
         if entry.authoritative_command:
             violations.append(f"registry: deferred helper {helper_id} exposes an authoritative request")
+
+    for helper_id in sorted(EXPECTED_ACTIVE_PACKET_HELPERS):
+        entry = MUTATION_HELPERS.get(helper_id)
+        if entry is None:
+            violations.append(f"registry: missing active packet helper {helper_id}")
+            continue
+        if entry.promotion_status != "golden_only":
+            violations.append(f"registry: {helper_id} status={entry.promotion_status}, expected golden_only")
+        if not entry.authoritative_command:
+            violations.append(f"registry: active packet helper {helper_id} has no authoritative request")
 
     generate_entry = MUTATION_HELPERS.get("generate-pr-body")
     if generate_entry is None or generate_entry.promotion_status != "golden_only":

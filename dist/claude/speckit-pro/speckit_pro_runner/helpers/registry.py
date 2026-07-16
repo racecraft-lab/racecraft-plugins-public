@@ -459,7 +459,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         mutation_authoritative_request("validate-pr-packet-write"),
         ("validate-pr-packet-write-apply",),
         ("validate-pr-packet",),
-        "Retry validate-pr-packet-read-only, then persist only the current passing validation result.",
+        "Retry validate-pr-packet-write from a clean worktree; apply mode reruns read-only validation before persisting.",
     ),
     "detect-stack-manager-plan": MutationEntry(
         "detect-stack-manager-plan",

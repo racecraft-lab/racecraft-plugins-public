@@ -121,7 +121,7 @@
     "shared_packet_schema": "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json",
     "shared_packet_validator_helper_id": "validate-pr-packet-read-only",
     "required_packet_path": "specs/<feature>/.process/pr-packets/<packet-id>.json",
-    "packet_emission_promotion_status": "deferred",
+    "packet_emission_promotion_status": "golden_only",
     "validation_result_source": "data.stdout_json",
     "validation_writes_state": false,
     "validation_artifact_written": false,

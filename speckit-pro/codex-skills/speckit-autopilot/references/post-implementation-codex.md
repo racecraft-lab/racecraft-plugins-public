@@ -153,9 +153,11 @@ fail-closed sequence:
 
 ```text
 final-reviewability boundary: use current committed reviewability evidence; if none is current, stop before PR side effects
-require specs/<feature>/.process/pr-packets/<packet-id>.json to already exist and be current
+emit or refresh specs/<feature>/.process/pr-packets/<packet-id>.json with pr-packet-output dry_run then apply
 run validate-pr-packet-read-only for that packet and consume response data.stdout_json in memory/state
 require data.stdout_json.status=passed, data.stdout_json.pr_blocked=false, and response data.writes_state=false
+checkpoint packet/body artifacts so validate-pr-packet-write runs from a clean worktree
+run validate-pr-packet-write; apply mode reruns read-only validation before persisting validation_result_path
 run validate-pr-workflow-contract with the packet title and current repository diff
 create only with packet-owned --base, --head, --title, and --body-file values
 ```
@@ -214,10 +216,13 @@ JSON request using `helper_id=validate-pr-packet-read-only`, the same operation,
 `mode=read_only`, and the established feature-local packet path. Consume the
 current response's `data.stdout_json` in memory and durable workflow state.
 Continue only when it reports `status=passed` and `pr_blocked=false`, while the
-outer response reports `data.writes_state=false`. Then run
-`validate-pr-packet-write` with the just-run `data.stdout_json` to persist the
-packet's `validation_result_path`. Prior validation artifacts never authorize PR
-creation. Exit 1 or 2 blocks before PR creation with the returned diagnostics.
+outer response reports `data.writes_state=false`. If any required packet is
+absent or invalid, stop before PR creation with the validator diagnostics.
+Commit or otherwise checkpoint the packet/body artifacts so the worktree is
+clean, then run `validate-pr-packet-write`; apply mode reruns read-only
+validation before persisting the packet's `validation_result_path`. Prior
+validation artifacts never authorize PR creation. Exit 1 or 2 blocks before PR
+creation with the returned diagnostics.
 
 Validate the PR workflow contract before any single-PR create attempt. The
 read-only `validate-pr-workflow-contract` helper checks the actual PR title against the
@@ -304,7 +309,8 @@ command, exit status, evidence path, stderr/stdout tail, and keep
 `next_slice_id` on the blocked slice. Each existing slice packet must also pass
 a fresh `validate-pr-packet-read-only` request before `gh pr create`; consume
 `data.stdout_json` in memory/state and do not claim a validation file was
-written. A validation failure blocks on the same slice without opening or
+written. If any required packet is absent or invalid, stop before PR creation
+with the validator diagnostics. A validation failure blocks on the same slice without opening or
 repairing a PR. A later failed slice must not rewind,
 invalidate, or mark earlier opened slice PRs as blocked.
 

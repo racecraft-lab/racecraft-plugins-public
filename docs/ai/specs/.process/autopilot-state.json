@@ -58,13 +58,13 @@
       "status": "ok",
       "mode": "dry_run",
       "mutation_status": "no_op",
-      "destination": "/Users/fredrickgabelmann/.codex/agents",
+      "destination": "<CODEX_HOME>/agents",
       "model": "gpt-5.5"
     },
     "runner": {
       "python": "Python 3.11.0",
       "module": "speckit-pro-runner 0.1.0",
-      "source": "/Users/fredrickgabelmann/.codex/plugins/cache/racecraft-plugins-public/speckit-pro/2.19.2"
+      "source": "<installed-speckit-pro-plugin-cache>/speckit-pro/2.19.2"
     }
   },
   "phase_results": {

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import stat
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -355,41 +356,63 @@ def run_mutation_helper(
         )
         return response("input_error", request_id=request.request_id, data=base_data, diagnostics=[diag])
 
+    snapshots = capture_write_snapshots(normalized, repo_root)
+    if isinstance(snapshots, dict) and "diagnostic" in snapshots:
+        mutation["mutation_status"] = "blocked"
+        return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[snapshots["diagnostic"]])
+
     for index, op in enumerate(normalized):
         if isinstance(simulate_failure_after, int) and index >= simulate_failure_after:
             mutation["mutation_status"] = "partial_failure"
             mutation["failure_operation"] = operation_record(op)
+            rollback_errors = rollback_applied_writes(mutation["touched_paths"], snapshots, repo_root)
             mutation["manual_remediation"] = [
                 "Inspect applied_operations and touched_paths.",
-                "Manually revert or complete the failed operation before retrying.",
+                "Retry after the deterministic failure condition is removed.",
             ]
+            if rollback_errors:
+                mutation["manual_remediation"].append("Manual rollback is required for the reported rollback errors.")
+            else:
+                mutation["rollback_notes"] = ["Already-applied writes were rolled back before returning partial_failure."]
             diag = diagnostic(
                 "partial_failure",
                 "mutation helper stopped after a deterministic partial failure",
-                details={"helper_id": entry.helper_id, "operation_id": op["operation_id"]},
+                details={"helper_id": entry.helper_id, "operation_id": op["operation_id"], "rollback_errors": rollback_errors},
                 remediation_summary="Reconcile already-applied operations before retrying.",
                 remediation_actions=mutation["manual_remediation"],
             )
+            base_data["writes_state"] = bool(rollback_errors)
             return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[diag])
 
         if op["kind"] == "write_file":
             target = resolve_candidate_path(op["target"], repo_root)
             try:
-                write_file_atomic(target, str(op["content"]))
+                write_file_atomic(target, str(op["content"]), trust_root=repo_root)
             except OSError as exc:
                 mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
                 mutation["failure_operation"] = operation_record(op)
+                rollback_errors = rollback_applied_writes(mutation["touched_paths"], snapshots, repo_root)
                 mutation["manual_remediation"] = [
                     "Inspect the target path and parent directory.",
-                    "Restore any applied_operations before retrying.",
+                    "Retry after the write target is stable.",
                 ]
+                if rollback_errors:
+                    mutation["manual_remediation"].append("Manual rollback is required for the reported rollback errors.")
+                elif mutation["applied_operations"]:
+                    mutation["rollback_notes"] = ["Already-applied writes were rolled back after the failed operation."]
                 diag = diagnostic(
                     "write_failure",
                     "mutation helper could not complete an atomic file write",
-                    details={"helper_id": entry.helper_id, "operation_id": op["operation_id"], "error": type(exc).__name__},
+                    details={
+                        "helper_id": entry.helper_id,
+                        "operation_id": op["operation_id"],
+                        "error": type(exc).__name__,
+                        "rollback_errors": rollback_errors,
+                    },
                     remediation_summary="Fix the target path or reconcile partial writes before retrying.",
                     remediation_actions=mutation["manual_remediation"],
                 )
+                base_data["writes_state"] = bool(rollback_errors)
                 return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[diag])
             rel = repo_relative(target, repo_root)
             mutation["applied_operations"].append(operation_record(op))
@@ -398,6 +421,7 @@ def run_mutation_helper(
             mutation["skipped_operations"].append(operation_record(op))
 
     mutation["mutation_status"] = "applied" if mutation["applied_operations"] else "no_op"
+    base_data["writes_state"] = bool(mutation["applied_operations"])
     return response("ok", request_id=request.request_id, data=base_data)
 
 
@@ -636,26 +660,159 @@ def git_worktree_status(repo_root: Path) -> bool | dict[str, Any]:
     return bool(completed.stdout.strip())
 
 
-def write_file_atomic(target: Path, content: str, *, trust_root: Path | None = None) -> None:
-    if trust_root is not None and not _spec_index_target_chain_is_safe(target, trust_root):
-        raise OSError("unsafe target path")
-    target.parent.mkdir(parents=True, exist_ok=True)
-    tmp = target.with_name(f".{target.name}.tmp-{os.getpid()}")
+def capture_write_snapshots(
+    operations: list[dict[str, Any]],
+    repo_root: Path,
+) -> dict[str, bytes | None] | dict[str, Any]:
+    snapshots: dict[str, bytes | None] = {}
+    for op in operations:
+        if op["kind"] != "write_file":
+            continue
+        target = resolve_candidate_path(op["target"], repo_root)
+        rel = repo_relative(target, repo_root)
+        if rel in snapshots:
+            continue
+        try:
+            ensure_safe_write_parent(target, repo_root, create=False)
+            if target.exists():
+                if target.is_symlink() or not target.is_file():
+                    raise OSError("unsafe existing target")
+                snapshots[rel] = target.read_bytes()
+            else:
+                snapshots[rel] = None
+        except OSError as exc:
+            return {
+                "diagnostic": diagnostic(
+                    "source_changed",
+                    "mutation helper could not snapshot write targets before apply",
+                    details={"target": rel, "error": type(exc).__name__},
+                    remediation_summary="Retry from a stable repository tree.",
+                    remediation_actions=["Inspect the target path.", "Remove symlinks or concurrent edits.", "Retry apply mode."],
+                )
+            }
+    return snapshots
+
+
+def rollback_applied_writes(touched_paths: list[str], snapshots: dict[str, bytes | None], repo_root: Path) -> list[str]:
+    errors: list[str] = []
+    for rel in reversed(touched_paths):
+        target = resolve_candidate_path(rel, repo_root)
+        try:
+            original = snapshots.get(rel)
+            if original is None:
+                safe_unlink(target, repo_root)
+            else:
+                write_bytes_atomic(target, original, trust_root=repo_root)
+        except OSError as exc:
+            errors.append(f"{rel}:{type(exc).__name__}")
+    return errors
+
+
+def safe_unlink(target: Path, trust_root: Path) -> None:
+    ensure_safe_write_parent(target, trust_root)
+    parent_fd = os.open(target.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0))
     try:
-        with tmp.open("w", encoding="utf-8", newline="\n") as fh:
-            fh.write(ensure_final_newline(content))
+        try:
+            mode = os.stat(target.name, dir_fd=parent_fd, follow_symlinks=False).st_mode
+        except FileNotFoundError:
+            return
+        if stat.S_ISDIR(mode):
+            raise OSError("refusing to unlink directory")
+        os.unlink(target.name, dir_fd=parent_fd)
+        try:
+            os.fsync(parent_fd)
+        except OSError:
+            pass
+    finally:
+        os.close(parent_fd)
+
+
+def write_file_atomic(target: Path, content: str, *, trust_root: Path | None = None) -> None:
+    write_bytes_atomic(target, ensure_final_newline(content).encode("utf-8"), trust_root=trust_root)
+
+
+def write_bytes_atomic(target: Path, content: bytes, *, trust_root: Path | None = None) -> None:
+    if trust_root is not None:
+        ensure_safe_write_parent(target, trust_root)
+    else:
+        target.parent.mkdir(parents=True, exist_ok=True)
+    tmp_name = f".{target.name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
+    parent_fd = os.open(target.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0))
+    tmp_fd = -1
+    try:
+        if trust_root is not None:
+            ensure_safe_write_target_fd(parent_fd, target.name)
+        tmp_fd = os.open(
+            tmp_name,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
+            0o600,
+            dir_fd=parent_fd,
+        )
+        with os.fdopen(tmp_fd, "wb") as fh:
+            tmp_fd = -1
+            fh.write(content)
             fh.flush()
             os.fsync(fh.fileno())
-        if trust_root is not None and not _spec_index_target_chain_is_safe(target, trust_root):
-            raise OSError("target path changed before replace")
-        os.replace(tmp, target)
+        if trust_root is not None:
+            ensure_safe_write_parent(target, trust_root)
+        if trust_root is not None:
+            ensure_safe_write_target_fd(parent_fd, target.name)
+        os.replace(tmp_name, target.name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+        try:
+            os.fsync(parent_fd)
+        except OSError:
+            pass
     finally:
-        if tmp.exists():
+        if tmp_fd >= 0:
             try:
-                tmp.unlink()
+                os.close(tmp_fd)
             except OSError:
-                # Best-effort cleanup only; the write outcome is already determined.
                 pass
+        try:
+            os.unlink(tmp_name, dir_fd=parent_fd)
+        except FileNotFoundError:
+            pass
+        except OSError:
+            # Best-effort cleanup only; the write outcome is already determined.
+            pass
+        os.close(parent_fd)
+
+
+def ensure_safe_write_parent(target: Path, trust_root: Path, *, create: bool = True) -> None:
+    trust_root = trust_root.resolve(strict=False)
+    target = target if target.is_absolute() else trust_root / target
+    try:
+        relative = target.relative_to(trust_root)
+    except ValueError as exc:
+        raise OSError("target escapes trust root") from exc
+    if not relative.parts or any(part in {"", ".", ".."} for part in relative.parts):
+        raise OSError("unsafe target path")
+    current = trust_root
+    root_mode = current.lstat().st_mode
+    if stat.S_ISLNK(root_mode) or not stat.S_ISDIR(root_mode):
+        raise OSError("unsafe trust root")
+    for part in relative.parts[:-1]:
+        current = current / part
+        try:
+            mode = current.lstat().st_mode
+        except FileNotFoundError:
+            if not create:
+                continue
+            current.mkdir()
+            mode = current.lstat().st_mode
+        if stat.S_ISLNK(mode) or not stat.S_ISDIR(mode):
+            raise OSError("unsafe parent path")
+
+
+def ensure_safe_write_target_fd(parent_fd: int, name: str) -> None:
+    if "/" in name or name in {"", ".", ".."}:
+        raise OSError("unsafe target name")
+    try:
+        mode = os.stat(name, dir_fd=parent_fd, follow_symlinks=False).st_mode
+    except FileNotFoundError:
+        return
+    if stat.S_ISLNK(mode) or not stat.S_ISREG(mode):
+        raise OSError("unsafe existing target")
 
 
 def ensure_final_newline(content: str) -> str:
@@ -705,7 +862,7 @@ def mutation_response_data(
         "mode": request.mode,
         "promotion_status": entry.promotion_status,
         "comparison_mode": entry.comparison_mode,
-        "writes_state": request.mode == "apply",
+        "writes_state": False,
         "mutation": mutation,
     }
     if extra_data:

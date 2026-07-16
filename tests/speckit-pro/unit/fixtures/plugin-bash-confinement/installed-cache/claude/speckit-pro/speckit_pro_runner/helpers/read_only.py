@@ -2128,7 +2128,7 @@ def protected_body_sha256(body_text: str) -> str:
     known_gaps_body_seen = False
     for raw_line in body_text.splitlines():
         line = raw_line.rstrip(" \t\r")
-        if not in_packet and line == "## Summary":
+        if not in_packet and re.fullmatch(r"#\s+\S.*", line):
             in_packet = True
         if not in_packet:
             continue
@@ -2158,6 +2158,86 @@ def protected_body_sha256(body_text: str) -> str:
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
+def packet_body_structure_failures(data: dict[str, Any], body_text: str) -> list[dict[str, Any]]:
+    failures: list[dict[str, Any]] = []
+    lines = [line.rstrip(" \t\r") for line in body_text.splitlines()]
+    title = data.get("generated_title")
+    expected_title = title.get("value") if isinstance(title, dict) else None
+    h1_lines = [line for line in lines if re.fullmatch(r"#\s+\S.*", line)]
+    if isinstance(expected_title, str) and expected_title:
+        expected_h1 = f"# {expected_title}"
+        if h1_lines != [expected_h1]:
+            failures.append(
+                {
+                    "rule": "body.title",
+                    "field": "body_file",
+                    "message": "Rendered body must contain exactly one H1 matching generated_title.value before Summary.",
+                }
+            )
+    elif len(h1_lines) != 1:
+        failures.append(
+            {
+                "rule": "body.title",
+                "field": "body_file",
+                "message": "Rendered body must contain exactly one H1 title.",
+            }
+        )
+
+    required_headings = data.get("required_headings")
+    if isinstance(required_headings, list) and all(isinstance(item, str) and item for item in required_headings):
+        heading_lines = [line[3:].strip() for line in lines if line.startswith("## ")]
+        positions: list[int] = []
+        for heading in required_headings:
+            matches = [index for index, found in enumerate(heading_lines) if found == heading]
+            if len(matches) != 1:
+                failures.append(
+                    {
+                        "rule": "body.required_headings",
+                        "field": "body_file",
+                        "message": f"Rendered body must contain required heading exactly once: {heading}",
+                    }
+                )
+                continue
+            positions.append(matches[0])
+        if positions and positions != sorted(positions):
+            failures.append(
+                {
+                    "rule": "body.required_headings",
+                    "field": "body_file",
+                    "message": "Rendered body required headings must appear in packet order.",
+                }
+            )
+
+    editable_fields = data.get("editable_fields")
+    if isinstance(editable_fields, list):
+        for field in editable_fields:
+            if not isinstance(field, dict):
+                continue
+            field_id = field.get("field_id")
+            start_marker = field.get("start_marker")
+            end_marker = field.get("end_marker")
+            if not isinstance(field_id, str) or not isinstance(start_marker, str) or not isinstance(end_marker, str):
+                failures.append(
+                    {
+                        "rule": "body.editable_markers",
+                        "field": "editable_fields",
+                        "message": "Editable field records must include field_id, start_marker, and end_marker.",
+                    }
+                )
+                continue
+            starts = [index for index, line in enumerate(lines) if line == start_marker]
+            ends = [index for index, line in enumerate(lines) if line == end_marker]
+            if len(starts) != 1 or len(ends) != 1 or starts[0] >= ends[0]:
+                failures.append(
+                    {
+                        "rule": "body.editable_markers",
+                        "field": "body_file",
+                        "message": f"Rendered body must contain one balanced editable marker pair for {field_id}.",
+                    }
+                )
+    return failures
+
+
 def pr_packet_body_failures(data: dict[str, Any], repo_root: Path) -> list[dict[str, Any]]:
     body_file = data.get("body_file")
     if not isinstance(body_file, str) or not body_file:
@@ -2182,18 +2262,20 @@ def pr_packet_body_failures(data: dict[str, Any], repo_root: Path) -> list[dict[
                 "message": f"Rendered body file is unreadable: {body_file}",
             }
         ]
+    structure_failures = packet_body_structure_failures(data, body_text)
+    failures = structure_failures[:]
     fingerprint = data.get("protected_body_fingerprint")
     expected = fingerprint.get("value") if isinstance(fingerprint, dict) else None
     if isinstance(expected, str) and re.fullmatch(r"[a-f0-9]{64}", expected):
         if protected_body_sha256(body_text) != expected:
-            return [
+            failures.append(
                 {
                     "rule": "body.protected_fingerprint",
                     "field": "body_file",
                     "message": "Protected body fingerprint changed outside sanctioned editable prose fields.",
                 }
-            ]
-    return []
+            )
+    return failures
 
 
 def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:

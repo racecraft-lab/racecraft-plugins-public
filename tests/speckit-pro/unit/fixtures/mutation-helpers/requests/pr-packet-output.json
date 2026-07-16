@@ -26,7 +26,7 @@
     "what_changed": [
       "Writes PR body markdown.",
       "Writes machine-readable packet JSON.",
-      "Writes validation result JSON."
+      "Declares validation result path for later persistence."
     ],
     "why_it_matters": "Autopilot can publish completed work without a missing packet-emission blocker.",
     "how_to_review": [

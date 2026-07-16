@@ -376,9 +376,9 @@ opens one slice PR.
    arbitrary stale file. Run `pr-packet-output` in `dry_run` first, then
    `apply` only with current packet path, body path, base/head target, title,
    changed-file scope, verification evidence, UAT text, non-goals, and known
-   gaps. The helper writes the packet JSON, packet-owned body file, and
-   validation-result JSON. `generate-pr-body` is a body-only `golden_only`
-   operation and cannot replace the packet.
+   gaps. The helper writes the packet JSON and packet-owned body file, and
+   declares the validation-result path. `generate-pr-body` is a body-only
+   `golden_only` operation and cannot replace the packet.
 6b. Require the emitted packet's repo-relative `body_file` to be present and
    readable. If body prose needs refinement, edit only the declared editable
    regions described below, then rerun validation before PR creation.
@@ -406,10 +406,13 @@ opens one slice PR.
    Consume the current response's `data.stdout_json` in memory and durable
    workflow state. Continue only when `data.stdout_json.status=passed`,
    `data.stdout_json.pr_blocked=false`, and response `data.writes_state=false`.
-   Then run `validate-pr-packet-write` with the just-run `data.stdout_json` to
-   persist the packet's `validation_result_path`. Prior validation artifacts
-   never authorize PR creation. Exit 1 or 2 blocks before PR creation with the
-   returned diagnostics.
+   If any required packet is absent or invalid, stop before PR creation with
+   the validator diagnostics. Commit or otherwise checkpoint the packet/body
+   artifacts so the worktree is clean, then run `validate-pr-packet-write`;
+   apply mode reruns read-only validation before persisting the packet's
+   `validation_result_path`. Prior validation artifacts never authorize PR
+   creation. Exit 1 or 2 blocks before PR creation with the returned
+   diagnostics.
 6e. Validate the PR workflow contract before any single-PR create attempt:
    send one read-only runner request for `validate-pr-workflow-contract` with
    `inputs.title=<packet.generated_title.value>` and `inputs.repo_root=.`. Let
@@ -474,8 +477,9 @@ opens one slice PR.
      gh pr create --base <base> --head <head> --body-file <body-file> --title <generated-title>
 9. Each slice must pass or record scoped verification before PR creation and
    its existing packet must pass a fresh `validate-pr-packet-read-only` request
-   whose `data.stdout_json` is consumed in memory/state. The validator writes no
-   state or validation file. A
+   whose `data.stdout_json` is consumed in memory/state. If any required packet
+   is absent or invalid, stop before PR creation with the validator diagnostics.
+   The read-only validator writes no state or validation file. A
    failing required scoped command must stop before `gh pr create`, record the
    failed command, exit status, evidence path, stderr/stdout tail, and keep
    `next_slice_id` on the blocked slice.
