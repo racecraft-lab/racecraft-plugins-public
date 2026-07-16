@@ -1,15 +1,52 @@
 # PRD: Codex Agent Model Routing and Graceful Fallback
 
 **Status**: Active - not yet implemented
-**Source**: Maintainer request plus official OpenAI documentation, `$research`,
-and `$tavily-research` passes completed 2026-07-09 and revalidated 2026-07-12
+**Source**: Maintainer request plus current official OpenAI documentation,
+revalidated under the evidence-authority contract below
 **Created**: 2026-07-09
-**Last updated**: 2026-07-12
+**Last updated**: 2026-07-16
 **Target window**: Next SpecKit Pro minor release after the evaluation and
 installer specifications in this roadmap are implemented
 **Legacy identifier note**: The stable `G56R` SPEC prefix originated when this
 work was scoped to GPT-5.6. It remains for traceability, but the candidate
 catalog includes any supported Codex model that satisfies an agent's contract.
+**Parity note**: This PRD is the Codex half of the shared twelve-agent catalog.
+The Claude half is defined by the companion Claude routing PRD; the two
+documents mirror each other and diverge only for platform-specific
+implementation requirements.
+
+---
+
+## Evidence Authority
+
+- The shared
+  [agent-routing parity contract](ai/specs/agent-routing-parity-contract.md)
+  governs structure, evidence classes, source records, historical integrity,
+  and fail-closed behavior for CAR and G56R.
+- Official OpenAI documentation under `learn.chatgpt.com/docs/**`,
+  `developers.openai.com/codex/**`, `developers.openai.com/api/docs/**`, and
+  `platform.openai.com/docs/**` is the sole authority for Codex and OpenAI
+  platform facts, including model IDs and positioning, supported configuration
+  fields, reasoning controls, telemetry fields, lifecycle, and client-surface
+  behavior.
+- Repository files, generated payloads, installed caches, and Claude agent
+  definitions are project inputs used to inventory the current implementation
+  and define SpecKit Pro role contracts. They cannot establish an OpenAI model,
+  capability, configuration field, telemetry field, or native behavior.
+- Responses from documented runtime methods and bounded invocation probes may
+  verify environment availability or exact treatment for an already
+  documented candidate. They cannot add a candidate or broaden a platform
+  claim.
+- Controlled SpecKit Pro evaluations may qualify and rank document-eligible
+  routes against project role contracts. Those results are product
+  qualification evidence, not authority for platform behavior.
+- If official documentation does not establish a required platform fact, the
+  fact is `undocumented` and the dependent claim or route fails closed. Support
+  articles, marketing pages, news posts, repository inference, runtime success,
+  and neighboring-model analogy cannot promote it to a platform fact.
+- The official-source ledger is versioned and revalidated before each G56R
+  scaffold that consumes it and again before release. A changed, conflicting,
+  inaccessible, or withdrawn source invalidates bound candidates and claims.
 
 ---
 
@@ -196,39 +233,50 @@ selection and G56R-011 composes the aggregates.
   `consensus-synthesizer` and `gate-validator` derived from the Claude plugin)
   and every active source, installer, skill, validation, evaluation,
   generated-payload, and installed-cache surface that encodes or consumes their
-  route policy.
-- **AC-1.2**: The record cites current official OpenAI documentation for model
-  IDs, custom-agent configuration fields, supported reasoning controls,
-  capability discovery, telemetry, reroute events, and non-interactive output.
-  Conflicting claims are rejected or explicitly unresolved.
+  route policy. The inventory is labeled `project_input` and cannot establish
+  OpenAI platform facts or candidate eligibility.
+- **AC-1.2 - Official-source ledger**: The record cites only current official
+  OpenAI documentation for every shared research-matrix family: model IDs and
+  lifecycle, custom-agent fields, reasoning controls, skills and instructions,
+  tools and MCP, sandboxing, hooks, discovery, noninteractive output,
+  telemetry, authentication, availability, pricing, cost, and analytics. Every
+  platform claim records its source-ledger ID, canonical URL, retrieval
+  timestamp, supported surface, exact fact, bounded extract and hash, claim
+  binding, gap, and invalidation trigger. Conflicting or absent claims are
+  blocked or marked `undocumented`.
 - **AC-1.3**: Every agent has an immutable production route (recorded as absent
-  for the two parity additions), a role-specific
-  contract, candidate model/effort tuples from discovered capabilities or a
-  pinned probe, prompt/context candidates when justified, and a fixture backlog.
-  A model or effort is excluded only for recorded incompatibility, contract
-  failure, or predeclared dominance evidence.
+  for the two parity additions), a role-specific contract, candidate routes
+  admitted only by the official-source ledger, prompt/context candidates when
+  justified, and a fixture backlog. G56R-001 records model/effort tuples as
+  non-executable until documented model support, surface-specific effort
+  support, environment availability, and exact treatment are verified. Runtime
+  discovery and probes may narrow availability but cannot introduce a model or
+  effort outside the official ledger. A route is excluded only for recorded
+  incompatibility, contract failure, or predeclared dominance evidence.
 - **AC-1.4**: Platform facts, reasonable inferences, proposed SpecKit Pro
-  policies, and unverified assumptions are visibly separated. No head-to-head
-  benchmark or native fallback feature is claimed where none is documented.
+  policies, project inputs, runtime observations, qualification evidence, and
+  undocumented facts are visibly separated under the shared five-class
+  contract. Only official documentation may support a platform fact. No
+  head-to-head benchmark or native fallback feature is claimed where none is
+  documented.
 - **AC-1.5 — Research completion without a dependency cycle**: The time-boxed
-  research spike ends with a provisional candidate-route manifest,
+  research spike ends with an official-source ledger, provisional
+  candidate-route manifest,
   role-contract catalog, fixture backlog, telemetry requirements, unresolved
   capability questions, and a go/no-go handoff to G56R-002. It does not depend
   on G56R-002 results, change installed defaults, or claim that a candidate is
   executable before capability preflight.
 - **AC-1.6 — Candidate route and fallback manifest**: Before scored screening,
-  G56R-001 publishes a versioned `agent_route_candidate_manifest` covering all
-  twelve named agents; the two parity additions enter with role contracts
-  derived from the Claude definitions and no current Codex production route.
-  For each agent it records the immutable production route or its recorded
-  absence;
-  every candidate model/effort tuple; required model, modality, custom-agent,
-  tool, skill, MCP, sandbox, and client capabilities; `agent_contract_id`;
-  prompt/instruction hash; candidate rationale; known incompatibilities;
-  required qualification artifacts; and invalidation triggers. It distinguishes
-  project-level candidate eligibility from installation-time availability.
-  G56R-002 later binds the manifest to a versioned runtime capability snapshot
-  and freezes the executable candidate set before G56R-003 scores outcomes.
+  G56R-001 publishes a Schema `2.0.0` `agent_route_candidate_manifest`
+  covering all twelve named agents under the same top-level and record-level
+  contract as CAR-001. It records the immutable comparator, source ledger,
+  effort surfaces, project inputs, role contracts, source-bound candidates,
+  fixtures, telemetry, capability questions, traceability, decisions,
+  historical fact dispositions, and invalidation rules. Platform differences
+  remain values, explicit statuses, nulls, or empty arrays rather than
+  platform-only schema fields. G56R-002 later binds the manifest to a versioned
+  runtime capability snapshot and freezes the executable candidate set before
+  G56R-003 scores outcomes.
 - **AC-1.7 — Current harness baseline**: The research record labels historical
   prompt-emulation results as `non_release_evidence` until G56R-003 replays them
   through the shared materializer with exact treatment and the required skills,
@@ -779,21 +827,25 @@ selection and G56R-011 composes the aggregates.
    required agent, plus the optional helper and no-helper paths. Direct harness
    injection, generic substitution, or unused results do not satisfy release.
 8. Source, generated payload, installer output, installed cache, active
-   guidance, replay evidence, UAT, rollback, and final identities agree. Only
-   capability-based routing claims supported by the pinned client/surface and
-   evidence are published.
+   guidance, replay evidence, UAT, rollback, and final identities agree.
+   Platform claims require current official OpenAI documentation;
+   qualification claims require the pinned client/surface and evaluation
+   evidence.
 
 ## 9. References
 
 - **Technical roadmap:** [codex-gpt-5-6-agent-routing-technical-roadmap.md](ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md)
 - **Roadmap MOC:** [codex-gpt-5-6-agent-routing-roadmap-MOC.md](ai/specs/codex-gpt-5-6-agent-routing-roadmap-MOC.md)
+- **Shared parity contract:** [agent-routing-parity-contract.md](ai/specs/agent-routing-parity-contract.md)
+- **Shared manifest schema:** [agent-route-candidate-manifest.schema.json](ai/research/agent-route-candidate-manifest.schema.json)
 - **Constitution:** [Racecraft Plugins Public Constitution](../.specify/memory/constitution.md)
 - **Project standards:** [AGENTS.md](../AGENTS.md) and [CLAUDE.md](../CLAUDE.md)
-- **Codex custom agents, subagents, model, effort, and skill-trigger behavior:** [Subagents](https://developers.openai.com/codex/subagents)
-- **Codex model discovery, provider capabilities, token usage, and conditional reroute events:** [App server](https://developers.openai.com/codex/app-server)
-- **Codex model and reasoning guidance:** [Models](https://developers.openai.com/codex/models)
-- **Codex configuration fields and inheritance:** [Configuration reference](https://developers.openai.com/codex/config-reference)
-- **Codex non-interactive JSONL and token-usage events:** [Non-interactive mode](https://developers.openai.com/codex/noninteractive)
+- **Official documentation discovery:** [Codex manual](https://developers.openai.com/codex/codex-manual.md)
+- **Codex custom agents and subagents:** [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents)
+- **Codex model discovery, provider capabilities, token usage, and conditional reroute events:** [App server](https://learn.chatgpt.com/docs/app-server)
+- **Codex model and reasoning guidance:** [Models](https://learn.chatgpt.com/docs/models)
+- **Codex configuration fields and inheritance:** [Configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference)
+- **Codex non-interactive JSONL lifecycle and error events:** [Non-interactive mode](https://learn.chatgpt.com/docs/non-interactive-mode)
 - **Current model-selection and prompting guidance:** [Latest model](https://developers.openai.com/api/docs/guides/latest-model)
 - **Cross-platform parity source (Claude agent definitions):**
   `speckit-pro/agents/consensus-synthesizer.md` and

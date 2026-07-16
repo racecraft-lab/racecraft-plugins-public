@@ -570,20 +570,21 @@ class RunnerFoundationTests(unittest.TestCase):
             "docs-site/src/content/docs/reference/source-vs-dist.md",
             "docs/ai/research/tool-agnostic-capability-discovery-spike.md",
         }
-        # CAR-001 candidate-route baseline research-spike deliverables. Research
-        # output under docs/ai/research/ (not a shipped payload, not a public
-        # native-platform claim); allowlisted per the docs/ai/research/ precedent
-        # above so the docs-surface guard admits them as a conscious checkpoint.
-        allowed_car001_research_exact = {
+        # Shared CAR/G56R candidate-route research deliverables. These are
+        # governed planning evidence, not shipped payload or runtime claims.
+        allowed_agent_route_research_exact = {
+            "docs/ai/research/agent-route-candidate-manifest.schema.json",
             "docs/ai/research/claude-agent-route-candidates.md",
             "docs/ai/research/claude-agent-route-candidate-manifest.json",
+            "docs/ai/research/codex-agent-route-candidates.md",
+            "docs/ai/research/codex-agent-route-candidate-manifest.json",
         }
         for path in changed:
             if (
                 path in allowed_exact
                 or path in allowed_xplat008_exact
                 or path in allowed_tool_surface_exact
-                or path in allowed_car001_research_exact
+                or path in allowed_agent_route_research_exact
             ):
                 continue
             if path.startswith("dist/claude/speckit-pro/agents/") and path.endswith(".md"):
