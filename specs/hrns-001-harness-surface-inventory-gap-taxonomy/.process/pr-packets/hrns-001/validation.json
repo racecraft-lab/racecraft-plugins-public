@@ -15,12 +15,27 @@
     }
   ],
   "schema_version": "1.0.0",
+  "source_fingerprints": {
+    "body": {
+      "algorithm": "sha256",
+      "path": "specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001/body.md",
+      "sha256": "e988fd951b9062986ed1276fd4829b1215bbce4d9b0ca0878f9abc44518590b3",
+      "size_bytes": 4512
+    },
+    "packet": {
+      "algorithm": "sha256",
+      "path": "specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001.json",
+      "sha256": "64029bd2fa91ed71bd6e324432404c27cefe71dc09a0d68592bfcb921c2a7e70",
+      "size_bytes": 15394
+    }
+  },
   "status": "passed",
   "stderr_line": "",
   "target": {
     "base_branch": "main",
     "head_branch": "hrns-001-harness-surface-inventory-gap-taxonomy"
   },
-  "timestamp": "2026-07-16T01:09:06Z",
-  "title_value": "fix(speckit-pro): Enable PR packet emission"
+  "timestamp": "2026-07-16T02:05:31Z",
+  "title_value": "fix(speckit-pro): Enable PR packet emission",
+  "validation_result_path": "specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001/validation.json"
 }
