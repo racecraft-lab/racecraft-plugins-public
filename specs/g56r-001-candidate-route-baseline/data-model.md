@@ -19,15 +19,28 @@ Fields:
 
 - `official_source_ledger_id`
 - `source_family`
+- `retrieval_method`
+- `requested_url`
+- `canonical_url`
 - `direct_url`
 - `retrieval_date`
+- `retrieval_timestamp_utc`
+- `http_status`
+- `response_body_bytes`
+- `response_body_sha256`
 - `page_or_surface`
+- `page_or_section_title`
+- `access_status`
+- `conflict_status`
 - `documented_facts`
 - `supported_surfaces`
 - `documented_models`
 - `documented_efforts`
 - `documented_defaults`
 - `conflicts_or_gaps`
+- `source_fact_extracts`
+- `source_fact_extract_sha256`
+- `source_fact_extract_normalization`
 - `claim_bindings`
 - `invalidation_triggers`
 
@@ -35,6 +48,8 @@ Validation rules:
 
 - IDs are unique.
 - Every platform claim binds at least one ledger record.
+- Every source fact used for candidate admission has a bounded normalized
+  official-documentation extract and SHA-256 hash.
 - Repository files cannot populate platform facts.
 - Changed, redirected, inaccessible, withdrawn, or conflicting source material
   is recorded as an invalidation trigger.
@@ -56,6 +71,9 @@ Fields:
 - `instruction_sha256`
 - `full_file_sha256`
 - `hash_source`
+- `instruction_hash_extraction_rule`
+- `instruction_hash_encoding`
+- `hash_validation_status`
 - `role_boundary`
 - `safety_contract`
 - `grounding_contract`
@@ -79,6 +97,27 @@ Validation rules:
 - Two records have `production_route_status=parity_only_absent`.
 - Effective runtime fields are `runtime_verification_needed` in G56R-001.
 - Claude parity-role metadata is always `project_input`.
+- Instruction and full-file hashes are recomputed for all twelve records with
+  documented extraction and encoding rules, and every record has
+  `hash_validation_status=pass`.
+
+## ProjectInputRecord
+
+Fields:
+
+- `project_input_id`
+- `path_or_surface`
+- `source_class`
+- `use`
+- `candidate_authority`
+
+Validation rules:
+
+- Every active route-policy project, skill, runner, payload, cache, fixture, or
+  parity source surface included in AC-1.1 has one stable record.
+- `candidate_authority` is always false in G56R-001.
+- Project input records can define project state but cannot establish platform
+  facts.
 
 ## CandidateRouteRecord
 
@@ -86,14 +125,24 @@ Fields:
 
 - `candidate_route_id`
 - `agent_contract_id`
+- `role_instruction_sha256`
 - `official_source_ledger_ids`
 - `model`
 - `model_reasoning_effort`
 - `effort_surface_records`
+- `effort_surface_record_ids`
 - `role_contract_binding`
 - `required_capabilities`
 - `unsupported_facts`
 - `candidate_status`
+- `candidate_rationale`
+- `source_fact_id`
+- `source_fact_locator`
+- `short_excerpt_anchor`
+- `source_fact_extract`
+- `source_fact_extract_sha256`
+- `source_fact_extract_normalization`
+- `required_qualification_artifacts`
 - `lifecycle_state`
 - `shutdown_date`
 - `replacement_model`
@@ -102,18 +151,35 @@ Fields:
 
 Validation rules:
 
-- Every admitted route binds one role contract and official source support.
+- Every source-bound candidate record binds one role contract and official
+  source support.
+- Every source-bound candidate record records the `instruction_sha256` of its bound role
+  contract so instruction changes trigger rediscovery.
+- Every source-bound candidate record binds a source fact with a bounded
+  normalized official-documentation extract and extract hash.
+- Every source-bound candidate record binds required qualification artifacts:
+  role-specific fixture backlog ID, `runtime_capability_snapshot_id`,
+  `telemetry_profile_id`, `route_resolution_id`, `execution_trace_id`, and
+  `experiment_policy_id` with scorer contract.
 - Unsupported, deprecated, withdrawn, or undocumented facts block admission.
 - No record claims availability, executability, qualification, preference,
   efficiency, fallback behavior, or exact treatment.
 - Candidate status is one of `admitted_for_discovery`,
-  `rejected_undocumented`, `rejected_deprecated_or_withdrawn`,
-  `blocked_pending_capability`, or `project_input_only`.
+  `rejected_undocumented`, `rejected_undocumented_lifecycle_detail`,
+  `rejected_undocumented_for_current_codex_route`,
+  `rejected_deprecated_or_withdrawn`, or `blocked_pending_capability`.
+- Source-bound and admitted records have a rationale that binds an exact source fact to a
+  role-contract need and names remaining incompatibilities or gaps.
+- G56R-002 may add a role/model binding only for a model already present in the
+  G56R-001 official-source ledger, and only when the binding records
+  role-contract rationale or explicit exclusion evidence before G56R-003 freezes
+  the executable candidate set.
 
 ## EffortSurfaceRecord
 
 Fields:
 
+- `effort_surface_record_id`
 - `surface`
 - `source_ledger_id`
 - `setting_or_field`
@@ -126,6 +192,8 @@ Fields:
 Validation rules:
 
 - Effort and default claims are scoped to the documented surface.
+- Documented values and defaults are either exact source-scoped values or an
+  explicit undocumented/runtime-only classification.
 - Absence on one surface cannot be filled from another surface unless the
   official source explicitly links them.
 

@@ -40,7 +40,9 @@ Re-read it before each phase. Its accepted decisions are:
 - Define executable fixture specifications without creating or running live
   fixture payloads.
 - Run the full operational checklist set: `llm-integration`,
-  `data-integrity`, `error-handling`, `security`, and `reliability`.
+  `data-integrity`, `error-handling`, `security`, `observability`, and
+  `reliability`. The reliability checklist carries the resilience review for
+  this documentation-only spike.
 
 Grill Me is human-in-the-loop only. Once autopilot starts, clarification uses
 `$speckit-clarify` and the consensus protocol, never grill-me.
@@ -54,12 +56,12 @@ Grill Me is human-in-the-loop only. Once autopilot starts, clarification uses
 | Specify | `$speckit-specify` | Complete | Created spec and requirements checklist; G1 passed |
 | Clarify | `$speckit-clarify` | Complete | Resolved execution-time source, parity-role, fixture, and handoff ambiguities; G2 passed |
 | Plan | `$speckit-plan` | Complete | Generated plan, research, data model, report contract, quickstart, and G3 pass evidence |
-| Checklist | `$speckit-checklist` | Complete | All five selected domains passed after seed-list drift was resolved |
+| Checklist | `$speckit-checklist` | Complete | All six selected domains passed after seed-list drift was resolved |
 | Tasks | `$speckit-tasks` | Complete | Generated 38 source-first documentation tasks; G5 passed |
 | Analyze | `$speckit-analyze` | Complete | Resolved seed-list drift and passed G6 |
 | Confidence Gate | G6.5 | Complete | Advisory no-data result recorded because Phase 6 ran locally without synthesizer confidence emit |
 | Implement | `$speckit-implement` | Complete | Authored and validated the canonical research report; G7 passed |
-| Post | Post-Implementation | In Progress | Running durable verification, review, UAT, PR, remediation, and retrospective steps |
+| Post | Post-Implementation | Complete | RepoPrompt review loop is clean; G56R-002 remains blocked until merge complete |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -70,7 +72,7 @@ Grill Me is human-in-the-loop only. Once autopilot starts, clarification uses
 | G1 | After Specify | AC-1.1 through AC-1.7 are testable; authority classes and no-runtime boundary are explicit; no unresolved scope markers remain |
 | G2 | After Clarify | Candidate admission, unsupported facts, parity-role divergence, source invalidation, and G56R-002 handoff rules are unambiguous |
 | G3 | After Plan | One-report architecture, stable IDs, source snapshot, twelve-role inventory, fixture backlog, and deterministic checks are fully planned |
-| G4 | After Checklist | All true gaps from the five selected checklist domains are remediated or explicitly rejected as out of scope |
+| G4 | After Checklist | All true gaps from the six selected checklist domains are remediated or explicitly rejected as out of scope |
 | G5 | After Tasks | Every task maps to AC-1.*, uses official evidence or labeled project input, and creates no runtime behavior |
 | G6 | After Analyze | No critical or high authority, traceability, count, dependency-cycle, or scope-leakage finding remains |
 | G6.5 | Before Implement | Advisory confidence gate records the current evidence posture or no-data outcome without weakening G7 |
@@ -197,15 +199,16 @@ that they remain eligible or complete:
 - `gpt-5.3-codex-spark`
 
 Every retained or added candidate must have direct execution-snapshot official
-support, a role-contract rationale, and an explicit model/effort tuple. Every
+support, a role-contract rationale, and either an explicit model/effort tuple
+or blocked model/effort tuple status pending G56R-002 capability discovery. Every
 withdrawn, conflicting, or unsupported seed entry must be removed from the
 candidate set or marked `undocumented`; local availability cannot restore it.
 
 ### Success Criteria Summary
 
 - [ ] AC-1.1: One dated record inventories all twelve named agents and every active project surface that encodes or consumes their route policy, all labeled `project_input`.
-- [ ] AC-1.2: The official-source ledger records current official URLs, retrieval dates, supported surfaces, documented facts, conflicts, and `undocumented` gaps.
-- [ ] AC-1.3: Every agent has an immutable production route or recorded absence, a role contract, document-eligible candidate tuples, and a fixture backlog.
+- [ ] AC-1.2: The official-source ledger records source family, retrieval method, requested/canonical official URLs, retrieval dates, durable retrieval evidence, page or section locators, short excerpt anchors, bounded source-fact extracts, extract hashes, supported surfaces, documented facts, conflicts, and `undocumented` gaps.
+- [ ] AC-1.3: Every agent has an immutable production route or recorded absence, a role contract, source-bound candidate records with blocked executable tuple status, and a fixture backlog.
 - [ ] AC-1.4: Platform facts, project inputs, proposed policy, runtime observations, qualification evidence, inferences, and assumptions are visibly separated.
 - [ ] AC-1.5: The spike independently produces the source ledger, role catalog, candidate manifest, fixture backlog, telemetry requirements, capability questions, and go/no-go handoff without depending on G56R-002.
 - [ ] AC-1.6: A versioned `agent_route_candidate_manifest` covers all twelve agents and binds every provisional route to `official_source_ledger_id` and `agent_contract_id` without claiming executability or preference.
@@ -268,8 +271,8 @@ state but cannot establish Codex platform facts or admit model/effort routes.
   contract, candidate, and fixture identifiers.
 - Define three current and nine missing fixtures as executable specifications;
   do not create or run live fixture payloads.
-- Require `llm-integration`, `data-integrity`, `error-handling`, `security`, and
-  `reliability` requirement-quality checklists.
+- Require `llm-integration`, `data-integrity`, `error-handling`, `security`,
+  `observability`, and `reliability` requirement-quality checklists.
 
 ### Out of Scope
 - Agent TOML, installer, prompt, skill, payload, cache, default, resolver, or
@@ -422,7 +425,7 @@ $speckit-plan
 ## Phase 4: Domain Checklists
 
 **When to run:** After `$speckit-plan`. The user explicitly selected the full
-operational set. Run all five enriched checklists even though the general
+operational set. Run all six enriched checklists even though the general
 guidance normally recommends two to four.
 
 ### Checklist Prompts
@@ -491,7 +494,25 @@ Focus on G56R-001 requirements:
   field needed to preserve their safety contracts.
 ```
 
-#### 5. Reliability Checklist
+#### 5. Observability Checklist
+
+```text
+$speckit-checklist observability
+
+Focus on G56R-001 requirements:
+- Source-audit metadata: source family, retrieval method, requested URL,
+  canonical URL, retrieval timestamp, and invalidation triggers.
+- Telemetry field coverage, terminal-state evidence, and missing-field
+  classification for G56R-002.
+- Traceability from platform claims to official source IDs and from project
+  inputs to route-policy surfaces.
+- Reviewability and changed-file evidence that proves no runtime route policy
+  changed.
+- Pay special attention to lifecycle gaps, not-recorded fields, and
+  observability evidence that is deferred rather than silently assumed.
+```
+
+#### 6. Reliability Checklist
 
 ```text
 $speckit-checklist reliability
@@ -517,6 +538,7 @@ Focus on G56R-001 requirements:
 | Data integrity | 15 | 0 | No unresolved data-integrity requirement defects |
 | Error handling | 15 | 0 | No unresolved error-handling requirement defects |
 | Security | 15 | 0 | No unresolved security requirement defects |
+| Observability | 15 | 0 | No unresolved observability requirement defects |
 | Reliability | 15 | 0 | No unresolved reliability requirement defects |
 
 All true gaps must update `spec.md` or `plan.md`, then the affected checklist
@@ -524,11 +546,16 @@ must be rerun before G4 passes.
 
 G4 passed with zero checklist gap markers.
 
+Chronology note: Phase 4 originally completed on `2026-07-15T23:29:14Z`.
+`observability.md` was added during later review remediation on 2026-07-16 to
+complete the six-domain operational checklist taxonomy, then revalidated with
+the structural checks, Layer 1, and full suite.
+
 ---
 
 ## Phase 5: Tasks
 
-**When to run:** After all five checklist domains are complete and true gaps
+**When to run:** After all six checklist domains are complete and true gaps
 are resolved. Output: `specs/g56r-001-candidate-route-baseline/tasks.md`.
 
 ### Tasks Prompt
@@ -703,7 +730,7 @@ $speckit-implement
 | Phase | Tasks | Completed | Notes |
 |---|---|---|---|
 | Foundation and official evidence | Complete | Complete | Execution-time source snapshot and report skeleton completed |
-| Role contracts and candidates | Complete | Complete | Twelve contracts and provisional source-bound routes completed |
+| Role contracts and candidates | Complete | Complete | Twelve contracts and provisional source-bound/blocked model candidates completed |
 | Fixture and G56R-002 handoff | Complete | Complete | Exact fixture inventory, telemetry/capability backlog, and strict decision completed |
 | Verification | Complete | Complete | G7 passed; `git diff --check`, Layer 1, and full suite passed |
 
@@ -716,16 +743,16 @@ $speckit-implement
 | Post: Doctor Extension Check | Complete | Parent fallback health check passed |
 | Post: Verify Implementation | Complete | G7 passed with all 38 tasks complete |
 | Post: Verify Tasks Phantom Check | Complete | `verify-tasks-report.md` found no phantom completions |
-| Post: Code Review | Complete | RepoPrompt review dispatch failed with transport closed; parent fallback found no blocking issues |
+| Post: Code Review | Complete | RepoPrompt reviews through `review-g56r-baseline-B40534` returned actionable findings; clean rerun `review-g56r-baseline-EE3373` returned no findings |
 | Post: Integration Suite | Complete | Final full suite passed 2768/2768 |
-| Post: Reviewability Diff Gate | Complete | Plan-target reviewability gate passed; diff remains docs/process only |
+| Post: Reviewability Diff Gate | Complete | Setup-mode runner gate passed; actual branch-diff backstop is 25 docs/process/test-guard files, warning-only above the 15-file warning threshold, and not above the 25-file block threshold |
 | Post: Self-Review | Complete | Four-question self-review recorded below |
 | Post: UAT Runbook Generation | Skipped | No committed runbook exists; `generate-uat-skeleton` is deferred |
-| Post: Final Reviewability Backstop | Complete | Deferred helper boundary honored; current reviewability evidence passed before PR packet checks |
+| Post: Final Reviewability Backstop | Complete | Deferred helper boundary honored; current diff evidence is warning-only; PR side effects remain blocked until a valid packet exists |
 | Post: PR Packet/Body Generation | Skipped | No current feature-local PR packet exists; `pr-packet-output` is deferred |
 | Post: PR Body Generation | Skipped | Packet-owned body file is absent because packet generation is deferred |
 | Post: PR Creation | Skipped | No PR side effect allowed without a valid packet |
-| Post: Review Remediation | Skipped | No PR was opened, so no review threads exist |
+| Post: Review Remediation | Complete | All RepoPrompt findings remediated; clean rerun `review-g56r-baseline-EE3373` returned no findings |
 | Post: Retrospective | Complete | `retrospective.md` saved with no proposed spec changes |
 
 ---
@@ -739,18 +766,19 @@ $speckit-implement
 | Doctor Extension Check | Pass: templates 5/5, agent directory present, 29 local skills, runner manifest valid, constitution present, feature artifacts complete |
 | Verify Implementation | Pass: G7, marker search, exact counts, scope review, `git diff --check`, Layer 1, and full suite passed |
 | Verify Tasks Phantom Check | Pass: 38/38 verified in `specs/g56r-001-candidate-route-baseline/verify-tasks-report.md` |
-| Code Review | No blocking findings found in parent fallback review; RepoPrompt transport was unavailable |
+| Code Review | Pass: RepoPrompt reviews through `review-g56r-baseline-B40534` returned findings and were remediated; clean rerun `review-g56r-baseline-EE3373` returned no findings against the branch diff |
 | Integration Suite | Pass: `python3 tests/speckit-pro/run-all.py` reported 2768/2768 |
-| Reviewability Diff Gate | Pass: `reviewability-gate` setup mode passed against `specs/g56r-001-candidate-route-baseline/plan.md` |
-| Final Reviewability Backstop | Proceeded for validation, but PR side effects remained blocked by missing packet |
+| Reviewability Diff Gate | Warn/pass: installed `reviewability-gate` runner supports setup mode only and passed against `specs/g56r-001-candidate-route-baseline/plan.md`; actual branch-diff backstop records 25 docs/process/test-guard files, zero runtime production files, and a warning for total changed files over the 15-file warning threshold but not over the 25-file block threshold |
+| Final Reviewability Backstop | Proceeded for validation; PR side effects remain blocked until a valid packet exists |
 | PR Packet/Body Generation | Skipped because no `specs/g56r-001-candidate-route-baseline/.process/pr-packets/` packet exists and packet output is deferred |
 
 ### Self-Review
 
-**Tests executed?** No project build, typecheck, lint, or unit-test command is
-documented for this worktree. The relevant gates were run directly: G7 passed,
-`git diff --check` passed, Layer 1 passed 1428/1428, and the final full suite
-passed 2768/2768.
+**Tests executed?** No project build, typecheck, or lint command is documented
+for this worktree. The relevant gates were run directly: G7 passed,
+`git diff --check` passed, Layer 1 passed 1428/1428, the focused
+`test-speckit-pro-runner.py` guard passed 11/11 after remediation, and the
+final full suite passed 2768/2768 after review remediation.
 
 **Edge cases?** G56R-001 is documentation-only. The report covers source
 redirect/invalidation, unsupported and historical seed exclusion, parity-role
@@ -769,18 +797,18 @@ packet exists.
 ## Post-Implementation Checklist
 
 - [x] All tasks are complete in `tasks.md`.
-- [x] `docs/ai/research/codex-agent-route-candidates.md` is the only new implementation artifact outside the feature planning directory.
-- [x] The official-source ledger is dated, versioned, revalidated at execution, and contains direct official URLs for every platform claim.
-- [x] Every repository, payload, cache, fixture, and Claude-definition fact is labeled `project_input`.
+- [x] `docs/ai/research/codex-agent-route-candidates.md` is the only new implementation artifact outside the feature planning directory; review remediation added one checklist artifact inside the feature directory.
+- [x] The official-source ledger is dated, versioned, revalidated at execution, and contains source family, retrieval method, requested URLs, canonical official URLs, durable retrieval evidence, page or section locators, short excerpt anchors, bounded source-fact extracts, extract hashes, documented facts, and invalidation triggers for every platform claim.
+- [x] Every repository, route-policy skill/runner surface, payload, cache, fixture, and Claude-definition fact is labeled `project_input`.
 - [x] Exactly twelve unique `agent_contract_id` records exist and cover the named catalog.
-- [x] Every provisional `candidate_route_id` binds one `official_source_ledger_id`, one `agent_contract_id`, an explicit model/effort tuple, and complete contract requirements.
+- [x] Every provisional `candidate_route_id` binds official source IDs, one `agent_contract_id`, explicit effort-surface records, blocked model/effort tuple status where G56R-002 must discover supported efforts, and complete contract requirements.
 - [x] No candidate relies on an `undocumented` fact or claims availability, executability, qualification, preference, or fallback order.
 - [x] The fixture backlog contains exactly three current and nine missing records with executable specifications and no new payloads.
-- [x] Telemetry requirements, capability questions, invalidation triggers, and the strict G56R-002 go/no-go result are complete.
+- [x] Telemetry requirements, terminal-state fields, missing-field classification, capability questions, invalidation triggers, and the strict G56R-002 go/no-go result are complete.
 - [x] Historical prompt-emulation evidence is labeled `non_release_evidence`.
-- [x] All five user-selected requirement-quality checklists have zero unresolved true gaps.
+- [x] All six user-selected requirement-quality checklists have zero unresolved true gaps.
 - [x] Relative links, stable IDs, counts, and source bindings pass focused validation.
-- [x] `git diff --check` passes and changed-file review confirms no runtime, agent, installer, payload, cache, fixture, or version change.
+- [x] `git diff --check` passes and changed-file review confirms no runtime, agent, installer, payload, cache, fixture payload, generated artifact, schema, helper script, or version change.
 - [x] `python3 tests/speckit-pro/run-all.py --layer 1` passes.
 - [x] `python3 tests/speckit-pro/run-all.py` passes with zero failures.
 
@@ -801,7 +829,7 @@ specs/g56r-001-candidate-route-baseline/
   research.md                              # Planning decisions
   data-model.md                            # Record definitions when emitted by preset
   contracts/                               # Planning-only contracts when required
-  checklists/                              # Requirements plus five domain audits
+  checklists/                              # Requirements plus six domain audits
   tasks.md                                 # Ordered documentation tasks
 speckit-pro/codex-agents/                  # Read-only current Codex role inputs
 speckit-pro/agents/                        # Read-only Claude parity-role inputs
@@ -814,8 +842,10 @@ tests/speckit-pro/layer6-efficiency/       # Read-only fixture-gap inputs
 
 Populate this section only after G7:
 
-- Canonical report commit: `b776814a`
+- Initial canonical report commit: `b776814a`
+- Final verified report content SHA-256: `272a495da0adf429acbaa6bfb759ec03a0afa7f73eaf49ee76270b3fbba83602`
 - Frozen `official_source_ledger_id`: `OSL-001` through `OSL-009`
+- Frozen `effort_surface_record_id`: `G56R-001-ESR-001` through `G56R-001-ESR-005`
 - `agent_route_candidate_manifest` version: `agent_route_candidate_manifest.v0.1`
 - G56R-002 handoff decision: `GO` for capability discovery and telemetry profiling only; `NO-GO` for executable candidate set, route qualification, installer behavior, resolver behavior, preferred routes, and fallback policy
 - Verification summary: G7 passed with all 38 tasks complete; `git diff --check`, Layer 1, and full suite passed

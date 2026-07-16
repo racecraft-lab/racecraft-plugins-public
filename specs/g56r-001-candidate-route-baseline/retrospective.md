@@ -14,15 +14,18 @@ critical_findings: 0
 G56R-001 completed as a documentation-only research spike. The implementation
 produced one canonical report and did not change runtime, agent, installer,
 payload, cache, fixture payload, schema, helper script, generated artifact, or
-version surfaces.
+version surfaces. Review remediation also updates the repository changed-surface
+guard allowlist for the new Codex research report path.
 
 ## Requirement Coverage
 
 | Area | Result |
 |---|---|
 | Official-source ledger | Complete; 9 records |
+| Effort-surface records | Complete; 5 records |
+| Project-input inventory | Complete; 16 stable records |
 | Role contracts | Complete; 12 records |
-| Candidate route records | Complete; 12 provisional records |
+| Candidate route records | Complete; 23 provisional, comparator, and parity records |
 | Fixture backlog | Complete; 3 current and 9 missing records |
 | G56R-002 handoff | Complete; capability questions, telemetry needs, invalidation rules, and strict go/no-go decision |
 | No-runtime boundary | Preserved |
@@ -42,13 +45,17 @@ version surfaces.
 
 | Planned architecture | Actual result | Drift |
 |---|---|---|
-| One canonical report under `docs/ai/research/` | One report created at `docs/ai/research/codex-agent-route-candidates.md` | None |
+| One canonical implementation report under `docs/ai/research/` | One report created at `docs/ai/research/codex-agent-route-candidates.md`; review remediation also required roadmap, PRD, workflow, autopilot state, and feature-package updates to keep the documentation contract consistent | Accepted docs/process scope expansion; runtime production files remain zero |
 | Planning artifacts under the feature directory | Feature specs, checklists, tasks, verify-tasks report, and retrospective remain under the feature directory | None |
-| No runtime or payload changes | No runtime or payload changes were made | None |
+| No runtime or payload changes | No runtime or payload changes were made; one unit-test guard allowlist admits the new research report path | None |
 
 ## Significant Deviations
 
-None.
+The actual branch diff is 25 docs/process/test-guard files rather than the
+initial one-report implementation estimate. The expansion is intentional review
+remediation and remains within the documented reviewability backstop because it
+adds no runtime, installer, payload, cache, fixture payload, schema, helper
+script, generated artifact, or version changes.
 
 ## Process Notes
 
@@ -58,8 +65,10 @@ None.
 - The full suite initially failed only because workflow state contained raw
   local path and agent-run identifiers. The state was redacted to symbolic
   labels, the focused privacy scan passed, and the full suite passed on rerun.
-- RepoPrompt review tools were unavailable during Post code review because the
-  tool transport closed. Parent-session review was used as fallback.
+- RepoPrompt reviews later ran successfully through `rpce-cli` and returned
+  findings. This branch remediates the report, workflow state, checklist set,
+  roadmap, data model, contract, and verification records before the final
+  clean review pass.
 
 ## Constitution Compliance
 
@@ -71,8 +80,9 @@ None.
 
 ## Lessons Learned
 
-- For documentation-only specs, reviewability evidence should target the plan
-  and declared implementation surface, not the full workflow log.
+- For documentation-only specs, setup reviewability evidence should target the
+  plan and declared implementation surface; post-review records also need an
+  actual branch-diff backstop when remediation expands process files.
 - Workflow state should avoid raw local paths and agent-run identifiers because
   repository privacy scanning treats them as sensitive.
 - PR creation remains dependent on a packet-owned PR artifact; without that

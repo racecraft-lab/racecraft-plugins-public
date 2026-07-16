@@ -4,7 +4,7 @@ related:
   - "[Codex Agent Model Routing and Graceful Fallback PRD](../../prd-codex-gpt-5-6-agent-routing.md)"
   - "[Shared Agent Routing Evidence Parity Contract](agent-routing-parity-contract.md)"
   - "[Shared Candidate Manifest Schema](../research/agent-route-candidate-manifest.schema.json)"
-status: "Draft; G56R-001 in review on PR #360; blocked on evidence foundation"
+status: "Draft; G56R-001 in review on PR #360; stacked on evidence foundation PR #362"
 rank:
 spec_id: "codex-gpt-5-6-agent-routing"
 structureVersion: 1
@@ -23,8 +23,8 @@ schema-v2 candidate-manifest shape before downstream specifications begin.
 ### Candidate and Role Contracts
 
 Why: Admit model and effort candidates only from official OpenAI documentation,
-then pair them with the immutable project safety, tool, mutation, and output
-contracts for every named agent.
+freeze source-scoped effort records, then pair them with the immutable project
+safety, tool, mutation, and output contracts for every named agent.
 
 - [G56R-001 Candidate Route Baseline and Role Contracts](codex-gpt-5-6-agent-routing-technical-roadmap.md#g56r-001-candidate-route-baseline-and-role-contracts)
 

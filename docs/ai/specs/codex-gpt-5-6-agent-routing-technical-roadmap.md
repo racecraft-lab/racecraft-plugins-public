@@ -15,8 +15,8 @@ is prepared for `$speckit-scaffold-spec G56R-NNN`.
 **Shared manifest schema:** [../research/agent-route-candidate-manifest.schema.json](../research/agent-route-candidate-manifest.schema.json)
 **Spec ID prefix:** `G56R-###`
 **Proposed branch:** `codex/agent-routing-fallback`
-**Status:** Draft; G56R-001 in review on PR #360; blocked on the shared
-official-source evidence foundation
+**Status:** Draft; G56R-001 in review on PR #360; stacked on the shared
+official-source evidence foundation in PR #362
 
 **Legacy identifier note:** `G56R` and the existing filenames are retained for
 traceability. They do not limit the candidate catalog to GPT-5.6.
@@ -49,8 +49,8 @@ the shared official-source evidence foundation before it can complete.
 A route-agnostic Python `install-codex-agents` helper is active for safe static
 agent refreshes. G56R-006 later extends that baseline with capability-aware
 resolution, materialization, and atomic policy installation; it must not
-reintroduce a deleted Bash helper. The baseline's optional `gpt-5.4` rewrite is
-legacy static compatibility only: it does not qualify model routes or runtime
+reintroduce a deleted Bash helper. Any legacy static model rewrite behavior is
+project-input compatibility only: it does not qualify model routes or runtime
 capabilities, and G56R-006 replaces it with strict route-aware resolution.
 
 ### Evidence authority
@@ -68,8 +68,12 @@ downstream specifications.
 
 G56R-001 starts from the current official Codex model guidance retrieved
 2026-07-15. This table is a source ledger, not a pre-approved route table and not
-an agent-to-model assignment. G56R-001 maps documented candidates to project
-role contracts; G56R-002 may only narrow that set by runtime availability.
+an agent-to-model assignment. G56R-001 maps documented model candidates to
+project role contracts and records executable tuple status as blocked when the
+surface-supported effort set must be discovered. G56R-002 may expand listed
+source-bound model records, or newly recorded role/model bindings for models
+already present in this official-source ledger, into supported model/effort
+tuples and narrow that set by runtime availability before the G56R-003 freeze.
 
 | Official model ID | Documented positioning | Candidate use |
 |---|---|---|
@@ -77,7 +81,7 @@ role contracts; G56R-002 may only narrow that set by runtime availability.
 | `gpt-5.6-terra` | Everyday work requiring strong reasoning and tool use | Candidate for roles whose project contract matches that documented workload |
 | `gpt-5.6-luna` | Clear, specific, repeatable, or high-volume work | Candidate for roles whose project contract matches that documented workload |
 | `gpt-5.5` | Previous-generation model for complex coding, computer use, knowledge work, and research | Immutable comparator where project inventory records it; candidate only while officially documented |
-| `gpt-5.3-codex-spark` | Text-only, low-latency research preview with documented surface and account constraints | Optional-helper candidate only when its documented constraints and role contract are satisfied |
+| `gpt-5.3-codex-spark` | Text-only, low-latency research preview | Optional-helper candidate only when runtime availability, text-only suitability, and role contract are satisfied |
 
 For every admitted model, effort search begins at the documented default and
 uses only effort values documented for the pinned surface and returned by the
@@ -106,9 +110,10 @@ represented as a native custom-agent TOML fallback field.
 | Identity | Created by | Required contents |
 |---|---|---|
 | `agent_contract_id` | G56R-001 | Named role plus safety, grounding, mutation, tool, and output contracts |
-| `official_source_ledger_id` | G56R-001 | Official URLs, retrieval dates, supported surfaces, exact documented facts, undocumented gaps, and source invalidation rules |
-| `candidate_route_id` | G56R-001/G56R-002 | Candidate model/effort, official-source-ledger binding, contract and instruction hashes, required capabilities, and rationale |
-| `telemetry_profile_id` | G56R-002 | Pinned client/surface and mandatory, conditional, derived, and unavailable fields |
+| `official_source_ledger_id` | G56R-001 | Source family, retrieval method, requested/canonical official URLs, retrieval dates, supported surfaces, exact documented facts, undocumented gaps, and source invalidation rules |
+| `effort_surface_record_id` | G56R-001 | Source-scoped effort/default evidence for Codex model guidance, custom-agent TOML, config TOML, app-server catalog, and API guidance surfaces |
+| `candidate_route_id` | G56R-001/G56R-002 | G56R-001 source-bound model candidate or G56R-002 executable model/effort tuple, effort-surface record binding, official-source-ledger binding, contract and instruction hashes, required capabilities, and rationale |
+| `telemetry_profile_id` | G56R-002 | Pinned client/surface and fields classified as `stable_native`, `experimental_native`, `derived_from_controlled_configuration`, `conditional`, `unavailable`, `not_applicable`, or `undocumented` |
 | `runtime_capability_snapshot_id` | G56R-002 or installer preflight | Client/surface, available model IDs, efforts, relevant capabilities, method, timestamp, and raw environment observation; never candidate authority |
 | `experiment_policy_id` | G56R-003 | Corpora, partitions, scorers, analysis plan, budgets, terminal policy, and treatment controls |
 | `execution_trace_id` | G56R-003 | Assigned route, effective-route evidence, result, raw resource observations, retries, terminal state, and treatment integrity |
@@ -206,8 +211,8 @@ G56R-006 Resolver, Materializer, Installer, and Strict Override
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| G56R-001 | Candidate Route Baseline and Role Contracts | In Review | [.process/G56R-001-workflow.md](.process/G56R-001-workflow.md) | Rebase PR #360 onto the evidence foundation |
-| G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | Pending | - | Blocked by G56R-001 |
+| G56R-001 | Candidate Route Baseline and Role Contracts | In Review | [.process/G56R-001-workflow.md](.process/G56R-001-workflow.md) | Review schema-v2 evidence parity and merge after PR #362 |
+| G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | Pending | - | Blocked by G56R-001 review and merge |
 | G56R-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Pending | - | Blocked by G56R-002 |
 | G56R-004 | Policy Controls and Adaptive Comparators | Pending | - | Blocked by G56R-003 |
 | G56R-005 | Model Availability, Fallback, and Recovery Simulation | Pending | - | Blocked by G56R-004 |
@@ -244,34 +249,39 @@ Budget result: research spike; time-boxed, LOC sizing not applicable
   recorded absence, instructions, role boundary, safety/grounding/
   mutation contract, output contract, expected tool/skill/MCP use, supported
   client assumptions, and representative tasks.
-- Label every repository, payload, cache, fixture, and Claude-definition fact as
-  `project_input`; none may establish a Codex model, effort, field, capability,
-  or native behavior.
+- Label every repository, route-policy skill/runner surface, payload, cache,
+  fixture, and Claude-definition fact as `project_input`; none may establish a
+  Codex model, effort, field, capability, or native behavior.
 - Publish a versioned `agent_route_candidate_manifest` covering all twelve
-  named agents. Create `official_source_ledger_id`, `agent_contract_id`, and
-  provisional `candidate_route_id` records. Each candidate binds the ledger and
-  records an explicit model/effort tuple, instruction hash, required model and
-  modality capabilities, tool/skill/MCP contract, sandbox/mutation contract,
-  rationale, known incompatibilities, evidence requirements, and invalidation
-  triggers.
+  named agents. Create `official_source_ledger_id`,
+  `effort_surface_record_id`, `agent_contract_id`, and provisional
+  `candidate_route_id` records. Each candidate binds the ledger and
+  source-scoped effort records, and records either an officially proven
+  model/effort tuple or blocked executable-tuple status pending G56R-002
+  capability discovery, plus instruction hash, required model and modality
+  capabilities, tool/skill/MCP contract, sandbox/mutation contract, rationale,
+  known incompatibilities, evidence requirements, and invalidation triggers.
 - Admit project-level candidates only from the official-source ledger and bind
-  every candidate to official URLs, retrieval dates, documented positioning,
-  supported surfaces, and documented constraints. Distinguish that eligibility
-  from installation-time availability. Record role-fit hypotheses and fallback-
+  every candidate to source family, retrieval method, requested/canonical
+  official URLs, retrieval dates, documented positioning, supported surfaces,
+  source-scoped effort/default records, and documented constraints. Distinguish
+  that eligibility from
+  installation-time availability. Record role-fit hypotheses and fallback-
   candidate requirements without claiming that any candidate is executable or
   preferred.
 - Record the immutable production-route inputs that G56R-003 will bind into the
   sole candidate and integrated comparator before screening. This research
   output does not depend on G56R-002 or G56R-003 completion evidence.
 - Build the sole platform-fact table from official Codex model, custom-agent,
-  configuration, app-server, and non-interactive documentation. Record URL,
-  retrieval date, surface, exact documented fact, and affected roadmap claim.
-  Label every unsupported behavior `undocumented`; it may remain an open
-  question or proposed SpecKit Pro policy but cannot support a candidate or
-  platform claim.
-- Deliver the role contracts, provisional candidate manifest, fixture backlog,
-  three-current/nine-missing fixture inventory, telemetry requirements,
-  capability questions, and independent go/no-go handoff to G56R-002.
+  configuration, app-server, and non-interactive documentation. Record source
+  family, retrieval method, requested/canonical URL, retrieval date, surface,
+  exact documented fact, and affected roadmap claim. Label every unsupported
+  behavior `undocumented`; it may remain an open question or proposed SpecKit
+  Pro policy but cannot support a candidate or platform claim.
+- Deliver the role contracts, effort-surface records, provisional candidate
+  manifest, fixture backlog, three-current/nine-missing fixture inventory,
+  telemetry requirements, capability questions, and independent go/no-go
+  handoff to G56R-002.
 - INVEST rationale: the spike closes the research uncertainty that blocks safe
   capability probing and ends without depending on later telemetry results.
 
@@ -314,16 +324,19 @@ Budget result: re-estimate at scaffold; synthetic traces precede live use
   environment only; it cannot establish platform support, effort support, or
   candidate eligibility. An unresolved model or effort is unavailable for
   qualification.
-- Bind provisional candidates to the capability snapshot, complete their
-  `candidate_route_id` records, and freeze the executable set before G56R-003
-  scores outcomes.
+- Bind provisional candidates to the capability snapshot, expand G56R-001
+  source-bound model candidates and any newly recorded official-ledger-bound
+  role/model bindings into supported executable model/effort tuples, complete
+  their `candidate_route_id` records, and freeze the executable set before
+  G56R-003 scores outcomes.
 - Publish `telemetry_profile_id` for the pinned client and surface. Classify each
   desired field as `stable_native`, `experimental_native`,
-  `derived_from_controlled_configuration`, or `unavailable`; state the source,
-  completeness rule, and claims each class may support. Never fabricate returned
-  effort, effective model, speed, token categories, or parent attribution. A
-  native classification requires an official field-level citation for the
-  pinned surface; controlled configuration proves requested assignment only.
+  `derived_from_controlled_configuration`, `conditional`, `unavailable`,
+  `not_applicable`, or `undocumented`; state the source, completeness rule, and
+  claims each class may support. Never fabricate returned effort, effective
+  model, speed, token categories, or parent attribution. A native classification
+  requires an official field-level citation for the pinned surface; controlled
+  configuration proves requested assignment only.
 - Define `route_resolution_id` and exact-treatment replay schemas for candidate route, named
   agent, explicit model and effort, instruction hash, sandbox and mutation
   class, expected skills/MCP/tools, parent configuration, client, controlled

@@ -87,9 +87,9 @@ Current official OpenAI documentation establishes these platform facts:
 - Applicable project or skill instructions can request named subagent
   delegation.
 - The [non-interactive-mode documentation](https://learn.chatgpt.com/docs/non-interactive-mode)
-  defines JSONL lifecycle, item, error, and token-usage events for
-  `codex exec --json`; it does not document universal effective-model or
-  effective-effort fields.
+  defines JSONL lifecycle, item, and error events for `codex exec --json`; it
+  does not document universal effective-model, effective-effort, or token-usage
+  fields.
 
 The following are proposed SpecKit Pro policies, not claims about native Codex
 fallback behavior:
@@ -212,9 +212,10 @@ depend on final aggregates that do not yet exist.
 | Identity | Created by | Required contents |
 |---|---|---|
 | `agent_contract_id` | G56R-001 | Named role plus safety, grounding, mutation, tool, and output contract |
-| `official_source_ledger_id` | G56R-001 | Official URLs, retrieval dates, supported surfaces, exact documented facts, undocumented gaps, and source invalidation rules |
-| `candidate_route_id` | G56R-001/G56R-002 | Candidate model/effort tuple, official-source-ledger binding, contract and instruction hashes, required capabilities, rationale, and invalidation rules |
-| `telemetry_profile_id` | G56R-002 | Pinned client/surface and mandatory, conditional, derived, and unavailable telemetry fields |
+| `official_source_ledger_id` | G56R-001 | Source family, retrieval method, requested/canonical official URLs, retrieval dates, supported surfaces, exact documented facts, undocumented gaps, and source invalidation rules |
+| `effort_surface_record_id` | G56R-001 | Source-scoped effort/default evidence for model guidance, custom-agent TOML, config TOML, app-server catalog, and API guidance surfaces |
+| `candidate_route_id` | G56R-001/G56R-002 | G56R-001 source-bound model candidate or G56R-002 executable model/effort tuple, effort-surface record binding, official-source-ledger binding, contract and instruction hashes, required capabilities, rationale, and invalidation rules |
+| `telemetry_profile_id` | G56R-002 | Pinned client/surface and telemetry fields classified as `stable_native`, `experimental_native`, `derived_from_controlled_configuration`, `conditional`, `unavailable`, `not_applicable`, or `undocumented` |
 | `runtime_capability_snapshot_id` | G56R-002 or installer preflight | Client/surface, available models, efforts and capabilities, timestamp, retrieval/probe method, and raw environment observation; never candidate authority |
 | `experiment_policy_id` | G56R-003 | Corpus and partitions, scorer, analysis plan, budgets, terminal policy, and treatment controls |
 | `execution_trace_id` | G56R-003 | Assigned route, effective-route evidence, task outcome, resource evidence, retries, terminal state, and treatment integrity |
@@ -257,7 +258,11 @@ selection and G56R-011 composes the aggregates.
   non-executable until documented model support, surface-specific effort
   support, environment availability, and exact treatment are verified. Runtime
   discovery and probes may narrow availability but cannot introduce a model or
-  effort outside the official ledger. A route is excluded only for recorded
+  effort outside the official ledger. Before G56R-003 freezes the executable
+  set, G56R-002 may add a role/model binding only for a model already present
+  in the G56R-001 ledger and only with role-contract rationale or explicit
+  exclusion evidence. It cannot introduce a model ID outside that ledger.
+  A model, effort, or role/model binding is excluded only for recorded
   incompatibility, contract failure, or predeclared dominance evidence.
 - **AC-1.4**: Platform facts, reasonable inferences, proposed SpecKit Pro
   policies, project inputs, runtime observations, qualification evidence, and
@@ -280,9 +285,14 @@ selection and G56R-011 composes the aggregates.
   fixtures, telemetry, capability questions, traceability, decisions,
   historical fact dispositions, and invalidation rules. Platform differences
   remain values, explicit statuses, nulls, or empty arrays rather than
-  platform-only schema fields. G56R-002 later binds the manifest to a versioned
-  runtime capability snapshot and freezes the executable candidate set before
-  G56R-003 scores outcomes.
+  platform-only schema fields. Every candidate binds source-ledger and effort-
+  surface records and remains non-executable pending capability verification
+  and qualification. The two parity additions retain role contracts derived
+  from Claude definitions and record no current Codex production route.
+  G56R-002 later binds the manifest to a versioned runtime capability snapshot,
+  expands listed source-bound candidates and any newly justified ledger-bound
+  role/model bindings into supported model/effort tuples,
+  and freezes the executable candidate set before G56R-003 scores outcomes.
 - **AC-1.7 — Current harness baseline**: The research record labels historical
   prompt-emulation results as `non_release_evidence` until G56R-003 replays them
   through the shared materializer with exact treatment and the required skills,
@@ -326,10 +336,12 @@ selection and G56R-011 composes the aggregates.
   the run non-scorable as qualification evidence for the requested route.
 - **AC-2.4 — Telemetry capability profile**: G56R-002 publishes a versioned
   telemetry capability profile for the pinned client and surface. Qualification
-  classifies a field as native only when the official-source ledger documents
-  that field for the pinned surface; every other desired platform field is
-  `unavailable`. Controlled configuration may prove requested assignment but
-  cannot prove an undocumented returned or effective value. Qualification
+  classifies each desired field as `stable_native`, `experimental_native`,
+  `derived_from_controlled_configuration`, `conditional`, `unavailable`,
+  `not_applicable`, or `undocumented`. A native class requires the
+  official-source ledger to document that field for the pinned surface.
+  Controlled configuration may prove requested assignment but cannot prove an
+  undocumented returned or effective value. Qualification
   requires complete evidence only for fields classified as mandatory by that
   profile: successful treatment assignment, effective route or an approved
   proof of configured route with no unapproved reroute, task outcome, duration,
@@ -769,10 +781,12 @@ selection and G56R-011 composes the aggregates.
 ## 6. Open Questions
 
 - **OQ-1 (G56R-001/G56R-002):** Which current model IDs and efforts are exposed
-  by each supported Codex client/surface? Recommendation: admit model IDs and
-  effort concepts only from official documentation, then use documented
-  discovery to narrow runtime availability. A bounded invocation probe may
-  verify availability only when discovery is unavailable.
+  by each supported Codex client/surface? Recommendation: admit source-bound
+  model candidates and effort-surface concepts only from official
+  documentation, then use documented discovery to expand those model candidates
+  into supported executable model/effort tuples and narrow runtime availability.
+  A bounded invocation probe may verify availability only when discovery is
+  unavailable.
 - **OQ-2 (G56R-002):** Which app-server model and provider capability fields are
   stable enough for installer preflight? Recommendation: version the raw
   capability snapshot and classify each field through the telemetry profile.
@@ -869,7 +883,7 @@ selection and G56R-011 composes the aggregates.
 - **Codex model discovery, provider capabilities, token usage, and conditional reroute events:** [App server](https://learn.chatgpt.com/docs/app-server)
 - **Codex model and reasoning guidance:** [Models](https://learn.chatgpt.com/docs/models)
 - **Codex configuration fields and inheritance:** [Configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference)
-- **Codex non-interactive JSONL lifecycle and error events:** [Non-interactive mode](https://learn.chatgpt.com/docs/non-interactive-mode)
+- **Codex non-interactive JSONL lifecycle, item, and error events:** [Non-interactive mode](https://learn.chatgpt.com/docs/non-interactive-mode)
 - **Current model-selection and prompting guidance:** [Latest model](https://developers.openai.com/api/docs/guides/latest-model)
 - **Cross-platform parity source (Claude agent definitions):**
   `speckit-pro/agents/consensus-synthesizer.md` and

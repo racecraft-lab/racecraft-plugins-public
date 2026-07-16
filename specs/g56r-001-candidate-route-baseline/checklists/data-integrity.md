@@ -9,9 +9,9 @@
 ## Requirement Completeness
 
 - [x] CHK001 Are all required record types named with stable identifiers and explicit relationships? [Completeness, Spec Key Entities, Data Model Relationships]
-- [x] CHK002 Are exact required counts specified for official-source ledger records, role contracts, fixture backlog records, current fixtures, missing fixtures, and unsupported admitted seed candidates? [Completeness, Spec SC-001, SC-004]
-- [x] CHK003 Are official source records required to include direct URL, retrieval date, source family, supported surface, documented facts, claim bindings, and invalidation triggers? [Completeness, Spec FR-003]
-- [x] CHK004 Are candidate records required to bind both source ledger IDs and agent contract IDs? [Completeness, Spec FR-011, Data Model CandidateRouteRecord]
+- [x] CHK002 Are exact required counts specified for official-source ledger records, source fact binding rows, source fact extract rows, effort-surface records, role contracts, fixture backlog records, current fixtures, missing fixtures, and unsupported admitted seed candidates? [Completeness, Spec SC-001, SC-004]
+- [x] CHK003 Are official source records required to include source family, retrieval method, requested URL, canonical URL, retrieval timestamp, durable retrieval evidence, page or section locator, short excerpt anchor, bounded source-fact extracts, extract hashes, supported surface, documented facts, claim bindings, and invalidation triggers? [Completeness, Spec FR-003]
+- [x] CHK004 Are candidate records required to bind source ledger IDs, effort-surface records, and agent contract IDs? [Completeness, Spec FR-011, Data Model CandidateRouteRecord]
 - [x] CHK005 Are fixture backlog records required to include current status, representative input, telemetry requirements, success oracle, blocking dependency, owner spec, priority, and invalidation triggers? [Completeness, Spec FR-014]
 
 ## Requirement Clarity
@@ -25,7 +25,7 @@
 
 - [x] CHK010 Do source ledger, candidate, role, fixture, traceability, and go/no-go records use compatible cross-reference fields? [Consistency, Data Model Relationships]
 - [x] CHK011 Do the spec, data model, contract, and quickstart agree on required counts and no-runtime boundaries? [Consistency, Spec SC-001, Contract Record Count Contract, Quickstart Review Counts]
-- [x] CHK012 Do plan declared file operations match the single implementation artifact promised by the spec? [Consistency, Spec FR-001, Plan Declared File Operations]
+- [x] CHK012 Do plan declared file operations match the actual docs/process/test-guard branch scope while preserving the single canonical implementation report? [Consistency, Spec FR-001, Plan Declared File Operations]
 
 ## Acceptance Criteria Quality
 

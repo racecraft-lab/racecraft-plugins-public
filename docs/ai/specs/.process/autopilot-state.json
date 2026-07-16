@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-001-workflow.md",
   "spec_id": "G56R-001",
   "feature_dir": "specs/g56r-001-candidate-route-baseline",
-  "updated_at": "2026-07-16T00:30:00Z",
-  "active_step": "Complete: PR creation skipped - missing feature-local PR packet",
+  "updated_at": "2026-07-16T06:14:47Z",
+  "active_step": "Post: RepoPrompt review loop clean after review-g56r-baseline-EE3373",
   "settings": {
     "auto_commit": "per-phase",
     "confidence_gate_mode": "advisory",
@@ -66,7 +66,7 @@
       ],
       "hooks": "18 hook events configured"
     },
-    "speckit_cli": "specify 0.11.8",
+    "speckit_cli": "specify 0.12.12.dev0",
     "runner": {
       "python": "python3",
       "module": "speckit_pro_runner",
@@ -275,10 +275,18 @@
           "gaps": 0,
           "resolution": "No unresolved security requirement defects."
         },
+        "observability": {
+          "items": 15,
+          "gaps": 0,
+          "resolution": "No unresolved observability requirement defects.",
+          "added_during_review_remediation": true,
+          "created_at": "2026-07-16",
+          "last_verified_at": "2026-07-16T05:15:02Z"
+        },
         "reliability": {
           "items": 15,
           "gaps": 0,
-          "resolution": "No unresolved reliability requirement defects."
+          "resolution": "No unresolved reliability or resilience requirement defects for this documentation-only spike."
         }
       },
       "gate": {
@@ -294,6 +302,15 @@
         "specs/g56r-001-candidate-route-baseline/checklists/error-handling.md",
         "specs/g56r-001-candidate-route-baseline/checklists/security.md",
         "specs/g56r-001-candidate-route-baseline/checklists/reliability.md"
+      ],
+      "review_remediation_files_changed": [
+        {
+          "file": "specs/g56r-001-candidate-route-baseline/checklists/observability.md",
+          "added_during_review_remediation": true,
+          "created_at": "2026-07-16",
+          "last_verified_at": "2026-07-16T05:15:02Z",
+          "reason": "Added after the original Phase 4 completion to complete the six-domain operational checklist taxonomy."
+        }
       ]
     },
     "Phase 5: Tasks": {
@@ -395,8 +412,9 @@
         "marker_search": "pass",
         "exact_counts": {
           "official_source_records": 9,
+          "effort_surface_records": 5,
           "agent_contract_records": 12,
-          "candidate_route_records": 12,
+          "candidate_route_records": 23,
           "fixture_backlog_records": 12,
           "current_fixtures": 3,
           "missing_fixtures": 9,
@@ -411,7 +429,10 @@
         "specs/g56r-001-candidate-route-baseline/tasks.md",
         "docs/ai/specs/.process/autopilot-state.json"
       ],
-      "canonical_report_commit": "b776814a"
+      "canonical_report_provenance": {
+        "initial_commit": "b776814a",
+        "final_verified_content_sha256": "272a495da0adf429acbaa6bfb759ec03a0afa7f73eaf49ee76270b3fbba83602"
+      }
     }
   },
   "plan": [
@@ -488,6 +509,14 @@
       "status": "completed"
     },
     {
+      "step": "Phase 4: Checklist - Observability",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - Observability Consensus",
+      "status": "completed"
+    },
+    {
       "step": "Phase 4: Checklist - Reliability",
       "status": "completed"
     },
@@ -529,7 +558,7 @@
     },
     {
       "step": "Post: Code Review",
-      "status": "completed"
+      "status": "completed: RepoPrompt reviews through review-g56r-baseline-B40534 returned findings and clean rerun review-g56r-baseline-EE3373 returned no findings"
     },
     {
       "step": "Post: Integration Suite",
@@ -565,7 +594,7 @@
     },
     {
       "step": "Post: Review Remediation",
-      "status": "skipped: no PR opened"
+      "status": "completed: clean RepoPrompt rerun review-g56r-baseline-EE3373 returned no findings"
     },
     {
       "step": "Post: Retrospective",
@@ -591,13 +620,32 @@
       "flagged": 0
     },
     "code_review": {
-      "status": "pass_parent_fallback",
-      "repo_prompt_dispatch": "transport_closed",
-      "findings": 0
+      "status": "pass",
+      "repo_prompt_dispatches": [
+        "review-g56r-baseline-BEB0E5",
+        "review-g56r-baseline-CB60BD",
+        "review-g56r-baseline-74D6A9",
+        "review-g56r-baseline-1C9918",
+        "review-g56r-baseline-DA1EB7",
+        "review-g56r-baseline-AAC612",
+        "review-g56r-baseline-205F8D",
+        "review-g56r-baseline-86E22B",
+        "review-g56r-baseline-9E7498",
+        "review-g56r-baseline-AB681F",
+        "review-g56r-baseline-AE8E96",
+        "review-g56r-baseline-4C193A",
+        "review-g56r-baseline-8E767F",
+        "review-g56r-baseline-BF4556",
+        "review-g56r-baseline-B40534",
+        "review-g56r-baseline-EE3373"
+      ],
+      "findings": 0,
+      "remediation": "complete",
+      "clean_review": "review-g56r-baseline-EE3373"
     },
     "reviewability": {
-      "status": "pass",
-      "evidence": "reviewability-gate setup mode passed against specs/g56r-001-candidate-route-baseline/plan.md"
+      "status": "warn_pass",
+      "evidence": "reviewability-gate setup mode passed against specs/g56r-001-candidate-route-baseline/plan.md; actual branch-diff backstop is 25 docs/process/test-guard files with zero runtime production files and warning-only total-file count"
     },
     "uat_runbook_generation": {
       "status": "skipped",

@@ -40,9 +40,10 @@ installed into plugin runtime surfaces.
 **Project Type**: Documentation-only research spike.
 
 **Performance Goals**: Deterministic reviewability rather than runtime
-performance: exact counts for 9 source records, 12 role contracts, 12 fixture
-backlog records, no unsupported admitted seed candidates, and zero production
-runtime files.
+performance: exact counts for 9 source records, 5 effort-surface records, 16
+project-input records, 12 role contracts, 23 candidate route records, 12
+fixture backlog records, 24 traceability records, 4 go/no-go decisions, no
+unsupported admitted seed candidates, and zero production runtime files.
 
 **Constraints**: Official OpenAI documentation is the only authority for
 platform facts. Project inputs must be labeled `project_input`. The report must
@@ -51,17 +52,36 @@ agent definitions, installer changes, generated payloads, cache proofs,
 version changes, schema files, helper scripts, or fallback policy.
 
 **Scale/Scope**: One canonical implementation report with a bounded planning
-package. The report covers 9 official-source ledger records, 12 role contract
-records, 12 fixture backlog records, provisional route records, and one
-G56R-002 handoff decision.
+package. The report covers 9 official-source ledger records, 5 effort-surface
+records, 16 project-input records, 12 role contract records, 23
+source-bound blocked or comparator route records, 12 fixture backlog records, 24
+traceability records, and 4 go/no-go decisions.
 
 **Reviewability Budget**: Primary surface: docs/process. Secondary surfaces:
-none. Projected reviewable production LOC: 0. Projected production files: 0.
-Projected implementation files: 1. Budget result: within budget.
+repository test guard allowlist only when the new research path must be
+explicitly admitted by the changed-surface guard. Projected reviewable
+production LOC: 0. Projected production files: 0. Projected implementation
+files: 1. Post-review remediation expanded process/checklist files but kept
+runtime production files at 0. Actual branch-diff reviewability is 25
+docs/process/test-guard files: warning-only above the 15-file warning threshold
+and not above the 25-file block threshold.
 
 ## Declared File Operations
 
 - NEW docs/ai/research/codex-agent-route-candidates.md
+- NEW specs/g56r-001-candidate-route-baseline/ planning package, including
+  spec, plan, research, data model, contract, quickstart, checklists, tasks,
+  verification report, retrospective, and SPEC-MOC
+- NEW docs/ai/specs/.process/G56R-001-design-concept.md
+- NEW docs/ai/specs/.process/G56R-001-workflow.md
+- MODIFY docs/ai/specs/.process/autopilot-state.json
+- MODIFY docs/prd-codex-gpt-5-6-agent-routing.md,
+  docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md, and
+  docs/ai/specs/codex-gpt-5-6-agent-routing-roadmap-MOC.md to connect the
+  G56R-001 package to the roadmap and downstream G56R-002 handoff
+- MODIFY tests/speckit-pro/unit/test-speckit-pro-runner.py for the
+  changed-surface guard allowlist that admits the new Codex research report
+  path while keeping production runtime files at zero
 
 ## Constitution Check
 
@@ -114,9 +134,12 @@ docs/
 
 speckit-pro/
 ├── codex-agents/
+├── codex-skills/
 └── agents/
 
 tests/speckit-pro/layer6-efficiency/
+dist/codex/speckit-pro/
+dist/claude/speckit-pro/
 ```
 
 **Structure Decision**: Use the existing feature planning directory for
@@ -131,6 +154,7 @@ Resolve planning decisions in `research.md` before authoring tasks:
 - official-source snapshot and invalidation policy
 - one-report architecture
 - stable record IDs and relationships
+- active route-policy project-input inventory with stable IDs
 - candidate admission and rejection classifications
 - role-contract field model
 - fixture backlog field model
@@ -157,20 +181,21 @@ Design output must keep source authority explicit:
 ## Implementation Approach
 
 1. Revalidate official OpenAI documentation at report-authoring time and record
-   direct URLs, retrieval date, source family, documented facts, claim bindings,
-   and invalidation triggers.
+   source family, retrieval method, requested URLs, canonical URLs, retrieval
+   timestamp, documented facts, claim bindings, and invalidation triggers.
 2. Inventory current Codex TOML roles, Claude parity-role files, and current
    fixture inputs as `project_input`.
 3. Compute instruction and full-file hashes for all twelve role records where
    a source file exists.
-4. Build provisional candidate route records only from official-source support
-   plus role-contract fit.
+4. Build provisional candidate route records only from official-source support,
+   exact source-fact bindings, candidate rationale, and role-contract fit.
 5. Reject or block every seed or candidate that depends on undocumented,
    deprecated, withdrawn, runtime-only, or qualification-only facts.
 6. Complete the three-current/nine-missing fixture backlog without creating or
    executing fixture payloads.
-7. Finish with traceability, count checks, scope checks, repository validation,
-   and the strict G56R-002 go/no-go decision.
+7. Finish with stable traceability IDs, stable go/no-go decision IDs, count
+   checks, scope checks, repository validation, and the strict G56R-002
+   go/no-go decision.
 
 ## Verification Strategy
 
@@ -178,7 +203,7 @@ Minimum implementation verification:
 
 - marker search across the feature directory and canonical report
 - exact count checks for source, role, and fixture records
-- traceability review for all platform claims and candidate records
+- stable-ID traceability review for all platform claims and candidate records
 - changed-file scope review proving no runtime, installer, payload, cache,
   fixture payload, generated artifact, or version change
 - `git diff --check`

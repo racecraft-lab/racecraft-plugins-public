@@ -32,4 +32,6 @@
 ## Notes
 
 - The spec intentionally names official OpenAI URLs, source files, and artifact IDs because G56R-001 is an evidence-ledger research spike.
-- Branch creation and Grill Me were skipped per the phase prompt; no clarification markers were introduced.
+- Branch creation reused the dedicated G56R-001 worktree. Grill Me completed six
+  setup questions in `docs/ai/specs/.process/G56R-001-design-concept.md`; no
+  clarification markers were introduced.

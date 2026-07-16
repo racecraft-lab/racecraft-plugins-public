@@ -23,9 +23,9 @@
 
 ## Requirement Consistency
 
-- [x] CHK010 Do candidate records require role-contract binding before any route can be admitted for discovery? [Consistency, Spec FR-011]
+- [x] CHK010 Do candidate records require role-contract binding before any route can be source-bound or admitted for discovery? [Consistency, Spec FR-011]
 - [x] CHK011 Do the spec and plan consistently prohibit runtime behavior, installation, route policy, and fallback changes? [Consistency, Spec FR-002, Plan Constraints]
-- [x] CHK012 Do fixture telemetry requirements preserve sandbox, approvals, tools, skills, MCP, and parent-child attribution as future evidence needs? [Consistency, Spec Fixture Backlog Record Shape]
+- [x] CHK012 Do fixture telemetry requirements preserve sandbox, approvals, tools, skills, MCP, parent-child attribution, terminal state, and missing-field classification as future evidence needs? [Consistency, Spec Fixture Backlog Record Shape]
 
 ## Acceptance Criteria Quality
 

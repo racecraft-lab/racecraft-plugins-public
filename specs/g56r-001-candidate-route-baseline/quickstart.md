@@ -17,15 +17,18 @@ Expected branch:
 g56r-001-candidate-route-baseline
 ```
 
-Only G56R-001 planning files and the canonical report should change.
+Only G56R-001 planning/process files, the canonical report, and the repository
+test guard allowlist for the new research path should change.
 
 ## 2. Refresh Official Sources
 
 Open the current official OpenAI documentation needed for model, effort,
 custom-agent, MCP, app, configuration, non-interactive, telemetry, and prompting
-claims. Record each source as an `OfficialSourceLedgerRecord` with direct URL,
-retrieval date, source family, documented facts, supported surfaces, claim
-bindings, and invalidation triggers.
+claims. Record each source as an `OfficialSourceLedgerRecord` with source
+family, retrieval method, requested URL, canonical URL, retrieval timestamp,
+HTTP status, response-body hash, page or section locator, short excerpt anchor,
+bounded source-fact extracts, extract hashes, documented facts, supported
+surfaces, claim bindings, and invalidation triggers.
 
 Do not use repository files, successful local behavior, third-party material,
 or remembered facts as platform authority.
@@ -36,6 +39,8 @@ Read current project sources as `project_input`:
 
 ```bash
 find speckit-pro/codex-agents -maxdepth 1 -type f
+find speckit-pro/codex-skills -maxdepth 2 -type f
+find speckit-pro/skills -maxdepth 2 -type f
 find speckit-pro/agents -maxdepth 1 -type f
 find tests/speckit-pro/layer6-efficiency -maxdepth 3 -type f
 ```
@@ -56,12 +61,19 @@ Required sections:
 - scope, authority classes, and snapshot metadata
 - official-source ledger
 - project-input surface inventory
+- exact source-fact bindings
+- bounded source-fact extracts and extract hashes
 - twelve role contract records
+- all-role instruction/full-file hash validation evidence
 - provisional candidate route manifest
+- candidate rationale records
+- explicit per-candidate effort-surface IDs, effort-surface records, and role
+  instruction hashes
 - three-current/nine-missing fixture backlog
-- telemetry requirements and G56R-002 capability questions
-- traceability matrix
-- strict go/no-go decision and invalidation rules
+- telemetry requirements, terminal-state fields, missing-field classification,
+  and G56R-002 capability questions
+- traceability matrix with stable traceability IDs
+- strict go/no-go decision records with stable decision IDs and invalidation rules
 
 ## 5. Run Focused Checks
 
@@ -92,8 +104,13 @@ python3 tests/speckit-pro/run-all.py
 Confirm the report contains:
 
 - 9 official-source ledger records
+- 5 effort-surface records
+- 16 project-input records
 - 12 role contract records
+- 23 candidate route records
 - 12 fixture backlog records
+- 24 traceability records
+- 4 go/no-go decision records
 - 3 current Codex prompt-emulation fixture records
 - 9 missing executable fixture records
 - 0 unsupported admitted seed candidates

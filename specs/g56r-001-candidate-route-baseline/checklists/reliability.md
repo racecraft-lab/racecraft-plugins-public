@@ -1,6 +1,6 @@
 # Reliability Checklist: G56R-001 Candidate Route Baseline
 
-**Purpose**: Validate requirement quality for reproducible source snapshots, invalidation rules, telemetry handoff, capability questions, and strict downstream decisions.
+**Purpose**: Validate requirement quality for reproducible source snapshots, invalidation rules, telemetry handoff, resilience conditions, capability questions, and strict downstream decisions.
 **Created**: 2026-07-15
 **Feature**: [spec.md](../spec.md)
 
@@ -8,8 +8,8 @@
 
 ## Requirement Completeness
 
-- [x] CHK001 Are source retrieval date, source family, supported surface, documented facts, claim bindings, and invalidation triggers required for every official source? [Completeness, Spec FR-003]
-- [x] CHK002 Are telemetry requirements complete for assigned route, effective route, model, effort, parent-child attribution, tools, skills, MCP, sandbox, approvals, tokens, duration, retries, terminal state, and missing-field classification? [Completeness, Spec Fixture Backlog Record Shape]
+- [x] CHK001 Are source retrieval date, source family, durable retrieval evidence, page or section locator, short excerpt anchor, bounded source-fact extracts, extract hashes, supported surface, documented facts, claim bindings, and invalidation triggers required for every official source? [Completeness, Spec FR-003]
+- [x] CHK002 Are telemetry requirements complete for assigned route, effective route, model, effort, parent-child attribution, tools, skills, MCP, sandbox, approvals, tokens, duration, retries, route-match status, terminal state, terminal reason, and missing-field classification? [Completeness, Spec Fixture Backlog Record Shape]
 - [x] CHK003 Are capability questions required before G56R-002 can use any provisional candidate? [Completeness, Spec G56R-002 Handoff Contract]
 - [x] CHK004 Are current prompt-emulation fixtures and missing executable fixtures both covered with success oracles and blocking dependencies? [Completeness, Spec FR-014]
 - [x] CHK005 Are downstream route qualification, installation, resolver behavior, and fallback policy explicitly blocked in G56R-001? [Completeness, Spec G56R-002 Go/No-Go Matrix]
@@ -35,4 +35,4 @@
 
 ## Notes
 
-- No unresolved reliability requirement defects were found.
+- No unresolved reliability or resilience requirement defects were found.

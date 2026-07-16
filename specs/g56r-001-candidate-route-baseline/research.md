@@ -36,8 +36,9 @@ with stable cross-references.
 ## Decision 3: Use Stable Record IDs Instead Of Free-Form Claims
 
 **Decision**: The report uses stable IDs for
-`OfficialSourceLedgerRecord`, `AgentContractRecord`, `CandidateRouteRecord`,
-`FixtureBacklogRecord`, `TraceabilityRecord`, and `GoNoGoDecision` entries.
+`OfficialSourceLedgerRecord`, `EffortSurfaceRecord`,
+`AgentContractRecord`, `CandidateRouteRecord`, `FixtureBacklogRecord`,
+`TraceabilityRecord`, and `GoNoGoDecision` entries.
 
 **Rationale**: Stable IDs make count checks, source bindings, and later G56R-002
 handoff validation deterministic.
@@ -49,11 +50,12 @@ handoff validation deterministic.
 - Runtime schema file: rejected because schema enforcement is out of scope for
   this research spike.
 
-## Decision 4: Treat Roadmap Models As A Seed, Not An Approved Set
+## Decision 4: Treat Roadmap And Legacy Models As Inputs, Not An Approved Set
 
-**Decision**: Roadmap seed models are reviewed against the execution-time
-official source ledger. Unsupported, deprecated, withdrawn, or undocumented
-entries cannot become admitted routes.
+**Decision**: Roadmap seed models and legacy project-input model guidance are
+reviewed against the execution-time official source ledger. Unsupported,
+deprecated, withdrawn, or undocumented entries cannot become source-bound
+candidates or executable routes.
 
 **Rationale**: Candidate admission must fail closed when official documentation
 does not support the model, effort, or required client surface.
@@ -132,9 +134,14 @@ runtime behavior.
 
 ## Decision 9: Defer Availability, Preference, Fallback, And Qualification
 
-**Decision**: Candidate route records may be admitted for discovery only. They
-must not claim availability, executability, qualification, preference,
-efficiency, or fallback order.
+**Decision**: Candidate records may be source-bound for discovery only.
+Executable model/effort tuple admission remains blocked until G56R-002 proves
+supported efforts for the pinned client. Candidate records must not claim
+availability, executability, qualification, preference, efficiency, or fallback
+order. Before G56R-003 freezes the executable candidate set, G56R-002 may add a
+role/model binding only for a model already present in the G56R-001
+official-source ledger, and only when it records role-contract rationale or
+explicit exclusion evidence.
 
 **Rationale**: Official documentation can bound candidate eligibility, while
 runtime capability discovery, telemetry profiling, exact treatment, scoring,
