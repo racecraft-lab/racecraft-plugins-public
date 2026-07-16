@@ -29,6 +29,11 @@ from .read_only import (
 DEFAULT_ROLLBACK = "Review touched_paths and restore the previous file content before retrying."
 
 
+def atomic_write_cleanup_errors(exc: OSError) -> list[str]:
+    errors = getattr(exc, "cleanup_errors", None)
+    return errors if isinstance(errors, list) else []
+
+
 def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
     invocation_root_result = resolve_repo_root(request.inputs)
     if isinstance(invocation_root_result, dict):
@@ -415,11 +420,12 @@ def run_mutation_helper(
                 base_data["writes_state"] = bool(rollback_errors)
                 return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[source_changed])
             try:
-                write_file_atomic(target, str(op["content"]), trust_root=repo_root)
+                write_result = write_file_atomic(target, str(op["content"]), trust_root=repo_root)
             except OSError as exc:
                 mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
                 mutation["failure_operation"] = operation_record(op)
                 rollback_errors = rollback_applied_writes(mutation["touched_paths"], snapshots, repo_root)
+                rollback_errors.extend(atomic_write_cleanup_errors(exc))
                 mutation["manual_remediation"] = [
                     "Inspect the target path and parent directory.",
                     "Retry after the write target is stable.",
@@ -439,12 +445,19 @@ def run_mutation_helper(
                     },
                     remediation_summary="Fix the target path or reconcile partial writes before retrying.",
                     remediation_actions=mutation["manual_remediation"],
-            )
+                )
                 base_data["writes_state"] = bool(rollback_errors)
                 return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[diag])
             mutation["applied_operations"].append(operation_record(op))
             mutation["touched_paths"].append(rel)
-            applied_snapshot = snapshot_changed_diagnostic_after_write(rel, target, snapshots, repo_root)
+            applied_snapshot = snapshot_changed_diagnostic_after_write(
+                rel,
+                target,
+                snapshots,
+                repo_root,
+                expected_digest=write_result["digest"],
+                expected_mode=write_result["mode"],
+            )
             if applied_snapshot is not None:
                 mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
                 mutation["failure_operation"] = operation_record(op)
@@ -457,6 +470,19 @@ def run_mutation_helper(
                     mutation["manual_remediation"].append("Manual rollback is required for the reported rollback errors.")
                 base_data["writes_state"] = bool(rollback_errors)
                 return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[applied_snapshot])
+            source_postcondition_changed = operation_source_fingerprint_diagnostic(op, repo_root)
+            if source_postcondition_changed is not None:
+                mutation["mutation_status"] = "partial_failure"
+                mutation["failure_operation"] = operation_record(op)
+                rollback_errors = rollback_applied_writes(mutation["touched_paths"], snapshots, repo_root)
+                mutation["manual_remediation"] = [
+                    "Inspect the source packet/body files used by this mutation.",
+                    "Retry after validation and write preconditions are refreshed from current content.",
+                ]
+                if rollback_errors:
+                    mutation["manual_remediation"].append("Manual rollback is required for the reported rollback errors.")
+                base_data["writes_state"] = bool(rollback_errors)
+                return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[source_postcondition_changed])
         else:
             mutation["skipped_operations"].append(operation_record(op))
 
@@ -820,11 +846,12 @@ def safe_unlink(target: Path, trust_root: Path) -> None:
         os.close(parent_fd)
 
 
-def write_file_atomic(target: Path, content: str, *, trust_root: Path | None = None) -> None:
-    write_bytes_atomic(target, ensure_final_newline(content).encode("utf-8"), trust_root=trust_root)
+def write_file_atomic(target: Path, content: str, *, trust_root: Path | None = None) -> dict[str, Any]:
+    return write_bytes_atomic(target, ensure_final_newline(content).encode("utf-8"), trust_root=trust_root)
 
 
-def write_bytes_atomic(target: Path, content: bytes, *, trust_root: Path | None = None, mode: int | None = None) -> None:
+def write_bytes_atomic(target: Path, content: bytes, *, trust_root: Path | None = None, mode: int | None = None) -> dict[str, Any]:
+    created_dirs: list[str] = []
     if trust_root is None:
         target.parent.mkdir(parents=True, exist_ok=True)
         tmp_name = f".{target.name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
@@ -834,35 +861,44 @@ def write_bytes_atomic(target: Path, content: bytes, *, trust_root: Path | None 
         opened = open_safe_parent_fd(target, trust_root, create=True)
         if opened is None:
             raise OSError("target parent missing")
-        parent_fd, target_name, _created_dirs = opened
+        parent_fd, target_name, created_dirs = opened
         tmp_name = f".{target_name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
     tmp_fd = -1
+    failure: OSError | None = None
+    replaced = False
+    applied_mode: int | None = None
     try:
-        if trust_root is not None:
-            ensure_safe_write_target_fd(parent_fd, target_name)
-        write_mode = mode if mode is not None else current_file_mode_fd(parent_fd, target_name)
-        if write_mode is None:
-            write_mode = 0o666
-        tmp_fd = os.open(
-            tmp_name,
-            os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
-            write_mode,
-            dir_fd=parent_fd,
-        )
-        os.fchmod(tmp_fd, write_mode)
-        with os.fdopen(tmp_fd, "wb") as fh:
-            tmp_fd = -1
-            fh.write(content)
-            fh.flush()
-            os.fsync(fh.fileno())
-        if trust_root is not None:
-            ensure_safe_write_target_fd(parent_fd, target_name)
-        os.replace(tmp_name, target_name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
         try:
-            os.fsync(parent_fd)
-        except OSError:
-            # Directory fsync is best-effort after replace; the atomic swap already succeeded.
-            pass
+            if trust_root is not None:
+                ensure_safe_write_target_fd(parent_fd, target_name)
+            existing_mode = mode if mode is not None else current_file_mode_fd(parent_fd, target_name)
+            write_mode = existing_mode if existing_mode is not None else 0o666
+            tmp_fd = os.open(
+                tmp_name,
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
+                write_mode,
+                dir_fd=parent_fd,
+            )
+            if existing_mode is not None:
+                os.fchmod(tmp_fd, existing_mode)
+            applied_mode = stat.S_IMODE(os.fstat(tmp_fd).st_mode)
+            with os.fdopen(tmp_fd, "wb") as fh:
+                tmp_fd = -1
+                fh.write(content)
+                fh.flush()
+                os.fsync(fh.fileno())
+            if trust_root is not None:
+                ensure_safe_write_target_fd(parent_fd, target_name)
+            os.replace(tmp_name, target_name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+            replaced = True
+            try:
+                os.fsync(parent_fd)
+            except OSError:
+                # Directory fsync is best-effort after replace; the atomic swap already succeeded.
+                pass
+        except OSError as exc:
+            failure = exc
+            raise
     finally:
         if tmp_fd >= 0:
             try:
@@ -878,6 +914,15 @@ def write_bytes_atomic(target: Path, content: bytes, *, trust_root: Path | None 
             # Best-effort cleanup only; the write outcome is already determined.
             pass
         os.close(parent_fd)
+        if trust_root is not None and failure is not None and not replaced and created_dirs:
+            cleanup_errors = remove_created_parent_dirs(created_dirs, trust_root)
+            if cleanup_errors:
+                setattr(failure, "cleanup_errors", cleanup_errors)
+    return {
+        "digest": hashlib.sha256(content).hexdigest(),
+        "mode": applied_mode,
+        "created_parent_dirs": created_dirs,
+    }
 
 
 def ensure_safe_write_parent(target: Path, trust_root: Path, *, create: bool = True) -> None:
@@ -1029,7 +1074,15 @@ def snapshot_changed_diagnostic(rel: str, target: Path, snapshots: dict[str, dic
     )
 
 
-def snapshot_changed_diagnostic_after_write(rel: str, target: Path, snapshots: dict[str, dict[str, Any]], repo_root: Path) -> dict[str, Any] | None:
+def snapshot_changed_diagnostic_after_write(
+    rel: str,
+    target: Path,
+    snapshots: dict[str, dict[str, Any]],
+    repo_root: Path,
+    *,
+    expected_digest: str,
+    expected_mode: int | None,
+) -> dict[str, Any] | None:
     original = snapshots.setdefault(rel, {"exists": False, "created_parent_dirs": []})
     try:
         applied = snapshot_write_target(target, repo_root)
@@ -1049,8 +1102,16 @@ def snapshot_changed_diagnostic_after_write(rel: str, target: Path, snapshots: d
             remediation_summary="Inspect the target path before retrying.",
             remediation_actions=["Review the target file.", "Manually reconcile any partial write.", "Retry from a stable repository tree."],
         )
-    original["applied_digest"] = applied.get("digest")
-    original["applied_mode"] = applied.get("mode")
+    if applied.get("digest") != expected_digest or applied.get("mode") != expected_mode:
+        return diagnostic(
+            "source_changed",
+            "mutation helper wrote a target but observed different content or mode before rollback tracking",
+            details={"target": rel},
+            remediation_summary="Inspect the target path before retrying.",
+            remediation_actions=["Review the target file.", "Manually reconcile any partial write.", "Retry from a stable repository tree."],
+        )
+    original["applied_digest"] = expected_digest
+    original["applied_mode"] = expected_mode
     return None
 
 

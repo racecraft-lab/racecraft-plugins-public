@@ -521,6 +521,17 @@
         "pr_blocked": {
           "type": "boolean"
         },
+        "validation_result_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_fingerprints": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "$ref": "#/$defs/source_fingerprint"
+          }
+        },
         "resume": {
           "$ref": "#/$defs/resume_evidence"
         },
@@ -533,6 +544,28 @@
         "timestamp": {
           "type": "string",
           "minLength": 1
+        }
+      }
+    },
+    "source_fingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "algorithm", "sha256", "size_bytes"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "algorithm": {
+          "const": "sha256"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
         }
       }
     },

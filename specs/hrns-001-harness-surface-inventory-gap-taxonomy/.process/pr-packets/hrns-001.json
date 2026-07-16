@@ -42,7 +42,7 @@
       "why_it_matters"
     ],
     "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
-    "value": "98e02c00e00c2ccc69255fb606545feaf43b8147636b892641ef5ebbc7e08c88"
+    "value": "2acca43c2d1f244691d1f9ea08b3f888209f432b07b80a3d1b18cb68f4244269"
   },
   "required_headings": [
     "Summary",
@@ -201,7 +201,7 @@
       "kind": "verification",
       "result": "pass",
       "source": "validation",
-      "summary": "python3 -m unittest -v tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py passed 35/35."
+      "summary": "python3 -m unittest -v tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py passed 39/39."
     },
     {
       "kind": "verification",
@@ -237,7 +237,7 @@
       "kind": "verification",
       "result": "pass",
       "source": "validation",
-      "summary": "python3 tests/speckit-pro/run-all.py passed 2776/2776 after the final regression tests were added."
+      "summary": "python3 tests/speckit-pro/run-all.py passed 2780/2780 after the final regression tests were added."
     },
     {
       "kind": "verification",
