@@ -748,10 +748,10 @@ $speckit-implement
 | Post: Reviewability Diff Gate | Complete | Setup-mode runner gate passed; actual branch-diff backstop is 25 docs/process/test-guard files, warning-only above the 15-file warning threshold, and not above the 25-file block threshold |
 | Post: Self-Review | Complete | Four-question self-review recorded below |
 | Post: UAT Runbook Generation | Skipped | No committed runbook exists; `generate-uat-skeleton` is deferred |
-| Post: Final Reviewability Backstop | Complete | Deferred helper boundary honored; current diff evidence is warning-only; PR side effects remain blocked until a valid packet exists |
-| Post: PR Packet/Body Generation | Skipped | No current feature-local PR packet exists; `pr-packet-output` is deferred |
-| Post: PR Body Generation | Skipped | Packet-owned body file is absent because packet generation is deferred |
-| Post: PR Creation | Skipped | No PR side effect allowed without a valid packet |
+| Post: Final Reviewability Backstop | Complete | Deferred helper boundary honored; current diff evidence is warning-only; PR side effect completed afterward by explicit user instruction |
+| Post: PR Packet/Body Generation | Skipped | No current feature-local PR packet exists; `pr-packet-output` remains deferred |
+| Post: PR Body Generation | Complete | Manual PR body was prepared from completed workflow evidence for draft PR #360 by explicit user instruction |
+| Post: PR Creation | Complete | Draft PR #360 opened against `main`: https://github.com/racecraft-lab/racecraft-plugins-public/pull/360 |
 | Post: Review Remediation | Complete | All RepoPrompt findings remediated; clean rerun `review-g56r-baseline-EE3373` returned no findings |
 | Post: Retrospective | Complete | `retrospective.md` saved with no proposed spec changes |
 
@@ -769,8 +769,10 @@ $speckit-implement
 | Code Review | Pass: RepoPrompt reviews through `review-g56r-baseline-B40534` returned findings and were remediated; clean rerun `review-g56r-baseline-EE3373` returned no findings against the branch diff |
 | Integration Suite | Pass: `python3 tests/speckit-pro/run-all.py` reported 2768/2768 |
 | Reviewability Diff Gate | Warn/pass: installed `reviewability-gate` runner supports setup mode only and passed against `specs/g56r-001-candidate-route-baseline/plan.md`; actual branch-diff backstop records 25 docs/process/test-guard files, zero runtime production files, and a warning for total changed files over the 15-file warning threshold but not over the 25-file block threshold |
-| Final Reviewability Backstop | Proceeded for validation; PR side effects remain blocked until a valid packet exists |
-| PR Packet/Body Generation | Skipped because no `specs/g56r-001-candidate-route-baseline/.process/pr-packets/` packet exists and packet output is deferred |
+| Final Reviewability Backstop | Proceeded for validation; PR side effect completed afterward by explicit user instruction |
+| PR Packet/Body Generation | Skipped because no `specs/g56r-001-candidate-route-baseline/.process/pr-packets/` packet exists and packet output remains deferred |
+| PR Body Generation | Pass: manual PR body prepared from completed workflow evidence for draft PR #360 |
+| PR Creation | Pass: draft PR #360 opened against `main` |
 
 ### Self-Review
 
@@ -790,9 +792,10 @@ to the report traceability and completeness sections. All 38 tasks are checked
 complete and verified in `verify-tasks-report.md`.
 
 **Follow-up and tidiness?** Marker search found no live deferred-work,
-placeholder, clarification, or critical markers. The only blocked downstream item is PR
-packet/body generation because packet output is deferred and no feature-local
-packet exists.
+placeholder, clarification, or critical markers. PR packet output remains
+deferred because no feature-local packet exists; draft PR #360 was opened by
+explicit user instruction using a manual body from the completed workflow
+evidence.
 
 ## Post-Implementation Checklist
 
