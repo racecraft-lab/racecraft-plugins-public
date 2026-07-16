@@ -34,6 +34,20 @@ def atomic_write_cleanup_errors(exc: OSError) -> list[str]:
     return errors if isinstance(errors, list) else []
 
 
+def descriptor_mutation_supported() -> bool:
+    return os.name != "nt" and hasattr(os, "O_NOFOLLOW")
+
+
+def unsupported_mutation_platform(helper_id: str) -> dict[str, Any]:
+    return diagnostic(
+        "unsupported_platform",
+        "mutation helper apply mode requires POSIX descriptor-relative filesystem operations",
+        details={"helper_id": helper_id, "platform": os.name},
+        remediation_summary="Run apply-mode mutation helpers on a platform with descriptor-relative no-follow filesystem APIs.",
+        remediation_actions=["Retry on Linux or macOS.", "Use dry_run on unsupported platforms."],
+    )
+
+
 def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
     invocation_root_result = resolve_repo_root(request.inputs)
     if isinstance(invocation_root_result, dict):
@@ -68,7 +82,6 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
     mutation = empty_mutation(request.mode)
     mutation["planned_operations"] = operation_records(operations)
     mutation["planned_paths"] = [repo_relative(record.path, target_root) for record in changed]
-    mutation["live_mutation"] = request.mode == "apply" and bool(changed)
 
     if request.mode == "dry_run":
         mutation["mutation_status"] = "planned" if changed else "no_op"
@@ -95,6 +108,23 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
         )
         return response("input_error", request_id=request.request_id, diagnostics=[diag])
 
+    if changed and not descriptor_mutation_supported():
+        mutation["mutation_status"] = "blocked"
+        diag = unsupported_mutation_platform(entry.helper_id)
+        return response(
+            "expected_failure",
+            request_id=request.request_id,
+            data=_spec_index_write_data(
+                entry,
+                request,
+                mutation,
+                specs_present=specs_present,
+                rendered=rendered,
+                writes_state=False,
+            ),
+            diagnostics=[diag],
+        )
+
     conflict = _spec_index_source_conflict(changed, target_root)
     if conflict is not None:
         mutation["mutation_status"] = "blocked"
@@ -114,10 +144,12 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
 
     for record, operation in zip(changed, operations):
         try:
+            mutation["live_mutation"] = True
             write_file_atomic(record.path, record.rendered, trust_root=target_root)
         except OSError as exc:
             mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
             mutation["failure_operation"] = operation_record(operation)
+            cleanup_errors = atomic_write_cleanup_errors(exc)
             mutation["manual_remediation"] = [
                 "Inspect touched_paths and the failed map.",
                 "Restore any already-written maps before retrying.",
@@ -129,6 +161,7 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
                     "helper_id": entry.helper_id,
                     "target": repo_relative(record.path, target_root),
                     "error": type(exc).__name__,
+                    "rollback_errors": cleanup_errors,
                 },
                 remediation_summary="Reconcile any applied map writes and fix the target path before retrying.",
                 remediation_actions=mutation["manual_remediation"],
@@ -142,7 +175,7 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
                     mutation,
                     specs_present=specs_present,
                     rendered=rendered,
-                    writes_state=bool(mutation["applied_operations"]),
+                    writes_state=bool(mutation["applied_operations"]) or bool(cleanup_errors),
                 ),
                 diagnostics=[diag],
             )
@@ -340,6 +373,15 @@ def run_mutation_helper(
         mutation["mutation_status"] = "no_op"
         return response("ok", request_id=request.request_id, data=base_data)
 
+    if any(op["kind"] == "write_file" for op in normalized) and not descriptor_mutation_supported():
+        mutation["mutation_status"] = "blocked"
+        return response(
+            "expected_failure",
+            request_id=request.request_id,
+            data=base_data,
+            diagnostics=[unsupported_mutation_platform(entry.helper_id)],
+        )
+
     command_plan_diag = command_plan_apply_diagnostic(normalized, entry.helper_id)
     if command_plan_diag is not None:
         mutation["mutation_status"] = "blocked"
@@ -398,6 +440,7 @@ def run_mutation_helper(
                 mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
                 mutation["failure_operation"] = operation_record(op)
                 rollback_errors = rollback_applied_writes(mutation["touched_paths"], snapshots, repo_root)
+                mutation["live_mutation"] = bool(mutation["applied_operations"])
                 mutation["manual_remediation"] = [
                     "Inspect the source packet/body files used by this mutation.",
                     "Retry after validation and write preconditions are refreshed from current content.",
@@ -411,6 +454,7 @@ def run_mutation_helper(
                 mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
                 mutation["failure_operation"] = operation_record(op)
                 rollback_errors = rollback_applied_writes(mutation["touched_paths"], snapshots, repo_root)
+                mutation["live_mutation"] = bool(mutation["applied_operations"])
                 mutation["manual_remediation"] = [
                     "Inspect the target path and parent directory.",
                     "Retry after the write target is stable.",
@@ -420,6 +464,7 @@ def run_mutation_helper(
                 base_data["writes_state"] = bool(rollback_errors)
                 return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[source_changed])
             try:
+                mutation["live_mutation"] = True
                 write_result = write_file_atomic(target, str(op["content"]), trust_root=repo_root)
             except OSError as exc:
                 mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
@@ -462,6 +507,7 @@ def run_mutation_helper(
                 mutation["mutation_status"] = "partial_failure" if mutation["applied_operations"] else "blocked"
                 mutation["failure_operation"] = operation_record(op)
                 rollback_errors = rollback_applied_writes(mutation["touched_paths"], snapshots, repo_root)
+                mutation["live_mutation"] = True
                 mutation["manual_remediation"] = [
                     "Inspect the target path and parent directory.",
                     "Retry after the write target is stable.",
@@ -475,6 +521,7 @@ def run_mutation_helper(
                 mutation["mutation_status"] = "partial_failure"
                 mutation["failure_operation"] = operation_record(op)
                 rollback_errors = rollback_applied_writes(mutation["touched_paths"], snapshots, repo_root)
+                mutation["live_mutation"] = True
                 mutation["manual_remediation"] = [
                     "Inspect the source packet/body files used by this mutation.",
                     "Retry after validation and write preconditions are refreshed from current content.",

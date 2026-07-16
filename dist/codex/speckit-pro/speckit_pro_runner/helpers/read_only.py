@@ -2376,6 +2376,7 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
     packet_id_value = data.get("packet_id")
     if isinstance(packet_id_value, str) and packet_id_value != packet_id:
         failures.append({"rule": "input.identity.packet_id", "field": "packet_id", "message": "packet_id must match the packet filename."})
+    source_feature_dir = data.get("source_feature_dir")
     scope_evidence = data.get("scope_evidence")
     generated_title = data.get("generated_title")
     target = data.get("target")
@@ -2400,6 +2401,16 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
         path_diag = validate_path_value("validate-pr-packet-read-only", "validation_result_path", validation_path, repo_root)
         if path_diag is not None:
             failures.append({"rule": "input.path.validation_result_path", "field": "validation_result_path", "message": path_diag["message"]})
+        elif isinstance(source_feature_dir, str) and source_feature_dir and isinstance(packet_id_value, str) and packet_id_value:
+            expected_validation_path = f"{source_feature_dir}/.process/pr-packets/{packet_id_value}/validation.json"
+            if validation_path != expected_validation_path:
+                failures.append(
+                    {
+                        "rule": "input.identity.validation_result_path",
+                        "field": "validation_result_path",
+                        "message": "validation_result_path must be owned by source_feature_dir and packet_id.",
+                    }
+                )
     body_file = data.get("body_file")
     if body_file is not None and not isinstance(body_file, str):
         failures.append({"rule": "input.path.body_file", "field": "body_file", "message": "body_file must be a string when present."})
@@ -3231,7 +3242,16 @@ def repo_relative(path: Path, repo_root: Path) -> str:
 
 
 def trusted_file_exists(path: Path, repo_root: Path) -> bool:
-    return path.is_file() and path_stays_in_trust_boundary(path, repo_root)
+    fd = trusted_open_regular_file(path, repo_root)
+    if fd is None:
+        return False
+    try:
+        return True
+    finally:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
 
 
 def trusted_dir_exists(path: Path, repo_root: Path) -> bool:
@@ -3244,25 +3264,96 @@ def path_stays_in_trust_boundary(path: Path, repo_root: Path) -> bool:
 
 
 def trusted_text(path: Path, repo_root: Path | None = None) -> str | None:
-    if repo_root is not None and not path_stays_in_trust_boundary(path, repo_root):
-        return None
-    if not path.is_file():
-        return None
-    try:
-        return path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return None
+    content = trusted_bytes(path, repo_root)
+    return None if content is None else content.decode("utf-8", errors="replace")
 
 
 def trusted_bytes(path: Path, repo_root: Path | None = None) -> bytes | None:
-    if repo_root is not None and not path_stays_in_trust_boundary(path, repo_root):
-        return None
-    if not path.is_file():
-        return None
+    if repo_root is not None:
+        return trusted_bytes_descriptor(path, repo_root)
     try:
+        if not path.is_file():
+            return None
         return path.read_bytes()
     except OSError:
         return None
+
+
+def trusted_bytes_descriptor(path: Path, repo_root: Path) -> bytes | None:
+    fd = trusted_open_regular_file(path, repo_root)
+    if fd is None:
+        return None
+    try:
+        chunks: list[bytes] = []
+        while True:
+            chunk = os.read(fd, 1024 * 1024)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        return b"".join(chunks)
+    except OSError:
+        return None
+    finally:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+
+
+def trusted_open_regular_file(path: Path, repo_root: Path) -> int | None:
+    if not descriptor_read_supported():
+        return None
+    repo_root = repo_root.resolve(strict=False)
+    target = path if path.is_absolute() else repo_root / path
+    try:
+        relative = target.relative_to(repo_root)
+    except ValueError:
+        return None
+    if not relative.parts or any(part in {"", ".", ".."} for part in relative.parts):
+        return None
+    target_name = relative.parts[-1]
+    if target_name in {"", ".", ".."} or "/" in target_name:
+        return None
+    try:
+        root_mode = repo_root.lstat().st_mode
+        if stat.S_ISLNK(root_mode) or not stat.S_ISDIR(root_mode):
+            return None
+        parent_fd = os.open(repo_root, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | os.O_NOFOLLOW)
+    except (OSError, NotImplementedError):
+        return None
+    fd = -1
+    try:
+        for part in relative.parts[:-1]:
+            next_fd = os.open(
+                part,
+                os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | os.O_NOFOLLOW,
+                dir_fd=parent_fd,
+            )
+            os.close(parent_fd)
+            parent_fd = next_fd
+        fd = os.open(target_name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=parent_fd)
+        file_stat = os.fstat(fd)
+        if stat.S_ISLNK(file_stat.st_mode) or not stat.S_ISREG(file_stat.st_mode):
+            os.close(fd)
+            fd = -1
+            return None
+        return fd
+    except (OSError, NotImplementedError):
+        if fd >= 0:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        return None
+    finally:
+        try:
+            os.close(parent_fd)
+        except OSError:
+            pass
+
+
+def descriptor_read_supported() -> bool:
+    return os.name != "nt" and hasattr(os, "O_NOFOLLOW")
 
 
 def trusted_lines(path: Path, repo_root: Path | None = None) -> list[str]:

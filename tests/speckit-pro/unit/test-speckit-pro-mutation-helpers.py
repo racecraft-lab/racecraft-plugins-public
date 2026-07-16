@@ -990,6 +990,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual([op["operation_id"] for op in mutation["applied_operations"]], ["first"])
             self.assertEqual(mutation["failure_operation"]["operation_id"], "second")
             self.assertTrue(mutation["manual_remediation"])
+            self.assertTrue(mutation["live_mutation"])
             self.assertFalse(response["data"]["writes_state"])
             self.assertFalse(first.exists())
             self.assertFalse(second.exists())
@@ -1153,6 +1154,7 @@ class MutationHelperTests(unittest.TestCase):
             self.assert_response(response, "expected_failure", 1)
             self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["source_changed"])
             self.assertFalse((git_root / "validation.json").exists())
+            self.assertTrue(response["data"]["mutation"]["live_mutation"])
             self.assertFalse(response["data"]["writes_state"])
 
     def test_post_write_snapshot_rejects_concurrent_replacement(self) -> None:
@@ -1217,7 +1219,44 @@ class MutationHelperTests(unittest.TestCase):
             self.assert_response(response, "expected_failure", 1)
             self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["write_failure"])
             self.assertEqual(response["diagnostics"][0]["details"]["rollback_errors"], ["nested:OSError"])
+            self.assertTrue(response["data"]["mutation"]["live_mutation"])
             self.assertTrue(response["data"]["writes_state"])
+
+    def test_apply_file_writes_fail_closed_on_unsupported_descriptor_platform(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            request = RunnerRequest(
+                "test-unsupported-platform",
+                "mutation-foundation",
+                "mutation-foundation",
+                "apply",
+                {
+                    "operations": [
+                        {
+                            "operation_id": "write-new",
+                            "kind": "write_file",
+                            "target": "new.md",
+                            "content": "new\n",
+                        }
+                    ]
+                },
+            )
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with patch.object(mutation, "descriptor_mutation_supported", return_value=False):
+                    response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["unsupported_platform"])
+            self.assertFalse(response["data"]["mutation"]["live_mutation"])
+            self.assertFalse(response["data"]["writes_state"])
+            self.assertFalse((git_root / "new.md").exists())
 
     def test_rollback_refuses_concurrent_edits_and_reports_directory_cleanup_errors(self) -> None:
         from speckit_pro_runner.helpers import mutation

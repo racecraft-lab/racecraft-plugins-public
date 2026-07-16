@@ -104,7 +104,7 @@
         "value": "speckit_pro_runner/helpers/mutation.py",
         "display": "speckit_pro_runner/helpers/mutation.py"
       },
-      "sha256": "1ff9ac90364c6326c6aec8ba6f48bf83f7ffe82d834adca54a2a1d53f7035108"
+      "sha256": "8129a71746458c6324c1e094a8edcaa4dc93814c6216542635138ef6633576f8"
     },
     {
       "path": {
@@ -128,7 +128,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "b544f544e4095332d139345357f9a6af276f30df9f251173cc88e2dde11aa0ad"
+      "sha256": "0d0c635d89d0e2dd076bd01882ae5b1e1b8fac76013bb27ff8b2438dcc7d349f"
     },
     {
       "path": {

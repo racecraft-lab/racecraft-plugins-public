@@ -886,6 +886,33 @@ class ReadOnlyHelperTests(unittest.TestCase):
         failures = json.loads(result["stdout"])["failures"]
         self.assertIn("body.readable", {failure["rule"] for failure in failures})
 
+    def test_validate_pr_packet_rejects_validation_result_path_not_owned_by_packet(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
+            self.skipTest("validate-pr-packet validation ownership case")
+        valid_packet = json.loads((PR_PACKET_FIXTURE_DIR / "valid-single.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            packet = Path(project) / "valid-single.json"
+            packet.write_text(
+                json.dumps(
+                    {
+                        **valid_packet,
+                        "validation_result_path": "specs/other-feature/.process/pr-packets/valid-single/validation.json",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-read-only",
+                    {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                )
+            )
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure", 1)
+        rules = {failure["rule"] for failure in response["data"]["stdout_json"]["failures"]}
+        self.assertIn("input.identity.validation_result_path", rules)
+        self.assertEqual(stderr_records, response["diagnostics"])
+
     def test_validate_pr_packet_checks_body_currentness_without_writing_state(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
             self.skipTest("validate-pr-packet currentness case")
@@ -1079,10 +1106,10 @@ class ReadOnlyHelperTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
             changed_files = Path(project) / "changed-files.txt"
             changed_files.write_text(f"{FEATURE_DIR}/plan.md\n", encoding="utf-8")
-            from speckit_pro_runner.helpers.read_only import validate_pr_workflow_contract
+            from speckit_pro_runner.helpers import read_only
 
-            with patch.object(Path, "read_text", side_effect=PermissionError("denied")):
-                result = validate_pr_workflow_contract(
+            with patch.object(read_only, "trusted_text", return_value=None):
+                result = read_only.validate_pr_workflow_contract(
                     {
                         "title": "feat(XPLAT-005): Scope check",
                         "repo_root": ".",
@@ -1144,10 +1171,36 @@ class ReadOnlyHelperTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
             path = Path(project) / "unreadable.md"
             path.write_text("secret\n", encoding="utf-8")
-            from speckit_pro_runner.helpers.read_only import trusted_text
+            from speckit_pro_runner.helpers import read_only
 
-            with patch.object(Path, "read_text", side_effect=PermissionError("denied")):
-                self.assertIsNone(trusted_text(path, REPO_ROOT))
+            with patch.object(read_only.os, "open", side_effect=PermissionError("denied")):
+                self.assertIsNone(read_only.trusted_text(path, REPO_ROOT))
+
+    @unittest.skipIf(os.name == "nt", "POSIX no-follow descriptor behavior is not portable to Windows")
+    def test_trusted_bytes_rejects_symlink_replacement_between_check_and_open(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("trusted bytes race case uses shared helper behavior")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project, tempfile.TemporaryDirectory() as outside:
+            project_path = Path(project)
+            target = project_path / "packet.json"
+            target.write_text('{"packet": true}\n', encoding="utf-8")
+            outside_file = Path(outside) / "outside.json"
+            outside_file.write_text('{"outside": true}\n', encoding="utf-8")
+            from speckit_pro_runner.helpers import read_only
+
+            real_open = read_only.os.open
+            swapped = False
+
+            def swap_before_leaf_open(path: object, flags: int, mode: int = 0o777, *, dir_fd: int | None = None):
+                nonlocal swapped
+                if path == "packet.json" and dir_fd is not None and not swapped:
+                    target.unlink()
+                    target.symlink_to(outside_file)
+                    swapped = True
+                return real_open(path, flags, mode, dir_fd=dir_fd)
+
+            with patch.object(read_only.os, "open", side_effect=swap_before_leaf_open):
+                self.assertIsNone(read_only.trusted_bytes(target, project_path))
 
     def test_git_branch_rejects_symlinked_git_paths(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
