@@ -48,7 +48,7 @@ The design concept is the source of truth for these scoping decisions:
 | Analyze | `/speckit-analyze` | ✅ Complete | A1 parallel marker issue resolved; no open findings |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory confidence gate passed: 0.97 >= 0.90 |
 | Implement | `/speckit-implement` | ✅ Complete | Taxonomy artifact created; 35/35 tasks complete; validation passed |
-| Post | post-implementation | ⚠️ Blocked | Blocked at PR packet generation boundary; packet emission is deferred |
+| Post | post-implementation | 🔄 In Progress | PR packet/body generation and draft PR creation complete; review remediation and retrospective remain pending |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -707,7 +707,7 @@ For each task:
 | US1 inventory | T011-T019 | 9/9 | Current-state boundary, surface rows, canonical gap register, owners, knowledge lifecycle gaps, and loop closures recorded |
 | US1 candidate/safety evidence | T020-T025 | 6/6 | External candidate and OKF evidence matrix populated from dated primary sources |
 | US1 proof | T026-T027 | 2/2 | AC-1.1 through AC-1.10 crosswalk and non-adoption guardrail review completed |
-| Polish | T028-T035 | 8/8 | Placeholder sweep, link/evidence review, spec-index check, `git diff --check`, Layer 1, workflow/state, and PR packet draft completed |
+| Polish | T028-T035 | 8/8 | Placeholder sweep, link/evidence review, spec-index check, `git diff --check`, Layer 1, workflow/state, PR packet, and PR creation completed |
 
 ---
 
@@ -724,9 +724,9 @@ For each task:
 - [x] Post: Self-Review
 - [x] Post: UAT Runbook Generation
 - [x] Post: Final Reviewability Backstop
-- [ ] Post: PR Packet/Body Generation — blocked: feature-local PR packet JSON absent and packet emission is deferred
-- [ ] Post: PR Body Generation
-- [ ] Post: PR Creation
+- [x] Post: PR Packet/Body Generation
+- [x] Post: PR Body Generation
+- [x] Post: PR Creation
 - [ ] Post: Review Remediation
 - [ ] Post: Retrospective
 
@@ -748,8 +748,11 @@ For each task:
 - [x] Applicable structural validation passes:
       `python3 tests/speckit-pro/run-all.py --layer 1`.
 - [x] The PR packet names review scope, verification, and intentional deferrals.
-- [x] No runtime, generated, installed-cache, or vendored file changed.
-- [ ] PR is created and reviewed before merge.
+- [x] HRNS taxonomy scope remains docs/process; the post-gate PR-packet failure
+      required an intentional SpecKit Pro plugin fix, with generated release
+      artifacts and installed-cache fixtures refreshed for both Claude Code and
+      Codex.
+- [ ] PR is created; review remains required before merge.
 
 ### Post Results
 
@@ -764,7 +767,9 @@ For each task:
 | Self-Review | Complete | See self-review block below |
 | UAT Runbook Generation | Skipped | No committed feature-local UAT runbook; `generate-uat-skeleton` is deferred |
 | Final Reviewability Backstop | Proceed | Current reviewability evidence is committed and docs/process bounded |
-| PR Packet/Body Generation | Blocked | No `specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/*.json`; `pr-packet-output` is deferred |
+| PR Packet/Body Generation | Pass | `speckit-pro-runner helpers pr-packet-output apply` emitted `specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001.json`, body markdown, and validation result |
+| PR Body Generation | Pass | PR body committed at `specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001/body.md` |
+| PR Creation | Pass | Draft PR opened: https://github.com/racecraft-lab/racecraft-plugins-public/pull/357 |
 
 ### Self-Review
 

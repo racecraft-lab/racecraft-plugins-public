@@ -3,8 +3,8 @@
   "feature_dir": "specs/hrns-001-harness-surface-inventory-gap-taxonomy",
   "spec_id": "HRNS-001",
   "branch": "hrns-001-harness-surface-inventory-gap-taxonomy",
-  "updated_at": "2026-07-15T23:36:00Z",
-  "active_step": "Post: PR Packet/Body Generation",
+  "updated_at": "2026-07-16T00:27:38Z",
+  "active_step": "Post: Review Remediation",
   "confidence_gate_mode": "advisory",
   "project_commands": {
     "BUILD": "N/A",
@@ -292,7 +292,7 @@
       "pr_packet": "recorded_in_workflow"
     },
     "post": {
-      "status": "blocked",
+      "status": "pr_open_pending_review",
       "completed_items": [
         "Post: Doctor Extension Check",
         "Post: Verify Implementation",
@@ -302,10 +302,22 @@
         "Post: Reviewability Diff Gate",
         "Post: Self-Review",
         "Post: UAT Runbook Generation",
-        "Post: Final Reviewability Backstop"
+        "Post: Final Reviewability Backstop",
+        "Post: PR Packet/Body Generation",
+        "Post: PR Body Generation",
+        "Post: PR Creation"
       ],
-      "blocked_item": "Post: PR Packet/Body Generation",
-      "blocker": "No feature-local pr-packets JSON exists and pr-packet-output is deferred; PR body generation and PR creation are not authorized.",
+      "pending_items": [
+        "Post: Review Remediation",
+        "Post: Retrospective"
+      ],
+      "pr": {
+        "status": "draft_open",
+        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/357",
+        "number": 357,
+        "base": "main",
+        "head": "hrns-001-harness-surface-inventory-gap-taxonomy"
+      },
       "doctor": {
         "status": "pass_with_warnings",
         "warnings": [
@@ -346,9 +358,10 @@
         "reason": "No committed feature-local UAT runbook; generate-uat-skeleton deferred"
       },
       "pr_packet": {
-        "status": "blocked",
-        "packet_dir": "specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets",
-        "reason": "packet missing and packet emission deferred"
+        "status": "pass",
+        "packet": "specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001.json",
+        "body": "specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001/body.md",
+        "validation": "specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001/validation.json"
       }
     }
   },
@@ -387,9 +400,9 @@
     {"step": "Post: Self-Review", "status": "completed"},
     {"step": "Post: UAT Runbook Generation", "status": "completed"},
     {"step": "Post: Final Reviewability Backstop", "status": "completed"},
-    {"step": "Post: PR Packet/Body Generation", "status": "in_progress"},
-    {"step": "Post: PR Body Generation", "status": "pending"},
-    {"step": "Post: PR Creation", "status": "pending"},
+    {"step": "Post: PR Packet/Body Generation", "status": "completed"},
+    {"step": "Post: PR Body Generation", "status": "completed"},
+    {"step": "Post: PR Creation", "status": "completed"},
     {"step": "Post: Review Remediation", "status": "pending"},
     {"step": "Post: Retrospective", "status": "pending"}
   ]
