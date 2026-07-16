@@ -19,14 +19,14 @@
     "body": {
       "algorithm": "sha256",
       "path": "specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001/body.md",
-      "sha256": "e988fd951b9062986ed1276fd4829b1215bbce4d9b0ca0878f9abc44518590b3",
-      "size_bytes": 4512
+      "sha256": "1f2dd163f8be6b42ead31e5cfe536b19aa7d29954bc245a5fb2e6bd689874404",
+      "size_bytes": 4667
     },
     "packet": {
       "algorithm": "sha256",
       "path": "specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001.json",
-      "sha256": "64029bd2fa91ed71bd6e324432404c27cefe71dc09a0d68592bfcb921c2a7e70",
-      "size_bytes": 15394
+      "sha256": "9e7e1d95a30405058ff377f0178b1e40e1041098388025805bffc89122de9721",
+      "size_bytes": 15438
     }
   },
   "status": "passed",
@@ -35,7 +35,7 @@
     "base_branch": "main",
     "head_branch": "hrns-001-harness-surface-inventory-gap-taxonomy"
   },
-  "timestamp": "2026-07-16T02:05:31Z",
+  "timestamp": "2026-07-16T02:47:23Z",
   "title_value": "fix(speckit-pro): Enable PR packet emission",
   "validation_result_path": "specs/hrns-001-harness-surface-inventory-gap-taxonomy/.process/pr-packets/hrns-001/validation.json"
 }
