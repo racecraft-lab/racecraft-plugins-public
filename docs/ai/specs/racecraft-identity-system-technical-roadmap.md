@@ -89,7 +89,7 @@ Repo + docs             Plugin + packaging
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| BRAND-001 | Brand brief and concept exploration | ⏳ Pending | `.process/BRAND-001-workflow.md` | Scaffold / Grill Me |
+| BRAND-001 | Brand brief and concept exploration | 🔄 In Progress | `.process/BRAND-001-workflow.md` | Ready for autopilot |
 | BRAND-002 | Rationale-blind critique and human selection | ⏳ Pending | — | Blocked by BRAND-001 |
 | BRAND-003 | Canonical SVG master production | ⏳ Pending | — | Blocked by BRAND-002 |
 | BRAND-004 | Deterministic SVG validation and export pipeline | ⏳ Pending | — | Blocked by BRAND-003 |
