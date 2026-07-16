@@ -1,0 +1,4686 @@
+{
+  "$schema": "./agent-route-candidate-manifest.schema.json",
+  "schema_version": "2.0.0",
+  "manifest_kind": "agent_route_candidate_manifest",
+  "platform": "codex",
+  "spec_id": "G56R-001",
+  "provisional": true,
+  "snapshot": {
+    "snapshot_id": "G56R-001-SNAPSHOT-2026-07-16-V2",
+    "captured_at_utc": "2026-07-16T14:03:39Z",
+    "prior_snapshot_id": "G56R-001-REPORT-2026-07-16-V0.1",
+    "supersedes_manifest_version": "report-only-v0.1",
+    "historical_artifact_refs": [
+      "fe9d7cda2ae96247391b62cd43c8897262245f97:docs/ai/research/codex-agent-route-candidates.md",
+      "docs/ai/specs/.process/G56R-001-design-concept.md",
+      "docs/ai/specs/.process/G56R-001-workflow.md"
+    ],
+    "change_summary": "Adds the shared schema-v2 machine manifest, expands the official OpenAI source ledger from nine to twenty-one current sources, and records dispositions without rewriting the original G56R-001 execution history.",
+    "legacy_fact_dispositions": [
+      {
+        "legacy_fact_id": "G56R-001-OSF-001",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-001",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-002"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-002",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-002",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-002"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-003",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-003",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-002"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-004",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-004",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-002"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-005",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-005",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-002"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-006",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-006",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-002"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-007",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-007",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-003"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-008",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-008",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-003"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-009",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-009",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-004"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-010",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-010",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-004"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-011",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-011",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-006"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-012",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-012",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-006"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-013",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-013",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-006"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-014",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-014",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-007"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-015",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-015",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-007"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-016",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-016",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-008"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-017",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-017",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-008"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-018",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-018",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-008"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-019",
+        "disposition": "withdrawn",
+        "replacement_claim_id": null,
+        "official_source_ledger_ids": [],
+        "note": "The Apps SDK statement remains preserved as Apps-SDK-scoped historical context, but its URL is outside the strict Codex platform-authority allowlist and cannot support a G56R route claim."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-020",
+        "disposition": "withdrawn",
+        "replacement_claim_id": null,
+        "official_source_ledger_ids": [],
+        "note": "The Apps SDK statement remains preserved as Apps-SDK-scoped historical context, but its URL is outside the strict Codex platform-authority allowlist and cannot support a G56R route claim."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-021",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-021",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-014"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-022",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-022",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-014"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-023",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-023",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-014"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-024",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-024",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-013"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      },
+      {
+        "legacy_fact_id": "G56R-001-OSF-025",
+        "disposition": "confirmed_current",
+        "replacement_claim_id": "G56R-001-OSF-025",
+        "official_source_ledger_ids": [
+          "OPENAI-DOC-013"
+        ],
+        "note": "Revalidated against the current canonical OpenAI document; the v2 source record carries the live body hash and bounded extract."
+      }
+    ],
+    "refresh_required_before": [
+      "next_consuming_scaffold",
+      "release"
+    ]
+  },
+  "evidence_authority": {
+    "vendor": "openai",
+    "authoritative_domains": [
+      "learn.chatgpt.com/docs/",
+      "developers.openai.com/codex/",
+      "developers.openai.com/api/docs/",
+      "platform.openai.com/docs/"
+    ],
+    "evidence_classes": [
+      "official_documentation",
+      "project_input",
+      "runtime_verification_needed",
+      "qualification_needed",
+      "undocumented"
+    ],
+    "platform_fact_rule": "Only current canonical OpenAI documentation in the shared allowlist may establish a Codex or OpenAI platform fact.",
+    "candidate_admission_rule": "A candidate requires Codex coding-agent documentation plus relevant model and lifecycle documentation; API documentation alone does not prove Codex availability.",
+    "cross_platform_rule": "Cross-platform comparisons require separately bound Anthropic and OpenAI documentation and may preserve documented asymmetry.",
+    "fail_closed_rule": "Missing, conflicting, inaccessible, or withdrawn official documentation blocks the dependent claim or route."
+  },
+  "immutable_production_comparator": {
+    "release_tag": "speckit-pro-v2.19.2",
+    "commit_sha": "587057efeff856bad020b38dc11c7e9214f2c078",
+    "pin_rationale": "Latest published non-draft, non-prerelease SpecKit Pro release at the v2 evidence refresh.",
+    "reconciliation_note": "The scoped speckit-pro/agents and speckit-pro/codex-agents diff from v2.19.1 to v2.19.2 is empty, so the original role, route, and hash records remain byte-equivalent while the comparator advances.",
+    "source_agent_roots": [
+      "speckit-pro/codex-agents",
+      "speckit-pro/agents"
+    ]
+  },
+  "official_source_ledger": [
+    {
+      "official_source_ledger_id": "OPENAI-DOC-001",
+      "vendor": "openai",
+      "source_family": "documentation_discovery",
+      "document_class": "documentation_index",
+      "requested_url": "https://developers.openai.com/codex/codex-manual.md",
+      "canonical_url": "https://learn.chatgpt.com/docs/codex-manual.md",
+      "retrieved_at_utc": "2026-07-16T14:03:32Z",
+      "http_status": 200,
+      "body_bytes": 787455,
+      "body_sha256": "084f81886e62bd0d8eafdc9cbc0b297f026880dbd212bf55796759fe9115ccc9",
+      "page_or_surface": "Codex documentation manual",
+      "locator": "manual topic index and canonical source links",
+      "supported_surfaces": [
+        "codex_documentation"
+      ],
+      "exact_documented_facts": [
+        "The manual enumerates the current official Codex documentation surfaces used by this ledger."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "--- title: \"Codex Manual\" hidden: true --- ## Find By Topic - `pricing`, `plans`, `ChatGPT`, `API key`, `Plus`,",
+          "extract_sha256": "ffe2bf2e4d446fce1cf0abb0ad779a96e3f9095b9b6f63b3babc5d916eb370f1",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-DOCUMENTATION_DISCOVERY"
+      ],
+      "access_status": "redirected",
+      "conflict_status": "none",
+      "gaps": [],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-002",
+      "vendor": "openai",
+      "source_family": "model_catalog",
+      "document_class": "coding_agent_documentation",
+      "requested_url": "https://learn.chatgpt.com/docs/models",
+      "canonical_url": "https://learn.chatgpt.com/docs/models",
+      "retrieved_at_utc": "2026-07-16T14:03:33Z",
+      "http_status": 200,
+      "body_bytes": 599306,
+      "body_sha256": "01dfd5f6e7d67308cf2d2897256d3b1442b1cef8a1db165e6989c520dd073e1e",
+      "page_or_surface": "Codex models",
+      "locator": "recommended models, positioning, and reasoning guidance",
+      "supported_surfaces": [
+        "codex_cli",
+        "codex_app",
+        "codex_ide",
+        "codex_cloud"
+      ],
+      "exact_documented_facts": [
+        "The Codex catalog documents exact model IDs and workload positioning for Sol, Terra, Luna, GPT-5.5, and Codex Spark."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "Where each model shines Sol, for complex, open-ended work. Choose Sol for ambiguous, difficult, or high-value tasks that",
+          "extract_sha256": "9c777520507f76a4259f75c8f6f860734f0edf16ab9d18f754f6d691b95688fd",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-MODEL_CATALOG"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "Account-specific availability and model-specific effort support require pinned-runtime verification."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-003",
+      "vendor": "openai",
+      "source_family": "subagent_configuration",
+      "document_class": "coding_agent_documentation",
+      "requested_url": "https://learn.chatgpt.com/docs/agent-configuration/subagents",
+      "canonical_url": "https://learn.chatgpt.com/docs/agent-configuration/subagents",
+      "retrieved_at_utc": "2026-07-16T14:03:33Z",
+      "http_status": 200,
+      "body_bytes": 539340,
+      "body_sha256": "18fda902a30f9563e20645ed0549193ef4bc15b330e7bd6e3e0397b23055714c",
+      "page_or_surface": "Codex custom agents and subagents",
+      "locator": "custom-agent optional fields and parent inheritance",
+      "supported_surfaces": [
+        "codex_custom_agent"
+      ],
+      "exact_documented_facts": [
+        "Custom-agent files support model, model_reasoning_effort, sandbox_mode, MCP server, and skills configuration fields, with documented inheritance when omitted."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "define: name description developer_instructions Optional fields such as nickname_candidates , model , model_reasoning_effort , sandbox_mode , mcp_servers ,",
+          "extract_sha256": "0385df09b87028ee323f7758b0d42e4e8eb77400da8bdf1fc9de27d555d69134",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-SUBAGENT_CONFIGURATION"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "Effective runtime treatment remains a pinned-client question."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-004",
+      "vendor": "openai",
+      "source_family": "model_configuration_and_resolution",
+      "document_class": "coding_agent_documentation",
+      "requested_url": "https://learn.chatgpt.com/docs/config-file/config-reference",
+      "canonical_url": "https://learn.chatgpt.com/docs/config-file/config-reference",
+      "retrieved_at_utc": "2026-07-16T14:03:33Z",
+      "http_status": 200,
+      "body_bytes": 1157392,
+      "body_sha256": "483eb6d8baa3ceee65d2196ba41cecad1ee6be87bdf37b7886d3e60b39c426d2",
+      "page_or_surface": "Codex configuration reference",
+      "locator": "model and reasoning configuration fields and precedence",
+      "supported_surfaces": [
+        "codex_config_toml"
+      ],
+      "exact_documented_facts": [
+        "The configuration reference documents model_reasoning_effort and its config-surface value set and defaults."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "the built-in amazon-bedrock provider. model_reasoning_effort minimal | low | medium | high | xhigh Adjust reasoning effort for",
+          "extract_sha256": "993d4e020f33000f792926d018e9fb348bf5a95454ab3edcc59abb26940484ba",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-MODEL_CONFIGURATION_AND_RESOLUTION"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "A config default cannot establish another surface's effective effort."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-005",
+      "vendor": "openai",
+      "source_family": "hooks_and_effective_route",
+      "document_class": "coding_agent_documentation",
+      "requested_url": "https://learn.chatgpt.com/docs/hooks",
+      "canonical_url": "https://learn.chatgpt.com/docs/hooks",
+      "retrieved_at_utc": "2026-07-16T14:03:34Z",
+      "http_status": 200,
+      "body_bytes": 405914,
+      "body_sha256": "be2be47332edbc2de3170da674f838ffcf9cd5d0e777c93240bb344b91129f84",
+      "page_or_surface": "Codex hooks",
+      "locator": "hook events, inputs, and execution boundaries",
+      "supported_surfaces": [
+        "codex_hooks"
+      ],
+      "exact_documented_facts": [
+        "Codex documents lifecycle hook configuration and event-specific inputs."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "Codex lifecycle Copy Page Hooks are an extensibility framework for Codex. They allow you to inject your own",
+          "extract_sha256": "44a82f685eea6e8be5b11ad27b70deacbe2b4dcf0417081d8275fdb66d76a688",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-HOOKS_AND_EFFECTIVE_ROUTE"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "Hooks do not independently prove a requested custom-agent route's complete effective treatment."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "vendor": "openai",
+      "source_family": "telemetry_and_observability",
+      "document_class": "api_reference",
+      "requested_url": "https://learn.chatgpt.com/docs/app-server",
+      "canonical_url": "https://learn.chatgpt.com/docs/app-server",
+      "retrieved_at_utc": "2026-07-16T14:03:34Z",
+      "http_status": 200,
+      "body_bytes": 835428,
+      "body_sha256": "0aeafcfd075e3aa463341fe08e0a5a29f4b8c8d17778423d4b5c45941181a373",
+      "page_or_surface": "Codex app-server JSON-RPC",
+      "locator": "model discovery, capability, reroute, and token-usage methods and events",
+      "supported_surfaces": [
+        "codex_app_server"
+      ],
+      "exact_documented_facts": [
+        "The app server documents model/list, provider capabilities, supported/default reasoning effort fields, input modalities, model/rerouted, and token-usage events."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "process exit status (experimental). model/list - list available models (set includeHidden: true to include entries with hidden: true",
+          "extract_sha256": "1ab510db8d8d89bf2a6e5b8c9297ef2539983de071f27db946fce2d13eb3daae",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-TELEMETRY_AND_OBSERVABILITY"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "The ledger does not capture a pinned-client response."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-007",
+      "vendor": "openai",
+      "source_family": "noninteractive_output",
+      "document_class": "coding_agent_documentation",
+      "requested_url": "https://learn.chatgpt.com/docs/non-interactive-mode",
+      "canonical_url": "https://learn.chatgpt.com/docs/non-interactive-mode",
+      "retrieved_at_utc": "2026-07-16T14:03:35Z",
+      "http_status": 200,
+      "body_bytes": 378886,
+      "body_sha256": "e5f9d89f239bdbb4e15d2c4eac317f66a12cf79a6a168ba0245e509ce433b69c",
+      "page_or_surface": "Codex non-interactive mode",
+      "locator": "JSONL lifecycle, item, error, and schema-constrained output",
+      "supported_surfaces": [
+        "codex_exec"
+      ],
+      "exact_documented_facts": [
+        "Non-interactive mode documents JSONL lifecycle, item, and error events plus schema-constrained final output."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "emits while it\u2019s running. Event types include thread.started , turn.started , turn.completed , turn.failed , item.* , and",
+          "extract_sha256": "42a085438445b5bcb415bf55008c5036995479a8d7a781fb9966e8b3a166f801",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-NONINTERACTIVE_OUTPUT"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "This surface does not document every desired custom-agent effective-route field."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-008",
+      "vendor": "openai",
+      "source_family": "tools_and_mcp",
+      "document_class": "coding_agent_documentation",
+      "requested_url": "https://learn.chatgpt.com/docs/extend/mcp",
+      "canonical_url": "https://learn.chatgpt.com/docs/extend/mcp",
+      "retrieved_at_utc": "2026-07-16T14:03:35Z",
+      "http_status": 200,
+      "body_bytes": 402853,
+      "body_sha256": "80963d1ff2ed16f9739527a3bc64a0918fde9b5c053b5d0f6d0009a07e37aae7",
+      "page_or_surface": "Codex MCP extension",
+      "locator": "MCP server configuration, transports, commands, and plugin bundling",
+      "supported_surfaces": [
+        "codex_mcp",
+        "codex_plugins"
+      ],
+      "exact_documented_facts": [
+        "Codex documents MCP server configuration, STDIO and Streamable HTTP transports, CLI management, and plugin-bundled MCP servers."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "\"approve\" Plugin-provided MCP servers Installed plugins can bundle MCP servers in their plugin manifest. Those servers are launched",
+          "extract_sha256": "228f9d04aecb5cefe0c6aa0135ea4577f6b8383bcb2af68a81340b2988dbb68f",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-TOOLS_AND_MCP"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "Role-specific effective MCP access remains runtime verification."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-009",
+      "vendor": "openai",
+      "source_family": "authentication",
+      "document_class": "coding_agent_documentation",
+      "requested_url": "https://learn.chatgpt.com/docs/auth",
+      "canonical_url": "https://learn.chatgpt.com/docs/auth",
+      "retrieved_at_utc": "2026-07-16T14:03:35Z",
+      "http_status": 200,
+      "body_bytes": 513300,
+      "body_sha256": "0ff352b1ad2b2085db5d7b78b699c4081024c7607b4933886f220e3b17ed78bd",
+      "page_or_surface": "Codex authentication",
+      "locator": "ChatGPT sign-in and API-key authentication boundaries",
+      "supported_surfaces": [
+        "codex_cli",
+        "codex_app",
+        "codex_ide",
+        "codex_cloud"
+      ],
+      "exact_documented_facts": [
+        "Codex documents ChatGPT and API-key authentication as distinct product and billing boundaries."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "when using OpenAI models: Sign in with ChatGPT for subscription access Sign in with an API key for",
+          "extract_sha256": "12e0300ae5adbb288f99b46f5a403b956ece3b4d19ebcec452410b19a5d54af4",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-AUTHENTICATION"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "Authentication alone does not prove model availability."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-010",
+      "vendor": "openai",
+      "source_family": "permissions_and_sandboxing",
+      "document_class": "coding_agent_documentation",
+      "requested_url": "https://learn.chatgpt.com/docs/agent-approvals-security",
+      "canonical_url": "https://learn.chatgpt.com/docs/agent-approvals-security",
+      "retrieved_at_utc": "2026-07-16T14:03:35Z",
+      "http_status": 200,
+      "body_bytes": 385907,
+      "body_sha256": "ad62dbe0c921a25849b901d1bac79e7ec49af4ba1b255c6beffe8f13ea37cdce",
+      "page_or_surface": "Codex agent approvals and security",
+      "locator": "sandbox modes, approval policies, network access, and writable roots",
+      "supported_surfaces": [
+        "codex_local"
+      ],
+      "exact_documented_facts": [
+        "Codex documents separate sandbox and approval controls, including network and writable-root boundaries."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "security white paper . Sandbox and approvals Codex security controls come from two layers that work together: Sandbox",
+          "extract_sha256": "e283fc8087451a8f3f0a7ef113f72a2a98fff327c7e371e3035d3765f022d3e9",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-PERMISSIONS_AND_SANDBOXING"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "Effective child-agent permissions must be verified under the pinned parent configuration."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-011",
+      "vendor": "openai",
+      "source_family": "model_pricing",
+      "document_class": "coding_agent_documentation",
+      "requested_url": "https://learn.chatgpt.com/docs/pricing",
+      "canonical_url": "https://learn.chatgpt.com/docs/pricing",
+      "retrieved_at_utc": "2026-07-16T14:03:36Z",
+      "http_status": 200,
+      "body_bytes": 641592,
+      "body_sha256": "b1fe88e5d02fe30974742f59ec546f4bc08dd61742b254fe3eeafd9a1a0f324e",
+      "page_or_surface": "Codex pricing",
+      "locator": "plan, credit, API billing, and feature-availability boundaries",
+      "supported_surfaces": [
+        "codex_chatgpt_sign_in",
+        "codex_api_key"
+      ],
+      "exact_documented_facts": [
+        "Codex pricing distinguishes plan or credit usage from API token billing and scopes feature availability by plan."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "and Codex share usage. Work usage inside ChatGPT uses the same pricing, credits, and usage limits as Codex.",
+          "extract_sha256": "6d879c16afc27bd8d927ff9638721e4607015a8190463b908ca3973b69f09df1",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-MODEL_PRICING"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "Pricing is diagnostic context and does not qualify a route."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-012",
+      "vendor": "openai",
+      "source_family": "administrative_analytics",
+      "document_class": "api_reference",
+      "requested_url": "https://learn.chatgpt.com/docs/enterprise/analytics-api",
+      "canonical_url": "https://learn.chatgpt.com/docs/enterprise/analytics-api",
+      "retrieved_at_utc": "2026-07-16T14:03:36Z",
+      "http_status": 200,
+      "body_bytes": 295064,
+      "body_sha256": "ac53417415d816c67161b364de04e1c13534181ed76918425d41ee6316c7e151",
+      "page_or_surface": "Codex enterprise Analytics API",
+      "locator": "administrative usage reporting contract",
+      "supported_surfaces": [
+        "codex_enterprise_admin"
+      ],
+      "exact_documented_facts": [
+        "The Analytics API is an administrative reporting surface, separate from per-run exact-treatment evidence."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "Analytics API Copy Page The Codex Analytics API provides aggregated Codex usage and activity metrics for a ChatGPT",
+          "extract_sha256": "8fe9a856e22f57f2c91e646e26d5660922279df0f5ad0aa88dee5ddb48b4fe22",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-ADMINISTRATIVE_ANALYTICS"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "Aggregate analytics cannot replace route-level execution telemetry."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-013",
+      "vendor": "openai",
+      "source_family": "model_lifecycle",
+      "document_class": "platform_api_documentation",
+      "requested_url": "https://developers.openai.com/api/docs/deprecations",
+      "canonical_url": "https://developers.openai.com/api/docs/deprecations",
+      "retrieved_at_utc": "2026-07-16T14:03:36Z",
+      "http_status": 200,
+      "body_bytes": 425288,
+      "body_sha256": "c9afecea6c0d8e9e4cb93abe7823a9348fb13d7a6f6f6f66960bcfd3dbf18dd4",
+      "page_or_surface": "OpenAI API deprecations",
+      "locator": "deprecation taxonomy and recommended replacements",
+      "supported_surfaces": [
+        "openai_api"
+      ],
+      "exact_documented_facts": [
+        "OpenAI documents API deprecations and recommended replacements; API lifecycle entries are surface-scoped."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "posts for larger changes. This page lists all API deprecations, along with recommended replacements. Model deprecation notice periods",
+          "extract_sha256": "211824358b8a1a69665fd8e250813d8ea1de9635d7f268adfce50e638baf4bfa",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-MODEL_LIFECYCLE"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "API lifecycle documentation alone does not establish Codex client availability or lifecycle for an unlisted slug."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-014",
+      "vendor": "openai",
+      "source_family": "effort_controls",
+      "document_class": "platform_api_documentation",
+      "requested_url": "https://developers.openai.com/api/docs/guides/latest-model",
+      "canonical_url": "https://developers.openai.com/api/docs/guides/latest-model",
+      "retrieved_at_utc": "2026-07-16T14:03:37Z",
+      "http_status": 200,
+      "body_bytes": 417218,
+      "body_sha256": "214b2e623fe154d5908ff433a1ea6d3987a08098e114842045b5c99ec1141b1a",
+      "page_or_surface": "OpenAI latest-model guidance",
+      "locator": "GPT-5.6 API reasoning effort and mode guidance",
+      "supported_surfaces": [
+        "openai_api"
+      ],
+      "exact_documented_facts": [
+        "The API guidance documents GPT-5.6 reasoning effort and pro-mode semantics for the API surface."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "tool-calling, and multi-turn workflows. Set reasoning.effort intentionally. GPT-5.6 supports none , low , medium , high , xhigh",
+          "extract_sha256": "30b3a1a35d3365a03b5fdf223de7b6608c098e2e245417600b28e008b2534194",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-EFFORT_CONTROLS"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "API effort values and modes do not by themselves prove Codex custom-agent support."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-015",
+      "vendor": "openai",
+      "source_family": "skills_and_delegation",
+      "document_class": "coding_agent_documentation",
+      "requested_url": "https://learn.chatgpt.com/docs/build-skills",
+      "canonical_url": "https://learn.chatgpt.com/docs/build-skills",
+      "retrieved_at_utc": "2026-07-16T14:03:37Z",
+      "http_status": 200,
+      "body_bytes": 334972,
+      "body_sha256": "fb2b03951f078fb5fac8c8528ef51e2c3ae12db9377cbd8c499a2a9839585642",
+      "page_or_surface": "Codex skills",
+      "locator": "skill structure, discovery, and invocation guidance",
+      "supported_surfaces": [
+        "codex_skills"
+      ],
+      "exact_documented_facts": [
+        "Codex documents skills as reusable instruction and resource packages discovered from configured scopes."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "agent skills standard . Skills are the authoring format for reusable workflows. Plugins distribute reusable skills and connectors",
+          "extract_sha256": "8a4aaf7c162e1a31fc5da5b110b8158edcb9ef1fc5afa8fc90740e5dec3ce428",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-SKILLS_AND_DELEGATION"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "Skill loading for a specific child route remains exact-treatment evidence."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-016",
+      "vendor": "openai",
+      "source_family": "plugin_agent_contract",
+      "document_class": "coding_agent_documentation",
+      "requested_url": "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
+      "canonical_url": "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
+      "retrieved_at_utc": "2026-07-16T14:03:37Z",
+      "http_status": 200,
+      "body_bytes": 337271,
+      "body_sha256": "c5c7ce87abe8f4dfec2119676510fb28581e5c200739ef6b9f83c3c0ad11e86e",
+      "page_or_surface": "Codex AGENTS.md instructions",
+      "locator": "instruction discovery and directory scope",
+      "supported_surfaces": [
+        "codex_instructions"
+      ],
+      "exact_documented_facts": [
+        "Codex documents durable AGENTS.md instruction discovery and scoped precedence."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "your project Copy Page Codex reads AGENTS.md files before doing any work. By layering global guidance with project-specific",
+          "extract_sha256": "6b86b2a5b2c7876f8336f5c51ea6340d3688d43bdd5e2bee276eab1e2c0c502d",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-PLUGIN_AGENT_CONTRACT"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "Repository instructions do not establish model capability or route quality."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-017",
+      "vendor": "openai",
+      "source_family": "feature_and_provider_availability",
+      "document_class": "coding_agent_documentation",
+      "requested_url": "https://learn.chatgpt.com/docs/enterprise/workspace-model-availability",
+      "canonical_url": "https://learn.chatgpt.com/docs/enterprise/workspace-model-availability",
+      "retrieved_at_utc": "2026-07-16T14:03:38Z",
+      "http_status": 200,
+      "body_bytes": 301052,
+      "body_sha256": "32f1c2576adaf8aa3d804bd2a97d788d204d931a1fd30dfb0dc2eb8afd9c5d3a",
+      "page_or_surface": "Codex workspace model availability",
+      "locator": "product, authentication, client, and workspace model boundaries",
+      "supported_surfaces": [
+        "codex_cli",
+        "codex_app",
+        "codex_ide",
+        "codex_cloud",
+        "openai_api"
+      ],
+      "exact_documented_facts": [
+        "Model access depends on product surface, client support, authentication boundary, account, and workspace settings."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "API Platform Copy Page Model availability depends on the product surface and authentication boundary. A ChatGPT workspace model",
+          "extract_sha256": "70730787b1f9bba0f44c8df6c1d8c76f2d8b030eaf8e2edb93da21d24bf25cdd",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-FEATURE_AND_PROVIDER_AVAILABILITY"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "The current account's available models require pinned-runtime verification."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-018",
+      "vendor": "openai",
+      "source_family": "interactive_commands",
+      "document_class": "coding_agent_documentation",
+      "requested_url": "https://learn.chatgpt.com/docs/developer-commands?surface=cli",
+      "canonical_url": "https://learn.chatgpt.com/docs/developer-commands?surface=cli",
+      "retrieved_at_utc": "2026-07-16T14:03:38Z",
+      "http_status": 200,
+      "body_bytes": 1021760,
+      "body_sha256": "6612502c70407b9555c964273fd63450ef63664d13e8e4c480367724a679d0f1",
+      "page_or_surface": "Codex developer commands",
+      "locator": "CLI and TUI command catalog",
+      "supported_surfaces": [
+        "codex_cli"
+      ],
+      "exact_documented_facts": [
+        "The command reference documents interactive, noninteractive, app-server, model, status, and permission command surfaces."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "command help. For example, codex exec --oss ... applies --oss",
+          "extract_sha256": "846e70e2f7c73e4c4a6661ec4d63059704258560b5f1ea110513fdb033003492",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-INTERACTIVE_COMMANDS"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "Command presence remains version-bound."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-019",
+      "vendor": "openai",
+      "source_family": "fast_mode",
+      "document_class": "coding_agent_documentation",
+      "requested_url": "https://learn.chatgpt.com/docs/agent-configuration/speed",
+      "canonical_url": "https://learn.chatgpt.com/docs/agent-configuration/speed",
+      "retrieved_at_utc": "2026-07-16T14:03:38Z",
+      "http_status": 200,
+      "body_bytes": 291449,
+      "body_sha256": "8604ea2a184d474f7193c650792a585598585090e474853a27877a987c95ba70",
+      "page_or_surface": "Codex speed and Fast mode",
+      "locator": "Fast mode support, speed, credit, authentication, and surface boundaries",
+      "supported_surfaces": [
+        "codex_cli",
+        "codex_app",
+        "codex_ide"
+      ],
+      "exact_documented_facts": [
+        "Fast mode is a service tier for supported models with documented speed, credit, authentication, and surface constraints; Codex Spark is a separate model."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "for increased credit consumption. Fast mode increases supported model speed by 1.5x and consumes credits at a higher",
+          "extract_sha256": "926879c4366090169753d5beeba5d1a41faaaf21cecf89f55a0d3a995c260a26",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-FAST_MODE"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "Runtime tier availability remains catalog- and account-dependent."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-020",
+      "vendor": "openai",
+      "source_family": "cost_management",
+      "document_class": "coding_agent_documentation",
+      "requested_url": "https://learn.chatgpt.com/docs/enterprise/usage-limits",
+      "canonical_url": "https://learn.chatgpt.com/docs/enterprise/usage-limits",
+      "retrieved_at_utc": "2026-07-16T14:03:38Z",
+      "http_status": 200,
+      "body_bytes": 293506,
+      "body_sha256": "b777217b0483d1693cff70d93fee88ccd50dca1892d228add7d7de14e6f32ccf",
+      "page_or_surface": "Codex enterprise usage limits",
+      "locator": "workspace usage, spend controls, and administrative boundaries",
+      "supported_surfaces": [
+        "codex_enterprise_admin"
+      ],
+      "exact_documented_facts": [
+        "Codex documents plan-dependent workspace usage limits and spend controls separately from route qualification."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "Codex usage Copy Page ChatGPT workspace usage limits and spend controls apply to eligible activity under the plan",
+          "extract_sha256": "5c8fbe1f4fe8fec5c828f32299bb5b85c54383f22a2f878a15f331710c79d7e0",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-COST_MANAGEMENT"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "Administrative limits are not per-route cost telemetry."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-021",
+      "vendor": "openai",
+      "source_family": "statusline_diagnostics",
+      "document_class": "coding_agent_documentation",
+      "requested_url": "https://learn.chatgpt.com/docs/developer-commands?surface=cli#configure-footer-items-with-statusline",
+      "canonical_url": "https://learn.chatgpt.com/docs/developer-commands?surface=cli#configure-footer-items-with-statusline",
+      "retrieved_at_utc": "2026-07-16T14:03:39Z",
+      "http_status": 200,
+      "body_bytes": 1021760,
+      "body_sha256": "6612502c70407b9555c964273fd63450ef63664d13e8e4c480367724a679d0f1",
+      "page_or_surface": "Codex TUI status line",
+      "locator": "status-line field configuration and diagnostic scope",
+      "supported_surfaces": [
+        "codex_cli_tui"
+      ],
+      "exact_documented_facts": [
+        "The Codex TUI documents configurable status-line fields for model, context, limits, Git, tokens, and session diagnostics."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "constraints. /statusline Configure TUI status-line fields interactively. Pick and reorder",
+          "extract_sha256": "8cae9cac61bb545a4083f979b5758150d3ed9615f635a8511b3083e49e5baaaa",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V2-STATUSLINE_DIAGNOSTICS"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "Status-line values are diagnostic and do not prove complete child-route exact treatment."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    }
+  ],
+  "effort_surface_records": [
+    {
+      "effort_surface_record_id": "G56R-001-ESR-001",
+      "official_source_ledger_id": "OPENAI-DOC-002",
+      "surface": "Codex model guidance",
+      "field": "Codex reasoning guidance and model examples",
+      "documented_values": [
+        "not_documented_as_value_set"
+      ],
+      "default_value": null,
+      "scope": "Documentation guidance only",
+      "support_status": "partially_documented",
+      "runtime_verification_needed": true,
+      "notes": "Original claim status: official_documentation` plus `undocumented_value_set` plus `runtime_verification_needed. Executable tuples remain deferred to G56R-002."
+    },
+    {
+      "effort_surface_record_id": "G56R-001-ESR-002",
+      "official_source_ledger_id": "OPENAI-DOC-003",
+      "surface": "Codex custom-agent TOML",
+      "field": "`model_reasoning_effort` optional field",
+      "documented_values": [
+        "not_documented_in_snapshot"
+      ],
+      "default_value": "parent_session_inheritance_when_optional_field_omitted",
+      "scope": "Custom-agent TOML field scope",
+      "support_status": "partially_documented",
+      "runtime_verification_needed": true,
+      "notes": "Original claim status: official_documentation` plus `undocumented_value_set` plus `runtime_verification_needed. Executable tuples remain deferred to G56R-002."
+    },
+    {
+      "effort_surface_record_id": "G56R-001-ESR-003",
+      "official_source_ledger_id": "OPENAI-DOC-004",
+      "surface": "Codex config TOML",
+      "field": "`model_reasoning_effort` config key",
+      "documented_values": [
+        ", ",
+        ", ",
+        ", ",
+        ", "
+      ],
+      "default_value": "managed_model_default_when_omitted",
+      "scope": "Config-file and provider-default scope",
+      "support_status": "partially_documented",
+      "runtime_verification_needed": true,
+      "notes": "Original claim status: official_documentation` plus `runtime_verification_needed. Executable tuples remain deferred to G56R-002."
+    },
+    {
+      "effort_surface_record_id": "G56R-001-ESR-004",
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "surface": "Codex app-server catalog",
+      "field": "supportedReasoningEfforts`, `defaultReasoningEffort",
+      "documented_values": [
+        "runtime_returned_by_model_list_not_captured_in_g56r_001"
+      ],
+      "default_value": null,
+      "scope": "Pinned-client app-server model entry",
+      "support_status": "partially_documented",
+      "runtime_verification_needed": true,
+      "notes": "Original claim status: runtime_verification_needed. Executable tuples remain deferred to G56R-002."
+    },
+    {
+      "effort_surface_record_id": "G56R-001-ESR-005",
+      "official_source_ledger_id": "OPENAI-DOC-014",
+      "surface": "OpenAI API latest-model guidance",
+      "field": "API reasoning effort and pro-mode guidance",
+      "documented_values": [
+        "not_authoritative_for_codex_custom_agent"
+      ],
+      "default_value": null,
+      "scope": "API guidance only",
+      "support_status": "not_applicable",
+      "runtime_verification_needed": true,
+      "notes": "Original claim status: official_documentation` plus `api_surface_caveat. Executable tuples remain deferred to G56R-002."
+    }
+  ],
+  "project_inputs": [
+    {
+      "project_input_id": "G56R-001-PI-001",
+      "kind": "prd",
+      "ref": "docs/prd-codex-gpt-5-6-agent-routing.md",
+      "status": "present",
+      "sha256": "afa50a0b9f0da06141a32cdf386cf495890a2ad5d1894026de867e5caef8a8bb",
+      "claim_bindings": [
+        "Acceptance criteria, evidence authority, G56R dependency boundaries"
+      ],
+      "notes": "Repository evidence only; never OpenAI platform authority."
+    },
+    {
+      "project_input_id": "G56R-001-PI-002",
+      "kind": "roadmap",
+      "ref": "docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md",
+      "status": "present",
+      "sha256": "4e4d4debfe07ea8bfb5bf156661a2ac1a4adb001892fe960dab1204614335cbd",
+      "claim_bindings": [
+        "Current roadmap seed set, spec dependencies, target artifact"
+      ],
+      "notes": "Repository evidence only; never OpenAI platform authority."
+    },
+    {
+      "project_input_id": "G56R-001-PI-003",
+      "kind": "repository_file",
+      "ref": "docs/ai/specs/.process/G56R-001-workflow.md",
+      "status": "present",
+      "sha256": "0f926025fa79716c3812a5d848f40fd533738cf8f88e462ffe584f8364a86cf9",
+      "claim_bindings": [
+        "Durable workflow, gates, checklist domains, task and analysis evidence"
+      ],
+      "notes": "Repository evidence only; never OpenAI platform authority."
+    },
+    {
+      "project_input_id": "G56R-001-PI-004",
+      "kind": "repository_file",
+      "ref": "specs/g56r-001-candidate-route-baseline/spec.md",
+      "status": "present",
+      "sha256": "d8e67b2a3d16e523ce3630312b639d26118667e3f0547bb53b2a8b4e1880117a",
+      "claim_bindings": [
+        "Requirements and record shapes"
+      ],
+      "notes": "Repository evidence only; never OpenAI platform authority."
+    },
+    {
+      "project_input_id": "G56R-001-PI-005",
+      "kind": "repository_file",
+      "ref": "specs/g56r-001-candidate-route-baseline/plan.md",
+      "status": "present",
+      "sha256": "3a2adb08a20aa4dc067ce71a1cfd3adaec54b24d2960b1c5aebbb24ffc0db029",
+      "claim_bindings": [
+        "One-report architecture and declared file operation"
+      ],
+      "notes": "Repository evidence only; never OpenAI platform authority."
+    },
+    {
+      "project_input_id": "G56R-001-PI-006",
+      "kind": "repository_file",
+      "ref": "specs/g56r-001-candidate-route-baseline/tasks.md",
+      "status": "present",
+      "sha256": "ec7437747d5d529244f130863dd63e6e996bc91a053e5c9184a59f29d05c5e93",
+      "claim_bindings": [
+        "Implementation and verification tasks"
+      ],
+      "notes": "Repository evidence only; never OpenAI platform authority."
+    },
+    {
+      "project_input_id": "G56R-001-PI-007",
+      "kind": "repository_file",
+      "ref": "speckit-pro/codex-agents/*.toml",
+      "status": "present",
+      "sha256": null,
+      "claim_bindings": [
+        "Current active Codex role inventory, declared TOML fields, and legacy route guidance such as the UAT `gpt-5.4` compatibility fallback"
+      ],
+      "notes": "Repository evidence only; never OpenAI platform authority."
+    },
+    {
+      "project_input_id": "G56R-001-PI-008",
+      "kind": "repository_file",
+      "ref": "speckit-pro/codex-skills/",
+      "status": "present",
+      "sha256": null,
+      "claim_bindings": [
+        "Codex skill surfaces that may invoke or consume future route policy; read-only in G56R-001"
+      ],
+      "notes": "Repository evidence only; never OpenAI platform authority."
+    },
+    {
+      "project_input_id": "G56R-001-PI-009",
+      "kind": "repository_file",
+      "ref": "speckit-pro/skills/",
+      "status": "present",
+      "sha256": null,
+      "claim_bindings": [
+        "Claude skill surfaces retained for cross-platform parity context; read-only in G56R-001"
+      ],
+      "notes": "Repository evidence only; never OpenAI platform authority."
+    },
+    {
+      "project_input_id": "G56R-001-PI-010",
+      "kind": "repository_file",
+      "ref": "speckit-pro/speckit_pro_runner/helpers/install.py` and `speckit-pro/speckit_pro_runner/helpers/registry.py",
+      "status": "present",
+      "sha256": null,
+      "claim_bindings": [
+        "Installer and helper registry surfaces, including environment/flag-driven model rewrite behavior future route materialization may need to preserve; no behavior changed in G56R-001"
+      ],
+      "notes": "Repository evidence only; never OpenAI platform authority."
+    },
+    {
+      "project_input_id": "G56R-001-PI-011",
+      "kind": "repository_file",
+      "ref": "speckit-pro/speckit_pro_runner/gates/payloads.py",
+      "status": "present",
+      "sha256": "86cf83d7eef00ea016ef15bcd1cf398b8e67b3c32ebe38797ebdea9dc8219b99",
+      "claim_bindings": [
+        "Generated-payload contract guard surface; no payload behavior changed in G56R-001"
+      ],
+      "notes": "Repository evidence only; never OpenAI platform authority."
+    },
+    {
+      "project_input_id": "G56R-001-PI-012",
+      "kind": "repository_file",
+      "ref": "scripts/build-plugin-payloads.py",
+      "status": "present",
+      "sha256": "e90488567a265681f2652a712fb8d27a3ace461feb93534f76e2f74160953395",
+      "claim_bindings": [
+        "Payload build entrypoint reference for future release impact review; no generated artifact changed in G56R-001"
+      ],
+      "notes": "Repository evidence only; never OpenAI platform authority."
+    },
+    {
+      "project_input_id": "G56R-001-PI-013",
+      "kind": "repository_file",
+      "ref": "dist/codex/speckit-pro/` and `dist/claude/speckit-pro/",
+      "status": "present",
+      "sha256": null,
+      "claim_bindings": [
+        "Generated payload references only; not edited and not platform authority"
+      ],
+      "notes": "Repository evidence only; never OpenAI platform authority."
+    },
+    {
+      "project_input_id": "G56R-001-PI-014",
+      "kind": "repository_file",
+      "ref": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/",
+      "status": "present",
+      "sha256": null,
+      "claim_bindings": [
+        "Installed-cache fixture references only; not edited and not platform authority"
+      ],
+      "notes": "Repository evidence only; never OpenAI platform authority."
+    },
+    {
+      "project_input_id": "G56R-001-PI-015",
+      "kind": "repository_file",
+      "ref": "speckit-pro/agents/consensus-synthesizer.md` and `speckit-pro/agents/gate-validator.md",
+      "status": "present",
+      "sha256": null,
+      "claim_bindings": [
+        "Claude parity-role contract inputs only"
+      ],
+      "notes": "Repository evidence only; never OpenAI platform authority."
+    },
+    {
+      "project_input_id": "G56R-001-PI-016",
+      "kind": "repository_file",
+      "ref": "tests/speckit-pro/layer6-efficiency/",
+      "status": "present",
+      "sha256": null,
+      "claim_bindings": [
+        "Current prompt-emulation fixture state and future fixture backlog"
+      ],
+      "notes": "Repository evidence only; never OpenAI platform authority."
+    },
+    {
+      "project_input_id": "G56R-001-PI-017",
+      "kind": "historical_snapshot",
+      "ref": "fe9d7cda2ae96247391b62cd43c8897262245f97:docs/ai/research/codex-agent-route-candidates.md",
+      "status": "historical",
+      "sha256": "272a495da0adf429acbaa6bfb759ec03a0afa7f73eaf49ee76270b3fbba83602",
+      "claim_bindings": [
+        "original report-only G56R-001 handoff"
+      ],
+      "notes": "Preserved predecessor for the dated schema-v2 parity amendment."
+    }
+  ],
+  "agent_contracts": [
+    {
+      "agent_contract_id": "G56R-001-AC-ANALYZE-EXECUTOR",
+      "agent_name": "analyze-executor",
+      "role_summary": "Run Analyze and remediate findings",
+      "safety_boundary": "May mutate only scoped findings; must preserve marker accounting and verification evidence",
+      "grounding_contract": "Uses project specs, plans, tasks, code, and official docs only when required by a finding",
+      "mutation_boundary": "May edit specs/plans/tasks/code for scoped findings",
+      "tool_contract": [
+        "Project commands, tests, file reads, edits"
+      ],
+      "skill_contract": [
+        "Analyze workflow skill when invoked by parent"
+      ],
+      "mcp_contract": [
+        "Parent-provided MCP only; no intrinsic MCP dependency"
+      ],
+      "output_contract": "Analyze result with findings, fixes, verification",
+      "required_capabilities": [
+        "client: Codex custom agent",
+        "modality: text",
+        "tools: Project commands, tests, file reads, edits",
+        "skills: Analyze workflow skill when invoked by parent",
+        "mcp: Parent-provided MCP only; no intrinsic MCP dependency",
+        "runtime: exact model, effort, sandbox, approval, tool, skill, MCP, and parent treatment"
+      ],
+      "source_ref": "speckit-pro/codex-agents/analyze-executor.toml",
+      "source_sha256": "eac0a81678fe8b82411ab90258af41bc819681e4111547c16581e12d60afb3a4",
+      "instruction_sha256": "771a5b9075240abf72b92449dae9960a03b8873e516468a13b7c6da17245f64c",
+      "production_route": {
+        "status": "present",
+        "model_selector": "gpt-5.5",
+        "effort_selector": "xhigh"
+      },
+      "platform_field_mappings": {
+        "model": "model",
+        "effort": "model_reasoning_effort",
+        "sandbox": "sandbox_mode",
+        "mcp": "mcp_servers",
+        "skills": "skills.config"
+      },
+      "platform_divergences": [
+        "None recorded beyond runtime verification"
+      ],
+      "fixture_backlog_ids": [
+        "G56R-001-FB-ANALYZE-EXECUTOR"
+      ],
+      "notes": [
+        "Representative future task: Resolve G56R analysis drift before implementation",
+        "Recorded production status: active_codex_toml; declared sandbox: workspace-write."
+      ],
+      "invalidation_triggers": [
+        "The source file or recorded instruction/full-file hash changes: speckit-pro/codex-agents/analyze-executor.toml.",
+        "The custom-agent field contract or role boundary changes."
+      ]
+    },
+    {
+      "agent_contract_id": "G56R-001-AC-AUTOPILOT-FAST-HELPER",
+      "agent_name": "autopilot-fast-helper",
+      "role_summary": "Compress, triage, draft queries, normalize context",
+      "safety_boundary": "Read-only advisory; no decisions, spawned agents, commands, or file mutation",
+      "grounding_contract": "Uses prompt context only",
+      "mutation_boundary": "Read-only advisory",
+      "tool_contract": [
+        "No tools by role contract"
+      ],
+      "skill_contract": [
+        "No skill dependency"
+      ],
+      "mcp_contract": [
+        "No MCP dependency"
+      ],
+      "output_contract": "Short advisory output",
+      "required_capabilities": [
+        "client: Codex custom agent",
+        "modality: text",
+        "tools: No tools by role contract",
+        "skills: No skill dependency",
+        "mcp: No MCP dependency",
+        "runtime: exact model, effort, sandbox, approval, tool, skill, MCP, and parent treatment"
+      ],
+      "source_ref": "speckit-pro/codex-agents/autopilot-fast-helper.toml",
+      "source_sha256": "aa570f8ff51fa3cb7848d8c05253ddf5d080f5d4a2dbed9a55f0149fceb1296d",
+      "instruction_sha256": "0da3103f276542e615f2257f90514d58e3af9a61e6c59555d9c611ea7aff2b95",
+      "production_route": {
+        "status": "present",
+        "model_selector": "gpt-5.3-codex-spark",
+        "effort_selector": null
+      },
+      "platform_field_mappings": {
+        "model": "model",
+        "effort": "model_reasoning_effort",
+        "sandbox": "sandbox_mode",
+        "mcp": "mcp_servers",
+        "skills": "skills.config"
+      },
+      "platform_divergences": [
+        "Optional helper may be omitted if no qualified route exists"
+      ],
+      "fixture_backlog_ids": [
+        "G56R-001-FB-AUTOPILOT-FAST-HELPER"
+      ],
+      "notes": [
+        "Representative future task: Summarize an executor result for parent orchestration",
+        "Recorded production status: active_codex_toml; declared sandbox: read-only."
+      ],
+      "invalidation_triggers": [
+        "The source file or recorded instruction/full-file hash changes: speckit-pro/codex-agents/autopilot-fast-helper.toml.",
+        "The custom-agent field contract or role boundary changes."
+      ]
+    },
+    {
+      "agent_contract_id": "G56R-001-AC-CHECKLIST-EXECUTOR",
+      "agent_name": "checklist-executor",
+      "role_summary": "Run one checklist domain and close true requirement gaps",
+      "safety_boundary": "May remediate true checklist gaps only in scoped artifacts",
+      "grounding_contract": "Uses checklist evidence, spec, plan, and official docs for requirement gaps",
+      "mutation_boundary": "May edit spec/plan/checklist artifacts",
+      "tool_contract": [
+        "Project reads, marker checks, scoped edits"
+      ],
+      "skill_contract": [
+        "Checklist workflow skill"
+      ],
+      "mcp_contract": [
+        "Parent-provided MCP only"
+      ],
+      "output_contract": "Checklist domain result with gaps and fixes",
+      "required_capabilities": [
+        "client: Codex custom agent",
+        "modality: text",
+        "tools: Project reads, marker checks, scoped edits",
+        "skills: Checklist workflow skill",
+        "mcp: Parent-provided MCP only",
+        "runtime: exact model, effort, sandbox, approval, tool, skill, MCP, and parent treatment"
+      ],
+      "source_ref": "speckit-pro/codex-agents/checklist-executor.toml",
+      "source_sha256": "ec29b97b8211c626e00fed1edbf0f601d3328dde57e22fb54626b5a92c2671d0",
+      "instruction_sha256": "bb97bee3e0e52ae3885dacefb9659f9c47250508fce289aaa5daeccc59353218",
+      "production_route": {
+        "status": "present",
+        "model_selector": "gpt-5.5",
+        "effort_selector": "xhigh"
+      },
+      "platform_field_mappings": {
+        "model": "model",
+        "effort": "model_reasoning_effort",
+        "sandbox": "sandbox_mode",
+        "mcp": "mcp_servers",
+        "skills": "skills.config"
+      },
+      "platform_divergences": [
+        "None recorded beyond runtime verification"
+      ],
+      "fixture_backlog_ids": [
+        "G56R-001-FB-CHECKLIST-EXECUTOR"
+      ],
+      "notes": [
+        "Representative future task: Close evidence-integrity gaps",
+        "Recorded production status: active_codex_toml; declared sandbox: workspace-write."
+      ],
+      "invalidation_triggers": [
+        "The source file or recorded instruction/full-file hash changes: speckit-pro/codex-agents/checklist-executor.toml.",
+        "The custom-agent field contract or role boundary changes."
+      ]
+    },
+    {
+      "agent_contract_id": "G56R-001-AC-CLARIFY-EXECUTOR",
+      "agent_name": "clarify-executor",
+      "role_summary": "Prepare bounded clarify questions with recommendations",
+      "safety_boundary": "Read-only; prepares bounded questions without acting as user",
+      "grounding_contract": "Uses workflow, spec, project context, and official docs",
+      "mutation_boundary": "Read-only",
+      "tool_contract": [
+        "File reads and search only"
+      ],
+      "skill_contract": [
+        "Clarify workflow context only"
+      ],
+      "mcp_contract": [
+        "No intrinsic MCP dependency"
+      ],
+      "output_contract": "Clarify question set with evidence",
+      "required_capabilities": [
+        "client: Codex custom agent",
+        "modality: text",
+        "tools: File reads and search only",
+        "skills: Clarify workflow context only",
+        "mcp: No intrinsic MCP dependency",
+        "runtime: exact model, effort, sandbox, approval, tool, skill, MCP, and parent treatment"
+      ],
+      "source_ref": "speckit-pro/codex-agents/clarify-executor.toml",
+      "source_sha256": "7853d199bcf06685239d724a289d7aeaafcf5a133e665c21bc23375220d3f490",
+      "instruction_sha256": "c5fba94ebe76b2589e453a7f5d8acbe94cb5a804bf9235401824e8ea0fd47486",
+      "production_route": {
+        "status": "present",
+        "model_selector": "gpt-5.5",
+        "effort_selector": "xhigh"
+      },
+      "platform_field_mappings": {
+        "model": "model",
+        "effort": "model_reasoning_effort",
+        "sandbox": "sandbox_mode",
+        "mcp": "mcp_servers",
+        "skills": "skills.config"
+      },
+      "platform_divergences": [
+        "None recorded beyond runtime verification"
+      ],
+      "fixture_backlog_ids": [
+        "G56R-001-FB-CLARIFY-EXECUTOR"
+      ],
+      "notes": [
+        "Representative future task: Prepare ambiguity questions for a new spec",
+        "Recorded production status: active_codex_toml; declared sandbox: read-only."
+      ],
+      "invalidation_triggers": [
+        "The source file or recorded instruction/full-file hash changes: speckit-pro/codex-agents/clarify-executor.toml.",
+        "The custom-agent field contract or role boundary changes."
+      ]
+    },
+    {
+      "agent_contract_id": "G56R-001-AC-CODEBASE-ANALYST",
+      "agent_name": "codebase-analyst",
+      "role_summary": "Answer from existing code patterns only",
+      "safety_boundary": "Read-only; must not propose behavior unsupported by repo evidence",
+      "grounding_contract": "Codebase files and exact references only",
+      "mutation_boundary": "Read-only",
+      "tool_contract": [
+        "Search, structure, targeted reads"
+      ],
+      "skill_contract": [
+        "No required skill"
+      ],
+      "mcp_contract": [
+        "No intrinsic MCP dependency"
+      ],
+      "output_contract": "Answer, evidence, confidence",
+      "required_capabilities": [
+        "client: Codex custom agent",
+        "modality: text",
+        "tools: Search, structure, targeted reads",
+        "skills: No required skill",
+        "mcp: No intrinsic MCP dependency",
+        "runtime: exact model, effort, sandbox, approval, tool, skill, MCP, and parent treatment"
+      ],
+      "source_ref": "speckit-pro/codex-agents/codebase-analyst.toml",
+      "source_sha256": "12f41b87c1a2f2003c588d328702144d7ffcbef11f28489124751be44bb98a1e",
+      "instruction_sha256": "256ff48441eea5f6d94e792d68d72ef9735a683292046c7e68ad5008a76b010f",
+      "production_route": {
+        "status": "present",
+        "model_selector": "gpt-5.5",
+        "effort_selector": "low"
+      },
+      "platform_field_mappings": {
+        "model": "model",
+        "effort": "model_reasoning_effort",
+        "sandbox": "sandbox_mode",
+        "mcp": "mcp_servers",
+        "skills": "skills.config"
+      },
+      "platform_divergences": [
+        "None recorded beyond runtime verification"
+      ],
+      "fixture_backlog_ids": [
+        "G56R-001-FB-CODEBASE-ANALYST"
+      ],
+      "notes": [
+        "Representative future task: Resolve implementation-precedent questions",
+        "Recorded production status: active_codex_toml; declared sandbox: read-only."
+      ],
+      "invalidation_triggers": [
+        "The source file or recorded instruction/full-file hash changes: speckit-pro/codex-agents/codebase-analyst.toml.",
+        "The custom-agent field contract or role boundary changes."
+      ]
+    },
+    {
+      "agent_contract_id": "G56R-001-AC-DOMAIN-RESEARCHER",
+      "agent_name": "domain-researcher",
+      "role_summary": "Answer from official docs and standards",
+      "safety_boundary": "Read-only; no project mutation",
+      "grounding_contract": "Official docs, standards, and cited source material",
+      "mutation_boundary": "Read-only",
+      "tool_contract": [
+        "Web or docs retrieval where parent grants it"
+      ],
+      "skill_contract": [
+        "Library/domain research skills when available"
+      ],
+      "mcp_contract": [
+        "Optional source-extraction MCP when parent grants it"
+      ],
+      "output_contract": "Answer, citations, confidence",
+      "required_capabilities": [
+        "client: Codex custom agent",
+        "modality: text",
+        "tools: Web or docs retrieval where parent grants it",
+        "skills: Library/domain research skills when available",
+        "mcp: Optional source-extraction MCP when parent grants it",
+        "runtime: exact model, effort, sandbox, approval, tool, skill, MCP, and parent treatment"
+      ],
+      "source_ref": "speckit-pro/codex-agents/domain-researcher.toml",
+      "source_sha256": "eb558933bb60f874d5bed972226100b8ff8cf5adf5c334b184ef232f0287518f",
+      "instruction_sha256": "efee1fa569e635801c797711220084f86511a7ea2f6ac1e088a6a004ae624463",
+      "production_route": {
+        "status": "present",
+        "model_selector": "gpt-5.5",
+        "effort_selector": "xhigh"
+      },
+      "platform_field_mappings": {
+        "model": "model",
+        "effort": "model_reasoning_effort",
+        "sandbox": "sandbox_mode",
+        "mcp": "mcp_servers",
+        "skills": "skills.config"
+      },
+      "platform_divergences": [
+        "Must not substitute project input for platform facts"
+      ],
+      "fixture_backlog_ids": [
+        "G56R-001-FB-DOMAIN-RESEARCHER"
+      ],
+      "notes": [
+        "Representative future task: Verify current OpenAI model/config docs",
+        "Recorded production status: active_codex_toml; declared sandbox: read-only."
+      ],
+      "invalidation_triggers": [
+        "The source file or recorded instruction/full-file hash changes: speckit-pro/codex-agents/domain-researcher.toml.",
+        "The custom-agent field contract or role boundary changes."
+      ]
+    },
+    {
+      "agent_contract_id": "G56R-001-AC-IMPLEMENT-EXECUTOR",
+      "agent_name": "implement-executor",
+      "role_summary": "Execute one implementation task with TDD discipline",
+      "safety_boundary": "Workspace-write only for assigned task; follows TDD and scoped verification",
+      "grounding_contract": "Spec, plan, task, project commands, and official docs when required",
+      "mutation_boundary": "Workspace-write for scoped task",
+      "tool_contract": [
+        "Project commands, tests, edits"
+      ],
+      "skill_contract": [
+        "Implement workflow skill when invoked"
+      ],
+      "mcp_contract": [
+        "Parent-provided MCP only"
+      ],
+      "output_contract": "Task result with TDD and verification",
+      "required_capabilities": [
+        "client: Codex custom agent",
+        "modality: text",
+        "tools: Project commands, tests, edits",
+        "skills: Implement workflow skill when invoked",
+        "mcp: Parent-provided MCP only",
+        "runtime: exact model, effort, sandbox, approval, tool, skill, MCP, and parent treatment"
+      ],
+      "source_ref": "speckit-pro/codex-agents/implement-executor.toml",
+      "source_sha256": "7a95370adcc423203d64c1440e9f0a17af3a1a9ca2a3a6262fa6ceb8efab6148",
+      "instruction_sha256": "6e2b1adca0b0ee96e8af6593d1de5a4dcb5696fd3cbcd67601b428c334ac71f8",
+      "production_route": {
+        "status": "present",
+        "model_selector": "gpt-5.5",
+        "effort_selector": "xhigh"
+      },
+      "platform_field_mappings": {
+        "model": "model",
+        "effort": "model_reasoning_effort",
+        "sandbox": "sandbox_mode",
+        "mcp": "mcp_servers",
+        "skills": "skills.config"
+      },
+      "platform_divergences": [
+        "None recorded beyond runtime verification"
+      ],
+      "fixture_backlog_ids": [
+        "G56R-001-FB-IMPLEMENT-EXECUTOR"
+      ],
+      "notes": [
+        "Representative future task: Implement one G56R resolver task",
+        "Recorded production status: active_codex_toml; declared sandbox: workspace-write."
+      ],
+      "invalidation_triggers": [
+        "The source file or recorded instruction/full-file hash changes: speckit-pro/codex-agents/implement-executor.toml.",
+        "The custom-agent field contract or role boundary changes."
+      ]
+    },
+    {
+      "agent_contract_id": "G56R-001-AC-PHASE-EXECUTOR",
+      "agent_name": "phase-executor",
+      "role_summary": "Run one Specify, Plan, or Tasks phase",
+      "safety_boundary": "Workspace-write only for requested phase artifacts",
+      "grounding_contract": "Loaded phase prompt and command-owned templates",
+      "mutation_boundary": "Workspace-write for phase artifacts",
+      "tool_contract": [
+        "Phase command scripts/templates and file edits"
+      ],
+      "skill_contract": [
+        "Specify, plan, or tasks workflow skill"
+      ],
+      "mcp_contract": [
+        "Parent-provided MCP only"
+      ],
+      "output_contract": "Phase result with files and metrics",
+      "required_capabilities": [
+        "client: Codex custom agent",
+        "modality: text",
+        "tools: Phase command scripts/templates and file edits",
+        "skills: Specify, plan, or tasks workflow skill",
+        "mcp: Parent-provided MCP only",
+        "runtime: exact model, effort, sandbox, approval, tool, skill, MCP, and parent treatment"
+      ],
+      "source_ref": "speckit-pro/codex-agents/phase-executor.toml",
+      "source_sha256": "6f974a124ea4f3422f6650e4c9b501c15916ff874e2490a46cecfeedd634f7c9",
+      "instruction_sha256": "2ecf93717029553369f62f902f8ac95bad5f77e726dbbb8c7065d9bde36c4fe5",
+      "production_route": {
+        "status": "present",
+        "model_selector": "gpt-5.5",
+        "effort_selector": "xhigh"
+      },
+      "platform_field_mappings": {
+        "model": "model",
+        "effort": "model_reasoning_effort",
+        "sandbox": "sandbox_mode",
+        "mcp": "mcp_servers",
+        "skills": "skills.config"
+      },
+      "platform_divergences": [
+        "None recorded beyond runtime verification"
+      ],
+      "fixture_backlog_ids": [
+        "G56R-001-FB-PHASE-EXECUTOR"
+      ],
+      "notes": [
+        "Representative future task: Run G56R-002 plan phase",
+        "Recorded production status: active_codex_toml; declared sandbox: workspace-write."
+      ],
+      "invalidation_triggers": [
+        "The source file or recorded instruction/full-file hash changes: speckit-pro/codex-agents/phase-executor.toml.",
+        "The custom-agent field contract or role boundary changes."
+      ]
+    },
+    {
+      "agent_contract_id": "G56R-001-AC-SPEC-CONTEXT-ANALYST",
+      "agent_name": "spec-context-analyst",
+      "role_summary": "Answer from constitution, roadmap, specs, decisions",
+      "safety_boundary": "Read-only project-context answerer",
+      "grounding_contract": "Constitution, roadmap, specs, plans, and decision records",
+      "mutation_boundary": "Read-only",
+      "tool_contract": [
+        "Search and targeted reads"
+      ],
+      "skill_contract": [
+        "No required skill"
+      ],
+      "mcp_contract": [
+        "No intrinsic MCP dependency"
+      ],
+      "output_contract": "Answer, references, confidence",
+      "required_capabilities": [
+        "client: Codex custom agent",
+        "modality: text",
+        "tools: Search and targeted reads",
+        "skills: No required skill",
+        "mcp: No intrinsic MCP dependency",
+        "runtime: exact model, effort, sandbox, approval, tool, skill, MCP, and parent treatment"
+      ],
+      "source_ref": "speckit-pro/codex-agents/spec-context-analyst.toml",
+      "source_sha256": "680e93129186f37d245ffa35dc44e064dffe24b497675aaa72b275daa7642674",
+      "instruction_sha256": "b276d4f074e07986c7e0cc75b8a52df7bdbebd7bb8ced05c3aadb615f1e7ade8",
+      "production_route": {
+        "status": "present",
+        "model_selector": "gpt-5.5",
+        "effort_selector": "low"
+      },
+      "platform_field_mappings": {
+        "model": "model",
+        "effort": "model_reasoning_effort",
+        "sandbox": "sandbox_mode",
+        "mcp": "mcp_servers",
+        "skills": "skills.config"
+      },
+      "platform_divergences": [
+        "None recorded beyond runtime verification"
+      ],
+      "fixture_backlog_ids": [
+        "G56R-001-FB-SPEC-CONTEXT-ANALYST"
+      ],
+      "notes": [
+        "Representative future task: Resolve cross-spec consistency question",
+        "Recorded production status: active_codex_toml; declared sandbox: read-only."
+      ],
+      "invalidation_triggers": [
+        "The source file or recorded instruction/full-file hash changes: speckit-pro/codex-agents/spec-context-analyst.toml.",
+        "The custom-agent field contract or role boundary changes."
+      ]
+    },
+    {
+      "agent_contract_id": "G56R-001-AC-UAT-RUNBOOK-AUTHOR",
+      "agent_name": "uat-runbook-author",
+      "role_summary": "Rewrite generated UAT skeleton in place",
+      "safety_boundary": "Workspace-write to generated UAT skeleton only; fails open when source evidence is insufficient",
+      "grounding_contract": "Spec, plan, quickstart, diff, and project commands",
+      "mutation_boundary": "Workspace-write to skeleton only",
+      "tool_contract": [
+        "Skeleton reads and direct skeleton edit"
+      ],
+      "skill_contract": [
+        "UAT skeleton workflow context"
+      ],
+      "mcp_contract": [
+        "No intrinsic MCP dependency"
+      ],
+      "output_contract": "Rewrite summary and removed placeholders",
+      "required_capabilities": [
+        "client: Codex custom agent",
+        "modality: text",
+        "tools: Skeleton reads and direct skeleton edit",
+        "skills: UAT skeleton workflow context",
+        "mcp: No intrinsic MCP dependency",
+        "runtime: exact model, effort, sandbox, approval, tool, skill, MCP, and parent treatment"
+      ],
+      "source_ref": "speckit-pro/codex-agents/uat-runbook-author.toml",
+      "source_sha256": "ea1e74b375a9fab40881d52574ec9c184033abe020e69637eac1b2248509b918",
+      "instruction_sha256": "e78f3a5ddf51cbe26fc286780e7c711043ef0cccdd9a49d39fd0373f906b95cf",
+      "production_route": {
+        "status": "present",
+        "model_selector": "gpt-5.5",
+        "effort_selector": "xhigh"
+      },
+      "platform_field_mappings": {
+        "model": "model",
+        "effort": "model_reasoning_effort",
+        "sandbox": "sandbox_mode",
+        "mcp": "mcp_servers",
+        "skills": "skills.config"
+      },
+      "platform_divergences": [
+        "None recorded beyond runtime verification"
+      ],
+      "fixture_backlog_ids": [
+        "G56R-001-FB-UAT-RUNBOOK-AUTHOR"
+      ],
+      "notes": [
+        "Representative future task: Produce final UAT runbook",
+        "Recorded production status: active_codex_toml; declared sandbox: workspace-write."
+      ],
+      "invalidation_triggers": [
+        "The source file or recorded instruction/full-file hash changes: speckit-pro/codex-agents/uat-runbook-author.toml.",
+        "The custom-agent field contract or role boundary changes."
+      ]
+    },
+    {
+      "agent_contract_id": "G56R-001-AC-CONSENSUS-SYNTHESIZER",
+      "agent_name": "consensus-synthesizer",
+      "role_summary": "Synthesize analyst outputs and exact edit instructions",
+      "safety_boundary": "Read-only synthesis of analyst outputs; no new research or edits",
+      "grounding_contract": "Analyst responses and cited evidence only",
+      "mutation_boundary": "Parity-only project input; no active Codex route",
+      "tool_contract": [
+        "Future Codex contract must preserve no-new-research behavior"
+      ],
+      "skill_contract": [
+        "Future orchestration skill only when explicitly invoked"
+      ],
+      "mcp_contract": [
+        "Future MCP contract must not broaden evidence authority"
+      ],
+      "output_contract": "Consensus result with agreement, edits, flags",
+      "required_capabilities": [
+        "client: Future Codex custom agent; currently parity-only",
+        "modality: text",
+        "tools: Future Codex contract must preserve no-new-research behavior",
+        "skills: Future orchestration skill only when explicitly invoked",
+        "mcp: Future MCP contract must not broaden evidence authority",
+        "runtime: exact model, effort, sandbox, approval, tool, skill, MCP, and parent treatment"
+      ],
+      "source_ref": "speckit-pro/agents/consensus-synthesizer.md",
+      "source_sha256": "548b9eeb69b6c3f8b8f5429a9ae567d456e4a4ddd1482efe1c1e947e84737327",
+      "instruction_sha256": "1d668a009a1a7ddc0ac4af9663a7f7dba367519b431af3271e212c0426cd99f2",
+      "production_route": {
+        "status": "recorded_absence",
+        "model_selector": null,
+        "effort_selector": null
+      },
+      "platform_field_mappings": {
+        "model": "model",
+        "effort": "model_reasoning_effort",
+        "sandbox": "sandbox_mode",
+        "mcp": "mcp_servers",
+        "skills": "skills.config"
+      },
+      "platform_divergences": [
+        "Claude source exists; Codex TOML absent until G56R-009"
+      ],
+      "fixture_backlog_ids": [
+        "G56R-001-FB-CONSENSUS-SYNTHESIZER"
+      ],
+      "notes": [
+        "Representative future task: Define future Codex consensus role",
+        "Recorded production status: parity_only_absent; declared sandbox: absent."
+      ],
+      "invalidation_triggers": [
+        "The source file or recorded instruction/full-file hash changes: speckit-pro/agents/consensus-synthesizer.md.",
+        "The custom-agent field contract or role boundary changes."
+      ]
+    },
+    {
+      "agent_contract_id": "G56R-001-AC-GATE-VALIDATOR",
+      "agent_name": "gate-validator",
+      "role_summary": "Run supplied gate command and preserve JSON evidence",
+      "safety_boundary": "Run supplied gate and preserve JSON; no remediation",
+      "grounding_contract": "Verbatim command output only",
+      "mutation_boundary": "Parity-only project input; no active Codex route",
+      "tool_contract": [
+        "Gate command execution only"
+      ],
+      "skill_contract": [
+        "Future gate-validation workflow only when supplied"
+      ],
+      "mcp_contract": [
+        "Future MCP contract must preserve verbatim evidence"
+      ],
+      "output_contract": "Gate result with verbatim JSON",
+      "required_capabilities": [
+        "client: Future Codex custom agent; currently parity-only",
+        "modality: text",
+        "tools: Gate command execution only",
+        "skills: Future gate-validation workflow only when supplied",
+        "mcp: Future MCP contract must preserve verbatim evidence",
+        "runtime: exact model, effort, sandbox, approval, tool, skill, MCP, and parent treatment"
+      ],
+      "source_ref": "speckit-pro/agents/gate-validator.md",
+      "source_sha256": "ecfa70143aa02c943474f23d38cd5c0b01ca1fabae7d2a899c45d35eb7bb5f0d",
+      "instruction_sha256": "f30cae871e3e63ac736d5cd8695dfa42a73ded50807f46709139c663d91c070e",
+      "production_route": {
+        "status": "recorded_absence",
+        "model_selector": null,
+        "effort_selector": null
+      },
+      "platform_field_mappings": {
+        "model": "model",
+        "effort": "model_reasoning_effort",
+        "sandbox": "sandbox_mode",
+        "mcp": "mcp_servers",
+        "skills": "skills.config"
+      },
+      "platform_divergences": [
+        "Claude source exists; Codex TOML absent until G56R-009"
+      ],
+      "fixture_backlog_ids": [
+        "G56R-001-FB-GATE-VALIDATOR"
+      ],
+      "notes": [
+        "Representative future task: Define future Codex gate-validation role",
+        "Recorded production status: parity_only_absent; declared sandbox: absent."
+      ],
+      "invalidation_triggers": [
+        "The source file or recorded instruction/full-file hash changes: speckit-pro/agents/gate-validator.md.",
+        "The custom-agent field contract or role boundary changes."
+      ]
+    }
+  ],
+  "candidate_routes": [
+    {
+      "candidate_route_id": "G56R-001-CR-ANALYZE-EXECUTOR-SOL",
+      "agent_contract_id": "G56R-001-AC-ANALYZE-EXECUTOR",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.6-sol",
+        "expected_resolved_model_id": "gpt-5.6-sol"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006",
+        "OPENAI-DOC-014"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004",
+        "G56R-001-ESR-005"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "Analyze remediation is complex, open-ended, and judgment-heavy, matching the Sol positioning.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "supported efforts",
+        "input modalities",
+        "exact custom-agent treatment",
+        "telemetry"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, runtime availability, exact treatment, and quality remain unproven.",
+        "runtime supported effort tuple, lifecycle status, runtime availability, exact treatment, quality, comparator parity"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-ANALYZE-EXECUTOR",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "none"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "771a5b9075240abf72b92449dae9960a03b8873e516468a13b7c6da17245f64c",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-ANALYZE-EXECUTOR-GPT55",
+      "agent_contract_id": "G56R-001-AC-ANALYZE-EXECUTOR",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.5",
+        "expected_resolved_model_id": "gpt-5.5"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "Current TOML declares `gpt-5.5`; its captured complex coding/research positioning supports an immutable comparator only.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "supported efforts",
+        "input modalities",
+        "exact custom-agent treatment",
+        "telemetry"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, comparator availability, and exact treatment remain unproven.",
+        "runtime supported effort tuple, lifecycle status, future availability, comparator exact treatment"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-ANALYZE-EXECUTOR",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "comparator exact treatment"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "771a5b9075240abf72b92449dae9960a03b8873e516468a13b7c6da17245f64c",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-AUTOPILOT-FAST-HELPER-SPARK",
+      "agent_contract_id": "G56R-001-AC-AUTOPILOT-FAST-HELPER",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.3-codex-spark",
+        "expected_resolved_model_id": "gpt-5.3-codex-spark"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "The helper contract is read-only, no-tool, text summarization/triage; Spark's captured text-only low-latency preview positioning is a plausible discovery candidate.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "account/surface availability",
+        "supported efforts",
+        "text-only constraint",
+        "no-tool treatment"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, account/surface availability, text-only constraint, and helper quality remain unproven.",
+        "runtime supported effort tuple, lifecycle status, account availability, text-only suitability, helper qualification"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-AUTOPILOT-FAST-HELPER",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "G56R-010 helper policy"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "0da3103f276542e615f2257f90514d58e3af9a61e6c59555d9c611ea7aff2b95",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-AUTOPILOT-FAST-HELPER-LUNA",
+      "agent_contract_id": "G56R-001-AC-AUTOPILOT-FAST-HELPER",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.6-luna",
+        "expected_resolved_model_id": "gpt-5.6-luna"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006",
+        "OPENAI-DOC-014"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004",
+        "G56R-001-ESR-005"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "The helper contract is clear, specific, and repeatable, matching Luna's captured positioning.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "supported efforts",
+        "input modalities",
+        "no-tool exact treatment",
+        "telemetry"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, runtime availability, latency, and helper quality remain unproven.",
+        "runtime supported effort tuple, lifecycle status, runtime availability, helper latency and quality qualification"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-AUTOPILOT-FAST-HELPER",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "G56R-010 helper policy"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "0da3103f276542e615f2257f90514d58e3af9a61e6c59555d9c611ea7aff2b95",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-CHECKLIST-EXECUTOR-SOL",
+      "agent_contract_id": "G56R-001-AC-CHECKLIST-EXECUTOR",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.6-sol",
+        "expected_resolved_model_id": "gpt-5.6-sol"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006",
+        "OPENAI-DOC-014"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004",
+        "G56R-001-ESR-005"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "Checklist remediation requires judgment over evidence gaps and requirement quality, matching Sol's complex/high-value positioning.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "supported efforts",
+        "input modalities",
+        "exact custom-agent treatment",
+        "telemetry"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, runtime availability, exact treatment, and quality remain unproven.",
+        "runtime supported effort tuple, lifecycle status, runtime availability, exact treatment, quality, comparator parity"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-CHECKLIST-EXECUTOR",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "none"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "bb97bee3e0e52ae3885dacefb9659f9c47250508fce289aaa5daeccc59353218",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-CHECKLIST-EXECUTOR-GPT55",
+      "agent_contract_id": "G56R-001-AC-CHECKLIST-EXECUTOR",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.5",
+        "expected_resolved_model_id": "gpt-5.5"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "Current TOML declares `gpt-5.5`; its captured complex work positioning supports an immutable checklist comparator only.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "supported efforts",
+        "input modalities",
+        "exact custom-agent treatment",
+        "telemetry"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, comparator availability, and exact treatment remain unproven.",
+        "runtime supported effort tuple, lifecycle status, future availability, comparator exact treatment"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-CHECKLIST-EXECUTOR",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "comparator exact treatment"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "bb97bee3e0e52ae3885dacefb9659f9c47250508fce289aaa5daeccc59353218",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-CLARIFY-EXECUTOR-SOL",
+      "agent_contract_id": "G56R-001-AC-CLARIFY-EXECUTOR",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.6-sol",
+        "expected_resolved_model_id": "gpt-5.6-sol"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006",
+        "OPENAI-DOC-014"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004",
+        "G56R-001-ESR-005"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "Clarification design can require judgment and careful ambiguity resolution, matching Sol's complex/high-value positioning.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "supported efforts",
+        "input modalities",
+        "exact custom-agent treatment",
+        "telemetry"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, runtime availability, exact treatment, and quality remain unproven.",
+        "runtime supported effort tuple, lifecycle status, runtime availability, exact treatment, quality, comparator parity"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-CLARIFY-EXECUTOR",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "none"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "c5fba94ebe76b2589e453a7f5d8acbe94cb5a804bf9235401824e8ea0fd47486",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-CLARIFY-EXECUTOR-GPT55",
+      "agent_contract_id": "G56R-001-AC-CLARIFY-EXECUTOR",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.5",
+        "expected_resolved_model_id": "gpt-5.5"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "Current TOML declares `gpt-5.5`; its captured knowledge-work positioning supports an immutable clarify comparator only.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "supported efforts",
+        "input modalities",
+        "exact custom-agent treatment",
+        "telemetry"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, comparator availability, and exact treatment remain unproven.",
+        "runtime supported effort tuple, lifecycle status, future availability, comparator exact treatment"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-CLARIFY-EXECUTOR",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "comparator exact treatment"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "c5fba94ebe76b2589e453a7f5d8acbe94cb5a804bf9235401824e8ea0fd47486",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-CODEBASE-ANALYST-TERRA",
+      "agent_contract_id": "G56R-001-AC-CODEBASE-ANALYST",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.6-terra",
+        "expected_resolved_model_id": "gpt-5.6-terra"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006",
+        "OPENAI-DOC-014"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004",
+        "G56R-001-ESR-005"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "Codebase analysis is everyday reasoning over project files and tool use, matching Terra's captured positioning.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "supported efforts",
+        "input modalities",
+        "exact custom-agent treatment",
+        "telemetry"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, runtime availability, tool access, exact treatment, and quality remain unproven.",
+        "runtime supported effort tuple, lifecycle status, runtime availability, exact treatment, quality, comparator parity"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-CODEBASE-ANALYST",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "none"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "256ff48441eea5f6d94e792d68d72ef9735a683292046c7e68ad5008a76b010f",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-CODEBASE-ANALYST-GPT55",
+      "agent_contract_id": "G56R-001-AC-CODEBASE-ANALYST",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.5",
+        "expected_resolved_model_id": "gpt-5.5"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "Current TOML declares `gpt-5.5`; its captured complex coding positioning supports an immutable codebase comparator only.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "supported efforts",
+        "input modalities",
+        "exact custom-agent treatment",
+        "telemetry"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, comparator availability, and exact treatment remain unproven.",
+        "runtime supported effort tuple, lifecycle status, future availability, comparator exact treatment"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-CODEBASE-ANALYST",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "comparator exact treatment"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "256ff48441eea5f6d94e792d68d72ef9735a683292046c7e68ad5008a76b010f",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-DOMAIN-RESEARCHER-SOL",
+      "agent_contract_id": "G56R-001-AC-DOMAIN-RESEARCHER",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.6-sol",
+        "expected_resolved_model_id": "gpt-5.6-sol"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006",
+        "OPENAI-DOC-014"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004",
+        "G56R-001-ESR-005"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "Official-source research can be high-value and judgment-heavy, matching Sol's captured positioning.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "supported efforts",
+        "input modalities",
+        "exact custom-agent treatment",
+        "telemetry"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, runtime availability, official-source access, exact treatment, and quality remain unproven.",
+        "runtime supported effort tuple, lifecycle status, runtime availability, exact treatment, quality, comparator parity"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-DOMAIN-RESEARCHER",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "none"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "efee1fa569e635801c797711220084f86511a7ea2f6ac1e088a6a004ae624463",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-DOMAIN-RESEARCHER-GPT55",
+      "agent_contract_id": "G56R-001-AC-DOMAIN-RESEARCHER",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.5",
+        "expected_resolved_model_id": "gpt-5.5"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "Current TOML declares `gpt-5.5`; its captured research positioning supports an immutable domain-research comparator only.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "supported efforts",
+        "input modalities",
+        "exact custom-agent treatment",
+        "telemetry"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, comparator availability, and exact treatment remain unproven.",
+        "runtime supported effort tuple, lifecycle status, future availability, comparator exact treatment"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-DOMAIN-RESEARCHER",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "comparator exact treatment"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "efee1fa569e635801c797711220084f86511a7ea2f6ac1e088a6a004ae624463",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-IMPLEMENT-EXECUTOR-SOL",
+      "agent_contract_id": "G56R-001-AC-IMPLEMENT-EXECUTOR",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.6-sol",
+        "expected_resolved_model_id": "gpt-5.6-sol"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006",
+        "OPENAI-DOC-014"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004",
+        "G56R-001-ESR-005"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "Scoped implementation with TDD and remediation can require complex analysis and judgment, matching Sol's captured positioning.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "supported efforts",
+        "input modalities",
+        "exact custom-agent treatment",
+        "telemetry"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, runtime availability, mutation/tool treatment, and quality remain unproven.",
+        "runtime supported effort tuple, lifecycle status, runtime availability, exact treatment, quality, comparator parity"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-IMPLEMENT-EXECUTOR",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "none"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "6e2b1adca0b0ee96e8af6593d1de5a4dcb5696fd3cbcd67601b428c334ac71f8",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-IMPLEMENT-EXECUTOR-GPT55",
+      "agent_contract_id": "G56R-001-AC-IMPLEMENT-EXECUTOR",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.5",
+        "expected_resolved_model_id": "gpt-5.5"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "Current TOML declares `gpt-5.5`; its captured complex coding positioning supports an immutable implementation comparator only.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "supported efforts",
+        "input modalities",
+        "exact custom-agent treatment",
+        "telemetry"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, comparator availability, and exact treatment remain unproven.",
+        "runtime supported effort tuple, lifecycle status, future availability, comparator exact treatment"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-IMPLEMENT-EXECUTOR",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "comparator exact treatment"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "6e2b1adca0b0ee96e8af6593d1de5a4dcb5696fd3cbcd67601b428c334ac71f8",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-PHASE-EXECUTOR-SOL",
+      "agent_contract_id": "G56R-001-AC-PHASE-EXECUTOR",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.6-sol",
+        "expected_resolved_model_id": "gpt-5.6-sol"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006",
+        "OPENAI-DOC-014"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004",
+        "G56R-001-ESR-005"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "Running Specify/Plan/Tasks phases is open-ended planning work with judgment, matching Sol's captured positioning.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "supported efforts",
+        "input modalities",
+        "exact custom-agent treatment",
+        "telemetry"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, runtime availability, phase-skill treatment, and quality remain unproven.",
+        "runtime supported effort tuple, lifecycle status, runtime availability, exact treatment, quality, comparator parity"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-PHASE-EXECUTOR",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "none"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "2ecf93717029553369f62f902f8ac95bad5f77e726dbbb8c7065d9bde36c4fe5",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-PHASE-EXECUTOR-GPT55",
+      "agent_contract_id": "G56R-001-AC-PHASE-EXECUTOR",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.5",
+        "expected_resolved_model_id": "gpt-5.5"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "Current TOML declares `gpt-5.5`; its captured complex knowledge-work positioning supports an immutable phase comparator only.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "supported efforts",
+        "input modalities",
+        "exact custom-agent treatment",
+        "telemetry"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, comparator availability, and exact treatment remain unproven.",
+        "runtime supported effort tuple, lifecycle status, future availability, comparator exact treatment"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-PHASE-EXECUTOR",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "comparator exact treatment"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "2ecf93717029553369f62f902f8ac95bad5f77e726dbbb8c7065d9bde36c4fe5",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-SPEC-CONTEXT-ANALYST-TERRA",
+      "agent_contract_id": "G56R-001-AC-SPEC-CONTEXT-ANALYST",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.6-terra",
+        "expected_resolved_model_id": "gpt-5.6-terra"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006",
+        "OPENAI-DOC-014"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004",
+        "G56R-001-ESR-005"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "Spec-context analysis is everyday reasoning over project docs and tool-supported reads, matching Terra's captured positioning.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "supported efforts",
+        "input modalities",
+        "exact custom-agent treatment",
+        "telemetry"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, runtime availability, exact treatment, and quality remain unproven.",
+        "runtime supported effort tuple, lifecycle status, runtime availability, exact treatment, quality, comparator parity"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-SPEC-CONTEXT-ANALYST",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "none"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "b276d4f074e07986c7e0cc75b8a52df7bdbebd7bb8ced05c3aadb615f1e7ade8",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-SPEC-CONTEXT-ANALYST-GPT55",
+      "agent_contract_id": "G56R-001-AC-SPEC-CONTEXT-ANALYST",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.5",
+        "expected_resolved_model_id": "gpt-5.5"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "Current TOML declares `gpt-5.5`; its captured knowledge-work positioning supports an immutable spec-context comparator only.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "supported efforts",
+        "input modalities",
+        "exact custom-agent treatment",
+        "telemetry"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, comparator availability, and exact treatment remain unproven.",
+        "runtime supported effort tuple, lifecycle status, future availability, comparator exact treatment"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-SPEC-CONTEXT-ANALYST",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "comparator exact treatment"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "b276d4f074e07986c7e0cc75b8a52df7bdbebd7bb8ced05c3aadb615f1e7ade8",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-UAT-RUNBOOK-AUTHOR-TERRA",
+      "agent_contract_id": "G56R-001-AC-UAT-RUNBOOK-AUTHOR",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.6-terra",
+        "expected_resolved_model_id": "gpt-5.6-terra"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006",
+        "OPENAI-DOC-014"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004",
+        "G56R-001-ESR-005"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "UAT runbook authoring requires everyday reasoning and project-tool context, matching Terra's captured positioning.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "supported efforts",
+        "input modalities",
+        "exact custom-agent treatment",
+        "telemetry"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, runtime availability, exact treatment, and quality remain unproven.",
+        "runtime supported effort tuple, lifecycle status, runtime availability, exact treatment, quality, comparator parity"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-UAT-RUNBOOK-AUTHOR",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "none"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "e78f3a5ddf51cbe26fc286780e7c711043ef0cccdd9a49d39fd0373f906b95cf",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-UAT-RUNBOOK-AUTHOR-LUNA",
+      "agent_contract_id": "G56R-001-AC-UAT-RUNBOOK-AUTHOR",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.6-luna",
+        "expected_resolved_model_id": "gpt-5.6-luna"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006",
+        "OPENAI-DOC-014"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004",
+        "G56R-001-ESR-005"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "UAT skeleton rewriting is structured and repeatable, matching Luna's captured positioning.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "supported efforts",
+        "input modalities",
+        "exact custom-agent treatment",
+        "telemetry"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, runtime availability, and skeleton quality remain unproven.",
+        "runtime supported effort tuple, lifecycle status, runtime availability, skeleton quality qualification"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-UAT-RUNBOOK-AUTHOR",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "none"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "e78f3a5ddf51cbe26fc286780e7c711043ef0cccdd9a49d39fd0373f906b95cf",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-UAT-RUNBOOK-AUTHOR-GPT55",
+      "agent_contract_id": "G56R-001-AC-UAT-RUNBOOK-AUTHOR",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.5",
+        "expected_resolved_model_id": "gpt-5.5"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "Current TOML declares `gpt-5.5`; its captured knowledge-work positioning supports an immutable UAT comparator only.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "model listing",
+        "supported efforts",
+        "input modalities",
+        "exact custom-agent treatment",
+        "telemetry"
+      ],
+      "known_gaps": [
+        "Runtime supported effort tuple, lifecycle status, comparator availability, and exact treatment remain unproven.",
+        "runtime supported effort tuple, lifecycle status, future availability, comparator exact treatment"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-UAT-RUNBOOK-AUTHOR",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "comparator exact treatment"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "e78f3a5ddf51cbe26fc286780e7c711043ef0cccdd9a49d39fd0373f906b95cf",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-CONSENSUS-SYNTHESIZER-SOL",
+      "agent_contract_id": "G56R-001-AC-CONSENSUS-SYNTHESIZER",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.6-sol",
+        "expected_resolved_model_id": "gpt-5.6-sol"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006",
+        "OPENAI-DOC-014"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004",
+        "G56R-001-ESR-005"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "Consensus synthesis evaluates analyst agreement, evidence, exact edits, and conflict flags; Sol's captured complex/open-ended positioning makes it a source-bound discovery candidate.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "future Codex custom-agent source",
+        "model listing",
+        "supported efforts",
+        "exact custom-agent treatment",
+        "telemetry",
+        "route qualification"
+      ],
+      "known_gaps": [
+        "Active Codex TOML, runtime supported effort tuple, lifecycle status, runtime availability, exact treatment, and quality remain unproven.",
+        "active Codex TOML absence, runtime supported effort tuple, lifecycle status, runtime availability, exact treatment, quality"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-CONSENSUS-SYNTHESIZER",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "G56R-009 active Codex parity TOML"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "1d668a009a1a7ddc0ac4af9663a7f7dba367519b431af3271e212c0426cd99f2",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, parity TOML creation, or fixture/scorer change"
+      ]
+    },
+    {
+      "candidate_route_id": "G56R-001-CR-GATE-VALIDATOR-LUNA",
+      "agent_contract_id": "G56R-001-AC-GATE-VALIDATOR",
+      "model_selector": {
+        "kind": "model_id",
+        "requested_value": "gpt-5.6-luna",
+        "expected_resolved_model_id": "gpt-5.6-luna"
+      },
+      "effort_selector": {
+        "field": "model_reasoning_effort",
+        "requested_value": null,
+        "support_status": "runtime_verification_needed"
+      },
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-006",
+        "OPENAI-DOC-014"
+      ],
+      "effort_surface_record_ids": [
+        "G56R-001-ESR-001",
+        "G56R-001-ESR-002",
+        "G56R-001-ESR-003",
+        "G56R-001-ESR-004",
+        "G56R-001-ESR-005"
+      ],
+      "candidate_status": "source_bound_provisional",
+      "eligibility_basis": "Gate validation is a supplied-command, verbatim-JSON preservation task; Luna's captured clear/repeatable positioning makes it a source-bound discovery candidate.",
+      "executability_status": "not_executable_pending_capability_and_qualification",
+      "required_capabilities": [
+        "future Codex custom-agent source",
+        "model listing",
+        "supported efforts",
+        "exact custom-agent treatment",
+        "telemetry",
+        "route qualification"
+      ],
+      "known_gaps": [
+        "Active Codex TOML, runtime supported effort tuple, lifecycle status, runtime availability, exact treatment, and quality remain unproven.",
+        "active Codex TOML absence, runtime supported effort tuple, lifecycle status, runtime availability, exact treatment, quality"
+      ],
+      "incompatibilities": [],
+      "lifecycle": {
+        "status": "unknown",
+        "shutdown_date": null,
+        "replacement_model": null,
+        "official_source_ledger_id": null
+      },
+      "qualification_artifact_refs": [
+        "G56R-001-FB-GATE-VALIDATOR",
+        "runtime_capability_snapshot_id",
+        "telemetry_profile_id",
+        "route_resolution_id`, `execution_trace_id",
+        "`experiment_policy_id` with scorer contract",
+        "G56R-009 active Codex parity TOML"
+      ],
+      "capability_question_refs": [
+        "G56R-001-CAP-001",
+        "G56R-001-CAP-002",
+        "G56R-001-CAP-003",
+        "G56R-001-CAP-004",
+        "G56R-001-CAP-005",
+        "G56R-001-CAP-006",
+        "G56R-001-CAP-007",
+        "G56R-001-CAP-008",
+        "G56R-001-CAP-009",
+        "G56R-001-CAP-010"
+      ],
+      "role_instruction_sha256": "f30cae871e3e63ac736d5cd8695dfa42a73ded50807f46709139c663d91c070e",
+      "invalidation_triggers": [
+        "source, capability, telemetry, instruction hash, role contract, parity TOML creation, or fixture/scorer change"
+      ]
+    }
+  ],
+  "fixture_backlog": [
+    {
+      "fixture_backlog_id": "G56R-001-FB-CODEBASE-ANALYST",
+      "agent_contract_id": "G56R-001-AC-CODEBASE-ANALYST",
+      "representative_tasks": [
+        "Answer a code-pattern question from a pinned repository slice",
+        "Re-execute as materialized read-only custom agent against codebase evidence fixture"
+      ],
+      "required_evidence": [
+        "route, effective route, file reads/searches, tokens, duration",
+        "G56R-002 telemetry, G56R-003 materializer",
+        "Current source status: current_prompt_emulation_codex at tests/speckit-pro/layer6-efficiency/fixtures-codex/codebase-analyst/."
+      ],
+      "pass_fail_signal": "Cites file evidence and stays in codebase lane",
+      "status": "deferred_to_qualification"
+    },
+    {
+      "fixture_backlog_id": "G56R-001-FB-DOMAIN-RESEARCHER",
+      "agent_contract_id": "G56R-001-AC-DOMAIN-RESEARCHER",
+      "representative_tasks": [
+        "Cite official documentation for a model/config claim without project inference",
+        "Re-execute with official-doc access and citation capture"
+      ],
+      "required_evidence": [
+        "route, effective route, source access events, tokens, duration",
+        "G56R-002 tool/MCP telemetry",
+        "Current source status: current_prompt_emulation_codex at tests/speckit-pro/layer6-efficiency/fixtures-codex/domain-researcher/."
+      ],
+      "pass_fail_signal": "Provides official citations without codebase claims",
+      "status": "deferred_to_qualification"
+    },
+    {
+      "fixture_backlog_id": "G56R-001-FB-SPEC-CONTEXT-ANALYST",
+      "agent_contract_id": "G56R-001-AC-SPEC-CONTEXT-ANALYST",
+      "representative_tasks": [
+        "Resolve a cross-spec consistency question from roadmap and spec files",
+        "Re-execute with project docs and no writes"
+      ],
+      "required_evidence": [
+        "route, effective route, file reads, tokens, duration",
+        "G56R-003 exact treatment",
+        "Current source status: current_prompt_emulation_codex at tests/speckit-pro/layer6-efficiency/fixtures-codex/spec-context-analyst/."
+      ],
+      "pass_fail_signal": "Cites constitution, roadmap, and spec sections",
+      "status": "deferred_to_qualification"
+    },
+    {
+      "fixture_backlog_id": "G56R-001-FB-ANALYZE-EXECUTOR",
+      "agent_contract_id": "G56R-001-AC-ANALYZE-EXECUTOR",
+      "representative_tasks": [
+        "Remediate seeded Analyze findings and preserve verification evidence",
+        "Run synthetic Analyze findings through command, remediation, marker recount"
+      ],
+      "required_evidence": [
+        "command events, file changes, marker counts, retries, tokens",
+        "G56R-003 safe fixture repo",
+        "Current source status: missing_executable_fixture at none."
+      ],
+      "pass_fail_signal": "Findings remediated or tagged after bounded loops",
+      "status": "deferred_to_qualification"
+    },
+    {
+      "fixture_backlog_id": "G56R-001-FB-AUTOPILOT-FAST-HELPER",
+      "agent_contract_id": "G56R-001-AC-AUTOPILOT-FAST-HELPER",
+      "representative_tasks": [
+        "Summarize an executor result into concise advisory output",
+        "Invoke compression, triage, query draft, context normalization cases"
+      ],
+      "required_evidence": [
+        "route, latency, output tokens, no tool use",
+        "G56R-010 helper campaign",
+        "Current source status: missing_executable_fixture at none."
+      ],
+      "pass_fail_signal": "Advisory output, no decisions or mutation",
+      "status": "deferred_to_qualification"
+    },
+    {
+      "fixture_backlog_id": "G56R-001-FB-CHECKLIST-EXECUTOR",
+      "agent_contract_id": "G56R-001-AC-CHECKLIST-EXECUTOR",
+      "representative_tasks": [
+        "Close seeded checklist gaps without weakening requirements",
+        "Run one checklist domain with seeded requirement gaps"
+      ],
+      "required_evidence": [
+        "checklist output, file changes, marker counts, tokens",
+        "G56R-003 checklist fixture",
+        "Current source status: missing_executable_fixture at none."
+      ],
+      "pass_fail_signal": "True gaps closed or tagged after bounded loops",
+      "status": "deferred_to_qualification"
+    },
+    {
+      "fixture_backlog_id": "G56R-001-FB-CLARIFY-EXECUTOR",
+      "agent_contract_id": "G56R-001-AC-CLARIFY-EXECUTOR",
+      "representative_tasks": [
+        "Produce bounded clarify questions with evidence and no artifact edits",
+        "Provide spec ambiguity and require bounded question set without edits"
+      ],
+      "required_evidence": [
+        "file reads, route, marker count, tokens",
+        "G56R-002 telemetry",
+        "Current source status: missing_executable_fixture at none."
+      ],
+      "pass_fail_signal": "Up to five evidence-backed questions, no interactive invocation",
+      "status": "deferred_to_qualification"
+    },
+    {
+      "fixture_backlog_id": "G56R-001-FB-IMPLEMENT-EXECUTOR",
+      "agent_contract_id": "G56R-001-AC-IMPLEMENT-EXECUTOR",
+      "representative_tasks": [
+        "Perform a small red-green-refactor task with known acceptance tests",
+        "Assign small TDD task with known red/green behavior in fixture repo"
+      ],
+      "required_evidence": [
+        "test commands, file changes, route, tokens",
+        "G56R-003 executable harness",
+        "Current source status: missing_executable_fixture at none."
+      ],
+      "pass_fail_signal": "Real failing test then passing scoped edit",
+      "status": "deferred_to_qualification"
+    },
+    {
+      "fixture_backlog_id": "G56R-001-FB-PHASE-EXECUTOR",
+      "agent_contract_id": "G56R-001-AC-PHASE-EXECUTOR",
+      "representative_tasks": [
+        "Run a fake Specify/Plan/Tasks command fixture exactly as prompted",
+        "Run fake Specify/Plan/Tasks command fixture"
+      ],
+      "required_evidence": [
+        "created files, markers, phase metrics, route",
+        "G56R-003 command fixture",
+        "Current source status: missing_executable_fixture at none."
+      ],
+      "pass_fail_signal": "Only command instructions followed",
+      "status": "deferred_to_qualification"
+    },
+    {
+      "fixture_backlog_id": "G56R-001-FB-UAT-RUNBOOK-AUTHOR",
+      "agent_contract_id": "G56R-001-AC-UAT-RUNBOOK-AUTHOR",
+      "representative_tasks": [
+        "Rewrite a generated UAT skeleton with known placeholders",
+        "Rewrite generated UAT skeleton with known placeholders"
+      ],
+      "required_evidence": [
+        "file change evidence, route, tokens",
+        "G56R-003 skeleton fixture",
+        "Current source status: missing_executable_fixture at none."
+      ],
+      "pass_fail_signal": "Plain-English steps and FR matrix; fail-open preserved",
+      "status": "deferred_to_qualification"
+    },
+    {
+      "fixture_backlog_id": "G56R-001-FB-CONSENSUS-SYNTHESIZER",
+      "agent_contract_id": "G56R-001-AC-CONSENSUS-SYNTHESIZER",
+      "representative_tasks": [
+        "Synthesize one-, two-, and three-analyst answer sets",
+        "Replay 1-, 2-, 3-analyst consensus cases"
+      ],
+      "required_evidence": [
+        "route, analyst hashes, output hash, tokens",
+        "G56R-009 parity TOML",
+        "Current source status: missing_executable_fixture at tests/speckit-pro/layer6-efficiency/fixtures/consensus-synthesizer/` as `project_input."
+      ],
+      "pass_fail_signal": "Correct agreement, flags, exact edit behavior",
+      "status": "deferred_to_qualification"
+    },
+    {
+      "fixture_backlog_id": "G56R-001-FB-GATE-VALIDATOR",
+      "agent_contract_id": "G56R-001-AC-GATE-VALIDATOR",
+      "representative_tasks": [
+        "Run a supplied gate command and return verbatim JSON",
+        "Execute supplied gate command returning JSON"
+      ],
+      "required_evidence": [
+        "command exit, JSON output, route, duration",
+        "G56R-009 parity TOML",
+        "Current source status: missing_executable_fixture at tests/speckit-pro/layer6-efficiency/fixtures/gate-validator/` as `project_input."
+      ],
+      "pass_fail_signal": "Verbatim JSON preserved, no remediation",
+      "status": "deferred_to_qualification"
+    }
+  ],
+  "telemetry_requirements": [
+    {
+      "telemetry_requirement_id": "G56R-001-TEL-001",
+      "field": "assigned_route_id",
+      "source_class": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-003",
+      "surface": "materialized custom-agent configuration",
+      "necessity": "mandatory",
+      "availability": "derived",
+      "evidence_rule": "Route selected by policy or test assignment before invocation"
+    },
+    {
+      "telemetry_requirement_id": "G56R-001-TEL-002",
+      "field": "assigned_model` and `assigned_model_reasoning_effort",
+      "source_class": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-003",
+      "surface": "materialized custom-agent configuration",
+      "necessity": "mandatory",
+      "availability": "derived",
+      "evidence_rule": "Requested model and effort tuple from the candidate route"
+    },
+    {
+      "telemetry_requirement_id": "G56R-001-TEL-003",
+      "field": "effective_route_id",
+      "source_class": "official_documentation",
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "surface": "Codex app server and pinned runtime",
+      "necessity": "mandatory",
+      "availability": "conditional",
+      "evidence_rule": "Matched route after runtime evidence, or null with classification"
+    },
+    {
+      "telemetry_requirement_id": "G56R-001-TEL-004",
+      "field": "effective_model` and `effective_model_reasoning_effort",
+      "source_class": "official_documentation",
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "surface": "Codex app server and pinned runtime",
+      "necessity": "mandatory",
+      "availability": "conditional",
+      "evidence_rule": "Runtime-observed model and effort, including reroute or missing-field status"
+    },
+    {
+      "telemetry_requirement_id": "G56R-001-TEL-005",
+      "field": "route_match_status",
+      "source_class": "official_documentation",
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "surface": "Codex app server and pinned runtime",
+      "necessity": "mandatory",
+      "availability": "conditional",
+      "evidence_rule": "matched`, `rerouted`, `missing`, `unavailable`, or `not_observable"
+    },
+    {
+      "telemetry_requirement_id": "G56R-001-TEL-006",
+      "field": "parent_session_id` and `child_agent_id",
+      "source_class": "runtime_verification_needed",
+      "official_source_ledger_id": null,
+      "surface": "pinned execution trace",
+      "necessity": "mandatory",
+      "availability": "undocumented",
+      "evidence_rule": "Parent-child attribution without storing raw local or sensitive identifiers"
+    },
+    {
+      "telemetry_requirement_id": "G56R-001-TEL-007",
+      "field": "instruction_sha256",
+      "source_class": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-003",
+      "surface": "materialized custom-agent configuration",
+      "necessity": "mandatory",
+      "availability": "derived",
+      "evidence_rule": "Instruction hash used for exact-treatment comparison"
+    },
+    {
+      "telemetry_requirement_id": "G56R-001-TEL-008",
+      "field": "loaded_tools`, `loaded_skills`, and `loaded_mcp_servers",
+      "source_class": "runtime_verification_needed",
+      "official_source_ledger_id": null,
+      "surface": "materialized child-agent execution",
+      "necessity": "mandatory",
+      "availability": "undocumented",
+      "evidence_rule": "Loaded access surfaces or explicit unavailable classification"
+    },
+    {
+      "telemetry_requirement_id": "G56R-001-TEL-009",
+      "field": "sandbox_mode` and `approval_policy",
+      "source_class": "official_documentation",
+      "official_source_ledger_id": "OPENAI-DOC-010",
+      "surface": "Codex local security controls and pinned runtime",
+      "necessity": "mandatory",
+      "availability": "conditional",
+      "evidence_rule": "Effective runtime sandbox and approval treatment or explicit unavailable classification"
+    },
+    {
+      "telemetry_requirement_id": "G56R-001-TEL-010",
+      "field": "token_usage",
+      "source_class": "official_documentation",
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "surface": "Codex app server and pinned runtime",
+      "necessity": "mandatory",
+      "availability": "conditional",
+      "evidence_rule": "Input, output, reasoning, cached, and total token fields where exposed"
+    },
+    {
+      "telemetry_requirement_id": "G56R-001-TEL-011",
+      "field": "duration_ms",
+      "source_class": "runtime_verification_needed",
+      "official_source_ledger_id": null,
+      "surface": "pinned execution trace",
+      "necessity": "mandatory",
+      "availability": "undocumented",
+      "evidence_rule": "End-to-end duration for the role invocation or fixture replay"
+    },
+    {
+      "telemetry_requirement_id": "G56R-001-TEL-012",
+      "field": "retry_count",
+      "source_class": "runtime_verification_needed",
+      "official_source_ledger_id": null,
+      "surface": "pinned execution trace",
+      "necessity": "mandatory",
+      "availability": "undocumented",
+      "evidence_rule": "Retry attempts and retry reason classification"
+    },
+    {
+      "telemetry_requirement_id": "G56R-001-TEL-013",
+      "field": "terminal_state",
+      "source_class": "official_documentation",
+      "official_source_ledger_id": "OPENAI-DOC-007",
+      "surface": "Codex non-interactive mode",
+      "necessity": "mandatory",
+      "availability": "conditional",
+      "evidence_rule": "success`, `failure`, `timeout`, `cancelled`, `blocked`, or `unknown"
+    },
+    {
+      "telemetry_requirement_id": "G56R-001-TEL-014",
+      "field": "terminal_reason",
+      "source_class": "official_documentation",
+      "official_source_ledger_id": "OPENAI-DOC-007",
+      "surface": "Codex non-interactive mode",
+      "necessity": "mandatory",
+      "availability": "conditional",
+      "evidence_rule": "Human-readable terminal-state reason without sensitive path or account data"
+    },
+    {
+      "telemetry_requirement_id": "G56R-001-TEL-015",
+      "field": "missing_field_classification",
+      "source_class": "runtime_verification_needed",
+      "official_source_ledger_id": null,
+      "surface": "pinned execution trace",
+      "necessity": "mandatory",
+      "availability": "undocumented",
+      "evidence_rule": "One of `stable_native`, `experimental_native`, `derived_from_controlled_configuration`, `conditional`, `unavailable`, `not_applicable`, or `undocumented`"
+    }
+  ],
+  "capability_questions": [
+    {
+      "capability_question_id": "G56R-001-CAP-001",
+      "question": "Which source-bound blocked candidates appear in `model/list` for the pinned client, with `includeHidden` policy declared?",
+      "blocks": [
+        "candidate executability",
+        "G56R-002 exact-treatment gate"
+      ],
+      "source_gap": "Requires pinned client, account, parent configuration, or execution evidence beyond the documentation-only baseline.",
+      "status": "open"
+    },
+    {
+      "capability_question_id": "G56R-001-CAP-002",
+      "question": "Which entries expose `supportedReasoningEfforts`, `defaultReasoningEffort`, and `inputModalities`?",
+      "blocks": [
+        "candidate executability",
+        "G56R-002 exact-treatment gate"
+      ],
+      "source_gap": "Requires pinned client, account, parent configuration, or execution evidence beyond the documentation-only baseline.",
+      "status": "open"
+    },
+    {
+      "capability_question_id": "G56R-001-CAP-003",
+      "question": "Which provider capabilities are returned by `modelProvider/capabilities/read` for each candidate?",
+      "blocks": [
+        "candidate executability",
+        "G56R-002 exact-treatment gate"
+      ],
+      "source_gap": "Requires pinned client, account, parent configuration, or execution evidence beyond the documentation-only baseline.",
+      "status": "open"
+    },
+    {
+      "capability_question_id": "G56R-001-CAP-004",
+      "question": "Which surface proves requested model, requested effort, effective model, effective effort, service reroute when documented, token usage, duration, retries, and parent/child attribution?",
+      "blocks": [
+        "candidate executability",
+        "G56R-002 exact-treatment gate"
+      ],
+      "source_gap": "Requires pinned client, account, parent configuration, or execution evidence beyond the documentation-only baseline.",
+      "status": "open"
+    },
+    {
+      "capability_question_id": "G56R-001-CAP-005",
+      "question": "Which telemetry fields are `stable_native`, `experimental_native`, `derived_from_controlled_configuration`, `conditional`, `unavailable`, `not_applicable`, or `undocumented`?",
+      "blocks": [
+        "candidate executability",
+        "G56R-002 exact-treatment gate"
+      ],
+      "source_gap": "Requires pinned client, account, parent configuration, or execution evidence beyond the documentation-only baseline.",
+      "status": "open"
+    },
+    {
+      "capability_question_id": "G56R-001-CAP-006",
+      "question": "Which evidence separates declared TOML fields from effective runtime sandbox, approvals, parent overrides, tools, skills, and MCP?",
+      "blocks": [
+        "candidate executability",
+        "G56R-002 exact-treatment gate"
+      ],
+      "source_gap": "Requires pinned client, account, parent configuration, or execution evidence beyond the documentation-only baseline.",
+      "status": "open"
+    },
+    {
+      "capability_question_id": "G56R-001-CAP-007",
+      "question": "Which exact-treatment evidence proves a materialized custom-agent route matched intended model, effort, instructions, sandbox, skills, MCP, tools, and parent config?",
+      "blocks": [
+        "candidate executability",
+        "G56R-002 exact-treatment gate"
+      ],
+      "source_gap": "Requires pinned client, account, parent configuration, or execution evidence beyond the documentation-only baseline.",
+      "status": "open"
+    },
+    {
+      "capability_question_id": "G56R-001-CAP-008",
+      "question": "Which MCP/app/tool surfaces are available to each role under the pinned client?",
+      "blocks": [
+        "candidate executability",
+        "G56R-002 exact-treatment gate"
+      ],
+      "source_gap": "Requires pinned client, account, parent configuration, or execution evidence beyond the documentation-only baseline.",
+      "status": "open"
+    },
+    {
+      "capability_question_id": "G56R-001-CAP-009",
+      "question": "Which historical or undocumented candidates remain rejected before probing?",
+      "blocks": [
+        "candidate executability",
+        "G56R-002 exact-treatment gate"
+      ],
+      "source_gap": "Requires pinned client, account, parent configuration, or execution evidence beyond the documentation-only baseline.",
+      "status": "open"
+    },
+    {
+      "capability_question_id": "G56R-001-CAP-010",
+      "question": "Which source, capability, telemetry, fixture, scorer, or instruction-hash invalidation trigger requires rediscovery before proceeding?",
+      "blocks": [
+        "candidate executability",
+        "G56R-002 exact-treatment gate"
+      ],
+      "source_gap": "Requires pinned client, account, parent configuration, or execution evidence beyond the documentation-only baseline.",
+      "status": "open"
+    }
+  ],
+  "traceability": [
+    {
+      "requirement_id": "G56R-001-TR-FR-001",
+      "artifact_refs": [
+        "This report path",
+        "canonical report"
+      ],
+      "claim_ids": [
+        "FR-001 report artifact exists"
+      ],
+      "official_source_ledger_ids": [],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-FR-002",
+      "artifact_refs": [
+        "Scope and non-goals; changed-file scope guard",
+        "changed-file scope review"
+      ],
+      "claim_ids": [
+        "FR-002 scope stays documentation-only"
+      ],
+      "official_source_ledger_ids": [],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-FR-003",
+      "artifact_refs": [
+        "Official Source Ledger and retrieval evidence",
+        "official source records, response hashes, locators, short excerpt anchors, bounded source-fact extracts, and extract hashes"
+      ],
+      "claim_ids": [
+        "FR-003 platform facts use official docs"
+      ],
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-013"
+      ],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-FR-004",
+      "artifact_refs": [
+        "Evidence Classes and Source Ledger",
+        "evidence class table"
+      ],
+      "claim_ids": [
+        "FR-004 authority classes are explicit"
+      ],
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-013"
+      ],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-FR-005",
+      "artifact_refs": [
+        "Project Input Inventory",
+        "project input records"
+      ],
+      "claim_ids": [
+        "FR-005 project inputs are non-authoritative"
+      ],
+      "official_source_ledger_ids": [],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-FR-006",
+      "artifact_refs": [
+        "Historical Seed Exclusions and Candidate Routes",
+        "historical and legacy exclusions, candidate routes"
+      ],
+      "claim_ids": [
+        "FR-006 unsupported seeds fail closed"
+      ],
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-014"
+      ],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-FR-007",
+      "artifact_refs": [
+        "Role Contract Records count",
+        "`G56R-001-AC-*` records"
+      ],
+      "claim_ids": [
+        "FR-007 twelve role contracts exist"
+      ],
+      "official_source_ledger_ids": [],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-FR-008",
+      "artifact_refs": [
+        "Role Boundary, Contract Matrix, and Role Hash Validation Evidence",
+        "role boundary matrix and complete all-role hash validation"
+      ],
+      "claim_ids": [
+        "FR-008 role contracts keep runtime facts deferred"
+      ],
+      "official_source_ledger_ids": [],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-FR-009",
+      "artifact_refs": [
+        "Parity-only role records",
+        "consensus and gate parity records"
+      ],
+      "claim_ids": [
+        "FR-009 parity roles remain project input only"
+      ],
+      "official_source_ledger_ids": [],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-FR-010",
+      "artifact_refs": [
+        "Current Roadmap Seed Admission",
+        "current roadmap seed table"
+      ],
+      "claim_ids": [
+        "FR-010 roadmap seed admission is source-bound"
+      ],
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-014"
+      ],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-FR-011",
+      "artifact_refs": [
+        "Provisional Candidate Routes",
+        "`G56R-001-CR-*` records"
+      ],
+      "claim_ids": [
+        "FR-011 provisional routes bind source, effort, lifecycle gaps, and role instruction records"
+      ],
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-014"
+      ],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-FR-012",
+      "artifact_refs": [
+        "Candidate no-claims boundary",
+        "`G56R-001-CR-*` records"
+      ],
+      "claim_ids": [
+        "FR-012 candidates make no availability or preference claims"
+      ],
+      "official_source_ledger_ids": [],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-FR-013",
+      "artifact_refs": [
+        "Fixture Backlog Records count",
+        "`G56R-001-FB-*` records"
+      ],
+      "claim_ids": [
+        "FR-013 twelve fixture backlog records exist"
+      ],
+      "official_source_ledger_ids": [],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-FR-014",
+      "artifact_refs": [
+        "Fixture Backlog Records fields",
+        "fixture supplemental fields"
+      ],
+      "claim_ids": [
+        "FR-014 fixture backlog fields are complete"
+      ],
+      "official_source_ledger_ids": [],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-FR-015",
+      "artifact_refs": [
+        "Fixture non-release evidence label",
+        "fixture backlog records"
+      ],
+      "claim_ids": [
+        "FR-015 prompt-emulation evidence is non-release"
+      ],
+      "official_source_ledger_ids": [],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-FR-016",
+      "artifact_refs": [
+        "G56R-002 capability and telemetry questions",
+        "G56R-002 handoff"
+      ],
+      "claim_ids": [
+        "FR-016 G56R-002 questions are explicit"
+      ],
+      "official_source_ledger_ids": [],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-FR-017",
+      "artifact_refs": [
+        "Traceability Matrix",
+        "`G56R-001-TR-*` records"
+      ],
+      "claim_ids": [
+        "FR-017 traceability matrix is complete"
+      ],
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-001",
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-005",
+        "OPENAI-DOC-006",
+        "OPENAI-DOC-007",
+        "OPENAI-DOC-008",
+        "OPENAI-DOC-009",
+        "OPENAI-DOC-010",
+        "OPENAI-DOC-011",
+        "OPENAI-DOC-012",
+        "OPENAI-DOC-013",
+        "OPENAI-DOC-014",
+        "OPENAI-DOC-015",
+        "OPENAI-DOC-016",
+        "OPENAI-DOC-017",
+        "OPENAI-DOC-018",
+        "OPENAI-DOC-019",
+        "OPENAI-DOC-020",
+        "OPENAI-DOC-021"
+      ],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-FR-018",
+      "artifact_refs": [
+        "Go/No-Go Decision",
+        "decision matrix"
+      ],
+      "claim_ids": [
+        "FR-018 go/no-go decisions are explicit"
+      ],
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-001",
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-005",
+        "OPENAI-DOC-006",
+        "OPENAI-DOC-007",
+        "OPENAI-DOC-008",
+        "OPENAI-DOC-009",
+        "OPENAI-DOC-010",
+        "OPENAI-DOC-011",
+        "OPENAI-DOC-012",
+        "OPENAI-DOC-013",
+        "OPENAI-DOC-014",
+        "OPENAI-DOC-015",
+        "OPENAI-DOC-016",
+        "OPENAI-DOC-017",
+        "OPENAI-DOC-018",
+        "OPENAI-DOC-019",
+        "OPENAI-DOC-020",
+        "OPENAI-DOC-021"
+      ],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-SC-001",
+      "artifact_refs": [
+        "Source, role, fixture, and unsupported admitted seed counts",
+        "all record families"
+      ],
+      "claim_ids": [
+        "SC-001 required counts match"
+      ],
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-001",
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-005",
+        "OPENAI-DOC-006",
+        "OPENAI-DOC-007",
+        "OPENAI-DOC-008",
+        "OPENAI-DOC-009",
+        "OPENAI-DOC-010",
+        "OPENAI-DOC-011",
+        "OPENAI-DOC-012",
+        "OPENAI-DOC-013",
+        "OPENAI-DOC-014",
+        "OPENAI-DOC-015",
+        "OPENAI-DOC-016",
+        "OPENAI-DOC-017",
+        "OPENAI-DOC-018",
+        "OPENAI-DOC-019",
+        "OPENAI-DOC-020",
+        "OPENAI-DOC-021"
+      ],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-SC-002",
+      "artifact_refs": [
+        "Source bindings and unsupported candidates",
+        "source ledger, historical and legacy exclusions, candidate routes"
+      ],
+      "claim_ids": [
+        "SC-002 source bindings and unsupported candidates are fail-closed"
+      ],
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-013"
+      ],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-SC-003",
+      "artifact_refs": [
+        "Role contract fields and effective-runtime fields",
+        "role contract records"
+      ],
+      "claim_ids": [
+        "SC-003 role contract fields and runtime deferrals are present"
+      ],
+      "official_source_ledger_ids": [],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-SC-004",
+      "artifact_refs": [
+        "Fixture backlog count and labels",
+        "fixture backlog records"
+      ],
+      "claim_ids": [
+        "SC-004 fixture backlog counts and labels match"
+      ],
+      "official_source_ledger_ids": [],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-SC-005",
+      "artifact_refs": [
+        "Final decision matrix",
+        "go/no-go decision table"
+      ],
+      "claim_ids": [
+        "SC-005 final decision matrix is complete"
+      ],
+      "official_source_ledger_ids": [
+        "OPENAI-DOC-001",
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-005",
+        "OPENAI-DOC-006",
+        "OPENAI-DOC-007",
+        "OPENAI-DOC-008",
+        "OPENAI-DOC-009",
+        "OPENAI-DOC-010",
+        "OPENAI-DOC-011",
+        "OPENAI-DOC-012",
+        "OPENAI-DOC-013",
+        "OPENAI-DOC-014",
+        "OPENAI-DOC-015",
+        "OPENAI-DOC-016",
+        "OPENAI-DOC-017",
+        "OPENAI-DOC-018",
+        "OPENAI-DOC-019",
+        "OPENAI-DOC-020",
+        "OPENAI-DOC-021"
+      ],
+      "status": "verified"
+    },
+    {
+      "requirement_id": "G56R-001-TR-SC-006",
+      "artifact_refs": [
+        "Marker search is part of implementation verification",
+        "marker search result"
+      ],
+      "claim_ids": [
+        "SC-006 marker search is part of verification"
+      ],
+      "official_source_ledger_ids": [],
+      "status": "verified"
+    }
+  ],
+  "decisions": [
+    {
+      "decision_id": "G56R-001-D-G56R-002-CAPABILITY",
+      "date": "2026-07-16",
+      "title": "Proceed to G56R-002 capability discovery and telemetry profiling",
+      "decision": "GO; blocked downstream work: none for G56R-002 discovery",
+      "rationale": "Required evidence: Source ledger with retrieval evidence, bounded source-fact extracts and extract hashes, explicit effort-surface IDs, documented or explicitly undocumented effort values/defaults, role contracts and instruction hashes with all-role validation evidence, candidate lifecycle gap fields, blocked/source-bound candidate records, fixture backlog, telemetry requirements, capability questions, invalidation rules, and strict authority classes Evidence status: Complete for a documentation-only discovery handoff; executable model/effort tuples remain blocked pending G56R-002, runtime-supported efforts/defaults remain G56R-002 inputs, and historical seed slugs remain undocumented because no exact lifecycle source text is recorded Handoff owner: G56R-002.",
+      "supersedes": []
+    },
+    {
+      "decision_id": "G56R-001-D-EXECUTABLE-CANDIDATES",
+      "date": "2026-07-16",
+      "title": "Proceed to executable candidate set",
+      "decision": "NO-GO; blocked downstream work: executable candidate set, materialized route policy",
+      "rationale": "Required evidence: Pinned-client capability snapshot plus telemetry profile proving effective model, effort, modalities, route, and exact treatment Evidence status: Missing by design in G56R-001 Handoff owner: G56R-002/G56R-003.",
+      "supersedes": []
+    },
+    {
+      "decision_id": "G56R-001-D-ROUTE-QUALIFICATION",
+      "date": "2026-07-16",
+      "title": "Proceed to route qualification",
+      "decision": "NO-GO; blocked downstream work: route qualification, ranking, quality claims",
+      "rationale": "Required evidence: Exact treatment, executable fixtures, scorer, analysis plan, and role corpus Evidence status: Missing by design in G56R-001 Handoff owner: G56R-003 and later qualification specs.",
+      "supersedes": []
+    },
+    {
+      "decision_id": "G56R-001-D-POLICY-INSTALLATION",
+      "date": "2026-07-16",
+      "title": "Proceed to installer behavior, resolver behavior, preferred route, or fallback policy",
+      "decision": "NO-GO; blocked downstream work: installer behavior, resolver behavior, preferred route, fallback policy",
+      "rationale": "Required evidence: Qualified preferred routes, fallback routes, resolver contract, installer plan, and payload/update strategy Evidence status: Missing by design in G56R-001 Handoff owner: G56R-006 and final integration.",
+      "supersedes": []
+    },
+    {
+      "decision_id": "G56R-001-DEC-PARITY-20260716",
+      "date": "2026-07-16",
+      "title": "Machine-readable parity amendment",
+      "decision": "Publish a schema-v2 Codex manifest beside the canonical report while preserving the original report-only handoff.",
+      "rationale": "The approved CAR/G56R parity plan requires one enforceable structure; this supersedes artifact packaging only and leaves the original evidence and no-runtime boundary intact.",
+      "supersedes": [
+        "G56R-001 design Q3: One canonical report"
+      ]
+    }
+  ],
+  "invalidation_rules": [
+    {
+      "invalidation_rule_id": "G56R-001-INV-001",
+      "trigger": "An official OpenAI source URL, body hash, documented surface, model ID, field, or lifecycle statement changes.",
+      "affected_ids": [
+        "OPENAI-DOC-001",
+        "OPENAI-DOC-002",
+        "OPENAI-DOC-003",
+        "OPENAI-DOC-004",
+        "OPENAI-DOC-005",
+        "OPENAI-DOC-006",
+        "OPENAI-DOC-007",
+        "OPENAI-DOC-008",
+        "OPENAI-DOC-009",
+        "OPENAI-DOC-010",
+        "OPENAI-DOC-011",
+        "OPENAI-DOC-012",
+        "OPENAI-DOC-013",
+        "OPENAI-DOC-014",
+        "OPENAI-DOC-015",
+        "OPENAI-DOC-016",
+        "OPENAI-DOC-017",
+        "OPENAI-DOC-018",
+        "OPENAI-DOC-019",
+        "OPENAI-DOC-020",
+        "OPENAI-DOC-021"
+      ],
+      "action": "Block bound claims and candidates until the ledger is revalidated and dispositions are recorded."
+    },
+    {
+      "invalidation_rule_id": "G56R-001-INV-002",
+      "trigger": "A role source file, instruction hash, safety boundary, or platform field mapping changes.",
+      "affected_ids": [
+        "G56R-001-AC-ANALYZE-EXECUTOR",
+        "G56R-001-AC-AUTOPILOT-FAST-HELPER",
+        "G56R-001-AC-CHECKLIST-EXECUTOR",
+        "G56R-001-AC-CLARIFY-EXECUTOR",
+        "G56R-001-AC-CODEBASE-ANALYST",
+        "G56R-001-AC-DOMAIN-RESEARCHER",
+        "G56R-001-AC-IMPLEMENT-EXECUTOR",
+        "G56R-001-AC-PHASE-EXECUTOR",
+        "G56R-001-AC-SPEC-CONTEXT-ANALYST",
+        "G56R-001-AC-UAT-RUNBOOK-AUTHOR",
+        "G56R-001-AC-CONSENSUS-SYNTHESIZER",
+        "G56R-001-AC-GATE-VALIDATOR",
+        "G56R-001-CR-ANALYZE-EXECUTOR-SOL",
+        "G56R-001-CR-ANALYZE-EXECUTOR-GPT55",
+        "G56R-001-CR-AUTOPILOT-FAST-HELPER-SPARK",
+        "G56R-001-CR-AUTOPILOT-FAST-HELPER-LUNA",
+        "G56R-001-CR-CHECKLIST-EXECUTOR-SOL",
+        "G56R-001-CR-CHECKLIST-EXECUTOR-GPT55",
+        "G56R-001-CR-CLARIFY-EXECUTOR-SOL",
+        "G56R-001-CR-CLARIFY-EXECUTOR-GPT55",
+        "G56R-001-CR-CODEBASE-ANALYST-TERRA",
+        "G56R-001-CR-CODEBASE-ANALYST-GPT55",
+        "G56R-001-CR-DOMAIN-RESEARCHER-SOL",
+        "G56R-001-CR-DOMAIN-RESEARCHER-GPT55",
+        "G56R-001-CR-IMPLEMENT-EXECUTOR-SOL",
+        "G56R-001-CR-IMPLEMENT-EXECUTOR-GPT55",
+        "G56R-001-CR-PHASE-EXECUTOR-SOL",
+        "G56R-001-CR-PHASE-EXECUTOR-GPT55",
+        "G56R-001-CR-SPEC-CONTEXT-ANALYST-TERRA",
+        "G56R-001-CR-SPEC-CONTEXT-ANALYST-GPT55",
+        "G56R-001-CR-UAT-RUNBOOK-AUTHOR-TERRA",
+        "G56R-001-CR-UAT-RUNBOOK-AUTHOR-LUNA",
+        "G56R-001-CR-UAT-RUNBOOK-AUTHOR-GPT55",
+        "G56R-001-CR-CONSENSUS-SYNTHESIZER-SOL",
+        "G56R-001-CR-GATE-VALIDATOR-LUNA"
+      ],
+      "action": "Recompute role records and invalidate every bound candidate before capability discovery."
+    },
+    {
+      "invalidation_rule_id": "G56R-001-INV-003",
+      "trigger": "Pinned runtime discovery conflicts with a documented source binding or effort-surface assumption.",
+      "affected_ids": [
+        "G56R-001-CR-ANALYZE-EXECUTOR-SOL",
+        "G56R-001-CR-ANALYZE-EXECUTOR-GPT55",
+        "G56R-001-CR-AUTOPILOT-FAST-HELPER-SPARK",
+        "G56R-001-CR-AUTOPILOT-FAST-HELPER-LUNA",
+        "G56R-001-CR-CHECKLIST-EXECUTOR-SOL",
+        "G56R-001-CR-CHECKLIST-EXECUTOR-GPT55",
+        "G56R-001-CR-CLARIFY-EXECUTOR-SOL",
+        "G56R-001-CR-CLARIFY-EXECUTOR-GPT55",
+        "G56R-001-CR-CODEBASE-ANALYST-TERRA",
+        "G56R-001-CR-CODEBASE-ANALYST-GPT55",
+        "G56R-001-CR-DOMAIN-RESEARCHER-SOL",
+        "G56R-001-CR-DOMAIN-RESEARCHER-GPT55",
+        "G56R-001-CR-IMPLEMENT-EXECUTOR-SOL",
+        "G56R-001-CR-IMPLEMENT-EXECUTOR-GPT55",
+        "G56R-001-CR-PHASE-EXECUTOR-SOL",
+        "G56R-001-CR-PHASE-EXECUTOR-GPT55",
+        "G56R-001-CR-SPEC-CONTEXT-ANALYST-TERRA",
+        "G56R-001-CR-SPEC-CONTEXT-ANALYST-GPT55",
+        "G56R-001-CR-UAT-RUNBOOK-AUTHOR-TERRA",
+        "G56R-001-CR-UAT-RUNBOOK-AUTHOR-LUNA",
+        "G56R-001-CR-UAT-RUNBOOK-AUTHOR-GPT55",
+        "G56R-001-CR-CONSENSUS-SYNTHESIZER-SOL",
+        "G56R-001-CR-GATE-VALIDATOR-LUNA"
+      ],
+      "action": "Fail closed; classify the conflict and refresh official documentation before changing candidate eligibility."
+    },
+    {
+      "invalidation_rule_id": "G56R-001-INV-004",
+      "trigger": "The shared parity contract or schema changes.",
+      "affected_ids": [
+        "G56R-001",
+        "CAR-001"
+      ],
+      "action": "Revalidate both platform manifests before either downstream scaffold consumes them."
+    }
+  ]
+}
