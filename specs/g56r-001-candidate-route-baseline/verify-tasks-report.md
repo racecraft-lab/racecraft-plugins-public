@@ -43,7 +43,7 @@ session, and later RepoPrompt reviews (`review-g56r-baseline-BEB0E5`,
 findings. Clean rerun `review-g56r-baseline-EE3373` returned no findings. This
 report now reflects the remediation checks for those findings.
 
-## Summary
+## Original v0.1 Summary (38 Tasks)
 
 | Verdict | Count |
 |---|---:|
@@ -70,7 +70,7 @@ review packet evidence.
 | `git diff --check` | pass |
 | G7 gate | pass; all 38 tasks complete |
 | Layer 1 validation | pass; 1428/1428 |
-| Full suite | pass; 2768/2768 |
+| Full suite (original v0.1 run) | pass; 2768/2768 |
 
 ## Verified Items
 
