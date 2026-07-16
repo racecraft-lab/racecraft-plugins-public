@@ -3343,12 +3343,14 @@ def trusted_open_regular_file(path: Path, repo_root: Path) -> int | None:
             try:
                 os.close(fd)
             except OSError:
+                # Close failures during an already-failed guarded open are best-effort cleanup.
                 pass
         return None
     finally:
         try:
             os.close(parent_fd)
         except OSError:
+            # The caller should see the original read result, not a best-effort close failure.
             pass
 
 
