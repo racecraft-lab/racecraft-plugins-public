@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.19.3](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.19.2...speckit-pro-v2.19.3) (2026-07-16)
+
+
+### Bug Fixes
+
+* **speckit-pro:** Enable PR packet emission ([#357](https://github.com/racecraft-lab/racecraft-plugins-public/issues/357)) ([dcef3e9](https://github.com/racecraft-lab/racecraft-plugins-public/commit/dcef3e90896e52b32bdb668ec55dd29ea7ba282a))
+
 ## [2.19.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.19.1...speckit-pro-v2.19.2) (2026-07-14)
 
 
