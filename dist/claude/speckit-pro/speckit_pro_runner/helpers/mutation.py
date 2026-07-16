@@ -951,6 +951,7 @@ def write_bytes_atomic(target: Path, content: bytes, *, trust_root: Path | None 
             try:
                 os.close(tmp_fd)
             except OSError:
+                # Best-effort cleanup only; a close error cannot safely change the write outcome.
                 pass
         try:
             os.unlink(tmp_name, dir_fd=parent_fd)
