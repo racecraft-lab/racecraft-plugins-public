@@ -2,14 +2,13 @@
 
 **Date**: 2026-07-16
 **Scope**: all
-**Completed tasks**: 38 / 38
+**Completed tasks**: 44 / 44 (38 original plus 6 evidence-parity amendment tasks)
 **Feature directory**: `specs/g56r-001-candidate-route-baseline`
 
 ## 2026-07-16 Evidence-Parity Amendment Verification
 
 The original 38-task verification below remains the v0.1 completion record.
-Amendment tasks T039 through T043 are complete; T044 remains open only for
-stack publication.
+Amendment tasks T039 through T044 are complete.
 
 | Check | Result |
 |---|---|
@@ -22,6 +21,8 @@ stack publication.
 | Layer 1 validation | pass; 1428/1428 |
 | Full repository suite | pass; 2811/2811 |
 | Docs reference validation | pass; reference pages current |
+| PR stack | pass; draft PR #360 targets foundation branch from PR #362 and GitHub reports it mergeable |
+| Rewritten-head CI | in progress after publication; not represented as complete |
 
 Current content hashes:
 

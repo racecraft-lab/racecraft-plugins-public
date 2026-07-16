@@ -84,7 +84,7 @@ Grill Me is human-in-the-loop only. Once autopilot starts, clarification uses
 | Confidence Gate | G6.5 | Complete | Advisory no-data result recorded because Phase 6 ran locally without synthesizer confidence emit |
 | Implement | `$speckit-implement` | Complete | Authored and validated the canonical research report; G7 passed |
 | Post | Post-Implementation | Complete | RepoPrompt review loop is clean; G56R-002 remains blocked until merge complete |
-| Evidence Parity Amendment | Post-completion amendment | In Progress | All local gates pass; stacked-PR publication remains |
+| Evidence Parity Amendment | Post-completion amendment | Complete | Local gates pass; draft PR #360 is mergeable and stacked on foundation PR #362; rewritten-head CI is in progress |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -887,6 +887,8 @@ Populate this section only after G7:
 - Current planning manifest SHA-256: `71d2ee129d5ca0fd407382ac5102566efe4c0321541514ee0eece38b29d6117d`
 - Evidence-parity verification: validator 8/8, Layer 1 1428/1428,
   full suite 2811/2811, and docs reference check passed
+- Publication: draft PR #360 targets `car-001-official-evidence-parity`, is
+  reported mergeable by GitHub, and must merge after foundation PR #362
 - G56R-002 handoff decision: `GO` for capability discovery and telemetry profiling only; `NO-GO` for executable candidate set, route qualification, installer behavior, resolver behavior, preferred routes, and fallback policy
 - Verification summary: G7 passed with all 38 tasks complete; `git diff --check`, Layer 1, and full suite passed
 - Remaining invalidation or follow-up items: Refresh official documentation before G56R-002 if source content, model lifecycle, app-server capability schema, telemetry schema, role source hashes, or fixture inputs change

@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-001-workflow.md",
   "spec_id": "G56R-001",
   "feature_dir": "specs/g56r-001-candidate-route-baseline",
-  "updated_at": "2026-07-16T14:24:08Z",
-  "active_step": "Post: Evidence-parity amendment publication pending",
+  "updated_at": "2026-07-16T14:28:10Z",
+  "active_step": "Post: Evidence-parity amendment published as stacked draft PR #360",
   "settings": {
     "auto_commit": "per-phase",
     "confidence_gate_mode": "advisory",
@@ -11,8 +11,9 @@
     "gate_failure": "stop"
   },
   "evidence_parity_amendment": {
-    "status": "validation_complete_publication_pending",
+    "status": "complete",
     "started_at": "2026-07-16T14:17:07Z",
+    "completed_at": "2026-07-16T14:28:10Z",
     "foundation_pr": 362,
     "dependent_pr": 360,
     "authority": "current allowlisted official OpenAI documentation only",
@@ -39,7 +40,9 @@
       "full_suite": "2811/2811 passed",
       "docs_reference_check": "pass; reference pages current",
       "report_sha256": "b429a568ebc780bf638e6891eff6532deefae97c3ed4e5ef86cc7eced1436289",
-      "planning_manifest_sha256": "71d2ee129d5ca0fd407382ac5102566efe4c0321541514ee0eece38b29d6117d"
+      "planning_manifest_sha256": "71d2ee129d5ca0fd407382ac5102566efe4c0321541514ee0eece38b29d6117d",
+      "pr_stack": "pass; PR #360 targets foundation PR #362 branch and GitHub reports mergeable",
+      "rewritten_head_ci": "in_progress"
     }
   },
   "archive_sweep": {
@@ -642,7 +645,7 @@
     },
     {
       "step": "Post: Evidence Parity - Verify and publish stacked PR #360",
-      "status": "in_progress"
+      "status": "completed: local gates pass; PR #360 mergeable on PR #362; rewritten-head CI in progress"
     }
   ],
   "post_results": {
@@ -704,10 +707,15 @@
       "status": "pass",
       "pr_number": 360,
       "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/360",
-      "base_branch": "main",
+      "original_base_branch": "main",
+      "base_branch": "car-001-official-evidence-parity",
+      "foundation_pr": 362,
       "head_branch": "g56r-001-candidate-route-baseline",
+      "rewritten_head_commit": "a4a442df05dc468cd6ce8a619892d78af8e4136d",
+      "github_mergeable": true,
+      "rewritten_head_ci": "in_progress",
       "draft": true,
-      "reason": "draft PR opened by explicit user instruction after completed workflow validation"
+      "reason": "draft PR opened by explicit user instruction, then rebased and retargeted onto the shared official-source evidence foundation"
     },
     "retrospective": {
       "status": "complete",

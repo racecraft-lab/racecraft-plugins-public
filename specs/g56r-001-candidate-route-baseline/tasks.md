@@ -131,7 +131,7 @@ official OpenAI documentation while preserving the completed v0.1 record.
 - [x] T041 Add `docs/ai/research/codex-agent-route-candidate-manifest.json` with schema version `2.0.0`, 12 agent contracts, 23 candidates, and explicit dispositions for all 25 legacy source facts
 - [x] T042 Amend the canonical report, design decision, workflow, spec, plan, research, data model, contract, quickstart, checklist, retrospective, and verification records without rewriting historical execution evidence
 - [x] T043 Run `python3 tests/speckit-pro/unit/test-agent-route-research-parity.py` and confirm schema, authority-domain, cross-reference, legacy-disposition, and CAR/G56R structural-parity checks pass
-- [ ] T044 Run diff hygiene, Layer 1, full repository validation, docs reference validation, then publish PR #360 as a clean stack on PR #362
+- [x] T044 Run diff hygiene, Layer 1, full repository validation, docs reference validation, then publish PR #360 as a mergeable stack on PR #362; rewritten-head CI remains in progress
 
 ---
 
