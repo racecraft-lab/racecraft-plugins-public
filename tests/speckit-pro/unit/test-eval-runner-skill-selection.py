@@ -307,8 +307,12 @@ def runtime_registry_violations() -> list[str]:
     if validate_entry is None or validate_entry.promotion_status != "python_authoritative":
         status = None if validate_entry is None else validate_entry.promotion_status
         violations.append(f"registry: validate-pr-packet-read-only status={status}")
-    elif "persistence" not in validate_entry.out_of_scope_modes:
-        violations.append("registry: packet validator no longer marks persistence out of scope")
+    elif "persistence" in validate_entry.out_of_scope_modes:
+        violations.append("registry: packet validator still marks promoted persistence out of scope")
+    elif validate_entry.mutation_operation != "validate-pr-packet-write":
+        violations.append("registry: packet validator does not route persistence to validate-pr-packet-write")
+    elif validate_entry.mutation_operation_deferred:
+        violations.append("registry: packet validator still marks validate-pr-packet-write as deferred")
     return violations
 
 

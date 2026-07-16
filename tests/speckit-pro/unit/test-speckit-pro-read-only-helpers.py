@@ -271,6 +271,11 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 {"feature_dir": FEATURE_DIR, "write_mode": True},
                 "The registered plan-layers-marker-plan operation remains deferred; keep this request read_only.",
             ),
+            (
+                "validate-pr-packet-read-only",
+                {**HELPER_CASES["validate-pr-packet-read-only"], "write_mode": True},
+                "Submit a separate runner request with helper_id and operation validate-pr-packet-write.",
+            ),
         ]
         for helper_id, inputs, mutation_action in cases:
             with self.subTest(helper_id=helper_id):

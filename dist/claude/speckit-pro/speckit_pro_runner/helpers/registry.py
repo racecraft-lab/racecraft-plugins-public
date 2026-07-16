@@ -240,9 +240,8 @@ HELPERS: dict[str, HelperEntry] = {
         "python_authoritative",
         "bash_reference",
         authoritative_request("validate-pr-packet-read-only"),
-        ("persistence", "workflow-event-upserts", "pr-body-generation", "pr-emission", "restack"),
+        ("workflow-event-upserts", "pr-body-generation", "pr-emission", "restack"),
         mutation_operation="validate-pr-packet-write",
-        mutation_operation_deferred=True,
     ),
 }
 
