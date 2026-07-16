@@ -1402,6 +1402,7 @@ def write_bytes_atomic(
     failure: OSError | None = None
     replaced = False
     applied_mode: int | None = None
+    tmp_cleanup_errors: list[str] = []
     try:
         try:
             if trust_root is not None:
@@ -1450,7 +1451,7 @@ def write_bytes_atomic(
             pass
         except OSError:
             # Best-effort cleanup only; the write outcome is already determined.
-            pass
+            tmp_cleanup_errors.append(f"{tmp_name}:OSError")
         close_error: OSError | None = None
         try:
             os.close(parent_fd)
@@ -1462,6 +1463,8 @@ def write_bytes_atomic(
             cleanup_errors = atomic_write_cleanup_errors(failure)
             cleanup_errors.append(f"parent_fd:{type(close_error).__name__}")
             setattr(failure, "cleanup_errors", cleanup_errors)
+        if failure is not None and not replaced and tmp_cleanup_errors:
+            setattr(failure, "cleanup_errors", [*atomic_write_cleanup_errors(failure), *tmp_cleanup_errors])
         if trust_root is not None and failure is not None and not replaced and created_dirs:
             cleanup_errors = remove_created_parent_dirs(created_dirs, trust_root)
             if cleanup_errors:
@@ -1520,8 +1523,14 @@ def open_safe_parent_fd(target: Path, trust_root: Path, *, create: bool) -> tupl
                 )
             os.close(parent_fd)
             parent_fd = next_fd
-    except Exception:
-        os.close(parent_fd)
+    except Exception as exc:
+        try:
+            os.close(parent_fd)
+        finally:
+            if created_dirs:
+                cleanup_errors = remove_created_parent_dirs(created_dirs, trust_root)
+                if cleanup_errors:
+                    setattr(exc, "cleanup_errors", [*atomic_write_cleanup_errors(exc), *cleanup_errors])
         raise
     return parent_fd, target_name, created_dirs
 

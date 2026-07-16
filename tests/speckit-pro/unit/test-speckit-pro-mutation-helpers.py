@@ -1344,6 +1344,98 @@ class MutationHelperTests(unittest.TestCase):
             self.assertTrue(response["data"]["writes_state"])
             self.assertEqual((git_root / "new.md").read_text(encoding="utf-8"), "new\n")
 
+    def test_apply_cleans_parent_created_before_traversal_failure(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            request = RunnerRequest(
+                "test-created-parent-traversal-failure",
+                "mutation-foundation",
+                "mutation-foundation",
+                "apply",
+                {
+                    "operations": [
+                        {
+                            "operation_id": "write-new",
+                            "kind": "write_file",
+                            "target": "nested/new.md",
+                            "content": "new\n",
+                        }
+                    ]
+                },
+            )
+            real_open = mutation.os.open
+
+            def fail_reopen_created_parent(path, *args, **kwargs):
+                if path == "nested" and (git_root / "nested").exists():
+                    raise OSError("injected parent traversal failure")
+                return real_open(path, *args, **kwargs)
+
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with patch.object(mutation.os, "open", side_effect=fail_reopen_created_parent):
+                    response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["write_failure"])
+            self.assertFalse((git_root / "nested").exists())
+            self.assertFalse(response["data"]["writes_state"])
+
+    def test_apply_reports_temp_unlink_failure_after_failed_replace(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            request = RunnerRequest(
+                "test-temp-unlink-cleanup-failure",
+                "mutation-foundation",
+                "mutation-foundation",
+                "apply",
+                {
+                    "operations": [
+                        {
+                            "operation_id": "write-new",
+                            "kind": "write_file",
+                            "target": "new.md",
+                            "content": "new\n",
+                        }
+                    ]
+                },
+            )
+            real_unlink = mutation.os.unlink
+
+            def fail_replace(*args, **kwargs):
+                raise OSError("injected replace failure")
+
+            def fail_temp_unlink(path, *args, **kwargs):
+                if isinstance(path, str) and path.startswith(".new.md.tmp-"):
+                    raise OSError("injected temp cleanup failure")
+                return real_unlink(path, *args, **kwargs)
+
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with (
+                    patch.object(mutation.os, "replace", side_effect=fail_replace),
+                    patch.object(mutation.os, "unlink", side_effect=fail_temp_unlink),
+                ):
+                    response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["write_failure"])
+            self.assertTrue(any(error.endswith(":OSError") for error in response["diagnostics"][0]["details"]["rollback_errors"]))
+            self.assertTrue(response["data"]["writes_state"])
+            self.assertEqual(len(list(git_root.glob(".new.md.tmp-*"))), 1)
+            self.assertFalse((git_root / "new.md").exists())
+
     def test_apply_rejects_target_swap_between_snapshot_and_replace(self) -> None:
         from speckit_pro_runner.envelope import RunnerRequest
         from speckit_pro_runner.helpers import mutation, registry
