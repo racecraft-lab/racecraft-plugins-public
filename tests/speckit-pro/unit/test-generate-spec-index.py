@@ -157,6 +157,19 @@ class GenerateSpecIndexTests(unittest.TestCase):
         self.assertIn("invalid JSON", body["data"]["stderr"]["text"])
         self.assertNotIn("Traceback", completed.stderr)
 
+    def test_check_fails_closed_without_descriptor_safe_reads(self) -> None:
+        from speckit_pro_runner.helpers import read_only
+
+        root = self.copy_fixture("stale-fill")
+        with patch.object(read_only, "descriptor_read_supported", return_value=False):
+            result = read_only.generate_spec_index_check(
+                {"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+                REPO_ROOT,
+            )
+
+        self.assertEqual(result["exit_code"], 2)
+        self.assertIn("descriptor-safe spec-index reads are unsupported", result["stderr"])
+
     def test_write_plans_applies_and_is_idempotent_without_touching_curated_content(self) -> None:
         root = self.copy_fixture("stale-fill")
         moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"
@@ -358,6 +371,42 @@ class GenerateSpecIndexTests(unittest.TestCase):
         self.assertEqual(body["data"]["mutation"]["touched_paths"], ["specs/prsg-901-stale/SPEC-MOC.md"])
         self.assertEqual(moc.read_text(encoding="utf-8"), before)
         self.assertFalse(body["data"]["writes_state"])
+
+    def test_write_rechecks_applied_map_before_success(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        root = self.copy_fixture("stale-fill")
+        moc = root / "specs" / "prsg-901-stale" / "SPEC-MOC.md"
+        real_after_write = mutation.snapshot_changed_diagnostic_after_write
+
+        def mutate_after_applied_snapshot(*args, **kwargs):
+            result = real_after_write(*args, **kwargs)
+            if result is None:
+                moc.write_text("concurrent\n", encoding="utf-8")
+            return result
+
+        request = RunnerRequest(
+            "test-spec-index-final-target-recheck",
+            "generate-spec-index-write",
+            "generate-spec-index-write",
+            "apply",
+            {"repo_root": root.relative_to(REPO_ROOT).as_posix()},
+        )
+        old_cwd = Path.cwd()
+        os.chdir(REPO_ROOT)
+        try:
+            with patch.object(mutation, "snapshot_changed_diagnostic_after_write", side_effect=mutate_after_applied_snapshot):
+                body = mutation.run_spec_index_write(registry.MUTATION_HELPERS["generate-spec-index-write"], request)
+        finally:
+            os.chdir(old_cwd)
+
+        self.assertEqual(body["status"], "expected_failure")
+        self.assertEqual([diag["code"] for diag in body["diagnostics"]], ["source_changed"])
+        self.assertEqual(body["data"]["mutation"]["mutation_status"], "partial_failure")
+        self.assertEqual(body["data"]["mutation"]["touched_paths"], ["specs/prsg-901-stale/SPEC-MOC.md"])
+        self.assertEqual(moc.read_text(encoding="utf-8"), "concurrent\n")
+        self.assertTrue(body["data"]["writes_state"])
 
     def test_current_marker_spelling_is_rendered_and_preserved(self) -> None:
         root = self.copy_fixture("stale-fill")

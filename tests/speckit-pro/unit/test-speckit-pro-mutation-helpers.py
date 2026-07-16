@@ -769,6 +769,60 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(len(mutation["applied_operations"]), 1)
             self.assertEqual(mutation["touched_paths"], [rel])
 
+    def test_apply_rechecks_all_applied_targets_before_success(self) -> None:
+        from speckit_pro_runner.envelope import RunnerRequest
+        from speckit_pro_runner.helpers import mutation, registry
+
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            first = git_root / "generated" / "first.md"
+            second = git_root / "generated" / "second.md"
+            request = RunnerRequest(
+                "test-final-applied-target-recheck",
+                "mutation-foundation",
+                "mutation-foundation",
+                "apply",
+                {
+                    "operations": [
+                        {
+                            "operation_id": "write-first",
+                            "kind": "write_file",
+                            "target": "generated/first.md",
+                            "content": "first\n",
+                        },
+                        {
+                            "operation_id": "write-second",
+                            "kind": "write_file",
+                            "target": "generated/second.md",
+                            "content": "second\n",
+                        },
+                    ]
+                },
+            )
+            real_write = mutation.write_file_atomic
+
+            def mutate_first_after_second(target: Path, content: str | bytes, **kwargs):
+                result = real_write(target, content, **kwargs)
+                if Path(target).name == second.name:
+                    first.write_text("concurrent\n", encoding="utf-8")
+                return result
+
+            old_cwd = Path.cwd()
+            os.chdir(git_root)
+            try:
+                with patch.object(mutation, "write_file_atomic", side_effect=mutate_first_after_second):
+                    response = mutation.run_mutation_helper(registry.MUTATION_HELPERS["mutation-foundation"], request)
+            finally:
+                os.chdir(old_cwd)
+
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["source_changed"])
+            self.assertEqual(response["data"]["mutation"]["mutation_status"], "partial_failure")
+            self.assertEqual(response["data"]["mutation"]["touched_paths"], ["generated/first.md", "generated/second.md"])
+            self.assertEqual(first.read_text(encoding="utf-8"), "concurrent\n")
+            self.assertFalse(second.exists())
+            self.assertTrue(response["data"]["writes_state"])
+
     def test_apply_rejects_dirty_worktree_without_touching_target(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:

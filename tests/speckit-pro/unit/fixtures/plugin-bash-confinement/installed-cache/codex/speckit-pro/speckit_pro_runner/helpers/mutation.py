@@ -24,7 +24,9 @@ from .read_only import (
     repo_relative,
     resolve_input_path,
     resolve_repo_root,
+    trusted_dir_entries,
     trusted_dir_exists,
+    trusted_regular_file_bytes_and_mode,
 )
 
 DEFAULT_ROLLBACK = "Review touched_paths and restore the previous file content before retrying."
@@ -401,6 +403,41 @@ def run_spec_index_write(entry: Any, request: Any) -> dict[str, Any]:
             )
 
     if changed:
+        final_target_changed = applied_targets_changed_diagnostic(
+            mutation["touched_paths"],
+            snapshots,
+            target_root,
+            helper_id=entry.helper_id,
+            message="generate-spec-index-write detected an applied map changed before completion",
+        )
+        if final_target_changed is not None:
+            mutation["mutation_status"] = "partial_failure"
+            mutation["failure_operation"] = mutation["applied_operations"][-1] if mutation["applied_operations"] else None
+            rollback_errors = rollback_applied_writes(mutation["touched_paths"], snapshots, target_root)
+            mutation["live_mutation"] = True
+            mutation["manual_remediation"] = [
+                "Inspect touched_paths and refreshed generated maps.",
+                "Retry apply mode after concurrent edits stop.",
+            ]
+            if rollback_errors:
+                mutation["manual_remediation"].append("Manual rollback is required for the reported rollback errors.")
+            else:
+                mutation["rollback_notes"] = ["Already-applied maps were rolled back before returning source_changed."]
+            final_target_changed["details"]["rollback_errors"] = rollback_errors
+            return spec_index_response(
+                "expected_failure",
+                request_id=request.request_id,
+                data=_spec_index_write_data(
+                    entry,
+                    request,
+                    mutation,
+                    specs_present=specs_present,
+                    rendered=rendered,
+                    writes_state=bool(rollback_errors),
+                ),
+                diagnostics=[final_target_changed],
+            )
+
         postcondition = _spec_index_postcommit_source_diagnostic(
             target_root,
             changed,
@@ -511,6 +548,21 @@ def _spec_index_postcommit_source_diagnostic(
             remediation_summary="Retry after spec-index sources are stable.",
             remediation_actions=["Inspect spec-index source files.", "Retry apply mode after concurrent edits stop."],
         )
+    expected_committed_maps = {
+        repo_relative(record.path, target_root): record.rendered
+        for record in changed
+    }
+    for record in current_rendered:
+        rel = repo_relative(record.path, target_root)
+        expected_original = expected_committed_maps.get(rel)
+        if expected_original is not None and record.original != expected_original:
+            return diagnostic(
+                "source_changed",
+                "generate-spec-index-write detected a committed map changed after commit",
+                details={"repo_root": repo_relative(target_root, target_root), "target": rel},
+                remediation_summary="Retry after generated map targets are stable.",
+                remediation_actions=["Inspect the generated map target.", "Retry apply mode after concurrent edits stop."],
+            )
     if current_dependency_signature != expected_dependency_signature:
         return diagnostic(
             "source_changed",
@@ -546,11 +598,11 @@ def spec_index_render_dependency_signature(
         if not stat.S_ISREG(mode):
             records.append((rel, "other", str(stat.S_IFMT(mode))))
             return
-        try:
-            digest = hashlib.sha256(path.read_bytes()).hexdigest()
-        except OSError as exc:
-            raise SpecIndexRenderError(f"could not read spec-index dependency: {path} ({type(exc).__name__})") from exc
-        records.append((rel, f"file:{stat.S_IMODE(mode):o}", digest))
+        snapshot = trusted_regular_file_bytes_and_mode(path, target_root)
+        if snapshot is None:
+            raise SpecIndexRenderError(f"could not read spec-index dependency: {path} (descriptor-safe read failed)")
+        data, file_mode = snapshot
+        records.append((rel, f"file:{file_mode:o}", hashlib.sha256(data).hexdigest()))
 
     def walk_tree(root: Path) -> None:
         rel = repo_relative(root, target_root)
@@ -568,10 +620,10 @@ def spec_index_render_dependency_signature(
             records.append((rel, "other", str(stat.S_IFMT(mode))))
             return
         records.append((rel, "dir", ""))
-        try:
-            children = sorted(root.iterdir(), key=lambda item: item.name.encode("utf-8"))
-        except OSError as exc:
-            raise SpecIndexRenderError(f"could not scan spec-index dependency directory: {root} ({type(exc).__name__})") from exc
+        child_names = trusted_dir_entries(root, target_root)
+        if child_names is None:
+            raise SpecIndexRenderError(f"could not scan spec-index dependency directory: {root} (descriptor-safe read failed)")
+        children = sorted((root / name for name in child_names), key=lambda item: item.name.encode("utf-8"))
         for child in children:
             try:
                 child_mode = child.lstat().st_mode
@@ -596,10 +648,10 @@ def spec_index_render_dependency_signature(
             records.append((home_rel, "symlink", ""))
         elif stat.S_ISDIR(home_mode):
             records.append((home_rel, "dir", ""))
-            try:
-                home_entries = sorted(home_dir.iterdir(), key=lambda item: item.name.encode("utf-8"))
-            except OSError as exc:
-                raise SpecIndexRenderError(f"could not scan roadmap-MOC dependency directory: {home_dir} ({type(exc).__name__})") from exc
+            home_names = trusted_dir_entries(home_dir, target_root)
+            if home_names is None:
+                raise SpecIndexRenderError(f"could not scan roadmap-MOC dependency directory: {home_dir} (descriptor-safe read failed)")
+            home_entries = sorted((home_dir / name for name in home_names), key=lambda item: item.name.encode("utf-8"))
             for home in home_entries:
                 if home.name.endswith("-roadmap-MOC.md"):
                     add_file(home)
@@ -638,9 +690,18 @@ def _spec_index_source_conflict(
                 remediation_summary="Do not write through replaced or redirected map paths.",
                 remediation_actions=["Inspect the target path.", "Retry from a stable repository tree."],
             )
+        snapshot = trusted_regular_file_bytes_and_mode(record.path, target_root)
+        if snapshot is None:
+            return diagnostic(
+                "source_changed",
+                "a rendered spec-index source could not be re-read before apply",
+                details={"target": record.path.as_posix(), "error": "descriptor-safe read failed"},
+                remediation_summary="Re-run from a stable set of source files.",
+                remediation_actions=["Inspect the target file.", "Retry generate-spec-index-write."],
+            )
         try:
-            current = record.path.read_bytes().decode("utf-8")
-        except (OSError, UnicodeDecodeError) as exc:
+            current = snapshot[0].decode("utf-8")
+        except UnicodeDecodeError as exc:
             return diagnostic(
                 "source_changed",
                 "a rendered spec-index source could not be re-read before apply",
@@ -989,6 +1050,30 @@ def run_mutation_helper(
                 return locked_response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[source_postcondition_changed])
         else:
             mutation["skipped_operations"].append(operation_record(op))
+
+    final_target_changed = applied_targets_changed_diagnostic(
+        mutation["touched_paths"],
+        snapshots,
+        repo_root,
+        helper_id=entry.helper_id,
+        message="mutation helper detected an applied target changed before completion",
+    )
+    if final_target_changed is not None:
+        mutation["mutation_status"] = "partial_failure"
+        mutation["failure_operation"] = mutation["applied_operations"][-1] if mutation["applied_operations"] else None
+        rollback_errors = rollback_applied_writes(mutation["touched_paths"], snapshots, repo_root)
+        mutation["live_mutation"] = True
+        mutation["manual_remediation"] = [
+            "Inspect touched_paths and applied target files.",
+            "Retry apply mode after concurrent edits stop.",
+        ]
+        if rollback_errors:
+            mutation["manual_remediation"].append("Manual rollback is required for the reported rollback errors.")
+        else:
+            mutation["rollback_notes"] = ["Already-applied writes were rolled back before returning source_changed."]
+        final_target_changed["details"]["rollback_errors"] = rollback_errors
+        base_data["writes_state"] = bool(rollback_errors)
+        return locked_response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[final_target_changed])
 
     mutation["mutation_status"] = "applied" if mutation["applied_operations"] else "no_op"
     mutation["live_mutation"] = bool(mutation["applied_operations"])
@@ -1708,6 +1793,38 @@ def snapshot_changed_diagnostic_after_write(
     original["applied_digest"] = expected_digest
     original["applied_mode"] = expected_mode
     original["applied_created_parent_dirs"] = expected_created_parent_dirs or []
+    return None
+
+
+def applied_targets_changed_diagnostic(
+    touched_paths: list[str],
+    snapshots: dict[str, dict[str, Any]],
+    repo_root: Path,
+    *,
+    helper_id: str,
+    message: str,
+) -> dict[str, Any] | None:
+    for rel in touched_paths:
+        target = resolve_candidate_path(rel, repo_root)
+        try:
+            current = snapshot_write_target(target, repo_root)
+        except OSError as exc:
+            return diagnostic(
+                "source_changed",
+                f"{message}: could not resnapshot applied target",
+                details={"helper_id": helper_id, "target": rel, "error": type(exc).__name__},
+                remediation_summary="Inspect the target path before retrying.",
+                remediation_actions=["Review touched_paths.", "Retry from a stable repository tree."],
+            )
+        original = snapshots.get(rel) or {"exists": False, "created_parent_dirs": []}
+        if not target_matches_applied_snapshot(current, original):
+            return diagnostic(
+                "source_changed",
+                message,
+                details={"helper_id": helper_id, "target": rel},
+                remediation_summary="Do not report success after a concurrent edit changes an applied target.",
+                remediation_actions=["Inspect touched_paths.", "Retry apply mode after concurrent edits stop."],
+            )
     return None
 
 

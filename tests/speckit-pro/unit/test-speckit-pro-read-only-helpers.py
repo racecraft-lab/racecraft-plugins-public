@@ -1034,6 +1034,76 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertIn("input.identity.validation_result_path", rules)
         self.assertEqual(stderr_records, response["diagnostics"])
 
+    def test_validate_pr_packet_enforces_canonical_packet_owned_paths(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
+            self.skipTest("validate-pr-packet canonical ownership case")
+        valid_packet = json.loads((PR_PACKET_FIXTURE_DIR / "valid-single.json").read_text(encoding="utf-8"))
+        specs_root = REPO_ROOT / "specs"
+        with tempfile.TemporaryDirectory(prefix="packet-identity-", dir=specs_root) as feature:
+            feature_dir = Path(feature)
+            source_feature_dir = feature_dir.relative_to(REPO_ROOT).as_posix()
+            packet_id = "valid-single"
+            packet_root = feature_dir / ".process" / "pr-packets"
+            body_path = packet_root / packet_id / "body.md"
+            body_path.parent.mkdir(parents=True)
+            body_path.write_text(
+                (PR_PACKET_FIXTURE_DIR / "bodies" / "valid-single.md").read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            packet_path = packet_root / f"{packet_id}.json"
+            canonical_packet = {
+                **valid_packet,
+                "packet_id": packet_id,
+                "source_feature_dir": source_feature_dir,
+                "body_file": body_path.relative_to(REPO_ROOT).as_posix(),
+                "validation_result_path": f"{source_feature_dir}/.process/pr-packets/{packet_id}/validation.json",
+            }
+            packet_path.write_text(json.dumps(canonical_packet), encoding="utf-8")
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-read-only",
+                    {"packet_path": packet_path.relative_to(REPO_ROOT).as_posix()},
+                )
+            )
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok", 0)
+            self.assertEqual(stderr_records, [])
+
+            cases = {
+                "source_mismatch": (
+                    {"source_feature_dir": "specs/other-feature"},
+                    "input.identity.source_feature_dir",
+                ),
+                "body_mismatch": (
+                    {"body_file": (PR_PACKET_FIXTURE_DIR / "bodies" / "valid-single.md").relative_to(REPO_ROOT).as_posix()},
+                    "input.identity.body_file",
+                ),
+                "validation_mismatch": (
+                    {"validation_result_path": f"{source_feature_dir}/.process/pr-packets/other/validation.json"},
+                    "input.identity.validation_result_path",
+                ),
+            }
+            for name, (overrides, expected_rule) in cases.items():
+                with self.subTest(name=name):
+                    packet_path.write_text(
+                        json.dumps({**canonical_packet, **overrides}),
+                        encoding="utf-8",
+                    )
+                    completed, response, stderr_records = run_runner(
+                        helper_request(
+                            "validate-pr-packet-read-only",
+                            {"packet_path": packet_path.relative_to(REPO_ROOT).as_posix()},
+                        )
+                    )
+                    self.assertEqual(completed.returncode, 1)
+                    self.assert_response(response, "expected_failure", 1)
+                    rules = {
+                        failure["rule"]
+                        for failure in response["data"]["stdout_json"]["failures"]
+                    }
+                    self.assertIn(expected_rule, rules)
+                    self.assertEqual(stderr_records, response["diagnostics"])
+
     def test_validate_pr_packet_checks_body_currentness_without_writing_state(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
             self.skipTest("validate-pr-packet currentness case")

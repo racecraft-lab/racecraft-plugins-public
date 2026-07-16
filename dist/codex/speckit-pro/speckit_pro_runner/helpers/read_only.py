@@ -1083,9 +1083,15 @@ class RenderedSpecIndexMap:
         return self.original != self.rendered
 
 
-def _spec_index_read_text(path: Path) -> str:
+def _spec_index_read_text(path: Path, repo_root: Path | None = None) -> str:
     try:
-        return path.read_bytes().decode("utf-8")
+        if repo_root is None:
+            data = path.read_bytes()
+        else:
+            data = trusted_bytes(path, repo_root)
+            if data is None:
+                raise OSError("descriptor-safe read failed")
+        return data.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise SpecIndexRenderError(f"file is not valid UTF-8: {path}") from exc
     except OSError as exc:
@@ -1164,7 +1170,9 @@ def _spec_index_home_owns(home_path: Path, home_text: str, candidate_text: str) 
     )
 
 
-def _spec_index_path_state(path: Path, label: str) -> str:
+def _spec_index_path_state(path: Path, label: str, repo_root: Path) -> str:
+    if not descriptor_read_supported():
+        raise SpecIndexRenderError("descriptor-safe spec-index reads are unsupported on this platform")
     try:
         mode = path.lstat().st_mode
     except FileNotFoundError:
@@ -1176,19 +1184,31 @@ def _spec_index_path_state(path: Path, label: str) -> str:
     return "regular"
 
 
-def _spec_index_directories(specs_dir: Path) -> list[Path]:
-    try:
-        entries = sorted(specs_dir.iterdir(), key=lambda path: path.name.encode("utf-8"))
-    except OSError as exc:
-        raise SpecIndexRenderError(f"could not scan specs directory: {specs_dir} ({type(exc).__name__})") from exc
+def _spec_index_directories(specs_dir: Path, repo_root: Path) -> list[Path]:
+    names = trusted_dir_entries(specs_dir, repo_root)
+    if names is None:
+        raise SpecIndexRenderError(f"could not scan specs directory: {specs_dir} (descriptor-safe read failed)")
+    entries = sorted((specs_dir / name for name in names), key=lambda path: path.name.encode("utf-8"))
     directories: list[Path] = []
     for entry in entries:
+        fd = trusted_open_directory(entry, repo_root)
+        if fd is not None:
+            try:
+                directories.append(entry)
+            finally:
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
+            continue
         try:
             mode = entry.lstat().st_mode
         except OSError as exc:
             raise SpecIndexRenderError(f"could not inspect spec path: {entry} ({type(exc).__name__})") from exc
+        if stat.S_ISLNK(mode):
+            continue
         if stat.S_ISDIR(mode):
-            directories.append(entry)
+            raise SpecIndexRenderError(f"could not scan spec path: {entry} (descriptor-safe read failed)")
     return directories
 
 
@@ -1219,21 +1239,12 @@ def _spec_index_jq_text(value: Any) -> str:
     return str(value)
 
 
-def _spec_index_render_prs(spec_dir: Path) -> list[str]:
+def _spec_index_render_prs(spec_dir: Path, repo_root: Path) -> list[str]:
     manifest = spec_dir / ".process" / "prs.json"
-    process_dir = manifest.parent
-    if process_dir.is_symlink():
-        raise SpecIndexRenderError(f"unreadable PRS manifest: {manifest}")
-    try:
-        mode = manifest.lstat().st_mode
-    except FileNotFoundError:
+    if _spec_index_path_state(manifest, "PRS manifest", repo_root) == "missing":
         return []
-    except OSError as exc:
-        raise SpecIndexRenderError(f"unreadable PRS manifest: {manifest} ({type(exc).__name__})") from exc
-    if stat.S_ISLNK(mode) or not stat.S_ISREG(mode):
-        raise SpecIndexRenderError(f"unreadable PRS manifest: {manifest}")
     try:
-        payload = json.loads(_spec_index_read_text(manifest))
+        payload = json.loads(_spec_index_read_text(manifest, repo_root))
     except (json.JSONDecodeError, ValueError) as exc:
         raise SpecIndexRenderError(
             f"malformed PRS manifest (invalid JSON or missing records[]): {manifest}"
@@ -1341,16 +1352,16 @@ def _spec_index_render_prs(spec_dir: Path) -> list[str]:
     return [row for _, _, _, _, row in sortable]
 
 
-def _spec_index_walk_regular_files(root: Path) -> list[Path]:
+def _spec_index_walk_regular_files(root: Path, repo_root: Path) -> list[Path]:
     files: list[Path] = []
 
     def visit(directory: Path) -> None:
-        try:
-            entries = sorted(directory.iterdir(), key=lambda path: path.name.encode("utf-8"))
-        except OSError as exc:
+        names = trusted_dir_entries(directory, repo_root)
+        if names is None:
             raise SpecIndexRenderError(
-                f"could not scan spec artifacts: {directory} ({type(exc).__name__})"
-            ) from exc
+                f"could not scan spec artifacts: {directory} (descriptor-safe read failed)"
+            )
+        entries = sorted((directory / name for name in names), key=lambda path: path.name.encode("utf-8"))
         for entry in entries:
             try:
                 mode = entry.lstat().st_mode
@@ -1361,17 +1372,31 @@ def _spec_index_walk_regular_files(root: Path) -> list[Path]:
             if stat.S_ISLNK(mode):
                 continue
             if stat.S_ISDIR(mode):
+                fd = trusted_open_directory(entry, repo_root)
+                if fd is None:
+                    raise SpecIndexRenderError(
+                        f"could not scan spec artifacts: {entry} (descriptor-safe read failed)"
+                    )
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
                 visit(entry)
             elif stat.S_ISREG(mode):
-                files.append(entry)
+                if trusted_regular_file_bytes_and_mode(entry, repo_root) is not None:
+                    files.append(entry)
+                else:
+                    raise SpecIndexRenderError(
+                        f"could not inspect spec artifact: {entry} (descriptor-safe read failed)"
+                    )
 
     visit(root)
     return files
 
 
-def _spec_index_render_backlinks(spec_dir: Path) -> list[str]:
+def _spec_index_render_backlinks(spec_dir: Path, repo_root: Path) -> list[str]:
     records: list[tuple[int, bytes, str]] = []
-    for path in _spec_index_walk_regular_files(spec_dir):
+    for path in _spec_index_walk_regular_files(spec_dir, repo_root):
         relative = path.relative_to(spec_dir).as_posix()
         if relative == "SPEC-MOC.md":
             continue
@@ -1401,8 +1426,8 @@ def _spec_index_render_backlinks(spec_dir: Path) -> list[str]:
 def _spec_index_repo_structure_current(repo_root: Path) -> bool:
     marker = repo_root / ".specify" / "structure-version.json"
     try:
-        payload = json.loads(_spec_index_read_text(marker))
-    except (SpecIndexRenderError, json.JSONDecodeError):
+        payload = json.loads(_spec_index_read_text(marker, repo_root))
+    except (SpecIndexRenderError, json.JSONDecodeError, ValueError):
         return False
     if not isinstance(payload, dict):
         return False
@@ -1413,8 +1438,8 @@ def _spec_index_repo_structure_current(repo_root: Path) -> bool:
 def _spec_index_active_feature(repo_root: Path) -> str:
     feature = repo_root / ".specify" / "feature.json"
     try:
-        payload = json.loads(_spec_index_read_text(feature))
-    except (SpecIndexRenderError, json.JSONDecodeError):
+        payload = json.loads(_spec_index_read_text(feature, repo_root))
+    except (SpecIndexRenderError, json.JSONDecodeError, ValueError):
         return ""
     if not isinstance(payload, dict):
         return ""
@@ -1436,12 +1461,12 @@ def _spec_index_render_home_index(
     home_text: str,
 ) -> list[str]:
     sortable: list[tuple[bytes, bytes, str]] = []
-    spec_dirs = _spec_index_directories(specs_dir)
+    spec_dirs = _spec_index_directories(specs_dir, repo_root)
     for spec_dir in spec_dirs:
         moc = spec_dir / "SPEC-MOC.md"
-        if _spec_index_path_state(moc, "SPEC-MOC.md") == "missing":
+        if _spec_index_path_state(moc, "SPEC-MOC.md", repo_root) == "missing":
             continue
-        moc_text = _spec_index_read_text(moc)
+        moc_text = _spec_index_read_text(moc, repo_root)
         if not _spec_index_is_gated(moc_text) or not _spec_index_home_owns(home_path, home_text, moc_text):
             continue
         has_id, spec_id = _spec_index_scalar(moc_text, "spec_id")
@@ -1465,8 +1490,8 @@ def _spec_index_render_home_index(
         for spec_dir in spec_dirs:
             branch = spec_dir.name
             moc = spec_dir / "SPEC-MOC.md"
-            moc_state = _spec_index_path_state(moc, "SPEC-MOC.md")
-            if moc_state == "regular" and _spec_index_is_gated(_spec_index_read_text(moc)):
+            moc_state = _spec_index_path_state(moc, "SPEC-MOC.md", repo_root)
+            if moc_state == "regular" and _spec_index_is_gated(_spec_index_read_text(moc, repo_root)):
                 continue
             if _spec_index_candidate_out_of_scope(branch):
                 continue
@@ -1476,13 +1501,13 @@ def _spec_index_render_home_index(
                 continue
             spec_file = spec_dir / "spec.md"
             try:
-                mode = spec_file.lstat().st_mode
-            except (FileNotFoundError, OSError):
+                spec_state = _spec_index_path_state(spec_file, "spec.md", repo_root)
+            except SpecIndexRenderError:
                 continue
-            if stat.S_ISLNK(mode) or not stat.S_ISREG(mode):
+            if spec_state == "missing":
                 continue
             try:
-                spec_text = _spec_index_read_text(spec_file)
+                spec_text = _spec_index_read_text(spec_file, repo_root)
             except SpecIndexRenderError:
                 continue
             if not _spec_index_home_owns(home_path, home_text, spec_text):
@@ -1579,14 +1604,14 @@ def _spec_index_rebuild_map(
     if positions["index"] is not None and is_home:
         bodies["index"] = _spec_index_render_home_index(repo_root, specs_dir, path, text)
     if positions["prs"] is not None:
-        bodies["prs"] = _spec_index_render_prs(spec_dir)
+        bodies["prs"] = _spec_index_render_prs(spec_dir, repo_root)
     if positions["backlinks"] is not None:
-        bodies["backlinks"] = _spec_index_render_backlinks(spec_dir)
+        bodies["backlinks"] = _spec_index_render_backlinks(spec_dir, repo_root)
 
     all_absent = all(positions[zone] is None for zone in SPEC_INDEX_ZONE_ORDER)
     if all_absent:
-        bodies["prs"] = _spec_index_render_prs(spec_dir)
-        bodies["backlinks"] = _spec_index_render_backlinks(spec_dir)
+        bodies["prs"] = _spec_index_render_prs(spec_dir, repo_root)
+        bodies["backlinks"] = _spec_index_render_backlinks(spec_dir, repo_root)
         while lines and not lines[-1].strip():
             lines.pop()
         if lines:
@@ -1619,6 +1644,8 @@ def render_spec_index(repo_root: Path) -> tuple[list[RenderedSpecIndexMap], bool
     """Render every in-scope map in memory; never mutate the repository."""
 
     root = repo_root.resolve(strict=False)
+    if not descriptor_read_supported():
+        raise SpecIndexRenderError("descriptor-safe spec-index reads are unsupported on this platform")
     specs_dir = root / "specs"
     try:
         specs_mode = specs_dir.lstat().st_mode
@@ -1634,11 +1661,11 @@ def render_spec_index(repo_root: Path) -> tuple[list[RenderedSpecIndexMap], bool
         return [], False
 
     rendered: list[RenderedSpecIndexMap] = []
-    for spec_dir in _spec_index_directories(specs_dir):
+    for spec_dir in _spec_index_directories(specs_dir, root):
         moc = spec_dir / "SPEC-MOC.md"
-        if _spec_index_path_state(moc, "SPEC-MOC.md") == "missing":
+        if _spec_index_path_state(moc, "SPEC-MOC.md", root) == "missing":
             continue
-        original = _spec_index_read_text(moc)
+        original = _spec_index_read_text(moc, root)
         if not _spec_index_is_gated(original):
             continue
         rebuilt = _spec_index_rebuild_map(
@@ -1668,18 +1695,18 @@ def render_spec_index(repo_root: Path) -> tuple[list[RenderedSpecIndexMap], bool
         if not stat.S_ISDIR(home_mode):
             home_entries = []
         else:
-            try:
-                home_entries = sorted(home_dir.iterdir(), key=lambda path: path.name.encode("utf-8"))
-            except OSError as exc:
+            home_names = trusted_dir_entries(home_dir, root)
+            if home_names is None:
                 raise SpecIndexRenderError(
-                    f"could not scan roadmap-MOC directory: {home_dir} ({type(exc).__name__})"
-                ) from exc
+                    f"could not scan roadmap-MOC directory: {home_dir} (descriptor-safe read failed)"
+                )
+            home_entries = sorted((home_dir / name for name in home_names), key=lambda path: path.name.encode("utf-8"))
     for home in home_entries:
         if not home.name.endswith("-roadmap-MOC.md"):
             continue
-        if _spec_index_path_state(home, "roadmap-MOC home note") == "missing":
+        if _spec_index_path_state(home, "roadmap-MOC home note", root) == "missing":
             continue
-        original = _spec_index_read_text(home)
+        original = _spec_index_read_text(home, root)
         if not _spec_index_is_gated(original):
             continue
         rebuilt = _spec_index_rebuild_map(
@@ -2450,6 +2477,41 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
     if isinstance(packet_id_value, str) and packet_id_value != packet_id:
         failures.append({"rule": "input.identity.packet_id", "field": "packet_id", "message": "packet_id must match the packet filename."})
     source_feature_dir = data.get("source_feature_dir")
+    canonical_packet_identity_paths: dict[str, str] | None = None
+    packet_rel = repo_relative(packet, repo_root)
+    if packet_rel.startswith("specs/") or "/.process/pr-packets/" in packet_rel:
+        from .pr_emission import canonical_packet_paths, packet_path_parts
+
+        packet_parts = packet_path_parts(packet_rel)
+        if packet_parts is None:
+            failures.append(
+                {
+                    "rule": "input.identity.packet_path",
+                    "field": "packet_path",
+                    "message": "packet_path must be <source_feature_dir>/.process/pr-packets/<packet_id>.json.",
+                }
+            )
+        else:
+            canonical_packet_identity_paths = canonical_packet_paths(
+                packet_parts["source_feature_dir"],
+                packet_parts["packet_id"],
+            )
+            if source_feature_dir != packet_parts["source_feature_dir"]:
+                failures.append(
+                    {
+                        "rule": "input.identity.source_feature_dir",
+                        "field": "source_feature_dir",
+                        "message": "source_feature_dir must match the packet_path feature directory.",
+                    }
+                )
+            if packet_id_value != packet_parts["packet_id"]:
+                failures.append(
+                    {
+                        "rule": "input.identity.packet_path",
+                        "field": "packet_path",
+                        "message": "packet_path packet id must match packet_id.",
+                    }
+                )
     scope_evidence = data.get("scope_evidence")
     generated_title = data.get("generated_title")
     target = data.get("target")
@@ -2474,6 +2536,14 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
         path_diag = validate_path_value("validate-pr-packet-read-only", "validation_result_path", validation_path, repo_root)
         if path_diag is not None:
             failures.append({"rule": "input.path.validation_result_path", "field": "validation_result_path", "message": path_diag["message"]})
+        elif canonical_packet_identity_paths is not None and validation_path != canonical_packet_identity_paths["validation_result_path"]:
+            failures.append(
+                {
+                    "rule": "input.identity.validation_result_path",
+                    "field": "validation_result_path",
+                    "message": "validation_result_path must be owned by packet_path.",
+                }
+            )
         elif isinstance(source_feature_dir, str) and source_feature_dir and isinstance(packet_id_value, str) and packet_id_value:
             expected_validation_path = f"{source_feature_dir}/.process/pr-packets/{packet_id_value}/validation.json"
             if validation_path != expected_validation_path:
@@ -2492,6 +2562,14 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
         path_diag = validate_path_value("validate-pr-packet-read-only", "body_file", body_file, repo_root)
         if path_diag is not None:
             failures.append({"rule": "input.path.body_file", "field": "body_file", "message": path_diag["message"]})
+        elif canonical_packet_identity_paths is not None and body_file != canonical_packet_identity_paths["body_file"]:
+            failures.append(
+                {
+                    "rule": "input.identity.body_file",
+                    "field": "body_file",
+                    "message": "body_file must be owned by packet_path.",
+                }
+            )
     body_result = pr_packet_body_validation(data, repo_root)
     failures.extend(body_result["failures"])
     source_fingerprints = pr_packet_source_fingerprints(
@@ -3328,6 +3406,17 @@ def trusted_file_exists(path: Path, repo_root: Path) -> bool:
 
 
 def trusted_dir_exists(path: Path, repo_root: Path) -> bool:
+    if descriptor_read_supported():
+        fd = trusted_open_directory(path, repo_root)
+        if fd is None:
+            return False
+        try:
+            return True
+        finally:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
     return path.is_dir() and path_stays_in_trust_boundary(path, repo_root)
 
 
@@ -3364,6 +3453,28 @@ def trusted_bytes_descriptor(path: Path, repo_root: Path) -> bytes | None:
                 break
             chunks.append(chunk)
         return b"".join(chunks)
+    except OSError:
+        return None
+    finally:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+
+
+def trusted_regular_file_bytes_and_mode(path: Path, repo_root: Path) -> tuple[bytes, int] | None:
+    fd = trusted_open_regular_file(path, repo_root)
+    if fd is None:
+        return None
+    try:
+        file_stat = os.fstat(fd)
+        chunks: list[bytes] = []
+        while True:
+            chunk = os.read(fd, 1024 * 1024)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        return b"".join(chunks), stat.S_IMODE(file_stat.st_mode)
     except OSError:
         return None
     finally:
@@ -3423,6 +3534,61 @@ def trusted_open_regular_file(path: Path, repo_root: Path) -> int | None:
             os.close(parent_fd)
         except OSError:
             # The caller should see the original read result, not a best-effort close failure.
+            pass
+
+
+def trusted_open_directory(path: Path, repo_root: Path) -> int | None:
+    if not descriptor_read_supported():
+        return None
+    repo_root = repo_root.resolve(strict=False)
+    target = path if path.is_absolute() else repo_root / path
+    try:
+        relative = target.relative_to(repo_root)
+    except ValueError:
+        return None
+    if any(part in {"", ".", ".."} for part in relative.parts):
+        return None
+    try:
+        root_mode = repo_root.lstat().st_mode
+        if stat.S_ISLNK(root_mode) or not stat.S_ISDIR(root_mode):
+            return None
+        current_fd = os.open(repo_root, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | os.O_NOFOLLOW)
+    except (OSError, NotImplementedError):
+        return None
+    try:
+        for part in relative.parts:
+            next_fd = os.open(
+                part,
+                os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | os.O_NOFOLLOW,
+                dir_fd=current_fd,
+            )
+            os.close(current_fd)
+            current_fd = next_fd
+        dir_stat = os.fstat(current_fd)
+        if stat.S_ISLNK(dir_stat.st_mode) or not stat.S_ISDIR(dir_stat.st_mode):
+            os.close(current_fd)
+            return None
+        return current_fd
+    except (OSError, NotImplementedError):
+        try:
+            os.close(current_fd)
+        except OSError:
+            pass
+        return None
+
+
+def trusted_dir_entries(path: Path, repo_root: Path) -> list[str] | None:
+    fd = trusted_open_directory(path, repo_root)
+    if fd is None:
+        return None
+    try:
+        return os.listdir(fd)
+    except OSError:
+        return None
+    finally:
+        try:
+            os.close(fd)
+        except OSError:
             pass
 
 
