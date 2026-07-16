@@ -126,6 +126,13 @@ The revised BRAND-001 signal is one user story, eight core authored files, and
 three functional requirements. The estimator returned `estimated_loc: 390`,
 `suggested_slices: 1`, `status: ok`.
 
+Machine-readable setup budget:
+
+- Projected reviewable LOC: 0
+- Projected production files: 0
+- Projected total files: 25
+- Primary surfaces: docs/process, visual/assets
+
 | Metric | BRAND-001 budget |
 |---|---:|
 | Projected reviewable production LOC | 0 |
