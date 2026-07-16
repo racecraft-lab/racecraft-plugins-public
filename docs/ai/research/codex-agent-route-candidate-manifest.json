@@ -6,16 +6,16 @@
   "spec_id": "G56R-001",
   "provisional": true,
   "snapshot": {
-    "snapshot_id": "G56R-001-SNAPSHOT-2026-07-16-V2",
-    "captured_at_utc": "2026-07-16T14:03:39Z",
-    "prior_snapshot_id": "G56R-001-REPORT-2026-07-16-V0.1",
-    "supersedes_manifest_version": "report-only-v0.1",
+    "snapshot_id": "G56R-001-SNAPSHOT-2026-07-16-V3",
+    "captured_at_utc": "2026-07-16T20:03:42Z",
+    "prior_snapshot_id": "G56R-001-SNAPSHOT-2026-07-16-V2",
+    "supersedes_manifest_version": "2.0.0-v2-snapshot",
     "historical_artifact_refs": [
       "fe9d7cda2ae96247391b62cd43c8897262245f97:docs/ai/research/codex-agent-route-candidates.md",
       "docs/ai/specs/.process/G56R-001-design-concept.md",
       "docs/ai/specs/.process/G56R-001-workflow.md"
     ],
-    "change_summary": "Adds the shared schema-v2 machine manifest, expands the official OpenAI source ledger from nine to twenty-one current sources, and records dispositions without rewriting the original G56R-001 execution history.",
+    "change_summary": "Preserves the shared schema-v2 machine contract and adds the direct official GPT-5.6 prompting guide as a twenty-second API-surface source for bounded Stage B prompt-ablation claims without rewriting the original G56R-001 execution history.",
     "legacy_fact_dispositions": [
       {
         "legacy_fact_id": "G56R-001-OSF-001",
@@ -1103,6 +1103,59 @@
       ],
       "invalidation_triggers": [
         "Canonical URL, body hash, locator, documented field, or supported surface changes.",
+        "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
+      ]
+    },
+    {
+      "official_source_ledger_id": "OPENAI-DOC-022",
+      "vendor": "openai",
+      "source_family": "effort_controls",
+      "document_class": "platform_api_documentation",
+      "requested_url": "https://developers.openai.com/api/docs/guides/prompt-guidance-gpt-5p6.md",
+      "canonical_url": "https://developers.openai.com/api/docs/guides/prompt-guidance-gpt-5p6.md",
+      "retrieved_at_utc": "2026-07-16T20:03:42Z",
+      "http_status": 200,
+      "body_bytes": 17138,
+      "body_sha256": "c074d3d8b539b0f2068040a24df1f95022afd83ee88e2936c7806e8720edd5f0",
+      "page_or_surface": "OpenAI GPT-5.6 Sol prompting guidance",
+      "locator": "Simplify prompts first and prompt migration workflow",
+      "supported_surfaces": [
+        "openai_api"
+      ],
+      "exact_documented_facts": [
+        "The API guidance recommends changing one instruction, example, or tool group at a time and rerunning the same evaluations.",
+        "The API guidance preserves outcomes, success and stopping conditions, safety, business, evidence, permissions, contextual tool routing, output shape, and validation while trimming repeated or behavior-neutral scaffolding.",
+        "The API guidance requires contradiction review and treats lean-prompt performance and resource results as workload-dependent evaluation findings rather than universal guarantees."
+      ],
+      "bounded_extracts": [
+        {
+          "text": "Start with a prompt and tool set that already works. Remove one group of instructions, examples, or tools at a time, then rerun the same evals.",
+          "extract_sha256": "b8177497966d4cee4b9ca46d971800df3ac074c70d05420d96ab2dd979ab1542",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        },
+        {
+          "text": "Keep: - the user-visible outcome; - success criteria and stopping conditions; - safety, business, evidence, and permission constraints; - tool-routing rules when the route depends on context; - required output shape and validation requirements.",
+          "extract_sha256": "6c3191ea0ea940545c49d495a06e9ff910ff0a41885ca509af06648dd59c6c3c",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        },
+        {
+          "text": "Review the remaining instructions for contradictions. GPT-5-class models follow prompt contracts closely, so conflicting rules can create more instability than missing detail.",
+          "extract_sha256": "77d357a58637de23803a1f4c01271e3eee4525e177d9bc42fbb2cda6d0167123",
+          "normalization": "unicode_text_whitespace_collapsed_utf8"
+        }
+      ],
+      "claim_bindings": [
+        "G56R-V3-PROMPT_GUIDANCE",
+        "G56R-V3-PROMPT_ABLATION"
+      ],
+      "access_status": "accessible",
+      "conflict_status": "none",
+      "gaps": [
+        "API prompting guidance does not establish Codex custom-agent fields, runtime availability, defaults, telemetry, or exact treatment.",
+        "Directional internal evaluation ranges require validation against the governed SpecKit Pro role corpus."
+      ],
+      "invalidation_triggers": [
+        "Canonical URL, body hash, locator, documented prompt guidance, or supported surface changes.",
         "The page becomes inaccessible or leaves the OpenAI documentation allowlist."
       ]
     }

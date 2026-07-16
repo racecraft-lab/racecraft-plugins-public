@@ -7,9 +7,9 @@
 **Authority rule**: Official OpenAI documentation is the only authority for
 platform facts. Repository files are `project_input` only.
 
-## Current v2 Evidence-Parity Amendment
+## Current Evidence-Parity Amendment
 
-**Current snapshot:** `G56R-001-SNAPSHOT-2026-07-16-V2`
+**Current snapshot:** `G56R-001-SNAPSHOT-2026-07-16-V3`
 **Machine manifest:**
 [`codex-agent-route-candidate-manifest.json`](codex-agent-route-candidate-manifest.json)
 **Shared schema:**
@@ -20,9 +20,10 @@ platform facts. Repository files are `project_input` only.
 `587057efeff856bad020b38dc11c7e9214f2c078`
 
 This amendment is the current G56R-001 authority for downstream consumers. It
-adds the same schema-v2 evidence structure used by CAR-001 while preserving the
-original report-only handoff below and at commit
-`fe9d7cda2ae96247391b62cd43c8897262245f97`.
+preserves the same schema-v2 evidence structure used by CAR-001, adds the
+direct official GPT-5.6 prompting guide as an API-surface source for bounded
+prompt-ablation claims, and preserves the original report-only handoff below
+and at commit `fe9d7cda2ae96247391b62cd43c8897262245f97`.
 
 Platform claims are admitted only from canonical OpenAI documentation under
 `learn.chatgpt.com/docs/**`, `developers.openai.com/codex/**`,
@@ -56,6 +57,7 @@ undocumented platform fact or candidate.
 | `OPENAI-DOC-019` | `fast_mode` | `https://learn.chatgpt.com/docs/agent-configuration/speed` | `2026-07-16T14:03:38Z` | `8604ea2a184d474f7193c650792a585598585090e474853a27877a987c95ba70` |
 | `OPENAI-DOC-020` | `cost_management` | `https://learn.chatgpt.com/docs/enterprise/usage-limits` | `2026-07-16T14:03:38Z` | `b777217b0483d1693cff70d93fee88ccd50dca1892d228add7d7de14e6f32ccf` |
 | `OPENAI-DOC-021` | `statusline_diagnostics` | `https://learn.chatgpt.com/docs/developer-commands?surface=cli#configure-footer-items-with-statusline` | `2026-07-16T14:03:39Z` | `6612502c70407b9555c964273fd63450ef63664d13e8e4c480367724a679d0f1` |
+| `OPENAI-DOC-022` | `effort_controls` | `https://developers.openai.com/api/docs/guides/prompt-guidance-gpt-5p6.md` | `2026-07-16T20:03:42Z` | `c074d3d8b539b0f2068040a24df1f95022afd83ee88e2936c7806e8720edd5f0` |
 
 Each machine record also contains the requested URL, HTTP status, byte count,
 bounded normalized extract and hash, supported surfaces, exact facts, claim
@@ -66,7 +68,7 @@ bindings, gaps, conflict/access status, and invalidation triggers.
 | Contract item | Current result |
 |---|---|
 | Shared schema | `2.0.0`; exact top-level and record-level parity with CAR-001 |
-| Source matrix | 21 of 21 shared families represented by current OpenAI documentation |
+| Source matrix | 22 current OpenAI source records representing all 21 shared families |
 | Agent contracts | 12 of 12 shared names, including two recorded Codex absences |
 | Candidate routes | 23 source-bound, provisional, and non-executable records |
 | Fixture backlog | 12 records, exactly one per shared agent |
@@ -81,9 +83,9 @@ shared machine contract. The original source rows, extracts, hashes, decisions,
 and verification narrative below remain historical evidence and are not
 silently rewritten.
 
-**Consumption gate:** G56R-002 remains blocked until PR #362 and this v2
-amendment merge, the manifest passes deterministic parity validation, and all
-official sources are revalidated for the consuming scaffold.
+**Consumption gate:** G56R-002 consumption requires this v3 amendment on
+`main`, deterministic parity validation, and revalidation of all official
+sources for the consuming scaffold.
 
 > Historical boundary: The remaining sections preserve the original
 > report-only G56R-001 handoff. Its `OSL-*` identifiers and nine-source counts

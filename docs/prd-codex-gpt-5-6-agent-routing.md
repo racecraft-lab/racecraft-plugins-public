@@ -385,10 +385,21 @@ selection and G56R-011 composes the aggregates.
 - **AC-2.10 — Prompt interaction stage**: Model/effort attribution uses the
   unchanged baseline prompt. Only Stage A-shortlisted pairs enter prompt/context
   interaction evaluation, where only the candidate agent's bounded prompt may
-  vary. After one final instruction hash is selected, every preferred and
-  fallback route is requalified under that same instruction hash. The selected
-  model, effort, prompt, and fallback order are then frozen as one route policy
-  for cohort lock and integrated confirmation.
+  vary. Each ablation starts from the unchanged baseline, changes one
+  predeclared instruction, example, tool-description, or context group, and
+  reruns the same representative evaluations. The experiment record preserves
+  the baseline and candidate instruction hashes, changed group IDs, normalized
+  instruction bytes, available token estimate, and contradiction-review result.
+  A candidate may remove repeated or behavior-neutral process scaffolding, but
+  it must preserve the user-visible outcome, success and stop conditions,
+  safety, business, grounding, permission, mutation, tool-routing, output, and
+  validation contracts. Outcome-first wording may replace discretionary
+  procedure narration; required SDD phases, dependency rules, approvals, and
+  verification steps remain hard constraints. After one final instruction hash
+  is selected, every preferred and fallback route is requalified under that
+  same instruction hash. The selected model, effort, prompt, and fallback order
+  are then frozen as one route policy for cohort lock and integrated
+  confirmation.
 - **AC-2.11 — Search and campaign bounds**: For every model, capability probing
   produces an ordered supported-effort set. The predeclared rule starts at the
   documented default, ascends to the first stable pass when necessary, then
@@ -885,6 +896,7 @@ selection and G56R-011 composes the aggregates.
 - **Codex configuration fields and inheritance:** [Configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference)
 - **Codex non-interactive JSONL lifecycle, item, and error events:** [Non-interactive mode](https://learn.chatgpt.com/docs/non-interactive-mode)
 - **Current model-selection and prompting guidance:** [Latest model](https://developers.openai.com/api/docs/guides/latest-model)
+- **GPT-5.6 prompt migration and simplification guidance:** [Prompting guidance for GPT-5.6 Sol](https://developers.openai.com/api/docs/guides/prompt-guidance-gpt-5p6.md)
 - **Cross-platform parity source (Claude agent definitions):**
   `speckit-pro/agents/consensus-synthesizer.md` and
   `speckit-pro/agents/gate-validator.md`
