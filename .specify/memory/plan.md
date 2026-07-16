@@ -1588,3 +1588,62 @@ artifacts are `docs/ai/research/claude-agent-route-candidates.md` and
 `docs/ai/research/claude-agent-route-candidate-manifest.json`; CAR-002 is now
 the next ready spec in the Claude routing roadmap. Recovery commands and
 provenance are recorded in the CAR-001 archive report.
+
+## HRNS-001 Harness Surface Inventory and Gap Taxonomy
+
+[Source: specs/hrns-001-harness-surface-inventory-gap-taxonomy]
+
+### Technical Approach
+
+- Treat verified merged repository state as current authority and classify all
+  other evidence by explicit source and lifecycle rules.
+- Keep one canonical Markdown taxonomy with stable surface and gap identities.
+- Preserve packet-emission runtime behavior in the runner helper registry with
+  guarded writes, persisted validation, mutation locks, rollback ownership,
+  synchronized Claude/Codex guidance, and parity fixtures.
+- Keep later context, capability, permission, eval, trace, orchestration, OKF,
+  and drift behavior in HRNS-002 through HRNS-014.
+
+### Testing Strategy
+
+HRNS-001 used source/evidence review, task verification, spec-index checks,
+packet helper tests, structural validation, full CI, generated payload parity,
+container preflight, and resolved review threads. Post-merge cleanup revalidates
+the active-spec index, JSON state, docs references, and deterministic suite.
+
+### Cleanup Notes
+
+The active HRNS-001 directory was removed after PR #357 merged. The taxonomy at
+`docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md` and merged runner,
+test, payload, and process artifacts are canonical. HRNS-002 and HRNS-003 are
+ready; exact recovery is recorded in the HRNS-001 archive report.
+
+## G56R-001 Candidate Route Baseline and Role Contracts
+
+[Source: specs/g56r-001-candidate-route-baseline]
+
+### Technical Approach
+
+- Separate official platform evidence, repository project inputs, runtime
+  verification, qualification evidence, and undocumented gaps.
+- Bind provisional candidates to stable source, effort-surface, and role
+  contract IDs in one schema-v2 planning manifest and one canonical report.
+- Preserve role contracts while deferring executable tuples, qualification,
+  fallback ordering, resolver behavior, installation, and release policy.
+- Fail closed when current official documentation is missing, conflicting, or
+  invalidated.
+
+### Testing Strategy
+
+G56R-001 used the shared CAR/G56R parity validator, exact record-count and
+reference checks, task verification, Layer 1 and full deterministic suites,
+docs reference checks, CodeQL, container preflight, and resolved PR review
+threads. Post-merge cleanup reruns the parity validator and repository gates.
+
+### Cleanup Notes
+
+The active G56R-001 directory was removed after PR #360 merged on top of PR
+#362. The report, manifest, shared schema, parity contract, roadmap, PRD, and
+process files remain canonical. G56R-002 is ready for capability discovery and
+telemetry profiling under the preserved no-qualification boundary; exact
+recovery is recorded in the G56R-001 archive report.

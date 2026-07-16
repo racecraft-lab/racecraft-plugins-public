@@ -15,8 +15,8 @@ is prepared for `$speckit-scaffold-spec G56R-NNN`.
 **Shared manifest schema:** [../research/agent-route-candidate-manifest.schema.json](../research/agent-route-candidate-manifest.schema.json)
 **Spec ID prefix:** `G56R-###`
 **Proposed branch:** `codex/agent-routing-fallback`
-**Status:** Draft; G56R-001 in review on PR #360; the shared official-source
-evidence foundation merged via PR #362
+**Status:** Active; G56R-001 is complete and archived after PR #360 merged on
+the shared official-source evidence foundation from PR #362; G56R-002 is ready
 
 **Legacy identifier note:** `G56R` and the existing filenames are retained for
 traceability. They do not limit the candidate catalog to GPT-5.6.
@@ -45,8 +45,9 @@ G56R-011
 
 **Implementation boundary:** This sequence has no external prerequisite, but its
 internal dependencies still apply: the shared official-source evidence
-foundation merged via PR #362, and G56R-001 remains in review on PR #360 before
-G56R-002 may begin.
+foundation merged via PR #362, G56R-001 merged via PR #360, and G56R-002 may
+now begin capability discovery and telemetry profiling under the preserved
+no-qualification boundary.
 A route-agnostic Python `install-codex-agents` helper is active for safe static
 agent refreshes. G56R-006 later extends that baseline with capability-aware
 resolution, materialization, and atomic policy installation; it must not
@@ -212,8 +213,8 @@ G56R-006 Resolver, Materializer, Installer, and Strict Override
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| G56R-001 | Candidate Route Baseline and Role Contracts | In Review | [.process/G56R-001-workflow.md](.process/G56R-001-workflow.md) | Resolve PR #360 feedback and merge |
-| G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | Pending | - | Blocked by G56R-001 review and merge |
+| G56R-001 | Candidate Route Baseline and Role Contracts | Complete / Archived | [.process/G56R-001-workflow.md](.process/G56R-001-workflow.md) | PR #360 merged; canonical evidence lives under `docs/ai/research/` |
+| G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | Ready | - | Ready after G56R-001; refresh source invalidation checks at scaffold |
 | G56R-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Pending | - | Blocked by G56R-002 |
 | G56R-004 | Policy Controls and Adaptive Comparators | Pending | - | Blocked by G56R-003 |
 | G56R-005 | Model Availability, Fallback, and Recovery Simulation | Pending | - | Blocked by G56R-004 |
@@ -224,7 +225,7 @@ G56R-006 Resolver, Materializer, Installer, and Strict Override
 | G56R-010 | Optional Helper Routing and No-helper Path | Pending | - | Blocked by G56R-006 |
 | G56R-011 | Payload, Installed Skill UAT, Fallback Proof, and Release Integration | Pending | - | Blocked by G56R-007 through G56R-010 |
 
-**Status legend:** Pending | Ready | In Progress | In Review | Complete | Blocked
+**Status legend:** Pending | Ready | In Progress | In Review | Complete | Complete / Archived | Blocked
 
 ---
 

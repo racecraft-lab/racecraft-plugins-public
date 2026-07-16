@@ -1864,6 +1864,50 @@ are recorded in
 
 ---
 
+## 2026-07-16 - HRNS-001 and G56R-001 Post-Merge Archive Sweep
+
+### Provenance
+
+| Spec | PR | Title | Merged at | Merge commit |
+|---|---|---|---|---|
+| HRNS-001 | [#357](https://github.com/racecraft-lab/racecraft-plugins-public/pull/357) | `fix(speckit-pro): Enable PR packet emission` | `2026-07-16T12:33:28Z` | `dcef3e90896e52b32bdb668ec55dd29ea7ba282a` |
+| G56R-001 | [#360](https://github.com/racecraft-lab/racecraft-plugins-public/pull/360) | `docs(speckit-pro): align G56R official-source route evidence` | `2026-07-16T15:52:57Z` | `191642962e55df21000a5303f36e9010a14898d2` |
+
+### Summary
+
+- Archived HRNS-001 after its taxonomy and packet-emission implementation
+  merged with green CI and resolved review threads.
+- Archived G56R-001 after its official-source schema-v2 evidence package merged
+  on top of shared CAR/G56R foundation PR #362.
+- Removed both completed active spec directories while preserving all authored
+  workflow/design evidence under `docs/ai/specs/.process/`.
+- Marked HRNS-002, HRNS-003, and G56R-002 ready without advancing specs that
+  still have unmet dependencies.
+
+### Canonical Artifacts
+
+- `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`
+- `speckit-pro/speckit_pro_runner/helpers/pr_emission.py`
+- `docs/ai/research/codex-agent-route-candidates.md`
+- `docs/ai/research/codex-agent-route-candidate-manifest.json`
+- `docs/ai/research/agent-route-candidate-manifest.schema.json`
+- `docs/ai/specs/agent-routing-parity-contract.md`
+- `docs/ai/specs/.process/HRNS-001-*`
+- `docs/ai/specs/.process/G56R-001-*`
+
+### Recovery
+
+```text
+git checkout dcef3e90896e52b32bdb668ec55dd29ea7ba282a -- specs/hrns-001-harness-surface-inventory-gap-taxonomy
+git checkout 191642962e55df21000a5303f36e9010a14898d2 -- specs/g56r-001-candidate-route-baseline
+```
+
+Detailed artifact-level recovery commands and cleanup verification are stored
+in `.specify/memory/archive-reports/2026-07-16-hrns-001-post-merge-hygiene.md`
+and `.specify/memory/archive-reports/2026-07-16-g56r-001-post-merge-hygiene.md`.
+
+---
+
 ## CAR-001 Candidate Route Baseline and Role Contracts
 
 ### Provenance

@@ -1,11 +1,11 @@
 # PRD: SpecKit Pro Harness Engineering Uplift
 
-**Status**: Draft
+**Status**: Active - HRNS-001 complete; HRNS-002 and HRNS-003 ready
 **Spec ID prefix**: `HRNS-###`
 **Source**: Maintainer direction to harden SpecKit Pro harness behavior as
 runner, helper, long-running workflow, and portable knowledge surfaces expand.
 **Created**: 2026-07-03
-**Last updated**: 2026-07-15
+**Last updated**: 2026-07-16
 **Target window**: Post-XPLAT helper migration hardening lane; should not block
 the active XPLAT runtime cutover unless a scaffolded HRNS spec explicitly
 finds a release-blocking harness safety gap.

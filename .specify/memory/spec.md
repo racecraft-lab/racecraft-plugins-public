@@ -2132,3 +2132,64 @@ Archived into project memory on 2026-07-15 after PR #350 merged at
 process evidence remains under `docs/ai/specs/.process/CAR-001-*`. Recovery
 commands and provenance are recorded in
 `.specify/memory/archive-reports/2026-07-15-car-001-post-merge-hygiene.md`.
+
+## HRNS-001 Harness Surface Inventory and Gap Taxonomy
+
+[Source: specs/hrns-001-harness-surface-inventory-gap-taxonomy]
+
+HRNS-001 established the durable source-grounded inventory and taxonomy for
+SpecKit Pro harness surfaces, retained gaps, evidence authority, external
+candidates, self-improvement loop closure, OKF posture, and downstream HRNS
+ownership. PR #357 also shipped the guarded PR packet emission and validation
+persistence needed for completed autopilot work to reach review.
+
+### Requirements Preserved
+
+- One canonical taxonomy records current harness boundaries and stable gap IDs.
+- Every retained gap carries surface, state, evidence, dependency posture, and
+  downstream ownership.
+- Generated distributions, caches, fixtures, raw transcripts, unreviewed chat,
+  and derived indexes cannot become authoritative evidence.
+- External candidate and OKF findings remain evidence-backed planning inputs;
+  HRNS-001 does not adopt dependencies or authorize runtime policy changes.
+- PR packet writes and persisted validation are guarded, serialized, and
+  covered by source, generated-payload, installed-cache, and unit-test parity.
+
+### Cleanup Note
+
+Archived on 2026-07-16 after PR #357 merged as
+`dcef3e90896e52b32bdb668ec55dd29ea7ba282a`. The canonical taxonomy remains at
+`docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md`; process evidence
+remains under `docs/ai/specs/.process/HRNS-001-*`. Recovery commands are in
+`.specify/memory/archive-reports/2026-07-16-hrns-001-post-merge-hygiene.md`.
+
+## G56R-001 Candidate Route Baseline and Role Contracts
+
+[Source: specs/g56r-001-candidate-route-baseline]
+
+G56R-001 established the official-OpenAI-documentation candidate-route baseline
+for twelve named Codex/parity roles. Its schema-v2 package preserves source and
+effort evidence, project inputs, immutable role contracts, provisional
+candidates, fixture and telemetry gaps, traceability, and strict go/no-go
+boundaries without changing runtime routing.
+
+### Requirements Preserved
+
+- Current allowlisted official OpenAI documentation is the sole authority for
+  platform facts and candidate admission.
+- Project inputs cannot establish availability, executability, qualification,
+  preference, or fallback order.
+- All twelve role contracts preserve safety, grounding, mutation, tool, skill,
+  MCP, output, and client-surface boundaries.
+- G56R-002 may perform capability discovery and telemetry profiling only;
+  qualification, route selection, fallback policy, installation, and release
+  remain downstream work.
+
+### Cleanup Note
+
+Archived on 2026-07-16 after PR #360 merged as
+`191642962e55df21000a5303f36e9010a14898d2`, on top of shared evidence
+foundation PR #362. Canonical evidence remains under `docs/ai/research/`, and
+process evidence remains under `docs/ai/specs/.process/G56R-001-*`. Recovery
+commands are in
+`.specify/memory/archive-reports/2026-07-16-g56r-001-post-merge-hygiene.md`.

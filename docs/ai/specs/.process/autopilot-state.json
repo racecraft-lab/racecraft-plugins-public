@@ -1,9 +1,10 @@
 {
   "workflow_file": "docs/ai/specs/.process/G56R-001-workflow.md",
   "spec_id": "G56R-001",
-  "feature_dir": "specs/g56r-001-candidate-route-baseline",
-  "updated_at": "2026-07-16T14:28:10Z",
-  "active_step": "Post: Evidence-parity amendment published as stacked draft PR #360",
+  "archived_feature_dir": "specs/g56r-001-candidate-route-baseline",
+  "updated_at": "2026-07-16T16:01:50Z",
+  "active_step": "Post: Completed and archived after merged PR #360",
+  "status": "completed_archived",
   "settings": {
     "auto_commit": "per-phase",
     "confidence_gate_mode": "advisory",
@@ -41,25 +42,63 @@
       "docs_reference_check": "pass; reference pages current",
       "report_sha256": "b429a568ebc780bf638e6891eff6532deefae97c3ed4e5ef86cc7eced1436289",
       "planning_manifest_sha256": "71d2ee129d5ca0fd407382ac5102566efe4c0321541514ee0eece38b29d6117d",
-      "pr_stack": "pass; PR #360 targets foundation PR #362 branch and GitHub reports mergeable",
-      "rewritten_head_ci": "in_progress"
+      "pr_stack": "pass; foundation PR #362 and dependent PR #360 merged into main",
+      "rewritten_head_ci": "pass"
     }
   },
   "archive_sweep": {
-    "status": "no_candidates",
+    "status": "completed_archived",
     "execution_path": "extension_contract",
     "archive_extension_installed": true,
     "invocation_available": true,
     "prerequisite_available": true,
     "prerequisite_mode": "codex_native_worktree_binding",
-    "current_target": "specs/g56r-001-candidate-route-baseline",
-    "eligible_previous_specs": [],
-    "excluded_current_spec": "specs/g56r-001-candidate-route-baseline",
-    "active_specs_inventory": [
+    "archived_specs": [
+      "specs/hrns-001-harness-surface-inventory-gap-taxonomy",
       "specs/g56r-001-candidate-route-baseline"
     ],
-    "cleanup_mode": "feature_branch_sweep",
-    "safeToApplyCleanup": false
+    "active_specs_inventory": [],
+    "cleanup_mode": "multi_prd_post_merge_sweep",
+    "safeToApplyCleanup": true,
+    "cleanup_applied": true,
+    "archive_reports": [
+      ".specify/memory/archive-reports/2026-07-16-hrns-001-post-merge-hygiene.md",
+      ".specify/memory/archive-reports/2026-07-16-g56r-001-post-merge-hygiene.md"
+    ]
+  },
+  "archive_cleanup": {
+    "status": "completed_archived",
+    "cleanup_branch": "codex/archive-merged-specs-2026-07-16",
+    "cleanup_applied": true,
+    "merged_specs": [
+      {
+        "spec_id": "HRNS-001",
+        "archived_spec": "specs/hrns-001-harness-surface-inventory-gap-taxonomy",
+        "merged_pr": 357,
+        "merged_at": "2026-07-16T12:33:28Z",
+        "merge_commit": "dcef3e90896e52b32bdb668ec55dd29ea7ba282a",
+        "archive_report": ".specify/memory/archive-reports/2026-07-16-hrns-001-post-merge-hygiene.md"
+      },
+      {
+        "spec_id": "G56R-001",
+        "archived_spec": "specs/g56r-001-candidate-route-baseline",
+        "merged_pr": 360,
+        "merged_at": "2026-07-16T15:52:57Z",
+        "merge_commit": "191642962e55df21000a5303f36e9010a14898d2",
+        "archive_report": ".specify/memory/archive-reports/2026-07-16-g56r-001-post-merge-hygiene.md"
+      }
+    ],
+    "preserved_process_evidence": [
+      "docs/ai/specs/.process/HRNS-001-workflow.md",
+      "docs/ai/specs/.process/HRNS-001-design-concept.md",
+      "docs/ai/specs/.process/G56R-001-workflow.md",
+      "docs/ai/specs/.process/G56R-001-design-concept.md"
+    ],
+    "canonical_artifacts": [
+      "docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md",
+      "docs/ai/research/codex-agent-route-candidates.md",
+      "docs/ai/research/codex-agent-route-candidate-manifest.json"
+    ]
   },
   "prerequisites": {
     "all_pass": true,
@@ -645,7 +684,7 @@
     },
     {
       "step": "Post: Evidence Parity - Verify and publish stacked PR #360",
-      "status": "completed: local gates pass; PR #360 mergeable on PR #362; rewritten-head CI in progress"
+      "status": "completed: local gates and rewritten-head CI passed; PR #360 merged into main after PR #362"
     }
   ],
   "post_results": {
@@ -708,14 +747,17 @@
       "pr_number": 360,
       "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/360",
       "original_base_branch": "main",
-      "base_branch": "car-001-official-evidence-parity",
+      "base_branch": "main",
       "foundation_pr": 362,
       "head_branch": "g56r-001-candidate-route-baseline",
-      "rewritten_head_commit": "a4a442df05dc468cd6ce8a619892d78af8e4136d",
+      "rewritten_head_commit": "0c01b1f71ff85dfb1b9c6d92e7111da057fcbf80",
       "github_mergeable": true,
-      "rewritten_head_ci": "in_progress",
-      "draft": true,
-      "reason": "draft PR opened by explicit user instruction, then rebased and retargeted onto the shared official-source evidence foundation"
+      "rewritten_head_ci": "pass",
+      "draft": false,
+      "merged": true,
+      "merged_at": "2026-07-16T15:52:57Z",
+      "merge_commit": "191642962e55df21000a5303f36e9010a14898d2",
+      "reason": "PR #360 merged into main after foundation PR #362 with all checks passing and all review threads resolved"
     },
     "retrospective": {
       "status": "complete",
