@@ -899,7 +899,7 @@ For every task:
 |---|---|
 | Feature spec | `sha256:7f7dd656c87550a9fe606fde8e79109c6246daaad6c5db539cbcfbf7c92e56de` |
 | Plan-declared scope | `sha256:daf4a8ac4f2e33fb39114f85c572a193a1a946ea671917879cb2dc921de268ca` |
-| Tasks | `sha256:75ceff382680146ac495ada2dd5583487a1e686efdc2e4918a4383b803105e03` |
+| Tasks | `sha256:f97fa606d45fc8a8b1952ac7453e151318ef1d76ca6023aeb0c638a0e2d2d484` |
 | Reviewability evidence | `sha256:14b510444650a6348a4a7291c7b944aa9412dcec6cbc815f8653fafa5fe22d0f` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
