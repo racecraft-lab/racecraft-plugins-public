@@ -98,7 +98,7 @@ preferred based on CAR-001 alone.
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 106 items, 22 gaps → all remediated; G4 = 0 markers. Executor note: checklist-executor hit repeated API stream timeouts → generation split to phase-executor, remediation owned by orchestrator (all resolutions record-grounded; zero consensus escalations) |
 | Tasks | `/speckit-tasks` | ✅ Complete | 40 tasks (WP1:18/WP2:10/WP3:12), 5 [P], all 28 FRs mapped; G5 pass; atomicity route `one-navigable-PR` (conflict with ratified split surfaced — see Atomicity Route); layer plan skipped; no marker plan required |
 | Analyze | `/speckit-analyze` | ✅ Complete | 1 LOW finding (vague docs-site reference path in T008/T027/T038) → fixed in 1 loop; 0 unresolved, consensus skipped; G6 pass. Executor independently re-verified the 37→6 tuple reduction |
-| Implement | `/speckit-implement` | ⏳ Pending | Operator-only live probe step |
+| Implement | `/speckit-implement` | 🔄 In Progress | T001–T014 complete (TDD, suite 3048/3048); **paused at T015 — the operator-only live probe run (human-gated, FR-001)**; T016–T040 resume after the snapshot is committed |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -831,10 +831,12 @@ fail-closed writer plus the deterministic test then re-validate it.
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - WP1 schema + validators | | | |
-| 2 - WP1 probe tool + snapshot | | | |
-| 3 - WP2 telemetry profile + handoff | | | |
-| 4 - WP3 fixtures + replay validation | | | |
+| 1 - WP1 schema + validators | T002–T008 | 7/7 ✅ | TDD RED→GREEN; schema + stdlib validator + suite registration + docs reference regen; guard allowlist (schema path) pulled forward from T016 with empirical proof |
+| 2 - WP1 probe tool + snapshot | T009–T017 | 6/9 (T009–T014 ✅) | Pure logic + FR-003 controls + live boundary + capability capture + subagent mechanism; one live-guard regression self-caught and fixed. **T015 = operator gate (pending human); T016 remainder + T017 follow the committed snapshot** |
+| 3 - WP2 telemetry profile + handoff | T019–T028 | 0/10 ⏳ | Blocked on T015 (snapshot cross-refs) |
+| 4 - WP3 fixtures + replay validation | T029–T039 | 0/11 ⏳ | Blocked on WP2 + snapshot |
+
+**Suite at the T015 boundary (2026-07-17):** `python3 tests/speckit-pro/run-all.py` → **3048/3048** (L1 1428, L4 1434, L5 186) — +227 tests over the Phase 0 baseline, all offline/deterministic.
 
 ---
 

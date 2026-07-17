@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/CAR-002-workflow.md",
   "spec_id": "CAR-002",
   "feature_dir": "specs/car-002-capability-probing-telemetry",
-  "updated_at": "2026-07-17T04:36:19Z",
-  "active_step": "Phase 6: Analyze (pending)",
+  "updated_at": "2026-07-17T07:12:37Z",
+  "active_step": "Phase 7: T015 operator live-probe gate (human-gated, FR-001) \u2014 T001-T014 complete, suite 3048/3048",
   "status": "in_progress",
   "prior_run_note": "Previous contents (G56R-001, completed_archived) are preserved in git history; this file carries the active CAR-002 run.",
   "settings": {
@@ -61,5 +61,11 @@
   "pr_marker_plan": {
     "status": "not_required",
     "reason": "No current size-only block in the tasks-phase evidence chain; re-evaluate at the final reviewability boundary."
+  },
+  "implement_progress": {
+    "completed_tasks": "T001-T014 (checkpoint commits 5e3edf15, 75da7ec1, 02feb872, 904bfa96)",
+    "suite_at_gate": "3048/3048 (L1 1428, L4 1434, L5 186)",
+    "pending_human_gate": "T015 operator live probe (quickstart Part A)",
+    "blocked_on_t015": "T016-T018 (WP1 wrap), T019-T028 (WP2), T029-T039 (WP3), T040"
   }
 }
