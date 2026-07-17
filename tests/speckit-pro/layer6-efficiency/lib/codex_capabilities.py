@@ -20,6 +20,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 SCHEMA_VERSION = "1.0.0"
+PENDING_TELEMETRY_PROFILE_ID = "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
+EXTRACT_NORMALIZATION = "unicode_text_whitespace_collapsed_utf8"
 SURFACES = ("app_server", "cli", "interactive_picker")
 APPROVED_CANARY_EXECUTORS = ()
 APPROVED_LIVE_COLLECTION_METHODS = ()
@@ -43,6 +45,13 @@ _OPENAI_AUTHORITY_PREFIXES = {
     "learn.chatgpt.com": ("/docs",),
     "developers.openai.com": ("/codex", "/api/docs"),
     "platform.openai.com": ("/docs",),
+}
+_MULTI_CLAIM_EXTRACT_DEPENDENCIES = {
+    "OPENAI-DOC-022": {
+        "b8177497966d4cee4b9ca46d971800df3ac074c70d05420d96ab2dd979ab1542": {"G56R-V3-PROMPT_ABLATION"},
+        "6c3191ea0ea940545c49d495a06e9ff910ff0a41885ca509af06648dd59c6c3c": {"G56R-V3-PROMPT_GUIDANCE"},
+        "77d357a58637de23803a1f4c01271e3eee4525e177d9bc42fbb2cda6d0167123": {"G56R-V3-PROMPT_GUIDANCE"},
+    },
 }
 _ENTRY_KEYS = {"model", "effort", "available", "hidden", "machine_id", "raw_label", "capabilities"}
 _OBSERVATION_KEYS = {
@@ -114,6 +123,7 @@ def _validated_body(body_b64, extracts, source_id):
     valid_extracts = isinstance(extracts, list) and extracts and all(
         set(extract) == {"text", "extract_sha256", "normalization"}
         and isinstance(extract["text"], str) and extract["text"]
+        and extract["normalization"] == EXTRACT_NORMALIZATION
         and _HEX_SHA256.fullmatch(str(extract["extract_sha256"]))
         and hashlib.sha256(extract["text"].encode()).hexdigest() == extract["extract_sha256"]
         and extract["text"] in collapsed
@@ -134,7 +144,9 @@ def _token(value):
 
 
 def _openai_url(value):
-    parsed = urlparse(str(value)); host = (parsed.hostname or "").lower()
+    if not isinstance(value, str) or not value or any(character.isspace() or ord(character) < 0x20 or ord(character) == 0x7f for character in value):
+        return False
+    parsed = urlparse(value); host = (parsed.hostname or "").lower()
     try:
         port = parsed.port
     except ValueError:
@@ -153,6 +165,7 @@ def _openai_url(value):
     )
     return (
         parsed.scheme == "https"
+        and parsed.geturl() == value
         and parsed.username is None
         and parsed.password is None
         and port is None
@@ -255,6 +268,14 @@ def digest_regular_file(path):
     return f"sha256:{hasher.hexdigest()}"
 
 
+def _extract_claim_dependencies(source):
+    bindings = set(source["claim_bindings"])
+    if len(bindings) == 1:
+        return {item["extract_sha256"]: set(bindings) for item in source["bounded_extracts"]}
+    raw = source.get("extract_claim_dependencies", _MULTI_CLAIM_EXTRACT_DEPENDENCIES.get(source["official_source_ledger_id"], {}))
+    return {key: set(value) for key, value in raw.items()}
+
+
 def validate_manifest(manifest, *, allow_synthetic_manifest=False):
     snapshot = manifest.get("snapshot", {})
     if manifest.get("schema_version") != CANONICAL_MANIFEST_SCHEMA_VERSION or snapshot.get("snapshot_id") != CANONICAL_MANIFEST_SNAPSHOT_ID:
@@ -269,8 +290,13 @@ def validate_manifest(manifest, *, allow_synthetic_manifest=False):
         raise ValueError("every current source requires claim bindings and approved URLs")
     for row in sources:
         extracts = row.get("bounded_extracts", [])
-        if not extracts or any(set(item) != {"text", "extract_sha256", "normalization"} or not item["text"] or not _HEX_SHA256.fullmatch(str(item["extract_sha256"])) or hashlib.sha256(item["text"].encode()).hexdigest() != item["extract_sha256"] for item in extracts):
+        if not extracts or any(set(item) != {"text", "extract_sha256", "normalization"} or not item["text"] or item["normalization"] != EXTRACT_NORMALIZATION or not _HEX_SHA256.fullmatch(str(item["extract_sha256"])) or hashlib.sha256(item["text"].encode()).hexdigest() != item["extract_sha256"] for item in extracts):
             raise ValueError("every current source requires valid bounded extracts")
+        bindings = set(row["claim_bindings"])
+        if len(bindings) > 1:
+            dependencies = _extract_claim_dependencies(row)
+            if set(dependencies) != {item["extract_sha256"] for item in extracts} or set().union(*dependencies.values()) != bindings or any(not claims or not claims <= bindings for claims in dependencies.values()):
+                raise ValueError("multi-claim source requires complete extract-to-claim dependencies")
     contracts = manifest.get("agent_contracts", []); contract_ids = [row.get("agent_contract_id") for row in contracts]
     routes = manifest.get("candidate_routes", []); route_ids = [row.get("candidate_route_id") for row in routes]
     invalid_contract_hash = any(not _HEX_SHA256.fullmatch(str(row.get("source_sha256"))) or not _HEX_SHA256.fullmatch(str(row.get("instruction_sha256"))) for row in contracts)
@@ -302,6 +328,19 @@ def validate_manifest(manifest, *, allow_synthetic_manifest=False):
     return {"current_source_count": 22, "historical_active_count": 0, "effort_surface_count": 5, "quarantined_effort_record_ids": sorted(quarantined), "authoritative_effort_tokens": sorted(authoritative), "authoritative_effort_tokens_by_record": {key: sorted(value) for key, value in by_record.items()}}
 
 
+def _changed_extract_claims(source, extracts):
+    original = source["bounded_extracts"]
+    if extracts == original:
+        return set()
+    bindings = set(source["claim_bindings"])
+    if len(bindings) == 1:
+        return bindings
+    dependencies = _extract_claim_dependencies(source)
+    changed = [item for item in original if item not in extracts]
+    claims = set().union(*(dependencies[item["extract_sha256"]] for item in changed)) if changed else set()
+    return claims or bindings
+
+
 def normalize_source_refreshes(manifest, captured, *, allow_synthetic_manifest=False):
     validate_manifest(manifest, allow_synthetic_manifest=allow_synthetic_manifest)
     sources = {row["official_source_ledger_id"]: row for row in manifest["official_source_ledger"]}
@@ -326,7 +365,8 @@ def normalize_source_refreshes(manifest, captured, *, allow_synthetic_manifest=F
         body, extracts = (digest(body_bytes), list(item["bounded_extracts"])) if body_bytes is not None else (None, [])
         if body is not None:
             redirect_with_change = status == "redirected" and source["requested_url"] != item["canonical_url"]
-            if extracts != source["bounded_extracts"] and (status != "changed" and not redirect_with_change or not invalid):
+            changed_claims = _changed_extract_claims(source, extracts)
+            if changed_claims and (status != "changed" and not redirect_with_change or not changed_claims <= set(invalid)):
                 raise ValueError("changed bounded extracts must invalidate dependent claims")
         if body is None and status not in {"inaccessible", "withdrawn", "conflicting"}:
             raise ValueError("a retrieved body is required for this source outcome")
@@ -365,13 +405,13 @@ def validate_published_source_refreshes(manifest, refreshes, *, allow_synthetic_
         if item["body_digest"] is not None: _need_digest(item["body_digest"], "body_digest")
         elif item["bounded_extracts"]: raise ValueError("bounded extracts require a published body digest")
         for extract in item["bounded_extracts"]:
-            if set(extract) != {"text", "extract_sha256", "normalization"} or not isinstance(extract["text"], str) or not extract["text"] or not _HEX_SHA256.fullmatch(str(extract["extract_sha256"])) or hashlib.sha256(extract["text"].encode()).hexdigest() != extract["extract_sha256"]:
+            if set(extract) != {"text", "extract_sha256", "normalization"} or not isinstance(extract["text"], str) or not extract["text"] or extract["normalization"] != EXTRACT_NORMALIZATION or not _HEX_SHA256.fullmatch(str(extract["extract_sha256"])) or hashlib.sha256(extract["text"].encode()).hexdigest() != extract["extract_sha256"]:
                 raise ValueError("published bounded extract identity is invalid")
-        exact_extracts = item["bounded_extracts"] == source["bounded_extracts"]
         if item["status"] in {"confirmed_current", "changed", "redirected"} and (item["body_digest"] is None or not item["bounded_extracts"]):
             raise ValueError("source refresh lacks bounded extract evidence")
         redirect_with_change = item["status"] == "redirected" and source["requested_url"] != item["canonical_url"]
-        if item["status"] in {"confirmed_current", "changed", "redirected"} and not exact_extracts and (item["status"] != "changed" and not redirect_with_change or not item["invalidated_claim_ids"]):
+        changed_claims = _changed_extract_claims(source, item["bounded_extracts"])
+        if item["status"] in {"confirmed_current", "changed", "redirected"} and changed_claims and (item["status"] != "changed" and not redirect_with_change or not changed_claims <= set(item["invalidated_claim_ids"])):
             raise ValueError("changed bounded extracts must invalidate dependent claims")
         if item["status"] in {"inaccessible", "withdrawn", "conflicting"} and set(item["invalidated_claim_ids"]) != set(bindings):
             raise ValueError("adverse source outcome must invalidate every bound claim")
@@ -397,6 +437,8 @@ def validate_source_refreshes(manifest, refreshes, *, allow_synthetic_manifest=F
 
 def build_client_identity(payload):
     keys = ("reported_version", "build_identifier_kind", "build_identifier", "distribution")
+    if not isinstance(payload, dict) or set(payload) not in (set(keys), {*keys, "client_identity_id"}):
+        raise ValueError("client identity must use the closed v1 shape")
     clean = {key: payload.get(key) for key in keys}
     if any(not value for value in clean.values()) or clean["build_identifier_kind"] not in {"vendor_build_id", "executable_sha256", "package_sha256"}:
         raise ValueError("client identity is incomplete or unsupported")
@@ -877,6 +919,8 @@ def _validate_canary_result_envelope(result, approvals=APPROVED_CANARY_EXECUTORS
         raise ValueError("canary bounds or retry contract violated")
     if result["terminal_class"] not in ("success", *ERROR_TERMINALS) or result["process_tree_termination_state"] not in {"not_needed", "completed", "failed"}:
         raise ValueError("unknown canary state")
+    if result["terminal_class"] in {"timeout", "output_cap_exceeded"} and result["process_tree_termination_state"] == "not_needed":
+        raise ValueError("bounded canary termination requires process-tree cleanup")
     if evidence_bytes is not None:
         if not isinstance(evidence_bytes, bytes) or digest(evidence_bytes) != result["evidence_digest"]:
             raise ValueError("canary evidence bytes do not match evidence_digest")
@@ -1089,7 +1133,7 @@ def build_freeze(identity, refreshes, matrix, decisions, published_at, *, manife
     rebuilt, expected = evaluate_surface_matrix(matrix["observations"], candidate_tuples_from_manifest(manifest, refreshes), aliases=matrix["normalization_map"], expected_integrity_digest=matrix["aggregate_integrity_digest"])
     if rebuilt["surface_matrix_id"] != matrix["surface_matrix_id"] or canonical_bytes(expected) != canonical_bytes(decisions):
         raise ValueError("tuple decisions do not match manifest-backed matrix evaluation")
-    source_digest, telemetry = refresh_validation["digest"], digest({"status": "pending_treatment_increment"})
+    source_digest, telemetry = refresh_validation["digest"], PENDING_TELEMETRY_PROFILE_ID
     same_runtime_inputs = predecessor is not None and (
         predecessor["client_identity"] == identity
         and predecessor["official_source_refreshes"] == sanitized_refreshes
@@ -1150,6 +1194,7 @@ def validate_freeze(freeze, manifest, *, predecessor=None, _enforce_lineage=True
         if predecessor is not None and supersedes != predecessor["candidate_freeze_id"]:
             raise ValueError("successor freeze predecessor identity is invalid")
     if freeze["client_identity_id"] != identity["client_identity_id"]: raise ValueError("freeze client identity fields disagree")
+    if freeze["client_identity"] != identity: raise ValueError("freeze client identity must use the canonical closed shape")
     expected_manifest = {"schema_version": manifest["schema_version"], "snapshot_id": manifest["snapshot"]["snapshot_id"], "manifest_digest": digest(manifest)}
     if freeze["source_manifest_binding"] != expected_manifest: raise ValueError("freeze manifest binding is not canonical")
     refresh_validation = validate_published_source_refreshes(manifest, freeze["official_source_refreshes"]); matrix = validate_surface_matrix(freeze["surface_matrix"])
@@ -1173,7 +1218,9 @@ def validate_freeze(freeze, manifest, *, predecessor=None, _enforce_lineage=True
     included = [item["candidate_route_id"] for item in expected_decisions if item["decision"] == "included"]
     excluded = [{"candidate_route_id": item["candidate_route_id"], "reasons": item["reasons"]} for item in expected_decisions if item["decision"] == "excluded"]
     if freeze["included_candidate_route_ids"] != included or freeze["excluded_candidates"] != excluded: raise ValueError("freeze derived candidate lists disagree")
-    for field in ("candidate_freeze_id", "telemetry_profile_id"): _need_digest(freeze[field], field)
+    _need_digest(freeze["candidate_freeze_id"], "candidate_freeze_id")
+    if freeze["telemetry_profile_id"] != PENDING_TELEMETRY_PROFILE_ID:
+        raise ValueError("slice-1 freeze telemetry profile must use the pending-treatment authority")
     canonical_approvals = list(_validated_canary_approvals(APPROVED_CANARY_EXECUTORS))
     if freeze["approved_canary_executors"] != canonical_approvals:
         raise ValueError("published canary approvals do not match the repository-owned allowlist")

@@ -59,7 +59,10 @@ Invariant: an adverse refresh invalidates only bound current claims/routes.
 Historical `OSL-*` evidence is never copied into this record as current. The
 private normalized refresh additionally retains `retrieved_body_b64` so the
 adapter can recheck the body and visible-text extracts. The published
-`OfficialSourceRefresh` strips that field.
+`OfficialSourceRefresh` strips that field. Extract normalization is the closed
+`unicode_text_whitespace_collapsed_utf8` contract. Multi-claim sources use the
+reviewed extract-to-claim dependency registry, and every materially changed
+extract must invalidate all claims mapped to that extract.
 
 ### `ClientIdentity`
 
@@ -178,6 +181,8 @@ The successor builder itself resolves and validates that retained object; a
 caller cannot publish from detached bytes. Same-snapshot successors preserve
 prior canary results as an immutable prefix so the one-attempt key cannot be
 reopened by an unrelated freeze refresh.
+Timeout and output-cap terminal records must report process-tree cleanup as
+`completed` or `failed`; `not_needed` is invalid once either bound is crossed.
 
 The module owns a versioned, default-empty allowlist of approved executor
 contract IDs. An executor becomes trusted only through a separately reviewed
@@ -221,7 +226,7 @@ only narrow this set.
 | `tuple_decisions` | array | Complete manifest-backed decision records with runtime snapshot binding |
 | `runtime_capability_snapshot` | object | Embedded rebuilt runtime snapshot |
 | `runtime_capability_snapshot_id` | digest | Required |
-| `telemetry_profile_id` | digest | Required before G56R-003 handoff |
+| `telemetry_profile_id` | digest | Slice 1 must equal the named pending-treatment placeholder authority; a later slice replaces this only through its validated telemetry artifact contract |
 | `included_candidate_route_ids` | array | May be empty; never inferred |
 | `excluded_candidates` | array | Every excluded tuple and its explicit reasons |
 | `approved_canary_executors` / `canary_results` | arrays | Closed approval and replay-safe result records; both empty in the first freeze |

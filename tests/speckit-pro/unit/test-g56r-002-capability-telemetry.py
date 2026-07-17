@@ -177,6 +177,10 @@ class CapabilityContractTests(unittest.TestCase):
         scoped_source = next(item for item in scoped_manifest["official_source_ledger"] if item["official_source_ledger_id"] == scoped_route["official_source_ledger_ids"][0])
         generic_claim = scoped_source["claim_bindings"][0]
         scoped_source["claim_bindings"].append(scoped_route["candidate_route_id"])
+        scoped_source["extract_claim_dependencies"] = {
+            item["extract_sha256"]: list(scoped_source["claim_bindings"])
+            for item in scoped_source["bounded_extracts"]
+        }
         scoped_capture = source_capture(scoped_manifest)
         scoped_row = next(item for item in scoped_capture if item["official_source_ledger_id"] == scoped_source["official_source_ledger_id"])
         scoped_row["invalidated_claim_ids"] = [generic_claim]
@@ -217,6 +221,8 @@ class CapabilityContractTests(unittest.TestCase):
         for field, value in (("reported_version", absolute_client_path), ("build_identifier", "https://example.invalid/build"), ("build_identifier", "secret\nvalue")):
             with self.assertRaises(ValueError):
                 capabilities.build_client_identity({**self.fixture["client_identity"], field: value})
+        with self.assertRaisesRegex(ValueError, "closed v1 shape"):
+            capabilities.build_client_identity({**self.fixture["client_identity"], "authorization": "sensitive"})
         unrelated_body = copy.deepcopy(captured); unrelated_body[0]["retrieved_body_b64"] = base64.b64encode(b"unrelated").decode()
         with self.assertRaisesRegex(ValueError, "bounded extract"):
             capabilities.normalize_source_refreshes(self.manifest, unrelated_body)
@@ -261,6 +267,11 @@ class CapabilityContractTests(unittest.TestCase):
             "https://platform.openai.com/docs/%2e%2e/outside",
             "https://platform.openai.com/docs/%2Foutside",
             "https://platform.openai.com/docs//outside",
+            "https://platform.openai.com/docs?",
+            "https://platform.openai.com/docs#",
+            "https://platform.openai.com/docs\n",
+            "https://platform.openai.com/\tdocs",
+            " https://platform.openai.com/docs",
         ):
             unapproved = copy.deepcopy(captured)
             unapproved[0].update({"canonical_url": unapproved_url, "status": "redirected"})
@@ -280,10 +291,18 @@ class CapabilityContractTests(unittest.TestCase):
         changed_source.update({
             "retrieved_body_b64": base64.b64encode(changed_body).decode(),
             "status": "changed",
-            "invalidated_claim_ids": [self.manifest["official_source_ledger"][-1]["claim_bindings"][0]],
+            "invalidated_claim_ids": ["G56R-V3-PROMPT_ABLATION"],
         })
+        wrong_claim = copy.deepcopy(partial_change)
+        wrong_claim[-1]["invalidated_claim_ids"] = ["G56R-V3-PROMPT_GUIDANCE"]
+        with self.assertRaisesRegex(ValueError, "dependent claims"):
+            capabilities.normalize_source_refreshes(self.manifest, wrong_claim)
         partial_refreshes = capabilities.normalize_source_refreshes(self.manifest, partial_change)
         self.assertEqual(partial_refreshes[-1]["invalidated_claim_ids"], changed_source["invalidated_claim_ids"])
+        unknown_normalization = copy.deepcopy(captured)
+        unknown_normalization[0]["bounded_extracts"][0]["normalization"] = "unreviewed-normalization"
+        with self.assertRaisesRegex(ValueError, "retrieved body"):
+            capabilities.normalize_source_refreshes(self.manifest, unknown_normalization)
         forged = copy.deepcopy(refreshes); forged_body = b"unrelated body"
         forged[0]["retrieved_body_b64"] = base64.b64encode(forged_body).decode()
         forged[0]["body_digest"] = capabilities.digest(forged_body)
@@ -438,6 +457,17 @@ class CapabilityContractTests(unittest.TestCase):
             manifest=self.manifest,
         )
         self.assertEqual(capabilities.validate_freeze(freeze, self.manifest), freeze)
+        self.assertEqual(freeze["telemetry_profile_id"], capabilities.PENDING_TELEMETRY_PROFILE_ID)
+        leaky_identity = copy.deepcopy(freeze)
+        leaky_identity["client_identity"]["authorization"] = "sensitive"
+        leaky_identity["candidate_freeze_id"] = capabilities.digest(capabilities._freeze_identity_payload(leaky_identity))
+        with self.assertRaisesRegex(ValueError, "closed v1 shape"):
+            capabilities.validate_freeze(leaky_identity, self.manifest)
+        forged_telemetry = copy.deepcopy(freeze)
+        forged_telemetry["telemetry_profile_id"] = capabilities.digest(b"forged-telemetry")
+        forged_telemetry["candidate_freeze_id"] = capabilities.digest(capabilities._freeze_identity_payload(forged_telemetry))
+        with self.assertRaisesRegex(ValueError, "pending-treatment authority"):
+            capabilities.validate_freeze(forged_telemetry, self.manifest)
         self.assertEqual(len(freeze["tuple_decisions"]), 23)
         self.assertEqual([d for d in freeze["tuple_decisions"] if d["decision"] == "included"], [])
         self.assertEqual(freeze["runtime_capability_snapshot"]["controlled_repository_snapshot"], matrix["observations"][0]["repository_binding"])
@@ -606,10 +636,20 @@ class CapabilityContractTests(unittest.TestCase):
             capabilities.validate_canary_result(self_approved, [approval], evidence_bytes=evidence_bytes)
         for terminal in capabilities.ERROR_TERMINALS:
             failed = copy.deepcopy(result)
-            failed.update({"terminal_class": terminal, "exit_code": None, "sentinel_observed": False})
+            failed.update({
+                "terminal_class": terminal, "exit_code": None, "sentinel_observed": False,
+                "process_tree_termination_state": "completed" if terminal in {"timeout", "output_cap_exceeded"} else "not_needed",
+            })
             failed["evidence_digest"] = capabilities.digest(canary_evidence_bytes(failed))
             failed["executor_result_digest"] = capabilities.digest({key: value for key, value in failed.items() if key not in {"executor_result_digest", "availability_disposition"}})
             self.assertEqual(capabilities.validate_canary_result(failed, [approval], evidence_bytes=canary_evidence_bytes(failed))["availability_disposition"], "unknown")
+        for terminal in ("timeout", "output_cap_exceeded"):
+            missing_cleanup = copy.deepcopy(result)
+            missing_cleanup.update({"terminal_class": terminal, "exit_code": None, "sentinel_observed": False})
+            missing_cleanup["evidence_digest"] = capabilities.digest(canary_evidence_bytes(missing_cleanup))
+            missing_cleanup["executor_result_digest"] = capabilities.digest({key: value for key, value in missing_cleanup.items() if key not in {"executor_result_digest", "availability_disposition"}})
+            with self.assertRaisesRegex(ValueError, "process-tree cleanup"):
+                capabilities.validate_canary_result(missing_cleanup, [approval], evidence_bytes=canary_evidence_bytes(missing_cleanup))
         shared_decisions = [
             {"canonical_model_id": result["canonical_model_id"], "canonical_effort": result["canonical_effort"], "source_admitted": True,
              "reasons": ["surface_evidence_incomplete", "collection_evidence_non_authoritative"]},
