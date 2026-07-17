@@ -897,8 +897,8 @@ class CapabilityContractTests(unittest.TestCase):
                 ["git", "config", "user.email", "git@github.com"],
                 ["git", "config", "commit.gpgsign", "false"],
             )
-            for command in commands:
-                subprocess.run(command, cwd=repository, check=True, capture_output=True)
+            for _git, *arguments in commands:
+                subprocess.run(["git", *arguments], cwd=repository, check=True, capture_output=True)
             tracked = repository / "tracked.txt"
             tracked.write_text("committed\n", encoding="utf-8")
             subprocess.run(["git", "add", "tracked.txt"], cwd=repository, check=True, capture_output=True)
