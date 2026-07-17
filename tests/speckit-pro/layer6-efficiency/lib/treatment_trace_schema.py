@@ -858,7 +858,10 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
         and reroute_observation is not None and reroute_observation["observation_state"] == "observed_value"
     )
     proof_valid = proof is not None and not _proof_failure_codes(proof, row, profile) and monitoring_authoritative
-    if canonical_effort is None or (not reroute_disposition and not proof_valid and not effective_observed):
+    hard_failure_derived = any(FAILURE_DISPOSITIONS.get(code) == "hard_fail" for code in derived_codes)
+    if not reroute_disposition and (
+        not proof_valid and not effective_observed or canonical_effort is None and not hard_failure_derived
+    ):
         derived_codes.append("effective_treatment_unknown")
     derived_codes = list(dict.fromkeys(derived_codes))
     declared_by_code = {item["failure_code"]: item for item in validated_failures}

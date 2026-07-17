@@ -1587,8 +1587,7 @@ class TreatmentContractTests(unittest.TestCase):
         arbitrary = copy.deepcopy(self.bundle)
         arbitrary["treatment_traces"][0]["requested_effort"] = "arbitrary-effort"
         arbitrary["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
-        result = treatment.validate_treatment_bundle(self.rebound(arbitrary))
-        self.assertEqual(result["treatment_traces"][0]["treatment_disposition"], "hard_fail")
+        self.assert_bundle_not_proven(arbitrary)
 
     def test_configured_route_proof_cannot_self_assert_effective_treatment(self) -> None:
         mutations = [
@@ -1682,6 +1681,21 @@ class TreatmentContractTests(unittest.TestCase):
         bundle = copy.deepcopy(self.bundle)
         observation = next(item for item in bundle["treatment_traces"][0]["observations"] if item["field_path"] == "treatment.sandbox")
         observation["value"]["network_access"] = 0
+        trace = bundle["treatment_traces"][0]
+        trace["treatment_failures"] = [
+            {
+                "failure_code": "sandbox_approvals_mismatch", "affected_field": "treatment.evidence",
+                "expected_evidence_ref": None, "observed_evidence_ref": None,
+                "resulting_disposition": "hard_fail",
+            },
+            {
+                "failure_code": "effective_treatment_unknown", "affected_field": "treatment.evidence",
+                "expected_evidence_ref": None, "observed_evidence_ref": None,
+                "resulting_disposition": "unknown",
+            },
+        ]
+        trace["treatment_disposition"] = "hard_fail"
+        trace["disposition_reasons"] = ["effective_treatment_unknown", "sandbox_approvals_mismatch"]
         bundle["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
         validated = treatment.validate_treatment_bundle(self.rebound(bundle))
         trace = validated["treatment_traces"][0]
