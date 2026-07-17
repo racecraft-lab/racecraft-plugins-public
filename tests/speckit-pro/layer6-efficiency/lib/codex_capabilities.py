@@ -107,7 +107,10 @@ def digest(value):
 
 
 def _visible_text(value):
-    parser = _VisibleText(); parser.feed(value); parser.close()
+    parser = _VisibleText(); parser.feed(value)
+    if parser.rawdata:
+        raise ValueError("retrieved body contains malformed hidden markup")
+    parser.close()
     if parser.invalid_hidden_markup or parser.hidden_stack:
         raise ValueError("retrieved body contains malformed hidden markup")
     return " ".join(" ".join(parser.parts).split())
@@ -794,7 +797,11 @@ def _surface_index_and_invalidity(observations, normalization_map, normalization
     for observation in observations:
         entries = {}
         for raw in observation["entries"]:
-            key = (normalization_map.get(raw["model"], {}).get("canonical_model_id", raw["model"]), raw["effort"])
+            alias = normalization_map.get(raw["model"])
+            if alias is not None and "machine_id" in raw and raw["machine_id"] != alias["canonical_model_id"]:
+                reasons.append("ambiguous_or_duplicate_normalization_key")
+                continue
+            key = (alias["canonical_model_id"] if alias is not None else raw["model"], raw["effort"])
             if not all(_token(value) for value in key) or key in entries:
                 reasons.append("ambiguous_or_duplicate_normalization_key")
             entries[key] = raw

@@ -336,6 +336,12 @@ class CapabilityContractTests(unittest.TestCase):
         malformed_hidden[0]["retrieved_body_b64"] = base64.b64encode(hidden_body).decode()
         with self.assertRaisesRegex(ValueError, "malformed hidden markup"):
             capabilities.normalize_source_refreshes(self.manifest, malformed_hidden)
+        for opening in ("<script ", "<template ", "<!-- "):
+            incomplete_hidden = copy.deepcopy(captured)
+            incomplete_body = f"{opening}{incomplete_hidden[0]['bounded_extracts'][0]['text']}".encode()
+            incomplete_hidden[0]["retrieved_body_b64"] = base64.b64encode(incomplete_body).decode()
+            with self.subTest(opening=opening), self.assertRaisesRegex(ValueError, "malformed hidden markup"):
+                capabilities.normalize_source_refreshes(self.manifest, incomplete_hidden)
 
     def test_surface_cases_preserve_dispositions(self) -> None:
         for case in self.fixture["surface_cases"]:
@@ -465,6 +471,21 @@ class CapabilityContractTests(unittest.TestCase):
                 self.observations(alias_case), self.authority_tuples(alias_case),
                 aliases={"Model A Display": {"canonical_model_id": "model-b", "authority_kind": "machine_readable_identifier", "authority_surface": "cli"}},
             )
+        conflicting_alias_observations = self.observations(alias_case)
+        conflicting_entry = conflicting_alias_observations[0]["entries"][0]
+        conflicting_entry.update({
+            "model": "Model A Display", "raw_label": "Model A Display", "machine_id": "model-b",
+        })
+        conflicting_alias_observations[0]["surface_observation_id"] = capabilities.digest({
+            key: value for key, value in conflicting_alias_observations[0].items() if key != "surface_observation_id"
+        })
+        conflicting_matrix, conflicting_decisions = capabilities.evaluate_surface_matrix(
+            conflicting_alias_observations, self.authority_tuples(alias_case), aliases=alias_case["aliases"],
+        )
+        self.assertEqual(conflicting_matrix["invalidity_reasons"], ["ambiguous_or_duplicate_normalization_key"])
+        self.assertEqual(conflicting_decisions[0]["surface_evidence"]["app_server"]["matching_entry"], None)
+        self.assertIn("matrix_invalid", conflicting_decisions[0]["reasons"])
+        self.assertEqual(capabilities.validate_surface_matrix(conflicting_matrix), conflicting_matrix)
         observations = self.observations(agreed); baseline = None
         for permutation in itertools.permutations(observations):
             matrix, decisions = capabilities.evaluate_surface_matrix(list(permutation), self.authority_tuples(agreed))
