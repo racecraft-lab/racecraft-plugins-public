@@ -8,12 +8,12 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 1301,
-  "actual_nonblank_noncomment_lines": 1190,
+  "actual_source_lines": 1385,
+  "actual_nonblank_noncomment_lines": 1267,
   "production_modules": 1,
   "primary_surface": "harness/adapter",
   "correctness_checks": {
-    "focused_tests": "31/31 pass",
+    "focused_tests": "38/38 pass",
     "two_pass_byte_equality": "pass",
     "raw_fixture_digest_validation": "pass",
     "canonical_fixture_serialization": "pass",
@@ -22,14 +22,14 @@
     "public_synthetic_qualification_rejection": "pass",
     "capability_module_freeze": "pass",
     "declared_claim_exactness": "pass",
-    "independent_review": "pass_after_false_claim_remediation"
+    "independent_review": "repeat_pending"
   },
   "exception": {
     "kind": "typed_size_only",
     "status": "honored_for_checkpoint",
     "subdivision": "no_safe_boundary",
     "rationale": "Fixture provenance, raw-byte digest-before-parse validation, exact eight-class disposition semantics, synthetic reroute isolation, and two-pass normalized replay extend the predeclared treatment integrity boundary from T026-T030.",
-    "growth_limit": "The predeclared replay extension is complete; no further treatment_trace_schema.py growth is authorized after this checkpoint."
+    "growth_limit": "The predeclared replay extension is complete; only finding-driven review remediation may extend treatment_trace_schema.py after this checkpoint, and no feature expansion is authorized."
   },
   "later_markers": [
     "polish:T031-T039"
