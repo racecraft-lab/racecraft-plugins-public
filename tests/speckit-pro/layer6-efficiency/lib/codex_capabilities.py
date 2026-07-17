@@ -907,9 +907,9 @@ def _write(path, value, *, private=False):
             os.replace(temporary, path)
         except Exception:
             try: os.close(descriptor)
-            except OSError: pass
+            except OSError: pass  # Best-effort cleanup must not mask the original failure.
             try: os.unlink(temporary)
-            except OSError: pass
+            except OSError: pass  # Best-effort cleanup must not mask the original failure.
             raise
         return
     Path(path).write_bytes(payload)
