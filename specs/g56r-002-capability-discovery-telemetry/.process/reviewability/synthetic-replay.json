@@ -13,7 +13,7 @@
   "production_modules": 1,
   "primary_surface": "harness/adapter",
   "correctness_checks": {
-    "focused_tests": "30/30 pass",
+    "focused_tests": "31/31 pass",
     "two_pass_byte_equality": "pass",
     "raw_fixture_digest_validation": "pass",
     "canonical_fixture_serialization": "pass",
@@ -21,7 +21,8 @@
     "eight_class_semantic_binding": "pass",
     "public_synthetic_qualification_rejection": "pass",
     "capability_module_freeze": "pass",
-    "independent_review": "pass"
+    "declared_claim_exactness": "pass",
+    "independent_review": "pass_after_false_claim_remediation"
   },
   "exception": {
     "kind": "typed_size_only",

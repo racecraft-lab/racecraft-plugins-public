@@ -7,12 +7,12 @@
     "T026", "T027", "T028", "T029", "T030"
   ],
   "implementation_baseline_sha": "4a1febfd0f90348f91cef6f71ab8e809ec924231",
-  "implementation_checkpoint_sha": "9603b57367c5258123e1e0694bdcde0bbab140e7",
+  "implementation_checkpoint_sha": "8100b85658337755ad3c8b2654abcde2ff3f6cf4",
   "capability_fixture_digest": "sha256:8afdd9ef74e51b5b5a793a3553a3e1001239c0756616e105833f7880165dbb1c",
-  "treatment_fixture_digest": "sha256:493681d6bc6fc199676d60c28261bc719e793ac2901f00fc474503729ffa2bcf",
-  "replay_digest": "sha256:7de14b3ebfdc12e8c1e77c30c45fa57e8b59110c0344139901a7c783dda38995",
+  "treatment_fixture_digest": "sha256:ff02ccc6e4862542224f8db8fb3369bf90d9c2f52af5244dfcb8e9294c825d7f",
+  "replay_digest": "sha256:1ec08d53ac31a2cdd29f74bf08e2d1ca3eb27e9c4fd5f6c6430108c0c2f08d68",
   "verification": {
-    "focused_tests": "30/30 pass",
+    "focused_tests": "31/31 pass",
     "two_pass_byte_equality": "pass",
     "raw_fixture_digest_validation": "pass",
     "canonical_offline_replay": "pass",
@@ -20,6 +20,6 @@
     "independent_critical_high_review": "pass"
   },
   "source_fingerprint_status": "current",
-  "tasks_sha": "sha256:0c3e6c7bb8d09dec243e0a24c36c403ae9e96c5b03828e155d4a4d3efdc2c660",
-  "completed_at": "2026-07-17T06:43:26Z"
+  "tasks_sha": "sha256:39c5e6dcaaece4b4cff0f0d226f5b9452d54dacc968d08c8de9ec40242b20076",
+  "completed_at": "2026-07-17T07:44:42Z"
 }
