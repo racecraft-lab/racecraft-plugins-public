@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "telemetry_profile_id": "CAR-002-TP-2026-07-17-V1",
   "pinned_client_version": "2.1.212 (Claude Code)",
-  "runtime_capability_snapshot_id": "CAR-002-RCS-2026-07-17-V2",
+  "runtime_capability_snapshot_id": "CAR-002-RCS-2026-07-17-V3",
   "field_classifications": [
     {
       "field": "usage.input_tokens",

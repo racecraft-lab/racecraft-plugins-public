@@ -5,7 +5,7 @@
     "route_resolution_id": "CAR-002-RR-FIXTURE-SUCCESS-001",
     "agent_contract_id": "car.analyze-executor.v1",
     "candidate_route_id": "CAR-001-CR-01-01",
-    "runtime_capability_snapshot_id": "CAR-002-RCS-2026-07-17-V2",
+    "runtime_capability_snapshot_id": "CAR-002-RCS-2026-07-17-V3",
     "requested_model_alias": "opus",
     "resolved_dated_model_id": "claude-opus-4-8",
     "effort_level": "max",
