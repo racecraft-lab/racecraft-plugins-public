@@ -176,6 +176,8 @@ these per invocation; CAR-002 fixes the contract.
 | `client_version` | string | yes | Pinned client version (FR-021). |
 | `fast_mode_state` | enum `["on","off","unknown"]` | yes | Fast-mode state (FR-021). |
 | `env_override_proof` | `unsetProof` | yes | Env-override proof, reusing the snapshot `unsetProof` shape (FR-021). |
+| `fallback_index` | nullable integer | yes | AC-2.3; consumer-populated only when a documented fallback chain fires; always null under CAR-002's unset-proof probes (FR-021, nulls preserved). |
+| `fallback_reason` | `nullableString` | yes | AC-2.3; same population rule as `fallback_index` (FR-021). |
 | `tuple_id` | string | yes | Derived join key to the snapshot's `tuple_evidence` (FR-004). |
 
 ---
@@ -195,7 +197,7 @@ Carries a complete `routeResolution` binding plus the observed record class and 
 | `outcome` | `outcome` object (below) | yes | Observed telemetry/outcome sufficient to replay (FR-022). |
 | `scorable` | boolean | yes | False for `unavailable` and `misdelivery`. |
 
-**`outcome`**: `{ status: enum["completed","unavailable","error"], telemetry_ref: nullableString, notes: nullableString }`. Telemetry references the telemetry-profile field set rather than duplicating values.
+**`outcome`**: `{ status: enum["completed","unavailable","error"], telemetry_ref: nullableString, notes: nullableString }`. Telemetry references the telemetry-profile field set rather than duplicating values. Resolution rule (FR-022): a non-null `telemetry_ref` MUST resolve against the telemetry-profile field set during deterministic validation; a dangling reference fails validation.
 
 ### Record-class rules (FR-025; the four synthetic fixtures, WP3)
 
