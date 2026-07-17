@@ -63,6 +63,11 @@ MANIFEST_PATH = RESEARCH_ROOT / "claude-agent-route-candidate-manifest.json"
 # The canonical committed runtime-capability snapshot (T015 operator deliverable),
 # continuously validated on every run by CommittedRuntimeCapabilitySnapshotTests (T017).
 SNAPSHOT_PATH = RESEARCH_ROOT / "claude-runtime-capability-snapshot.json"
+# The committed WP2 telemetry capability profile (T019-T021) and the standalone
+# route-resolution fixture (T022), continuously validated on every run (T023/T026).
+PROFILE_PATH = RESEARCH_ROOT / "claude-telemetry-capability-profile.json"
+TELEMETRY_RECORDS_DIR = TEST_ROOT / "unit" / "fixtures" / "claude-telemetry-records"
+ROUTE_RESOLUTION_FIXTURE_PATH = TELEMETRY_RECORDS_DIR / "route-resolution.json"
 
 # The 37 committed CAR-001 candidate routes dedupe to exactly these 6 unique
 # (model, effort) tuples (research R1; verified against the committed manifest).
@@ -1765,6 +1770,439 @@ class CommittedRuntimeCapabilitySnapshotTests(unittest.TestCase):
                     check_tuple_evidence_has_six(snapshot)
 
 
+# -- T019-T024 (WP2): committed telemetry profile, route-resolution fixture, and
+# the exact-treatment telemetry-linkage rule — continuously validated every run.
+# Each rule is a pure check raising AssertionError on violation, so the same logic
+# backs both the positive assertion (committed artifact passes) and the teeth test
+# (a deliberately-corrupted in-memory copy fails), making the green meaningful.
+
+CLASSIFICATION_LABELS = frozenset(
+    {"stable_native", "derived", "derived_from_controlled_configuration", "unavailable"}
+)
+
+# FR-019 mandated minimums. The effective model is read from the ``modelUsage`` key
+# set (there is no scalar ``model`` field) and is ``stable_native`` per AC-2.4 / the
+# roadmap verbatim — NOT ``derived`` (spec.md FR-019 traceability revision note).
+EFFECTIVE_MODEL_FIELD = "modelUsage.<model>"
+FR019_STABLE_NATIVE_FIELDS = frozenset(
+    {
+        "usage.input_tokens",
+        "usage.output_tokens",
+        "usage.cache_read_input_tokens",
+        "usage.cache_creation.ephemeral_5m_input_tokens",
+        "usage.cache_creation.ephemeral_1h_input_tokens",
+        "usage.cache_creation_input_tokens",
+        "num_turns",
+        "duration_ms",
+        EFFECTIVE_MODEL_FIELD,
+        "modelUsage.<model>.inputTokens",
+        "modelUsage.<model>.outputTokens",
+        "modelUsage.<model>.cacheReadInputTokens",
+        "modelUsage.<model>.cacheCreationInputTokens",
+        "modelUsage.<model>.contextWindow",
+    }
+)
+FR019_DERIVED_FIELDS = frozenset({"total_cost_usd", "modelUsage.<model>.costUSD"})
+FR019_EFFORT_FIELD = "effective_reasoning_effort"
+
+FR021_ROUTE_RESOLUTION_BINDINGS = (
+    "agent_contract_id",
+    "candidate_route_id",
+    "runtime_capability_snapshot_id",
+    "requested_model_alias",
+    "resolved_dated_model_id",
+    "effort_level",
+    "instruction_sha256",
+    "mutation_contract",
+    "dispatch_namespace",
+    "parent_session_configuration",
+    "client_version",
+    "fast_mode_state",
+    "env_override_proof",
+    "fallback_index",
+    "fallback_reason",
+    "tuple_id",
+)
+
+
+def _read_committed_json(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _relabel_field(profile: dict, field: str, classification: str) -> None:
+    for entry in profile["field_classifications"]:
+        if entry["field"] == field:
+            entry["classification"] = classification
+            return
+    raise LookupError(f"test setup error: field {field!r} not in committed profile")
+
+
+def _manifest_candidate_routes() -> dict:
+    manifest = _read_committed_json(MANIFEST_PATH)
+    return {route["candidate_route_id"]: route for route in manifest["candidate_routes"]}
+
+
+def check_profile_exactly_one_classification(profile: dict) -> None:
+    """SC-006: every telemetry field carries exactly one of the four classification
+    labels, and no field is classified twice."""
+    classifications = profile["field_classifications"]
+    if not classifications:
+        raise AssertionError("field_classifications is empty (SC-006 100% coverage)")
+    fields = [entry["field"] for entry in classifications]
+    if len(fields) != len(set(fields)):
+        dupes = sorted({field for field in fields if fields.count(field) > 1})
+        raise AssertionError(f"field(s) classified more than once: {dupes}")
+    for entry in classifications:
+        if entry["classification"] not in CLASSIFICATION_LABELS:
+            raise AssertionError(
+                f"{entry['field']!r}: {entry['classification']!r} is not one of the four labels"
+            )
+
+
+def check_profile_preserves_nulls(profile: dict) -> None:
+    """FR-020/SC-006: unobserved fields are present with ``observed_value`` null and
+    still classified — 'unavailable' is distinguishable from 'absent'. At least one
+    preserved null must exist and every null field must still be classified."""
+    null_entries = [
+        entry for entry in profile["field_classifications"] if entry["observed_value"] is None
+    ]
+    if not null_entries:
+        raise AssertionError(
+            "no observed_value:null field present — nulls-preserved guarantee undemonstrated"
+        )
+    for entry in null_entries:
+        if entry["classification"] not in CLASSIFICATION_LABELS:
+            raise AssertionError(f"null field {entry['field']!r} dropped its classification")
+
+
+def check_profile_meets_fr019_minimums(profile: dict) -> None:
+    """FR-019: the mandated classifications, including the effective model as
+    ``stable_native`` (NOT ``derived`` — traceability revision note)."""
+    by_field = {
+        entry["field"]: entry["classification"] for entry in profile["field_classifications"]
+    }
+    for field in FR019_STABLE_NATIVE_FIELDS:
+        if by_field.get(field) != "stable_native":
+            raise AssertionError(
+                f"{field!r}: expected stable_native, got {by_field.get(field)!r}"
+            )
+    for field in FR019_DERIVED_FIELDS:
+        if by_field.get(field) != "derived":
+            raise AssertionError(f"{field!r}: expected derived, got {by_field.get(field)!r}")
+    if by_field.get(FR019_EFFORT_FIELD) != "derived_from_controlled_configuration":
+        raise AssertionError(
+            f"{FR019_EFFORT_FIELD!r}: expected derived_from_controlled_configuration, "
+            f"got {by_field.get(FR019_EFFORT_FIELD)!r}"
+        )
+
+
+def check_profile_grounds_in_committed_snapshot(profile: dict) -> None:
+    """FR-018: the profile records the pinned client version in a field (not the id)
+    and cross-references the committed snapshot's real id."""
+    snapshot = _read_committed_json(SNAPSHOT_PATH)
+    if profile["runtime_capability_snapshot_id"] != snapshot["runtime_capability_snapshot_id"]:
+        raise AssertionError(
+            f"profile cross-ref {profile['runtime_capability_snapshot_id']!r} != committed "
+            f"snapshot id {snapshot['runtime_capability_snapshot_id']!r}"
+        )
+    if not profile["pinned_client_version"]:
+        raise AssertionError("pinned_client_version must be a recorded non-empty field (FR-018)")
+
+
+def check_route_resolution_binds_all_fr021_fields(record: dict) -> None:
+    """FR-021: every binding present; ``dispatch_namespace`` a non-empty string;
+    ``fallback_index``/``fallback_reason`` null under CAR-002's unset-proof."""
+    for field in FR021_ROUTE_RESOLUTION_BINDINGS:
+        if field not in record:
+            raise AssertionError(f"route_resolution missing FR-021 binding {field!r}")
+    if not isinstance(record["dispatch_namespace"], str) or not record["dispatch_namespace"]:
+        raise AssertionError("dispatch_namespace must be a non-empty string (roadmap binding)")
+    if record["fallback_index"] is not None or record["fallback_reason"] is not None:
+        raise AssertionError(
+            "fallback_index/fallback_reason must be null under CAR-002's unset-proof"
+        )
+
+
+def check_route_resolution_crossrefs_resolve(record: dict) -> None:
+    """SC-008 / CAR-003 handoff (quickstart Part C): the fixture's cross-reference
+    IDs resolve against committed bytes with no re-probing — ``candidate_route_id``
+    + ``agent_contract_id`` are a real CAR-001 manifest pair and
+    ``runtime_capability_snapshot_id`` matches the committed snapshot."""
+    routes = _manifest_candidate_routes()
+    candidate = record["candidate_route_id"]
+    if candidate not in routes:
+        raise AssertionError(
+            f"candidate_route_id {candidate!r} absent from committed CAR-001 manifest"
+        )
+    manifest_contract = routes[candidate]["agent_contract_id"]
+    if manifest_contract != record["agent_contract_id"]:
+        raise AssertionError(
+            f"agent_contract_id {record['agent_contract_id']!r} != manifest pair "
+            f"{manifest_contract!r} for {candidate!r}"
+        )
+    snapshot = _read_committed_json(SNAPSHOT_PATH)
+    if record["runtime_capability_snapshot_id"] != snapshot["runtime_capability_snapshot_id"]:
+        raise AssertionError(
+            f"snapshot cross-ref {record['runtime_capability_snapshot_id']!r} != committed "
+            f"snapshot id {snapshot['runtime_capability_snapshot_id']!r}"
+        )
+
+
+def check_telemetry_ref_resolves(replay: dict, profile: dict) -> None:
+    """FR-022: a non-null ``outcome.telemetry_ref`` MUST resolve against the
+    telemetry-profile field set; a dangling reference fails validation."""
+    telemetry_ref = replay["outcome"]["telemetry_ref"]
+    if telemetry_ref is None:
+        return
+    field_set = {entry["field"] for entry in profile["field_classifications"]}
+    if telemetry_ref not in field_set:
+        raise AssertionError(
+            f"dangling telemetry_ref {telemetry_ref!r}: not in the telemetry-profile field set"
+        )
+
+
+class CommittedTelemetryProfileTests(unittest.TestCase):
+    """The committed WP2 telemetry capability profile at
+    ``docs/ai/research/claude-telemetry-capability-profile.json`` is continuously
+    re-validated (T019-T021/T023): it conforms to the ``telemetryProfile`` ``$def``,
+    every field carries exactly one classification (SC-006), nulls are preserved
+    (FR-020), and the FR-019 minimums hold (the effective model is ``stable_native``,
+    not ``derived``). Every check is teeth-verified against a corrupted copy.
+    """
+
+    def require_validator(self):
+        self.assertIsNotNone(
+            claude_trace_schema,
+            "claude_trace_schema validator module not importable (T005)",
+        )
+        return claude_trace_schema
+
+    def load_committed_profile(self) -> dict:
+        self.assertTrue(
+            PROFILE_PATH.is_file(),
+            f"committed telemetry capability profile missing (T019): {PROFILE_PATH}",
+        )
+        return _read_committed_json(PROFILE_PATH)
+
+    def test_committed_profile_validates_against_the_schema(self) -> None:
+        validator = self.require_validator()
+        profile = self.load_committed_profile()
+        self.assertIs(validator.validate_telemetry_profile(profile), profile)
+
+    def test_committed_profile_validation_rejects_corrupted_copies(self) -> None:
+        validator = self.require_validator()
+        error = validator.ClaudeTraceContractError
+        mutations = {
+            "drop field_classifications": lambda r: r.pop("field_classifications"),
+            "wrong schema_version const": lambda r: r.__setitem__("schema_version", "2.0.0"),
+            "malformed telemetry_profile_id": lambda r: r.__setitem__(
+                "telemetry_profile_id", "CAR-002-TP-bad"
+            ),
+            "snapshot cross-ref not a snapshot id": lambda r: r.__setitem__(
+                "runtime_capability_snapshot_id", r["telemetry_profile_id"]
+            ),
+            "bad classification enum": lambda r: r["field_classifications"][0].__setitem__(
+                "classification", "made_up"
+            ),
+            "additional property": lambda r: r.__setitem__("extra", 1),
+        }
+        for label, mutate in mutations.items():
+            with self.subTest(mutation=label):
+                profile = self.load_committed_profile()
+                mutate(profile)
+                with self.assertRaises(error):
+                    validator.validate_telemetry_profile(profile)
+
+    def test_committed_profile_carries_exactly_one_classification(self) -> None:
+        check_profile_exactly_one_classification(self.load_committed_profile())
+
+    def test_exactly_one_classification_check_has_teeth(self) -> None:
+        cases = {
+            "duplicate field entry": lambda r: r["field_classifications"].append(
+                dict(r["field_classifications"][0])
+            ),
+            "classification outside the four labels": lambda r: r["field_classifications"][
+                0
+            ].__setitem__("classification", "sometimes_native"),
+            "empty field_classifications": lambda r: r.__setitem__("field_classifications", []),
+        }
+        for label, mutate in cases.items():
+            with self.subTest(corruption=label):
+                profile = self.load_committed_profile()
+                mutate(profile)
+                with self.assertRaises(AssertionError):
+                    check_profile_exactly_one_classification(profile)
+
+    def test_committed_profile_preserves_null_valued_fields(self) -> None:
+        check_profile_preserves_nulls(self.load_committed_profile())
+
+    def test_nulls_preserved_check_has_teeth(self) -> None:
+        # Dropping every null-valued field (so 'unavailable' becomes indistinguishable
+        # from 'absent') must fail the guarantee.
+        profile = self.load_committed_profile()
+        profile["field_classifications"] = [
+            entry
+            for entry in profile["field_classifications"]
+            if entry["observed_value"] is not None
+        ]
+        with self.assertRaises(AssertionError):
+            check_profile_preserves_nulls(profile)
+
+    def test_committed_profile_meets_fr019_minimums(self) -> None:
+        check_profile_meets_fr019_minimums(self.load_committed_profile())
+
+    def test_fr019_minimums_check_has_teeth(self) -> None:
+        cases = {
+            # The exact revision-note trap: effective model mislabeled derived.
+            "effective model mislabeled derived": lambda r: _relabel_field(
+                r, EFFECTIVE_MODEL_FIELD, "derived"
+            ),
+            "raw token field mislabeled derived": lambda r: _relabel_field(
+                r, "usage.input_tokens", "derived"
+            ),
+            "cost field mislabeled stable_native": lambda r: _relabel_field(
+                r, "total_cost_usd", "stable_native"
+            ),
+            "effort field mislabeled stable_native": lambda r: _relabel_field(
+                r, FR019_EFFORT_FIELD, "stable_native"
+            ),
+        }
+        for label, mutate in cases.items():
+            with self.subTest(corruption=label):
+                profile = self.load_committed_profile()
+                mutate(profile)
+                with self.assertRaises(AssertionError):
+                    check_profile_meets_fr019_minimums(profile)
+
+    def test_committed_profile_grounds_in_committed_snapshot(self) -> None:
+        check_profile_grounds_in_committed_snapshot(self.load_committed_profile())
+
+    def test_snapshot_grounding_check_has_teeth(self) -> None:
+        profile = self.load_committed_profile()
+        profile["runtime_capability_snapshot_id"] = "CAR-002-RCS-2020-01-01-V9"
+        with self.assertRaises(AssertionError):
+            check_profile_grounds_in_committed_snapshot(profile)
+
+
+class RouteResolutionFixtureTests(unittest.TestCase):
+    """The standalone route-resolution fixture at
+    ``tests/speckit-pro/unit/fixtures/claude-telemetry-records/route-resolution.json``
+    exercises the ``routeResolution`` ``$def`` in isolation (T022/T023, US3
+    acceptance scenario 1) and stands in for the CAR-003 handoff (quickstart Part C
+    / SC-008, T026): a downstream consumer binds a route from committed bytes
+    without re-probing. Every check is teeth-verified against a corrupted copy.
+    """
+
+    def require_validator(self):
+        self.assertIsNotNone(
+            claude_trace_schema,
+            "claude_trace_schema validator module not importable (T005)",
+        )
+        return claude_trace_schema
+
+    def load_fixture(self) -> dict:
+        self.assertTrue(
+            ROUTE_RESOLUTION_FIXTURE_PATH.is_file(),
+            f"route-resolution fixture missing (T022): {ROUTE_RESOLUTION_FIXTURE_PATH}",
+        )
+        return _read_committed_json(ROUTE_RESOLUTION_FIXTURE_PATH)
+
+    def test_fixture_validates_against_route_resolution_def(self) -> None:
+        validator = self.require_validator()
+        fixture = self.load_fixture()
+        self.assertIs(validator.validate_route_resolution(fixture), fixture)
+
+    def test_fixture_uses_the_deterministic_literal_id(self) -> None:
+        self.assertEqual(
+            self.load_fixture()["route_resolution_id"], "CAR-002-RR-FIXTURE-001"
+        )
+
+    def test_fixture_binds_every_fr021_field(self) -> None:
+        check_route_resolution_binds_all_fr021_fields(self.load_fixture())
+
+    def test_fr021_binding_check_has_teeth(self) -> None:
+        cases = {
+            "missing dispatch_namespace": lambda r: r.pop("dispatch_namespace"),
+            "missing parent_session_configuration": lambda r: r.pop(
+                "parent_session_configuration"
+            ),
+            "empty dispatch_namespace": lambda r: r.__setitem__("dispatch_namespace", ""),
+            "non-null fallback_index": lambda r: r.__setitem__("fallback_index", 0),
+            "non-null fallback_reason": lambda r: r.__setitem__(
+                "fallback_reason", "documented chain fired"
+            ),
+        }
+        for label, mutate in cases.items():
+            with self.subTest(corruption=label):
+                fixture = self.load_fixture()
+                mutate(fixture)
+                with self.assertRaises(AssertionError):
+                    check_route_resolution_binds_all_fr021_fields(fixture)
+
+    def test_fixture_crossrefs_resolve_against_committed_bytes(self) -> None:
+        # SC-008 / CAR-003 handoff: the handoff path is exercised by the committed
+        # fixture resolving against the committed snapshot + manifest, no re-probing.
+        check_route_resolution_crossrefs_resolve(self.load_fixture())
+
+    def test_crossref_resolution_check_has_teeth(self) -> None:
+        cases = {
+            "unknown candidate_route_id": lambda r: r.__setitem__(
+                "candidate_route_id", "CAR-001-CR-99-99"
+            ),
+            "mismatched agent_contract_id": lambda r: r.__setitem__(
+                "agent_contract_id", "car.gate-validator.v1"
+            ),
+            "stale snapshot cross-ref": lambda r: r.__setitem__(
+                "runtime_capability_snapshot_id", "CAR-002-RCS-2020-01-01-V9"
+            ),
+        }
+        for label, mutate in cases.items():
+            with self.subTest(corruption=label):
+                fixture = self.load_fixture()
+                mutate(fixture)
+                with self.assertRaises(AssertionError):
+                    check_route_resolution_crossrefs_resolve(fixture)
+
+
+class ExactTreatmentTelemetryLinkageTests(unittest.TestCase):
+    """FR-022 telemetry-linkage rule: a non-null ``outcome.telemetry_ref`` MUST
+    resolve against the committed telemetry-profile field set during deterministic
+    validation; a dangling reference fails validation (T024)."""
+
+    def load_committed_profile(self) -> dict:
+        self.assertTrue(
+            PROFILE_PATH.is_file(),
+            f"committed telemetry capability profile missing (T019): {PROFILE_PATH}",
+        )
+        return _read_committed_json(PROFILE_PATH)
+
+    def test_null_telemetry_ref_needs_no_resolution(self) -> None:
+        replay = valid_exact_treatment_replay()
+        replay["outcome"]["telemetry_ref"] = None
+        check_telemetry_ref_resolves(replay, self.load_committed_profile())
+
+    def test_resolvable_telemetry_ref_against_committed_profile(self) -> None:
+        profile = self.load_committed_profile()
+        resolvable_field = profile["field_classifications"][0]["field"]
+        replay = valid_exact_treatment_replay()
+        replay["outcome"]["telemetry_ref"] = resolvable_field
+        check_telemetry_ref_resolves(replay, profile)  # resolves; does not raise
+
+    def test_stable_native_raw_token_ref_resolves(self) -> None:
+        # AC-2.3: raw token categories stay reachable from the record via the profile.
+        profile = self.load_committed_profile()
+        replay = valid_exact_treatment_replay()
+        replay["outcome"]["telemetry_ref"] = "usage.input_tokens"
+        check_telemetry_ref_resolves(replay, profile)
+
+    def test_dangling_telemetry_ref_fails_validation(self) -> None:
+        profile = self.load_committed_profile()
+        replay = valid_exact_treatment_replay()
+        replay["outcome"]["telemetry_ref"] = "usage.no_such_field_anywhere"
+        with self.assertRaises(AssertionError):
+            check_telemetry_ref_resolves(replay, profile)
+
+
 if __name__ == "__main__":
     loader = unittest.defaultTestLoader
     suite = unittest.TestSuite()
@@ -1772,4 +2210,7 @@ if __name__ == "__main__":
     suite.addTests(loader.loadTestsFromTestCase(ClaudeCapabilitiesPureLogicTests))
     suite.addTests(loader.loadTestsFromTestCase(ClaudeCapabilitiesLiveBoundaryTests))
     suite.addTests(loader.loadTestsFromTestCase(CommittedRuntimeCapabilitySnapshotTests))
+    suite.addTests(loader.loadTestsFromTestCase(CommittedTelemetryProfileTests))
+    suite.addTests(loader.loadTestsFromTestCase(RouteResolutionFixtureTests))
+    suite.addTests(loader.loadTestsFromTestCase(ExactTreatmentTelemetryLinkageTests))
     raise SystemExit(run_counted(suite, label="test-efficiency-claude-telemetry"))

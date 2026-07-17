@@ -855,7 +855,16 @@ fail-closed writer plus the deterministic test then re-validate it.
 - **Known gaps**: CAP-Q6 explicitly open (detection rule only); models endpoint recorded as a gap (subscription auth); effort acceptance labeled observation, never certification.
 - **Rollback**: revert the additive PR; no feature flag; no migration.
 
-### WP2 packet draft (T028) — ⏳ filled at WP2 completion
+### WP2 packet draft (T028, recorded 2026-07-17)
+
+- **What changed**: the versioned telemetry capability profile (`docs/ai/research/claude-telemetry-capability-profile.json`, `CAR-002-TP-2026-07-17-V1`, 18 classified fields), the standalone `route_resolution` trace fixture (`tests/speckit-pro/unit/fixtures/claude-telemetry-records/route-resolution.json`), the validator/test extensions for both plus the exact-treatment telemetry-linkage rule, and the docs-surface guard allowlist entry for the profile.
+- **Why**: US2/US3 — downstream CAR-003..CAR-011 consume the telemetry field classifications and the `route_resolution`/exact-treatment binding as contracts; this WP publishes them, consuming the WP1 schema and authoring no new `$defs`.
+- **Review order**: telemetry profile → route-resolution fixture → validator linkage rule.
+- **Non-goals**: no scoring/statistics/fallback ordering; consumes the WP1 schema unchanged.
+- **Traceability**: WP2 = FR-018/019/020/021/022 → tasks T019–T028; effective model classified `stable_native` per AC-2.4/roadmap verbatim (traceability revision note), guarded by a teeth test that rejects the `derived` mislabel.
+- **Verification evidence**: TDD RED (36 fail) → GREEN (36 pass); suite 1491/1491 at Layer 4; profile + fixture validate against their `$defs`; nulls preserved; cross-refs resolve to the committed snapshot and CAR-001 manifest (`CAR-001-CR-01-01` ↔ `car.analyze-executor.v1`); dangling `telemetry_ref` rejected.
+- **Known gaps**: `model` and `effective_reasoning_effort` recorded present-but-null (classified, not dropped); all observed values labeled `observation`, never `fact`.
+- **Rollback**: revert the additive PR; no migration.
 
 ### WP3 packet draft (T039) — ⏳ filled at WP3 completion
 
