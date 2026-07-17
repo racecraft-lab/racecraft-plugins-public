@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import base64
 import binascii
+import copy
 from datetime import datetime, timezone
 import hashlib
 from html.parser import HTMLParser
@@ -33,6 +34,7 @@ _RAW_REF = re.compile(r"raw://sha256:[0-9a-f]{64}")
 _TOKEN = re.compile(r"[a-z0-9][a-z0-9._-]*")
 _CLAIM_ID = re.compile(r"[A-Z0-9][A-Z0-9_-]*")
 _LABEL = re.compile(r"[A-Za-z0-9][A-Za-z0-9 ._-]{0,127}")
+_IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]{0,127}")
 _GIT_OBJECT = re.compile(r"[0-9a-f]{40,64}")
 _WORK_ITEM_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
 _RFC3339_UTC = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?Z")
@@ -139,6 +141,33 @@ def _utc_timestamp(value):
     return parsed.tzinfo is not None and parsed.utcoffset().total_seconds() == 0
 
 
+def _parsed_timestamp(value, field):
+    if not _utc_timestamp(value):
+        raise ValueError(f"{field} must be RFC3339 UTC")
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
+def _unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON object key: {key}")
+        result[key] = value
+    return result
+
+
+def digest_regular_file(path):
+    source = Path(path).resolve(strict=True)
+    mode = source.stat().st_mode
+    if not stat.S_ISREG(mode):
+        raise ValueError("client executable must resolve to a regular file")
+    hasher = hashlib.sha256()
+    with source.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            hasher.update(chunk)
+    return f"sha256:{hasher.hexdigest()}"
+
+
 def validate_manifest(manifest, *, allow_synthetic_manifest=False):
     snapshot = manifest.get("snapshot", {})
     if manifest.get("schema_version") != CANONICAL_MANIFEST_SCHEMA_VERSION or snapshot.get("snapshot_id") != CANONICAL_MANIFEST_SNAPSHOT_ID:
@@ -197,7 +226,7 @@ def normalize_source_refreshes(manifest, captured, *, allow_synthetic_manifest=F
     normalized = []
     for item in captured:
         source, status = sources[item["official_source_ledger_id"]], item.get("status")
-        if set(item) != measured or item.get("requested_url") != source.get("requested_url") or item.get("canonical_url") not in {source.get("requested_url"), source.get("canonical_url")}:
+        if set(item) != measured or item.get("requested_url") != source.get("requested_url") or not _openai_url(item.get("canonical_url")):
             raise ValueError("captured refresh identity or URL does not match current authority")
         if status not in statuses or not _utc_timestamp(item.get("retrieved_at")):
             raise ValueError("source refresh status or timestamp is invalid")
@@ -209,8 +238,9 @@ def normalize_source_refreshes(manifest, captured, *, allow_synthetic_manifest=F
         body_bytes = _validated_body(item["retrieved_body_b64"], item["bounded_extracts"], item["official_source_ledger_id"])
         body, extracts = (digest(body_bytes), list(item["bounded_extracts"])) if body_bytes is not None else (None, [])
         if body is not None:
-            if extracts != source["bounded_extracts"] and (status != "changed" or set(invalid) != set(bindings)):
-                raise ValueError("changed bounded extracts must invalidate every bound claim")
+            redirect_with_change = status == "redirected" and source["requested_url"] != item["canonical_url"]
+            if extracts != source["bounded_extracts"] and (status != "changed" and not redirect_with_change or not invalid):
+                raise ValueError("changed bounded extracts must invalidate dependent claims")
         if body is None and status not in {"inaccessible", "withdrawn", "conflicting"}:
             raise ValueError("a retrieved body is required for this source outcome")
         if body is not None and status in {"confirmed_current", "changed", "redirected"}:
@@ -239,7 +269,7 @@ def validate_published_source_refreshes(manifest, refreshes, *, allow_synthetic_
     statuses = {"confirmed_current", "changed", "redirected", "inaccessible", "withdrawn", "conflicting"}
     for item in refreshes:
         source = sources[item["official_source_ledger_id"]]; bindings = source["claim_bindings"]
-        if set(item) != keys or item["requested_url"] != source["requested_url"] or item["canonical_url"] not in {source["requested_url"], source["canonical_url"]} or not _utc_timestamp(item["retrieved_at"]):
+        if set(item) != keys or item["requested_url"] != source["requested_url"] or not _openai_url(item["canonical_url"]) or not _utc_timestamp(item["retrieved_at"]):
             raise ValueError("source refresh authority fields must be canonical manifest values")
         if item["documented_facts"] != source["exact_documented_facts"] or item["claim_bindings"] != bindings or item["prior_record_digest"] != digest(source):
             raise ValueError("source refresh authority fields must be canonical manifest values")
@@ -253,8 +283,9 @@ def validate_published_source_refreshes(manifest, refreshes, *, allow_synthetic_
         exact_extracts = item["bounded_extracts"] == source["bounded_extracts"]
         if item["status"] in {"confirmed_current", "changed", "redirected"} and (item["body_digest"] is None or not item["bounded_extracts"]):
             raise ValueError("source refresh lacks bounded extract evidence")
-        if item["status"] in {"confirmed_current", "changed", "redirected"} and not exact_extracts and (item["status"] != "changed" or set(item["invalidated_claim_ids"]) != set(bindings)):
-            raise ValueError("changed bounded extracts must invalidate every bound claim")
+        redirect_with_change = item["status"] == "redirected" and source["requested_url"] != item["canonical_url"]
+        if item["status"] in {"confirmed_current", "changed", "redirected"} and not exact_extracts and (item["status"] != "changed" and not redirect_with_change or not item["invalidated_claim_ids"]):
+            raise ValueError("changed bounded extracts must invalidate dependent claims")
         if item["status"] in {"inaccessible", "withdrawn", "conflicting"} and set(item["invalidated_claim_ids"]) != set(bindings):
             raise ValueError("adverse source outcome must invalidate every bound claim")
         if item["status"] in {"confirmed_current", "changed", "redirected"}:
@@ -282,8 +313,13 @@ def build_client_identity(payload):
     clean = {key: payload.get(key) for key in keys}
     if any(not value for value in clean.values()) or clean["build_identifier_kind"] not in {"vendor_build_id", "executable_sha256", "package_sha256"}:
         raise ValueError("client identity is incomplete or unsupported")
+    _safe_sanitized_value(clean)
     identity = {"client_identity_id": digest(clean), **clean}
-    if not _token(clean["distribution"]) or clean["build_identifier_kind"] != "vendor_build_id" and not _DIGEST.fullmatch(str(clean["build_identifier"])):
+    if not _token(clean["distribution"]) or not _LABEL.fullmatch(str(clean["reported_version"])):
+        raise ValueError("client version or distribution is invalid")
+    if clean["build_identifier_kind"] == "vendor_build_id" and not _IDENTIFIER.fullmatch(str(clean["build_identifier"])):
+        raise ValueError("vendor build identifier is invalid")
+    if clean["build_identifier_kind"] != "vendor_build_id" and not _DIGEST.fullmatch(str(clean["build_identifier"])):
         raise ValueError("client distribution or immutable build identifier is invalid")
     if payload.get("client_identity_id", identity["client_identity_id"]) != identity["client_identity_id"]:
         raise ValueError("client_identity_id does not match its canonical payload")
@@ -326,7 +362,7 @@ def repository_binding_from_checkout(repository_root):
     if status():
         raise ValueError("active checkout must be clean before collection")
     values = []
-    for revision in ("HEAD", "HEAD^{tree}"):
+    for revision in ("HEAD",):
         completed = subprocess.run(
             ["git", "rev-parse", revision], cwd=repository_root, capture_output=True,
             text=True, timeout=5, check=False,
@@ -335,6 +371,21 @@ def repository_binding_from_checkout(repository_root):
         if completed.returncode or not _GIT_OBJECT.fullmatch(value):
             raise ValueError("active checkout revision/tree binding is unavailable")
         values.append(value)
+    resolved_revision = values[0]
+    completed = subprocess.run(
+        ["git", "rev-parse", f"{resolved_revision}^{{tree}}"], cwd=repository_root,
+        capture_output=True, text=True, timeout=5, check=False,
+    )
+    tree_object = completed.stdout.strip()
+    if completed.returncode or not _GIT_OBJECT.fullmatch(tree_object):
+        raise ValueError("active checkout revision/tree binding is unavailable")
+    values.append(tree_object)
+    completed = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=repository_root, capture_output=True,
+        text=True, timeout=5, check=False,
+    )
+    if completed.returncode or completed.stdout.strip() != resolved_revision:
+        raise ValueError("active checkout changed during collection binding")
     if status():
         raise ValueError("active checkout changed during collection binding")
     return build_repository_binding(*values)
@@ -483,16 +534,25 @@ def _candidate_tuples(manifest, validation, *, allow_synthetic_manifest=False):
     contracts = {row["agent_contract_id"]: row for row in manifest.get("agent_contracts", [])}; effort_records = {row["effort_surface_record_id"]: row for row in manifest["effort_surface_records"]}
     refresh_by_source = {row["official_source_ledger_id"]: row for row in validation["sanitized_refreshes"]}
     invalidated, efforts_by_record = set(validation["invalidated_claim_ids"]), authority["authoritative_effort_tokens_by_record"]
-    adverse_sources = {row["official_source_ledger_id"] for row in refreshes if row["status"] in {"inaccessible", "withdrawn", "conflicting"} or row["invalidated_claim_ids"]}
+    def source_adverse_for_route(row, route):
+        invalid = set(row["invalidated_claim_ids"])
+        bindings = set(row["claim_bindings"])
+        explicit_dependencies = {route["candidate_route_id"], *route.get("effort_surface_record_ids", [])}
+        return row["status"] in {"inaccessible", "withdrawn", "conflicting"} or invalid == bindings or bool(invalid & explicit_dependencies)
+
     tuples = []
     for route in manifest.get("candidate_routes", []):
         model = route.get("model_selector", {}).get("requested_value"); effort = route.get("effort_selector", {}).get("requested_value")
         source_ids = route.get("official_source_ledger_ids", []); reasons = []
-        if not _token(model) or not source_ids or not set(source_ids) <= current_ids or set(source_ids) & adverse_sources or route.get("candidate_route_id") in invalidated:
+        adverse_source_ids = {
+            source_id for source_id in source_ids
+            if source_adverse_for_route(refresh_by_source[source_id], route)
+        }
+        if not _token(model) or not source_ids or not set(source_ids) <= current_ids or adverse_source_ids or route.get("candidate_route_id") in invalidated:
             reasons.append("source_not_admitted")
         bound_records = [effort_records[record_id] for record_id in route.get("effort_surface_record_ids", [])]
         supporting = [row for row in bound_records if effort in efforts_by_record.get(row["effort_surface_record_id"], [])]
-        valid_supporting = [row for row in supporting if row["official_source_ledger_id"] in set(source_ids) and row["official_source_ledger_id"] not in adverse_sources]
+        valid_supporting = [row for row in supporting if row["official_source_ledger_id"] in set(source_ids) and not source_adverse_for_route(refresh_by_source[row["official_source_ledger_id"]], route)]
         if not _token(effort) or not supporting:
             reasons.append("effort_not_source_admitted")
         elif not valid_supporting: reasons.append("effort_source_not_admitted")
@@ -638,13 +698,44 @@ def validate_surface_matrix(matrix):
     allowed_reasons = {"missing_or_unsupported_version", "unprovable_shared_client_identity", "aggregate_hash_mismatch", "ambiguous_or_duplicate_normalization_key"}
     if matrix["validity"] not in {"valid", "invalid"} or not set(matrix["invalidity_reasons"]) <= allowed_reasons or (matrix["validity"] == "invalid") != bool(matrix["invalidity_reasons"]):
         raise ValueError("surface matrix validity is inconsistent")
+    indexed = {}
+    for observation in observations:
+        entries = {}
+        for entry in observation["entries"]:
+            key = (matrix["normalization_map"].get(entry["model"], {}).get("canonical_model_id", entry["model"]), entry["effort"])
+            if key in entries:
+                raise ValueError("surface disagreement inputs contain duplicate canonical tuples")
+            entries[key] = entry
+        indexed[observation["surface"]] = entries
+    expected_disagreements = {}
+    for key in sorted({key for entries in indexed.values() for key in entries}):
+        values = {surface: indexed[surface].get(key) for surface in SURFACES}
+        observed = [value for value in values.values() if value is not None]
+        availability = {value["available"] for value in observed}
+        hidden = {value["hidden"] for value in observed}
+        disagreement_class = "hidden_state" if len(hidden) > 1 else "availability" if len(availability) > 1 else None
+        if disagreement_class is not None:
+            tuple_value = {"model": key[0], "effort": key[1]}
+            expected_disagreements[key] = {
+                "canonical_tuple": tuple_value,
+                "surface_values": values,
+                "evidence_refs": {surface: observations_by_surface[surface]["raw_evidence_ref"] for surface in SURFACES},
+                "proposed_normalized_key": tuple_value,
+                "disagreement_class": disagreement_class,
+                "tuple_disposition": "excluded",
+            }
+    actual_disagreements = {}
     for item in matrix["disagreements"]:
         keys = {"canonical_tuple", "surface_values", "evidence_refs", "proposed_normalized_key", "disagreement_class", "tuple_disposition"}
-        if set(item) != keys or set(item["surface_values"]) != set(SURFACES) or set(item["evidence_refs"]) != set(SURFACES) or item["tuple_disposition"] != "excluded":
-            raise ValueError("surface disagreement must use the closed v1 shape")
-        for value in item["surface_values"].values():
-            if value is not None: _clean_entry(value)
-        if not all(_RAW_REF.fullmatch(str(value)) for value in item["evidence_refs"].values()): raise ValueError("disagreement evidence must be content addressed")
+        tuple_value = item.get("canonical_tuple", {}) if isinstance(item, dict) else {}
+        tuple_key = (tuple_value.get("model"), tuple_value.get("effort"))
+        if set(item) != keys or set(tuple_value) != {"model", "effort"} or not all(_token(value) for value in tuple_key) or tuple_key in actual_disagreements:
+            raise ValueError("surface disagreement must use unique canonical tuple keys")
+        if item != expected_disagreements.get(tuple_key):
+            raise ValueError("surface disagreement is inconsistent with observed values")
+        actual_disagreements[tuple_key] = item
+    if set(actual_disagreements) != set(expected_disagreements):
+        raise ValueError("surface disagreement inventory is incomplete")
     expected = digest({"observations": observations, "normalization_map_id": matrix["normalization_map_id"]})
     if matrix["aggregate_integrity_digest"] != expected or matrix["surface_matrix_id"] != digest({key: matrix[key] for key in matrix if key != "surface_matrix_id"}):
         raise ValueError("surface matrix identity does not match its canonical payload")
@@ -663,11 +754,13 @@ def _validated_canary_approvals(approvals):
 
 
 def validate_canary_result(result, approvals=APPROVED_CANARY_EXECUTORS):
-    required = {"snapshot_id", "canonical_model_id", "canonical_effort", "attempt_index", "timeout_seconds", "combined_output_cap_bytes", "executor_contract_id", "implementation_digest", "executor_result_digest", "contract_version", "timeout_enforced", "output_cap_enforced", "process_tree_termination_state", "retry_count", "exit_code", "sentinel_observed", "terminal_class", "availability_disposition", "evidence_digest"}
+    required = {"snapshot_id", "canonical_model_id", "canonical_effort", "attempt_index", "timeout_seconds", "combined_output_cap_bytes", "executor_contract_id", "implementation_digest", "executor_result_digest", "contract_version", "platform", "timeout_enforced", "output_cap_enforced", "process_tree_termination_state", "retry_count", "exit_code", "sentinel_observed", "terminal_class", "availability_disposition", "evidence_digest"}
     if set(result) != required:
         raise ValueError("canary result must use the closed v1 envelope")
     for field in ("snapshot_id", "executor_contract_id", "implementation_digest", "executor_result_digest", "evidence_digest"):
         _need_digest(result[field], field)
+    if not _token(result["canonical_model_id"]) or not _token(result["canonical_effort"]) or result["platform"] not in {"macos", "linux", "windows"}:
+        raise ValueError("canary tuple or platform identity is invalid")
     bound_result = {key: result[key] for key in result if key not in {"executor_result_digest", "availability_disposition"}}
     if result["executor_result_digest"] != digest(bound_result): raise ValueError("canary result digest does not bind the closed result envelope")
     integer_fields = ("attempt_index", "timeout_seconds", "combined_output_cap_bytes", "retry_count")
@@ -679,6 +772,8 @@ def validate_canary_result(result, approvals=APPROVED_CANARY_EXECUTORS):
     if result["terminal_class"] not in ("success", *ERROR_TERMINALS) or result["process_tree_termination_state"] not in {"not_needed", "completed", "failed"}:
         raise ValueError("unknown canary state")
     approvals = _validated_canary_approvals(approvals); approval = next((item for item in approvals if item["executor_contract_id"] == result["executor_contract_id"] and item["implementation_digest"] == result["implementation_digest"]), None)
+    if approval is not None and approval["platform"] != result["platform"]:
+        raise ValueError("canary executor platform does not match its repository approval")
     success = approval and approval.get("implementation_digest") == result["implementation_digest"] and result["terminal_class"] == "success" and result["exit_code"] == 0 and result["sentinel_observed"] and result["process_tree_termination_state"] != "failed"
     return {**result, "availability_disposition": "available_for_pinned_environment" if success else "unknown"}
 
@@ -821,17 +916,38 @@ def _freeze_identity_payload(freeze):
     return {key: freeze[key] for key in freeze if key != "candidate_freeze_id"}
 
 
-def build_freeze(identity, refreshes, matrix, decisions, published_at, *, manifest, supersedes=None, supersedes_snapshot=None):
+def _validate_publication_time(published_at, refreshes, matrix, predecessor=None):
+    published = _parsed_timestamp(published_at, "publication timestamp")
+    evidence_times = [
+        *(_parsed_timestamp(item["retrieved_at"], "source retrieval timestamp") for item in refreshes),
+        *(_parsed_timestamp(item["completed_at"], "surface collection timestamp") for item in matrix["observations"]),
+    ]
+    if evidence_times and published < max(evidence_times):
+        raise ValueError("publication timestamp precedes captured evidence")
+    if predecessor is not None and published <= _parsed_timestamp(predecessor["published_at"], "predecessor publication timestamp"):
+        raise ValueError("successor publication timestamp must follow its predecessor")
+
+
+def build_freeze(identity, refreshes, matrix, decisions, published_at, *, manifest, predecessor=None):
     identity = build_client_identity(identity); matrix = validate_surface_matrix(matrix); decisions = validate_tuple_decisions(decisions)
-    if not _utc_timestamp(published_at): raise ValueError("publication timestamp must be RFC3339 UTC")
-    if supersedes is not None: _need_digest(supersedes, "supersedes_candidate_freeze_id")
+    if predecessor is not None:
+        predecessor = validate_freeze(predecessor, manifest, _enforce_lineage=False)
     if len(refreshes) != 22 or len({item.get("official_source_ledger_id") for item in refreshes}) != 22:
         raise ValueError("freeze requires all 22 source refreshes")
     refresh_validation = validate_source_refreshes(manifest, refreshes); sanitized_refreshes = refresh_validation["sanitized_refreshes"]
+    _validate_publication_time(published_at, sanitized_refreshes, matrix, predecessor)
     rebuilt, expected = evaluate_surface_matrix(matrix["observations"], candidate_tuples_from_manifest(manifest, refreshes), aliases=matrix["normalization_map"], expected_integrity_digest=matrix["aggregate_integrity_digest"])
     if rebuilt["surface_matrix_id"] != matrix["surface_matrix_id"] or canonical_bytes(expected) != canonical_bytes(decisions):
         raise ValueError("tuple decisions do not match manifest-backed matrix evaluation")
     source_digest, telemetry = refresh_validation["digest"], digest({"status": "pending_treatment_increment"})
+    same_runtime_inputs = predecessor is not None and (
+        predecessor["client_identity"] == identity
+        and predecessor["official_source_refreshes"] == sanitized_refreshes
+        and predecessor["surface_matrix"] == matrix
+    )
+    supersedes_snapshot = None
+    if predecessor is not None:
+        supersedes_snapshot = predecessor["runtime_capability_snapshot"].get("supersedes_snapshot_id") if same_runtime_inputs else predecessor["runtime_capability_snapshot_id"]
     snapshot = build_runtime_snapshot(identity, sanitized_refreshes, matrix, supersedes=supersedes_snapshot)
     decisions = _BoundDecisionSet([{**item, "runtime_capability_snapshot_id": snapshot["runtime_capability_snapshot_id"]} for item in expected]); validate_tuple_decisions(decisions, require_snapshot=True)
     tuple_digest = digest(decisions); manifest_binding = {"schema_version": manifest["schema_version"], "snapshot_id": manifest["snapshot"]["snapshot_id"], "manifest_digest": digest(manifest)}
@@ -844,23 +960,40 @@ def build_freeze(identity, refreshes, matrix, decisions, published_at, *, manife
             "surface_matrix_digest": matrix["surface_matrix_id"], "tuple_decision_digest": tuple_digest,
             "included_candidate_route_ids": included, "excluded_candidates": excluded,
             "tuple_decisions": decisions, "approved_canary_executors": list(APPROVED_CANARY_EXECUTORS), "canary_results": [], "published_at": published_at,
-            "supersedes_candidate_freeze_id": supersedes}
+            "supersedes_candidate_freeze_id": predecessor["candidate_freeze_id"] if predecessor is not None else None}
     result["candidate_freeze_id"] = digest(_freeze_identity_payload(result))
-    return validate_freeze(result, manifest)
+    return validate_freeze(result, manifest, predecessor=predecessor)
 
 
-def validate_freeze(freeze, manifest):
+def validate_freeze(freeze, manifest, *, predecessor=None, _enforce_lineage=True):
     keys = {"schema_version", "candidate_freeze_id", "source_manifest_binding", "client_identity", "client_identity_id", "official_source_refreshes", "source_refresh_set_digest", "surface_matrix", "surface_matrix_id", "runtime_capability_snapshot", "runtime_capability_snapshot_id", "telemetry_profile_id", "current_ledger_digest", "surface_matrix_digest", "tuple_decision_digest", "included_candidate_route_ids", "excluded_candidates", "tuple_decisions", "approved_canary_executors", "canary_results", "published_at", "supersedes_candidate_freeze_id"}
     if not isinstance(freeze, dict) or set(freeze) != keys or freeze.get("schema_version") != SCHEMA_VERSION: raise ValueError("freeze must use the closed v1 shape")
     validate_manifest(manifest); identity = build_client_identity(freeze["client_identity"])
+    if predecessor is not None:
+        predecessor = validate_freeze(predecessor, manifest, _enforce_lineage=False)
+    supersedes = freeze["supersedes_candidate_freeze_id"]
+    if supersedes is None and predecessor is not None:
+        raise ValueError("initial freeze cannot declare a predecessor")
+    if supersedes is not None:
+        _need_digest(supersedes, "supersedes_candidate_freeze_id")
+        if _enforce_lineage and predecessor is None:
+            raise ValueError("successor freeze requires its validated predecessor")
+        if predecessor is not None and supersedes != predecessor["candidate_freeze_id"]:
+            raise ValueError("successor freeze predecessor identity is invalid")
     if freeze["client_identity_id"] != identity["client_identity_id"]: raise ValueError("freeze client identity fields disagree")
     expected_manifest = {"schema_version": manifest["schema_version"], "snapshot_id": manifest["snapshot"]["snapshot_id"], "manifest_digest": digest(manifest)}
     if freeze["source_manifest_binding"] != expected_manifest: raise ValueError("freeze manifest binding is not canonical")
     refresh_validation = validate_published_source_refreshes(manifest, freeze["official_source_refreshes"]); matrix = validate_surface_matrix(freeze["surface_matrix"])
+    _validate_publication_time(freeze["published_at"], freeze["official_source_refreshes"], matrix, predecessor)
     if freeze["source_refresh_set_digest"] != refresh_validation["digest"] or freeze["current_ledger_digest"] != refresh_validation["digest"]: raise ValueError("freeze source ledger digests disagree")
     if freeze["surface_matrix_id"] != matrix["surface_matrix_id"] or freeze["surface_matrix_digest"] != matrix["surface_matrix_id"]: raise ValueError("freeze surface matrix fields disagree")
     snapshot = freeze["runtime_capability_snapshot"]; expected_snapshot = build_runtime_snapshot(identity, freeze["official_source_refreshes"], matrix, supersedes=snapshot.get("supersedes_snapshot_id"))
     if snapshot != expected_snapshot or freeze["runtime_capability_snapshot_id"] != expected_snapshot["runtime_capability_snapshot_id"]: raise ValueError("freeze runtime snapshot fields disagree")
+    if predecessor is not None:
+        unchanged_snapshot = expected_snapshot["runtime_capability_snapshot_id"] == predecessor["runtime_capability_snapshot_id"]
+        required_snapshot_predecessor = predecessor["runtime_capability_snapshot"].get("supersedes_snapshot_id") if unchanged_snapshot else predecessor["runtime_capability_snapshot_id"]
+        if expected_snapshot["supersedes_snapshot_id"] != required_snapshot_predecessor:
+            raise ValueError("successor runtime snapshot lineage is invalid")
     rebuilt_matrix, expected_decisions = evaluate_surface_matrix(matrix["observations"], candidate_tuples_from_published(manifest, freeze["official_source_refreshes"]), aliases=matrix["normalization_map"], expected_integrity_digest=matrix["aggregate_integrity_digest"])
     if rebuilt_matrix["surface_matrix_id"] != matrix["surface_matrix_id"]: raise ValueError("published surface matrix cannot be rebuilt")
     expected_decisions = _BoundDecisionSet([{**item, "runtime_capability_snapshot_id": expected_snapshot["runtime_capability_snapshot_id"]} for item in expected_decisions])
@@ -872,8 +1005,6 @@ def validate_freeze(freeze, manifest):
     excluded = [{"candidate_route_id": item["candidate_route_id"], "reasons": item["reasons"]} for item in expected_decisions if item["decision"] == "excluded"]
     if freeze["included_candidate_route_ids"] != included or freeze["excluded_candidates"] != excluded: raise ValueError("freeze derived candidate lists disagree")
     for field in ("candidate_freeze_id", "telemetry_profile_id"): _need_digest(freeze[field], field)
-    if freeze["supersedes_candidate_freeze_id"] is not None: _need_digest(freeze["supersedes_candidate_freeze_id"], "supersedes_candidate_freeze_id")
-    if not _utc_timestamp(freeze["published_at"]): raise ValueError("publication timestamp must be RFC3339 UTC")
     canonical_approvals = list(_validated_canary_approvals(APPROVED_CANARY_EXECUTORS))
     if freeze["approved_canary_executors"] != canonical_approvals:
         raise ValueError("published canary approvals do not match the repository-owned allowlist")
@@ -883,19 +1014,49 @@ def validate_freeze(freeze, manifest):
     if validated_canaries != freeze["canary_results"]: raise ValueError("published canary dispositions are not validated")
     for result in validated_canaries:
         matches = [item for item in expected_decisions if item["canonical_model_id"] == result["canonical_model_id"] and item["canonical_effort"] == result["canonical_effort"]]
-        if result["snapshot_id"] != expected_snapshot["runtime_capability_snapshot_id"] or len(matches) != 1 or not matches[0]["source_admitted"]:
+        if result["snapshot_id"] != expected_snapshot["runtime_capability_snapshot_id"] or len(matches) != 1 or not matches[0]["source_admitted"] or "surface_evidence_incomplete" not in matches[0]["reasons"]:
             raise ValueError("published canary is not bound to one source-admitted snapshot tuple")
     if freeze["candidate_freeze_id"] != digest(_freeze_identity_payload(freeze)): raise ValueError("candidate freeze identity does not bind its authoritative payload")
     return freeze
 
 
-def _read(path):
+def build_canary_successor(predecessor, result, manifest, published_at):
+    predecessor = validate_freeze(predecessor, manifest, _enforce_lineage=False)
+    validated = validate_canary_result(result, APPROVED_CANARY_EXECUTORS)
+    matches = [
+        item for item in predecessor["tuple_decisions"]
+        if item["canonical_model_id"] == validated["canonical_model_id"]
+        and item["canonical_effort"] == validated["canonical_effort"]
+    ]
+    if validated["snapshot_id"] != predecessor["runtime_capability_snapshot_id"] or len(matches) != 1 or not matches[0]["source_admitted"]:
+        raise ValueError("canary requires one source-admitted tuple in the validated freeze")
+    if "surface_evidence_incomplete" not in matches[0]["reasons"]:
+        raise ValueError("canary requires documented discovery to be unavailable")
+    results = validate_canary_results([*predecessor["canary_results"], validated], APPROVED_CANARY_EXECUTORS)
+    successor = copy.deepcopy(predecessor)
+    successor.update({
+        "canary_results": results,
+        "published_at": published_at,
+        "supersedes_candidate_freeze_id": predecessor["candidate_freeze_id"],
+    })
+    successor["candidate_freeze_id"] = digest(_freeze_identity_payload(successor))
+    return validate_freeze(successor, manifest, predecessor=predecessor)
+
+
+def _read(path, *, require_canonical=False):
     source = Path(path)
     if not source.is_file() or source.stat().st_size > PRIVATE_REFRESH_MAX_BYTES: raise ValueError("JSON input is missing or exceeds the bounded size")
-    return json.loads(source.read_text())
+    raw = source.read_bytes()
+    try:
+        value = json.loads(raw.decode("utf-8", errors="strict"), object_pairs_hook=_unique_object)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError("JSON input must be strict UTF-8 JSON") from error
+    if require_canonical and raw != canonical_bytes(value) + b"\n":
+        raise ValueError("stored JSON artifact is not canonical")
+    return value
 
 
-def _write(path, value, *, private=False):
+def _write(path, value, *, private=False, append_only=False):
     payload = canonical_bytes(value) + b"\n"
     if private:
         if len(payload) > PRIVATE_REFRESH_MAX_BYTES: raise ValueError("private refresh output exceeds the bounded size")
@@ -912,6 +1073,20 @@ def _write(path, value, *, private=False):
             except OSError: pass  # Best-effort cleanup must not mask the original failure.
             raise
         return
+    if append_only:
+        descriptor, temporary = tempfile.mkstemp(prefix=".g56r-002-publish-", dir=Path(path).parent)
+        try:
+            with os.fdopen(descriptor, "wb") as stream:
+                stream.write(payload); stream.flush(); os.fsync(stream.fileno())
+            os.link(temporary, path)
+        except Exception:
+            try: os.close(descriptor)
+            except OSError: pass  # Best-effort cleanup must not mask the original failure.
+            raise
+        finally:
+            try: os.unlink(temporary)
+            except OSError: pass  # Best-effort cleanup must not mask the original failure.
+        return
     Path(path).write_bytes(payload)
 
 
@@ -921,9 +1096,9 @@ def main(argv=None):
     refresh = sub.add_parser("refresh-sources"); refresh.add_argument("--manifest", required=True); refresh.add_argument("--captured-refresh", required=True); refresh.add_argument("--output", required=True)
     identify = sub.add_parser("identify-client"); identify.add_argument("--reported-version", required=True); group = identify.add_mutually_exclusive_group(required=True); group.add_argument("--build-id"); group.add_argument("--executable"); identify.add_argument("--distribution", required=True); identify.add_argument("--output", required=True)
     collect = sub.add_parser("collect"); collect.add_argument("--surface", choices=SURFACES, required=True); collect.add_argument("--client-identity", required=True); collect.add_argument("--raw-evidence-root", required=True); collect.add_argument("--work-item-kind", choices=("task", "fixture", "objective"), required=True); collect.add_argument("--work-item-id", required=True); collect.add_argument("--output", required=True)
-    canary = sub.add_parser("canary"); canary.add_argument("--snapshot", required=True); canary.add_argument("--model", required=True); canary.add_argument("--effort", required=True); canary.add_argument("--executor-result", required=True); canary.add_argument("--raw-evidence-root", required=True); canary.add_argument("--output", required=True)
-    freeze = sub.add_parser("freeze"); freeze.add_argument("--manifest", required=True); freeze.add_argument("--source-refresh", required=True); freeze.add_argument("--client-identity", required=True); freeze.add_argument("--app-server", required=True); freeze.add_argument("--cli", required=True); freeze.add_argument("--interactive-picker", required=True); freeze.add_argument("--aliases"); freeze.add_argument("--supersedes-candidate-freeze-id"); freeze.add_argument("--supersedes-snapshot-id"); freeze.add_argument("--published-at"); freeze.add_argument("--output", required=True)
-    published = sub.add_parser("validate-freeze"); published.add_argument("--manifest", required=True); published.add_argument("--freeze", required=True)
+    canary = sub.add_parser("canary"); canary.add_argument("--manifest", required=True); canary.add_argument("--freeze", required=True); canary.add_argument("--model", required=True); canary.add_argument("--effort", required=True); canary.add_argument("--executor-result", required=True); canary.add_argument("--raw-evidence-root", required=True); canary.add_argument("--published-at"); canary.add_argument("--output", required=True)
+    freeze = sub.add_parser("freeze"); freeze.add_argument("--manifest", required=True); freeze.add_argument("--source-refresh", required=True); freeze.add_argument("--client-identity", required=True); freeze.add_argument("--app-server", required=True); freeze.add_argument("--cli", required=True); freeze.add_argument("--interactive-picker", required=True); freeze.add_argument("--aliases"); freeze.add_argument("--predecessor-freeze"); freeze.add_argument("--published-at"); freeze.add_argument("--output", required=True)
+    published = sub.add_parser("validate-freeze"); published.add_argument("--manifest", required=True); published.add_argument("--freeze", required=True); published.add_argument("--predecessor-freeze")
     args, repo = parser.parse_args(argv), Path(__file__).resolve().parents[4]
     now = lambda: datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     if args.command == "refresh-sources":
@@ -931,7 +1106,7 @@ def main(argv=None):
         output = validate_private_external_file(args.output, repo, "normalized refresh output", output=True)
         _write(output, normalize_source_refreshes(_read(args.manifest), _read(capture)), private=True); return 0
     if args.command == "identify-client":
-        kind, identifier = ("vendor_build_id", args.build_id) if args.build_id else ("executable_sha256", digest(Path(args.executable).read_bytes()))
+        kind, identifier = ("vendor_build_id", args.build_id) if args.build_id else ("executable_sha256", digest_regular_file(args.executable))
         _write(args.output, build_client_identity({"reported_version": args.reported_version, "build_identifier_kind": kind, "build_identifier": identifier, "distribution": args.distribution})); return 0
     if args.command == "collect":
         validate_raw_evidence_root(args.raw_evidence_root, repo); identity = build_client_identity(_read(args.client_identity))
@@ -941,18 +1116,22 @@ def main(argv=None):
     if args.command == "canary":
         if not APPROVED_CANARY_EXECUTORS:
             raise ValueError("no repository-approved canary executor is available in this slice")
-        validate_raw_evidence_root(args.raw_evidence_root, repo); result_path = validate_private_external_file(args.executor_result, repo, "canary executor result"); result, snapshot = _read(result_path), _read(args.snapshot)
-        if (result.get("snapshot_id"), result.get("canonical_model_id"), result.get("canonical_effort")) != (snapshot.get("runtime_capability_snapshot_id", snapshot.get("snapshot_id")), args.model, args.effort):
+        validate_raw_evidence_root(args.raw_evidence_root, repo); result_path = validate_private_external_file(args.executor_result, repo, "canary executor result"); result = _read(result_path)
+        manifest = _read(args.manifest); predecessor = _read(args.freeze, require_canonical=True)
+        if (result.get("snapshot_id"), result.get("canonical_model_id"), result.get("canonical_effort")) != (predecessor.get("runtime_capability_snapshot_id"), args.model, args.effort):
             raise ValueError("canary result does not match the requested tuple")
-        result = validate_canary_result(result); _write(args.output, result); return int(result["availability_disposition"] == "unknown")
+        successor = build_canary_successor(predecessor, result, manifest, args.published_at or now())
+        _write(args.output, successor, append_only=True); return int(successor["canary_results"][-1]["availability_disposition"] == "unknown")
     if args.command == "validate-freeze":
-        validate_freeze(_read(args.freeze), _read(args.manifest)); return 0
+        predecessor = _read(args.predecessor_freeze, require_canonical=True) if args.predecessor_freeze else None
+        validate_freeze(_read(args.freeze, require_canonical=True), _read(args.manifest), predecessor=predecessor); return 0
     source_refresh = validate_private_external_file(args.source_refresh, repo, "normalized source refresh")
     manifest, refreshes, identity = _read(args.manifest), _read(source_refresh), build_client_identity(_read(args.client_identity)); validate_source_refreshes(manifest, refreshes)
     tuples = candidate_tuples_from_manifest(manifest, refreshes)
     aliases = _read(args.aliases) if args.aliases else {}
     matrix, decisions = evaluate_surface_matrix([_read(args.app_server), _read(args.cli), _read(args.interactive_picker)], tuples, aliases=aliases)
-    _write(args.output, build_freeze(identity, refreshes, matrix, decisions, args.published_at or now(), manifest=manifest, supersedes=args.supersedes_candidate_freeze_id, supersedes_snapshot=args.supersedes_snapshot_id)); return 0
+    predecessor = _read(args.predecessor_freeze, require_canonical=True) if args.predecessor_freeze else None
+    _write(args.output, build_freeze(identity, refreshes, matrix, decisions, args.published_at or now(), manifest=manifest, predecessor=predecessor), append_only=True); return 0
 
 
 if __name__ == "__main__":

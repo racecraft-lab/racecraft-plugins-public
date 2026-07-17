@@ -13,6 +13,7 @@ import stat
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -71,7 +72,7 @@ def canary_envelope() -> tuple[dict, dict]:
         "canonical_effort": "high", "attempt_index": 1, "timeout_seconds": 30,
         "combined_output_cap_bytes": 65536, "executor_contract_id": contract_id,
         "implementation_digest": implementation, "executor_result_digest": "",
-        "contract_version": "1.0.0", "timeout_enforced": True, "output_cap_enforced": True,
+        "contract_version": "1.0.0", "platform": "macos", "timeout_enforced": True, "output_cap_enforced": True,
         "process_tree_termination_state": "not_needed", "retry_count": 0, "exit_code": 0,
         "sentinel_observed": True, "terminal_class": "success",
         "availability_disposition": "available_for_pinned_environment", "evidence_digest": capabilities.digest(b"fixture-evidence"),
@@ -158,6 +159,27 @@ class CapabilityContractTests(unittest.TestCase):
         adverse_tuple = capabilities.candidate_tuples_from_manifest(adverse_effort, adverse_refreshes, allow_synthetic_manifest=True)[0]
         self.assertFalse(adverse_tuple["source_admitted"])
         self.assertIn("effort_source_not_admitted", adverse_tuple["authority_reasons"])
+        scoped_manifest = copy.deepcopy(self.manifest)
+        scoped_route = scoped_manifest["candidate_routes"][0]
+        scoped_source = next(item for item in scoped_manifest["official_source_ledger"] if item["official_source_ledger_id"] == scoped_route["official_source_ledger_ids"][0])
+        generic_claim = scoped_source["claim_bindings"][0]
+        scoped_source["claim_bindings"].append(scoped_route["candidate_route_id"])
+        scoped_capture = source_capture(scoped_manifest)
+        scoped_row = next(item for item in scoped_capture if item["official_source_ledger_id"] == scoped_source["official_source_ledger_id"])
+        scoped_row["invalidated_claim_ids"] = [generic_claim]
+        generic_only = capabilities.candidate_tuples_from_manifest(
+            scoped_manifest,
+            capabilities.normalize_source_refreshes(scoped_manifest, scoped_capture, allow_synthetic_manifest=True),
+            allow_synthetic_manifest=True,
+        )[0]
+        self.assertNotIn("source_not_admitted", generic_only["authority_reasons"])
+        scoped_row["invalidated_claim_ids"] = [scoped_route["candidate_route_id"]]
+        route_specific = capabilities.candidate_tuples_from_manifest(
+            scoped_manifest,
+            capabilities.normalize_source_refreshes(scoped_manifest, scoped_capture, allow_synthetic_manifest=True),
+            allow_synthetic_manifest=True,
+        )[0]
+        self.assertIn("source_not_admitted", route_specific["authority_reasons"])
         empty_bindings = copy.deepcopy(self.manifest)
         empty_bindings["official_source_ledger"][1]["claim_bindings"] = []
         with self.assertRaisesRegex(ValueError, "claim bindings"):
@@ -178,6 +200,10 @@ class CapabilityContractTests(unittest.TestCase):
             self.identity["client_identity_id"],
             capabilities.digest({k: v for k, v in self.identity.items() if k != "client_identity_id"}),
         )
+        absolute_client_path = "/" + "Users/private/client"
+        for field, value in (("reported_version", absolute_client_path), ("build_identifier", "https://example.invalid/build"), ("build_identifier", "secret\nvalue")):
+            with self.assertRaises(ValueError):
+                capabilities.build_client_identity({**self.fixture["client_identity"], field: value})
         unrelated_body = copy.deepcopy(captured); unrelated_body[0]["retrieved_body_b64"] = base64.b64encode(b"unrelated").decode()
         with self.assertRaisesRegex(ValueError, "bounded extract"):
             capabilities.normalize_source_refreshes(self.manifest, unrelated_body)
@@ -187,9 +213,27 @@ class CapabilityContractTests(unittest.TestCase):
         insecure = copy.deepcopy(captured); insecure[0]["canonical_url"] = "http://openai.com/unrelated"
         with self.assertRaisesRegex(ValueError, "identity or URL"):
             capabilities.normalize_source_refreshes(self.manifest, insecure)
-        unrelated = copy.deepcopy(captured); unrelated[0]["canonical_url"] = "https://openai.com/docs/completely-unrelated"
-        with self.assertRaisesRegex(ValueError, "identity or URL"):
-            capabilities.normalize_source_refreshes(self.manifest, unrelated)
+        approved_redirect = copy.deepcopy(captured); approved_redirect[0].update({"canonical_url": "https://openai.com/docs/moved-source", "status": "redirected"})
+        redirected_refreshes = capabilities.normalize_source_refreshes(self.manifest, approved_redirect)
+        self.assertEqual(redirected_refreshes[0]["canonical_url"], approved_redirect[0]["canonical_url"])
+        self.assertEqual(redirected_refreshes[0]["status"], "redirected")
+        redirected_material = copy.deepcopy(approved_redirect)
+        redirected_material[0]["bounded_extracts"][0]["text"] += " Updated."
+        redirected_material[0]["bounded_extracts"][0]["extract_sha256"] = capabilities.digest(redirected_material[0]["bounded_extracts"][0]["text"].encode()).removeprefix("sha256:")
+        redirected_body = "\n".join(item["text"] for item in redirected_material[0]["bounded_extracts"]).encode()
+        redirected_material[0].update({
+            "retrieved_body_b64": base64.b64encode(redirected_body).decode(),
+            "invalidated_claim_ids": self.manifest["official_source_ledger"][0]["claim_bindings"],
+        })
+        self.assertEqual(capabilities.normalize_source_refreshes(self.manifest, redirected_material)[0]["status"], "redirected")
+        redirect_only_manifest = copy.deepcopy(self.manifest)
+        redirect_only_source = redirect_only_manifest["official_source_ledger"][0]
+        redirect_only_body = "\n".join(item["text"] for item in redirect_only_source["bounded_extracts"]).encode()
+        redirect_only_source["body_sha256"] = capabilities.digest(redirect_only_body).removeprefix("sha256:")
+        redirect_only_capture = source_capture(redirect_only_manifest)
+        redirect_only_capture[0].update({"canonical_url": "https://openai.com/docs/moved-source", "status": "redirected"})
+        redirect_only = capabilities.normalize_source_refreshes(redirect_only_manifest, redirect_only_capture, allow_synthetic_manifest=True)
+        self.assertEqual(redirect_only[0]["status"], "redirected")
         prefix_attack = copy.deepcopy(captured); prefix_attack[0]["canonical_url"] = "https://openai.com/docs-evil"
         with self.assertRaisesRegex(ValueError, "identity or URL"):
             capabilities.normalize_source_refreshes(self.manifest, prefix_attack)
@@ -199,6 +243,18 @@ class CapabilityContractTests(unittest.TestCase):
         adverse = copy.deepcopy(captured); adverse[0].update({"status": "inaccessible", "retrieved_body_b64": None, "bounded_extracts": [], "invalidated_claim_ids": []})
         with self.assertRaisesRegex(ValueError, "invalidate every bound claim"):
             capabilities.normalize_source_refreshes(self.manifest, adverse)
+        partial_change = copy.deepcopy(captured)
+        changed_source = partial_change[-1]
+        changed_source["bounded_extracts"][0]["text"] += " Updated."
+        changed_source["bounded_extracts"][0]["extract_sha256"] = capabilities.digest(changed_source["bounded_extracts"][0]["text"].encode()).removeprefix("sha256:")
+        changed_body = "\n".join(item["text"] for item in changed_source["bounded_extracts"]).encode()
+        changed_source.update({
+            "retrieved_body_b64": base64.b64encode(changed_body).decode(),
+            "status": "changed",
+            "invalidated_claim_ids": [self.manifest["official_source_ledger"][-1]["claim_bindings"][0]],
+        })
+        partial_refreshes = capabilities.normalize_source_refreshes(self.manifest, partial_change)
+        self.assertEqual(partial_refreshes[-1]["invalidated_claim_ids"], changed_source["invalidated_claim_ids"])
         forged = copy.deepcopy(refreshes); forged_body = b"unrelated body"
         forged[0]["retrieved_body_b64"] = base64.b64encode(forged_body).decode()
         forged[0]["body_digest"] = capabilities.digest(forged_body)
@@ -259,6 +315,23 @@ class CapabilityContractTests(unittest.TestCase):
                     self.assertEqual(decisions[0]["surface_disposition"], "disagreed")
                     self.assertIn("hidden_state_disagreement", decisions[0]["reasons"])
                     self.assertEqual(matrix["disagreements"][0]["disagreement_class"], "hidden_state")
+        disagreement_case = next(item for item in self.fixture["surface_cases"] if item["case_id"] == "surface_disagreement")
+        disagreement_matrix, _ = capabilities.evaluate_surface_matrix(self.observations(disagreement_case), self.authority_tuples(disagreement_case))
+        wrong_class = copy.deepcopy(disagreement_matrix)
+        wrong_class["disagreements"][0]["disagreement_class"] = "hidden_state"
+        wrong_class["surface_matrix_id"] = capabilities.digest({key: value for key, value in wrong_class.items() if key != "surface_matrix_id"})
+        with self.assertRaisesRegex(ValueError, "inconsistent with observed values"):
+            capabilities.validate_surface_matrix(wrong_class)
+        missing_disagreement = copy.deepcopy(disagreement_matrix)
+        missing_disagreement["disagreements"] = []
+        missing_disagreement["surface_matrix_id"] = capabilities.digest({key: value for key, value in missing_disagreement.items() if key != "surface_matrix_id"})
+        with self.assertRaisesRegex(ValueError, "inventory is incomplete"):
+            capabilities.validate_surface_matrix(missing_disagreement)
+        wrong_reference = copy.deepcopy(disagreement_matrix)
+        wrong_reference["disagreements"][0]["evidence_refs"]["cli"] = wrong_reference["disagreements"][0]["evidence_refs"]["app_server"]
+        wrong_reference["surface_matrix_id"] = capabilities.digest({key: value for key, value in wrong_reference.items() if key != "surface_matrix_id"})
+        with self.assertRaisesRegex(ValueError, "inconsistent with observed values"):
+            capabilities.validate_surface_matrix(wrong_reference)
         agreed = next(item for item in self.fixture["surface_cases"] if item["case_id"] == "agreed")
         with self.assertRaisesRegex(ValueError, "alias authority"):
             capabilities.evaluate_surface_matrix(
@@ -307,12 +380,17 @@ class CapabilityContractTests(unittest.TestCase):
         self.assertTrue(all(item["official_source_bindings"] for item in freeze["tuple_decisions"]))
         self.assertTrue(all(item["agent_contract_digest"].startswith("sha256:") for item in freeze["tuple_decisions"]))
         successor = capabilities.build_freeze(
-            self.identity, refreshes, matrix, decisions, "2026-07-16T00:00:00Z",
-            manifest=self.manifest, supersedes=freeze["candidate_freeze_id"],
+            self.identity, refreshes, matrix, decisions, "2026-07-16T00:00:01Z",
+            manifest=self.manifest, predecessor=freeze,
         )
         self.assertNotEqual(successor["candidate_freeze_id"], freeze["candidate_freeze_id"])
         self.assertEqual(successor["supersedes_candidate_freeze_id"], freeze["candidate_freeze_id"])
         self.assertEqual(successor["runtime_capability_snapshot_id"], freeze["runtime_capability_snapshot_id"])
+        self.assertEqual(capabilities.validate_freeze(successor, self.manifest, predecessor=freeze), successor)
+        with self.assertRaisesRegex(ValueError, "requires its validated predecessor"):
+            capabilities.validate_freeze(successor, self.manifest)
+        with self.assertRaisesRegex(ValueError, "precedes captured evidence"):
+            capabilities.build_freeze(self.identity, refreshes, matrix, decisions, "2026-07-15T23:59:59Z", manifest=self.manifest)
         with self.assertRaisesRegex(ValueError, "publication timestamp"):
             capabilities.build_freeze(self.identity, refreshes, matrix, decisions, "not-a-date", manifest=self.manifest)
         changed_contract = copy.deepcopy(self.manifest)
@@ -434,6 +512,10 @@ class CapabilityContractTests(unittest.TestCase):
         boolean_bound["executor_result_digest"] = capabilities.digest({key: value for key, value in boolean_bound.items() if key not in {"executor_result_digest", "availability_disposition"}})
         with self.assertRaisesRegex(ValueError, "primitive types"):
             capabilities.validate_canary_result(boolean_bound, [approval])
+        wrong_platform = {**result, "platform": "linux"}
+        wrong_platform["executor_result_digest"] = capabilities.digest({key: value for key, value in wrong_platform.items() if key not in {"executor_result_digest", "availability_disposition"}})
+        with self.assertRaisesRegex(ValueError, "platform does not match"):
+            capabilities.validate_canary_result(wrong_platform, [approval])
         self_approved = {**result, "approved": True}
         with self.assertRaisesRegex(ValueError, "closed v1 envelope"):
             capabilities.validate_canary_result(self_approved, [approval])
@@ -445,7 +527,7 @@ class CapabilityContractTests(unittest.TestCase):
         self.assertEqual(capabilities.APPROVED_CANARY_EXECUTORS, ())
         with self.assertRaisesRegex(ValueError, "no repository-approved canary executor"):
             capabilities.main([
-                "canary", "--snapshot", "unused", "--model", "model-a",
+                "canary", "--manifest", "unused", "--freeze", "unused", "--model", "model-a",
                 "--effort", "high", "--executor-result", "unused",
                 "--raw-evidence-root", "unused", "--output", "unused",
             ])
@@ -509,7 +591,7 @@ class CapabilityContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "undeclared"):
             capabilities.fixture_observation("cli", secret, self.identity["client_identity_id"])
         observation = self.observations(next(item for item in self.fixture["surface_cases"] if item["case_id"] == "agreed"))[0]
-        observation["entries"][0]["model"] = "/Users/fixture/private"
+        observation["entries"][0]["model"] = "/" + "Users/fixture/private"
         observation["surface_observation_id"] = capabilities.digest({key: observation[key] for key in observation if key != "surface_observation_id"})
         with self.assertRaisesRegex(ValueError, "path or remote"):
             capabilities.validate_observation(observation)
@@ -539,7 +621,7 @@ class CapabilityContractTests(unittest.TestCase):
             commands = (
                 ["git", "init", "-q"],
                 ["git", "config", "user.name", "G56R Fixture"],
-                ["git", "config", "user.email", "fixture@example.invalid"],
+                ["git", "config", "user.email", "git@github.com"],
                 ["git", "config", "commit.gpgsign", "false"],
             )
             for command in commands:
@@ -556,6 +638,47 @@ class CapabilityContractTests(unittest.TestCase):
             (repository / "untracked.txt").write_text("dirty\n", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "must be clean"):
                 capabilities.repository_binding_from_checkout(repository)
+            resolved = "a" * 40
+            responses = [
+                subprocess.CompletedProcess([], 0, stdout="", stderr=""),
+                subprocess.CompletedProcess([], 0, stdout=f"{resolved}\n", stderr=""),
+                subprocess.CompletedProcess([], 0, stdout=f"{'b' * 40}\n", stderr=""),
+                subprocess.CompletedProcess([], 0, stdout=f"{'c' * 40}\n", stderr=""),
+            ]
+            with mock.patch.object(capabilities.subprocess, "run", side_effect=responses) as run:
+                with self.assertRaisesRegex(ValueError, "changed during collection binding"):
+                    capabilities.repository_binding_from_checkout(repository)
+            self.assertEqual(run.call_args_list[2].args[0][-1], f"{resolved}^{{tree}}")
+
+    def test_json_inputs_executable_hashing_and_publication_are_bounded(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            duplicate = root / "duplicate.json"
+            duplicate.write_bytes(b'{"key":1,"key":2}\n')
+            with self.assertRaisesRegex(ValueError, "duplicate JSON object key"):
+                capabilities._read(duplicate)
+            invalid_utf8 = root / "invalid-utf8.json"
+            invalid_utf8.write_bytes(b'{"key":"\xff"}\n')
+            with self.assertRaisesRegex(ValueError, "strict UTF-8 JSON"):
+                capabilities._read(invalid_utf8)
+            noncanonical = root / "noncanonical.json"
+            noncanonical.write_text('{"b": 1, "a": 2}\n', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "not canonical"):
+                capabilities._read(noncanonical, require_canonical=True)
+            canonical = root / "canonical.json"
+            capabilities._write(canonical, {"b": 1, "a": 2}, append_only=True)
+            self.assertEqual(capabilities._read(canonical, require_canonical=True), {"a": 2, "b": 1})
+            with self.assertRaises(FileExistsError):
+                capabilities._write(canonical, {"replacement": True}, append_only=True)
+            self.assertEqual(capabilities._read(canonical, require_canonical=True), {"a": 2, "b": 1})
+            executable = root / "large-client"
+            executable.write_bytes(b"fixture-client" * 200000)
+            self.assertEqual(capabilities.digest_regular_file(executable), capabilities.digest(executable.read_bytes()))
+            if hasattr(os, "mkfifo"):
+                fifo = root / "client-fifo"
+                os.mkfifo(fifo)
+                with self.assertRaisesRegex(ValueError, "regular file"):
+                    capabilities.digest_regular_file(fifo)
 
 
 if __name__ == "__main__":

@@ -123,19 +123,22 @@ documented discovery is unavailable:
 
 ```sh
 python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py canary \
-  --snapshot /tmp/g56r-002-runtime-snapshot.json \
+  --manifest docs/ai/research/codex-agent-route-candidate-manifest.json \
+  --freeze /tmp/g56r-002-candidate-freeze.json \
   --model CANONICAL_MODEL_ID \
   --effort CANONICAL_EFFORT \
   --executor-result /absolute/path/outside/repository/g56r-002-private/canary-executor-result.json \
   --raw-evidence-root /absolute/path/outside/repository/g56r-002-raw \
-  --output /tmp/g56r-002-canary-sanitized.json
+  --output /tmp/g56r-002-canary-successor-freeze.json
 ```
 
 The adapter accepts only a result from an approved injected executor contract
 for a live launch. That executor must enforce the 30-second wall timeout, 64 KiB
 combined output cap, process-tree termination, and zero retries; the result
 uses the closed v1 envelope and records its contract/implementation/result
-digests plus enforcement acknowledgements. Approval comes only from the
+digests, approved platform, and enforcement acknowledgements. A successful
+result is appended atomically to a content-addressed successor freeze; the
+validated predecessor cannot be overwritten. Approval comes only from the
 repository-owned executor-ID allowlist, which is intentionally empty in this
 slice; an arbitrary result file cannot self-approve, so this command exits
 nonzero before consuming an executor result. Default repository tests inject a deterministic

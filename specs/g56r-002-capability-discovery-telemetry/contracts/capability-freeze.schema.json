@@ -659,6 +659,7 @@
         "implementation_digest",
         "executor_result_digest",
         "contract_version",
+        "platform",
         "timeout_enforced",
         "output_cap_enforced",
         "process_tree_termination_state",
@@ -680,6 +681,7 @@
         "implementation_digest": {"$ref": "#/$defs/digest"},
         "executor_result_digest": {"$ref": "#/$defs/digest"},
         "contract_version": {"const": "1.0.0"},
+        "platform": {"enum": ["macos", "linux", "windows"]},
         "timeout_enforced": {"const": true},
         "output_cap_enforced": {"const": true},
         "process_tree_termination_state": {

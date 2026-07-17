@@ -159,6 +159,7 @@ surface raw values and evidence references, proposed normalized key,
 | `implementation_digest` | digest | Must equal the matching approval record's implementation digest |
 | `executor_result_digest` | digest | Exact closed external result-envelope binding, excluding only this digest and the derived availability disposition |
 | `contract_version` | string | Must equal `1.0.0` |
+| `platform` | enum | Must equal the matching repository-approved executor platform |
 | `timeout_enforced` / `output_cap_enforced` | booleans | Both must be true |
 | `process_tree_termination_state` | enum | `not_needed`, `completed`, or `failed`; failed remains unknown |
 | `retry_count` | integer | Must equal `0` |
