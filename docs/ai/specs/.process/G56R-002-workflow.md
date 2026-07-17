@@ -60,8 +60,8 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 |---|---|---|---|
 | Specify | `$speckit-specify` | Complete | Defined source, surface, snapshot, and treatment requirements; G1 passed |
 | Clarify | `$speckit-clarify` | Complete | Resolved field-level and bounded-probe details; G2 passed |
-| Plan | `$speckit-plan` | In Progress | Design one guarded three-increment slice |
-| Checklist | `$speckit-checklist` | Pending | Run four risk-focused domains |
+| Plan | `$speckit-plan` | Complete | Designed one guarded three-increment slice; G3 and reviewability passed |
+| Checklist | `$speckit-checklist` | In Progress | Run four risk-focused domains |
 | Tasks | `$speckit-tasks` | Pending | Generate TDD-first, vertically ordered tasks |
 | Analyze | `$speckit-analyze` | Pending | Prove cross-artifact consistency and scope containment |
 | Confidence Gate | G6.5 | Pending | Evaluate the Analyze confidence emit in advisory mode |
@@ -171,7 +171,7 @@ for decomposition if a binding threshold is crossed.
 | Conventional Commits | Use repository-valid lowercase conventional commit scopes and validate the final PR title before readiness | Git history and release-readiness gate |
 | KISS, Simplicity, YAGNI | Use a Codex adapter, neutral schemas, and only the smallest orchestration seam; no cross-vendor framework | Plan complexity review and G6 analysis |
 
-**Constitution Check:** Verified at G1; the plan must record a pass before G3.
+**Constitution Check:** Passed at G1 and re-checked after planning before G3.
 
 ---
 
@@ -528,11 +528,25 @@ $speckit-plan
 
 | Artifact | Status | Notes |
 |---|---|---|
-| `plan.md` | Pending | Must include re-estimation and one-slice decision |
-| `research.md` | Pending | Must bind every native field to current official evidence |
-| `data-model.md` | Pending | Must preserve null, unknown, mismatch, and exclusion states |
-| `contracts/` | Pending | No runtime qualification or installer schema |
-| `quickstart.md` | Pending | Must avoid raw live evidence in Git |
+| `plan.md` | Complete | 297-LOC binding estimate; one guarded slice retained |
+| `research.md` | Complete | Native claims bound to current official evidence; CLI/picker remain runtime-only |
+| `data-model.md` | Complete | Preserves null, unknown, mismatch, exclusion, reroute, and successor states |
+| `contracts/` | Complete | Two deterministic planning schemas; no qualification or installer schema |
+| `quickstart.md` | Complete | Safe operator collection and offline replay; raw live evidence stays outside Git |
+
+### Planning Reviewability Inputs
+
+- Reviewable LOC: 297
+- Production Files: 2
+- Total Files: 9
+- Primary Surface: harness/adapter
+
+These explicit post-plan values supersede the scaffold's prose estimate for
+gate parsing. `schema/data contract` remains a secondary review surface.
+
+**Plan review:** Independent conformance review passed. **G3 Gate:** Passed —
+`plan.md` exists with 0 unresolved markers. The reviewability gate passed with
+no warnings or blockers.
 
 ---
 

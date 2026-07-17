@@ -1,0 +1,282 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/schemas/g56r-002/capability-freeze.schema.json",
+  "title": "G56R-002 Executable Candidate Freeze",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "candidate_freeze_id",
+    "client_identity",
+    "official_source_refreshes",
+    "surface_matrix",
+    "runtime_capability_snapshot_id",
+    "telemetry_profile_id",
+    "tuple_decisions",
+    "published_at",
+    "supersedes_candidate_freeze_id"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "candidate_freeze_id": {"$ref": "#/$defs/digest"},
+    "client_identity": {"$ref": "#/$defs/clientIdentity"},
+    "official_source_refreshes": {
+      "type": "array",
+      "minItems": 22,
+      "maxItems": 22,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/sourceRefresh"}
+    },
+    "surface_matrix": {"$ref": "#/$defs/surfaceMatrix"},
+    "runtime_capability_snapshot_id": {"$ref": "#/$defs/digest"},
+    "telemetry_profile_id": {"$ref": "#/$defs/digest"},
+    "tuple_decisions": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/tupleDecision"}
+    },
+    "canary_results": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/canaryResult"},
+      "default": []
+    },
+    "published_at": {"type": "string", "format": "date-time"},
+    "supersedes_candidate_freeze_id": {
+      "oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "clientIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "client_identity_id",
+        "reported_version",
+        "build_identifier_kind",
+        "build_identifier",
+        "distribution"
+      ],
+      "properties": {
+        "client_identity_id": {"$ref": "#/$defs/digest"},
+        "reported_version": {"type": "string", "minLength": 1},
+        "build_identifier_kind": {
+          "enum": ["vendor_build_id", "executable_sha256", "package_sha256"]
+        },
+        "build_identifier": {"type": "string", "minLength": 1},
+        "distribution": {"type": "string", "minLength": 1}
+      }
+    },
+    "sourceRefresh": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "official_source_ledger_id",
+        "requested_url",
+        "canonical_url",
+        "retrieved_at",
+        "body_digest",
+        "status",
+        "documented_facts",
+        "claim_bindings",
+        "invalidated_claim_ids",
+        "prior_record_digest"
+      ],
+      "properties": {
+        "official_source_ledger_id": {
+          "type": "string",
+          "pattern": "^OPENAI-DOC-[0-9]{3}$"
+        },
+        "requested_url": {"type": "string", "format": "uri"},
+        "canonical_url": {"type": "string", "format": "uri"},
+        "retrieved_at": {"type": "string", "format": "date-time"},
+        "body_digest": {
+          "oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]
+        },
+        "status": {
+          "enum": [
+            "confirmed_current",
+            "changed",
+            "redirected",
+            "inaccessible",
+            "withdrawn",
+            "conflicting"
+          ]
+        },
+        "documented_facts": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "claim_bindings": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "invalidated_claim_ids": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "prior_record_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "surfaceObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_observation_id",
+        "client_identity_id",
+        "surface",
+        "collection_method_id",
+        "method_inputs_digest",
+        "started_at",
+        "completed_at",
+        "completeness_state",
+        "visibility_policy",
+        "entries",
+        "raw_evidence_digest",
+        "raw_evidence_ref",
+        "sanitized_evidence_digest"
+      ],
+      "properties": {
+        "surface_observation_id": {"type": "string", "minLength": 1},
+        "client_identity_id": {"$ref": "#/$defs/digest"},
+        "surface": {"enum": ["app_server", "cli", "interactive_picker"]},
+        "collection_method_id": {"type": "string", "minLength": 1},
+        "method_inputs_digest": {"$ref": "#/$defs/digest"},
+        "started_at": {"type": "string", "format": "date-time"},
+        "completed_at": {"type": "string", "format": "date-time"},
+        "completeness_state": {
+          "enum": ["complete", "partial", "unavailable", "unknown"]
+        },
+        "visibility_policy": {"type": ["object", "null"]},
+        "entries": {"type": "array", "items": {"type": "object"}},
+        "raw_evidence_digest": {"$ref": "#/$defs/digest"},
+        "raw_evidence_ref": {"type": "string", "minLength": 1},
+        "sanitized_evidence_digest": {
+          "oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]
+        }
+      }
+    },
+    "surfaceMatrix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_matrix_id",
+        "schema_version",
+        "client_identity_id",
+        "observations",
+        "normalization_map_id",
+        "disagreements",
+        "aggregate_integrity_digest",
+        "validity",
+        "invalidity_reasons"
+      ],
+      "properties": {
+        "surface_matrix_id": {"$ref": "#/$defs/digest"},
+        "schema_version": {"const": "1.0.0"},
+        "client_identity_id": {"$ref": "#/$defs/digest"},
+        "observations": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {"$ref": "#/$defs/surfaceObservation"}
+        },
+        "normalization_map_id": {"$ref": "#/$defs/digest"},
+        "disagreements": {"type": "array", "items": {"type": "object"}},
+        "aggregate_integrity_digest": {"$ref": "#/$defs/digest"},
+        "validity": {"enum": ["valid", "invalid"]},
+        "invalidity_reasons": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "missing_or_unsupported_version",
+              "unprovable_shared_client_identity",
+              "aggregate_hash_mismatch",
+              "ambiguous_or_duplicate_normalization_key"
+            ]
+          }
+        }
+      }
+    },
+    "tupleDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_route_id",
+        "agent_contract_id",
+        "named_agent",
+        "canonical_model_id",
+        "canonical_effort",
+        "source_admitted",
+        "availability_disposition",
+        "surface_disposition",
+        "decision",
+        "reasons"
+      ],
+      "properties": {
+        "candidate_route_id": {"type": "string", "minLength": 1},
+        "agent_contract_id": {"type": "string", "minLength": 1},
+        "named_agent": {"type": "string", "minLength": 1},
+        "canonical_model_id": {"type": "string", "minLength": 1},
+        "canonical_effort": {"type": "string", "minLength": 1},
+        "source_admitted": {"type": "boolean"},
+        "availability_disposition": {
+          "enum": ["supported", "available_for_pinned_environment", "unknown"]
+        },
+        "surface_disposition": {"enum": ["agreed", "disagreed", "unknown"]},
+        "decision": {"enum": ["included", "excluded"]},
+        "reasons": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "canaryResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot_id",
+        "canonical_model_id",
+        "canonical_effort",
+        "attempt_index",
+        "timeout_seconds",
+        "combined_output_cap_bytes",
+        "exit_code",
+        "sentinel_observed",
+        "terminal_class",
+        "availability_disposition",
+        "evidence_digest"
+      ],
+      "properties": {
+        "snapshot_id": {"$ref": "#/$defs/digest"},
+        "canonical_model_id": {"type": "string", "minLength": 1},
+        "canonical_effort": {"type": "string", "minLength": 1},
+        "attempt_index": {"const": 1},
+        "timeout_seconds": {"const": 30},
+        "combined_output_cap_bytes": {"const": 65536},
+        "exit_code": {"type": ["integer", "null"]},
+        "sentinel_observed": {"type": "boolean"},
+        "terminal_class": {
+          "enum": [
+            "success",
+            "timeout",
+            "output_cap_exceeded",
+            "launch_error",
+            "transport_error",
+            "authentication_error",
+            "rate_limited",
+            "malformed_response",
+            "explicit_rejection",
+            "service_reroute",
+            "ambiguous_error"
+          ]
+        },
+        "availability_disposition": {
+          "enum": ["available_for_pinned_environment", "unknown"]
+        },
+        "evidence_digest": {"$ref": "#/$defs/digest"}
+      }
+    }
+  }
+}
