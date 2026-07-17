@@ -85,7 +85,7 @@ preferred based on CAR-001 alone.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
+| Specify | `/speckit-specify` | ✅ Complete | 28 FRs, 4 US (WP-mapped), 11 acceptance scenarios, 8 SCs; 0 markers; 16/16 quality checklist; privacy scan clean |
 | Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
 | Plan | `/speckit-plan` | ⏳ Pending | Declares the 3 work packages (Q8) |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
@@ -124,7 +124,26 @@ Each phase requires **human review and approval** before proceeding:
 | V. Conventional Commits | Scoped commits, e.g. `test(speckit-pro): ...` / `chore(CAR-002): ...` | `git log` review |
 | VI. KISS, Simplicity & YAGNI | Only the record fields AC-2.2/2.3/2.4 require; no speculative schema surface | Review against design concept Q3/Q5 |
 
-**Constitution Check:** ⏳ (mark before proceeding to G1)
+**Constitution Check:** ✅ 2026-07-16 — full default suite `python3 tests/speckit-pro/run-all.py` → **2821/2821 passed** (L1 1428/1428, L4 1207/1207, L5 186/186, toolchain preflight ok). Principles I/II/IV verified by the suite; III/V/VI are process-enforced (release-please, PR-title gate, plan review).
+
+### Autopilot Pre-flight Record (2026-07-16)
+
+| Item | Result |
+|------|--------|
+| check-prerequisites | `all_pass: true` — SpecKit CLI `specify 0.11.8`; project initialized; constitution present; all SpecKit commands installed; workflow file found |
+| Branch context | `car-002-capability-probing-telemetry`, IS_WORKTREE=true; `on_feature_branch=false` (non-numeric branch pattern) → `.specify/feature.json` created (gitignored) pointing at `specs/car-002-capability-probing-telemetry`; Specify dispatch uses the skip-branch-creation prefix |
+| PROJECT_COMMANDS | detect-commands: stack `unknown`, all N/A — constitution commands govern: UNIT_TEST/FULL_VERIFY = `python3 tests/speckit-pro/run-all.py` (Layers 1/4/5); no BUILD/TYPECHECK/LINT surface |
+| PRESET_CONVENTIONS | `speckit-pro-reviewability` v1.0.0 — spec/plan/tasks templates resolve as top layer |
+| Settings | No `.claude/speckit-pro.local.md` → defaults: gate-failure=stop, auto-commit=on, confidence threshold 0.90 |
+| CONFIDENCE_GATE_MODE | `advisory` (resolved once at Step 0.6b from argv — no flags passed) |
+| AGENT_TEAMS_AVAILABLE | `false` (TeamCreate not exposed in this session) → `[P]` runs dispatch as batched background subagents |
+| Capability surface | WebFetch/WebSearch, context7 + tavily MCP (research), RepoPromptCE/gitnexus/qmd (codebase/context) — canonical platform-fact authority remains `code.claude.com/docs/**` / `platform.claude.com/docs/**` (fail closed) |
+| Extension hooks | 18 events configured; non-destructive optional hooks auto-accepted; `before_specify` git.feature (optional:false) intent already satisfied — feature branch created at scaffold, no new branch; before_specify archive sweep handled by the Step -1 sweep |
+| Tier-2 relocation | Suppressed — target spec is already current (`SPEC-MOC.md` `structureVersion: 1`, PROCESS artifacts under `.process/`); no legacy candidates under `specs/` |
+| Implementation agent | No project implementation agent matched (`.claude/agents/`: plugin-release-auditor, speckit-skill-reviewer — both review-only) → PROJECT_IMPLEMENTATION_AGENT falls back per routing table; code tasks route to `speckit-pro:implement-executor` |
+| Doctor health check | ✅ 8 ok / 2 warn / 0 fail — warns are the expected just-scaffolded state (feature dir has only SPEC-MOC.md; workflow file mid-update). CLI resolves as 0.12.12.dev0 at `~/.local/bin/specify` per doctor (runner prereq check reported 0.11.8 via its own resolution) — both pass |
+| Archive Sweep (Step -1) | ✅ Zero merged-spec candidates; current target excluded; prior archives (XPLAT-010, CAR-001, G56R-001, HRNS-001) already recorded in `.specify/memory/`; no cleanup needed; report-only, no files changed |
+| before_specify hooks | git.feature (optional:false): intent satisfied — feature branch created at scaffold, no new branch made; archive dry-run sweep: satisfied by the Step -1 sweep above |
 
 ---
 
@@ -262,13 +281,16 @@ trace schemas as binding contracts.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | |
-| User Stories | |
-| Acceptance Criteria | |
+| Functional Requirements | 28 (FR-001..FR-028, 10 concern groups) |
+| User Stories | 4 (US1 P1 snapshot, US2 P2 telemetry profile, US3 P2 trace contracts, US4 P3 deterministic CI) — mapped to WP1/WP2/WP3 |
+| Acceptance Criteria | 11 acceptance scenarios + 8 success criteria (SC-001..SC-008) + 7 edge cases |
+
+**G1 routing (2026-07-16):** spec.md contains **0** `[NEEDS CLARIFICATION]` markers (verified by grep, not just executor summary). Marker-based routing alone would skip Clarify; the three seeded Clarify sessions run anyway per this workflow's contract — they carry the design concept's open questions (effort-config surface, canary text, CAP-Q6 disposition, models-endpoint auth, file-to-slice assignment) whose conservative fail-closed defaults in spec.md still need canonical-docs pinning before Plan bakes them in.
 
 ### Files Generated
 
-- [ ] `specs/car-002-capability-probing-telemetry/spec.md`
+- [x] `specs/car-002-capability-probing-telemetry/spec.md`
+- [x] `specs/car-002-capability-probing-telemetry/checklists/requirements.md` (spec quality checklist, 16/16)
 
 ### SpecKit Traceability Markers
 
