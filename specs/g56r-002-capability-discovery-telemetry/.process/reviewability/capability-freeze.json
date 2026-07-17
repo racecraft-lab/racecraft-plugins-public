@@ -8,8 +8,8 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 1427,
-  "actual_nonblank_noncomment_lines": 1270,
+  "actual_source_lines": 1433,
+  "actual_nonblank_noncomment_lines": 1276,
   "production_modules": 1,
   "primary_surface": "harness/adapter",
   "correctness_checks": {
@@ -17,7 +17,7 @@
     "published_freeze_validation": "pass",
     "json_schema_instance_validation": "pass",
     "deterministic_replay": "pass",
-    "independent_review": "pass",
+    "independent_review": "repeat_pending",
     "clean_repository_binding": "pass",
     "content_addressed_raw_evidence": "pass",
     "canary_authority": "pass"

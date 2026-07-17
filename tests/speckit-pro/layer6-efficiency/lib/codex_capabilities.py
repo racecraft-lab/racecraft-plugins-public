@@ -179,6 +179,8 @@ def _openai_url(value):
         and parsed.password is None
         and port is None
         and parsed.netloc.lower() == host
+        and parsed.query in {"", "surface=cli"}
+        and parsed.fragment in {"", "configure-footer-items-with-statusline"}
         and canonical_path
         and allowed_path
     )
@@ -393,6 +395,9 @@ def normalize_source_refreshes(manifest, captured, *, allow_synthetic_manifest=F
         bindings = list(source.get("claim_bindings", [])); invalid = list(item.get("invalidated_claim_ids", []))
         if len(invalid) != len(set(invalid)) or not set(invalid) <= set(bindings):
             raise ValueError("claim-scoped invalidation is invalid")
+        canonical_changed = item["canonical_url"] != source["canonical_url"]
+        if canonical_changed and set(invalid) != set(bindings):
+            raise ValueError("canonical URL change must invalidate every bound claim")
         if status in {"inaccessible", "withdrawn", "conflicting"} and set(invalid) != set(bindings):
             raise ValueError("adverse source outcome must invalidate every bound claim")
         body_bytes = _validated_body(item["retrieved_body_b64"], item["bounded_extracts"], item["official_source_ledger_id"])
@@ -406,7 +411,7 @@ def normalize_source_refreshes(manifest, captured, *, allow_synthetic_manifest=F
             raise ValueError("a retrieved body is required for this source outcome")
         if body is not None and status in {"confirmed_current", "changed", "redirected"}:
             prior_body = f"sha256:{source['body_sha256']}"
-            expected_status = "redirected" if source["requested_url"] != item["canonical_url"] else "confirmed_current" if body == prior_body else "changed"
+            expected_status = "redirected" if source["requested_url"] != item["canonical_url"] else "changed" if canonical_changed else "confirmed_current" if body == prior_body else "changed"
             if status != expected_status: raise ValueError("source refresh status or timestamp is invalid")
         evidence = {"canonical_url": item["canonical_url"], "retrieved_at": item["retrieved_at"], "body_digest": body, "bounded_extracts": extracts}
         normalized.append({
@@ -436,6 +441,9 @@ def validate_published_source_refreshes(manifest, refreshes, *, allow_synthetic_
             raise ValueError("source refresh authority fields must be canonical manifest values")
         invalid = item["invalidated_claim_ids"]
         if item["status"] not in statuses or len(invalid) != len(set(invalid)) or not set(invalid) <= set(bindings): raise ValueError("source refresh status or invalidation is invalid")
+        canonical_changed = item["canonical_url"] != source["canonical_url"]
+        if canonical_changed and set(invalid) != set(bindings):
+            raise ValueError("canonical URL change must invalidate every bound claim")
         if item["body_digest"] is not None: _need_digest(item["body_digest"], "body_digest")
         elif item["bounded_extracts"]: raise ValueError("bounded extracts require a published body digest")
         for extract in item["bounded_extracts"]:
@@ -450,7 +458,7 @@ def validate_published_source_refreshes(manifest, refreshes, *, allow_synthetic_
         if item["status"] in {"inaccessible", "withdrawn", "conflicting"} and set(item["invalidated_claim_ids"]) != set(bindings):
             raise ValueError("adverse source outcome must invalidate every bound claim")
         if item["status"] in {"confirmed_current", "changed", "redirected"}:
-            prior_body = f"sha256:{source['body_sha256']}"; expected_status = "redirected" if source["requested_url"] != item["canonical_url"] else "confirmed_current" if item["body_digest"] == prior_body else "changed"
+            prior_body = f"sha256:{source['body_sha256']}"; expected_status = "redirected" if source["requested_url"] != item["canonical_url"] else "changed" if canonical_changed else "confirmed_current" if item["body_digest"] == prior_body else "changed"
             if item["status"] != expected_status: raise ValueError("source refresh status is inconsistent with captured evidence")
         evidence = {"canonical_url": item["canonical_url"], "retrieved_at": item["retrieved_at"], "body_digest": item["body_digest"], "bounded_extracts": item["bounded_extracts"]}
         if item["retrieval_evidence_digest"] != digest(evidence): raise ValueError("source retrieval evidence digest is invalid")
@@ -721,11 +729,9 @@ def _candidate_tuples(manifest, validation, *, allow_synthetic_manifest=False):
     contracts = {row["agent_contract_id"]: row for row in manifest.get("agent_contracts", [])}; effort_records = {row["effort_surface_record_id"]: row for row in manifest["effort_surface_records"]}
     refresh_by_source = {row["official_source_ledger_id"]: row for row in validation["sanitized_refreshes"]}
     invalidated, efforts_by_record = set(validation["invalidated_claim_ids"]), authority["authoritative_effort_tokens_by_record"]
-    def source_adverse_for_route(row, route):
+    def source_adverse_for_route(row, _route):
         invalid = set(row["invalidated_claim_ids"])
-        bindings = set(row["claim_bindings"])
-        explicit_dependencies = {route["candidate_route_id"], *route.get("effort_surface_record_ids", [])}
-        return row["status"] in {"inaccessible", "withdrawn", "conflicting"} or invalid == bindings or bool(invalid & explicit_dependencies)
+        return row["status"] in {"inaccessible", "withdrawn", "conflicting"} or bool(invalid)
 
     tuples = []
     for route in manifest.get("candidate_routes", []):

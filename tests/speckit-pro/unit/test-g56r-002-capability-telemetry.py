@@ -189,7 +189,7 @@ class CapabilityContractTests(unittest.TestCase):
             capabilities.normalize_source_refreshes(scoped_manifest, scoped_capture, allow_synthetic_manifest=True),
             allow_synthetic_manifest=True,
         )[0]
-        self.assertNotIn("source_not_admitted", generic_only["authority_reasons"])
+        self.assertIn("source_not_admitted", generic_only["authority_reasons"])
         scoped_row["invalidated_claim_ids"] = [scoped_route["candidate_route_id"]]
         route_specific = capabilities.candidate_tuples_from_manifest(
             scoped_manifest,
@@ -233,6 +233,9 @@ class CapabilityContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "identity or URL"):
             capabilities.normalize_source_refreshes(self.manifest, insecure)
         approved_redirect = copy.deepcopy(captured); approved_redirect[0].update({"canonical_url": "https://platform.openai.com/docs/moved-source", "status": "redirected"})
+        with self.assertRaisesRegex(ValueError, "canonical URL change"):
+            capabilities.normalize_source_refreshes(self.manifest, approved_redirect)
+        approved_redirect[0]["invalidated_claim_ids"] = self.manifest["official_source_ledger"][0]["claim_bindings"]
         redirected_refreshes = capabilities.normalize_source_refreshes(self.manifest, approved_redirect)
         self.assertEqual(redirected_refreshes[0]["canonical_url"], approved_redirect[0]["canonical_url"])
         self.assertEqual(redirected_refreshes[0]["status"], "redirected")
@@ -251,8 +254,23 @@ class CapabilityContractTests(unittest.TestCase):
         redirect_only_source["body_sha256"] = capabilities.digest(redirect_only_body).removeprefix("sha256:")
         redirect_only_capture = source_capture(redirect_only_manifest)
         redirect_only_capture[0].update({"canonical_url": "https://platform.openai.com/docs/moved-source", "status": "redirected"})
+        redirect_only_capture[0]["invalidated_claim_ids"] = redirect_only_source["claim_bindings"]
         redirect_only = capabilities.normalize_source_refreshes(redirect_only_manifest, redirect_only_capture, allow_synthetic_manifest=True)
         self.assertEqual(redirect_only[0]["status"], "redirected")
+        canonical_drift = copy.deepcopy(captured)
+        canonical_drift[0].update({
+            "canonical_url": self.manifest["official_source_ledger"][0]["requested_url"],
+            "status": "changed",
+        })
+        with self.assertRaisesRegex(ValueError, "canonical URL change"):
+            capabilities.normalize_source_refreshes(self.manifest, canonical_drift)
+        canonical_drift[0]["invalidated_claim_ids"] = self.manifest["official_source_ledger"][0]["claim_bindings"]
+        drifted_refreshes = capabilities.normalize_source_refreshes(self.manifest, canonical_drift)
+        self.assertEqual(drifted_refreshes[0]["status"], "changed")
+        self.assertEqual(
+            capabilities.validate_source_refreshes(self.manifest, drifted_refreshes)["invalidated_claim_ids"],
+            self.manifest["official_source_ledger"][0]["claim_bindings"],
+        )
         prefix_attack = copy.deepcopy(captured); prefix_attack[0]["canonical_url"] = "https://platform.openai.com/docs-evil"
         with self.assertRaisesRegex(ValueError, "identity or URL"):
             capabilities.normalize_source_refreshes(self.manifest, prefix_attack)
@@ -269,6 +287,8 @@ class CapabilityContractTests(unittest.TestCase):
             "https://platform.openai.com/docs//outside",
             "https://platform.openai.com/docs?",
             "https://platform.openai.com/docs#",
+            "https://platform.openai.com/docs/moved-source?token=fixture-sensitive",
+            "https://platform.openai.com/docs/moved-source#private-fragment",
             "https://platform.openai.com/docs\n",
             "https://platform.openai.com/\tdocs",
             " https://platform.openai.com/docs",
