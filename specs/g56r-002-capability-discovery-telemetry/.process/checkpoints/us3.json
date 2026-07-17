@@ -1,0 +1,25 @@
+{
+  "schema_version": "marker-checkpoint.v1",
+  "feature_id": "G56R-002",
+  "marker_id": "us3",
+  "status": "complete",
+  "task_ids": [
+    "T026", "T027", "T028", "T029", "T030"
+  ],
+  "implementation_baseline_sha": "4a1febfd0f90348f91cef6f71ab8e809ec924231",
+  "implementation_checkpoint_sha": "9603b57367c5258123e1e0694bdcde0bbab140e7",
+  "capability_fixture_digest": "sha256:8afdd9ef74e51b5b5a793a3553a3e1001239c0756616e105833f7880165dbb1c",
+  "treatment_fixture_digest": "sha256:493681d6bc6fc199676d60c28261bc719e793ac2901f00fc474503729ffa2bcf",
+  "replay_digest": "sha256:7de14b3ebfdc12e8c1e77c30c45fa57e8b59110c0344139901a7c783dda38995",
+  "verification": {
+    "focused_tests": "30/30 pass",
+    "two_pass_byte_equality": "pass",
+    "raw_fixture_digest_validation": "pass",
+    "canonical_offline_replay": "pass",
+    "eight_class_semantic_binding": "pass",
+    "independent_critical_high_review": "pass"
+  },
+  "source_fingerprint_status": "current",
+  "tasks_sha": "sha256:0c3e6c7bb8d09dec243e0a24c36c403ae9e96c5b03828e155d4a4d3efdc2c660",
+  "completed_at": "2026-07-17T06:43:26Z"
+}

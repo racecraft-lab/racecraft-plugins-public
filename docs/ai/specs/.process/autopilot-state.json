@@ -70,8 +70,8 @@
     {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
     {"step": "Phase 7: Implement - Capability Freeze (T001-T015)", "status": "completed"},
     {"step": "Phase 7: Implement - Treatment Contracts (T016-T025)", "status": "completed"},
-    {"step": "Phase 7: Implement - Synthetic Replay (T026-T030)", "status": "in_progress"},
-    {"step": "Phase 7: Implement - Integration and Polish (T031-T039)", "status": "pending"},
+    {"step": "Phase 7: Implement - Synthetic Replay (T026-T030)", "status": "completed"},
+    {"step": "Phase 7: Implement - Integration and Polish (T031-T039)", "status": "in_progress"},
     {"step": "Post: Doctor Extension Check", "status": "pending"},
     {"step": "Post: Verify Implementation", "status": "pending"},
     {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
@@ -89,7 +89,7 @@
   ],
   "phase_results": {
     "Phase 0: Prerequisites": {
-      "status": "completed",
+      "status": "checkpointing",
       "completed_at": "2026-07-17T00:00:54Z",
       "runner_status": "all_pass",
       "agent_install": "no_op",
@@ -347,7 +347,7 @@
       "completed_at": "2026-07-19T03:09:22Z"
     },
     "Phase 7: Implement - Synthetic Replay": {
-      "status": "checkpointing",
+      "status": "completed",
       "tasks_completed": 5,
       "tasks_total": 5,
       "focused_tests": "pending hardened-schema restack verification",
@@ -577,7 +577,11 @@
             "growth_limit": "No further treatment_trace_schema.py growth after this checkpoint."
           }
         },
-        "implementation_checkpoint": {"status": "pending", "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3.json"},
+        "implementation_checkpoint": {
+          "status": "complete",
+          "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3.json",
+          "commit_sha": "9603b57367c5258123e1e0694bdcde0bbab140e7"
+        },
         "emission_mapping": {"status": "pending", "packet_path": "specs/g56r-002-capability-discovery-telemetry/.process/pr-packets/us3.json"},
         "warnings": [
           {
@@ -607,7 +611,7 @@
       }
     ],
     "created_at": "2026-07-17T04:50:02Z",
-    "updated_at": "2026-07-17T06:41:10Z"
+    "updated_at": "2026-07-17T06:43:26Z"
   },
   "layer_plan": {
     "status": "skipped",
