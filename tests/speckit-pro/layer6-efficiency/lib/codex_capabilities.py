@@ -78,18 +78,21 @@ class _BoundDecisionSet(list):
 
 class _VisibleText(HTMLParser):
     def __init__(self):
-        super().__init__(); self.parts, self.hidden_depth = [], 0
+        super().__init__(); self.parts, self.hidden_stack, self.invalid_hidden_markup = [], [], False
 
     def handle_starttag(self, tag, attrs):
         if tag in {"head", "script", "style", "noscript", "template", "svg"}:
-            self.hidden_depth += 1
+            self.hidden_stack.append(tag)
 
     def handle_endtag(self, tag):
-        if tag in {"head", "script", "style", "noscript", "template", "svg"} and self.hidden_depth:
-            self.hidden_depth -= 1
+        if tag in {"head", "script", "style", "noscript", "template", "svg"}:
+            if not self.hidden_stack or self.hidden_stack[-1] != tag:
+                self.invalid_hidden_markup = True
+            else:
+                self.hidden_stack.pop()
 
     def handle_data(self, data):
-        if not self.hidden_depth:
+        if not self.hidden_stack and not self.invalid_hidden_markup:
             self.parts.append(data)
 
 
@@ -103,7 +106,9 @@ def digest(value):
 
 
 def _visible_text(value):
-    parser = _VisibleText(); parser.feed(value)
+    parser = _VisibleText(); parser.feed(value); parser.close()
+    if parser.invalid_hidden_markup or parser.hidden_stack:
+        raise ValueError("retrieved body contains malformed hidden markup")
     return " ".join(" ".join(parser.parts).split())
 
 
@@ -257,15 +262,36 @@ def _read_bounded_regular_file(path, *, required_mode=None):
 
 
 def digest_regular_file(path):
-    source = Path(path).resolve(strict=True)
-    mode = source.stat().st_mode
-    if not stat.S_ISREG(mode):
-        raise ValueError("client executable must resolve to a regular file")
-    hasher = hashlib.sha256()
-    with source.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            hasher.update(chunk)
-    return f"sha256:{hasher.hexdigest()}"
+    source = Path(os.path.abspath(path)); flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        pathname_before = os.stat(source, follow_symlinks=False)
+        if not stat.S_ISREG(pathname_before.st_mode): raise ValueError("client executable must be a regular file that is not a symlink")
+        descriptor = os.open(source, flags)
+    except OSError as error:
+        raise ValueError("client executable must be a readable regular file that is not a symlink") from error
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode) or (pathname_before.st_dev, pathname_before.st_ino) != (before.st_dev, before.st_ino):
+            raise ValueError("client executable pathname changed before hashing")
+        hasher, total = hashlib.sha256(), 0
+        while True:
+            chunk = os.read(descriptor, 1024 * 1024)
+            if not chunk: break
+            hasher.update(chunk); total += len(chunk)
+        after = os.fstat(descriptor)
+        before_identity = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, stat.S_IMODE(before.st_mode))
+        after_identity = (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, stat.S_IMODE(after.st_mode))
+        if before_identity != after_identity or total != after.st_size:
+            raise ValueError("client executable changed while hashing")
+        try:
+            current = os.stat(source, follow_symlinks=False)
+        except OSError as error:
+            raise ValueError("client executable pathname changed while hashing") from error
+        if not stat.S_ISREG(current.st_mode) or (current.st_dev, current.st_ino) != (after.st_dev, after.st_ino):
+            raise ValueError("client executable pathname changed while hashing")
+        return f"sha256:{hasher.hexdigest()}"
+    finally:
+        os.close(descriptor)
 
 
 def _extract_claim_dependencies(source):
@@ -557,7 +583,7 @@ def _clean_entry(raw):
     raw = sanitize(raw, "surface_entry")
     if not {"model", "effort", "available", "hidden"} <= set(raw):
         raise ValueError("surface entry contains undeclared or missing fields")
-    if not isinstance(raw["model"], str) or not raw["model"] or any(mark in raw["model"] for mark in ("/", "\\", "://", "@")) or not _token(raw["effort"]):
+    if not isinstance(raw["model"], str) or not _LABEL.fullmatch(raw["model"]) or not _token(raw["effort"]):
         raise ValueError("surface entry model or effort is invalid")
     if not isinstance(raw["available"], bool) or not isinstance(raw["hidden"], bool):
         raise ValueError("surface entry availability fields must be boolean")
@@ -570,6 +596,18 @@ def _clean_entry(raw):
 
 def _observation_payload(observation):
     return {key: observation[key] for key in sorted(_OBSERVATION_KEYS - {"surface_observation_id"})}
+
+
+def _unknown_capture_record(surface, client_identity_id, repository_binding, work_item, captured_at):
+    repository = validate_repository_binding(repository_binding); work_item = validate_work_item(work_item)
+    if surface not in SURFACES or not _DIGEST.fullmatch(str(client_identity_id)) or not _utc_timestamp(captured_at):
+        raise ValueError("unknown capture binding is invalid")
+    return {
+        "schema_version": SCHEMA_VERSION, "surface": surface, "client_identity_id": client_identity_id,
+        "repository_binding_id": repository["repository_binding_id"], "work_item": work_item,
+        "collection_method_id": "unknown-observation-v1", "outcome": "no_approved_live_collector",
+        "captured_at": captured_at,
+    }
 
 
 def _collection_authority(observation):
@@ -614,6 +652,16 @@ def validate_observation(observation):
         raise ValueError("raw_evidence_ref must match raw_evidence_digest")
     observation["entries"] = [_clean_entry(item) for item in observation["entries"]]
     _collection_authority(observation)
+    if observation["collection_method_id"] == "unknown-observation-v1":
+        if observation["started_at"] != observation["completed_at"]:
+            raise ValueError("unknown observation must use one capture timestamp")
+        record = _unknown_capture_record(
+            observation["surface"], observation["client_identity_id"], observation["repository_binding"],
+            observation["work_item"], observation["started_at"],
+        )
+        expected_evidence = digest(canonical_bytes(record) + b"\n")
+        if observation["raw_evidence_digest"] != expected_evidence or observation["sanitized_evidence_digest"] != expected_evidence:
+            raise ValueError("unknown observation evidence does not match its deterministic attempt record")
     if observation["surface_observation_id"] != digest(_observation_payload(observation)):
         raise ValueError("surface observation identity does not match its canonical payload")
     return observation
@@ -641,7 +689,9 @@ def fixture_observation(surface, payload, client_identity_id):
 def unknown_observation(surface, client_identity_id, repository_binding, work_item, *, raw_evidence_digest=None, captured_at="2026-07-16T00:00:00Z"):
     repository = validate_repository_binding(repository_binding); work_item = validate_work_item(work_item)
     if not _utc_timestamp(captured_at): raise ValueError("unknown observation timestamp must be RFC3339 UTC")
-    evidence = raw_evidence_digest or digest({"surface": surface, "state": "unknown", "entries": []})
+    evidence = digest(canonical_bytes(_unknown_capture_record(surface, client_identity_id, repository, work_item, captured_at)) + b"\n")
+    if raw_evidence_digest is not None and raw_evidence_digest != evidence:
+        raise ValueError("unknown observation raw evidence does not match its attempt record")
     _need_digest(evidence, "raw_evidence_digest")
     result = {
         "client_identity_id": client_identity_id, "surface": surface,
@@ -728,6 +778,28 @@ def _surface_disagreements(indexed, observations_by_surface):
     return disagreements
 
 
+def _surface_index_and_invalidity(observations, normalization_map, normalization_map_id, aggregate_integrity_digest):
+    reasons = []
+    if len({item["client_identity_id"] for item in observations}) != 1:
+        reasons.append("unprovable_shared_client_identity")
+    canonical_aliases = [item["canonical_model_id"] for item in normalization_map.values()]
+    if len(canonical_aliases) != len(set(canonical_aliases)):
+        reasons.append("ambiguous_or_duplicate_normalization_key")
+    indexed = {}
+    for observation in observations:
+        entries = {}
+        for raw in observation["entries"]:
+            key = (normalization_map.get(raw["model"], {}).get("canonical_model_id", raw["model"]), raw["effort"])
+            if not all(_token(value) for value in key) or key in entries:
+                reasons.append("ambiguous_or_duplicate_normalization_key")
+            entries[key] = raw
+        indexed[observation["surface"]] = entries
+    actual_integrity = digest({"observations": observations, "normalization_map_id": normalization_map_id})
+    if aggregate_integrity_digest != actual_integrity:
+        reasons.append("aggregate_hash_mismatch")
+    return indexed, list(dict.fromkeys(reasons)), actual_integrity
+
+
 def evaluate_surface_matrix(observations, source_tuples, *, aliases=None, expected_integrity_digest=None):
     if any(row.get("source_admitted") for row in source_tuples) and not isinstance(source_tuples, _AuthorityTupleSet):
         raise ValueError("source admission requires a manifest-bound tuple set")
@@ -737,8 +809,7 @@ def evaluate_surface_matrix(observations, source_tuples, *, aliases=None, expect
         raise ValueError("matrix requires exactly one observation per surface")
     observations_by_surface = {item["surface"]: item for item in observations}
     observations = [observations_by_surface[surface] for surface in SURFACES]
-    clients, reasons = {item["client_identity_id"] for item in observations}, []
-    if len(clients) != 1: reasons.append("unprovable_shared_client_identity")
+    clients = {item["client_identity_id"] for item in observations}
     repository_ids = {item["repository_binding"]["repository_binding_id"] for item in observations}; work_items = {canonical_bytes(item["work_item"]) for item in observations}
     if len(repository_ids) != 1 or len(work_items) != 1: raise ValueError("surface observations must share repository and work-item bindings")
     collection_authorities = [_collection_authority(item) for item in observations]
@@ -757,21 +828,14 @@ def evaluate_surface_matrix(observations, source_tuples, *, aliases=None, expect
                           "client_identity_id": observation["client_identity_id"], "authority_evidence_ref": observation["raw_evidence_ref"]}
         if set(alias) == enriched and alias != expected_alias: raise ValueError("alias authority does not match the pinned-build evidence")
         normalized_aliases[raw_label] = expected_alias
-    if len({item["canonical_model_id"] for item in normalized_aliases.values()}) != len(normalized_aliases): reasons.append("ambiguous_or_duplicate_normalization_key")
     authority_keys = {"candidate_route_digest", "source_ref", "source_sha256", "instruction_sha256", "role_instruction_sha256", "agent_contract_digest", "official_source_bindings", "effort_surface_bindings"}
     if any(row.get("source_admitted") and (not authority_keys <= set(row) or not row["official_source_bindings"] or not row["effort_surface_bindings"]) for row in source_tuples):
         raise ValueError("source admission requires complete tuple authority")
-    indexed = {}
-    for observation in observations:
-        entries = {}
-        for raw in observation["entries"]:
-            key = (normalized_aliases.get(raw["model"], {}).get("canonical_model_id", raw["model"]), raw["effort"])
-            if not all(_token(value) for value in key) or key in entries: reasons.append("ambiguous_or_duplicate_normalization_key")
-            entries[key] = raw
-        indexed[observation["surface"]] = entries
-    normalization = digest(normalized_aliases); integrity = digest({"observations": observations, "normalization_map_id": normalization})
-    if expected_integrity_digest and expected_integrity_digest != integrity: reasons.append("aggregate_hash_mismatch")
-    reasons, decisions = list(dict.fromkeys(reasons)), []
+    normalization = digest(normalized_aliases)
+    actual_integrity = digest({"observations": observations, "normalization_map_id": normalization})
+    integrity = expected_integrity_digest or actual_integrity
+    indexed, reasons, _ = _surface_index_and_invalidity(observations, normalized_aliases, normalization, integrity)
+    decisions = []
     disagreements_by_key = _surface_disagreements(indexed, observations_by_surface)
     disagreements = [disagreements_by_key[key] for key in sorted(disagreements_by_key)]
     sources = list(source_tuples); source_keys = {(row.get("model"), row.get("effort")) for row in sources}
@@ -833,7 +897,9 @@ def validate_surface_matrix(matrix):
     if len(observations) != 3 or set(surfaces) != set(SURFACES) or len(set(surfaces)) != 3: raise ValueError("matrix requires exactly one observation per surface")
     by_surface = {item["surface"]: item for item in observations}; observations = [by_surface[surface] for surface in SURFACES]
     matrix = {**matrix, "observations": observations}
-    if any(item["client_identity_id"] != matrix["client_identity_id"] for item in observations): raise ValueError("matrix client identity mismatch")
+    clients = {item["client_identity_id"] for item in observations}
+    expected_client_identity = next(iter(clients)) if len(clients) == 1 else digest({"invalid": "client_identity"})
+    if matrix["client_identity_id"] != expected_client_identity: raise ValueError("matrix client identity mismatch")
     validate_work_item(matrix["work_item"])
     if any(item["repository_binding"]["repository_binding_id"] != matrix["repository_binding_id"] or item["work_item"] != matrix["work_item"] for item in observations): raise ValueError("matrix repository or work-item binding mismatch")
     observations_by_surface = {item["surface"]: item for item in observations}
@@ -843,22 +909,14 @@ def validate_surface_matrix(matrix):
             raise ValueError("normalization map alias authority is invalid")
         observation = observations_by_surface[alias["authority_surface"]]
         evidence = [item for item in observation["entries"] if item["model"] == raw_label and item.get("raw_label") == raw_label and item.get("machine_id") == alias["canonical_model_id"]]
-        if alias["client_identity_id"] != matrix["client_identity_id"] or alias["authority_evidence_ref"] != observation["raw_evidence_ref"] or len(evidence) != 1:
+        if alias["client_identity_id"] != observation["client_identity_id"] or alias["authority_evidence_ref"] != observation["raw_evidence_ref"] or len(evidence) != 1:
             raise ValueError("normalization map alias authority is not bound to the pinned build")
-    if len({item["canonical_model_id"] for item in matrix["normalization_map"].values()}) != len(matrix["normalization_map"]): raise ValueError("normalization map is not one-to-one")
     if matrix["normalization_map_id"] != digest(matrix["normalization_map"]): raise ValueError("normalization map identity mismatch")
-    allowed_reasons = {"missing_or_unsupported_version", "unprovable_shared_client_identity", "aggregate_hash_mismatch", "ambiguous_or_duplicate_normalization_key"}
-    if matrix["validity"] not in {"valid", "invalid"} or not set(matrix["invalidity_reasons"]) <= allowed_reasons or (matrix["validity"] == "invalid") != bool(matrix["invalidity_reasons"]):
+    indexed, expected_invalidity_reasons, _ = _surface_index_and_invalidity(
+        observations, matrix["normalization_map"], matrix["normalization_map_id"], matrix["aggregate_integrity_digest"],
+    )
+    if matrix["validity"] not in {"valid", "invalid"} or matrix["invalidity_reasons"] != expected_invalidity_reasons or (matrix["validity"] == "invalid") != bool(expected_invalidity_reasons):
         raise ValueError("surface matrix validity is inconsistent")
-    indexed = {}
-    for observation in observations:
-        entries = {}
-        for entry in observation["entries"]:
-            key = (matrix["normalization_map"].get(entry["model"], {}).get("canonical_model_id", entry["model"]), entry["effort"])
-            if key in entries:
-                raise ValueError("surface disagreement inputs contain duplicate canonical tuples")
-            entries[key] = entry
-        indexed[observation["surface"]] = entries
     expected_disagreements = _surface_disagreements(indexed, observations_by_surface)
     actual_disagreements = {}
     for item in matrix["disagreements"]:
@@ -872,8 +930,7 @@ def validate_surface_matrix(matrix):
         actual_disagreements[tuple_key] = item
     if set(actual_disagreements) != set(expected_disagreements):
         raise ValueError("surface disagreement inventory is incomplete")
-    expected = digest({"observations": observations, "normalization_map_id": matrix["normalization_map_id"]})
-    if matrix["aggregate_integrity_digest"] != expected or matrix["surface_matrix_id"] != digest({key: matrix[key] for key in matrix if key != "surface_matrix_id"}):
+    if matrix["surface_matrix_id"] != digest({key: matrix[key] for key in matrix if key != "surface_matrix_id"}):
         raise ValueError("surface matrix identity does not match its canonical payload")
     return matrix
 
@@ -1013,19 +1070,7 @@ def validate_canary_evidence(raw_root, repository_root, result):
 
 def materialize_unknown_capture(raw_root, repository_root, surface, client_identity_id, repository_binding, work_item, captured_at):
     raw = validate_raw_evidence_root(raw_root, repository_root)
-    repository = validate_repository_binding(repository_binding); work_item = validate_work_item(work_item)
-    if surface not in SURFACES or not _DIGEST.fullmatch(str(client_identity_id)) or not _utc_timestamp(captured_at):
-        raise ValueError("unknown capture binding is invalid")
-    record = {
-        "schema_version": SCHEMA_VERSION,
-        "surface": surface,
-        "client_identity_id": client_identity_id,
-        "repository_binding_id": repository["repository_binding_id"],
-        "work_item": work_item,
-        "collection_method_id": "unknown-observation-v1",
-        "outcome": "no_approved_live_collector",
-        "captured_at": captured_at,
-    }
+    record = _unknown_capture_record(surface, client_identity_id, repository_binding, work_item, captured_at)
     stored = canonical_bytes(record) + b"\n"; evidence = digest(stored)
     target = raw / f"{evidence.removeprefix('sha256:')}.json"
     if target.exists():
@@ -1038,6 +1083,21 @@ def materialize_unknown_capture(raw_root, repository_root, surface, client_ident
     if retained != stored or digest(retained) != evidence:
         raise ValueError("unknown capture was not retained under its content identity")
     return evidence, target
+
+
+def validate_unknown_observation_evidence(observation, raw_root, repository_root):
+    observation = validate_observation(dict(observation))
+    if observation["collection_method_id"] != "unknown-observation-v1":
+        return
+    raw = validate_raw_evidence_root(raw_root, repository_root)
+    target = raw / f"{observation['raw_evidence_digest'].removeprefix('sha256:')}.json"
+    _, retained = read_content_addressed_private_file(target, repository_root, "unknown observation evidence")
+    expected = canonical_bytes(_unknown_capture_record(
+        observation["surface"], observation["client_identity_id"], observation["repository_binding"],
+        observation["work_item"], observation["started_at"],
+    )) + b"\n"
+    if retained != expected:
+        raise ValueError("unknown observation evidence bytes do not match the deterministic attempt record")
 
 
 def validate_tuple_decisions(decisions, *, require_snapshot=False):
@@ -1122,8 +1182,13 @@ def _validate_same_snapshot_canary_history(predecessor, results, unchanged_snaps
         raise ValueError("same-snapshot successor cannot drop or rewrite canary history")
 
 
-def build_freeze(identity, refreshes, matrix, decisions, published_at, *, manifest, predecessor=None):
+def build_freeze(identity, refreshes, matrix, decisions, published_at, *, manifest, predecessor=None, raw_evidence_root=None, repository_root=None):
     identity = build_client_identity(identity); matrix = validate_surface_matrix(matrix); decisions = validate_tuple_decisions(decisions)
+    if any(item["collection_method_id"] == "unknown-observation-v1" for item in matrix["observations"]):
+        if raw_evidence_root is None or repository_root is None:
+            raise ValueError("initial unknown-observation publication requires its raw evidence root")
+        for observation in matrix["observations"]:
+            validate_unknown_observation_evidence(observation, raw_evidence_root, repository_root)
     if predecessor is not None:
         predecessor = validate_freeze(predecessor, manifest, _enforce_lineage=False)
     if len(refreshes) != 22 or len({item.get("official_source_ledger_id") for item in refreshes}) != 22:
@@ -1300,7 +1365,7 @@ def main(argv=None):
     identify = sub.add_parser("identify-client"); identify.add_argument("--reported-version", required=True); group = identify.add_mutually_exclusive_group(required=True); group.add_argument("--build-id"); group.add_argument("--executable"); identify.add_argument("--distribution", required=True); identify.add_argument("--output", required=True)
     collect = sub.add_parser("collect"); collect.add_argument("--surface", choices=SURFACES, required=True); collect.add_argument("--client-identity", required=True); collect.add_argument("--raw-evidence-root", required=True); collect.add_argument("--work-item-kind", choices=("task", "fixture", "objective"), required=True); collect.add_argument("--work-item-id", required=True); collect.add_argument("--output", required=True)
     canary = sub.add_parser("canary"); canary.add_argument("--manifest", required=True); canary.add_argument("--freeze", required=True); canary.add_argument("--model", required=True); canary.add_argument("--effort", required=True); canary.add_argument("--executor-result", required=True); canary.add_argument("--raw-evidence-root", required=True); canary.add_argument("--published-at"); canary.add_argument("--output", required=True)
-    freeze = sub.add_parser("freeze"); freeze.add_argument("--manifest", required=True); freeze.add_argument("--source-refresh", required=True); freeze.add_argument("--client-identity", required=True); freeze.add_argument("--app-server", required=True); freeze.add_argument("--cli", required=True); freeze.add_argument("--interactive-picker", required=True); freeze.add_argument("--aliases"); freeze.add_argument("--predecessor-freeze"); freeze.add_argument("--published-at"); freeze.add_argument("--output", required=True)
+    freeze = sub.add_parser("freeze"); freeze.add_argument("--manifest", required=True); freeze.add_argument("--source-refresh", required=True); freeze.add_argument("--client-identity", required=True); freeze.add_argument("--app-server", required=True); freeze.add_argument("--cli", required=True); freeze.add_argument("--interactive-picker", required=True); freeze.add_argument("--raw-evidence-root"); freeze.add_argument("--aliases"); freeze.add_argument("--predecessor-freeze"); freeze.add_argument("--published-at"); freeze.add_argument("--output", required=True)
     published = sub.add_parser("validate-freeze"); published.add_argument("--manifest", required=True); published.add_argument("--freeze", required=True); published.add_argument("--predecessor-freeze")
     args, repo = parser.parse_args(argv), Path(__file__).resolve().parents[4]
     now = lambda: datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -1334,7 +1399,10 @@ def main(argv=None):
     aliases = _read(args.aliases) if args.aliases else {}
     matrix, decisions = evaluate_surface_matrix([_read(args.app_server), _read(args.cli), _read(args.interactive_picker)], tuples, aliases=aliases)
     predecessor = _read(args.predecessor_freeze, require_canonical=True) if args.predecessor_freeze else None
-    _write(args.output, build_freeze(identity, refreshes, matrix, decisions, args.published_at or now(), manifest=manifest, predecessor=predecessor), append_only=True); return 0
+    _write(args.output, build_freeze(
+        identity, refreshes, matrix, decisions, args.published_at or now(), manifest=manifest, predecessor=predecessor,
+        raw_evidence_root=args.raw_evidence_root, repository_root=repo,
+    ), append_only=True); return 0
 
 
 if __name__ == "__main__":

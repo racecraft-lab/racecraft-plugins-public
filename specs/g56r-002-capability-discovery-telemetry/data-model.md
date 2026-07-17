@@ -126,6 +126,12 @@ Aggregate invalidity is limited to missing/unsupported matrix version,
 unprovable shared client identity, failed aggregate hash, or ambiguous/duplicate
 normalization keys that prevent tuple attribution. Other gaps are tuple-local.
 
+An `unknown-observation-v1` observation binds both evidence digests to the
+canonical bytes of its deterministic collection-attempt record. Initial freeze
+publication must resolve that content-addressed record in the private raw store
+and verify the exact retained bytes; later published-artifact validation remains
+independent of the raw-store retention window.
+
 ### `Disagreement`
 
 Required fields: canonical tuple key (or null when key attribution failed), all

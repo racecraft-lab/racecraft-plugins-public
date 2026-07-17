@@ -170,6 +170,7 @@ python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py freeze \
   --app-server /tmp/g56r-002-app-server-sanitized.json \
   --cli /tmp/g56r-002-cli-sanitized.json \
   --interactive-picker /tmp/g56r-002-picker-sanitized.json \
+  --raw-evidence-root /absolute/path/outside/repository/g56r-002-raw \
   --published-at RFC3339_UTC_PUBLICATION_TIME \
   --output docs/ai/research/codex-g56r-002-executable-candidate-freeze.json
 ```
@@ -183,6 +184,9 @@ entry on that same pinned surface.
 
 The freeze command accepts no free-form repository or work-item value. It
 rebuilds those values from the three observations and rejects a mismatch.
+When the matrix contains an `unknown-observation-v1` result, initial publication
+also resolves every content-addressed attempt record under `raw_evidence_root`
+and verifies its exact deterministic bytes before creating the tracked freeze.
 
 Review that:
 

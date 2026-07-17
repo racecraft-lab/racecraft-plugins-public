@@ -331,6 +331,11 @@ class CapabilityContractTests(unittest.TestCase):
         script_only[0]["retrieved_body_b64"] = base64.b64encode(script_body).decode()
         with self.assertRaisesRegex(ValueError, "bounded extract"):
             capabilities.normalize_source_refreshes(self.manifest, script_only)
+        malformed_hidden = copy.deepcopy(captured)
+        hidden_body = f"<template></head>{malformed_hidden[0]['bounded_extracts'][0]['text']}</template>".encode()
+        malformed_hidden[0]["retrieved_body_b64"] = base64.b64encode(hidden_body).decode()
+        with self.assertRaisesRegex(ValueError, "malformed hidden markup"):
+            capabilities.normalize_source_refreshes(self.manifest, malformed_hidden)
 
     def test_surface_cases_preserve_dispositions(self) -> None:
         for case in self.fixture["surface_cases"]:
@@ -342,6 +347,7 @@ class CapabilityContractTests(unittest.TestCase):
                     aliases=case.get("aliases", {}),
                     expected_integrity_digest=case.get("expected_integrity_digest"),
                 )
+                self.assertEqual(capabilities.validate_surface_matrix(matrix), matrix)
                 self.assertEqual(matrix["validity"], case["expected_validity"])
                 if case["expected_decision"] == "none":
                     self.assertEqual(decisions, [])
@@ -363,6 +369,21 @@ class CapabilityContractTests(unittest.TestCase):
                     self.assertEqual(decisions[0]["surface_disposition"], "disagreed")
                     self.assertIn("hidden_state_disagreement", decisions[0]["reasons"])
                     self.assertEqual(matrix["disagreements"][0]["disagreement_class"], "hidden_state")
+        agreed_case = next(item for item in self.fixture["surface_cases"] if item["case_id"] == "agreed")
+        agreed_matrix, _ = capabilities.evaluate_surface_matrix(self.observations(agreed_case), self.authority_tuples(agreed_case))
+        forged_invalidity = copy.deepcopy(agreed_matrix)
+        forged_invalidity.update({"validity": "invalid", "invalidity_reasons": ["aggregate_hash_mismatch"]})
+        forged_invalidity["surface_matrix_id"] = capabilities.digest({key: value for key, value in forged_invalidity.items() if key != "surface_matrix_id"})
+        with self.assertRaisesRegex(ValueError, "validity is inconsistent"):
+            capabilities.validate_surface_matrix(forged_invalidity)
+        unequal_clients = self.observations(agreed_case)
+        unequal_clients[0]["client_identity_id"] = capabilities.digest(b"different-client")
+        unequal_clients[0]["surface_observation_id"] = capabilities.digest({
+            key: value for key, value in unequal_clients[0].items() if key != "surface_observation_id"
+        })
+        unequal_matrix, _ = capabilities.evaluate_surface_matrix(unequal_clients, self.authority_tuples(agreed_case))
+        self.assertEqual(unequal_matrix["invalidity_reasons"], ["unprovable_shared_client_identity"])
+        self.assertEqual(capabilities.validate_surface_matrix(unequal_matrix), unequal_matrix)
         disagreement_case = next(item for item in self.fixture["surface_cases"] if item["case_id"] == "surface_disagreement")
         disagreement_matrix, _ = capabilities.evaluate_surface_matrix(self.observations(disagreement_case), self.authority_tuples(disagreement_case))
         wrong_class = copy.deepcopy(disagreement_matrix)
@@ -729,6 +750,42 @@ class CapabilityContractTests(unittest.TestCase):
                 raw_evidence_digest=evidence,
             )
             self.assertEqual(observation["raw_evidence_ref"], f"raw://{evidence}")
+            self.assertIsNone(capabilities.validate_unknown_observation_evidence(observation, raw_root, ROOT))
+            forged = copy.deepcopy(observation)
+            forged_evidence = capabilities.digest(b"arbitrary retained bytes")
+            forged.update({
+                "raw_evidence_digest": forged_evidence,
+                "raw_evidence_ref": f"raw://{forged_evidence}",
+                "sanitized_evidence_digest": forged_evidence,
+            })
+            forged["surface_observation_id"] = capabilities.digest({
+                key: value for key, value in forged.items() if key != "surface_observation_id"
+            })
+            with self.assertRaisesRegex(ValueError, "deterministic attempt record"):
+                capabilities.validate_observation(forged)
+            observations = []
+            for surface in capabilities.SURFACES:
+                surface_evidence, _ = capabilities.materialize_unknown_capture(
+                    raw_root, ROOT, surface, self.identity["client_identity_id"], repository,
+                    work_item, "2026-07-16T00:00:00Z",
+                )
+                observations.append(capabilities.unknown_observation(
+                    surface, self.identity["client_identity_id"], repository, work_item,
+                    raw_evidence_digest=surface_evidence,
+                ))
+            refreshes = source_refreshes(self.manifest)
+            source_tuples = capabilities.candidate_tuples_from_manifest(self.manifest, refreshes)
+            matrix, decisions = capabilities.evaluate_surface_matrix(observations, source_tuples)
+            with self.assertRaisesRegex(ValueError, "raw evidence root"):
+                capabilities.build_freeze(
+                    self.identity, refreshes, matrix, decisions, "2026-07-16T00:00:00Z",
+                    manifest=self.manifest,
+                )
+            freeze = capabilities.build_freeze(
+                self.identity, refreshes, matrix, decisions, "2026-07-16T00:00:00Z",
+                manifest=self.manifest, raw_evidence_root=raw_root, repository_root=ROOT,
+            )
+            self.assertEqual(capabilities.validate_freeze(freeze, self.manifest), freeze)
             raw_file.chmod(0o644)
             with self.assertRaisesRegex(ValueError, "files require 0600"):
                 capabilities.validate_raw_evidence_root(raw_root, ROOT)
@@ -770,6 +827,12 @@ class CapabilityContractTests(unittest.TestCase):
         observation["surface_observation_id"] = capabilities.digest({key: observation[key] for key in observation if key != "surface_observation_id"})
         with self.assertRaisesRegex(ValueError, "path or remote"):
             capabilities.validate_observation(observation)
+        for bad_model in ("model-a\nAuthorization", "model-a\x1b[31m", "x" * 129, "モデル"):
+            with self.subTest(bad_model=bad_model), self.assertRaisesRegex(ValueError, "model or effort"):
+                capabilities.fixture_observation(
+                    "cli", {"state": "complete", "entries": [{"model": bad_model, "effort": "high", "available": True, "hidden": False}]},
+                    self.identity["client_identity_id"],
+                )
         machine = capabilities.fixture_observation("cli", {"state": "complete", "entries": [{"model": "Model A", "machine_id": "model-a", "raw_label": "Model A", "effort": "high", "available": True, "hidden": False}]}, self.identity["client_identity_id"])
         self.assertEqual(machine["entries"][0]["machine_id"], "model-a")
         bad_ref = copy.deepcopy(machine); bad_ref["raw_evidence_ref"] += "/private"
@@ -873,6 +936,20 @@ class CapabilityContractTests(unittest.TestCase):
             executable = root / "large-client"
             executable.write_bytes(b"fixture-client" * 200000)
             self.assertEqual(capabilities.digest_regular_file(executable), capabilities.digest(executable.read_bytes()))
+            executable_replacement = root / "replacement-client"
+            executable_replacement.write_bytes(b"different-client")
+            with mock.patch.object(capabilities.os, "stat", return_value=executable_replacement.stat()):
+                with self.assertRaisesRegex(ValueError, "pathname changed"):
+                    capabilities.digest_regular_file(executable)
+            executable_before = executable.stat()
+            executable_after = mock.Mock(
+                st_mode=executable_before.st_mode, st_dev=executable_before.st_dev,
+                st_ino=executable_before.st_ino, st_size=executable_before.st_size,
+                st_mtime_ns=executable_before.st_mtime_ns + 1,
+            )
+            with mock.patch.object(capabilities.os, "fstat", side_effect=[executable_before, executable_after]):
+                with self.assertRaisesRegex(ValueError, "changed while hashing"):
+                    capabilities.digest_regular_file(executable)
             if hasattr(os, "mkfifo"):
                 fifo = root / "client-fifo"
                 os.mkfifo(fifo)
