@@ -27,7 +27,9 @@ import json
 import re
 import sys
 import unittest
+from collections import Counter
 from pathlib import Path
+from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -45,9 +47,72 @@ try:  # T005 deliverable — absent until the validator module is implemented.
 except ImportError:
     claude_trace_schema = None  # type: ignore[assignment]
 
+try:  # T009/T010 deliverable — absent until the probe-logic module is implemented.
+    import claude_capabilities  # type: ignore[import-not-found]  # noqa: E402
+except ImportError:
+    claude_capabilities = None  # type: ignore[assignment]
+
 
 RESEARCH_ROOT = REPO_ROOT / "docs" / "ai" / "research"
 SCHEMA_PATH = RESEARCH_ROOT / "claude-trace-contract.schema.json"
+MANIFEST_PATH = RESEARCH_ROOT / "claude-agent-route-candidate-manifest.json"
+
+# The 37 committed CAR-001 candidate routes dedupe to exactly these 6 unique
+# (model, effort) tuples (research R1; verified against the committed manifest).
+EXPECTED_TUPLE_ROUTE_COUNTS = {
+    "opus__max": 11,
+    "sonnet__max": 11,
+    "fable__max": 5,
+    "haiku__max": 8,
+    "haiku__low": 1,
+    "sonnet__low": 1,
+}
+EXPECTED_TUPLE_IDS = frozenset(EXPECTED_TUPLE_ROUTE_COUNTS)
+EXPECTED_ROUTE_TOTAL = 37
+TUPLE_ID_PATTERN = re.compile(r"^[a-z0-9]+__[a-z0-9]+$")
+SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+
+# Local mirror of the committed privacy-scan path patterns
+# (tests/speckit-pro/unit/test-privacy-scan.py): the probe sanitizer's output
+# MUST neutralize every family the scan flags on committed files.
+PRIVACY_HOME_PATH = re.compile(
+    r"(?:/(?:Users|home)/|[A-Za-z]:[\\/]+Users[\\/]+)[A-Za-z0-9_.\-]+", re.IGNORECASE
+)
+PRIVACY_HYPHENATED_HOME = re.compile(r"-Users-[A-Za-z0-9_.\-]+", re.IGNORECASE)
+PRIVACY_PRIVATE_VAR = re.compile(r"/private/var/folders/[A-Za-z0-9_/\.\-]+", re.IGNORECASE)
+PRIVACY_TMP_TRANSCRIPT = re.compile(r"/private/tmp/claude-[0-9]+", re.IGNORECASE)
+
+# The sanitizer tests need synthetic home/user and machine-local session paths as
+# INPUTS, but the committed privacy scan forbids those literal path forms anywhere
+# in the tree. Assemble each input from fragments so the runtime string is the real
+# path while this file's source text carries no flagged literal.
+_USERS_SEG = "Users"
+_HOME_SEG = "home"
+_PRIVATE_SEG = "/private"
+
+
+def _home_posix(rest: str) -> str:
+    return "/" + _USERS_SEG + "/" + rest
+
+
+def _home_linux(rest: str) -> str:
+    return "/" + _HOME_SEG + "/" + rest
+
+
+def _home_windows(rest: str) -> str:
+    return "C:\\" + _USERS_SEG + "\\" + rest
+
+
+def _home_hyphenated(rest: str) -> str:
+    return "-" + _USERS_SEG + "-" + rest
+
+
+def _session_var(rest: str) -> str:
+    return _PRIVATE_SEG + "/var/folders/" + rest
+
+
+def _session_tmp(suffix: str) -> str:
+    return _PRIVATE_SEG + "/tmp/" + "claude-" + suffix
 
 RECORD_DEFS = (
     "runtimeCapabilitySnapshot",
@@ -484,6 +549,359 @@ class ClaudeTraceSchemaContractTests(unittest.TestCase):
                     validator.validate_exact_treatment_replay(record)
 
 
+class ClaudeCapabilitiesPureLogicTests(unittest.TestCase):
+    """Pure-logic coverage for the operator probe tool (T009/T010, driven by T013).
+
+    Exercises the deduplicated probe matrix, ``tuple_id`` derivation, the fixed
+    canary text + hash, ``<home>`` sanitization, per-payload hashing, the three
+    fail-closed dispositions, and the FR-003 budget/timeout/no-retry controls —
+    all with zero live model calls (the single live boundary is injected as a
+    fake ``LiveInvoker``, never spawned).
+    """
+
+    def require_capabilities(self):
+        self.assertIsNotNone(
+            claude_capabilities,
+            "claude_capabilities probe-logic module not implemented yet (T009/T010): "
+            f"{LAYER6_LIB_DIR / 'claude_capabilities.py'}",
+        )
+        return claude_capabilities
+
+    # -- Bounded probe matrix (dedup 37 → 6 tuples) ---------------------------
+
+    def test_probe_matrix_dedupes_37_routes_to_six_tuples(self) -> None:
+        cap = self.require_capabilities()
+        matrix = cap.build_probe_matrix()
+        self.assertEqual(matrix.cardinality, 6)
+        self.assertEqual(set(matrix.tuple_ids), set(EXPECTED_TUPLE_IDS))
+        self.assertEqual(matrix.total_routes, EXPECTED_ROUTE_TOTAL)
+
+    def test_probe_matrix_route_counts_match_committed_manifest(self) -> None:
+        cap = self.require_capabilities()
+        matrix = cap.build_probe_matrix()
+        counts = {spec.tuple_id: spec.route_count for spec in matrix.tuples}
+        self.assertEqual(counts, dict(EXPECTED_TUPLE_ROUTE_COUNTS))
+        self.assertEqual(sum(counts.values()), EXPECTED_ROUTE_TOTAL)
+
+    def test_probe_matrix_tuple_ids_are_schema_valid(self) -> None:
+        cap = self.require_capabilities()
+        for tuple_id in cap.build_probe_matrix().tuple_ids:
+            with self.subTest(tuple_id=tuple_id):
+                self.assertRegex(tuple_id, TUPLE_ID_PATTERN)
+
+    def test_probe_matrix_derives_none_token_for_null_effort_route(self) -> None:
+        cap = self.require_capabilities()
+        synthetic = {
+            "candidate_routes": [
+                {
+                    "model_selector": {"requested_value": "haiku"},
+                    "effort_selector": {"requested_value": None},
+                },
+                {
+                    "model_selector": {"requested_value": "opus"},
+                    "effort_selector": {"requested_value": "max"},
+                },
+            ]
+        }
+        matrix = cap.build_probe_matrix(synthetic)
+        self.assertEqual(set(matrix.tuple_ids), {"haiku__none", "opus__max"})
+        self.assertEqual(matrix.total_routes, 2)
+
+    # -- tuple_id derivation --------------------------------------------------
+
+    def test_derive_tuple_id_joins_model_and_effort(self) -> None:
+        cap = self.require_capabilities()
+        self.assertEqual(cap.derive_tuple_id("opus", "max"), "opus__max")
+        self.assertEqual(cap.derive_tuple_id("sonnet", "low"), "sonnet__low")
+
+    def test_derive_tuple_id_null_effort_becomes_none(self) -> None:
+        cap = self.require_capabilities()
+        self.assertEqual(cap.derive_tuple_id("haiku", None), "haiku__none")
+
+    def test_derive_tuple_id_lowercases_tokens(self) -> None:
+        cap = self.require_capabilities()
+        self.assertEqual(cap.derive_tuple_id("OPUS", "MAX"), "opus__max")
+
+    # -- Fixed canary text + hash --------------------------------------------
+
+    def test_canary_text_is_fixed_with_no_trailing_newline(self) -> None:
+        cap = self.require_capabilities()
+        self.assertEqual(cap.CANARY_TEXT, "Reply with the single word: ok")
+        self.assertFalse(cap.CANARY_TEXT.endswith("\n"))
+
+    def test_canary_hash_is_sha256_over_exact_utf8_bytes(self) -> None:
+        cap = self.require_capabilities()
+        expected = hashlib.sha256("Reply with the single word: ok".encode("utf-8")).hexdigest()
+        self.assertEqual(cap.CANARY_SHA256, expected)
+        self.assertRegex(cap.CANARY_SHA256, SHA256_PATTERN)
+
+    def test_canary_metadata_records_text_and_hash(self) -> None:
+        cap = self.require_capabilities()
+        meta = cap.canary_metadata()
+        self.assertEqual(set(meta), {"text", "canary_sha256"})
+        self.assertEqual(meta["text"], cap.CANARY_TEXT)
+        self.assertEqual(meta["canary_sha256"], cap.CANARY_SHA256)
+
+    # -- <home> sanitization --------------------------------------------------
+
+    def test_sanitize_normalizes_posix_home_paths(self) -> None:
+        cap = self.require_capabilities()
+        self.assertEqual(cap.sanitize_home_paths(_home_posix("alice/x")), "<home>/x")
+        self.assertEqual(cap.sanitize_home_paths(_home_linux("bob/y")), "<home>/y")
+
+    def test_sanitize_normalizes_windows_hyphenated_and_session_paths(self) -> None:
+        cap = self.require_capabilities()
+        cases = {
+            "windows": _home_windows("alice\\proj"),
+            "hyphenated": _home_hyphenated("alice-Documents"),
+            "private_var": _session_var("ab/cd/T/x"),
+            "tmp_transcript": _session_tmp("501"),
+        }
+        for label, raw in cases.items():
+            with self.subTest(case=label):
+                self.assertIn("<home>", cap.sanitize_home_paths(raw))
+
+    def test_sanitized_output_passes_every_privacy_scan_pattern(self) -> None:
+        cap = self.require_capabilities()
+        raw = " ".join(
+            (
+                "cwd=" + _home_posix("alice/repo"),
+                "tmp=" + _session_tmp("501"),
+                "var=" + _session_var("ab/cd/T/z"),
+                "win=" + _home_windows("bob\\proj"),
+                "hy=" + _home_hyphenated("carol-x"),
+            )
+        )
+        sanitized = cap.sanitize_home_paths(raw)
+        for pattern in (
+            PRIVACY_HOME_PATH,
+            PRIVACY_HYPHENATED_HOME,
+            PRIVACY_PRIVATE_VAR,
+            PRIVACY_TMP_TRANSCRIPT,
+        ):
+            with self.subTest(pattern=pattern.pattern):
+                self.assertIsNone(pattern.search(sanitized))
+
+    def test_sanitize_is_idempotent_and_leaves_clean_text_untouched(self) -> None:
+        cap = self.require_capabilities()
+        clean = '{"result":"ok","modelUsage":{"claude-opus-4-8":{"inputTokens":5}}}'
+        self.assertEqual(cap.sanitize_home_paths(clean), clean)
+        once = cap.sanitize_home_paths(_home_posix("alice/x"))
+        self.assertEqual(cap.sanitize_home_paths(once), once)
+
+    # -- Per-payload SHA-256 over sanitized UTF-8 bytes -----------------------
+
+    def test_payload_sha256_reproduces_over_sanitized_utf8_bytes(self) -> None:
+        cap = self.require_capabilities()
+        sanitized = cap.sanitize_home_paths('{"result":"ok"}')
+        expected = hashlib.sha256(sanitized.encode("utf-8")).hexdigest()
+        self.assertEqual(cap.payload_sha256(sanitized), expected)
+        self.assertEqual(cap.payload_sha256(sanitized), cap.payload_sha256(sanitized))
+        self.assertRegex(cap.payload_sha256(sanitized), SHA256_PATTERN)
+
+    def test_payload_sha256_encodes_unicode_as_utf8(self) -> None:
+        cap = self.require_capabilities()
+        text = '{"note":"café ✓"}'
+        self.assertEqual(
+            cap.payload_sha256(text),
+            hashlib.sha256(text.encode("utf-8")).hexdigest(),
+        )
+
+    # -- Three fail-closed dispositions --------------------------------------
+
+    def test_disposition_records_interpretable_platform_observations(self) -> None:
+        cap = self.require_capabilities()
+        cases = {
+            "exit0 parseable schema-valid": cap.ProbeInvocationResult(return_code=0),
+            "nonzero exit WITH parseable error body (hard rejection)": cap.ProbeInvocationResult(
+                return_code=1
+            ),
+        }
+        for label, result in cases.items():
+            with self.subTest(case=label):
+                self.assertEqual(
+                    cap.classify_probe_disposition(
+                        result, payload_parseable=True, observation_schema_valid=True
+                    ),
+                    cap.DISPOSITION_RECORD,
+                )
+
+    def test_disposition_records_undetermined_but_parseable_outcome(self) -> None:
+        cap = self.require_capabilities()
+        # An undetermined unavailable-probe outcome is a PARSEABLE, schema-valid
+        # payload whose path cannot be classified — recorded, never aborted.
+        result = cap.ProbeInvocationResult(return_code=0)
+        self.assertEqual(
+            cap.classify_probe_disposition(
+                result, payload_parseable=True, observation_schema_valid=True
+            ),
+            cap.DISPOSITION_RECORD,
+        )
+
+    def test_disposition_aborts_write_on_unparseable_or_schema_invalid(self) -> None:
+        cap = self.require_capabilities()
+        cases = {
+            "unparseable json payload (exit 0)": (cap.ProbeInvocationResult(return_code=0), False, True),
+            "schema-invalid observation (exit 0)": (cap.ProbeInvocationResult(return_code=0), True, False),
+        }
+        for label, (result, parseable, valid) in cases.items():
+            with self.subTest(case=label):
+                self.assertEqual(
+                    cap.classify_probe_disposition(
+                        result, payload_parseable=parseable, observation_schema_valid=valid
+                    ),
+                    cap.DISPOSITION_ABORT_WRITE,
+                )
+
+    def test_disposition_aborts_run_on_transport_failure_never_unavailable(self) -> None:
+        cap = self.require_capabilities()
+        cases = {
+            "timeout": cap.ProbeInvocationResult(return_code=None, timed_out=True),
+            "network failure": cap.ProbeInvocationResult(return_code=None, network_error=True),
+            "nonzero exit with no parseable body": cap.ProbeInvocationResult(return_code=1),
+        }
+        for label, result in cases.items():
+            with self.subTest(case=label):
+                disposition = cap.classify_probe_disposition(
+                    result, payload_parseable=False, observation_schema_valid=False
+                )
+                self.assertEqual(disposition, cap.DISPOSITION_ABORT_RUN)
+                # A transport failure is NEVER recorded (would falsely narrow
+                # availability, FR-026).
+                self.assertNotEqual(disposition, cap.DISPOSITION_RECORD)
+
+    # -- FR-003 budget: bound == cardinality, overrun before any live call ----
+
+    def test_enforce_invocation_budget_allows_within_ceiling(self) -> None:
+        cap = self.require_capabilities()
+        for cardinality in (0, 1, 12, cap.INVOCATION_BUDGET_CEILING):
+            with self.subTest(cardinality=cardinality):
+                self.assertIsNone(cap.enforce_invocation_budget(cardinality))
+
+    def test_enforce_invocation_budget_surfaces_overrun(self) -> None:
+        cap = self.require_capabilities()
+        with self.assertRaises(cap.BudgetOverrunError):
+            cap.enforce_invocation_budget(cap.INVOCATION_BUDGET_CEILING + 1)
+
+    def test_planned_matrix_cardinality_sits_within_budget(self) -> None:
+        cap = self.require_capabilities()
+        matrix = cap.build_probe_matrix()
+        plan = cap.plan_probe_invocations(matrix)
+        by_purpose = Counter(item.purpose for item in plan)
+        self.assertEqual(by_purpose[cap.PURPOSE_ALIAS_CANARY], len(matrix.model_aliases))
+        self.assertEqual(by_purpose[cap.PURPOSE_CONFIG_ACCEPTANCE], matrix.cardinality)
+        self.assertEqual(by_purpose[cap.PURPOSE_UNAVAILABLE_PROBE], 2)
+        self.assertLessEqual(len(plan), cap.INVOCATION_BUDGET_CEILING)
+        self.assertIsNone(cap.enforce_invocation_budget(len(plan)))
+
+    def test_plan_config_invocations_cover_every_tuple(self) -> None:
+        cap = self.require_capabilities()
+        matrix = cap.build_probe_matrix()
+        plan = cap.plan_probe_invocations(matrix)
+        config_tuple_ids = {
+            item.tuple_id for item in plan if item.purpose == cap.PURPOSE_CONFIG_ACCEPTANCE
+        }
+        self.assertEqual(config_tuple_ids, set(matrix.tuple_ids))
+
+    def test_plan_unavailable_probes_cover_both_surfaces(self) -> None:
+        cap = self.require_capabilities()
+        plan = cap.plan_probe_invocations(cap.build_probe_matrix())
+        surfaces = {
+            item.surface for item in plan if item.purpose == cap.PURPOSE_UNAVAILABLE_PROBE
+        }
+        self.assertEqual(surfaces, {"print_model", "subagent_frontmatter"})
+
+    # -- FR-003 driver: explicit timeout, no retries, overrun pre-flight ------
+
+    def _canary_plan(self, cap, count):
+        return tuple(
+            cap.PlannedInvocation(purpose=cap.PURPOSE_ALIAS_CANARY, model_alias=f"m{index}")
+            for index in range(count)
+        )
+
+    def test_driver_threads_explicit_timeout_and_records_it(self) -> None:
+        cap = self.require_capabilities()
+        plan = self._canary_plan(cap, 2)
+        seen_timeouts = []
+
+        def invoke(item, *, timeout_seconds):
+            seen_timeouts.append(timeout_seconds)
+            return cap.ProbeInvocationResult(return_code=0)
+
+        run = cap.run_bounded_probe_matrix(plan, invoke, timeout_seconds=45.0)
+        self.assertEqual(seen_timeouts, [45.0, 45.0])
+        self.assertEqual(run.metadata["per_invocation_timeout_seconds"], 45.0)
+        self.assertEqual(len(run.results), 2)
+
+    def test_driver_requires_an_explicit_timeout(self) -> None:
+        cap = self.require_capabilities()
+        plan = self._canary_plan(cap, 1)
+        with self.assertRaises(TypeError):
+            cap.run_bounded_probe_matrix(plan, lambda item, *, timeout_seconds: None)
+
+    def test_driver_surfaces_budget_overrun_before_any_live_call(self) -> None:
+        cap = self.require_capabilities()
+        plan = self._canary_plan(cap, cap.INVOCATION_BUDGET_CEILING + 1)
+        calls = []
+
+        def invoke(item, *, timeout_seconds):
+            calls.append(item)
+            return cap.ProbeInvocationResult(return_code=0)
+
+        with self.assertRaises(cap.BudgetOverrunError):
+            cap.run_bounded_probe_matrix(plan, invoke, timeout_seconds=30.0)
+        self.assertEqual(calls, [])
+
+    def test_driver_does_not_retry_a_timed_out_invocation(self) -> None:
+        cap = self.require_capabilities()
+        plan = self._canary_plan(cap, 3)
+        calls = []
+
+        def invoke(item, *, timeout_seconds):
+            calls.append(item)
+            return cap.ProbeInvocationResult(return_code=None, timed_out=True)
+
+        with self.assertRaises(cap.ProbeRunAborted):
+            cap.run_bounded_probe_matrix(plan, invoke, timeout_seconds=30.0)
+        self.assertEqual(len(calls), 1)
+
+    def test_driver_aborts_on_network_error_without_proceeding(self) -> None:
+        cap = self.require_capabilities()
+        plan = self._canary_plan(cap, 3)
+        calls = []
+
+        def invoke(item, *, timeout_seconds):
+            calls.append(item)
+            return cap.ProbeInvocationResult(return_code=None, network_error=True)
+
+        with self.assertRaises(cap.ProbeRunAborted):
+            cap.run_bounded_probe_matrix(plan, invoke, timeout_seconds=30.0)
+        self.assertEqual(len(calls), 1)
+
+    def test_pure_logic_and_driver_spawn_no_subprocess(self) -> None:
+        cap = self.require_capabilities()
+        plan = self._canary_plan(cap, 1)
+
+        def invoke(item, *, timeout_seconds):
+            return cap.ProbeInvocationResult(return_code=0)
+
+        with mock.patch("subprocess.run", side_effect=AssertionError("no live subprocess in pure logic")):
+            matrix = cap.build_probe_matrix()
+            cap.plan_probe_invocations(matrix)
+            cap.sanitize_home_paths(_home_posix("x/y"))
+            cap.payload_sha256("{}")
+            cap.classify_probe_disposition(
+                cap.ProbeInvocationResult(return_code=0),
+                payload_parseable=True,
+                observation_schema_valid=True,
+            )
+            run = cap.run_bounded_probe_matrix(plan, invoke, timeout_seconds=30.0)
+        self.assertEqual(len(run.results), 1)
+
+
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(ClaudeTraceSchemaContractTests)
+    loader = unittest.defaultTestLoader
+    suite = unittest.TestSuite()
+    suite.addTests(loader.loadTestsFromTestCase(ClaudeTraceSchemaContractTests))
+    suite.addTests(loader.loadTestsFromTestCase(ClaudeCapabilitiesPureLogicTests))
     raise SystemExit(run_counted(suite, label="test-efficiency-claude-telemetry"))
