@@ -65,7 +65,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Tasks | `$speckit-tasks` | Complete | 39 TDD-first tasks; G5 passed |
 | Analyze | `$speckit-analyze` | Complete | Nine findings remediated; G6 passed |
 | Confidence Gate | G6.5 | Complete | Advisory score 0.99 passed the 0.90 threshold |
-| Implement | `$speckit-implement` | In Progress | T016-T025 passed independent review; treatment marker checkpoint is pending |
+| Implement | `$speckit-implement` | In Progress | T016-T025 checkpointed at `0e73f181`; synthetic replay marker is active |
 | Post | Post-Implementation | Pending | Complete verification, reviewability, PR, remediation, and retrospective work |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -873,8 +873,8 @@ For every task:
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
-| 2 - Treatment contracts | Checkpointing | 10 | 24/24 focused tests, schema/CLI/freeze validation, and independent critical/high review pass |
-| 3 - Synthetic replay | Pending | 0 | Not started |
+| 2 - Treatment contracts | Complete | 10 | Checkpoint `0e73f181`; 24/24 focused tests, schema/CLI/freeze validation, and independent critical/high review pass |
+| 3 - Synthetic replay | In Progress | 0 | T026-T030 active in the bounded offline replay extension |
 | Polish and validation | Pending | 0 | Not started |
 
 ### Capability Checkpoint Evidence
@@ -898,6 +898,7 @@ For every task:
 - Superseded candidate freeze: `sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03`
 - Telemetry profile: `sha256:5d6657cbdf269bf5a77461723dac1f69803c06f60989e2fe7ed18d93fa2be0ba`
 - Treatment contract: `sha256:d9c0048e1443ea6c0f5792a4075d434cd539dc0f923db18403880f26bec7e551`
+- Marker checkpoint: `0e73f1813b0fb355f4dfd0985d4841e43000e12f`
 - Reviewability: size-only `block` at 940 source / 855 nonblank,
   non-comment lines; typed `no_safe_boundary` exception honored for the
   checkpoint with only T026-T030 replay growth reserved.
@@ -924,7 +925,7 @@ For every task:
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
-| 2 | `us2` | T016-T025 | Size-only `block`; honored typed `no_safe_boundary` exception | Pending treatment artifact commit | Only T026-T030 replay growth remains authorized |
+| 2 | `us2` | T016-T025 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `0e73f1813b0fb355f4dfd0985d4841e43000e12f` | Only T026-T030 replay growth remains authorized |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
