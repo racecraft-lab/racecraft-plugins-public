@@ -454,7 +454,7 @@
           "details": {
             "reason": "Field authority, owner joins, failure derivation, reroute qualification, and successor cross-binding share one integrity boundary.",
             "exception_kind": "typed_size_only",
-            "growth_limit": "Only the predeclared T026-T030 offline replay dispatch may extend treatment_trace_schema.py before final freeze."
+            "growth_limit": "Only finding-driven review remediation and the predeclared T026-T030 offline replay dispatch may extend treatment_trace_schema.py before final freeze; no feature expansion is authorized."
           }
         },
         "implementation_checkpoint": {
@@ -469,7 +469,7 @@
             "severity": "warning",
             "message": "US2 exceeds 400 reviewable LOC and is retained only under the typed no-safe-boundary size exception.",
             "source": "treatment-contracts-reviewability",
-            "details": {"marker_id": "us2", "actual_source_lines": 940, "actual_nonblank_noncomment_lines": 855}
+            "details": {"marker_id": "us2", "actual_source_lines": 1021, "actual_nonblank_noncomment_lines": 929}
           }
         ]
       },

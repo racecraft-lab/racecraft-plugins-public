@@ -1503,6 +1503,44 @@ class TreatmentContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "exact field-level classification authority"):
                     treatment.validate_treatment_bundle(self.rebound(bundle))
 
+    def test_profile_conditions_and_prohibited_claims_are_exact_authority(self) -> None:
+        mutations = [
+            ("reroute.events", "condition", "caller-controlled condition"),
+            ("assignment.model", "condition", "unexpected condition"),
+            ("assignment.model", "prohibited_claims", ["configured_as_effective"]),
+            ("terminal.outcome", "prohibited_claims", ["effective_treatment"]),
+        ]
+        for field_path, field, value in mutations:
+            with self.subTest(field_path=field_path, field=field):
+                bundle = copy.deepcopy(self.bundle)
+                entry = next(item for item in bundle["telemetry_profile"] if item["surface"] == "app_server" and item["field_path"] == field_path)
+                entry[field] = value
+                self.assert_bundle_invalid(bundle)
+
+    def test_cli_and_picker_traces_validate_only_their_surface_profile(self) -> None:
+        cases = [
+            ("cli", "route.supported_effective_route_id", "undocumented"),
+            ("interactive_picker", "parent.graph", "not_applicable"),
+        ]
+        for surface, field_path, state in cases:
+            with self.subTest(surface=surface):
+                bundle = copy.deepcopy(self.bundle)
+                environment = bundle["controlled_environments"][0]
+                environment["surface"] = surface
+                environment["controlled_environment_id"] = treatment.content_id(environment, "controlled_environment_id")
+                trace = bundle["treatment_traces"][0]
+                trace["surface"] = surface
+                trace["controlled_environment_id"] = environment["controlled_environment_id"]
+                trace["configured_route_proof"] = None
+                trace["service_reroute_events"] = []
+                trace["reroute_destination_assessments"] = []
+                trace["observations"] = [{
+                    "field_path": field_path, "observation_state": state, "value": None,
+                    "evidence_ref": None, "captured_at": None,
+                }]
+                validated = treatment.validate_treatment_bundle(self.rebound(bundle))
+                self.assertEqual(validated["treatment_traces"][0]["treatment_disposition"], "unknown")
+
     def test_conditional_reroute_event_profile_cannot_self_assert_complete_monitoring(self) -> None:
         bundle = copy.deepcopy(self.bundle)
         profile = next(item for item in bundle["telemetry_profile"] if item["surface"] == "app_server" and item["field_path"] == "reroute.events")
@@ -1536,6 +1574,21 @@ class TreatmentContractTests(unittest.TestCase):
         })
         fabricated["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
         self.assert_reroute_hard_failed(fabricated)
+
+    def test_manifest_and_predecessor_null_effort_remain_unknown(self) -> None:
+        trace = self.bundle["treatment_traces"][0]
+        route = treatment._canonical_routes()[trace["assigned_route_id"]]
+        self.assertIn("effort", route)
+        self.assertIsNone(route["effort"])
+        validated = treatment.validate_treatment_bundle(copy.deepcopy(self.bundle))
+        self.assertEqual(validated["treatment_traces"][0]["treatment_disposition"], "unknown")
+        self.assertIn("effective_treatment_unknown", {item["failure_code"] for item in validated["treatment_traces"][0]["treatment_failures"]})
+
+        arbitrary = copy.deepcopy(self.bundle)
+        arbitrary["treatment_traces"][0]["requested_effort"] = "arbitrary-effort"
+        arbitrary["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
+        result = treatment.validate_treatment_bundle(self.rebound(arbitrary))
+        self.assertEqual(result["treatment_traces"][0]["treatment_disposition"], "hard_fail")
 
     def test_configured_route_proof_cannot_self_assert_effective_treatment(self) -> None:
         mutations = [
@@ -1624,6 +1677,16 @@ class TreatmentContractTests(unittest.TestCase):
         }]
         forged_declared["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
         self.assert_bundle_invalid(forged_declared)
+
+    def test_observation_comparison_preserves_json_types(self) -> None:
+        bundle = copy.deepcopy(self.bundle)
+        observation = next(item for item in bundle["treatment_traces"][0]["observations"] if item["field_path"] == "treatment.sandbox")
+        observation["value"]["network_access"] = 0
+        bundle["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
+        validated = treatment.validate_treatment_bundle(self.rebound(bundle))
+        trace = validated["treatment_traces"][0]
+        self.assertEqual(trace["treatment_disposition"], "hard_fail")
+        self.assertIn("sandbox_approvals_mismatch", {item["failure_code"] for item in trace["treatment_failures"]})
 
     def test_six_id_environment_and_configured_proof_joins(self) -> None:
         base = treatment.validate_treatment_bundle(copy.deepcopy(self.bundle))
@@ -1750,6 +1813,37 @@ class TreatmentContractTests(unittest.TestCase):
         wrong_expectation = copy.deepcopy(self.bundle)
         wrong_expectation["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "proven"
         self.assert_bundle_invalid(wrong_expectation)
+
+    def test_status_conditionals_require_exact_null_evidence(self) -> None:
+        cases = [
+            ("delivery_canary", "not_run"),
+            ("validation", "not_run"),
+            ("outcome", "unknown"),
+        ]
+        for field, status in cases:
+            with self.subTest(field=field):
+                bundle = copy.deepcopy(self.bundle)
+                bundle["treatment_traces"][0][field]["status"] = status
+                self.assert_bundle_invalid(bundle)
+
+    def test_evidence_references_and_retained_strings_are_sanitized(self) -> None:
+        references = [
+            "/" + "Users" + "/example/private/evidence.json",
+            "build-host.example.com",
+            "https://github.com/private/repository",
+            "authorization=Bearer-secret",
+        ]
+        for evidence_ref in references:
+            with self.subTest(evidence_ref=evidence_ref):
+                bundle = copy.deepcopy(self.bundle)
+                bundle["treatment_traces"][0]["observations"][0]["evidence_ref"] = evidence_ref
+                self.assert_bundle_invalid(bundle)
+        retained = copy.deepcopy(self.bundle)
+        retained["treatment_traces"][0]["cancellation"].update({
+            "state": "requested", "reason": "/" + "Users" + "/example/private/cancellation.txt",
+        })
+        with self.assertRaisesRegex(ValueError, "forbidden private"):
+            treatment.validate_treatment_bundle(self.rebound(retained))
 
     def test_all_record_layers_reject_undeclared_fields(self) -> None:
         accessors = [

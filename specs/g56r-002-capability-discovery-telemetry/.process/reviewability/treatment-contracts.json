@@ -8,12 +8,12 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 940,
-  "actual_nonblank_noncomment_lines": 855,
+  "actual_source_lines": 1021,
+  "actual_nonblank_noncomment_lines": 929,
   "production_modules": 1,
   "primary_surface": "harness/adapter",
   "correctness_checks": {
-    "focused_tests": "24/24 pass",
+    "focused_tests": "31/31 pass",
     "published_successor_validation": "pass",
     "json_schema_instance_validation": "pass",
     "exact_field_authority": "pass",
@@ -21,14 +21,14 @@
     "owner_registry_integrity": "pass",
     "trusted_qualification_boundary": "pass",
     "successor_cross_binding": "pass",
-    "independent_review": "pass"
+    "independent_review": "repeat_pending"
   },
   "exception": {
     "kind": "typed_size_only",
     "status": "honored_for_checkpoint",
     "subdivision": "no_safe_boundary",
     "rationale": "Field source and classification authority, schema and profile identity, six-ID owner joins, failure derivation, reroute qualification, and successor cross-binding form one integrity boundary that T023 explicitly keeps in the treatment module.",
-    "growth_limit": "No further treatment-contract expansion is authorized; only the predeclared T026-T030 offline replay dispatch may extend treatment_trace_schema.py before final freeze."
+    "growth_limit": "Only finding-driven review remediation and the predeclared T026-T030 offline replay dispatch may extend treatment_trace_schema.py before final freeze; no feature expansion is authorized."
   },
   "later_markers": [
     "us3:T026-T039"

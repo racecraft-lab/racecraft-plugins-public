@@ -130,6 +130,21 @@ if any(
 ):
     raise RuntimeError("field-level telemetry source and classification authority maps disagree")
 
+AUTHORIZED_PROFILE_CONDITIONS = {key: None for key in TELEMETRY_INVENTORY}
+AUTHORIZED_PROFILE_CONDITIONS.update({
+    ("app_server", "assignment.supported_effective_model"): "model/rerouted observes a destination model",
+    ("app_server", "reroute.events"): "model/rerouted is emitted for a service reroute",
+    ("app_server", "parent.graph"): "parent and child identifiers are emitted for nested work",
+    ("app_server", "lifecycle.validation"): "validation evidence is emitted when validation runs",
+    ("app_server", "lifecycle.cancellation"): "cancellation evidence is emitted when cancellation is requested",
+    ("interactive_picker", "parent.graph"): "interactive picker collection has no execution parent graph",
+})
+AUTHORIZED_PROHIBITED_CLAIMS = {
+    key: (["effective_treatment"] if classification == "derived_from_controlled_configuration"
+          else ["configured_as_effective", "unsupported_platform_value"])
+    for key, classification in AUTHORIZED_PROFILE_CLASSIFICATIONS.items()
+}
+
 COMPLETENESS_BY_CLASS = {
     "stable_native": "complete_capture",
     "experimental_native": "pinned_build_observation_only",
@@ -159,6 +174,10 @@ FAILURE_DISPOSITIONS = {
 DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 SOURCE_RE = re.compile(r"^OPENAI-DOC-[0-9]{3}$")
 REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
+EVIDENCE_REF_RE = re.compile(r"^fixture://[a-z0-9][a-z0-9._-]*(?:/[a-z0-9][a-z0-9._-]*)*$")
+ABSOLUTE_PATH_RE = re.compile(r"(?:^|[\s\"'=])(?:/(?!/)[A-Za-z0-9._~-]|[A-Za-z]:[\\/]|\\\\[A-Za-z0-9._-]+\\)")
+REMOTE_RE = re.compile(r"(?i)(?:\b(?:https?|ssh|git|file)://|\bgit@[a-z0-9.-]+:)")
+CREDENTIAL_RE = re.compile(r"(?i)\b(?:authorization|credential|secret|api[_-]?key|cookie|password)\b\s*[:=]")
 
 
 @lru_cache(maxsize=1)
@@ -171,7 +190,7 @@ def _current_source_ids() -> frozenset[str]:
 
 
 @lru_cache(maxsize=1)
-def _canonical_routes() -> dict[str, dict[str, str]]:
+def _canonical_routes() -> dict[str, dict[str, str | None]]:
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     agents = {item["agent_contract_id"]: item["agent_name"] for item in manifest["agent_contracts"]}
     routes = {}
@@ -181,6 +200,7 @@ def _canonical_routes() -> dict[str, dict[str, str]]:
             "agent_contract_id": contract,
             "named_agent": agents[contract],
             "model": item["model_selector"]["expected_resolved_model_id"],
+            "effort": item["effort_selector"]["requested_value"],
         }
     if len(routes) != len(manifest["candidate_routes"]):
         raise ValueError("canonical manifest candidate routes are not uniquely owned")
@@ -188,7 +208,32 @@ def _canonical_routes() -> dict[str, dict[str, str]]:
 
 
 def canonical_bytes(value: object) -> bytes:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
+
+
+def _same_json_value(actual: object, expected: object, label: str) -> bool:
+    try:
+        return canonical_bytes(actual) == canonical_bytes(expected)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} must be canonical JSON") from exc
+
+
+def _validate_retained_strings(value: object, label: str = "treatment bundle") -> None:
+    if isinstance(value, str):
+        forbidden = (
+            any(ord(char) < 32 for char in value)
+            or ABSOLUTE_PATH_RE.search(value)
+            or REMOTE_RE.search(value)
+            or CREDENTIAL_RE.search(value)
+        )
+        if forbidden:
+            raise ValueError(f"{label} retains forbidden private or credential-bearing text")
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            _validate_retained_strings(item, f"{label}[{index}]")
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            _validate_retained_strings(item, f"{label}.{key}")
 
 
 def digest(value: object) -> str:
@@ -223,6 +268,14 @@ def _text(value: object, label: str, *, nullable: bool = False) -> str | None:
         return None
     if not isinstance(value, str) or not value:
         raise ValueError(f"{label} must be a non-empty string")
+    return value
+
+
+def _evidence_ref(value: object, label: str, *, nullable: bool = False) -> str | None:
+    if value is None and nullable:
+        return None
+    if not isinstance(value, str) or EVIDENCE_REF_RE.fullmatch(value) is None:
+        raise ValueError(f"{label} must use the sanitized fixture evidence namespace")
     return value
 
 
@@ -322,9 +375,8 @@ def _validate_profile(profile: object) -> list[dict]:
             raise ValueError("telemetry field does not use its exact field-level source authority")
         if (expected_source is None) != (classification == "undocumented"):
             raise ValueError("telemetry authority and undocumented classification disagree")
-        condition_required = classification in {"conditional", "not_applicable"}
-        if condition_required != (isinstance(entry["condition"], str) and bool(entry["condition"])):
-            raise ValueError("conditional applicability semantics are invalid")
+        if entry["condition"] != AUTHORIZED_PROFILE_CONDITIONS[(entry["surface"], entry["field_path"])]:
+            raise ValueError("telemetry field does not use its exact condition authority")
         if entry["completeness_rule"] != COMPLETENESS_BY_CLASS[classification]:
             raise ValueError("telemetry completeness rule does not match its classification")
         rules = _closed(entry["observation_state_rules"], {"allowed_states", "value_rule", "evidence_rule"}, "observation-state rules")
@@ -340,10 +392,12 @@ def _validate_profile(profile: object) -> list[dict]:
         if rules != expected_rules:
             raise ValueError("observation-state rules do not match classification semantics")
         permitted = _strings(entry["permitted_claims"], "permitted claims")
-        _strings(entry["prohibited_claims"], "prohibited claims")
+        prohibited = _strings(entry["prohibited_claims"], "prohibited claims")
         expected_claim = CLAIM_BY_CLASS.get(classification)
         if permitted != ([expected_claim] if expected_claim else []):
             raise ValueError("telemetry permitted claims do not match classification semantics")
+        if prohibited != AUTHORIZED_PROHIBITED_CLAIMS[(entry["surface"], entry["field_path"])]:
+            raise ValueError("telemetry prohibited claims do not match field-level authority")
     actual_inventory = {(item["surface"], item["field_path"]) for item in profile}
     if actual_inventory != TELEMETRY_INVENTORY:
         raise ValueError("telemetry profile does not cover the closed inventory")
@@ -464,7 +518,9 @@ def _validate_trace_structures(trace: dict) -> None:
     canary = _closed(trace["delivery_canary"], {"status", "evidence_digest"}, "delivery canary")
     if canary["status"] not in {"passed", "failed", "not_run"}:
         raise ValueError("delivery canary status is invalid")
-    _digest(canary["evidence_digest"], "delivery canary evidence", nullable=canary["status"] == "not_run")
+    if canary["status"] == "not_run":
+        if canary["evidence_digest"] is not None: raise ValueError("unrun delivery canary evidence must be null")
+    else: _digest(canary["evidence_digest"], "delivery canary evidence")
     context = _closed(trace["context"], {"threadId", "turnId"}, "trace association context")
     _text(context["threadId"], "trace threadId"); _text(context["turnId"], "trace turnId")
     graph = _closed(trace["parent_child_graph"], {
@@ -487,7 +543,9 @@ def _validate_trace_structures(trace: dict) -> None:
     if compaction["occurred"] != (compaction["count"] > 0): raise ValueError("compaction count and occurrence disagree")
     validation = _closed(trace["validation"], {"status", "evidence_digest"}, "validation")
     if validation["status"] not in {"completed", "failed", "not_run"}: raise ValueError("validation status is invalid")
-    _digest(validation["evidence_digest"], "validation evidence", nullable=validation["status"] == "not_run")
+    if validation["status"] == "not_run":
+        if validation["evidence_digest"] is not None: raise ValueError("unrun validation evidence must be null")
+    else: _digest(validation["evidence_digest"], "validation evidence")
     cancellation = _closed(trace["cancellation"], {"state", "reason"}, "cancellation")
     if cancellation["state"] not in {"not_requested", "requested", "completed"}: raise ValueError("cancellation state is invalid")
     _text(cancellation["reason"], "cancellation reason", nullable=True)
@@ -497,7 +555,9 @@ def _validate_trace_structures(trace: dict) -> None:
     if trace["terminal_state"] not in {"completed", "failed", "cancelled", "abandoned"}: raise ValueError("terminal state is invalid")
     outcome = _closed(trace["outcome"], {"status", "evidence_digest"}, "outcome")
     if outcome["status"] not in {"completed", "failed", "cancelled", "abandoned", "unknown"}: raise ValueError("outcome status is invalid")
-    _digest(outcome["evidence_digest"], "outcome evidence", nullable=outcome["status"] == "unknown")
+    if outcome["status"] == "unknown":
+        if outcome["evidence_digest"] is not None: raise ValueError("unknown outcome evidence must be null")
+    else: _digest(outcome["evidence_digest"], "outcome evidence")
     if trace["acceptance"] is not None and not isinstance(trace["acceptance"], bool): raise ValueError("acceptance must be boolean or null")
 
 
@@ -509,8 +569,8 @@ def _validate_failure(value: object) -> dict:
     if failure["failure_code"] not in FAILURE_DISPOSITIONS:
         raise ValueError("treatment failure code is invalid")
     _text(failure["affected_field"], "treatment failure affected field")
-    _text(failure["expected_evidence_ref"], "expected evidence reference", nullable=True)
-    _text(failure["observed_evidence_ref"], "observed evidence reference", nullable=True)
+    _evidence_ref(failure["expected_evidence_ref"], "expected evidence reference", nullable=True)
+    _evidence_ref(failure["observed_evidence_ref"], "observed evidence reference", nullable=True)
     if failure["resulting_disposition"] != FAILURE_DISPOSITIONS[failure["failure_code"]]:
         raise ValueError("structured treatment failure disposition is invalid")
     return failure
@@ -533,9 +593,9 @@ def _validate_observations(trace: dict, profile: list[dict]) -> dict[str, dict]:
         if state != "observed_value" and row["value"] is not None: raise ValueError("null-only observation state cannot carry a value")
         present = state in {"observed_value", "explicit_null"}
         if present:
-            _text(row["evidence_ref"], "observation evidence reference"); _timestamp(row["captured_at"], "observation capture timestamp")
+            _evidence_ref(row["evidence_ref"], "observation evidence reference"); _timestamp(row["captured_at"], "observation capture timestamp")
         else:
-            _text(row["evidence_ref"], "observation evidence reference", nullable=True); _timestamp(row["captured_at"], "observation capture timestamp", nullable=True)
+            _evidence_ref(row["evidence_ref"], "observation evidence reference", nullable=True); _timestamp(row["captured_at"], "observation capture timestamp", nullable=True)
         if state == "undocumented" and (row["evidence_ref"] is not None or row["captured_at"] is not None): raise ValueError("undocumented observation cannot claim evidence or capture time")
         if field in {"discovery.models", "discovery.efforts", "discovery.capabilities"} and state == "observed_value": _strings(row["value"], f"{field} observation")
         observed[field] = row
@@ -691,10 +751,13 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
     if objective["candidate_route_id"] != row["assigned_route_id"] or resolution["assigned_route_id"] != row["assigned_route_id"]:
         raise ValueError("assigned route does not join objective, environment, and resolution")
     canonical_route = _canonical_routes().get(objective["candidate_route_id"])
-    if canonical_route is None or canonical_route != {
+    if canonical_route is None or {key: canonical_route[key] for key in ("agent_contract_id", "named_agent", "model")} != {
         "agent_contract_id": objective["agent_contract_id"], "named_agent": row["named_agent"], "model": row["requested_model"],
     }:
         raise ValueError("assigned route does not bind the canonical candidate manifest")
+    canonical_effort = canonical_route["effort"]
+    if canonical_effort is not None and row["requested_effort"] != canonical_effort:
+        raise ValueError("requested effort does not bind the canonical candidate manifest")
     if resolution["runtime_capability_snapshot_id"] != objective["runtime_capability_snapshot_id"]: raise ValueError("route resolution snapshot does not join the objective")
     if row["parent_child_graph"]["root_execution_trace_id"] != objective["execution_trace_id"]: raise ValueError("parent-child graph does not bind the execution trace")
     _validate_trace_structures(row)
@@ -712,8 +775,9 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
     if row["supported_effective_effort"] is not None: derived_codes.append("effort_mismatch")
     if row["supported_effective_model"] is not None and (len(events) != 1 or events[0]["toModel"] != row["supported_effective_model"]): derived_codes.append("model_mismatch")
     if events and row["supported_effective_model"] is None: derived_codes.append("model_mismatch")
-    if observations["reroute.events"]["observation_state"] == "observed_value":
-        if observations["reroute.events"]["value"] != events: derived_codes.append("reroute_ambiguous")
+    reroute_observation = observations.get("reroute.events")
+    if reroute_observation is not None and reroute_observation["observation_state"] == "observed_value":
+        if not _same_json_value(reroute_observation["value"], events, "reroute observation"): derived_codes.append("reroute_ambiguous")
     elif events: derived_codes.append("reroute_unidentifiable")
     bindings = {
         "assignment.named_agent": row["named_agent"], "assignment.model": row["requested_model"],
@@ -754,10 +818,13 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
         "route.runtime_capability_snapshot_id", "route.resolved_at",
     }
     for field, expected in bindings.items():
+        if field not in observations:
+            continue
         observed = observations[field]
-        mismatch = observed["observation_state"] == "observed_value" and observed["value"] != expected
+        entry = profile_entry(profile, row["client_identity_id"], row["surface"], field)
+        mismatch = observed["observation_state"] == "observed_value" and not _same_json_value(observed["value"], expected, f"{field} observation")
         mismatch |= observed["observation_state"] == "explicit_null" and expected is not None
-        mismatch |= observed["observation_state"] in {"unavailable", "not_applicable", "undocumented", "missing"} and expected is not None
+        mismatch |= observed["observation_state"] == "missing" and expected is not None and entry["classification"] not in {"conditional", "undocumented"}
         if mismatch: derived_codes.append("configuration_mismatch" if field in configuration_fields else observation_failure_codes.get(field, "effective_treatment_unknown"))
     if row["expected_skills_mcp_tools"] != row["loaded_skills_mcp_tools"]: derived_codes.append("skills_mcp_tools_mismatch")
     if row["parent_configuration"]["parent_execution_trace_id"] != row["parent_child_graph"]["parent_execution_trace_id"]: derived_codes.append("parent_configuration_mismatch")
@@ -779,7 +846,8 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
     }
     if reroute_disposition == "hard_fail": derived_codes.extend(reason_codes[item] for item in reasons)
     effective_observed = all(
-        row[field] is not None and observations[path]["observation_state"] == "observed_value" and observations[path]["value"] == row[field]
+        path in observations and row[field] is not None and observations[path]["observation_state"] == "observed_value"
+        and _same_json_value(observations[path]["value"], row[field], f"{path} observation")
         for field, path in (("supported_effective_model", "assignment.supported_effective_model"), ("supported_effective_effort", "assignment.supported_effective_effort"))
     )
     reroute_profile = profile_entry(profile, row["client_identity_id"], row["surface"], "reroute.events")
@@ -787,10 +855,10 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
         proof is not None and proof["reroute_monitoring_complete"]
         and reroute_profile["classification"] == "stable_native"
         and reroute_profile["completeness_rule"] == "complete_capture"
-        and observations["reroute.events"]["observation_state"] == "observed_value"
+        and reroute_observation is not None and reroute_observation["observation_state"] == "observed_value"
     )
     proof_valid = proof is not None and not _proof_failure_codes(proof, row, profile) and monitoring_authoritative
-    if not reroute_disposition and not proof_valid and not effective_observed:
+    if canonical_effort is None or (not reroute_disposition and not proof_valid and not effective_observed):
         derived_codes.append("effective_treatment_unknown")
     derived_codes = list(dict.fromkeys(derived_codes))
     declared_by_code = {item["failure_code"]: item for item in validated_failures}
@@ -823,6 +891,7 @@ def validate_treatment_bundle(bundle: object, *, schema_path: Path = SCHEMA_PATH
         "controlled_environments", "qualification_evidence_registry", "route_resolutions",
         "treatment_traces", "fixture_provenance",
     }, "treatment bundle")
+    _validate_retained_strings(value)
     if value["schema_version"] != SCHEMA_VERSION: raise ValueError("unsupported treatment schema version")
     contract_digest = schema_file_digest(schema_path)
     if value["treatment_contract_digest"] != contract_digest: raise ValueError("treatment contract digest does not bind the exact schema bytes")
@@ -906,7 +975,9 @@ def build_treatment_successor(prior_freeze: dict, treatment_bundle: dict, *, man
     if bundle_repositories != expected_repository:
         raise ValueError("treatment bundle repository binding does not match the prior freeze")
     prior_tuples = {
-        (item["candidate_route_id"], item["agent_contract_id"]): (item["instruction_sha256"], item["role_instruction_sha256"])
+        (item["candidate_route_id"], item["agent_contract_id"]): (
+            item["instruction_sha256"], item["role_instruction_sha256"], item["canonical_effort"]
+        )
         for item in prior_freeze["tuple_decisions"]
     }
     for trace in validated["treatment_traces"]:
@@ -914,8 +985,13 @@ def build_treatment_successor(prior_freeze: dict, treatment_bundle: dict, *, man
         instruction_identity = prior_tuples.get((objective["candidate_route_id"], objective["agent_contract_id"]))
         if instruction_identity is None:
             raise ValueError("treatment bundle candidate tuple is not present in the prior freeze")
-        if instruction_identity != (trace["instruction_hash"], trace["instruction_hash"]):
+        if instruction_identity[:2] != (trace["instruction_hash"], trace["instruction_hash"]):
             raise ValueError("treatment bundle instruction identity does not match the prior freeze")
+        prior_effort = instruction_identity[2]
+        if prior_effort is not None and trace["requested_effort"] != prior_effort:
+            raise ValueError("treatment bundle requested effort does not match the prior freeze")
+        if prior_effort is None and trace["treatment_disposition"] == "proven":
+            raise ValueError("treatment bundle cannot prove an effort absent from the prior freeze")
     successor = copy.deepcopy(prior_freeze); prior_id = prior_freeze["candidate_freeze_id"]
     successor["telemetry_profile_id"] = validated["telemetry_profile_id"]
     successor["supersedes_candidate_freeze_id"] = prior_id
