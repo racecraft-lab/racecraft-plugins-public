@@ -39,6 +39,6 @@
     "awk 'NF && $0 !~ /^[[:space:]]*#/ {n++} END{print n}' tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py",
     "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
     "python3 tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py replay --fixture tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json --digest-manifest tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json --repeat 2",
-    "git diff --exit-code 2270fb56 -- tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py"
+    "git diff --exit-code 942c9162 -- tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py"
   ]
 }

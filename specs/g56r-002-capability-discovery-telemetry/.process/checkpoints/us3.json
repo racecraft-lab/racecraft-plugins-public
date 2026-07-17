@@ -6,8 +6,8 @@
   "task_ids": [
     "T026", "T027", "T028", "T029", "T030"
   ],
-  "implementation_baseline_sha": "4a1febfd0f90348f91cef6f71ab8e809ec924231",
-  "implementation_checkpoint_sha": "8100b85658337755ad3c8b2654abcde2ff3f6cf4",
+  "implementation_baseline_sha": "0d5df513fe95a5201c422b908e2c6b7330b91552",
+  "implementation_checkpoint_sha": "672e605dd7c056a53e8469e5a7c0ea6b83ed348f",
   "capability_fixture_digest": "sha256:8afdd9ef74e51b5b5a793a3553a3e1001239c0756616e105833f7880165dbb1c",
   "treatment_fixture_digest": "sha256:ff02ccc6e4862542224f8db8fb3369bf90d9c2f52af5244dfcb8e9294c825d7f",
   "replay_digest": "sha256:1ec08d53ac31a2cdd29f74bf08e2d1ca3eb27e9c4fd5f6c6430108c0c2f08d68",
