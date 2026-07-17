@@ -24,8 +24,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
+import subprocess
 import sys
+import tempfile
 import unittest
 from collections import Counter
 from pathlib import Path
@@ -899,9 +902,636 @@ class ClaudeCapabilitiesPureLogicTests(unittest.TestCase):
         self.assertEqual(len(run.results), 1)
 
 
+# -- Canned offline payloads for the live-boundary tests (T011/T012/T014) -----
+# Grounded dated IDs = the CAR-001 manifest CAP-Q1..Q4 "currently expected"
+# alias bindings. No test makes a live call; every ``ProbeInvocationResult`` here
+# is synthetic and every ``subprocess.run`` is monkeypatched or unreached.
+_EXPECTED_DATED_IDS = {
+    "opus": "claude-opus-4-8",
+    "sonnet": "claude-sonnet-5",
+    "haiku": "claude-haiku-4-5-20251001",
+    "fable": "claude-fable-5",
+}
+_UNAVAILABLE_PROBE_ID = "claude-opus-3-0"
+
+
+def _canary_stdout(dated_model_id: str) -> str:
+    """A raw ``--output-format json`` canary payload whose single ``modelUsage``
+    key is the effective dated model ID (there is no scalar ``model`` field —
+    research R3)."""
+    return json.dumps(
+        {
+            "type": "result",
+            "subtype": "success",
+            "result": "ok",
+            "modelUsage": {
+                dated_model_id: {
+                    "inputTokens": 5,
+                    "outputTokens": 1,
+                    "cacheReadInputTokens": 0,
+                    "cacheCreationInputTokens": 0,
+                    "contextWindow": 200000,
+                    "costUSD": 0.0001,
+                }
+            },
+            "usage": {"input_tokens": 5, "output_tokens": 1},
+            "total_cost_usd": 0.0001,
+            "num_turns": 1,
+            "duration_ms": 100,
+        }
+    )
+
+
+def _run_bounded_matrix_with_fake_invoker(cap):
+    """Drive the REAL bounded matrix with a deterministic offline invoker (no
+    subprocess). Alias canaries resolve to their grounded dated IDs; the
+    unavailable probe soft-remaps to opus; effort probes return a clean
+    plain-text acceptance. Returns ``(matrix, ProbeRun)``."""
+    matrix = cap.build_probe_matrix()
+    plan = cap.plan_probe_invocations(matrix)
+
+    def invoke(item, *, timeout_seconds):
+        if item.purpose == cap.PURPOSE_ALIAS_CANARY:
+            return cap.ProbeInvocationResult(
+                return_code=0,
+                stdout=_canary_stdout(_EXPECTED_DATED_IDS[item.model_alias]),
+                output_mode=cap.OUTPUT_MODE_JSON,
+            )
+        if item.purpose == cap.PURPOSE_CONFIG_ACCEPTANCE:
+            return cap.ProbeInvocationResult(
+                return_code=0,
+                stdout=f"effort {item.effort_requested} applied to {item.model_alias}",
+                output_mode=cap.OUTPUT_MODE_PLAIN_TEXT,
+            )
+        return cap.ProbeInvocationResult(
+            return_code=0,
+            stdout=_canary_stdout("claude-opus-4-8"),
+            output_mode=cap.OUTPUT_MODE_JSON,
+        )
+
+    return matrix, cap.run_bounded_probe_matrix(plan, invoke, timeout_seconds=30.0)
+
+
+def _argv_aware_fake_run(argv, **kwargs):
+    """An offline stand-in for ``subprocess.run`` that returns a canned
+    ``CompletedProcess`` shaped by the probe command it is handed — so ``main()``
+    runs the whole matrix end-to-end with zero live model calls."""
+    args = list(argv)
+    joined = " ".join(args)
+    if "--effort" in args:
+        return subprocess.CompletedProcess(args, 0, stdout="effort applied", stderr="")
+    if "--model" in args and args[args.index("--model") + 1] == _UNAVAILABLE_PROBE_ID:
+        return subprocess.CompletedProcess(args, 0, stdout=_canary_stdout("claude-opus-4-8"), stderr="")
+    if "@agent-" in joined and "--model" not in args:
+        return subprocess.CompletedProcess(args, 0, stdout=_canary_stdout("claude-opus-4-8"), stderr="")
+    if "--model" in args:
+        alias = args[args.index("--model") + 1]
+        return subprocess.CompletedProcess(
+            args, 0, stdout=_canary_stdout(_EXPECTED_DATED_IDS.get(alias, "claude-opus-4-8")), stderr=""
+        )
+    return subprocess.CompletedProcess(args, 0, stdout=_canary_stdout("claude-opus-4-8"), stderr="")
+
+
+class ClaudeCapabilitiesLiveBoundaryTests(unittest.TestCase):
+    """The single live boundary (T011), capability-answer/evidence capture (T012),
+    and the subagent-frontmatter dispatch mechanism (T014).
+
+    Every test is deterministic and offline: the ``claude`` boundary is either an
+    injected fake ``LiveInvoker`` or a monkeypatched ``subprocess.run``; the
+    models endpoint is an injected fake; and the subagent probe agent file is
+    always staged in a temp dir, never the repo's real ``.claude/agents/``. Zero
+    live model calls (FR-001/FR-002).
+    """
+
+    def require_capabilities(self):
+        self.assertIsNotNone(
+            claude_capabilities,
+            "claude_capabilities probe-logic module not implemented yet: "
+            f"{LAYER6_LIB_DIR / 'claude_capabilities.py'}",
+        )
+        return claude_capabilities
+
+    def _clean_unset_proof(self, cap):
+        return cap.build_unset_proof(env={}, settings={})
+
+    # -- T011: probe command construction (pure, FR-compliant argv) -----------
+
+    def test_build_probe_command_shapes_argv_per_purpose_and_surface(self) -> None:
+        cap = self.require_capabilities()
+
+        canary = cap.build_probe_command(
+            cap.PlannedInvocation(purpose=cap.PURPOSE_ALIAS_CANARY, model_alias="opus")
+        )
+        self.assertEqual(canary.output_mode, cap.OUTPUT_MODE_JSON)
+        self.assertIn("--output-format", canary.argv)
+        self.assertEqual(canary.argv[canary.argv.index("--output-format") + 1], "json")
+        self.assertEqual(canary.argv[canary.argv.index("--model") + 1], "opus")
+        self.assertEqual(canary.prompt, cap.CANARY_TEXT)
+        self.assertIn(cap.CANARY_TEXT, canary.argv)
+        self.assertIn("-p", canary.argv)
+
+        config = cap.build_probe_command(
+            cap.PlannedInvocation(
+                purpose=cap.PURPOSE_CONFIG_ACCEPTANCE,
+                model_alias="opus",
+                effort_requested="max",
+                tuple_id="opus__max",
+            )
+        )
+        self.assertEqual(config.output_mode, cap.OUTPUT_MODE_PLAIN_TEXT)
+        self.assertNotIn("--output-format", config.argv)  # plain-text --print avoids silent JSON clamp (R6)
+        self.assertEqual(config.argv[config.argv.index("--effort") + 1], "max")
+        self.assertEqual(config.argv[config.argv.index("--model") + 1], "opus")
+
+        config_null = cap.build_probe_command(
+            cap.PlannedInvocation(
+                purpose=cap.PURPOSE_CONFIG_ACCEPTANCE,
+                model_alias="haiku",
+                effort_requested=None,
+                tuple_id="haiku__none",
+            )
+        )
+        self.assertNotIn("--effort", config_null.argv)
+
+        print_model = cap.build_probe_command(
+            cap.PlannedInvocation(purpose=cap.PURPOSE_UNAVAILABLE_PROBE, surface="print_model"),
+            unavailable_model_id=_UNAVAILABLE_PROBE_ID,
+        )
+        self.assertEqual(print_model.argv[print_model.argv.index("--model") + 1], _UNAVAILABLE_PROBE_ID)
+        self.assertIn("--output-format", print_model.argv)
+
+        subagent = cap.build_probe_command(
+            cap.PlannedInvocation(purpose=cap.PURPOSE_UNAVAILABLE_PROBE, surface="subagent_frontmatter"),
+            unavailable_model_id=_UNAVAILABLE_PROBE_ID,
+            agent_name="car002-probe",
+        )
+        # No preempting per-invocation --model on the subagent surface (R4/R12); not --bare.
+        self.assertNotIn("--model", subagent.argv)
+        self.assertNotIn("--bare", subagent.argv)
+        self.assertTrue(subagent.prompt.startswith("@agent-car002-probe"))
+        self.assertTrue(any(arg.startswith("@agent-car002-probe") for arg in subagent.argv))
+
+    def test_no_probe_command_ever_passes_a_fallback_model_flag(self) -> None:
+        # FR-010 unset-proof is structural: the tool never emits --fallback-model.
+        cap = self.require_capabilities()
+        plan = cap.plan_probe_invocations(cap.build_probe_matrix())
+        for item in plan:
+            command = cap.build_probe_command(item, unavailable_model_id=_UNAVAILABLE_PROBE_ID)
+            with self.subTest(purpose=item.purpose, surface=item.surface):
+                self.assertNotIn("--fallback-model", command.argv)
+                self.assertNotIn("--fallback", command.argv)
+                self.assertEqual(command.argv[0], cap.CLAUDE_BIN)
+
+    # -- T011: the ONLY subprocess boundary (monkeypatched, never live) -------
+
+    def test_invoke_claude_cli_maps_subprocess_outcomes(self) -> None:
+        cap = self.require_capabilities()
+        command = cap.build_probe_command(
+            cap.PlannedInvocation(purpose=cap.PURPOSE_ALIAS_CANARY, model_alias="opus")
+        )
+
+        calls: list[tuple[list, dict]] = []
+
+        def ok_run(argv, **kwargs):
+            calls.append((list(argv), kwargs))
+            return subprocess.CompletedProcess(list(argv), 0, stdout="OUT", stderr="")
+
+        with mock.patch("subprocess.run", ok_run):
+            result = cap.invoke_claude_cli(command, timeout_seconds=31.5)
+        self.assertEqual(result.return_code, 0)
+        self.assertEqual(result.stdout, "OUT")
+        self.assertEqual(result.output_mode, cap.OUTPUT_MODE_JSON)
+        self.assertFalse(result.is_unambiguous_transport_failure())
+        argv, kwargs = calls[0]
+        self.assertEqual(argv, list(command.argv))
+        self.assertIs(kwargs["shell"], False)
+        self.assertIs(kwargs["text"], True)
+        self.assertTrue(kwargs["capture_output"])
+        self.assertEqual(kwargs["timeout"], 31.5)
+
+        def timeout_run(argv, **kwargs):
+            raise subprocess.TimeoutExpired(cmd=list(argv), timeout=kwargs.get("timeout", 1))
+
+        with mock.patch("subprocess.run", timeout_run):
+            timed = cap.invoke_claude_cli(command, timeout_seconds=5.0)
+        self.assertTrue(timed.timed_out)
+        self.assertIsNone(timed.return_code)
+        self.assertTrue(timed.is_unambiguous_transport_failure())
+
+        def missing_run(argv, **kwargs):
+            raise FileNotFoundError("claude not on PATH")
+
+        with mock.patch("subprocess.run", missing_run):
+            spawn_fail = cap.invoke_claude_cli(command, timeout_seconds=5.0)
+        self.assertIsNone(spawn_fail.return_code)
+        self.assertTrue(spawn_fail.is_unambiguous_transport_failure())
+
+    def test_build_arg_parser_parses_operator_options(self) -> None:
+        cap = self.require_capabilities()
+        parser = cap.build_arg_parser()
+        ns = parser.parse_args(
+            [
+                "--timeout", "45",
+                "--unavailable-model-id", "claude-x-0",
+                "--pinned-client-version", "2.19.3",
+                "--output", "out.json",
+                "--version-number", "3",
+            ]
+        )
+        self.assertEqual(ns.timeout, 45.0)
+        self.assertEqual(ns.unavailable_model_id, "claude-x-0")
+        self.assertEqual(ns.pinned_client_version, "2.19.3")
+        self.assertEqual(Path(ns.output), Path("out.json"))
+        self.assertEqual(ns.version_number, 3)
+        defaults = parser.parse_args([])
+        self.assertEqual(defaults.timeout, cap.DEFAULT_TIMEOUT_SECONDS)
+        self.assertEqual(Path(defaults.output), cap.SNAPSHOT_OUTPUT_PATH)
+
+    def test_module_import_and_command_building_spawn_no_subprocess(self) -> None:
+        cap = self.require_capabilities()
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch("subprocess.run", side_effect=AssertionError("no spawn at build time")):
+                invoker = cap.LiveClaudeInvoker(agents_dir=Path(tmp))
+                self.assertIsNotNone(invoker)
+                for item in cap.plan_probe_invocations(cap.build_probe_matrix()):
+                    self.assertTrue(cap.build_probe_command(item).argv)
+                self.assertIsNotNone(cap.build_arg_parser())
+
+    # -- T012: authentication mode + unset proof (pure) -----------------------
+
+    def test_detect_authentication_mode_from_documented_env_signals(self) -> None:
+        cap = self.require_capabilities()
+        cases = {
+            "api key present": ({"ANTHROPIC_API_KEY": "sk-x"}, "api_key"),
+            "auth token present": ({"ANTHROPIC_AUTH_TOKEN": "tok"}, "api_key"),
+            "neither present": ({}, "subscription"),
+            "empty api key not present": ({"ANTHROPIC_API_KEY": ""}, "subscription"),
+        }
+        for label, (env, expected) in cases.items():
+            with self.subTest(case=label):
+                self.assertEqual(cap.detect_authentication_mode(env), expected)
+
+    def test_build_unset_proof_from_operator_environment(self) -> None:
+        cap = self.require_capabilities()
+        clean = cap.build_unset_proof(env={}, settings={})
+        self.assertEqual(
+            set(clean),
+            {
+                "fallback_model_unset",
+                "fallbackModel_unset",
+                "claude_code_subagent_model_unset",
+                "available_models_absent",
+                "enforce_available_models_observed",
+                "config_dir_isolation",
+                "inherit_equivalent_to_unset",
+                "org_restriction_gap",
+            },
+        )
+        self.assertTrue(clean["fallback_model_unset"])
+        self.assertTrue(clean["fallbackModel_unset"])
+        self.assertTrue(clean["claude_code_subagent_model_unset"])
+        self.assertTrue(clean["available_models_absent"])
+        self.assertEqual(clean["config_dir_isolation"], "none")
+        self.assertIsNone(clean["inherit_equivalent_to_unset"])
+        self.assertIsNone(clean["org_restriction_gap"])
+
+        set_model = cap.build_unset_proof(env={"CLAUDE_CODE_SUBAGENT_MODEL": "claude-opus-4-8"}, settings={})
+        self.assertFalse(set_model["claude_code_subagent_model_unset"])
+
+        with_settings = cap.build_unset_proof(
+            env={}, settings={"availableModels": ["claude-opus-4-8"], "enforceAvailableModels": True}
+        )
+        self.assertFalse(with_settings["available_models_absent"])
+        self.assertEqual(with_settings["enforce_available_models_observed"], "True")
+
+        inherit_new = cap.build_unset_proof(
+            env={"CLAUDE_CODE_SUBAGENT_MODEL": "inherit"}, settings={}, client_version="2.1.196"
+        )
+        self.assertTrue(inherit_new["claude_code_subagent_model_unset"])
+        self.assertIsNotNone(inherit_new["inherit_equivalent_to_unset"])
+        inherit_old = cap.build_unset_proof(
+            env={"CLAUDE_CODE_SUBAGENT_MODEL": "inherit"}, settings={}, client_version="2.0.0"
+        )
+        self.assertFalse(inherit_old["claude_code_subagent_model_unset"])
+        self.assertIsNotNone(inherit_old["inherit_equivalent_to_unset"])
+
+    # -- T012: modelUsage extraction, remap cross-check, evidence builders ----
+
+    def test_primary_model_id_and_remap_cross_check(self) -> None:
+        cap = self.require_capabilities()
+        payload = cap.parse_result_payload(_canary_stdout("claude-opus-4-8"))
+        self.assertEqual(cap.primary_model_id(payload), "claude-opus-4-8")
+        self.assertIsNone(cap.primary_model_id(cap.parse_result_payload("not json")))
+        self.assertTrue(cap.cross_check_remap("claude-opus-3-0", "claude-opus-4-8"))
+        self.assertFalse(cap.cross_check_remap("claude-opus-4-8", "claude-opus-4-8"))
+        self.assertFalse(cap.cross_check_remap("claude-opus-3-0", None))
+
+    def test_build_alias_binding_from_canary_payload(self) -> None:
+        cap = self.require_capabilities()
+        result = cap.ProbeInvocationResult(
+            return_code=0, stdout=_canary_stdout("claude-sonnet-5"), output_mode=cap.OUTPUT_MODE_JSON
+        )
+        binding = cap.build_alias_binding("sonnet", "sonnet__max", result)
+        self.assertEqual(binding["alias"], "sonnet")
+        self.assertEqual(binding["resolved_dated_model_id"], "claude-sonnet-5")
+        self.assertEqual(binding["tuple_id"], "sonnet__max")
+        self.assertEqual(binding["raw_evidence"]["sanitization"], cap.SANITIZATION_MARKER)
+        self.assertRegex(binding["raw_evidence"]["raw_output_sha256"], SHA256_PATTERN)
+
+    def test_classify_effort_acceptance_labels_observation_never_certification(self) -> None:
+        cap = self.require_capabilities()
+        accepted = cap.classify_effort_acceptance(
+            cap.ProbeInvocationResult(return_code=0, stdout="effort max applied", output_mode=cap.OUTPUT_MODE_PLAIN_TEXT)
+        )
+        self.assertEqual(accepted, ("accepted", "plain_text_print"))
+        clamped = cap.classify_effort_acceptance(
+            cap.ProbeInvocationResult(
+                return_code=0,
+                stdout="warning: requested effort max clamped to high",
+                output_mode=cap.OUTPUT_MODE_PLAIN_TEXT,
+            )
+        )
+        self.assertEqual(clamped, ("clamped", "plain_text_print"))
+        rejected = cap.classify_effort_acceptance(
+            cap.ProbeInvocationResult(return_code=1, stdout="", stderr="effort not supported", output_mode=cap.OUTPUT_MODE_PLAIN_TEXT)
+        )
+        self.assertEqual(rejected, ("rejected", "plain_text_print"))
+        json_mode = cap.classify_effort_acceptance(
+            cap.ProbeInvocationResult(return_code=0, stdout=_canary_stdout("claude-opus-4-8"), output_mode=cap.OUTPUT_MODE_JSON)
+        )
+        self.assertEqual(json_mode, ("observation_only", "json_no_org_cap_assumed"))
+
+    def test_build_unavailable_observation_flags_soft_remap_and_records_caveat(self) -> None:
+        cap = self.require_capabilities()
+        proof = self._clean_unset_proof(cap)
+        soft = cap.build_unavailable_observation(
+            surface="print_model",
+            requested_unavailable_model_id=_UNAVAILABLE_PROBE_ID,
+            result=cap.ProbeInvocationResult(
+                return_code=0, stdout=_canary_stdout("claude-opus-4-8"), output_mode=cap.OUTPUT_MODE_JSON
+            ),
+            unset_proof=proof,
+        )
+        self.assertEqual(soft["surface"], "print_model")
+        self.assertEqual(soft["observed_model_id"], "claude-opus-4-8")
+        self.assertEqual(soft["observed_outcome"], "soft_remap")
+        self.assertTrue(soft["remap_flagged"])
+        self.assertTrue(soft["dispatch_equivalence_caveat"])
+        self.assertEqual(soft["unset_proof"], proof)
+
+        hard = cap.build_unavailable_observation(
+            surface="subagent_frontmatter",
+            requested_unavailable_model_id=_UNAVAILABLE_PROBE_ID,
+            result=cap.ProbeInvocationResult(
+                return_code=1, stdout="", stderr="error: model not found", output_mode=cap.OUTPUT_MODE_JSON
+            ),
+            unset_proof=proof,
+        )
+        self.assertEqual(hard["observed_outcome"], "hard_rejection")
+        self.assertIsNone(hard["observed_model_id"])
+        self.assertFalse(hard["remap_flagged"])
+        # The subagent surface must state the file-agent-vs-production-Agent-tool inference (R12).
+        self.assertIn("Agent", hard["dispatch_equivalence_caveat"])
+
+    # -- T012: models endpoint corroboration (api_key only; injected fetch) ---
+
+    def test_corroborate_models_endpoint_only_hits_network_in_api_key_mode(self) -> None:
+        cap = self.require_capabilities()
+
+        def forbidden_fetch(env):
+            raise AssertionError("no network in subscription mode")
+
+        subscription = cap.corroborate_models_endpoint("subscription", fetch=forbidden_fetch)
+        self.assertIsNone(subscription.evidence)
+        self.assertIsNotNone(subscription.gap)
+        self.assertEqual(subscription.gap["disposition"], "gap")
+
+        def ok_fetch(env):
+            return {"data": [{"id": "claude-opus-4-8"}, {"id": "claude-sonnet-5"}]}
+
+        accessible = cap.corroborate_models_endpoint("api_key", fetch=ok_fetch)
+        self.assertEqual(accessible.evidence["access_status"], "accessible")
+        self.assertIn("claude-opus-4-8", accessible.evidence["dated_model_ids"])
+        self.assertTrue(accessible.evidence["note"])
+
+        def broken_fetch(env):
+            raise OSError("unreachable")
+
+        unreachable = cap.corroborate_models_endpoint("api_key", fetch=broken_fetch)
+        self.assertEqual(unreachable.evidence["access_status"], "unreachable")
+
+    def test_build_snapshot_id_embeds_capture_date(self) -> None:
+        cap = self.require_capabilities()
+        self.assertEqual(
+            cap.build_snapshot_id("2026-07-16T12:00:00Z", 1), "CAR-002-RCS-2026-07-16-V1"
+        )
+        self.assertEqual(
+            cap.build_snapshot_id("2026-07-16T12:00:00Z", 3), "CAR-002-RCS-2026-07-16-V3"
+        )
+        self.assertRegex(cap.build_snapshot_id("2026-07-16T12:00:00Z", 1), SNAPSHOT_ID_PATTERN)
+
+    # -- T012: full assembly validates against the shipped schema -------------
+
+    def test_assemble_runtime_capability_snapshot_validates_against_schema(self) -> None:
+        cap = self.require_capabilities()
+        validator = self.require_validator_module()
+        matrix, probe_run = _run_bounded_matrix_with_fake_invoker(cap)
+        endpoint = cap.corroborate_models_endpoint("subscription", fetch=lambda env: {})
+        snapshot = cap.assemble_runtime_capability_snapshot(
+            probe_run,
+            captured_at_utc="2026-07-16T12:00:00Z",
+            version=1,
+            pinned_client_version="2.19.3",
+            authentication_mode="subscription",
+            unset_proof=self._clean_unset_proof(cap),
+            unavailable_model_id=_UNAVAILABLE_PROBE_ID,
+            models_endpoint=endpoint,
+        )
+        # Fail-closed writer path: must validate against the runtimeCapabilitySnapshot $def.
+        self.assertIs(validator.validate_runtime_capability_snapshot(snapshot), snapshot)
+        self.assertEqual(len(snapshot["tuple_evidence"]), matrix.cardinality)
+        self.assertEqual(len(snapshot["alias_bindings"]), len(matrix.model_aliases))
+        self.assertEqual(len(snapshot["unavailable_observations"]), 2)
+        self.assertEqual(snapshot["runtime_capability_snapshot_id"], "CAR-002-RCS-2026-07-16-V1")
+        surfaces = {obs["surface"] for obs in snapshot["unavailable_observations"]}
+        self.assertEqual(surfaces, {"print_model", "subagent_frontmatter"})
+
+    def test_assembled_capability_answers_cover_six_questions_capq6_open(self) -> None:
+        cap = self.require_capabilities()
+        _, probe_run = _run_bounded_matrix_with_fake_invoker(cap)
+        snapshot = cap.assemble_runtime_capability_snapshot(
+            probe_run,
+            captured_at_utc="2026-07-16T12:00:00Z",
+            version=1,
+            pinned_client_version="2.19.3",
+            authentication_mode="subscription",
+            unset_proof=self._clean_unset_proof(cap),
+            unavailable_model_id=_UNAVAILABLE_PROBE_ID,
+        )
+        answers = {a["capability_question_id"]: a for a in snapshot["capability_answers"]}
+        self.assertEqual(set(answers), {"CAP-Q1", "CAP-Q2", "CAP-Q3", "CAP-Q4", "CAP-Q5", "CAP-Q6"})
+        self.assertEqual(answers["CAP-Q1"]["answer"], "claude-opus-4-8")
+        self.assertEqual(answers["CAP-Q1"]["status"], "answered")
+        self.assertEqual(answers["CAP-Q6"]["status"], "open")
+        self.assertEqual(answers["CAP-Q6"]["label"], "labeled_inference")
+        # CAP-Q6 is also carried as an explicit open/gap entry (R11).
+        self.assertTrue(any(g["disposition"] == "open" for g in snapshot["open_gaps"]))
+
+    def require_validator_module(self):
+        self.assertIsNotNone(
+            claude_trace_schema, "claude_trace_schema validator module not importable"
+        )
+        return claude_trace_schema
+
+    def test_write_snapshot_fail_closed_writes_valid_and_aborts_invalid(self) -> None:
+        cap = self.require_capabilities()
+        _, probe_run = _run_bounded_matrix_with_fake_invoker(cap)
+        snapshot = cap.assemble_runtime_capability_snapshot(
+            probe_run,
+            captured_at_utc="2026-07-16T12:00:00Z",
+            version=1,
+            pinned_client_version="2.19.3",
+            authentication_mode="subscription",
+            unset_proof=self._clean_unset_proof(cap),
+            unavailable_model_id=_UNAVAILABLE_PROBE_ID,
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            good = Path(tmp) / "snap.json"
+            disposition = cap.write_snapshot_fail_closed(snapshot, good)
+            self.assertEqual(disposition, cap.DISPOSITION_RECORD)
+            self.assertTrue(good.exists())
+            reloaded = json.loads(good.read_text(encoding="utf-8"))
+            self.assertEqual(reloaded["runtime_capability_snapshot_id"], snapshot["runtime_capability_snapshot_id"])
+
+            broken = dict(snapshot)
+            broken.pop("canary")
+            bad = Path(tmp) / "bad.json"
+            with self.assertRaises(cap.ProbeWriteAborted):
+                cap.write_snapshot_fail_closed(broken, bad)
+            self.assertFalse(bad.exists())  # fail-closed: nothing committed (SC-004)
+
+    # -- T014: subagent-frontmatter dispatch mechanism ------------------------
+
+    def test_build_probe_agent_markdown_names_unavailable_model_in_frontmatter(self) -> None:
+        cap = self.require_capabilities()
+        text = cap.build_probe_agent_markdown("car002-probe", _UNAVAILABLE_PROBE_ID)
+        self.assertTrue(text.startswith("---\n"))
+        self.assertIn("name: car002-probe", text)
+        self.assertIn(f"model: {_UNAVAILABLE_PROBE_ID}", text)
+        self.assertEqual(text.count("---"), 2)
+
+    def test_staged_probe_agent_creates_then_removes_file_on_every_exit(self) -> None:
+        cap = self.require_capabilities()
+        with tempfile.TemporaryDirectory() as tmp:
+            agents_dir = Path(tmp) / ".claude" / "agents"
+            with cap.staged_probe_agent(agents_dir, "car002-probe", _UNAVAILABLE_PROBE_ID) as path:
+                self.assertTrue(path.exists())
+                self.assertIn(_UNAVAILABLE_PROBE_ID, path.read_text(encoding="utf-8"))
+            self.assertFalse(path.exists())  # removed on normal exit
+
+            # Removed even when the dispatch body raises (abort/timeout path).
+            with self.assertRaises(RuntimeError):
+                with cap.staged_probe_agent(agents_dir, "car002-probe", _UNAVAILABLE_PROBE_ID) as path2:
+                    self.assertTrue(path2.exists())
+                    raise RuntimeError("simulated abort")
+            self.assertFalse(path2.exists())
+
+    def test_live_invoker_subagent_stages_file_during_dispatch_and_removes_after(self) -> None:
+        cap = self.require_capabilities()
+        with tempfile.TemporaryDirectory() as tmp:
+            agents_dir = Path(tmp) / ".claude" / "agents"
+            invoker = cap.LiveClaudeInvoker(
+                agents_dir=agents_dir,
+                unavailable_model_id=_UNAVAILABLE_PROBE_ID,
+                agent_name="car002-probe",
+            )
+            probe_path = agents_dir / "car002-probe.md"
+            seen = {}
+
+            def spy_run(argv, **kwargs):
+                seen["existed_during"] = probe_path.exists()
+                seen["argv"] = list(argv)
+                return subprocess.CompletedProcess(list(argv), 0, stdout=_canary_stdout("claude-opus-4-8"), stderr="")
+
+            planned = cap.PlannedInvocation(
+                purpose=cap.PURPOSE_UNAVAILABLE_PROBE, surface="subagent_frontmatter"
+            )
+            with mock.patch("subprocess.run", spy_run):
+                result = invoker(planned, timeout_seconds=30.0)
+            self.assertEqual(result.return_code, 0)
+            self.assertTrue(seen["existed_during"])  # file present at dispatch time
+            self.assertNotIn("--model", seen["argv"])  # no preempting model (R4/R12)
+            self.assertFalse(probe_path.exists())  # removed after (try/finally)
+
+    def test_live_invoker_subagent_removes_file_on_timeout(self) -> None:
+        cap = self.require_capabilities()
+        with tempfile.TemporaryDirectory() as tmp:
+            agents_dir = Path(tmp) / ".claude" / "agents"
+            invoker = cap.LiveClaudeInvoker(
+                agents_dir=agents_dir, unavailable_model_id=_UNAVAILABLE_PROBE_ID, agent_name="car002-probe"
+            )
+            probe_path = agents_dir / "car002-probe.md"
+
+            def timeout_run(argv, **kwargs):
+                raise subprocess.TimeoutExpired(cmd=list(argv), timeout=kwargs.get("timeout", 1))
+
+            planned = cap.PlannedInvocation(
+                purpose=cap.PURPOSE_UNAVAILABLE_PROBE, surface="subagent_frontmatter"
+            )
+            with mock.patch("subprocess.run", timeout_run):
+                result = invoker(planned, timeout_seconds=5.0)
+            self.assertTrue(result.timed_out)
+            self.assertFalse(probe_path.exists())  # removed on timeout exit path
+
+    def test_probe_run_leaves_the_real_claude_agents_dir_untouched(self) -> None:
+        cap = self.require_capabilities()
+        real_agents_dir = REPO_ROOT / ".claude" / "agents"
+        before = sorted(p.name for p in real_agents_dir.iterdir()) if real_agents_dir.exists() else []
+        with tempfile.TemporaryDirectory() as tmp:
+            agents_dir = Path(tmp) / ".claude" / "agents"
+            invoker = cap.LiveClaudeInvoker(
+                agents_dir=agents_dir, unavailable_model_id=_UNAVAILABLE_PROBE_ID, agent_name="car002-probe"
+            )
+            planned = cap.PlannedInvocation(
+                purpose=cap.PURPOSE_UNAVAILABLE_PROBE, surface="subagent_frontmatter"
+            )
+            with mock.patch("subprocess.run", _argv_aware_fake_run):
+                invoker(planned, timeout_seconds=30.0)
+        after = sorted(p.name for p in real_agents_dir.iterdir()) if real_agents_dir.exists() else []
+        self.assertEqual(before, after)
+        self.assertNotIn("car002-probe.md", after)
+
+    # -- T011+T012+T014 end-to-end through main() (offline, faked subprocess) -
+
+    def test_main_runs_the_matrix_offline_and_writes_a_valid_snapshot(self) -> None:
+        cap = self.require_capabilities()
+        validator = self.require_validator_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "claude-runtime-capability-snapshot.json"
+            agents_dir = Path(tmp) / ".claude" / "agents"
+            argv = [
+                "--timeout", "30",
+                "--unavailable-model-id", _UNAVAILABLE_PROBE_ID,
+                "--pinned-client-version", "2.19.3",
+                "--output", str(out),
+                "--agents-dir", str(agents_dir),
+                "--version-number", "1",
+            ]
+            with mock.patch("subprocess.run", _argv_aware_fake_run):
+                exit_code = cap.main(argv, env={})  # env={} => subscription => no network
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(out.exists())
+            snapshot = json.loads(out.read_text(encoding="utf-8"))
+            self.assertIs(validator.validate_runtime_capability_snapshot(snapshot), snapshot)
+            self.assertEqual(snapshot["authentication_mode"], "subscription")
+            # No probe residue and the real agents dir is untouched.
+            self.assertFalse((agents_dir / "car002-probe.md").exists())
+
+
 if __name__ == "__main__":
     loader = unittest.defaultTestLoader
     suite = unittest.TestSuite()
     suite.addTests(loader.loadTestsFromTestCase(ClaudeTraceSchemaContractTests))
     suite.addTests(loader.loadTestsFromTestCase(ClaudeCapabilitiesPureLogicTests))
+    suite.addTests(loader.loadTestsFromTestCase(ClaudeCapabilitiesLiveBoundaryTests))
     raise SystemExit(run_counted(suite, label="test-efficiency-claude-telemetry"))
