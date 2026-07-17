@@ -923,7 +923,12 @@ def build_treatment_successor(prior_freeze: dict, treatment_bundle: dict, *, man
     for key, value in prior_freeze.items():
         if key not in {"candidate_freeze_id", "telemetry_profile_id", "supersedes_candidate_freeze_id"} and canonical_bytes(successor[key]) != canonical_bytes(value):
             raise ValueError("treatment successor changed frozen capability evidence")
-    capability.validate_freeze(successor, manifest, predecessor=prior_freeze)
+    capability_projection = copy.deepcopy(successor)
+    capability_projection["telemetry_profile_id"] = capability.PENDING_TELEMETRY_PROFILE_ID
+    capability_projection["candidate_freeze_id"] = digest({
+        key: value for key, value in capability_projection.items() if key != "candidate_freeze_id"
+    })
+    capability.validate_freeze(capability_projection, manifest, predecessor=prior_freeze)
     if successor["supersedes_candidate_freeze_id"] != prior_id: raise ValueError("treatment successor does not bind the actual prior freeze")
     return successor
 
