@@ -94,7 +94,7 @@ preferred based on CAR-001 alone.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 28 FRs, 4 US (WP-mapped), 11 acceptance scenarios, 8 SCs; 0 markers; 16/16 quality checklist; privacy scan clean |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions; 9 parent-applied, 6 via consensus (all Round 1, zero escapes, zero human-review flags); 0 markers remain — decisions documented in spec Assumptions + Consensus Resolution Log (spec template carries no dedicated Clarifications section) |
-| Plan | `/speckit-plan` | ⏳ Pending | Declares the 3 work packages (Q8) |
+| Plan | `/speckit-plan` | ✅ Complete | 5 artifacts; constitution 6/6 PASS; 13 declared file-ops (WP1:7, WP2:4, WP3:5); all Plan-owed decisions resolved in research.md; WP1 hand-estimate 550–820 LOC → G5 escalation recorded |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -451,11 +451,13 @@ observation).
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, execution flow, work packages |
-| `research.md` | ⏳ | Decision rationales (effort config surface, canary, CAP-Q6 route) |
-| `data-model.md` | ⏳ | Four record types + ID contract |
-| `contracts/` | ⏳ | JSON Schema for the four record $defs |
-| `quickstart.md` | ⏳ | Operator probe runbook + how CAR-003 consumes the snapshot |
+| `plan.md` | ✅ | Constitution 6/6 PASS (initial + post-design re-check); 13 Declared File Operations (11 NEW, 2 MODIFIED) with per-WP assignment WP1:7 / WP2:4 / WP3:5; Complexity Tracking empty (no violations) |
+| `research.md` | ✅ | All Plan-owed decisions pinned: `tuple_id` = `<model>__<effort>` (6 tuples verified); `record_class` lowercase enum; one-shot `modelUsage` key-spelling confirmation = probe step 1; probe-integrity controls (requested-vs-observed cross-check, no preempting `--model`); effort via plain-text `--print`; CAP-Q6 detection-rule-only; FR-010 unset-proof set + `inherit` version caveat |
+| `data-model.md` | ✅ | Four record types + ID contract + rawEvidence sub-component |
+| `contracts/` | ✅ | `claude-trace-contract.schema.json` — valid draft 2020-12, four record `$defs` + shared primitives, `schema_version` 1.0.0 |
+| `quickstart.md` | ✅ | Operator probe runbook + CAR-003 consumption |
+
+**Plan-phase reviewability budget (step 7b, advisory — 2026-07-16):** runner helper `estimate-reviewable-loc` → `status: pass`, `projected: 0`, 13 declared entries parsed. The mechanical pass is a known blind spot: `is_production_file` recognizes only `src/|app/|lib/|scripts/` prefixes or JS/TS/SQL extensions, and every CAR-002 file is test-tree `.py` or `docs/**` JSON. The plan's hand estimate puts WP1's authored surface at ≈550–820 reviewable LOC (over the 400 warn ceiling, possibly near the 800 block ceiling under the PR-time diff gate). Per the Clarify log #5 decision this is **carried to G5 for explicit escalation** — two dispositions documented in plan.md (single WP1 PR with ratified over-ceiling exception [plan-recommended: the coupling is atomic per FR-015/FR-016/FR-023/FR-028] vs PRSG file-level review units within the one WP); the ratified 3-WP boundary is preserved either way. Advisory only — the run continues.
 
 ---
 

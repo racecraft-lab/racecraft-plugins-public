@@ -1,0 +1,281 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/docs/ai/research/claude-trace-contract.schema.json",
+  "title": "Claude Runtime Capability and Trace Contract",
+  "description": "CAR-002 design draft. One review-visible JSON Schema publishing four record contracts as $defs: runtimeCapabilitySnapshot, telemetryProfile, routeResolution, and exactTreatmentReplay. $def names are camelCase; instance fields are snake_case. Every record carries schema_version const 1.0.0. Standard-library-validated (claude_trace_schema.py); no third-party jsonschema. Shipped copy: docs/ai/research/claude-trace-contract.schema.json.",
+  "oneOf": [
+    {"$ref": "#/$defs/runtimeCapabilitySnapshot"},
+    {"$ref": "#/$defs/telemetryProfile"},
+    {"$ref": "#/$defs/routeResolution"},
+    {"$ref": "#/$defs/exactTreatmentReplay"}
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "nullableString": {"type": ["string", "null"]},
+    "recordClass": {"enum": ["success", "null", "unavailable", "misdelivery"]},
+    "evidenceLabel": {"enum": ["fact", "observation", "labeled_inference"]},
+    "rawEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["raw_output", "raw_output_sha256", "sanitization"],
+      "properties": {
+        "raw_output": {"type": "string", "minLength": 1},
+        "raw_output_sha256": {"$ref": "#/$defs/sha256"},
+        "sanitization": {"const": "home_paths_normalized_utf8"}
+      }
+    },
+    "unsetProof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fallback_model_unset",
+        "fallbackModel_unset",
+        "claude_code_subagent_model_unset",
+        "available_models_absent",
+        "enforce_available_models_observed",
+        "config_dir_isolation",
+        "inherit_equivalent_to_unset",
+        "org_restriction_gap"
+      ],
+      "properties": {
+        "fallback_model_unset": {"type": "boolean"},
+        "fallbackModel_unset": {"type": "boolean"},
+        "claude_code_subagent_model_unset": {"type": "boolean"},
+        "available_models_absent": {"type": "boolean"},
+        "enforce_available_models_observed": {"$ref": "#/$defs/nullableString"},
+        "config_dir_isolation": {"enum": ["none", "partial_defense_in_depth"]},
+        "inherit_equivalent_to_unset": {"$ref": "#/$defs/nullableString"},
+        "org_restriction_gap": {"$ref": "#/$defs/nullableString"}
+      }
+    },
+    "canary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "canary_sha256"],
+      "properties": {
+        "text": {"type": "string", "minLength": 1},
+        "canary_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "tupleEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tuple_id",
+        "model_requested",
+        "effort_requested",
+        "resolved_dated_model_id",
+        "effort_acceptance",
+        "effort_probe_output_mode",
+        "raw_evidence"
+      ],
+      "properties": {
+        "tuple_id": {"type": "string", "pattern": "^[a-z0-9]+__[a-z0-9]+$"},
+        "model_requested": {"type": "string", "minLength": 1},
+        "effort_requested": {"$ref": "#/$defs/nullableString"},
+        "resolved_dated_model_id": {"$ref": "#/$defs/nullableString"},
+        "effort_acceptance": {"enum": ["accepted", "clamped", "rejected", "observation_only"]},
+        "effort_probe_output_mode": {"enum": ["plain_text_print", "json_no_org_cap_assumed"]},
+        "raw_evidence": {"$ref": "#/$defs/rawEvidence"}
+      }
+    },
+    "aliasBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alias", "resolved_dated_model_id", "tuple_id", "raw_evidence"],
+      "properties": {
+        "alias": {"enum": ["opus", "sonnet", "haiku", "fable"]},
+        "resolved_dated_model_id": {"$ref": "#/$defs/nullableString"},
+        "tuple_id": {"type": "string", "pattern": "^[a-z0-9]+__[a-z0-9]+$"},
+        "raw_evidence": {"$ref": "#/$defs/rawEvidence"}
+      }
+    },
+    "unavailableObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface",
+        "requested_unavailable_model_id",
+        "observed_outcome",
+        "observed_model_id",
+        "unset_proof",
+        "remap_flagged",
+        "dispatch_equivalence_caveat",
+        "raw_evidence"
+      ],
+      "properties": {
+        "surface": {"enum": ["print_model", "subagent_frontmatter"]},
+        "requested_unavailable_model_id": {"type": "string", "minLength": 1},
+        "observed_outcome": {"enum": ["soft_remap", "hard_rejection", "silent_fallback", "undetermined"]},
+        "observed_model_id": {"$ref": "#/$defs/nullableString"},
+        "unset_proof": {"$ref": "#/$defs/unsetProof"},
+        "remap_flagged": {"type": "boolean"},
+        "dispatch_equivalence_caveat": {"type": "string", "minLength": 1},
+        "raw_evidence": {"$ref": "#/$defs/rawEvidence"}
+      }
+    },
+    "modelsEndpointEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["access_status", "dated_model_ids", "per_model_effort_flags", "note"],
+      "properties": {
+        "access_status": {"enum": ["accessible", "unreachable", "not_applicable_subscription"]},
+        "dated_model_ids": {"type": "array", "items": {"type": "string"}},
+        "per_model_effort_flags": {"type": "object"},
+        "note": {"type": "string", "minLength": 1}
+      }
+    },
+    "capabilityAnswer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability_question_id", "status", "answer", "evidence_refs", "label"],
+      "properties": {
+        "capability_question_id": {"enum": ["CAP-Q1", "CAP-Q2", "CAP-Q3", "CAP-Q4", "CAP-Q5", "CAP-Q6"]},
+        "status": {"enum": ["answered", "open"]},
+        "answer": {"$ref": "#/$defs/nullableString"},
+        "evidence_refs": {"type": "array", "items": {"type": "string"}},
+        "label": {"$ref": "#/$defs/evidenceLabel"}
+      }
+    },
+    "openGap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subject", "reason", "disposition"],
+      "properties": {
+        "subject": {"type": "string", "minLength": 1},
+        "reason": {"type": "string", "minLength": 1},
+        "disposition": {"enum": ["open", "unavailable", "gap"]}
+      }
+    },
+    "runtimeCapabilitySnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "runtime_capability_snapshot_id",
+        "captured_at_utc",
+        "pinned_client_version",
+        "authentication_mode",
+        "canary",
+        "tuple_evidence",
+        "alias_bindings",
+        "unavailable_observations",
+        "models_endpoint_evidence",
+        "capability_answers",
+        "open_gaps"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "runtime_capability_snapshot_id": {"type": "string", "pattern": "^CAR-002-RCS-[0-9]{4}-[0-9]{2}-[0-9]{2}-V[0-9]+$"},
+        "captured_at_utc": {"type": "string", "format": "date-time"},
+        "pinned_client_version": {"type": "string", "minLength": 1},
+        "authentication_mode": {"enum": ["api_key", "subscription"]},
+        "canary": {"$ref": "#/$defs/canary"},
+        "tuple_evidence": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/tupleEvidence"}},
+        "alias_bindings": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/aliasBinding"}},
+        "unavailable_observations": {"type": "array", "items": {"$ref": "#/$defs/unavailableObservation"}},
+        "models_endpoint_evidence": {"anyOf": [{"$ref": "#/$defs/modelsEndpointEvidence"}, {"type": "null"}]},
+        "capability_answers": {"type": "array", "minItems": 6, "items": {"$ref": "#/$defs/capabilityAnswer"}},
+        "open_gaps": {"type": "array", "items": {"$ref": "#/$defs/openGap"}}
+      }
+    },
+    "fieldClassification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "classification", "observed_value", "label", "source_ref"],
+      "properties": {
+        "field": {"type": "string", "minLength": 1},
+        "classification": {"enum": ["stable_native", "derived", "derived_from_controlled_configuration", "unavailable"]},
+        "observed_value": {"$ref": "#/$defs/nullableString"},
+        "label": {"$ref": "#/$defs/evidenceLabel"},
+        "source_ref": {"$ref": "#/$defs/nullableString"}
+      }
+    },
+    "telemetryProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "telemetry_profile_id",
+        "pinned_client_version",
+        "runtime_capability_snapshot_id",
+        "field_classifications"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "telemetry_profile_id": {"type": "string", "pattern": "^CAR-002-TP-[0-9]{4}-[0-9]{2}-[0-9]{2}-V[0-9]+$"},
+        "pinned_client_version": {"type": "string", "minLength": 1},
+        "runtime_capability_snapshot_id": {"type": "string", "minLength": 1},
+        "field_classifications": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/fieldClassification"}}
+      }
+    },
+    "routeResolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "route_resolution_id",
+        "agent_contract_id",
+        "candidate_route_id",
+        "runtime_capability_snapshot_id",
+        "requested_model_alias",
+        "resolved_dated_model_id",
+        "effort_level",
+        "instruction_sha256",
+        "mutation_contract",
+        "client_version",
+        "fast_mode_state",
+        "env_override_proof",
+        "tuple_id"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "route_resolution_id": {"type": "string", "minLength": 1},
+        "agent_contract_id": {"type": "string", "minLength": 1},
+        "candidate_route_id": {"type": "string", "minLength": 1},
+        "runtime_capability_snapshot_id": {"type": "string", "minLength": 1},
+        "requested_model_alias": {"type": "string", "minLength": 1},
+        "resolved_dated_model_id": {"type": "string", "minLength": 1},
+        "effort_level": {"$ref": "#/$defs/nullableString"},
+        "instruction_sha256": {"$ref": "#/$defs/sha256"},
+        "mutation_contract": {"type": "string", "minLength": 1},
+        "client_version": {"type": "string", "minLength": 1},
+        "fast_mode_state": {"enum": ["on", "off", "unknown"]},
+        "env_override_proof": {"$ref": "#/$defs/unsetProof"},
+        "tuple_id": {"type": "string", "pattern": "^[a-z0-9]+__[a-z0-9]+$"}
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "telemetry_ref", "notes"],
+      "properties": {
+        "status": {"enum": ["completed", "unavailable", "error"]},
+        "telemetry_ref": {"$ref": "#/$defs/nullableString"},
+        "notes": {"$ref": "#/$defs/nullableString"}
+      }
+    },
+    "exactTreatmentReplay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "route_resolution",
+        "execution_trace_id",
+        "record_class",
+        "observed_model_id",
+        "outcome",
+        "scorable"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "route_resolution": {"$ref": "#/$defs/routeResolution"},
+        "execution_trace_id": {"$ref": "#/$defs/nullableString"},
+        "record_class": {"$ref": "#/$defs/recordClass"},
+        "observed_model_id": {"$ref": "#/$defs/nullableString"},
+        "outcome": {"$ref": "#/$defs/outcome"},
+        "scorable": {"type": "boolean"}
+      }
+    }
+  }
+}
