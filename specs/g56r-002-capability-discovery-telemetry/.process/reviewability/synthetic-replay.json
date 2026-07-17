@@ -1,0 +1,43 @@
+{
+  "schema_version": "reviewability-evidence.v1",
+  "feature_id": "G56R-002",
+  "marker_id": "us3",
+  "status": "block",
+  "mode": "implementation",
+  "scope": "T026-T030 deterministic synthetic replay",
+  "reason_class": "size_only",
+  "threshold_reviewable_loc": 400,
+  "planned_reviewable_loc": 297,
+  "actual_source_lines": 1301,
+  "actual_nonblank_noncomment_lines": 1190,
+  "production_modules": 1,
+  "primary_surface": "harness/adapter",
+  "correctness_checks": {
+    "focused_tests": "30/30 pass",
+    "two_pass_byte_equality": "pass",
+    "raw_fixture_digest_validation": "pass",
+    "canonical_fixture_serialization": "pass",
+    "offline_guardrails": "pass",
+    "eight_class_semantic_binding": "pass",
+    "public_synthetic_qualification_rejection": "pass",
+    "capability_module_freeze": "pass",
+    "independent_review": "pass"
+  },
+  "exception": {
+    "kind": "typed_size_only",
+    "status": "honored_for_checkpoint",
+    "subdivision": "no_safe_boundary",
+    "rationale": "Fixture provenance, raw-byte digest-before-parse validation, exact eight-class disposition semantics, synthetic reroute isolation, and two-pass normalized replay extend the predeclared treatment integrity boundary from T026-T030.",
+    "growth_limit": "The predeclared replay extension is complete; no further treatment_trace_schema.py growth is authorized after this checkpoint."
+  },
+  "later_markers": [
+    "polish:T031-T039"
+  ],
+  "evidence_commands": [
+    "wc -l tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py",
+    "awk 'NF && $0 !~ /^[[:space:]]*#/ {n++} END{print n}' tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py",
+    "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
+    "python3 tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py replay --fixture tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json --digest-manifest tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json --repeat 2",
+    "git diff --exit-code 2270fb56 -- tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py"
+  ]
+}

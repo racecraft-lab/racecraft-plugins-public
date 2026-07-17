@@ -65,7 +65,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Tasks | `$speckit-tasks` | Complete | 39 TDD-first tasks; G5 passed |
 | Analyze | `$speckit-analyze` | Complete | Nine findings remediated; G6 passed |
 | Confidence Gate | G6.5 | Complete | Advisory score 0.99 passed the 0.90 threshold |
-| Implement | `$speckit-implement` | In Progress | T016-T025 completed at the clean US2 checkpoint; T026-T030 synthetic replay is in progress |
+| Implement | `$speckit-implement` | In Progress | T026-T030 replay implementation applied during restack; checkpoint verification is pending |
 | Post | Post-Implementation | Pending | Complete verification, reviewability, PR, remediation, and retrospective work |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -874,7 +874,7 @@ For every task:
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
 | 2 - Treatment contracts | Complete | 10 | 51/51 focused tests, 2821/2821 full suite, Windows-safe offline replay, and exact-head independent review returned `NO FINDINGS` |
-| 3 - Synthetic replay | In Progress | 0 | T026-T030 are unblocked after the clean US2 checkpoint and continue in the next marker branch |
+| 3 - Synthetic replay | Checkpointing | 5 | Replay code and fixtures applied; final schema rebinding and restack verification are pending |
 | Polish and validation | Pending | 0 | Not started |
 
 ### Capability Checkpoint Evidence
@@ -926,6 +926,17 @@ For every task:
   (`windows-telemetry-review-D88461`).
 - Implementation checkpoint: `1190e3c1205744fd50afb37a12c0f9527ad5ee53`
 
+### Synthetic Replay Checkpoint Evidence
+
+- Restacked implementation commit: `cd36822c0188ad338e1a96140ef90007796792aa`
+- Capability fixture: Pending final digest verification.
+- Treatment fixture: Pending final hardened-schema rebinding and digest verification.
+- Replay output: Pending byte-identical two-pass verification.
+- Cases: eight exact success, null, unavailable, misdelivery, approved reroute,
+  unapproved reroute, discovery-loss, and surface-disagreement classes.
+- Reviewability: Pending refresh against the restacked US3 production surface.
+- Review: Pending exact-head review after restack verification.
+
 ## PR Marker Plan Evidence
 
 - Schema version: `pr-marker-plan.v1`
@@ -946,12 +957,12 @@ For every task:
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
 | 2 | `us2` | T016-T025 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `1190e3c1205744fd50afb37a12c0f9527ad5ee53` | Only T026-T030 replay growth remains authorized |
-| 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
+| 3 | `us3` | T026-T030; T031-T039 folded | Pending restack measurement | Checkpointing from `cd36822c0188ad338e1a96140ef90007796792aa` | Final validation and review remain pending |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
   lines; the current US2 marker is 4,214 / 3,843 across its two modules against
-  the 400-LOC boundary. Both use typed size-only exceptions.
+  the 400-LOC boundary. The US3 measurement will be refreshed after restack.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.
 - PR mappings: Pending.

@@ -4,7 +4,7 @@
   "feature_dir": "specs/g56r-002-capability-discovery-telemetry",
   "branch": "g56r-002-capability-discovery-telemetry",
   "updated_at": "2026-07-19T03:09:22Z",
-  "active_step": "Phase 7: Implement - Synthetic Replay",
+  "active_step": "Phase 7: Implement - Synthetic Replay Checkpoint",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
   "archive_sweep": {
@@ -345,6 +345,20 @@
       "checkpoint": "1190e3c1205744fd50afb37a12c0f9527ad5ee53",
       "superseded_checkpoint": "c47c9d31fd1288e86f0707601078e4f03e2b12e5",
       "completed_at": "2026-07-19T03:09:22Z"
+    },
+    "Phase 7: Implement - Synthetic Replay": {
+      "status": "checkpointing",
+      "tasks_completed": 5,
+      "tasks_total": 5,
+      "focused_tests": "pending hardened-schema restack verification",
+      "independent_review": "pending exact-head review",
+      "implementation_commit": "cd36822c0188ad338e1a96140ef90007796792aa",
+      "capability_fixture_digest": "pending final digest verification",
+      "treatment_fixture_digest": "pending final hardened-schema rebinding",
+      "replay_digest": "pending byte-identical two-pass verification",
+      "marker_id": "us3",
+      "reviewability": "pending restack measurement",
+      "checkpoint": "pending replay validation"
     }
   },
   "current_source_fingerprint": {
@@ -531,6 +545,7 @@
         "declared_files": [
           {"operation": "MODIFIED", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"},
           {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"},
+          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/capability-matrix.json"},
           {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"},
           {"operation": "NEW", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json"},
           {"operation": "MODIFIED", "path": "tests/speckit-pro/suite-manifest.json"},
@@ -546,12 +561,33 @@
           "python3 -u tests/speckit-pro/run-all.py",
           "pnpm --dir docs-site reference:check"
         ],
-        "reviewability": {"status": "not_estimated", "mode": "implementation", "scope": "us3"},
+        "reviewability": {
+          "status": "block",
+          "mode": "implementation",
+          "scope": "us3",
+          "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
+          "head_sha": "4a1febfd0f90348f91cef6f71ab8e809ec924231"
+        },
         "hazards": ["fixture-provenance", "offline-determinism", "release-readiness"],
-        "subdivision": {"status": "none", "details": {}},
+        "subdivision": {
+          "status": "no_safe_boundary",
+          "details": {
+            "reason": "Fixture provenance, digest-before-parse validation, eight-class semantics, and byte-identical normalized replay share one acceptance boundary.",
+            "exception_kind": "typed_size_only",
+            "growth_limit": "No further treatment_trace_schema.py growth after this checkpoint."
+          }
+        },
         "implementation_checkpoint": {"status": "pending", "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3.json"},
         "emission_mapping": {"status": "pending", "packet_path": "specs/g56r-002-capability-discovery-telemetry/.process/pr-packets/us3.json"},
-        "warnings": []
+        "warnings": [
+          {
+            "code": "MARKER_SIZE_WARNING",
+            "severity": "warning",
+            "message": "US3 exceeds 400 reviewable LOC and is retained under the exhausted predeclared replay size exception.",
+            "source": "synthetic-replay-reviewability",
+            "details": {"marker_id": "us3", "actual_source_lines": 1301, "actual_nonblank_noncomment_lines": 1190}
+          }
+        ]
       }
     ],
     "warnings": [
@@ -571,7 +607,7 @@
       }
     ],
     "created_at": "2026-07-17T04:50:02Z",
-    "updated_at": "2026-07-17T06:04:36Z"
+    "updated_at": "2026-07-17T06:41:10Z"
   },
   "layer_plan": {
     "status": "skipped",
