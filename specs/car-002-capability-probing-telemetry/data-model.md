@@ -197,7 +197,7 @@ Carries a complete `routeResolution` binding plus the observed record class and 
 | `outcome` | `outcome` object (below) | yes | Observed telemetry/outcome sufficient to replay (FR-022). |
 | `scorable` | boolean | yes | False for `unavailable` and `misdelivery`. |
 
-**`outcome`**: `{ status: enum["completed","unavailable","error"], telemetry_ref: nullableString, notes: nullableString }`. Telemetry references the telemetry-profile field set rather than duplicating values. Resolution rule (FR-022): a non-null `telemetry_ref` MUST resolve against the telemetry-profile field set during deterministic validation; a dangling reference fails validation.
+**`outcome`**: `{ status: enum["completed","unavailable","error"], telemetry_ref: nullableString, notes: nullableString }`. Telemetry references the telemetry-profile field set rather than duplicating values. Resolution rule (FR-022): a non-null `telemetry_ref` MUST resolve against the telemetry-profile field set during deterministic validation; a dangling reference fails validation. Class→status mapping (FR-025): `success`/`null`/`misdelivery` ⇒ `completed` (misdelivery is a completed-but-misrouted treatment, non-scorable); `unavailable` ⇒ `unavailable`; `error` is reserved for consumer-recorded execution errors outside the four synthetic classes.
 
 ### Record-class rules (FR-025; the four synthetic fixtures, WP3)
 
