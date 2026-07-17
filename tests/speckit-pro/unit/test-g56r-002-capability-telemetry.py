@@ -24,6 +24,31 @@ FIXTURE_PATH = ROOT / "tests/speckit-pro/unit/fixtures/capability-treatment-repl
 MANIFEST_PATH = ROOT / "docs/ai/research/codex-agent-route-candidate-manifest.json"
 PUBLISHED_FREEZE_PATH = ROOT / "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json"
 CAPABILITY_EVIDENCE_PATH = ROOT / "docs/ai/research/codex-g56r-002-capability-evidence.md"
+TREATMENT_MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"
+TREATMENT_FIXTURE_PATH = ROOT / "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"
+
+EXPECTED_APP_SERVER_TELEMETRY_FIELDS = frozenset({
+    "discovery.models", "discovery.efforts", "discovery.capabilities",
+    "assignment.named_agent", "assignment.model", "assignment.effort",
+    "assignment.candidate_route_id", "assignment.agent_contract_id",
+    "assignment.instruction_hash", "assignment.configuration_hash",
+    "route.preferred_route_id", "route.attempted_route_ids", "route.assigned_route_id",
+    "route.supported_effective_route_id", "route.fallback_index", "route.fallback_reason",
+    "route.runtime_capability_snapshot_id", "route.resolved_at", "reroute.events",
+    "treatment.sandbox", "treatment.approvals", "treatment.mutation_class",
+    "treatment.expected_skills_mcp_tools", "treatment.loaded_skills_mcp_tools",
+    "treatment.parent_configuration", "treatment.controlled_overrides",
+    "treatment.delivery_canary", "assignment.supported_effective_model",
+    "assignment.supported_effective_effort", "treatment.failures", "parent.context", "parent.graph",
+    "resources.raw_token_vector", "resources.request_turn_count", "resources.wall_time_ms",
+    "lifecycle.retries", "lifecycle.compaction", "lifecycle.validation",
+    "lifecycle.cancellation", "lifecycle.failed_abandoned_work", "terminal.state",
+    "terminal.outcome", "terminal.acceptance",
+})
+EXPECTED_TELEMETRY_INVENTORY = frozenset(
+    {("app_server", field) for field in EXPECTED_APP_SERVER_TELEMETRY_FIELDS}
+    | {("cli", "route.supported_effective_route_id"), ("interactive_picker", "parent.graph")}
+)
 
 spec = importlib.util.spec_from_file_location("g56r_002_codex_capabilities", MODULE_PATH)
 if spec is None or spec.loader is None:
@@ -31,9 +56,63 @@ if spec is None or spec.loader is None:
 capabilities = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(capabilities)
 
+treatment_spec = importlib.util.spec_from_file_location("g56r_002_treatment_trace_schema", TREATMENT_MODULE_PATH)
+if treatment_spec is None or treatment_spec.loader is None:
+    raise RuntimeError(f"cannot load {TREATMENT_MODULE_PATH}")
+treatment = importlib.util.module_from_spec(treatment_spec)
+treatment_spec.loader.exec_module(treatment)
+
 
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def trusted_external_qualification(bundle: dict) -> dict[str, dict]:
+    owner = next(item for item in bundle["qualification_evidence_registry"] if item["authority_kind"] == "owned_external")
+    return {owner["qualification_evidence_id"]: copy.deepcopy(owner)}
+
+
+def make_treatment_reroute_case(bundle: dict, authority: str) -> dict:
+    trace = bundle["treatment_traces"][0]
+    owned = next(item for item in bundle["qualification_evidence_registry"] if item["authority_kind"] == "owned_external")
+    synthetic = next(item for item in bundle["qualification_evidence_registry"] if item["authority_kind"] == "synthetic_fixture")
+    event = {
+        "surface": trace["surface"], "threadId": trace["context"]["threadId"], "turnId": trace["context"]["turnId"],
+        "fromModel": trace["requested_model"], "toModel": "gpt-5.5", "reason": "fixture-service-reroute",
+        "evidence_digest": treatment.digest(b"fixture-reroute-evidence"),
+    }
+    event["event_id"] = treatment.digest(event)
+    selected = synthetic if authority == "synthetic_fixture" else owned
+    assessment = {
+        "event_id": event["event_id"], "destination_candidate_route_id": selected["destination_candidate_route_id"],
+        "destination_agent_contract_id": selected["destination_agent_contract_id"],
+        "destination_named_agent": selected["destination_named_agent"], "assessment": "prequalified_same_agent",
+        "prequalification_evidence_id": selected["qualification_evidence_id"],
+    }
+    trace["service_reroute_events"] = [event]
+    trace["supported_effective_model"] = event["toModel"]
+    trace["supported_effective_effort"] = None
+    next(item for item in trace["observations"] if item["field_path"] == "reroute.events")["value"] = [event]
+    effective = next(item for item in trace["observations"] if item["field_path"] == "assignment.supported_effective_model")
+    effective.update({
+        "observation_state": "observed_value", "value": event["toModel"],
+        "evidence_ref": "fixture://trace/effective-model", "captured_at": "2026-07-17T04:01:00Z",
+    })
+    if authority == "missing":
+        trace["reroute_destination_assessments"], disposition = [], "hard_fail"
+    else:
+        if authority == "mismatched":
+            assessment["destination_named_agent"] = "different-agent"
+        trace["reroute_destination_assessments"] = [assessment]
+        disposition = "non_scorable_rerouted" if authority == "owned_external" else "hard_fail"
+    trace["treatment_failures"] = []
+    trace["treatment_disposition"] = disposition
+    trace["disposition_reasons"] = ["fixture_predeclared_and_derived"]
+    bundle["fixture_provenance"]["expected_dispositions"] = [{
+        "execution_trace_id": trace["objective_binding"]["execution_trace_id"],
+        "treatment_disposition": disposition,
+    }]
+    return bundle
 
 
 def source_capture(manifest: dict, retrieved_at: str = "2026-07-16T00:00:00Z") -> list[dict]:
@@ -1284,6 +1363,624 @@ class CapabilityContractTests(unittest.TestCase):
                 os.mkfifo(fifo)
                 with self.assertRaisesRegex(ValueError, "regular file"):
                     capabilities.digest_regular_file(fifo)
+
+
+class TreatmentContractTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.bundle = load_json(TREATMENT_FIXTURE_PATH)
+
+    def rebound(self, bundle: dict) -> dict:
+        bundle["treatment_contract_digest"] = treatment.schema_file_digest()
+        bundle["telemetry_profile_id"] = treatment.telemetry_profile_id(
+            bundle["schema_version"], bundle["telemetry_profile"], bundle["treatment_contract_digest"]
+        )
+        return bundle
+
+    def assert_bundle_invalid(self, bundle: dict, message: str = "") -> None:
+        with self.assertRaises(ValueError, msg=message):
+            treatment.validate_treatment_bundle(self.rebound(bundle))
+
+    def assert_bundle_not_proven(self, bundle: dict, message: str = "") -> None:
+        try:
+            validated = treatment.validate_treatment_bundle(self.rebound(bundle))
+        except ValueError:
+            return
+        self.assertNotEqual(validated["treatment_traces"][0]["treatment_disposition"], "proven", message)
+
+    def assert_reroute_hard_failed(self, bundle: dict, message: str = "", *, trusted: dict[str, dict] | None = None) -> None:
+        try:
+            validated = treatment.validate_treatment_bundle(
+                self.rebound(bundle), trusted_qualification_evidence=trusted or {}
+            )
+        except ValueError:
+            return
+        self.assertEqual(validated["treatment_traces"][0]["treatment_disposition"], "hard_fail", message)
+
+    def test_telemetry_inventory_and_null_semantics(self) -> None:
+        validated = treatment.validate_treatment_bundle(copy.deepcopy(self.bundle))
+        self.assertEqual(set(treatment.CLASSIFICATIONS), {
+            "stable_native", "experimental_native", "derived_from_controlled_configuration",
+            "conditional", "unavailable", "not_applicable", "undocumented",
+        })
+        self.assertEqual({entry["classification"] for entry in validated["telemetry_profile"]}, set(treatment.CLASSIFICATIONS))
+        actual_inventory = {(entry["surface"], entry["field_path"]) for entry in validated["telemetry_profile"]}
+        self.assertEqual(actual_inventory, EXPECTED_TELEMETRY_INVENTORY)
+        self.assertEqual(treatment.TELEMETRY_INVENTORY, EXPECTED_TELEMETRY_INVENTORY)
+        client = validated["controlled_environments"][0]["client_identity_id"]
+        omitted = treatment.profile_entry(validated["telemetry_profile"], client, "cli", "assignment.model")
+        self.assertEqual(omitted["classification"], "undocumented")
+        self.assertEqual(omitted["permitted_claims"], [])
+        trace = validated["treatment_traces"][0]
+        self.assertIsNone(trace["supported_effective_model"])
+        self.assertIsNone(trace["supported_effective_effort"])
+        forged = copy.deepcopy(self.bundle)
+        obs = next(item for item in forged["treatment_traces"][0]["observations"] if item["field_path"] == "terminal.acceptance")
+        obs["value"] = False
+        with self.assertRaisesRegex(ValueError, "null-only observation"):
+            treatment.validate_treatment_bundle(self.rebound(forged))
+        duplicate = copy.deepcopy(self.bundle)
+        duplicate["telemetry_profile"].append(copy.deepcopy(duplicate["telemetry_profile"][0]))
+        with self.assertRaisesRegex(ValueError, "duplicate telemetry profile key"):
+            treatment.validate_treatment_bundle(self.rebound(duplicate))
+
+    def test_profile_authority_and_typed_observation_states(self) -> None:
+        profile_mutations = [
+            ("app_server", "discovery.models", "official_source_ledger_id", None),
+            ("app_server", "discovery.models", "official_source_ledger_id", "OPENAI-DOC-999"),
+            ("app_server", "discovery.models", "official_source_ledger_id", "OPENAI-DOC-001"),
+            ("app_server", "assignment.model", "permitted_claims", ["effective_treatment"]),
+            ("app_server", "reroute.events", "condition", None),
+            ("app_server", "terminal.acceptance", "permitted_claims", ["observed_value"]),
+            ("interactive_picker", "parent.graph", "condition", None),
+            ("cli", "route.supported_effective_route_id", "official_source_ledger_id", "OPENAI-DOC-006"),
+            ("app_server", "discovery.models", "completeness_rule", "no_authority"),
+            ("app_server", "discovery.models", "observation_state_rules", {
+                "allowed_states": ["observed_value", "unavailable"],
+                "value_rule": "typed_when_observed", "evidence_rule": "required_when_present",
+            }),
+        ]
+        for surface, field_path, field, value in profile_mutations:
+            with self.subTest(profile=f"{surface}:{field_path}:{field}"):
+                bundle = copy.deepcopy(self.bundle)
+                entry = next(item for item in bundle["telemetry_profile"] if item["surface"] == surface and item["field_path"] == field_path)
+                entry[field] = value
+                self.assert_bundle_invalid(bundle)
+
+        observation_mutations = [
+            ("discovery.models", "value", None),
+            ("discovery.models", "value", "unknown"),
+            ("discovery.models", "evidence_ref", None),
+            ("discovery.models", "captured_at", None),
+            ("route.supported_effective_route_id", "value", "fixture-route"),
+            ("route.supported_effective_route_id", "observation_state", "unavailable"),
+            ("treatment.failures", "value", []),
+            ("treatment.failures", "evidence_ref", "fixture://forged"),
+            ("terminal.acceptance", "value", False),
+            ("terminal.acceptance", "observation_state", "observed_value"),
+        ]
+        for field_path, field, value in observation_mutations:
+            with self.subTest(observation=f"{field_path}:{field}"):
+                bundle = copy.deepcopy(self.bundle)
+                observation = next(item for item in bundle["treatment_traces"][0]["observations"] if item["field_path"] == field_path)
+                observation[field] = value
+                self.assert_bundle_invalid(bundle)
+
+        missing = copy.deepcopy(self.bundle)
+        missing["treatment_traces"][0]["configured_route_proof"] = None
+        observation = next(item for item in missing["treatment_traces"][0]["observations"] if item["field_path"] == "route.supported_effective_route_id")
+        observation.update({"observation_state": "missing", "value": None, "evidence_ref": None, "captured_at": None})
+        missing["treatment_traces"][0]["treatment_disposition"] = "proven"
+        missing["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "unknown"
+        result = treatment.validate_treatment_bundle(self.rebound(missing))
+        self.assertEqual(result["treatment_traces"][0]["treatment_disposition"], "unknown")
+        self.assertIsNone(result["treatment_traces"][0]["supported_effective_model"])
+        self.assertIsNone(result["treatment_traces"][0]["supported_effective_effort"])
+
+    def test_profile_classification_authority_rejects_semantically_consistent_rebinding(self) -> None:
+        classification_mutations = [
+            ("assignment.model", "stable_native"),
+            ("assignment.named_agent", "stable_native"),
+            ("route.supported_effective_route_id", "stable_native"),
+            ("treatment.loaded_skills_mcp_tools", "stable_native"),
+            ("discovery.models", "derived_from_controlled_configuration"),
+            ("lifecycle.compaction", "stable_native"),
+        ]
+        for field_path, classification in classification_mutations:
+            with self.subTest(field_path=field_path, classification=classification):
+                bundle = copy.deepcopy(self.bundle)
+                entry = next(item for item in bundle["telemetry_profile"] if item["surface"] == "app_server" and item["field_path"] == field_path)
+                entry.update({
+                    "classification": classification,
+                    "condition": None,
+                    "completeness_rule": treatment.COMPLETENESS_BY_CLASS[classification],
+                    "observation_state_rules": {
+                        "allowed_states": ["observed_value", "explicit_null", "missing"],
+                        "value_rule": "typed_when_observed", "evidence_rule": "required_when_present",
+                    },
+                    "permitted_claims": [treatment.CLAIM_BY_CLASS[classification]],
+                })
+                with self.assertRaisesRegex(ValueError, "exact field-level classification authority"):
+                    treatment.validate_treatment_bundle(self.rebound(bundle))
+
+    def test_conditional_reroute_event_profile_cannot_self_assert_complete_monitoring(self) -> None:
+        bundle = copy.deepcopy(self.bundle)
+        profile = next(item for item in bundle["telemetry_profile"] if item["surface"] == "app_server" and item["field_path"] == "reroute.events")
+        trace = bundle["treatment_traces"][0]
+        self.assertEqual(profile["classification"], "conditional")
+        self.assertEqual(profile["completeness_rule"], "condition_bound")
+        self.assertTrue(trace["configured_route_proof"]["reroute_monitoring_complete"])
+        self.assertEqual(trace["service_reroute_events"], [])
+        validated = treatment.validate_treatment_bundle(self.rebound(bundle))
+        trace = validated["treatment_traces"][0]
+        self.assertEqual(trace["treatment_disposition"], "unknown")
+        self.assertIn("effective_treatment_unknown", {item["failure_code"] for item in trace["treatment_failures"]})
+
+    def test_effective_model_and_effort_require_profiled_observation_authority(self) -> None:
+        for field, value in (
+            ("supported_effective_model", "fabricated-model"),
+            ("supported_effective_effort", "fabricated-effort"),
+        ):
+            with self.subTest(field=field):
+                bundle = copy.deepcopy(self.bundle)
+                bundle["treatment_traces"][0][field] = value
+                self.assert_bundle_invalid(bundle)
+
+        fabricated = copy.deepcopy(self.bundle)
+        trace = fabricated["treatment_traces"][0]
+        trace["supported_effective_model"] = "fabricated-model"
+        observation = next(item for item in trace["observations"] if item["field_path"] == "assignment.supported_effective_model")
+        observation.update({
+            "observation_state": "observed_value", "value": "fabricated-model",
+            "evidence_ref": "fixture://forged/effective-model", "captured_at": "2026-07-17T04:01:00Z",
+        })
+        fabricated["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
+        self.assert_reroute_hard_failed(fabricated)
+
+    def test_configured_route_proof_cannot_self_assert_effective_treatment(self) -> None:
+        mutations = [
+            (("proof_id",), treatment.digest(b"forged-proof")),
+            (("profile_entry_key", "field_path"), "discovery.models"),
+            (("named_agent",), "different-agent"),
+            (("model",), "different-model"),
+            (("effort",), "low"),
+            (("candidate_route_id",), "different-route"),
+            (("agent_contract_id",), "different-contract"),
+            (("instruction_hash",), "sha256:" + "0" * 64),
+            (("configuration_hash",), "sha256:" + "0" * 64),
+            (("client_identity_id",), "sha256:" + "0" * 64),
+            (("controlled_overrides", "model"), "different-model"),
+            (("launch_id",), ""),
+            (("consumption_evidence_digest",), "invalid"),
+            (("reroute_monitoring_complete",), False),
+        ]
+        for path, value in mutations:
+            with self.subTest(path=".".join(path)):
+                bundle = copy.deepcopy(self.bundle)
+                target = bundle["treatment_traces"][0]["configured_route_proof"]
+                for part in path[:-1]:
+                    target = target[part]
+                target[path[-1]] = value
+                self.assert_bundle_not_proven(bundle)
+        validated = treatment.validate_treatment_bundle(copy.deepcopy(self.bundle))
+        trace = validated["treatment_traces"][0]
+        self.assertEqual(trace["treatment_disposition"], "unknown")
+        self.assertIsNone(trace["supported_effective_model"])
+        self.assertIsNone(trace["supported_effective_effort"])
+
+    def test_configuration_materialization_and_failure_taxonomy_are_derived(self) -> None:
+        mismatch_cases = [
+            ("assignment.named_agent", "different-agent", "agent_mismatch", "hard_fail"),
+            ("assignment.model", "different-model", "model_mismatch", "hard_fail"),
+            ("assignment.effort", "low", "effort_mismatch", "hard_fail"),
+            ("assignment.configuration_hash", "sha256:" + "0" * 64, "configuration_mismatch", "hard_fail"),
+            ("treatment.sandbox", {"mode": "read_only", "network_access": False, "writable_roots_digest": "sha256:" + "b" * 64}, "sandbox_approvals_mismatch", "hard_fail"),
+            ("treatment.approvals", {"policy": "never", "granted_action_ids": []}, "sandbox_approvals_mismatch", "hard_fail"),
+            ("treatment.mutation_class", "read_only", "mutation_class_mismatch", "hard_fail"),
+            ("treatment.parent_configuration", {"parent_execution_trace_id": None, "configuration_hash": "sha256:" + "0" * 64}, "parent_configuration_mismatch", "hard_fail"),
+            ("treatment.controlled_overrides", {"model": "different-model", "effort": "high", "configuration_hash": "sha256:" + "1" * 64}, "client_or_override_mismatch", "hard_fail"),
+            ("treatment.delivery_canary", {"status": "failed", "evidence_digest": "sha256:" + "7" * 64}, "delivery_canary_failure", "unknown"),
+        ]
+        for field_path, observed_value, expected_code, expected_disposition in mismatch_cases:
+            with self.subTest(field_path=field_path):
+                bundle = copy.deepcopy(self.bundle)
+                observation = next(item for item in bundle["treatment_traces"][0]["observations"] if item["field_path"] == field_path)
+                observation["value"] = observed_value
+                bundle["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = expected_disposition
+                result = treatment.validate_treatment_bundle(self.rebound(bundle))
+                trace = result["treatment_traces"][0]
+                self.assertEqual(trace["treatment_disposition"], expected_disposition)
+                self.assertIn(expected_code, {item["failure_code"] for item in trace["treatment_failures"]})
+
+        materialization = copy.deepcopy(self.bundle)
+        trace = materialization["treatment_traces"][0]
+        changed_hash = "sha256:" + "0" * 64
+        trace["controlled_overrides"]["configuration_hash"] = changed_hash
+        trace["configured_route_proof"]["controlled_overrides"]["configuration_hash"] = changed_hash
+        trace["configured_route_proof"]["proof_id"] = treatment.content_id(trace["configured_route_proof"], "proof_id")
+        observation = next(item for item in trace["observations"] if item["field_path"] == "treatment.controlled_overrides")
+        observation["value"] = copy.deepcopy(trace["controlled_overrides"])
+        materialization["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
+        result = treatment.validate_treatment_bundle(self.rebound(materialization))
+        self.assertEqual(result["treatment_traces"][0]["treatment_disposition"], "hard_fail")
+        self.assertIn("configuration_mismatch", {item["failure_code"] for item in result["treatment_traces"][0]["treatment_failures"]})
+
+        unsubstantiated = copy.deepcopy(self.bundle)
+        unsubstantiated["treatment_traces"][0]["treatment_failures"] = [{
+            "failure_code": "agent_mismatch", "affected_field": "assignment.named_agent",
+            "expected_evidence_ref": None, "observed_evidence_ref": None,
+            "resulting_disposition": "hard_fail",
+        }]
+        self.assert_bundle_invalid(unsubstantiated)
+
+        forged_declared = copy.deepcopy(self.bundle)
+        trace = forged_declared["treatment_traces"][0]
+        next(item for item in trace["observations"] if item["field_path"] == "assignment.named_agent")["value"] = "different-agent"
+        trace["treatment_failures"] = [{
+            "failure_code": "agent_mismatch", "affected_field": "forged.field",
+            "expected_evidence_ref": "fixture://forged/expected",
+            "observed_evidence_ref": "fixture://forged/observed",
+            "resulting_disposition": "hard_fail",
+        }]
+        forged_declared["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
+        self.assert_bundle_invalid(forged_declared)
+
+    def test_six_id_environment_and_configured_proof_joins(self) -> None:
+        base = treatment.validate_treatment_bundle(copy.deepcopy(self.bundle))
+        trace = base["treatment_traces"][0]
+        self.assertTrue(all(trace["objective_binding"][field] for field in treatment.OBJECTIVE_ID_FIELDS))
+        self.assertEqual(trace["treatment_disposition"], "unknown")
+        self.assertIsNone(trace["supported_effective_model"])
+        missing_owner = copy.deepcopy(self.bundle); missing_owner["controlled_environments"] = []
+        with self.assertRaisesRegex(ValueError, "controlled environment owner"):
+            treatment.validate_treatment_bundle(self.rebound(missing_owner))
+        duplicate_owner = copy.deepcopy(self.bundle); duplicate_owner["controlled_environments"].append(copy.deepcopy(duplicate_owner["controlled_environments"][0]))
+        with self.assertRaisesRegex(ValueError, "duplicate controlled environment"):
+            treatment.validate_treatment_bundle(self.rebound(duplicate_owner))
+        orphan_owner = copy.deepcopy(self.bundle)
+        orphan = copy.deepcopy(orphan_owner["controlled_environments"][0])
+        orphan["work_item_id"] = "G56R-002-ORPHAN"
+        orphan["controlled_environment_id"] = treatment.content_id(orphan, "controlled_environment_id")
+        orphan_owner["controlled_environments"].append(orphan)
+        with self.assertRaisesRegex(ValueError, "orphan owner"):
+            treatment.validate_treatment_bundle(self.rebound(orphan_owner))
+        mismatch = copy.deepcopy(self.bundle); mismatch["treatment_traces"][0]["work_item_id"] = "G56R-002-FORGED"
+        with self.assertRaisesRegex(ValueError, "controlled environment binding"):
+            treatment.validate_treatment_bundle(self.rebound(mismatch))
+        repeated_fk = copy.deepcopy(self.bundle)
+        other = copy.deepcopy(repeated_fk["treatment_traces"][0])
+        other["objective_binding"]["execution_trace_id"] = "TRACE-FIXTURE-002"
+        other["parent_child_graph"]["root_execution_trace_id"] = "TRACE-FIXTURE-002"
+        graph_observation = next(item for item in other["observations"] if item["field_path"] == "parent.graph")
+        graph_observation["value"] = copy.deepcopy(other["parent_child_graph"])
+        repeated_fk["treatment_traces"].append(other)
+        repeated_fk["fixture_provenance"]["expected_dispositions"] = [
+            {"execution_trace_id": "TRACE-FIXTURE-001", "treatment_disposition": "unknown"},
+            {"execution_trace_id": "TRACE-FIXTURE-002", "treatment_disposition": "unknown"},
+        ]
+        self.assertEqual(len(treatment.validate_treatment_bundle(self.rebound(repeated_fk))["treatment_traces"]), 2)
+
+    def test_every_objective_and_environment_binding_is_owned(self) -> None:
+        for field in (
+            "candidate_route_id", "agent_contract_id", "runtime_capability_snapshot_id",
+            "route_resolution_id", "experiment_policy_id", "execution_trace_id",
+        ):
+            with self.subTest(objective_id=field):
+                bundle = copy.deepcopy(self.bundle)
+                bundle["treatment_traces"][0]["objective_binding"][field] = None
+                self.assert_bundle_invalid(bundle)
+
+        missing_route = copy.deepcopy(self.bundle)
+        missing_route["route_resolutions"] = []
+        self.assert_bundle_invalid(missing_route)
+        duplicate_route = copy.deepcopy(self.bundle)
+        duplicate_route["route_resolutions"].append(copy.deepcopy(duplicate_route["route_resolutions"][0]))
+        self.assert_bundle_invalid(duplicate_route)
+        orphan_route = copy.deepcopy(self.bundle)
+        orphan_resolution = copy.deepcopy(orphan_route["route_resolutions"][0])
+        orphan_resolution["route_resolution_id"] = "ORPHAN-RESOLUTION"
+        orphan_route["route_resolutions"].append(orphan_resolution)
+        with self.assertRaisesRegex(ValueError, "orphan owner"):
+            treatment.validate_treatment_bundle(self.rebound(orphan_route))
+        duplicate_trace = copy.deepcopy(self.bundle)
+        duplicate_trace["treatment_traces"].append(copy.deepcopy(duplicate_trace["treatment_traces"][0]))
+        self.assert_bundle_invalid(duplicate_trace)
+
+        equality_mutations = [
+            (("client_identity_id",), "sha256:" + "0" * 64),
+            (("surface",), "cli"),
+            (("objective_binding", "runtime_capability_snapshot_id"), "sha256:" + "0" * 64),
+            (("repository_revision",), "0" * 40),
+            (("repository_tree_digest",), "sha256:" + "0" * 64),
+            (("objective_binding", "candidate_route_id"), "different-route"),
+            (("work_item_kind",), "fixture"),
+            (("work_item_id",), "different-work-item"),
+            (("assigned_route_id",), "different-route"),
+        ]
+        for path, value in equality_mutations:
+            with self.subTest(environment_binding=".".join(path)):
+                bundle = copy.deepcopy(self.bundle)
+                target = bundle["treatment_traces"][0]
+                for part in path[:-1]:
+                    target = target[part]
+                target[path[-1]] = value
+                self.assert_bundle_invalid(bundle)
+
+    def test_context_lifecycle_and_structured_failures_are_validated(self) -> None:
+        invalid_nested_values = [
+            (("sandbox", "network_access"), "false"),
+            (("approvals", "granted_action_ids"), ["duplicate", "duplicate"]),
+            (("mutation_class",), ""),
+            (("expected_skills_mcp_tools", "tools"), ["exec_command", "exec_command"]),
+            (("parent_configuration", "configuration_hash"), "invalid"),
+            (("controlled_overrides", "configuration_hash"), "invalid"),
+            (("delivery_canary", "status"), "promoted"),
+            (("context", "threadId"), ""),
+            (("parent_child_graph", "root_execution_trace_id"), "different-trace"),
+            (("raw_token_vector", "input_tokens"), -1),
+            (("request_turn_count", "requests"), -1),
+            (("wall_time_ms",), "unknown"),
+            (("retries",), -1),
+            (("compaction", "count"), -1),
+            (("validation", "status"), "unknown"),
+            (("cancellation", "state"), "unknown"),
+            (("failed_abandoned_work", "failed_count"), -1),
+            (("terminal_state",), ""),
+            (("acceptance",), "unknown"),
+        ]
+        for path, value in invalid_nested_values:
+            with self.subTest(field=".".join(path)):
+                bundle = copy.deepcopy(self.bundle)
+                target = bundle["treatment_traces"][0]
+                for part in path[:-1]:
+                    target = target[part]
+                target[path[-1]] = value
+                self.assert_bundle_invalid(bundle)
+
+        mismatch = copy.deepcopy(self.bundle)
+        mismatch["treatment_traces"][0]["loaded_skills_mcp_tools"]["tools"] = []
+        mismatch["treatment_traces"][0]["treatment_failures"] = []
+        mismatch["treatment_traces"][0]["treatment_disposition"] = "proven"
+        mismatch["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
+        result = treatment.validate_treatment_bundle(self.rebound(mismatch))
+        trace = result["treatment_traces"][0]
+        self.assertEqual(trace["treatment_disposition"], "hard_fail")
+        self.assertIn("skills_mcp_tools_mismatch", {item["failure_code"] for item in trace["treatment_failures"]})
+
+        wrong_expectation = copy.deepcopy(self.bundle)
+        wrong_expectation["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "proven"
+        self.assert_bundle_invalid(wrong_expectation)
+
+    def test_all_record_layers_reject_undeclared_fields(self) -> None:
+        accessors = [
+            lambda bundle: bundle,
+            lambda bundle: bundle["telemetry_profile"][0],
+            lambda bundle: bundle["telemetry_profile"][0]["observation_state_rules"],
+            lambda bundle: bundle["controlled_environments"][0],
+            lambda bundle: bundle["qualification_evidence_registry"][0],
+            lambda bundle: bundle["route_resolutions"][0],
+            lambda bundle: bundle["treatment_traces"][0],
+            lambda bundle: bundle["treatment_traces"][0]["objective_binding"],
+            lambda bundle: bundle["treatment_traces"][0]["configured_route_proof"],
+            lambda bundle: bundle["treatment_traces"][0]["configured_route_proof"]["profile_entry_key"],
+            lambda bundle: bundle["treatment_traces"][0]["configured_route_proof"]["controlled_overrides"],
+            lambda bundle: bundle["treatment_traces"][0]["sandbox"],
+            lambda bundle: bundle["treatment_traces"][0]["approvals"],
+            lambda bundle: bundle["treatment_traces"][0]["expected_skills_mcp_tools"],
+            lambda bundle: bundle["treatment_traces"][0]["parent_configuration"],
+            lambda bundle: bundle["treatment_traces"][0]["delivery_canary"],
+            lambda bundle: bundle["treatment_traces"][0]["context"],
+            lambda bundle: bundle["treatment_traces"][0]["parent_child_graph"],
+            lambda bundle: bundle["treatment_traces"][0]["raw_token_vector"],
+            lambda bundle: bundle["treatment_traces"][0]["request_turn_count"],
+            lambda bundle: bundle["treatment_traces"][0]["compaction"],
+            lambda bundle: bundle["treatment_traces"][0]["validation"],
+            lambda bundle: bundle["treatment_traces"][0]["cancellation"],
+            lambda bundle: bundle["treatment_traces"][0]["failed_abandoned_work"],
+            lambda bundle: bundle["treatment_traces"][0]["outcome"],
+            lambda bundle: bundle["treatment_traces"][0]["observations"][0],
+            lambda bundle: bundle["fixture_provenance"],
+        ]
+        for index, accessor in enumerate(accessors):
+            with self.subTest(record_layer=index):
+                bundle = copy.deepcopy(self.bundle)
+                accessor(bundle)["undeclared"] = True
+                self.assert_bundle_invalid(bundle)
+
+    def test_reroutes_are_separate_read_only_and_fail_closed(self) -> None:
+        resolver_before_reroute = copy.deepcopy(self.bundle["route_resolutions"][0])
+        approved = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
+        result = treatment.validate_treatment_bundle(
+            self.rebound(approved), trusted_qualification_evidence=trusted_external_qualification(self.bundle)
+        )
+        self.assertEqual(result["treatment_traces"][0]["treatment_disposition"], "non_scorable_rerouted")
+        self.assertEqual(result["route_resolutions"][0], resolver_before_reroute)
+        for authority in ("synthetic_fixture", "missing", "mismatched"):
+            with self.subTest(authority=authority):
+                bundle = make_treatment_reroute_case(copy.deepcopy(self.bundle), authority)
+                failed = treatment.validate_treatment_bundle(self.rebound(bundle))
+                self.assertEqual(failed["treatment_traces"][0]["treatment_disposition"], "hard_fail")
+        ambiguous = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
+        second_event = copy.deepcopy(ambiguous["treatment_traces"][0]["service_reroute_events"][0])
+        second_event["reason"] = "fixture-second-service-reroute"
+        second_event["event_id"] = treatment.content_id(second_event, "event_id")
+        ambiguous["treatment_traces"][0]["service_reroute_events"].append(second_event)
+        reroute_observation = next(item for item in ambiguous["treatment_traces"][0]["observations"] if item["field_path"] == "reroute.events")
+        reroute_observation["value"].append(copy.deepcopy(second_event))
+        ambiguous["treatment_traces"][0]["treatment_disposition"] = "hard_fail"
+        ambiguous["treatment_traces"][0]["disposition_reasons"] = ["ambiguous_reroute_association"]
+        ambiguous["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
+        failed = treatment.validate_treatment_bundle(
+            self.rebound(ambiguous), trusted_qualification_evidence=trusted_external_qualification(self.bundle)
+        )
+        self.assertEqual(failed["treatment_traces"][0]["treatment_disposition"], "hard_fail")
+        self.assertEqual(treatment.FAILURE_DISPOSITIONS["effective_treatment_unknown"], "unknown")
+        self.assertTrue(all(value in {"unknown", "hard_fail"} for value in treatment.FAILURE_DISPOSITIONS.values()))
+
+    def test_reroute_association_and_external_qualification_are_exact(self) -> None:
+        association_mutations = [
+            ("event", "surface", "cli"),
+            ("event", "threadId", "different-thread"),
+            ("event", "turnId", "different-turn"),
+            ("assessment", "destination_candidate_route_id", "different-route"),
+            ("assessment", "destination_agent_contract_id", "different-contract"),
+            ("assessment", "destination_named_agent", "different-agent"),
+            ("assessment", "assessment", "unknown"),
+            ("qualification", "destination_candidate_route_id", "different-route"),
+            ("qualification", "destination_agent_contract_id", "different-contract"),
+            ("qualification", "destination_named_agent", "different-agent"),
+            ("qualification", "qualification_status", "unknown"),
+            ("qualification", "owner_spec_id", ""),
+            ("qualification", "evidence_digest", "invalid"),
+        ]
+        for record, field, value in association_mutations:
+            with self.subTest(record=record, field=field):
+                bundle = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
+                trace = bundle["treatment_traces"][0]
+                targets = {
+                    "event": trace["service_reroute_events"][0],
+                    "assessment": trace["reroute_destination_assessments"][0],
+                    "qualification": bundle["qualification_evidence_registry"][0],
+                }
+                targets[record][field] = value
+                self.assert_reroute_hard_failed(
+                    bundle, trusted=trusted_external_qualification(self.bundle)
+                )
+
+        missing_assessment = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
+        missing_assessment["treatment_traces"][0]["reroute_destination_assessments"] = []
+        self.assert_reroute_hard_failed(
+            missing_assessment, trusted=trusted_external_qualification(self.bundle)
+        )
+        duplicate_assessment = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
+        duplicate_assessment["treatment_traces"][0]["reroute_destination_assessments"].append(
+            copy.deepcopy(duplicate_assessment["treatment_traces"][0]["reroute_destination_assessments"][0])
+        )
+        self.assert_reroute_hard_failed(
+            duplicate_assessment, trusted=trusted_external_qualification(self.bundle)
+        )
+
+        rerouted = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
+        trace = rerouted["treatment_traces"][0]
+        trace["service_reroute_events"][0]["undeclared"] = True
+        self.assert_bundle_invalid(rerouted)
+        rerouted = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
+        rerouted["treatment_traces"][0]["reroute_destination_assessments"][0]["undeclared"] = True
+        self.assert_bundle_invalid(rerouted)
+
+    def test_reroute_cannot_self_authorize_or_rebind_models(self) -> None:
+        no_trust = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
+        no_trust["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
+        self.assert_reroute_hard_failed(no_trust)
+
+        forged_owner = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
+        owner = next(item for item in forged_owner["qualification_evidence_registry"] if item["authority_kind"] == "owned_external")
+        old_id = owner["qualification_evidence_id"]
+        owner["owner_spec_id"] = "FAKE-OWNER"
+        owner["evidence_digest"] = "sha256:" + "0" * 64
+        owner["qualification_evidence_id"] = treatment.content_id(owner, "qualification_evidence_id")
+        assessment = forged_owner["treatment_traces"][0]["reroute_destination_assessments"][0]
+        self.assertEqual(assessment["prequalification_evidence_id"], old_id)
+        assessment["prequalification_evidence_id"] = owner["qualification_evidence_id"]
+        forged_owner["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
+        self.assert_reroute_hard_failed(
+            forged_owner, trusted=trusted_external_qualification(self.bundle)
+        )
+
+        for field, value in (("fromModel", "unrelated-model"), ("toModel", "unrelated-model")):
+            with self.subTest(event_field=field):
+                bundle = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
+                trace = bundle["treatment_traces"][0]
+                event = trace["service_reroute_events"][0]
+                event[field] = value
+                event["event_id"] = treatment.content_id(event, "event_id")
+                trace["reroute_destination_assessments"][0]["event_id"] = event["event_id"]
+                next(item for item in trace["observations"] if item["field_path"] == "reroute.events")["value"] = [copy.deepcopy(event)]
+                if field == "toModel":
+                    trace["supported_effective_model"] = value
+                    next(item for item in trace["observations"] if item["field_path"] == "assignment.supported_effective_model")["value"] = value
+                bundle["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
+                self.assert_reroute_hard_failed(
+                    bundle, trusted=trusted_external_qualification(self.bundle)
+                )
+
+    def test_successor_freeze_preserves_capability_payload(self) -> None:
+        published = load_json(ROOT / "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json")
+        prior = copy.deepcopy(published)
+        prior["candidate_freeze_id"] = "sha256:57b79448bc59f4e9dd8eb2acb61452c5c0fe6f4acc4199c48bc9a3eb4e6b3d24"
+        prior["telemetry_profile_id"] = "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
+        prior["supersedes_candidate_freeze_id"] = None
+        self.assertEqual(treatment.content_id(prior, "candidate_freeze_id"), prior["candidate_freeze_id"])
+        successor = treatment.build_treatment_successor(prior, self.bundle)
+        self.assertEqual(successor, published)
+        self.assertEqual(successor["supersedes_candidate_freeze_id"], prior["candidate_freeze_id"])
+        self.assertEqual(successor["telemetry_profile_id"], self.bundle["telemetry_profile_id"])
+        for key in prior:
+            if key not in {"candidate_freeze_id", "telemetry_profile_id", "supersedes_candidate_freeze_id"}:
+                self.assertEqual(successor[key], prior[key])
+        tampered = copy.deepcopy(prior); tampered["candidate_freeze_id"] = treatment.digest(b"forged")
+        with self.assertRaisesRegex(ValueError, "prior freeze identity"):
+            treatment.build_treatment_successor(tampered, self.bundle)
+
+    def test_successor_rejects_cross_bound_treatment_bundle(self) -> None:
+        published = load_json(ROOT / "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json")
+        prior = copy.deepcopy(published)
+        prior["candidate_freeze_id"] = "sha256:57b79448bc59f4e9dd8eb2acb61452c5c0fe6f4acc4199c48bc9a3eb4e6b3d24"
+        prior["telemetry_profile_id"] = "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
+        prior["supersedes_candidate_freeze_id"] = None
+
+        def assert_valid_but_rejected(bundle: dict, message: str) -> None:
+            rebound = self.rebound(bundle)
+            treatment.validate_treatment_bundle(copy.deepcopy(rebound))
+            with self.assertRaisesRegex(ValueError, message):
+                treatment.build_treatment_successor(prior, rebound)
+
+        foreign_client = "sha256:" + "0" * 64
+        client_rebound = copy.deepcopy(self.bundle)
+        for entry in client_rebound["telemetry_profile"]:
+            entry["client_identity_id"] = foreign_client
+        environment = client_rebound["controlled_environments"][0]
+        environment["client_identity_id"] = foreign_client
+        environment["controlled_environment_id"] = treatment.content_id(environment, "controlled_environment_id")
+        trace = client_rebound["treatment_traces"][0]
+        trace["client_identity_id"] = foreign_client
+        trace["controlled_environment_id"] = environment["controlled_environment_id"]
+        proof = trace["configured_route_proof"]
+        proof["client_identity_id"] = foreign_client
+        proof["profile_entry_key"]["client_identity_id"] = foreign_client
+        proof["proof_id"] = treatment.content_id(proof, "proof_id")
+        assert_valid_but_rejected(client_rebound, "client identity")
+
+        foreign_snapshot = "sha256:" + "0" * 64
+        snapshot_rebound = copy.deepcopy(self.bundle)
+        environment = snapshot_rebound["controlled_environments"][0]
+        environment["runtime_capability_snapshot_id"] = foreign_snapshot
+        environment["controlled_environment_id"] = treatment.content_id(environment, "controlled_environment_id")
+        trace = snapshot_rebound["treatment_traces"][0]
+        trace["controlled_environment_id"] = environment["controlled_environment_id"]
+        trace["objective_binding"]["runtime_capability_snapshot_id"] = foreign_snapshot
+        snapshot_rebound["route_resolutions"][0]["runtime_capability_snapshot_id"] = foreign_snapshot
+        next(item for item in trace["observations"] if item["field_path"] == "route.runtime_capability_snapshot_id")["value"] = foreign_snapshot
+        assert_valid_but_rejected(snapshot_rebound, "runtime snapshot")
+
+        repository_rebound = copy.deepcopy(self.bundle)
+        environment = repository_rebound["controlled_environments"][0]
+        environment["repository_revision"] = "0" * 40
+        environment["repository_tree_digest"] = "sha256:" + "0" * 64
+        environment["controlled_environment_id"] = treatment.content_id(environment, "controlled_environment_id")
+        trace = repository_rebound["treatment_traces"][0]
+        trace["controlled_environment_id"] = environment["controlled_environment_id"]
+        trace["repository_revision"] = environment["repository_revision"]
+        trace["repository_tree_digest"] = environment["repository_tree_digest"]
+        assert_valid_but_rejected(repository_rebound, "repository binding")
+
+        instruction_rebound = copy.deepcopy(self.bundle)
+        trace = instruction_rebound["treatment_traces"][0]
+        trace["instruction_hash"] = "sha256:" + "0" * 64
+        trace["configured_route_proof"]["instruction_hash"] = trace["instruction_hash"]
+        trace["configured_route_proof"]["proof_id"] = treatment.content_id(trace["configured_route_proof"], "proof_id")
+        next(item for item in trace["observations"] if item["field_path"] == "assignment.instruction_hash")["value"] = trace["instruction_hash"]
+        assert_valid_but_rejected(instruction_rebound, "instruction identity")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,1664 @@
+{
+  "schema_version": "1.0.0",
+  "treatment_contract_digest": "sha256:d9c0048e1443ea6c0f5792a4075d434cd539dc0f923db18403880f26bec7e551",
+  "telemetry_profile_id": "sha256:5d6657cbdf269bf5a77461723dac1f69803c06f60989e2fe7ed18d93fa2be0ba",
+  "telemetry_profile": [
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "discovery.models",
+      "classification": "stable_native",
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "condition": null,
+      "completeness_rule": "complete_capture",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "observed_value"
+      ],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "discovery.efforts",
+      "classification": "stable_native",
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "condition": null,
+      "completeness_rule": "complete_capture",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "observed_value"
+      ],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "discovery.capabilities",
+      "classification": "stable_native",
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "condition": null,
+      "completeness_rule": "complete_capture",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "observed_value"
+      ],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "assignment.named_agent",
+      "classification": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-003",
+      "condition": null,
+      "completeness_rule": "consumed_configuration_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "requested_assignment"
+      ],
+      "prohibited_claims": [
+        "effective_treatment"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "assignment.model",
+      "classification": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-003",
+      "condition": null,
+      "completeness_rule": "consumed_configuration_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "requested_assignment"
+      ],
+      "prohibited_claims": [
+        "effective_treatment"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "assignment.effort",
+      "classification": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-003",
+      "condition": null,
+      "completeness_rule": "consumed_configuration_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "requested_assignment"
+      ],
+      "prohibited_claims": [
+        "effective_treatment"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "assignment.candidate_route_id",
+      "classification": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-003",
+      "condition": null,
+      "completeness_rule": "consumed_configuration_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "requested_assignment"
+      ],
+      "prohibited_claims": [
+        "effective_treatment"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "assignment.agent_contract_id",
+      "classification": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-003",
+      "condition": null,
+      "completeness_rule": "consumed_configuration_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "requested_assignment"
+      ],
+      "prohibited_claims": [
+        "effective_treatment"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "assignment.instruction_hash",
+      "classification": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-003",
+      "condition": null,
+      "completeness_rule": "consumed_configuration_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "requested_assignment"
+      ],
+      "prohibited_claims": [
+        "effective_treatment"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "assignment.configuration_hash",
+      "classification": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-003",
+      "condition": null,
+      "completeness_rule": "consumed_configuration_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "requested_assignment"
+      ],
+      "prohibited_claims": [
+        "effective_treatment"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "route.preferred_route_id",
+      "classification": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-004",
+      "condition": null,
+      "completeness_rule": "consumed_configuration_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "requested_assignment"
+      ],
+      "prohibited_claims": [
+        "effective_treatment"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "route.attempted_route_ids",
+      "classification": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-004",
+      "condition": null,
+      "completeness_rule": "consumed_configuration_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "requested_assignment"
+      ],
+      "prohibited_claims": [
+        "effective_treatment"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "route.assigned_route_id",
+      "classification": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-004",
+      "condition": null,
+      "completeness_rule": "consumed_configuration_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "requested_assignment"
+      ],
+      "prohibited_claims": [
+        "effective_treatment"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "route.supported_effective_route_id",
+      "classification": "experimental_native",
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "condition": null,
+      "completeness_rule": "pinned_build_observation_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "pinned_build_value"
+      ],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "route.fallback_index",
+      "classification": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-004",
+      "condition": null,
+      "completeness_rule": "consumed_configuration_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "requested_assignment"
+      ],
+      "prohibited_claims": [
+        "effective_treatment"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "route.fallback_reason",
+      "classification": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-004",
+      "condition": null,
+      "completeness_rule": "consumed_configuration_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "requested_assignment"
+      ],
+      "prohibited_claims": [
+        "effective_treatment"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "route.runtime_capability_snapshot_id",
+      "classification": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-004",
+      "condition": null,
+      "completeness_rule": "consumed_configuration_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "requested_assignment"
+      ],
+      "prohibited_claims": [
+        "effective_treatment"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "route.resolved_at",
+      "classification": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-004",
+      "condition": null,
+      "completeness_rule": "consumed_configuration_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "requested_assignment"
+      ],
+      "prohibited_claims": [
+        "effective_treatment"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "reroute.events",
+      "classification": "conditional",
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "condition": "model/rerouted is emitted for a service reroute",
+      "completeness_rule": "condition_bound",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "condition_bound_presence"
+      ],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "treatment.sandbox",
+      "classification": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-010",
+      "condition": null,
+      "completeness_rule": "consumed_configuration_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "requested_assignment"
+      ],
+      "prohibited_claims": [
+        "effective_treatment"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "treatment.approvals",
+      "classification": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-010",
+      "condition": null,
+      "completeness_rule": "consumed_configuration_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "requested_assignment"
+      ],
+      "prohibited_claims": [
+        "effective_treatment"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "treatment.mutation_class",
+      "classification": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-003",
+      "condition": null,
+      "completeness_rule": "consumed_configuration_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "requested_assignment"
+      ],
+      "prohibited_claims": [
+        "effective_treatment"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "treatment.expected_skills_mcp_tools",
+      "classification": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-003",
+      "condition": null,
+      "completeness_rule": "consumed_configuration_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "requested_assignment"
+      ],
+      "prohibited_claims": [
+        "effective_treatment"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "treatment.loaded_skills_mcp_tools",
+      "classification": "experimental_native",
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "condition": null,
+      "completeness_rule": "pinned_build_observation_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "pinned_build_value"
+      ],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "treatment.parent_configuration",
+      "classification": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-003",
+      "condition": null,
+      "completeness_rule": "consumed_configuration_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "requested_assignment"
+      ],
+      "prohibited_claims": [
+        "effective_treatment"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "treatment.controlled_overrides",
+      "classification": "derived_from_controlled_configuration",
+      "official_source_ledger_id": "OPENAI-DOC-004",
+      "condition": null,
+      "completeness_rule": "consumed_configuration_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "requested_assignment"
+      ],
+      "prohibited_claims": [
+        "effective_treatment"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "treatment.delivery_canary",
+      "classification": "experimental_native",
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "condition": null,
+      "completeness_rule": "pinned_build_observation_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "pinned_build_value"
+      ],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "assignment.supported_effective_model",
+      "classification": "conditional",
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "condition": "model/rerouted observes a destination model",
+      "completeness_rule": "condition_bound",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "condition_bound_presence"
+      ],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "assignment.supported_effective_effort",
+      "classification": "undocumented",
+      "official_source_ledger_id": null,
+      "condition": null,
+      "completeness_rule": "no_authority",
+      "observation_state_rules": {
+        "allowed_states": [
+          "undocumented"
+        ],
+        "value_rule": "null_only",
+        "evidence_rule": "optional"
+      },
+      "permitted_claims": [],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "treatment.failures",
+      "classification": "undocumented",
+      "official_source_ledger_id": null,
+      "condition": null,
+      "completeness_rule": "no_authority",
+      "observation_state_rules": {
+        "allowed_states": [
+          "undocumented"
+        ],
+        "value_rule": "null_only",
+        "evidence_rule": "optional"
+      },
+      "permitted_claims": [],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "parent.context",
+      "classification": "stable_native",
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "condition": null,
+      "completeness_rule": "complete_capture",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "observed_value"
+      ],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "parent.graph",
+      "classification": "conditional",
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "condition": "parent and child identifiers are emitted for nested work",
+      "completeness_rule": "condition_bound",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "condition_bound_presence"
+      ],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "resources.raw_token_vector",
+      "classification": "stable_native",
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "condition": null,
+      "completeness_rule": "complete_capture",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "observed_value"
+      ],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "resources.request_turn_count",
+      "classification": "stable_native",
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "condition": null,
+      "completeness_rule": "complete_capture",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "observed_value"
+      ],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "resources.wall_time_ms",
+      "classification": "undocumented",
+      "official_source_ledger_id": null,
+      "condition": null,
+      "completeness_rule": "no_authority",
+      "observation_state_rules": {
+        "allowed_states": [
+          "undocumented"
+        ],
+        "value_rule": "null_only",
+        "evidence_rule": "optional"
+      },
+      "permitted_claims": [],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "lifecycle.retries",
+      "classification": "undocumented",
+      "official_source_ledger_id": null,
+      "condition": null,
+      "completeness_rule": "no_authority",
+      "observation_state_rules": {
+        "allowed_states": [
+          "undocumented"
+        ],
+        "value_rule": "null_only",
+        "evidence_rule": "optional"
+      },
+      "permitted_claims": [],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "lifecycle.compaction",
+      "classification": "experimental_native",
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "condition": null,
+      "completeness_rule": "pinned_build_observation_only",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "pinned_build_value"
+      ],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "lifecycle.validation",
+      "classification": "conditional",
+      "official_source_ledger_id": "OPENAI-DOC-007",
+      "condition": "validation evidence is emitted when validation runs",
+      "completeness_rule": "condition_bound",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "condition_bound_presence"
+      ],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "lifecycle.cancellation",
+      "classification": "conditional",
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "condition": "cancellation evidence is emitted when cancellation is requested",
+      "completeness_rule": "condition_bound",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "condition_bound_presence"
+      ],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "lifecycle.failed_abandoned_work",
+      "classification": "stable_native",
+      "official_source_ledger_id": "OPENAI-DOC-007",
+      "condition": null,
+      "completeness_rule": "complete_capture",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "observed_value"
+      ],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "terminal.state",
+      "classification": "stable_native",
+      "official_source_ledger_id": "OPENAI-DOC-007",
+      "condition": null,
+      "completeness_rule": "complete_capture",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "observed_value"
+      ],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "terminal.outcome",
+      "classification": "stable_native",
+      "official_source_ledger_id": "OPENAI-DOC-007",
+      "condition": null,
+      "completeness_rule": "complete_capture",
+      "observation_state_rules": {
+        "allowed_states": [
+          "observed_value",
+          "explicit_null",
+          "missing"
+        ],
+        "value_rule": "typed_when_observed",
+        "evidence_rule": "required_when_present"
+      },
+      "permitted_claims": [
+        "observed_value"
+      ],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "field_path": "terminal.acceptance",
+      "classification": "unavailable",
+      "official_source_ledger_id": "OPENAI-DOC-007",
+      "condition": null,
+      "completeness_rule": "known_unavailable",
+      "observation_state_rules": {
+        "allowed_states": [
+          "unavailable"
+        ],
+        "value_rule": "null_only",
+        "evidence_rule": "optional"
+      },
+      "permitted_claims": [],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "cli",
+      "field_path": "route.supported_effective_route_id",
+      "classification": "undocumented",
+      "official_source_ledger_id": null,
+      "condition": null,
+      "completeness_rule": "no_authority",
+      "observation_state_rules": {
+        "allowed_states": [
+          "undocumented"
+        ],
+        "value_rule": "null_only",
+        "evidence_rule": "optional"
+      },
+      "permitted_claims": [],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    },
+    {
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "interactive_picker",
+      "field_path": "parent.graph",
+      "classification": "not_applicable",
+      "official_source_ledger_id": "OPENAI-DOC-006",
+      "condition": "interactive picker collection has no execution parent graph",
+      "completeness_rule": "false_applicability",
+      "observation_state_rules": {
+        "allowed_states": [
+          "not_applicable"
+        ],
+        "value_rule": "null_only",
+        "evidence_rule": "optional"
+      },
+      "permitted_claims": [],
+      "prohibited_claims": [
+        "configured_as_effective",
+        "unsupported_platform_value"
+      ]
+    }
+  ],
+  "controlled_environments": [
+    {
+      "controlled_environment_id": "sha256:bc1dbf2ca7893b707b7fe191b82471a774aa27774105781c06aef4e175d8a5ce",
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "runtime_capability_snapshot_id": "sha256:39e6284e4a3ae9109a543b8e0ecf4c9d59181010dd3def7b874c89fab46a43f3",
+      "repository_revision": "ab272f05937bd08a50e40710b3f1ad3b0dc8452b",
+      "repository_tree_digest": "sha256:50aa948b304f465c8bfb405dcecada993b1ee28cdb84d1237a9a06ba93e34cba",
+      "candidate_route_id": "G56R-001-CR-PHASE-EXECUTOR-SOL",
+      "work_item_kind": "task",
+      "work_item_id": "G56R-002-T020"
+    }
+  ],
+  "qualification_evidence_registry": [
+    {
+      "qualification_evidence_id": "sha256:0dfd224a4d4b17ae8e69d08985c9160d6266ee72a2dd10de8fe98d724e5f6917",
+      "authority_kind": "owned_external",
+      "owner_spec_id": "G56R-003",
+      "destination_candidate_route_id": "G56R-001-CR-PHASE-EXECUTOR-GPT55",
+      "destination_agent_contract_id": "G56R-001-AC-PHASE-EXECUTOR",
+      "destination_named_agent": "phase-executor",
+      "qualification_status": "prequalified",
+      "evidence_digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    },
+    {
+      "qualification_evidence_id": "sha256:179c2a52c4e5a32673e0848368fe21ee5afa5ceb76ba21101a0c934b206f12b7",
+      "authority_kind": "synthetic_fixture",
+      "owner_spec_id": "G56R-002",
+      "destination_candidate_route_id": "G56R-001-CR-PHASE-EXECUTOR-GPT55",
+      "destination_agent_contract_id": "G56R-001-AC-PHASE-EXECUTOR",
+      "destination_named_agent": "phase-executor",
+      "qualification_status": "prequalified",
+      "evidence_digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    }
+  ],
+  "route_resolutions": [
+    {
+      "route_resolution_id": "RR-FIXTURE-001",
+      "preferred_route_id": "G56R-001-CR-PHASE-EXECUTOR-SOL",
+      "attempted_route_ids": [
+        "G56R-001-CR-PHASE-EXECUTOR-SOL"
+      ],
+      "assigned_route_id": "G56R-001-CR-PHASE-EXECUTOR-SOL",
+      "supported_effective_route_id": null,
+      "fallback_index": 0,
+      "fallback_reason": null,
+      "runtime_capability_snapshot_id": "sha256:39e6284e4a3ae9109a543b8e0ecf4c9d59181010dd3def7b874c89fab46a43f3",
+      "resolved_at": "2026-07-17T04:00:00Z"
+    }
+  ],
+  "treatment_traces": [
+    {
+      "objective_binding": {
+        "candidate_route_id": "G56R-001-CR-PHASE-EXECUTOR-SOL",
+        "agent_contract_id": "G56R-001-AC-PHASE-EXECUTOR",
+        "runtime_capability_snapshot_id": "sha256:39e6284e4a3ae9109a543b8e0ecf4c9d59181010dd3def7b874c89fab46a43f3",
+        "route_resolution_id": "RR-FIXTURE-001",
+        "experiment_policy_id": "EP-FIXTURE-001",
+        "execution_trace_id": "TRACE-FIXTURE-001"
+      },
+      "controlled_environment_id": "sha256:bc1dbf2ca7893b707b7fe191b82471a774aa27774105781c06aef4e175d8a5ce",
+      "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+      "surface": "app_server",
+      "repository_revision": "ab272f05937bd08a50e40710b3f1ad3b0dc8452b",
+      "repository_tree_digest": "sha256:50aa948b304f465c8bfb405dcecada993b1ee28cdb84d1237a9a06ba93e34cba",
+      "work_item_kind": "task",
+      "work_item_id": "G56R-002-T020",
+      "named_agent": "phase-executor",
+      "assigned_route_id": "G56R-001-CR-PHASE-EXECUTOR-SOL",
+      "requested_model": "gpt-5.6-sol",
+      "requested_effort": "high",
+      "supported_effective_model": null,
+      "supported_effective_effort": null,
+      "configured_route_proof": {
+        "proof_id": "sha256:b2ab4d8972e9d4b65862de20e490e4b54cf4cc137563b234da4da9223a8d73f5",
+        "profile_entry_key": {
+          "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+          "surface": "app_server",
+          "field_path": "assignment.configuration_hash"
+        },
+        "named_agent": "phase-executor",
+        "model": "gpt-5.6-sol",
+        "effort": "high",
+        "candidate_route_id": "G56R-001-CR-PHASE-EXECUTOR-SOL",
+        "agent_contract_id": "G56R-001-AC-PHASE-EXECUTOR",
+        "instruction_hash": "sha256:2ecf93717029553369f62f902f8ac95bad5f77e726dbbb8c7065d9bde36c4fe5",
+        "configuration_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
+        "controlled_overrides": {
+          "model": "gpt-5.6-sol",
+          "effort": "high",
+          "configuration_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+        },
+        "launch_id": "launch-fixture-001",
+        "consumption_evidence_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "reroute_monitoring_complete": true
+      },
+      "service_reroute_events": [],
+      "reroute_destination_assessments": [],
+      "instruction_hash": "sha256:2ecf93717029553369f62f902f8ac95bad5f77e726dbbb8c7065d9bde36c4fe5",
+      "configuration_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "sandbox": {
+        "mode": "workspace_write",
+        "network_access": false,
+        "writable_roots_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "approvals": {
+        "policy": "on_request",
+        "granted_action_ids": []
+      },
+      "mutation_class": "repository_write",
+      "expected_skills_mcp_tools": {
+        "skills": [
+          "speckit-pro:speckit-autopilot"
+        ],
+        "mcp_servers": [],
+        "tools": [
+          "exec_command"
+        ]
+      },
+      "loaded_skills_mcp_tools": {
+        "skills": [
+          "speckit-pro:speckit-autopilot"
+        ],
+        "mcp_servers": [],
+        "tools": [
+          "exec_command"
+        ]
+      },
+      "parent_configuration": {
+        "parent_execution_trace_id": null,
+        "configuration_hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "controlled_overrides": {
+        "model": "gpt-5.6-sol",
+        "effort": "high",
+        "configuration_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "delivery_canary": {
+        "status": "passed",
+        "evidence_digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "treatment_failures": [],
+      "context": {
+        "threadId": "thread-fixture-001",
+        "turnId": "turn-fixture-001"
+      },
+      "parent_child_graph": {
+        "root_execution_trace_id": "TRACE-FIXTURE-001",
+        "parent_execution_trace_id": null,
+        "child_execution_trace_ids": []
+      },
+      "raw_token_vector": {
+        "input_tokens": 120,
+        "output_tokens": 40,
+        "cached_input_tokens": 20,
+        "reasoning_output_tokens": 10
+      },
+      "request_turn_count": {
+        "requests": 1,
+        "turns": 1
+      },
+      "wall_time_ms": null,
+      "retries": null,
+      "compaction": {
+        "occurred": false,
+        "count": 0
+      },
+      "validation": {
+        "status": "completed",
+        "evidence_digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "cancellation": {
+        "state": "not_requested",
+        "reason": null
+      },
+      "failed_abandoned_work": {
+        "failed_count": 0,
+        "abandoned_count": 0
+      },
+      "terminal_state": "completed",
+      "outcome": {
+        "status": "completed",
+        "evidence_digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "acceptance": null,
+      "observations": [
+        {
+          "field_path": "discovery.models",
+          "observation_state": "observed_value",
+          "value": [
+            "gpt-5.6-sol"
+          ],
+          "evidence_ref": "fixture://trace/discovery-models",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "discovery.efforts",
+          "observation_state": "observed_value",
+          "value": [
+            "high"
+          ],
+          "evidence_ref": "fixture://trace/discovery-efforts",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "discovery.capabilities",
+          "observation_state": "observed_value",
+          "value": [
+            "text"
+          ],
+          "evidence_ref": "fixture://trace/discovery-capabilities",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "assignment.named_agent",
+          "observation_state": "observed_value",
+          "value": "phase-executor",
+          "evidence_ref": "fixture://trace/assignment-named_agent",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "assignment.model",
+          "observation_state": "observed_value",
+          "value": "gpt-5.6-sol",
+          "evidence_ref": "fixture://trace/assignment-model",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "assignment.effort",
+          "observation_state": "observed_value",
+          "value": "high",
+          "evidence_ref": "fixture://trace/assignment-effort",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "assignment.candidate_route_id",
+          "observation_state": "observed_value",
+          "value": "G56R-001-CR-PHASE-EXECUTOR-SOL",
+          "evidence_ref": "fixture://trace/assignment-candidate_route_id",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "assignment.agent_contract_id",
+          "observation_state": "observed_value",
+          "value": "G56R-001-AC-PHASE-EXECUTOR",
+          "evidence_ref": "fixture://trace/assignment-agent_contract_id",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "assignment.instruction_hash",
+          "observation_state": "observed_value",
+          "value": "sha256:2ecf93717029553369f62f902f8ac95bad5f77e726dbbb8c7065d9bde36c4fe5",
+          "evidence_ref": "fixture://trace/assignment-instruction_hash",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "assignment.configuration_hash",
+          "observation_state": "observed_value",
+          "value": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "evidence_ref": "fixture://trace/assignment-configuration_hash",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "route.preferred_route_id",
+          "observation_state": "observed_value",
+          "value": "G56R-001-CR-PHASE-EXECUTOR-SOL",
+          "evidence_ref": "fixture://trace/route-preferred_route_id",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "route.attempted_route_ids",
+          "observation_state": "observed_value",
+          "value": [
+            "G56R-001-CR-PHASE-EXECUTOR-SOL"
+          ],
+          "evidence_ref": "fixture://trace/route-attempted_route_ids",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "route.assigned_route_id",
+          "observation_state": "observed_value",
+          "value": "G56R-001-CR-PHASE-EXECUTOR-SOL",
+          "evidence_ref": "fixture://trace/route-assigned_route_id",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "route.supported_effective_route_id",
+          "observation_state": "explicit_null",
+          "value": null,
+          "evidence_ref": "fixture://trace/explicit-null",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "route.fallback_index",
+          "observation_state": "observed_value",
+          "value": 0,
+          "evidence_ref": "fixture://trace/route-fallback_index",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "route.fallback_reason",
+          "observation_state": "explicit_null",
+          "value": null,
+          "evidence_ref": "fixture://trace/explicit-null",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "route.runtime_capability_snapshot_id",
+          "observation_state": "observed_value",
+          "value": "sha256:39e6284e4a3ae9109a543b8e0ecf4c9d59181010dd3def7b874c89fab46a43f3",
+          "evidence_ref": "fixture://trace/route-runtime_capability_snapshot_id",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "route.resolved_at",
+          "observation_state": "observed_value",
+          "value": "2026-07-17T04:00:00Z",
+          "evidence_ref": "fixture://trace/route-resolved_at",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "reroute.events",
+          "observation_state": "observed_value",
+          "value": [],
+          "evidence_ref": "fixture://trace/reroute-events",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "treatment.sandbox",
+          "observation_state": "observed_value",
+          "value": {
+            "mode": "workspace_write",
+            "network_access": false,
+            "writable_roots_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          },
+          "evidence_ref": "fixture://trace/treatment-sandbox",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "treatment.approvals",
+          "observation_state": "observed_value",
+          "value": {
+            "policy": "on_request",
+            "granted_action_ids": []
+          },
+          "evidence_ref": "fixture://trace/treatment-approvals",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "treatment.mutation_class",
+          "observation_state": "observed_value",
+          "value": "repository_write",
+          "evidence_ref": "fixture://trace/treatment-mutation_class",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "treatment.expected_skills_mcp_tools",
+          "observation_state": "observed_value",
+          "value": {
+            "skills": [
+              "speckit-pro:speckit-autopilot"
+            ],
+            "mcp_servers": [],
+            "tools": [
+              "exec_command"
+            ]
+          },
+          "evidence_ref": "fixture://trace/treatment-expected_skills_mcp_tools",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "treatment.loaded_skills_mcp_tools",
+          "observation_state": "observed_value",
+          "value": {
+            "skills": [
+              "speckit-pro:speckit-autopilot"
+            ],
+            "mcp_servers": [],
+            "tools": [
+              "exec_command"
+            ]
+          },
+          "evidence_ref": "fixture://trace/treatment-loaded_skills_mcp_tools",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "treatment.parent_configuration",
+          "observation_state": "observed_value",
+          "value": {
+            "parent_execution_trace_id": null,
+            "configuration_hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          },
+          "evidence_ref": "fixture://trace/treatment-parent_configuration",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "treatment.controlled_overrides",
+          "observation_state": "observed_value",
+          "value": {
+            "model": "gpt-5.6-sol",
+            "effort": "high",
+            "configuration_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+          },
+          "evidence_ref": "fixture://trace/treatment-controlled_overrides",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "treatment.delivery_canary",
+          "observation_state": "observed_value",
+          "value": {
+            "status": "passed",
+            "evidence_digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+          },
+          "evidence_ref": "fixture://trace/treatment-delivery_canary",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "assignment.supported_effective_model",
+          "observation_state": "explicit_null",
+          "value": null,
+          "evidence_ref": "fixture://trace/no-effective-model",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "assignment.supported_effective_effort",
+          "observation_state": "undocumented",
+          "value": null,
+          "evidence_ref": null,
+          "captured_at": null
+        },
+        {
+          "field_path": "treatment.failures",
+          "observation_state": "undocumented",
+          "value": null,
+          "evidence_ref": null,
+          "captured_at": null
+        },
+        {
+          "field_path": "parent.context",
+          "observation_state": "observed_value",
+          "value": {
+            "threadId": "thread-fixture-001",
+            "turnId": "turn-fixture-001"
+          },
+          "evidence_ref": "fixture://trace/parent-context",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "parent.graph",
+          "observation_state": "observed_value",
+          "value": {
+            "root_execution_trace_id": "TRACE-FIXTURE-001",
+            "parent_execution_trace_id": null,
+            "child_execution_trace_ids": []
+          },
+          "evidence_ref": "fixture://trace/parent-graph",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "resources.raw_token_vector",
+          "observation_state": "observed_value",
+          "value": {
+            "input_tokens": 120,
+            "output_tokens": 40,
+            "cached_input_tokens": 20,
+            "reasoning_output_tokens": 10
+          },
+          "evidence_ref": "fixture://trace/resources-raw_token_vector",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "resources.request_turn_count",
+          "observation_state": "observed_value",
+          "value": {
+            "requests": 1,
+            "turns": 1
+          },
+          "evidence_ref": "fixture://trace/resources-request_turn_count",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "resources.wall_time_ms",
+          "observation_state": "undocumented",
+          "value": null,
+          "evidence_ref": null,
+          "captured_at": null
+        },
+        {
+          "field_path": "lifecycle.retries",
+          "observation_state": "undocumented",
+          "value": null,
+          "evidence_ref": null,
+          "captured_at": null
+        },
+        {
+          "field_path": "lifecycle.compaction",
+          "observation_state": "observed_value",
+          "value": {
+            "occurred": false,
+            "count": 0
+          },
+          "evidence_ref": "fixture://trace/lifecycle-compaction",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "lifecycle.validation",
+          "observation_state": "observed_value",
+          "value": {
+            "status": "completed",
+            "evidence_digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+          },
+          "evidence_ref": "fixture://trace/lifecycle-validation",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "lifecycle.cancellation",
+          "observation_state": "observed_value",
+          "value": {
+            "state": "not_requested",
+            "reason": null
+          },
+          "evidence_ref": "fixture://trace/lifecycle-cancellation",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "lifecycle.failed_abandoned_work",
+          "observation_state": "observed_value",
+          "value": {
+            "failed_count": 0,
+            "abandoned_count": 0
+          },
+          "evidence_ref": "fixture://trace/lifecycle-failed_abandoned_work",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "terminal.state",
+          "observation_state": "observed_value",
+          "value": "completed",
+          "evidence_ref": "fixture://trace/terminal-state",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "terminal.outcome",
+          "observation_state": "observed_value",
+          "value": {
+            "status": "completed",
+            "evidence_digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+          },
+          "evidence_ref": "fixture://trace/terminal-outcome",
+          "captured_at": "2026-07-17T04:01:00Z"
+        },
+        {
+          "field_path": "terminal.acceptance",
+          "observation_state": "unavailable",
+          "value": null,
+          "evidence_ref": "fixture://profile/unavailable",
+          "captured_at": "2026-07-17T04:01:00Z"
+        }
+      ],
+      "treatment_disposition": "unknown",
+      "disposition_reasons": [
+        "effective_treatment_unknown"
+      ]
+    }
+  ],
+  "fixture_provenance": {
+    "schema_version": "1.0.0",
+    "sanitizer_version": "g56r-002-allowlist-v1",
+    "raw_evidence_digest": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+    "expected_dispositions": [
+      {
+        "execution_trace_id": "TRACE-FIXTURE-001",
+        "treatment_disposition": "unknown"
+      }
+    ],
+    "network_required": false,
+    "raw_store_required": false,
+    "replay_count": 2
+  }
+}
