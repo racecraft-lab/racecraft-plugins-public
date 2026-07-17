@@ -630,10 +630,16 @@ When checklist identifies `[Gap]` items:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 40 (WP1: 18, WP2: 10, WP3: 12; runner G5 helper counts 39 — checkbox-format counting difference, gate pass) |
+| **Phases** | 6 (Setup; WP1 schema+validator TDD; WP1 probe tool+operator run; WP2 profile+contracts+handoff; WP3 fixtures+validation+join; Polish) |
+| **Parallel Opportunities** | 5 `[P]` (T022 route-resolution fixture; T029–T032 four record-class fixtures) |
+| **User Stories Covered** | 4/4 (US1→WP1, US2+US3→WP2, US4→WP3); all 28 FRs mapped (FR→Task table in tasks.md); CHK034/CHK035 forward requirements satisfied |
+
+**G5 (2026-07-16):** runner `validate-gate` → `pass` (0 markers); `count-markers` all
+zero. **Verify Tasks:** deterministic phantom check — 0 completed checkboxes exist in
+tasks.md pre-implementation (grep `^- \[[xX]\]` = 0), so phantom completions are
+vacuously absent; a full verify-tasks pass re-runs post-implementation (canonical
+Post task).
 
 ---
 
@@ -654,10 +660,51 @@ line count. Surface the four fields the SKILL extracts from the emitted decision
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
-| **Signals** | | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
-| **Warnings** | | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+| **Route** | `one-navigable-PR` | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
+| **Releasable** | `true` | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
+| **Signals** | `change-shape:modify-heavy` | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
+| **Warnings** | (none) | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+
+**G5 conflict — surfaced, not silently resolved (2026-07-16):** the advisory classifier
+returned `one-navigable-PR`, disagreeing with the operator-ratified 3-WP `split-PR`
+decision (design concept Q8, Clarify consensus log #5). Both positions are recorded:
+the ratified split remains the operator's standing scope intent (WP seams are declared
+in spec.md/plan.md/tasks.md and ready for split emission); the classifier's structural
+reading (releasable, modify-heavy, no warnings) matches the precedent run (G56R-001,
+same verdict, shipped fine as one navigable PR). Per the skill's route mechanics the
+layer planner runs only on an exact `split-PR` route, so the **final PR-boundary
+decision defers to the final reviewability gate with real diff numbers** — exactly the
+contingency Q8's own record contemplated ("the PR-time diff-mode gate re-checks with
+real numbers"). If the final diff evidence passes/warns, a single navigable PR may
+proceed with the ratified-split conflict surfaced in the PR body for the reviewer; if
+it size-blocks, the ratified WP1/WP2/WP3 seams are the prepared re-slicing plan.
+
+## Layer Plan
+
+`layer_plan.status = skipped` — atomicity route is `one-navigable-PR`, not exactly
+`split-PR` (recorded 2026-07-16 in `docs/ai/specs/.process/autopilot-state.json`).
+Route context (the ratified 3-WP seams + the G5 conflict note above) carries into
+implementation and the final reviewability boundary.
+
+## Tasks-Phase Reviewability Capture (deferred-mode record, 2026-07-16)
+
+Runner helper `reviewability-gate` supports **setup mode only** on the installed
+runner — tasks mode is deferred, so it was NOT invoked as an active helper.
+Deferred-mode diagnostics: helper_id `reviewability-gate`, requested mode `tasks`,
+deferral reason `installed runner registers setup mode only; tasks/pre-PR modes
+deferred for installed workflows`. Fallback evidence chain (all current):
+
+1. Setup-mode gate at scaffold: `status: warn, pass: true` (395 reviewable LOC,
+   roadmap-wide surface warning) — proceed input.
+2. Plan-phase `estimate-reviewable-loc`: `status: pass, projected: 0` (13 declared
+   entries; estimator blind to test-tree `.py` + `docs/**` JSON) with the plan's hand
+   estimate of ≈550–820 authored LOC for WP1 — advisory, carried to the final gate.
+3. Operator-ratified 3-WP split decision (Q8 / consensus log #5) + the G5
+   classifier conflict recorded above.
+
+No current size-only `block` exists in the evidence chain → **no `pr_marker_plan` is
+required at this boundary**; marker planning re-evaluates at the final reviewability
+gate if the real diff evidence produces a size block.
 
 Note: the operator ratified a 3-slice split at scoping (Q8, recorded in the
 Scope Budget section above). If the classifier's route disagrees with
