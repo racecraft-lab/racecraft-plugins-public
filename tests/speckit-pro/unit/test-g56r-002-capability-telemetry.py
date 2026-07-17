@@ -10,12 +10,15 @@ import itertools
 import json
 import os
 import re
+import shutil
+import socket
 import stat
 import subprocess
+import sys
 import tempfile
 import unittest
-from unittest import mock
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -28,6 +31,7 @@ TREATMENT_MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/treatmen
 TREATMENT_FIXTURE_PATH = ROOT / "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"
 TREATMENT_PREDECESSOR_PUBLISHED_AT = "2026-07-17T04:44:32.543011Z"
 TREATMENT_SUCCESSOR_PUBLISHED_AT = "2026-07-18T19:40:00Z"
+DIGEST_MANIFEST_PATH = ROOT / "tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json"
 
 EXPECTED_APP_SERVER_TELEMETRY_FIELDS = frozenset({
     "discovery.models", "discovery.efforts", "discovery.capabilities",
@@ -237,6 +241,28 @@ def declare_reroute_result(bundle: dict, trusted: dict[str, dict] | None = None)
         if disposition == "hard_fail" else detailed_reasons
     )
     return declare_treatment_result(bundle, failure_codes, disposition, reasons)
+
+
+def single_treatment_case(bundle: dict, execution_trace_id: str) -> dict:
+    isolated = copy.deepcopy(bundle)
+    trace = next(
+        item for item in isolated["treatment_traces"]
+        if item["objective_binding"]["execution_trace_id"] == execution_trace_id
+    )
+    isolated["treatment_traces"] = [trace]
+    isolated["controlled_environments"] = [
+        item for item in isolated["controlled_environments"]
+        if item["controlled_environment_id"] == trace["controlled_environment_id"]
+    ]
+    isolated["route_resolutions"] = [
+        item for item in isolated["route_resolutions"]
+        if item["route_resolution_id"] == trace["objective_binding"]["route_resolution_id"]
+    ]
+    isolated["fixture_provenance"]["expected_dispositions"] = [{
+        "execution_trace_id": execution_trace_id,
+        "treatment_disposition": trace["treatment_disposition"],
+    }]
+    return isolated
 
 
 def make_treatment_reroute_case(bundle: dict, authority: str) -> dict:
@@ -1830,7 +1856,8 @@ class CapabilityContractTests(unittest.TestCase):
 class TreatmentContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.bundle = load_json(TREATMENT_FIXTURE_PATH)
+        cls.replay_bundle = load_json(TREATMENT_FIXTURE_PATH)
+        cls.bundle = single_treatment_case(cls.replay_bundle, "TRACE-SUCCESS")
 
     def rebound(self, bundle: dict) -> dict:
         bundle["treatment_contract_digest"] = treatment.schema_file_digest()
@@ -2259,6 +2286,19 @@ class TreatmentContractTests(unittest.TestCase):
         mismatch = copy.deepcopy(self.bundle); mismatch["treatment_traces"][0]["work_item_id"] = "G56R-002-FORGED"
         with self.assertRaisesRegex(ValueError, "controlled environment binding"):
             treatment.validate_treatment_bundle(self.rebound(mismatch))
+        repeated_fk = copy.deepcopy(self.bundle)
+        other = copy.deepcopy(repeated_fk["treatment_traces"][0])
+        other["objective_binding"]["execution_trace_id"] = "TRACE-REPEATED-FK"
+        other["parent_child_graph"]["root_execution_trace_id"] = "TRACE-REPEATED-FK"
+        graph_observation = next(item for item in other["observations"] if item["field_path"] == "parent.graph")
+        graph_observation["value"] = copy.deepcopy(other["parent_child_graph"])
+        repeated_fk["treatment_traces"].append(other)
+        repeated_fk["fixture_provenance"]["expected_dispositions"] = [
+            {"execution_trace_id": "TRACE-SUCCESS", "treatment_disposition": "unknown"},
+            {"execution_trace_id": "TRACE-REPEATED-FK", "treatment_disposition": "unknown"},
+        ]
+        self.assertEqual(len(treatment.validate_treatment_bundle(self.rebound(repeated_fk))["treatment_traces"]), 2)
+
         validated_graph = treatment.validate_treatment_bundle(self.rebound(make_two_trace_graph_bundle(self.bundle)))
         self.assertEqual(len(validated_graph["treatment_traces"]), 2)
 
@@ -3223,6 +3263,220 @@ class TreatmentContractTests(unittest.TestCase):
         trace["configured_route_proof"]["proof_id"] = treatment.content_id(trace["configured_route_proof"], "proof_id")
         next(item for item in trace["observations"] if item["field_path"] == "assignment.instruction_hash")["value"] = trace["instruction_hash"]
         assert_valid_but_rejected(instruction_rebound, "instruction identity")
+
+
+class TreatmentReplayTests(unittest.TestCase):
+    CASES = [
+        ("TRACE-SUCCESS", "success", "unknown", None),
+        ("TRACE-EXPLICIT-NULL", "explicit_null", "unknown", None),
+        ("TRACE-UNAVAILABLE", "unavailable", "unknown", None),
+        ("TRACE-MISDELIVERY", "misdelivery", "hard_fail", None),
+        ("TRACE-APPROVED-SAME-AGENT-REROUTE", "approved_same_agent_reroute", "non_scorable_rerouted", None),
+        ("TRACE-UNAPPROVED-UNIDENTIFIABLE-REROUTE", "unapproved_unidentifiable_reroute", "hard_fail", None),
+        ("TRACE-DISCOVERY-LOSS", "discovery_loss", "unknown", "partial_surface"),
+        ("TRACE-SURFACE-DISAGREEMENT", "surface_disagreement", "unknown", "surface_disagreement"),
+    ]
+
+    def copy_replay_tree(self, repository_root: Path) -> tuple[Path, Path]:
+        for source in (FIXTURE_PATH, TREATMENT_FIXTURE_PATH, DIGEST_MANIFEST_PATH):
+            destination = repository_root / source.relative_to(ROOT)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, destination)
+        return (
+            repository_root / TREATMENT_FIXTURE_PATH.relative_to(ROOT),
+            repository_root / DIGEST_MANIFEST_PATH.relative_to(ROOT),
+        )
+
+    def write_and_reseal(self, repository_root: Path, source: Path, value: dict) -> None:
+        target = repository_root / source.relative_to(ROOT)
+        target.write_bytes(treatment.canonical_fixture_bytes(value))
+        manifest_path = repository_root / DIGEST_MANIFEST_PATH.relative_to(ROOT)
+        manifest = json.loads(manifest_path.read_bytes())
+        fixture_path = source.relative_to(ROOT).as_posix()
+        entry = next(item for item in manifest["fixtures"] if item["fixture_path"] == fixture_path)
+        entry["fixture_digest"] = treatment.digest(target.read_bytes())
+        manifest_path.write_bytes(treatment.canonical_fixture_bytes(manifest))
+
+    def replay(self) -> dict:
+        return treatment.replay_fixture(
+            TREATMENT_FIXTURE_PATH,
+            DIGEST_MANIFEST_PATH,
+            repeat=2,
+            repository_root=ROOT,
+        )
+
+    def test_eight_case_matrix_is_explicit_and_canary_never_promotes(self) -> None:
+        bundle = load_json(TREATMENT_FIXTURE_PATH)
+        actual = [
+            (item["objective_binding"]["execution_trace_id"], item["treatment_disposition"])
+            for item in bundle["treatment_traces"]
+        ]
+        self.assertEqual(actual, [(case_id, disposition) for case_id, _, disposition, _ in self.CASES])
+        result = self.replay()
+        self.assertEqual(result["status"], "replayed")
+        self.assertEqual(result["repeat"], 2)
+        normalized = [
+            (
+                item["execution_trace_id"], item["case_class"], item["treatment_disposition"],
+                item["source_capability_case_id"],
+            )
+            for item in result["cases"]
+        ]
+        self.assertEqual(normalized, self.CASES)
+        success = result["cases"][0]
+        self.assertEqual(success["terminal_state"], "completed")
+        self.assertEqual(success["delivery_canary_status"], "passed")
+        self.assertEqual(success["treatment_disposition"], "unknown")
+        self.assertEqual(result["guardrails"], {
+            "qualification_scope": "synthetic_replay_only",
+            "runtime_continuation_authorized": False,
+            "canary_promotes_treatment": False,
+            "network_accessed": False,
+            "raw_store_accessed": False,
+        })
+
+    def test_synthetic_reroute_is_replay_only_and_public_validation_hard_fails(self) -> None:
+        bundle = single_treatment_case(
+            load_json(TREATMENT_FIXTURE_PATH), "TRACE-APPROVED-SAME-AGENT-REROUTE"
+        )
+        bundle["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
+        validated = treatment.validate_treatment_bundle(bundle)
+        trace = validated["treatment_traces"][0]
+        self.assertEqual(trace["treatment_disposition"], "hard_fail")
+        self.assertIn("reroute_unapproved", {item["failure_code"] for item in trace["treatment_failures"]})
+        replayed = self.replay()
+        simulated = next(
+            item for item in replayed["cases"]
+            if item["execution_trace_id"] == "TRACE-APPROVED-SAME-AGENT-REROUTE"
+        )
+        self.assertEqual(simulated["treatment_disposition"], "non_scorable_rerouted")
+        self.assertFalse(replayed["guardrails"]["runtime_continuation_authorized"])
+
+    def test_manifest_is_closed_and_hashes_both_fixtures_before_parsing(self) -> None:
+        for source in (FIXTURE_PATH, TREATMENT_FIXTURE_PATH):
+            with self.subTest(mutated_fixture=source.name), tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                target = repository_root / source.relative_to(ROOT)
+                target.write_bytes(b"!" + target.read_bytes()[1:])
+                with self.assertRaisesRegex(ValueError, "digest mismatch before pars"):
+                    treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+
+        manifest = load_json(DIGEST_MANIFEST_PATH)
+        mutations = []
+        missing = copy.deepcopy(manifest); missing["fixtures"].pop(); mutations.append(missing)
+        duplicate = copy.deepcopy(manifest); duplicate["fixtures"].append(copy.deepcopy(duplicate["fixtures"][0])); mutations.append(duplicate)
+        extra = copy.deepcopy(manifest); extra["fixtures"].append({
+            "fixture_path": "../outside.json", "fixture_digest": "sha256:" + "0" * 64,
+        }); mutations.append(extra)
+        undeclared = copy.deepcopy(manifest); undeclared["undeclared"] = True; mutations.append(undeclared)
+        for index, mutation in enumerate(mutations):
+            with self.subTest(manifest_mutation=index), tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                manifest_path.write_bytes(treatment.canonical_fixture_bytes(mutation))
+                with self.assertRaises(ValueError):
+                    treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            manifest_path.write_bytes(
+                b'{"fixtures":[],"schema_version":"1.0.0","schema_version":"1.0.0"}\n'
+            )
+            with self.assertRaisesRegex(ValueError, "duplicate JSON key"):
+                treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+
+    def test_rehashed_undeclared_fixture_field_fails_after_digest_verification(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            bundle = json.loads(fixture.read_bytes())
+            bundle["undeclared"] = True
+            fixture.write_bytes(treatment.canonical_fixture_bytes(bundle))
+            manifest = json.loads(manifest_path.read_bytes())
+            entry = next(item for item in manifest["fixtures"] if item["fixture_path"].endswith("treatment-replay.json"))
+            entry["fixture_digest"] = treatment.digest(fixture.read_bytes())
+            manifest_path.write_bytes(treatment.canonical_fixture_bytes(manifest))
+            with self.assertRaisesRegex(ValueError, "closed shape"):
+                treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+
+    def test_rehashed_fixtures_cannot_relabel_case_semantics(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            bundle = json.loads(fixture.read_bytes())
+            trace = next(
+                item for item in bundle["treatment_traces"]
+                if item["objective_binding"]["execution_trace_id"] == "TRACE-SUCCESS"
+            )
+            observation = next(
+                item for item in trace["observations"]
+                if item["field_path"] == "assignment.named_agent"
+            )
+            observation["value"] = "fixture-misdelivered-agent"
+            trace["treatment_disposition"] = "hard_fail"
+            expected = next(
+                item for item in bundle["fixture_provenance"]["expected_dispositions"]
+                if item["execution_trace_id"] == "TRACE-SUCCESS"
+            )
+            expected["treatment_disposition"] = "hard_fail"
+            self.write_and_reseal(repository_root, TREATMENT_FIXTURE_PATH, bundle)
+            with self.assertRaisesRegex(ValueError, "predeclared disposition"):
+                treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+
+        for case_id, message in (
+            ("partial_surface", "partial-surface"),
+            ("surface_disagreement", "surface-disagreement"),
+        ):
+            with self.subTest(capability_case=case_id), tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+                capability = json.loads(capability_path.read_bytes())
+                case = next(item for item in capability["surface_cases"] if item["case_id"] == case_id)
+                agreed = copy.deepcopy(case["surfaces"]["app_server"]["entries"])
+                for payload in case["surfaces"].values():
+                    payload["state"] = "complete"
+                    payload["entries"] = copy.deepcopy(agreed)
+                self.write_and_reseal(repository_root, FIXTURE_PATH, capability)
+                with self.assertRaisesRegex(ValueError, message):
+                    treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+
+    def test_replay_is_canonical_offline_and_exactly_two_passes(self) -> None:
+        for path in (FIXTURE_PATH, TREATMENT_FIXTURE_PATH, DIGEST_MANIFEST_PATH):
+            value = json.loads(path.read_bytes())
+            self.assertEqual(path.read_bytes(), treatment.canonical_fixture_bytes(value))
+        forbidden = (b"/Users/", b"Bearer ", b"authorization", b"cookie", b"github.com", b"sk-")
+        raw = FIXTURE_PATH.read_bytes() + TREATMENT_FIXTURE_PATH.read_bytes()
+        self.assertTrue(all(token.lower() not in raw.lower() for token in forbidden))
+        with mock.patch.object(socket, "create_connection", side_effect=AssertionError("network forbidden")), mock.patch.object(
+            subprocess, "run", side_effect=AssertionError("process launch forbidden")
+        ):
+            first = self.replay()
+            second = self.replay()
+        self.assertEqual(
+            treatment.canonical_fixture_bytes(first), treatment.canonical_fixture_bytes(second)
+        )
+        self.assertEqual(first["replay_digest"], second["replay_digest"])
+        for repeat in (1, 3, True, "2", 2.0):
+            with self.subTest(repeat=repeat), self.assertRaises(ValueError):
+                treatment.replay_fixture(
+                    TREATMENT_FIXTURE_PATH, DIGEST_MANIFEST_PATH,
+                    repeat=repeat, repository_root=ROOT,
+                )
+        completed = subprocess.run(
+            [
+                sys.executable, str(TREATMENT_MODULE_PATH), "replay",
+                "--fixture", str(TREATMENT_FIXTURE_PATH),
+                "--digest-manifest", str(DIGEST_MANIFEST_PATH),
+                "--repeat", "2",
+            ],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+        )
+        self.assertEqual(completed.stdout, treatment.canonical_fixture_bytes(first))
+        self.assertEqual(completed.stderr, b"")
 
 
 if __name__ == "__main__":
