@@ -86,16 +86,24 @@ python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py canary \
   --snapshot /tmp/g56r-002-runtime-snapshot.json \
   --model CANONICAL_MODEL_ID \
   --effort CANONICAL_EFFORT \
+  --executor-result /absolute/path/outside/repository/canary-executor-result.json \
   --raw-evidence-root /absolute/path/outside/repository/g56r-002 \
   --output /tmp/g56r-002-canary-sanitized.json
 ```
 
-The adapter enforces one launch for the snapshot/model/effort key, a 30-second
-wall timeout, a 64 KiB combined-output cap, process-tree termination, and zero
-retries. Only exit zero plus the predeclared sentinel records availability for
-the pinned environment. Every other terminal class is unknown and excludes the
-tuple. To retry an independently proven transient condition, create a successor
-snapshot first.
+The adapter accepts only a result from an approved injected executor contract
+for a live launch. That executor must enforce the 30-second wall timeout, 64 KiB
+combined output cap, process-tree termination, and zero retries; the result
+uses the closed v1 envelope and records its contract/implementation/result
+digests plus enforcement acknowledgements. Approval comes only from the
+repository-owned executor-ID allowlist, which is intentionally empty in this
+slice; an arbitrary result file cannot self-approve, so this command currently
+fails closed as `unknown`. Default repository tests inject a deterministic
+allowlist and fake result and launch no process. Only a future separately
+reviewed admitted executor plus exit zero and the predeclared sentinel may
+record pinned-environment availability. Every other terminal class is unknown
+and excludes the tuple. To retry an independently proven transient condition,
+create a successor snapshot first.
 
 ## 6. Build and Review the Freeze
 
@@ -127,7 +135,8 @@ published ID in place.
 
 ```sh
 python3 tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py replay \
-  --fixture tests/speckit-pro/unit/fixtures/g56r-002/treatment-replay.json \
+  --fixture tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json \
+  --digest-manifest tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json \
   --repeat 2
 ```
 

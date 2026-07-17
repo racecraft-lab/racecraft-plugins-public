@@ -47,11 +47,11 @@ required replay classes
 
 **Reviewability Budget**: Primary surface `harness/adapter`; secondary surface
 `schema/data contract`; target 265 reviewable LOC, approximately 2 production
-modules and 9 implementation files. The scaffold estimate is 297 LOC. Stay one
+modules and 10 implementation files. The scaffold estimate is 297 LOC. Stay one
 slice unless the authoritative plan estimate exceeds 400 LOC or the three
 increments cease to be independently testable.
 
-**Authoritative plan estimate**: `pass`, 0 projected production LOC, 7 new and
+**Authoritative plan estimate**: `pass`, 0 projected production LOC, 8 new and
 2 modified files. The helper does not classify Python modules below
 `tests/speckit-pro/` as production, so its zero is a path-classification limit,
 not a size claim. The binding human estimate remains 297 reviewable LOC; the
@@ -62,8 +62,9 @@ not a size claim. The binding human estimate remains 297 reviewable LOC; the
 - NEW tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py
 - NEW tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py
 - NEW tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py
-- NEW tests/speckit-pro/unit/fixtures/g56r-002/capability-matrix.json
-- NEW tests/speckit-pro/unit/fixtures/g56r-002/treatment-replay.json
+- NEW tests/speckit-pro/unit/fixtures/capability-treatment-replay/capability-matrix.json
+- NEW tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json
+- NEW tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json
 - MODIFIED tests/speckit-pro/suite-manifest.json
 - MODIFIED docs-site/src/content/docs/reference/tests.md
 - NEW docs/ai/research/codex-g56r-002-executable-candidate-freeze.json
@@ -95,17 +96,24 @@ increments, stop and split before coding further.
   model/effort normalization, hidden visibility, and disagreement records.
 - Revalidate current source-record digests and carry claim-scoped invalidations;
   never modify historical `OSL-*` rows.
-- Enforce one 30-second, 64 KiB, zero-retry canary per
-  `(snapshot, model, effort)` and its closed terminal taxonomy.
+- Validate one injected, approved `CanaryExecutor` result per
+  `(snapshot, model, effort)`, including the 30-second, 64 KiB, zero-retry,
+  process-tree-termination contract and closed result envelope. A
+  repository-owned, versioned, default-empty executor-ID allowlist is the trust
+  anchor; fail closed without a separately reviewed admitted executor.
 - Sanitize allowlisted evidence, emit canonical JSON/SHA-256, and build the
   append-only candidate freeze.
 
 ### `treatment_trace_schema.py`
 
 - Validate telemetry-profile keys and classification/claim semantics.
-- Validate the six-ID objective join, configured-route proof, typed observation
-  states, route resolution, exact treatment, resource/lifecycle fields, and
-  service-reroute association.
+- Validate the six-ID objective join, controlled-environment consistency,
+  configured-route proof, typed observation-state rules, structured treatment
+  failures, owning-ID uniqueness, route resolution, exact treatment,
+  resource/lifecycle fields, and separate service-reroute destination proof.
+  Controlled environments and qualification evidence live in explicit owner
+  registries; synthetic qualification records exercise replay but never
+  authorize live continuation.
 - Replay committed fixtures twice offline and reject hash drift, undeclared
   fields, raw-store dependencies, inferred values, or nondeterminism.
 
@@ -143,8 +151,8 @@ current benchmark runner out of G56R-002.
 
 1. Add success, explicit-null, unavailable, misdelivery, approved reroute,
    unapproved reroute, discovery-loss, and surface-disagreement records.
-2. Validate fixture hashes before parsing and replay the full set twice without
-   network or raw-store access.
+2. Validate fixture bytes against the out-of-band digest manifest before
+   parsing and replay the full set twice without network or raw-store access.
 3. Register the focused test, regenerate the docs-site test reference, and run
    the applicable repository gates.
 
@@ -172,7 +180,7 @@ Repository tests must pass with the network disabled and no raw evidence store.
   publication before leaving only a digest and deletion record.
 - Committed fixtures are deny-by-default sanitized, schema-allowlisted,
   canonical UTF-8 JSON with sorted keys and compact separators, and SHA-256
-  bound to exact bytes.
+  bound to exact bytes by the adjacent out-of-band digest manifest.
 - Official-document refresh outcomes remain per `OPENAI-DOC-*` record. A changed
   source invalidates only bound claims/routes; the G56R-001 historical record is
   not rewritten as current evidence.
@@ -204,9 +212,10 @@ tests/speckit-pro/layer6-efficiency/lib/
 
 tests/speckit-pro/unit/
 ├── test-g56r-002-capability-telemetry.py
-└── fixtures/g56r-002/
+└── fixtures/capability-treatment-replay/
     ├── capability-matrix.json
-    └── treatment-replay.json
+    ├── treatment-replay.json
+    └── fixture-digests.json
 
 docs/ai/research/
 ├── codex-g56r-002-executable-candidate-freeze.json

@@ -3,8 +3,8 @@
   "spec_id": "G56R-002",
   "feature_dir": "specs/g56r-002-capability-discovery-telemetry",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-17T01:24:27Z",
-  "active_step": "Phase 6: Analyze",
+  "updated_at": "2026-07-17T02:00:09Z",
+  "active_step": "Phase 7: Implement - Capability Freeze (T001-T015)",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
   "archive_sweep": {
@@ -65,10 +65,10 @@
     {"step": "Phase 4: Checklist - Observability", "status": "completed"},
     {"step": "Phase 4: Checklist - Observability Consensus", "status": "completed"},
     {"step": "Phase 5: Tasks", "status": "completed"},
-    {"step": "Phase 6: Analyze", "status": "in_progress"},
-    {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
-    {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
-    {"step": "Phase 7: Implement - Capability Freeze (T001-T015)", "status": "pending"},
+    {"step": "Phase 6: Analyze", "status": "completed"},
+    {"step": "Phase 6: Analyze - Consensus", "status": "completed"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
+    {"step": "Phase 7: Implement - Capability Freeze (T001-T015)", "status": "in_progress"},
     {"step": "Phase 7: Implement - Treatment Contracts (T016-T025)", "status": "pending"},
     {"step": "Phase 7: Implement - Synthetic Replay (T026-T030)", "status": "pending"},
     {"step": "Phase 7: Implement - Integration and Polish (T031-T039)", "status": "pending"},
@@ -173,7 +173,7 @@
         "status": "pass",
         "reviewable_loc": 297,
         "production_files": 2,
-        "total_files": 9,
+        "total_files": 10,
         "primary_surface": "harness/adapter",
         "warnings": [],
         "blockers": []
@@ -181,7 +181,7 @@
       "estimator": {
         "status": "pass",
         "projected": 0,
-        "declared_files": 9,
+        "declared_files": 10,
         "limitation": "tests/speckit-pro Python paths are not classified as production by the helper"
       },
       "artifacts": [
@@ -254,6 +254,43 @@
         "reason": "atomicity route is one-navigable-PR; planning is required only for split-PR"
       },
       "artifact": "specs/g56r-002-capability-discovery-telemetry/tasks.md"
+    },
+    "Phase 6: Analyze": {
+      "status": "completed",
+      "completed_at": "2026-07-17T02:00:09Z",
+      "executor": "/root/analyze_g56r002",
+      "consensus": [
+        "/root/analyze_contract_consensus PASS",
+        "/root/analyze_repo_consensus PASS",
+        "/root/source_manifest_scout evidence audit",
+        "/root/analyze_remediation_review final PASS"
+      ],
+      "gate": "G6 passed",
+      "findings_total": 9,
+      "findings_remediated": 9,
+      "unresolved_findings": 0,
+      "reviewability_gate": "pass at 297 reviewable LOC, 2 production files, 10 total files",
+      "remediations": [
+        "controlled environment binding",
+        "reroute destination assessment",
+        "structured treatment failures",
+        "observation-state rules",
+        "owning-ID uniqueness",
+        "behavior-named fixture namespace",
+        "out-of-band fixture digests",
+        "injected fail-closed canary executor",
+        "malformed inherited effort non-admission"
+      ]
+    },
+    "Phase 6.5: Confidence Gate": {
+      "status": "completed",
+      "completed_at": "2026-07-17T02:00:09Z",
+      "mode": "advisory",
+      "threshold": 0.9,
+      "composite": 0.99,
+      "result": "pass",
+      "recommended_action": "proceed",
+      "iterations": 0
     }
   },
   "layer_plan": {

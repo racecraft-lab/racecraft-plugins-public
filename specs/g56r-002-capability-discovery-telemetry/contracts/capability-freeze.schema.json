@@ -13,6 +13,7 @@
     "runtime_capability_snapshot_id",
     "telemetry_profile_id",
     "tuple_decisions",
+    "approved_canary_executors",
     "published_at",
     "supersedes_candidate_freeze_id"
   ],
@@ -33,6 +34,11 @@
     "tuple_decisions": {
       "type": "array",
       "items": {"$ref": "#/$defs/tupleDecision"}
+    },
+    "approved_canary_executors": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/canaryExecutorApproval"}
     },
     "canary_results": {
       "type": "array",
@@ -232,6 +238,24 @@
         }
       }
     },
+    "canaryExecutorApproval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "executor_contract_id",
+        "contract_version",
+        "implementation_digest",
+        "platform",
+        "approval_evidence_digest"
+      ],
+      "properties": {
+        "executor_contract_id": {"$ref": "#/$defs/digest"},
+        "contract_version": {"const": "1.0.0"},
+        "implementation_digest": {"$ref": "#/$defs/digest"},
+        "platform": {"enum": ["macos", "linux", "windows"]},
+        "approval_evidence_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
     "canaryResult": {
       "type": "object",
       "additionalProperties": false,
@@ -242,6 +266,14 @@
         "attempt_index",
         "timeout_seconds",
         "combined_output_cap_bytes",
+        "executor_contract_id",
+        "implementation_digest",
+        "executor_result_digest",
+        "contract_version",
+        "timeout_enforced",
+        "output_cap_enforced",
+        "process_tree_termination_state",
+        "retry_count",
         "exit_code",
         "sentinel_observed",
         "terminal_class",
@@ -255,6 +287,16 @@
         "attempt_index": {"const": 1},
         "timeout_seconds": {"const": 30},
         "combined_output_cap_bytes": {"const": 65536},
+        "executor_contract_id": {"$ref": "#/$defs/digest"},
+        "implementation_digest": {"$ref": "#/$defs/digest"},
+        "executor_result_digest": {"$ref": "#/$defs/digest"},
+        "contract_version": {"const": "1.0.0"},
+        "timeout_enforced": {"const": true},
+        "output_cap_enforced": {"const": true},
+        "process_tree_termination_state": {
+          "enum": ["not_needed", "completed", "failed"]
+        },
+        "retry_count": {"const": 0},
         "exit_code": {"type": ["integer", "null"]},
         "sentinel_observed": {"type": "boolean"},
         "terminal_class": {

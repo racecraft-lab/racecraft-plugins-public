@@ -8,6 +8,8 @@
     "schema_version",
     "telemetry_profile_id",
     "telemetry_profile",
+    "controlled_environments",
+    "qualification_evidence_registry",
     "route_resolutions",
     "treatment_traces",
     "fixture_provenance"
@@ -19,6 +21,14 @@
       "type": "array",
       "minItems": 1,
       "items": {"$ref": "#/$defs/telemetryProfileEntry"}
+    },
+    "controlled_environments": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/controlledEnvironmentBinding"}
+    },
+    "qualification_evidence_registry": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/qualificationEvidenceReference"}
     },
     "route_resolutions": {
       "type": "array",
@@ -70,6 +80,7 @@
         "official_source_ledger_id",
         "condition",
         "completeness_rule",
+        "observation_state_rules",
         "permitted_claims",
         "prohibited_claims"
       ],
@@ -94,6 +105,30 @@
         },
         "condition": {"type": ["string", "null"]},
         "completeness_rule": {"type": "string", "minLength": 1},
+        "observation_state_rules": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["allowed_states", "value_rule", "evidence_rule"],
+          "properties": {
+            "allowed_states": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "observed_value",
+                  "explicit_null",
+                  "missing",
+                  "unavailable",
+                  "not_applicable",
+                  "undocumented"
+                ]
+              }
+            },
+            "value_rule": {"type": "string", "minLength": 1},
+            "evidence_rule": {"type": "string", "minLength": 1}
+          }
+        },
         "permitted_claims": {
           "type": "array",
           "items": {"type": "string", "minLength": 1}
@@ -173,8 +208,9 @@
     "serviceRerouteEvent": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["surface", "threadId", "turnId", "fromModel", "toModel", "reason", "evidence_digest"],
+      "required": ["event_id", "surface", "threadId", "turnId", "fromModel", "toModel", "reason", "evidence_digest"],
       "properties": {
+        "event_id": {"$ref": "#/$defs/digest"},
         "surface": {"enum": ["app_server", "cli", "interactive_picker"]},
         "threadId": {"type": "string", "minLength": 1},
         "turnId": {"type": "string", "minLength": 1},
@@ -182,6 +218,124 @@
         "toModel": {"type": "string", "minLength": 1},
         "reason": {"type": "string", "minLength": 1},
         "evidence_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "rerouteDestinationAssessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_id",
+        "destination_candidate_route_id",
+        "destination_agent_contract_id",
+        "destination_named_agent",
+        "assessment",
+        "prequalification_evidence_id"
+      ],
+      "properties": {
+        "event_id": {"$ref": "#/$defs/digest"},
+        "destination_candidate_route_id": {"type": ["string", "null"], "minLength": 1},
+        "destination_agent_contract_id": {"type": ["string", "null"], "minLength": 1},
+        "destination_named_agent": {"type": ["string", "null"], "minLength": 1},
+        "assessment": {
+          "enum": [
+            "prequalified_same_agent",
+            "not_prequalified",
+            "unknown",
+            "ambiguous",
+            "different_agent"
+          ]
+        },
+        "prequalification_evidence_id": {
+          "oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]
+        }
+      }
+    },
+    "qualificationEvidenceReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "qualification_evidence_id",
+        "authority_kind",
+        "owner_spec_id",
+        "destination_candidate_route_id",
+        "destination_agent_contract_id",
+        "destination_named_agent",
+        "qualification_status",
+        "evidence_digest"
+      ],
+      "properties": {
+        "qualification_evidence_id": {"$ref": "#/$defs/digest"},
+        "authority_kind": {"enum": ["synthetic_fixture", "owned_external"]},
+        "owner_spec_id": {"type": "string", "minLength": 1},
+        "destination_candidate_route_id": {"type": "string", "minLength": 1},
+        "destination_agent_contract_id": {"type": "string", "minLength": 1},
+        "destination_named_agent": {"type": "string", "minLength": 1},
+        "qualification_status": {"const": "prequalified"},
+        "evidence_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "controlledEnvironmentBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "controlled_environment_id",
+        "client_identity_id",
+        "surface",
+        "runtime_capability_snapshot_id",
+        "repository_revision",
+        "repository_tree_digest",
+        "candidate_route_id",
+        "work_item_kind",
+        "work_item_id"
+      ],
+      "properties": {
+        "controlled_environment_id": {"$ref": "#/$defs/digest"},
+        "client_identity_id": {"$ref": "#/$defs/digest"},
+        "surface": {"enum": ["app_server", "cli", "interactive_picker"]},
+        "runtime_capability_snapshot_id": {"$ref": "#/$defs/digest"},
+        "repository_revision": {"type": "string", "minLength": 1},
+        "repository_tree_digest": {"$ref": "#/$defs/digest"},
+        "candidate_route_id": {"type": "string", "minLength": 1},
+        "work_item_kind": {"enum": ["task", "fixture", "objective"]},
+        "work_item_id": {"type": "string", "minLength": 1}
+      }
+    },
+    "treatmentFailure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "failure_code",
+        "affected_field",
+        "expected_evidence_ref",
+        "observed_evidence_ref",
+        "resulting_disposition"
+      ],
+      "properties": {
+        "failure_code": {
+          "enum": [
+            "agent_mismatch",
+            "model_mismatch",
+            "effort_mismatch",
+            "configuration_mismatch",
+            "sandbox_approvals_mismatch",
+            "mutation_class_mismatch",
+            "skills_mcp_tools_mismatch",
+            "parent_configuration_mismatch",
+            "client_or_override_mismatch",
+            "delivery_canary_failure",
+            "effective_treatment_unknown",
+            "reroute_unapproved",
+            "reroute_unidentifiable",
+            "reroute_ambiguous",
+            "reroute_different_agent"
+          ]
+        },
+        "affected_field": {"type": "string", "minLength": 1},
+        "expected_evidence_ref": {"type": ["string", "null"]},
+        "observed_evidence_ref": {"type": ["string", "null"]},
+        "resulting_disposition": {
+          "enum": ["unknown", "non_scorable_rerouted", "hard_fail"]
+        }
       }
     },
     "objectiveBinding": {
@@ -209,6 +363,7 @@
       "additionalProperties": false,
       "required": [
         "objective_binding",
+        "controlled_environment_id",
         "named_agent",
         "assigned_route_id",
         "requested_model",
@@ -217,6 +372,7 @@
         "supported_effective_effort",
         "configured_route_proof",
         "service_reroute_events",
+        "reroute_destination_assessments",
         "instruction_hash",
         "sandbox",
         "approvals",
@@ -227,6 +383,7 @@
         "client_identity_id",
         "controlled_overrides",
         "delivery_canary",
+        "treatment_failures",
         "context",
         "parent_child_graph",
         "raw_token_vector",
@@ -246,6 +403,7 @@
       ],
       "properties": {
         "objective_binding": {"$ref": "#/$defs/objectiveBinding"},
+        "controlled_environment_id": {"$ref": "#/$defs/digest"},
         "named_agent": {"type": "string", "minLength": 1},
         "assigned_route_id": {"type": "string", "minLength": 1},
         "requested_model": {"type": "string", "minLength": 1},
@@ -259,6 +417,10 @@
           "type": "array",
           "items": {"$ref": "#/$defs/serviceRerouteEvent"}
         },
+        "reroute_destination_assessments": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/rerouteDestinationAssessment"}
+        },
         "instruction_hash": {"$ref": "#/$defs/digest"},
         "sandbox": {"type": "object"},
         "approvals": {"type": "object"},
@@ -269,6 +431,10 @@
         "client_identity_id": {"$ref": "#/$defs/digest"},
         "controlled_overrides": {"type": "object"},
         "delivery_canary": {"type": "object"},
+        "treatment_failures": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/treatmentFailure"}
+        },
         "context": {"type": "object"},
         "parent_child_graph": {"type": "object"},
         "raw_token_vector": {"type": "object"},
@@ -302,7 +468,6 @@
         "schema_version",
         "sanitizer_version",
         "raw_evidence_digest",
-        "fixture_digest",
         "expected_dispositions",
         "network_required",
         "raw_store_required",
@@ -312,7 +477,6 @@
         "schema_version": {"const": "1.0.0"},
         "sanitizer_version": {"type": "string", "minLength": 1},
         "raw_evidence_digest": {"$ref": "#/$defs/digest"},
-        "fixture_digest": {"$ref": "#/$defs/digest"},
         "expected_dispositions": {
           "type": "array",
           "items": {

@@ -133,11 +133,19 @@
 - **Q: What exact canary execution envelope applies?** **A:** Permit one launch
   per `(runtime_capability_snapshot_id, canonical_model_id, canonical_effort)`
   with a 30-second wall-clock timeout and 64 KiB combined-output cap. Crossing
-  either bound kills the process tree. There is no retry within a snapshot; an
-  independently proven transient condition requires a successor snapshot. Only
-  an exit-zero response matching the predeclared sentinel can record
-  pinned-environment availability, and it still cannot establish support,
-  effort support, eligibility, quality, or preference.
+  either bound requires the approved executor to kill its process tree. The
+  repository adapter validates an injected `CanaryExecutor` contract and fails
+  closed as `unknown` when no approved platform executor is supplied; default
+  tests never launch a process. Approval comes only from a versioned,
+  repository-owned allowlist that is empty in this slice; an external result
+  cannot self-approve. The closed result envelope binds the executor and result
+  digests, contract version, timeout/output-cap acknowledgements,
+  process-tree-termination state, and zero retry count. There is no retry within
+  a snapshot. An independently proven transient condition requires a successor
+  snapshot. Only an exit-zero response matching
+  the predeclared sentinel can record pinned-environment availability, and it
+  still cannot establish support, effort support, eligibility, quality, or
+  preference.
 - **Q: What terminal error taxonomy is required?** **A:** Use `timeout`,
   `output_cap_exceeded`, `launch_error`, `transport_error`,
   `authentication_error`, `rate_limited`, `malformed_response`,
@@ -157,9 +165,11 @@
 - **Q: How are deterministic fixtures derived and hashed?** **A:** Sanitize
   first, keep only schema-allowlisted fields, replace unstable values with fixed
   tokens, serialize canonical UTF-8 JSON with sorted keys and no insignificant
-  whitespace, and compute SHA-256 over those exact bytes. Record the schema and
-  sanitizer versions, raw-evidence digest, fixture digest, and expected
-  disposition.
+  whitespace, and compute SHA-256 over those exact bytes. Store the exact-byte
+  digest in a separate committed digest manifest so replay can compare raw
+  bytes before parsing without a self-referential hash. Each fixture records
+  its schema and sanitizer versions, raw-evidence digest, and expected
+  disposition; the manifest records its path and fixture digest.
 - **Q: What constitutes synthetic replay acceptance?** **A:** Validate every
   fixture hash before parsing; replay every required success and failure class
   twice without network or raw-store access; and require identical normalized

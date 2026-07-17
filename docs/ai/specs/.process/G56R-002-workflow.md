@@ -62,10 +62,10 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Clarify | `$speckit-clarify` | Complete | Resolved field-level and bounded-probe details; G2 passed |
 | Plan | `$speckit-plan` | Complete | Designed one guarded three-increment slice; G3 and reviewability passed |
 | Checklist | `$speckit-checklist` | Complete | Four risk-focused domains passed consensus; G4 passed |
-| Tasks | `$speckit-tasks` | In Progress | Generate TDD-first, vertically ordered tasks |
-| Analyze | `$speckit-analyze` | Pending | Prove cross-artifact consistency and scope containment |
-| Confidence Gate | G6.5 | Pending | Evaluate the Analyze confidence emit in advisory mode |
-| Implement | `$speckit-implement` | Pending | Implement only after G6 passes |
+| Tasks | `$speckit-tasks` | Complete | 39 TDD-first tasks; G5 passed |
+| Analyze | `$speckit-analyze` | Complete | Nine findings remediated; G6 passed |
+| Confidence Gate | G6.5 | Complete | Advisory score 0.99 passed the 0.90 threshold |
+| Implement | `$speckit-implement` | In Progress | Capability-freeze increment is active |
 | Post | Post-Implementation | Pending | Complete verification, reviewability, PR, remediation, and retrospective work |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -538,7 +538,7 @@ $speckit-plan
 
 - Reviewable LOC: 297
 - Production Files: 2
-- Total Files: 9
+- Total Files: 10
 - Primary Surface: harness/adapter
 
 These explicit post-plan values supersede the scaffold's prose estimate for
@@ -742,7 +742,7 @@ Focus on:
 7. Scope leakage into corpus execution, scoring, statistics, qualification,
    ranking, fallback order, installation, agent configuration, payloads, or versioning.
 8. Reviewability against the 265-LOC target, 297-LOC scaffold estimate,
-   approximately three production files, ten total files, and one guarded slice.
+   approximately three production files, ten implementation files, and one guarded slice.
 9. Verification coverage for sanitized fixtures, raw-evidence exclusion,
    Python 3.11 standard-library constraints, and the selected repository gates.
 10. Exact-treatment coverage for named agent, model/effort, instruction hash,
@@ -770,7 +770,35 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |---|---|---|---|
-| Pending | Pending | Autopilot has not run analysis | Resolve before G6 |
+| A-001 | HIGH (resolved) | Treatment contract omitted controlled repository/task binding | Added an environment owner registry, trace references, equality invariants, and T018/T021 missing-owner/mismatch coverage |
+| A-002 | HIGH (resolved) | Raw service-reroute event could not prove a same-agent prequalified destination | Kept the raw event immutable and added destination assessment plus a read-only qualification owner registry; synthetic evidence cannot authorize live continuation |
+| A-003 | HIGH (resolved) | Closed trace schema omitted structured treatment failures | Added the required closed failure collection and T016/T019/T021 coverage |
+| A-004 | MEDIUM (resolved) | Telemetry entries omitted observation-state rules required by the data model | Added required state/value/evidence rules and T016/T017/T020 validation |
+| A-005 | MEDIUM (resolved) | Owning-ID collision checks were incomplete | Enumerated owner uniqueness, preserved repeated foreign keys, and added T018/T021 collision coverage |
+| A-006 | MEDIUM (resolved) | Spec-ID fixture directory violated the behavior-named fixture contract | Renamed the namespace to `capability-treatment-replay` everywhere |
+| A-007 | HIGH (resolved) | In-band `fixture_digest` made exact-byte hash-before-parse self-referential | Added an out-of-band digest manifest and manifest-first replay contract |
+| A-008 | HIGH (resolved) | Portable stdlib code could not unconditionally promise live process-tree control | Added a closed executor-result envelope, default-empty repository approval allowlist, and fail-closed missing/unapproved executor behavior |
+| A-009 | MEDIUM (resolved) | Inherited `G56R-001-ESR-003` punctuation-only effort values could be misread as authority | T001/T007 now reject malformed or undocumented effort values without rewriting G56R-001 evidence |
+
+### Consensus Resolution Log
+
+- Primary Analyze executor: 3 HIGH and 2 MEDIUM contract findings confirmed.
+- Independent contract consensus: PASS on A-001 through A-005, with no
+  G56R-003 qualification leakage after the destination-assessment boundary.
+- Independent repository consensus: PASS on A-006 through A-008; the digest
+  manifest adds one data file while retaining two production modules.
+- Independent source-manifest audit: 22 current source records, 0 active
+  historical `OSL-*` rows, and malformed effort tokens explicitly quarantined.
+- Final remediation review: PASS after environment/qualification owner
+  registries and executor approval-to-implementation equality were added.
+
+📊 Confidence: 0.99
+
+- Task understanding: 0.98
+- Approach clarity: 0.98
+- Requirements alignment: 0.99
+- Risk assessment: 1.00
+- Completeness: 0.98
 
 G6 passes only when no `CRITICAL` or `HIGH` finding remains and every accepted
 lower-severity finding has a recorded disposition.
@@ -787,8 +815,8 @@ workflow confidence emit.
 |---|---|
 | Mode | Advisory |
 | Threshold | 0.90 |
-| Status | Pending Analyze confidence emit |
-| Bounded remediation | Up to three focused iterations on the lowest-scoring criterion |
+| Status | Passed at 0.99; proceed |
+| Bounded remediation | Not required |
 
 ---
 

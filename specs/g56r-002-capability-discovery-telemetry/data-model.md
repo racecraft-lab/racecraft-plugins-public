@@ -26,6 +26,17 @@
 | `RouteResolution` | Candidate route and capability snapshot | `TreatmentTrace`, objective join |
 | `TreatmentTrace` | Six-ID objective join and telemetry profile | Synthetic replay and G56R-003 handoff |
 
+## Owning-ID Uniqueness
+
+Every owning collection rejects duplicate identity keys even when the duplicate
+objects differ: source-refresh ledger ID; surface-observation ID and
+`(client_identity_id, surface)` key; tuple-decision candidate-route/model/effort
+key; telemetry `(client_identity_id, surface, field_path)` key;
+route-resolution ID; controlled-environment binding ID; reroute event ID;
+execution-trace ID; and fixture path in the digest manifest. Repeated foreign
+key references to one valid owner remain allowed. A collision fails before any
+join or disposition is evaluated.
+
 ## Source and Surface Records
 
 ### `OfficialSourceRefresh`
@@ -128,15 +139,29 @@ surface raw values and evidence references, proposed normalized key,
 | `attempt_index` | integer | Must be exactly `1` |
 | `timeout_seconds` | integer | Must equal `30` |
 | `combined_output_cap_bytes` | integer | Must equal `65536` |
+| `executor_contract_id` | digest | Approved platform executor contract that enforced output and process-tree bounds |
+| `implementation_digest` | digest | Must equal the matching approval record's implementation digest |
+| `executor_result_digest` | digest | Exact external result-envelope binding |
+| `contract_version` | string | Must equal `1.0.0` |
+| `timeout_enforced` / `output_cap_enforced` | booleans | Both must be true |
+| `process_tree_termination_state` | enum | `not_needed`, `completed`, or `failed`; failed remains unknown |
+| `retry_count` | integer | Must equal `0` |
 | `exit_code` | integer or null | Raw process result |
 | `sentinel_observed` | boolean | True only for the predeclared bounded response |
 | `terminal_class` | enum | `success`, `timeout`, `output_cap_exceeded`, `launch_error`, `transport_error`, `authentication_error`, `rate_limited`, `malformed_response`, `explicit_rejection`, `service_reroute`, or `ambiguous_error` |
 | `availability_disposition` | enum | `available_for_pinned_environment` only for success; otherwise `unknown` |
 | `evidence_digest` | digest | Redacted evidence binding |
 
-There is no retry flag. A transient exception creates a successor snapshot and
-a new key. Canary results never establish support, effort support, eligibility,
-quality, preference, or qualification.
+The module owns a versioned, default-empty allowlist of approved executor
+contract IDs. An executor becomes trusted only through a separately reviewed
+repository change that binds its implementation and approval-evidence digests;
+an executor result cannot self-approve. The repository adapter consumes the
+closed result envelope and fails closed as `unknown` when the ID is absent from
+the allowlist, any enforcement acknowledgement is missing, or process-tree
+termination failed. Its default path never launches a process. A transient
+exception creates a successor snapshot and a new key. Canary results never
+establish support, effort support, eligibility, quality, preference, or
+qualification.
 
 ### `ExecutableCandidateTuple`
 
@@ -219,6 +244,18 @@ Every assigned objective requires all six non-null IDs:
 
 Later aggregate IDs remain explicit null until their owning specs create them.
 
+### `ControlledEnvironmentBinding`
+
+Required fields: content-addressed binding ID, pinned client identity and
+surface, runtime-capability snapshot ID, repository revision and tree digest,
+candidate route ID, work-item kind (`task`, `fixture`, or `objective`), and
+work-item ID. Every treatment bundle carries a unique
+`controlled_environments` owner registry, and each trace references one owner
+by ID. The client, snapshot, and candidate route MUST equal the corresponding
+treatment and objective fields. A missing owner, duplicate owner, mismatch, or
+orphan hard-fails validation; no environment value is inferred from another
+record.
+
 ### `RouteResolution`
 
 Required fields: `route_resolution_id`, preferred route, ordered attempted
@@ -230,17 +267,39 @@ not define fallback ordering or resolver policy.
 ### `ServiceRerouteEvent`
 
 Required documented fields: `threadId`, `turnId`, `fromModel`, `toModel`, and
-`reason`, plus pinned surface and event evidence. It joins to a trace by
-`(surface, threadId, turnId)`. It proves no effort or named-agent identity and
-never overwrites resolver fields. Ambiguous/conflicting joins hard-fail.
+`reason`, plus event ID, pinned surface, and event evidence. It joins to a trace
+by `(surface, threadId, turnId)`. It proves no effort or named-agent identity
+and never overwrites resolver fields. Ambiguous/conflicting joins hard-fail.
+
+### `RerouteDestinationAssessment`
+
+Required fields: source event ID, destination candidate-route ID, destination
+agent-contract ID, destination named agent, assessment, and nullable
+prequalification-evidence ID. The raw service event remains unchanged. The
+treatment bundle includes a read-only `qualification_evidence_registry` whose
+owners bind evidence ID, authority kind, owning spec, destination route,
+agent-contract, named agent, status, and digest. Synthetic fixture authority
+exercises replay only and can never authorize live continuation. Runtime UAT is
+allowed only for a matching `owned_external` record created by its owning later
+spec. G56R-002 validates and consumes the slot but never creates or asserts real
+qualification evidence. Missing, mismatched, unknown, ambiguous, or
+different-agent assessments hard-fail treatment.
+
+### `TreatmentFailure`
+
+Required fields: closed failure code, affected contract field, expected and
+observed evidence references (nullable when unavailable), and resulting
+treatment disposition. The collection is required even when empty. Free-form
+disposition reasons may add context but never replace structured failures.
 
 ### `TreatmentTrace`
 
 The trace contains:
 
 - objective six-ID binding;
+- controlled-environment binding and equality with the objective/snapshot;
 - named agent, assigned/requested route, supported effective evidence, and
-  separate service-reroute events;
+  separate raw service-reroute events and destination assessments;
 - instruction/configuration hashes, sandbox, approvals, mutation class,
   expected/loaded skills, MCP, and tools;
 - parent configuration, pinned client, controlled overrides, delivery canary,
@@ -249,6 +308,7 @@ The trace contains:
   retries, compaction, validation, cancellation, failed/abandoned work,
   terminal state, outcome, and acceptance;
 - one `ObservationValue` per closed telemetry-profile field;
+- structured treatment failures for every expected-versus-observed mismatch;
 - `treatment_disposition`: `proven`, `unknown`, `non_scorable_rerouted`, or
   `hard_fail` with reasons.
 
@@ -265,14 +325,18 @@ Rules:
 ## Fixture Provenance and Replay
 
 Each committed fixture records `schema_version`, `sanitizer_version`,
-`raw_evidence_digest`, `fixture_digest`, and expected disposition. Sanitization
-removes credentials, headers, cookies, prompt/user content, account IDs,
-hostnames, absolute paths, and repository remotes, replacing necessary joins
-with deterministic fixture-local pseudonyms.
+`raw_evidence_digest`, and expected disposition. The adjacent behavior-named
+`fixture-digests.json` maps each repo-relative fixture path to its SHA-256 over
+the exact raw bytes. Keeping that digest out of the hashed file avoids a
+self-referential value and lets replay verify bytes before parsing.
+Sanitization removes credentials, headers, cookies, prompt/user content,
+account IDs, hostnames, absolute paths, and repository remotes, replacing
+necessary joins with deterministic fixture-local pseudonyms.
 
 Replay acceptance requires:
 
-1. verify each fixture digest before parsing;
+1. load the out-of-band digest entry, verify raw fixture bytes, and only then
+   parse the fixture;
 2. reject undeclared fields and any raw-store or network dependency;
 3. cover success, explicit null, unavailable, misdelivery, approved reroute,
    unapproved/unidentifiable reroute, discovery unavailable, and surface
