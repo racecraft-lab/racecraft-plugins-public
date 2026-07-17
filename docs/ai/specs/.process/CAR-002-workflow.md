@@ -706,6 +706,13 @@ No current size-only `block` exists in the evidence chain → **no `pr_marker_pl
 required at this boundary**; marker planning re-evaluates at the final reviewability
 gate if the real diff evidence produces a size block.
 
+**T001 disposition (recorded 2026-07-16, pre-implementation):** single WP1 PR with a
+documented, ratified over-ceiling exception (the plan-recommended option — WP1's
+coupling is atomic per FR-015/FR-016/FR-023/FR-028); the Clarify-ratified WP1→WP2→WP3
+seam is unchanged. Interaction with the G5 atomicity conflict: if the final gate emits
+one navigable PR for the whole feature, this disposition applies to that PR's
+scope-budget section instead. Carried into the T018 PR-packet scope-budget section.
+
 Note: the operator ratified a 3-slice split at scoping (Q8, recorded in the
 Scope Budget section above). If the classifier's route disagrees with
 `split-PR`, surface the conflict at G5 instead of silently preferring either.
