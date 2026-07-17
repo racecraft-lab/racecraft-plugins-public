@@ -127,7 +127,7 @@ python3 tests/speckit-pro/run-all.py
 
 - the four synthetic record-class fixtures (`success`, `null`, `unavailable`, `misdelivery`)
   under `tests/speckit-pro/unit/fixtures/claude-telemetry-records/` (SC-003);
-- the standalone `route-resolution.json` fixture (AC-3.1);
+- the standalone `route-resolution.json` fixture (US3 acceptance scenario 1);
 - the committed snapshot `docs/ai/research/claude-runtime-capability-snapshot.json`;
 - the committed telemetry profile `docs/ai/research/claude-telemetry-capability-profile.json`
   (exactly-one-label per field, nulls preserved — SC-006);
@@ -135,7 +135,7 @@ python3 tests/speckit-pro/run-all.py
 and computes the **37-route → tuple join** from the committed CAR-001 manifest against the
 snapshot's `tuple_evidence`, failing closed if any route resolves to zero or to more than one
 tuple (SC-005). A fixture or snapshot that drifts from the schema fails the suite and blocks
-merge (AC-4.2). No test path spawns `claude` (FR-001/FR-002).
+merge (US4 acceptance scenario 2). No test path spawns `claude` (FR-001/FR-002).
 
 Scoped runs: `python3 tests/speckit-pro/run-all.py --layer 4` (unit only);
 `python3 tests/speckit-pro/run-all.py --layer 1` (structural only).

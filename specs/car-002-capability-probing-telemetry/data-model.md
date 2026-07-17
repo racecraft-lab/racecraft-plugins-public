@@ -158,7 +158,7 @@ establish is `unavailable`, labeled `observation` (FR-027). Label crosswalk from
 ## Record 3 — `routeResolution` (WP2, US3)
 
 The binding needed to resolve one requested route to concrete execution identity. Exercised
-in isolation by the WP2 `route-resolution.json` fixture (AC-3.1). Consumers (CAR-003+) mint
+in isolation by the WP2 `route-resolution.json` fixture (US3 acceptance scenario 1). Consumers (CAR-003+) mint
 these per invocation; CAR-002 fixes the contract.
 
 | Field | Type | Required | Rule / FR |

@@ -133,7 +133,7 @@ tests/speckit-pro/
 | tests/speckit-pro/suite-manifest.json | MODIFIED | WP1 | FR-028 |
 | tests/speckit-pro/unit/test-speckit-pro-runner.py | MODIFIED | WP1 | docs-surface guard (schema + snapshot) |
 | docs/ai/research/claude-telemetry-capability-profile.json | NEW | WP2 | FR-018/FR-019/FR-020 |
-| tests/speckit-pro/unit/fixtures/claude-telemetry-records/route-resolution.json | NEW | WP2 | FR-021/AC-3.1 |
+| tests/speckit-pro/unit/fixtures/claude-telemetry-records/route-resolution.json | NEW | WP2 | FR-021 / US3 acceptance scenario 1 |
 | tests/speckit-pro/unit/test-efficiency-claude-telemetry.py | MODIFIED | WP2 | telemetry-profile + route_resolution coverage (SC-006) |
 | tests/speckit-pro/unit/test-speckit-pro-runner.py | MODIFIED | WP2 | docs-surface guard (telemetry profile) |
 | tests/speckit-pro/unit/fixtures/claude-telemetry-records/success.json | NEW | WP3 | FR-025/SC-003 |
