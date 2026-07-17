@@ -32,6 +32,140 @@
   Codex custom-agent fields, runtime availability, defaults, telemetry, or
   exact treatment.
 
+## Clarifications
+
+### Session 2026-07-16 — Surface Matrix and Candidate Freeze
+
+- **Q: What exact identity proves all three observations came from one pinned
+  Codex build?** **A:** Every observation references one `client_identity_id`
+  derived from the reported client version plus an immutable vendor build ID.
+  When the client exposes no immutable build ID, the SHA-256 of the resolved
+  executable or application package is the build ID. A missing or unequal
+  identity prevents a shared matrix.
+- **Q: What deterministic collection contract applies to each surface?**
+  **A:** Each surface uses a predeclared, versioned collection method with fixed
+  inputs and configuration. App-server collection uses initialization followed
+  by documented `model/list` with `includeHidden: true` and documented provider
+  capability discovery. CLI and picker collection performs the complete
+  non-mutating selector enumeration available to a clean pinned-client session.
+  Each method retains the ordered raw capture or its content hash. An incomplete
+  or irreproducible collection is `unknown`; missing values are never inferred.
+- **Q: What normalization key and disagreement record are authoritative?**
+  **A:** Surfaces join only on `(official-ledger canonical model ID, canonical
+  effort token)`. Raw labels are always retained. An alias is usable only
+  through a versioned one-to-one mapping supported by field-level official
+  documentation or a machine-readable identifier exposed by the same pinned
+  build. A disagreement record preserves every surface value and evidence
+  reference, the proposed normalized key, disagreement class, and tuple
+  disposition without choosing a winning surface.
+- **Q: When is picker omission of a hidden model consistent rather than a
+  contradiction?** **A:** Hidden status is an explicit visibility state. Picker
+  omission is consistent only when app-server reports `hidden: true` and the
+  picker collection method proves complete enumeration under its recorded
+  visibility rules. Independent current-ledger admission and all other required
+  evidence remain necessary; otherwise the affected tuple is `unknown` and
+  excluded.
+- **Q: What causes snapshot-wide invalidity?** **A:** Only an absent or invalid
+  matrix version, an unprovable shared `client_identity_id`, a failed aggregate
+  integrity hash, or ambiguous or duplicate normalization keys that prevent
+  tuple attribution invalidates the aggregate. Missing fields, unavailable
+  surfaces, hidden status, and ordinary disagreements remain tuple-local
+  exclusions, even when every tuple is excluded.
+- **Q: What makes a candidate freeze immutable?** **A:** A freeze is append-only
+  and content-addressed over its schema version, client identity, current-ledger
+  digest, surface-matrix digest, and complete tuple-decision digest. Any source,
+  build, evidence, normalization, or disposition change creates a successor
+  freeze ID; a published freeze is never edited.
+
+### Session 2026-07-16 — Telemetry and Exact Treatment
+
+- **Q: What is the atomic telemetry-profile entry and closed field inventory?**
+  **A:** Each entry is keyed by `(client_identity_id, surface, field_path)`.
+  The inventory contains every discovery, assignment, route-resolution,
+  service-reroute, resource, parent-child, and terminal field required by
+  [FR-002] and [FR-006]. Classifications never inherit across surfaces. An
+  omitted entry is `undocumented` and cannot support treatment.
+- **Q: What claims may each telemetry classification support?** **A:**
+  `stable_native` requires a documented field-level contract and supports only
+  observed values within its completeness rule. `experimental_native` is
+  documented but unstable and supports only pinned-build observations.
+  `derived_from_controlled_configuration` requires deterministic, hash-bound
+  configuration evidence and supports requested or assigned intent only.
+  `conditional` supports only a documented condition-bound claim when its
+  predicate is met; absence is unknown without a completeness guarantee.
+  `unavailable` has no collectable pinned-surface value, `not_applicable` has an
+  explicit false applicability predicate, and both remain null. `undocumented`
+  may retain evidence but supports no platform or treatment claim.
+- **Q: What makes configured-route proof approved?** **A:** It is
+  content-addressed evidence that the launched client consumed the exact
+  materialized configuration for the named agent, explicit model and effort,
+  candidate and agent-contract IDs, instruction and configuration hashes,
+  client identity, controlled overrides, and launch. The telemetry profile must
+  approve this proof path and reroute monitoring must be complete. It proves
+  requested assignment only, never an undocumented effective model or effort.
+- **Q: What qualifies as effective-route evidence and complete reroute
+  monitoring?** **A:** An effective model or effort is claimable only through a
+  profile entry with field-level official support whose completeness rule is
+  satisfied. A documented `model/rerouted` event proves only its observed
+  `threadId`, `turnId`, `fromModel`, `toModel`, and `reason`; it proves neither
+  effort, named-agent identity, nor absence of another reroute. Monitoring is
+  complete only when the pinned-surface contract guarantees coverage and the
+  capture spans the associated run through terminal state without gaps.
+  Otherwise treatment is `unknown`.
+- **Q: How are resolver fallback and service reroute kept distinct?** **A:**
+  Records preserve separate immutable fields for the preferred route,
+  resolver-selected assigned route, requested model and effort, observed
+  service-reroute events, and supported effective destination. Resolver fallback
+  occurs before assignment and owns the fallback index and reason. A service
+  reroute occurs after assignment, never rewrites resolver evidence, and makes
+  the requested route non-scorable. Events join by pinned surface plus
+  `threadId` and `turnId`; ambiguous or conflicting joins hard-fail treatment.
+- **Q: How are null, missing, unavailable, and unknown represented?** **A:** A
+  typed value is stored separately from its observation state and evidence.
+  `observed_value`, `explicit_null`, `missing`, `unavailable`,
+  `not_applicable`, and `undocumented` remain distinct states and are never
+  coerced to zero, false, a configured value, or the string `unknown`.
+  `Unknown` is the knowledge or treatment disposition produced by missing or
+  incomplete required evidence and causes tuple-local exclusion.
+
+### Session 2026-07-16 — Probe Bounds and Evidence Retention
+
+- **Q: What exact canary execution envelope applies?** **A:** Permit one launch
+  per `(runtime_capability_snapshot_id, canonical_model_id, canonical_effort)`
+  with a 30-second wall-clock timeout and 64 KiB combined-output cap. Crossing
+  either bound kills the process tree. There is no retry within a snapshot; an
+  independently proven transient condition requires a successor snapshot. Only
+  an exit-zero response matching the predeclared sentinel can record
+  pinned-environment availability, and it still cannot establish support,
+  effort support, eligibility, quality, or preference.
+- **Q: What terminal error taxonomy is required?** **A:** Use `timeout`,
+  `output_cap_exceeded`, `launch_error`, `transport_error`,
+  `authentication_error`, `rate_limited`, `malformed_response`,
+  `explicit_rejection`, `service_reroute`, or `ambiguous_error`. Every error
+  produces the `unknown` disposition and tuple-local exclusion; none proves
+  support or non-support.
+- **Q: What is the redaction contract?** **A:** A deny-by-default sanitizer
+  removes credentials, headers, cookies, prompt or user content, account
+  identifiers, hostnames, absolute paths, and repository remotes. Required
+  joins use deterministic fixture-local pseudonyms. Only schema-allowlisted
+  fields may enter a committed fixture.
+- **Q: Where and how long is raw evidence retained?** **A:** `raw_evidence_root`
+  is a required content-addressed location outside the repository. Directories
+  are operator-only mode `0700` and files are mode `0600`. Captures remain for
+  30 days after freeze publication, then are deleted while their digest and a
+  deletion record remain. Repository tests never require raw-store access.
+- **Q: How are deterministic fixtures derived and hashed?** **A:** Sanitize
+  first, keep only schema-allowlisted fields, replace unstable values with fixed
+  tokens, serialize canonical UTF-8 JSON with sorted keys and no insignificant
+  whitespace, and compute SHA-256 over those exact bytes. Record the schema and
+  sanitizer versions, raw-evidence digest, fixture digest, and expected
+  disposition.
+- **Q: What constitutes synthetic replay acceptance?** **A:** Validate every
+  fixture hash before parsing; replay every required success and failure class
+  twice without network or raw-store access; and require identical normalized
+  outputs, dispositions, and digests. Any mismatch, undeclared field, raw-data
+  dependency, or canary-derived support or eligibility claim fails acceptance.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Freeze Executable Candidate Tuples [US1] (Priority: P1)
@@ -184,8 +318,11 @@ validate every fixture hash.
 - **[FR-002] Versioned surface matrix and controlled identity**: The feature
   MUST create one versioned matrix aggregate containing distinct, surface-keyed
   app-server, CLI, and interactive-picker observations from the same pinned
-  Codex build. It MUST preserve contradictory fields rather than collapse them.
-  Every observation MUST bind its client/build and surface identity, method,
+  Codex build through the clarified `client_identity_id`. It MUST use the
+  clarified versioned collection methods, normalization key, hidden visibility
+  rule, disagreement record, and aggregate-invalidity boundary, and MUST
+  preserve contradictory fields rather than collapse them. Every observation
+  MUST bind its client/build and surface identity, method, method inputs,
   timestamp, discovered models, supported efforts, relevant capabilities, and
   raw capability evidence or an explicit content-addressed raw-evidence
   reference. Every run MUST also bind the controlled repository snapshot,
@@ -200,28 +337,35 @@ validate every fixture hash.
   set and MUST bind its source and agent-contract rationale. The frozen set
   MUST contain only source-admitted, availability-supported model/effort tuples
   whose required surfaces agree; mismatch or unknown evidence MUST exclude only
-  the affected tuple.
+  the affected tuple. The published freeze MUST use the clarified append-only,
+  content-addressed identity and successor rule.
 - **[FR-004] Bounded fallback and evidence retention**: Only when documented
   discovery is unavailable, the feature MAY perform at most one predeclared,
-  timeout-bounded, non-scored canary per source-admitted tuple. The canary MUST
-  retain only redacted evidence, MUST NOT become a repeated availability
+  non-scored canary per clarified snapshot/model/effort key. The canary MUST
+  obey the clarified 30-second timeout, 64 KiB output cap, zero-retry rule,
+  process-tree termination, success criterion, and terminal error taxonomy. It
+  MUST retain only redacted evidence, MUST NOT become a repeated availability
   campaign, and MUST NOT establish platform support, effort support,
   eligibility, quality, or preference. Unresolved availability MUST exclude
-  the tuple. Raw live responses MUST remain outside Git under the retention
-  contract; committed evidence MUST be sanitized, deterministic, and
-  hash-bound.
+  the tuple. Raw live responses MUST remain outside Git under the clarified
+  content-addressed retention and access contract; committed evidence MUST use
+  the clarified deny-by-default sanitizer, canonical serialization, and hashes.
 - **[FR-005] Telemetry profile and exact-treatment proof**: The feature MUST
   publish a versioned, surface-keyed telemetry profile that classifies every
   desired field as `stable_native`, `experimental_native`,
   `derived_from_controlled_configuration`, `conditional`, `unavailable`,
   `not_applicable`, or `undocumented`, and records the source, completeness
-  rule, and permitted claims for that field. A native classification MUST have
+  rule, and permitted claims for that field. Entries MUST use the clarified
+  atomic key, closed inventory, classification semantics, and typed
+  value/observation-state representation. A native classification MUST have
   field-level official support for the pinned surface. Returned effort,
   effective model, speed, token categories, parent attribution, or any other
   missing value MUST NOT be fabricated. Exact treatment MUST require observed
-  effective treatment or an approved configured-route proof permitted by the
-  profile plus complete reroute monitoring; configured intent alone MUST NOT
-  prove an undocumented effective value, and missing proof MUST be `unknown`.
+  effective treatment or an approved configured-route proof meeting the
+  clarified consumption-evidence contract and permitted by the profile plus
+  complete reroute monitoring; configured intent alone MUST NOT prove an
+  undocumented effective value, and missing proof MUST produce the `unknown`
+  disposition without replacing the typed value or observation state.
 - **[FR-006] Joined route-resolution and execution-trace contract**: Every
   assigned objective MUST bind `candidate_route_id`, `agent_contract_id`,
   `runtime_capability_snapshot_id`, `route_resolution_id`,
@@ -235,8 +379,10 @@ validate every fixture hash.
   treatment failures; context; parent-child graph; complete objective-level raw
   token vector; request/turn count; wall time; retries; compaction; validation;
   cancellation; failed or abandoned work; terminal state; outcome and
-  acceptance; and explicit null behavior. Values MUST remain null when the
-  profile does not permit a claim.
+  acceptance; and explicit null behavior. Resolver-selected fields, requested
+  fields, service-reroute events, and supported effective fields MUST remain
+  separate and immutable. Values MUST remain null when the profile does not
+  permit a claim.
 - **[FR-007] Service-reroute treatment**: Service rerouting MUST remain distinct
   from resolver-selected fallback. Every service-rerouted run MUST be recorded
   and MUST be non-scorable as evidence for the requested route. Runtime UAT MAY
@@ -244,15 +390,18 @@ validate every fixture hash.
   for the same named agent; otherwise the run MUST hard-fail treatment.
   Unapproved, unidentifiable, unknown, or different-agent reroutes MUST hard
   fail. A missing reroute observation MUST remain unknown unless the pinned
-  telemetry profile establishes complete reporting for that surface.
+  telemetry profile establishes complete reporting for that surface. Event
+  association MUST use the pinned surface plus `threadId` and `turnId`; an
+  ambiguous or conflicting association MUST hard-fail treatment.
 - **[FR-008] Deterministic replay and contract boundary**: Before any live
   corpus run, the feature MUST replay sanitized deterministic records covering
   success, explicit null, unavailable field, misdelivery, approved same-agent
   prequalified-destination reroute, unapproved or unidentifiable hard-fail
   reroute, surface disagreement, and unavailable discovery. Replay MUST verify
-  fixture hashes and deterministic dispositions. Vendor-specific collection
-  evidence MUST remain identifiable while treatment and trace records retain a
-  vendor-neutral contract. G56R-002 MUST NOT create a cross-vendor probing
+  fixture hashes and deterministic dispositions through the clarified offline
+  double-replay acceptance contract. Vendor-specific collection evidence MUST
+  remain identifiable while treatment and trace records retain a vendor-neutral
+  contract. G56R-002 MUST NOT create a cross-vendor probing
   abstraction or define corpus execution, scoring, statistical qualification,
   ranking, preference, fallback ordering, resolver policy, installation,
   defaults, agent configuration, payload regeneration, or release claims.

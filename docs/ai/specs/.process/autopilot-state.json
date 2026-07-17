@@ -3,8 +3,8 @@
   "spec_id": "G56R-002",
   "feature_dir": "specs/g56r-002-capability-discovery-telemetry",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-17T00:15:02Z",
-  "active_step": "Phase 2: Clarify - Surface Matrix and Candidate Freeze",
+  "updated_at": "2026-07-17T00:27:54Z",
+  "active_step": "Phase 3: Plan",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
   "archive_sweep": {
@@ -49,13 +49,13 @@
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
     {"step": "Phase 1: Specify", "status": "completed"},
-    {"step": "Phase 2: Clarify - Surface Matrix and Candidate Freeze", "status": "in_progress"},
-    {"step": "Phase 2: Clarify - Surface Matrix and Candidate Freeze Consensus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Telemetry and Exact Treatment", "status": "pending"},
-    {"step": "Phase 2: Clarify - Telemetry and Exact Treatment Consensus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Probe Bounds and Evidence Retention", "status": "pending"},
-    {"step": "Phase 2: Clarify - Probe Bounds and Evidence Retention Consensus", "status": "pending"},
-    {"step": "Phase 3: Plan", "status": "pending"},
+    {"step": "Phase 2: Clarify - Surface Matrix and Candidate Freeze", "status": "completed"},
+    {"step": "Phase 2: Clarify - Surface Matrix and Candidate Freeze Consensus", "status": "completed"},
+    {"step": "Phase 2: Clarify - Telemetry and Exact Treatment", "status": "completed"},
+    {"step": "Phase 2: Clarify - Telemetry and Exact Treatment Consensus", "status": "completed"},
+    {"step": "Phase 2: Clarify - Probe Bounds and Evidence Retention", "status": "completed"},
+    {"step": "Phase 2: Clarify - Probe Bounds and Evidence Retention Consensus", "status": "completed"},
+    {"step": "Phase 3: Plan", "status": "in_progress"},
     {"step": "Phase 4: Checklist - LLM Integration", "status": "pending"},
     {"step": "Phase 4: Checklist - LLM Integration Consensus", "status": "pending"},
     {"step": "Phase 4: Checklist - Data Integrity", "status": "pending"},
@@ -107,6 +107,58 @@
         "specs/g56r-002-capability-discovery-telemetry/checklists/requirements.md"
       ],
       "documentation_refresh": "official OpenAI documentation MCP fallback used after Context7 transport closed"
+    },
+    "Phase 2: Clarify": {
+      "status": "completed",
+      "completed_at": "2026-07-17T00:27:54Z",
+      "gate": "G2 passed",
+      "sessions": {
+        "Surface Matrix and Candidate Freeze": {
+          "status": "completed",
+          "completed_at": "2026-07-17T00:19:14Z",
+          "executor": "/root/clarify_surface_matrix",
+          "questions": 6,
+          "consensus": "completed without escalation; all questions had accepted bounded answers",
+          "outcomes": [
+            "client identity",
+            "deterministic collection",
+            "normalization and disagreement",
+            "hidden visibility",
+            "aggregate invalidity",
+            "immutable freeze"
+          ]
+        },
+        "Telemetry and Exact Treatment": {
+          "status": "completed",
+          "completed_at": "2026-07-17T00:24:04Z",
+          "executor": "/root/clarify_telemetry_treatment",
+          "questions": 6,
+          "consensus": "completed without escalation; all questions had accepted bounded answers",
+          "outcomes": [
+            "telemetry profile key and inventory",
+            "classification claim semantics",
+            "configured-route proof",
+            "effective-route evidence",
+            "service-reroute separation",
+            "typed null and unknown states"
+          ]
+        },
+        "Probe Bounds and Evidence Retention": {
+          "status": "completed",
+          "completed_at": "2026-07-17T00:27:54Z",
+          "executor": "/root/clarify_probe_retention",
+          "questions": 6,
+          "consensus": "completed without escalation; all questions had accepted bounded answers",
+          "outcomes": [
+            "canary envelope",
+            "terminal error taxonomy",
+            "deny-by-default redaction",
+            "raw evidence retention",
+            "canonical fixture hashing",
+            "offline replay acceptance"
+          ]
+        }
+      }
     }
   }
 }

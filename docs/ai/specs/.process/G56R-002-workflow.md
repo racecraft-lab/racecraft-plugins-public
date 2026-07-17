@@ -59,8 +59,8 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Phase | Command | Status | Notes |
 |---|---|---|---|
 | Specify | `$speckit-specify` | Complete | Defined source, surface, snapshot, and treatment requirements; G1 passed |
-| Clarify | `$speckit-clarify` | In Progress | Resolve field-level and bounded-probe details only |
-| Plan | `$speckit-plan` | Pending | Design one guarded three-increment slice |
+| Clarify | `$speckit-clarify` | Complete | Resolved field-level and bounded-probe details; G2 passed |
+| Plan | `$speckit-plan` | In Progress | Design one guarded three-increment slice |
 | Checklist | `$speckit-checklist` | Pending | Run four risk-focused domains |
 | Tasks | `$speckit-tasks` | Pending | Generate TDD-first, vertically ordered tasks |
 | Analyze | `$speckit-analyze` | Pending | Prove cross-artifact consistency and scope containment |
@@ -420,9 +420,11 @@ $speckit-clarify Focus on the one-canary fallback contract: timeout, output cap,
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---|---|---|---|
-| 1 | Surface matrix and candidate freeze | Pending | Pending autopilot |
-| 2 | Telemetry and exact treatment | Pending | Pending autopilot |
-| 3 | Probe bounds and evidence retention | Pending | Pending autopilot |
+| 1 | Surface matrix and candidate freeze | 6 | Frozen client identity, deterministic collection, normalization, hidden-state, aggregate-invalidity, and immutable-freeze rules |
+| 2 | Telemetry and exact treatment | 6 | Frozen profile keys/classes, configured-route proof, effective evidence, reroute separation, and typed null states |
+| 3 | Probe bounds and evidence retention | 6 | Frozen canary envelope, error taxonomy, redaction, retention, fixture hashing, and replay acceptance |
+
+**G2 Gate:** Passed — 0 `[NEEDS CLARIFICATION]` markers remain.
 
 ---
 
