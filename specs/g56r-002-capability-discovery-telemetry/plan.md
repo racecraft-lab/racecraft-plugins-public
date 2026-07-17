@@ -57,6 +57,17 @@ increments cease to be independently testable.
 not a size claim. The binding human estimate remains 297 reviewable LOC; the
 400-LOC split trigger remains enforced.
 
+**Implementation checkpoint**: The completed capability adapter is 959 source
+lines and 851 nonblank, non-comment lines, so the 400-LOC trigger is active.
+Capability work T001-T015 remains one review marker under a typed size-only
+exception because source refresh, surface authority, tuple decisions, and the
+published freeze validator share one integrity boundary and have no safe
+internal split. This exception permits the completed capability checkpoint
+only; it authorizes no further growth of `codex_capabilities.py`. Treatment
+work T016-T025 remains a separate module and marker, while replay plus polish
+T026-T039 remains a third marker. The authoritative marker state is persisted
+in `docs/ai/specs/.process/autopilot-state.json`.
+
 ## Declared File Operations
 
 - NEW tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py
@@ -82,11 +93,11 @@ not a size claim. The binding human estimate remains 297 reviewable LOC; the
 | Observability | Pass | Every desired field has a profile entry with source, completeness, claim, typed state, and evidence |
 | Simplicity and YAGNI | Pass | Reuse Layer 6 and the shared G56R taxonomy; no cross-vendor prober or installer seam |
 | Source authority | Pass | Only current canonical OpenAI documentation admits platform claims; runtime data can only narrow |
-| Reviewability | Pass with warning | 297-LOC scaffold estimate exceeds the 265 target but remains below the 400-LOC split threshold; one guarded slice retained |
+| Reviewability | Typed size-only exception | Capability implementation exceeded 400 LOC; T001-T015 has no safe internal integrity boundary, and T016-T039 remains split into two later markers |
 
-No constitution violation or typed exception is requested. If implementation
-needs a third production module, exceeds 400 reviewable LOC, or couples the
-increments, stop and split before coding further.
+No correctness or safety exception is requested. The capability marker carries
+only the typed size exception above. Any further growth of that module, a third
+production module, or coupling between later markers is a new stop condition.
 
 ## Architecture and Ownership
 

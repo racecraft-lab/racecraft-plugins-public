@@ -1,0 +1,959 @@
+#!/usr/bin/env python3
+"""Fail-closed Codex capability evidence adapter for G56R-002."""
+
+from __future__ import annotations
+
+import argparse
+import base64
+import binascii
+from datetime import datetime, timezone
+import hashlib
+from html.parser import HTMLParser
+import json
+import os
+import re
+import stat
+import subprocess
+import tempfile
+from pathlib import Path
+from urllib.parse import urlparse
+
+SCHEMA_VERSION = "1.0.0"
+SURFACES = ("app_server", "cli", "interactive_picker")
+APPROVED_CANARY_EXECUTORS = ()
+APPROVED_LIVE_COLLECTION_METHODS = ()
+CANONICAL_MANIFEST_SCHEMA_VERSION = "2.0.0"
+CANONICAL_MANIFEST_SNAPSHOT_ID = "G56R-001-SNAPSHOT-2026-07-16-V3"
+CANONICAL_MANIFEST_DIGEST = "sha256:3dc5c6c7a117ac8d01728ffeff1a35cf38fb0d6e982bb029cf192a790d30cd64"
+PRIVATE_REFRESH_MAX_BYTES = 32 * 1024 * 1024
+ERROR_TERMINALS = ("timeout", "output_cap_exceeded", "launch_error", "transport_error", "authentication_error", "rate_limited", "malformed_response", "explicit_rejection", "service_reroute", "ambiguous_error")
+_DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
+_HEX_SHA256 = re.compile(r"[0-9a-f]{64}")
+_RAW_REF = re.compile(r"raw://sha256:[0-9a-f]{64}")
+_TOKEN = re.compile(r"[a-z0-9][a-z0-9._-]*")
+_CLAIM_ID = re.compile(r"[A-Z0-9][A-Z0-9_-]*")
+_LABEL = re.compile(r"[A-Za-z0-9][A-Za-z0-9 ._-]{0,127}")
+_GIT_OBJECT = re.compile(r"[0-9a-f]{40,64}")
+_WORK_ITEM_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
+_RFC3339_UTC = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?Z")
+_SOURCE_ID = re.compile(r"OPENAI-DOC-[0-9]{3}")
+_ENTRY_KEYS = {"model", "effort", "available", "hidden", "machine_id", "raw_label", "capabilities"}
+_OBSERVATION_KEYS = {
+    "surface_observation_id", "client_identity_id", "surface", "collection_method_id",
+    "method_inputs_digest", "started_at", "completed_at", "completeness_state",
+    "visibility_policy", "entries", "raw_evidence_digest", "raw_evidence_ref",
+    "sanitized_evidence_digest", "repository_binding", "work_item",
+}
+_SANITIZER_PROFILES = {
+    "surface_entry": (_ENTRY_KEYS, frozenset(), True),
+    "surface_status": (frozenset({"surface", "status"}), frozenset(), False),
+    "fixture_identity": (frozenset({"account"}), frozenset({"account"}), False),
+}
+_FORBIDDEN_KEY_PARTS = ("authorization", "credential", "secret", "token", "cookie", "header", "prompt", "content", "account", "hostname", "host_name", "path", "remote")
+
+
+class _AuthorityTupleSet(list):
+    pass
+
+
+class _BoundDecisionSet(list):
+    pass
+
+
+class _VisibleText(HTMLParser):
+    def __init__(self):
+        super().__init__(); self.parts, self.hidden_depth = [], 0
+
+    def handle_starttag(self, tag, attrs):
+        if tag in {"head", "script", "style", "noscript", "template", "svg"}:
+            self.hidden_depth += 1
+
+    def handle_endtag(self, tag):
+        if tag in {"head", "script", "style", "noscript", "template", "svg"} and self.hidden_depth:
+            self.hidden_depth -= 1
+
+    def handle_data(self, data):
+        if not self.hidden_depth:
+            self.parts.append(data)
+
+
+def canonical_bytes(value):
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+
+
+def digest(value):
+    raw = value if isinstance(value, bytes) else canonical_bytes(value)
+    return f"sha256:{hashlib.sha256(raw).hexdigest()}"
+
+
+def _visible_text(value):
+    parser = _VisibleText(); parser.feed(value)
+    return " ".join(" ".join(parser.parts).split())
+
+
+def _validated_body(body_b64, extracts, source_id):
+    if body_b64 is None:
+        if extracts:
+            raise ValueError(f"{source_id} bounded extracts require a retrieved body")
+        return None
+    try:
+        body_bytes = base64.b64decode(body_b64, validate=True)
+        body_text = body_bytes.decode()
+    except (binascii.Error, UnicodeDecodeError, TypeError):
+        raise ValueError("retrieved body must be canonical UTF-8 base64")
+    if base64.b64encode(body_bytes).decode() != body_b64:
+        raise ValueError("retrieved body must be canonical UTF-8 base64")
+    collapsed = _visible_text(body_text)
+    valid_extracts = isinstance(extracts, list) and extracts and all(
+        set(extract) == {"text", "extract_sha256", "normalization"}
+        and isinstance(extract["text"], str) and extract["text"]
+        and _HEX_SHA256.fullmatch(str(extract["extract_sha256"]))
+        and hashlib.sha256(extract["text"].encode()).hexdigest() == extract["extract_sha256"]
+        and extract["text"] in collapsed
+        for extract in extracts
+    )
+    if not valid_extracts:
+        raise ValueError(f"{source_id} retrieved body does not contain every bounded extract")
+    return body_bytes
+
+
+def _need_digest(value, field):
+    if not isinstance(value, str) or not _DIGEST.fullmatch(value):
+        raise ValueError(f"{field} must be a sha256 digest")
+
+
+def _token(value):
+    return isinstance(value, str) and bool(_TOKEN.fullmatch(value))
+
+
+def _openai_url(value):
+    parsed = urlparse(str(value)); host = (parsed.hostname or "").lower()
+    allowed_path = any(parsed.path == prefix or parsed.path.startswith(f"{prefix}/") for prefix in ("/docs", "/api/docs", "/codex"))
+    return parsed.scheme == "https" and (host in {"openai.com", "chatgpt.com"} or host.endswith((".openai.com", ".chatgpt.com"))) and allowed_path
+
+
+def _utc_timestamp(value):
+    if not isinstance(value, str) or not _RFC3339_UTC.fullmatch(value): return False
+    try: parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError: return False
+    return parsed.tzinfo is not None and parsed.utcoffset().total_seconds() == 0
+
+
+def validate_manifest(manifest, *, allow_synthetic_manifest=False):
+    snapshot = manifest.get("snapshot", {})
+    if manifest.get("schema_version") != CANONICAL_MANIFEST_SCHEMA_VERSION or snapshot.get("snapshot_id") != CANONICAL_MANIFEST_SNAPSHOT_ID:
+        raise ValueError("manifest schema or snapshot identity is not the canonical G56R-001 v3 authority")
+    if not allow_synthetic_manifest and digest(manifest) != CANONICAL_MANIFEST_DIGEST:
+        raise ValueError("manifest content does not match the canonical G56R-001 v3 authority")
+    sources = manifest.get("official_source_ledger", [])
+    ids = [row.get("official_source_ledger_id") for row in sources]
+    if len(sources) != 22 or len(set(ids)) != 22 or any(not _SOURCE_ID.fullmatch(str(item)) for item in ids):
+        raise ValueError("manifest must contain exactly 22 unique current OPENAI-DOC records")
+    if any(not isinstance(row.get("claim_bindings"), list) or not row["claim_bindings"] or len(row["claim_bindings"]) != len(set(row["claim_bindings"])) or not all(isinstance(item, str) and _CLAIM_ID.fullmatch(item) for item in row["claim_bindings"]) or not _openai_url(row.get("requested_url")) or not _openai_url(row.get("canonical_url")) for row in sources):
+        raise ValueError("every current source requires claim bindings and approved URLs")
+    for row in sources:
+        extracts = row.get("bounded_extracts", [])
+        if not extracts or any(set(item) != {"text", "extract_sha256", "normalization"} or not item["text"] or not _HEX_SHA256.fullmatch(str(item["extract_sha256"])) or hashlib.sha256(item["text"].encode()).hexdigest() != item["extract_sha256"] for item in extracts):
+            raise ValueError("every current source requires valid bounded extracts")
+    contracts = manifest.get("agent_contracts", []); contract_ids = [row.get("agent_contract_id") for row in contracts]
+    routes = manifest.get("candidate_routes", []); route_ids = [row.get("candidate_route_id") for row in routes]
+    invalid_contract_hash = any(not _HEX_SHA256.fullmatch(str(row.get("source_sha256"))) or not _HEX_SHA256.fullmatch(str(row.get("instruction_sha256"))) for row in contracts)
+    if len(contracts) != 12 or len(routes) != 23 or len(contract_ids) != len(set(contract_ids)) or len(route_ids) != len(set(route_ids)) or invalid_contract_hash or any(row.get("agent_contract_id") not in set(contract_ids) for row in routes):
+        raise ValueError("candidate routes require unique agent-contract owners")
+    efforts = manifest.get("effort_surface_records", [])
+    effort_ids = [row.get("effort_surface_record_id") for row in efforts]
+    if len(efforts) != 5 or len(effort_ids) != len(set(effort_ids)) or any(row.get("official_source_ledger_id") not in set(ids) for row in efforts):
+        raise ValueError("manifest must contain exactly five effort-surface records")
+    contracts_by_id = {row["agent_contract_id"]: row for row in contracts}; effort_id_set = set(effort_ids); source_id_set = set(ids)
+    invalid_route_binding = any(
+        not _HEX_SHA256.fullmatch(str(row.get("role_instruction_sha256")))
+        or row.get("role_instruction_sha256") != contracts_by_id[row["agent_contract_id"]]["instruction_sha256"]
+        or not set(row.get("official_source_ledger_ids", [])) <= source_id_set
+        or not set(row.get("effort_surface_record_ids", [])) <= effort_id_set
+        or len(row.get("official_source_ledger_ids", [])) != len(set(row.get("official_source_ledger_ids", [])))
+        or len(row.get("effort_surface_record_ids", [])) != len(set(row.get("effort_surface_record_ids", [])))
+        for row in routes
+    )
+    if invalid_route_binding: raise ValueError("candidate route authority binding is invalid")
+    quarantined, authoritative, by_record = [], set(), {}
+    for row in efforts:
+        values = row.get("documented_values", [])
+        field = str(row.get("field", "")); codex_selector = str(row.get("surface", "")).startswith("Codex ") and any(name in field for name in ("model_reasoning_effort", "supportedReasoningEfforts", "defaultReasoningEffort"))
+        if row.get("support_status") != "documented" or not codex_selector or any(not _token(value) for value in values):
+            quarantined.append(str(row.get("effort_surface_record_id")))
+        else:
+            by_record[row["effort_surface_record_id"]] = set(values); authoritative.update(values)
+    return {"current_source_count": 22, "historical_active_count": 0, "effort_surface_count": 5, "quarantined_effort_record_ids": sorted(quarantined), "authoritative_effort_tokens": sorted(authoritative), "authoritative_effort_tokens_by_record": {key: sorted(value) for key, value in by_record.items()}}
+
+
+def normalize_source_refreshes(manifest, captured, *, allow_synthetic_manifest=False):
+    validate_manifest(manifest, allow_synthetic_manifest=allow_synthetic_manifest)
+    sources = {row["official_source_ledger_id"]: row for row in manifest["official_source_ledger"]}
+    actual = [row.get("official_source_ledger_id") for row in captured]
+    if len(captured) != 22 or set(actual) != set(sources) or len(set(actual)) != 22:
+        raise ValueError("source refresh must cover the 22 unique current records")
+    statuses = {"confirmed_current", "changed", "redirected", "inaccessible", "withdrawn", "conflicting"}
+    measured = {"official_source_ledger_id", "requested_url", "canonical_url", "retrieved_at", "status", "invalidated_claim_ids", "retrieved_body_b64", "bounded_extracts"}
+    normalized = []
+    for item in captured:
+        source, status = sources[item["official_source_ledger_id"]], item.get("status")
+        if set(item) != measured or item.get("requested_url") != source.get("requested_url") or item.get("canonical_url") not in {source.get("requested_url"), source.get("canonical_url")}:
+            raise ValueError("captured refresh identity or URL does not match current authority")
+        if status not in statuses or not _utc_timestamp(item.get("retrieved_at")):
+            raise ValueError("source refresh status or timestamp is invalid")
+        bindings = list(source.get("claim_bindings", [])); invalid = list(item.get("invalidated_claim_ids", []))
+        if len(invalid) != len(set(invalid)) or not set(invalid) <= set(bindings):
+            raise ValueError("claim-scoped invalidation is invalid")
+        if status in {"inaccessible", "withdrawn", "conflicting"} and set(invalid) != set(bindings):
+            raise ValueError("adverse source outcome must invalidate every bound claim")
+        body_bytes = _validated_body(item["retrieved_body_b64"], item["bounded_extracts"], item["official_source_ledger_id"])
+        body, extracts = (digest(body_bytes), list(item["bounded_extracts"])) if body_bytes is not None else (None, [])
+        if body is not None:
+            if extracts != source["bounded_extracts"] and (status != "changed" or set(invalid) != set(bindings)):
+                raise ValueError("changed bounded extracts must invalidate every bound claim")
+        if body is None and status not in {"inaccessible", "withdrawn", "conflicting"}:
+            raise ValueError("a retrieved body is required for this source outcome")
+        if body is not None and status in {"confirmed_current", "changed", "redirected"}:
+            prior_body = f"sha256:{source['body_sha256']}"
+            expected_status = "redirected" if source["requested_url"] != item["canonical_url"] else "confirmed_current" if body == prior_body else "changed"
+            if status != expected_status: raise ValueError("source refresh status or timestamp is invalid")
+        evidence = {"canonical_url": item["canonical_url"], "retrieved_at": item["retrieved_at"], "body_digest": body, "bounded_extracts": extracts}
+        normalized.append({
+            "official_source_ledger_id": item["official_source_ledger_id"],
+            "requested_url": source["requested_url"], "canonical_url": item["canonical_url"],
+            "retrieved_at": item["retrieved_at"], "body_digest": body, "status": status,
+            "retrieved_body_b64": item["retrieved_body_b64"],
+            "bounded_extracts": extracts, "retrieval_evidence_digest": digest(evidence),
+            "documented_facts": list(source.get("exact_documented_facts", [])),
+            "claim_bindings": bindings, "invalidated_claim_ids": invalid,
+            "prior_record_digest": digest(source),
+        })
+    return sorted(normalized, key=lambda row: row["official_source_ledger_id"])
+
+
+def validate_published_source_refreshes(manifest, refreshes, *, allow_synthetic_manifest=False):
+    validate_manifest(manifest, allow_synthetic_manifest=allow_synthetic_manifest); sources = {row["official_source_ledger_id"]: row for row in manifest["official_source_ledger"]}
+    if len(refreshes) != 22 or [row.get("official_source_ledger_id") for row in refreshes] != sorted(sources):
+        raise ValueError("source refresh must cover the 22 unique current records")
+    keys = {"official_source_ledger_id", "requested_url", "canonical_url", "retrieved_at", "body_digest", "status", "bounded_extracts", "retrieval_evidence_digest", "documented_facts", "claim_bindings", "invalidated_claim_ids", "prior_record_digest"}
+    statuses = {"confirmed_current", "changed", "redirected", "inaccessible", "withdrawn", "conflicting"}
+    for item in refreshes:
+        source = sources[item["official_source_ledger_id"]]; bindings = source["claim_bindings"]
+        if set(item) != keys or item["requested_url"] != source["requested_url"] or item["canonical_url"] not in {source["requested_url"], source["canonical_url"]} or not _utc_timestamp(item["retrieved_at"]):
+            raise ValueError("source refresh authority fields must be canonical manifest values")
+        if item["documented_facts"] != source["exact_documented_facts"] or item["claim_bindings"] != bindings or item["prior_record_digest"] != digest(source):
+            raise ValueError("source refresh authority fields must be canonical manifest values")
+        invalid = item["invalidated_claim_ids"]
+        if item["status"] not in statuses or len(invalid) != len(set(invalid)) or not set(invalid) <= set(bindings): raise ValueError("source refresh status or invalidation is invalid")
+        if item["body_digest"] is not None: _need_digest(item["body_digest"], "body_digest")
+        elif item["bounded_extracts"]: raise ValueError("bounded extracts require a published body digest")
+        for extract in item["bounded_extracts"]:
+            if set(extract) != {"text", "extract_sha256", "normalization"} or not isinstance(extract["text"], str) or not extract["text"] or not _HEX_SHA256.fullmatch(str(extract["extract_sha256"])) or hashlib.sha256(extract["text"].encode()).hexdigest() != extract["extract_sha256"]:
+                raise ValueError("published bounded extract identity is invalid")
+        exact_extracts = item["bounded_extracts"] == source["bounded_extracts"]
+        if item["status"] in {"confirmed_current", "changed", "redirected"} and (item["body_digest"] is None or not item["bounded_extracts"]):
+            raise ValueError("source refresh lacks bounded extract evidence")
+        if item["status"] in {"confirmed_current", "changed", "redirected"} and not exact_extracts and (item["status"] != "changed" or set(item["invalidated_claim_ids"]) != set(bindings)):
+            raise ValueError("changed bounded extracts must invalidate every bound claim")
+        if item["status"] in {"inaccessible", "withdrawn", "conflicting"} and set(item["invalidated_claim_ids"]) != set(bindings):
+            raise ValueError("adverse source outcome must invalidate every bound claim")
+        if item["status"] in {"confirmed_current", "changed", "redirected"}:
+            prior_body = f"sha256:{source['body_sha256']}"; expected_status = "redirected" if source["requested_url"] != item["canonical_url"] else "confirmed_current" if item["body_digest"] == prior_body else "changed"
+            if item["status"] != expected_status: raise ValueError("source refresh status is inconsistent with captured evidence")
+        evidence = {"canonical_url": item["canonical_url"], "retrieved_at": item["retrieved_at"], "body_digest": item["body_digest"], "bounded_extracts": item["bounded_extracts"]}
+        if item["retrieval_evidence_digest"] != digest(evidence): raise ValueError("source retrieval evidence digest is invalid")
+    invalidated = sorted({claim for row in refreshes for claim in row["invalidated_claim_ids"]})
+    return {"count": 22, "invalidated_claim_ids": invalidated, "digest": digest(refreshes), "sanitized_refreshes": refreshes}
+
+
+def validate_source_refreshes(manifest, refreshes, *, allow_synthetic_manifest=False):
+    raw_keys = {"official_source_ledger_id", "requested_url", "canonical_url", "retrieved_at", "body_digest", "status", "retrieved_body_b64", "bounded_extracts", "retrieval_evidence_digest", "documented_facts", "claim_bindings", "invalidated_claim_ids", "prior_record_digest"}
+    for item in refreshes:
+        if set(item) != raw_keys: raise ValueError("source refresh must retain the closed raw evidence binding")
+        body_bytes = _validated_body(item["retrieved_body_b64"], item["bounded_extracts"], item.get("official_source_ledger_id"))
+        if item["body_digest"] is None and body_bytes is not None or item["body_digest"] is not None and (body_bytes is None or item["body_digest"] != digest(body_bytes)):
+            raise ValueError("source body digest does not match captured evidence")
+    sanitized = [{key: item[key] for key in item if key != "retrieved_body_b64"} for item in refreshes]
+    return validate_published_source_refreshes(manifest, sanitized, allow_synthetic_manifest=allow_synthetic_manifest)
+
+
+def build_client_identity(payload):
+    keys = ("reported_version", "build_identifier_kind", "build_identifier", "distribution")
+    clean = {key: payload.get(key) for key in keys}
+    if any(not value for value in clean.values()) or clean["build_identifier_kind"] not in {"vendor_build_id", "executable_sha256", "package_sha256"}:
+        raise ValueError("client identity is incomplete or unsupported")
+    identity = {"client_identity_id": digest(clean), **clean}
+    if not _token(clean["distribution"]) or clean["build_identifier_kind"] != "vendor_build_id" and not _DIGEST.fullmatch(str(clean["build_identifier"])):
+        raise ValueError("client distribution or immutable build identifier is invalid")
+    if payload.get("client_identity_id", identity["client_identity_id"]) != identity["client_identity_id"]:
+        raise ValueError("client_identity_id does not match its canonical payload")
+    return identity
+
+
+def build_repository_binding(revision, tree_object):
+    if not _GIT_OBJECT.fullmatch(str(revision)) or not _GIT_OBJECT.fullmatch(str(tree_object)):
+        raise ValueError("repository revision and tree object must be immutable Git object IDs")
+    payload = {
+        "revision": revision,
+        "tree_object": tree_object,
+        "tree_digest": digest({"git_tree_object": tree_object}),
+        "evidence_ref": f"git-object://{revision}/{tree_object}",
+    }
+    return {"repository_binding_id": digest(payload), **payload}
+
+
+def validate_repository_binding(binding):
+    keys = {"repository_binding_id", "revision", "tree_object", "tree_digest", "evidence_ref"}
+    if not isinstance(binding, dict) or set(binding) != keys:
+        raise ValueError("repository binding must use the closed v1 shape")
+    expected = build_repository_binding(binding["revision"], binding["tree_object"])
+    if binding != expected:
+        raise ValueError("repository binding does not match its revision and tree evidence")
+    return binding
+
+
+def repository_binding_from_checkout(repository_root):
+    def status():
+        completed = subprocess.run(
+            ["git", "status", "--porcelain=v1", "--untracked-files=all"],
+            cwd=repository_root, capture_output=True, text=True, timeout=5,
+            check=False,
+        )
+        if completed.returncode:
+            raise ValueError("active checkout cleanliness is unavailable")
+        return completed.stdout
+
+    if status():
+        raise ValueError("active checkout must be clean before collection")
+    values = []
+    for revision in ("HEAD", "HEAD^{tree}"):
+        completed = subprocess.run(
+            ["git", "rev-parse", revision], cwd=repository_root, capture_output=True,
+            text=True, timeout=5, check=False,
+        )
+        value = completed.stdout.strip()
+        if completed.returncode or not _GIT_OBJECT.fullmatch(value):
+            raise ValueError("active checkout revision/tree binding is unavailable")
+        values.append(value)
+    if status():
+        raise ValueError("active checkout changed during collection binding")
+    return build_repository_binding(*values)
+
+
+def validate_work_item(work_item):
+    if not isinstance(work_item, dict) or set(work_item) != {"kind", "id"} or work_item.get("kind") not in {"task", "fixture", "objective"} or not _WORK_ITEM_ID.fullmatch(str(work_item.get("id"))):
+        raise ValueError("work item must use the closed task/fixture/objective shape")
+    return work_item
+
+
+def _safe_sanitized_value(value):
+    if isinstance(value, dict):
+        for key, nested in value.items():
+            lowered = str(key).lower()
+            sensitive = any(part in lowered for part in _FORBIDDEN_KEY_PARTS)
+            if sensitive and not (isinstance(nested, str) and nested.startswith("fixture-")):
+                raise ValueError("sanitized output contains a forbidden sensitive field")
+            _safe_sanitized_value(nested)
+    elif isinstance(value, list):
+        for nested in value: _safe_sanitized_value(nested)
+    elif isinstance(value, str) and (value.startswith(("/", "\\")) or "://" in value or re.match(r"^[A-Za-z]:[\\/]", value)):
+        raise ValueError("sanitized output contains a path or remote locator")
+
+
+def sanitize(record, profile):
+    if profile not in _SANITIZER_PROFILES or not isinstance(record, dict):
+        raise ValueError("sanitizer profile is unknown")
+    allowlist, pseudonym_fields, strict = _SANITIZER_PROFILES[profile]
+    if strict and set(record) - set(allowlist): raise ValueError("surface entry contains undeclared fields")
+    result = {}
+    for key in sorted(set(record) & set(allowlist)):
+        value = record[key]
+        result[key] = f"fixture-{key}" if key in pseudonym_fields else value
+    _safe_sanitized_value(result)
+    return result
+
+
+def _clean_entry(raw):
+    raw = sanitize(raw, "surface_entry")
+    if not {"model", "effort", "available", "hidden"} <= set(raw):
+        raise ValueError("surface entry contains undeclared or missing fields")
+    if not isinstance(raw["model"], str) or not raw["model"] or any(mark in raw["model"] for mark in ("/", "\\", "://", "@")) or not _token(raw["effort"]):
+        raise ValueError("surface entry model or effort is invalid")
+    if not isinstance(raw["available"], bool) or not isinstance(raw["hidden"], bool):
+        raise ValueError("surface entry availability fields must be boolean")
+    if "machine_id" in raw and not _token(raw["machine_id"]): raise ValueError("surface entry machine identifier is invalid")
+    if "raw_label" in raw and (not isinstance(raw["raw_label"], str) or not _LABEL.fullmatch(raw["raw_label"])): raise ValueError("surface entry raw label is invalid")
+    if "capabilities" in raw and (not isinstance(raw["capabilities"], list) or not all(_token(value) for value in raw["capabilities"])):
+        raise ValueError("surface entry capabilities are invalid")
+    return {key: raw[key] for key in sorted(raw)}
+
+
+def _observation_payload(observation):
+    return {key: observation[key] for key in sorted(_OBSERVATION_KEYS - {"surface_observation_id"})}
+
+
+def _collection_authority(observation):
+    repository = validate_repository_binding(observation["repository_binding"])
+    work_item = validate_work_item(observation["work_item"])
+    shared = {"repository_binding_id": repository["repository_binding_id"], "work_item": work_item}
+    method = observation["collection_method_id"]
+    if method == "fixture-enumeration-v1":
+        expected = digest({"include_hidden": observation["surface"] == "app_server", **shared})
+        authority = "synthetic"
+    elif method == "unknown-observation-v1":
+        expected = digest({"reason": "no_approved_live_collector", "surface": observation["surface"], **shared})
+        authority = "non_authoritative"
+        if observation["completeness_state"] != "unknown" or observation["entries"]:
+            raise ValueError("unknown observation method cannot carry discovered entries")
+    else:
+        raise ValueError("collection method is not in the closed registry")
+    if observation["method_inputs_digest"] != expected:
+        raise ValueError("collection method inputs do not match the closed registry")
+    return authority
+
+
+def validate_observation(observation):
+    if not isinstance(observation, dict) or set(observation) != _OBSERVATION_KEYS:
+        raise ValueError("surface observation must use the closed v1 shape")
+    if observation["surface"] not in SURFACES or observation["completeness_state"] not in {"complete", "partial", "unavailable", "unknown"}:
+        raise ValueError("unsupported surface observation")
+    expected_visibility = {"complete_enumeration": observation["completeness_state"] == "complete"} if observation["surface"] == "interactive_picker" else None
+    if observation["visibility_policy"] != expected_visibility:
+        raise ValueError("surface collection or visibility policy is invalid")
+    if not _utc_timestamp(observation["started_at"]) or not _utc_timestamp(observation["completed_at"]):
+        raise ValueError("collection timestamp must be RFC3339 UTC")
+    if datetime.fromisoformat(observation["started_at"].replace("Z", "+00:00")) > datetime.fromisoformat(observation["completed_at"].replace("Z", "+00:00")):
+        raise ValueError("collection window is reversed")
+    for field in ("client_identity_id", "method_inputs_digest", "raw_evidence_digest"):
+        _need_digest(observation[field], field)
+    if observation["sanitized_evidence_digest"] is not None:
+        _need_digest(observation["sanitized_evidence_digest"], "sanitized_evidence_digest")
+    if not _RAW_REF.fullmatch(str(observation["raw_evidence_ref"])):
+        raise ValueError("raw evidence reference must be content addressed")
+    if observation["raw_evidence_ref"] != f"raw://{observation['raw_evidence_digest']}":
+        raise ValueError("raw_evidence_ref must match raw_evidence_digest")
+    observation["entries"] = [_clean_entry(item) for item in observation["entries"]]
+    _collection_authority(observation)
+    if observation["surface_observation_id"] != digest(_observation_payload(observation)):
+        raise ValueError("surface observation identity does not match its canonical payload")
+    return observation
+
+
+def fixture_observation(surface, payload, client_identity_id):
+    state, entries = payload.get("state", "unknown"), [_clean_entry(item) for item in payload.get("entries", [])]
+    if surface not in SURFACES or state not in {"complete", "partial", "unavailable", "unknown"}:
+        raise ValueError("unsupported surface observation")
+    repository = validate_repository_binding(payload.get("repository_binding", build_repository_binding("0" * 40, "0" * 40)))
+    work_item = validate_work_item(payload.get("work_item", {"kind": "fixture", "id": "G56R-002-SYNTHETIC"}))
+    evidence = digest({"surface": surface, "state": state, "entries": entries})
+    result = {
+        "client_identity_id": client_identity_id, "surface": surface,
+        "collection_method_id": "fixture-enumeration-v1", "method_inputs_digest": digest({"include_hidden": surface == "app_server", "repository_binding_id": repository["repository_binding_id"], "work_item": work_item}),
+        "started_at": "2026-07-16T00:00:00Z", "completed_at": "2026-07-16T00:00:00Z", "completeness_state": state,
+        "visibility_policy": {"complete_enumeration": state == "complete"} if surface == "interactive_picker" else None,
+        "entries": entries, "raw_evidence_digest": evidence, "raw_evidence_ref": f"raw://{evidence}", "sanitized_evidence_digest": evidence,
+        "repository_binding": repository, "work_item": work_item,
+    }
+    result["surface_observation_id"] = digest(result)
+    return validate_observation(result)
+
+
+def unknown_observation(surface, client_identity_id, repository_binding, work_item, *, raw_evidence_digest=None, captured_at="2026-07-16T00:00:00Z"):
+    repository = validate_repository_binding(repository_binding); work_item = validate_work_item(work_item)
+    if not _utc_timestamp(captured_at): raise ValueError("unknown observation timestamp must be RFC3339 UTC")
+    evidence = raw_evidence_digest or digest({"surface": surface, "state": "unknown", "entries": []})
+    _need_digest(evidence, "raw_evidence_digest")
+    result = {
+        "client_identity_id": client_identity_id, "surface": surface,
+        "collection_method_id": "unknown-observation-v1",
+        "method_inputs_digest": digest({"reason": "no_approved_live_collector", "surface": surface, "repository_binding_id": repository["repository_binding_id"], "work_item": work_item}),
+        "started_at": captured_at, "completed_at": captured_at,
+        "completeness_state": "unknown", "visibility_policy": {"complete_enumeration": False} if surface == "interactive_picker" else None,
+        "entries": [], "raw_evidence_digest": evidence, "raw_evidence_ref": f"raw://{evidence}", "sanitized_evidence_digest": evidence,
+        "repository_binding": repository, "work_item": work_item,
+    }
+    result["surface_observation_id"] = digest(result)
+    return validate_observation(result)
+
+
+def _candidate_tuples(manifest, validation, *, allow_synthetic_manifest=False):
+    authority = validate_manifest(manifest, allow_synthetic_manifest=allow_synthetic_manifest)
+    refreshes = validation["sanitized_refreshes"]
+    current_ids = {row["official_source_ledger_id"] for row in manifest["official_source_ledger"]}
+    contracts = {row["agent_contract_id"]: row for row in manifest.get("agent_contracts", [])}; effort_records = {row["effort_surface_record_id"]: row for row in manifest["effort_surface_records"]}
+    refresh_by_source = {row["official_source_ledger_id"]: row for row in validation["sanitized_refreshes"]}
+    invalidated, efforts_by_record = set(validation["invalidated_claim_ids"]), authority["authoritative_effort_tokens_by_record"]
+    adverse_sources = {row["official_source_ledger_id"] for row in refreshes if row["status"] in {"inaccessible", "withdrawn", "conflicting"} or row["invalidated_claim_ids"]}
+    tuples = []
+    for route in manifest.get("candidate_routes", []):
+        model = route.get("model_selector", {}).get("requested_value"); effort = route.get("effort_selector", {}).get("requested_value")
+        source_ids = route.get("official_source_ledger_ids", []); reasons = []
+        if not _token(model) or not source_ids or not set(source_ids) <= current_ids or set(source_ids) & adverse_sources or route.get("candidate_route_id") in invalidated:
+            reasons.append("source_not_admitted")
+        bound_records = [effort_records[record_id] for record_id in route.get("effort_surface_record_ids", [])]
+        supporting = [row for row in bound_records if effort in efforts_by_record.get(row["effort_surface_record_id"], [])]
+        valid_supporting = [row for row in supporting if row["official_source_ledger_id"] in set(source_ids) and row["official_source_ledger_id"] not in adverse_sources]
+        if not _token(effort) or not supporting:
+            reasons.append("effort_not_source_admitted")
+        elif not valid_supporting: reasons.append("effort_source_not_admitted")
+        contract = contracts[route["agent_contract_id"]]
+        tuples.append({"candidate_route_id": route["candidate_route_id"], "agent_contract_id": route["agent_contract_id"],
+                       "named_agent": contract["agent_name"], "model": model, "effort": effort,
+                       "candidate_route_digest": digest(route), "source_ref": contract["source_ref"],
+                       "source_sha256": f"sha256:{contract['source_sha256']}", "instruction_sha256": f"sha256:{contract['instruction_sha256']}",
+                       "role_instruction_sha256": f"sha256:{route['role_instruction_sha256']}", "agent_contract_digest": digest(contract),
+                       "official_source_bindings": [{"official_source_ledger_id": source_id, "source_refresh_digest": digest(refresh_by_source[source_id])} for source_id in sorted(source_ids)],
+                       "effort_surface_bindings": sorted(({"effort_surface_record_id": row["effort_surface_record_id"], "effort_surface_record_digest": digest(row), "official_source_ledger_id": row["official_source_ledger_id"], "source_refresh_digest": digest(refresh_by_source[row["official_source_ledger_id"]])} for row in bound_records), key=lambda row: row["effort_surface_record_id"]),
+                       "source_admitted": not reasons, "authority_reasons": reasons})
+    return _AuthorityTupleSet(tuples)
+
+
+def candidate_tuples_from_manifest(manifest, refreshes, *, allow_synthetic_manifest=False):
+    validation = validate_source_refreshes(manifest, refreshes, allow_synthetic_manifest=allow_synthetic_manifest)
+    return _candidate_tuples(manifest, validation, allow_synthetic_manifest=allow_synthetic_manifest)
+
+
+def candidate_tuples_from_published(manifest, refreshes):
+    return _candidate_tuples(manifest, validate_published_source_refreshes(manifest, refreshes))
+
+
+def evaluate_surface_matrix(observations, source_tuples, *, aliases=None, expected_integrity_digest=None):
+    if any(row.get("source_admitted") for row in source_tuples) and not isinstance(source_tuples, _AuthorityTupleSet):
+        raise ValueError("source admission requires a manifest-bound tuple set")
+    aliases = aliases or {}; observations = [validate_observation(dict(item)) for item in observations]
+    surfaces = [item["surface"] for item in observations]
+    if len(observations) != 3 or set(surfaces) != set(SURFACES) or len(set(surfaces)) != 3:
+        raise ValueError("matrix requires exactly one observation per surface")
+    observations_by_surface = {item["surface"]: item for item in observations}
+    observations = [observations_by_surface[surface] for surface in SURFACES]
+    clients, reasons = {item["client_identity_id"] for item in observations}, []
+    if len(clients) != 1: reasons.append("unprovable_shared_client_identity")
+    repository_ids = {item["repository_binding"]["repository_binding_id"] for item in observations}; work_items = {canonical_bytes(item["work_item"]) for item in observations}
+    if len(repository_ids) != 1 or len(work_items) != 1: raise ValueError("surface observations must share repository and work-item bindings")
+    collection_authorities = [_collection_authority(item) for item in observations]
+    normalized_aliases = {}; observations_by_surface = {item["surface"]: item for item in observations}
+    for raw_label, alias in aliases.items():
+        required = {"canonical_model_id", "authority_kind", "authority_surface"}; enriched = required | {"client_identity_id", "authority_evidence_ref"}
+        if not isinstance(raw_label, str) or not _LABEL.fullmatch(raw_label) or not isinstance(alias, dict) or set(alias) != required and set(alias) != enriched:
+            raise ValueError("alias authority must use the closed pinned-build shape")
+        canonical, surface = alias["canonical_model_id"], alias["authority_surface"]
+        if not _token(canonical) or alias["authority_kind"] != "machine_readable_identifier" or surface not in SURFACES:
+            raise ValueError("alias authority is unsupported")
+        observation = observations_by_surface[surface]
+        evidence = [entry for entry in observation["entries"] if entry["model"] == raw_label and entry.get("raw_label") == raw_label and entry.get("machine_id") == canonical]
+        if len(evidence) != 1: raise ValueError("alias authority evidence is absent")
+        expected_alias = {"canonical_model_id": canonical, "authority_kind": "machine_readable_identifier", "authority_surface": surface,
+                          "client_identity_id": observation["client_identity_id"], "authority_evidence_ref": observation["raw_evidence_ref"]}
+        if set(alias) == enriched and alias != expected_alias: raise ValueError("alias authority does not match the pinned-build evidence")
+        normalized_aliases[raw_label] = expected_alias
+    if len({item["canonical_model_id"] for item in normalized_aliases.values()}) != len(normalized_aliases): reasons.append("ambiguous_or_duplicate_normalization_key")
+    authority_keys = {"candidate_route_digest", "source_ref", "source_sha256", "instruction_sha256", "role_instruction_sha256", "agent_contract_digest", "official_source_bindings", "effort_surface_bindings"}
+    if any(row.get("source_admitted") and (not authority_keys <= set(row) or not row["official_source_bindings"] or not row["effort_surface_bindings"]) for row in source_tuples):
+        raise ValueError("source admission requires complete tuple authority")
+    indexed = {}
+    for observation in observations:
+        entries = {}
+        for raw in observation["entries"]:
+            key = (normalized_aliases.get(raw["model"], {}).get("canonical_model_id", raw["model"]), raw["effort"])
+            if not all(_token(value) for value in key) or key in entries: reasons.append("ambiguous_or_duplicate_normalization_key")
+            entries[key] = raw
+        indexed[observation["surface"]] = entries
+    normalization = digest(normalized_aliases); integrity = digest({"observations": observations, "normalization_map_id": normalization})
+    if expected_integrity_digest and expected_integrity_digest != integrity: reasons.append("aggregate_hash_mismatch")
+    reasons, disagreements, decisions = list(dict.fromkeys(reasons)), [], []
+    sources = list(source_tuples); source_keys = {(row.get("model"), row.get("effort")) for row in sources}
+    observed_keys = {key for entries in indexed.values() for key in entries}
+    for key in sorted(observed_keys - source_keys):
+        suffix = digest({"model": key[0], "effort": key[1]})[7:23]
+        sources.append({"candidate_route_id": f"runtime-only:{suffix}", "agent_contract_id": "unbound-runtime-observation",
+                        "named_agent": "unbound-runtime-observation", "model": key[0], "effort": key[1],
+                        "candidate_route_digest": digest({"runtime_only": key}), "source_ref": "runtime-only-observation",
+                        "source_sha256": digest({"runtime_only": "source"}), "instruction_sha256": digest({"runtime_only": "instruction"}),
+                        "role_instruction_sha256": digest({"runtime_only": "instruction"}), "agent_contract_digest": digest({"runtime_only": "contract"}),
+                        "official_source_bindings": [], "effort_surface_bindings": [],
+                        "source_admitted": False, "authority_reasons": ["source_not_admitted"]})
+    complete = all(item["completeness_state"] == "complete" for item in observations); collection_authoritative = all(item == "approved_live" for item in collection_authorities)
+    for source in sources:
+        key = (source.get("model"), source.get("effort")); values = {surface: indexed[surface].get(key) for surface in SURFACES}
+        observed = [value for value in values.values() if value is not None]; availability = {value["available"] for value in observed}; hidden = {value["hidden"] for value in observed}
+        picker_omission = values["interactive_picker"] is None and values["app_server"] is not None and values["cli"] is not None and values["app_server"]["hidden"] and values["cli"]["hidden"] and next(item for item in observations if item["surface"] == "interactive_picker")["visibility_policy"] == {"complete_enumeration": True}
+        why = list(source.get("authority_reasons", [])) if not source.get("source_admitted") else []
+        if reasons: disposition, surface_why = "unknown", ["matrix_invalid"]
+        elif key[1] is None: disposition, surface_why = "unknown", ["canonical_effort_unknown"]
+        elif len(hidden) > 1: disposition, surface_why = "disagreed", ["hidden_state_disagreement"]
+        elif not complete or len(observed) != 3 and not picker_omission: disposition, surface_why = "unknown", ["surface_evidence_incomplete"]
+        elif len(availability) != 1: disposition, surface_why = "disagreed", ["surface_disagreement"]
+        elif availability == {True}: disposition, surface_why = "agreed", []
+        else: disposition, surface_why = "agreed", ["availability_not_proven"]
+        why.extend(item for item in surface_why if item not in why)
+        if not collection_authoritative and "collection_evidence_non_authoritative" not in why: why.append("collection_evidence_non_authoritative")
+        included = source.get("source_admitted") and disposition == "agreed" and availability == {True} and collection_authoritative
+        disagreement = None
+        if disposition == "disagreed":
+            disagreement = {"canonical_tuple": {"model": key[0], "effort": key[1]}, "surface_values": values, "evidence_refs": {item["surface"]: item["raw_evidence_ref"] for item in observations}, "proposed_normalized_key": {"model": key[0], "effort": key[1]}, "disagreement_class": "hidden_state" if "hidden_state_disagreement" in surface_why else "availability", "tuple_disposition": "excluded"}; disagreements.append(disagreement)
+        decisions.append({"candidate_route_id": source["candidate_route_id"], "agent_contract_id": source["agent_contract_id"], "named_agent": source["named_agent"],
+                          "canonical_model_id": key[0], "canonical_effort": key[1], "source_admitted": bool(source.get("source_admitted")),
+                          "candidate_route_digest": source["candidate_route_digest"], "source_ref": source["source_ref"],
+                          "source_sha256": source["source_sha256"], "instruction_sha256": source["instruction_sha256"], "role_instruction_sha256": source["role_instruction_sha256"],
+                          "agent_contract_digest": source["agent_contract_digest"], "official_source_bindings": list(source["official_source_bindings"]), "effort_surface_bindings": list(source["effort_surface_bindings"]),
+                          "runtime_capability_snapshot_id": None,
+                          "surface_evidence": {item["surface"]: {"surface_observation_id": item["surface_observation_id"], "completeness_state": item["completeness_state"], "visibility_policy": item["visibility_policy"], "raw_evidence_digest": item["raw_evidence_digest"], "raw_evidence_ref": item["raw_evidence_ref"], "matching_entry": values[item["surface"]]} for item in observations},
+                          "hidden_state": {surface: values[surface]["hidden"] if values[surface] is not None else None for surface in SURFACES},
+                          "normalization_map_id": normalization, "disagreement_digest": digest(disagreement) if disagreement else None,
+                          "exact_treatment_readiness": "pending" if included else "not_ready_excluded",
+                          "source_admission_reasons": list(source.get("authority_reasons", [])),
+                          "availability_disposition": "supported" if included else "unknown", "surface_disposition": disposition,
+                          "decision": "included" if included else "excluded", "reasons": why})
+    payload = {"schema_version": SCHEMA_VERSION, "client_identity_id": next(iter(clients)) if len(clients) == 1 else digest({"invalid": "client_identity"}),
+               "repository_binding_id": next(iter(repository_ids)), "work_item": observations[0]["work_item"],
+               "observations": observations, "normalization_map": normalized_aliases, "normalization_map_id": normalization, "disagreements": disagreements,
+               "aggregate_integrity_digest": integrity, "validity": "invalid" if reasons else "valid", "invalidity_reasons": reasons}
+    matrix_id = digest(payload)
+    for decision in decisions: decision["surface_matrix_id"] = matrix_id
+    return {"surface_matrix_id": matrix_id, **payload}, _BoundDecisionSet(decisions)
+
+
+def validate_surface_matrix(matrix):
+    required = {"surface_matrix_id", "schema_version", "client_identity_id", "repository_binding_id", "work_item", "observations", "normalization_map", "normalization_map_id", "disagreements", "aggregate_integrity_digest", "validity", "invalidity_reasons"}
+    if set(matrix) != required or matrix.get("schema_version") != SCHEMA_VERSION: raise ValueError("surface matrix must use the closed v1 shape")
+    observations = [validate_observation(dict(item)) for item in matrix["observations"]]
+    surfaces = [item["surface"] for item in observations]
+    if len(observations) != 3 or set(surfaces) != set(SURFACES) or len(set(surfaces)) != 3: raise ValueError("matrix requires exactly one observation per surface")
+    by_surface = {item["surface"]: item for item in observations}; observations = [by_surface[surface] for surface in SURFACES]
+    matrix = {**matrix, "observations": observations}
+    if any(item["client_identity_id"] != matrix["client_identity_id"] for item in observations): raise ValueError("matrix client identity mismatch")
+    validate_work_item(matrix["work_item"])
+    if any(item["repository_binding"]["repository_binding_id"] != matrix["repository_binding_id"] or item["work_item"] != matrix["work_item"] for item in observations): raise ValueError("matrix repository or work-item binding mismatch")
+    observations_by_surface = {item["surface"]: item for item in observations}
+    alias_keys = {"canonical_model_id", "authority_kind", "authority_surface", "client_identity_id", "authority_evidence_ref"}
+    for raw_label, alias in matrix["normalization_map"].items():
+        if not _LABEL.fullmatch(str(raw_label)) or not isinstance(alias, dict) or set(alias) != alias_keys or not _token(alias["canonical_model_id"]) or alias["authority_kind"] != "machine_readable_identifier" or alias["authority_surface"] not in SURFACES:
+            raise ValueError("normalization map alias authority is invalid")
+        observation = observations_by_surface[alias["authority_surface"]]
+        evidence = [item for item in observation["entries"] if item["model"] == raw_label and item.get("raw_label") == raw_label and item.get("machine_id") == alias["canonical_model_id"]]
+        if alias["client_identity_id"] != matrix["client_identity_id"] or alias["authority_evidence_ref"] != observation["raw_evidence_ref"] or len(evidence) != 1:
+            raise ValueError("normalization map alias authority is not bound to the pinned build")
+    if len({item["canonical_model_id"] for item in matrix["normalization_map"].values()}) != len(matrix["normalization_map"]): raise ValueError("normalization map is not one-to-one")
+    if matrix["normalization_map_id"] != digest(matrix["normalization_map"]): raise ValueError("normalization map identity mismatch")
+    allowed_reasons = {"missing_or_unsupported_version", "unprovable_shared_client_identity", "aggregate_hash_mismatch", "ambiguous_or_duplicate_normalization_key"}
+    if matrix["validity"] not in {"valid", "invalid"} or not set(matrix["invalidity_reasons"]) <= allowed_reasons or (matrix["validity"] == "invalid") != bool(matrix["invalidity_reasons"]):
+        raise ValueError("surface matrix validity is inconsistent")
+    for item in matrix["disagreements"]:
+        keys = {"canonical_tuple", "surface_values", "evidence_refs", "proposed_normalized_key", "disagreement_class", "tuple_disposition"}
+        if set(item) != keys or set(item["surface_values"]) != set(SURFACES) or set(item["evidence_refs"]) != set(SURFACES) or item["tuple_disposition"] != "excluded":
+            raise ValueError("surface disagreement must use the closed v1 shape")
+        for value in item["surface_values"].values():
+            if value is not None: _clean_entry(value)
+        if not all(_RAW_REF.fullmatch(str(value)) for value in item["evidence_refs"].values()): raise ValueError("disagreement evidence must be content addressed")
+    expected = digest({"observations": observations, "normalization_map_id": matrix["normalization_map_id"]})
+    if matrix["aggregate_integrity_digest"] != expected or matrix["surface_matrix_id"] != digest({key: matrix[key] for key in matrix if key != "surface_matrix_id"}):
+        raise ValueError("surface matrix identity does not match its canonical payload")
+    return matrix
+
+
+def _validated_canary_approvals(approvals):
+    keys = {"executor_contract_id", "contract_version", "implementation_digest", "platform", "approval_evidence_digest"}; identities = []
+    for item in approvals:
+        if not isinstance(item, dict) or set(item) != keys or item["contract_version"] != SCHEMA_VERSION or item["platform"] not in {"macos", "linux", "windows"}:
+            raise ValueError("canary approval must use the closed repository-owned shape")
+        for field in ("executor_contract_id", "implementation_digest", "approval_evidence_digest"): _need_digest(item[field], field)
+        identities.append((item["executor_contract_id"], item["implementation_digest"]))
+    if len(identities) != len(set(identities)): raise ValueError("canary approvals must be unique")
+    return approvals
+
+
+def validate_canary_result(result, approvals=APPROVED_CANARY_EXECUTORS):
+    required = {"snapshot_id", "canonical_model_id", "canonical_effort", "attempt_index", "timeout_seconds", "combined_output_cap_bytes", "executor_contract_id", "implementation_digest", "executor_result_digest", "contract_version", "timeout_enforced", "output_cap_enforced", "process_tree_termination_state", "retry_count", "exit_code", "sentinel_observed", "terminal_class", "availability_disposition", "evidence_digest"}
+    if set(result) != required:
+        raise ValueError("canary result must use the closed v1 envelope")
+    for field in ("snapshot_id", "executor_contract_id", "implementation_digest", "executor_result_digest", "evidence_digest"):
+        _need_digest(result[field], field)
+    bound_result = {key: result[key] for key in result if key not in {"executor_result_digest", "availability_disposition"}}
+    if result["executor_result_digest"] != digest(bound_result): raise ValueError("canary result digest does not bind the closed result envelope")
+    integer_fields = ("attempt_index", "timeout_seconds", "combined_output_cap_bytes", "retry_count")
+    if any(type(result[field]) is not int for field in integer_fields) or type(result["timeout_enforced"]) is not bool or type(result["output_cap_enforced"]) is not bool or type(result["sentinel_observed"]) is not bool or result["exit_code"] is not None and type(result["exit_code"]) is not int:
+        raise ValueError("canary result uses invalid primitive types")
+    fixed = result["attempt_index"], result["timeout_seconds"], result["combined_output_cap_bytes"], result["contract_version"], result["retry_count"]
+    if fixed != (1, 30, 65536, SCHEMA_VERSION, 0) or not result["timeout_enforced"] or not result["output_cap_enforced"]:
+        raise ValueError("canary bounds or retry contract violated")
+    if result["terminal_class"] not in ("success", *ERROR_TERMINALS) or result["process_tree_termination_state"] not in {"not_needed", "completed", "failed"}:
+        raise ValueError("unknown canary state")
+    approvals = _validated_canary_approvals(approvals); approval = next((item for item in approvals if item["executor_contract_id"] == result["executor_contract_id"] and item["implementation_digest"] == result["implementation_digest"]), None)
+    success = approval and approval.get("implementation_digest") == result["implementation_digest"] and result["terminal_class"] == "success" and result["exit_code"] == 0 and result["sentinel_observed"] and result["process_tree_termination_state"] != "failed"
+    return {**result, "availability_disposition": "available_for_pinned_environment" if success else "unknown"}
+
+
+def validate_canary_results(results, approvals=APPROVED_CANARY_EXECUTORS):
+    keys = [(item.get("snapshot_id"), item.get("canonical_model_id"), item.get("canonical_effort")) for item in results]
+    if len(keys) != len(set(keys)):
+        raise ValueError("only one canary is permitted per snapshot/model/effort")
+    result_digests = [item.get("executor_result_digest") for item in results]
+    if len(result_digests) != len(set(result_digests)): raise ValueError("canary result digests cannot be replayed across tuple keys")
+    return [validate_canary_result(item, approvals) for item in results]
+
+
+def validate_raw_evidence_root(raw_root, repository_root):
+    lexical, repo = Path(os.path.abspath(raw_root)), Path(repository_root).resolve()
+    if lexical.is_symlink(): raise ValueError("raw_evidence_root cannot be a symlink")
+    raw = lexical.resolve(strict=True)
+    if raw == repo or repo in raw.parents or _git_worktree_ancestor(raw):
+        raise ValueError("raw_evidence_root must resolve outside every Git worktree")
+    if not raw.is_dir(): raise ValueError("raw_evidence_root must be a directory")
+    for path in (raw, *raw.rglob("*")):
+        if path.is_symlink(): raise ValueError("raw_evidence_root cannot contain symlinks")
+        if os.name != "nt":
+            mode = stat.S_IMODE(path.stat().st_mode)
+            if path.is_dir() and mode != 0o700 or path.is_file() and mode != 0o600:
+                raise ValueError("raw evidence directories require 0700 and files require 0600")
+        if not path.is_dir() and not path.is_file(): raise ValueError("raw_evidence_root may contain only regular files and directories")
+    return raw
+
+
+def _git_worktree_ancestor(path):
+    current = path if path.is_dir() else path.parent
+    return any((ancestor / ".git").exists() for ancestor in (current, *current.parents))
+
+
+def validate_private_external_file(path, repository_root, label, *, output=False):
+    lexical = Path(os.path.abspath(path)); repo = Path(repository_root).resolve()
+    if lexical.is_symlink(): raise ValueError(f"{label} cannot be a symlink")
+    parent = lexical.parent.resolve(strict=True); resolved = parent / lexical.name
+    if resolved == repo or repo in resolved.parents or _git_worktree_ancestor(resolved): raise ValueError(f"{label} must remain outside every Git worktree")
+    if os.name != "nt" and stat.S_IMODE(parent.stat().st_mode) != 0o700: raise ValueError(f"{label} parent directory must use mode 0700")
+    if output and not resolved.exists(): return resolved
+    if not resolved.is_file() or resolved.is_symlink(): raise ValueError(f"{label} must be a regular non-symlink file")
+    if os.name != "nt" and stat.S_IMODE(resolved.stat().st_mode) != 0o600: raise ValueError(f"{label} must use mode 0600")
+    if resolved.stat().st_size > PRIVATE_REFRESH_MAX_BYTES: raise ValueError(f"{label} exceeds the bounded private-file size")
+    return resolved
+
+
+def validate_content_addressed_private_file(path, repository_root, label):
+    resolved = validate_private_external_file(path, repository_root, label)
+    expected_name = f"{digest(resolved.read_bytes()).removeprefix('sha256:')}.json"
+    if resolved.name != expected_name:
+        raise ValueError(f"{label} must use its exact content digest as the filename")
+    return resolved
+
+
+def materialize_unknown_capture(raw_root, repository_root, surface, client_identity_id, repository_binding, work_item, captured_at):
+    raw = validate_raw_evidence_root(raw_root, repository_root)
+    repository = validate_repository_binding(repository_binding); work_item = validate_work_item(work_item)
+    if surface not in SURFACES or not _DIGEST.fullmatch(str(client_identity_id)) or not _utc_timestamp(captured_at):
+        raise ValueError("unknown capture binding is invalid")
+    record = {
+        "schema_version": SCHEMA_VERSION,
+        "surface": surface,
+        "client_identity_id": client_identity_id,
+        "repository_binding_id": repository["repository_binding_id"],
+        "work_item": work_item,
+        "collection_method_id": "unknown-observation-v1",
+        "outcome": "no_approved_live_collector",
+        "captured_at": captured_at,
+    }
+    stored = canonical_bytes(record) + b"\n"; evidence = digest(stored)
+    target = raw / f"{evidence.removeprefix('sha256:')}.json"
+    if target.exists():
+        validate_private_external_file(target, repository_root, "unknown capture")
+        if target.read_bytes() != stored: raise ValueError("content-addressed unknown capture bytes disagree")
+    else:
+        _write(target, record, private=True)
+    validate_raw_evidence_root(raw, repository_root)
+    if target.read_bytes() != stored or digest(target.read_bytes()) != evidence:
+        raise ValueError("unknown capture was not retained under its content identity")
+    return evidence, target
+
+
+def validate_tuple_decisions(decisions, *, require_snapshot=False):
+    if any(item.get("decision") == "included" for item in decisions) and not isinstance(decisions, _BoundDecisionSet):
+        raise ValueError("included decisions require manifest-bound authority")
+    keys = {"candidate_route_id", "candidate_route_digest", "agent_contract_id", "named_agent", "agent_contract_digest", "source_ref", "source_sha256", "instruction_sha256", "role_instruction_sha256", "canonical_model_id", "canonical_effort", "official_source_bindings", "effort_surface_bindings", "runtime_capability_snapshot_id", "surface_matrix_id", "surface_evidence", "hidden_state", "normalization_map_id", "disagreement_digest", "source_admitted", "source_admission_reasons", "availability_disposition", "surface_disposition", "exact_treatment_readiness", "decision", "reasons"}
+    for item in decisions:
+        strings = (item.get("candidate_route_id"), item.get("agent_contract_id"), item.get("named_agent"), item.get("canonical_model_id"))
+        if set(item) != keys or not all(isinstance(value, str) and value and not any(mark in value for mark in ("/", "\\", "://", "@")) for value in strings):
+            raise ValueError("tuple decision must use the sanitized closed v1 shape")
+        if not isinstance(item["source_ref"], str) or not item["source_ref"] or item["source_ref"].startswith(("/", "\\")) or ".." in Path(item["source_ref"]).parts: raise ValueError("tuple source_ref must be repository relative")
+        for field in ("candidate_route_digest", "agent_contract_digest", "source_sha256", "instruction_sha256", "role_instruction_sha256", "surface_matrix_id", "normalization_map_id"):
+            _need_digest(item[field], field)
+        if item["instruction_sha256"] != item["role_instruction_sha256"]: raise ValueError("tuple instruction hashes disagree")
+        snapshot = item["runtime_capability_snapshot_id"]
+        if snapshot is not None: _need_digest(snapshot, "runtime_capability_snapshot_id")
+        if require_snapshot and snapshot is None: raise ValueError("tuple runtime snapshot binding is required")
+        if item["disagreement_digest"] is not None: _need_digest(item["disagreement_digest"], "disagreement_digest")
+        source_binding_keys = {"official_source_ledger_id", "source_refresh_digest"}
+        if any(set(row) != source_binding_keys or not _SOURCE_ID.fullmatch(str(row["official_source_ledger_id"])) or not _DIGEST.fullmatch(str(row["source_refresh_digest"])) for row in item["official_source_bindings"]): raise ValueError("tuple official-source binding is invalid")
+        effort_binding_keys = {"effort_surface_record_id", "effort_surface_record_digest", "official_source_ledger_id", "source_refresh_digest"}
+        if any(set(row) != effort_binding_keys or not isinstance(row["effort_surface_record_id"], str) or not row["effort_surface_record_id"] or not _SOURCE_ID.fullmatch(str(row["official_source_ledger_id"])) or not _DIGEST.fullmatch(str(row["effort_surface_record_digest"])) or not _DIGEST.fullmatch(str(row["source_refresh_digest"])) for row in item["effort_surface_bindings"]): raise ValueError("tuple effort-surface binding is invalid")
+        if set(item["surface_evidence"]) != set(SURFACES) or set(item["hidden_state"]) != set(SURFACES): raise ValueError("tuple surface evidence is incomplete")
+        evidence_keys = {"surface_observation_id", "completeness_state", "visibility_policy", "raw_evidence_digest", "raw_evidence_ref", "matching_entry"}
+        for surface, evidence in item["surface_evidence"].items():
+            if set(evidence) != evidence_keys or evidence["completeness_state"] not in {"complete", "partial", "unavailable", "unknown"}: raise ValueError("tuple surface evidence is invalid")
+            _need_digest(evidence["surface_observation_id"], "surface_observation_id"); _need_digest(evidence["raw_evidence_digest"], "raw_evidence_digest")
+            if evidence["raw_evidence_ref"] != f"raw://{evidence['raw_evidence_digest']}": raise ValueError("tuple surface evidence reference is invalid")
+            if evidence["matching_entry"] is not None: _clean_entry(evidence["matching_entry"])
+            expected_hidden = evidence["matching_entry"]["hidden"] if evidence["matching_entry"] is not None else None
+            if item["hidden_state"][surface] != expected_hidden: raise ValueError("tuple hidden state does not match surface evidence")
+        if item["canonical_effort"] is not None and not _token(item["canonical_effort"]): raise ValueError("tuple effort is invalid")
+        if not isinstance(item["source_admitted"], bool) or item["availability_disposition"] not in {"supported", "available_for_pinned_environment", "unknown"} or item["surface_disposition"] not in {"agreed", "disagreed", "unknown"} or item["exact_treatment_readiness"] not in {"pending", "not_ready_excluded"} or item["decision"] not in {"included", "excluded"} or not all(_token(value) for value in item["source_admission_reasons"] + item["reasons"]):
+            raise ValueError("tuple decision disposition is invalid")
+        if item["decision"] == "included" and (not item["source_admitted"] or item["surface_disposition"] != "agreed"): raise ValueError("included tuple lacks source and surface admission")
+    if len({item["candidate_route_id"] for item in decisions}) != len(decisions): raise ValueError("tuple decision candidate identities must be unique")
+    return decisions
+
+
+def build_runtime_snapshot(identity, refreshes, matrix, *, supersedes=None):
+    if supersedes is not None: _need_digest(supersedes, "supersedes_snapshot_id")
+    matrix = validate_surface_matrix(matrix)
+    if matrix["client_identity_id"] != identity["client_identity_id"]: raise ValueError("freeze client identity does not match the matrix")
+    repository = validate_repository_binding(matrix["observations"][0]["repository_binding"]); work_item = validate_work_item(matrix["work_item"])
+    entries = [entry for observation in matrix["observations"] for entry in observation["entries"]]
+    raw_digest = digest([item["raw_evidence_digest"] for item in matrix["observations"]])
+    payload = {"schema_version": SCHEMA_VERSION, "surface_matrix_id": matrix["surface_matrix_id"], "client_identity_id": identity["client_identity_id"],
+               "controlled_repository_snapshot": repository, "work_item": work_item,
+               "models": sorted({item["model"] for item in entries}), "efforts": sorted({item["effort"] for item in entries}),
+               "capabilities": sorted({value for item in entries for value in item.get("capabilities", [])}),
+               "collection_window": {"started_at": min(item["started_at"] for item in matrix["observations"]), "completed_at": max(item["completed_at"] for item in matrix["observations"])},
+               "raw_evidence_digest": raw_digest, "raw_evidence_ref": f"aggregate://{raw_digest}",
+               "source_refresh_set_digest": digest(refreshes), "supersedes_snapshot_id": supersedes}
+    return {"runtime_capability_snapshot_id": digest(payload), **payload}
+
+
+def _freeze_identity_payload(freeze):
+    return {key: freeze[key] for key in freeze if key != "candidate_freeze_id"}
+
+
+def build_freeze(identity, refreshes, matrix, decisions, published_at, *, manifest, supersedes=None, supersedes_snapshot=None):
+    identity = build_client_identity(identity); matrix = validate_surface_matrix(matrix); decisions = validate_tuple_decisions(decisions)
+    if not _utc_timestamp(published_at): raise ValueError("publication timestamp must be RFC3339 UTC")
+    if supersedes is not None: _need_digest(supersedes, "supersedes_candidate_freeze_id")
+    if len(refreshes) != 22 or len({item.get("official_source_ledger_id") for item in refreshes}) != 22:
+        raise ValueError("freeze requires all 22 source refreshes")
+    refresh_validation = validate_source_refreshes(manifest, refreshes); sanitized_refreshes = refresh_validation["sanitized_refreshes"]
+    rebuilt, expected = evaluate_surface_matrix(matrix["observations"], candidate_tuples_from_manifest(manifest, refreshes), aliases=matrix["normalization_map"], expected_integrity_digest=matrix["aggregate_integrity_digest"])
+    if rebuilt["surface_matrix_id"] != matrix["surface_matrix_id"] or canonical_bytes(expected) != canonical_bytes(decisions):
+        raise ValueError("tuple decisions do not match manifest-backed matrix evaluation")
+    source_digest, telemetry = refresh_validation["digest"], digest({"status": "pending_treatment_increment"})
+    snapshot = build_runtime_snapshot(identity, sanitized_refreshes, matrix, supersedes=supersedes_snapshot)
+    decisions = _BoundDecisionSet([{**item, "runtime_capability_snapshot_id": snapshot["runtime_capability_snapshot_id"]} for item in expected]); validate_tuple_decisions(decisions, require_snapshot=True)
+    tuple_digest = digest(decisions); manifest_binding = {"schema_version": manifest["schema_version"], "snapshot_id": manifest["snapshot"]["snapshot_id"], "manifest_digest": digest(manifest)}
+    included = [item["candidate_route_id"] for item in decisions if item["decision"] == "included"]
+    excluded = [{"candidate_route_id": item["candidate_route_id"], "reasons": item["reasons"]} for item in decisions if item["decision"] == "excluded"]
+    result = {"schema_version": SCHEMA_VERSION, "source_manifest_binding": manifest_binding, "client_identity": identity, "client_identity_id": identity["client_identity_id"],
+            "official_source_refreshes": sanitized_refreshes, "surface_matrix": matrix, "runtime_capability_snapshot": snapshot,
+            "runtime_capability_snapshot_id": snapshot["runtime_capability_snapshot_id"], "telemetry_profile_id": telemetry,
+            "source_refresh_set_digest": source_digest, "current_ledger_digest": source_digest, "surface_matrix_id": matrix["surface_matrix_id"],
+            "surface_matrix_digest": matrix["surface_matrix_id"], "tuple_decision_digest": tuple_digest,
+            "included_candidate_route_ids": included, "excluded_candidates": excluded,
+            "tuple_decisions": decisions, "approved_canary_executors": list(APPROVED_CANARY_EXECUTORS), "canary_results": [], "published_at": published_at,
+            "supersedes_candidate_freeze_id": supersedes}
+    result["candidate_freeze_id"] = digest(_freeze_identity_payload(result))
+    return validate_freeze(result, manifest)
+
+
+def validate_freeze(freeze, manifest):
+    keys = {"schema_version", "candidate_freeze_id", "source_manifest_binding", "client_identity", "client_identity_id", "official_source_refreshes", "source_refresh_set_digest", "surface_matrix", "surface_matrix_id", "runtime_capability_snapshot", "runtime_capability_snapshot_id", "telemetry_profile_id", "current_ledger_digest", "surface_matrix_digest", "tuple_decision_digest", "included_candidate_route_ids", "excluded_candidates", "tuple_decisions", "approved_canary_executors", "canary_results", "published_at", "supersedes_candidate_freeze_id"}
+    if not isinstance(freeze, dict) or set(freeze) != keys or freeze.get("schema_version") != SCHEMA_VERSION: raise ValueError("freeze must use the closed v1 shape")
+    validate_manifest(manifest); identity = build_client_identity(freeze["client_identity"])
+    if freeze["client_identity_id"] != identity["client_identity_id"]: raise ValueError("freeze client identity fields disagree")
+    expected_manifest = {"schema_version": manifest["schema_version"], "snapshot_id": manifest["snapshot"]["snapshot_id"], "manifest_digest": digest(manifest)}
+    if freeze["source_manifest_binding"] != expected_manifest: raise ValueError("freeze manifest binding is not canonical")
+    refresh_validation = validate_published_source_refreshes(manifest, freeze["official_source_refreshes"]); matrix = validate_surface_matrix(freeze["surface_matrix"])
+    if freeze["source_refresh_set_digest"] != refresh_validation["digest"] or freeze["current_ledger_digest"] != refresh_validation["digest"]: raise ValueError("freeze source ledger digests disagree")
+    if freeze["surface_matrix_id"] != matrix["surface_matrix_id"] or freeze["surface_matrix_digest"] != matrix["surface_matrix_id"]: raise ValueError("freeze surface matrix fields disagree")
+    snapshot = freeze["runtime_capability_snapshot"]; expected_snapshot = build_runtime_snapshot(identity, freeze["official_source_refreshes"], matrix, supersedes=snapshot.get("supersedes_snapshot_id"))
+    if snapshot != expected_snapshot or freeze["runtime_capability_snapshot_id"] != expected_snapshot["runtime_capability_snapshot_id"]: raise ValueError("freeze runtime snapshot fields disagree")
+    rebuilt_matrix, expected_decisions = evaluate_surface_matrix(matrix["observations"], candidate_tuples_from_published(manifest, freeze["official_source_refreshes"]), aliases=matrix["normalization_map"], expected_integrity_digest=matrix["aggregate_integrity_digest"])
+    if rebuilt_matrix["surface_matrix_id"] != matrix["surface_matrix_id"]: raise ValueError("published surface matrix cannot be rebuilt")
+    expected_decisions = _BoundDecisionSet([{**item, "runtime_capability_snapshot_id": expected_snapshot["runtime_capability_snapshot_id"]} for item in expected_decisions])
+    validate_tuple_decisions(expected_decisions, require_snapshot=True)
+    if canonical_bytes(freeze["tuple_decisions"]) != canonical_bytes(expected_decisions): raise ValueError("published tuple decisions cannot be rebuilt")
+    route_ids = {item["candidate_route_id"] for item in expected_decisions}; manifest_route_ids = {item["candidate_route_id"] for item in manifest["candidate_routes"]}
+    if not manifest_route_ids <= route_ids or freeze["tuple_decision_digest"] != digest(expected_decisions): raise ValueError("freeze tuple authority is incomplete")
+    included = [item["candidate_route_id"] for item in expected_decisions if item["decision"] == "included"]
+    excluded = [{"candidate_route_id": item["candidate_route_id"], "reasons": item["reasons"]} for item in expected_decisions if item["decision"] == "excluded"]
+    if freeze["included_candidate_route_ids"] != included or freeze["excluded_candidates"] != excluded: raise ValueError("freeze derived candidate lists disagree")
+    for field in ("candidate_freeze_id", "telemetry_profile_id"): _need_digest(freeze[field], field)
+    if freeze["supersedes_candidate_freeze_id"] is not None: _need_digest(freeze["supersedes_candidate_freeze_id"], "supersedes_candidate_freeze_id")
+    if not _utc_timestamp(freeze["published_at"]): raise ValueError("publication timestamp must be RFC3339 UTC")
+    canonical_approvals = list(_validated_canary_approvals(APPROVED_CANARY_EXECUTORS))
+    if freeze["approved_canary_executors"] != canonical_approvals:
+        raise ValueError("published canary approvals do not match the repository-owned allowlist")
+    if not canonical_approvals and freeze["canary_results"]:
+        raise ValueError("published canary results require a repository-approved executor")
+    validated_canaries = validate_canary_results(freeze["canary_results"], APPROVED_CANARY_EXECUTORS)
+    if validated_canaries != freeze["canary_results"]: raise ValueError("published canary dispositions are not validated")
+    for result in validated_canaries:
+        matches = [item for item in expected_decisions if item["canonical_model_id"] == result["canonical_model_id"] and item["canonical_effort"] == result["canonical_effort"]]
+        if result["snapshot_id"] != expected_snapshot["runtime_capability_snapshot_id"] or len(matches) != 1 or not matches[0]["source_admitted"]:
+            raise ValueError("published canary is not bound to one source-admitted snapshot tuple")
+    if freeze["candidate_freeze_id"] != digest(_freeze_identity_payload(freeze)): raise ValueError("candidate freeze identity does not bind its authoritative payload")
+    return freeze
+
+
+def _read(path):
+    source = Path(path)
+    if not source.is_file() or source.stat().st_size > PRIVATE_REFRESH_MAX_BYTES: raise ValueError("JSON input is missing or exceeds the bounded size")
+    return json.loads(source.read_text())
+
+
+def _write(path, value, *, private=False):
+    payload = canonical_bytes(value) + b"\n"
+    if private:
+        if len(payload) > PRIVATE_REFRESH_MAX_BYTES: raise ValueError("private refresh output exceeds the bounded size")
+        descriptor, temporary = tempfile.mkstemp(prefix=".g56r-002-", dir=Path(path).parent)
+        try:
+            os.fchmod(descriptor, 0o600)
+            with os.fdopen(descriptor, "wb") as stream:
+                stream.write(payload); stream.flush(); os.fsync(stream.fileno())
+            os.replace(temporary, path)
+        except Exception:
+            try: os.close(descriptor)
+            except OSError: pass
+            try: os.unlink(temporary)
+            except OSError: pass
+            raise
+        return
+    Path(path).write_bytes(payload)
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser()
+    sub = parser.add_subparsers(dest="command", required=True)
+    refresh = sub.add_parser("refresh-sources"); refresh.add_argument("--manifest", required=True); refresh.add_argument("--captured-refresh", required=True); refresh.add_argument("--output", required=True)
+    identify = sub.add_parser("identify-client"); identify.add_argument("--reported-version", required=True); group = identify.add_mutually_exclusive_group(required=True); group.add_argument("--build-id"); group.add_argument("--executable"); identify.add_argument("--distribution", required=True); identify.add_argument("--output", required=True)
+    collect = sub.add_parser("collect"); collect.add_argument("--surface", choices=SURFACES, required=True); collect.add_argument("--client-identity", required=True); collect.add_argument("--raw-evidence-root", required=True); collect.add_argument("--work-item-kind", choices=("task", "fixture", "objective"), required=True); collect.add_argument("--work-item-id", required=True); collect.add_argument("--output", required=True)
+    canary = sub.add_parser("canary"); canary.add_argument("--snapshot", required=True); canary.add_argument("--model", required=True); canary.add_argument("--effort", required=True); canary.add_argument("--executor-result", required=True); canary.add_argument("--raw-evidence-root", required=True); canary.add_argument("--output", required=True)
+    freeze = sub.add_parser("freeze"); freeze.add_argument("--manifest", required=True); freeze.add_argument("--source-refresh", required=True); freeze.add_argument("--client-identity", required=True); freeze.add_argument("--app-server", required=True); freeze.add_argument("--cli", required=True); freeze.add_argument("--interactive-picker", required=True); freeze.add_argument("--aliases"); freeze.add_argument("--supersedes-candidate-freeze-id"); freeze.add_argument("--supersedes-snapshot-id"); freeze.add_argument("--published-at"); freeze.add_argument("--output", required=True)
+    published = sub.add_parser("validate-freeze"); published.add_argument("--manifest", required=True); published.add_argument("--freeze", required=True)
+    args, repo = parser.parse_args(argv), Path(__file__).resolve().parents[4]
+    now = lambda: datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    if args.command == "refresh-sources":
+        capture = validate_content_addressed_private_file(args.captured_refresh, repo, "captured refresh")
+        output = validate_private_external_file(args.output, repo, "normalized refresh output", output=True)
+        _write(output, normalize_source_refreshes(_read(args.manifest), _read(capture)), private=True); return 0
+    if args.command == "identify-client":
+        kind, identifier = ("vendor_build_id", args.build_id) if args.build_id else ("executable_sha256", digest(Path(args.executable).read_bytes()))
+        _write(args.output, build_client_identity({"reported_version": args.reported_version, "build_identifier_kind": kind, "build_identifier": identifier, "distribution": args.distribution})); return 0
+    if args.command == "collect":
+        validate_raw_evidence_root(args.raw_evidence_root, repo); identity = build_client_identity(_read(args.client_identity))
+        binding = repository_binding_from_checkout(repo); work_item = validate_work_item({"kind": args.work_item_kind, "id": args.work_item_id})
+        captured_at = now(); raw_digest, _ = materialize_unknown_capture(args.raw_evidence_root, repo, args.surface, identity["client_identity_id"], binding, work_item, captured_at)
+        _write(args.output, unknown_observation(args.surface, identity["client_identity_id"], binding, work_item, raw_evidence_digest=raw_digest, captured_at=captured_at)); return 0
+    if args.command == "canary":
+        if not APPROVED_CANARY_EXECUTORS:
+            raise ValueError("no repository-approved canary executor is available in this slice")
+        validate_raw_evidence_root(args.raw_evidence_root, repo); result_path = validate_private_external_file(args.executor_result, repo, "canary executor result"); result, snapshot = _read(result_path), _read(args.snapshot)
+        if (result.get("snapshot_id"), result.get("canonical_model_id"), result.get("canonical_effort")) != (snapshot.get("runtime_capability_snapshot_id", snapshot.get("snapshot_id")), args.model, args.effort):
+            raise ValueError("canary result does not match the requested tuple")
+        result = validate_canary_result(result); _write(args.output, result); return int(result["availability_disposition"] == "unknown")
+    if args.command == "validate-freeze":
+        validate_freeze(_read(args.freeze), _read(args.manifest)); return 0
+    source_refresh = validate_private_external_file(args.source_refresh, repo, "normalized source refresh")
+    manifest, refreshes, identity = _read(args.manifest), _read(source_refresh), build_client_identity(_read(args.client_identity)); validate_source_refreshes(manifest, refreshes)
+    tuples = candidate_tuples_from_manifest(manifest, refreshes)
+    aliases = _read(args.aliases) if args.aliases else {}
+    matrix, decisions = evaluate_surface_matrix([_read(args.app_server), _read(args.cli), _read(args.interactive_picker)], tuples, aliases=aliases)
+    _write(args.output, build_freeze(identity, refreshes, matrix, decisions, args.published_at or now(), manifest=manifest, supersedes=args.supersedes_candidate_freeze_id, supersedes_snapshot=args.supersedes_snapshot_id)); return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

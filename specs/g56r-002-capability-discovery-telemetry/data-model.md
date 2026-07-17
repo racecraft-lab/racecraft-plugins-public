@@ -48,13 +48,18 @@ join or disposition is evaluated.
 | `retrieved_at` | timestamp | Required per refresh |
 | `body_digest` | digest or null | Null only when retrieval did not yield a body |
 | `status` | enum | `confirmed_current`, `changed`, `redirected`, `inaccessible`, `withdrawn`, or `conflicting` |
+| `bounded_extracts` | array | Exact visible-text extracts with SHA-256 and normalization contract |
+| `retrieval_evidence_digest` | digest | Binds canonical URL, retrieval time, body digest, and bounded extracts |
 | `documented_facts` | array | Bounded field-level claims supported by the refreshed source |
 | `claim_bindings` | array | Current claim/route IDs affected by this record |
 | `invalidated_claim_ids` | array | Subset of bindings invalidated by this outcome |
 | `prior_record_digest` | digest | Binds the G56R-001 input without rewriting it |
 
 Invariant: an adverse refresh invalidates only bound current claims/routes.
-Historical `OSL-*` evidence is never copied into this record as current.
+Historical `OSL-*` evidence is never copied into this record as current. The
+private normalized refresh additionally retains `retrieved_body_b64` so the
+adapter can recheck the body and visible-text extracts. The published
+`OfficialSourceRefresh` strips that field.
 
 ### `ClientIdentity`
 
@@ -72,10 +77,12 @@ All surface observations in one matrix must reference the same ID.
 
 | Field | Type | Rule |
 |---|---|---|
-| `surface_observation_id` | string | Stable within the matrix |
+| `surface_observation_id` | digest | Content identity of the closed observation payload |
 | `client_identity_id` | digest | Must match the matrix |
+| `repository_binding` | object | Closed revision/tree object, tree digest, and `git-object://` evidence binding derived from the active checkout |
+| `work_item` | object | Typed `task`, `fixture`, or `objective` ID supplied at collection |
 | `surface` | enum | `app_server`, `cli`, or `interactive_picker` |
-| `collection_method_id` | string | Versioned predeclared method |
+| `collection_method_id` | enum | Closed registry: `fixture-enumeration-v1` or `unknown-observation-v1` in this slice |
 | `method_inputs_digest` | digest | Fixed inputs/configuration |
 | `started_at` / `completed_at` | timestamp | Ordered collection window |
 | `completeness_state` | enum | `complete`, `partial`, `unavailable`, or `unknown` |
@@ -88,6 +95,12 @@ All surface observations in one matrix must reference the same ID.
 App-server observations record initialization, `model/list(includeHidden:
 true)`, and provider-capability method outcomes separately. CLI/picker partial or
 irreproducible collection is unknown; missing values are not inferred.
+Neither registered method can authorize inclusion: fixture enumeration is
+synthetic and unknown observation is non-authoritative. The live collection
+allowlist is empty in this slice. A live unknown observation's
+`raw://sha256:<digest>` reference maps to `<raw_evidence_root>/<digest>.json`;
+the collector writes that sanitized attempt record with mode `0600` and
+verifies the exact stored bytes before publishing the observation.
 
 ### `SurfaceMatrix`
 
@@ -96,11 +109,13 @@ irreproducible collection is unknown; missing values are not inferred.
 | `surface_matrix_id` | digest | Content digest of the aggregate |
 | `schema_version` | string | Required and supported |
 | `client_identity_id` | digest | Shared by all observations |
-| `surface_observation_ids` | object | Exactly one key per required surface |
-| `normalization_map_id` | digest | Versioned one-to-one mappings only |
-| `normalized_tuples` | array | Canonical model/effort keys plus per-surface evidence |
+| `repository_binding_id` | digest | Shared by all three observation repository bindings |
+| `work_item` | object | Shared typed work-item binding |
+| `observations` | array | Exactly one observation for each required surface in canonical surface order |
+| `normalization_map` | object | Pinned-build aliases backed by an exact raw-label/machine-ID entry on the named authority surface |
+| `normalization_map_id` | digest | Content digest of the one-to-one alias map |
 | `disagreements` | array | Lossless conflict records |
-| `aggregate_integrity_digest` | digest | Covers all referenced observation and mapping digests |
+| `aggregate_integrity_digest` | digest | Covers all canonical observation objects and the normalization-map ID |
 | `validity` | enum | `valid` or `invalid` |
 | `invalidity_reasons` | array | Closed aggregate-level reasons |
 
@@ -123,8 +138,8 @@ surface raw values and evidence references, proposed normalized key,
 | `runtime_capability_snapshot_id` | digest | Stable content-addressed ID |
 | `surface_matrix_id` | digest | Required parent |
 | `client_identity_id` | digest | Must match matrix |
-| `controlled_repository_snapshot` | string | Exact repository revision/tree binding |
-| `task_fixture_or_objective_id` | string | Controlled input identity |
+| `controlled_repository_snapshot` | object | Exact repository-binding ID, revision, tree object/digest, and content-addressed evidence reference derived from the observations |
+| `work_item` | object | Exact shared typed work-item binding derived from the observations |
 | `models` / `efforts` / `capabilities` | arrays | Surface-keyed observations, never candidate authority |
 | `collection_window` | object | Start/end timestamps |
 | `raw_evidence_digest` / `raw_evidence_ref` | digest/string | External raw capture binding |
@@ -135,13 +150,14 @@ surface raw values and evidence references, proposed normalized key,
 
 | Field | Type | Rule |
 |---|---|---|
-| `canary_key` | tuple | Snapshot ID, canonical model ID, canonical effort |
+| `snapshot_id` | digest | Runtime snapshot parent |
+| `canonical_model_id` / `canonical_effort` | strings | Together with snapshot ID, the one-attempt canary key |
 | `attempt_index` | integer | Must be exactly `1` |
 | `timeout_seconds` | integer | Must equal `30` |
 | `combined_output_cap_bytes` | integer | Must equal `65536` |
 | `executor_contract_id` | digest | Approved platform executor contract that enforced output and process-tree bounds |
 | `implementation_digest` | digest | Must equal the matching approval record's implementation digest |
-| `executor_result_digest` | digest | Exact external result-envelope binding |
+| `executor_result_digest` | digest | Exact closed external result-envelope binding, excluding only this digest and the derived availability disposition |
 | `contract_version` | string | Must equal `1.0.0` |
 | `timeout_enforced` / `output_cap_enforced` | booleans | Both must be true |
 | `process_tree_termination_state` | enum | `not_needed`, `completed`, or `failed`; failed remains unknown |
@@ -181,21 +197,31 @@ only narrow this set.
 
 | Field | Type | Rule |
 |---|---|---|
-| `candidate_freeze_id` | digest | Hash of all identity inputs and tuple decisions |
+| `candidate_freeze_id` | digest | Hash of the complete published payload except this field |
 | `schema_version` | string | Required |
+| `source_manifest_binding` | object | Canonical G56R-001 manifest schema, snapshot ID, and whole-manifest digest |
+| `client_identity` | object | Embedded closed pinned-build identity |
 | `client_identity_id` | digest | Required |
-| `current_ledger_digest` | digest | All 22 refresh outcomes |
-| `surface_matrix_digest` | digest | Required |
+| `official_source_refreshes` | array | All 22 sanitized, body-free published refresh outcomes |
+| `source_refresh_set_digest` / `current_ledger_digest` | digests | Equal digest over all 22 refresh outcomes |
+| `surface_matrix` | object | Embedded validated matrix |
+| `surface_matrix_id` / `surface_matrix_digest` | digests | Both equal the embedded matrix ID |
 | `tuple_decision_digest` | digest | Complete ordered included/excluded set |
+| `tuple_decisions` | array | Complete manifest-backed decision records with runtime snapshot binding |
+| `runtime_capability_snapshot` | object | Embedded rebuilt runtime snapshot |
 | `runtime_capability_snapshot_id` | digest | Required |
 | `telemetry_profile_id` | digest | Required before G56R-003 handoff |
 | `included_candidate_route_ids` | array | May be empty; never inferred |
-| `excluded_candidates` | array | Every considered tuple and explicit reasons |
+| `excluded_candidates` | array | Every excluded tuple and its explicit reasons |
+| `approved_canary_executors` / `canary_results` | arrays | Closed approval and replay-safe result records; both empty in the first freeze |
 | `published_at` | timestamp | Required |
 | `supersedes_candidate_freeze_id` | string or null | Successor only; prior freeze is immutable |
 
-Any source, build, evidence, normalization, telemetry, or disposition change
-must produce a successor ID.
+`candidate_freeze_id` hashes the complete published object except that ID
+itself. Validation rebuilds the manifest binding, source refresh, matrix,
+runtime snapshot, tuple decisions, derived candidate lists, canary state, and
+whole-freeze identity. Any source, build, evidence, normalization, telemetry,
+or disposition change must produce a successor ID.
 
 ## Telemetry and Treatment Records
 
