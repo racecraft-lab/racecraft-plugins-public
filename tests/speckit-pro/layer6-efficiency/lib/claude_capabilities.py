@@ -815,18 +815,109 @@ def dispatch_equivalence_caveat(surface: str) -> str:
 def classify_unavailable_outcome(
     result: ProbeInvocationResult, *, requested_id: str, observed_model_id: str | None
 ) -> str:
-    """Classify the unavailable-model outcome among the documented paths (R4/R12).
+    """Classify the ``print_model`` unavailable-model outcome among the documented
+    paths (R4/R12).
 
-    A non-zero exit carrying an error body ⇒ ``hard_rejection``; a zero exit whose
-    observed model differs from the requested unavailable ID ⇒ ``soft_remap``;
-    otherwise ``undetermined`` (no availability claim derives from it — CAP-Q5
-    stays open).
+    Reads the DIRECT ``-p --model <unavailable-id>`` result, whose ``modelUsage``
+    is the requested dispatch's own result: a non-zero exit carrying an error body
+    ⇒ ``hard_rejection``; a zero exit whose observed model differs from the
+    requested unavailable ID ⇒ ``soft_remap``; otherwise ``undetermined`` (no
+    availability claim derives from it — CAP-Q5 stays open).
+
+    This is NOT valid on the ``subagent_frontmatter`` surface, whose top-level
+    result is the PARENT session that narrated the dispatch (its ``modelUsage`` is
+    the parent's model, not the subagent's) — use
+    :func:`classify_subagent_unavailable_outcome` there.
     """
     if result.return_code not in (0, None) and (result.stdout or result.stderr):
         return "hard_rejection"
     if result.return_code == 0 and observed_model_id is not None and observed_model_id != requested_id:
         return "soft_remap"
     return "undetermined"
+
+
+# Documented access/existence error phrases that, co-occurring with the
+# requested-unavailable model id in a narrated result, evidence a terminal
+# model-access rejection at the subagent boundary — the parent `-p` session
+# narrates the subagent's spawn-time failure while itself exiting 0 on the
+# parent's own model. Kept deterministic; the subagent-surface reading is labeled
+# inference, not certified fact (FR-027).
+_MODEL_ACCESS_ERROR_MARKERS = (
+    "doesn't exist",
+    "does not exist",
+    "isn't accessible",
+    "is not accessible",
+    "not accessible",
+    "may not have access",
+    "don't have access",
+    "do not have access",
+    "no access to it",
+    "api error",
+    "model-access error",
+    "model access error",
+)
+
+
+def _signals_terminal_model_access_error(
+    payload: dict[str, Any] | None, result: ProbeInvocationResult, requested_id: str
+) -> bool:
+    """True when the result evidences a terminal model-access rejection of
+    ``requested_id`` (the requested-unavailable model never ran).
+
+    Three deterministic signals: a non-zero exit carrying an error body (a
+    print_model-style direct rejection, or a parent that itself exits non-zero
+    with a body); a structured top-level ``is_error``/``api_error_status``; or a
+    narrated model-access error — the requested-unavailable id co-occurring with a
+    documented access/existence error phrase in the result text (the subagent
+    parent narrates the subagent's spawn-time failure while exiting 0).
+    """
+    if result.return_code not in (0, None) and (result.stdout or result.stderr):
+        return True
+    if isinstance(payload, dict):
+        if payload.get("is_error") is True:
+            return True
+        if payload.get("api_error_status") not in (None, "", False):
+            return True
+    text = ((result.stdout or "") + "\n" + (result.stderr or "")).lower()
+    return requested_id.lower() in text and any(
+        marker in text for marker in _MODEL_ACCESS_ERROR_MARKERS
+    )
+
+
+def classify_subagent_unavailable_outcome(
+    result: ProbeInvocationResult,
+    *,
+    requested_id: str,
+    payload: dict[str, Any] | None = None,
+    subagent_observed_model_id: str | None = None,
+) -> tuple[str, str | None]:
+    """Classify the ``subagent_frontmatter`` unavailable outcome (labeled inference).
+
+    Returns ``(observed_outcome, observed_model_id)``.
+
+    On this surface the top-level ``--output-format json`` result describes the
+    PARENT ``-p`` session that dispatched the subagent via an ``@agent-<name>``
+    mention and narrated the outcome; its ``modelUsage`` is the PARENT's model and
+    MUST NOT be read as the subagent's observed model (FR-026/FR-027; the false
+    remap this once produced is root-cause LOW-2). So:
+
+    * a terminal model-access error for the requested-unavailable id at the
+      subagent boundary means the subagent never ran ⇒ ``("hard_rejection", None)``;
+    * a genuine substitution is asserted ONLY from the subagent's OWN observed
+      model (never the parent's top-level ``modelUsage``); when that
+      subagent-scoped model is present and differs from the requested id ⇒
+      ``("soft_remap", <subagent model>)``;
+    * otherwise the parent narration does not determine the subagent outcome ⇒
+      ``("undetermined", None)`` (no availability claim derives from it; CAP-Q5
+      stays open).
+    """
+    if payload is None:
+        payload = parse_result_payload(result.stdout)
+    if _signals_terminal_model_access_error(payload, result, requested_id):
+        return "hard_rejection", None
+    if subagent_observed_model_id is not None and subagent_observed_model_id != requested_id:
+        return "soft_remap", subagent_observed_model_id
+    return "undetermined", None
 
 
 def build_unavailable_observation(
@@ -837,15 +928,31 @@ def build_unavailable_observation(
     unset_proof: dict[str, Any],
 ) -> dict[str, Any]:
     """One per-surface unavailable-model observation with the requested-vs-observed
-    cross-check and the FR-010 unset-proof (CAP-Q5, FR-009/FR-010)."""
+    cross-check and the FR-010 unset-proof (CAP-Q5, FR-009/FR-010).
+
+    The ``print_model`` surface reads the direct ``-p --model <id>`` result, whose
+    ``modelUsage`` is the requested dispatch's own result. The
+    ``subagent_frontmatter`` surface's top-level result is instead the PARENT
+    session that narrated the dispatch, so its ``modelUsage`` is the parent's model
+    and is NEVER read as the subagent's observed model (root-cause LOW-2): its
+    outcome is derived from the dispatch signal and it carries no subagent-scoped
+    observed model here, so the assemble flow records only ``hard_rejection`` or
+    ``undetermined`` — never a parent-model soft remap.
+    """
     payload = parse_result_payload(result.stdout)
-    observed = primary_model_id(payload)
+    if surface == "subagent_frontmatter":
+        observed_outcome, observed = classify_subagent_unavailable_outcome(
+            result, requested_id=requested_unavailable_model_id, payload=payload
+        )
+    else:
+        observed = primary_model_id(payload)
+        observed_outcome = classify_unavailable_outcome(
+            result, requested_id=requested_unavailable_model_id, observed_model_id=observed
+        )
     return {
         "surface": surface,
         "requested_unavailable_model_id": requested_unavailable_model_id,
-        "observed_outcome": classify_unavailable_outcome(
-            result, requested_id=requested_unavailable_model_id, observed_model_id=observed
-        ),
+        "observed_outcome": observed_outcome,
         "observed_model_id": observed,
         "unset_proof": unset_proof,
         "remap_flagged": cross_check_remap(requested_unavailable_model_id, observed),
@@ -994,6 +1101,48 @@ def build_open_gaps(models_endpoint: ModelsEndpointResult | None = None) -> list
     return gaps
 
 
+def gate_probe_run_dispositions(probe_run: ProbeRun) -> None:
+    """Enforce the three fail-closed dispositions over every probe result BEFORE a
+    snapshot is assembled or written (FR-023; spec "Malformed probe payload" /
+    "Partial probe matrix").
+
+    Each result is classified through :func:`classify_probe_disposition`:
+
+    * disposition (1) ``abort_write`` — a ``--output-format json`` payload that
+      does not parse — raises :class:`ProbeWriteAborted` so no snapshot file is
+      written or overwritten (a silently-omitted tuple would break the SC-005
+      join);
+    * disposition (2) ``abort_run`` — a transport failure with no interpretable
+      signal (a non-zero exit with no parseable error body; the driver already
+      catches timeout/network) — raises :class:`ProbeRunAborted` and is NEVER
+      recorded as "unavailable" (FR-026);
+    * disposition (3) ``record`` — any interpretable observation (including a
+      null/absent field or an undetermined outcome). A plain-text ``--print``
+      observation is always interpretable by :func:`classify_effort_acceptance`,
+      so JSON parseability is not required of it.
+    """
+    for planned, result in probe_run.results:
+        if result.output_mode == OUTPUT_MODE_JSON:
+            payload_parseable = parse_result_payload(result.stdout) is not None
+        else:
+            payload_parseable = True
+        disposition = classify_probe_disposition(
+            result, payload_parseable=payload_parseable, observation_schema_valid=True
+        )
+        if disposition == DISPOSITION_ABORT_RUN:
+            raise ProbeRunAborted(
+                f"probe invocation {planned.purpose!r} is a transport failure with no "
+                "interpretable platform signal; run aborted, nothing committed — no "
+                "automatic retries (FR-003/FR-026)."
+            )
+        if disposition == DISPOSITION_ABORT_WRITE:
+            raise ProbeWriteAborted(
+                f"probe invocation {planned.purpose!r} returned an unparseable "
+                "`--output-format json` payload; snapshot write aborted, nothing "
+                "committed (fail-closed, FR-023/SC-004)."
+            )
+
+
 def assemble_runtime_capability_snapshot(
     probe_run: ProbeRun,
     *,
@@ -1009,7 +1158,13 @@ def assemble_runtime_capability_snapshot(
     run plus the environment-derived facts (CAP-Q1..Q6; FR-006..FR-014). The
     result validates against the ``runtimeCapabilitySnapshot`` ``$def`` via the
     fail-closed writer (T009's dispositions). Pure given the probe results.
+
+    Fail-closed: every probe result is first gated through the three dispositions
+    (:func:`gate_probe_run_dispositions`), so an unparseable ``--output-format
+    json`` payload aborts the write BEFORE any snapshot is built or committed —
+    it never degrades to a schema-valid null binding (FR-023).
     """
+    gate_probe_run_dispositions(probe_run)
     canaries = [(p, r) for p, r in probe_run.results if p.purpose == PURPOSE_ALIAS_CANARY]
     configs = [(p, r) for p, r in probe_run.results if p.purpose == PURPOSE_CONFIG_ACCEPTANCE]
     unavailable = [(p, r) for p, r in probe_run.results if p.purpose == PURPOSE_UNAVAILABLE_PROBE]
@@ -1248,12 +1403,14 @@ __all__ = (
     "classify_effort_acceptance",
     "dispatch_equivalence_caveat",
     "classify_unavailable_outcome",
+    "classify_subagent_unavailable_outcome",
     "build_unavailable_observation",
     "ModelsEndpointResult",
     "corroborate_models_endpoint",
     "build_snapshot_id",
     "build_capability_answers",
     "build_open_gaps",
+    "gate_probe_run_dispositions",
     "assemble_runtime_capability_snapshot",
     "write_snapshot_fail_closed",
     "ALIAS_CAPABILITY_QUESTIONS",

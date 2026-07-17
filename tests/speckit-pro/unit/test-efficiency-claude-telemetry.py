@@ -1000,6 +1000,96 @@ def _run_bounded_matrix_with_fake_invoker(cap):
     return matrix, cap.run_bounded_probe_matrix(plan, invoke, timeout_seconds=30.0)
 
 
+def _run_bounded_matrix_with_one_unparseable_canary(cap, *, broken_alias="opus"):
+    """Drive the REAL bounded matrix but return an UNPARSEABLE ``--output-format
+    json`` payload (a truncated JSON body) for one alias canary. Every other
+    invocation is a clean parseable observation, so the ONLY fail-closed trigger
+    is the malformed JSON payload (spec "Malformed probe payload"). Returns
+    ``(matrix, ProbeRun)`` — the driver records it because a syntactically-broken
+    payload is not a transport failure."""
+    matrix = cap.build_probe_matrix()
+    plan = cap.plan_probe_invocations(matrix)
+
+    def invoke(item, *, timeout_seconds):
+        if item.purpose == cap.PURPOSE_ALIAS_CANARY:
+            if item.model_alias == broken_alias:
+                return cap.ProbeInvocationResult(
+                    return_code=0,
+                    stdout='{"type":"result","modelUsage":{',  # truncated => json.loads raises
+                    output_mode=cap.OUTPUT_MODE_JSON,
+                )
+            return cap.ProbeInvocationResult(
+                return_code=0,
+                stdout=_canary_stdout(_EXPECTED_DATED_IDS[item.model_alias]),
+                output_mode=cap.OUTPUT_MODE_JSON,
+            )
+        if item.purpose == cap.PURPOSE_CONFIG_ACCEPTANCE:
+            return cap.ProbeInvocationResult(
+                return_code=0,
+                stdout=f"effort {item.effort_requested} applied to {item.model_alias}",
+                output_mode=cap.OUTPUT_MODE_PLAIN_TEXT,
+            )
+        return cap.ProbeInvocationResult(
+            return_code=0,
+            stdout=_canary_stdout("claude-opus-4-8"),
+            output_mode=cap.OUTPUT_MODE_JSON,
+        )
+
+    return matrix, cap.run_bounded_probe_matrix(plan, invoke, timeout_seconds=30.0)
+
+
+def _subagent_parent_narrated_reject_stdout(
+    requested_id=_UNAVAILABLE_PROBE_ID, parent_model="claude-fable-5"
+):
+    """A ``subagent_frontmatter`` ``--output-format json`` payload in which the
+    PARENT ``-p`` session (running on ``parent_model``) SUCCEEDED and merely
+    NARRATES the dispatched subagent's terminal model-access failure for
+    ``requested_id``. Mirrors the committed CAR-002 subagent evidence: the
+    top-level ``modelUsage`` is the PARENT's model and must NOT be read as the
+    subagent's observed model (FR-026 / root-cause LOW-2)."""
+    return json.dumps(
+        {
+            "type": "result",
+            "subtype": "success",
+            "is_error": False,
+            "api_error_status": None,
+            "result": (
+                "The probe agent could not run: it terminated immediately with an API "
+                f"error - its configured model `{requested_id}` doesn't exist or isn't "
+                "accessible, so no reply was produced. Dispatching a subagent pinned to an "
+                "unavailable model fails at spawn time with a terminal model-access error "
+                "rather than falling back to another model."
+            ),
+            "modelUsage": {
+                parent_model: {"inputTokens": 4, "outputTokens": 83, "contextWindow": 1000000}
+            },
+            "num_turns": 2,
+            "terminal_reason": "completed",
+        }
+    )
+
+
+def _subagent_parent_narrated_success_stdout(parent_model="claude-fable-5"):
+    """A ``subagent_frontmatter`` payload where the PARENT session succeeded and
+    narrates a non-error outcome that does NOT name the subagent's model — the
+    subagent outcome is NOT derivable from the parent narration (undetermined).
+    The top-level ``modelUsage`` is again the PARENT's model."""
+    return json.dumps(
+        {
+            "type": "result",
+            "subtype": "success",
+            "is_error": False,
+            "api_error_status": None,
+            "result": "The dispatched agent replied: ok.",
+            "modelUsage": {
+                parent_model: {"inputTokens": 4, "outputTokens": 5, "contextWindow": 1000000}
+            },
+            "num_turns": 2,
+            "terminal_reason": "completed",
+        }
+    )
+
+
 def _argv_aware_fake_run(argv, **kwargs):
     """An offline stand-in for ``subprocess.run`` that returns a canned
     ``CompletedProcess`` shaped by the probe command it is handed — so ``main()``
@@ -1321,6 +1411,108 @@ class ClaudeCapabilitiesLiveBoundaryTests(unittest.TestCase):
         # The subagent surface must state the file-agent-vs-production-Agent-tool inference (R12).
         self.assertIn("Agent", hard["dispatch_equivalence_caveat"])
 
+    # -- MEDIUM-2 (root cause LOW-2): the subagent surface must NEVER read the
+    # PARENT session's top-level modelUsage as the subagent's observed model. On
+    # the committed evidence the parent ran on claude-fable-5 and merely NARRATED
+    # the subagent's terminal model-access rejection of claude-opus-3-0; the old
+    # code recorded soft_remap / claude-fable-5 / remap_flagged=true — a false
+    # remap/availability signal (FR-026; "Interfering configuration fires despite
+    # unset-proof"), on an answer CAR-003..CAR-011 consume.
+
+    def test_subagent_surface_hard_rejects_parent_narrated_model_access_error(self) -> None:
+        cap = self.require_capabilities()
+        proof = self._clean_unset_proof(cap)
+        obs = cap.build_unavailable_observation(
+            surface="subagent_frontmatter",
+            requested_unavailable_model_id=_UNAVAILABLE_PROBE_ID,
+            result=cap.ProbeInvocationResult(
+                return_code=0,
+                stdout=_subagent_parent_narrated_reject_stdout(parent_model="claude-fable-5"),
+                output_mode=cap.OUTPUT_MODE_JSON,
+            ),
+            unset_proof=proof,
+        )
+        # The subagent never ran => a HARD rejection at the subagent boundary.
+        self.assertEqual(obs["observed_outcome"], "hard_rejection")
+        self.assertIsNone(obs["observed_model_id"])
+        self.assertFalse(obs["remap_flagged"])
+        # Prove the OLD bug is caught: never the parent's model, never soft_remap.
+        self.assertNotEqual(obs["observed_outcome"], "soft_remap")
+        self.assertNotEqual(obs["observed_model_id"], "claude-fable-5")
+
+    def test_subagent_surface_undetermined_when_outcome_not_derivable(self) -> None:
+        cap = self.require_capabilities()
+        proof = self._clean_unset_proof(cap)
+        obs = cap.build_unavailable_observation(
+            surface="subagent_frontmatter",
+            requested_unavailable_model_id=_UNAVAILABLE_PROBE_ID,
+            result=cap.ProbeInvocationResult(
+                return_code=0,
+                stdout=_subagent_parent_narrated_success_stdout(parent_model="claude-fable-5"),
+                output_mode=cap.OUTPUT_MODE_JSON,
+            ),
+            unset_proof=proof,
+        )
+        # Parent success with no terminal error and no subagent-scoped model signal
+        # => undetermined; the parent's fable model is NEVER borrowed.
+        self.assertEqual(obs["observed_outcome"], "undetermined")
+        self.assertIsNone(obs["observed_model_id"])
+        self.assertFalse(obs["remap_flagged"])
+        self.assertNotEqual(obs["observed_model_id"], "claude-fable-5")
+
+    def test_classify_subagent_unavailable_outcome_three_documented_paths(self) -> None:
+        cap = self.require_capabilities()
+        # (a) hard rejection: parent narrates a terminal model-access error and the
+        # subagent never ran => hard_rejection / null, never the parent model.
+        hard = cap.classify_subagent_unavailable_outcome(
+            cap.ProbeInvocationResult(
+                return_code=0,
+                stdout=_subagent_parent_narrated_reject_stdout(parent_model="claude-fable-5"),
+                output_mode=cap.OUTPUT_MODE_JSON,
+            ),
+            requested_id=_UNAVAILABLE_PROBE_ID,
+        )
+        self.assertEqual(hard, ("hard_rejection", None))
+
+        # (b) genuine substitution: ONLY the subagent's OWN observed model (never
+        # the parent's top-level modelUsage) may establish a soft remap.
+        soft = cap.classify_subagent_unavailable_outcome(
+            cap.ProbeInvocationResult(
+                return_code=0,
+                stdout=_subagent_parent_narrated_success_stdout(parent_model="claude-fable-5"),
+                output_mode=cap.OUTPUT_MODE_JSON,
+            ),
+            requested_id=_UNAVAILABLE_PROBE_ID,
+            subagent_observed_model_id="claude-sonnet-5",
+        )
+        self.assertEqual(soft, ("soft_remap", "claude-sonnet-5"))
+        self.assertNotEqual(soft[1], "claude-fable-5")  # never the parent's model
+
+        # (c) undetermined: parent success, no terminal error, no subagent-scoped
+        # model => the parent narration does not determine the subagent outcome.
+        undet = cap.classify_subagent_unavailable_outcome(
+            cap.ProbeInvocationResult(
+                return_code=0,
+                stdout=_subagent_parent_narrated_success_stdout(parent_model="claude-fable-5"),
+                output_mode=cap.OUTPUT_MODE_JSON,
+            ),
+            requested_id=_UNAVAILABLE_PROBE_ID,
+        )
+        self.assertEqual(undet, ("undetermined", None))
+
+        # A non-zero parent exit carrying an error body is also a hard rejection
+        # (keeps the print_model-style direct-rejection reading; R4/R12).
+        hard_nonzero = cap.classify_subagent_unavailable_outcome(
+            cap.ProbeInvocationResult(
+                return_code=1,
+                stdout="",
+                stderr="error: model not found",
+                output_mode=cap.OUTPUT_MODE_JSON,
+            ),
+            requested_id=_UNAVAILABLE_PROBE_ID,
+        )
+        self.assertEqual(hard_nonzero, ("hard_rejection", None))
+
     # -- T012: models endpoint corroboration (api_key only; injected fetch) ---
 
     def test_corroborate_models_endpoint_only_hits_network_in_api_key_mode(self) -> None:
@@ -1437,6 +1629,70 @@ class ClaudeCapabilitiesLiveBoundaryTests(unittest.TestCase):
             with self.assertRaises(cap.ProbeWriteAborted):
                 cap.write_snapshot_fail_closed(broken, bad)
             self.assertFalse(bad.exists())  # fail-closed: nothing committed (SC-004)
+
+    # -- MEDIUM-1: the fail-closed dispositions gate the assemble/write path. An
+    # UNPARSEABLE `--output-format json` payload is disposition (1) abort_write:
+    # the snapshot write aborts BEFORE any file is written or overwritten (spec
+    # "Malformed probe payload" / "Partial probe matrix" (1); FR-023). The old
+    # code routed it through parse->None->null binding (schema-valid) and wrote it.
+
+    def test_assemble_aborts_write_on_unparseable_json_payload_writes_no_file(self) -> None:
+        cap = self.require_capabilities()
+        _, bad_run = _run_bounded_matrix_with_one_unparseable_canary(cap)
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "snap.json"
+            with self.assertRaises(cap.ProbeWriteAborted):
+                snapshot = cap.assemble_runtime_capability_snapshot(
+                    bad_run,
+                    captured_at_utc="2026-07-16T12:00:00Z",
+                    version=1,
+                    pinned_client_version="2.19.3",
+                    authentication_mode="subscription",
+                    unset_proof=self._clean_unset_proof(cap),
+                    unavailable_model_id=_UNAVAILABLE_PROBE_ID,
+                )
+                cap.write_snapshot_fail_closed(snapshot, out)
+            self.assertFalse(out.exists())  # fail-closed: nothing written/overwritten
+
+    def test_assemble_writes_a_valid_run_positive_control(self) -> None:
+        cap = self.require_capabilities()
+        validator = self.require_validator_module()
+        _, good_run = _run_bounded_matrix_with_fake_invoker(cap)
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "snap.json"
+            snapshot = cap.assemble_runtime_capability_snapshot(
+                good_run,
+                captured_at_utc="2026-07-16T12:00:00Z",
+                version=1,
+                pinned_client_version="2.19.3",
+                authentication_mode="subscription",
+                unset_proof=self._clean_unset_proof(cap),
+                unavailable_model_id=_UNAVAILABLE_PROBE_ID,
+            )
+            self.assertIs(validator.validate_runtime_capability_snapshot(snapshot), snapshot)
+            self.assertEqual(cap.write_snapshot_fail_closed(snapshot, out), cap.DISPOSITION_RECORD)
+            self.assertTrue(out.exists())
+
+    def test_gate_probe_run_dispositions_maps_each_disposition(self) -> None:
+        cap = self.require_capabilities()
+        planned = cap.PlannedInvocation(purpose=cap.PURPOSE_ALIAS_CANARY, model_alias="opus")
+        bad_run = cap.ProbeRun(
+            metadata={},
+            results=(
+                (
+                    planned,
+                    cap.ProbeInvocationResult(
+                        return_code=0, stdout="not valid json {", output_mode=cap.OUTPUT_MODE_JSON
+                    ),
+                ),
+            ),
+        )
+        with self.assertRaises(cap.ProbeWriteAborted):
+            cap.gate_probe_run_dispositions(bad_run)
+
+        # Parseable JSON canaries + plain-text config observations => all record.
+        _, good_run = _run_bounded_matrix_with_fake_invoker(cap)
+        self.assertIsNone(cap.gate_probe_run_dispositions(good_run))
 
     # -- T014: subagent-frontmatter dispatch mechanism ------------------------
 
