@@ -1242,3 +1242,7 @@ __all__ = (
     "write_snapshot_fail_closed",
     "ALIAS_CAPABILITY_QUESTIONS",
 )
+
+
+if __name__ == "__main__":  # pragma: no cover — operator-only entry (FR-001); tests import, never execute
+    raise SystemExit(main())
