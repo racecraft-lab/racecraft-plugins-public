@@ -148,6 +148,15 @@ record pinned-environment availability. Every other terminal class is unknown
 and excludes the tuple. To retry an independently proven transient condition,
 create a successor snapshot first.
 
+Before publication, the adapter resolves `evidence_digest` to
+`RAW_EVIDENCE_ROOT/<sha256>.json`, verifies the private content-addressed file,
+and requires its canonical closed redacted schema to match the result envelope.
+An incomplete fixture observation alone does not authorize a canary: the
+adapter derives documented-discovery unavailability only from an
+`unknown-observation-v1` collection outcome in the validated matrix. Shared
+candidate routes with the same model/effort use one canary key and retain their
+independent source-admission decisions.
+
 ## 6. Build and Review the Freeze
 
 ```sh

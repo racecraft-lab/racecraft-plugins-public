@@ -167,7 +167,13 @@ surface raw values and evidence references, proposed normalized key,
 | `sentinel_observed` | boolean | True only for the predeclared bounded response |
 | `terminal_class` | enum | `success`, `timeout`, `output_cap_exceeded`, `launch_error`, `transport_error`, `authentication_error`, `rate_limited`, `malformed_response`, `explicit_rejection`, `service_reroute`, or `ambiguous_error` |
 | `availability_disposition` | enum | `available_for_pinned_environment` only for success; otherwise `unknown` |
-| `evidence_digest` | digest | Redacted evidence binding |
+| `evidence_digest` | digest | Exact-byte binding to a canonical, schema-closed redacted evidence object stored as `<sha256>.json` under the validated private raw-evidence root before successor publication |
+
+The redacted evidence object contains only `schema_version`, `snapshot_id`,
+`canonical_model_id`, `canonical_effort`, `terminal_class`, `exit_code`, and
+`sentinel_observed`. Its exact canonical bytes, including the trailing newline,
+must hash to `evidence_digest`; missing, mismatched, noncanonical, or additional
+fields block successor publication.
 
 The module owns a versioned, default-empty allowlist of approved executor
 contract IDs. An executor becomes trusted only through a separately reviewed

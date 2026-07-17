@@ -75,10 +75,23 @@ def canary_envelope() -> tuple[dict, dict]:
         "contract_version": "1.0.0", "platform": "macos", "timeout_enforced": True, "output_cap_enforced": True,
         "process_tree_termination_state": "not_needed", "retry_count": 0, "exit_code": 0,
         "sentinel_observed": True, "terminal_class": "success",
-        "availability_disposition": "available_for_pinned_environment", "evidence_digest": capabilities.digest(b"fixture-evidence"),
+        "availability_disposition": "available_for_pinned_environment", "evidence_digest": "",
     }
+    result["evidence_digest"] = capabilities.digest(canary_evidence_bytes(result))
     result["executor_result_digest"] = capabilities.digest({key: value for key, value in result.items() if key not in {"executor_result_digest", "availability_disposition"}})
     return approval, result
+
+
+def canary_evidence_bytes(result: dict) -> bytes:
+    return capabilities.canonical_bytes({
+        "schema_version": "1.0.0",
+        "snapshot_id": result["snapshot_id"],
+        "canonical_model_id": result["canonical_model_id"],
+        "canonical_effort": result["canonical_effort"],
+        "terminal_class": result["terminal_class"],
+        "exit_code": result["exit_code"],
+        "sentinel_observed": result["sentinel_observed"],
+    }) + b"\n"
 
 
 class CapabilityContractTests(unittest.TestCase):
@@ -213,7 +226,7 @@ class CapabilityContractTests(unittest.TestCase):
         insecure = copy.deepcopy(captured); insecure[0]["canonical_url"] = "http://openai.com/unrelated"
         with self.assertRaisesRegex(ValueError, "identity or URL"):
             capabilities.normalize_source_refreshes(self.manifest, insecure)
-        approved_redirect = copy.deepcopy(captured); approved_redirect[0].update({"canonical_url": "https://openai.com/docs/moved-source", "status": "redirected"})
+        approved_redirect = copy.deepcopy(captured); approved_redirect[0].update({"canonical_url": "https://platform.openai.com/docs/moved-source", "status": "redirected"})
         redirected_refreshes = capabilities.normalize_source_refreshes(self.manifest, approved_redirect)
         self.assertEqual(redirected_refreshes[0]["canonical_url"], approved_redirect[0]["canonical_url"])
         self.assertEqual(redirected_refreshes[0]["status"], "redirected")
@@ -231,12 +244,21 @@ class CapabilityContractTests(unittest.TestCase):
         redirect_only_body = "\n".join(item["text"] for item in redirect_only_source["bounded_extracts"]).encode()
         redirect_only_source["body_sha256"] = capabilities.digest(redirect_only_body).removeprefix("sha256:")
         redirect_only_capture = source_capture(redirect_only_manifest)
-        redirect_only_capture[0].update({"canonical_url": "https://openai.com/docs/moved-source", "status": "redirected"})
+        redirect_only_capture[0].update({"canonical_url": "https://platform.openai.com/docs/moved-source", "status": "redirected"})
         redirect_only = capabilities.normalize_source_refreshes(redirect_only_manifest, redirect_only_capture, allow_synthetic_manifest=True)
         self.assertEqual(redirect_only[0]["status"], "redirected")
-        prefix_attack = copy.deepcopy(captured); prefix_attack[0]["canonical_url"] = "https://openai.com/docs-evil"
+        prefix_attack = copy.deepcopy(captured); prefix_attack[0]["canonical_url"] = "https://platform.openai.com/docs-evil"
         with self.assertRaisesRegex(ValueError, "identity or URL"):
             capabilities.normalize_source_refreshes(self.manifest, prefix_attack)
+        for unapproved_url in (
+            "https://unapproved.openai.com/docs/moved-source",
+            "https://chatgpt.com/codex/moved-source",
+            "https://openai.com/docs/moved-source",
+        ):
+            unapproved = copy.deepcopy(captured)
+            unapproved[0].update({"canonical_url": unapproved_url, "status": "redirected"})
+            with self.subTest(unapproved_url=unapproved_url), self.assertRaisesRegex(ValueError, "identity or URL"):
+                capabilities.normalize_source_refreshes(self.manifest, unapproved)
         invalid_time = copy.deepcopy(captured); invalid_time[0]["retrieved_at"] = "2026-07-16 00:00:00Z"
         with self.assertRaisesRegex(ValueError, "status or timestamp"):
             capabilities.normalize_source_refreshes(self.manifest, invalid_time)
@@ -327,6 +349,44 @@ class CapabilityContractTests(unittest.TestCase):
         missing_disagreement["surface_matrix_id"] = capabilities.digest({key: value for key, value in missing_disagreement.items() if key != "surface_matrix_id"})
         with self.assertRaisesRegex(ValueError, "inventory is incomplete"):
             capabilities.validate_surface_matrix(missing_disagreement)
+        partial_observations = self.observations(disagreement_case)
+        partial_observations[0]["completeness_state"] = "partial"
+        partial_observations[0]["surface_observation_id"] = capabilities.digest({
+            key: partial_observations[0][key]
+            for key in partial_observations[0]
+            if key != "surface_observation_id"
+        })
+        partial_matrix, partial_decisions = capabilities.evaluate_surface_matrix(
+            partial_observations,
+            self.authority_tuples(disagreement_case),
+        )
+        self.assertEqual(capabilities.validate_surface_matrix(partial_matrix), partial_matrix)
+        self.assertEqual(len(partial_matrix["disagreements"]), 1)
+        self.assertEqual(partial_decisions[0]["surface_disposition"], "disagreed")
+        self.assertFalse(capabilities._documented_discovery_unavailable(partial_observations))
+        binding = partial_observations[0]["repository_binding"]
+        work_item = partial_observations[0]["work_item"]
+        unavailable_observations = [
+            capabilities.unknown_observation(surface, self.identity["client_identity_id"], binding, work_item)
+            for surface in capabilities.SURFACES
+        ]
+        self.assertTrue(capabilities._documented_discovery_unavailable(unavailable_observations))
+        shared_tuples = self.authority_tuples(disagreement_case)
+        shared_route = copy.deepcopy(shared_tuples[0])
+        shared_route.update({
+            "candidate_route_id": "FIXTURE-ROUTE-SHARED",
+            "agent_contract_id": "FIXTURE-AGENT-SHARED",
+            "candidate_route_digest": capabilities.digest({"route": "FIXTURE-ROUTE-SHARED"}),
+        })
+        shared_tuples.append(shared_route)
+        shared_matrix, shared_decisions = capabilities.evaluate_surface_matrix(
+            self.observations(disagreement_case),
+            shared_tuples,
+        )
+        self.assertEqual(capabilities.validate_surface_matrix(shared_matrix), shared_matrix)
+        self.assertEqual(len(shared_matrix["disagreements"]), 1)
+        self.assertEqual(len(shared_decisions), 2)
+        self.assertEqual(len({item["disagreement_digest"] for item in shared_decisions}), 1)
         wrong_reference = copy.deepcopy(disagreement_matrix)
         wrong_reference["disagreements"][0]["evidence_refs"]["cli"] = wrong_reference["disagreements"][0]["evidence_refs"]["app_server"]
         wrong_reference["surface_matrix_id"] = capabilities.digest({key: value for key, value in wrong_reference.items() if key != "surface_matrix_id"})
@@ -496,10 +556,15 @@ class CapabilityContractTests(unittest.TestCase):
 
     def test_canary_is_injected_bounded_and_default_denied(self) -> None:
         approval, result = canary_envelope()
-        denied = capabilities.validate_canary_result(result)
+        evidence_bytes = canary_evidence_bytes(result)
+        denied = capabilities.validate_canary_result(result, evidence_bytes=evidence_bytes)
         self.assertEqual(denied["availability_disposition"], "unknown")
-        allowed = capabilities.validate_canary_result(result, [approval])
+        allowed = capabilities.validate_canary_result(result, [approval], evidence_bytes=evidence_bytes)
         self.assertEqual(allowed["availability_disposition"], "available_for_pinned_environment")
+        with self.assertRaisesRegex(ValueError, "requires its content-addressed"):
+            capabilities.validate_canary_result(result, [approval], evidence_bytes=None)
+        with self.assertRaisesRegex(ValueError, "do not match evidence_digest"):
+            capabilities.validate_canary_result(result, [approval], evidence_bytes=b"{}\n")
         with self.assertRaisesRegex(ValueError, "only one canary"):
             capabilities.validate_canary_results([result, result], [approval])
         replayed = {**result, "canonical_model_id": "model-b"}
@@ -507,23 +572,64 @@ class CapabilityContractTests(unittest.TestCase):
             capabilities.validate_canary_results([result, replayed], [approval])
         mismatched = {**result, "canonical_model_id": "model-b"}
         with self.assertRaisesRegex(ValueError, "does not bind"):
-            capabilities.validate_canary_result(mismatched, [approval])
+            capabilities.validate_canary_result(mismatched, [approval], evidence_bytes=evidence_bytes)
         boolean_bound = {**result, "attempt_index": True}
         boolean_bound["executor_result_digest"] = capabilities.digest({key: value for key, value in boolean_bound.items() if key not in {"executor_result_digest", "availability_disposition"}})
         with self.assertRaisesRegex(ValueError, "primitive types"):
-            capabilities.validate_canary_result(boolean_bound, [approval])
+            capabilities.validate_canary_result(boolean_bound, [approval], evidence_bytes=evidence_bytes)
         wrong_platform = {**result, "platform": "linux"}
         wrong_platform["executor_result_digest"] = capabilities.digest({key: value for key, value in wrong_platform.items() if key not in {"executor_result_digest", "availability_disposition"}})
         with self.assertRaisesRegex(ValueError, "platform does not match"):
-            capabilities.validate_canary_result(wrong_platform, [approval])
+            capabilities.validate_canary_result(wrong_platform, [approval], evidence_bytes=evidence_bytes)
         self_approved = {**result, "approved": True}
         with self.assertRaisesRegex(ValueError, "closed v1 envelope"):
-            capabilities.validate_canary_result(self_approved, [approval])
+            capabilities.validate_canary_result(self_approved, [approval], evidence_bytes=evidence_bytes)
         for terminal in capabilities.ERROR_TERMINALS:
             failed = copy.deepcopy(result)
             failed.update({"terminal_class": terminal, "exit_code": None, "sentinel_observed": False})
+            failed["evidence_digest"] = capabilities.digest(canary_evidence_bytes(failed))
             failed["executor_result_digest"] = capabilities.digest({key: value for key, value in failed.items() if key not in {"executor_result_digest", "availability_disposition"}})
-            self.assertEqual(capabilities.validate_canary_result(failed, [approval])["availability_disposition"], "unknown")
+            self.assertEqual(capabilities.validate_canary_result(failed, [approval], evidence_bytes=canary_evidence_bytes(failed))["availability_disposition"], "unknown")
+        shared_decisions = [
+            {"canonical_model_id": result["canonical_model_id"], "canonical_effort": result["canonical_effort"], "source_admitted": True,
+             "reasons": ["surface_evidence_incomplete", "collection_evidence_non_authoritative"]},
+            {"canonical_model_id": result["canonical_model_id"], "canonical_effort": result["canonical_effort"], "source_admitted": True,
+             "reasons": ["surface_evidence_incomplete", "collection_evidence_non_authoritative"]},
+        ]
+        unknown_methods = [{"collection_method_id": "unknown-observation-v1"}]
+        self.assertEqual(len(capabilities._validate_canary_tuple_binding(shared_decisions, result, result["snapshot_id"], unknown_methods)), 2)
+        with self.assertRaisesRegex(ValueError, "documented discovery"):
+            capabilities._validate_canary_tuple_binding(
+                shared_decisions, result, result["snapshot_id"], [{"collection_method_id": "fixture-enumeration-v1"}],
+            )
+        predecessor = {
+            "runtime_capability_snapshot_id": result["snapshot_id"],
+            "tuple_decisions": shared_decisions,
+            "surface_matrix": {"observations": unknown_methods},
+            "canary_results": [],
+            "candidate_freeze_id": capabilities.digest(b"fixture-predecessor"),
+        }
+        with mock.patch.object(capabilities, "APPROVED_CANARY_EXECUTORS", (approval,)), mock.patch.object(
+            capabilities, "validate_freeze", side_effect=lambda freeze, manifest, **kwargs: freeze,
+        ):
+            successor = capabilities.build_canary_successor(
+                predecessor, result, self.manifest, "2026-07-16T00:00:01Z", evidence_bytes=evidence_bytes,
+            )
+        self.assertEqual(successor["canary_results"], [result])
+        self.assertEqual(successor["supersedes_candidate_freeze_id"], predecessor["candidate_freeze_id"])
+        with tempfile.TemporaryDirectory() as tmp:
+            raw_root = Path(tmp) / "raw"
+            raw_root.mkdir(mode=0o700)
+            with self.assertRaisesRegex(ValueError, "regular non-symlink file"):
+                capabilities.validate_canary_evidence(raw_root, ROOT, result)
+            evidence_path = raw_root / f"{result['evidence_digest'].removeprefix('sha256:')}.json"
+            evidence_path.write_bytes(evidence_bytes); evidence_path.chmod(0o600)
+            self.assertEqual(capabilities.validate_canary_evidence(raw_root, ROOT, result), evidence_bytes)
+            evidence_path.write_bytes(b"{}\n")
+            with self.assertRaisesRegex(ValueError, "content digest as the filename"):
+                capabilities.validate_canary_evidence(raw_root, ROOT, result)
+            with self.assertRaisesRegex(ValueError, "outside every Git worktree"):
+                capabilities.validate_canary_evidence(ROOT, ROOT, result)
         self.assertEqual(capabilities.APPROVED_CANARY_EXECUTORS, ())
         with self.assertRaisesRegex(ValueError, "no repository-approved canary executor"):
             capabilities.main([
@@ -661,6 +767,15 @@ class CapabilityContractTests(unittest.TestCase):
             invalid_utf8.write_bytes(b'{"key":"\xff"}\n')
             with self.assertRaisesRegex(ValueError, "strict UTF-8 JSON"):
                 capabilities._read(invalid_utf8)
+            for index, constant in enumerate(("NaN", "Infinity", "-Infinity")):
+                nonfinite = root / f"nonfinite-{index}.json"
+                nonfinite.write_text(f'{{"value":{constant}}}\n', encoding="utf-8")
+                with self.subTest(constant=constant), self.assertRaisesRegex(ValueError, "non-JSON numeric constant"):
+                    capabilities._read(nonfinite)
+                with self.assertRaisesRegex(ValueError, "non-JSON numeric constant"):
+                    capabilities._read(nonfinite, require_canonical=True)
+            with self.assertRaises(ValueError):
+                capabilities.canonical_bytes({"value": float("nan")})
             noncanonical = root / "noncanonical.json"
             noncanonical.write_text('{"b": 1, "a": 2}\n', encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "not canonical"):

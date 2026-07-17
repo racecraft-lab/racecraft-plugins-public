@@ -39,6 +39,11 @@ _GIT_OBJECT = re.compile(r"[0-9a-f]{40,64}")
 _WORK_ITEM_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
 _RFC3339_UTC = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?Z")
 _SOURCE_ID = re.compile(r"OPENAI-DOC-[0-9]{3}")
+_OPENAI_AUTHORITY_PREFIXES = {
+    "learn.chatgpt.com": ("/docs",),
+    "developers.openai.com": ("/codex", "/api/docs"),
+    "platform.openai.com": ("/docs",),
+}
 _ENTRY_KEYS = {"model", "effort", "available", "hidden", "machine_id", "raw_label", "capabilities"}
 _OBSERVATION_KEYS = {
     "surface_observation_id", "client_identity_id", "surface", "collection_method_id",
@@ -80,7 +85,7 @@ class _VisibleText(HTMLParser):
 
 
 def canonical_bytes(value):
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode()
 
 
 def digest(value):
@@ -130,8 +135,11 @@ def _token(value):
 
 def _openai_url(value):
     parsed = urlparse(str(value)); host = (parsed.hostname or "").lower()
-    allowed_path = any(parsed.path == prefix or parsed.path.startswith(f"{prefix}/") for prefix in ("/docs", "/api/docs", "/codex"))
-    return parsed.scheme == "https" and (host in {"openai.com", "chatgpt.com"} or host.endswith((".openai.com", ".chatgpt.com"))) and allowed_path
+    allowed_path = any(
+        parsed.path == prefix or parsed.path.startswith(f"{prefix}/")
+        for prefix in _OPENAI_AUTHORITY_PREFIXES.get(host, ())
+    )
+    return parsed.scheme == "https" and allowed_path
 
 
 def _utc_timestamp(value):
@@ -154,6 +162,21 @@ def _unique_object(pairs):
             raise ValueError(f"duplicate JSON object key: {key}")
         result[key] = value
     return result
+
+
+def _reject_json_constant(value):
+    raise ValueError(f"non-JSON numeric constant: {value}")
+
+
+def _parse_json_bytes(raw):
+    try:
+        return json.loads(
+            raw.decode("utf-8", errors="strict"),
+            object_pairs_hook=_unique_object,
+            parse_constant=_reject_json_constant,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError("JSON input must be strict UTF-8 JSON") from error
 
 
 def digest_regular_file(path):
@@ -577,6 +600,28 @@ def candidate_tuples_from_published(manifest, refreshes):
     return _candidate_tuples(manifest, validate_published_source_refreshes(manifest, refreshes))
 
 
+def _surface_disagreements(indexed, observations_by_surface):
+    disagreements = {}
+    for key in sorted({key for entries in indexed.values() for key in entries}):
+        values = {surface: indexed[surface].get(key) for surface in SURFACES}
+        observed = [value for value in values.values() if value is not None]
+        availability = {value["available"] for value in observed}
+        hidden = {value["hidden"] for value in observed}
+        disagreement_class = "hidden_state" if len(hidden) > 1 else "availability" if len(availability) > 1 else None
+        if disagreement_class is None:
+            continue
+        tuple_value = {"model": key[0], "effort": key[1]}
+        disagreements[key] = {
+            "canonical_tuple": tuple_value,
+            "surface_values": values,
+            "evidence_refs": {surface: observations_by_surface[surface]["raw_evidence_ref"] for surface in SURFACES},
+            "proposed_normalized_key": tuple_value,
+            "disagreement_class": disagreement_class,
+            "tuple_disposition": "excluded",
+        }
+    return disagreements
+
+
 def evaluate_surface_matrix(observations, source_tuples, *, aliases=None, expected_integrity_digest=None):
     if any(row.get("source_admitted") for row in source_tuples) and not isinstance(source_tuples, _AuthorityTupleSet):
         raise ValueError("source admission requires a manifest-bound tuple set")
@@ -620,7 +665,9 @@ def evaluate_surface_matrix(observations, source_tuples, *, aliases=None, expect
         indexed[observation["surface"]] = entries
     normalization = digest(normalized_aliases); integrity = digest({"observations": observations, "normalization_map_id": normalization})
     if expected_integrity_digest and expected_integrity_digest != integrity: reasons.append("aggregate_hash_mismatch")
-    reasons, disagreements, decisions = list(dict.fromkeys(reasons)), [], []
+    reasons, decisions = list(dict.fromkeys(reasons)), []
+    disagreements_by_key = _surface_disagreements(indexed, observations_by_surface)
+    disagreements = [disagreements_by_key[key] for key in sorted(disagreements_by_key)]
     sources = list(source_tuples); source_keys = {(row.get("model"), row.get("effort")) for row in sources}
     observed_keys = {key for entries in indexed.values() for key in entries}
     for key in sorted(observed_keys - source_keys):
@@ -640,17 +687,16 @@ def evaluate_surface_matrix(observations, source_tuples, *, aliases=None, expect
         why = list(source.get("authority_reasons", [])) if not source.get("source_admitted") else []
         if reasons: disposition, surface_why = "unknown", ["matrix_invalid"]
         elif key[1] is None: disposition, surface_why = "unknown", ["canonical_effort_unknown"]
-        elif len(hidden) > 1: disposition, surface_why = "disagreed", ["hidden_state_disagreement"]
+        elif key in disagreements_by_key:
+            disposition = "disagreed"
+            surface_why = ["hidden_state_disagreement" if disagreements_by_key[key]["disagreement_class"] == "hidden_state" else "surface_disagreement"]
         elif not complete or len(observed) != 3 and not picker_omission: disposition, surface_why = "unknown", ["surface_evidence_incomplete"]
-        elif len(availability) != 1: disposition, surface_why = "disagreed", ["surface_disagreement"]
         elif availability == {True}: disposition, surface_why = "agreed", []
         else: disposition, surface_why = "agreed", ["availability_not_proven"]
         why.extend(item for item in surface_why if item not in why)
         if not collection_authoritative and "collection_evidence_non_authoritative" not in why: why.append("collection_evidence_non_authoritative")
         included = source.get("source_admitted") and disposition == "agreed" and availability == {True} and collection_authoritative
-        disagreement = None
-        if disposition == "disagreed":
-            disagreement = {"canonical_tuple": {"model": key[0], "effort": key[1]}, "surface_values": values, "evidence_refs": {item["surface"]: item["raw_evidence_ref"] for item in observations}, "proposed_normalized_key": {"model": key[0], "effort": key[1]}, "disagreement_class": "hidden_state" if "hidden_state_disagreement" in surface_why else "availability", "tuple_disposition": "excluded"}; disagreements.append(disagreement)
+        disagreement = disagreements_by_key.get(key)
         decisions.append({"candidate_route_id": source["candidate_route_id"], "agent_contract_id": source["agent_contract_id"], "named_agent": source["named_agent"],
                           "canonical_model_id": key[0], "canonical_effort": key[1], "source_admitted": bool(source.get("source_admitted")),
                           "candidate_route_digest": source["candidate_route_digest"], "source_ref": source["source_ref"],
@@ -707,23 +753,7 @@ def validate_surface_matrix(matrix):
                 raise ValueError("surface disagreement inputs contain duplicate canonical tuples")
             entries[key] = entry
         indexed[observation["surface"]] = entries
-    expected_disagreements = {}
-    for key in sorted({key for entries in indexed.values() for key in entries}):
-        values = {surface: indexed[surface].get(key) for surface in SURFACES}
-        observed = [value for value in values.values() if value is not None]
-        availability = {value["available"] for value in observed}
-        hidden = {value["hidden"] for value in observed}
-        disagreement_class = "hidden_state" if len(hidden) > 1 else "availability" if len(availability) > 1 else None
-        if disagreement_class is not None:
-            tuple_value = {"model": key[0], "effort": key[1]}
-            expected_disagreements[key] = {
-                "canonical_tuple": tuple_value,
-                "surface_values": values,
-                "evidence_refs": {surface: observations_by_surface[surface]["raw_evidence_ref"] for surface in SURFACES},
-                "proposed_normalized_key": tuple_value,
-                "disagreement_class": disagreement_class,
-                "tuple_disposition": "excluded",
-            }
+    expected_disagreements = _surface_disagreements(indexed, observations_by_surface)
     actual_disagreements = {}
     for item in matrix["disagreements"]:
         keys = {"canonical_tuple", "surface_values", "evidence_refs", "proposed_normalized_key", "disagreement_class", "tuple_disposition"}
@@ -753,7 +783,19 @@ def _validated_canary_approvals(approvals):
     return approvals
 
 
-def validate_canary_result(result, approvals=APPROVED_CANARY_EXECUTORS):
+def _canary_evidence_payload(result):
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "snapshot_id": result["snapshot_id"],
+        "canonical_model_id": result["canonical_model_id"],
+        "canonical_effort": result["canonical_effort"],
+        "terminal_class": result["terminal_class"],
+        "exit_code": result["exit_code"],
+        "sentinel_observed": result["sentinel_observed"],
+    }
+
+
+def _validate_canary_result_envelope(result, approvals=APPROVED_CANARY_EXECUTORS, *, evidence_bytes=None):
     required = {"snapshot_id", "canonical_model_id", "canonical_effort", "attempt_index", "timeout_seconds", "combined_output_cap_bytes", "executor_contract_id", "implementation_digest", "executor_result_digest", "contract_version", "platform", "timeout_enforced", "output_cap_enforced", "process_tree_termination_state", "retry_count", "exit_code", "sentinel_observed", "terminal_class", "availability_disposition", "evidence_digest"}
     if set(result) != required:
         raise ValueError("canary result must use the closed v1 envelope")
@@ -771,11 +813,23 @@ def validate_canary_result(result, approvals=APPROVED_CANARY_EXECUTORS):
         raise ValueError("canary bounds or retry contract violated")
     if result["terminal_class"] not in ("success", *ERROR_TERMINALS) or result["process_tree_termination_state"] not in {"not_needed", "completed", "failed"}:
         raise ValueError("unknown canary state")
+    if evidence_bytes is not None:
+        if not isinstance(evidence_bytes, bytes) or digest(evidence_bytes) != result["evidence_digest"]:
+            raise ValueError("canary evidence bytes do not match evidence_digest")
+        evidence = _parse_json_bytes(evidence_bytes)
+        if evidence_bytes != canonical_bytes(evidence) + b"\n" or evidence != _canary_evidence_payload(result):
+            raise ValueError("canary evidence must use the canonical closed redacted schema")
     approvals = _validated_canary_approvals(approvals); approval = next((item for item in approvals if item["executor_contract_id"] == result["executor_contract_id"] and item["implementation_digest"] == result["implementation_digest"]), None)
     if approval is not None and approval["platform"] != result["platform"]:
         raise ValueError("canary executor platform does not match its repository approval")
     success = approval and approval.get("implementation_digest") == result["implementation_digest"] and result["terminal_class"] == "success" and result["exit_code"] == 0 and result["sentinel_observed"] and result["process_tree_termination_state"] != "failed"
     return {**result, "availability_disposition": "available_for_pinned_environment" if success else "unknown"}
+
+
+def validate_canary_result(result, approvals=APPROVED_CANARY_EXECUTORS, *, evidence_bytes):
+    if evidence_bytes is None:
+        raise ValueError("canary result requires its content-addressed redacted evidence")
+    return _validate_canary_result_envelope(result, approvals, evidence_bytes=evidence_bytes)
 
 
 def validate_canary_results(results, approvals=APPROVED_CANARY_EXECUTORS):
@@ -784,7 +838,7 @@ def validate_canary_results(results, approvals=APPROVED_CANARY_EXECUTORS):
         raise ValueError("only one canary is permitted per snapshot/model/effort")
     result_digests = [item.get("executor_result_digest") for item in results]
     if len(result_digests) != len(set(result_digests)): raise ValueError("canary result digests cannot be replayed across tuple keys")
-    return [validate_canary_result(item, approvals) for item in results]
+    return [_validate_canary_result_envelope(item, approvals) for item in results]
 
 
 def validate_raw_evidence_root(raw_root, repository_root):
@@ -828,6 +882,16 @@ def validate_content_addressed_private_file(path, repository_root, label):
     if resolved.name != expected_name:
         raise ValueError(f"{label} must use its exact content digest as the filename")
     return resolved
+
+
+def validate_canary_evidence(raw_root, repository_root, result):
+    _need_digest(result.get("evidence_digest"), "evidence_digest")
+    raw = validate_raw_evidence_root(raw_root, repository_root)
+    target = raw / f"{result['evidence_digest'].removeprefix('sha256:')}.json"
+    resolved = validate_content_addressed_private_file(target, repository_root, "canary evidence")
+    evidence_bytes = resolved.read_bytes()
+    validate_canary_result(result, evidence_bytes=evidence_bytes)
+    return evidence_bytes
 
 
 def materialize_unknown_capture(raw_root, repository_root, surface, client_identity_id, repository_binding, work_item, captured_at):
@@ -965,6 +1029,24 @@ def build_freeze(identity, refreshes, matrix, decisions, published_at, *, manife
     return validate_freeze(result, manifest, predecessor=predecessor)
 
 
+def _documented_discovery_unavailable(observations):
+    return any(item.get("collection_method_id") == "unknown-observation-v1" for item in observations)
+
+
+def _validate_canary_tuple_binding(decisions, result, snapshot_id, observations):
+    matches = [
+        item for item in decisions
+        if item["canonical_model_id"] == result["canonical_model_id"]
+        and item["canonical_effort"] == result["canonical_effort"]
+    ]
+    admitted = [item for item in matches if item["source_admitted"]]
+    if result["snapshot_id"] != snapshot_id or not admitted:
+        raise ValueError("canary requires a source-admitted snapshot model/effort key")
+    if not _documented_discovery_unavailable(observations):
+        raise ValueError("canary requires documented discovery to be unavailable")
+    return admitted
+
+
 def validate_freeze(freeze, manifest, *, predecessor=None, _enforce_lineage=True):
     keys = {"schema_version", "candidate_freeze_id", "source_manifest_binding", "client_identity", "client_identity_id", "official_source_refreshes", "source_refresh_set_digest", "surface_matrix", "surface_matrix_id", "runtime_capability_snapshot", "runtime_capability_snapshot_id", "telemetry_profile_id", "current_ledger_digest", "surface_matrix_digest", "tuple_decision_digest", "included_candidate_route_ids", "excluded_candidates", "tuple_decisions", "approved_canary_executors", "canary_results", "published_at", "supersedes_candidate_freeze_id"}
     if not isinstance(freeze, dict) or set(freeze) != keys or freeze.get("schema_version") != SCHEMA_VERSION: raise ValueError("freeze must use the closed v1 shape")
@@ -1013,25 +1095,15 @@ def validate_freeze(freeze, manifest, *, predecessor=None, _enforce_lineage=True
     validated_canaries = validate_canary_results(freeze["canary_results"], APPROVED_CANARY_EXECUTORS)
     if validated_canaries != freeze["canary_results"]: raise ValueError("published canary dispositions are not validated")
     for result in validated_canaries:
-        matches = [item for item in expected_decisions if item["canonical_model_id"] == result["canonical_model_id"] and item["canonical_effort"] == result["canonical_effort"]]
-        if result["snapshot_id"] != expected_snapshot["runtime_capability_snapshot_id"] or len(matches) != 1 or not matches[0]["source_admitted"] or "surface_evidence_incomplete" not in matches[0]["reasons"]:
-            raise ValueError("published canary is not bound to one source-admitted snapshot tuple")
+        _validate_canary_tuple_binding(expected_decisions, result, expected_snapshot["runtime_capability_snapshot_id"], matrix["observations"])
     if freeze["candidate_freeze_id"] != digest(_freeze_identity_payload(freeze)): raise ValueError("candidate freeze identity does not bind its authoritative payload")
     return freeze
 
 
-def build_canary_successor(predecessor, result, manifest, published_at):
+def build_canary_successor(predecessor, result, manifest, published_at, *, evidence_bytes):
     predecessor = validate_freeze(predecessor, manifest, _enforce_lineage=False)
-    validated = validate_canary_result(result, APPROVED_CANARY_EXECUTORS)
-    matches = [
-        item for item in predecessor["tuple_decisions"]
-        if item["canonical_model_id"] == validated["canonical_model_id"]
-        and item["canonical_effort"] == validated["canonical_effort"]
-    ]
-    if validated["snapshot_id"] != predecessor["runtime_capability_snapshot_id"] or len(matches) != 1 or not matches[0]["source_admitted"]:
-        raise ValueError("canary requires one source-admitted tuple in the validated freeze")
-    if "surface_evidence_incomplete" not in matches[0]["reasons"]:
-        raise ValueError("canary requires documented discovery to be unavailable")
+    validated = validate_canary_result(result, APPROVED_CANARY_EXECUTORS, evidence_bytes=evidence_bytes)
+    _validate_canary_tuple_binding(predecessor["tuple_decisions"], validated, predecessor["runtime_capability_snapshot_id"], predecessor["surface_matrix"]["observations"])
     results = validate_canary_results([*predecessor["canary_results"], validated], APPROVED_CANARY_EXECUTORS)
     successor = copy.deepcopy(predecessor)
     successor.update({
@@ -1047,10 +1119,7 @@ def _read(path, *, require_canonical=False):
     source = Path(path)
     if not source.is_file() or source.stat().st_size > PRIVATE_REFRESH_MAX_BYTES: raise ValueError("JSON input is missing or exceeds the bounded size")
     raw = source.read_bytes()
-    try:
-        value = json.loads(raw.decode("utf-8", errors="strict"), object_pairs_hook=_unique_object)
-    except (UnicodeDecodeError, json.JSONDecodeError) as error:
-        raise ValueError("JSON input must be strict UTF-8 JSON") from error
+    value = _parse_json_bytes(raw)
     if require_canonical and raw != canonical_bytes(value) + b"\n":
         raise ValueError("stored JSON artifact is not canonical")
     return value
@@ -1117,10 +1186,11 @@ def main(argv=None):
         if not APPROVED_CANARY_EXECUTORS:
             raise ValueError("no repository-approved canary executor is available in this slice")
         validate_raw_evidence_root(args.raw_evidence_root, repo); result_path = validate_private_external_file(args.executor_result, repo, "canary executor result"); result = _read(result_path)
+        evidence_bytes = validate_canary_evidence(args.raw_evidence_root, repo, result)
         manifest = _read(args.manifest); predecessor = _read(args.freeze, require_canonical=True)
         if (result.get("snapshot_id"), result.get("canonical_model_id"), result.get("canonical_effort")) != (predecessor.get("runtime_capability_snapshot_id"), args.model, args.effort):
             raise ValueError("canary result does not match the requested tuple")
-        successor = build_canary_successor(predecessor, result, manifest, args.published_at or now())
+        successor = build_canary_successor(predecessor, result, manifest, args.published_at or now(), evidence_bytes=evidence_bytes)
         _write(args.output, successor, append_only=True); return int(successor["canary_results"][-1]["availability_disposition"] == "unknown")
     if args.command == "validate-freeze":
         predecessor = _read(args.predecessor_freeze, require_canonical=True) if args.predecessor_freeze else None
