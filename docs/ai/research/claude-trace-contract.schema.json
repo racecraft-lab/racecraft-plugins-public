@@ -26,7 +26,7 @@
       "properties": {
         "raw_output": {"type": "string", "minLength": 1},
         "raw_output_sha256": {"$ref": "#/$defs/sha256"},
-        "sanitization": {"const": "home_paths_normalized_utf8"}
+        "sanitization": {"const": "home_paths_and_session_ids_normalized_utf8"}
       }
     },
     "unsetProof": {

@@ -51,7 +51,12 @@ CANARY_TEXT = "Reply with the single word: ok"
 # home/user path form plus machine-local session paths so it is deterministic and
 # environment-independent.
 HOME_TOKEN = "<home>"
-SANITIZATION_MARKER = "home_paths_normalized_utf8"
+# Run-local session/request identifiers (the `--output-format json` payload's
+# `session_id`/`uuid` values) carry no evidentiary value — alias→ID binding and
+# config acceptance come from `modelUsage`, not the session ID — and the repo's
+# tree-wide privacy scan redacts raw UUIDs, so they are normalized too.
+SESSION_ID_TOKEN = "<session-id>"
+SANITIZATION_MARKER = "home_paths_and_session_ids_normalized_utf8"
 
 # ``tuple_id = "<model>__<effort>"``; a JSON-null effort segment is the literal
 # ``none`` (research R1).
@@ -122,21 +127,32 @@ _HOME_PATH_RE = re.compile(
 _HYPHENATED_HOME_RE = re.compile(r"-Users-[A-Za-z0-9_.\-]+", re.IGNORECASE)
 _PRIVATE_VAR_RE = re.compile(r"/private/var/folders/[A-Za-z0-9_/\.\-]+", re.IGNORECASE)
 _TMP_TRANSCRIPT_RE = re.compile(r"/private/tmp/claude-[0-9]+", re.IGNORECASE)
-_SANITIZERS = (_PRIVATE_VAR_RE, _TMP_TRANSCRIPT_RE, _HOME_PATH_RE, _HYPHENATED_HOME_RE)
+_HOME_SANITIZERS = (_PRIVATE_VAR_RE, _TMP_TRANSCRIPT_RE, _HOME_PATH_RE, _HYPHENATED_HOME_RE)
+# Mirror the committed privacy-scan UUID rule verbatim
+# (tests/speckit-pro/unit/test-privacy-scan.py `UUID_PATTERN`) so a sanitized
+# payload can never leave a raw run-local session/request UUID in the snapshot.
+_SESSION_UUID_RE = re.compile(
+    r"[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}",
+    re.IGNORECASE,
+)
 
 
 def sanitize_home_paths(text: str) -> str:
-    """Normalize home/user paths and machine-local session paths to ``<home>``.
+    """Normalize home/user paths, machine-local session paths, and run-local
+    session/request UUIDs to fixed tokens (FR-012/FR-013).
 
     Deterministic and idempotent: every documented home/user path form
     (``/Users/<u>``, ``/home/<u>``, ``C:\\Users\\<u>``, hyphenated ``-Users-<u>``)
     and machine-local session path (macOS ``/private/var/folders`` temp trees and
-    ``/private/tmp/claude-<n>`` session paths) collapses to the ``<home>`` token,
-    so no unsanitized absolute path can be committed (FR-012/FR-013).
+    ``/private/tmp/claude-<n>`` session paths) collapses to ``<home>``, and every
+    raw session/request UUID collapses to ``<session-id>`` (matching the repo's
+    tree-wide privacy-scan UUID rule), so no unsanitized absolute path or raw
+    run-local identifier can be committed.
     """
     sanitized = text
-    for pattern in _SANITIZERS:
+    for pattern in _HOME_SANITIZERS:
         sanitized = pattern.sub(HOME_TOKEN, sanitized)
+    sanitized = _SESSION_UUID_RE.sub(SESSION_ID_TOKEN, sanitized)
     return sanitized
 
 

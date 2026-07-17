@@ -31,6 +31,7 @@ import sys
 import tempfile
 import unittest
 from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest import mock
 
@@ -59,6 +60,9 @@ except ImportError:
 RESEARCH_ROOT = REPO_ROOT / "docs" / "ai" / "research"
 SCHEMA_PATH = RESEARCH_ROOT / "claude-trace-contract.schema.json"
 MANIFEST_PATH = RESEARCH_ROOT / "claude-agent-route-candidate-manifest.json"
+# The canonical committed runtime-capability snapshot (T015 operator deliverable),
+# continuously validated on every run by CommittedRuntimeCapabilitySnapshotTests (T017).
+SNAPSHOT_PATH = RESEARCH_ROOT / "claude-runtime-capability-snapshot.json"
 
 # The 37 committed CAR-001 candidate routes dedupe to exactly these 6 unique
 # (model, effort) tuples (research R1; verified against the committed manifest).
@@ -84,6 +88,10 @@ PRIVACY_HOME_PATH = re.compile(
 PRIVACY_HYPHENATED_HOME = re.compile(r"-Users-[A-Za-z0-9_.\-]+", re.IGNORECASE)
 PRIVACY_PRIVATE_VAR = re.compile(r"/private/var/folders/[A-Za-z0-9_/\.\-]+", re.IGNORECASE)
 PRIVACY_TMP_TRANSCRIPT = re.compile(r"/private/tmp/claude-[0-9]+", re.IGNORECASE)
+PRIVACY_UUID = re.compile(
+    r"[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}",
+    re.IGNORECASE,
+)
 
 # The sanitizer tests need synthetic home/user and machine-local session paths as
 # INPUTS, but the committed privacy scan forbids those literal path forms anywhere
@@ -158,7 +166,7 @@ def _raw_evidence() -> dict[str, object]:
     return {
         "raw_output": raw_output,
         "raw_output_sha256": _sha256_hex(raw_output),
-        "sanitization": "home_paths_normalized_utf8",
+        "sanitization": "home_paths_and_session_ids_normalized_utf8",
     }
 
 
@@ -339,7 +347,7 @@ class ClaudeTraceSchemaContractTests(unittest.TestCase):
         raw = defs["rawEvidence"]
         self.assertIs(raw["additionalProperties"], False)
         self.assertEqual(set(raw["required"]), {"raw_output", "raw_output_sha256", "sanitization"})
-        self.assertEqual(raw["properties"]["sanitization"], {"const": "home_paths_normalized_utf8"})
+        self.assertEqual(raw["properties"]["sanitization"], {"const": "home_paths_and_session_ids_normalized_utf8"})
         self.assertEqual(raw["properties"]["raw_output_sha256"], {"$ref": "#/$defs/sha256"})
 
     def test_every_object_def_is_strict_and_symmetric(self) -> None:
@@ -684,6 +692,21 @@ class ClaudeCapabilitiesPureLogicTests(unittest.TestCase):
         ):
             with self.subTest(pattern=pattern.pattern):
                 self.assertIsNone(pattern.search(sanitized))
+
+    def test_sanitize_redacts_run_local_session_uuids(self) -> None:
+        # Run-local session/request UUIDs in the raw payload carry no evidentiary
+        # value and are redacted so the tree-wide privacy-scan UUID rule holds.
+        # The UUID inputs are assembled from fragments so this file's source text
+        # carries no literal UUID (which the privacy scan would itself flag).
+        cap = self.require_capabilities()
+        uuid_a = "-".join(("78b65992", "1a2b", "3c4d", "5e6f", "0011" + "22334455"))
+        uuid_b = "-".join(("E034F23D", "AAAA", "4BBB", "8CCC", "DDDDEEEE" + "FFFF"))
+        raw = f'{{"session_id":"{uuid_a}","uuid":"{uuid_b}"}}'
+        self.assertIsNotNone(PRIVACY_UUID.search(raw))  # inputs really are UUIDs
+        sanitized = cap.sanitize_home_paths(raw)
+        self.assertIsNone(PRIVACY_UUID.search(sanitized))
+        self.assertEqual(sanitized.count("<session-id>"), 2)
+        self.assertEqual(cap.SANITIZATION_MARKER, "home_paths_and_session_ids_normalized_utf8")
 
     def test_sanitize_is_idempotent_and_leaves_clean_text_untouched(self) -> None:
         cap = self.require_capabilities()
@@ -1528,10 +1551,225 @@ class ClaudeCapabilitiesLiveBoundaryTests(unittest.TestCase):
             self.assertFalse((agents_dir / "car002-probe.md").exists())
 
 
+# -- T017: committed runtime-capability snapshot — continuous validation ------
+# FR-011 / SC-002: the one committed operator snapshot is re-validated on every
+# run. Each rule below is a pure check that raises AssertionError on violation, so
+# the same logic backs both the positive assertion (committed snapshot passes) and
+# the teeth test (a deliberately-corrupted in-memory copy fails) — making an
+# otherwise-characterization "it already validates" green meaningful.
+
+EXPECTED_ALIAS_SET = frozenset({"opus", "sonnet", "haiku", "fable"})
+_SNAPSHOT_ID_IDENTITY_RE = re.compile(r"^CAR-002-RCS-(\d{4}-\d{2}-\d{2})-V(\d+)$")
+
+
+def utc_calendar_date(timestamp: str) -> str:
+    """Calendar date ``YYYY-MM-DD`` of a UTC instant (the validator guarantees a
+    ``Z``-suffixed, zero-offset ``captured_at_utc``)."""
+    parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    return parsed.astimezone(timezone.utc).date().isoformat()
+
+
+def check_snapshot_id_identity(snapshot: dict) -> None:
+    """FR-011: the date embedded in ``runtime_capability_snapshot_id`` equals the
+    UTC date of ``captured_at_utc`` and the ``V<n>`` suffix is a positive integer."""
+    snapshot_id = snapshot["runtime_capability_snapshot_id"]
+    match = _SNAPSHOT_ID_IDENTITY_RE.fullmatch(snapshot_id)
+    if match is None:
+        raise AssertionError(f"snapshot id is not well-formed: {snapshot_id!r}")
+    embedded_date, version_token = match.group(1), match.group(2)
+    capture_date = utc_calendar_date(snapshot["captured_at_utc"])
+    if embedded_date != capture_date:
+        raise AssertionError(
+            f"id date {embedded_date!r} != captured_at_utc UTC date {capture_date!r}"
+        )
+    if int(version_token) < 1:
+        raise AssertionError(f"V<n> suffix is not a positive integer: V{version_token}")
+
+
+def check_alias_bindings_cover_four(snapshot: dict) -> None:
+    """FR-011 coverage: ``alias_bindings`` cover exactly opus/sonnet/haiku/fable,
+    with no duplicate alias."""
+    aliases = [binding["alias"] for binding in snapshot["alias_bindings"]]
+    if len(aliases) != len(set(aliases)):
+        raise AssertionError(f"duplicate alias bindings: {aliases}")
+    if set(aliases) != set(EXPECTED_ALIAS_SET):
+        raise AssertionError(
+            f"alias set {sorted(set(aliases))} != {sorted(EXPECTED_ALIAS_SET)}"
+        )
+
+
+def check_tuple_evidence_has_six(snapshot: dict) -> None:
+    """FR-011 coverage: ``tuple_evidence`` holds exactly the six deduped
+    ``(model, effort)`` tuple_ids, with no duplicate."""
+    tuple_ids = [evidence["tuple_id"] for evidence in snapshot["tuple_evidence"]]
+    if len(tuple_ids) != len(set(tuple_ids)):
+        raise AssertionError(f"duplicate tuple_evidence ids: {tuple_ids}")
+    if set(tuple_ids) != set(EXPECTED_TUPLE_IDS):
+        raise AssertionError(
+            f"tuple_id set {sorted(set(tuple_ids))} != {sorted(EXPECTED_TUPLE_IDS)}"
+        )
+
+
+class CommittedRuntimeCapabilitySnapshotTests(unittest.TestCase):
+    """The committed operator snapshot at
+    ``docs/ai/research/claude-runtime-capability-snapshot.json`` is continuously
+    re-validated on every run (FR-011, SC-002): it conforms to the
+    ``runtimeCapabilitySnapshot`` ``$def``, its ID identity holds, and its
+    alias/tuple coverage is exact. Each check is teeth-verified against a
+    deliberately-corrupted in-memory copy so the green is meaningful and not a
+    vacuous characterization pass.
+    """
+
+    def require_validator(self):
+        self.assertIsNotNone(
+            claude_trace_schema,
+            "claude_trace_schema validator module not importable (T005)",
+        )
+        return claude_trace_schema
+
+    def load_committed_snapshot(self) -> dict:
+        # Loaded fresh per call so a test may mutate its copy without leaking.
+        self.assertTrue(
+            SNAPSHOT_PATH.is_file(),
+            f"committed runtime-capability snapshot missing (T015): {SNAPSHOT_PATH}",
+        )
+        return json.loads(SNAPSHOT_PATH.read_text(encoding="utf-8"))
+
+    # (a) fail-closed schema validation of the committed snapshot -------------
+
+    def test_committed_snapshot_validates_against_the_schema(self) -> None:
+        validator = self.require_validator()
+        snapshot = self.load_committed_snapshot()
+        self.assertIs(
+            validator.validate_runtime_capability_snapshot(snapshot), snapshot
+        )
+
+    def test_committed_snapshot_validation_rejects_corrupted_copies(self) -> None:
+        validator = self.require_validator()
+        error = validator.ClaudeTraceContractError
+        mutations = {
+            "drop required canary": lambda r: r.pop("canary"),
+            "wrong schema_version const": lambda r: r.__setitem__("schema_version", "2.0.0"),
+            "malformed snapshot id": lambda r: r.__setitem__(
+                "runtime_capability_snapshot_id", "RCS-not-valid"
+            ),
+            "captured_at not UTC-Z": lambda r: r.__setitem__(
+                "captured_at_utc", "2026-07-17 08:20:26"
+            ),
+            "empty tuple_evidence": lambda r: r.__setitem__("tuple_evidence", []),
+        }
+        for label, mutate in mutations.items():
+            with self.subTest(mutation=label):
+                snapshot = self.load_committed_snapshot()
+                mutate(snapshot)
+                with self.assertRaises(error):
+                    validator.validate_runtime_capability_snapshot(snapshot)
+
+    # (b) FR-011 identity: id-embedded date == captured UTC date; V<n> positive
+
+    def test_committed_snapshot_id_identity_holds(self) -> None:
+        snapshot = self.load_committed_snapshot()
+        check_snapshot_id_identity(snapshot)  # raises on any FR-011 violation
+        match = _SNAPSHOT_ID_IDENTITY_RE.fullmatch(
+            snapshot["runtime_capability_snapshot_id"]
+        )
+        self.assertIsNotNone(match)
+        self.assertEqual(match.group(1), utc_calendar_date(snapshot["captured_at_utc"]))
+        self.assertGreaterEqual(int(match.group(2)), 1)
+
+    def test_id_identity_check_has_teeth(self) -> None:
+        # Each corruption keeps the id schema-well-formed (so the validator alone
+        # would NOT catch most of these) yet violates FR-011 identity — proving the
+        # dedicated check adds real coverage.
+        cases = {
+            "id date one day ahead of capture": lambda r: r.__setitem__(
+                "runtime_capability_snapshot_id", "CAR-002-RCS-2026-07-18-V1"
+            ),
+            "id date one day behind capture": lambda r: r.__setitem__(
+                "runtime_capability_snapshot_id", "CAR-002-RCS-2026-07-16-V1"
+            ),
+            "captured_at shifted off the id date": lambda r: r.__setitem__(
+                "captured_at_utc", "2026-08-01T08:20:26Z"
+            ),
+            "non-positive V0 (schema-valid, identity-invalid)": lambda r: r.__setitem__(
+                "runtime_capability_snapshot_id", "CAR-002-RCS-2026-07-17-V0"
+            ),
+            "non-numeric V suffix": lambda r: r.__setitem__(
+                "runtime_capability_snapshot_id", "CAR-002-RCS-2026-07-17-VX"
+            ),
+        }
+        for label, mutate in cases.items():
+            with self.subTest(corruption=label):
+                snapshot = self.load_committed_snapshot()
+                mutate(snapshot)
+                with self.assertRaises(AssertionError):
+                    check_snapshot_id_identity(snapshot)
+
+    # (c) alias bindings cover exactly the four aliases -----------------------
+
+    def test_committed_snapshot_alias_bindings_cover_exactly_four(self) -> None:
+        snapshot = self.load_committed_snapshot()
+        check_alias_bindings_cover_four(snapshot)
+        self.assertEqual(
+            {binding["alias"] for binding in snapshot["alias_bindings"]},
+            set(EXPECTED_ALIAS_SET),
+        )
+
+    def test_alias_coverage_check_has_teeth(self) -> None:
+        cases = {
+            "missing an alias": lambda r: r.__setitem__(
+                "alias_bindings", r["alias_bindings"][:3]
+            ),
+            "unexpected extra alias": lambda r: r["alias_bindings"].append(
+                {"alias": "ultra"}
+            ),
+            "duplicate alias": lambda r: r["alias_bindings"].append(
+                {"alias": r["alias_bindings"][0]["alias"]}
+            ),
+        }
+        for label, mutate in cases.items():
+            with self.subTest(corruption=label):
+                snapshot = self.load_committed_snapshot()
+                mutate(snapshot)
+                with self.assertRaises(AssertionError):
+                    check_alias_bindings_cover_four(snapshot)
+
+    # (d) tuple_evidence holds exactly the six expected tuple_ids --------------
+
+    def test_committed_snapshot_tuple_evidence_has_the_six_tuples(self) -> None:
+        snapshot = self.load_committed_snapshot()
+        check_tuple_evidence_has_six(snapshot)
+        self.assertEqual(
+            {evidence["tuple_id"] for evidence in snapshot["tuple_evidence"]},
+            set(EXPECTED_TUPLE_IDS),
+        )
+        self.assertEqual(len(snapshot["tuple_evidence"]), len(EXPECTED_TUPLE_IDS))
+
+    def test_tuple_evidence_check_has_teeth(self) -> None:
+        cases = {
+            "missing a tuple": lambda r: r.__setitem__(
+                "tuple_evidence", r["tuple_evidence"][:5]
+            ),
+            "unexpected extra tuple": lambda r: r["tuple_evidence"].append(
+                {"tuple_id": "opus__low"}
+            ),
+            "duplicate tuple": lambda r: r["tuple_evidence"].append(
+                {"tuple_id": r["tuple_evidence"][0]["tuple_id"]}
+            ),
+        }
+        for label, mutate in cases.items():
+            with self.subTest(corruption=label):
+                snapshot = self.load_committed_snapshot()
+                mutate(snapshot)
+                with self.assertRaises(AssertionError):
+                    check_tuple_evidence_has_six(snapshot)
+
+
 if __name__ == "__main__":
     loader = unittest.defaultTestLoader
     suite = unittest.TestSuite()
     suite.addTests(loader.loadTestsFromTestCase(ClaudeTraceSchemaContractTests))
     suite.addTests(loader.loadTestsFromTestCase(ClaudeCapabilitiesPureLogicTests))
     suite.addTests(loader.loadTestsFromTestCase(ClaudeCapabilitiesLiveBoundaryTests))
+    suite.addTests(loader.loadTestsFromTestCase(CommittedRuntimeCapabilitySnapshotTests))
     raise SystemExit(run_counted(suite, label="test-efficiency-claude-telemetry"))

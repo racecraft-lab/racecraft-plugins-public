@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "runtime_capability_snapshot_id": "CAR-002-RCS-2026-07-17-V1",
-  "captured_at_utc": "2026-07-17T08:20:26Z",
+  "runtime_capability_snapshot_id": "CAR-002-RCS-2026-07-17-V2",
+  "captured_at_utc": "2026-07-17T08:51:02Z",
   "pinned_client_version": "2.1.212 (Claude Code)",
   "authentication_mode": "subscription",
   "canary": {
@@ -19,7 +19,7 @@
       "raw_evidence": {
         "raw_output": "ok\n",
         "raw_output_sha256": "dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
-        "sanitization": "home_paths_normalized_utf8"
+        "sanitization": "home_paths_and_session_ids_normalized_utf8"
       }
     },
     {
@@ -32,7 +32,7 @@
       "raw_evidence": {
         "raw_output": "ok\n",
         "raw_output_sha256": "dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
-        "sanitization": "home_paths_normalized_utf8"
+        "sanitization": "home_paths_and_session_ids_normalized_utf8"
       }
     },
     {
@@ -45,7 +45,7 @@
       "raw_evidence": {
         "raw_output": "ok\n",
         "raw_output_sha256": "dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
-        "sanitization": "home_paths_normalized_utf8"
+        "sanitization": "home_paths_and_session_ids_normalized_utf8"
       }
     },
     {
@@ -58,7 +58,7 @@
       "raw_evidence": {
         "raw_output": "ok\n",
         "raw_output_sha256": "dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
-        "sanitization": "home_paths_normalized_utf8"
+        "sanitization": "home_paths_and_session_ids_normalized_utf8"
       }
     },
     {
@@ -71,7 +71,7 @@
       "raw_evidence": {
         "raw_output": "ok\n",
         "raw_output_sha256": "dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
-        "sanitization": "home_paths_normalized_utf8"
+        "sanitization": "home_paths_and_session_ids_normalized_utf8"
       }
     },
     {
@@ -84,7 +84,7 @@
       "raw_evidence": {
         "raw_output": "ok\n",
         "raw_output_sha256": "dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
-        "sanitization": "home_paths_normalized_utf8"
+        "sanitization": "home_paths_and_session_ids_normalized_utf8"
       }
     }
   ],
@@ -94,9 +94,9 @@
       "resolved_dated_model_id": "claude-opus-4-8",
       "tuple_id": "opus__max",
       "raw_evidence": {
-        "raw_output": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"api_error_status\":null,\"duration_ms\":3197,\"duration_api_ms\":1408,\"ttft_ms\":2538,\"ttft_stream_ms\":2530,\"time_to_request_ms\":1150,\"num_turns\":1,\"result\":\"ok\",\"stop_reason\":\"end_turn\",\"session_id\":\"78b65992-8ed3-455a-9a2f-b5267a2b2139\",\"total_cost_usd\":0.289317,\"usage\":{\"input_tokens\":2,\"cache_creation_input_tokens\":28159,\"cache_read_input_tokens\":15234,\"output_tokens\":4,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":28159,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":2,\"output_tokens\":4,\"cache_read_input_tokens\":15234,\"cache_creation_input_tokens\":28159,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":28159},\"type\":\"message\"}],\"speed\":\"standard\"},\"modelUsage\":{\"claude-opus-4-8\":{\"inputTokens\":2,\"outputTokens\":4,\"cacheReadInputTokens\":15234,\"cacheCreationInputTokens\":28159,\"webSearchRequests\":0,\"costUSD\":0.289317,\"contextWindow\":1000000,\"maxOutputTokens\":64000}},\"permission_denials\":[],\"terminal_reason\":\"completed\",\"fast_mode_state\":\"off\",\"uuid\":\"e034f23d-5ed1-4c27-9b01-565c7dbc659b\"}\n",
-        "raw_output_sha256": "8b883f0387c0539f9bbcebb9745d09fcb5c1568ccebd69d6cdeda08ba32c9fb9",
-        "sanitization": "home_paths_normalized_utf8"
+        "raw_output": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"api_error_status\":null,\"duration_ms\":3245,\"duration_api_ms\":1179,\"ttft_ms\":2181,\"ttft_stream_ms\":2156,\"time_to_request_ms\":1039,\"num_turns\":1,\"result\":\"ok\",\"stop_reason\":\"end_turn\",\"session_id\":\"<session-id>\",\"total_cost_usd\":0.291577,\"usage\":{\"input_tokens\":2,\"cache_creation_input_tokens\":28385,\"cache_read_input_tokens\":15234,\"output_tokens\":4,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":28385,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":2,\"output_tokens\":4,\"cache_read_input_tokens\":15234,\"cache_creation_input_tokens\":28385,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":28385},\"type\":\"message\"}],\"speed\":\"standard\"},\"modelUsage\":{\"claude-opus-4-8\":{\"inputTokens\":2,\"outputTokens\":4,\"cacheReadInputTokens\":15234,\"cacheCreationInputTokens\":28385,\"webSearchRequests\":0,\"costUSD\":0.291577,\"contextWindow\":1000000,\"maxOutputTokens\":64000}},\"permission_denials\":[],\"terminal_reason\":\"completed\",\"fast_mode_state\":\"off\",\"uuid\":\"<session-id>\"}\n",
+        "raw_output_sha256": "87eb83362ec1b7d3808079ba65aa8a955ca7a3bee621d2c3776c0196117e308d",
+        "sanitization": "home_paths_and_session_ids_normalized_utf8"
       }
     },
     {
@@ -104,9 +104,9 @@
       "resolved_dated_model_id": "claude-sonnet-5",
       "tuple_id": "sonnet__max",
       "raw_evidence": {
-        "raw_output": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"api_error_status\":null,\"duration_ms\":4075,\"duration_api_ms\":2325,\"ttft_ms\":3347,\"ttft_stream_ms\":3185,\"time_to_request_ms\":1070,\"num_turns\":1,\"result\":\"ok\",\"stop_reason\":\"end_turn\",\"session_id\":\"b04b7bc7-757a-4e63-9938-fd7cf5a570c1\",\"total_cost_usd\":0.1974171,\"usage\":{\"input_tokens\":2,\"cache_creation_input_tokens\":31709,\"cache_read_input_tokens\":23657,\"output_tokens\":4,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":31709,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":2,\"output_tokens\":4,\"cache_read_input_tokens\":23657,\"cache_creation_input_tokens\":31709,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":31709},\"type\":\"message\"}],\"speed\":\"standard\"},\"modelUsage\":{\"claude-sonnet-5\":{\"inputTokens\":2,\"outputTokens\":4,\"cacheReadInputTokens\":23657,\"cacheCreationInputTokens\":31709,\"webSearchRequests\":0,\"costUSD\":0.1974171,\"contextWindow\":1000000,\"maxOutputTokens\":64000}},\"permission_denials\":[],\"terminal_reason\":\"completed\",\"fast_mode_state\":\"off\",\"uuid\":\"f00e8b21-28ae-42a0-b3a5-8454643c29dd\"}\n",
-        "raw_output_sha256": "032da3c1deec16583cf2d3e2d5ec6477da35efd5a55bf549626315aa18d26767",
-        "sanitization": "home_paths_normalized_utf8"
+        "raw_output": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"api_error_status\":null,\"duration_ms\":4532,\"duration_api_ms\":2655,\"ttft_ms\":3747,\"ttft_stream_ms\":3738,\"time_to_request_ms\":1111,\"num_turns\":1,\"result\":\"ok\",\"stop_reason\":\"end_turn\",\"session_id\":\"<session-id>\",\"total_cost_usd\":0.1987731,\"usage\":{\"input_tokens\":2,\"cache_creation_input_tokens\":31935,\"cache_read_input_tokens\":23657,\"output_tokens\":4,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":31935,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":2,\"output_tokens\":4,\"cache_read_input_tokens\":23657,\"cache_creation_input_tokens\":31935,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":31935},\"type\":\"message\"}],\"speed\":\"standard\"},\"modelUsage\":{\"claude-sonnet-5\":{\"inputTokens\":2,\"outputTokens\":4,\"cacheReadInputTokens\":23657,\"cacheCreationInputTokens\":31935,\"webSearchRequests\":0,\"costUSD\":0.1987731,\"contextWindow\":1000000,\"maxOutputTokens\":64000}},\"permission_denials\":[],\"terminal_reason\":\"completed\",\"fast_mode_state\":\"off\",\"uuid\":\"<session-id>\"}\n",
+        "raw_output_sha256": "9e725c0e2f2be1df4f78c8c24bf68c9194cd0eecfa1edde904b2874860d2f9ba",
+        "sanitization": "home_paths_and_session_ids_normalized_utf8"
       }
     },
     {
@@ -114,9 +114,9 @@
       "resolved_dated_model_id": "claude-fable-5",
       "tuple_id": "fable__max",
       "raw_evidence": {
-        "raw_output": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"api_error_status\":null,\"duration_ms\":7099,\"duration_api_ms\":5358,\"ttft_ms\":6323,\"ttft_stream_ms\":5628,\"time_to_request_ms\":1109,\"num_turns\":1,\"result\":\"ok\",\"stop_reason\":\"end_turn\",\"session_id\":\"91641b03-0fbe-487c-a2d7-cc34434aadbb\",\"total_cost_usd\":0.5938969999999999,\"usage\":{\"input_tokens\":2,\"cache_creation_input_tokens\":28894,\"cache_read_input_tokens\":15247,\"output_tokens\":15,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":28894,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":2,\"output_tokens\":15,\"cache_read_input_tokens\":15247,\"cache_creation_input_tokens\":28894,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":28894},\"type\":\"message\"}],\"speed\":\"standard\"},\"modelUsage\":{\"claude-fable-5\":{\"inputTokens\":2,\"outputTokens\":15,\"cacheReadInputTokens\":15247,\"cacheCreationInputTokens\":28894,\"webSearchRequests\":0,\"costUSD\":0.5938969999999999,\"contextWindow\":1000000,\"maxOutputTokens\":64000}},\"permission_denials\":[],\"terminal_reason\":\"completed\",\"fast_mode_state\":\"off\",\"uuid\":\"5578b548-b0d8-4f13-8326-8750fba6db5f\"}\n",
-        "raw_output_sha256": "3df5cf7e910de2591c8d963125a73af97c23c44ea17215480a87c4c084e0b2ba",
-        "sanitization": "home_paths_normalized_utf8"
+        "raw_output": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"api_error_status\":null,\"duration_ms\":16382,\"duration_api_ms\":11265,\"ttft_ms\":6632,\"ttft_stream_ms\":5711,\"time_to_request_ms\":1009,\"num_turns\":2,\"result\":\"ok\",\"stop_reason\":\"end_turn\",\"session_id\":\"<session-id>\",\"total_cost_usd\":0.647854,\"usage\":{\"input_tokens\":4,\"cache_creation_input_tokens\":29205,\"cache_read_input_tokens\":59614,\"output_tokens\":82,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":29205,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":2,\"output_tokens\":4,\"cache_read_input_tokens\":44367,\"cache_creation_input_tokens\":85,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":85},\"type\":\"message\"}],\"speed\":\"standard\"},\"modelUsage\":{\"claude-fable-5\":{\"inputTokens\":4,\"outputTokens\":82,\"cacheReadInputTokens\":59614,\"cacheCreationInputTokens\":29205,\"webSearchRequests\":0,\"costUSD\":0.647854,\"contextWindow\":1000000,\"maxOutputTokens\":64000}},\"permission_denials\":[],\"terminal_reason\":\"completed\",\"fast_mode_state\":\"off\",\"uuid\":\"<session-id>\"}\n",
+        "raw_output_sha256": "b2d5b67017c0a397a6993330b1162b0db6aab53acbc0423d0b353ceed94f3db4",
+        "sanitization": "home_paths_and_session_ids_normalized_utf8"
       }
     },
     {
@@ -124,9 +124,9 @@
       "resolved_dated_model_id": "claude-haiku-4-5-20251001",
       "tuple_id": "haiku__max",
       "raw_evidence": {
-        "raw_output": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"api_error_status\":null,\"duration_ms\":3706,\"duration_api_ms\":1861,\"ttft_ms\":2970,\"ttft_stream_ms\":2566,\"time_to_request_ms\":1144,\"num_turns\":1,\"result\":\"ok\",\"stop_reason\":\"end_turn\",\"session_id\":\"94fec627-eff3-425b-ab2a-0219ff3c9600\",\"total_cost_usd\":0.0470417,\"usage\":{\"input_tokens\":10,\"cache_creation_input_tokens\":22531,\"cache_read_input_tokens\":17497,\"output_tokens\":44,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":22531,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":10,\"output_tokens\":44,\"cache_read_input_tokens\":17497,\"cache_creation_input_tokens\":22531,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":22531},\"type\":\"message\"}],\"speed\":\"standard\"},\"modelUsage\":{\"claude-haiku-4-5-20251001\":{\"inputTokens\":10,\"outputTokens\":44,\"cacheReadInputTokens\":17497,\"cacheCreationInputTokens\":22531,\"webSearchRequests\":0,\"costUSD\":0.0470417,\"contextWindow\":200000,\"maxOutputTokens\":32000}},\"permission_denials\":[],\"terminal_reason\":\"completed\",\"fast_mode_state\":\"off\",\"uuid\":\"26eb3b23-27cc-4103-84df-465c208997c5\"}\n",
-        "raw_output_sha256": "5205b104a7307f88cb58277c0b2e8858109c7116a50bb229d74d0d46b75138c8",
-        "sanitization": "home_paths_normalized_utf8"
+        "raw_output": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"api_error_status\":null,\"duration_ms\":5907,\"duration_api_ms\":3956,\"ttft_ms\":4917,\"ttft_stream_ms\":4558,\"time_to_request_ms\":991,\"num_turns\":1,\"result\":\"ok\",\"stop_reason\":\"end_turn\",\"session_id\":\"<session-id>\",\"total_cost_usd\":0.0473727,\"usage\":{\"input_tokens\":10,\"cache_creation_input_tokens\":22704,\"cache_read_input_tokens\":17497,\"output_tokens\":41,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":22704,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":10,\"output_tokens\":41,\"cache_read_input_tokens\":17497,\"cache_creation_input_tokens\":22704,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":22704},\"type\":\"message\"}],\"speed\":\"standard\"},\"modelUsage\":{\"claude-haiku-4-5-20251001\":{\"inputTokens\":10,\"outputTokens\":41,\"cacheReadInputTokens\":17497,\"cacheCreationInputTokens\":22704,\"webSearchRequests\":0,\"costUSD\":0.0473727,\"contextWindow\":200000,\"maxOutputTokens\":32000}},\"permission_denials\":[],\"terminal_reason\":\"completed\",\"fast_mode_state\":\"off\",\"uuid\":\"<session-id>\"}\n",
+        "raw_output_sha256": "ec7108d5b20a4750cec0bb162bb6cc3d1e04bd77f8b58054d073af0144536072",
+        "sanitization": "home_paths_and_session_ids_normalized_utf8"
       }
     }
   ],
@@ -149,9 +149,9 @@
       "remap_flagged": false,
       "dispatch_equivalence_caveat": "Direct `-p --model` dispatch of an unavailable ID; the observed outcome path is a labeled observation, not a certified platform fact (FR-026/FR-027).",
       "raw_evidence": {
-        "raw_output": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":true,\"api_error_status\":404,\"duration_ms\":2301,\"duration_api_ms\":0,\"num_turns\":1,\"result\":\"There's an issue with the selected model (claude-opus-3-0). It may not exist or you may not have access to it. Run --model to pick a different model.\",\"stop_reason\":\"stop_sequence\",\"session_id\":\"4d64e2b2-2b3c-4c25-8ae7-79c215220eea\",\"total_cost_usd\":0,\"usage\":{\"input_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{},\"permission_denials\":[],\"terminal_reason\":\"api_error\",\"fast_mode_state\":\"off\",\"uuid\":\"4206558c-c7b9-40dd-8236-c30415e3a703\"}\n",
-        "raw_output_sha256": "eb7fb5a327c406950d9643f04d335b52e9450f21017e837eb146d69873a33c2a",
-        "sanitization": "home_paths_normalized_utf8"
+        "raw_output": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":true,\"api_error_status\":404,\"duration_ms\":1968,\"duration_api_ms\":0,\"num_turns\":1,\"result\":\"There's an issue with the selected model (claude-opus-3-0). It may not exist or you may not have access to it. Run --model to pick a different model.\",\"stop_reason\":\"stop_sequence\",\"session_id\":\"<session-id>\",\"total_cost_usd\":0,\"usage\":{\"input_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{},\"permission_denials\":[],\"terminal_reason\":\"api_error\",\"fast_mode_state\":\"off\",\"uuid\":\"<session-id>\"}\n",
+        "raw_output_sha256": "4bf848a320320f560e22b84a673347c0a8d6f8fb67aba4a3b3a7410fe62b4adb",
+        "sanitization": "home_paths_and_session_ids_normalized_utf8"
       }
     },
     {
@@ -172,9 +172,9 @@
       "remap_flagged": true,
       "dispatch_equivalence_caveat": "File-based `.claude/agents` frontmatter dispatched via an @agent mention approximates but is not proven equivalent to the plugin-namespaced production Agent-tool routing; recorded as labeled inference (research R12).",
       "raw_evidence": {
-        "raw_output": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"api_error_status\":null,\"duration_ms\":19778,\"duration_api_ms\":14579,\"ttft_ms\":9334,\"ttft_stream_ms\":7388,\"time_to_request_ms\":1193,\"num_turns\":2,\"result\":\"The probe agent did not reply \\\"ok\\\" — it terminated before producing any output. The dispatch failed with an API error:\\n\\n> Agent terminated early due to an API error: There's an issue with the selected model (claude-opus-3-0[1m]). It may not exist or you may not have access to it. Run --model to pick a different model.\\n\\nSo the `car002-probe` agent's configured model (`claude-opus-3-0[1m]`) is unavailable in this environment, and the subagent died on a terminal API error rather than returning a response. If this was the CAR-002 unavailable-model probe doing its job, that's your signal: dispatch fails hard with a model-not-found error instead of silently falling back to another model.\",\"stop_reason\":\"end_turn\",\"session_id\":\"c5776487-21ea-4819-906d-362c349f1d15\",\"total_cost_usd\":0.675599,\"usage\":{\"input_tokens\":4,\"cache_creation_input_tokens\":29359,\"cache_read_input_tokens\":59529,\"output_tokens\":577,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":29359,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":2,\"output_tokens\":327,\"cache_read_input_tokens\":44282,\"cache_creation_input_tokens\":324,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":324},\"type\":\"message\"}],\"speed\":\"standard\"},\"modelUsage\":{\"claude-fable-5\":{\"inputTokens\":4,\"outputTokens\":577,\"cacheReadInputTokens\":59529,\"cacheCreationInputTokens\":29359,\"webSearchRequests\":0,\"costUSD\":0.675599,\"contextWindow\":1000000,\"maxOutputTokens\":64000}},\"permission_denials\":[],\"terminal_reason\":\"completed\",\"fast_mode_state\":\"off\",\"uuid\":\"1e190bc8-779e-4077-960d-59a193123c03\"}\n",
-        "raw_output_sha256": "88a337b1b12211bd76e4961563d39ee2a4b2e9c380e08d3a80029c71a90bb9fc",
-        "sanitization": "home_paths_normalized_utf8"
+        "raw_output": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"api_error_status\":null,\"duration_ms\":17185,\"duration_api_ms\":12776,\"ttft_ms\":6780,\"ttft_stream_ms\":5366,\"time_to_request_ms\":1011,\"num_turns\":2,\"result\":\"The probe agent could not run: it terminated immediately with an API error — its configured model `claude-opus-3-0[1m]` doesn't exist or isn't accessible, so no reply (no \\\"ok\\\") was produced.\\n\\nGiven this is the CAR-002 throwaway unavailable-model probe, that error is itself the probe signal: dispatching a subagent pinned to an unavailable model fails at spawn time with a terminal model-access error rather than falling back to another model.\",\"stop_reason\":\"end_turn\",\"session_id\":\"<session-id>\",\"total_cost_usd\":0.659994,\"usage\":{\"input_tokens\":4,\"cache_creation_input_tokens\":28838,\"cache_read_input_tokens\":59044,\"output_tokens\":483,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":28838,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"not_available\",\"iterations\":[{\"input_tokens\":2,\"output_tokens\":269,\"cache_read_input_tokens\":43797,\"cache_creation_input_tokens\":288,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":288},\"type\":\"message\"}],\"speed\":\"standard\"},\"modelUsage\":{\"claude-fable-5\":{\"inputTokens\":4,\"outputTokens\":483,\"cacheReadInputTokens\":59044,\"cacheCreationInputTokens\":28838,\"webSearchRequests\":0,\"costUSD\":0.659994,\"contextWindow\":1000000,\"maxOutputTokens\":64000}},\"permission_denials\":[],\"terminal_reason\":\"completed\",\"fast_mode_state\":\"off\",\"uuid\":\"<session-id>\"}\n",
+        "raw_output_sha256": "7496feb313c6f285047e473cc38fe94c680f91212a1831dd1786519fa2e3395e",
+        "sanitization": "home_paths_and_session_ids_normalized_utf8"
       }
     }
   ],

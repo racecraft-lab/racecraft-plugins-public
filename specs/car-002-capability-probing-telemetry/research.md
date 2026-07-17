@@ -132,7 +132,7 @@ standard-library logic in `claude_trace_schema.py` — no third-party `jsonschem
 (`require_exact_keys`, `schema_keys`, `require_sha256`, `require_utc_timestamp`).
 
 `rawEvidence` `$def`: `{ raw_output: <string>, raw_output_sha256: <sha256>, sanitization:
-const "home_paths_normalized_utf8" }`. It stores the **full** sanitized `--output-format
+const "home_paths_and_session_ids_normalized_utf8" }`. It stores the **full** sanitized `--output-format
 json` stdout committed verbatim as a string (not a parsed object), deliberately distinct
 from CAR-001's 700-char-capped `boundedExtract` because the ratified Q7 decision stores
 the whole payload (FR-012/FR-013; Key Entities "Raw probe evidence").

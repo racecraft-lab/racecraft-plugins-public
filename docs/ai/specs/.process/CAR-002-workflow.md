@@ -840,6 +840,27 @@ fail-closed writer plus the deterministic test then re-validate it.
 
 ---
 
+## PR Review Packet Drafts (T018 / T028 / T039 — consumed by final PR emission)
+
+### WP1 packet draft (T018, recorded 2026-07-17)
+
+- **What changed**: the CAR-002 schema contract (`docs/ai/research/claude-trace-contract.schema.json`, four `$defs` + shared primitives, `schema_version` 1.0.0), the stdlib validator (`tests/speckit-pro/layer6-efficiency/lib/claude_trace_schema.py`), the operator probe tool (`tests/speckit-pro/layer6-efficiency/lib/claude_capabilities.py` — pure matrix logic, fail-closed writer, single live boundary, subagent dispatch mechanism), the Layer-4 test module + suite registration, the docs-surface guard allowlist entries, and the committed snapshot `docs/ai/research/claude-runtime-capability-snapshot.json` (`CAR-002-RCS-2026-07-17-V1`).
+- **Why**: CAR-001 froze 37 candidate routes behind six capability questions; CAR-003 cannot score until the executable subset is frozen from recorded probe evidence. The snapshot answers CAP-Q1..Q5 and records CAP-Q6 open (detection-rule-only, ratified).
+- **Headline evidence**: CAP-Q5's surfaces diverge — `-p --model <unavailable-id>` hard-rejects; subagent-frontmatter dispatch silently soft-remaps to the inherited session model (remap_flagged=true), with the full FR-010 unset-proof recorded on both surfaces (bare-platform behavior, not config masking).
+- **Non-goals**: corpus execution, scoring, statistics, fallback ordering (CAR-003+); no shipped payload/agent-frontmatter edits (zero bytes under `speckit-pro/`, `dist/`, installed-cache mirrors).
+- **Review order**: schema → validator → probe tool pure logic → live boundary → snapshot.
+- **Scope budget**: T001 disposition — single WP1 unit with a documented, ratified over-ceiling exception (WP1's coupling is atomic per FR-015/FR-016/FR-023/FR-028); hand estimate 550–820 authored LOC vs the 400 warn ceiling; final shape decided at the final reviewability gate (G5 atomicity conflict recorded above).
+- **Traceability**: WP1 = FR-001/003–017/023/026–028 → tasks T001–T018 (FR→Task table in tasks.md).
+- **Verification evidence**: TDD RED→GREEN at every step; suite 3048/3048 at the T015 boundary; snapshot validates fail-closed against the `runtimeCapabilitySnapshot` `$def`; privacy scan clean.
+- **Known gaps**: CAP-Q6 explicitly open (detection rule only); models endpoint recorded as a gap (subscription auth); effort acceptance labeled observation, never certification.
+- **Rollback**: revert the additive PR; no feature flag; no migration.
+
+### WP2 packet draft (T028) — ⏳ filled at WP2 completion
+
+### WP3 packet draft (T039) — ⏳ filled at WP3 completion
+
+---
+
 ## Post-Implementation Checklist
 
 - [ ] All tasks marked complete in tasks.md

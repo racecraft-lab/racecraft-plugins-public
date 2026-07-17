@@ -26,7 +26,7 @@ snapshot — never duplicated data that can drift (constitution VI; Architecture
 |-------|------|----------|------|
 | `raw_output` | string | yes | The **full** `--output-format json` stdout, sanitized to `<home>`, committed verbatim as a string (not a parsed object). |
 | `raw_output_sha256` | `sha256` | yes | SHA-256 over the exact sanitized UTF-8 bytes of `raw_output` (reproducible from committed bytes). |
-| `sanitization` | const `"home_paths_normalized_utf8"` | yes | Marks the applied sanitization convention. |
+| `sanitization` | const `"home_paths_and_session_ids_normalized_utf8"` | yes | Marks the applied sanitization convention. |
 
 ---
 
