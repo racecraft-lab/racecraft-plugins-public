@@ -1559,8 +1559,8 @@ def _validate_publication_time(published_at, refreshes, matrix, predecessor=None
     ]
     if evidence_times and published < max(evidence_times):
         raise ValueError("publication timestamp precedes captured evidence")
-    if predecessor is not None and published <= _parsed_timestamp(predecessor["published_at"], "predecessor publication timestamp"):
-        raise ValueError("successor publication timestamp must follow its predecessor")
+    if predecessor is not None and published < _parsed_timestamp(predecessor["published_at"], "predecessor publication timestamp"):
+        raise ValueError("successor publication timestamp cannot precede its predecessor")
 
 
 def _successor_canary_results(predecessor, same_runtime_inputs):
