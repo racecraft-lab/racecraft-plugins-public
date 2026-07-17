@@ -65,7 +65,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Tasks | `$speckit-tasks` | Complete | 39 TDD-first tasks; G5 passed |
 | Analyze | `$speckit-analyze` | Complete | Nine findings remediated; G6 passed |
 | Confidence Gate | G6.5 | Complete | Advisory score 0.99 passed the 0.90 threshold |
-| Implement | `$speckit-implement` | In Progress | T016-T025 checkpointed at `0e73f181`; synthetic replay marker is active |
+| Implement | `$speckit-implement` | In Progress | T016-T025 checkpointed at `c47c9d31`; synthetic replay marker is active |
 | Post | Post-Implementation | Pending | Complete verification, reviewability, PR, remediation, and retrospective work |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -873,7 +873,7 @@ For every task:
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
-| 2 - Treatment contracts | Complete | 10 | Checkpoint `0e73f181`; 24/24 focused tests, schema/CLI/freeze validation, and independent critical/high review pass |
+| 2 - Treatment contracts | Complete | 10 | Checkpoint `c47c9d31`; 24/24 focused tests, schema/CLI/freeze validation, and independent critical/high review pass |
 | 3 - Synthetic replay | In Progress | 0 | T026-T030 active in the bounded offline replay extension |
 | Polish and validation | Pending | 0 | Not started |
 
@@ -893,12 +893,12 @@ For every task:
 
 ### Treatment Checkpoint Evidence
 
-- Implementation baseline: `9ff8413ba74d6faf5def9eb3d453c3ea431c13cd`
+- Implementation baseline: `bbffc774c815594edc64cf412a2b5f91127ef213`
 - Successor candidate freeze: `sha256:4563bb9c21f9c2378b70d67c5bfe6f82e2febda01b8506bf2e274081bba7b149`
 - Superseded candidate freeze: `sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03`
 - Telemetry profile: `sha256:5d6657cbdf269bf5a77461723dac1f69803c06f60989e2fe7ed18d93fa2be0ba`
 - Treatment contract: `sha256:d9c0048e1443ea6c0f5792a4075d434cd539dc0f923db18403880f26bec7e551`
-- Marker checkpoint: `0e73f1813b0fb355f4dfd0985d4841e43000e12f`
+- Marker checkpoint: `c47c9d31fd1288e86f0707601078e4f03e2b12e5`
 - Reviewability: size-only `block` at 940 source / 855 nonblank,
   non-comment lines; typed `no_safe_boundary` exception honored for the
   checkpoint with only T026-T030 replay growth reserved.
@@ -925,7 +925,7 @@ For every task:
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
-| 2 | `us2` | T016-T025 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `0e73f1813b0fb355f4dfd0985d4841e43000e12f` | Only T026-T030 replay growth remains authorized |
+| 2 | `us2` | T016-T025 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `c47c9d31fd1288e86f0707601078e4f03e2b12e5` | Only T026-T030 replay growth remains authorized |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level

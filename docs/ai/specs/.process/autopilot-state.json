@@ -314,13 +314,13 @@
       "tasks_total": 10,
       "focused_tests": "24/24 pass",
       "independent_review": "pass with 0 critical and 0 high findings",
-      "baseline_commit": "9ff8413ba74d6faf5def9eb3d453c3ea431c13cd",
+      "baseline_commit": "bbffc774c815594edc64cf412a2b5f91127ef213",
       "candidate_freeze_id": "sha256:4563bb9c21f9c2378b70d67c5bfe6f82e2febda01b8506bf2e274081bba7b149",
       "telemetry_profile_id": "sha256:5d6657cbdf269bf5a77461723dac1f69803c06f60989e2fe7ed18d93fa2be0ba",
       "treatment_contract_digest": "sha256:d9c0048e1443ea6c0f5792a4075d434cd539dc0f923db18403880f26bec7e551",
       "marker_id": "us2",
       "reviewability": "size-only block with honored typed no-safe-boundary exception",
-      "checkpoint": "0e73f1813b0fb355f4dfd0985d4841e43000e12f",
+      "checkpoint": "c47c9d31fd1288e86f0707601078e4f03e2b12e5",
       "completed_at": "2026-07-17T06:04:36Z"
     }
   },
@@ -446,7 +446,7 @@
           "mode": "implementation",
           "scope": "us2",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/treatment-contracts.json",
-          "head_sha": "9ff8413ba74d6faf5def9eb3d453c3ea431c13cd"
+          "head_sha": "bbffc774c815594edc64cf412a2b5f91127ef213"
         },
         "hazards": ["six-id-join", "exact-treatment", "service-reroute"],
         "subdivision": {
@@ -460,7 +460,7 @@
         "implementation_checkpoint": {
           "status": "complete",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json",
-          "commit_sha": "0e73f1813b0fb355f4dfd0985d4841e43000e12f"
+          "commit_sha": "c47c9d31fd1288e86f0707601078e4f03e2b12e5"
         },
         "emission_mapping": {"status": "pending", "packet_path": "specs/g56r-002-capability-discovery-telemetry/.process/pr-packets/us2.json"},
         "warnings": [
