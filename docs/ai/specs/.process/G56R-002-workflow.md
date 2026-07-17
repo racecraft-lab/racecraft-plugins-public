@@ -65,7 +65,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Tasks | `$speckit-tasks` | Complete | 39 TDD-first tasks; G5 passed |
 | Analyze | `$speckit-analyze` | Complete | Nine findings remediated; G6 passed |
 | Confidence Gate | G6.5 | Complete | Advisory score 0.99 passed the 0.90 threshold |
-| Implement | `$speckit-implement` | In Progress | T001-T015 passed independent review; capability marker checkpoint is pending |
+| Implement | `$speckit-implement` | In Progress | T001-T015 checkpointed at `f262695d`; treatment marker is active |
 | Post | Post-Implementation | Pending | Complete verification, reviewability, PR, remediation, and retrospective work |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -872,8 +872,8 @@ For every task:
 
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
-| 1 - Capability freeze | Checkpointing | 15 | 8/8 focused tests, published validator, schema validation, deterministic replay, and independent critical/high review pass |
-| 2 - Treatment contracts | Pending | 0 | Not started |
+| 1 - Capability freeze | Complete | 15 | Checkpoint `f262695d`; 8/8 focused tests, published validator, schema validation, deterministic replay, and independent critical/high review pass |
+| 2 - Treatment contracts | In Progress | 0 | T016-T025 active in the separate treatment module |
 | 3 - Synthetic replay | Pending | 0 | Not started |
 | Polish and validation | Pending | 0 | Not started |
 
@@ -905,7 +905,7 @@ For every task:
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
-| 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Pending capability artifact commit | No further `codex_capabilities.py` growth |
+| 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `f262695d0c1b519e73d93058a944ccdc377ad62f` | No further `codex_capabilities.py` growth |
 | 2 | `us2` | T016-T025 | Not estimated | Pending | Treatment remains a separate module |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
