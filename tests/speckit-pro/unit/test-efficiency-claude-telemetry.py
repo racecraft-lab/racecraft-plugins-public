@@ -15,13 +15,14 @@ Two families of tests live here:
   green once the schema is authored (T003/T004).
 * **Validator-contract** cases exercise the standard-library validator
   ``claude_trace_schema`` (T005 deliverable at
-  ``tests/speckit-pro/layer6-efficiency/lib/claude_trace_schema.py``). Until that
-  module lands they fail closed on ``assertIsNotNone`` — an expected RED that
-  T005/T006 turn green.
+  ``tests/speckit-pro/layer6-efficiency/lib/claude_trace_schema.py``): each of the
+  four record ``$defs`` is checked with an inline conformant sample (accepted) and
+  a family of malformed variants (rejected fail-closed).
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sys
@@ -72,6 +73,155 @@ def load_schema() -> dict[str, object] | None:
         return json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return None
+
+
+# -- Inline conformant record samples (T006) ---------------------------------
+# Each builder returns a freshly-constructed, schema-conformant instance of one
+# record $def so a test can mutate a copy without disturbing the others. Hashes
+# are real SHA-256 digests so they satisfy the shared ``sha256`` pattern.
+
+
+def _sha256_hex(payload: str) -> str:
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _raw_evidence() -> dict[str, object]:
+    raw_output = '{"result":"ok","modelUsage":{"claude-opus-4-8":{"inputTokens":5}}}'
+    return {
+        "raw_output": raw_output,
+        "raw_output_sha256": _sha256_hex(raw_output),
+        "sanitization": "home_paths_normalized_utf8",
+    }
+
+
+def _unset_proof() -> dict[str, object]:
+    return {
+        "fallback_model_unset": True,
+        "fallbackModel_unset": True,
+        "claude_code_subagent_model_unset": True,
+        "available_models_absent": True,
+        "enforce_available_models_observed": None,
+        "config_dir_isolation": "none",
+        "inherit_equivalent_to_unset": None,
+        "org_restriction_gap": None,
+    }
+
+
+def valid_models_endpoint_evidence() -> dict[str, object]:
+    return {
+        "access_status": "accessible",
+        "dated_model_ids": ["claude-opus-4-8"],
+        "per_model_effort_flags": {},
+        "note": "GET /v1/models corroboration in api_key mode",
+    }
+
+
+def valid_runtime_capability_snapshot() -> dict[str, object]:
+    canary_text = "Reply with the single word: ok"
+    return {
+        "schema_version": "1.0.0",
+        "runtime_capability_snapshot_id": "CAR-002-RCS-2026-07-16-V1",
+        "captured_at_utc": "2026-07-16T12:00:00Z",
+        "pinned_client_version": "2.19.3",
+        "authentication_mode": "api_key",
+        "canary": {"text": canary_text, "canary_sha256": _sha256_hex(canary_text)},
+        "tuple_evidence": [
+            {
+                "tuple_id": "opus__max",
+                "model_requested": "opus",
+                "effort_requested": "max",
+                "resolved_dated_model_id": "claude-opus-4-8",
+                "effort_acceptance": "accepted",
+                "effort_probe_output_mode": "plain_text_print",
+                "raw_evidence": _raw_evidence(),
+            }
+        ],
+        "alias_bindings": [
+            {
+                "alias": "opus",
+                "resolved_dated_model_id": "claude-opus-4-8",
+                "tuple_id": "opus__max",
+                "raw_evidence": _raw_evidence(),
+            }
+        ],
+        "unavailable_observations": [
+            {
+                "surface": "print_model",
+                "requested_unavailable_model_id": "claude-opus-3-0",
+                "observed_outcome": "soft_remap",
+                "observed_model_id": "claude-opus-4-8",
+                "unset_proof": _unset_proof(),
+                "remap_flagged": True,
+                "dispatch_equivalence_caveat": "file-agent @mention approximates the production Agent tool",
+                "raw_evidence": _raw_evidence(),
+            }
+        ],
+        "models_endpoint_evidence": None,
+        "capability_answers": [
+            {
+                "capability_question_id": question_id,
+                "status": "answered",
+                "answer": "recorded",
+                "evidence_refs": ["opus__max"],
+                "label": "observation",
+            }
+            for question_id in ("CAP-Q1", "CAP-Q2", "CAP-Q3", "CAP-Q4", "CAP-Q5", "CAP-Q6")
+        ],
+        "open_gaps": [],
+    }
+
+
+def valid_telemetry_profile() -> dict[str, object]:
+    return {
+        "schema_version": "1.0.0",
+        "telemetry_profile_id": "CAR-002-TP-2026-07-16-V1",
+        "pinned_client_version": "2.19.3",
+        "runtime_capability_snapshot_id": "CAR-002-RCS-2026-07-16-V1",
+        "field_classifications": [
+            {
+                "field": "usage.input_tokens",
+                "classification": "stable_native",
+                "observed_value": "1234",
+                "label": "observation",
+                "source_ref": None,
+            }
+        ],
+    }
+
+
+def valid_route_resolution() -> dict[str, object]:
+    return {
+        "schema_version": "1.0.0",
+        "route_resolution_id": "CAR-002-RR-FIXTURE-001",
+        "agent_contract_id": "car.implement-executor.v1",
+        "candidate_route_id": "CAR-001-CR-01-01",
+        "runtime_capability_snapshot_id": "CAR-002-RCS-2026-07-16-V1",
+        "requested_model_alias": "opus",
+        "resolved_dated_model_id": "claude-opus-4-8",
+        "effort_level": "max",
+        "instruction_sha256": _sha256_hex("role instruction body"),
+        "mutation_contract": "additive_only",
+        "dispatch_namespace": "speckit-pro:implement-executor",
+        "parent_session_configuration": None,
+        "client_version": "2.19.3",
+        "fast_mode_state": "off",
+        "env_override_proof": _unset_proof(),
+        "fallback_index": None,
+        "fallback_reason": None,
+        "tuple_id": "opus__max",
+    }
+
+
+def valid_exact_treatment_replay() -> dict[str, object]:
+    return {
+        "schema_version": "1.0.0",
+        "route_resolution": valid_route_resolution(),
+        "execution_trace_id": None,
+        "record_class": "success",
+        "observed_model_id": "claude-opus-4-8",
+        "outcome": {"status": "completed", "telemetry_ref": None, "notes": None},
+        "scorable": True,
+    }
 
 
 class ClaudeTraceSchemaContractTests(unittest.TestCase):
@@ -219,6 +369,119 @@ class ClaudeTraceSchemaContractTests(unittest.TestCase):
         self.assertTrue(callable(validate), "validate_runtime_capability_snapshot")
         with self.assertRaises(Exception):
             validate({})
+
+    # -- Validator conformance + fail-closed rejection (T006) -----------------
+    # Drive the T005 stdlib validator with inline valid + invalid samples for
+    # each of the four record $defs: conformant records are accepted and returned
+    # unchanged; every malformed variant is rejected fail-closed.
+
+    def require_validator(self):
+        self.assertIsNotNone(
+            claude_trace_schema,
+            "claude_trace_schema validator module not implemented yet (T005)",
+        )
+        return claude_trace_schema
+
+    def test_validator_accepts_conformant_samples_for_each_record(self) -> None:
+        validator = self.require_validator()
+        cases = {
+            "validate_runtime_capability_snapshot": valid_runtime_capability_snapshot(),
+            "validate_telemetry_profile": valid_telemetry_profile(),
+            "validate_route_resolution": valid_route_resolution(),
+            "validate_exact_treatment_replay": valid_exact_treatment_replay(),
+        }
+        for entrypoint, record in cases.items():
+            with self.subTest(entrypoint=entrypoint):
+                validate = getattr(validator, entrypoint)
+                self.assertIs(validate(record), record)
+
+    def test_validator_accepts_snapshot_with_models_endpoint_object(self) -> None:
+        validator = self.require_validator()
+        record = valid_runtime_capability_snapshot()
+        record["models_endpoint_evidence"] = valid_models_endpoint_evidence()
+        self.assertIs(validator.validate_runtime_capability_snapshot(record), record)
+
+    def test_validator_rejects_malformed_runtime_capability_snapshots(self) -> None:
+        validator = self.require_validator()
+        error = validator.ClaudeTraceContractError
+        mutations = {
+            "missing required key": lambda r: r.pop("canary"),
+            "wrong schema_version const": lambda r: r.__setitem__("schema_version", "2.0.0"),
+            "bad snapshot id pattern": lambda r: r.__setitem__("runtime_capability_snapshot_id", "RCS-1"),
+            "captured_at not UTC-Z": lambda r: r.__setitem__("captured_at_utc", "2026-07-16 12:00:00"),
+            "bad authentication_mode enum": lambda r: r.__setitem__("authentication_mode", "oauth"),
+            "additional property": lambda r: r.__setitem__("extra_field", True),
+            "too few capability_answers": lambda r: r.__setitem__("capability_answers", r["capability_answers"][:5]),
+            "empty tuple_evidence": lambda r: r.__setitem__("tuple_evidence", []),
+            "bad tuple_id pattern": lambda r: r["tuple_evidence"][0].__setitem__("tuple_id", "opus-max"),
+            "bad raw_evidence sha256": lambda r: r["tuple_evidence"][0]["raw_evidence"].__setitem__("raw_output_sha256", "deadbeef"),
+            "bad canary sha256": lambda r: r["canary"].__setitem__("canary_sha256", "nothex"),
+        }
+        for label, mutate in mutations.items():
+            with self.subTest(mutation=label):
+                record = valid_runtime_capability_snapshot()
+                mutate(record)
+                with self.assertRaises(error):
+                    validator.validate_runtime_capability_snapshot(record)
+
+    def test_validator_rejects_malformed_telemetry_profiles(self) -> None:
+        validator = self.require_validator()
+        error = validator.ClaudeTraceContractError
+        mutations = {
+            "missing field_classifications": lambda r: r.pop("field_classifications"),
+            "bad telemetry_profile_id pattern": lambda r: r.__setitem__("telemetry_profile_id", "CAR-002-TP-bad"),
+            "bad snapshot cross-ref pattern": lambda r: r.__setitem__("runtime_capability_snapshot_id", "CAR-002-TP-2026-07-16-V1"),
+            "empty field_classifications": lambda r: r.__setitem__("field_classifications", []),
+            "bad classification enum": lambda r: r["field_classifications"][0].__setitem__("classification", "made_up"),
+            "additional property": lambda r: r.__setitem__("extra", 1),
+        }
+        for label, mutate in mutations.items():
+            with self.subTest(mutation=label):
+                record = valid_telemetry_profile()
+                mutate(record)
+                with self.assertRaises(error):
+                    validator.validate_telemetry_profile(record)
+
+    def test_validator_rejects_malformed_route_resolutions(self) -> None:
+        validator = self.require_validator()
+        error = validator.ClaudeTraceContractError
+        mutations = {
+            "missing dispatch_namespace": lambda r: r.pop("dispatch_namespace"),
+            "bad candidate_route_id pattern": lambda r: r.__setitem__("candidate_route_id", "CR-1"),
+            "bad agent_contract_id pattern": lambda r: r.__setitem__("agent_contract_id", "implement-executor"),
+            "bad instruction_sha256": lambda r: r.__setitem__("instruction_sha256", "xyz"),
+            "fallback_index wrong type": lambda r: r.__setitem__("fallback_index", "0"),
+            "fallback_index boolean not integer": lambda r: r.__setitem__("fallback_index", True),
+            "bad fast_mode_state enum": lambda r: r.__setitem__("fast_mode_state", "maybe"),
+            "parent_session_configuration wrong type": lambda r: r.__setitem__("parent_session_configuration", 3),
+            "env_override_proof missing key": lambda r: r["env_override_proof"].pop("config_dir_isolation"),
+            "additional property": lambda r: r.__setitem__("extra", None),
+        }
+        for label, mutate in mutations.items():
+            with self.subTest(mutation=label):
+                record = valid_route_resolution()
+                mutate(record)
+                with self.assertRaises(error):
+                    validator.validate_route_resolution(record)
+
+    def test_validator_rejects_malformed_exact_treatment_replays(self) -> None:
+        validator = self.require_validator()
+        error = validator.ClaudeTraceContractError
+        mutations = {
+            "bad record_class enum": lambda r: r.__setitem__("record_class", "partial"),
+            "scorable wrong type": lambda r: r.__setitem__("scorable", "true"),
+            "missing outcome": lambda r: r.pop("outcome"),
+            "bad outcome.status enum": lambda r: r["outcome"].__setitem__("status", "done"),
+            "execution_trace_id wrong type": lambda r: r.__setitem__("execution_trace_id", 7),
+            "nested route_resolution invalid": lambda r: r["route_resolution"].pop("tuple_id"),
+            "additional property": lambda r: r.__setitem__("extra", 1),
+        }
+        for label, mutate in mutations.items():
+            with self.subTest(mutation=label):
+                record = valid_exact_treatment_replay()
+                mutate(record)
+                with self.assertRaises(error):
+                    validator.validate_exact_treatment_replay(record)
 
 
 if __name__ == "__main__":
