@@ -95,7 +95,7 @@ preferred based on CAR-001 alone.
 | Specify | `/speckit-specify` | ✅ Complete | 28 FRs, 4 US (WP-mapped), 11 acceptance scenarios, 8 SCs; 0 markers; 16/16 quality checklist; privacy scan clean |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions; 9 parent-applied, 6 via consensus (all Round 1, zero escapes, zero human-review flags); 0 markers remain — decisions documented in spec Assumptions + Consensus Resolution Log (spec template carries no dedicated Clarifications section) |
 | Plan | `/speckit-plan` | ✅ Complete | 5 artifacts; constitution 6/6 PASS; 13 declared file-ops (WP1:7, WP2:4, WP3:5); all Plan-owed decisions resolved in research.md; WP1 hand-estimate 550–820 LOC → G5 escalation recorded |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
+| Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 106 items, 22 gaps → all remediated; G4 = 0 markers. Executor note: checklist-executor hit repeated API stream timeouts → generation split to phase-executor, remediation owned by orchestrator (all resolutions record-grounded; zero consensus escalations) |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Implement | `/speckit-implement` | ⏳ Pending | Operator-only live probe step |
@@ -560,10 +560,10 @@ Contract requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| data-integrity | | | |
-| error-handling | | | |
-| traceability | | | |
-| **Total** | | | |
+| data-integrity | 38 (CHK001–CHK038) | 9 found → 9 remediated, 0 open | FR-011/FR-015/FR-021/FR-022/FR-024 extended (probe-method element, nullable fallback fields, telemetry-ref resolution, ID-date consistency, hash recompute + sanitization re-scan + referential integrity, uniform ID patterns); data-model Record 3 + outcome rule updated. Note: 3 checklist-executor dispatches died on API stream timeouts → generation split to phase-executor, remediation done by orchestrator (all 9 gaps unambiguous under AC-2.2/2.3 + ratified decisions; zero consensus items) |
+| error-handling | 28 (CHK001–CHK028) | 10 found → 10 remediated, 0 open | FR-003 (per-invocation timeout, no automatic retries, budget = actual invocations), FR-024 (class↔scorable + semantic invariants), FR-025 (misdelivery-vs-fallback precedence, class→status mapping), edge case extended (plain-text effort parse failure → abort; undetermined outcome → recorded, CAP-Q5 stays open), probe-agent cleanup on all exit paths; data-model outcome mapping added. Zero consensus items |
+| traceability | 40 (CHK001–CHK040) | 3 found → 3 remediated, 0 open (2 items deliberately unchecked as forward requirements on tasks.md — CHK034/CHK035, satisfied at Tasks) | Effective model reclassified `stable_native` per AC-2.4/roadmap verbatim with revision note (overrides the Session 2 consensus `derived` label — PRD authority prevails); `dispatch_namespace` + `parent_session_configuration` added to FR-021/Key Entities/data-model Record 3 per the roadmap binding list; complete 28-FR→WP table added to plan.md (WP1: 20, WP2: 5, WP3: 3) |
+| **Total** | 106 | 22 found → 22 remediated, 0 open | G4: `grep -c "\[Gap\]"` = 0 across all checklist files; privacy scan clean |
 
 ### Addressing Gaps
 

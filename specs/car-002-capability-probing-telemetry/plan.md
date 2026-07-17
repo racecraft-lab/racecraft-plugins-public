@@ -144,6 +144,14 @@ tests/speckit-pro/
 
 Dependency order: **WP1 → WP2 → WP3**. WP2 consumes the schema WP1 published (authors no new `$defs`). WP3's deterministic test extends the Layer 4 coverage WP1 registered and joins against the snapshot WP1 committed.
 
+**Complete FR → work-package assignment** (every FR traces to exactly one primary WP; global invariants note their enforcement scope):
+
+| WP | FRs | Note |
+|----|-----|------|
+| WP1 | FR-001, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-012, FR-013, FR-014, FR-015, FR-016, FR-017, FR-023, FR-026, FR-027, FR-028 | Probe execution boundary, matrix/budget/timeout, snapshot structure + per-tuple evidence (FR-004's structural half; its join *verification* is FR-024/WP3), capability answers, dual-surface probe + unset-proof, evidence capture/sanitization, schema contract + validator + suite registration, fail-closed writer, evidence authority |
+| WP2 | FR-018, FR-019, FR-020, FR-021, FR-022 | Telemetry capability profile + route_resolution and exact-treatment trace contracts + CAR-003 handoff |
+| WP3 | FR-002, FR-024, FR-025 | Four record-class fixtures + deterministic validation (schema conformance, class invariants, hash recompute, sanitization re-scan, referential integrity, 37-route join) + offline-suite determinism proof. FR-002 is a global invariant every WP must satisfy; its dedicated offline verification artifact matures here |
+
 ### WP1 sizing — mechanical estimator vs. real reviewable LOC (G5 escalation)
 
 The mechanical plan estimator (`estimate-reviewable-loc`) classifies a file as

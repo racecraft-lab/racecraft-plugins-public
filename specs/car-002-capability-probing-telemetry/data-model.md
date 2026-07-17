@@ -145,9 +145,10 @@ pair `usage.cache_creation.ephemeral_5m_input_tokens` / `ephemeral_1h_input_toke
 flat aggregate `usage.cache_creation_input_tokens` (documented sum of the per-TTL pair —
 optional cross-check, not a substitute), `num_turns`, `duration_ms`, and the `modelUsage`
 per-model key set with `inputTokens`/`outputTokens`/`cacheReadInputTokens`/
-`cacheCreationInputTokens`/`contextWindow`; `derived` for `total_cost_usd`, the
-`modelUsage.<model>.costUSD` sub-field, and the effective model (extracted from the
-`modelUsage` key set — `SDKResultMessage` has no scalar `model` field);
+`cacheCreationInputTokens`/`contextWindow`; `stable_native` also for the effective model (AC-2.4/roadmap verbatim — platform-returned
+model names read from the `modelUsage` key set; `SDKResultMessage` has no scalar `model`
+field, so extraction is a read, not a derivation); `derived` for `total_cost_usd` and the
+`modelUsage.<model>.costUSD` sub-field;
 `derived_from_controlled_configuration` for effective reasoning effort (no documented field
 returns it). Any field whose result-message key or availability the canonical docs do not
 establish is `unavailable`, labeled `observation` (FR-027). Label crosswalk from CAR-001
@@ -173,6 +174,8 @@ these per invocation; CAR-002 fixes the contract.
 | `effort_level` | `nullableString` | yes | Requested effort (FR-021). |
 | `instruction_sha256` | `sha256` | yes | System-prompt/instruction hash (FR-021). |
 | `mutation_contract` | string | yes | The route's mutation boundary (FR-021). |
+| `dispatch_namespace` | string | yes | The dispatch surface identity, e.g. plugin-namespaced `speckit-pro:<name>` vs project-level bare name (FR-021; roadmap binding). |
+| `parent_session_configuration` | `nullableString` | yes | Recorded parent-session model/effort configuration summary; null when not applicable (FR-021; roadmap binding, nulls preserved). |
 | `client_version` | string | yes | Pinned client version (FR-021). |
 | `fast_mode_state` | enum `["on","off","unknown"]` | yes | Fast-mode state (FR-021). |
 | `env_override_proof` | `unsetProof` | yes | Env-override proof, reusing the snapshot `unsetProof` shape (FR-021). |
