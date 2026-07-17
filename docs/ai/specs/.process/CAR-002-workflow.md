@@ -51,17 +51,24 @@ projected FRs), returned `{estimated_loc: 860, suggested_slices: 3, status:
 warn}`. The roadmap's earlier 265-LOC/1-slice budget carried its own
 "re-estimate at scaffold" note; this scaffold-time estimate supersedes it.
 
-**Split decision (operator-ratified, design concept Q8):** split into **3
+**Split decision (operator-ratified, design concept Q8; file-to-slice
+assignment resolved at Plan per Open Question 5):** split into **3
 vertical slices**, declared as work packages at Plan so PRSG split-PR routing
 can emit them:
 
-1. **WP1 — Snapshot capture:** snapshot `$defs` + operator probe tool +
-   committed `runtime_capability_snapshot`.
-2. **WP2 — Trace contracts:** telemetry profile + `route_resolution` +
-   exact-treatment replay contracts.
-3. **WP3 — Synthetic replay validation:** committed fixtures and deterministic
-   validation across the four record classes (success, null, unavailable,
-   misdelivery).
+1. **WP1 — Schema foundation + snapshot capture:** the complete JSON Schema
+   contract, all four `$defs` (`runtime_capability_snapshot`,
+   `telemetry_profile`, `route_resolution`, exact-treatment replay; FR-015) +
+   `claude_trace_schema.py` validator (FR-016) + `suite-manifest.json` Layer 4
+   registration (FR-028) + operator probe tool + fail-closed writer +
+   committed `runtime_capability_snapshot` (US1).
+2. **WP2 — Trace contracts:** telemetry profile document + `route_resolution`
+   + exact-treatment replay contracts, finalization, and CAR-003 handoff
+   (US2, US3) — consumes the WP1 schema rather than authoring new `$defs`.
+3. **WP3 — Synthetic replay validation:** committed fixtures and
+   deterministic validation across the four record classes (success, null,
+   unavailable, misdelivery) plus the 37-route-to-tuple join validation
+   (US4, SC-005).
 
 ### Consumption Gate — execution record (2026-07-16)
 
@@ -86,7 +93,7 @@ preferred based on CAR-001 alone.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 28 FRs, 4 US (WP-mapped), 11 acceptance scenarios, 8 SCs; 0 markers; 16/16 quality checklist; privacy scan clean |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
+| Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions; 9 parent-applied, 6 via consensus (all Round 1, zero escapes, zero human-review flags); 0 markers remain — decisions documented in spec Assumptions + Consensus Resolution Log (spec template carries no dedicated Clarifications section) |
 | Plan | `/speckit-plan` | ⏳ Pending | Declares the 3 work packages (Q8) |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -362,9 +369,24 @@ observation).
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | | | |
-| 2 | | | |
-| 3 | | | |
+| 1 | Probe harness mechanics | 5 (3 parent-applied, 2 → consensus) | Effort surface pinned to documented `--effort` (labeled-inference fork does not fire; silent JSON clamp caveat recorded — probe uses plain-text `--print` or records no-cap assumption); canary fixed: `Reply with the single word: ok` + SHA-256; FR-014 expanded (auth mode from documented env signals; models endpoint API-key-mode-only, corroborating never alias-establishing); FR-010 broadened via consensus (see log #1); CAP-Q5 dispatch mechanism pinned via consensus (see log #2) |
+| 2 | Record schemas and identity contract | 5 (3 parent-applied, 2 → consensus) | ID conventions pinned (`CAR-002-RCS-<date>-V<n>`, `CAR-002-TP-<date>-V<n>`; `route_resolution_id` consumer-minted pattern; FR-021 now carries CAR-001 cross-ref IDs verbatim); contract starts own `schema_version` 1.0.0 with CAR-001 structural conventions; `rawEvidence` $def (full verbatim sanitized string + SHA-256, not boundedExtract); route→tuple = derive-by-join via consensus (see log #3); telemetry field set + labels pinned to `SDKResultMessage` contract via consensus (see log #4) |
+| 3 | Slice boundaries and replay validation | 5 (3 parent-applied, 2 → consensus) | CAP-Q6 detection-rule-only (an induced re-pointing probe needs an override that collides with the FR-010 unset-proof → separate labeled phase only); three-bucket fail-closed writer disposition (new "Partial probe matrix" edge case; transport failure is never recorded as "unavailable"); telemetry profile added to FR-024/US4 CI validation; WP1 = complete schema foundation via consensus (see log #5); four fixtures = exact-treatment replay records via consensus (see log #6) |
+
+**Carried to Plan from Session 1** (HOW-level items deliberately kept out of spec.md): (a) probe-integrity fail-safe — cross-check the requested unavailable ID against the JSON result message's documented `modelUsage` field; (b) the probe's dispatch mechanism must not itself pass a per-invocation `model` parameter that would preempt the frontmatter value under test (subagent resolution step 2); (c) exact result-message JSON key names beyond `modelUsage`/`total_cost_usd` need one-shot empirical confirmation before the probe parser is finalized.
+
+### Consensus Resolution Log
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|------|----------------------|------------|-------|---------|------------|---------------|
+| 1 | Clarify | Broaden FR-010 unset-proof beyond fallback config (CLAUDE_CODE_SUBAGENT_MODEL, availableModels, enforceAvailableModels; proof method) | [spec, domain] | 1 | both-agree | FR-010 broadened (3 surfaces, ambient-environment proof, absent-not-empty allowlist); `enforceAvailableModels` recorded-for-audit not gated (inert when allowlist unset); `inherit` version-gated ≥2.1.196; Enterprise org restrictions = labeled gap; edge case generalized; US1 scenario 2 aligned; new Assumptions bullet "Interference-surface set" | spec-context-analyst, domain-researcher |
+| 2 | Clarify | CAP-Q5 subagent-frontmatter dispatch mechanism under non-interactive `-p` | [domain, codebase] | 1 | both-agree | File-based `.claude/agents/<probe-name>.md` + explicit `@agent-` mention (staged at probe time, not committed) is THE FR-009 mechanism; inline `--agents` JSON demoted to optional corroboration; two reliability limits recorded as labeled inference (undocumented outcome path; project-agent↔plugin-agent transfer equivalence); FR-009 pointer + new Assumptions bullet "Unavailable-model probe mechanism" | domain-researcher, codebase-analyst |
+| 3 | Clarify | Route→tuple evidence citation: derive-by-join vs stored map | [codebase, spec] | 1 | both-agree | Derive-by-join adopted: snapshot stores only per-tuple evidence keyed by computable `tuple_id` (37 routes → 6 tuples today); FR-004/FR-024/SC-005 rewritten to require the deterministic fail-closed CI join and forbid a persisted per-route map (constitution VI); exact `tuple_id` format deferred to Plan/data-model.md | codebase-analyst, spec-context-analyst |
+| 4 | Clarify | Exact result-message keys for the telemetry raw token vector (per-TTL cache-write) | [domain] | 1 | high-confidence | `SDKResultMessage` (code.claude.com Agent SDK TS reference) governs `-p --output-format json`; FR-019 enumerates the labeled field set (per-TTL `cache_creation` pair stable_native; cost fields derived client-side estimates; effective model from `modelUsage` key set — no scalar `model` field; effort derived_from_controlled_configuration); byte-for-byte stdout key-spelling stays a labeled one-shot empirical confirmation (Assumptions "Telemetry field grounding") | domain-researcher |
+| 5 | Clarify | File-to-slice assignment: schema-contract ownership (WP1 foundation vs literal Q8 text) | [codebase, spec] | 1 | both-agree | WP1 consolidates the complete JSON Schema (all four `$defs`) + `claude_trace_schema.py` + suite-manifest registration + probe tool + snapshot; WP2 consumes the published schema; WP3 = fixtures + deterministic test + 37-route join. Ratification intact — design concept Open Question 5 explicitly deferred file-to-slice assignment to Plan; CAR-001's split-then-reconcile amendment (PR #350→#362) is the recorded cost of the alternative. WP1 re-estimated at Plan; escalate at G5 if >400 reviewable LOC. Spec Split decision + workflow split list + Tasks Prompt phases + Phase 7 progress table all aligned | codebase-analyst, spec-context-analyst |
+| 6 | Clarify | Which `$def` the four record-class fixtures instantiate | [spec] | 1 | high-confidence | All four FR-025 fixtures are complete exact-treatment replay records with full `route_resolution` bindings (misdelivery is only meaningful against a resolved qualified ID, AC-2.3; the term never appears in the PRD); Key Entities "Probe observation (record)" renamed "Raw probe evidence (`rawEvidence` `$def`)" — an embedded snapshot sub-component with three outcome states (bound, null/gap, unavailable), misdelivery inapplicable at that layer; snapshot + telemetry profile validated separately (FR-024) | spec-context-analyst |
+
+**Security-routing note (log #1):** the executor flagged `availableModels` as "access-control-adjacent." Orchestrator judgment: the underlying question is configuration-precedence/measurement-validity — no credential, auth, or protected-resource surface — so it was routed per its `[spec, domain]` tags, not escalated to `[security]` all-3 + human review.
 
 ---
 
@@ -574,15 +596,17 @@ When checklist identifies `[Gap]` items:
   independently verifiable
 
 ## Implementation Phases
-1. WP2a foundation: JSON Schema $defs + claude_trace_schema.py validators
+1. WP1 foundation: complete JSON Schema $defs (all four record types) +
+   claude_trace_schema.py validators + suite-manifest.json registration
    (TDD: failing schema tests first)
 2. WP1: claude_capabilities.py probe entrypoint + fail-closed writer +
    operator runbook; the live probe run itself is an explicit
    operator-only step, never CI
-3. WP3: synthetic fixtures for success/null/unavailable/misdelivery +
-   deterministic test-efficiency-claude-telemetry.py coverage
-4. WP2b: telemetry profile document/record + route_resolution and
-   exact-treatment replay contract finalization + CAR-003 handoff
+3. WP2: telemetry profile document + route_resolution and exact-treatment
+   replay contract finalization + CAR-003 handoff
+4. WP3: synthetic fixtures for success/null/unavailable/misdelivery +
+   37-route-to-tuple join validation + deterministic
+   test-efficiency-claude-telemetry.py coverage
 
 ## Constraints
 - Deliverables land ONLY in docs/ai/research/ (schema + snapshot),
@@ -737,10 +761,10 @@ fail-closed writer plus the deterministic test then re-validate it.
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - WP2a schema + validators | | | |
+| 1 - WP1 schema + validators | | | |
 | 2 - WP1 probe tool + snapshot | | | |
-| 3 - WP3 fixtures + replay validation | | | |
-| 4 - WP2b telemetry profile + handoff | | | |
+| 3 - WP2 telemetry profile + handoff | | | |
+| 4 - WP3 fixtures + replay validation | | | |
 
 ---
 
