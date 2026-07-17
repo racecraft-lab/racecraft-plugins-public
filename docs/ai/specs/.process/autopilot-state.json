@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/CAR-002-workflow.md",
   "spec_id": "CAR-002",
   "feature_dir": "specs/car-002-capability-probing-telemetry",
-  "updated_at": "2026-07-17T10:57:36Z",
-  "active_step": "Post: Review Remediation loop scheduled; Retrospective pending",
-  "status": "pr_open",
+  "updated_at": "2026-07-17T11:17:34Z",
+  "active_step": "Post: complete \u2014 PR #369 open, review remediation loop active, retrospective done",
+  "status": "complete_pr_open",
   "prior_run_note": "Previous contents (G56R-001, completed_archived) are preserved in git history; this file carries the active CAR-002 run.",
   "settings": {
     "auto_commit": "per-phase",
@@ -76,5 +76,16 @@
     "route": "one-navigable-PR",
     "snapshot": "CAR-002-RCS-2026-07-17-V3",
     "suite_at_pr": "3199/3199"
+  },
+  "review_remediation": {
+    "loop_job": "0409629e",
+    "first_iteration_threads_resolved": 3,
+    "fix_commit": "791f78c8"
+  },
+  "retrospective": {
+    "report": "specs/car-002-capability-probing-telemetry/retrospective.md",
+    "critical": 0,
+    "proposed_spec_changes": 2,
+    "applied": 0
   }
 }

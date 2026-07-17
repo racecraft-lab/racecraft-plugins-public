@@ -842,6 +842,22 @@ fail-closed writer plus the deterministic test then re-validate it.
 
 ---
 
+## Review Remediation (2026-07-17)
+
+A `/loop` monitor (5-min cadence) watches PR #369 for reviewer comments. First iteration addressed **3 automated-reviewer threads**, all resolved:
+
+| Thread | Reviewer | Finding | Fix (commit `791f78c8`) |
+|--------|----------|---------|-------------------------|
+| `claude_capabilities.py:629` | github-code-quality | Empty `except … pass` in cleanup | Replaced with `contextlib.suppress(FileNotFoundError)` + explanatory comment |
+| `claude_capabilities.py:726` | copilot | `build_unset_proof` derived both `fallback_model_unset` and `fallbackModel_unset` from the same `fallbackModel` key — the two FR-010 surfaces weren't distinguished | CLI-flag proof now derived from the actual probe argv (`--fallback-model`), settings-key proof from the `fallbackModel` setting; unit test added. Committed snapshot value unchanged (probe never emits the flag) |
+| `data-model.md:27` | copilot | `raw_output` documented as always `--output-format json`, but effort-acceptance probes are plain-text `--print` | FR-012 + data-model corrected: `raw_output` is JSON for canary/unavailable probes, plain-text for effort-acceptance; not always JSON-parsable |
+
+Suite green after fixes: **3199/3199**. All CI re-running on `791f78c8`; `validate-release-note` passing (fixed the missing release-note fence on the initial PR body). Loop job `0409629e` continues monitoring (auto-expires 3 days).
+
+## Retrospective (2026-07-17)
+
+Report-only (no spec mutation): `specs/car-002-capability-probing-telemetry/retrospective.md`. 40/40 tasks, 36/36 requirements, constitution 6/6, 0 critical findings. Three defects were caught and fully fixed in-run before merge (V1→V2 UUID leak; V2→V3 CAP-Q5 mis-derivation; dead fail-closed disposition). 2 spec-change proposals recorded, **0 applied** (PSC-1 HIGH: have deterministic validation re-derive the CAP-Q5 outcome from raw evidence — better targeted at CAR-003's consumer validation; PSC-2 LOW: the unreachable enum value). Top reusable pattern: **re-probe over hand-edit** for corrected evidence, and **structural green ≠ semantic correctness** — teeth-test every declared error disposition.
+
 ## Pull Request
 
 **PR #369** — https://github.com/racecraft-lab/racecraft-plugins-public/pull/369

@@ -33,4 +33,5 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [checklists/requirements.md](checklists/requirements.md)
 - [checklists/traceability.md](checklists/traceability.md)
 - [quickstart.md](quickstart.md)
+- [retrospective.md](retrospective.md)
 <!-- GENERATED:BACKLINKS:END -->
