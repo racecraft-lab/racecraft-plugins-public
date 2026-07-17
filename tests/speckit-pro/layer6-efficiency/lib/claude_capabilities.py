@@ -624,10 +624,10 @@ def staged_probe_agent(
     try:
         yield path
     finally:
-        try:
+        # Idempotent cleanup: a missing file is expected and benign (the dispatch
+        # may have already removed it, or an early abort ran before the write).
+        with contextlib.suppress(FileNotFoundError):
             path.unlink()
-        except FileNotFoundError:
-            pass
 
 
 class LiveClaudeInvoker:
@@ -698,6 +698,7 @@ def build_unset_proof(
     settings: Mapping[str, Any] | None = None,
     client_version: str | None = None,
     config_dir_isolation: str = "none",
+    probe_argvs: Iterable[Iterable[str]] | None = None,
 ) -> dict[str, Any]:
     """The FR-010 unset-proof, drawn from the actual operator environment (research R13).
 
@@ -705,8 +706,22 @@ def build_unset_proof(
     and ``availableModels`` (absent, not an empty list) are unset. ``enforce`` is
     recorded for audit (inert when ``availableModels`` is unset); the ``inherit``
     caveat is version-gated (``inherit`` == unset only on client >= v2.1.196).
+
+    ``--fallback-model`` and ``fallbackModel`` are two distinct surfaces and are
+    proven from distinct sources: ``fallback_model_unset`` reflects the actual
+    probe-invocation argv (the ``--fallback-model`` CLI flag), while
+    ``fallbackModel_unset`` reflects the resolved settings key. When ``probe_argvs``
+    is omitted the CLI-flag proof defaults to true because the probe's own command
+    builder never emits ``--fallback-model`` on any surface (see
+    :func:`build_probe_command`).
     """
     settings = settings or {}
+    if probe_argvs is None:
+        cli_fallback_model_unset = True
+    else:
+        cli_fallback_model_unset = not any(
+            "--fallback-model" in tuple(argv) for argv in probe_argvs
+        )
     subagent_model = env.get("CLAUDE_CODE_SUBAGENT_MODEL")
     inherit_caveat: str | None = None
     if not subagent_model:
@@ -722,7 +737,7 @@ def build_unset_proof(
         subagent_unset = False
     enforce = settings.get("enforceAvailableModels")
     return {
-        "fallback_model_unset": "fallbackModel" not in settings,
+        "fallback_model_unset": cli_fallback_model_unset,
         "fallbackModel_unset": "fallbackModel" not in settings,
         "claude_code_subagent_model_unset": subagent_unset,
         "available_models_absent": "availableModels" not in settings,
@@ -1317,11 +1332,18 @@ def main(argv: list[str] | None = None, *, env: Mapping[str, str] | None = None)
     probe_run = run_bounded_probe_matrix(plan, invoker, timeout_seconds=args.timeout)
 
     models_endpoint = corroborate_models_endpoint(authentication_mode, env=environment)
+    # The exact argvs the probe actually ran, so the --fallback-model CLI-flag
+    # proof reflects the real invocations (distinct from the fallbackModel setting).
+    probe_argvs = [
+        build_probe_command(planned, unavailable_model_id=args.unavailable_model_id).argv
+        for planned, _ in probe_run.results
+    ]
     unset_proof = build_unset_proof(
         env=environment,
         settings={},
         client_version=args.pinned_client_version,
         config_dir_isolation=args.config_dir_isolation,
+        probe_argvs=probe_argvs,
     )
     snapshot = assemble_runtime_capability_snapshot(
         probe_run,

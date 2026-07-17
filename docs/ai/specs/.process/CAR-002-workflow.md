@@ -842,6 +842,12 @@ fail-closed writer plus the deterministic test then re-validate it.
 
 ---
 
+## Pull Request
+
+**PR #369** — https://github.com/racecraft-lab/racecraft-plugins-public/pull/369
+Title: `feat(car-002): capture Claude runtime capability probe evidence and trace contracts`
+Base `main` ← head `car-002-capability-probing-telemetry`; single navigable PR (atomicity route `one-navigable-PR`); state OPEN, mergeable, not draft. Suite at PR time: 3199/3199. Snapshot: `CAR-002-RCS-2026-07-17-V3`. **Human merges — the autopilot never merges.**
+
 ## Post-Implementation Checklist (parallel group, 2026-07-17)
 
 | Task | Status | Findings | Action taken |

@@ -1322,6 +1322,25 @@ class ClaudeCapabilitiesLiveBoundaryTests(unittest.TestCase):
         self.assertFalse(with_settings["available_models_absent"])
         self.assertEqual(with_settings["enforce_available_models_observed"], "True")
 
+        # --fallback-model (CLI flag) and fallbackModel (settings key) are distinct
+        # surfaces proven from distinct sources — a fallbackModel setting must NOT
+        # drive the CLI-flag proof, and a --fallback-model argv must NOT be masked
+        # by clean settings.
+        settings_only = cap.build_unset_proof(env={}, settings={"fallbackModel": "claude-opus-4-8"})
+        self.assertTrue(settings_only["fallback_model_unset"])   # no --fallback-model argv
+        self.assertFalse(settings_only["fallbackModel_unset"])   # fallbackModel setting present
+        argv_flag = cap.build_unset_proof(
+            env={}, settings={},
+            probe_argvs=[["claude", "-p", "hi", "--model", "opus"],
+                         ["claude", "-p", "hi", "--fallback-model", "sonnet"]],
+        )
+        self.assertFalse(argv_flag["fallback_model_unset"])      # --fallback-model in a real argv
+        self.assertTrue(argv_flag["fallbackModel_unset"])        # settings key still absent
+        argv_clean = cap.build_unset_proof(
+            env={}, settings={}, probe_argvs=[["claude", "-p", "hi", "--model", "opus"]]
+        )
+        self.assertTrue(argv_clean["fallback_model_unset"])
+
         inherit_new = cap.build_unset_proof(
             env={"CLAUDE_CODE_SUBAGENT_MODEL": "inherit"}, settings={}, client_version="2.1.196"
         )

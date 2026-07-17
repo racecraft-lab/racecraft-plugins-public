@@ -24,7 +24,7 @@ snapshot — never duplicated data that can drift (constitution VI; Architecture
 
 | Field | Type | Required | Rule |
 |-------|------|----------|------|
-| `raw_output` | string | yes | The **full** `--output-format json` stdout, sanitized to `<home>`, committed verbatim as a string (not a parsed object). |
+| `raw_output` | string | yes | The **full** sanitized stdout of the probe invocation, committed verbatim as a string (not a parsed object): `--output-format json` for the alias-canary and unavailable-model probes, or plain-text `--print` for the effort-acceptance probes (which run in plain text to avoid the silent JSON effort clamp, research R6). So `raw_output` is not always JSON-parsable — treat it as opaque bytes keyed by the probe's `effort_probe_output_mode` / surface. |
 | `raw_output_sha256` | `sha256` | yes | SHA-256 over the exact sanitized UTF-8 bytes of `raw_output` (reproducible from committed bytes). |
 | `sanitization` | const `"home_paths_and_session_ids_normalized_utf8"` | yes | Marks the applied sanitization convention. |
 
