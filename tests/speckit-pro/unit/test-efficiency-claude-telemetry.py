@@ -2203,6 +2203,557 @@ class ExactTreatmentTelemetryLinkageTests(unittest.TestCase):
             check_telemetry_ref_resolves(replay, profile)
 
 
+# -- T029-T036 (WP3): the four record-class fixtures, class invariants, the
+# 37-route -> tuple join, and the committed-payload integrity re-checks. Same
+# pure-check-plus-teeth idiom as WP1/WP2 above: each rule is a module-level
+# ``check_*`` that raises AssertionError on violation, so one function backs both
+# the positive assertion (committed artifact passes) and the teeth test (a
+# deliberately-corrupted copy fails), making every green meaningful.
+
+SUCCESS_FIXTURE_PATH = TELEMETRY_RECORDS_DIR / "success.json"
+NULL_FIXTURE_PATH = TELEMETRY_RECORDS_DIR / "null.json"
+UNAVAILABLE_FIXTURE_PATH = TELEMETRY_RECORDS_DIR / "unavailable.json"
+MISDELIVERY_FIXTURE_PATH = TELEMETRY_RECORDS_DIR / "misdelivery.json"
+RECORD_CLASS_FIXTURE_PATHS = {
+    "success": SUCCESS_FIXTURE_PATH,
+    "null": NULL_FIXTURE_PATH,
+    "unavailable": UNAVAILABLE_FIXTURE_PATH,
+    "misdelivery": MISDELIVERY_FIXTURE_PATH,
+}
+
+# FR-024 class-invariant pairings and FR-025 class -> status mapping.
+SCORABLE_BY_CLASS = {"success": True, "null": True, "unavailable": False, "misdelivery": False}
+STATUS_BY_CLASS = {
+    "success": "completed",
+    "null": "completed",
+    "misdelivery": "completed",
+    "unavailable": "unavailable",
+}
+
+# The committed CAR-002 payloads whose sanitized bytes the validator re-scans every
+# run (the write-time FR-012/FR-013 guarantee, re-checked continuously).
+COMMITTED_CAR002_PAYLOAD_PATHS = (
+    SNAPSHOT_PATH,
+    PROFILE_PATH,
+    ROUTE_RESOLUTION_FIXTURE_PATH,
+    SUCCESS_FIXTURE_PATH,
+    NULL_FIXTURE_PATH,
+    UNAVAILABLE_FIXTURE_PATH,
+    MISDELIVERY_FIXTURE_PATH,
+)
+
+# Every home/user/session privacy family plus the raw session/request UUID rule the
+# committed privacy scan flags — the sanitizer now redacts UUIDs to ``<session-id>``.
+_PRIVACY_SCAN_PATTERNS = {
+    "posix/windows home path": PRIVACY_HOME_PATH,
+    "hyphenated home path": PRIVACY_HYPHENATED_HOME,
+    "private/var session path": PRIVACY_PRIVATE_VAR,
+    "tmp transcript path": PRIVACY_TMP_TRANSCRIPT,
+    "raw session/request UUID": PRIVACY_UUID,
+}
+
+
+def _nullable_leaf_values(record: dict) -> dict[str, object]:
+    """The nullable leaf fields of an ``exactTreatmentReplay`` record (every schema
+    ``nullableString`` / nullable-integer leaf). ``null.json`` sets every one to null
+    (present-but-null); ``success.json`` sets every one non-null — exact mirrors
+    (FR-020/FR-025)."""
+    route = record["route_resolution"]
+    proof = route["env_override_proof"]
+    return {
+        "execution_trace_id": record["execution_trace_id"],
+        "observed_model_id": record["observed_model_id"],
+        "outcome.telemetry_ref": record["outcome"]["telemetry_ref"],
+        "outcome.notes": record["outcome"]["notes"],
+        "route_resolution.effort_level": route["effort_level"],
+        "route_resolution.parent_session_configuration": route["parent_session_configuration"],
+        "route_resolution.fallback_index": route["fallback_index"],
+        "route_resolution.fallback_reason": route["fallback_reason"],
+        "env_override_proof.enforce_available_models_observed": proof["enforce_available_models_observed"],
+        "env_override_proof.inherit_equivalent_to_unset": proof["inherit_equivalent_to_unset"],
+        "env_override_proof.org_restriction_gap": proof["org_restriction_gap"],
+    }
+
+
+def check_class_scorable_pairing(record: dict) -> None:
+    """FR-024: ``success``/``null`` are scorable; ``unavailable``/``misdelivery`` are not."""
+    record_class = record["record_class"]
+    expected = SCORABLE_BY_CLASS[record_class]
+    if record["scorable"] is not expected:
+        raise AssertionError(
+            f"record_class {record_class!r}: scorable must be {expected}, got {record['scorable']!r}"
+        )
+
+
+def check_class_status_mapping(record: dict) -> None:
+    """FR-025 class -> status: ``unavailable`` => ``unavailable``; ``success``/``null``/
+    ``misdelivery`` => ``completed`` (misdelivery is a completed-but-misrouted treatment)."""
+    record_class = record["record_class"]
+    expected = STATUS_BY_CLASS[record_class]
+    if record["outcome"]["status"] != expected:
+        raise AssertionError(
+            f"record_class {record_class!r}: outcome.status must be {expected!r}, "
+            f"got {record['outcome']['status']!r}"
+        )
+
+
+def check_misdelivery_semantics(record: dict) -> None:
+    """FR-025 precedence: a misdelivery is ``observed_model_id`` != the resolved qualified
+    ID WITH ``fallback_index``/``fallback_reason`` null — a fallback-null difference is a
+    misdelivery, not a recorded resolver fallback (AC-2.3 separation)."""
+    route = record["route_resolution"]
+    resolved = route["resolved_dated_model_id"]
+    observed = record["observed_model_id"]
+    if observed == resolved:
+        raise AssertionError(
+            f"misdelivery requires observed != resolved, but both are {resolved!r}"
+        )
+    if route["fallback_index"] is not None or route["fallback_reason"] is not None:
+        raise AssertionError(
+            "misdelivery requires fallback_index/fallback_reason null (a non-null fallback "
+            "reclassifies the difference as recorded resolver fallback, not misdelivery)"
+        )
+
+
+def check_null_class_nulls_preserved(record: dict) -> None:
+    """FR-020/FR-025: every nullable leaf is present-but-null (not dropped), so
+    'unavailable' stays distinguishable from 'absent'."""
+    non_null = {p: v for p, v in _nullable_leaf_values(record).items() if v is not None}
+    if non_null:
+        raise AssertionError(
+            f"null-class record has non-null nullable field(s): {sorted(non_null)}"
+        )
+
+
+def check_success_fully_populated(record: dict) -> None:
+    """FR-025: the ``success`` fixture is fully-populated — every nullable leaf non-null."""
+    nulls = [p for p, v in _nullable_leaf_values(record).items() if v is None]
+    if nulls:
+        raise AssertionError(
+            f"success-class record must be fully-populated but has null field(s): {sorted(nulls)}"
+        )
+
+
+def check_unavailable_crossref_resolves(record: dict) -> None:
+    """FR-021/FR-025: the ``unavailable`` record cross-references a real unavailable
+    observation in the committed snapshot — its ``runtime_capability_snapshot_id`` resolves
+    AND the resolved dated model id is one the snapshot actually recorded as unavailable."""
+    snapshot = _read_committed_json(SNAPSHOT_PATH)
+    snapshot_id = record["route_resolution"]["runtime_capability_snapshot_id"]
+    if snapshot_id != snapshot["runtime_capability_snapshot_id"]:
+        raise AssertionError(
+            f"unavailable cross-ref {snapshot_id!r} != committed snapshot id "
+            f"{snapshot['runtime_capability_snapshot_id']!r}"
+        )
+    unavailable_ids = {
+        obs["requested_unavailable_model_id"] for obs in snapshot["unavailable_observations"]
+    }
+    resolved = record["route_resolution"]["resolved_dated_model_id"]
+    if resolved not in unavailable_ids:
+        raise AssertionError(
+            f"unavailable record resolved model {resolved!r} is not among the snapshot's "
+            f"recorded unavailable observations {sorted(unavailable_ids)}"
+        )
+
+
+def check_exact_treatment_class_invariants(record: dict) -> None:
+    """FR-024/FR-025 dispatcher: the class<->scorable pairing and class->status mapping for
+    every class, then the per-class semantic rule (misdelivery / null / unavailable /
+    success)."""
+    check_class_scorable_pairing(record)
+    check_class_status_mapping(record)
+    record_class = record["record_class"]
+    if record_class == "misdelivery":
+        check_misdelivery_semantics(record)
+    elif record_class == "null":
+        check_null_class_nulls_preserved(record)
+    elif record_class == "unavailable":
+        check_unavailable_crossref_resolves(record)
+    elif record_class == "success":
+        check_success_fully_populated(record)
+    else:  # pragma: no cover - schema enum already constrains record_class
+        raise AssertionError(f"unknown record_class {record_class!r}")
+
+
+def check_exact_treatment_referential_integrity(record: dict, profile: dict) -> None:
+    """FR-024/FR-022: the embedded ``candidate_route_id``/``agent_contract_id`` resolve to
+    the committed CAR-001 manifest, the snapshot cross-ref resolves, and any non-null
+    ``telemetry_ref`` resolves to the committed telemetry-profile field set — referential,
+    not merely well-formed."""
+    check_route_resolution_crossrefs_resolve(record["route_resolution"])
+    check_telemetry_ref_resolves(record, profile)
+
+
+def derive_route_tuple_id(route: dict) -> str:
+    """Pure derivation of a CAR-001 route's ``(model, effort)`` tuple_id from its manifest
+    selectors — null effort -> the ``none`` token (research R1). NEVER persisted (SC-005)."""
+    model = route["model_selector"]["requested_value"]
+    effort = route["effort_selector"]["requested_value"]
+    return f"{model}__{effort if effort is not None else 'none'}".lower()
+
+
+def join_routes_to_tuples(candidate_routes: list, tuple_evidence: list) -> dict[str, str]:
+    """SC-005: recompute the 37-route -> tuple join from the committed manifest selectors
+    against the snapshot's per-tuple evidence, failing closed if any route resolves to zero
+    or to more than one tuple. Returns the derived ``candidate_route_id`` -> ``tuple_id``
+    map (computed every run, never persisted)."""
+    evidence_ids = [evidence["tuple_id"] for evidence in tuple_evidence]
+    resolved: dict[str, str] = {}
+    for route in candidate_routes:
+        tuple_id = derive_route_tuple_id(route)
+        matches = [tid for tid in evidence_ids if tid == tuple_id]
+        if len(matches) != 1:
+            raise AssertionError(
+                f"route {route['candidate_route_id']!r} resolves to {len(matches)} tuple(s) "
+                f"(expected exactly 1) for derived tuple_id {tuple_id!r}"
+            )
+        resolved[route["candidate_route_id"]] = tuple_id
+    return resolved
+
+
+def check_snapshot_has_no_persisted_route_tuple_map(snapshot: dict) -> None:
+    """FR-004/SC-005/constitution VI: the route -> tuple join is derived, never stored — no
+    ``tuple_evidence`` entry carries a ``candidate_route_id``."""
+    for evidence in snapshot["tuple_evidence"]:
+        if "candidate_route_id" in evidence:
+            raise AssertionError(
+                f"tuple_evidence {evidence.get('tuple_id')!r} persists a candidate_route_id — "
+                "the route->tuple join must be derived, not stored (SC-005)"
+            )
+
+
+def _iter_snapshot_raw_evidence(snapshot: dict):
+    for location in ("tuple_evidence", "alias_bindings", "unavailable_observations"):
+        for entry in snapshot[location]:
+            yield location, entry["raw_evidence"]
+
+
+def check_snapshot_hashes_reproduce(snapshot: dict) -> None:
+    """FR-024/FR-013: the canary hash reproduces over the recorded canary text and every
+    stored ``raw_output_sha256`` reproduces over the committed sanitized UTF-8 payload
+    bytes."""
+    canary = snapshot["canary"]
+    if _sha256_hex(canary["text"]) != canary["canary_sha256"]:
+        raise AssertionError("canary_sha256 does not reproduce over the recorded canary text")
+    for location, evidence in _iter_snapshot_raw_evidence(snapshot):
+        recomputed = _sha256_hex(evidence["raw_output"])
+        if recomputed != evidence["raw_output_sha256"]:
+            raise AssertionError(
+                f"{location}: raw_output_sha256 {evidence['raw_output_sha256']!r} does not "
+                f"reproduce over committed bytes (recomputed {recomputed!r})"
+            )
+
+
+def scan_text_for_unsanitized_paths(text: str) -> dict[str, str]:
+    """Return ``{pattern_label: first_match}`` for every privacy family the text still leaks
+    (FR-012/FR-013 home/user/session paths plus the raw session/request UUID rule). An empty
+    dict means the text is clean."""
+    hits: dict[str, str] = {}
+    for label, pattern in _PRIVACY_SCAN_PATTERNS.items():
+        match = pattern.search(text)
+        if match is not None:
+            hits[label] = match.group(0)
+    return hits
+
+
+def check_committed_payload_is_sanitized(path: Path) -> None:
+    """FR-024: continuously re-check the write-time FR-012/FR-013 guarantee — no committed
+    payload contains an unsanitized home/user/session path or a raw session/request UUID."""
+    hits = scan_text_for_unsanitized_paths(path.read_text(encoding="utf-8"))
+    if hits:
+        raise AssertionError(f"{path.name}: unsanitized content {hits}")
+
+
+class RecordClassFixtureTests(unittest.TestCase):
+    """The four committed record-class fixtures (T029-T032) are validated against the
+    ``exactTreatmentReplay`` ``$def`` on every run (T033, SC-003 100% record-class coverage)
+    and additionally enforced for their FR-024/FR-025 class invariants (T034): the
+    class<->scorable pairing, the class->status mapping, and each class's semantic rule.
+    Every check is teeth-verified against a deliberately-corrupted copy."""
+
+    def require_validator(self):
+        self.assertIsNotNone(
+            claude_trace_schema, "claude_trace_schema validator module not importable (T005)"
+        )
+        return claude_trace_schema
+
+    def load_fixture(self, record_class: str) -> dict:
+        path = RECORD_CLASS_FIXTURE_PATHS[record_class]
+        self.assertTrue(path.is_file(), f"record-class fixture missing (T029-T032): {path}")
+        record = _read_committed_json(path)
+        self.assertEqual(record["record_class"], record_class, f"{path.name} record_class")
+        return record
+
+    # -- T033: all four validate against the exactTreatmentReplay $def every run ----
+
+    def test_all_four_fixtures_validate_against_exact_treatment_replay(self) -> None:
+        validator = self.require_validator()
+        for record_class in RECORD_CLASS_FIXTURE_PATHS:
+            with self.subTest(record_class=record_class):
+                record = self.load_fixture(record_class)
+                self.assertIs(validator.validate_exact_treatment_replay(record), record)
+
+    def test_all_four_record_classes_have_a_committed_fixture(self) -> None:
+        # SC-003: 100% record-class coverage — exactly one fixture per class.
+        self.assertEqual(
+            set(RECORD_CLASS_FIXTURE_PATHS), {"success", "null", "unavailable", "misdelivery"}
+        )
+        for record_class in RECORD_CLASS_FIXTURE_PATHS:
+            with self.subTest(record_class=record_class):
+                self.assertEqual(self.load_fixture(record_class)["record_class"], record_class)
+
+    def test_fixture_validation_rejects_corrupted_copies(self) -> None:
+        validator = self.require_validator()
+        error = validator.ClaudeTraceContractError
+        mutations = {
+            "bad record_class enum": lambda r: r.__setitem__("record_class", "partial"),
+            "scorable wrong type": lambda r: r.__setitem__("scorable", "yes"),
+            "drop outcome": lambda r: r.pop("outcome"),
+            "nested route_resolution loses tuple_id": lambda r: r["route_resolution"].pop("tuple_id"),
+            "additional property": lambda r: r.__setitem__("extra_field", 1),
+        }
+        for record_class in RECORD_CLASS_FIXTURE_PATHS:
+            for label, mutate in mutations.items():
+                with self.subTest(record_class=record_class, mutation=label):
+                    record = self.load_fixture(record_class)
+                    mutate(record)
+                    with self.assertRaises(error):
+                        validator.validate_exact_treatment_replay(record)
+
+    # -- T034: class invariants (scorable pairing + status mapping + semantic) ------
+
+    def test_all_fixtures_satisfy_their_class_invariants(self) -> None:
+        for record_class in RECORD_CLASS_FIXTURE_PATHS:
+            with self.subTest(record_class=record_class):
+                check_exact_treatment_class_invariants(self.load_fixture(record_class))
+
+    def test_scorable_pairing_matches_the_declared_class(self) -> None:
+        for record_class, expected in SCORABLE_BY_CLASS.items():
+            with self.subTest(record_class=record_class):
+                self.assertIs(self.load_fixture(record_class)["scorable"], expected)
+
+    def test_outcome_status_matches_the_declared_class(self) -> None:
+        for record_class, expected in STATUS_BY_CLASS.items():
+            with self.subTest(record_class=record_class):
+                self.assertEqual(
+                    self.load_fixture(record_class)["outcome"]["status"], expected
+                )
+
+    def test_scorable_pairing_check_has_teeth(self) -> None:
+        for record_class in RECORD_CLASS_FIXTURE_PATHS:
+            with self.subTest(record_class=record_class):
+                record = self.load_fixture(record_class)
+                record["scorable"] = not SCORABLE_BY_CLASS[record_class]
+                with self.assertRaises(AssertionError):
+                    check_class_scorable_pairing(record)
+
+    def test_status_mapping_check_has_teeth(self) -> None:
+        flip = {"completed": "unavailable", "unavailable": "completed"}
+        for record_class in RECORD_CLASS_FIXTURE_PATHS:
+            with self.subTest(record_class=record_class):
+                record = self.load_fixture(record_class)
+                record["outcome"]["status"] = flip[STATUS_BY_CLASS[record_class]]
+                with self.assertRaises(AssertionError):
+                    check_class_status_mapping(record)
+
+    def test_misdelivery_semantics_check_has_teeth(self) -> None:
+        # observed == resolved erases the misdelivery signal.
+        equal = self.load_fixture("misdelivery")
+        equal["observed_model_id"] = equal["route_resolution"]["resolved_dated_model_id"]
+        with self.assertRaises(AssertionError):
+            check_misdelivery_semantics(equal)
+        # a non-null fallback reclassifies the difference as recorded resolver fallback.
+        for field, value in (("fallback_index", 0), ("fallback_reason", "documented chain fired")):
+            with self.subTest(fallback=field):
+                record = self.load_fixture("misdelivery")
+                record["route_resolution"][field] = value
+                with self.assertRaises(AssertionError):
+                    check_misdelivery_semantics(record)
+
+    def test_null_class_nulls_preserved_check_has_teeth(self) -> None:
+        setters = {
+            "execution_trace_id": lambda r: r.__setitem__("execution_trace_id", "x"),
+            "observed_model_id": lambda r: r.__setitem__("observed_model_id", "claude-opus-4-8"),
+            "outcome.telemetry_ref": lambda r: r["outcome"].__setitem__("telemetry_ref", "usage.input_tokens"),
+            "effort_level": lambda r: r["route_resolution"].__setitem__("effort_level", "max"),
+            "fallback_index": lambda r: r["route_resolution"].__setitem__("fallback_index", 0),
+            "org_restriction_gap": lambda r: r["route_resolution"]["env_override_proof"].__setitem__(
+                "org_restriction_gap", "gap"
+            ),
+        }
+        for leaf, mutate in setters.items():
+            with self.subTest(leaf=leaf):
+                record = self.load_fixture("null")
+                mutate(record)
+                with self.assertRaises(AssertionError):
+                    check_null_class_nulls_preserved(record)
+
+    def test_success_fully_populated_check_has_teeth(self) -> None:
+        nullers = {
+            "execution_trace_id": lambda r: r.__setitem__("execution_trace_id", None),
+            "observed_model_id": lambda r: r.__setitem__("observed_model_id", None),
+            "outcome.notes": lambda r: r["outcome"].__setitem__("notes", None),
+            "fallback_index": lambda r: r["route_resolution"].__setitem__("fallback_index", None),
+            "org_restriction_gap": lambda r: r["route_resolution"]["env_override_proof"].__setitem__(
+                "org_restriction_gap", None
+            ),
+        }
+        for leaf, mutate in nullers.items():
+            with self.subTest(leaf=leaf):
+                record = self.load_fixture("success")
+                mutate(record)
+                with self.assertRaises(AssertionError):
+                    check_success_fully_populated(record)
+
+    def test_unavailable_crossref_check_has_teeth(self) -> None:
+        stale = self.load_fixture("unavailable")
+        stale["route_resolution"]["runtime_capability_snapshot_id"] = "CAR-002-RCS-2020-01-01-V9"
+        with self.assertRaises(AssertionError):
+            check_unavailable_crossref_resolves(stale)
+        # a model the snapshot never recorded as unavailable does not resolve.
+        available = self.load_fixture("unavailable")
+        available["route_resolution"]["resolved_dated_model_id"] = "claude-opus-4-8"
+        with self.assertRaises(AssertionError):
+            check_unavailable_crossref_resolves(available)
+
+
+class RouteToTupleJoinTests(unittest.TestCase):
+    """T035/SC-005: the 37-route -> tuple join is recomputed every run from the committed
+    CAR-001 manifest selectors against the snapshot's per-tuple evidence, failing closed if
+    any route resolves to zero or to more than one tuple; the join is derived, never
+    persisted. Teeth-verified for the zero-resolve, multi-resolve, and persisted-map
+    failure modes."""
+
+    def committed_routes(self) -> list:
+        return _read_committed_json(MANIFEST_PATH)["candidate_routes"]
+
+    def committed_tuple_evidence(self) -> list:
+        return _read_committed_json(SNAPSHOT_PATH)["tuple_evidence"]
+
+    def test_all_37_routes_resolve_to_exactly_one_of_the_six_tuples(self) -> None:
+        routes = self.committed_routes()
+        self.assertEqual(len(routes), EXPECTED_ROUTE_TOTAL)
+        resolved = join_routes_to_tuples(routes, self.committed_tuple_evidence())
+        self.assertEqual(len(resolved), EXPECTED_ROUTE_TOTAL)
+        self.assertEqual(set(resolved.values()), set(EXPECTED_TUPLE_IDS))
+        self.assertEqual(dict(Counter(resolved.values())), dict(EXPECTED_TUPLE_ROUTE_COUNTS))
+
+    def test_derive_route_tuple_id_lowercases_and_handles_null_effort(self) -> None:
+        self.assertEqual(
+            derive_route_tuple_id(
+                {"model_selector": {"requested_value": "haiku"}, "effort_selector": {"requested_value": None}}
+            ),
+            "haiku__none",
+        )
+        self.assertEqual(
+            derive_route_tuple_id(
+                {"model_selector": {"requested_value": "OPUS"}, "effort_selector": {"requested_value": "MAX"}}
+            ),
+            "opus__max",
+        )
+
+    def test_join_is_derived_not_persisted(self) -> None:
+        check_snapshot_has_no_persisted_route_tuple_map(_read_committed_json(SNAPSHOT_PATH))
+
+    def test_join_fails_closed_when_a_route_resolves_to_zero_tuples(self) -> None:
+        routes = self.committed_routes()
+        evidence = [te for te in self.committed_tuple_evidence() if te["tuple_id"] != "opus__max"]
+        with self.assertRaises(AssertionError):
+            join_routes_to_tuples(routes, evidence)
+
+    def test_join_fails_closed_when_a_route_resolves_to_more_than_one_tuple(self) -> None:
+        routes = self.committed_routes()
+        evidence = self.committed_tuple_evidence()
+        evidence.append(dict(evidence[0]))  # duplicate the first tuple_id -> >1 match
+        with self.assertRaises(AssertionError):
+            join_routes_to_tuples(routes, evidence)
+
+    def test_persisted_map_check_has_teeth(self) -> None:
+        snapshot = _read_committed_json(SNAPSHOT_PATH)
+        snapshot["tuple_evidence"][0]["candidate_route_id"] = "CAR-001-CR-01-01"
+        with self.assertRaises(AssertionError):
+            check_snapshot_has_no_persisted_route_tuple_map(snapshot)
+
+
+class CommittedPayloadIntegrityTests(unittest.TestCase):
+    """T036/FR-024 integrity re-checks over committed bytes: every stored hash reproduces,
+    no committed payload leaks an unsanitized home/user/session path or a raw UUID, and every
+    cross-reference in the record fixtures resolves referentially (not merely as a
+    well-formed string). Each check is teeth-verified."""
+
+    # -- (a) hash reproduction over committed sanitized bytes ----------------------
+
+    def test_committed_snapshot_hashes_reproduce_over_committed_bytes(self) -> None:
+        check_snapshot_hashes_reproduce(_read_committed_json(SNAPSHOT_PATH))
+
+    def test_hash_reproduction_check_has_teeth(self) -> None:
+        tampered = _read_committed_json(SNAPSHOT_PATH)
+        tampered["tuple_evidence"][0]["raw_evidence"]["raw_output"] += " tampered"
+        with self.assertRaises(AssertionError):
+            check_snapshot_hashes_reproduce(tampered)
+        canary_tampered = _read_committed_json(SNAPSHOT_PATH)
+        canary_tampered["canary"]["text"] += "!"
+        with self.assertRaises(AssertionError):
+            check_snapshot_hashes_reproduce(canary_tampered)
+
+    # -- (b) privacy re-scan: home/user/session paths + raw UUIDs ------------------
+
+    def test_every_committed_payload_is_sanitized(self) -> None:
+        for path in COMMITTED_CAR002_PAYLOAD_PATHS:
+            with self.subTest(payload=path.name):
+                self.assertTrue(path.is_file(), f"committed CAR-002 payload missing: {path}")
+                check_committed_payload_is_sanitized(path)
+
+    def test_privacy_scan_flags_a_home_path(self) -> None:
+        leaked = "cwd=" + _home_posix("alice/repo")
+        self.assertIn("posix/windows home path", scan_text_for_unsanitized_paths(leaked))
+
+    def test_privacy_scan_flags_a_raw_uuid(self) -> None:
+        # Assembled from fragments so this file's source carries no literal UUID.
+        uuid = "-".join(("78b65992", "1a2b", "3c4d", "5e6f", "0011" + "22334455"))
+        self.assertIn(
+            "raw session/request UUID",
+            scan_text_for_unsanitized_paths(f'"session_id":"{uuid}"'),
+        )
+
+    def test_privacy_scan_passes_clean_sanitized_text(self) -> None:
+        clean = '{"session_id":"<session-id>","cwd":"<home>/repo","modelUsage":{}}'
+        self.assertEqual(scan_text_for_unsanitized_paths(clean), {})
+
+    # -- (c) referential integrity of every committed record fixture ---------------
+
+    def test_record_fixtures_resolve_all_crossrefs(self) -> None:
+        profile = _read_committed_json(PROFILE_PATH)
+        for record_class, path in RECORD_CLASS_FIXTURE_PATHS.items():
+            with self.subTest(record_class=record_class):
+                self.assertTrue(path.is_file(), f"record-class fixture missing: {path}")
+                check_exact_treatment_referential_integrity(_read_committed_json(path), profile)
+
+    def test_referential_integrity_check_has_teeth(self) -> None:
+        profile = _read_committed_json(PROFILE_PATH)
+        self.assertTrue(SUCCESS_FIXTURE_PATH.is_file(), "success fixture missing (T029)")
+        cases = {
+            "unknown candidate_route_id": lambda r: r["route_resolution"].__setitem__(
+                "candidate_route_id", "CAR-001-CR-99-99"
+            ),
+            "mismatched agent_contract_id": lambda r: r["route_resolution"].__setitem__(
+                "agent_contract_id", "car.gate-validator.v1"
+            ),
+            "stale snapshot cross-ref": lambda r: r["route_resolution"].__setitem__(
+                "runtime_capability_snapshot_id", "CAR-002-RCS-2020-01-01-V9"
+            ),
+            "dangling telemetry_ref": lambda r: r["outcome"].__setitem__(
+                "telemetry_ref", "usage.no_such_field_anywhere"
+            ),
+        }
+        for label, mutate in cases.items():
+            with self.subTest(corruption=label):
+                record = _read_committed_json(SUCCESS_FIXTURE_PATH)
+                mutate(record)
+                with self.assertRaises(AssertionError):
+                    check_exact_treatment_referential_integrity(record, profile)
+
+
 if __name__ == "__main__":
     loader = unittest.defaultTestLoader
     suite = unittest.TestSuite()
@@ -2213,4 +2764,7 @@ if __name__ == "__main__":
     suite.addTests(loader.loadTestsFromTestCase(CommittedTelemetryProfileTests))
     suite.addTests(loader.loadTestsFromTestCase(RouteResolutionFixtureTests))
     suite.addTests(loader.loadTestsFromTestCase(ExactTreatmentTelemetryLinkageTests))
+    suite.addTests(loader.loadTestsFromTestCase(RecordClassFixtureTests))
+    suite.addTests(loader.loadTestsFromTestCase(RouteToTupleJoinTests))
+    suite.addTests(loader.loadTestsFromTestCase(CommittedPayloadIntegrityTests))
     raise SystemExit(run_counted(suite, label="test-efficiency-claude-telemetry"))

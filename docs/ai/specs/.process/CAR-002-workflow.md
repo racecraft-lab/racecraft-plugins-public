@@ -98,7 +98,7 @@ preferred based on CAR-001 alone.
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 106 items, 22 gaps → all remediated; G4 = 0 markers. Executor note: checklist-executor hit repeated API stream timeouts → generation split to phase-executor, remediation owned by orchestrator (all resolutions record-grounded; zero consensus escalations) |
 | Tasks | `/speckit-tasks` | ✅ Complete | 40 tasks (WP1:18/WP2:10/WP3:12), 5 [P], all 28 FRs mapped; G5 pass; atomicity route `one-navigable-PR` (conflict with ratified split surfaced — see Atomicity Route); layer plan skipped; no marker plan required |
 | Analyze | `/speckit-analyze` | ✅ Complete | 1 LOW finding (vague docs-site reference path in T008/T027/T038) → fixed in 1 loop; 0 unresolved, consensus skipped; G6 pass. Executor independently re-verified the 37→6 tuple reduction |
-| Implement | `/speckit-implement` | 🔄 In Progress | T001–T014 complete (TDD, suite 3048/3048); **paused at T015 — the operator-only live probe run (human-gated, FR-001)**; T016–T040 resume after the snapshot is committed |
+| Implement | `/speckit-implement` | ✅ Complete | All 40 tasks; TDD RED→GREEN throughout; operator live probe run (T015) captured `CAR-002-RCS-2026-07-17-V2`; **G7 pass — full default suite 3193/3193** (L1 1428, L4 1579, L5 186), zero live calls, payload boundary clean |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -131,7 +131,9 @@ Each phase requires **human review and approval** before proceeding:
 | V. Conventional Commits | Scoped commits, e.g. `test(speckit-pro): ...` / `chore(CAR-002): ...` | `git log` review |
 | VI. KISS, Simplicity & YAGNI | Only the record fields AC-2.2/2.3/2.4 require; no speculative schema surface | Review against design concept Q3/Q5 |
 
-**Constitution Check:** ✅ 2026-07-16 — full default suite `python3 tests/speckit-pro/run-all.py` → **2821/2821 passed** (L1 1428/1428, L4 1207/1207, L5 186/186, toolchain preflight ok). Principles I/II/IV verified by the suite; III/V/VI are process-enforced (release-please, PR-title gate, plan review).
+**Constitution Check (initial):** ✅ 2026-07-16 — full default suite `python3 tests/speckit-pro/run-all.py` → **2821/2821 passed** (L1 1428/1428, L4 1207/1207, L5 186/186, toolchain preflight ok). Principles I/II/IV verified by the suite; III/V/VI are process-enforced (release-please, PR-title gate, plan review).
+
+**Constitution Check (final, post-Implement 2026-07-17):** ✅ full default suite **3193/3193** (L1 1428, L4 1579, L5 186). **II** (Cross-Platform/Script Safety): both new modules are Python 3.11 stdlib-only importable snake_case (`claude_capabilities.py`, `claude_trace_schema.py`); the single live boundary uses an argument-array `subprocess` with `shell=False` and explicit timeout; no live `claude` call in CI or any test (the operator probe is the sole live path, T015). **IV** (Test Coverage): +372 deterministic Layer-4 tests, all four record classes + snapshot + profile validated every run, validator registered in `suite-manifest.json`. **VI** (KISS/YAGNI): the route→tuple map is derived not persisted; one canonical snapshot replaced in place; no speculative schema surface. **I/III/V**: additive-only, no plugin manifest/version changes, conventional-commit history.
 
 ### Autopilot Pre-flight Record (2026-07-16)
 
@@ -832,11 +834,11 @@ fail-closed writer plus the deterministic test then re-validate it.
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
 | 1 - WP1 schema + validators | T002–T008 | 7/7 ✅ | TDD RED→GREEN; schema + stdlib validator + suite registration + docs reference regen; guard allowlist (schema path) pulled forward from T016 with empirical proof |
-| 2 - WP1 probe tool + snapshot | T009–T017 | 6/9 (T009–T014 ✅) | Pure logic + FR-003 controls + live boundary + capability capture + subagent mechanism; one live-guard regression self-caught and fixed. **T015 = operator gate (pending human); T016 remainder + T017 follow the committed snapshot** |
-| 3 - WP2 telemetry profile + handoff | T019–T028 | 0/10 ⏳ | Blocked on T015 (snapshot cross-refs) |
-| 4 - WP3 fixtures + replay validation | T029–T039 | 0/11 ⏳ | Blocked on WP2 + snapshot |
+| 2 - WP1 probe tool + snapshot | T009–T018 | 10/10 ✅ | Pure logic + FR-003 controls + live boundary + capability capture + subagent mechanism; operator run captured `CAR-002-RCS-2026-07-17-V2`; **sanitizer broadened to redact session UUIDs (privacy-scan defect caught + fixed, re-probed clean at V2)**; committed-snapshot validation + docs-surface guard |
+| 3 - WP2 telemetry profile + handoff | T019–T028 | 10/10 ✅ | Telemetry profile (`CAR-002-TP-2026-07-17-V1`, 18 classified fields) + route-resolution fixture + validator linkage; effective-model `stable_native` teeth-guarded |
+| 4 - WP3 fixtures + replay validation | T029–T039 | 11/11 ✅ | Four record-class fixtures + class invariants + integrity re-checks + 37→6 join (all 37 → exactly one tuple, derived-not-persisted); every check teeth-verified |
 
-**Suite at the T015 boundary (2026-07-17):** `python3 tests/speckit-pro/run-all.py` → **3048/3048** (L1 1428, L4 1434, L5 186) — +227 tests over the Phase 0 baseline, all offline/deterministic.
+**G7 aggregate (2026-07-17):** `python3 tests/speckit-pro/run-all.py` → **3193/3193** (L1 1428, L4 1579, L5 186) — +372 tests over the Phase 0 baseline, all offline/deterministic; zero live model calls in any test; payload boundary clean (only `docs/`, `docs-site/`, `specs/`, `tests/` touched — nothing under `speckit-pro/` or `dist/`).
 
 ---
 
@@ -866,7 +868,16 @@ fail-closed writer plus the deterministic test then re-validate it.
 - **Known gaps**: `model` and `effective_reasoning_effort` recorded present-but-null (classified, not dropped); all observed values labeled `observation`, never `fact`.
 - **Rollback**: revert the additive PR; no migration.
 
-### WP3 packet draft (T039) — ⏳ filled at WP3 completion
+### WP3 packet draft (T039, recorded 2026-07-17)
+
+- **What changed**: the four synthetic exact-treatment replay fixtures (`success`/`null`/`unavailable`/`misdelivery` under `tests/speckit-pro/unit/fixtures/claude-telemetry-records/`), and the deterministic validator maturation — per-class invariant + semantic checks (FR-024/FR-025), the 37-route→tuple join (FR-004/SC-005), and the integrity re-checks (hash recompute, sanitization re-scan, referential integrity).
+- **Why**: US4 — the trust anchor. It turns the schemas into a deterministically-enforced binding contract validated on every CI run with zero live model calls.
+- **Review order**: four fixtures → class-invariant checks → 37-route join → integrity re-checks.
+- **Non-goals**: no live calls, no scoring; validation only.
+- **Traceability**: WP3 = FR-002/024/025 → tasks T029–T039; SC-003 (record-class coverage), SC-005 (37→6 join, derived-not-persisted).
+- **Verification evidence**: TDD RED (70 fail) → GREEN (372/372 module); full default suite **3193/3193** (L1 1428, L4 1579, L5 186) offline; the 37→6 join proven (all 37 resolve to exactly one of the 6 tuples; zero-resolve and multi-resolve both proven to fail closed); every invariant/integrity check teeth-verified against corrupted copies.
+- **Known gaps**: none; the record-class enum is fully exercised.
+- **Rollback**: revert the additive PR.
 
 ---
 

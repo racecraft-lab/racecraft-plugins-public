@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0.0",
+  "route_resolution": {
+    "schema_version": "1.0.0",
+    "route_resolution_id": "CAR-002-RR-FIXTURE-UNAVAILABLE-001",
+    "agent_contract_id": "car.analyze-executor.v1",
+    "candidate_route_id": "CAR-001-CR-01-01",
+    "runtime_capability_snapshot_id": "CAR-002-RCS-2026-07-17-V2",
+    "requested_model_alias": "opus",
+    "resolved_dated_model_id": "claude-opus-3-0",
+    "effort_level": "max",
+    "instruction_sha256": "6230b2e8dc80ecdebdef64da461e465ce9129073f1fa9359821023aedc2bf35d",
+    "mutation_contract": "Read-write on the feature's spec.md/plan.md/tasks.md artifacts (applies remediations); inherits the full operator tool surface with no disallowedTools denylist.",
+    "dispatch_namespace": "speckit-pro:analyze-executor",
+    "parent_session_configuration": null,
+    "client_version": "2.1.212 (Claude Code)",
+    "fast_mode_state": "off",
+    "env_override_proof": {
+      "fallback_model_unset": true,
+      "fallbackModel_unset": true,
+      "claude_code_subagent_model_unset": true,
+      "available_models_absent": true,
+      "enforce_available_models_observed": null,
+      "config_dir_isolation": "none",
+      "inherit_equivalent_to_unset": null,
+      "org_restriction_gap": null
+    },
+    "fallback_index": null,
+    "fallback_reason": null,
+    "tuple_id": "opus__max"
+  },
+  "execution_trace_id": null,
+  "record_class": "unavailable",
+  "observed_model_id": null,
+  "outcome": {
+    "status": "unavailable",
+    "telemetry_ref": null,
+    "notes": "The route resolved to claude-opus-3-0, which the committed snapshot records as unavailable on the print_model surface (hard_rejection); nothing was delivered, so the record is non-scorable."
+  },
+  "scorable": false
+}
