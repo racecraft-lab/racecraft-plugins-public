@@ -1,122 +1,33 @@
 {
-  "workflow_file": "docs/ai/specs/.process/G56R-001-workflow.md",
-  "spec_id": "G56R-001",
-  "archived_feature_dir": "specs/g56r-001-candidate-route-baseline",
-  "updated_at": "2026-07-16T16:01:50Z",
-  "active_step": "Post: Completed and archived after merged PR #360",
-  "status": "completed_archived",
-  "settings": {
-    "auto_commit": "per-phase",
-    "confidence_gate_mode": "advisory",
-    "consensus_mode": "moderate",
-    "gate_failure": "stop"
-  },
-  "evidence_parity_amendment": {
-    "status": "complete",
-    "started_at": "2026-07-16T14:17:07Z",
-    "completed_at": "2026-07-16T14:28:10Z",
-    "foundation_pr": 362,
-    "dependent_pr": 360,
-    "authority": "current allowlisted official OpenAI documentation only",
-    "shared_contract": "docs/ai/specs/agent-routing-parity-contract.md",
-    "shared_schema": "docs/ai/research/agent-route-candidate-manifest.schema.json",
-    "canonical_report": "docs/ai/research/codex-agent-route-candidates.md",
-    "planning_manifest": "docs/ai/research/codex-agent-route-candidate-manifest.json",
-    "schema_version": "2.0.0",
-    "current_counts": {
-      "official_source_records": 21,
-      "effort_surface_records": 5,
-      "project_input_records": 17,
-      "agent_contract_records": 12,
-      "candidate_route_records": 23,
-      "fixture_backlog_records": 12,
-      "traceability_records": 24,
-      "decision_records": 5,
-      "legacy_fact_dispositions": 25
-    },
-    "validation": {
-      "shared_parity_validator": "pass",
-      "diff_check": "pass",
-      "layer1": "1428/1428 passed",
-      "full_suite": "2811/2811 passed",
-      "docs_reference_check": "pass; reference pages current",
-      "report_sha256": "b429a568ebc780bf638e6891eff6532deefae97c3ed4e5ef86cc7eced1436289",
-      "planning_manifest_sha256": "71d2ee129d5ca0fd407382ac5102566efe4c0321541514ee0eece38b29d6117d",
-      "pr_stack": "pass; foundation PR #362 and dependent PR #360 merged into main",
-      "rewritten_head_ci": "pass"
-    }
-  },
+  "workflow_file": "docs/ai/specs/.process/G56R-002-workflow.md",
+  "spec_id": "G56R-002",
+  "feature_dir": "specs/g56r-002-capability-discovery-telemetry",
+  "branch": "g56r-002-capability-discovery-telemetry",
+  "updated_at": "2026-07-17T00:15:02Z",
+  "active_step": "Phase 2: Clarify - Surface Matrix and Candidate Freeze",
+  "confidence_gate_mode": "advisory",
+  "subagent_slots": 3,
   "archive_sweep": {
-    "status": "completed_archived",
+    "status": "no_candidates",
     "execution_path": "extension_contract",
     "archive_extension_installed": true,
     "invocation_available": true,
     "prerequisite_available": true,
     "prerequisite_mode": "codex_native_worktree_binding",
-    "archived_specs": [
-      "specs/hrns-001-harness-surface-inventory-gap-taxonomy",
-      "specs/g56r-001-candidate-route-baseline"
-    ],
-    "active_specs_inventory": [],
-    "cleanup_mode": "multi_prd_post_merge_sweep",
-    "safeToApplyCleanup": true,
-    "cleanup_applied": true,
-    "archive_reports": [
-      ".specify/memory/archive-reports/2026-07-16-hrns-001-post-merge-hygiene.md",
-      ".specify/memory/archive-reports/2026-07-16-g56r-001-post-merge-hygiene.md"
-    ]
+    "eligible_previous_specs": [],
+    "excluded_current_spec": "specs/g56r-002-capability-discovery-telemetry",
+    "cleanup_mode": "sweep_feature_branch_no_apply_cleanup",
+    "safeToApplyCleanup": false
   },
-  "archive_cleanup": {
-    "status": "completed_archived",
-    "cleanup_branch": "codex/archive-merged-specs-2026-07-16",
-    "cleanup_applied": true,
-    "merged_specs": [
-      {
-        "spec_id": "HRNS-001",
-        "archived_spec": "specs/hrns-001-harness-surface-inventory-gap-taxonomy",
-        "merged_pr": 357,
-        "merged_at": "2026-07-16T12:33:28Z",
-        "merge_commit": "dcef3e90896e52b32bdb668ec55dd29ea7ba282a",
-        "archive_report": ".specify/memory/archive-reports/2026-07-16-hrns-001-post-merge-hygiene.md"
-      },
-      {
-        "spec_id": "G56R-001",
-        "archived_spec": "specs/g56r-001-candidate-route-baseline",
-        "merged_pr": 360,
-        "merged_at": "2026-07-16T15:52:57Z",
-        "merge_commit": "191642962e55df21000a5303f36e9010a14898d2",
-        "archive_report": ".specify/memory/archive-reports/2026-07-16-g56r-001-post-merge-hygiene.md"
-      }
-    ],
-    "preserved_process_evidence": [
-      "docs/ai/specs/.process/HRNS-001-workflow.md",
-      "docs/ai/specs/.process/HRNS-001-design-concept.md",
-      "docs/ai/specs/.process/G56R-001-workflow.md",
-      "docs/ai/specs/.process/G56R-001-design-concept.md"
-    ],
-    "canonical_artifacts": [
-      "docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md",
-      "docs/ai/research/codex-agent-route-candidates.md",
-      "docs/ai/research/codex-agent-route-candidate-manifest.json"
-    ]
-  },
-  "prerequisites": {
-    "all_pass": true,
-    "branch": "g56r-001-candidate-route-baseline",
-    "is_worktree": true,
-    "on_feature_branch": true,
-    "runner_branch_detection": {
-      "branch": "",
-      "on_feature_branch": false,
-      "detail": "Runner branch helper reported worktree=true, feature=false for this non-numeric branch; git branch --show-current confirmed the expected branch."
-    },
-    "confidence_gate_mode": "advisory",
-    "codex_agents": {
-      "destination": "$CODEX_HOME/agents",
-      "model": "gpt-5.5",
-      "mutation_status": "no_op",
-      "agent_count": 10
-    },
+  "preflight": {
+    "status": "passed",
+    "runner_prerequisites": "all_pass",
+    "manual_branch_verification": "g56r-002-capability-discovery-telemetry",
+    "worktree_bound": true,
+    "agent_install_dry_run": "no_op",
+    "agent_model": "gpt-5.5",
+    "orchestrator_model": "gpt-5.6-sol",
+    "orchestrator_reasoning_effort": "xhigh",
     "project_commands": {
       "BUILD": "N/A",
       "TYPECHECK": "N/A",
@@ -128,643 +39,74 @@
       "SINGLE_FILE_INTEGRATION": "N/A",
       "FULL_VERIFY": "N/A"
     },
-    "project_implementation_agent": "implement-executor",
-    "preset_conventions": {
-      "has_presets": true,
-      "preset": "speckit-pro-reviewability",
-      "version": "1.0.0",
-      "templates": [
-        "spec",
-        "plan",
-        "tasks"
-      ],
-      "hooks": "18 hook events configured"
+    "preset": {
+      "name": "speckit-pro-reviewability",
+      "version": "1.0.0"
     },
-    "speckit_cli": "specify 0.12.12.dev0",
-    "runner": {
-      "python": "python3",
-      "module": "speckit_pro_runner",
-      "pythonpath": "speckit-pro"
-    },
-    "capability_coverage": {
-      "status": "advisory_pass",
-      "detail": "Runner reported coverage for codebase context, library documentation, web/domain research, and source extraction. Missing optional coverage remains non-blocking unless no acceptable evidence path exists."
-    }
-  },
-  "capability_discovery": {
-    "subagent_orchestration": "multi_agent_v1.spawn_agent and multi_agent_v1.wait_agent available",
-    "codebase_context": "local file reads, ripgrep, and RepoPromptCE tools available",
-    "library_documentation": "context7-mcp skill available when library/API docs are needed",
-    "web_or_domain_research": "web and Tavily-backed skills available; official OpenAI docs remain the only authority for G56R-001 platform claims",
-    "source_extraction": "web extraction and local file reads available",
-    "repo_local_helpers": "PYTHONPATH=speckit-pro python3 -m speckit_pro_runner"
-  },
-  "phase_results": {
-    "Phase 1: Specify": {
-      "status": "completed",
-      "completed_at": "2026-07-15T22:51:16Z",
-      "executor_agent_id": "phase-executor-specify-session",
-      "files_changed": [
-        "specs/g56r-001-candidate-route-baseline/spec.md",
-        "specs/g56r-001-candidate-route-baseline/checklists/requirements.md"
-      ],
-      "metrics": {
-        "functional_requirements": 18,
-        "user_stories": 4,
-        "acceptance_scenarios": 8,
-        "agent_contract_ids": 12,
-        "current_fixtures": 3,
-        "missing_fixtures": 9
-      },
-      "gate": {
-        "id": "G1",
-        "status": "pass",
-        "reason": "spec.md exists with 0 markers",
-        "markers": 0
-      },
-      "unresolved_markers": {
-        "needs_clarification": 0,
-        "gap": 0,
-        "critical": 0,
-        "high": 0
-      }
-    },
-    "Phase 2: Clarify - Source Ledger and Candidate Admission": {
-      "status": "completed",
-      "completed_at": "2026-07-15T23:02:11Z",
-      "executor_agent_id": "clarify-executor-source-session",
-      "questions": 4,
-      "accepted_answers": [
-        "Added required execution-time official-source ledger metadata.",
-        "Added distinct deprecated/withdrawn seed rejection status.",
-        "Required per-surface effort/default records instead of a global effort enum.",
-        "Clarified that the provisional candidate pool is a non-authoritative execution snapshot."
-      ],
-      "consensus": [
-        {
-          "item": "Deprecated or withdrawn seed status",
-          "categories": [
-            "domain"
-          ],
-          "round": 1,
-          "outcome": "high-confidence",
-          "analyst_agent_ids": [
-            "domain-researcher-source-consensus"
-          ]
-        },
-        {
-          "item": "Per-surface effort/default treatment",
-          "categories": [
-            "domain"
-          ],
-          "round": 1,
-          "outcome": "high-confidence",
-          "analyst_agent_ids": [
-            "domain-researcher-effort-consensus"
-          ]
-        }
-      ],
-      "files_changed": [
-        "specs/g56r-001-candidate-route-baseline/spec.md"
-      ]
-    },
-    "Phase 2: Clarify - Role Contracts and Parity Additions": {
-      "status": "completed",
-      "completed_at": "2026-07-15T23:11:29Z",
-      "executor_agent_id": "clarify-executor-role-session",
-      "questions": 5,
-      "accepted_answers": [
-        "Added explicit production route or absence fields and instruction/full-file hashes.",
-        "Separated declared TOML model/effort/sandbox/mutation fields from effective runtime verification fields.",
-        "Encoded parity-only Codex route absence for consensus-synthesizer and gate-validator.",
-        "Separated tool, skill, and MCP contracts.",
-        "Added role-boundary fields with in-scope, out-of-scope, and representative task expectations."
-      ],
-      "consensus": [
-        {
-          "item": "Declared TOML vs effective runtime permissions",
-          "categories": [
-            "security",
-            "domain",
-            "spec"
-          ],
-          "round": 1,
-          "outcome": "high-confidence",
-          "analyst_agent_ids": [
-            "codebase-analyst-role-consensus"
-          ],
-          "degradation": "multi_agent thread cap blocked additional spec-context and domain analyst spawns; parent verified project context and official OpenAI docs directly before applying edits."
-        }
-      ],
-      "files_changed": [
-        "specs/g56r-001-candidate-route-baseline/spec.md"
-      ]
-    },
-    "Phase 2: Clarify - Fixture and G56R-002 Handoff": {
-      "status": "completed",
-      "completed_at": "2026-07-15T23:13:30Z",
-      "executor_agent_id": null,
-      "execution_mode": "parent_fallback_due_thread_cap",
-      "questions": 4,
-      "accepted_answers": [
-        "Clarified that existing Claude prompt-emulation fixtures are project_input and non_release_evidence outside the current Codex fixture count.",
-        "Added fixture backlog record shape with stable ID, source path, representative input, telemetry requirements, owner spec, and invalidation triggers.",
-        "Expanded telemetry handoff requirements for assigned/effective route, tools/skills/MCP, sandbox/approvals, token vector, duration, retries, terminal state, and missing-field classification.",
-        "Tightened G56R-002 go/no-go criteria to require complete source, contract, candidate, fixture, telemetry, capability-question, and invalidation records."
-      ],
-      "consensus": [],
-      "gate": {
-        "id": "G2",
-        "status": "pass",
-        "reason": "0 clarification markers",
-        "markers": 0
-      },
-      "degradation": "multi_agent thread cap blocked clarify-executor spawn for Session 3; parent executed the read-only review locally using workflow, spec, PRD, roadmap, and layer6 fixture inventory.",
-      "files_changed": [
-        "specs/g56r-001-candidate-route-baseline/spec.md"
-      ]
-    },
-    "Phase 3: Plan": {
-      "status": "completed",
-      "completed_at": "2026-07-15T23:25:12Z",
-      "executor_agent_id": null,
-      "execution_mode": "parent_fallback_due_thread_cap",
-      "artifacts": {
-        "plan": "specs/g56r-001-candidate-route-baseline/plan.md",
-        "research": "specs/g56r-001-candidate-route-baseline/research.md",
-        "data_model": "specs/g56r-001-candidate-route-baseline/data-model.md",
-        "quickstart": "specs/g56r-001-candidate-route-baseline/quickstart.md",
-        "contract": "specs/g56r-001-candidate-route-baseline/contracts/codex-agent-route-candidates.contract.md"
-      },
-      "reviewability_estimate": {
-        "status": "pass",
-        "projected": 0,
-        "declared_files": {
-          "production": 0,
-          "new": 1,
-          "modified": 0,
-          "total_entries": 1
-        },
-        "greenfield": true
-      },
-      "gate": {
-        "id": "G3",
-        "status": "pass",
-        "reason": "plan.md exists with 0 unresolved markers",
-        "markers": 0
-      },
-      "degradation": "multi_agent thread cap blocked phase-executor spawn; parent executed the plan phase locally using command instructions, templates, spec, design concept, and constitution.",
-      "files_changed": [
-        "specs/g56r-001-candidate-route-baseline/plan.md",
-        "specs/g56r-001-candidate-route-baseline/research.md",
-        "specs/g56r-001-candidate-route-baseline/data-model.md",
-        "specs/g56r-001-candidate-route-baseline/quickstart.md",
-        "specs/g56r-001-candidate-route-baseline/contracts/codex-agent-route-candidates.contract.md",
-        "specs/g56r-001-candidate-route-baseline/checklists/requirements.md"
-      ]
-    },
-    "Phase 4: Domain Checklists": {
-      "status": "completed",
-      "completed_at": "2026-07-15T23:29:14Z",
-      "executor_agent_id": null,
-      "execution_mode": "parent_local_execution",
-      "checklists": {
-        "llm-integration": {
-          "items": 15,
-          "gaps": 1,
-          "resolution": "Spec and workflow official candidate seed lists aligned with the current technical roadmap."
-        },
-        "data-integrity": {
-          "items": 15,
-          "gaps": 0,
-          "resolution": "No unresolved data-integrity requirement defects."
-        },
-        "error-handling": {
-          "items": 15,
-          "gaps": 0,
-          "resolution": "No unresolved error-handling requirement defects."
-        },
-        "security": {
-          "items": 15,
-          "gaps": 0,
-          "resolution": "No unresolved security requirement defects."
-        },
-        "observability": {
-          "items": 15,
-          "gaps": 0,
-          "resolution": "No unresolved observability requirement defects.",
-          "added_during_review_remediation": true,
-          "created_at": "2026-07-16",
-          "last_verified_at": "2026-07-16T05:15:02Z"
-        },
-        "reliability": {
-          "items": 15,
-          "gaps": 0,
-          "resolution": "No unresolved reliability or resilience requirement defects for this documentation-only spike."
-        }
-      },
-      "gate": {
-        "id": "G4",
-        "status": "pass",
-        "reason": "0 checklist gap markers",
-        "markers": 0
-      },
-      "files_changed": [
-        "docs/ai/specs/.process/G56R-001-workflow.md",
-        "specs/g56r-001-candidate-route-baseline/checklists/llm-integration.md",
-        "specs/g56r-001-candidate-route-baseline/checklists/data-integrity.md",
-        "specs/g56r-001-candidate-route-baseline/checklists/error-handling.md",
-        "specs/g56r-001-candidate-route-baseline/checklists/security.md",
-        "specs/g56r-001-candidate-route-baseline/checklists/reliability.md"
-      ],
-      "review_remediation_files_changed": [
-        {
-          "file": "specs/g56r-001-candidate-route-baseline/checklists/observability.md",
-          "added_during_review_remediation": true,
-          "created_at": "2026-07-16",
-          "last_verified_at": "2026-07-16T05:15:02Z",
-          "reason": "Added after the original Phase 4 completion to complete the six-domain operational checklist taxonomy."
-        }
-      ]
-    },
-    "Phase 5: Tasks": {
-      "status": "completed",
-      "completed_at": "2026-07-15T23:32:56Z",
-      "executor_agent_id": null,
-      "execution_mode": "parent_local_execution",
-      "task_count": 38,
-      "phase_count": 7,
-      "parallel_task_count": 0,
-      "user_story_task_counts": {
-        "US1": 5,
-        "US2": 6,
-        "US3": 5,
-        "US4": 6
-      },
-      "gate": {
-        "id": "G5",
-        "status": "pass",
-        "reason": "38 tasks found",
-        "markers": 0
-      },
-      "atomicity_route": {
-        "route": "one-navigable-PR",
-        "releasable": true,
-        "signals": [
-          "change-shape:modify-heavy"
-        ],
-        "hints": [],
-        "warnings": []
-      },
-      "layer_plan": {
-        "status": "skipped",
-        "reason": "Atomicity route is one-navigable-PR, not split-PR."
-      },
-      "files_changed": [
-        "specs/g56r-001-candidate-route-baseline/tasks.md",
-        "docs/ai/specs/.process/G56R-001-workflow.md"
-      ]
-    },
-    "Phase 6: Analyze": {
-      "status": "completed",
-      "completed_at": "2026-07-15T23:36:08Z",
-      "executor_agent_id": null,
-      "execution_mode": "parent_local_execution",
-      "findings": [
-        {
-          "id": "A1",
-          "severity": "HIGH",
-          "status": "resolved",
-          "issue": "Current roadmap seed models drifted from spec.md FR-010 and the workflow seed list.",
-          "resolution": "Aligned spec.md and workflow to the current roadmap seed set and preserved older model names only as historical exclusions."
-        }
-      ],
-      "gate": {
-        "id": "G6",
-        "status": "pass",
-        "reason": "0 CRITICAL/HIGH findings",
-        "markers": 0
-      },
-      "files_changed": [
-        "specs/g56r-001-candidate-route-baseline/spec.md",
-        "specs/g56r-001-candidate-route-baseline/checklists/llm-integration.md",
-        "docs/ai/specs/.process/G56R-001-workflow.md",
-        "docs/ai/specs/.process/autopilot-state.json"
-      ]
-    },
-    "Phase 6.5: Confidence Gate": {
-      "status": "completed",
-      "completed_at": "2026-07-15T23:37:33Z",
-      "mode": "advisory",
-      "helper_status": "expected_failure",
-      "helper_exit_code": 1,
-      "pass": null,
-      "composite": null,
-      "threshold": 0.9,
-      "reason": "no confidence emit found",
-      "recommended_action": "soft_skip",
-      "disposition": "Proceed to implementation; G7 remains the binding verification gate.",
-      "files_changed": [
-        "docs/ai/specs/.process/G56R-001-workflow.md",
-        "docs/ai/specs/.process/autopilot-state.json"
-      ]
-    },
-    "Phase 7: Implement": {
-      "status": "completed",
-      "completed_at": "2026-07-16T00:05:00Z",
-      "execution_mode": "parent_local_execution",
-      "task_count": 38,
-      "gate": {
-        "id": "G7",
-        "status": "pass",
-        "reason": "All 38 tasks complete",
-        "markers": 0,
-        "total": 38,
-        "done": 38
-      },
-      "verification": {
-        "marker_search": "pass",
-        "exact_counts": {
-          "official_source_records": 9,
-          "effort_surface_records": 5,
-          "agent_contract_records": 12,
-          "candidate_route_records": 23,
-          "fixture_backlog_records": 12,
-          "current_fixtures": 3,
-          "missing_fixtures": 9,
-          "unsupported_admitted_seed_candidates": 0
-        },
-        "diff_check": "pass",
-        "layer1": "1428/1428 passed",
-        "full_suite": "2768/2768 passed"
-      },
-      "files_changed": [
-        "docs/ai/research/codex-agent-route-candidates.md",
-        "specs/g56r-001-candidate-route-baseline/tasks.md",
-        "docs/ai/specs/.process/autopilot-state.json"
-      ],
-      "canonical_report_provenance": {
-        "initial_commit": "b776814a",
-        "final_verified_content_sha256": "272a495da0adf429acbaa6bfb759ec03a0afa7f73eaf49ee76270b3fbba83602"
-      }
-    }
+    "capability_path": "repository and spec context -> local repository files; current OpenAI platform facts -> official OpenAI documentation and Context7 when phase work requires refresh"
   },
   "plan": [
-    {
-      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 0: Prerequisites",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 1: Specify",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Source Ledger and Candidate Admission",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Source Ledger and Candidate Admission Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Role Contracts and Parity Additions",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Role Contracts and Parity Additions Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Fixture and G56R-002 Handoff",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Fixture and G56R-002 Handoff Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 3: Plan",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - LLM Integration",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - LLM Integration Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Data Integrity",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Data Integrity Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Error Handling",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Error Handling Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Security",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Security Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Observability",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Observability Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Reliability",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Reliability Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 5: Tasks",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 6: Analyze",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 6: Analyze - Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 6.5: Confidence Gate",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 7: Implement - Pending task decomposition",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Doctor Extension Check",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Verify Implementation",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Verify Tasks Phantom Check",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Code Review",
-      "status": "completed: RepoPrompt reviews through review-g56r-baseline-B40534 returned findings and clean rerun review-g56r-baseline-EE3373 returned no findings"
-    },
-    {
-      "step": "Post: Integration Suite",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Reviewability Diff Gate",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Self-Review",
-      "status": "completed"
-    },
-    {
-      "step": "Post: UAT Runbook Generation",
-      "status": "skipped: generate-uat-skeleton deferred and no runbook exists"
-    },
-    {
-      "step": "Post: Final Reviewability Backstop",
-      "status": "completed"
-    },
-    {
-      "step": "Post: PR Packet/Body Generation",
-      "status": "skipped: no current feature-local PR packet; pr-packet-output remains deferred"
-    },
-    {
-      "step": "Post: PR Body Generation",
-      "status": "completed: manual PR body prepared from completed workflow evidence for draft PR #360"
-    },
-    {
-      "step": "Post: PR Creation",
-      "status": "completed: draft PR #360 opened against main by explicit user instruction"
-    },
-    {
-      "step": "Post: Review Remediation",
-      "status": "completed: clean RepoPrompt rerun review-g56r-baseline-EE3373 returned no findings"
-    },
-    {
-      "step": "Post: Retrospective",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Evidence Parity - Rebase onto PR #362",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Evidence Parity - OpenAI source refresh and schema-v2 package",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Evidence Parity - Verify and publish stacked PR #360",
-      "status": "completed: local gates and rewritten-head CI passed; PR #360 merged into main after PR #362"
-    }
+    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
+    {"step": "Phase 0: Prerequisites", "status": "completed"},
+    {"step": "Phase 1: Specify", "status": "completed"},
+    {"step": "Phase 2: Clarify - Surface Matrix and Candidate Freeze", "status": "in_progress"},
+    {"step": "Phase 2: Clarify - Surface Matrix and Candidate Freeze Consensus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Telemetry and Exact Treatment", "status": "pending"},
+    {"step": "Phase 2: Clarify - Telemetry and Exact Treatment Consensus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Probe Bounds and Evidence Retention", "status": "pending"},
+    {"step": "Phase 2: Clarify - Probe Bounds and Evidence Retention Consensus", "status": "pending"},
+    {"step": "Phase 3: Plan", "status": "pending"},
+    {"step": "Phase 4: Checklist - LLM Integration", "status": "pending"},
+    {"step": "Phase 4: Checklist - LLM Integration Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - Data Integrity", "status": "pending"},
+    {"step": "Phase 4: Checklist - Data Integrity Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - Error Handling", "status": "pending"},
+    {"step": "Phase 4: Checklist - Error Handling Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - Observability", "status": "pending"},
+    {"step": "Phase 4: Checklist - Observability Consensus", "status": "pending"},
+    {"step": "Phase 5: Tasks", "status": "pending"},
+    {"step": "Phase 6: Analyze", "status": "pending"},
+    {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
+    {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
+    {"step": "Post: Doctor Extension Check", "status": "pending"},
+    {"step": "Post: Verify Implementation", "status": "pending"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
+    {"step": "Post: Code Review", "status": "pending"},
+    {"step": "Post: Integration Suite", "status": "pending"},
+    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
+    {"step": "Post: Self-Review", "status": "pending"},
+    {"step": "Post: UAT Runbook Generation", "status": "pending"},
+    {"step": "Post: Final Reviewability Backstop", "status": "pending"},
+    {"step": "Post: PR Packet/Body Generation", "status": "pending"},
+    {"step": "Post: PR Body Generation", "status": "pending"},
+    {"step": "Post: PR Creation", "status": "pending"},
+    {"step": "Post: Review Remediation", "status": "pending"},
+    {"step": "Post: Retrospective", "status": "pending"}
   ],
-  "post_results": {
-    "doctor_extension_check": {
-      "status": "pass",
-      "mode": "parent_fallback",
-      "summary": "templates 5/5, agent directory present, 29 skills, runner manifest valid, constitution present, feature complete"
+  "phase_results": {
+    "Phase 0: Prerequisites": {
+      "status": "completed",
+      "completed_at": "2026-07-17T00:00:54Z",
+      "runner_status": "all_pass",
+      "agent_install": "no_op",
+      "confidence_gate_mode": "advisory",
+      "archive_sweep": "no_candidates"
     },
-    "verify_implementation": {
-      "status": "pass",
-      "g7": "All 38 tasks complete",
-      "layer1": "1428/1428 passed",
-      "full_suite": "2768/2768 passed"
-    },
-    "verify_tasks": {
-      "status": "pass",
-      "report": "specs/g56r-001-candidate-route-baseline/verify-tasks-report.md",
-      "verified": 38,
-      "flagged": 0
-    },
-    "code_review": {
-      "status": "pass",
-      "repo_prompt_dispatches": [
-        "review-g56r-baseline-BEB0E5",
-        "review-g56r-baseline-CB60BD",
-        "review-g56r-baseline-74D6A9",
-        "review-g56r-baseline-1C9918",
-        "review-g56r-baseline-DA1EB7",
-        "review-g56r-baseline-AAC612",
-        "review-g56r-baseline-205F8D",
-        "review-g56r-baseline-86E22B",
-        "review-g56r-baseline-9E7498",
-        "review-g56r-baseline-AB681F",
-        "review-g56r-baseline-AE8E96",
-        "review-g56r-baseline-4C193A",
-        "review-g56r-baseline-8E767F",
-        "review-g56r-baseline-BF4556",
-        "review-g56r-baseline-B40534",
-        "review-g56r-baseline-EE3373"
+    "Phase 1: Specify": {
+      "status": "completed",
+      "completed_at": "2026-07-17T00:15:02Z",
+      "executor": "/root/phase_executor_g56r002_specify",
+      "independent_review": "passed",
+      "functional_requirements": 8,
+      "user_stories": 3,
+      "unresolved_markers": 0,
+      "gate": "G1 passed",
+      "files": [
+        "specs/g56r-002-capability-discovery-telemetry/spec.md",
+        "specs/g56r-002-capability-discovery-telemetry/checklists/requirements.md"
       ],
-      "findings": 0,
-      "remediation": "complete",
-      "clean_review": "review-g56r-baseline-EE3373"
-    },
-    "reviewability": {
-      "status": "warn_pass",
-      "evidence": "reviewability-gate setup mode passed against specs/g56r-001-candidate-route-baseline/plan.md; actual branch-diff backstop is 25 docs/process/test-guard files with zero runtime production files and warning-only total-file count"
-    },
-    "uat_runbook_generation": {
-      "status": "skipped",
-      "reason": "no committed runbook exists and generate-uat-skeleton is deferred"
-    },
-    "pr_packet_body_generation": {
-      "status": "skipped",
-      "reason": "no current feature-local PR packet exists and pr-packet-output remains deferred",
-      "manual_body": "prepared from completed workflow evidence for draft PR #360 by explicit user instruction"
-    },
-    "pr_creation": {
-      "status": "pass",
-      "pr_number": 360,
-      "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/360",
-      "original_base_branch": "main",
-      "base_branch": "main",
-      "foundation_pr": 362,
-      "head_branch": "g56r-001-candidate-route-baseline",
-      "rewritten_head_commit": "0c01b1f71ff85dfb1b9c6d92e7111da057fcbf80",
-      "github_mergeable": true,
-      "rewritten_head_ci": "pass",
-      "draft": false,
-      "merged": true,
-      "merged_at": "2026-07-16T15:52:57Z",
-      "merge_commit": "191642962e55df21000a5303f36e9010a14898d2",
-      "reason": "PR #360 merged into main after foundation PR #362 with all checks passing and all review threads resolved"
-    },
-    "retrospective": {
-      "status": "complete",
-      "report": "specs/g56r-001-candidate-route-baseline/retrospective.md",
-      "critical_findings": 0,
-      "proposed_spec_changes": 0
-    },
-    "implementation_commit": "b776814a"
+      "documentation_refresh": "official OpenAI documentation MCP fallback used after Context7 transport closed"
+    }
   }
 }

@@ -58,13 +58,15 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 
 | Phase | Command | Status | Notes |
 |---|---|---|---|
-| Specify | `$speckit-specify` | Pending | Define source, surface, snapshot, and treatment requirements |
-| Clarify | `$speckit-clarify` | Pending | Resolve field-level and bounded-probe details only |
+| Specify | `$speckit-specify` | Complete | Defined source, surface, snapshot, and treatment requirements; G1 passed |
+| Clarify | `$speckit-clarify` | In Progress | Resolve field-level and bounded-probe details only |
 | Plan | `$speckit-plan` | Pending | Design one guarded three-increment slice |
 | Checklist | `$speckit-checklist` | Pending | Run four risk-focused domains |
 | Tasks | `$speckit-tasks` | Pending | Generate TDD-first, vertically ordered tasks |
 | Analyze | `$speckit-analyze` | Pending | Prove cross-artifact consistency and scope containment |
+| Confidence Gate | G6.5 | Pending | Evaluate the Analyze confidence emit in advisory mode |
 | Implement | `$speckit-implement` | Pending | Implement only after G6 passes |
+| Post | Post-Implementation | Pending | Complete verification, reviewability, PR, remediation, and retrospective work |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -78,6 +80,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | G4 | After Checklist | All true gaps from the four selected domains are remediated or explicitly rejected as out of scope |
 | G5 | After Tasks | Every requirement maps to an ordered, independently verifiable task and no qualification or installer work leaks in |
 | G6 | After Analyze | No critical or high inconsistency, authority violation, treatment-proof gap, or reviewability blocker remains |
+| G6.5 | Before Implement | Record and evaluate pre-implementation confidence; advisory mode may continue after bounded remediation |
 | G7 | After Each Implementation Increment | Focused tests, synthetic replay, diff hygiene, and the applicable repository gates pass |
 
 ---
@@ -168,7 +171,7 @@ for decomposition if a binding threshold is crossed.
 | Conventional Commits | Use repository-valid lowercase conventional commit scopes and validate the final PR title before readiness | Git history and release-readiness gate |
 | KISS, Simplicity, YAGNI | Use a Codex adapter, neutral schemas, and only the smallest orchestration seam; no cross-vendor framework | Plan complexity review and G6 analysis |
 
-**Constitution Check:** Pending at G1; the plan must record a pass before G3.
+**Constitution Check:** Verified at G1; the plan must record a pass before G3.
 
 ---
 
@@ -365,15 +368,19 @@ configuration alone cannot prove effective treatment.
 
 | Metric | Value |
 |---|---|
-| Functional Requirements | Pending autopilot |
-| User Stories | 3 seeded |
+| Functional Requirements | 8 |
+| User Stories | 3 |
 | Acceptance Criteria | AC-2.2 through AC-2.5 plus the G56R-002 portion of AC-2.19 |
-| G1 Gate | Pending autopilot |
+| G1 Gate | Passed — `spec.md` exists with 0 unresolved markers |
 
 ### Files Generated
 
-- [ ] `specs/g56r-002-capability-discovery-telemetry/spec.md`
-- [ ] `specs/g56r-002-capability-discovery-telemetry/checklists/requirements.md`
+- [x] `specs/g56r-002-capability-discovery-telemetry/spec.md`
+- [x] `specs/g56r-002-capability-discovery-telemetry/checklists/requirements.md`
+
+**Documentation refresh:** Context7 transport was unavailable during Specify;
+the phase used the official OpenAI documentation MCP as the authoritative
+fallback and bounded undocumented runtime shapes to discovery evidence.
 
 ### Traceability Markers
 
@@ -740,6 +747,21 @@ lower-severity finding has a recorded disposition.
 
 ---
 
+## Phase 6.5: Confidence Gate
+
+**When to run:** After Analyze and its mandatory consensus item, before any
+implementation task. Resolve mode once during preflight and use the latest
+workflow confidence emit.
+
+| Field | Value |
+|---|---|
+| Mode | Advisory |
+| Threshold | 0.90 |
+| Status | Pending Analyze confidence emit |
+| Bounded remediation | Up to three focused iterations on the lowest-scoring criterion |
+
+---
+
 ## Phase 7: Implement
 
 **When to run:** Only after G6 passes.
@@ -800,6 +822,23 @@ For every task:
 ---
 
 ## Post-Implementation Checklist
+
+| Post Item | Status |
+|---|---|
+| Post: Doctor Extension Check | Pending |
+| Post: Verify Implementation | Pending |
+| Post: Verify Tasks Phantom Check | Pending |
+| Post: Code Review | Pending |
+| Post: Integration Suite | Pending |
+| Post: Reviewability Diff Gate | Pending |
+| Post: Self-Review | Pending |
+| Post: UAT Runbook Generation | Pending |
+| Post: Final Reviewability Backstop | Pending |
+| Post: PR Packet/Body Generation | Pending |
+| Post: PR Body Generation | Pending |
+| Post: PR Creation | Pending |
+| Post: Review Remediation | Pending |
+| Post: Retrospective | Pending |
 
 - [ ] All tasks and user-story acceptance checks are complete.
 - [ ] Focused capability, telemetry, treatment, and replay tests pass.
