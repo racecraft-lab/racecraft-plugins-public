@@ -42,5 +42,11 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [checklists/llm-integration.md](checklists/llm-integration.md)
 - [checklists/observability.md](checklists/observability.md)
 - [checklists/requirements.md](checklists/requirements.md)
+- [.process/checkpoints/us1.json](.process/checkpoints/us1.json)
+- [.process/checkpoints/us2.json](.process/checkpoints/us2.json)
+- [.process/checkpoints/us3.json](.process/checkpoints/us3.json)
+- [.process/reviewability/capability-freeze.json](.process/reviewability/capability-freeze.json)
+- [.process/reviewability/synthetic-replay.json](.process/reviewability/synthetic-replay.json)
+- [.process/reviewability/treatment-contracts.json](.process/reviewability/treatment-contracts.json)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

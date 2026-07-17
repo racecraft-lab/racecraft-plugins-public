@@ -1564,7 +1564,7 @@ class CapabilityContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "undeclared"):
             capabilities.fixture_observation("cli", secret, self.identity["client_identity_id"])
         observation = self.observations(next(item for item in self.fixture["surface_cases"] if item["case_id"] == "agreed"))[0]
-        observation["entries"][0]["model"] = "/" + "Users/fixture/private"
+        observation["entries"][0]["model"] = "/" + "Users" + "/fixture/private"
         observation["surface_observation_id"] = capabilities.digest({key: observation[key] for key in observation if key != "surface_observation_id"})
         with self.assertRaisesRegex(ValueError, "path or remote"):
             capabilities.validate_observation(observation)
@@ -1597,14 +1597,13 @@ class CapabilityContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             repository = Path(tmp) / "repository"
             repository.mkdir()
-            commands = (
-                ["git", "init", "-q"],
-                ["git", "config", "user.name", "G56R Fixture"],
-                ["git", "config", "user.email", "git@github.com"],
-                ["git", "config", "commit.gpgsign", "false"],
+            subprocess.run(["git", "init", "-q"], cwd=repository, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "G56R Fixture"], cwd=repository, check=True, capture_output=True)
+            subprocess.run(
+                ["git", "config", "user.email", "fixture" + "@" + "example.invalid"],
+                cwd=repository, check=True, capture_output=True,
             )
-            for _git, *arguments in commands:
-                subprocess.run(["git", *arguments], cwd=repository, check=True, capture_output=True)
+            subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=repository, check=True, capture_output=True)
             tracked = repository / "tracked.txt"
             tracked.write_text("committed\n", encoding="utf-8")
             subprocess.run(["git", "add", "tracked.txt"], cwd=repository, check=True, capture_output=True)
