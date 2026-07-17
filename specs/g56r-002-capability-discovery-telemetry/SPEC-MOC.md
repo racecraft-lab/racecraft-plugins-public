@@ -36,6 +36,10 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [research.md](research.md)
 - [contracts/capability-freeze.schema.json](contracts/capability-freeze.schema.json)
 - [contracts/treatment-record.schema.json](contracts/treatment-record.schema.json)
+- [checklists/data-integrity.md](checklists/data-integrity.md)
+- [checklists/error-handling.md](checklists/error-handling.md)
+- [checklists/llm-integration.md](checklists/llm-integration.md)
+- [checklists/observability.md](checklists/observability.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

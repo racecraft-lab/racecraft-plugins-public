@@ -61,8 +61,8 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Specify | `$speckit-specify` | Complete | Defined source, surface, snapshot, and treatment requirements; G1 passed |
 | Clarify | `$speckit-clarify` | Complete | Resolved field-level and bounded-probe details; G2 passed |
 | Plan | `$speckit-plan` | Complete | Designed one guarded three-increment slice; G3 and reviewability passed |
-| Checklist | `$speckit-checklist` | In Progress | Run four risk-focused domains |
-| Tasks | `$speckit-tasks` | Pending | Generate TDD-first, vertically ordered tasks |
+| Checklist | `$speckit-checklist` | Complete | Four risk-focused domains passed consensus; G4 passed |
+| Tasks | `$speckit-tasks` | In Progress | Generate TDD-first, vertically ordered tasks |
 | Analyze | `$speckit-analyze` | Pending | Prove cross-artifact consistency and scope containment |
 | Confidence Gate | G6.5 | Pending | Evaluate the Analyze confidence emit in advisory mode |
 | Implement | `$speckit-implement` | Pending | Implement only after G6 passes |
@@ -615,13 +615,16 @@ Focus on G56R-002 requirements:
 
 | Checklist | Items | Gaps | Resolution |
 |---|---|---|---|
-| LLM integration | Pending | Pending | Pending autopilot |
-| Data integrity | Pending | Pending | Pending autopilot |
-| Error handling | Pending | Pending | Pending autopilot |
-| Observability | Pending | Pending | Pending autopilot |
+| LLM integration | 28 | 0 | Independent consensus PASS; no inferred platform fact or treatment gap |
+| Data integrity | 30 | 0 | Independent consensus PASS; identity, FK, null, hash, retention, and provenance contracts complete |
+| Error handling | 33 | 0 | Independent consensus PASS; every recovery is fail-closed and bounded |
+| Observability | 32 | 0 | Independent consensus PASS; every field has source, completeness, claim, and null semantics |
 
 Every accepted gap must update `spec.md` or `plan.md`, then the affected
 checklist must be rerun before G4 passes.
+
+**G4 Gate:** Passed — all 123 domain items passed consensus and 0 `[Gap]`
+markers remain in `spec.md` or `plan.md`.
 
 ---
 

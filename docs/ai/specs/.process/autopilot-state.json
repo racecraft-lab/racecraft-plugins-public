@@ -3,8 +3,8 @@
   "spec_id": "G56R-002",
   "feature_dir": "specs/g56r-002-capability-discovery-telemetry",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-17T00:49:35Z",
-  "active_step": "Phase 4: Checklist - LLM Integration",
+  "updated_at": "2026-07-17T01:12:22Z",
+  "active_step": "Phase 5: Tasks",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
   "archive_sweep": {
@@ -56,15 +56,15 @@
     {"step": "Phase 2: Clarify - Probe Bounds and Evidence Retention", "status": "completed"},
     {"step": "Phase 2: Clarify - Probe Bounds and Evidence Retention Consensus", "status": "completed"},
     {"step": "Phase 3: Plan", "status": "completed"},
-    {"step": "Phase 4: Checklist - LLM Integration", "status": "in_progress"},
-    {"step": "Phase 4: Checklist - LLM Integration Consensus", "status": "pending"},
-    {"step": "Phase 4: Checklist - Data Integrity", "status": "pending"},
-    {"step": "Phase 4: Checklist - Data Integrity Consensus", "status": "pending"},
-    {"step": "Phase 4: Checklist - Error Handling", "status": "pending"},
-    {"step": "Phase 4: Checklist - Error Handling Consensus", "status": "pending"},
-    {"step": "Phase 4: Checklist - Observability", "status": "pending"},
-    {"step": "Phase 4: Checklist - Observability Consensus", "status": "pending"},
-    {"step": "Phase 5: Tasks", "status": "pending"},
+    {"step": "Phase 4: Checklist - LLM Integration", "status": "completed"},
+    {"step": "Phase 4: Checklist - LLM Integration Consensus", "status": "completed"},
+    {"step": "Phase 4: Checklist - Data Integrity", "status": "completed"},
+    {"step": "Phase 4: Checklist - Data Integrity Consensus", "status": "completed"},
+    {"step": "Phase 4: Checklist - Error Handling", "status": "completed"},
+    {"step": "Phase 4: Checklist - Error Handling Consensus", "status": "completed"},
+    {"step": "Phase 4: Checklist - Observability", "status": "completed"},
+    {"step": "Phase 4: Checklist - Observability Consensus", "status": "completed"},
+    {"step": "Phase 5: Tasks", "status": "in_progress"},
     {"step": "Phase 6: Analyze", "status": "pending"},
     {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
     {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
@@ -189,6 +189,47 @@
         "specs/g56r-002-capability-discovery-telemetry/contracts/treatment-record.schema.json",
         "specs/g56r-002-capability-discovery-telemetry/quickstart.md"
       ]
+    },
+    "Phase 4: Domain Checklists": {
+      "status": "completed",
+      "completed_at": "2026-07-17T01:12:22Z",
+      "gate": "G4 passed",
+      "total_items": 123,
+      "total_gaps": 0,
+      "checklists": {
+        "LLM Integration": {
+          "status": "completed",
+          "completed_at": "2026-07-17T00:57:48Z",
+          "execution_path": "parent fallback after delegated checklist executor stalled without worktree changes",
+          "items": 28,
+          "gaps": 0,
+          "consensus": "/root/consensus_llm_integration PASS"
+        },
+        "Data Integrity": {
+          "status": "completed",
+          "completed_at": "2026-07-17T01:06:37Z",
+          "execution_path": "parent fallback under established checklist-executor reliability issue",
+          "items": 30,
+          "gaps": 0,
+          "consensus": "/root/consensus_data_integrity_fast PASS"
+        },
+        "Error Handling": {
+          "status": "completed",
+          "completed_at": "2026-07-17T01:08:49Z",
+          "execution_path": "parent fallback under established checklist-executor reliability issue",
+          "items": 33,
+          "gaps": 0,
+          "consensus": "/root/consensus_llm_integration PASS on follow-up"
+        },
+        "Observability": {
+          "status": "completed",
+          "completed_at": "2026-07-17T01:12:22Z",
+          "execution_path": "parent fallback under established checklist-executor reliability issue",
+          "items": 32,
+          "gaps": 0,
+          "consensus": "/root/consensus_llm_integration PASS on follow-up"
+        }
+      }
     }
   }
 }
