@@ -254,6 +254,13 @@ class CapabilityContractTests(unittest.TestCase):
             "https://unapproved.openai.com/docs/moved-source",
             "https://chatgpt.com/codex/moved-source",
             "https://openai.com/docs/moved-source",
+            "https://user" + chr(64) + "platform.openai.com/docs/moved-source",
+            "https://platform.openai.com:443/docs/moved-source",
+            "https://platform.openai.com:bad/docs/moved-source",
+            "https://platform.openai.com/docs/../outside",
+            "https://platform.openai.com/docs/%2e%2e/outside",
+            "https://platform.openai.com/docs/%2Foutside",
+            "https://platform.openai.com/docs//outside",
         ):
             unapproved = copy.deepcopy(captured)
             unapproved[0].update({"canonical_url": unapproved_url, "status": "redirected"})
@@ -567,6 +574,19 @@ class CapabilityContractTests(unittest.TestCase):
             capabilities.validate_canary_result(result, [approval], evidence_bytes=b"{}\n")
         with self.assertRaisesRegex(ValueError, "only one canary"):
             capabilities.validate_canary_results([result, result], [approval])
+        canary_predecessor = {"canary_results": [result]}
+        retained_history = capabilities._successor_canary_results(canary_predecessor, True)
+        self.assertEqual(retained_history, [result])
+        self.assertIsNot(retained_history, canary_predecessor["canary_results"])
+        capabilities._validate_same_snapshot_canary_history(canary_predecessor, retained_history, True)
+        with self.assertRaisesRegex(ValueError, "cannot drop or rewrite"):
+            capabilities._validate_same_snapshot_canary_history(canary_predecessor, [], True)
+        rewritten = copy.deepcopy(result); rewritten["availability_disposition"] = "unknown"
+        with self.assertRaisesRegex(ValueError, "cannot drop or rewrite"):
+            capabilities._validate_same_snapshot_canary_history(canary_predecessor, [rewritten], True)
+        self.assertEqual(capabilities._successor_canary_results(canary_predecessor, False), [])
+        with self.assertRaisesRegex(ValueError, "only one canary"):
+            capabilities.validate_canary_results([*retained_history, result], [approval])
         replayed = {**result, "canonical_model_id": "model-b"}
         with self.assertRaisesRegex(ValueError, "cannot be replayed"):
             capabilities.validate_canary_results([result, replayed], [approval])
@@ -609,22 +629,30 @@ class CapabilityContractTests(unittest.TestCase):
             "canary_results": [],
             "candidate_freeze_id": capabilities.digest(b"fixture-predecessor"),
         }
-        with mock.patch.object(capabilities, "APPROVED_CANARY_EXECUTORS", (approval,)), mock.patch.object(
-            capabilities, "validate_freeze", side_effect=lambda freeze, manifest, **kwargs: freeze,
-        ):
-            successor = capabilities.build_canary_successor(
-                predecessor, result, self.manifest, "2026-07-16T00:00:01Z", evidence_bytes=evidence_bytes,
-            )
-        self.assertEqual(successor["canary_results"], [result])
-        self.assertEqual(successor["supersedes_candidate_freeze_id"], predecessor["candidate_freeze_id"])
         with tempfile.TemporaryDirectory() as tmp:
             raw_root = Path(tmp) / "raw"
             raw_root.mkdir(mode=0o700)
             with self.assertRaisesRegex(ValueError, "regular non-symlink file"):
                 capabilities.validate_canary_evidence(raw_root, ROOT, result)
+            with mock.patch.object(capabilities, "APPROVED_CANARY_EXECUTORS", (approval,)), mock.patch.object(
+                capabilities, "validate_freeze", side_effect=lambda freeze, manifest, **kwargs: freeze,
+            ), self.assertRaisesRegex(ValueError, "regular non-symlink file"):
+                capabilities.build_canary_successor(
+                    predecessor, result, self.manifest, "2026-07-16T00:00:01Z",
+                    raw_evidence_root=raw_root, repository_root=ROOT,
+                )
             evidence_path = raw_root / f"{result['evidence_digest'].removeprefix('sha256:')}.json"
             evidence_path.write_bytes(evidence_bytes); evidence_path.chmod(0o600)
             self.assertEqual(capabilities.validate_canary_evidence(raw_root, ROOT, result), evidence_bytes)
+            with mock.patch.object(capabilities, "APPROVED_CANARY_EXECUTORS", (approval,)), mock.patch.object(
+                capabilities, "validate_freeze", side_effect=lambda freeze, manifest, **kwargs: freeze,
+            ):
+                successor = capabilities.build_canary_successor(
+                    predecessor, result, self.manifest, "2026-07-16T00:00:01Z",
+                    raw_evidence_root=raw_root, repository_root=ROOT,
+                )
+            self.assertEqual(successor["canary_results"], [result])
+            self.assertEqual(successor["supersedes_candidate_freeze_id"], predecessor["candidate_freeze_id"])
             evidence_path.write_bytes(b"{}\n")
             with self.assertRaisesRegex(ValueError, "content digest as the filename"):
                 capabilities.validate_canary_evidence(raw_root, ROOT, result)
@@ -682,6 +710,7 @@ class CapabilityContractTests(unittest.TestCase):
             content_path = Path(tmp) / f"{content_digest.removeprefix('sha256:')}.json"
             content_path.write_bytes(content); content_path.chmod(0o600)
             self.assertEqual(capabilities.validate_content_addressed_private_file(content_path, ROOT, "capture"), content_path.resolve())
+            self.assertEqual(capabilities.read_content_addressed_private_file(content_path, ROOT, "capture"), (content_path.resolve(), content))
             with self.assertRaisesRegex(ValueError, "content digest as the filename"):
                 capabilities.validate_content_addressed_private_file(private, ROOT, "capture")
             with self.assertRaisesRegex(ValueError, "outside every Git worktree"):
@@ -783,6 +812,21 @@ class CapabilityContractTests(unittest.TestCase):
             canonical = root / "canonical.json"
             capabilities._write(canonical, {"b": 1, "a": 2}, append_only=True)
             self.assertEqual(capabilities._read(canonical, require_canonical=True), {"a": 2, "b": 1})
+            replacement = root / "replacement.json"
+            replacement.write_bytes(b'{}\n')
+            with mock.patch.object(capabilities.os, "stat", return_value=replacement.stat()):
+                with self.assertRaisesRegex(ValueError, "pathname changed"):
+                    capabilities._read_bounded_regular_file(canonical)
+            initial = canonical.stat()
+            simulated_before_append = mock.Mock(
+                st_mode=initial.st_mode, st_dev=initial.st_dev, st_ino=initial.st_ino,
+                st_size=4, st_mtime_ns=initial.st_mtime_ns,
+            )
+            with mock.patch.object(capabilities, "PRIVATE_REFRESH_MAX_BYTES", 4), mock.patch.object(
+                capabilities.os, "fstat", return_value=simulated_before_append,
+            ):
+                with self.assertRaisesRegex(ValueError, "exceeds the maximum size"):
+                    capabilities._read_bounded_regular_file(canonical)
             with self.assertRaises(FileExistsError):
                 capabilities._write(canonical, {"replacement": True}, append_only=True)
             self.assertEqual(capabilities._read(canonical, require_canonical=True), {"a": 2, "b": 1})

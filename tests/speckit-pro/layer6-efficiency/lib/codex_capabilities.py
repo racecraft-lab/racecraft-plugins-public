@@ -135,11 +135,31 @@ def _token(value):
 
 def _openai_url(value):
     parsed = urlparse(str(value)); host = (parsed.hostname or "").lower()
+    try:
+        port = parsed.port
+    except ValueError:
+        return False
+    path_parts = parsed.path.split("/")
+    canonical_path = (
+        parsed.path.startswith("/")
+        and "%" not in parsed.path
+        and "\\" not in parsed.path
+        and "" not in path_parts[1:]
+        and not {".", ".."} & set(path_parts)
+    )
     allowed_path = any(
         parsed.path == prefix or parsed.path.startswith(f"{prefix}/")
         for prefix in _OPENAI_AUTHORITY_PREFIXES.get(host, ())
     )
-    return parsed.scheme == "https" and allowed_path
+    return (
+        parsed.scheme == "https"
+        and parsed.username is None
+        and parsed.password is None
+        and port is None
+        and parsed.netloc.lower() == host
+        and canonical_path
+        and allowed_path
+    )
 
 
 def _utc_timestamp(value):
@@ -177,6 +197,50 @@ def _parse_json_bytes(raw):
         )
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise ValueError("JSON input must be strict UTF-8 JSON") from error
+
+
+def _read_bounded_regular_file(path, *, required_mode=None):
+    source = Path(os.path.abspath(path))
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        pathname_before = os.stat(source, follow_symlinks=False)
+        if not stat.S_ISREG(pathname_before.st_mode):
+            raise ValueError("bounded input must be a regular non-symlink file")
+        descriptor = os.open(source, flags)
+    except OSError as error:
+        raise ValueError("bounded input must be a readable regular non-symlink file") from error
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode):
+            raise ValueError("bounded input must be a regular file")
+        if (pathname_before.st_dev, pathname_before.st_ino) != (before.st_dev, before.st_ino):
+            raise ValueError("bounded input pathname changed before it was read")
+        if required_mode is not None and os.name != "nt" and stat.S_IMODE(before.st_mode) != required_mode:
+            raise ValueError(f"private input must use mode {required_mode:04o}")
+        if before.st_size > PRIVATE_REFRESH_MAX_BYTES:
+            raise ValueError("bounded input exceeds the maximum size")
+        chunks, total = [], 0
+        while True:
+            chunk = os.read(descriptor, min(1024 * 1024, PRIVATE_REFRESH_MAX_BYTES + 1 - total))
+            if not chunk:
+                break
+            chunks.append(chunk); total += len(chunk)
+            if total > PRIVATE_REFRESH_MAX_BYTES:
+                raise ValueError("bounded input exceeds the maximum size")
+        after = os.fstat(descriptor)
+        identity_before = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, stat.S_IMODE(before.st_mode))
+        identity_after = (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, stat.S_IMODE(after.st_mode))
+        if identity_after != identity_before or total != after.st_size:
+            raise ValueError("bounded input changed while it was being read")
+        try:
+            current = os.stat(source, follow_symlinks=False)
+        except OSError as error:
+            raise ValueError("bounded input pathname changed while it was being read") from error
+        if not stat.S_ISREG(current.st_mode) or (current.st_dev, current.st_ino) != (after.st_dev, after.st_ino):
+            raise ValueError("bounded input pathname changed while it was being read")
+        return b"".join(chunks)
+    finally:
+        os.close(descriptor)
 
 
 def digest_regular_file(path):
@@ -876,20 +940,29 @@ def validate_private_external_file(path, repository_root, label, *, output=False
     return resolved
 
 
-def validate_content_addressed_private_file(path, repository_root, label):
+def read_private_external_file(path, repository_root, label):
     resolved = validate_private_external_file(path, repository_root, label)
-    expected_name = f"{digest(resolved.read_bytes()).removeprefix('sha256:')}.json"
+    return resolved, _read_bounded_regular_file(resolved, required_mode=0o600)
+
+
+def validate_content_addressed_private_file(path, repository_root, label):
+    resolved, raw = read_content_addressed_private_file(path, repository_root, label)
+    return resolved
+
+
+def read_content_addressed_private_file(path, repository_root, label):
+    resolved, raw = read_private_external_file(path, repository_root, label)
+    expected_name = f"{digest(raw).removeprefix('sha256:')}.json"
     if resolved.name != expected_name:
         raise ValueError(f"{label} must use its exact content digest as the filename")
-    return resolved
+    return resolved, raw
 
 
 def validate_canary_evidence(raw_root, repository_root, result):
     _need_digest(result.get("evidence_digest"), "evidence_digest")
     raw = validate_raw_evidence_root(raw_root, repository_root)
     target = raw / f"{result['evidence_digest'].removeprefix('sha256:')}.json"
-    resolved = validate_content_addressed_private_file(target, repository_root, "canary evidence")
-    evidence_bytes = resolved.read_bytes()
+    _, evidence_bytes = read_content_addressed_private_file(target, repository_root, "canary evidence")
     validate_canary_result(result, evidence_bytes=evidence_bytes)
     return evidence_bytes
 
@@ -912,12 +985,13 @@ def materialize_unknown_capture(raw_root, repository_root, surface, client_ident
     stored = canonical_bytes(record) + b"\n"; evidence = digest(stored)
     target = raw / f"{evidence.removeprefix('sha256:')}.json"
     if target.exists():
-        validate_private_external_file(target, repository_root, "unknown capture")
-        if target.read_bytes() != stored: raise ValueError("content-addressed unknown capture bytes disagree")
+        _, retained = read_content_addressed_private_file(target, repository_root, "unknown capture")
+        if retained != stored: raise ValueError("content-addressed unknown capture bytes disagree")
     else:
         _write(target, record, private=True)
     validate_raw_evidence_root(raw, repository_root)
-    if target.read_bytes() != stored or digest(target.read_bytes()) != evidence:
+    _, retained = read_content_addressed_private_file(target, repository_root, "unknown capture")
+    if retained != stored or digest(retained) != evidence:
         raise ValueError("unknown capture was not retained under its content identity")
     return evidence, target
 
@@ -992,6 +1066,18 @@ def _validate_publication_time(published_at, refreshes, matrix, predecessor=None
         raise ValueError("successor publication timestamp must follow its predecessor")
 
 
+def _successor_canary_results(predecessor, same_runtime_inputs):
+    return copy.deepcopy(predecessor["canary_results"]) if predecessor is not None and same_runtime_inputs else []
+
+
+def _validate_same_snapshot_canary_history(predecessor, results, unchanged_snapshot):
+    if not unchanged_snapshot:
+        return
+    prior_results = predecessor["canary_results"]
+    if len(results) < len(prior_results) or canonical_bytes(results[:len(prior_results)]) != canonical_bytes(prior_results):
+        raise ValueError("same-snapshot successor cannot drop or rewrite canary history")
+
+
 def build_freeze(identity, refreshes, matrix, decisions, published_at, *, manifest, predecessor=None):
     identity = build_client_identity(identity); matrix = validate_surface_matrix(matrix); decisions = validate_tuple_decisions(decisions)
     if predecessor is not None:
@@ -1023,7 +1109,8 @@ def build_freeze(identity, refreshes, matrix, decisions, published_at, *, manife
             "source_refresh_set_digest": source_digest, "current_ledger_digest": source_digest, "surface_matrix_id": matrix["surface_matrix_id"],
             "surface_matrix_digest": matrix["surface_matrix_id"], "tuple_decision_digest": tuple_digest,
             "included_candidate_route_ids": included, "excluded_candidates": excluded,
-            "tuple_decisions": decisions, "approved_canary_executors": list(APPROVED_CANARY_EXECUTORS), "canary_results": [], "published_at": published_at,
+            "tuple_decisions": decisions, "approved_canary_executors": list(APPROVED_CANARY_EXECUTORS),
+            "canary_results": _successor_canary_results(predecessor, same_runtime_inputs), "published_at": published_at,
             "supersedes_candidate_freeze_id": predecessor["candidate_freeze_id"] if predecessor is not None else None}
     result["candidate_freeze_id"] = digest(_freeze_identity_payload(result))
     return validate_freeze(result, manifest, predecessor=predecessor)
@@ -1071,8 +1158,8 @@ def validate_freeze(freeze, manifest, *, predecessor=None, _enforce_lineage=True
     if freeze["surface_matrix_id"] != matrix["surface_matrix_id"] or freeze["surface_matrix_digest"] != matrix["surface_matrix_id"]: raise ValueError("freeze surface matrix fields disagree")
     snapshot = freeze["runtime_capability_snapshot"]; expected_snapshot = build_runtime_snapshot(identity, freeze["official_source_refreshes"], matrix, supersedes=snapshot.get("supersedes_snapshot_id"))
     if snapshot != expected_snapshot or freeze["runtime_capability_snapshot_id"] != expected_snapshot["runtime_capability_snapshot_id"]: raise ValueError("freeze runtime snapshot fields disagree")
+    unchanged_snapshot = predecessor is not None and expected_snapshot["runtime_capability_snapshot_id"] == predecessor["runtime_capability_snapshot_id"]
     if predecessor is not None:
-        unchanged_snapshot = expected_snapshot["runtime_capability_snapshot_id"] == predecessor["runtime_capability_snapshot_id"]
         required_snapshot_predecessor = predecessor["runtime_capability_snapshot"].get("supersedes_snapshot_id") if unchanged_snapshot else predecessor["runtime_capability_snapshot_id"]
         if expected_snapshot["supersedes_snapshot_id"] != required_snapshot_predecessor:
             raise ValueError("successor runtime snapshot lineage is invalid")
@@ -1094,14 +1181,16 @@ def validate_freeze(freeze, manifest, *, predecessor=None, _enforce_lineage=True
         raise ValueError("published canary results require a repository-approved executor")
     validated_canaries = validate_canary_results(freeze["canary_results"], APPROVED_CANARY_EXECUTORS)
     if validated_canaries != freeze["canary_results"]: raise ValueError("published canary dispositions are not validated")
+    _validate_same_snapshot_canary_history(predecessor, validated_canaries, unchanged_snapshot)
     for result in validated_canaries:
         _validate_canary_tuple_binding(expected_decisions, result, expected_snapshot["runtime_capability_snapshot_id"], matrix["observations"])
     if freeze["candidate_freeze_id"] != digest(_freeze_identity_payload(freeze)): raise ValueError("candidate freeze identity does not bind its authoritative payload")
     return freeze
 
 
-def build_canary_successor(predecessor, result, manifest, published_at, *, evidence_bytes):
+def build_canary_successor(predecessor, result, manifest, published_at, *, raw_evidence_root, repository_root):
     predecessor = validate_freeze(predecessor, manifest, _enforce_lineage=False)
+    evidence_bytes = validate_canary_evidence(raw_evidence_root, repository_root, result)
     validated = validate_canary_result(result, APPROVED_CANARY_EXECUTORS, evidence_bytes=evidence_bytes)
     _validate_canary_tuple_binding(predecessor["tuple_decisions"], validated, predecessor["runtime_capability_snapshot_id"], predecessor["surface_matrix"]["observations"])
     results = validate_canary_results([*predecessor["canary_results"], validated], APPROVED_CANARY_EXECUTORS)
@@ -1116,9 +1205,7 @@ def build_canary_successor(predecessor, result, manifest, published_at, *, evide
 
 
 def _read(path, *, require_canonical=False):
-    source = Path(path)
-    if not source.is_file() or source.stat().st_size > PRIVATE_REFRESH_MAX_BYTES: raise ValueError("JSON input is missing or exceeds the bounded size")
-    raw = source.read_bytes()
+    raw = _read_bounded_regular_file(path)
     value = _parse_json_bytes(raw)
     if require_canonical and raw != canonical_bytes(value) + b"\n":
         raise ValueError("stored JSON artifact is not canonical")
@@ -1171,9 +1258,9 @@ def main(argv=None):
     args, repo = parser.parse_args(argv), Path(__file__).resolve().parents[4]
     now = lambda: datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     if args.command == "refresh-sources":
-        capture = validate_content_addressed_private_file(args.captured_refresh, repo, "captured refresh")
+        _, capture_bytes = read_content_addressed_private_file(args.captured_refresh, repo, "captured refresh")
         output = validate_private_external_file(args.output, repo, "normalized refresh output", output=True)
-        _write(output, normalize_source_refreshes(_read(args.manifest), _read(capture)), private=True); return 0
+        _write(output, normalize_source_refreshes(_read(args.manifest), _parse_json_bytes(capture_bytes)), private=True); return 0
     if args.command == "identify-client":
         kind, identifier = ("vendor_build_id", args.build_id) if args.build_id else ("executable_sha256", digest_regular_file(args.executable))
         _write(args.output, build_client_identity({"reported_version": args.reported_version, "build_identifier_kind": kind, "build_identifier": identifier, "distribution": args.distribution})); return 0
@@ -1185,18 +1272,17 @@ def main(argv=None):
     if args.command == "canary":
         if not APPROVED_CANARY_EXECUTORS:
             raise ValueError("no repository-approved canary executor is available in this slice")
-        validate_raw_evidence_root(args.raw_evidence_root, repo); result_path = validate_private_external_file(args.executor_result, repo, "canary executor result"); result = _read(result_path)
-        evidence_bytes = validate_canary_evidence(args.raw_evidence_root, repo, result)
+        validate_raw_evidence_root(args.raw_evidence_root, repo); _, result_bytes = read_private_external_file(args.executor_result, repo, "canary executor result"); result = _parse_json_bytes(result_bytes)
         manifest = _read(args.manifest); predecessor = _read(args.freeze, require_canonical=True)
         if (result.get("snapshot_id"), result.get("canonical_model_id"), result.get("canonical_effort")) != (predecessor.get("runtime_capability_snapshot_id"), args.model, args.effort):
             raise ValueError("canary result does not match the requested tuple")
-        successor = build_canary_successor(predecessor, result, manifest, args.published_at or now(), evidence_bytes=evidence_bytes)
+        successor = build_canary_successor(predecessor, result, manifest, args.published_at or now(), raw_evidence_root=args.raw_evidence_root, repository_root=repo)
         _write(args.output, successor, append_only=True); return int(successor["canary_results"][-1]["availability_disposition"] == "unknown")
     if args.command == "validate-freeze":
         predecessor = _read(args.predecessor_freeze, require_canonical=True) if args.predecessor_freeze else None
         validate_freeze(_read(args.freeze, require_canonical=True), _read(args.manifest), predecessor=predecessor); return 0
-    source_refresh = validate_private_external_file(args.source_refresh, repo, "normalized source refresh")
-    manifest, refreshes, identity = _read(args.manifest), _read(source_refresh), build_client_identity(_read(args.client_identity)); validate_source_refreshes(manifest, refreshes)
+    _, source_refresh_bytes = read_private_external_file(args.source_refresh, repo, "normalized source refresh")
+    manifest, refreshes, identity = _read(args.manifest), _parse_json_bytes(source_refresh_bytes), build_client_identity(_read(args.client_identity)); validate_source_refreshes(manifest, refreshes)
     tuples = candidate_tuples_from_manifest(manifest, refreshes)
     aliases = _read(args.aliases) if args.aliases else {}
     matrix, decisions = evaluate_surface_matrix([_read(args.app_server), _read(args.cli), _read(args.interactive_picker)], tuples, aliases=aliases)

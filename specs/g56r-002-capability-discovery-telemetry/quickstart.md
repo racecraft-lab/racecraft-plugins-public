@@ -156,6 +156,9 @@ adapter derives documented-discovery unavailability only from an
 `unknown-observation-v1` collection outcome in the validated matrix. Shared
 candidate routes with the same model/effort use one canary key and retain their
 independent source-admission decisions.
+Private and content-addressed inputs are opened once without following a final
+symlink, bounded from the opened descriptor, and checked for descriptor or
+pathname replacement before their exact retained bytes are parsed or hashed.
 
 ## 6. Build and Review the Freeze
 

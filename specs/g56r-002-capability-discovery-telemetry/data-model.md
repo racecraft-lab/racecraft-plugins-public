@@ -174,6 +174,10 @@ The redacted evidence object contains only `schema_version`, `snapshot_id`,
 `sentinel_observed`. Its exact canonical bytes, including the trailing newline,
 must hash to `evidence_digest`; missing, mismatched, noncanonical, or additional
 fields block successor publication.
+The successor builder itself resolves and validates that retained object; a
+caller cannot publish from detached bytes. Same-snapshot successors preserve
+prior canary results as an immutable prefix so the one-attempt key cannot be
+reopened by an unrelated freeze refresh.
 
 The module owns a versioned, default-empty allowlist of approved executor
 contract IDs. An executor becomes trusted only through a separately reviewed
