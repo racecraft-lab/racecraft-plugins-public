@@ -3,8 +3,8 @@
   "spec_id": "G56R-002",
   "feature_dir": "specs/g56r-002-capability-discovery-telemetry",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-17T01:12:22Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-07-17T01:24:27Z",
+  "active_step": "Phase 6: Analyze",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
   "archive_sweep": {
@@ -64,11 +64,14 @@
     {"step": "Phase 4: Checklist - Error Handling Consensus", "status": "completed"},
     {"step": "Phase 4: Checklist - Observability", "status": "completed"},
     {"step": "Phase 4: Checklist - Observability Consensus", "status": "completed"},
-    {"step": "Phase 5: Tasks", "status": "in_progress"},
-    {"step": "Phase 6: Analyze", "status": "pending"},
+    {"step": "Phase 5: Tasks", "status": "completed"},
+    {"step": "Phase 6: Analyze", "status": "in_progress"},
     {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
     {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
-    {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
+    {"step": "Phase 7: Implement - Capability Freeze (T001-T015)", "status": "pending"},
+    {"step": "Phase 7: Implement - Treatment Contracts (T016-T025)", "status": "pending"},
+    {"step": "Phase 7: Implement - Synthetic Replay (T026-T030)", "status": "pending"},
+    {"step": "Phase 7: Implement - Integration and Polish (T031-T039)", "status": "pending"},
     {"step": "Post: Doctor Extension Check", "status": "pending"},
     {"step": "Post: Verify Implementation", "status": "pending"},
     {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
@@ -230,6 +233,32 @@
           "consensus": "/root/consensus_llm_integration PASS on follow-up"
         }
       }
+    },
+    "Phase 5: Tasks": {
+      "status": "completed",
+      "completed_at": "2026-07-17T01:24:27Z",
+      "execution_path": "parent fallback after delegated task executor stalled without worktree changes",
+      "gate": "G5 passed",
+      "total_tasks": 39,
+      "increments": 4,
+      "parallel_opportunities": 2,
+      "user_stories": ["US1", "US2", "US3"],
+      "atomicity_route": {
+        "route": "one-navigable-PR",
+        "releasable": true,
+        "signals": ["change-shape:modify-heavy"],
+        "warnings": []
+      },
+      "layer_plan": {
+        "status": "skipped",
+        "reason": "atomicity route is one-navigable-PR; planning is required only for split-PR"
+      },
+      "artifact": "specs/g56r-002-capability-discovery-telemetry/tasks.md"
     }
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "route": "one-navigable-PR",
+    "reason": "layer planning is required only for split-PR"
   }
 }

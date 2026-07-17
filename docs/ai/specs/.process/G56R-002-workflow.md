@@ -679,10 +679,13 @@ $speckit-tasks
 
 | Metric | Value |
 |---|---|
-| Total Tasks | Pending autopilot |
-| Phases | Three implementation increments plus setup and polish |
-| Parallel Opportunities | Pending dependency analysis |
-| User Stories Covered | US1, US2, and US3 required |
+| Total Tasks | 39 |
+| Phases | Three implementation increments plus integration and polish |
+| Parallel Opportunities | 2 (generated test reference and SPEC-MOC only) |
+| User Stories Covered | US1, US2, and US3 |
+
+**G5 Gate:** Passed — all 39 tasks have exact paths, acceptance checks,
+user-story markers, and functional-requirement traceability.
 
 ---
 
@@ -694,10 +697,18 @@ The classifier records structure only; it does not create PRs or split branches.
 
 | Field | Value | Meaning |
 |---|---|---|
-| Route | Pending G5 classifier | Expected to remain one navigable or atomic PR unless planned seams prove otherwise |
-| Releasable | Pending G5 classifier | No assumption before classifier output |
-| Signals | Pending G5 classifier | Record decisive structural findings |
-| Warnings | Pending G5 classifier | Record every release-safety warning |
+| Route | `one-navigable-PR` | Modify-heavy guarded slice remains easiest to review as one PR |
+| Releasable | `true` | No destructive-migration or concurrency-sensitive signal |
+| Signals | `change-shape:modify-heavy` | Classifier found no proven additive multi-seam split |
+| Warnings | None | Classifier returned no release-safety warnings |
+
+## Layer Plan
+
+| Field | Value |
+|---|---|
+| Status | Skipped |
+| Reason | Atomicity route is `one-navigable-PR`; layer planning is required only for `split-PR` |
+| Implementation increments | Capability freeze (T001-T015), exact-treatment contracts (T016-T025), synthetic replay (T026-T030), integration and polish (T031-T039) |
 
 ---
 
