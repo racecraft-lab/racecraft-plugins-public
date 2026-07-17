@@ -842,6 +842,45 @@ fail-closed writer plus the deterministic test then re-validate it.
 
 ---
 
+## Post-Implementation Checklist (parallel group, 2026-07-17)
+
+| Task | Status | Findings | Action taken |
+|------|--------|----------|--------------|
+| Doctor Extension Check | ✅ pass | 8 ok / 2 warn / 0 fail — zero-command agent config (skills-layout, expected); 2 forward traceability boxes (CHK034/CHK035) then unmarked | Closed CHK034/CHK035 (satisfied at Tasks) |
+| Verify Implementation | ✅ pass | All 28 FRs mapped; artifacts present; constitution II/I/IV clean | none |
+| Verify Tasks (phantom) | ✅ pass | 40/40 tasks with real evidence across 3 detection layers; zero phantom completions | none |
+| Integration Suite | ✅ pass | full default suite green; zero live model calls | none |
+| Code Review (independent) | ✅ pass after remediation | 0 CRITICAL/HIGH; **2 MEDIUM + 2 LOW**: MEDIUM-1 fail-closed disposition was dead code (unparseable payload didn't abort the write, vs FR-023); MEDIUM-2 subagent surface misread the parent `-p` session's `modelUsage` as a subagent soft-remap (false availability signal on CAP-Q5, vs FR-026) | **Both MEDIUM fixed** (commit `318087c5`, TDD RED→GREEN): `gate_probe_run_dispositions` wired into the write path; subagent-surface classification made surface-aware (parent model never populates the subagent's observed model). **Re-probed V3** (commit `7f47386a`) so the committed evidence is correct — both surfaces now `hard_rejection`. LOW-1 (unreachable enum value) left as harmless; LOW-2 was the MEDIUM-2 root cause, fixed. |
+
+**Why the re-probe was necessary:** the committed-snapshot tests validate structure (schema-validity, sanitization, hash reproduction, alias/tuple coverage) but not outcome *re-derivation*, so the V2 snapshot's wrong `soft_remap` reading passed the suite unchanged. Regenerating from the corrected classifier (V3) — rather than hand-editing evidence — is the honest fix; a durable memory note records the "green suite ≠ committed-artifact-correct" gotcha.
+
+## UAT Runbook (2026-07-17)
+
+`skipped: generate-uat-skeleton deferred` — no committed source-derived runbook exists at `specs/car-002-capability-probing-telemetry/.process/uat-runbook.md`, and the skeleton generator is deferred for installed workflows. Fail-open per the post-implementation contract; the operator acceptance path is covered by `quickstart.md` Part A (operator probe run) and Part B (offline validation).
+
+## Self-Review (auto-generated, 2026-07-17)
+
+**Tests executed:** The full default suite `python3 tests/speckit-pro/run-all.py` ran on the V3 batch and exited zero — **3199/3199** (L1 1428, L4 1585, L5 186), toolchain preflight ok. There is no separate BUILD/TYPECHECK/LINT/INTEGRATION surface (Python 3.11 stdlib repo); the suite is the authoritative gate and it actually ran (not inferred). Evidence: workflow §Final Reviewability Boundary and the V3 commit gate.
+
+**Edge cases:** The 8 acceptance criteria and 7 spec edge cases have real non-happy-path coverage — 130 test methods, ~192 assertions on rejection/failure/teeth paths. Specifically: fail-closed writer rejects schema-invalid AND unparseable payloads (the MEDIUM-1 fix); the four record-class fixtures each exercise their invariant with teeth (misdelivery observed≠resolved, null present-but-null, unavailable snapshot cross-ref, class↔scorable); the 37→6 join fails closed on zero-resolve and multi-resolve; integrity re-checks bite on hash tamper, home-path/UUID injection, and dangling refs; both CAP-Q5 surfaces classified from the actual dispatch result (the MEDIUM-2 fix). No `[edge-case-gap]` markers.
+
+**Requirements matched:** All 28 FRs (FR-001..FR-028) appear in spec.md and all 28 map in the tasks.md FR→Task table; every task carries implementation evidence (commit + passing test). No orphans in either direction. SC-001..SC-008 all covered.
+
+**Follow-up & tidiness:** No `[TODO]`/`[DEFERRED]`/`[FIXME]` markers and no debug scaffolding (`print`/`breakpoint`/`pdb`) in the two new lib modules. Deliberate deferrals are named to their landing specs in the PR body / spec Non-goals (corpus execution, scoring, statistics, fallback ordering → CAR-003+; CAP-Q6 recorded open as a route-change detection rule; models-endpoint corroboration recorded as a subscription-mode gap). LOW-1 (unreachable schema enum value `not_applicable_subscription`) left in place as harmless — noted here as the one known tidiness item, deliberately not churned. No silent deferrals.
+
+## Final Reviewability Boundary (2026-07-17)
+
+`final-reviewability-backstop` is deferred for installed workflows, so this uses current committed evidence. **Decision: proceed to a single navigable PR** for the whole feature branch, with a documented over-ceiling exception.
+
+Real diff numbers (added lines vs branch base `b32aa655`): production reviewable surface ≈ **2,236 LOC** (probe + validator libs 1,661; JSON Schema contract 575) — over the 800 block ceiling — plus 3,029 test LOC, 383 research-evidence LOC, 193 fixture LOC, 1,795 spec-artifact LOC, 261 process/exhaust LOC, 12 generated-docs LOC. Nothing under `speckit-pro/` or `dist/` (zero shipped-payload bytes).
+
+Why one navigable PR rather than a 3-way split:
+1. **Route resolution says so.** The G5 atomicity classifier returned `one-navigable-PR` (not `split-PR`); the layer planner was correctly skipped; the skill directs single-PR behavior for non-split routes. This is the machine-adjudicated outcome of the G5 conflict recorded above, decided here with real numbers.
+2. **Split-emission machinery is deferred.** `plan-layers`, `multi-pr-emission`, and the packet-output helpers are golden-only/deferred for installed workflows, so an automated 3-PR stack cannot be emitted.
+3. **The change is over-ceiling but low-risk.** Entirely additive net-new (no refactor/migration/cutover), test-heavier than production (3,029 test vs 2,236 production LOC), and the classifier read it `releasable`. Precedent: CAR-001 and G56R-001 shipped as single navigable PRs.
+
+The T001 ratified over-ceiling exception (originally scoped to WP1) applies to the single PR: the PR body carries the scope-budget note, and the **review order WP1 → WP2 → WP3** (with the per-WP packet drafts below) is the reviewer's navigation guide. The ratified 3-WP seam is preserved in the commit history (each WP is its own set of commits) so a reviewer can review WP-by-WP. **No `pr_marker_plan` is required** (no current size-only marker-split block; the route is one-navigable-PR).
+
 ## PR Review Packet Drafts (T018 / T028 / T039 — consumed by final PR emission)
 
 ### WP1 packet draft (T018, recorded 2026-07-17)
