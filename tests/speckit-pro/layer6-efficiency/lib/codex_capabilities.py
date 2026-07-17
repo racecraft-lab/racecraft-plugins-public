@@ -30,6 +30,7 @@ CANONICAL_MANIFEST_SNAPSHOT_ID = "G56R-001-SNAPSHOT-2026-07-16-V3"
 CANONICAL_MANIFEST_DIGEST = "sha256:3dc5c6c7a117ac8d01728ffeff1a35cf38fb0d6e982bb029cf192a790d30cd64"
 PRIVATE_REFRESH_MAX_BYTES = 32 * 1024 * 1024
 ERROR_TERMINALS = ("timeout", "output_cap_exceeded", "launch_error", "transport_error", "authentication_error", "rate_limited", "malformed_response", "explicit_rejection", "service_reroute", "ambiguous_error")
+_UNSET = object()
 _DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
 _HEX_SHA256 = re.compile(r"[0-9a-f]{64}")
 _RAW_REF = re.compile(r"raw://sha256:[0-9a-f]{64}")
@@ -217,6 +218,13 @@ def _parse_json_bytes(raw):
         raise ValueError("JSON input must be strict UTF-8 JSON") from error
 
 
+def _stable_file_identity(metadata):
+    return (
+        metadata.st_dev, metadata.st_ino, metadata.st_size, metadata.st_mtime_ns,
+        metadata.st_ctime_ns, stat.S_IMODE(metadata.st_mode),
+    )
+
+
 def _read_bounded_regular_file(path, *, required_mode=None):
     source = Path(os.path.abspath(path))
     flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
@@ -231,7 +239,7 @@ def _read_bounded_regular_file(path, *, required_mode=None):
         before = os.fstat(descriptor)
         if not stat.S_ISREG(before.st_mode):
             raise ValueError("bounded input must be a regular file")
-        if (pathname_before.st_dev, pathname_before.st_ino) != (before.st_dev, before.st_ino):
+        if _stable_file_identity(pathname_before) != _stable_file_identity(before):
             raise ValueError("bounded input pathname changed before it was read")
         if required_mode is not None and os.name != "nt" and stat.S_IMODE(before.st_mode) != required_mode:
             raise ValueError(f"private input must use mode {required_mode:04o}")
@@ -246,15 +254,13 @@ def _read_bounded_regular_file(path, *, required_mode=None):
             if total > PRIVATE_REFRESH_MAX_BYTES:
                 raise ValueError("bounded input exceeds the maximum size")
         after = os.fstat(descriptor)
-        identity_before = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, stat.S_IMODE(before.st_mode))
-        identity_after = (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, stat.S_IMODE(after.st_mode))
-        if identity_after != identity_before or total != after.st_size:
+        if _stable_file_identity(after) != _stable_file_identity(before) or total != after.st_size:
             raise ValueError("bounded input changed while it was being read")
         try:
             current = os.stat(source, follow_symlinks=False)
         except OSError as error:
             raise ValueError("bounded input pathname changed while it was being read") from error
-        if not stat.S_ISREG(current.st_mode) or (current.st_dev, current.st_ino) != (after.st_dev, after.st_ino):
+        if not stat.S_ISREG(current.st_mode) or _stable_file_identity(current) != _stable_file_identity(after):
             raise ValueError("bounded input pathname changed while it was being read")
         return b"".join(chunks)
     finally:
@@ -271,23 +277,22 @@ def digest_regular_file(path):
         raise ValueError("client executable must be a readable regular file that is not a symlink") from error
     try:
         before = os.fstat(descriptor)
-        if not stat.S_ISREG(before.st_mode) or (pathname_before.st_dev, pathname_before.st_ino) != (before.st_dev, before.st_ino):
+        if not stat.S_ISREG(before.st_mode) or _stable_file_identity(pathname_before) != _stable_file_identity(before):
             raise ValueError("client executable pathname changed before hashing")
-        hasher, total = hashlib.sha256(), 0
-        while True:
-            chunk = os.read(descriptor, 1024 * 1024)
-            if not chunk: break
-            hasher.update(chunk); total += len(chunk)
+        hasher, remaining = hashlib.sha256(), before.st_size
+        while remaining:
+            chunk = os.read(descriptor, min(1024 * 1024, remaining))
+            if not chunk:
+                raise ValueError("client executable changed while hashing")
+            hasher.update(chunk); remaining -= len(chunk)
         after = os.fstat(descriptor)
-        before_identity = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, stat.S_IMODE(before.st_mode))
-        after_identity = (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, stat.S_IMODE(after.st_mode))
-        if before_identity != after_identity or total != after.st_size:
+        if _stable_file_identity(before) != _stable_file_identity(after):
             raise ValueError("client executable changed while hashing")
         try:
             current = os.stat(source, follow_symlinks=False)
         except OSError as error:
             raise ValueError("client executable pathname changed while hashing") from error
-        if not stat.S_ISREG(current.st_mode) or (current.st_dev, current.st_ino) != (after.st_dev, after.st_ino):
+        if not stat.S_ISREG(current.st_mode) or _stable_file_identity(current) != _stable_file_identity(after):
             raise ValueError("client executable pathname changed while hashing")
         return f"sha256:{hasher.hexdigest()}"
     finally:
@@ -800,7 +805,7 @@ def _surface_index_and_invalidity(observations, normalization_map, normalization
     return indexed, list(dict.fromkeys(reasons)), actual_integrity
 
 
-def evaluate_surface_matrix(observations, source_tuples, *, aliases=None, expected_integrity_digest=None):
+def evaluate_surface_matrix(observations, source_tuples, *, aliases=None, expected_integrity_digest=_UNSET):
     if any(row.get("source_admitted") for row in source_tuples) and not isinstance(source_tuples, _AuthorityTupleSet):
         raise ValueError("source admission requires a manifest-bound tuple set")
     aliases = aliases or {}; observations = [validate_observation(dict(item)) for item in observations]
@@ -833,7 +838,11 @@ def evaluate_surface_matrix(observations, source_tuples, *, aliases=None, expect
         raise ValueError("source admission requires complete tuple authority")
     normalization = digest(normalized_aliases)
     actual_integrity = digest({"observations": observations, "normalization_map_id": normalization})
-    integrity = expected_integrity_digest or actual_integrity
+    if expected_integrity_digest is _UNSET:
+        integrity = actual_integrity
+    else:
+        _need_digest(expected_integrity_digest, "expected_integrity_digest")
+        integrity = expected_integrity_digest
     indexed, reasons, _ = _surface_index_and_invalidity(observations, normalized_aliases, normalization, integrity)
     decisions = []
     disagreements_by_key = _surface_disagreements(indexed, observations_by_surface)
@@ -912,6 +921,7 @@ def validate_surface_matrix(matrix):
         if alias["client_identity_id"] != observation["client_identity_id"] or alias["authority_evidence_ref"] != observation["raw_evidence_ref"] or len(evidence) != 1:
             raise ValueError("normalization map alias authority is not bound to the pinned build")
     if matrix["normalization_map_id"] != digest(matrix["normalization_map"]): raise ValueError("normalization map identity mismatch")
+    _need_digest(matrix["aggregate_integrity_digest"], "aggregate_integrity_digest")
     indexed, expected_invalidity_reasons, _ = _surface_index_and_invalidity(
         observations, matrix["normalization_map"], matrix["normalization_map_id"], matrix["aggregate_integrity_digest"],
     )
@@ -1330,7 +1340,8 @@ def _write(path, value, *, private=False, append_only=False):
         if len(payload) > PRIVATE_REFRESH_MAX_BYTES: raise ValueError("private refresh output exceeds the bounded size")
         descriptor, temporary = tempfile.mkstemp(prefix=".g56r-002-", dir=Path(path).parent)
         try:
-            os.fchmod(descriptor, 0o600)
+            if os.name != "nt":
+                os.fchmod(descriptor, 0o600)
             with os.fdopen(descriptor, "wb") as stream:
                 stream.write(payload); stream.flush(); os.fsync(stream.fileno())
             os.replace(temporary, path)

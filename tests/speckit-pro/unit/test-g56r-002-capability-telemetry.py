@@ -341,11 +341,11 @@ class CapabilityContractTests(unittest.TestCase):
         for case in self.fixture["surface_cases"]:
             with self.subTest(case=case["case_id"]):
                 observations = self.observations(case)
+                options = {"aliases": case.get("aliases", {})}
+                if "expected_integrity_digest" in case:
+                    options["expected_integrity_digest"] = case["expected_integrity_digest"]
                 matrix, decisions = capabilities.evaluate_surface_matrix(
-                    observations,
-                    self.authority_tuples(case),
-                    aliases=case.get("aliases", {}),
-                    expected_integrity_digest=case.get("expected_integrity_digest"),
+                    observations, self.authority_tuples(case), **options,
                 )
                 self.assertEqual(capabilities.validate_surface_matrix(matrix), matrix)
                 self.assertEqual(matrix["validity"], case["expected_validity"])
@@ -371,6 +371,20 @@ class CapabilityContractTests(unittest.TestCase):
                     self.assertEqual(matrix["disagreements"][0]["disagreement_class"], "hidden_state")
         agreed_case = next(item for item in self.fixture["surface_cases"] if item["case_id"] == "agreed")
         agreed_matrix, _ = capabilities.evaluate_surface_matrix(self.observations(agreed_case), self.authority_tuples(agreed_case))
+        for malformed_digest in (None, "", "not-a-digest"):
+            with self.subTest(malformed_digest=malformed_digest), self.assertRaisesRegex(ValueError, "sha256 digest"):
+                capabilities.evaluate_surface_matrix(
+                    self.observations(agreed_case), self.authority_tuples(agreed_case),
+                    expected_integrity_digest=malformed_digest,
+                )
+            malformed_matrix = copy.deepcopy(agreed_matrix)
+            malformed_matrix["aggregate_integrity_digest"] = malformed_digest
+            malformed_matrix.update({"validity": "invalid", "invalidity_reasons": ["aggregate_hash_mismatch"]})
+            malformed_matrix["surface_matrix_id"] = capabilities.digest({
+                key: value for key, value in malformed_matrix.items() if key != "surface_matrix_id"
+            })
+            with self.assertRaisesRegex(ValueError, "sha256 digest"):
+                capabilities.validate_surface_matrix(malformed_matrix)
         forged_invalidity = copy.deepcopy(agreed_matrix)
         forged_invalidity.update({"validity": "invalid", "invalidity_reasons": ["aggregate_hash_mismatch"]})
         forged_invalidity["surface_matrix_id"] = capabilities.digest({key: value for key, value in forged_invalidity.items() if key != "surface_matrix_id"})
@@ -921,13 +935,15 @@ class CapabilityContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "pathname changed"):
                     capabilities._read_bounded_regular_file(canonical)
             initial = canonical.stat()
-            simulated_before_append = mock.Mock(
+            changed_ctime = mock.Mock(
                 st_mode=initial.st_mode, st_dev=initial.st_dev, st_ino=initial.st_ino,
-                st_size=4, st_mtime_ns=initial.st_mtime_ns,
+                st_size=initial.st_size, st_mtime_ns=initial.st_mtime_ns,
+                st_ctime_ns=initial.st_ctime_ns + 1,
             )
-            with mock.patch.object(capabilities, "PRIVATE_REFRESH_MAX_BYTES", 4), mock.patch.object(
-                capabilities.os, "fstat", return_value=simulated_before_append,
-            ):
+            with mock.patch.object(capabilities.os, "fstat", side_effect=[initial, changed_ctime]):
+                with self.assertRaisesRegex(ValueError, "changed while"):
+                    capabilities._read_bounded_regular_file(canonical)
+            with mock.patch.object(capabilities, "PRIVATE_REFRESH_MAX_BYTES", 4):
                 with self.assertRaisesRegex(ValueError, "exceeds the maximum size"):
                     capabilities._read_bounded_regular_file(canonical)
             with self.assertRaises(FileExistsError):
@@ -945,11 +961,34 @@ class CapabilityContractTests(unittest.TestCase):
             executable_after = mock.Mock(
                 st_mode=executable_before.st_mode, st_dev=executable_before.st_dev,
                 st_ino=executable_before.st_ino, st_size=executable_before.st_size,
-                st_mtime_ns=executable_before.st_mtime_ns + 1,
+                st_mtime_ns=executable_before.st_mtime_ns,
+                st_ctime_ns=executable_before.st_ctime_ns + 1,
             )
             with mock.patch.object(capabilities.os, "fstat", side_effect=[executable_before, executable_after]):
                 with self.assertRaisesRegex(ValueError, "changed while hashing"):
                     capabilities.digest_regular_file(executable)
+            growing = root / "growing-client"
+            growing.write_bytes(b"grow")
+            growing_before = growing.stat()
+            growing_after = mock.Mock(
+                st_mode=growing_before.st_mode, st_dev=growing_before.st_dev,
+                st_ino=growing_before.st_ino, st_size=growing_before.st_size + 1,
+                st_mtime_ns=growing_before.st_mtime_ns,
+                st_ctime_ns=growing_before.st_ctime_ns + 1,
+            )
+            with mock.patch.object(capabilities.os, "fstat", side_effect=[growing_before, growing_after]), mock.patch.object(
+                capabilities.os, "read", side_effect=lambda descriptor, size: b"x" * size,
+            ) as growing_read:
+                with self.assertRaisesRegex(ValueError, "changed while hashing"):
+                    capabilities.digest_regular_file(growing)
+            self.assertEqual(growing_read.call_count, 1)
+            private_output = root / "private-output.json"
+            with mock.patch.object(capabilities, "Path", type(root)), mock.patch.object(
+                capabilities.os, "name", "nt",
+            ), mock.patch.object(capabilities.os, "fchmod") as fchmod:
+                capabilities._write(private_output, {"private": True}, private=True)
+            fchmod.assert_not_called()
+            self.assertEqual(capabilities._read(private_output), {"private": True})
             if hasattr(os, "mkfifo"):
                 fifo = root / "client-fifo"
                 os.mkfifo(fifo)
