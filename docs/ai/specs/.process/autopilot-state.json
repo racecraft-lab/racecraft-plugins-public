@@ -469,7 +469,7 @@
             "severity": "warning",
             "message": "US2 exceeds 400 reviewable LOC and is retained only under the typed no-safe-boundary size exception.",
             "source": "treatment-contracts-reviewability",
-            "details": {"marker_id": "us2", "actual_source_lines": 1021, "actual_nonblank_noncomment_lines": 929}
+            "details": {"marker_id": "us2", "actual_source_lines": 1024, "actual_nonblank_noncomment_lines": 932}
           }
         ]
       },
