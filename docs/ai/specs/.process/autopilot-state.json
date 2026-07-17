@@ -3,8 +3,8 @@
   "spec_id": "G56R-002",
   "feature_dir": "specs/g56r-002-capability-discovery-telemetry",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-17T02:00:09Z",
-  "active_step": "Phase 7: Implement - Capability Freeze (T001-T015)",
+  "updated_at": "2026-07-17T04:50:02Z",
+  "active_step": "Phase 7: Implement - Capability Freeze Marker Checkpoint (T001-T015)",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
   "archive_sweep": {
@@ -291,7 +291,196 @@
       "result": "pass",
       "recommended_action": "proceed",
       "iterations": 0
+    },
+    "Phase 7: Implement - Capability Freeze": {
+      "status": "checkpointing",
+      "tasks_completed": 15,
+      "tasks_total": 15,
+      "focused_tests": "8/8 pass",
+      "independent_review": "pass with 0 critical and 0 high findings",
+      "baseline_commit": "ab272f05937bd08a50e40710b3f1ad3b0dc8452b",
+      "candidate_freeze_id": "sha256:57b79448bc59f4e9dd8eb2acb61452c5c0fe6f4acc4199c48bc9a3eb4e6b3d24",
+      "runtime_capability_snapshot_id": "sha256:39e6284e4a3ae9109a543b8e0ecf4c9d59181010dd3def7b874c89fab46a43f3",
+      "surface_matrix_id": "sha256:99739c0895250de0eb0cf1a0215fd2e5168213081d41f6b2f828c274528c32b2",
+      "marker_id": "us1",
+      "reviewability": "size-only block with honored typed no-safe-boundary exception",
+      "checkpoint": "pending capability artifact commit"
     }
+  },
+  "current_source_fingerprint": {
+    "feature_spec_sha": "sha256:7f7dd656c87550a9fe606fde8e79109c6246daaad6c5db539cbcfbf7c92e56de",
+    "plan_declared_scope_sha": "sha256:daf4a8ac4f2e33fb39114f85c572a193a1a946ea671917879cb2dc921de268ca",
+    "tasks_sha": "sha256:75ceff382680146ac495ada2dd5583487a1e686efdc2e4918a4383b803105e03",
+    "reviewability_sha": "sha256:14b510444650a6348a4a7291c7b944aa9412dcec6cbc815f8653fafa5fe22d0f",
+    "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
+  },
+  "pr_marker_plan": {
+    "schema_version": "pr-marker-plan.v1",
+    "kind": "pr_marker_plan",
+    "feature_id": "G56R-002",
+    "status": "checkpointing",
+    "source_fingerprint": {
+      "feature_spec_sha": "sha256:7f7dd656c87550a9fe606fde8e79109c6246daaad6c5db539cbcfbf7c92e56de",
+      "plan_declared_scope_sha": "sha256:daf4a8ac4f2e33fb39114f85c572a193a1a946ea671917879cb2dc921de268ca",
+      "tasks_sha": "sha256:75ceff382680146ac495ada2dd5583487a1e686efdc2e4918a4383b803105e03",
+      "reviewability_sha": "sha256:14b510444650a6348a4a7291c7b944aa9412dcec6cbc815f8653fafa5fe22d0f",
+      "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
+    },
+    "markers": [
+      {
+        "id": "us1",
+        "review_order": 1,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 1 - Capability Freeze",
+          "story_id": 1,
+          "start_task_id": "T001",
+          "end_task_id": "T015"
+        },
+        "title_description": "freeze capability authority and evidence",
+        "task_ids": ["T001", "T002", "T003", "T004", "T005", "T006", "T007", "T008", "T009", "T010", "T011", "T012", "T013", "T014", "T015"],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "No polish tasks fold into the integrity-coupled capability checkpoint.",
+        "declared_files": [
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/capability-matrix.json"},
+          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/contracts/capability-freeze.schema.json"},
+          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/data-model.md"},
+          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/plan.md"},
+          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/quickstart.md"},
+          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/tasks.md"},
+          {"operation": "NEW", "path": "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json"},
+          {"operation": "NEW", "path": "docs/ai/research/codex-g56r-002-capability-evidence.md"},
+          {"operation": "NEW", "path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/capability-freeze.json"},
+          {"operation": "MODIFIED", "path": "docs/ai/specs/.process/G56R-002-workflow.md"},
+          {"operation": "MODIFIED", "path": "docs/ai/specs/.process/autopilot-state.json"}
+        ],
+        "declared_tests": [
+          "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
+          "python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py validate-freeze --manifest docs/ai/research/codex-agent-route-candidate-manifest.json --freeze docs/ai/research/codex-g56r-002-executable-candidate-freeze.json",
+          "python3 /tmp/g56r-002-schema-validate.py specs/g56r-002-capability-discovery-telemetry/contracts/capability-freeze.schema.json docs/ai/research/codex-g56r-002-executable-candidate-freeze.json"
+        ],
+        "reviewability": {
+          "status": "block",
+          "mode": "implementation",
+          "scope": "us1",
+          "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/capability-freeze.json",
+          "head_sha": "ab272f05937bd08a50e40710b3f1ad3b0dc8452b"
+        },
+        "hazards": ["source-authority", "private-evidence", "content-addressed-freeze"],
+        "subdivision": {
+          "status": "no_safe_boundary",
+          "details": {
+            "reason": "Source refresh, surface authority, tuple decisions, and published freeze revalidation share one integrity boundary.",
+            "exception_kind": "typed_size_only",
+            "growth_limit": "No further codex_capabilities.py growth after this checkpoint."
+          }
+        },
+        "implementation_checkpoint": {
+          "status": "pending",
+          "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1.json"
+        },
+        "emission_mapping": {
+          "status": "pending",
+          "packet_path": "specs/g56r-002-capability-discovery-telemetry/.process/pr-packets/us1.json"
+        },
+        "warnings": [
+          {
+            "code": "MARKER_SIZE_WARNING",
+            "severity": "warning",
+            "message": "US1 exceeds 400 reviewable LOC and is retained only under the typed no-safe-boundary size exception.",
+            "source": "capability-freeze-reviewability",
+            "details": {"marker_id": "us1", "actual_source_lines": 959, "actual_nonblank_noncomment_lines": 851}
+          }
+        ]
+      },
+      {
+        "id": "us2",
+        "review_order": 2,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 2 - Telemetry and Exact-Treatment Contracts",
+          "story_id": 2,
+          "start_task_id": "T016",
+          "end_task_id": "T025"
+        },
+        "title_description": "add exact-treatment contracts",
+        "task_ids": ["T016", "T017", "T018", "T019", "T020", "T021", "T022", "T023", "T024", "T025"],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "Treatment is independently checkpointed before replay integration.",
+        "declared_files": [
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"},
+          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"},
+          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/contracts/treatment-record.schema.json"},
+          {"operation": "MODIFIED", "path": "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json"},
+          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/tasks.md"},
+          {"operation": "MODIFIED", "path": "docs/ai/specs/.process/G56R-002-workflow.md"},
+          {"operation": "MODIFIED", "path": "docs/ai/specs/.process/autopilot-state.json"}
+        ],
+        "declared_tests": ["python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"],
+        "reviewability": {"status": "not_estimated", "mode": "implementation", "scope": "us2"},
+        "hazards": ["six-id-join", "exact-treatment", "service-reroute"],
+        "subdivision": {"status": "none", "details": {}},
+        "implementation_checkpoint": {"status": "pending", "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json"},
+        "emission_mapping": {"status": "pending", "packet_path": "specs/g56r-002-capability-discovery-telemetry/.process/pr-packets/us2.json"},
+        "warnings": []
+      },
+      {
+        "id": "us3",
+        "review_order": 3,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 3 - Sanitized Synthetic Replay",
+          "story_id": 3,
+          "start_task_id": "T026",
+          "end_task_id": "T030"
+        },
+        "title_description": "add deterministic treatment replay",
+        "task_ids": ["T026", "T027", "T028", "T029", "T030"],
+        "folded_polish_task_ids": ["T031", "T032", "T033", "T034", "T035", "T036", "T037", "T038", "T039"],
+        "folded_polish_target_reason": "Integration, generated references, verification, and release gates validate the replay marker as a whole.",
+        "declared_files": [
+          {"operation": "MODIFIED", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"},
+          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"},
+          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"},
+          {"operation": "NEW", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json"},
+          {"operation": "MODIFIED", "path": "tests/speckit-pro/suite-manifest.json"},
+          {"operation": "MODIFIED", "path": "docs-site/src/content/docs/reference/tests.md"},
+          {"operation": "NEW", "path": "specs/g56r-002-capability-discovery-telemetry/SPEC-MOC.md"},
+          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/tasks.md"},
+          {"operation": "MODIFIED", "path": "docs/ai/specs/.process/G56R-002-workflow.md"},
+          {"operation": "MODIFIED", "path": "docs/ai/specs/.process/autopilot-state.json"}
+        ],
+        "declared_tests": [
+          "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
+          "python3 -u tests/speckit-pro/run-all.py --layer 1",
+          "python3 -u tests/speckit-pro/run-all.py",
+          "pnpm --dir docs-site reference:check"
+        ],
+        "reviewability": {"status": "not_estimated", "mode": "implementation", "scope": "us3"},
+        "hazards": ["fixture-provenance", "offline-determinism", "release-readiness"],
+        "subdivision": {"status": "none", "details": {}},
+        "implementation_checkpoint": {"status": "pending", "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3.json"},
+        "emission_mapping": {"status": "pending", "packet_path": "specs/g56r-002-capability-discovery-telemetry/.process/pr-packets/us3.json"},
+        "warnings": []
+      }
+    ],
+    "warnings": [
+      {
+        "code": "CAPABILITY_SIZE_BLOCK",
+        "severity": "warning",
+        "message": "The capability marker exceeds the 400-LOC reviewability threshold; marker-scoped checkpoints and PR emission are required.",
+        "source": "capability-freeze-reviewability",
+        "details": {"marker_ids": ["us1", "us2", "us3"], "final_marker_split": "pending", "packet_validation": "pending", "pr_mappings": "pending"}
+      }
+    ],
+    "created_at": "2026-07-17T04:50:02Z",
+    "updated_at": "2026-07-17T04:50:02Z"
   },
   "layer_plan": {
     "status": "skipped",

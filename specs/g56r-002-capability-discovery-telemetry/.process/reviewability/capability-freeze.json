@@ -1,0 +1,42 @@
+{
+  "schema_version": "reviewability-evidence.v1",
+  "feature_id": "G56R-002",
+  "marker_id": "us1",
+  "status": "block",
+  "mode": "implementation",
+  "scope": "T001-T015 capability freeze",
+  "reason_class": "size_only",
+  "threshold_reviewable_loc": 400,
+  "planned_reviewable_loc": 297,
+  "actual_source_lines": 959,
+  "actual_nonblank_noncomment_lines": 851,
+  "production_modules": 1,
+  "primary_surface": "harness/adapter",
+  "correctness_checks": {
+    "focused_tests": "pass",
+    "published_freeze_validation": "pass",
+    "json_schema_instance_validation": "pass",
+    "deterministic_replay": "pass",
+    "independent_review": "pass",
+    "clean_repository_binding": "pass",
+    "content_addressed_raw_evidence": "pass",
+    "canary_authority": "pass"
+  },
+  "exception": {
+    "kind": "typed_size_only",
+    "status": "honored_for_checkpoint",
+    "subdivision": "no_safe_boundary",
+    "rationale": "Source refresh authority, surface normalization, tuple-local decisions, complete freeze identity, and published-artifact revalidation form one integrity boundary.",
+    "growth_limit": "No further growth of codex_capabilities.py is authorized after the capability checkpoint."
+  },
+  "later_markers": [
+    "us2:T016-T025",
+    "us3:T026-T039"
+  ],
+  "evidence_commands": [
+    "wc -l tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py",
+    "awk 'NF && $0 !~ /^[[:space:]]*#/ {n++} END{print n}' tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py",
+    "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
+    "python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py validate-freeze --manifest docs/ai/research/codex-agent-route-candidate-manifest.json --freeze docs/ai/research/codex-g56r-002-executable-candidate-freeze.json"
+  ]
+}
