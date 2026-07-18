@@ -14,7 +14,6 @@ import stat
 import sys
 from collections.abc import Mapping
 from datetime import datetime
-from functools import lru_cache
 from pathlib import Path
 
 
@@ -221,27 +220,31 @@ REROUTE_REASON_CODES = frozenset({
 CANCELLATION_REASON_CODES = frozenset({"user_requested", "timeout", "superseded", "policy_denied"})
 
 
-@lru_cache(maxsize=1)
-def _current_source_ids() -> frozenset[str]:
-    manifest = _read_json_file(MANIFEST_PATH)
+def _current_source_ids(manifest: dict) -> frozenset[str]:
     ids = frozenset(item["official_source_ledger_id"] for item in manifest["official_source_ledger"])
     if len(ids) != 22 or any(SOURCE_RE.fullmatch(item) is None for item in ids):
         raise ValueError("canonical manifest does not expose exactly 22 current source owners")
     return ids
 
 
-@lru_cache(maxsize=1)
-def _canonical_routes() -> dict[str, dict[str, str | None]]:
-    manifest = _read_json_file(MANIFEST_PATH)
+def _canonical_routes(manifest: dict) -> dict[str, dict[str, object]]:
     agents = {item["agent_contract_id"]: item["agent_name"] for item in manifest["agent_contracts"]}
     routes = {}
     for item in manifest["candidate_routes"]:
         contract = item["agent_contract_id"]
+        required_capabilities = item["required_capabilities"]
+        if (
+            not isinstance(required_capabilities, list) or not required_capabilities
+            or any(not isinstance(value, str) or not value for value in required_capabilities)
+            or len(required_capabilities) != len(set(required_capabilities))
+        ):
+            raise ValueError("canonical manifest route capabilities are invalid")
         routes[item["candidate_route_id"]] = {
             "agent_contract_id": contract,
             "named_agent": agents[contract],
             "model": item["model_selector"]["expected_resolved_model_id"],
             "effort": item["effort_selector"]["requested_value"],
+            "required_capabilities": list(required_capabilities),
         }
     if len(routes) != len(manifest["candidate_routes"]):
         raise ValueError("canonical manifest candidate routes are not uniquely owned")
@@ -397,6 +400,14 @@ def _read_json_file(path: Path, *, allowed_root: Path = ROOT) -> object:
     return _parse_json_bytes(_read_bounded_regular_file(path, allowed_root=allowed_root))
 
 
+def _read_manifest_snapshot(path: Path) -> dict:
+    manifest = _read_json_file(path)
+    if not isinstance(manifest, dict):
+        raise ValueError("candidate manifest must be a JSON object")
+    _validate_resource_bounds(manifest)
+    return manifest
+
+
 def _validate_resource_bounds(value: object, *, depth: int = 0, counter: list[int] | None = None) -> None:
     if counter is None: counter = [0]
     counter[0] += 1
@@ -406,8 +417,13 @@ def _validate_resource_bounds(value: object, *, depth: int = 0, counter: list[in
         raise ValueError("treatment input contains an oversized retained string")
     if isinstance(value, (list, dict)):
         if len(value) > MAX_COLLECTION_ITEMS: raise ValueError("treatment input contains an oversized collection")
-        for item in (value.values() if isinstance(value, dict) else value):
-            _validate_resource_bounds(item, depth=depth + 1, counter=counter)
+        if isinstance(value, dict):
+            for key, item in value.items():
+                _validate_resource_bounds(key, depth=depth + 1, counter=counter)
+                _validate_resource_bounds(item, depth=depth + 1, counter=counter)
+        else:
+            for item in value:
+                _validate_resource_bounds(item, depth=depth + 1, counter=counter)
 
 
 def _json_type_matches(value: object, expected: str) -> bool:
@@ -483,13 +499,13 @@ def _validate_schema_instance(value: object, schema: object, root: dict, path: s
         missing = set(schema.get("required", [])) - set(value)
         if missing: raise ValueError(f"{path} is missing required treatment schema fields")
         properties = schema.get("properties", {})
-        for key, item in value.items():
+        for index, (key, item) in enumerate(value.items()):
             if key in properties:
                 _validate_schema_instance(item, properties[key], root, f"{path}.{key}")
             elif schema.get("additionalProperties") is False:
                 raise ValueError(f"{path} contains an undeclared treatment schema field")
             elif isinstance(schema.get("additionalProperties"), dict):
-                _validate_schema_instance(item, schema["additionalProperties"], root, f"{path}.{key}")
+                _validate_schema_instance(item, schema["additionalProperties"], root, f"{path}.<field:{index}>")
 
 
 def _same_json_value(actual: object, expected: object, label: str) -> bool:
@@ -514,8 +530,9 @@ def _validate_retained_strings(value: object, label: str = "treatment bundle") -
         for index, item in enumerate(value):
             _validate_retained_strings(item, f"{label}[{index}]")
     elif isinstance(value, dict):
-        for key, item in value.items():
-            _validate_retained_strings(item, f"{label}.{key}")
+        for index, (key, item) in enumerate(value.items()):
+            _validate_retained_strings(key, f"{label} object key {index}")
+            _validate_retained_strings(item, f"{label} object value {index}")
 
 
 def digest(value: object) -> str:
@@ -657,7 +674,7 @@ def profile_entry(profile: list[dict], client_identity_id: str, surface: str, fi
     }
 
 
-def _validate_profile(profile: object) -> list[dict]:
+def _validate_profile(profile: object, current_source_ids: frozenset[str]) -> list[dict]:
     if not isinstance(profile, list) or not profile:
         raise ValueError("telemetry profile must be a non-empty array")
     seen: set[tuple[str, str, str]] = set()
@@ -684,7 +701,7 @@ def _validate_profile(profile: object) -> list[dict]:
             raise ValueError("telemetry field does not use its exact field-level classification authority")
         source = entry["official_source_ledger_id"]
         expected_source = AUTHORIZED_PROFILE_SOURCES[(entry["surface"], entry["field_path"])]
-        if source != expected_source or (source is not None and source not in _current_source_ids()):
+        if source != expected_source or (source is not None and source not in current_source_ids):
             raise ValueError("telemetry field does not use its exact field-level source authority")
         if (expected_source is None) != (classification == "undocumented"):
             raise ValueError("telemetry authority and undocumented classification disagree")
@@ -1025,7 +1042,10 @@ def _validate_assessment(value: object) -> dict:
     return assessment
 
 
-def _reroute_disposition(trace: dict, events: list[dict], assessments: list[dict], qualification: dict[str, dict], trusted: dict[str, dict]) -> tuple[str, list[str]]:
+def _reroute_disposition(
+    trace: dict, events: list[dict], assessments: list[dict], qualification: dict[str, dict],
+    trusted: dict[str, dict], canonical_routes: dict[str, dict[str, object]],
+) -> tuple[str, list[str]]:
     if not events:
         if assessments: return "hard_fail", ["orphan_reroute_destination_assessment"]
         return "", []
@@ -1042,7 +1062,7 @@ def _reroute_disposition(trace: dict, events: list[dict], assessments: list[dict
         if len(matches) != 1: return "hard_fail", ["reroute_destination_missing" if not matches else "reroute_destination_ambiguous"]
         item = matches[0]; evidence = qualification.get(item["prequalification_evidence_id"])
         if item["assessment"] != "prequalified_same_agent" or evidence is None: return "hard_fail", ["reroute_destination_unapproved"]
-        canonical = _canonical_routes().get(item["destination_candidate_route_id"])
+        canonical = canonical_routes.get(item["destination_candidate_route_id"])
         if canonical is None: return "hard_fail", ["reroute_destination_unidentifiable"]
         if item["destination_named_agent"] != canonical["named_agent"]: return "hard_fail", ["reroute_destination_different_agent"]
         if item["destination_agent_contract_id"] != canonical["agent_contract_id"]: return "hard_fail", ["reroute_destination_manifest_mismatch"]
@@ -1077,7 +1097,8 @@ TRACE_KEYS = {
 
 def _validate_trace(trace: object, profile: list[dict], environments: dict[str, dict],
                     policies: dict[str, dict], resolutions: dict[str, dict],
-                    qualification: dict[str, dict], trusted: dict[str, dict]) -> dict:
+                    qualification: dict[str, dict], trusted: dict[str, dict],
+                    canonical_routes: dict[str, dict[str, object]]) -> dict:
     row = _closed(trace, TRACE_KEYS, "treatment trace")
     objective = _closed(row["objective_binding"], set(OBJECTIVE_ID_FIELDS), "six-ID objective binding")
     for field in ("candidate_route_id", "agent_contract_id"): _text(objective[field], f"objective {field}")
@@ -1108,7 +1129,7 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
     if any(env[field] != expected for field, expected in env_equalities.items()): raise ValueError("trace controlled environment binding is inconsistent")
     if objective["candidate_route_id"] != row["assigned_route_id"] or resolution["assigned_route_id"] != row["assigned_route_id"]:
         raise ValueError("assigned route does not join objective, environment, and resolution")
-    canonical_route = _canonical_routes().get(objective["candidate_route_id"])
+    canonical_route = canonical_routes.get(objective["candidate_route_id"])
     if canonical_route is None or {key: canonical_route[key] for key in ("agent_contract_id", "named_agent", "model")} != {
         "agent_contract_id": objective["agent_contract_id"], "named_agent": row["named_agent"], "model": row["requested_model"],
     }:
@@ -1133,6 +1154,18 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
     validated_failures = [_validate_failure(item) for item in failures]
     if len({item["failure_code"] for item in validated_failures}) != len(validated_failures): raise ValueError("duplicate structured treatment failure code")
     derived_codes = _proof_failure_codes(proof, row, profile)
+    discovery_requirements = {
+        "discovery.models": ([row["requested_model"]], "model_mismatch"),
+        "discovery.efforts": ([row["requested_effort"]], "effort_mismatch"),
+        "discovery.capabilities": (canonical_route["required_capabilities"], "skills_mcp_tools_mismatch"),
+    }
+    for field, (required_values, failure_code) in discovery_requirements.items():
+        observed = observations.get(field)
+        if (
+            observed is None or observed["observation_state"] != "observed_value"
+            or any(value not in observed["value"] for value in required_values)
+        ):
+            derived_codes.append(failure_code)
     events = row["service_reroute_events"]; assessments = row["reroute_destination_assessments"]
     if not isinstance(events, list) or not isinstance(assessments, list): raise ValueError("reroute records must be arrays")
     events = [_validate_event(item) for item in events]; assessments = [_validate_assessment(item) for item in assessments]
@@ -1167,8 +1200,7 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
         "terminal.outcome": row["outcome"], "terminal.acceptance": row["acceptance"],
     }
     observation_failure_codes = {
-        "discovery.models": "model_mismatch", "discovery.efforts": "effort_mismatch",
-        "discovery.capabilities": "skills_mcp_tools_mismatch", "assignment.named_agent": "agent_mismatch",
+        "assignment.named_agent": "agent_mismatch",
         "assignment.model": "model_mismatch", "assignment.effort": "effort_mismatch",
         "assignment.supported_effective_model": "model_mismatch", "assignment.supported_effective_effort": "effort_mismatch",
         "assignment.agent_contract_id": "agent_mismatch", "treatment.sandbox": "sandbox_approvals_mismatch",
@@ -1209,7 +1241,9 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
     proof_configuration_hash = proof["configuration_hash"] if proof is not None else row["configuration_hash"]
     if len({row["configuration_hash"], row["controlled_overrides"]["configuration_hash"], proof_configuration_hash}) != 1: derived_codes.append("configuration_mismatch")
     if row["delivery_canary"]["status"] == "failed": derived_codes.append("delivery_canary_failure")
-    reroute_disposition, reasons = _reroute_disposition(row, events, assessments, qualification, trusted)
+    reroute_disposition, reasons = _reroute_disposition(
+        row, events, assessments, qualification, trusted, canonical_routes
+    )
     if events and resolution["supported_effective_route_id"] not in {None, resolution["assigned_route_id"]}: raise ValueError("service reroute must not rewrite resolver-selected fields")
     reason_codes = {
         "reroute_association_mismatch": "reroute_unidentifiable", "ambiguous_reroute_association": "reroute_ambiguous",
@@ -1303,10 +1337,14 @@ def _validate_trace_graph(traces: list[dict]) -> None:
             raise ValueError("trace graph root does not match its ancestor chain")
 
 
-def validate_treatment_bundle(bundle: object, *, schema_path: Path = SCHEMA_PATH,
-                              trusted_qualification_evidence: Mapping[str, dict] | None = None) -> dict:
+def _validate_treatment_bundle(
+    bundle: object, *, schema_path: Path, manifest: dict,
+    trusted_qualification_evidence: Mapping[str, dict] | None,
+) -> dict:
     _validate_resource_bounds(bundle)
-    schema = _read_json_file(schema_path)
+    _validate_retained_strings(bundle)
+    schema_bytes = _read_bounded_regular_file(schema_path)
+    schema = _parse_json_bytes(schema_bytes)
     if not isinstance(schema, dict): raise ValueError("treatment contract must be a JSON Schema object")
     _validate_resource_bounds(schema)
     _validate_schema_instance(bundle, schema, schema)
@@ -1315,11 +1353,12 @@ def validate_treatment_bundle(bundle: object, *, schema_path: Path = SCHEMA_PATH
         "controlled_environments", "experiment_policy_registry", "qualification_evidence_registry", "route_resolutions",
         "treatment_traces", "fixture_provenance",
     }, "treatment bundle")
-    _validate_retained_strings(value)
     if value["schema_version"] != SCHEMA_VERSION: raise ValueError("unsupported treatment schema version")
-    contract_digest = schema_file_digest(schema_path)
+    contract_digest = digest(schema_bytes)
     if value["treatment_contract_digest"] != contract_digest: raise ValueError("treatment contract digest does not bind the exact schema bytes")
-    profile = _validate_profile(value["telemetry_profile"])
+    current_source_ids = _current_source_ids(manifest)
+    canonical_routes = _canonical_routes(manifest)
+    profile = _validate_profile(value["telemetry_profile"], current_source_ids)
     trusted = _validate_trusted_qualification(trusted_qualification_evidence)
     expected_profile_id = telemetry_profile_id(value["schema_version"], profile, contract_digest)
     if value["telemetry_profile_id"] != expected_profile_id: raise ValueError("telemetry profile ID does not bind the profile and treatment contract")
@@ -1342,7 +1381,7 @@ def validate_treatment_bundle(bundle: object, *, schema_path: Path = SCHEMA_PATH
         raise ValueError("schema v1 telemetry profile client must own every environment and trace")
     validated = [_validate_trace(
         item, profile, owners["controlled_environments"], owners["experiment_policy_registry"], owners["route_resolutions"],
-        owners["qualification_evidence_registry"], trusted,
+        owners["qualification_evidence_registry"], trusted, canonical_routes,
     ) for item in traces]
     referenced_environments = {item["controlled_environment_id"] for item in validated}
     if referenced_environments != set(owners["controlled_environments"]):
@@ -1372,6 +1411,17 @@ def validate_treatment_bundle(bundle: object, *, schema_path: Path = SCHEMA_PATH
     return value
 
 
+def validate_treatment_bundle(
+    bundle: object, *, schema_path: Path = SCHEMA_PATH, manifest_path: Path = MANIFEST_PATH,
+    trusted_qualification_evidence: Mapping[str, dict] | None = None,
+) -> dict:
+    manifest = _read_manifest_snapshot(manifest_path)
+    return _validate_treatment_bundle(
+        bundle, schema_path=schema_path, manifest=manifest,
+        trusted_qualification_evidence=trusted_qualification_evidence,
+    )
+
+
 def _capability_module():
     spec = importlib.util.spec_from_file_location("g56r_002_capability_for_treatment", CAPABILITY_MODULE_PATH)
     if spec is None or spec.loader is None: raise RuntimeError("cannot load capability freeze validator")
@@ -1382,10 +1432,12 @@ def _capability_module():
 def build_treatment_successor(prior_freeze: dict, treatment_bundle: dict, *, published_at: str,
                               manifest_path: Path = MANIFEST_PATH,
                               trusted_qualification_evidence: Mapping[str, dict] | None = None) -> dict:
-    validated = validate_treatment_bundle(
-        treatment_bundle, trusted_qualification_evidence=trusted_qualification_evidence,
+    manifest = _read_manifest_snapshot(manifest_path)
+    validated = _validate_treatment_bundle(
+        treatment_bundle, schema_path=SCHEMA_PATH, manifest=manifest,
+        trusted_qualification_evidence=trusted_qualification_evidence,
     )
-    capability = _capability_module(); manifest = _read_json_file(manifest_path)
+    capability = _capability_module()
     if prior_freeze["candidate_freeze_id"] != digest({key: value for key, value in prior_freeze.items() if key != "candidate_freeze_id"}):
         raise ValueError("prior freeze identity is invalid")
     try: capability.validate_freeze(prior_freeze, manifest)

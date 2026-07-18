@@ -1308,7 +1308,11 @@
           "field_path": "discovery.capabilities",
           "observation_state": "observed_value",
           "value": [
-            "text"
+            "model listing",
+            "supported efforts",
+            "input modalities",
+            "exact custom-agent treatment",
+            "telemetry"
           ],
           "evidence_ref": "fixture://trace/discovery-capabilities",
           "captured_at": "2026-07-17T04:01:00Z"

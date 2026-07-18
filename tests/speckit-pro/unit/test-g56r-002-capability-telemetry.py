@@ -202,7 +202,7 @@ def declare_reroute_result(bundle: dict, trusted: dict[str, dict] | None = None)
     }
     disposition, detailed_reasons = treatment._reroute_disposition(
         trace, events, trace["reroute_destination_assessments"],
-        qualification, trusted or {},
+        qualification, trusted or {}, treatment._canonical_routes(load_json(MANIFEST_PATH)),
     )
     directly_derived = []
     if trace["supported_effective_effort"] is not None:
@@ -1850,7 +1850,7 @@ class TreatmentContractTests(unittest.TestCase):
 
     def test_manifest_and_predecessor_null_effort_remain_unknown(self) -> None:
         trace = self.bundle["treatment_traces"][0]
-        route = treatment._canonical_routes()[trace["assigned_route_id"]]
+        route = treatment._canonical_routes(load_json(MANIFEST_PATH))[trace["assigned_route_id"]]
         self.assertIn("effort", route)
         self.assertIsNone(route["effort"])
         validated = treatment.validate_treatment_bundle(copy.deepcopy(self.bundle))
@@ -1984,6 +1984,45 @@ class TreatmentContractTests(unittest.TestCase):
         }]
         forged_declared["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
         self.assert_bundle_invalid(forged_declared)
+
+    def test_discovery_observations_must_support_the_requested_treatment(self) -> None:
+        cases = [
+            ("discovery.models", ["unrelated-model"], "model_mismatch"),
+            ("discovery.efforts", ["unrelated-effort"], "effort_mismatch"),
+            (
+                "discovery.capabilities",
+                ["model listing", "supported efforts", "input modalities", "telemetry"],
+                "skills_mcp_tools_mismatch",
+            ),
+        ]
+        for field_path, observed_values, expected_code in cases:
+            with self.subTest(field_path=field_path):
+                bundle = copy.deepcopy(self.bundle)
+                observation = next(
+                    item for item in bundle["treatment_traces"][0]["observations"]
+                    if item["field_path"] == field_path
+                )
+                observation["value"] = observed_values
+                failure_codes = [expected_code, "effective_treatment_unknown"]
+                declare_treatment_result(bundle, failure_codes, "hard_fail", sorted(failure_codes))
+                validated = treatment.validate_treatment_bundle(self.rebound(bundle))
+                self.assertEqual(validated["treatment_traces"][0]["treatment_disposition"], "hard_fail")
+
+        missing = copy.deepcopy(self.bundle)
+        observation = next(
+            item for item in missing["treatment_traces"][0]["observations"]
+            if item["field_path"] == "discovery.models"
+        )
+        observation.update({
+            "observation_state": "missing", "value": None,
+            "evidence_ref": None, "captured_at": None,
+        })
+        declare_treatment_result(
+            missing, ["model_mismatch", "effective_treatment_unknown"], "hard_fail",
+            ["effective_treatment_unknown", "model_mismatch"],
+        )
+        validated = treatment.validate_treatment_bundle(self.rebound(missing))
+        self.assertEqual(validated["treatment_traces"][0]["treatment_disposition"], "hard_fail")
 
     def test_observation_comparison_preserves_json_types(self) -> None:
         bundle = copy.deepcopy(self.bundle)
@@ -2455,6 +2494,7 @@ class TreatmentContractTests(unittest.TestCase):
                 fifo = root / "fixture-fifo"; os.mkfifo(fifo)
                 with self.assertRaisesRegex(ValueError, "regular"):
                     treatment._read_bounded_regular_file(fifo, allowed_root=root)
+
             race_directory = root / "race"; race_directory.mkdir()
             race_source = race_directory / "source.json"; race_source.write_text("{}", encoding="utf-8")
             moved_directory = root / "race-original"
@@ -2502,6 +2542,24 @@ class TreatmentContractTests(unittest.TestCase):
                     self.assertEqual(completed.returncode, 2)
                     self.assertNotIn("Traceback", completed.stderr)
                     self.assertNotIn("SUPERSECRET", completed.stderr)
+
+    def test_dictionary_keys_are_bounded_private_and_never_echoed(self) -> None:
+        oversized_key = "x" * (treatment.MAX_RETAINED_STRING_LENGTH + 1)
+        oversized = copy.deepcopy(self.bundle); oversized[oversized_key] = None
+        with self.assertRaisesRegex(ValueError, "oversized retained string") as oversized_error:
+            treatment.validate_treatment_bundle(self.rebound(oversized))
+        self.assertNotIn(oversized_key, str(oversized_error.exception))
+
+        for private_key in (
+            "password=SensitiveToken123",
+            "/opt/customer/private.json",
+            "unsafe\nterminal-key",
+        ):
+            with self.subTest(private_key=private_key):
+                retained = copy.deepcopy(self.bundle); retained[private_key] = None
+                with self.assertRaisesRegex(ValueError, "forbidden private") as private_error:
+                    treatment.validate_treatment_bundle(self.rebound(retained))
+                self.assertNotIn(private_key, str(private_error.exception))
 
     def test_top_level_claims_follow_profile_classification_and_conditions(self) -> None:
         for field in ("wall_time_ms", "retries"):
@@ -2648,9 +2706,19 @@ class TreatmentContractTests(unittest.TestCase):
         prior["published_at"] = TREATMENT_PREDECESSOR_PUBLISHED_AT
         prior["supersedes_candidate_freeze_id"] = None
         self.assertEqual(treatment.content_id(prior, "candidate_freeze_id"), prior["candidate_freeze_id"])
-        successor = treatment.build_treatment_successor(
-            prior, self.bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
-        )
+        bounded_reads: list[Path] = []
+        original_read = treatment._read_bounded_regular_file
+
+        def track_authority_reads(path: Path, **kwargs: object) -> bytes:
+            bounded_reads.append(Path(path))
+            return original_read(path, **kwargs)
+
+        with mock.patch.object(treatment, "_read_bounded_regular_file", side_effect=track_authority_reads):
+            successor = treatment.build_treatment_successor(
+                prior, self.bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+            )
+        self.assertEqual(bounded_reads.count(treatment.SCHEMA_PATH), 1)
+        self.assertEqual(bounded_reads.count(treatment.MANIFEST_PATH), 1)
         self.assertEqual(successor, published)
         self.assertEqual(successor["supersedes_candidate_freeze_id"], prior["candidate_freeze_id"])
         self.assertEqual(successor["telemetry_profile_id"], self.bundle["telemetry_profile_id"])
@@ -2674,6 +2742,20 @@ class TreatmentContractTests(unittest.TestCase):
                 prior, rerouted, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
                 trusted_qualification_evidence=altered_trust,
             )
+        custom_manifest = copy.deepcopy(load_json(MANIFEST_PATH))
+        route = next(
+            item for item in custom_manifest["candidate_routes"]
+            if item["candidate_route_id"] == self.bundle["treatment_traces"][0]["assigned_route_id"]
+        )
+        route["model_selector"]["expected_resolved_model_id"] = "different-model"
+        with tempfile.TemporaryDirectory(dir=ROOT) as directory:
+            manifest_path = Path(directory) / "custom-manifest.json"
+            manifest_path.write_text(json.dumps(custom_manifest), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "canonical candidate manifest"):
+                treatment.build_treatment_successor(
+                    prior, self.bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                    manifest_path=manifest_path,
+                )
         manifest = load_json(MANIFEST_PATH)
         self.assertEqual(capabilities.validate_freeze(
             published, manifest, predecessor=prior,
