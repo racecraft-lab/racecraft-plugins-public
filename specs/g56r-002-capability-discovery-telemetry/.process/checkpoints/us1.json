@@ -2,23 +2,25 @@
   "schema_version": "marker-checkpoint.v1",
   "feature_id": "G56R-002",
   "marker_id": "us1",
-  "status": "complete",
+  "status": "review_pending",
   "task_ids": [
     "T001", "T002", "T003", "T004", "T005",
     "T006", "T007", "T008", "T009", "T010",
     "T011", "T012", "T013", "T014", "T015"
   ],
   "clean_collection_baseline_sha": "ab272f05937bd08a50e40710b3f1ad3b0dc8452b",
-  "implementation_checkpoint_sha": "f262695d0c1b519e73d93058a944ccdc377ad62f",
+  "implementation_checkpoint_sha": null,
+  "superseded_checkpoint_sha": "f262695d0c1b519e73d93058a944ccdc377ad62f",
   "candidate_freeze_id": "sha256:57b79448bc59f4e9dd8eb2acb61452c5c0fe6f4acc4199c48bc9a3eb4e6b3d24",
   "verification": {
-    "focused_tests": "8/8 pass",
+    "focused_tests": "9/9 pass",
     "published_freeze_validation": "pass",
     "json_schema_instance_validation": "pass",
     "deterministic_replay": "pass",
-    "independent_critical_high_review": "pass"
+    "independent_critical_high_review": "repeat_pending"
   },
   "source_fingerprint_status": "current",
   "tasks_sha": "sha256:f97fa606d45fc8a8b1952ac7453e151318ef1d76ca6023aeb0c638a0e2d2d484",
-  "completed_at": "2026-07-17T04:52:54Z"
+  "completed_at": null,
+  "review_iteration_started_at": "2026-07-18T17:18:23Z"
 }

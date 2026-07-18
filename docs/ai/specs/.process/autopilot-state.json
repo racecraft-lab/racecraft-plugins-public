@@ -3,8 +3,8 @@
   "spec_id": "G56R-002",
   "feature_dir": "specs/g56r-002-capability-discovery-telemetry",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-17T04:58:44Z",
-  "active_step": "Phase 7: Implement - Treatment Contracts (T016-T025)",
+  "updated_at": "2026-07-18T17:18:23Z",
+  "active_step": "Phase 7: Implement - Capability Freeze Repeat Review",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
   "archive_sweep": {
@@ -68,8 +68,8 @@
     {"step": "Phase 6: Analyze", "status": "completed"},
     {"step": "Phase 6: Analyze - Consensus", "status": "completed"},
     {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
-    {"step": "Phase 7: Implement - Capability Freeze (T001-T015)", "status": "completed"},
-    {"step": "Phase 7: Implement - Treatment Contracts (T016-T025)", "status": "in_progress"},
+    {"step": "Phase 7: Implement - Capability Freeze (T001-T015)", "status": "in_progress"},
+    {"step": "Phase 7: Implement - Treatment Contracts (T016-T025)", "status": "pending"},
     {"step": "Phase 7: Implement - Synthetic Replay (T026-T030)", "status": "pending"},
     {"step": "Phase 7: Implement - Integration and Polish (T031-T039)", "status": "pending"},
     {"step": "Post: Doctor Extension Check", "status": "pending"},
@@ -293,38 +293,39 @@
       "iterations": 0
     },
     "Phase 7: Implement - Capability Freeze": {
-      "status": "completed",
+      "status": "review_pending",
       "tasks_completed": 15,
       "tasks_total": 15,
-      "focused_tests": "8/8 pass",
-      "independent_review": "pass with 0 critical and 0 high findings",
+      "focused_tests": "9/9 pass",
+      "independent_review": "repeat_pending",
       "baseline_commit": "ab272f05937bd08a50e40710b3f1ad3b0dc8452b",
       "candidate_freeze_id": "sha256:57b79448bc59f4e9dd8eb2acb61452c5c0fe6f4acc4199c48bc9a3eb4e6b3d24",
       "runtime_capability_snapshot_id": "sha256:39e6284e4a3ae9109a543b8e0ecf4c9d59181010dd3def7b874c89fab46a43f3",
       "surface_matrix_id": "sha256:99739c0895250de0eb0cf1a0215fd2e5168213081d41f6b2f828c274528c32b2",
       "marker_id": "us1",
       "reviewability": "size-only block with honored typed no-safe-boundary exception",
-      "checkpoint": "f262695d0c1b519e73d93058a944ccdc377ad62f",
-      "completed_at": "2026-07-17T04:52:54Z"
+      "checkpoint": null,
+      "superseded_checkpoint": "f262695d0c1b519e73d93058a944ccdc377ad62f",
+      "completed_at": null
     }
   },
   "current_source_fingerprint": {
     "feature_spec_sha": "sha256:7f7dd656c87550a9fe606fde8e79109c6246daaad6c5db539cbcfbf7c92e56de",
     "plan_declared_scope_sha": "sha256:daf4a8ac4f2e33fb39114f85c572a193a1a946ea671917879cb2dc921de268ca",
     "tasks_sha": "sha256:f97fa606d45fc8a8b1952ac7453e151318ef1d76ca6023aeb0c638a0e2d2d484",
-    "reviewability_sha": "sha256:14b510444650a6348a4a7291c7b944aa9412dcec6cbc815f8653fafa5fe22d0f",
+    "reviewability_sha": "sha256:31a8df819166033f51633b23b18a5709c6f0013826addd6d01682357e005c6a0",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
   },
   "pr_marker_plan": {
     "schema_version": "pr-marker-plan.v1",
     "kind": "pr_marker_plan",
     "feature_id": "G56R-002",
-    "status": "checkpointing",
+    "status": "review_pending",
     "source_fingerprint": {
       "feature_spec_sha": "sha256:7f7dd656c87550a9fe606fde8e79109c6246daaad6c5db539cbcfbf7c92e56de",
       "plan_declared_scope_sha": "sha256:daf4a8ac4f2e33fb39114f85c572a193a1a946ea671917879cb2dc921de268ca",
       "tasks_sha": "sha256:f97fa606d45fc8a8b1952ac7453e151318ef1d76ca6023aeb0c638a0e2d2d484",
-      "reviewability_sha": "sha256:14b510444650a6348a4a7291c7b944aa9412dcec6cbc815f8653fafa5fe22d0f",
+      "reviewability_sha": "sha256:31a8df819166033f51633b23b18a5709c6f0013826addd6d01682357e005c6a0",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
     },
     "markers": [
@@ -368,7 +369,7 @@
           "mode": "implementation",
           "scope": "us1",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/capability-freeze.json",
-          "head_sha": "ab272f05937bd08a50e40710b3f1ad3b0dc8452b"
+          "head_sha": null
         },
         "hazards": ["source-authority", "private-evidence", "content-addressed-freeze"],
         "subdivision": {
@@ -376,13 +377,14 @@
           "details": {
             "reason": "Source refresh, surface authority, tuple decisions, and published freeze revalidation share one integrity boundary.",
             "exception_kind": "typed_size_only",
-            "growth_limit": "No further codex_capabilities.py growth after this checkpoint."
+            "growth_limit": "No feature growth; only reviewer-required integrity remediation is authorized."
           }
         },
         "implementation_checkpoint": {
-          "status": "complete",
+          "status": "review_pending",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1.json",
-          "commit_sha": "f262695d0c1b519e73d93058a944ccdc377ad62f"
+          "commit_sha": null,
+          "superseded_commit_sha": "f262695d0c1b519e73d93058a944ccdc377ad62f"
         },
         "emission_mapping": {
           "status": "pending",
@@ -394,7 +396,7 @@
             "severity": "warning",
             "message": "US1 exceeds 400 reviewable LOC and is retained only under the typed no-safe-boundary size exception.",
             "source": "capability-freeze-reviewability",
-            "details": {"marker_id": "us1", "actual_source_lines": 959, "actual_nonblank_noncomment_lines": 851}
+            "details": {"marker_id": "us1", "actual_source_lines": 1691, "actual_nonblank_noncomment_lines": 1506}
           }
         ]
       },

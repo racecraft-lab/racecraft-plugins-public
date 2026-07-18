@@ -115,6 +115,10 @@ publication time, and exact 30-day deletion deadline. The deterministic
 overdue bytes, and in `cleanup` mode appends the complete deletion record before
 removing the expired bytes. Replaying cleanup is idempotent; the digest,
 retention history, and deletion record remain auditable after the bytes are
-gone. The committed JSON is deny-by-default sanitized and contains no
+gone. Registration and cleanup share an atomic private-root lock, so a newer
+publication cannot extend a digest while cleanup is deleting it. Destructive
+cleanup derives its deletion time from current UTC and rejects `--as-of`;
+arbitrary logical timestamps are read-only verification inputs. The committed
+JSON is deny-by-default sanitized and contains no
 retrieved source bodies, credentials, headers, cookies, prompt content, account
 identifiers, hostnames, absolute paths, or repository remotes.

@@ -7,6 +7,7 @@ import argparse
 import base64
 import binascii
 import copy
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 import hashlib
 from html.parser import HTMLParser
@@ -32,6 +33,7 @@ PRIVATE_REFRESH_MAX_BYTES = 32 * 1024 * 1024
 RAW_EVIDENCE_RETENTION_DAYS = 30
 RETENTION_RECORDS_DIR = "retention-records"
 DELETION_RECORDS_DIR = "deletion-records"
+RETENTION_LOCK_DIR = ".retention-lock"
 ERROR_TERMINALS = ("timeout", "output_cap_exceeded", "launch_error", "transport_error", "authentication_error", "rate_limited", "malformed_response", "explicit_rejection", "service_reroute", "ambiguous_error")
 _UNSET = object()
 _DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
@@ -1241,12 +1243,32 @@ def _freeze_raw_evidence_digests(freeze):
     return sorted(digests)
 
 
-def register_raw_evidence_retention(freeze, raw_evidence_root, repository_root, *, manifest):
-    raw = validate_raw_evidence_root(raw_evidence_root, repository_root)
-    freeze = validate_freeze(freeze, manifest, _enforce_lineage=False)
+@contextmanager
+def _retention_lock(raw):
+    target = raw / RETENTION_LOCK_DIR
+    try:
+        target.mkdir(mode=0o700)
+    except FileExistsError as error:
+        raise ValueError("raw evidence retention operation is already in progress") from error
+    if target.is_symlink() or not target.is_dir():
+        raise ValueError("raw evidence retention lock is invalid")
+    if os.name != "nt": target.chmod(0o700)
+    try:
+        yield
+    finally:
+        target.rmdir()
+
+
+def _register_raw_evidence_retention_locked(freeze, raw, repository_root):
     published = _parsed_timestamp(freeze.get("published_at"), "freeze publication timestamp")
     evidence_digests = _freeze_raw_evidence_digests(freeze)
     if not evidence_digests: return []
+    deleted_digests = {
+        _validate_deletion_record(record_digest, record)["raw_evidence_digest"]
+        for record_digest, record in _load_private_records(raw / DELETION_RECORDS_DIR, repository_root, "deletion record")
+    }
+    if set(evidence_digests) & deleted_digests:
+        raise ValueError("raw evidence cannot be registered after deletion has begun")
     records = _private_record_directory(raw, RETENTION_RECORDS_DIR)
     record_digests = []
     for evidence_digest in evidence_digests:
@@ -1264,8 +1286,33 @@ def register_raw_evidence_retention(freeze, raw_evidence_root, repository_root, 
     return sorted(record_digests)
 
 
-def reconcile_raw_evidence_retention(raw_evidence_root, repository_root, as_of, *, apply=False):
-    raw = validate_raw_evidence_root(raw_evidence_root, repository_root); current = _parsed_timestamp(as_of, "retention as-of timestamp")
+def register_raw_evidence_retention(freeze, raw_evidence_root, repository_root, *, manifest):
+    raw = validate_raw_evidence_root(raw_evidence_root, repository_root)
+    freeze = validate_freeze(freeze, manifest, _enforce_lineage=False)
+    with _retention_lock(raw):
+        validate_raw_evidence_root(raw, repository_root)
+        return _register_raw_evidence_retention_locked(freeze, raw, repository_root)
+
+
+def _retention_now():
+    return datetime.now(timezone.utc)
+
+
+def reconcile_raw_evidence_retention(raw_evidence_root, repository_root, as_of=None, *, apply=False):
+    raw = validate_raw_evidence_root(raw_evidence_root, repository_root)
+    if apply:
+        if as_of is not None: raise ValueError("cleanup derives its deletion time from current UTC")
+        current = _retention_now()
+        if current.tzinfo is None or current.utcoffset() != timedelta(0): raise ValueError("cleanup clock must be UTC")
+        effective_as_of = _format_timestamp(current)
+    else:
+        current = _parsed_timestamp(as_of, "retention as-of timestamp"); effective_as_of = as_of
+    with _retention_lock(raw):
+        validate_raw_evidence_root(raw, repository_root)
+        return _reconcile_raw_evidence_retention_locked(raw, repository_root, effective_as_of, current, apply=apply)
+
+
+def _reconcile_raw_evidence_retention_locked(raw, repository_root, as_of, current, *, apply):
     retention_records = [(_validate_retention_record(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / RETENTION_RECORDS_DIR, repository_root, "retention record")]
     deletion_records = [(_validate_deletion_record(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / DELETION_RECORDS_DIR, repository_root, "deletion record")]
     retention_by_evidence = {}
@@ -1592,7 +1639,7 @@ def main(argv=None):
     canary = sub.add_parser("canary"); canary.add_argument("--manifest", required=True); canary.add_argument("--freeze", required=True); canary.add_argument("--model", required=True); canary.add_argument("--effort", required=True); canary.add_argument("--executor-result", required=True); canary.add_argument("--raw-evidence-root", required=True); canary.add_argument("--published-at"); canary.add_argument("--output", required=True)
     freeze = sub.add_parser("freeze"); freeze.add_argument("--manifest", required=True); freeze.add_argument("--source-refresh", required=True); freeze.add_argument("--client-identity", required=True); freeze.add_argument("--app-server", required=True); freeze.add_argument("--cli", required=True); freeze.add_argument("--interactive-picker", required=True); freeze.add_argument("--raw-evidence-root"); freeze.add_argument("--aliases"); freeze.add_argument("--predecessor-freeze"); freeze.add_argument("--published-at"); freeze.add_argument("--output", required=True)
     published = sub.add_parser("validate-freeze"); published.add_argument("--manifest", required=True); published.add_argument("--freeze", required=True); published.add_argument("--predecessor-freeze")
-    retention = sub.add_parser("retention"); retention.add_argument("--raw-evidence-root", required=True); retention.add_argument("--as-of", required=True); retention.add_argument("--mode", choices=("verify", "cleanup"), default="verify"); retention.add_argument("--output", required=True)
+    retention = sub.add_parser("retention"); retention.add_argument("--raw-evidence-root", required=True); retention.add_argument("--as-of"); retention.add_argument("--mode", choices=("verify", "cleanup"), default="verify"); retention.add_argument("--output", required=True)
     args, repo = parser.parse_args(argv), Path(__file__).resolve().parents[4]
     now = lambda: datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     if args.command == "refresh-sources":
@@ -1621,6 +1668,8 @@ def main(argv=None):
         predecessor = _read(args.predecessor_freeze, require_canonical=True) if args.predecessor_freeze else None
         validate_freeze(_read(args.freeze, require_canonical=True), _read(args.manifest), predecessor=predecessor); return 0
     if args.command == "retention":
+        if args.mode == "verify" and args.as_of is None: raise ValueError("retention verification requires --as-of")
+        if args.mode == "cleanup" and args.as_of is not None: raise ValueError("retention cleanup uses current UTC and does not accept --as-of")
         output = validate_private_external_file(args.output, repo, "retention report output", output=True)
         report = reconcile_raw_evidence_retention(args.raw_evidence_root, repo, args.as_of, apply=args.mode == "cleanup")
         _write(output, report, private=True); return 0

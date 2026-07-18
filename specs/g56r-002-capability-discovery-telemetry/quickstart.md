@@ -253,23 +253,24 @@ verify that every retained digest still has its exact bytes:
 ```sh
 python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py retention \
   --raw-evidence-root /absolute/path/outside/repository/g56r-002-raw \
-  --as-of 2026-08-14T23:59:59Z \
+  --as-of 2026-08-16T04:44:32.543010Z \
   --mode verify \
   --output /absolute/path/outside/repository/g56r-002-raw/retention-report.json
 ```
 
-At or after the latest 30-day deadline, apply cleanup and then verify the same
-as-of state:
+At or after the latest 30-day deadline, apply cleanup using the adapter's
+current UTC clock and then verify that state. The example deadline below is
+derived from the committed freeze's `2026-07-17T04:44:32.543011Z`
+`published_at`; a successor freeze can extend it.
 
 ```sh
 python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py retention \
   --raw-evidence-root /absolute/path/outside/repository/g56r-002-raw \
-  --as-of 2026-08-15T00:00:00Z \
   --mode cleanup \
   --output /absolute/path/outside/repository/g56r-002-raw/cleanup-report.json
 python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py retention \
   --raw-evidence-root /absolute/path/outside/repository/g56r-002-raw \
-  --as-of 2026-08-15T00:00:00Z \
+  --as-of 2026-08-16T04:44:32.543011Z \
   --mode verify \
   --output /absolute/path/outside/repository/g56r-002-raw/retention-report.json
 ```
@@ -277,5 +278,10 @@ python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py retention 
 Cleanup appends an immutable record under `deletion-records/` before removing
 the expired raw bytes. The record retains the raw digest, complete retention
 record history, governing deadline, and deletion time. Repeated cleanup is
-idempotent. Do not delete committed sanitized fixtures or published freeze
-records; repository tests continue to pass without the raw store.
+idempotent. Registration and cleanup serialize through the atomic
+`.retention-lock` directory; another operation fails closed while it exists.
+After an interrupted operator process, inspect the private store before manually
+removing a stale lock. `--as-of` is accepted only for read-only verification;
+cleanup always uses current UTC. Do not delete committed sanitized fixtures or
+published freeze records; repository tests continue to pass without the raw
+store.

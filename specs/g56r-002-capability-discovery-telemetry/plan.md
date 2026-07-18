@@ -191,7 +191,8 @@ Repository tests must pass with the network disabled and no raw evidence store.
   publication. Publication appends a content-addressed retention record;
   deterministic verification fails on missing or overdue bytes, and cleanup
   appends a content-addressed deletion record before leaving only those records
-  and the raw digest.
+  and the raw digest. Registration and cleanup share an atomic private-root
+  lock, and destructive cleanup derives its timestamp from current UTC.
 - Committed fixtures are deny-by-default sanitized, schema-allowlisted,
   canonical UTF-8 JSON with sorted keys and compact separators, and SHA-256
   bound to exact bytes by the adjacent out-of-band digest manifest.

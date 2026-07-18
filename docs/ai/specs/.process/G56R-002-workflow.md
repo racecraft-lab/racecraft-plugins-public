@@ -65,7 +65,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Tasks | `$speckit-tasks` | Complete | 39 TDD-first tasks; G5 passed |
 | Analyze | `$speckit-analyze` | Complete | Nine findings remediated; G6 passed |
 | Confidence Gate | G6.5 | Complete | Advisory score 0.99 passed the 0.90 threshold |
-| Implement | `$speckit-implement` | In Progress | T001-T015 checkpointed at `f262695d`; treatment marker is active |
+| Implement | `$speckit-implement` | In Progress | T001-T015 reviewer remediation is complete locally; independent repeat review is pending and later markers are blocked |
 | Post | Post-Implementation | Pending | Complete verification, reviewability, PR, remediation, and retrospective work |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -872,8 +872,8 @@ For every task:
 
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
-| 1 - Capability freeze | Complete | 15 | Checkpoint `f262695d`; 8/8 focused tests, published validator, schema validation, deterministic replay, and independent critical/high review pass |
-| 2 - Treatment contracts | In Progress | 0 | T016-T025 active in the separate treatment module |
+| 1 - Capability freeze | Review Pending | 15 | 9/9 focused tests, published validator, schema validation, deterministic replay, and full suite pass; independent repeat review pending |
+| 2 - Treatment contracts | Blocked | 0 | T016-T025 remain ordered after a clean US1 repeat-review verdict |
 | 3 - Synthetic replay | Pending | 0 | Not started |
 | Polish and validation | Pending | 0 | Not started |
 
@@ -884,8 +884,10 @@ For every task:
 - Runtime snapshot: `sha256:39e6284e4a3ae9109a543b8e0ecf4c9d59181010dd3def7b874c89fab46a43f3`
 - Surface matrix: `sha256:99739c0895250de0eb0cf1a0215fd2e5168213081d41f6b2f828c274528c32b2`
 - Included routes: 0; excluded routes: 23
-- Review: PASS with 0 critical and 0 high findings after remediation of
-  canary approval authority, clean-tree provenance, and backed raw references.
+- Review: REPEAT PENDING after route-to-claim, retention lifecycle,
+  concurrency, and destructive-clock remediation. The prior pass and checkpoint
+  are superseded; a new implementation checkpoint SHA is recorded only after a
+  clean verdict.
 
 ## PR Marker Plan Evidence
 
@@ -893,24 +895,24 @@ For every task:
 - Authoritative state: top-level `pr_marker_plan` in
   `docs/ai/specs/.process/autopilot-state.json`
 - Fingerprint status: Current
-- Plan status: `checkpointing`
+- Plan status: `review_pending`
 
 | Fingerprint input | SHA-256 |
 |---|---|
 | Feature spec | `sha256:7f7dd656c87550a9fe606fde8e79109c6246daaad6c5db539cbcfbf7c92e56de` |
 | Plan-declared scope | `sha256:daf4a8ac4f2e33fb39114f85c572a193a1a946ea671917879cb2dc921de268ca` |
 | Tasks | `sha256:f97fa606d45fc8a8b1952ac7453e151318ef1d76ca6023aeb0c638a0e2d2d484` |
-| Reviewability evidence | `sha256:14b510444650a6348a4a7291c7b944aa9412dcec6cbc815f8653fafa5fe22d0f` |
+| Reviewability evidence | `sha256:31a8df819166033f51633b23b18a5709c6f0013826addd6d01682357e005c6a0` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
-| 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `f262695d0c1b519e73d93058a944ccdc377ad62f` | No further `codex_capabilities.py` growth |
-| 2 | `us2` | T016-T025 | Not estimated | Pending | Treatment remains a separate module |
+| 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Repeat review pending; implementation SHA unbound | Reviewer-required integrity remediation only |
+| 2 | `us2` | T016-T025 | Not estimated | Blocked on clean US1 review | Treatment remains a separate module |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
-- Warning: `CAPABILITY_SIZE_BLOCK` / `MARKER_SIZE_WARNING`; US1 is 959 source
-  lines and 851 nonblank, non-comment lines against the 400-LOC boundary.
+- Warning: `CAPABILITY_SIZE_BLOCK` / `MARKER_SIZE_WARNING`; US1 is 1,691 source
+  lines and 1,506 nonblank, non-comment lines against the 400-LOC boundary.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.
 - PR mappings: Pending.

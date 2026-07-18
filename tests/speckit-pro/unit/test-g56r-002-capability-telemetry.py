@@ -858,6 +858,11 @@ class CapabilityContractTests(unittest.TestCase):
             retention_records = capabilities.register_raw_evidence_retention(freeze, raw_root, ROOT, manifest=self.manifest)
             self.assertEqual(len(retention_records), 3)
             self.assertEqual(capabilities.register_raw_evidence_retention(freeze, raw_root, ROOT, manifest=self.manifest), retention_records)
+            with capabilities._retention_lock(raw_root):
+                with self.assertRaisesRegex(ValueError, "already in progress"):
+                    capabilities.register_raw_evidence_retention(freeze, raw_root, ROOT, manifest=self.manifest)
+                with self.assertRaisesRegex(ValueError, "already in progress"):
+                    capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-14T23:59:59Z")
             retained_report = capabilities.reconcile_raw_evidence_retention(
                 raw_root, ROOT, "2026-08-14T23:59:59Z",
             )
@@ -878,26 +883,38 @@ class CapabilityContractTests(unittest.TestCase):
             missing_path.write_bytes(missing_bytes); missing_path.chmod(0o600)
             with self.assertRaisesRegex(ValueError, "requires cleanup"):
                 capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-15T00:00:00Z")
-            cleanup_report = capabilities.reconcile_raw_evidence_retention(
-                raw_root, ROOT, "2026-08-15T00:00:00Z", apply=True,
+            with self.assertRaisesRegex(ValueError, "current UTC"):
+                capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2099-01-01T00:00:00Z", apply=True)
+            cleanup_clock = mock.patch.object(
+                capabilities, "_retention_now",
+                return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
             )
+            with cleanup_clock:
+                cleanup_report = capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
             self.assertEqual(cleanup_report["deleted_evidence_digests"], retained_report["retained_evidence_digests"])
             self.assertEqual(cleanup_report["retained_evidence_digests"], [])
             self.assertEqual(len(cleanup_report["deletion_record_digests"]), 3)
-            self.assertEqual(
-                capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-15T00:00:00Z", apply=True),
-                cleanup_report,
-            )
+            with mock.patch.object(
+                capabilities, "_retention_now",
+                return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+            ):
+                self.assertEqual(capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True), cleanup_report)
             cleanup_output = raw_root / "cleanup-report.json"
-            self.assertEqual(capabilities.main([
-                "retention", "--raw-evidence-root", str(raw_root), "--as-of", "2026-08-15T00:00:00Z",
-                "--mode", "cleanup", "--output", str(cleanup_output),
-            ]), 0)
+            with mock.patch.object(
+                capabilities, "_retention_now",
+                return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+            ):
+                self.assertEqual(capabilities.main([
+                    "retention", "--raw-evidence-root", str(raw_root),
+                    "--mode", "cleanup", "--output", str(cleanup_output),
+                ]), 0)
             self.assertEqual(json.loads(cleanup_output.read_text()), cleanup_report)
             verified_deleted = capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-15T00:00:00Z")
             self.assertEqual(verified_deleted["deleted_evidence_digests"], cleanup_report["deleted_evidence_digests"])
             with self.assertRaisesRegex(ValueError, "precedes the deletion"):
                 capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-14T23:59:59Z")
+            with self.assertRaisesRegex(ValueError, "after deletion"):
+                capabilities.register_raw_evidence_retention(freeze, raw_root, ROOT, manifest=self.manifest)
             self.assertTrue(all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in (raw_root / capabilities.RETENTION_RECORDS_DIR).iterdir()))
             self.assertTrue(all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in (raw_root / capabilities.DELETION_RECORDS_DIR).iterdir()))
             raw_file.chmod(0o644)
