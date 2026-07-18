@@ -155,6 +155,75 @@ def trusted_external_qualification(bundle: dict) -> dict[str, dict]:
     return {owner["qualification_evidence_id"]: copy.deepcopy(owner)}
 
 
+def declare_treatment_result(
+    bundle: dict, failure_codes: list[str], disposition: str, reasons: list[str], *, trace_index: int = 0,
+) -> dict:
+    trace = bundle["treatment_traces"][trace_index]
+    trace["treatment_failures"] = [{
+        "failure_code": code, "affected_field": "treatment.evidence",
+        "expected_evidence_ref": None, "observed_evidence_ref": None,
+        "resulting_disposition": treatment.FAILURE_DISPOSITIONS[code],
+    } for code in failure_codes]
+    trace["treatment_disposition"] = disposition
+    trace["disposition_reasons"] = reasons
+    expected_trace_id = trace["objective_binding"]["execution_trace_id"]
+    expected = next(
+        item for item in bundle["fixture_provenance"]["expected_dispositions"]
+        if item["execution_trace_id"] == expected_trace_id
+    )
+    expected["treatment_disposition"] = disposition
+    return bundle
+
+
+REROUTE_REASON_FAILURES = {
+    "reroute_association_mismatch": "reroute_unidentifiable",
+    "ambiguous_reroute_association": "reroute_ambiguous",
+    "reroute_destination_missing": "reroute_unidentifiable",
+    "reroute_destination_ambiguous": "reroute_ambiguous",
+    "reroute_destination_unapproved": "reroute_unapproved",
+    "reroute_destination_mismatch": "reroute_different_agent",
+    "reroute_destination_unidentifiable": "reroute_unidentifiable",
+    "reroute_destination_manifest_mismatch": "reroute_unidentifiable",
+    "reroute_destination_different_agent": "reroute_different_agent",
+    "reroute_destination_model_mismatch": "model_mismatch",
+    "reroute_destination_non_authoritative": "reroute_unapproved",
+    "reroute_destination_untrusted": "reroute_unapproved",
+    "reroute_effective_destination_mismatch": "model_mismatch",
+    "reroute_source_model_mismatch": "model_mismatch",
+    "orphan_reroute_destination_assessment": "reroute_ambiguous",
+}
+
+
+def declare_reroute_result(bundle: dict, trusted: dict[str, dict] | None = None) -> dict:
+    trace = bundle["treatment_traces"][0]
+    events = trace["service_reroute_events"]
+    qualification = {
+        item["qualification_evidence_id"]: item for item in bundle["qualification_evidence_registry"]
+    }
+    disposition, detailed_reasons = treatment._reroute_disposition(
+        trace, events, trace["reroute_destination_assessments"],
+        qualification, trusted or {},
+    )
+    directly_derived = []
+    if trace["supported_effective_effort"] is not None:
+        directly_derived.append("effort_mismatch")
+    if trace["supported_effective_model"] is not None and (
+        len(events) != 1 or events[0]["toModel"] != trace["supported_effective_model"]
+    ):
+        directly_derived.append("model_mismatch")
+    if events and trace["supported_effective_model"] is None:
+        directly_derived.append("model_mismatch")
+    failure_codes = list(dict.fromkeys(directly_derived + [
+        REROUTE_REASON_FAILURES[reason] for reason in detailed_reasons
+        if reason in REROUTE_REASON_FAILURES
+    ]))
+    reasons = (
+        sorted(set(failure_codes) | set(detailed_reasons))
+        if disposition == "hard_fail" else detailed_reasons
+    )
+    return declare_treatment_result(bundle, failure_codes, disposition, reasons)
+
+
 def make_treatment_reroute_case(bundle: dict, authority: str) -> dict:
     trace = bundle["treatment_traces"][0]
     owned = next(item for item in bundle["qualification_evidence_registry"] if item["authority_kind"] == "owned_external")
@@ -192,14 +261,11 @@ def make_treatment_reroute_case(bundle: dict, authority: str) -> dict:
             assessment["destination_named_agent"] = "different-agent"
         trace["reroute_destination_assessments"] = [assessment]
         disposition = "non_scorable_rerouted" if authority == "owned_external" else "hard_fail"
-    trace["treatment_failures"] = []
-    trace["treatment_disposition"] = disposition
-    trace["disposition_reasons"] = ["effective_treatment_unknown"]
     bundle["fixture_provenance"]["expected_dispositions"] = [{
         "execution_trace_id": trace["objective_binding"]["execution_trace_id"],
         "treatment_disposition": disposition,
     }]
-    return bundle
+    return declare_reroute_result(bundle)
 
 
 def source_capture(manifest: dict, retrieved_at: str = "2026-07-16T00:00:00Z") -> list[dict]:
@@ -1242,8 +1308,15 @@ class CapabilityContractTests(unittest.TestCase):
                 capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
             self.assertIsNotNone(raced_filename)
             restored_race_target = raw_root / str(raced_filename)
-            self.assertEqual(capabilities.digest(restored_race_target.read_bytes()), f"sha256:{restored_race_target.stem}")
-            race_link.unlink()
+            self.assertFalse(restored_race_target.exists())
+            with mock.patch.object(
+                capabilities, "_retention_now",
+                return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+            ), self.assertRaisesRegex(ValueError, "interrupted before link-count completion proof"):
+                capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
+            deletion_directory = raw_root / capabilities.DELETION_RECORDS_DIR
+            self.assertFalse(deletion_directory.exists() and any(deletion_directory.iterdir()))
+            os.link(race_link, restored_race_target); race_link.unlink()
             mutated_filename = None
             def mutate_after_digest_before_unlink(filename: str, parent_descriptor: int) -> None:
                 nonlocal mutated_filename
@@ -1564,14 +1637,16 @@ class TreatmentContractTests(unittest.TestCase):
         with self.assertRaises(ValueError, msg=message):
             treatment.validate_treatment_bundle(self.rebound(bundle))
 
-    def assert_bundle_not_proven(self, bundle: dict, expected_disposition: str, message: str = "") -> None:
-        bundle["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = expected_disposition
+    def assert_bundle_not_proven(
+        self, bundle: dict, expected_disposition: str, failure_codes: list[str], message: str = "",
+    ) -> None:
+        declare_treatment_result(bundle, failure_codes, expected_disposition, sorted(failure_codes))
         validated = treatment.validate_treatment_bundle(self.rebound(bundle))
         self.assertEqual(validated["treatment_traces"][0]["treatment_disposition"], expected_disposition, message)
         self.assertNotEqual(expected_disposition, "proven", message)
 
     def assert_reroute_hard_failed(self, bundle: dict, message: str = "", *, trusted: dict[str, dict] | None = None) -> None:
-        bundle["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
+        declare_reroute_result(bundle, trusted)
         validated = treatment.validate_treatment_bundle(
             self.rebound(bundle), trusted_qualification_evidence=trusted or {}
         )
@@ -1661,7 +1736,11 @@ class TreatmentContractTests(unittest.TestCase):
         observation = next(item for item in missing["treatment_traces"][0]["observations"] if item["field_path"] == "route.supported_effective_route_id")
         observation.update({"observation_state": "missing", "value": None, "evidence_ref": None, "captured_at": None})
         missing["treatment_traces"][0]["treatment_disposition"] = "proven"
-        missing["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "unknown"
+        with self.assertRaisesRegex(ValueError, "declared treatment disposition"):
+            treatment.validate_treatment_bundle(self.rebound(copy.deepcopy(missing)))
+        declare_treatment_result(
+            missing, ["effective_treatment_unknown"], "unknown", ["effective_treatment_unknown"]
+        )
         result = treatment.validate_treatment_bundle(self.rebound(missing))
         self.assertEqual(result["treatment_traces"][0]["treatment_disposition"], "unknown")
         self.assertIsNone(result["treatment_traces"][0]["supported_effective_model"])
@@ -1762,8 +1841,12 @@ class TreatmentContractTests(unittest.TestCase):
             "observation_state": "observed_value", "value": "fabricated-model",
             "evidence_ref": "fixture://forged/effective-model", "captured_at": "2026-07-17T04:01:00Z",
         })
-        fabricated["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
-        self.assert_reroute_hard_failed(fabricated)
+        declare_treatment_result(
+            fabricated, ["model_mismatch", "effective_treatment_unknown"], "hard_fail",
+            ["effective_treatment_unknown", "model_mismatch"],
+        )
+        validated = treatment.validate_treatment_bundle(self.rebound(fabricated))
+        self.assertEqual(validated["treatment_traces"][0]["treatment_disposition"], "hard_fail")
 
     def test_manifest_and_predecessor_null_effort_remain_unknown(self) -> None:
         trace = self.bundle["treatment_traces"][0]
@@ -1777,7 +1860,10 @@ class TreatmentContractTests(unittest.TestCase):
         arbitrary = copy.deepcopy(self.bundle)
         arbitrary["treatment_traces"][0]["requested_effort"] = "arbitrary-effort"
         arbitrary["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
-        self.assert_bundle_not_proven(arbitrary, "hard_fail")
+        self.assert_bundle_not_proven(
+            arbitrary, "hard_fail",
+            ["effort_mismatch", "client_or_override_mismatch", "effective_treatment_unknown"],
+        )
 
     def test_configured_route_proof_cannot_self_assert_effective_treatment(self) -> None:
         mutations = [
@@ -1812,7 +1898,24 @@ class TreatmentContractTests(unittest.TestCase):
                     proof = bundle["treatment_traces"][0]["configured_route_proof"]
                     proof["proof_id"] = treatment.content_id(proof, "proof_id")
                     expected = "unknown" if path == ("reroute_monitoring_complete",) else "hard_fail"
-                    self.assert_bundle_not_proven(bundle, expected)
+                    code_by_path = {
+                        ("profile_entry_key", "field_path"): "configuration_mismatch",
+                        ("named_agent",): "agent_mismatch",
+                        ("model",): "model_mismatch",
+                        ("effort",): "effort_mismatch",
+                        ("candidate_route_id",): "configuration_mismatch",
+                        ("agent_contract_id",): "agent_mismatch",
+                        ("instruction_hash",): "configuration_mismatch",
+                        ("configuration_hash",): "configuration_mismatch",
+                        ("client_identity_id",): "client_or_override_mismatch",
+                        ("controlled_overrides", "model"): "client_or_override_mismatch",
+                    }
+                    failure_codes = (
+                        ["effective_treatment_unknown"]
+                        if path == ("reroute_monitoring_complete",)
+                        else [code_by_path[path], "effective_treatment_unknown"]
+                    )
+                    self.assert_bundle_not_proven(bundle, expected, failure_codes)
         validated = treatment.validate_treatment_bundle(copy.deepcopy(self.bundle))
         trace = validated["treatment_traces"][0]
         self.assertEqual(trace["treatment_disposition"], "unknown")
@@ -1837,7 +1940,10 @@ class TreatmentContractTests(unittest.TestCase):
                 bundle = copy.deepcopy(self.bundle)
                 observation = next(item for item in bundle["treatment_traces"][0]["observations"] if item["field_path"] == field_path)
                 observation["value"] = observed_value
-                bundle["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = expected_disposition
+                failure_codes = [expected_code, "effective_treatment_unknown"]
+                declare_treatment_result(
+                    bundle, failure_codes, expected_disposition, sorted(failure_codes)
+                )
                 result = treatment.validate_treatment_bundle(self.rebound(bundle))
                 trace = result["treatment_traces"][0]
                 self.assertEqual(trace["treatment_disposition"], expected_disposition)
@@ -1851,7 +1957,10 @@ class TreatmentContractTests(unittest.TestCase):
         trace["configured_route_proof"]["proof_id"] = treatment.content_id(trace["configured_route_proof"], "proof_id")
         observation = next(item for item in trace["observations"] if item["field_path"] == "treatment.controlled_overrides")
         observation["value"] = copy.deepcopy(trace["controlled_overrides"])
-        materialization["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
+        declare_treatment_result(
+            materialization, ["configuration_mismatch", "effective_treatment_unknown"],
+            "hard_fail", ["configuration_mismatch", "effective_treatment_unknown"],
+        )
         result = treatment.validate_treatment_bundle(self.rebound(materialization))
         self.assertEqual(result["treatment_traces"][0]["treatment_disposition"], "hard_fail")
         self.assertIn("configuration_mismatch", {item["failure_code"] for item in result["treatment_traces"][0]["treatment_failures"]})
@@ -2003,6 +2112,12 @@ class TreatmentContractTests(unittest.TestCase):
         mismatch["treatment_traces"][0]["treatment_failures"] = []
         mismatch["treatment_traces"][0]["treatment_disposition"] = "proven"
         mismatch["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
+        with self.assertRaisesRegex(ValueError, "declared treatment failures"):
+            treatment.validate_treatment_bundle(self.rebound(copy.deepcopy(mismatch)))
+        declare_treatment_result(
+            mismatch, ["skills_mcp_tools_mismatch", "effective_treatment_unknown"], "hard_fail",
+            ["effective_treatment_unknown", "skills_mcp_tools_mismatch"],
+        )
         result = treatment.validate_treatment_bundle(self.rebound(mismatch))
         trace = result["treatment_traces"][0]
         self.assertEqual(trace["treatment_disposition"], "hard_fail")
@@ -2011,6 +2126,24 @@ class TreatmentContractTests(unittest.TestCase):
         wrong_expectation = copy.deepcopy(self.bundle)
         wrong_expectation["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "proven"
         self.assert_bundle_invalid(wrong_expectation)
+
+    def test_declared_treatment_results_must_exactly_match_derived_state(self) -> None:
+        missing_failures = copy.deepcopy(self.bundle)
+        missing_failures["treatment_traces"][0]["treatment_failures"] = []
+        with self.assertRaisesRegex(ValueError, "declared treatment failures"):
+            treatment.validate_treatment_bundle(self.rebound(missing_failures))
+
+        false_proven = copy.deepcopy(self.bundle)
+        false_proven["treatment_traces"][0]["treatment_disposition"] = "proven"
+        with self.assertRaisesRegex(ValueError, "declared treatment disposition"):
+            treatment.validate_treatment_bundle(self.rebound(false_proven))
+
+        incorrect_reasons = copy.deepcopy(self.bundle)
+        incorrect_reasons["treatment_traces"][0]["disposition_reasons"] = [
+            "effective_treatment_or_reroute_evidence_missing"
+        ]
+        with self.assertRaisesRegex(ValueError, "declared treatment disposition reasons"):
+            treatment.validate_treatment_bundle(self.rebound(incorrect_reasons))
 
     def test_status_conditionals_require_exact_null_evidence(self) -> None:
         cases = [
@@ -2101,16 +2234,17 @@ class TreatmentContractTests(unittest.TestCase):
     def test_reroutes_are_separate_read_only_and_fail_closed(self) -> None:
         resolver_before_reroute = copy.deepcopy(self.bundle["route_resolutions"][0])
         approved = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
+        trusted = trusted_external_qualification(self.bundle)
+        declare_reroute_result(approved, trusted)
         result = treatment.validate_treatment_bundle(
-            self.rebound(approved), trusted_qualification_evidence=trusted_external_qualification(self.bundle)
+            self.rebound(approved), trusted_qualification_evidence=trusted
         )
         self.assertEqual(result["treatment_traces"][0]["treatment_disposition"], "non_scorable_rerouted")
         self.assertEqual(result["route_resolutions"][0], resolver_before_reroute)
         for authority in ("synthetic_fixture", "missing", "mismatched"):
             with self.subTest(authority=authority):
                 bundle = make_treatment_reroute_case(copy.deepcopy(self.bundle), authority)
-                failed = treatment.validate_treatment_bundle(self.rebound(bundle))
-                self.assertEqual(failed["treatment_traces"][0]["treatment_disposition"], "hard_fail")
+                self.assert_reroute_hard_failed(bundle)
         ambiguous = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
         second_event = copy.deepcopy(ambiguous["treatment_traces"][0]["service_reroute_events"][0])
         second_event["reason"] = "fixture_second_service_reroute"
@@ -2118,11 +2252,10 @@ class TreatmentContractTests(unittest.TestCase):
         ambiguous["treatment_traces"][0]["service_reroute_events"].append(second_event)
         reroute_observation = next(item for item in ambiguous["treatment_traces"][0]["observations"] if item["field_path"] == "reroute.events")
         reroute_observation["value"].append(copy.deepcopy(second_event))
-        ambiguous["treatment_traces"][0]["treatment_disposition"] = "hard_fail"
-        ambiguous["treatment_traces"][0]["disposition_reasons"] = ["ambiguous_reroute_association"]
-        ambiguous["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
+        trusted = trusted_external_qualification(self.bundle)
+        declare_reroute_result(ambiguous, trusted)
         failed = treatment.validate_treatment_bundle(
-            self.rebound(ambiguous), trusted_qualification_evidence=trusted_external_qualification(self.bundle)
+            self.rebound(ambiguous), trusted_qualification_evidence=trusted
         )
         self.assertEqual(failed["treatment_traces"][0]["treatment_disposition"], "hard_fail")
         self.assertEqual(treatment.FAILURE_DISPOSITIONS["effective_treatment_unknown"], "unknown")
@@ -2239,7 +2372,7 @@ class TreatmentContractTests(unittest.TestCase):
         for authority, expected_reasons in cases.items():
             with self.subTest(authority=authority):
                 bundle = make_treatment_reroute_case(copy.deepcopy(self.bundle), authority)
-                bundle["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
+                declare_reroute_result(bundle)
                 validated = treatment.validate_treatment_bundle(self.rebound(rebind_treatment_owners(bundle)))
                 trace = validated["treatment_traces"][0]
                 self.assertEqual(trace["treatment_disposition"], "hard_fail")
@@ -2525,11 +2658,12 @@ class TreatmentContractTests(unittest.TestCase):
         self.assertEqual(successor["published_at"], TREATMENT_SUCCESSOR_PUBLISHED_AT)
         rerouted = self.rebound(make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external"))
         trusted = trusted_external_qualification(rerouted)
+        declare_reroute_result(rerouted, trusted)
         self.assertEqual(treatment.build_treatment_successor(
             prior, rerouted, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
             trusted_qualification_evidence=trusted,
         ), published)
-        with self.assertRaisesRegex(ValueError, "expected dispositions"):
+        with self.assertRaisesRegex(ValueError, "declared treatment"):
             treatment.build_treatment_successor(
                 prior, rerouted, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
             )

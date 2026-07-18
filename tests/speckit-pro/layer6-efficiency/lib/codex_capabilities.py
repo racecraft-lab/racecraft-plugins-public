@@ -40,6 +40,12 @@ RETENTION_LOCK_DIR = ".retention-lock"
 HAS_DESCRIPTOR_RELATIVE_IO = os.open in os.supports_dir_fd and os.stat in os.supports_dir_fd
 ERROR_TERMINALS = ("timeout", "output_cap_exceeded", "launch_error", "transport_error", "authentication_error", "rate_limited", "malformed_response", "explicit_rejection", "service_reroute", "ambiguous_error")
 _UNSET = object()
+
+
+class _BlockingHardLinkRace(ValueError):
+    """Deletion cannot complete while the original evidence inode remains linked."""
+
+
 _DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
 _HEX_SHA256 = re.compile(r"[0-9a-f]{64}")
 _RAW_REF = re.compile(r"raw://sha256:[0-9a-f]{64}")
@@ -1579,14 +1585,16 @@ def _delete_single_link_private_file(target, raw, expected_digest):
         current = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False)
         raw_current = os.stat(raw, follow_symlinks=False)
         immediately_before = os.fstat(descriptor)
-        if _stable_file_identity(current) != _stable_file_identity(before) or _stable_file_identity(immediately_before) != _stable_file_identity(before) or immediately_before.st_nlink != 1:
+        if current.st_nlink != 1 or immediately_before.st_nlink != 1:
+            raise _BlockingHardLinkRace("expired raw evidence acquired an alternate hard link before deletion")
+        if _stable_file_identity(current) != _stable_file_identity(before) or _stable_file_identity(immediately_before) != _stable_file_identity(before):
             raise ValueError("expired raw evidence changed after digest verification")
         if _stable_directory_identity(raw_current) != _stable_directory_identity(raw_open):
             raise ValueError("raw evidence root changed before deletion")
         _unlink_descriptor_relative(filename, parent_descriptor)
         after_unlink = os.fstat(descriptor)
         if after_unlink.st_nlink != 0:
-            raise ValueError("expired raw evidence retains an alternate hard link after deletion")
+            raise _BlockingHardLinkRace("expired raw evidence retains an alternate hard link after deletion")
         if _stable_file_content_identity(after_unlink) != _stable_file_content_identity(before):
             raise ValueError("expired raw evidence changed while it was being unlinked")
         os.lseek(descriptor, 0, os.SEEK_SET)
@@ -1597,13 +1605,17 @@ def _delete_single_link_private_file(target, raw, expected_digest):
             unlinked_chunks.append(chunk); unlinked_total += len(chunk)
             if unlinked_total > PRIVATE_REFRESH_MAX_BYTES: raise ValueError("unlinked raw evidence exceeds the maximum size")
         after_rehash = os.fstat(descriptor); unlinked_payload = b"".join(unlinked_chunks)
-        if after_rehash.st_nlink != 0 or _stable_file_content_identity(after_rehash) != _stable_file_content_identity(after_unlink) or unlinked_payload != verified_payload or digest(unlinked_payload) != expected_digest:
+        if after_rehash.st_nlink != 0:
+            raise _BlockingHardLinkRace("unlinked raw evidence reacquired an alternate hard link")
+        if _stable_file_content_identity(after_rehash) != _stable_file_content_identity(after_unlink) or unlinked_payload != verified_payload or digest(unlinked_payload) != expected_digest:
             raise ValueError("unlinked raw evidence does not match the verified content identity")
         os.fsync(parent_descriptor)
         raw_after = os.stat(raw, follow_symlinks=False)
         if _stable_directory_identity(raw_after) != _stable_directory_identity(raw_open):
             raise ValueError("raw evidence root changed during deletion")
         return payload
+    except _BlockingHardLinkRace:
+        raise
     except OSError as error:
         if verified_payload is not None:
             _write_private_bytes(target, verified_payload, append_only=not Path(target).exists())

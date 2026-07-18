@@ -1233,7 +1233,15 @@
         "status": "passed",
         "evidence_digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777"
       },
-      "treatment_failures": [],
+      "treatment_failures": [
+        {
+          "failure_code": "effective_treatment_unknown",
+          "affected_field": "treatment.evidence",
+          "expected_evidence_ref": null,
+          "observed_evidence_ref": null,
+          "resulting_disposition": "unknown"
+        }
+      ],
       "context": {
         "threadId": "thread-fixture-001",
         "turnId": "turn-fixture-001"

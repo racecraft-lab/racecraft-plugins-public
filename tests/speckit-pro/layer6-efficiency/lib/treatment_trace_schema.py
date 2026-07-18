@@ -1248,9 +1248,11 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
         "failure_code": code, "affected_field": "treatment.evidence", "expected_evidence_ref": None,
         "observed_evidence_ref": None, "resulting_disposition": FAILURE_DISPOSITIONS[code],
     } for code in derived_codes]
-    if validated_failures and validated_failures != normalized_failures:
-        raise ValueError("declared treatment failures do not match derived treatment failures")
-    row["treatment_failures"] = normalized_failures
+    if validated_failures != normalized_failures:
+        raise ValueError(
+            "declared treatment failures do not match derived treatment failures: "
+            f"expected {derived_codes!r}"
+        )
     failure_dispositions = {item["resulting_disposition"] for item in normalized_failures}
     if reroute_disposition == "non_scorable_rerouted" and "hard_fail" not in failure_dispositions: expected_disposition, expected_reasons = reroute_disposition, reasons
     elif "hard_fail" in failure_dispositions:
@@ -1264,7 +1266,16 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
     declared_reasons = _strings(row["disposition_reasons"], "treatment disposition reasons")
     if any(reason not in DISPOSITION_REASON_CODES for reason in declared_reasons):
         raise ValueError("treatment disposition reasons must use enumerated codes")
-    row["treatment_disposition"] = expected_disposition; row["disposition_reasons"] = expected_reasons
+    if row["treatment_disposition"] != expected_disposition:
+        raise ValueError(
+            "declared treatment disposition does not match the derived disposition: "
+            f"expected {expected_disposition!r}"
+        )
+    if declared_reasons != expected_reasons:
+        raise ValueError(
+            "declared treatment disposition reasons do not match the derived reasons: "
+            f"expected {expected_reasons!r}"
+        )
     return row
 
 
