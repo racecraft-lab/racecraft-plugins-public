@@ -35,7 +35,9 @@ RAW_EVIDENCE_PENDING_DAYS = 30
 RETENTION_RECORDS_DIR = "retention-records"
 DELETION_RECORDS_DIR = "deletion-records"
 PUBLICATION_RECEIPTS_DIR = "publication-receipts"
+DELETION_INTENTS_DIR = "deletion-intents"
 RETENTION_LOCK_DIR = ".retention-lock"
+HAS_DESCRIPTOR_RELATIVE_IO = os.open in os.supports_dir_fd and os.stat in os.supports_dir_fd
 ERROR_TERMINALS = ("timeout", "output_cap_exceeded", "launch_error", "transport_error", "authentication_error", "rate_limited", "malformed_response", "explicit_rejection", "service_reroute", "ambiguous_error")
 _UNSET = object()
 _DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
@@ -233,24 +235,76 @@ def _parse_json_bytes(raw):
 def _stable_file_identity(metadata):
     return (
         metadata.st_dev, metadata.st_ino, metadata.st_size, metadata.st_mtime_ns,
-        metadata.st_ctime_ns, stat.S_IMODE(metadata.st_mode),
+        metadata.st_ctime_ns, stat.S_IMODE(metadata.st_mode), metadata.st_nlink,
     )
 
 
-def _read_bounded_regular_file(path, *, required_mode=None):
-    source = Path(os.path.abspath(path))
-    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+def _stable_directory_identity(metadata):
+    return metadata.st_dev, metadata.st_ino, stat.S_IFMT(metadata.st_mode), stat.S_IMODE(metadata.st_mode)
+
+
+def _read_bounded_regular_file(
+    path, *, required_mode=None, allowed_root=None, expected_parent_identity=None,
+    require_single_link=False,
+):
+    source = Path(os.path.abspath(path)); root = Path(os.path.abspath(allowed_root or source.parent))
     try:
-        pathname_before = os.stat(source, follow_symlinks=False)
-        if not stat.S_ISREG(pathname_before.st_mode):
-            raise ValueError("bounded input must be a regular non-symlink file")
-        descriptor = os.open(source, flags)
+        relative = source.relative_to(root)
+    except ValueError as error:
+        raise ValueError("bounded input must remain inside its approved root") from error
+    if not relative.parts:
+        raise ValueError("bounded input must name a file below its approved root")
+    if not HAS_DESCRIPTOR_RELATIVE_IO:
+        raise ValueError("bounded input requires descriptor-relative path validation")
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    directory_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow | getattr(os, "O_DIRECTORY", 0)
+    file_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
+    directory_descriptors, directory_identities = [], []
+    descriptor = None
+    try:
+        root_before = os.stat(root, follow_symlinks=False)
+        if not stat.S_ISDIR(root_before.st_mode):
+            raise ValueError("bounded input approved root must be a real directory")
+        root_descriptor = os.open(root, directory_flags)
+        directory_descriptors.append(root_descriptor)
+        root_open = os.fstat(root_descriptor)
+        if _stable_directory_identity(root_before) != _stable_directory_identity(root_open):
+            raise ValueError("bounded input approved root changed before it was opened")
+        directory_identities.append(_stable_directory_identity(root_open))
+        parent_descriptor = root_descriptor
+        for component in relative.parts[:-1]:
+            component_before = os.stat(component, dir_fd=parent_descriptor, follow_symlinks=False)
+            if not stat.S_ISDIR(component_before.st_mode):
+                raise ValueError("bounded input path components must be real directories")
+            child_descriptor = os.open(component, directory_flags, dir_fd=parent_descriptor)
+            child_open = os.fstat(child_descriptor)
+            if _stable_directory_identity(component_before) != _stable_directory_identity(child_open):
+                os.close(child_descriptor)
+                raise ValueError("bounded input directory changed before it was opened")
+            directory_descriptors.append(child_descriptor)
+            directory_identities.append(_stable_directory_identity(child_open))
+            parent_descriptor = child_descriptor
+        if expected_parent_identity is not None and _stable_directory_identity(os.fstat(parent_descriptor)) != expected_parent_identity:
+            raise ValueError("bounded input parent changed after validation")
+        filename = relative.parts[-1]
+        pathname_before = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False)
+        if not stat.S_ISREG(pathname_before.st_mode) or require_single_link and pathname_before.st_nlink != 1:
+            raise ValueError("bounded input must be a single-link regular non-symlink file")
+        descriptor = os.open(filename, file_flags, dir_fd=parent_descriptor)
     except OSError as error:
+        if descriptor is not None: os.close(descriptor)
+        for directory_descriptor in reversed(directory_descriptors): os.close(directory_descriptor)
         raise ValueError("bounded input must be a readable regular non-symlink file") from error
+    except ValueError:
+        if descriptor is not None: os.close(descriptor)
+        for directory_descriptor in reversed(directory_descriptors): os.close(directory_descriptor)
+        raise
     try:
+        if descriptor is None:
+            raise ValueError("bounded input could not be opened safely")
         before = os.fstat(descriptor)
-        if not stat.S_ISREG(before.st_mode):
-            raise ValueError("bounded input must be a regular file")
+        if not stat.S_ISREG(before.st_mode) or require_single_link and before.st_nlink != 1:
+            raise ValueError("bounded input must be a single-link regular file")
         if _stable_file_identity(pathname_before) != _stable_file_identity(before):
             raise ValueError("bounded input pathname changed before it was read")
         if required_mode is not None and os.name != "nt" and stat.S_IMODE(before.st_mode) != required_mode:
@@ -268,15 +322,33 @@ def _read_bounded_regular_file(path, *, required_mode=None):
         after = os.fstat(descriptor)
         if _stable_file_identity(after) != _stable_file_identity(before) or total != after.st_size:
             raise ValueError("bounded input changed while it was being read")
-        try:
-            current = os.stat(source, follow_symlinks=False)
-        except OSError as error:
-            raise ValueError("bounded input pathname changed while it was being read") from error
-        if not stat.S_ISREG(current.st_mode) or _stable_file_identity(current) != _stable_file_identity(after):
+        current = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False)
+        if _stable_file_identity(current) != _stable_file_identity(after):
             raise ValueError("bounded input pathname changed while it was being read")
+        verifier_descriptors = []
+        try:
+            root_current = os.stat(root, follow_symlinks=False)
+            verifier = os.open(root, directory_flags)
+            verifier_descriptors.append(verifier)
+            if _stable_directory_identity(root_current) != directory_identities[0] or _stable_directory_identity(os.fstat(verifier)) != directory_identities[0]:
+                raise ValueError("bounded input approved root changed while it was being read")
+            for component, expected_identity in zip(relative.parts[:-1], directory_identities[1:]):
+                next_descriptor = os.open(component, directory_flags, dir_fd=verifier)
+                verifier_descriptors.append(next_descriptor)
+                if _stable_directory_identity(os.fstat(next_descriptor)) != expected_identity:
+                    raise ValueError("bounded input directory changed while it was being read")
+                verifier = next_descriptor
+            current_path = os.stat(filename, dir_fd=verifier, follow_symlinks=False)
+            if _stable_file_identity(current_path) != _stable_file_identity(after):
+                raise ValueError("bounded input path changed while it was being read")
+        except OSError as error:
+            raise ValueError("bounded input path changed while it was being read") from error
+        finally:
+            for verifier_descriptor in reversed(verifier_descriptors): os.close(verifier_descriptor)
         return b"".join(chunks)
     finally:
-        os.close(descriptor)
+        if descriptor is not None: os.close(descriptor)
+        for directory_descriptor in reversed(directory_descriptors): os.close(directory_descriptor)
 
 
 def digest_regular_file(path):
@@ -1097,24 +1169,35 @@ def _git_worktree_ancestor(path):
     return any((ancestor / ".git").exists() for ancestor in (current, *current.parents))
 
 
-def validate_private_external_file(path, repository_root, label, *, output=False):
+def _private_external_file_binding(path, repository_root, label, *, output=False):
     if os.name == "nt":
         raise ValueError("operator-only private-file permissions are not supported on Windows")
     lexical = Path(os.path.abspath(path)); repo = Path(repository_root).resolve()
     if lexical.is_symlink(): raise ValueError(f"{label} cannot be a symlink")
     parent = lexical.parent.resolve(strict=True); resolved = parent / lexical.name
     if resolved == repo or repo in resolved.parents or _git_worktree_ancestor(resolved): raise ValueError(f"{label} must remain outside every Git worktree")
-    if os.name != "nt" and stat.S_IMODE(parent.stat().st_mode) != 0o700: raise ValueError(f"{label} parent directory must use mode 0700")
-    if output and not resolved.exists(): return resolved
+    parent_metadata = os.stat(parent, follow_symlinks=False)
+    if not stat.S_ISDIR(parent_metadata.st_mode) or stat.S_IMODE(parent_metadata.st_mode) != 0o700:
+        raise ValueError(f"{label} parent directory must use mode 0700")
+    parent_identity = _stable_directory_identity(parent_metadata)
+    if output and not resolved.exists(): return resolved, parent_identity
     if not resolved.is_file() or resolved.is_symlink(): raise ValueError(f"{label} must be a regular non-symlink file")
     if os.name != "nt" and stat.S_IMODE(resolved.stat().st_mode) != 0o600: raise ValueError(f"{label} must use mode 0600")
     if resolved.stat().st_size > PRIVATE_REFRESH_MAX_BYTES: raise ValueError(f"{label} exceeds the bounded private-file size")
+    return resolved, parent_identity
+
+
+def validate_private_external_file(path, repository_root, label, *, output=False):
+    resolved, _ = _private_external_file_binding(path, repository_root, label, output=output)
     return resolved
 
 
 def read_private_external_file(path, repository_root, label):
-    resolved = validate_private_external_file(path, repository_root, label)
-    return resolved, _read_bounded_regular_file(resolved, required_mode=0o600)
+    resolved, parent_identity = _private_external_file_binding(path, repository_root, label)
+    return resolved, _read_bounded_regular_file(
+        resolved, required_mode=0o600, allowed_root=Path(resolved.anchor),
+        expected_parent_identity=parent_identity, require_single_link=True,
+    )
 
 
 def validate_content_addressed_private_file(path, repository_root, label):
@@ -1272,7 +1355,7 @@ def _validate_retention_record(record_digest, record):
 
 
 def _validate_deletion_record(record_digest, record):
-    keys = {"schema_version", "raw_evidence_digest", "retention_record_digests", "delete_after", "deleted_at"}
+    keys = {"schema_version", "raw_evidence_digest", "retention_record_digests", "deletion_intent_digest", "delete_after", "deleted_at"}
     if not isinstance(record, dict) or set(record) != keys or record["schema_version"] != "raw-evidence-deletion.v1":
         raise ValueError("raw evidence deletion record must use the closed v1 shape")
     _need_digest(record_digest, "deletion record digest"); _need_digest(record["raw_evidence_digest"], "raw_evidence_digest")
@@ -1280,9 +1363,25 @@ def _validate_deletion_record(record_digest, record):
     if not isinstance(refs, list) or not refs or refs != sorted(set(refs)):
         raise ValueError("raw evidence deletion record requires unique retention records")
     for value in refs: _need_digest(value, "retention_record_digest")
+    _need_digest(record["deletion_intent_digest"], "deletion_intent_digest")
     deadline = _parsed_timestamp(record["delete_after"], "deletion deadline")
     if _parsed_timestamp(record["deleted_at"], "deletion timestamp") < deadline:
         raise ValueError("raw evidence deletion precedes its retention deadline")
+    return record
+
+
+def _validate_deletion_intent(record_digest, record):
+    keys = {"schema_version", "raw_evidence_digest", "retention_record_digests", "delete_after", "deletion_started_at"}
+    if not isinstance(record, dict) or set(record) != keys or record["schema_version"] != "raw-evidence-deletion-intent.v1":
+        raise ValueError("raw evidence deletion intent must use the closed v1 shape")
+    _need_digest(record_digest, "deletion intent digest"); _need_digest(record["raw_evidence_digest"], "raw_evidence_digest")
+    refs = record["retention_record_digests"]
+    if not isinstance(refs, list) or not refs or refs != sorted(set(refs)):
+        raise ValueError("raw evidence deletion intent requires unique retention records")
+    for value in refs: _need_digest(value, "retention_record_digest")
+    deadline = _parsed_timestamp(record["delete_after"], "deletion intent deadline")
+    if _parsed_timestamp(record["deletion_started_at"], "deletion intent timestamp") < deadline:
+        raise ValueError("raw evidence deletion intent precedes its retention deadline")
     return record
 
 
@@ -1333,11 +1432,15 @@ def _register_raw_evidence_retention_locked(freeze, raw, repository_root):
     published = _parsed_timestamp(freeze.get("published_at"), "freeze publication timestamp")
     evidence_digests = _freeze_raw_evidence_digests(freeze)
     if not evidence_digests: return []
-    deleted_digests = {
+    deletion_started_digests = {
         _validate_deletion_record(record_digest, record)["raw_evidence_digest"]
         for record_digest, record in _load_private_records(raw / DELETION_RECORDS_DIR, repository_root, "deletion record")
     }
-    if set(evidence_digests) & deleted_digests:
+    deletion_started_digests.update(
+        _validate_deletion_intent(record_digest, record)["raw_evidence_digest"]
+        for record_digest, record in _load_private_records(raw / DELETION_INTENTS_DIR, repository_root, "deletion intent")
+    )
+    if set(evidence_digests) & deletion_started_digests:
         raise ValueError("raw evidence cannot be registered after deletion has begun")
     records = _private_record_directory(raw, RETENTION_RECORDS_DIR)
     existing = {}
@@ -1432,6 +1535,65 @@ def _retention_now():
     return datetime.now(timezone.utc)
 
 
+def _unlink_descriptor_relative(filename, parent_descriptor):
+    os.unlink(filename, dir_fd=parent_descriptor)
+
+
+def _delete_single_link_private_file(target, raw, expected_digest):
+    if not HAS_DESCRIPTOR_RELATIVE_IO:
+        raise ValueError("raw evidence deletion requires descriptor-relative path validation")
+    filename = Path(target).name
+    if Path(target).parent != raw:
+        raise ValueError("raw evidence deletion target must be an immediate child of its private root")
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    directory_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow | getattr(os, "O_DIRECTORY", 0)
+    file_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
+    parent_descriptor = descriptor = None
+    try:
+        raw_before = os.stat(raw, follow_symlinks=False)
+        parent_descriptor = os.open(raw, directory_flags)
+        raw_open = os.fstat(parent_descriptor)
+        if _stable_directory_identity(raw_before) != _stable_directory_identity(raw_open):
+            raise ValueError("raw evidence root changed before deletion")
+        pathname_before = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False)
+        if not stat.S_ISREG(pathname_before.st_mode) or pathname_before.st_nlink != 1:
+            raise ValueError("expired raw evidence must be a single-link regular non-symlink file")
+        descriptor = os.open(filename, file_flags, dir_fd=parent_descriptor)
+        before = os.fstat(descriptor)
+        if _stable_file_identity(pathname_before) != _stable_file_identity(before) or stat.S_IMODE(before.st_mode) != 0o600:
+            raise ValueError("expired raw evidence changed before deletion")
+        chunks, total = [], 0
+        while True:
+            chunk = os.read(descriptor, min(1024 * 1024, PRIVATE_REFRESH_MAX_BYTES + 1 - total))
+            if not chunk: break
+            chunks.append(chunk); total += len(chunk)
+            if total > PRIVATE_REFRESH_MAX_BYTES: raise ValueError("expired raw evidence exceeds the maximum size")
+        payload = b"".join(chunks)
+        if total != before.st_size or digest(payload) != expected_digest or filename != f"{expected_digest.removeprefix('sha256:')}.json":
+            raise ValueError("expired raw evidence does not match its content identity")
+        current = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False)
+        raw_current = os.stat(raw, follow_symlinks=False)
+        immediately_before = os.fstat(descriptor)
+        if _stable_file_identity(current) != _stable_file_identity(immediately_before) or immediately_before.st_nlink != 1:
+            raise ValueError("expired raw evidence acquired an alternate hard link before deletion")
+        if _stable_directory_identity(raw_current) != _stable_directory_identity(raw_open):
+            raise ValueError("raw evidence root changed before deletion")
+        _unlink_descriptor_relative(filename, parent_descriptor)
+        after_unlink = os.fstat(descriptor)
+        if after_unlink.st_nlink != 0:
+            raise ValueError("expired raw evidence retains an alternate hard link after deletion")
+        os.fsync(parent_descriptor)
+        raw_after = os.stat(raw, follow_symlinks=False)
+        if _stable_directory_identity(raw_after) != _stable_directory_identity(raw_open):
+            raise ValueError("raw evidence root changed during deletion")
+        return payload
+    except OSError as error:
+        raise ValueError("expired raw evidence could not be deleted safely") from error
+    finally:
+        if descriptor is not None: os.close(descriptor)
+        if parent_descriptor is not None: os.close(parent_descriptor)
+
+
 def reconcile_raw_evidence_retention(raw_evidence_root, repository_root, as_of=None, *, apply=False):
     raw = validate_raw_evidence_root(raw_evidence_root, repository_root)
     if apply:
@@ -1465,32 +1627,50 @@ def _reconcile_raw_evidence_retention_locked(raw, repository_root, as_of, curren
         governing_record_digests.update(refs)
     pending_record_digests = sorted(set(retention_by_digest) - governing_record_digests)
     retention_records = all_retention_records
+    deletion_intents = [(_validate_deletion_intent(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / DELETION_INTENTS_DIR, repository_root, "deletion intent")]
     deletion_records = [(_validate_deletion_record(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / DELETION_RECORDS_DIR, repository_root, "deletion record")]
     retention_by_evidence = {}
     for record, record_digest in retention_records:
         retention_by_evidence.setdefault(record["raw_evidence_digest"], []).append((record, record_digest))
+    intent_by_evidence = {}
+    for record, record_digest in deletion_intents:
+        if record["raw_evidence_digest"] in intent_by_evidence:
+            raise ValueError("raw evidence digest has multiple deletion intents")
+        intent_by_evidence[record["raw_evidence_digest"]] = (record, record_digest)
     deletion_by_evidence = {}
     for record, record_digest in deletion_records:
         if record["raw_evidence_digest"] in deletion_by_evidence:
             raise ValueError("raw evidence digest has multiple deletion records")
         deletion_by_evidence[record["raw_evidence_digest"]] = (record, record_digest)
-    if not set(deletion_by_evidence) <= set(retention_by_evidence):
-        raise ValueError("deletion record lacks retained evidence authority")
+    if not set(intent_by_evidence) <= set(retention_by_evidence) or not set(deletion_by_evidence) <= set(intent_by_evidence):
+        raise ValueError("deletion state lacks retained evidence authority")
+    for evidence_digest, (record, _) in deletion_by_evidence.items():
+        intent, intent_digest = intent_by_evidence[evidence_digest]
+        if record["deletion_intent_digest"] != intent_digest or record["retention_record_digests"] != intent["retention_record_digests"] or record["delete_after"] != intent["delete_after"]:
+            raise ValueError("raw evidence deletion record does not bind its deletion intent")
     retained, deleted, deletion_digests = [], [], []
     for evidence_digest in sorted(retention_by_evidence):
         grouped = retention_by_evidence[evidence_digest]
         record_digests = sorted(record_digest for _, record_digest in grouped)
-        deadlines = []
+        governing_deadlines, pending_deadlines = [], []
         for record, record_digest in grouped:
             registered = _parsed_timestamp(record["registered_at"], "retention registration timestamp")
             if current < registered:
                 raise ValueError("retention as-of timestamp precedes the registration record")
             deadline = _parsed_timestamp(record["delete_after"], "retention deletion deadline")
-            if record_digest not in governing_record_digests:
-                deadline = min(deadline, registered + timedelta(days=RAW_EVIDENCE_PENDING_DAYS))
-            deadlines.append(deadline)
-        deadline = max(deadlines)
+            if record_digest in governing_record_digests:
+                governing_deadlines.append(deadline)
+            else:
+                pending_deadlines.append(min(deadline, registered + timedelta(days=RAW_EVIDENCE_PENDING_DAYS)))
+        deadline = max(governing_deadlines) if governing_deadlines else min(pending_deadlines)
         deadline_text = _format_timestamp(deadline); target = raw / f"{evidence_digest.removeprefix('sha256:')}.json"
+        intent = intent_by_evidence.get(evidence_digest)
+        if intent is not None:
+            intent_record, _ = intent
+            if intent_record["retention_record_digests"] != record_digests or intent_record["delete_after"] != deadline_text:
+                raise ValueError("raw evidence deletion intent does not bind the complete retention history")
+            if current < _parsed_timestamp(intent_record["deletion_started_at"], "deletion intent timestamp"):
+                raise ValueError("retention as-of timestamp precedes the deletion intent")
         deletion = deletion_by_evidence.get(evidence_digest)
         if deletion is not None:
             record, record_digest = deletion
@@ -1500,24 +1680,45 @@ def _reconcile_raw_evidence_retention_locked(raw, repository_root, as_of, curren
                 raise ValueError("retention as-of timestamp precedes the deletion record")
             if target.exists():
                 if not apply: raise ValueError("deletion record still has retained raw evidence bytes")
-                read_content_addressed_private_file(target, repository_root, "expired raw evidence"); target.unlink(); _fsync_directory(raw)
+                _delete_single_link_private_file(target, raw, evidence_digest)
             deleted.append(evidence_digest); deletion_digests.append(record_digest); continue
+        if intent is not None and not target.exists():
+            raise ValueError("raw evidence deletion was interrupted before link-count completion proof")
         if current < deadline:
+            if intent is not None: raise ValueError("raw evidence deletion intent precedes its governing deadline")
             read_content_addressed_private_file(target, repository_root, "retained raw evidence")
             retained.append(evidence_digest); continue
         if not target.exists(): raise ValueError("expired raw evidence is missing without a deletion record")
         if not apply: raise ValueError("expired raw evidence requires cleanup")
-        read_content_addressed_private_file(target, repository_root, "expired raw evidence")
+        if intent is None:
+            intent_record = {
+                "schema_version": "raw-evidence-deletion-intent.v1",
+                "raw_evidence_digest": evidence_digest,
+                "retention_record_digests": record_digests,
+                "delete_after": deadline_text,
+                "deletion_started_at": as_of,
+            }
+            intent_directory = _private_record_directory(raw, DELETION_INTENTS_DIR)
+            intent_digest = _store_private_record(intent_directory, intent_record, repository_root)
+            intent_by_evidence[evidence_digest] = (intent_record, intent_digest)
+        else:
+            intent_record, intent_digest = intent
+        retained_payload = _delete_single_link_private_file(target, raw, evidence_digest)
         deletion_record = {
             "schema_version": "raw-evidence-deletion.v1",
             "raw_evidence_digest": evidence_digest,
             "retention_record_digests": record_digests,
+            "deletion_intent_digest": intent_digest,
             "delete_after": deadline_text,
             "deleted_at": as_of,
         }
         directory = _private_record_directory(raw, DELETION_RECORDS_DIR)
-        record_digest = _store_private_record(directory, deletion_record, repository_root)
-        target.unlink(); _fsync_directory(raw); deleted.append(evidence_digest); deletion_digests.append(record_digest)
+        try:
+            record_digest = _store_private_record(directory, deletion_record, repository_root)
+        except Exception:
+            if not target.exists(): _write_private_bytes(target, retained_payload, append_only=True)
+            raise
+        deleted.append(evidence_digest); deletion_digests.append(record_digest)
     validate_raw_evidence_root(raw, repository_root)
     return {
         "schema_version": "raw-evidence-retention-report.v1", "mode": "cleanup" if apply else "verify", "as_of": as_of,
@@ -1525,6 +1726,7 @@ def _reconcile_raw_evidence_retention_locked(raw, repository_root, as_of, curren
         "retention_record_digests": sorted(record_digest for _, record_digest in retention_records),
         "pending_retention_record_digests": pending_record_digests,
         "publication_receipt_digests": sorted(record_digest for _, record_digest in publication_receipts),
+        "deletion_intent_digests": sorted(record_digest for _, record_digest in intent_by_evidence.values()),
         "deletion_record_digests": sorted(deletion_digests),
     }
 

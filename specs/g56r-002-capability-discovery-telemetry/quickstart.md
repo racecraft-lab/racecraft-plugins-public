@@ -228,20 +228,18 @@ binding, and the whole-freeze content identity.
 Any later evidence change creates a successor freeze rather than editing the
 published ID in place.
 
-## 7. Validate Treatment and Replay Twice
+## 7. Validate the Treatment Bundle
 
 ```sh
-python3 tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py replay \
-  --fixture tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json \
-  --digest-manifest tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json \
-  --repeat 2
+python3 tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py validate \
+  --fixture tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json
 ```
 
-The validator checks hashes before parsing, the closed telemetry inventory,
-six-ID joins, typed null states, configured-route proof, resource/lifecycle
-fields, and separate resolver/service-reroute records. It must produce identical
-normalized output, dispositions, and digests on both passes without network or
-raw-store access.
+The US2 validator checks the closed telemetry inventory, six-ID joins, typed
+null states, configured-route proof, resource/lifecycle fields, and separate
+resolver/service-reroute records. The digest-manifest replay command and its
+two-pass normalized-output comparison are T026-T030 work and remain unavailable
+until the US3 replay increment is implemented.
 
 ## 8. Repository Verification
 
