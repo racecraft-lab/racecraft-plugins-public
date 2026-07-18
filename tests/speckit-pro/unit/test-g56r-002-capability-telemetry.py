@@ -1241,7 +1241,25 @@ class CapabilityContractTests(unittest.TestCase):
             ), self.assertRaisesRegex(ValueError, "retains an alternate hard link"):
                 capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
             self.assertIsNotNone(raced_filename)
-            os.link(race_link, raw_root / str(raced_filename)); race_link.unlink()
+            restored_race_target = raw_root / str(raced_filename)
+            self.assertEqual(capabilities.digest(restored_race_target.read_bytes()), f"sha256:{restored_race_target.stem}")
+            race_link.unlink()
+            mutated_filename = None
+            def mutate_after_digest_before_unlink(filename: str, parent_descriptor: int) -> None:
+                nonlocal mutated_filename
+                mutated_filename = filename
+                mutated = raw_root / filename; mutated.write_bytes(b"mutated-after-digest\n"); mutated.chmod(0o600)
+                original_unlink_descriptor_relative(filename, parent_descriptor)
+            with mock.patch.object(
+                capabilities, "_retention_now",
+                return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+            ), mock.patch.object(
+                capabilities, "_unlink_descriptor_relative", side_effect=mutate_after_digest_before_unlink,
+            ), self.assertRaisesRegex(ValueError, "changed while it was being unlinked|verified content identity"):
+                capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
+            self.assertIsNotNone(mutated_filename)
+            restored_mutation_target = raw_root / str(mutated_filename)
+            self.assertEqual(capabilities.digest(restored_mutation_target.read_bytes()), f"sha256:{restored_mutation_target.stem}")
             cleanup_clock = mock.patch.object(
                 capabilities, "_retention_now",
                 return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),

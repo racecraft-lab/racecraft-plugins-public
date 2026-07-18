@@ -243,6 +243,10 @@ def _stable_directory_identity(metadata):
     return metadata.st_dev, metadata.st_ino, stat.S_IFMT(metadata.st_mode), stat.S_IMODE(metadata.st_mode)
 
 
+def _stable_file_content_identity(metadata):
+    return metadata.st_dev, metadata.st_ino, metadata.st_size, metadata.st_mtime_ns, stat.S_IMODE(metadata.st_mode)
+
+
 def _read_bounded_regular_file(
     path, *, required_mode=None, allowed_root=None, expected_parent_identity=None,
     require_single_link=False,
@@ -1548,7 +1552,7 @@ def _delete_single_link_private_file(target, raw, expected_digest):
     nofollow = getattr(os, "O_NOFOLLOW", 0)
     directory_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow | getattr(os, "O_DIRECTORY", 0)
     file_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
-    parent_descriptor = descriptor = None
+    parent_descriptor = descriptor = None; verified_payload = None
     try:
         raw_before = os.stat(raw, follow_symlinks=False)
         parent_descriptor = os.open(raw, directory_flags)
@@ -1571,24 +1575,43 @@ def _delete_single_link_private_file(target, raw, expected_digest):
         payload = b"".join(chunks)
         if total != before.st_size or digest(payload) != expected_digest or filename != f"{expected_digest.removeprefix('sha256:')}.json":
             raise ValueError("expired raw evidence does not match its content identity")
+        verified_payload = payload
         current = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False)
         raw_current = os.stat(raw, follow_symlinks=False)
         immediately_before = os.fstat(descriptor)
-        if _stable_file_identity(current) != _stable_file_identity(immediately_before) or immediately_before.st_nlink != 1:
-            raise ValueError("expired raw evidence acquired an alternate hard link before deletion")
+        if _stable_file_identity(current) != _stable_file_identity(before) or _stable_file_identity(immediately_before) != _stable_file_identity(before) or immediately_before.st_nlink != 1:
+            raise ValueError("expired raw evidence changed after digest verification")
         if _stable_directory_identity(raw_current) != _stable_directory_identity(raw_open):
             raise ValueError("raw evidence root changed before deletion")
         _unlink_descriptor_relative(filename, parent_descriptor)
         after_unlink = os.fstat(descriptor)
         if after_unlink.st_nlink != 0:
             raise ValueError("expired raw evidence retains an alternate hard link after deletion")
+        if _stable_file_content_identity(after_unlink) != _stable_file_content_identity(before):
+            raise ValueError("expired raw evidence changed while it was being unlinked")
+        os.lseek(descriptor, 0, os.SEEK_SET)
+        unlinked_chunks, unlinked_total = [], 0
+        while True:
+            chunk = os.read(descriptor, min(1024 * 1024, PRIVATE_REFRESH_MAX_BYTES + 1 - unlinked_total))
+            if not chunk: break
+            unlinked_chunks.append(chunk); unlinked_total += len(chunk)
+            if unlinked_total > PRIVATE_REFRESH_MAX_BYTES: raise ValueError("unlinked raw evidence exceeds the maximum size")
+        after_rehash = os.fstat(descriptor); unlinked_payload = b"".join(unlinked_chunks)
+        if after_rehash.st_nlink != 0 or _stable_file_content_identity(after_rehash) != _stable_file_content_identity(after_unlink) or unlinked_payload != verified_payload or digest(unlinked_payload) != expected_digest:
+            raise ValueError("unlinked raw evidence does not match the verified content identity")
         os.fsync(parent_descriptor)
         raw_after = os.stat(raw, follow_symlinks=False)
         if _stable_directory_identity(raw_after) != _stable_directory_identity(raw_open):
             raise ValueError("raw evidence root changed during deletion")
         return payload
     except OSError as error:
+        if verified_payload is not None:
+            _write_private_bytes(target, verified_payload, append_only=not Path(target).exists())
         raise ValueError("expired raw evidence could not be deleted safely") from error
+    except ValueError:
+        if verified_payload is not None:
+            _write_private_bytes(target, verified_payload, append_only=not Path(target).exists())
+        raise
     finally:
         if descriptor is not None: os.close(descriptor)
         if parent_descriptor is not None: os.close(parent_descriptor)

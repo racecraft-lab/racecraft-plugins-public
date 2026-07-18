@@ -28,6 +28,7 @@
     "descriptor_relative_file_loading": "pass",
     "descriptor_relative_private_inputs": "pass",
     "post_unlink_hard_link_proof": "pass",
+    "post_unlink_digest_revalidation": "pass",
     "parser_and_path_sanitization": "pass",
     "detailed_reroute_reasons": "pass",
     "trusted_successor_qualification_forwarding": "pass",

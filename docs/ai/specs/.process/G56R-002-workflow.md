@@ -906,7 +906,7 @@ For every task:
   successor, external treatment-binding and predecessor-lineage authority,
   bounded non-extending recovery of pending retention records, executable
   schema/runtime parity, descriptor-relative private inputs, post-unlink
-  hard-link proof, sanitized CLI handling, and US2-only CLI documentation,
+  hard-link and digest proof, sanitized CLI handling, and US2-only CLI documentation,
   single-client profile authority, content-addressed six-ID ownership,
   reciprocal acyclic trace-graph validation, externally trusted successor
   reroutes, and detailed reroute reasons. A new implementation checkpoint SHA
@@ -925,7 +925,7 @@ For every task:
 | Feature spec | `sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56` |
 | Plan-declared scope | `sha256:35d4122bd719ba1512da85fdeead0c990d598591b33af7c3ed38947cea1aaf9e` |
 | Tasks | `sha256:4b78765419fc0f5d3fafdeefb2b78c19890cf7a02bc74c5bf128e21c97457867` |
-| Reviewability evidence | `sha256:3e0ac52f9d5e199bcbf832d4efb4e099f87313f2a74f6b37562cdec339e57661` |
+| Reviewability evidence | `sha256:67041fc0375ebc15f64ac264aeb1b99c748629ef01e606800ed00c04c9832845` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
@@ -935,7 +935,7 @@ For every task:
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
-  size warnings. US1 is 2,167 / 1,958 source/nonblank lines and US2 is 1,455 / 1,331
+  size warnings. US1 is 2,190 / 1,979 source/nonblank lines and US2 is 1,455 / 1,331
   against the 400-LOC boundary; both use typed size-only exceptions.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.
