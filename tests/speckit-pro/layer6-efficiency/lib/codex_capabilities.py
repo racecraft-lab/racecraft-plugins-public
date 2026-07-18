@@ -31,6 +31,7 @@ CANONICAL_MANIFEST_SNAPSHOT_ID = "G56R-001-SNAPSHOT-2026-07-16-V3"
 CANONICAL_MANIFEST_DIGEST = "sha256:3dc5c6c7a117ac8d01728ffeff1a35cf38fb0d6e982bb029cf192a790d30cd64"
 PRIVATE_REFRESH_MAX_BYTES = 32 * 1024 * 1024
 RAW_EVIDENCE_RETENTION_DAYS = 30
+RAW_EVIDENCE_PENDING_DAYS = 30
 RETENTION_RECORDS_DIR = "retention-records"
 DELETION_RECORDS_DIR = "deletion-records"
 PUBLICATION_RECEIPTS_DIR = "publication-receipts"
@@ -1258,11 +1259,12 @@ def _load_private_records(directory, repository_root, label):
 
 
 def _validate_retention_record(record_digest, record):
-    keys = {"schema_version", "candidate_freeze_id", "raw_evidence_digest", "published_at", "delete_after"}
+    keys = {"schema_version", "candidate_freeze_id", "raw_evidence_digest", "published_at", "registered_at", "delete_after"}
     if not isinstance(record, dict) or set(record) != keys or record["schema_version"] != "raw-evidence-retention.v1":
         raise ValueError("raw evidence retention record must use the closed v1 shape")
     _need_digest(record_digest, "retention record digest"); _need_digest(record["candidate_freeze_id"], "candidate_freeze_id"); _need_digest(record["raw_evidence_digest"], "raw_evidence_digest")
     published = _parsed_timestamp(record["published_at"], "retention publication timestamp")
+    _parsed_timestamp(record["registered_at"], "retention registration timestamp")
     delete_after = _parsed_timestamp(record["delete_after"], "retention deletion deadline")
     if delete_after != published + timedelta(days=RAW_EVIDENCE_RETENTION_DAYS):
         raise ValueError("raw evidence retention deadline must be exactly 30 days after publication")
@@ -1338,15 +1340,32 @@ def _register_raw_evidence_retention_locked(freeze, raw, repository_root):
     if set(evidence_digests) & deleted_digests:
         raise ValueError("raw evidence cannot be registered after deletion has begun")
     records = _private_record_directory(raw, RETENTION_RECORDS_DIR)
+    existing = {}
+    for record_digest, raw_record in _load_private_records(records, repository_root, "retention record"):
+        record = _validate_retention_record(record_digest, raw_record)
+        key = (record["candidate_freeze_id"], record["raw_evidence_digest"], record["published_at"])
+        if key in existing:
+            raise ValueError("freeze evidence has multiple retention registration records")
+        existing[key] = record_digest
+    registered_at = None
     record_digests = []
     for evidence_digest in evidence_digests:
         evidence_path = raw / f"{evidence_digest.removeprefix('sha256:')}.json"
         read_content_addressed_private_file(evidence_path, repository_root, "retained raw evidence")
+        key = (freeze["candidate_freeze_id"], evidence_digest, freeze["published_at"])
+        if key in existing:
+            record_digests.append(existing[key]); continue
+        if registered_at is None:
+            registered = _retention_now()
+            if registered.tzinfo is None or registered.utcoffset() != timedelta(0):
+                raise ValueError("retention registration clock must be UTC")
+            registered_at = _format_timestamp(registered)
         record = {
             "schema_version": "raw-evidence-retention.v1",
             "candidate_freeze_id": freeze["candidate_freeze_id"],
             "raw_evidence_digest": evidence_digest,
             "published_at": freeze["published_at"],
+            "registered_at": registered_at,
             "delete_after": _format_timestamp(published + timedelta(days=RAW_EVIDENCE_RETENTION_DAYS)),
         }
         record_digests.append(_store_private_record(records, record, repository_root))
@@ -1379,14 +1398,16 @@ def _store_publication_receipt_locked(freeze, retention_record_digests, raw, rep
 
 def publish_with_raw_evidence_retention(
     freeze, output, raw_evidence_root, repository_root, *, manifest,
-    expected_telemetry_profile_id=None, expected_treatment_contract_digest=None,
+    predecessor=None, expected_telemetry_profile_id=None, expected_treatment_contract_digest=None,
+    expected_predecessor_telemetry_profile_id=None, expected_predecessor_treatment_contract_digest=None,
 ):
     raw = validate_raw_evidence_root(raw_evidence_root, repository_root)
     freeze = validate_freeze(
-        freeze, manifest,
+        freeze, manifest, predecessor=predecessor,
         expected_telemetry_profile_id=expected_telemetry_profile_id,
         expected_treatment_contract_digest=expected_treatment_contract_digest,
-        _enforce_lineage=False,
+        expected_predecessor_telemetry_profile_id=expected_predecessor_telemetry_profile_id,
+        expected_predecessor_treatment_contract_digest=expected_predecessor_treatment_contract_digest,
     )
     payload = canonical_bytes(freeze) + b"\n"
     with _retention_lock(raw):
@@ -1443,7 +1464,7 @@ def _reconcile_raw_evidence_retention_locked(raw, repository_root, as_of, curren
                 raise ValueError("publication receipt does not bind its freeze retention records")
         governing_record_digests.update(refs)
     pending_record_digests = sorted(set(retention_by_digest) - governing_record_digests)
-    retention_records = [(record, record_digest) for record, record_digest in all_retention_records if record_digest in governing_record_digests]
+    retention_records = all_retention_records
     deletion_records = [(_validate_deletion_record(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / DELETION_RECORDS_DIR, repository_root, "deletion record")]
     retention_by_evidence = {}
     for record, record_digest in retention_records:
@@ -1459,7 +1480,16 @@ def _reconcile_raw_evidence_retention_locked(raw, repository_root, as_of, curren
     for evidence_digest in sorted(retention_by_evidence):
         grouped = retention_by_evidence[evidence_digest]
         record_digests = sorted(record_digest for _, record_digest in grouped)
-        deadline = max(_parsed_timestamp(record["delete_after"], "retention deletion deadline") for record, _ in grouped)
+        deadlines = []
+        for record, record_digest in grouped:
+            registered = _parsed_timestamp(record["registered_at"], "retention registration timestamp")
+            if current < registered:
+                raise ValueError("retention as-of timestamp precedes the registration record")
+            deadline = _parsed_timestamp(record["delete_after"], "retention deletion deadline")
+            if record_digest not in governing_record_digests:
+                deadline = min(deadline, registered + timedelta(days=RAW_EVIDENCE_PENDING_DAYS))
+            deadlines.append(deadline)
+        deadline = max(deadlines)
         deadline_text = _format_timestamp(deadline); target = raw / f"{evidence_digest.removeprefix('sha256:')}.json"
         deletion = deletion_by_evidence.get(evidence_digest)
         if deletion is not None:
@@ -1883,8 +1913,11 @@ def main(argv=None):
         )
         publish_with_raw_evidence_retention(
             successor, args.output, args.raw_evidence_root, repo, manifest=manifest,
+            predecessor=predecessor,
             expected_telemetry_profile_id=args.expected_telemetry_profile_id,
             expected_treatment_contract_digest=args.expected_treatment_contract_digest,
+            expected_predecessor_telemetry_profile_id=args.expected_telemetry_profile_id,
+            expected_predecessor_treatment_contract_digest=args.expected_treatment_contract_digest,
         )
         return int(successor["canary_results"][-1]["availability_disposition"] == "unknown")
     if args.command == "validate-freeze":
@@ -1920,7 +1953,11 @@ def main(argv=None):
         expected_predecessor_telemetry_profile_id=args.expected_predecessor_telemetry_profile_id,
         expected_predecessor_treatment_contract_digest=args.expected_predecessor_treatment_contract_digest,
     )
-    publish_with_raw_evidence_retention(result, args.output, args.raw_evidence_root, repo, manifest=manifest)
+    publish_with_raw_evidence_retention(
+        result, args.output, args.raw_evidence_root, repo, manifest=manifest, predecessor=predecessor,
+        expected_predecessor_telemetry_profile_id=args.expected_predecessor_telemetry_profile_id,
+        expected_predecessor_treatment_contract_digest=args.expected_predecessor_treatment_contract_digest,
+    )
     return 0
 
 

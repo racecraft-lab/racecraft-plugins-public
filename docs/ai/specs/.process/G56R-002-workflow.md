@@ -899,15 +899,17 @@ For every task:
 - Telemetry profile: `sha256:4fd9007697c86aae277099d12d37339379a0f19ed58de95ce1b939cdd918aeb3`
 - Treatment contract: `sha256:6be186638b12a57a93f00bf820ae8aa016a8fa33c0e52a90820833601d4ce71a`
 - Superseded marker checkpoint: `c47c9d31fd1288e86f0707601078e4f03e2b12e5`
-- Reviewability: size-only `block` at 1,452 source / 1,328 nonblank,
+- Reviewability: size-only `block` at 1,455 source / 1,331 nonblank,
   non-comment lines; typed `no_safe_boundary` exception honored for the
   checkpoint with only T026-T030 replay growth reserved.
 - Review: REPEAT PENDING after direct canonical validation of the actual
-  successor, external treatment-binding authority, executable schema/runtime
+  successor, external treatment-binding and predecessor-lineage authority,
+  bounded recovery of pending retention records, executable schema/runtime
   parity, descriptor-relative evidence-file and sanitized CLI handling,
   single-client profile authority, content-addressed six-ID ownership,
-  reciprocal acyclic trace-graph validation, and detailed reroute reasons. A new implementation
-  checkpoint SHA is recorded only after a clean verdict.
+  reciprocal acyclic trace-graph validation, externally trusted successor
+  reroutes, and detailed reroute reasons. A new implementation checkpoint SHA
+  is recorded only after a clean verdict.
 
 ## PR Marker Plan Evidence
 
@@ -922,7 +924,7 @@ For every task:
 | Feature spec | `sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56` |
 | Plan-declared scope | `sha256:35d4122bd719ba1512da85fdeead0c990d598591b33af7c3ed38947cea1aaf9e` |
 | Tasks | `sha256:4b78765419fc0f5d3fafdeefb2b78c19890cf7a02bc74c5bf128e21c97457867` |
-| Reviewability evidence | `sha256:45ca0ba43a4d6ac0edfe456f489dd1fb5d85af12e8b5c03f6e7ea3b935ecd512` |
+| Reviewability evidence | `sha256:0bbc3f1819f5ae57b61bd06395e5524d381cacd88276af310dc8e730e419a346` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
@@ -932,7 +934,7 @@ For every task:
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
-  size warnings. US1 is 1,928 / 1,729 source/nonblank lines and US2 is 1,452 / 1,328
+  size warnings. US1 is 1,965 / 1,766 source/nonblank lines and US2 is 1,455 / 1,331
   against the 400-LOC boundary; both use typed size-only exceptions.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.

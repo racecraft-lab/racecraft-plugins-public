@@ -1369,8 +1369,11 @@ def _capability_module():
 
 
 def build_treatment_successor(prior_freeze: dict, treatment_bundle: dict, *, published_at: str,
-                              manifest_path: Path = MANIFEST_PATH) -> dict:
-    validated = validate_treatment_bundle(treatment_bundle)
+                              manifest_path: Path = MANIFEST_PATH,
+                              trusted_qualification_evidence: Mapping[str, dict] | None = None) -> dict:
+    validated = validate_treatment_bundle(
+        treatment_bundle, trusted_qualification_evidence=trusted_qualification_evidence,
+    )
     capability = _capability_module(); manifest = _read_json_file(manifest_path)
     if prior_freeze["candidate_freeze_id"] != digest({key: value for key, value in prior_freeze.items() if key != "candidate_freeze_id"}):
         raise ValueError("prior freeze identity is invalid")
