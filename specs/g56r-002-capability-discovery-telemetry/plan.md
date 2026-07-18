@@ -30,7 +30,8 @@ Layer 1 structural validation, the generated docs-site test reference check,
 and the full deterministic suite
 
 **Target Platform**: The pinned Codex client on macOS, Linux, or Windows;
-repository replay is platform-neutral and offline
+repository replay is platform-neutral and offline. Operator-only raw-evidence
+workflows run on POSIX and fail closed on Windows pending equivalent DACL checks
 
 **Project Type**: Repository-owned test harness and evidence contract
 
@@ -57,8 +58,8 @@ increments cease to be independently testable.
 not a size claim. The binding human estimate remains 297 reviewable LOC; the
 400-LOC split trigger remains enforced.
 
-**Implementation checkpoint**: The capability adapter is 1,768 source lines
-and 1,575 nonblank, non-comment lines after independent-review integrity
+**Implementation checkpoint**: The capability adapter is 1,841 source lines
+and 1,642 nonblank, non-comment lines after independent-review integrity
 remediation, so the 400-LOC trigger is active.
 Capability work T001-T015 remains one review marker under a typed size-only
 exception because source refresh, surface authority, tuple decisions, and the
@@ -190,8 +191,10 @@ Repository tests must pass with the network disabled and no raw evidence store.
 - `raw_evidence_root` must resolve outside the repository, use `0700`
   directories and `0600` files, and retain captures for 30 days after freeze
   publication. Source refresh copies and binds the exact aggregate body capture
-  into that store. Publication appends a content-addressed retention record;
-  deterministic verification fails on missing or overdue bytes, and cleanup
+  into that store. Publication stages content-addressed retention records and
+  makes them governing only by appending a receipt after the exact freeze bytes
+  exist; failed-publication records cannot extend deletion. Deterministic
+  verification fails on missing or overdue bytes, and cleanup
   appends and directory-fsyncs a content-addressed deletion record before
   removing the raw bytes and directory-fsyncing the raw root. Registration and
   cleanup share an atomic private-root lock, and destructive cleanup derives its

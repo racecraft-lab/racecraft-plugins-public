@@ -250,8 +250,13 @@ collection is never part of the default deterministic suite.
 ## Retention Cleanup
 
 Freeze and canary publication automatically add immutable content-addressed
-records under `raw_evidence_root/retention-records/`. Before the deadline,
-verify that every retained digest still has its exact bytes:
+records under `raw_evidence_root/retention-records/`. Those records become
+governing only after the exact freeze bytes exist and an immutable receipt is
+directory-fsynced under `publication-receipts/`. Re-running the same publication
+recovers a crash between those steps; a different artifact at the output path
+fails before registration. Records left by failed publication remain reported
+as pending and cannot extend deletion. Before the deadline, verify that every
+governing retained digest still has its exact bytes:
 
 ```sh
 python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py retention \
@@ -288,4 +293,5 @@ After an interrupted operator process, inspect the private store before manually
 removing a stale lock. `--as-of` is accepted only for read-only verification;
 cleanup always uses current UTC. Do not delete committed sanitized fixtures or
 published freeze records; repository tests continue to pass without the raw
-store.
+store. Live private-store commands fail closed on Windows until the adapter can
+verify an owner-only DACL equivalent to POSIX `0700`/`0600`.

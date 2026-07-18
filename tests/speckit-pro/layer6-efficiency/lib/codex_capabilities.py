@@ -33,6 +33,7 @@ PRIVATE_REFRESH_MAX_BYTES = 32 * 1024 * 1024
 RAW_EVIDENCE_RETENTION_DAYS = 30
 RETENTION_RECORDS_DIR = "retention-records"
 DELETION_RECORDS_DIR = "deletion-records"
+PUBLICATION_RECEIPTS_DIR = "publication-receipts"
 RETENTION_LOCK_DIR = ".retention-lock"
 ERROR_TERMINALS = ("timeout", "output_cap_exceeded", "launch_error", "transport_error", "authentication_error", "rate_limited", "malformed_response", "explicit_rejection", "service_reroute", "ambiguous_error")
 _UNSET = object()
@@ -1070,6 +1071,8 @@ def validate_canary_results(results, approvals=APPROVED_CANARY_EXECUTORS):
 
 
 def validate_raw_evidence_root(raw_root, repository_root):
+    if os.name == "nt":
+        raise ValueError("operator-only raw evidence permissions are not supported on Windows")
     lexical, repo = Path(os.path.abspath(raw_root)), Path(repository_root).resolve()
     if lexical.is_symlink(): raise ValueError("raw_evidence_root cannot be a symlink")
     raw = lexical.resolve(strict=True)
@@ -1092,6 +1095,8 @@ def _git_worktree_ancestor(path):
 
 
 def validate_private_external_file(path, repository_root, label, *, output=False):
+    if os.name == "nt":
+        raise ValueError("operator-only private-file permissions are not supported on Windows")
     lexical = Path(os.path.abspath(path)); repo = Path(repository_root).resolve()
     if lexical.is_symlink(): raise ValueError(f"{label} cannot be a symlink")
     parent = lexical.parent.resolve(strict=True); resolved = parent / lexical.name
@@ -1277,6 +1282,21 @@ def _validate_deletion_record(record_digest, record):
     return record
 
 
+def _validate_publication_receipt(record_digest, record):
+    keys = {"schema_version", "candidate_freeze_id", "published_artifact_digest", "published_at", "retention_record_digests"}
+    if not isinstance(record, dict) or set(record) != keys or record["schema_version"] != "raw-evidence-publication.v1":
+        raise ValueError("raw evidence publication receipt must use the closed v1 shape")
+    _need_digest(record_digest, "publication receipt digest")
+    _need_digest(record["candidate_freeze_id"], "candidate_freeze_id")
+    _need_digest(record["published_artifact_digest"], "published_artifact_digest")
+    _parsed_timestamp(record["published_at"], "publication receipt timestamp")
+    refs = record["retention_record_digests"]
+    if not isinstance(refs, list) or not refs or refs != sorted(set(refs)):
+        raise ValueError("publication receipt requires unique retention records")
+    for value in refs: _need_digest(value, "retention_record_digest")
+    return record
+
+
 def _freeze_raw_evidence_digests(freeze):
     observations = freeze["surface_matrix"]["observations"]
     digests = {
@@ -1332,9 +1352,33 @@ def _register_raw_evidence_retention_locked(freeze, raw, repository_root):
     return sorted(record_digests)
 
 
-def register_raw_evidence_retention(freeze, raw_evidence_root, repository_root, *, manifest):
+def _publication_target_matches(path, payload):
+    target = Path(path)
+    if not target.exists():
+        return False
+    if _read_bounded_regular_file(target) != payload:
+        raise ValueError("publication output already exists with different bytes")
+    return True
+
+
+def _store_publication_receipt_locked(freeze, retention_record_digests, raw, repository_root):
+    receipt = {
+        "schema_version": "raw-evidence-publication.v1",
+        "candidate_freeze_id": freeze["candidate_freeze_id"],
+        "published_artifact_digest": digest(canonical_bytes(freeze) + b"\n"),
+        "published_at": freeze["published_at"],
+        "retention_record_digests": sorted(retention_record_digests),
+    }
+    directory = _private_record_directory(raw, PUBLICATION_RECEIPTS_DIR)
+    receipt_digest = _store_private_record(directory, receipt, repository_root)
+    _validate_publication_receipt(receipt_digest, receipt)
+    return receipt_digest
+
+
+def publish_with_raw_evidence_retention(freeze, output, raw_evidence_root, repository_root, *, manifest):
     raw = validate_raw_evidence_root(raw_evidence_root, repository_root)
     freeze = validate_freeze(freeze, manifest, _enforce_lineage=False)
+    payload = canonical_bytes(freeze) + b"\n"
     with _retention_lock(raw):
         validate_raw_evidence_root(raw, repository_root)
         deleted_digests = {
@@ -1344,7 +1388,13 @@ def register_raw_evidence_retention(freeze, raw_evidence_root, repository_root, 
         if set(_freeze_raw_evidence_digests(freeze)) & deleted_digests:
             raise ValueError("raw evidence cannot be registered after deletion has begun")
         validate_source_capture_evidence(manifest, freeze["official_source_refreshes"], raw, repository_root)
-        return _register_raw_evidence_retention_locked(freeze, raw, repository_root)
+        already_published = _publication_target_matches(output, payload)
+        retention_record_digests = _register_raw_evidence_retention_locked(freeze, raw, repository_root)
+        if not already_published:
+            _write(output, freeze, append_only=True)
+        receipt_digest = _store_publication_receipt_locked(freeze, retention_record_digests, raw, repository_root)
+        validate_raw_evidence_root(raw, repository_root)
+        return {"retention_record_digests": retention_record_digests, "publication_receipt_digest": receipt_digest}
 
 
 def _retention_now():
@@ -1366,7 +1416,24 @@ def reconcile_raw_evidence_retention(raw_evidence_root, repository_root, as_of=N
 
 
 def _reconcile_raw_evidence_retention_locked(raw, repository_root, as_of, current, *, apply):
-    retention_records = [(_validate_retention_record(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / RETENTION_RECORDS_DIR, repository_root, "retention record")]
+    all_retention_records = [(_validate_retention_record(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / RETENTION_RECORDS_DIR, repository_root, "retention record")]
+    retention_by_digest = {record_digest: record for record, record_digest in all_retention_records}
+    publication_receipts = [(_validate_publication_receipt(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / PUBLICATION_RECEIPTS_DIR, repository_root, "publication receipt")]
+    receipt_freeze_ids, governing_record_digests = set(), set()
+    for receipt, _ in publication_receipts:
+        if receipt["candidate_freeze_id"] in receipt_freeze_ids:
+            raise ValueError("candidate freeze has multiple publication receipts")
+        receipt_freeze_ids.add(receipt["candidate_freeze_id"])
+        refs = set(receipt["retention_record_digests"])
+        if not refs <= set(retention_by_digest):
+            raise ValueError("publication receipt references a missing retention record")
+        for ref in refs:
+            retained = retention_by_digest[ref]
+            if retained["candidate_freeze_id"] != receipt["candidate_freeze_id"] or retained["published_at"] != receipt["published_at"]:
+                raise ValueError("publication receipt does not bind its freeze retention records")
+        governing_record_digests.update(refs)
+    pending_record_digests = sorted(set(retention_by_digest) - governing_record_digests)
+    retention_records = [(record, record_digest) for record, record_digest in all_retention_records if record_digest in governing_record_digests]
     deletion_records = [(_validate_deletion_record(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / DELETION_RECORDS_DIR, repository_root, "deletion record")]
     retention_by_evidence = {}
     for record, record_digest in retention_records:
@@ -1416,6 +1483,8 @@ def _reconcile_raw_evidence_retention_locked(raw, repository_root, as_of, curren
         "schema_version": "raw-evidence-retention-report.v1", "mode": "cleanup" if apply else "verify", "as_of": as_of,
         "retained_evidence_digests": retained, "deleted_evidence_digests": deleted,
         "retention_record_digests": sorted(record_digest for _, record_digest in retention_records),
+        "pending_retention_record_digests": pending_record_digests,
+        "publication_receipt_digests": sorted(record_digest for _, record_digest in publication_receipts),
         "deletion_record_digests": sorted(deletion_digests),
     }
 
@@ -1452,6 +1521,8 @@ def validate_tuple_decisions(decisions, *, require_snapshot=False):
         if item["canonical_effort"] is not None and not _token(item["canonical_effort"]): raise ValueError("tuple effort is invalid")
         if not isinstance(item["source_admitted"], bool) or item["availability_disposition"] not in {"supported", "available_for_pinned_environment", "unknown"} or item["surface_disposition"] not in {"agreed", "disagreed", "unknown"} or item["exact_treatment_readiness"] not in {"pending", "not_ready_excluded"} or item["decision"] not in {"included", "excluded"} or not all(_token(value) for value in item["source_admission_reasons"] + item["reasons"]):
             raise ValueError("tuple decision disposition is invalid")
+        if item["decision"] == "excluded" and not item["reasons"]:
+            raise ValueError("excluded tuple decision requires a reason")
         if item["decision"] == "included" and (not item["source_admitted"] or item["surface_disposition"] != "agreed"): raise ValueError("included tuple lacks source and surface admission")
     if len({item["candidate_route_id"] for item in decisions}) != len(decisions): raise ValueError("tuple decision candidate identities must be unique")
     return decisions
@@ -1660,6 +1731,8 @@ def _fsync_directory(path):
 
 
 def _write_private_bytes(path, payload, *, append_only=False):
+    if os.name == "nt":
+        raise ValueError("operator-only private-file permissions are not supported on Windows")
     if len(payload) > PRIVATE_REFRESH_MAX_BYTES: raise ValueError("private output exceeds the bounded size")
     parent = Path(path).parent
     descriptor, temporary = tempfile.mkstemp(prefix=".g56r-002-", dir=parent)
@@ -1739,8 +1812,8 @@ def main(argv=None):
         if (result.get("snapshot_id"), result.get("canonical_model_id"), result.get("canonical_effort")) != (predecessor.get("runtime_capability_snapshot_id"), args.model, args.effort):
             raise ValueError("canary result does not match the requested tuple")
         successor = build_canary_successor(predecessor, result, manifest, args.published_at or now(), raw_evidence_root=args.raw_evidence_root, repository_root=repo)
-        register_raw_evidence_retention(successor, args.raw_evidence_root, repo, manifest=manifest)
-        _write(args.output, successor, append_only=True); return int(successor["canary_results"][-1]["availability_disposition"] == "unknown")
+        publish_with_raw_evidence_retention(successor, args.output, args.raw_evidence_root, repo, manifest=manifest)
+        return int(successor["canary_results"][-1]["availability_disposition"] == "unknown")
     if args.command == "validate-freeze":
         predecessor = _read(args.predecessor_freeze, require_canonical=True) if args.predecessor_freeze else None
         validate_freeze(_read(args.freeze, require_canonical=True), _read(args.manifest), predecessor=predecessor); return 0
@@ -1760,8 +1833,8 @@ def main(argv=None):
         identity, refreshes, matrix, decisions, args.published_at or now(), manifest=manifest, predecessor=predecessor,
         raw_evidence_root=args.raw_evidence_root, repository_root=repo,
     )
-    if args.raw_evidence_root: register_raw_evidence_retention(result, args.raw_evidence_root, repo, manifest=manifest)
-    _write(args.output, result, append_only=True); return 0
+    publish_with_raw_evidence_retention(result, args.output, args.raw_evidence_root, repo, manifest=manifest)
+    return 0
 
 
 if __name__ == "__main__":

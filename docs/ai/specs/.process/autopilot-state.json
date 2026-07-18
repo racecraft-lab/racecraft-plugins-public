@@ -296,7 +296,7 @@
       "status": "review_pending",
       "tasks_completed": 15,
       "tasks_total": 15,
-      "focused_tests": "9/9 pass",
+      "focused_tests": "11/11 pass",
       "independent_review": "repeat_pending",
       "baseline_commit": "ab272f05937bd08a50e40710b3f1ad3b0dc8452b",
       "candidate_freeze_id": "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03",
@@ -310,10 +310,10 @@
     }
   },
   "current_source_fingerprint": {
-    "feature_spec_sha": "sha256:7f7dd656c87550a9fe606fde8e79109c6246daaad6c5db539cbcfbf7c92e56de",
-    "plan_declared_scope_sha": "sha256:d0a4062aa3feb95ddba192dd14856e15c32c2da010ce541546ae5e574de16eb9",
-    "tasks_sha": "sha256:9512737afe52fd0429ece64cb08fc65e6063c8900b0d0307a9163dec976d7106",
-    "reviewability_sha": "sha256:4c9c7f4f2332eb8160cb329f4be5d6947ec048c2ee7ed852dc827bc49a29c33e",
+    "feature_spec_sha": "sha256:0b89db29a5c7f7f8f0f7e9a89cea8d71e4f9256da9f5b8c0dea412a5c3f4c029",
+    "plan_declared_scope_sha": "sha256:9902c3a4218319280811c85d8b82c8bcdd0e34509581f6874a731d8810e2384c",
+    "tasks_sha": "sha256:51ed383aba03753a510b315514d67f69e5fd26b9df4e97ca6563d59f556b2f88",
+    "reviewability_sha": "sha256:5bf55fc33d5a05aa65f8402fd57c8351f361a098ba5c1021a4f47c9d23bdcd81",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
   },
   "pr_marker_plan": {
@@ -322,10 +322,10 @@
     "feature_id": "G56R-002",
     "status": "review_pending",
     "source_fingerprint": {
-      "feature_spec_sha": "sha256:7f7dd656c87550a9fe606fde8e79109c6246daaad6c5db539cbcfbf7c92e56de",
-      "plan_declared_scope_sha": "sha256:d0a4062aa3feb95ddba192dd14856e15c32c2da010ce541546ae5e574de16eb9",
-      "tasks_sha": "sha256:9512737afe52fd0429ece64cb08fc65e6063c8900b0d0307a9163dec976d7106",
-      "reviewability_sha": "sha256:4c9c7f4f2332eb8160cb329f4be5d6947ec048c2ee7ed852dc827bc49a29c33e",
+      "feature_spec_sha": "sha256:0b89db29a5c7f7f8f0f7e9a89cea8d71e4f9256da9f5b8c0dea412a5c3f4c029",
+      "plan_declared_scope_sha": "sha256:9902c3a4218319280811c85d8b82c8bcdd0e34509581f6874a731d8810e2384c",
+      "tasks_sha": "sha256:51ed383aba03753a510b315514d67f69e5fd26b9df4e97ca6563d59f556b2f88",
+      "reviewability_sha": "sha256:5bf55fc33d5a05aa65f8402fd57c8351f361a098ba5c1021a4f47c9d23bdcd81",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
     },
     "markers": [
@@ -396,7 +396,7 @@
             "severity": "warning",
             "message": "US1 exceeds 400 reviewable LOC and is retained only under the typed no-safe-boundary size exception.",
             "source": "capability-freeze-reviewability",
-            "details": {"marker_id": "us1", "actual_source_lines": 1768, "actual_nonblank_noncomment_lines": 1575}
+            "details": {"marker_id": "us1", "actual_source_lines": 1841, "actual_nonblank_noncomment_lines": 1642}
           }
         ]
       },

@@ -247,6 +247,12 @@ runtime snapshot, tuple decisions, derived candidate lists, canary state, and
 whole-freeze identity. Any source, build, evidence, normalization, telemetry,
 or disposition change must produce a successor ID.
 
+Raw-evidence retention records are staged before append-only artifact output.
+They become governing only when a content-addressed publication receipt binds
+the candidate freeze ID, exact artifact digest, publication time, and complete
+retention-record set after the output bytes exist. Unreceipted records are
+reported as pending and do not participate in the effective deletion deadline.
+
 ## Telemetry and Treatment Records
 
 ### `ObservationValue`

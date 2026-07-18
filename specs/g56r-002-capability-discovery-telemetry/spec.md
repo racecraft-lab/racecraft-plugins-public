@@ -160,8 +160,12 @@
 - **Q: Where and how long is raw evidence retained?** **A:** `raw_evidence_root`
   is a required content-addressed location outside the repository. Directories
   are operator-only mode `0700` and files are mode `0600`. Captures remain for
-  30 days after freeze publication, then are deleted while their digest and a
-  deletion record remain. Repository tests never require raw-store access.
+  30 days after freeze publication. Retention records become governing only
+  after an immutable receipt proves publication of the exact freeze bytes;
+  failed-publication records cannot extend the deadline. Expired bytes are
+  deleted while their digest and a deletion record remain. Live private-store
+  operations fail closed on Windows until equivalent owner-only DACL validation
+  exists. Repository tests never require raw-store access.
 - **Q: How are deterministic fixtures derived and hashed?** **A:** Sanitize
   first, keep only schema-allowlisted fields, replace unstable values with fixed
   tokens, serialize canonical UTF-8 JSON with sorted keys and no insignificant
@@ -418,11 +422,16 @@ validate every fixture hash.
 
 ### Reviewability Notes *(if applicable)*
 
-- No typed reviewability exception is requested.
-- The feature remains one guarded slice with three ordered increments:
+- The capability adapter crossed the 400-LOC boundary during implementation.
+  A `typed_size_only` / `no_safe_boundary` exception is honored for T001-T015
+  because source refresh, raw-evidence retention, surface authority, tuple
+  decisions, and freeze validation form one integrity boundary. It grants no
+  correctness or safety exception and permits only reviewer-required integrity
+  remediation after the checkpoint.
+- The feature remains one guarded slice with three ordered review markers:
   source/surface freeze, telemetry/treatment contracts, and sanitized replay.
-  Planning must re-run the reviewability gate and split before implementation
-  if a binding threshold is crossed.
+  Treatment and replay remain separate; any new capability feature growth or
+  cross-marker coupling must stop and re-run the reviewability gate.
 
 ### Reviewability Budget *(mandatory)*
 

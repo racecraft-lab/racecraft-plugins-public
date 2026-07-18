@@ -872,7 +872,7 @@ For every task:
 
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
-| 1 - Capability freeze | Review Pending | 15 | 9/9 focused tests, published validator, schema validation, deterministic replay, and full suite pass; independent repeat review pending |
+| 1 - Capability freeze | Review Pending | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, and full suite pass; independent repeat review pending |
 | 2 - Treatment contracts | Blocked | 0 | T016-T025 remain ordered after a clean US1 repeat-review verdict |
 | 3 - Synthetic replay | Pending | 0 | Not started |
 | Polish and validation | Pending | 0 | Not started |
@@ -885,8 +885,9 @@ For every task:
 - Surface matrix: `sha256:99739c0895250de0eb0cf1a0215fd2e5168213081d41f6b2f828c274528c32b2`
 - Included routes: 0; excluded routes: 23
 - Review: REPEAT PENDING after route-to-claim, retention lifecycle,
-  concurrency, and destructive-clock remediation. The prior pass and checkpoint
-  are superseded; a new implementation checkpoint SHA is recorded only after a
+  publication-transaction, permission-boundary, schema-parity, concurrency,
+  and destructive-clock remediation. The prior pass and checkpoint are
+  superseded; a new implementation checkpoint SHA is recorded only after a
   clean verdict.
 
 ## PR Marker Plan Evidence
@@ -899,10 +900,10 @@ For every task:
 
 | Fingerprint input | SHA-256 |
 |---|---|
-| Feature spec | `sha256:7f7dd656c87550a9fe606fde8e79109c6246daaad6c5db539cbcfbf7c92e56de` |
-| Plan-declared scope | `sha256:d0a4062aa3feb95ddba192dd14856e15c32c2da010ce541546ae5e574de16eb9` |
-| Tasks | `sha256:9512737afe52fd0429ece64cb08fc65e6063c8900b0d0307a9163dec976d7106` |
-| Reviewability evidence | `sha256:4c9c7f4f2332eb8160cb329f4be5d6947ec048c2ee7ed852dc827bc49a29c33e` |
+| Feature spec | `sha256:0b89db29a5c7f7f8f0f7e9a89cea8d71e4f9256da9f5b8c0dea412a5c3f4c029` |
+| Plan-declared scope | `sha256:9902c3a4218319280811c85d8b82c8bcdd0e34509581f6874a731d8810e2384c` |
+| Tasks | `sha256:51ed383aba03753a510b315514d67f69e5fd26b9df4e97ca6563d59f556b2f88` |
+| Reviewability evidence | `sha256:5bf55fc33d5a05aa65f8402fd57c8351f361a098ba5c1021a4f47c9d23bdcd81` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
@@ -911,8 +912,8 @@ For every task:
 | 2 | `us2` | T016-T025 | Not estimated | Blocked on clean US1 review | Treatment remains a separate module |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
-- Warning: `CAPABILITY_SIZE_BLOCK` / `MARKER_SIZE_WARNING`; US1 is 1,768 source
-  lines and 1,575 nonblank, non-comment lines against the 400-LOC boundary.
+- Warning: `CAPABILITY_SIZE_BLOCK` / `MARKER_SIZE_WARNING`; US1 is 1,841 source
+  lines and 1,642 nonblank, non-comment lines against the 400-LOC boundary.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.
 - PR mappings: Pending.

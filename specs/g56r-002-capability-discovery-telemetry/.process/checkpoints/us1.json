@@ -13,14 +13,14 @@
   "superseded_checkpoint_sha": "f262695d0c1b519e73d93058a944ccdc377ad62f",
   "candidate_freeze_id": "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03",
   "verification": {
-    "focused_tests": "9/9 pass",
+    "focused_tests": "11/11 pass",
     "published_freeze_validation": "pass",
     "json_schema_instance_validation": "pass",
     "deterministic_replay": "pass",
     "independent_critical_high_review": "repeat_pending"
   },
   "source_fingerprint_status": "current",
-  "tasks_sha": "sha256:9512737afe52fd0429ece64cb08fc65e6063c8900b0d0307a9163dec976d7106",
+  "tasks_sha": "sha256:51ed383aba03753a510b315514d67f69e5fd26b9df4e97ca6563d59f556b2f88",
   "completed_at": null,
   "review_iteration_started_at": "2026-07-18T17:18:23Z"
 }

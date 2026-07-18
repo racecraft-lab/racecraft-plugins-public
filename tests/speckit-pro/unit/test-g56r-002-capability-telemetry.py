@@ -9,6 +9,7 @@ import importlib.util
 import itertools
 import json
 import os
+import re
 import stat
 import subprocess
 import tempfile
@@ -21,6 +22,8 @@ ROOT = Path(__file__).resolve().parents[3]
 MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py"
 FIXTURE_PATH = ROOT / "tests/speckit-pro/unit/fixtures/capability-treatment-replay/capability-matrix.json"
 MANIFEST_PATH = ROOT / "docs/ai/research/codex-agent-route-candidate-manifest.json"
+PUBLISHED_FREEZE_PATH = ROOT / "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json"
+CAPABILITY_EVIDENCE_PATH = ROOT / "docs/ai/research/codex-g56r-002-capability-evidence.md"
 
 spec = importlib.util.spec_from_file_location("g56r_002_codex_capabilities", MODULE_PATH)
 if spec is None or spec.loader is None:
@@ -106,6 +109,53 @@ class CapabilityContractTests(unittest.TestCase):
             capabilities.fixture_observation(surface, value, self.identity["client_identity_id"])
             for surface, value in case["surfaces"].items()
         ]
+
+    def test_published_evidence_digest_summary_matches_freeze(self) -> None:
+        freeze = load_json(PUBLISHED_FREEZE_PATH)
+        summary = {}
+        for line in CAPABILITY_EVIDENCE_PATH.read_text(encoding="utf-8").splitlines():
+            if line.startswith("- ") and ": `sha256:" in line and line.endswith("`"):
+                label, value = line[2:].split(": `", 1)
+                summary[label] = value[:-1]
+        expected = {
+            "Candidate freeze": freeze["candidate_freeze_id"],
+            "Runtime snapshot": freeze["runtime_capability_snapshot_id"],
+            "Surface matrix": freeze["surface_matrix_id"],
+            "Pinned client identity": freeze["client_identity_id"],
+            "Current source-refresh set": freeze["source_refresh_set_digest"],
+            "Complete tuple decisions": freeze["tuple_decision_digest"],
+        }
+        self.assertEqual({key: summary.get(key) for key in expected}, expected)
+
+    def test_schema_negative_constraints_match_runtime(self) -> None:
+        schema = load_json(ROOT / "specs/g56r-002-capability-discovery-telemetry/contracts/capability-freeze.schema.json")
+        self.assertEqual(schema["properties"]["tuple_decisions"]["minItems"], 1)
+        excluded_reasons = schema["$defs"]["excludedCandidate"]["properties"]["reasons"]
+        self.assertEqual(excluded_reasons["minItems"], 1)
+        effort_rule = schema["$defs"]["tupleDecision"]["properties"]["canonical_effort"]["oneOf"][0]
+        self.assertIsNone(re.fullmatch(effort_rule["pattern"], "!!!"))
+        canary_effort_rule = schema["$defs"]["canaryResult"]["properties"]["canonical_effort"]
+        self.assertIsNone(re.fullmatch(canary_effort_rule["pattern"], "!!!"))
+        observations_rule = schema["$defs"]["surfaceMatrix"]["properties"]["observations"]
+        required_surfaces = {
+            item["contains"]["properties"]["surface"]["const"]
+            for item in observations_rule["allOf"]
+            if item["minContains"] == item["maxContains"] == 1
+        }
+        self.assertEqual(required_surfaces, set(capabilities.SURFACES))
+        published = load_json(PUBLISHED_FREEZE_PATH)
+        invalid_effort = capabilities._BoundDecisionSet(copy.deepcopy(published["tuple_decisions"]))
+        invalid_effort[0]["canonical_effort"] = "!!!"
+        with self.assertRaisesRegex(ValueError, "effort is invalid"):
+            capabilities.validate_tuple_decisions(invalid_effort, require_snapshot=True)
+        missing_reason = capabilities._BoundDecisionSet(copy.deepcopy(published["tuple_decisions"]))
+        missing_reason[0]["reasons"] = []
+        with self.assertRaisesRegex(ValueError, "requires a reason"):
+            capabilities.validate_tuple_decisions(missing_reason, require_snapshot=True)
+        duplicate_surface = copy.deepcopy(published["surface_matrix"])
+        duplicate_surface["observations"][1]["surface"] = "app_server"
+        with self.assertRaises(ValueError):
+            capabilities.validate_surface_matrix(duplicate_surface)
 
     def authority_tuples(self, case: dict) -> list[dict]:
         tuples = copy.deepcopy(case["source_tuples"])
@@ -898,12 +948,53 @@ class CapabilityContractTests(unittest.TestCase):
                 manifest=self.manifest, raw_evidence_root=raw_root, repository_root=ROOT,
             )
             self.assertEqual(capabilities.validate_freeze(freeze, self.manifest), freeze)
-            retention_records = capabilities.register_raw_evidence_retention(freeze, raw_root, ROOT, manifest=self.manifest)
-            self.assertEqual(len(retention_records), 4)
-            self.assertEqual(capabilities.register_raw_evidence_retention(freeze, raw_root, ROOT, manifest=self.manifest), retention_records)
+            publication_path = Path(tmp) / "candidate-freeze.json"
+            with mock.patch.object(
+                capabilities, "_store_publication_receipt_locked",
+                side_effect=OSError("simulated publication receipt failure"),
+            ):
+                with self.assertRaisesRegex(OSError, "receipt failure"):
+                    capabilities.publish_with_raw_evidence_retention(
+                        freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
+                    )
+            self.assertTrue(publication_path.is_file())
+            pending_before_recovery = capabilities.reconcile_raw_evidence_retention(
+                raw_root, ROOT, "2026-08-14T23:59:59Z",
+            )
+            self.assertEqual(pending_before_recovery["retained_evidence_digests"], [])
+            self.assertEqual(len(pending_before_recovery["pending_retention_record_digests"]), 4)
+            publication = capabilities.publish_with_raw_evidence_retention(
+                freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
+            )
+            self.assertEqual(len(publication["retention_record_digests"]), 4)
+            self.assertEqual(capabilities.publish_with_raw_evidence_retention(
+                freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
+            ), publication)
+            future_freeze = copy.deepcopy(freeze)
+            future_freeze["published_at"] = "2026-08-01T00:00:00Z"
+            future_freeze["candidate_freeze_id"] = capabilities.digest(capabilities._freeze_identity_payload(future_freeze))
+            self.assertEqual(capabilities.validate_freeze(future_freeze, self.manifest), future_freeze)
+            with self.assertRaisesRegex(ValueError, "different bytes"):
+                capabilities.publish_with_raw_evidence_retention(
+                    future_freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
+                )
+            self.assertEqual(len(list((raw_root / capabilities.RETENTION_RECORDS_DIR).iterdir())), 4)
+            failed_publication_path = Path(tmp) / "failed-candidate-freeze.json"
+            original_write = capabilities._write
+            def fail_publication(path: Path, value: object, **kwargs: object) -> None:
+                if Path(path) == failed_publication_path:
+                    raise OSError("simulated publication failure")
+                original_write(path, value, **kwargs)
+            with mock.patch.object(capabilities, "_write", side_effect=fail_publication):
+                with self.assertRaisesRegex(OSError, "publication failure"):
+                    capabilities.publish_with_raw_evidence_retention(
+                        future_freeze, failed_publication_path, raw_root, ROOT, manifest=self.manifest,
+                    )
             with capabilities._retention_lock(raw_root):
                 with self.assertRaisesRegex(ValueError, "already in progress"):
-                    capabilities.register_raw_evidence_retention(freeze, raw_root, ROOT, manifest=self.manifest)
+                    capabilities.publish_with_raw_evidence_retention(
+                        freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
+                    )
                 with self.assertRaisesRegex(ValueError, "already in progress"):
                     capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-14T23:59:59Z")
             retained_report = capabilities.reconcile_raw_evidence_retention(
@@ -918,6 +1009,9 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(retained_report["retained_evidence_digests"], sorted(
                 [source_capture_digest, *(item["raw_evidence_digest"] for item in observations)]
             ))
+            self.assertEqual(retained_report["retention_record_digests"], publication["retention_record_digests"])
+            self.assertEqual(len(retained_report["pending_retention_record_digests"]), 4)
+            self.assertEqual(retained_report["publication_receipt_digests"], [publication["publication_receipt_digest"]])
             self.assertEqual(source_capture_path.read_bytes(), capture_bytes)
             missing_digest = source_capture_digest
             missing_path = raw_root / f"{missing_digest.removeprefix('sha256:')}.json"
@@ -974,9 +1068,12 @@ class CapabilityContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "precedes the deletion"):
                 capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-14T23:59:59Z")
             with self.assertRaisesRegex(ValueError, "after deletion"):
-                capabilities.register_raw_evidence_retention(freeze, raw_root, ROOT, manifest=self.manifest)
+                capabilities.publish_with_raw_evidence_retention(
+                    freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
+                )
             self.assertTrue(all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in (raw_root / capabilities.RETENTION_RECORDS_DIR).iterdir()))
             self.assertTrue(all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in (raw_root / capabilities.DELETION_RECORDS_DIR).iterdir()))
+            self.assertTrue(all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in (raw_root / capabilities.PUBLICATION_RECEIPTS_DIR).iterdir()))
             raw_file.chmod(0o644)
             with self.assertRaisesRegex(ValueError, "files require 0600"):
                 capabilities.validate_raw_evidence_root(raw_root, ROOT)
@@ -993,6 +1090,13 @@ class CapabilityContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "outside every Git worktree"):
                 capabilities.validate_raw_evidence_root(ROOT, ROOT)
             private = Path(tmp) / "capture.json"; private.write_text("{}"); private.chmod(0o600)
+            with mock.patch.object(capabilities.os, "name", "nt"):
+                with self.assertRaisesRegex(ValueError, "not supported on Windows"):
+                    capabilities.validate_raw_evidence_root(raw_root, ROOT)
+                with self.assertRaisesRegex(ValueError, "not supported on Windows"):
+                    capabilities.validate_private_external_file(private, ROOT, "private input")
+                with self.assertRaisesRegex(ValueError, "not supported on Windows"):
+                    capabilities._write_private_bytes(private, b"{}\n")
             self.assertEqual(capabilities.validate_private_external_file(private, ROOT, "capture"), private.resolve())
             content = b"content-addressed evidence\n"; content_digest = capabilities.digest(content)
             content_path = Path(tmp) / f"{content_digest.removeprefix('sha256:')}.json"
@@ -1160,11 +1264,11 @@ class CapabilityContractTests(unittest.TestCase):
                     capabilities.digest_regular_file(growing)
             self.assertEqual(growing_read.call_count, 1)
             private_output = root / "private-output.json"
-            with mock.patch.object(capabilities, "Path", type(root)), mock.patch.object(
-                capabilities.os, "name", "nt",
-            ), mock.patch.object(capabilities.os, "fchmod") as fchmod:
-                capabilities._write(private_output, {"private": True}, private=True)
+            with mock.patch.object(capabilities.os, "name", "nt"), mock.patch.object(capabilities.os, "fchmod") as fchmod:
+                with self.assertRaisesRegex(ValueError, "not supported on Windows"):
+                    capabilities._write(private_output, {"private": True}, private=True)
             fchmod.assert_not_called()
+            capabilities._write(private_output, {"private": True}, private=True)
             self.assertEqual(capabilities._read(private_output), {"private": True})
             if hasattr(os, "mkfifo"):
                 fifo = root / "client-fifo"

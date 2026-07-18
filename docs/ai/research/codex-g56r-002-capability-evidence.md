@@ -9,7 +9,7 @@ The first append-only capability freeze is valid but has zero eligible tuples:
 - Surface matrix: `sha256:99739c0895250de0eb0cf1a0215fd2e5168213081d41f6b2f828c274528c32b2`
 - Pinned client identity: `sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285`
 - Current source-refresh set: `sha256:6f382a11b06df40e03719d713fae09c8d88a9ddb9586b735a48f039ac8505ea9`
-- Complete tuple decisions: `sha256:70185addccf12535e30265b74dd2b6d725618626a774124b056b7aa0a917389b`
+- Complete tuple decisions: `sha256:b53455921d0b4fc9734c582490f5ea8071f972161ad06984f4d80ba7f36ee981`
 
 Zero eligibility is intentional. The app-server, CLI, and interactive-picker
 collections are each recorded as `unknown` under the same pinned client
@@ -111,9 +111,12 @@ The source-refresh digest resolves to the aggregate capture containing all 22
 retrieved bodies. Each surface's `raw://sha256:...` reference is backed by a mode-`0600`
 sanitized attempt record named by that exact digest, and collection re-reads
 the stored bytes before publishing the observation.
-Freeze and canary publication automatically append one content-addressed
-retention record per non-fixture digest. Each record binds the freeze ID,
-publication time, and exact 30-day deletion deadline. The deterministic
+Freeze and canary publication stage one content-addressed retention record per
+non-fixture digest. Each record binds the freeze ID, publication time, and exact
+30-day deletion deadline, but becomes governing only after the exact artifact
+bytes exist and a content-addressed publication receipt is directory-fsynced.
+An interrupted publication can be recovered idempotently; unreceipted records
+remain pending and cannot extend deletion. The deterministic
 `retention` command verifies pre-deadline presence, fails closed on missing or
 overdue bytes, and in `cleanup` mode appends and directory-fsyncs the complete
 deletion record before removing the expired bytes, then directory-fsyncs the
@@ -126,3 +129,6 @@ arbitrary logical timestamps are read-only verification inputs. The committed
 JSON is deny-by-default sanitized and contains no
 retrieved source bodies, credentials, headers, cookies, prompt content, account
 identifiers, hostnames, absolute paths, or repository remotes.
+Private-store operations fail closed on Windows until owner-only DACL validation
+can enforce the same access boundary as POSIX `0700` directories and `0600`
+files; offline committed-artifact validation remains platform-neutral.

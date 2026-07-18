@@ -61,6 +61,7 @@
     },
     "tuple_decisions": {
       "type": "array",
+      "minItems": 1,
       "items": {"$ref": "#/$defs/tupleDecision"}
     },
     "approved_canary_executors": {
@@ -129,7 +130,7 @@
       "required": ["candidate_route_id", "reasons"],
       "properties": {
         "candidate_route_id": {"type": "string", "minLength": 1},
-        "reasons": {"type": "array", "items": {"type": "string", "minLength": 1}}
+        "reasons": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
       }
     },
     "clientIdentity": {
@@ -409,7 +410,12 @@
           "type": "array",
           "minItems": 3,
           "maxItems": 3,
-          "items": {"$ref": "#/$defs/surfaceObservation"}
+          "items": {"$ref": "#/$defs/surfaceObservation"},
+          "allOf": [
+            {"contains": {"type": "object", "properties": {"surface": {"const": "app_server"}}, "required": ["surface"]}, "minContains": 1, "maxContains": 1},
+            {"contains": {"type": "object", "properties": {"surface": {"const": "cli"}}, "required": ["surface"]}, "minContains": 1, "maxContains": 1},
+            {"contains": {"type": "object", "properties": {"surface": {"const": "interactive_picker"}}, "required": ["surface"]}, "minContains": 1, "maxContains": 1}
+          ]
         },
         "normalization_map": {
           "type": "object",
@@ -450,6 +456,12 @@
     "tupleDecision": {
       "type": "object",
       "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {"properties": {"decision": {"const": "excluded"}}, "required": ["decision"]},
+          "then": {"properties": {"reasons": {"minItems": 1}}}
+        }
+      ],
       "required": [
         "candidate_route_id",
         "candidate_route_digest",
@@ -490,7 +502,10 @@
         "role_instruction_sha256": {"$ref": "#/$defs/digest"},
         "canonical_model_id": {"type": "string", "minLength": 1},
         "canonical_effort": {
-          "oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]
+          "oneOf": [
+            {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+            {"type": "null"}
+          ]
         },
         "official_source_bindings": {
           "type": "array",
@@ -675,7 +690,7 @@
       "properties": {
         "snapshot_id": {"$ref": "#/$defs/digest"},
         "canonical_model_id": {"type": "string", "minLength": 1},
-        "canonical_effort": {"type": "string", "minLength": 1},
+        "canonical_effort": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"},
         "attempt_index": {"const": 1},
         "timeout_seconds": {"const": 30},
         "combined_output_cap_bytes": {"const": 65536},
