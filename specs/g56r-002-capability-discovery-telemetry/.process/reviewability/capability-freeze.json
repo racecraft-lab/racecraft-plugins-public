@@ -8,8 +8,8 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 1433,
-  "actual_nonblank_noncomment_lines": 1276,
+  "actual_source_lines": 1642,
+  "actual_nonblank_noncomment_lines": 1465,
   "production_modules": 1,
   "primary_surface": "harness/adapter",
   "correctness_checks": {
@@ -26,7 +26,7 @@
     "kind": "typed_size_only",
     "status": "honored_for_checkpoint",
     "subdivision": "no_safe_boundary",
-    "rationale": "Source refresh authority, surface normalization, tuple-local decisions, complete freeze identity, and published-artifact revalidation form one integrity boundary.",
+    "rationale": "Source refresh authority, route-to-claim admission, raw-evidence retention, surface normalization, tuple-local decisions, complete freeze identity, and published-artifact revalidation form one integrity boundary.",
     "growth_limit": "No feature growth of codex_capabilities.py is authorized after the capability checkpoint; only reviewer-required integrity remediation with focused regression coverage is permitted."
   },
   "later_markers": [

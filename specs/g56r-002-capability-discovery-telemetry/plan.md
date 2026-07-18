@@ -188,7 +188,10 @@ Repository tests must pass with the network disabled and no raw evidence store.
 
 - `raw_evidence_root` must resolve outside the repository, use `0700`
   directories and `0600` files, and retain captures for 30 days after freeze
-  publication before leaving only a digest and deletion record.
+  publication. Publication appends a content-addressed retention record;
+  deterministic verification fails on missing or overdue bytes, and cleanup
+  appends a content-addressed deletion record before leaving only those records
+  and the raw digest.
 - Committed fixtures are deny-by-default sanitized, schema-allowlisted,
   canonical UTF-8 JSON with sorted keys and compact separators, and SHA-256
   bound to exact bytes by the adjacent out-of-band digest manifest.

@@ -181,6 +181,20 @@ class CapabilityContractTests(unittest.TestCase):
             item["extract_sha256"]: list(scoped_source["claim_bindings"])
             for item in scoped_source["bounded_extracts"]
         }
+        with self.assertRaisesRegex(ValueError, "route-to-claim"):
+            capabilities.validate_manifest(scoped_manifest, allow_synthetic_manifest=True)
+        for route in scoped_manifest["candidate_routes"]:
+            route["official_source_claim_dependencies"] = {
+                source_id: (
+                    [route["candidate_route_id"]] if route is scoped_route and source_id == scoped_source["official_source_ledger_id"]
+                    else [generic_claim] if source_id == scoped_source["official_source_ledger_id"]
+                    else list(next(
+                        item for item in scoped_manifest["official_source_ledger"]
+                        if item["official_source_ledger_id"] == source_id
+                    )["claim_bindings"])
+                )
+                for source_id in route["official_source_ledger_ids"]
+            }
         scoped_capture = source_capture(scoped_manifest)
         scoped_row = next(item for item in scoped_capture if item["official_source_ledger_id"] == scoped_source["official_source_ledger_id"])
         scoped_row["invalidated_claim_ids"] = [generic_claim]
@@ -189,7 +203,7 @@ class CapabilityContractTests(unittest.TestCase):
             capabilities.normalize_source_refreshes(scoped_manifest, scoped_capture, allow_synthetic_manifest=True),
             allow_synthetic_manifest=True,
         )[0]
-        self.assertIn("source_not_admitted", generic_only["authority_reasons"])
+        self.assertNotIn("source_not_admitted", generic_only["authority_reasons"])
         scoped_row["invalidated_claim_ids"] = [scoped_route["candidate_route_id"]]
         route_specific = capabilities.candidate_tuples_from_manifest(
             scoped_manifest,
@@ -841,6 +855,51 @@ class CapabilityContractTests(unittest.TestCase):
                 manifest=self.manifest, raw_evidence_root=raw_root, repository_root=ROOT,
             )
             self.assertEqual(capabilities.validate_freeze(freeze, self.manifest), freeze)
+            retention_records = capabilities.register_raw_evidence_retention(freeze, raw_root, ROOT, manifest=self.manifest)
+            self.assertEqual(len(retention_records), 3)
+            self.assertEqual(capabilities.register_raw_evidence_retention(freeze, raw_root, ROOT, manifest=self.manifest), retention_records)
+            retained_report = capabilities.reconcile_raw_evidence_retention(
+                raw_root, ROOT, "2026-08-14T23:59:59Z",
+            )
+            retention_output = raw_root / "retention-report.json"
+            self.assertEqual(capabilities.main([
+                "retention", "--raw-evidence-root", str(raw_root), "--as-of", "2026-08-14T23:59:59Z",
+                "--mode", "verify", "--output", str(retention_output),
+            ]), 0)
+            self.assertEqual(json.loads(retention_output.read_text()), retained_report)
+            self.assertEqual(retained_report["retained_evidence_digests"], sorted(
+                item["raw_evidence_digest"] for item in observations
+            ))
+            missing_digest = retained_report["retained_evidence_digests"][0]
+            missing_path = raw_root / f"{missing_digest.removeprefix('sha256:')}.json"
+            missing_bytes = missing_path.read_bytes(); missing_path.unlink()
+            with self.assertRaisesRegex(ValueError, "regular non-symlink"):
+                capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-14T23:59:59Z")
+            missing_path.write_bytes(missing_bytes); missing_path.chmod(0o600)
+            with self.assertRaisesRegex(ValueError, "requires cleanup"):
+                capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-15T00:00:00Z")
+            cleanup_report = capabilities.reconcile_raw_evidence_retention(
+                raw_root, ROOT, "2026-08-15T00:00:00Z", apply=True,
+            )
+            self.assertEqual(cleanup_report["deleted_evidence_digests"], retained_report["retained_evidence_digests"])
+            self.assertEqual(cleanup_report["retained_evidence_digests"], [])
+            self.assertEqual(len(cleanup_report["deletion_record_digests"]), 3)
+            self.assertEqual(
+                capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-15T00:00:00Z", apply=True),
+                cleanup_report,
+            )
+            cleanup_output = raw_root / "cleanup-report.json"
+            self.assertEqual(capabilities.main([
+                "retention", "--raw-evidence-root", str(raw_root), "--as-of", "2026-08-15T00:00:00Z",
+                "--mode", "cleanup", "--output", str(cleanup_output),
+            ]), 0)
+            self.assertEqual(json.loads(cleanup_output.read_text()), cleanup_report)
+            verified_deleted = capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-15T00:00:00Z")
+            self.assertEqual(verified_deleted["deleted_evidence_digests"], cleanup_report["deleted_evidence_digests"])
+            with self.assertRaisesRegex(ValueError, "precedes the deletion"):
+                capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-14T23:59:59Z")
+            self.assertTrue(all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in (raw_root / capabilities.RETENTION_RECORDS_DIR).iterdir()))
+            self.assertTrue(all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in (raw_root / capabilities.DELETION_RECORDS_DIR).iterdir()))
             raw_file.chmod(0o644)
             with self.assertRaisesRegex(ValueError, "files require 0600"):
                 capabilities.validate_raw_evidence_root(raw_root, ROOT)

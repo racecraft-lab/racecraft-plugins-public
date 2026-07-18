@@ -7,7 +7,7 @@ import argparse
 import base64
 import binascii
 import copy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 from html.parser import HTMLParser
 import json
@@ -29,6 +29,9 @@ CANONICAL_MANIFEST_SCHEMA_VERSION = "2.0.0"
 CANONICAL_MANIFEST_SNAPSHOT_ID = "G56R-001-SNAPSHOT-2026-07-16-V3"
 CANONICAL_MANIFEST_DIGEST = "sha256:3dc5c6c7a117ac8d01728ffeff1a35cf38fb0d6e982bb029cf192a790d30cd64"
 PRIVATE_REFRESH_MAX_BYTES = 32 * 1024 * 1024
+RAW_EVIDENCE_RETENTION_DAYS = 30
+RETENTION_RECORDS_DIR = "retention-records"
+DELETION_RECORDS_DIR = "deletion-records"
 ERROR_TERMINALS = ("timeout", "output_cap_exceeded", "launch_error", "transport_error", "authentication_error", "rate_limited", "malformed_response", "explicit_rejection", "service_reroute", "ambiguous_error")
 _UNSET = object()
 _DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
@@ -312,6 +315,28 @@ def _extract_claim_dependencies(source):
     return {key: set(value) for key, value in raw.items()}
 
 
+def _route_claim_dependencies(route, sources_by_id):
+    source_ids = route.get("official_source_ledger_ids", [])
+    raw = route.get("official_source_claim_dependencies")
+    if raw is None:
+        dependencies = {}
+        for source_id in source_ids:
+            bindings = set(sources_by_id[source_id]["claim_bindings"])
+            if len(bindings) != 1:
+                raise ValueError("multi-claim route source requires explicit route-to-claim dependencies")
+            dependencies[source_id] = bindings
+        return dependencies
+    if not isinstance(raw, dict) or set(raw) != set(source_ids):
+        raise ValueError("route-to-claim dependencies must cover every bound source exactly")
+    dependencies = {}
+    for source_id, claims in raw.items():
+        bindings = set(sources_by_id[source_id]["claim_bindings"])
+        if not isinstance(claims, list) or not claims or len(claims) != len(set(claims)) or not set(claims) <= bindings:
+            raise ValueError("route-to-claim dependency is not bound to its source")
+        dependencies[source_id] = set(claims)
+    return dependencies
+
+
 def validate_manifest(manifest, *, allow_synthetic_manifest=False):
     snapshot = manifest.get("snapshot", {})
     if manifest.get("schema_version") != CANONICAL_MANIFEST_SCHEMA_VERSION or snapshot.get("snapshot_id") != CANONICAL_MANIFEST_SNAPSHOT_ID:
@@ -353,6 +378,9 @@ def validate_manifest(manifest, *, allow_synthetic_manifest=False):
         for row in routes
     )
     if invalid_route_binding: raise ValueError("candidate route authority binding is invalid")
+    sources_by_id = {row["official_source_ledger_id"]: row for row in sources}
+    for route in routes:
+        _route_claim_dependencies(route, sources_by_id)
     quarantined, authoritative, by_record = [], set(), {}
     for row in efforts:
         values = row.get("documented_values", [])
@@ -725,13 +753,15 @@ def unknown_observation(surface, client_identity_id, repository_binding, work_it
 def _candidate_tuples(manifest, validation, *, allow_synthetic_manifest=False):
     authority = validate_manifest(manifest, allow_synthetic_manifest=allow_synthetic_manifest)
     refreshes = validation["sanitized_refreshes"]
-    current_ids = {row["official_source_ledger_id"] for row in manifest["official_source_ledger"]}
+    sources = {row["official_source_ledger_id"]: row for row in manifest["official_source_ledger"]}; current_ids = set(sources)
     contracts = {row["agent_contract_id"]: row for row in manifest.get("agent_contracts", [])}; effort_records = {row["effort_surface_record_id"]: row for row in manifest["effort_surface_records"]}
     refresh_by_source = {row["official_source_ledger_id"]: row for row in validation["sanitized_refreshes"]}
-    invalidated, efforts_by_record = set(validation["invalidated_claim_ids"]), authority["authoritative_effort_tokens_by_record"]
-    def source_adverse_for_route(row, _route):
+    efforts_by_record = authority["authoritative_effort_tokens_by_record"]
+    route_dependencies = {route["candidate_route_id"]: _route_claim_dependencies(route, sources) for route in manifest.get("candidate_routes", [])}
+    def source_adverse_for_route(row, route):
         invalid = set(row["invalidated_claim_ids"])
-        return row["status"] in {"inaccessible", "withdrawn", "conflicting"} or bool(invalid)
+        dependencies = route_dependencies[route["candidate_route_id"]][row["official_source_ledger_id"]]
+        return row["status"] in {"inaccessible", "withdrawn", "conflicting"} or bool(invalid & dependencies)
 
     tuples = []
     for route in manifest.get("candidate_routes", []):
@@ -741,7 +771,7 @@ def _candidate_tuples(manifest, validation, *, allow_synthetic_manifest=False):
             source_id for source_id in source_ids
             if source_adverse_for_route(refresh_by_source[source_id], route)
         }
-        if not _token(model) or not source_ids or not set(source_ids) <= current_ids or adverse_source_ids or route.get("candidate_route_id") in invalidated:
+        if not _token(model) or not source_ids or not set(source_ids) <= current_ids or adverse_source_ids:
             reasons.append("source_not_admitted")
         bound_records = [effort_records[record_id] for record_id in route.get("effort_surface_record_ids", [])]
         supporting = [row for row in bound_records if effort in efforts_by_record.get(row["effort_surface_record_id"], [])]
@@ -1123,6 +1153,173 @@ def validate_unknown_observation_evidence(observation, raw_root, repository_root
         raise ValueError("unknown observation evidence bytes do not match the deterministic attempt record")
 
 
+def _format_timestamp(value):
+    return value.isoformat().replace("+00:00", "Z")
+
+
+def _private_record_directory(raw, name):
+    target = raw / name
+    if target.exists():
+        if target.is_symlink() or not target.is_dir():
+            raise ValueError("raw evidence record path must be a private directory")
+    else:
+        try:
+            target.mkdir(mode=0o700)
+        except FileExistsError:
+            if target.is_symlink() or not target.is_dir():
+                raise ValueError("raw evidence record path must be a private directory")
+    if os.name != "nt":
+        target.chmod(0o700)
+    return target
+
+
+def _store_private_record(directory, value, repository_root):
+    payload = canonical_bytes(value) + b"\n"; record_digest = digest(payload)
+    target = directory / f"{record_digest.removeprefix('sha256:')}.json"
+    if target.exists():
+        _, retained = read_content_addressed_private_file(target, repository_root, "raw evidence record")
+        if retained != payload: raise ValueError("content-addressed raw evidence record bytes disagree")
+        return record_digest
+    try:
+        _write(target, value, private=True, append_only=True)
+    except FileExistsError:
+        _, retained = read_content_addressed_private_file(target, repository_root, "raw evidence record")
+        if retained != payload: raise ValueError("content-addressed raw evidence record bytes disagree")
+    return record_digest
+
+
+def _load_private_records(directory, repository_root, label):
+    if not directory.exists(): return []
+    if directory.is_symlink() or not directory.is_dir(): raise ValueError(f"{label} path must be a private directory")
+    entries = sorted(directory.iterdir(), key=lambda path: path.name)
+    if any(path.is_symlink() or not path.is_file() or path.suffix != ".json" for path in entries):
+        raise ValueError(f"{label} directory contains an undeclared entry")
+    records = []
+    for path in entries:
+        _, raw = read_content_addressed_private_file(path, repository_root, label)
+        record = _parse_json_bytes(raw)
+        if raw != canonical_bytes(record) + b"\n": raise ValueError(f"{label} must use canonical JSON bytes")
+        records.append((digest(raw), record))
+    return records
+
+
+def _validate_retention_record(record_digest, record):
+    keys = {"schema_version", "candidate_freeze_id", "raw_evidence_digest", "published_at", "delete_after"}
+    if not isinstance(record, dict) or set(record) != keys or record["schema_version"] != "raw-evidence-retention.v1":
+        raise ValueError("raw evidence retention record must use the closed v1 shape")
+    _need_digest(record_digest, "retention record digest"); _need_digest(record["candidate_freeze_id"], "candidate_freeze_id"); _need_digest(record["raw_evidence_digest"], "raw_evidence_digest")
+    published = _parsed_timestamp(record["published_at"], "retention publication timestamp")
+    delete_after = _parsed_timestamp(record["delete_after"], "retention deletion deadline")
+    if delete_after != published + timedelta(days=RAW_EVIDENCE_RETENTION_DAYS):
+        raise ValueError("raw evidence retention deadline must be exactly 30 days after publication")
+    return record
+
+
+def _validate_deletion_record(record_digest, record):
+    keys = {"schema_version", "raw_evidence_digest", "retention_record_digests", "delete_after", "deleted_at"}
+    if not isinstance(record, dict) or set(record) != keys or record["schema_version"] != "raw-evidence-deletion.v1":
+        raise ValueError("raw evidence deletion record must use the closed v1 shape")
+    _need_digest(record_digest, "deletion record digest"); _need_digest(record["raw_evidence_digest"], "raw_evidence_digest")
+    refs = record["retention_record_digests"]
+    if not isinstance(refs, list) or not refs or refs != sorted(set(refs)):
+        raise ValueError("raw evidence deletion record requires unique retention records")
+    for value in refs: _need_digest(value, "retention_record_digest")
+    deadline = _parsed_timestamp(record["delete_after"], "deletion deadline")
+    if _parsed_timestamp(record["deleted_at"], "deletion timestamp") < deadline:
+        raise ValueError("raw evidence deletion precedes its retention deadline")
+    return record
+
+
+def _freeze_raw_evidence_digests(freeze):
+    observations = freeze["surface_matrix"]["observations"]
+    digests = {
+        item["raw_evidence_digest"] for item in observations
+        if item["collection_method_id"] != "fixture-enumeration-v1"
+    }
+    digests.update(item["evidence_digest"] for item in freeze["canary_results"])
+    for value in digests: _need_digest(value, "raw_evidence_digest")
+    return sorted(digests)
+
+
+def register_raw_evidence_retention(freeze, raw_evidence_root, repository_root, *, manifest):
+    raw = validate_raw_evidence_root(raw_evidence_root, repository_root)
+    freeze = validate_freeze(freeze, manifest, _enforce_lineage=False)
+    published = _parsed_timestamp(freeze.get("published_at"), "freeze publication timestamp")
+    evidence_digests = _freeze_raw_evidence_digests(freeze)
+    if not evidence_digests: return []
+    records = _private_record_directory(raw, RETENTION_RECORDS_DIR)
+    record_digests = []
+    for evidence_digest in evidence_digests:
+        evidence_path = raw / f"{evidence_digest.removeprefix('sha256:')}.json"
+        read_content_addressed_private_file(evidence_path, repository_root, "retained raw evidence")
+        record = {
+            "schema_version": "raw-evidence-retention.v1",
+            "candidate_freeze_id": freeze["candidate_freeze_id"],
+            "raw_evidence_digest": evidence_digest,
+            "published_at": freeze["published_at"],
+            "delete_after": _format_timestamp(published + timedelta(days=RAW_EVIDENCE_RETENTION_DAYS)),
+        }
+        record_digests.append(_store_private_record(records, record, repository_root))
+    validate_raw_evidence_root(raw, repository_root)
+    return sorted(record_digests)
+
+
+def reconcile_raw_evidence_retention(raw_evidence_root, repository_root, as_of, *, apply=False):
+    raw = validate_raw_evidence_root(raw_evidence_root, repository_root); current = _parsed_timestamp(as_of, "retention as-of timestamp")
+    retention_records = [(_validate_retention_record(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / RETENTION_RECORDS_DIR, repository_root, "retention record")]
+    deletion_records = [(_validate_deletion_record(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / DELETION_RECORDS_DIR, repository_root, "deletion record")]
+    retention_by_evidence = {}
+    for record, record_digest in retention_records:
+        retention_by_evidence.setdefault(record["raw_evidence_digest"], []).append((record, record_digest))
+    deletion_by_evidence = {}
+    for record, record_digest in deletion_records:
+        if record["raw_evidence_digest"] in deletion_by_evidence:
+            raise ValueError("raw evidence digest has multiple deletion records")
+        deletion_by_evidence[record["raw_evidence_digest"]] = (record, record_digest)
+    if not set(deletion_by_evidence) <= set(retention_by_evidence):
+        raise ValueError("deletion record lacks retained evidence authority")
+    retained, deleted, deletion_digests = [], [], []
+    for evidence_digest in sorted(retention_by_evidence):
+        grouped = retention_by_evidence[evidence_digest]
+        record_digests = sorted(record_digest for _, record_digest in grouped)
+        deadline = max(_parsed_timestamp(record["delete_after"], "retention deletion deadline") for record, _ in grouped)
+        deadline_text = _format_timestamp(deadline); target = raw / f"{evidence_digest.removeprefix('sha256:')}.json"
+        deletion = deletion_by_evidence.get(evidence_digest)
+        if deletion is not None:
+            record, record_digest = deletion
+            if record["retention_record_digests"] != record_digests or record["delete_after"] != deadline_text:
+                raise ValueError("raw evidence deletion record does not bind the complete retention history")
+            if current < _parsed_timestamp(record["deleted_at"], "deletion timestamp"):
+                raise ValueError("retention as-of timestamp precedes the deletion record")
+            if target.exists():
+                if not apply: raise ValueError("deletion record still has retained raw evidence bytes")
+                read_content_addressed_private_file(target, repository_root, "expired raw evidence"); target.unlink()
+            deleted.append(evidence_digest); deletion_digests.append(record_digest); continue
+        if current < deadline:
+            read_content_addressed_private_file(target, repository_root, "retained raw evidence")
+            retained.append(evidence_digest); continue
+        if not target.exists(): raise ValueError("expired raw evidence is missing without a deletion record")
+        if not apply: raise ValueError("expired raw evidence requires cleanup")
+        read_content_addressed_private_file(target, repository_root, "expired raw evidence")
+        deletion_record = {
+            "schema_version": "raw-evidence-deletion.v1",
+            "raw_evidence_digest": evidence_digest,
+            "retention_record_digests": record_digests,
+            "delete_after": deadline_text,
+            "deleted_at": as_of,
+        }
+        directory = _private_record_directory(raw, DELETION_RECORDS_DIR)
+        record_digest = _store_private_record(directory, deletion_record, repository_root)
+        target.unlink(); deleted.append(evidence_digest); deletion_digests.append(record_digest)
+    validate_raw_evidence_root(raw, repository_root)
+    return {
+        "schema_version": "raw-evidence-retention-report.v1", "mode": "cleanup" if apply else "verify", "as_of": as_of,
+        "retained_evidence_digests": retained, "deleted_evidence_digests": deleted,
+        "retention_record_digests": sorted(record_digest for _, record_digest in retention_records),
+        "deletion_record_digests": sorted(deletion_digests),
+    }
+
+
 def validate_tuple_decisions(decisions, *, require_snapshot=False):
     if any(item.get("decision") == "included" for item in decisions) and not isinstance(decisions, _BoundDecisionSet):
         raise ValueError("included decisions require manifest-bound authority")
@@ -1357,7 +1554,11 @@ def _write(path, value, *, private=False, append_only=False):
                 os.fchmod(descriptor, 0o600)
             with os.fdopen(descriptor, "wb") as stream:
                 stream.write(payload); stream.flush(); os.fsync(stream.fileno())
-            os.replace(temporary, path)
+            if append_only:
+                os.link(temporary, path)
+                os.unlink(temporary)
+            else:
+                os.replace(temporary, path)
         except Exception:
             try: os.close(descriptor)
             except OSError: pass  # Best-effort cleanup must not mask the original failure.
@@ -1391,6 +1592,7 @@ def main(argv=None):
     canary = sub.add_parser("canary"); canary.add_argument("--manifest", required=True); canary.add_argument("--freeze", required=True); canary.add_argument("--model", required=True); canary.add_argument("--effort", required=True); canary.add_argument("--executor-result", required=True); canary.add_argument("--raw-evidence-root", required=True); canary.add_argument("--published-at"); canary.add_argument("--output", required=True)
     freeze = sub.add_parser("freeze"); freeze.add_argument("--manifest", required=True); freeze.add_argument("--source-refresh", required=True); freeze.add_argument("--client-identity", required=True); freeze.add_argument("--app-server", required=True); freeze.add_argument("--cli", required=True); freeze.add_argument("--interactive-picker", required=True); freeze.add_argument("--raw-evidence-root"); freeze.add_argument("--aliases"); freeze.add_argument("--predecessor-freeze"); freeze.add_argument("--published-at"); freeze.add_argument("--output", required=True)
     published = sub.add_parser("validate-freeze"); published.add_argument("--manifest", required=True); published.add_argument("--freeze", required=True); published.add_argument("--predecessor-freeze")
+    retention = sub.add_parser("retention"); retention.add_argument("--raw-evidence-root", required=True); retention.add_argument("--as-of", required=True); retention.add_argument("--mode", choices=("verify", "cleanup"), default="verify"); retention.add_argument("--output", required=True)
     args, repo = parser.parse_args(argv), Path(__file__).resolve().parents[4]
     now = lambda: datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     if args.command == "refresh-sources":
@@ -1413,20 +1615,27 @@ def main(argv=None):
         if (result.get("snapshot_id"), result.get("canonical_model_id"), result.get("canonical_effort")) != (predecessor.get("runtime_capability_snapshot_id"), args.model, args.effort):
             raise ValueError("canary result does not match the requested tuple")
         successor = build_canary_successor(predecessor, result, manifest, args.published_at or now(), raw_evidence_root=args.raw_evidence_root, repository_root=repo)
+        register_raw_evidence_retention(successor, args.raw_evidence_root, repo, manifest=manifest)
         _write(args.output, successor, append_only=True); return int(successor["canary_results"][-1]["availability_disposition"] == "unknown")
     if args.command == "validate-freeze":
         predecessor = _read(args.predecessor_freeze, require_canonical=True) if args.predecessor_freeze else None
         validate_freeze(_read(args.freeze, require_canonical=True), _read(args.manifest), predecessor=predecessor); return 0
+    if args.command == "retention":
+        output = validate_private_external_file(args.output, repo, "retention report output", output=True)
+        report = reconcile_raw_evidence_retention(args.raw_evidence_root, repo, args.as_of, apply=args.mode == "cleanup")
+        _write(output, report, private=True); return 0
     _, source_refresh_bytes = read_private_external_file(args.source_refresh, repo, "normalized source refresh")
     manifest, refreshes, identity = _read(args.manifest), _parse_json_bytes(source_refresh_bytes), build_client_identity(_read(args.client_identity)); validate_source_refreshes(manifest, refreshes)
     tuples = candidate_tuples_from_manifest(manifest, refreshes)
     aliases = _read(args.aliases) if args.aliases else {}
     matrix, decisions = evaluate_surface_matrix([_read(args.app_server), _read(args.cli), _read(args.interactive_picker)], tuples, aliases=aliases)
     predecessor = _read(args.predecessor_freeze, require_canonical=True) if args.predecessor_freeze else None
-    _write(args.output, build_freeze(
+    result = build_freeze(
         identity, refreshes, matrix, decisions, args.published_at or now(), manifest=manifest, predecessor=predecessor,
         raw_evidence_root=args.raw_evidence_root, repository_root=repo,
-    ), append_only=True); return 0
+    )
+    if args.raw_evidence_root: register_raw_evidence_retention(result, args.raw_evidence_root, repo, manifest=manifest)
+    _write(args.output, result, append_only=True); return 0
 
 
 if __name__ == "__main__":

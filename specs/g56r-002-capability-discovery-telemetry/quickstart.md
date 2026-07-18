@@ -246,7 +246,36 @@ collection is never part of the default deterministic suite.
 
 ## Retention Cleanup
 
-Thirty days after freeze publication, delete the raw capture bytes from the
-external store and retain only their content digest and deletion record. Do not
-delete committed sanitized fixtures or published freeze records. Repository
-tests must continue to pass after raw evidence is gone.
+Freeze and canary publication automatically add immutable content-addressed
+records under `raw_evidence_root/retention-records/`. Before the deadline,
+verify that every retained digest still has its exact bytes:
+
+```sh
+python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py retention \
+  --raw-evidence-root /absolute/path/outside/repository/g56r-002-raw \
+  --as-of 2026-08-14T23:59:59Z \
+  --mode verify \
+  --output /absolute/path/outside/repository/g56r-002-raw/retention-report.json
+```
+
+At or after the latest 30-day deadline, apply cleanup and then verify the same
+as-of state:
+
+```sh
+python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py retention \
+  --raw-evidence-root /absolute/path/outside/repository/g56r-002-raw \
+  --as-of 2026-08-15T00:00:00Z \
+  --mode cleanup \
+  --output /absolute/path/outside/repository/g56r-002-raw/cleanup-report.json
+python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py retention \
+  --raw-evidence-root /absolute/path/outside/repository/g56r-002-raw \
+  --as-of 2026-08-15T00:00:00Z \
+  --mode verify \
+  --output /absolute/path/outside/repository/g56r-002-raw/retention-report.json
+```
+
+Cleanup appends an immutable record under `deletion-records/` before removing
+the expired raw bytes. The record retains the raw digest, complete retention
+record history, governing deadline, and deletion time. Repeated cleanup is
+idempotent. Do not delete committed sanitized fixtures or published freeze
+records; repository tests continue to pass without the raw store.

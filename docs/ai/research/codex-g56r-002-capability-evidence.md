@@ -108,7 +108,13 @@ special files, permissive descendants, and Git worktree locations are rejected.
 Each surface's `raw://sha256:...` reference is backed by a mode-`0600`
 sanitized attempt record named by that exact digest, and collection re-reads
 the stored bytes before publishing the observation.
-They are deleted 30 days after publication while their digest and deletion
-record remain. The committed JSON is deny-by-default sanitized and contains no
+Freeze and canary publication automatically append one content-addressed
+retention record per non-fixture digest. Each record binds the freeze ID,
+publication time, and exact 30-day deletion deadline. The deterministic
+`retention` command verifies pre-deadline presence, fails closed on missing or
+overdue bytes, and in `cleanup` mode appends the complete deletion record before
+removing the expired bytes. Replaying cleanup is idempotent; the digest,
+retention history, and deletion record remain auditable after the bytes are
+gone. The committed JSON is deny-by-default sanitized and contains no
 retrieved source bodies, credentials, headers, cookies, prompt content, account
 identifiers, hostnames, absolute paths, or repository remotes.
