@@ -17,7 +17,7 @@
     "published_freeze_validation": "pass",
     "json_schema_instance_validation": "pass",
     "deterministic_replay": "pass",
-    "independent_review": "repeat_pending",
+    "independent_review": "pass",
     "clean_repository_binding": "pass",
     "content_addressed_raw_evidence": "pass",
     "canary_authority": "pass"

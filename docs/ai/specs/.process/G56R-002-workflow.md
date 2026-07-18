@@ -872,8 +872,8 @@ For every task:
 
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
-| 1 - Capability freeze | Review Pending | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, and full suite pass; independent repeat review pending |
-| 2 - Treatment contracts | Blocked | 0 | T016-T025 remain ordered after a clean US1 repeat-review verdict |
+| 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
+| 2 - Treatment contracts | Pending | 0 | T016-T025 are the next ordered increment after the clean US1 checkpoint |
 | 3 - Synthetic replay | Pending | 0 | Not started |
 | Polish and validation | Pending | 0 | Not started |
 
@@ -884,11 +884,12 @@ For every task:
 - Runtime snapshot: `sha256:450a655fabafb765b19bfc9ff3cbefe4b075d6c40fdbc5fd9dbc8ce8c4cfc3fe`
 - Surface matrix: `sha256:99739c0895250de0eb0cf1a0215fd2e5168213081d41f6b2f828c274528c32b2`
 - Included routes: 0; excluded routes: 23
-- Review: REPEAT PENDING after route-to-claim, retention lifecycle,
+- Review: PASS after route-to-claim, retention lifecycle,
   publication-transaction, permission-boundary, schema-parity, concurrency,
-  and destructive-clock remediation. The prior pass and checkpoint are
-  superseded; a new implementation checkpoint SHA is recorded only after a
-  clean verdict.
+  destructive-clock, and hard-link durability remediation. Exact-head
+  RepoPrompt reviews returned `NO FINDINGS` for the core
+  (`untitled-chat-337E74`) and process state (`untitled-chat-55E370`).
+- Implementation checkpoint: `2b7096dacdaa7a6af62b3c12b36e83cf4515213e`
 
 ## PR Marker Plan Evidence
 
@@ -896,20 +897,20 @@ For every task:
 - Authoritative state: top-level `pr_marker_plan` in
   `docs/ai/specs/.process/autopilot-state.json`
 - Fingerprint status: Current
-- Plan status: `review_pending`
+- Plan status: `checkpointing`
 
 | Fingerprint input | SHA-256 |
 |---|---|
 | Feature spec | `sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56` |
 | Plan-declared scope | `sha256:1cb880c5182a68344bf364cc47160da8928c720448b424541261e1168b02ea81` |
 | Tasks | `sha256:4ab7bafd49ffaf63341f0f690e1e9fd3f0a1ccebea0f97febb6bf9fc82cd96eb` |
-| Reviewability evidence | `sha256:aec64122e114199e768a15208aa6dca33045a526dc9e9cbdca3d121151d82f28` |
+| Reviewability evidence | `sha256:05e653cbd39b0300d9b27df30cc2419f524e861fcada383abe49646454dbfeff` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
-| 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Repeat review pending; implementation SHA unbound | Reviewer-required integrity remediation only |
-| 2 | `us2` | T016-T025 | Not estimated | Blocked on clean US1 review | Treatment remains a separate module |
+| 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
+| 2 | `us2` | T016-T025 | Not estimated | Pending; clean US1 checkpoint satisfied | Treatment remains a separate module |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warning: `CAPABILITY_SIZE_BLOCK` / `MARKER_SIZE_WARNING`; US1 is 1,844 source
