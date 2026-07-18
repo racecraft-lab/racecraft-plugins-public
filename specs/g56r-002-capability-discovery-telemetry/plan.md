@@ -57,8 +57,9 @@ increments cease to be independently testable.
 not a size claim. The binding human estimate remains 297 reviewable LOC; the
 400-LOC split trigger remains enforced.
 
-**Implementation checkpoint**: The completed capability adapter is 959 source
-lines and 851 nonblank, non-comment lines, so the 400-LOC trigger is active.
+**Implementation checkpoint**: The capability adapter is 1,768 source lines
+and 1,575 nonblank, non-comment lines after independent-review integrity
+remediation, so the 400-LOC trigger is active.
 Capability work T001-T015 remains one review marker under a typed size-only
 exception because source refresh, surface authority, tuple decisions, and the
 published freeze validator share one integrity boundary and have no safe
@@ -188,11 +189,13 @@ Repository tests must pass with the network disabled and no raw evidence store.
 
 - `raw_evidence_root` must resolve outside the repository, use `0700`
   directories and `0600` files, and retain captures for 30 days after freeze
-  publication. Publication appends a content-addressed retention record;
+  publication. Source refresh copies and binds the exact aggregate body capture
+  into that store. Publication appends a content-addressed retention record;
   deterministic verification fails on missing or overdue bytes, and cleanup
-  appends a content-addressed deletion record before leaving only those records
-  and the raw digest. Registration and cleanup share an atomic private-root
-  lock, and destructive cleanup derives its timestamp from current UTC.
+  appends and directory-fsyncs a content-addressed deletion record before
+  removing the raw bytes and directory-fsyncing the raw root. Registration and
+  cleanup share an atomic private-root lock, and destructive cleanup derives its
+  timestamp from current UTC.
 - Committed fixtures are deny-by-default sanitized, schema-allowlisted,
   canonical UTF-8 JSON with sorted keys and compact separators, and SHA-256
   bound to exact bytes by the adjacent out-of-band digest manifest.

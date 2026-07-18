@@ -4,11 +4,11 @@
 
 The first append-only capability freeze is valid but has zero eligible tuples:
 
-- Candidate freeze: `sha256:57b79448bc59f4e9dd8eb2acb61452c5c0fe6f4acc4199c48bc9a3eb4e6b3d24`
-- Runtime snapshot: `sha256:39e6284e4a3ae9109a543b8e0ecf4c9d59181010dd3def7b874c89fab46a43f3`
+- Candidate freeze: `sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03`
+- Runtime snapshot: `sha256:450a655fabafb765b19bfc9ff3cbefe4b075d6c40fdbc5fd9dbc8ce8c4cfc3fe`
 - Surface matrix: `sha256:99739c0895250de0eb0cf1a0215fd2e5168213081d41f6b2f828c274528c32b2`
 - Pinned client identity: `sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285`
-- Current source-refresh set: `sha256:85c190a19e562374e57d62ebd481c39705149a52987015c87809caddb78d8609`
+- Current source-refresh set: `sha256:6f382a11b06df40e03719d713fae09c8d88a9ddb9586b735a48f039ac8505ea9`
 - Complete tuple decisions: `sha256:70185addccf12535e30265b74dd2b6d725618626a774124b056b7aa0a917389b`
 
 Zero eligibility is intentional. The app-server, CLI, and interactive-picker
@@ -48,7 +48,9 @@ outside Git in an operator-only directory with mode `0700` and files with mode
 freeze-time revalidation; the published freeze strips them.
 The aggregate capture is stored as the exact-byte content-addressed object
 `sha256:26b4bc034cac55e149b1b0b5c7648531be2f84d46385160f3c6c30ac582df70a`;
-the refresh command rejects a filename that does not match those bytes.
+the refresh command rejects a filename that does not match those bytes, copies
+that exact object into `raw_evidence_root`, and binds its digest into every
+sanitized source-refresh row in the freeze.
 
 The pinned identity records `codex-cli 0.144.4` and an executable SHA-256 rather
 than an absolute executable path. The three surface collections emitted
@@ -105,15 +107,17 @@ for every later freeze and runtime-snapshot successor.
 Raw captures, if any, remain in an operator-only content-addressed store outside
 the repository with directory mode `0700` and file mode `0600`; symlinks,
 special files, permissive descendants, and Git worktree locations are rejected.
-Each surface's `raw://sha256:...` reference is backed by a mode-`0600`
+The source-refresh digest resolves to the aggregate capture containing all 22
+retrieved bodies. Each surface's `raw://sha256:...` reference is backed by a mode-`0600`
 sanitized attempt record named by that exact digest, and collection re-reads
 the stored bytes before publishing the observation.
 Freeze and canary publication automatically append one content-addressed
 retention record per non-fixture digest. Each record binds the freeze ID,
 publication time, and exact 30-day deletion deadline. The deterministic
 `retention` command verifies pre-deadline presence, fails closed on missing or
-overdue bytes, and in `cleanup` mode appends the complete deletion record before
-removing the expired bytes. Replaying cleanup is idempotent; the digest,
+overdue bytes, and in `cleanup` mode appends and directory-fsyncs the complete
+deletion record before removing the expired bytes, then directory-fsyncs the
+raw store. Replaying cleanup is idempotent; the digest,
 retention history, and deletion record remain auditable after the bytes are
 gone. Registration and cleanup share an atomic private-root lock, so a newer
 publication cannot extend a digest while cleanup is deleting it. Destructive

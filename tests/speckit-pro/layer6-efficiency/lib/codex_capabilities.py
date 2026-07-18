@@ -407,8 +407,11 @@ def _changed_extract_claims(source, extracts):
     return claims or bindings
 
 
-def normalize_source_refreshes(manifest, captured, *, allow_synthetic_manifest=False):
+def normalize_source_refreshes(manifest, captured, *, source_capture_digest=None, allow_synthetic_manifest=False):
     validate_manifest(manifest, allow_synthetic_manifest=allow_synthetic_manifest)
+    if source_capture_digest is None:
+        source_capture_digest = digest(canonical_bytes(captured) + b"\n")
+    _need_digest(source_capture_digest, "source_capture_digest")
     sources = {row["official_source_ledger_id"]: row for row in manifest["official_source_ledger"]}
     actual = [row.get("official_source_ledger_id") for row in captured]
     if len(captured) != 22 or set(actual) != set(sources) or len(set(actual)) != 22:
@@ -449,6 +452,7 @@ def normalize_source_refreshes(manifest, captured, *, allow_synthetic_manifest=F
             "requested_url": source["requested_url"], "canonical_url": item["canonical_url"],
             "retrieved_at": item["retrieved_at"], "body_digest": body, "status": status,
             "retrieved_body_b64": item["retrieved_body_b64"],
+            "source_capture_digest": source_capture_digest,
             "bounded_extracts": extracts, "retrieval_evidence_digest": digest(evidence),
             "documented_facts": list(source.get("exact_documented_facts", [])),
             "claim_bindings": bindings, "invalidated_claim_ids": invalid,
@@ -461,7 +465,7 @@ def validate_published_source_refreshes(manifest, refreshes, *, allow_synthetic_
     validate_manifest(manifest, allow_synthetic_manifest=allow_synthetic_manifest); sources = {row["official_source_ledger_id"]: row for row in manifest["official_source_ledger"]}
     if len(refreshes) != 22 or [row.get("official_source_ledger_id") for row in refreshes] != sorted(sources):
         raise ValueError("source refresh must cover the 22 unique current records")
-    keys = {"official_source_ledger_id", "requested_url", "canonical_url", "retrieved_at", "body_digest", "status", "bounded_extracts", "retrieval_evidence_digest", "documented_facts", "claim_bindings", "invalidated_claim_ids", "prior_record_digest"}
+    keys = {"official_source_ledger_id", "requested_url", "canonical_url", "retrieved_at", "body_digest", "status", "source_capture_digest", "bounded_extracts", "retrieval_evidence_digest", "documented_facts", "claim_bindings", "invalidated_claim_ids", "prior_record_digest"}
     statuses = {"confirmed_current", "changed", "redirected", "inaccessible", "withdrawn", "conflicting"}
     for item in refreshes:
         source = sources[item["official_source_ledger_id"]]; bindings = source["claim_bindings"]
@@ -469,6 +473,7 @@ def validate_published_source_refreshes(manifest, refreshes, *, allow_synthetic_
             raise ValueError("source refresh authority fields must be canonical manifest values")
         if item["documented_facts"] != source["exact_documented_facts"] or item["claim_bindings"] != bindings or item["prior_record_digest"] != digest(source):
             raise ValueError("source refresh authority fields must be canonical manifest values")
+        _need_digest(item["source_capture_digest"], "source_capture_digest")
         invalid = item["invalidated_claim_ids"]
         if item["status"] not in statuses or len(invalid) != len(set(invalid)) or not set(invalid) <= set(bindings): raise ValueError("source refresh status or invalidation is invalid")
         canonical_changed = item["canonical_url"] != source["canonical_url"]
@@ -492,12 +497,15 @@ def validate_published_source_refreshes(manifest, refreshes, *, allow_synthetic_
             if item["status"] != expected_status: raise ValueError("source refresh status is inconsistent with captured evidence")
         evidence = {"canonical_url": item["canonical_url"], "retrieved_at": item["retrieved_at"], "body_digest": item["body_digest"], "bounded_extracts": item["bounded_extracts"]}
         if item["retrieval_evidence_digest"] != digest(evidence): raise ValueError("source retrieval evidence digest is invalid")
+    capture_digests = {row["source_capture_digest"] for row in refreshes}
+    if len(capture_digests) != 1:
+        raise ValueError("source refreshes must bind one complete raw source capture")
     invalidated = sorted({claim for row in refreshes for claim in row["invalidated_claim_ids"]})
     return {"count": 22, "invalidated_claim_ids": invalidated, "digest": digest(refreshes), "sanitized_refreshes": refreshes}
 
 
 def validate_source_refreshes(manifest, refreshes, *, allow_synthetic_manifest=False):
-    raw_keys = {"official_source_ledger_id", "requested_url", "canonical_url", "retrieved_at", "body_digest", "status", "retrieved_body_b64", "bounded_extracts", "retrieval_evidence_digest", "documented_facts", "claim_bindings", "invalidated_claim_ids", "prior_record_digest"}
+    raw_keys = {"official_source_ledger_id", "requested_url", "canonical_url", "retrieved_at", "body_digest", "status", "retrieved_body_b64", "source_capture_digest", "bounded_extracts", "retrieval_evidence_digest", "documented_facts", "claim_bindings", "invalidated_claim_ids", "prior_record_digest"}
     for item in refreshes:
         if set(item) != raw_keys: raise ValueError("source refresh must retain the closed raw evidence binding")
         body_bytes = _validated_body(item["retrieved_body_b64"], item["bounded_extracts"], item.get("official_source_ledger_id"))
@@ -1114,6 +1122,43 @@ def read_content_addressed_private_file(path, repository_root, label):
     return resolved, raw
 
 
+def materialize_source_capture(raw_root, repository_root, capture_bytes):
+    captured = _parse_json_bytes(capture_bytes)
+    if not isinstance(captured, list):
+        raise ValueError("captured refresh must be a JSON list")
+    raw = validate_raw_evidence_root(raw_root, repository_root)
+    capture_digest = digest(capture_bytes)
+    target = raw / f"{capture_digest.removeprefix('sha256:')}.json"
+    if target.exists():
+        _, retained = read_content_addressed_private_file(target, repository_root, "source capture")
+        if retained != capture_bytes: raise ValueError("content-addressed source capture bytes disagree")
+    else:
+        _write_private_bytes(target, capture_bytes, append_only=True)
+    validate_raw_evidence_root(raw, repository_root)
+    _, retained = read_content_addressed_private_file(target, repository_root, "source capture")
+    if retained != capture_bytes:
+        raise ValueError("source capture was not retained under its content identity")
+    return capture_digest, target
+
+
+def validate_source_capture_evidence(manifest, refreshes, raw_root, repository_root):
+    capture_digests = {item.get("source_capture_digest") for item in refreshes}
+    if len(capture_digests) != 1:
+        raise ValueError("source refreshes must bind one complete raw source capture")
+    capture_digest = capture_digests.pop(); _need_digest(capture_digest, "source_capture_digest")
+    raw = validate_raw_evidence_root(raw_root, repository_root)
+    target = raw / f"{capture_digest.removeprefix('sha256:')}.json"
+    _, capture_bytes = read_content_addressed_private_file(target, repository_root, "source capture")
+    expected = normalize_source_refreshes(
+        manifest, _parse_json_bytes(capture_bytes), source_capture_digest=capture_digest,
+    )
+    if refreshes and "retrieved_body_b64" not in refreshes[0]:
+        expected = validate_source_refreshes(manifest, expected)["sanitized_refreshes"]
+    if canonical_bytes(expected) != canonical_bytes(refreshes):
+        raise ValueError("normalized source refresh does not match its retained raw capture")
+    return capture_digest
+
+
 def validate_canary_evidence(raw_root, repository_root, result):
     _need_digest(result.get("evidence_digest"), "evidence_digest")
     raw = validate_raw_evidence_root(raw_root, repository_root)
@@ -1238,6 +1283,7 @@ def _freeze_raw_evidence_digests(freeze):
         item["raw_evidence_digest"] for item in observations
         if item["collection_method_id"] != "fixture-enumeration-v1"
     }
+    digests.update(item["source_capture_digest"] for item in freeze["official_source_refreshes"])
     digests.update(item["evidence_digest"] for item in freeze["canary_results"])
     for value in digests: _need_digest(value, "raw_evidence_digest")
     return sorted(digests)
@@ -1291,6 +1337,13 @@ def register_raw_evidence_retention(freeze, raw_evidence_root, repository_root, 
     freeze = validate_freeze(freeze, manifest, _enforce_lineage=False)
     with _retention_lock(raw):
         validate_raw_evidence_root(raw, repository_root)
+        deleted_digests = {
+            _validate_deletion_record(record_digest, record)["raw_evidence_digest"]
+            for record_digest, record in _load_private_records(raw / DELETION_RECORDS_DIR, repository_root, "deletion record")
+        }
+        if set(_freeze_raw_evidence_digests(freeze)) & deleted_digests:
+            raise ValueError("raw evidence cannot be registered after deletion has begun")
+        validate_source_capture_evidence(manifest, freeze["official_source_refreshes"], raw, repository_root)
         return _register_raw_evidence_retention_locked(freeze, raw, repository_root)
 
 
@@ -1340,7 +1393,7 @@ def _reconcile_raw_evidence_retention_locked(raw, repository_root, as_of, curren
                 raise ValueError("retention as-of timestamp precedes the deletion record")
             if target.exists():
                 if not apply: raise ValueError("deletion record still has retained raw evidence bytes")
-                read_content_addressed_private_file(target, repository_root, "expired raw evidence"); target.unlink()
+                read_content_addressed_private_file(target, repository_root, "expired raw evidence"); target.unlink(); _fsync_directory(raw)
             deleted.append(evidence_digest); deletion_digests.append(record_digest); continue
         if current < deadline:
             read_content_addressed_private_file(target, repository_root, "retained raw evidence")
@@ -1357,7 +1410,7 @@ def _reconcile_raw_evidence_retention_locked(raw, repository_root, as_of, curren
         }
         directory = _private_record_directory(raw, DELETION_RECORDS_DIR)
         record_digest = _store_private_record(directory, deletion_record, repository_root)
-        target.unlink(); deleted.append(evidence_digest); deletion_digests.append(record_digest)
+        target.unlink(); _fsync_directory(raw); deleted.append(evidence_digest); deletion_digests.append(record_digest)
     validate_raw_evidence_root(raw, repository_root)
     return {
         "schema_version": "raw-evidence-retention-report.v1", "mode": "cleanup" if apply else "verify", "as_of": as_of,
@@ -1451,6 +1504,8 @@ def _validate_same_snapshot_canary_history(predecessor, results, unchanged_snaps
 
 def build_freeze(identity, refreshes, matrix, decisions, published_at, *, manifest, predecessor=None, raw_evidence_root=None, repository_root=None):
     identity = build_client_identity(identity); matrix = validate_surface_matrix(matrix); decisions = validate_tuple_decisions(decisions)
+    if (raw_evidence_root is None) != (repository_root is None):
+        raise ValueError("freeze raw evidence root and repository root must be provided together")
     if any(item["collection_method_id"] == "unknown-observation-v1" for item in matrix["observations"]):
         if raw_evidence_root is None or repository_root is None:
             raise ValueError("initial unknown-observation publication requires its raw evidence root")
@@ -1461,6 +1516,8 @@ def build_freeze(identity, refreshes, matrix, decisions, published_at, *, manife
     if len(refreshes) != 22 or len({item.get("official_source_ledger_id") for item in refreshes}) != 22:
         raise ValueError("freeze requires all 22 source refreshes")
     refresh_validation = validate_source_refreshes(manifest, refreshes); sanitized_refreshes = refresh_validation["sanitized_refreshes"]
+    if raw_evidence_root is not None:
+        validate_source_capture_evidence(manifest, refreshes, raw_evidence_root, repository_root)
     _validate_publication_time(published_at, sanitized_refreshes, matrix, predecessor)
     rebuilt, expected = evaluate_surface_matrix(matrix["observations"], candidate_tuples_from_manifest(manifest, refreshes), aliases=matrix["normalization_map"], expected_integrity_digest=matrix["aggregate_integrity_digest"])
     if rebuilt["surface_matrix_id"] != matrix["surface_matrix_id"] or canonical_bytes(expected) != canonical_bytes(decisions):
@@ -1591,27 +1648,45 @@ def _read(path, *, require_canonical=False):
     return value
 
 
+def _fsync_directory(path):
+    if os.name == "nt":
+        return
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    descriptor = os.open(path, flags)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def _write_private_bytes(path, payload, *, append_only=False):
+    if len(payload) > PRIVATE_REFRESH_MAX_BYTES: raise ValueError("private output exceeds the bounded size")
+    parent = Path(path).parent
+    descriptor, temporary = tempfile.mkstemp(prefix=".g56r-002-", dir=parent)
+    try:
+        if os.name != "nt":
+            os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(payload); stream.flush(); os.fsync(stream.fileno())
+        if append_only:
+            os.link(temporary, path)
+        else:
+            os.replace(temporary, path)
+        _fsync_directory(parent)
+        if append_only:
+            os.unlink(temporary)
+    except Exception:
+        try: os.close(descriptor)
+        except OSError: pass  # Best-effort cleanup must not mask the original failure.
+        try: os.unlink(temporary)
+        except OSError: pass  # Best-effort cleanup must not mask the original failure.
+        raise
+
+
 def _write(path, value, *, private=False, append_only=False):
     payload = canonical_bytes(value) + b"\n"
     if private:
-        if len(payload) > PRIVATE_REFRESH_MAX_BYTES: raise ValueError("private refresh output exceeds the bounded size")
-        descriptor, temporary = tempfile.mkstemp(prefix=".g56r-002-", dir=Path(path).parent)
-        try:
-            if os.name != "nt":
-                os.fchmod(descriptor, 0o600)
-            with os.fdopen(descriptor, "wb") as stream:
-                stream.write(payload); stream.flush(); os.fsync(stream.fileno())
-            if append_only:
-                os.link(temporary, path)
-                os.unlink(temporary)
-            else:
-                os.replace(temporary, path)
-        except Exception:
-            try: os.close(descriptor)
-            except OSError: pass  # Best-effort cleanup must not mask the original failure.
-            try: os.unlink(temporary)
-            except OSError: pass  # Best-effort cleanup must not mask the original failure.
-            raise
+        _write_private_bytes(path, payload, append_only=append_only)
         return
     if append_only:
         descriptor, temporary = tempfile.mkstemp(prefix=".g56r-002-publish-", dir=Path(path).parent)
@@ -1619,6 +1694,7 @@ def _write(path, value, *, private=False, append_only=False):
             with os.fdopen(descriptor, "wb") as stream:
                 stream.write(payload); stream.flush(); os.fsync(stream.fileno())
             os.link(temporary, path)
+            _fsync_directory(Path(path).parent)
         except Exception:
             try: os.close(descriptor)
             except OSError: pass  # Best-effort cleanup must not mask the original failure.
@@ -1633,19 +1709,20 @@ def _write(path, value, *, private=False, append_only=False):
 def main(argv=None):
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
-    refresh = sub.add_parser("refresh-sources"); refresh.add_argument("--manifest", required=True); refresh.add_argument("--captured-refresh", required=True); refresh.add_argument("--output", required=True)
+    refresh = sub.add_parser("refresh-sources"); refresh.add_argument("--manifest", required=True); refresh.add_argument("--captured-refresh", required=True); refresh.add_argument("--raw-evidence-root", required=True); refresh.add_argument("--output", required=True)
     identify = sub.add_parser("identify-client"); identify.add_argument("--reported-version", required=True); group = identify.add_mutually_exclusive_group(required=True); group.add_argument("--build-id"); group.add_argument("--executable"); identify.add_argument("--distribution", required=True); identify.add_argument("--output", required=True)
     collect = sub.add_parser("collect"); collect.add_argument("--surface", choices=SURFACES, required=True); collect.add_argument("--client-identity", required=True); collect.add_argument("--raw-evidence-root", required=True); collect.add_argument("--work-item-kind", choices=("task", "fixture", "objective"), required=True); collect.add_argument("--work-item-id", required=True); collect.add_argument("--output", required=True)
     canary = sub.add_parser("canary"); canary.add_argument("--manifest", required=True); canary.add_argument("--freeze", required=True); canary.add_argument("--model", required=True); canary.add_argument("--effort", required=True); canary.add_argument("--executor-result", required=True); canary.add_argument("--raw-evidence-root", required=True); canary.add_argument("--published-at"); canary.add_argument("--output", required=True)
-    freeze = sub.add_parser("freeze"); freeze.add_argument("--manifest", required=True); freeze.add_argument("--source-refresh", required=True); freeze.add_argument("--client-identity", required=True); freeze.add_argument("--app-server", required=True); freeze.add_argument("--cli", required=True); freeze.add_argument("--interactive-picker", required=True); freeze.add_argument("--raw-evidence-root"); freeze.add_argument("--aliases"); freeze.add_argument("--predecessor-freeze"); freeze.add_argument("--published-at"); freeze.add_argument("--output", required=True)
+    freeze = sub.add_parser("freeze"); freeze.add_argument("--manifest", required=True); freeze.add_argument("--source-refresh", required=True); freeze.add_argument("--client-identity", required=True); freeze.add_argument("--app-server", required=True); freeze.add_argument("--cli", required=True); freeze.add_argument("--interactive-picker", required=True); freeze.add_argument("--raw-evidence-root", required=True); freeze.add_argument("--aliases"); freeze.add_argument("--predecessor-freeze"); freeze.add_argument("--published-at"); freeze.add_argument("--output", required=True)
     published = sub.add_parser("validate-freeze"); published.add_argument("--manifest", required=True); published.add_argument("--freeze", required=True); published.add_argument("--predecessor-freeze")
     retention = sub.add_parser("retention"); retention.add_argument("--raw-evidence-root", required=True); retention.add_argument("--as-of"); retention.add_argument("--mode", choices=("verify", "cleanup"), default="verify"); retention.add_argument("--output", required=True)
     args, repo = parser.parse_args(argv), Path(__file__).resolve().parents[4]
     now = lambda: datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     if args.command == "refresh-sources":
         _, capture_bytes = read_content_addressed_private_file(args.captured_refresh, repo, "captured refresh")
+        capture_digest, _ = materialize_source_capture(args.raw_evidence_root, repo, capture_bytes)
         output = validate_private_external_file(args.output, repo, "normalized refresh output", output=True)
-        _write(output, normalize_source_refreshes(_read(args.manifest), _parse_json_bytes(capture_bytes)), private=True); return 0
+        _write(output, normalize_source_refreshes(_read(args.manifest), _parse_json_bytes(capture_bytes), source_capture_digest=capture_digest), private=True); return 0
     if args.command == "identify-client":
         kind, identifier = ("vendor_build_id", args.build_id) if args.build_id else ("executable_sha256", digest_regular_file(args.executable))
         _write(args.output, build_client_identity({"reported_version": args.reported_version, "build_identifier_kind": kind, "build_identifier": identifier, "distribution": args.distribution})); return 0

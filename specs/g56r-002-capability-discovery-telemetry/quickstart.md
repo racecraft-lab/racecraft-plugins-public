@@ -54,16 +54,19 @@ The adapter rejects a filename that does not match those bytes.
 python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py refresh-sources \
   --manifest docs/ai/research/codex-agent-route-candidate-manifest.json \
   --captured-refresh /absolute/path/outside/repository/g56r-002-private/CAPTURE_SHA256.json \
+  --raw-evidence-root /absolute/path/outside/repository/g56r-002-raw \
   --output /absolute/path/outside/repository/g56r-002-private/source-refresh.json
 ```
 
 Review every outcome. A changed, inaccessible, withdrawn, redirected, or
 conflicting source invalidates only its bound current claims/routes. Stop if the
 output consumes historical `OSL-*` rows or cites a non-OpenAI canonical domain.
-The normalized refresh remains private because it retains the base64-encoded
+The command copies the exact aggregate capture into `raw_evidence_root`; the
+normalized refresh remains private because it retains the base64-encoded
 retrieved bodies needed to recheck every body and bounded-extract digest. Freeze
-publication strips those body bytes and commits only the validated sanitized
-refresh rows.
+publication strips those body bytes, commits the capture digest in every
+validated sanitized refresh row, and fails if the referenced raw object is
+missing or disagrees with the normalized rows.
 
 ## 3. Pin the Client Identity
 
@@ -275,8 +278,9 @@ python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py retention 
   --output /absolute/path/outside/repository/g56r-002-raw/retention-report.json
 ```
 
-Cleanup appends an immutable record under `deletion-records/` before removing
-the expired raw bytes. The record retains the raw digest, complete retention
+Cleanup appends and directory-fsyncs an immutable record under
+`deletion-records/` before removing the expired raw bytes, then directory-fsyncs
+the raw store before reporting success. The record retains the raw digest, complete retention
 record history, governing deadline, and deletion time. Repeated cleanup is
 idempotent. Registration and cleanup serialize through the atomic
 `.retention-lock` directory; another operation fails closed while it exists.

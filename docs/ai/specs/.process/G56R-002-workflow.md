@@ -880,8 +880,8 @@ For every task:
 ### Capability Checkpoint Evidence
 
 - Clean collection baseline: `ab272f05937bd08a50e40710b3f1ad3b0dc8452b`
-- Candidate freeze: `sha256:57b79448bc59f4e9dd8eb2acb61452c5c0fe6f4acc4199c48bc9a3eb4e6b3d24`
-- Runtime snapshot: `sha256:39e6284e4a3ae9109a543b8e0ecf4c9d59181010dd3def7b874c89fab46a43f3`
+- Candidate freeze: `sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03`
+- Runtime snapshot: `sha256:450a655fabafb765b19bfc9ff3cbefe4b075d6c40fdbc5fd9dbc8ce8c4cfc3fe`
 - Surface matrix: `sha256:99739c0895250de0eb0cf1a0215fd2e5168213081d41f6b2f828c274528c32b2`
 - Included routes: 0; excluded routes: 23
 - Review: REPEAT PENDING after route-to-claim, retention lifecycle,
@@ -900,9 +900,9 @@ For every task:
 | Fingerprint input | SHA-256 |
 |---|---|
 | Feature spec | `sha256:7f7dd656c87550a9fe606fde8e79109c6246daaad6c5db539cbcfbf7c92e56de` |
-| Plan-declared scope | `sha256:daf4a8ac4f2e33fb39114f85c572a193a1a946ea671917879cb2dc921de268ca` |
-| Tasks | `sha256:f97fa606d45fc8a8b1952ac7453e151318ef1d76ca6023aeb0c638a0e2d2d484` |
-| Reviewability evidence | `sha256:31a8df819166033f51633b23b18a5709c6f0013826addd6d01682357e005c6a0` |
+| Plan-declared scope | `sha256:d0a4062aa3feb95ddba192dd14856e15c32c2da010ce541546ae5e574de16eb9` |
+| Tasks | `sha256:9512737afe52fd0429ece64cb08fc65e6063c8900b0d0307a9163dec976d7106` |
+| Reviewability evidence | `sha256:4c9c7f4f2332eb8160cb329f4be5d6947ec048c2ee7ed852dc827bc49a29c33e` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
@@ -911,8 +911,8 @@ For every task:
 | 2 | `us2` | T016-T025 | Not estimated | Blocked on clean US1 review | Treatment remains a separate module |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
-- Warning: `CAPABILITY_SIZE_BLOCK` / `MARKER_SIZE_WARNING`; US1 is 1,691 source
-  lines and 1,506 nonblank, non-comment lines against the 400-LOC boundary.
+- Warning: `CAPABILITY_SIZE_BLOCK` / `MARKER_SIZE_WARNING`; US1 is 1,768 source
+  lines and 1,575 nonblank, non-comment lines against the 400-LOC boundary.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.
 - PR mappings: Pending.

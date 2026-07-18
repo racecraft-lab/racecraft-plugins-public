@@ -48,6 +48,7 @@ join or disposition is evaluated.
 | `retrieved_at` | timestamp | Required per refresh |
 | `body_digest` | digest or null | Null only when retrieval did not yield a body |
 | `status` | enum | `confirmed_current`, `changed`, `redirected`, `inaccessible`, `withdrawn`, or `conflicting` |
+| `source_capture_digest` | digest | Resolves the exact aggregate raw capture containing all 22 retrieved source bodies |
 | `bounded_extracts` | array | Exact visible-text extracts with SHA-256 and normalization contract |
 | `retrieval_evidence_digest` | digest | Binds canonical URL, retrieval time, body digest, and bounded extracts |
 | `documented_facts` | array | Bounded field-level claims supported by the refreshed source |
@@ -59,7 +60,8 @@ Invariant: an adverse refresh invalidates only bound current claims/routes.
 Historical `OSL-*` evidence is never copied into this record as current. The
 private normalized refresh additionally retains `retrieved_body_b64` so the
 adapter can recheck the body and visible-text extracts. The published
-`OfficialSourceRefresh` strips that field. Extract normalization is the closed
+`OfficialSourceRefresh` strips that field but retains the shared aggregate
+capture digest. Extract normalization is the closed
 `unicode_text_whitespace_collapsed_utf8` contract. Multi-claim sources use the
 reviewed extract-to-claim dependency registry, and every materially changed
 extract must invalidate all claims mapped to that extract.

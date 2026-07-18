@@ -226,7 +226,28 @@ class CapabilityContractTests(unittest.TestCase):
         self.assertEqual(result["invalidated_claim_ids"], [])
         self.assertTrue(all(item["bounded_extracts"] for item in refreshes))
         self.assertTrue(all(item["retrieval_evidence_digest"].startswith("sha256:") for item in refreshes))
+        self.assertEqual(len({item["source_capture_digest"] for item in refreshes}), 1)
         self.assertTrue(all("retrieved_body_b64" in item for item in refreshes))
+        with tempfile.TemporaryDirectory() as tmp:
+            private_root = Path(tmp); private_root.chmod(0o700)
+            raw_root = private_root / "raw"; raw_root.mkdir(mode=0o700)
+            capture_bytes = capabilities.canonical_bytes(captured) + b"\n"
+            capture_digest = capabilities.digest(capture_bytes)
+            capture_path = private_root / f"{capture_digest.removeprefix('sha256:')}.json"
+            capture_path.write_bytes(capture_bytes); capture_path.chmod(0o600)
+            normalized_path = private_root / "normalized.json"
+            self.assertEqual(capabilities.main([
+                "refresh-sources", "--manifest", str(MANIFEST_PATH),
+                "--captured-refresh", str(capture_path),
+                "--raw-evidence-root", str(raw_root), "--output", str(normalized_path),
+            ]), 0)
+            normalized = json.loads(normalized_path.read_text())
+            self.assertEqual(normalized, capabilities.normalize_source_refreshes(
+                self.manifest, captured, source_capture_digest=capture_digest,
+            ))
+            self.assertEqual(
+                (raw_root / f"{capture_digest.removeprefix('sha256:')}.json").read_bytes(), capture_bytes,
+            )
         self.assertEqual(
             self.identity["client_identity_id"],
             capabilities.digest({k: v for k, v in self.identity.items() if k != "client_identity_id"}),
@@ -628,11 +649,18 @@ class CapabilityContractTests(unittest.TestCase):
     def test_freeze_cli_round_trips_alias_authority(self) -> None:
         alias_case = next(item for item in self.fixture["surface_cases"] if item["case_id"] == "one_to_one_alias")
         observations = self.observations(alias_case)
-        refreshes = source_refreshes(self.manifest)
 
         with tempfile.TemporaryDirectory() as tmp:
             private_root = Path(tmp)
             private_root.chmod(0o700)
+            raw_root = private_root / "raw"
+            raw_root.mkdir(mode=0o700)
+            captured = source_capture(self.manifest)
+            capture_bytes = capabilities.canonical_bytes(captured) + b"\n"
+            capture_digest, _ = capabilities.materialize_source_capture(raw_root, ROOT, capture_bytes)
+            refreshes = capabilities.normalize_source_refreshes(
+                self.manifest, captured, source_capture_digest=capture_digest,
+            )
 
             def write_input(name: str, value: object) -> Path:
                 path = private_root / name
@@ -657,6 +685,7 @@ class CapabilityContractTests(unittest.TestCase):
                 "--app-server", str(observation_paths["app_server"]),
                 "--cli", str(observation_paths["cli"]),
                 "--interactive-picker", str(observation_paths["interactive_picker"]),
+                "--raw-evidence-root", str(raw_root),
                 "--aliases", str(aliases_path),
                 "--published-at", "2026-07-16T00:00:00Z",
                 "--output", str(freeze_path),
@@ -842,7 +871,14 @@ class CapabilityContractTests(unittest.TestCase):
                     surface, self.identity["client_identity_id"], repository, work_item,
                     raw_evidence_digest=surface_evidence,
                 ))
-            refreshes = source_refreshes(self.manifest)
+            captured = source_capture(self.manifest)
+            capture_bytes = capabilities.canonical_bytes(captured) + b"\n"
+            source_capture_digest, source_capture_path = capabilities.materialize_source_capture(
+                raw_root, ROOT, capture_bytes,
+            )
+            refreshes = capabilities.normalize_source_refreshes(
+                self.manifest, captured, source_capture_digest=source_capture_digest,
+            )
             source_tuples = capabilities.candidate_tuples_from_manifest(self.manifest, refreshes)
             matrix, decisions = capabilities.evaluate_surface_matrix(observations, source_tuples)
             with self.assertRaisesRegex(ValueError, "raw evidence root"):
@@ -850,13 +886,20 @@ class CapabilityContractTests(unittest.TestCase):
                     self.identity, refreshes, matrix, decisions, "2026-07-16T00:00:00Z",
                     manifest=self.manifest,
                 )
+            source_capture_path.unlink()
+            with self.assertRaisesRegex(ValueError, "regular non-symlink"):
+                capabilities.build_freeze(
+                    self.identity, refreshes, matrix, decisions, "2026-07-16T00:00:00Z",
+                    manifest=self.manifest, raw_evidence_root=raw_root, repository_root=ROOT,
+                )
+            source_capture_path.write_bytes(capture_bytes); source_capture_path.chmod(0o600)
             freeze = capabilities.build_freeze(
                 self.identity, refreshes, matrix, decisions, "2026-07-16T00:00:00Z",
                 manifest=self.manifest, raw_evidence_root=raw_root, repository_root=ROOT,
             )
             self.assertEqual(capabilities.validate_freeze(freeze, self.manifest), freeze)
             retention_records = capabilities.register_raw_evidence_retention(freeze, raw_root, ROOT, manifest=self.manifest)
-            self.assertEqual(len(retention_records), 3)
+            self.assertEqual(len(retention_records), 4)
             self.assertEqual(capabilities.register_raw_evidence_retention(freeze, raw_root, ROOT, manifest=self.manifest), retention_records)
             with capabilities._retention_lock(raw_root):
                 with self.assertRaisesRegex(ValueError, "already in progress"):
@@ -873,9 +916,10 @@ class CapabilityContractTests(unittest.TestCase):
             ]), 0)
             self.assertEqual(json.loads(retention_output.read_text()), retained_report)
             self.assertEqual(retained_report["retained_evidence_digests"], sorted(
-                item["raw_evidence_digest"] for item in observations
+                [source_capture_digest, *(item["raw_evidence_digest"] for item in observations)]
             ))
-            missing_digest = retained_report["retained_evidence_digests"][0]
+            self.assertEqual(source_capture_path.read_bytes(), capture_bytes)
+            missing_digest = source_capture_digest
             missing_path = raw_root / f"{missing_digest.removeprefix('sha256:')}.json"
             missing_bytes = missing_path.read_bytes(); missing_path.unlink()
             with self.assertRaisesRegex(ValueError, "regular non-symlink"):
@@ -889,11 +933,27 @@ class CapabilityContractTests(unittest.TestCase):
                 capabilities, "_retention_now",
                 return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
             )
-            with cleanup_clock:
+            original_fsync_directory = capabilities._fsync_directory
+            def fail_deletion_record_fsync(path: Path) -> None:
+                if Path(path).name == capabilities.DELETION_RECORDS_DIR:
+                    raise OSError("simulated deletion-record directory fsync failure")
+                original_fsync_directory(path)
+            with cleanup_clock, mock.patch.object(capabilities, "_fsync_directory", side_effect=fail_deletion_record_fsync):
+                with self.assertRaisesRegex(OSError, "deletion-record directory fsync"):
+                    capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
+            self.assertTrue(all(
+                (raw_root / f"{item.removeprefix('sha256:')}.json").is_file()
+                for item in retained_report["retained_evidence_digests"]
+            ))
+            with mock.patch.object(
+                capabilities, "_retention_now",
+                return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+            ), mock.patch.object(capabilities, "_fsync_directory", wraps=original_fsync_directory) as fsync_directory:
                 cleanup_report = capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
+            fsync_directory.assert_any_call(raw_root.resolve())
             self.assertEqual(cleanup_report["deleted_evidence_digests"], retained_report["retained_evidence_digests"])
             self.assertEqual(cleanup_report["retained_evidence_digests"], [])
-            self.assertEqual(len(cleanup_report["deletion_record_digests"]), 3)
+            self.assertEqual(len(cleanup_report["deletion_record_digests"]), 4)
             with mock.patch.object(
                 capabilities, "_retention_now",
                 return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),

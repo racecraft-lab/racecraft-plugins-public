@@ -6,8 +6,9 @@
 smallest GREEN implementation, then REFACTOR and VERIFY without changing the
 predeclared dispositions.
 
-**Reviewability**: The capability adapter triggered the 400-LOC boundary at 959
-source lines (851 nonblank, non-comment). T001-T015 is retained under a typed
+**Reviewability**: The capability adapter triggered the 400-LOC boundary and is
+now 1,768 source lines (1,575 nonblank, non-comment) after independent-review
+integrity remediation. T001-T015 is retained under a typed
 size-only `no_safe_boundary` marker because its source, matrix, tuple, and
 freeze integrity checks cannot be separated safely. That exception permits no
 further capability-module growth. T016-T025 and T026-T039 remain separate

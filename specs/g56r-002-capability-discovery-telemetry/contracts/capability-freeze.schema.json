@@ -162,6 +162,7 @@
         "retrieved_at",
         "body_digest",
         "status",
+        "source_capture_digest",
         "bounded_extracts",
         "retrieval_evidence_digest",
         "documented_facts",
@@ -190,6 +191,7 @@
             "conflicting"
           ]
         },
+        "source_capture_digest": {"$ref": "#/$defs/digest"},
         "bounded_extracts": {
           "type": "array",
           "items": {"$ref": "#/$defs/boundedExtract"}
