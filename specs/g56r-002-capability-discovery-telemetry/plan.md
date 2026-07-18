@@ -58,8 +58,8 @@ increments cease to be independently testable.
 not a size claim. The binding human estimate remains 297 reviewable LOC; the
 400-LOC split trigger remains enforced.
 
-**Implementation checkpoint**: The capability adapter is 1,841 source lines
-and 1,642 nonblank, non-comment lines after independent-review integrity
+**Implementation checkpoint**: The capability adapter is 1,844 source lines
+and 1,645 nonblank, non-comment lines after independent-review integrity
 remediation, so the 400-LOC trigger is active.
 Capability work T001-T015 remains one review marker under a typed size-only
 exception because source refresh, surface authority, tuple decisions, and the
@@ -189,7 +189,7 @@ Repository tests must pass with the network disabled and no raw evidence store.
 ## Evidence and Data Boundaries
 
 - `raw_evidence_root` must resolve outside the repository, use `0700`
-  directories and `0600` files, and retain captures for 30 days after freeze
+  directories and single-link `0600` files, and retain captures for 30 days after freeze
   publication. Source refresh copies and binds the exact aggregate body capture
   into that store. Publication stages content-addressed retention records and
   makes them governing only by appending a receipt after the exact freeze bytes
@@ -198,7 +198,8 @@ Repository tests must pass with the network disabled and no raw evidence store.
   appends and directory-fsyncs a content-addressed deletion record before
   removing the raw bytes and directory-fsyncing the raw root. Registration and
   cleanup share an atomic private-root lock, and destructive cleanup derives its
-  timestamp from current UTC.
+  timestamp from current UTC. Append-only writes directory-fsync both final-name
+  publication and temporary-name removal; any alternate hard link blocks cleanup.
 - Committed fixtures are deny-by-default sanitized, schema-allowlisted,
   canonical UTF-8 JSON with sorted keys and compact separators, and SHA-256
   bound to exact bytes by the adjacent out-of-band digest manifest.

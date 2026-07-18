@@ -900,10 +900,10 @@ For every task:
 
 | Fingerprint input | SHA-256 |
 |---|---|
-| Feature spec | `sha256:0b89db29a5c7f7f8f0f7e9a89cea8d71e4f9256da9f5b8c0dea412a5c3f4c029` |
-| Plan-declared scope | `sha256:9902c3a4218319280811c85d8b82c8bcdd0e34509581f6874a731d8810e2384c` |
-| Tasks | `sha256:51ed383aba03753a510b315514d67f69e5fd26b9df4e97ca6563d59f556b2f88` |
-| Reviewability evidence | `sha256:5bf55fc33d5a05aa65f8402fd57c8351f361a098ba5c1021a4f47c9d23bdcd81` |
+| Feature spec | `sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56` |
+| Plan-declared scope | `sha256:1cb880c5182a68344bf364cc47160da8928c720448b424541261e1168b02ea81` |
+| Tasks | `sha256:4ab7bafd49ffaf63341f0f690e1e9fd3f0a1ccebea0f97febb6bf9fc82cd96eb` |
+| Reviewability evidence | `sha256:aec64122e114199e768a15208aa6dca33045a526dc9e9cbdca3d121151d82f28` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
@@ -912,8 +912,8 @@ For every task:
 | 2 | `us2` | T016-T025 | Not estimated | Blocked on clean US1 review | Treatment remains a separate module |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
-- Warning: `CAPABILITY_SIZE_BLOCK` / `MARKER_SIZE_WARNING`; US1 is 1,841 source
-  lines and 1,642 nonblank, non-comment lines against the 400-LOC boundary.
+- Warning: `CAPABILITY_SIZE_BLOCK` / `MARKER_SIZE_WARNING`; US1 is 1,844 source
+  lines and 1,645 nonblank, non-comment lines against the 400-LOC boundary.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.
 - PR mappings: Pending.

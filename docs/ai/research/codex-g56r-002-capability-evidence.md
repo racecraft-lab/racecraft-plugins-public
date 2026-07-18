@@ -132,3 +132,7 @@ identifiers, hostnames, absolute paths, or repository remotes.
 Private-store operations fail closed on Windows until owner-only DACL validation
 can enforce the same access boundary as POSIX `0700` directories and `0600`
 files; offline committed-artifact validation remains platform-neutral.
+Append-only private writes directory-fsync after both final-name publication
+and temporary-name removal. Every governed raw file must have one hard link;
+cleanup fails closed if a crash artifact or alternate name still reaches the
+same inode.

@@ -1085,6 +1085,8 @@ def validate_raw_evidence_root(raw_root, repository_root):
             mode = stat.S_IMODE(path.stat().st_mode)
             if path.is_dir() and mode != 0o700 or path.is_file() and mode != 0o600:
                 raise ValueError("raw evidence directories require 0700 and files require 0600")
+            if path.is_file() and path.stat().st_nlink != 1:
+                raise ValueError("raw evidence files cannot have alternate hard links")
         if not path.is_dir() and not path.is_file(): raise ValueError("raw_evidence_root may contain only regular files and directories")
     return raw
 
@@ -1748,6 +1750,7 @@ def _write_private_bytes(path, payload, *, append_only=False):
         _fsync_directory(parent)
         if append_only:
             os.unlink(temporary)
+            _fsync_directory(parent)
     except Exception:
         try: os.close(descriptor)
         except OSError: pass  # Best-effort cleanup must not mask the original failure.

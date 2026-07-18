@@ -1023,6 +1023,15 @@ class CapabilityContractTests(unittest.TestCase):
                 capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-15T00:00:00Z")
             with self.assertRaisesRegex(ValueError, "current UTC"):
                 capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2099-01-01T00:00:00Z", apply=True)
+            stale_hard_link = raw_root / ".g56r-002-power-loss"
+            os.link(source_capture_path, stale_hard_link)
+            with mock.patch.object(
+                capabilities, "_retention_now",
+                return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+            ):
+                with self.assertRaisesRegex(ValueError, "alternate hard links"):
+                    capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
+            stale_hard_link.unlink(); capabilities._fsync_directory(raw_root.resolve())
             cleanup_clock = mock.patch.object(
                 capabilities, "_retention_now",
                 return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),

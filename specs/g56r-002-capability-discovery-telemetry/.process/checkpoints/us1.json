@@ -20,7 +20,7 @@
     "independent_critical_high_review": "repeat_pending"
   },
   "source_fingerprint_status": "current",
-  "tasks_sha": "sha256:51ed383aba03753a510b315514d67f69e5fd26b9df4e97ca6563d59f556b2f88",
+  "tasks_sha": "sha256:4ab7bafd49ffaf63341f0f690e1e9fd3f0a1ccebea0f97febb6bf9fc82cd96eb",
   "completed_at": null,
   "review_iteration_started_at": "2026-07-18T17:18:23Z"
 }

@@ -287,7 +287,10 @@ Cleanup appends and directory-fsyncs an immutable record under
 `deletion-records/` before removing the expired raw bytes, then directory-fsyncs
 the raw store before reporting success. The record retains the raw digest, complete retention
 record history, governing deadline, and deletion time. Repeated cleanup is
-idempotent. Registration and cleanup serialize through the atomic
+idempotent. Every raw file must have exactly one hard link. Append-only writes
+directory-fsync after both final-name publication and temporary-name removal;
+cleanup fails closed if a power-loss artifact or any alternate hard link still
+reaches governed bytes. Registration and cleanup serialize through the atomic
 `.retention-lock` directory; another operation fails closed while it exists.
 After an interrupted operator process, inspect the private store before manually
 removing a stale lock. `--as-of` is accepted only for read-only verification;
