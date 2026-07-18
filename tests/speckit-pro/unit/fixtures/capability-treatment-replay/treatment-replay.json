@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "treatment_contract_digest": "sha256:d9c0048e1443ea6c0f5792a4075d434cd539dc0f923db18403880f26bec7e551",
-  "telemetry_profile_id": "sha256:5d6657cbdf269bf5a77461723dac1f69803c06f60989e2fe7ed18d93fa2be0ba",
+  "treatment_contract_digest": "sha256:a1f69b4675764de29879e68e0b88253ca395f8d6f941b2b653891f96091aac8a",
+  "telemetry_profile_id": "sha256:357b9db49df7a981c92e2539ecabd6727a3ef55cccd69aafa46d63039ac8cb2d",
   "telemetry_profile": [
     {
       "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
@@ -1094,6 +1094,16 @@
       "work_item_id": "G56R-002-T020"
     }
   ],
+  "experiment_policy_registry": [
+    {
+      "experiment_policy_id": "sha256:fe138f98012ee8b6158aea7d1a8818e574d911518d8827b23d9beb3166eb6950",
+      "owner_spec_id": "G56R-002",
+      "candidate_route_id": "G56R-001-CR-PHASE-EXECUTOR-SOL",
+      "work_item_kind": "task",
+      "work_item_id": "G56R-002-T020",
+      "mutation_class": "repository_write"
+    }
+  ],
   "qualification_evidence_registry": [
     {
       "qualification_evidence_id": "sha256:0dfd224a4d4b17ae8e69d08985c9160d6266ee72a2dd10de8fe98d724e5f6917",
@@ -1118,7 +1128,7 @@
   ],
   "route_resolutions": [
     {
-      "route_resolution_id": "RR-FIXTURE-001",
+      "route_resolution_id": "sha256:ecb38fa0ad362c65bb2e6909688ab59653963d329737db37e19bfc58ff10397c",
       "preferred_route_id": "G56R-001-CR-PHASE-EXECUTOR-SOL",
       "attempted_route_ids": [
         "G56R-001-CR-PHASE-EXECUTOR-SOL"
@@ -1137,9 +1147,9 @@
         "candidate_route_id": "G56R-001-CR-PHASE-EXECUTOR-SOL",
         "agent_contract_id": "G56R-001-AC-PHASE-EXECUTOR",
         "runtime_capability_snapshot_id": "sha256:450a655fabafb765b19bfc9ff3cbefe4b075d6c40fdbc5fd9dbc8ce8c4cfc3fe",
-        "route_resolution_id": "RR-FIXTURE-001",
-        "experiment_policy_id": "EP-FIXTURE-001",
-        "execution_trace_id": "TRACE-FIXTURE-001"
+        "route_resolution_id": "sha256:ecb38fa0ad362c65bb2e6909688ab59653963d329737db37e19bfc58ff10397c",
+        "experiment_policy_id": "sha256:fe138f98012ee8b6158aea7d1a8818e574d911518d8827b23d9beb3166eb6950",
+        "execution_trace_id": "sha256:660007e0270502fdc5f2fd670413dc7d4de28284d2669ad512f6e10b69936aa0"
       },
       "controlled_environment_id": "sha256:cc169b3d797245639c16b50be945d36d096cfe2e756bd961395830656f9e4586",
       "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
@@ -1229,7 +1239,7 @@
         "turnId": "turn-fixture-001"
       },
       "parent_child_graph": {
-        "root_execution_trace_id": "TRACE-FIXTURE-001",
+        "root_execution_trace_id": "sha256:660007e0270502fdc5f2fd670413dc7d4de28284d2669ad512f6e10b69936aa0",
         "parent_execution_trace_id": null,
         "child_execution_trace_ids": []
       },
@@ -1404,10 +1414,10 @@
         },
         {
           "field_path": "reroute.events",
-          "observation_state": "observed_value",
-          "value": [],
-          "evidence_ref": "fixture://trace/reroute-events",
-          "captured_at": "2026-07-17T04:01:00Z"
+          "observation_state": "missing",
+          "value": null,
+          "evidence_ref": null,
+          "captured_at": null
         },
         {
           "field_path": "treatment.sandbox",
@@ -1531,14 +1541,10 @@
         },
         {
           "field_path": "parent.graph",
-          "observation_state": "observed_value",
-          "value": {
-            "root_execution_trace_id": "TRACE-FIXTURE-001",
-            "parent_execution_trace_id": null,
-            "child_execution_trace_ids": []
-          },
-          "evidence_ref": "fixture://trace/parent-graph",
-          "captured_at": "2026-07-17T04:01:00Z"
+          "observation_state": "missing",
+          "value": null,
+          "evidence_ref": null,
+          "captured_at": null
         },
         {
           "field_path": "resources.raw_token_vector",
@@ -1598,13 +1604,10 @@
         },
         {
           "field_path": "lifecycle.cancellation",
-          "observation_state": "observed_value",
-          "value": {
-            "state": "not_requested",
-            "reason": null
-          },
-          "evidence_ref": "fixture://trace/lifecycle-cancellation",
-          "captured_at": "2026-07-17T04:01:00Z"
+          "observation_state": "missing",
+          "value": null,
+          "evidence_ref": null,
+          "captured_at": null
         },
         {
           "field_path": "lifecycle.failed_abandoned_work",
@@ -1653,7 +1656,7 @@
     "raw_evidence_digest": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
     "expected_dispositions": [
       {
-        "execution_trace_id": "TRACE-FIXTURE-001",
+        "execution_trace_id": "sha256:660007e0270502fdc5f2fd670413dc7d4de28284d2669ad512f6e10b69936aa0",
         "treatment_disposition": "unknown"
       }
     ],

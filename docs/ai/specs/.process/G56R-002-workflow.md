@@ -873,7 +873,7 @@ For every task:
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
-| 2 - Treatment contracts | Review Pending | 10 | 33/33 focused tests, schema/CLI/successor validation, and independent repeat review pending |
+| 2 - Treatment contracts | Review Pending | 10 | 39/39 focused tests, canonical successor/schema parity/bounded CLI/graph validation, and independent repeat review pending |
 | 3 - Synthetic replay | Blocked | 0 | T026-T030 remain ordered after a clean US2 repeat-review verdict |
 | Polish and validation | Pending | 0 | Not started |
 
@@ -894,18 +894,19 @@ For every task:
 ### Treatment Checkpoint Evidence
 
 - Implementation baseline: `bbffc774c815594edc64cf412a2b5f91127ef213`
-- Successor candidate freeze: `sha256:4563bb9c21f9c2378b70d67c5bfe6f82e2febda01b8506bf2e274081bba7b149`
+- Successor candidate freeze: `sha256:09dd2338d598aa1d51b2f86f7475ac26b3231993fcf239b5629963e60ee89524`
 - Superseded candidate freeze: `sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03`
-- Telemetry profile: `sha256:5d6657cbdf269bf5a77461723dac1f69803c06f60989e2fe7ed18d93fa2be0ba`
-- Treatment contract: `sha256:d9c0048e1443ea6c0f5792a4075d434cd539dc0f923db18403880f26bec7e551`
+- Telemetry profile: `sha256:357b9db49df7a981c92e2539ecabd6727a3ef55cccd69aafa46d63039ac8cb2d`
+- Treatment contract: `sha256:a1f69b4675764de29879e68e0b88253ca395f8d6f941b2b653891f96091aac8a`
 - Superseded marker checkpoint: `c47c9d31fd1288e86f0707601078e4f03e2b12e5`
-- Reviewability: size-only `block` at 1,024 source / 932 nonblank,
+- Reviewability: size-only `block` at 1,356 source / 1,234 nonblank,
   non-comment lines; typed `no_safe_boundary` exception honored for the
   checkpoint with only T026-T030 replay growth reserved.
-- Review: REPEAT PENDING after rebinding the treatment fixture, successor
-  lineage, published evidence summary, and process fingerprints to the current
-  capability snapshot. A new implementation checkpoint SHA is recorded only
-  after a clean verdict.
+- Review: REPEAT PENDING after direct canonical validation of the actual
+  successor, executable schema/runtime parity, bounded evidence-file and CLI
+  handling, content-addressed six-ID ownership, reciprocal acyclic trace-graph
+  validation, and authority/condition/lifecycle hardening. A new implementation
+  checkpoint SHA is recorded only after a clean verdict.
 
 ## PR Marker Plan Evidence
 
@@ -918,9 +919,9 @@ For every task:
 | Fingerprint input | SHA-256 |
 |---|---|
 | Feature spec | `sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56` |
-| Plan-declared scope | `sha256:1cb880c5182a68344bf364cc47160da8928c720448b424541261e1168b02ea81` |
-| Tasks | `sha256:75eecaaa1cf8a355d441a12c34c121f3b98d6208fcc37ec7dfdcc1ff0f723b1f` |
-| Reviewability evidence | `sha256:171e0c86f4c4e6d7a1c22a5005c64246f22bf0104c077b1821937139f17b2530` |
+| Plan-declared scope | `sha256:d9b03807ef2beac9b049e78a0f9fd99a2f5390442880b081607243b9dd21ef7c` |
+| Tasks | `sha256:6a2d2411683d41bb9183c72115e47c45c5e8df728b5eb611d6a0455753e821` |
+| Reviewability evidence | `sha256:141b41a11cd9d3e1d8e37e3c6d82898675b7e844f66a64639ebcaf229a7e50a4` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
@@ -930,7 +931,7 @@ For every task:
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
-  size warnings. US1 is 1,844 / 1,645 source/nonblank lines and US2 is 1,024 / 932
+  size warnings. US1 is 1,889 / 1,690 source/nonblank lines and US2 is 1,356 / 1,234
   against the 400-LOC boundary; both use typed size-only exceptions.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.

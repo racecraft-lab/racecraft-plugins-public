@@ -26,6 +26,8 @@ PUBLISHED_FREEZE_PATH = ROOT / "docs/ai/research/codex-g56r-002-executable-candi
 CAPABILITY_EVIDENCE_PATH = ROOT / "docs/ai/research/codex-g56r-002-capability-evidence.md"
 TREATMENT_MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"
 TREATMENT_FIXTURE_PATH = ROOT / "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"
+TREATMENT_PREDECESSOR_PUBLISHED_AT = "2026-07-17T04:44:32.543011Z"
+TREATMENT_SUCCESSOR_PUBLISHED_AT = "2026-07-18T19:40:00Z"
 
 EXPECTED_APP_SERVER_TELEMETRY_FIELDS = frozenset({
     "discovery.models", "discovery.efforts", "discovery.capabilities",
@@ -67,6 +69,87 @@ def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def rebind_treatment_owners(bundle: dict) -> dict:
+    route_ids: dict[str, str] = {}
+    for route in bundle["route_resolutions"]:
+        old_id = route["route_resolution_id"]
+        route["route_resolution_id"] = treatment.content_id(route, "route_resolution_id")
+        route_ids[old_id] = route["route_resolution_id"]
+    policy_ids: dict[str, str] = {}
+    for policy in bundle["experiment_policy_registry"]:
+        old_id = policy["experiment_policy_id"]
+        policy["experiment_policy_id"] = treatment.content_id(policy, "experiment_policy_id")
+        policy_ids[old_id] = policy["experiment_policy_id"]
+    environment_ids: dict[str, str] = {}
+    for environment in bundle["controlled_environments"]:
+        old_id = environment["controlled_environment_id"]
+        environment["controlled_environment_id"] = treatment.content_id(environment, "controlled_environment_id")
+        environment_ids[old_id] = environment["controlled_environment_id"]
+    for trace in bundle["treatment_traces"]:
+        objective = trace["objective_binding"]
+        objective["route_resolution_id"] = route_ids.get(objective["route_resolution_id"], objective["route_resolution_id"])
+        objective["experiment_policy_id"] = policy_ids.get(objective["experiment_policy_id"], objective["experiment_policy_id"])
+        trace["controlled_environment_id"] = environment_ids.get(trace["controlled_environment_id"], trace["controlled_environment_id"])
+    trace_ids: dict[str, str] = {}
+    for trace in bundle["treatment_traces"]:
+        old_id = trace["objective_binding"]["execution_trace_id"]
+        trace["objective_binding"]["execution_trace_id"] = treatment.execution_trace_identity(trace)
+        trace_ids[old_id] = trace["objective_binding"]["execution_trace_id"]
+    for trace in bundle["treatment_traces"]:
+        parent = trace["parent_configuration"]["parent_execution_trace_id"]
+        trace["parent_configuration"]["parent_execution_trace_id"] = trace_ids.get(parent, parent)
+        graph = trace["parent_child_graph"]
+        graph["root_execution_trace_id"] = trace_ids.get(graph["root_execution_trace_id"], graph["root_execution_trace_id"])
+        graph["parent_execution_trace_id"] = trace_ids.get(graph["parent_execution_trace_id"], graph["parent_execution_trace_id"])
+        graph["child_execution_trace_ids"] = [trace_ids.get(item, item) for item in graph["child_execution_trace_ids"]]
+        parent_observation = next((item for item in trace["observations"] if item["field_path"] == "parent.graph"), None)
+        if parent_observation is not None and parent_observation["observation_state"] == "observed_value":
+            parent_observation["value"] = copy.deepcopy(graph)
+    for expected in bundle["fixture_provenance"]["expected_dispositions"]:
+        expected["execution_trace_id"] = trace_ids.get(expected["execution_trace_id"], expected["execution_trace_id"])
+    return bundle
+
+
+def make_two_trace_graph_bundle(source: dict) -> dict:
+    bundle = copy.deepcopy(source); root_trace = bundle["treatment_traces"][0]
+    root_id = root_trace["objective_binding"]["execution_trace_id"]
+    child_placeholder = "sha256:" + "9" * 64
+    child_policy = copy.deepcopy(bundle["experiment_policy_registry"][0])
+    child_policy["work_item_id"] = "G56R-002-T021"
+    child_policy["experiment_policy_id"] = treatment.content_id(child_policy, "experiment_policy_id")
+    bundle["experiment_policy_registry"].append(child_policy)
+    child_environment = copy.deepcopy(bundle["controlled_environments"][0])
+    child_environment["work_item_id"] = "G56R-002-T021"
+    child_environment["controlled_environment_id"] = treatment.content_id(child_environment, "controlled_environment_id")
+    bundle["controlled_environments"].append(child_environment)
+    child = copy.deepcopy(root_trace)
+    child["work_item_id"] = "G56R-002-T021"
+    child["controlled_environment_id"] = child_environment["controlled_environment_id"]
+    child["objective_binding"]["experiment_policy_id"] = child_policy["experiment_policy_id"]
+    child["objective_binding"]["execution_trace_id"] = child_placeholder
+    child["context"]["turnId"] = "turn-fixture-002"
+    next(item for item in child["observations"] if item["field_path"] == "parent.context")["value"] = copy.deepcopy(child["context"])
+    child["parent_configuration"]["parent_execution_trace_id"] = root_id
+    next(item for item in child["observations"] if item["field_path"] == "treatment.parent_configuration")["value"] = copy.deepcopy(child["parent_configuration"])
+    child["parent_child_graph"] = {
+        "root_execution_trace_id": root_id,
+        "parent_execution_trace_id": root_id,
+        "child_execution_trace_ids": [],
+    }
+    root_trace["parent_child_graph"]["child_execution_trace_ids"] = [child_placeholder]
+    for trace in (root_trace, child):
+        observation = next(item for item in trace["observations"] if item["field_path"] == "parent.graph")
+        observation.update({
+            "observation_state": "observed_value", "value": copy.deepcopy(trace["parent_child_graph"]),
+            "evidence_ref": "fixture://trace/parent-graph", "captured_at": "2026-07-17T04:01:00Z",
+        })
+    bundle["treatment_traces"].append(child)
+    bundle["fixture_provenance"]["expected_dispositions"].append({
+        "execution_trace_id": child_placeholder, "treatment_disposition": "unknown",
+    })
+    return rebind_treatment_owners(bundle)
+
+
 def trusted_external_qualification(bundle: dict) -> dict[str, dict]:
     owner = next(item for item in bundle["qualification_evidence_registry"] if item["authority_kind"] == "owned_external")
     return {owner["qualification_evidence_id"]: copy.deepcopy(owner)}
@@ -78,7 +161,7 @@ def make_treatment_reroute_case(bundle: dict, authority: str) -> dict:
     synthetic = next(item for item in bundle["qualification_evidence_registry"] if item["authority_kind"] == "synthetic_fixture")
     event = {
         "surface": trace["surface"], "threadId": trace["context"]["threadId"], "turnId": trace["context"]["turnId"],
-        "fromModel": trace["requested_model"], "toModel": "gpt-5.5", "reason": "fixture-service-reroute",
+        "fromModel": trace["requested_model"], "toModel": "gpt-5.5", "reason": "fixture_service_reroute",
         "evidence_digest": treatment.digest(b"fixture-reroute-evidence"),
     }
     event["event_id"] = treatment.digest(event)
@@ -92,7 +175,11 @@ def make_treatment_reroute_case(bundle: dict, authority: str) -> dict:
     trace["service_reroute_events"] = [event]
     trace["supported_effective_model"] = event["toModel"]
     trace["supported_effective_effort"] = None
-    next(item for item in trace["observations"] if item["field_path"] == "reroute.events")["value"] = [event]
+    reroute_observation = next(item for item in trace["observations"] if item["field_path"] == "reroute.events")
+    reroute_observation.update({
+        "observation_state": "observed_value", "value": [event],
+        "evidence_ref": "fixture://trace/reroute-events", "captured_at": "2026-07-17T04:01:00Z",
+    })
     effective = next(item for item in trace["observations"] if item["field_path"] == "assignment.supported_effective_model")
     effective.update({
         "observation_state": "observed_value", "value": event["toModel"],
@@ -107,7 +194,7 @@ def make_treatment_reroute_case(bundle: dict, authority: str) -> dict:
         disposition = "non_scorable_rerouted" if authority == "owned_external" else "hard_fail"
     trace["treatment_failures"] = []
     trace["treatment_disposition"] = disposition
-    trace["disposition_reasons"] = ["fixture_predeclared_and_derived"]
+    trace["disposition_reasons"] = ["effective_treatment_unknown"]
     bundle["fixture_provenance"]["expected_dispositions"] = [{
         "execution_trace_id": trace["objective_binding"]["execution_trace_id"],
         "treatment_disposition": disposition,
@@ -706,7 +793,7 @@ class CapabilityContractTests(unittest.TestCase):
         forged_telemetry = copy.deepcopy(freeze)
         forged_telemetry["telemetry_profile_id"] = capabilities.digest(b"forged-telemetry")
         forged_telemetry["candidate_freeze_id"] = capabilities.digest(capabilities._freeze_identity_payload(forged_telemetry))
-        with self.assertRaisesRegex(ValueError, "pending-treatment authority"):
+        with self.assertRaisesRegex(ValueError, "treatment-aware freeze validation"):
             capabilities.validate_freeze(forged_telemetry, self.manifest)
         self.assertEqual(len(freeze["tuple_decisions"]), 23)
         self.assertEqual([d for d in freeze["tuple_decisions"] if d["decision"] == "included"], [])
@@ -1381,20 +1468,17 @@ class TreatmentContractTests(unittest.TestCase):
         with self.assertRaises(ValueError, msg=message):
             treatment.validate_treatment_bundle(self.rebound(bundle))
 
-    def assert_bundle_not_proven(self, bundle: dict, message: str = "") -> None:
-        try:
-            validated = treatment.validate_treatment_bundle(self.rebound(bundle))
-        except ValueError:
-            return
-        self.assertNotEqual(validated["treatment_traces"][0]["treatment_disposition"], "proven", message)
+    def assert_bundle_not_proven(self, bundle: dict, expected_disposition: str, message: str = "") -> None:
+        bundle["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = expected_disposition
+        validated = treatment.validate_treatment_bundle(self.rebound(bundle))
+        self.assertEqual(validated["treatment_traces"][0]["treatment_disposition"], expected_disposition, message)
+        self.assertNotEqual(expected_disposition, "proven", message)
 
     def assert_reroute_hard_failed(self, bundle: dict, message: str = "", *, trusted: dict[str, dict] | None = None) -> None:
-        try:
-            validated = treatment.validate_treatment_bundle(
-                self.rebound(bundle), trusted_qualification_evidence=trusted or {}
-            )
-        except ValueError:
-            return
+        bundle["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
+        validated = treatment.validate_treatment_bundle(
+            self.rebound(bundle), trusted_qualification_evidence=trusted or {}
+        )
         self.assertEqual(validated["treatment_traces"][0]["treatment_disposition"], "hard_fail", message)
 
     def test_telemetry_inventory_and_null_semantics(self) -> None:
@@ -1417,11 +1501,11 @@ class TreatmentContractTests(unittest.TestCase):
         forged = copy.deepcopy(self.bundle)
         obs = next(item for item in forged["treatment_traces"][0]["observations"] if item["field_path"] == "terminal.acceptance")
         obs["value"] = False
-        with self.assertRaisesRegex(ValueError, "null-only observation"):
+        with self.assertRaisesRegex(ValueError, "wrong treatment schema type"):
             treatment.validate_treatment_bundle(self.rebound(forged))
         duplicate = copy.deepcopy(self.bundle)
         duplicate["telemetry_profile"].append(copy.deepcopy(duplicate["telemetry_profile"][0]))
-        with self.assertRaisesRegex(ValueError, "duplicate telemetry profile key"):
+        with self.assertRaisesRegex(ValueError, "telemetry_profile must contain unique items"):
             treatment.validate_treatment_bundle(self.rebound(duplicate))
 
     def test_profile_authority_and_typed_observation_states(self) -> None:
@@ -1538,7 +1622,7 @@ class TreatmentContractTests(unittest.TestCase):
                     "field_path": field_path, "observation_state": state, "value": None,
                     "evidence_ref": None, "captured_at": None,
                 }]
-                validated = treatment.validate_treatment_bundle(self.rebound(bundle))
+                validated = treatment.validate_treatment_bundle(self.rebound(rebind_treatment_owners(bundle)))
                 self.assertEqual(validated["treatment_traces"][0]["treatment_disposition"], "unknown")
 
     def test_conditional_reroute_event_profile_cannot_self_assert_complete_monitoring(self) -> None:
@@ -1587,7 +1671,7 @@ class TreatmentContractTests(unittest.TestCase):
         arbitrary = copy.deepcopy(self.bundle)
         arbitrary["treatment_traces"][0]["requested_effort"] = "arbitrary-effort"
         arbitrary["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
-        self.assert_bundle_not_proven(arbitrary)
+        self.assert_bundle_not_proven(arbitrary, "hard_fail")
 
     def test_configured_route_proof_cannot_self_assert_effective_treatment(self) -> None:
         mutations = [
@@ -1613,7 +1697,16 @@ class TreatmentContractTests(unittest.TestCase):
                 for part in path[:-1]:
                     target = target[part]
                 target[path[-1]] = value
-                self.assert_bundle_not_proven(bundle)
+                if path == ("proof_id",):
+                    with self.assertRaisesRegex(ValueError, "proof ID is not content addressed"):
+                        treatment.validate_treatment_bundle(self.rebound(bundle))
+                elif path in {("launch_id",), ("consumption_evidence_digest",)}:
+                    self.assert_bundle_invalid(bundle)
+                else:
+                    proof = bundle["treatment_traces"][0]["configured_route_proof"]
+                    proof["proof_id"] = treatment.content_id(proof, "proof_id")
+                    expected = "unknown" if path == ("reroute_monitoring_complete",) else "hard_fail"
+                    self.assert_bundle_not_proven(bundle, expected)
         validated = treatment.validate_treatment_bundle(copy.deepcopy(self.bundle))
         trace = validated["treatment_traces"][0]
         self.assertEqual(trace["treatment_disposition"], "unknown")
@@ -1681,26 +1774,8 @@ class TreatmentContractTests(unittest.TestCase):
         bundle = copy.deepcopy(self.bundle)
         observation = next(item for item in bundle["treatment_traces"][0]["observations"] if item["field_path"] == "treatment.sandbox")
         observation["value"]["network_access"] = 0
-        trace = bundle["treatment_traces"][0]
-        trace["treatment_failures"] = [
-            {
-                "failure_code": "sandbox_approvals_mismatch", "affected_field": "treatment.evidence",
-                "expected_evidence_ref": None, "observed_evidence_ref": None,
-                "resulting_disposition": "hard_fail",
-            },
-            {
-                "failure_code": "effective_treatment_unknown", "affected_field": "treatment.evidence",
-                "expected_evidence_ref": None, "observed_evidence_ref": None,
-                "resulting_disposition": "unknown",
-            },
-        ]
-        trace["treatment_disposition"] = "hard_fail"
-        trace["disposition_reasons"] = ["effective_treatment_unknown", "sandbox_approvals_mismatch"]
-        bundle["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
-        validated = treatment.validate_treatment_bundle(self.rebound(bundle))
-        trace = validated["treatment_traces"][0]
-        self.assertEqual(trace["treatment_disposition"], "hard_fail")
-        self.assertIn("sandbox_approvals_mismatch", {item["failure_code"] for item in trace["treatment_failures"]})
+        with self.assertRaisesRegex(ValueError, "schema shape"):
+            treatment.validate_treatment_bundle(self.rebound(bundle))
 
     def test_six_id_environment_and_configured_proof_joins(self) -> None:
         base = treatment.validate_treatment_bundle(copy.deepcopy(self.bundle))
@@ -1709,10 +1784,10 @@ class TreatmentContractTests(unittest.TestCase):
         self.assertEqual(trace["treatment_disposition"], "unknown")
         self.assertIsNone(trace["supported_effective_model"])
         missing_owner = copy.deepcopy(self.bundle); missing_owner["controlled_environments"] = []
-        with self.assertRaisesRegex(ValueError, "controlled environment owner"):
+        with self.assertRaisesRegex(ValueError, "too few items"):
             treatment.validate_treatment_bundle(self.rebound(missing_owner))
         duplicate_owner = copy.deepcopy(self.bundle); duplicate_owner["controlled_environments"].append(copy.deepcopy(duplicate_owner["controlled_environments"][0]))
-        with self.assertRaisesRegex(ValueError, "duplicate controlled environment"):
+        with self.assertRaisesRegex(ValueError, "controlled_environments must contain unique items"):
             treatment.validate_treatment_bundle(self.rebound(duplicate_owner))
         orphan_owner = copy.deepcopy(self.bundle)
         orphan = copy.deepcopy(orphan_owner["controlled_environments"][0])
@@ -1724,18 +1799,8 @@ class TreatmentContractTests(unittest.TestCase):
         mismatch = copy.deepcopy(self.bundle); mismatch["treatment_traces"][0]["work_item_id"] = "G56R-002-FORGED"
         with self.assertRaisesRegex(ValueError, "controlled environment binding"):
             treatment.validate_treatment_bundle(self.rebound(mismatch))
-        repeated_fk = copy.deepcopy(self.bundle)
-        other = copy.deepcopy(repeated_fk["treatment_traces"][0])
-        other["objective_binding"]["execution_trace_id"] = "TRACE-FIXTURE-002"
-        other["parent_child_graph"]["root_execution_trace_id"] = "TRACE-FIXTURE-002"
-        graph_observation = next(item for item in other["observations"] if item["field_path"] == "parent.graph")
-        graph_observation["value"] = copy.deepcopy(other["parent_child_graph"])
-        repeated_fk["treatment_traces"].append(other)
-        repeated_fk["fixture_provenance"]["expected_dispositions"] = [
-            {"execution_trace_id": "TRACE-FIXTURE-001", "treatment_disposition": "unknown"},
-            {"execution_trace_id": "TRACE-FIXTURE-002", "treatment_disposition": "unknown"},
-        ]
-        self.assertEqual(len(treatment.validate_treatment_bundle(self.rebound(repeated_fk))["treatment_traces"]), 2)
+        validated_graph = treatment.validate_treatment_bundle(self.rebound(make_two_trace_graph_bundle(self.bundle)))
+        self.assertEqual(len(validated_graph["treatment_traces"]), 2)
 
     def test_every_objective_and_environment_binding_is_owned(self) -> None:
         for field in (
@@ -1755,10 +1820,23 @@ class TreatmentContractTests(unittest.TestCase):
         self.assert_bundle_invalid(duplicate_route)
         orphan_route = copy.deepcopy(self.bundle)
         orphan_resolution = copy.deepcopy(orphan_route["route_resolutions"][0])
-        orphan_resolution["route_resolution_id"] = "ORPHAN-RESOLUTION"
+        orphan_resolution["resolved_at"] = "2026-07-17T04:00:01Z"
+        orphan_resolution["route_resolution_id"] = treatment.content_id(orphan_resolution, "route_resolution_id")
         orphan_route["route_resolutions"].append(orphan_resolution)
         with self.assertRaisesRegex(ValueError, "orphan owner"):
             treatment.validate_treatment_bundle(self.rebound(orphan_route))
+        missing_policy = copy.deepcopy(self.bundle); missing_policy["experiment_policy_registry"] = []
+        self.assert_bundle_invalid(missing_policy)
+        duplicate_policy = copy.deepcopy(self.bundle)
+        duplicate_policy["experiment_policy_registry"].append(copy.deepcopy(duplicate_policy["experiment_policy_registry"][0]))
+        self.assert_bundle_invalid(duplicate_policy)
+        orphan_policy = copy.deepcopy(self.bundle)
+        policy = copy.deepcopy(orphan_policy["experiment_policy_registry"][0])
+        policy["work_item_id"] = "G56R-002-ORPHAN"
+        policy["experiment_policy_id"] = treatment.content_id(policy, "experiment_policy_id")
+        orphan_policy["experiment_policy_registry"].append(policy)
+        with self.assertRaisesRegex(ValueError, "experiment policy owner registry"):
+            treatment.validate_treatment_bundle(self.rebound(orphan_policy))
         duplicate_trace = copy.deepcopy(self.bundle)
         duplicate_trace["treatment_traces"].append(copy.deepcopy(duplicate_trace["treatment_traces"][0]))
         self.assert_bundle_invalid(duplicate_trace)
@@ -1852,12 +1930,24 @@ class TreatmentContractTests(unittest.TestCase):
                 bundle = copy.deepcopy(self.bundle)
                 bundle["treatment_traces"][0]["observations"][0]["evidence_ref"] = evidence_ref
                 self.assert_bundle_invalid(bundle)
-        retained = copy.deepcopy(self.bundle)
-        retained["treatment_traces"][0]["cancellation"].update({
-            "state": "requested", "reason": "/" + "Users" + "/example/private/cancellation.txt",
+        retained_strings = [
+            "note:/" + "Users" + "/example/private/cancellation.txt",
+            "../private/evidence.json",
+            "~/private/evidence.json",
+            "sk-exampleSecretToken123456",
+        ]
+        for retained_text in retained_strings:
+            with self.subTest(retained_text=retained_text):
+                retained = copy.deepcopy(self.bundle)
+                retained["treatment_traces"][0]["work_item_id"] = retained_text
+                with self.assertRaisesRegex(ValueError, "forbidden private"):
+                    treatment.validate_treatment_bundle(self.rebound(retained))
+        raw_reason = copy.deepcopy(self.bundle)
+        raw_reason["treatment_traces"][0]["cancellation"].update({
+            "state": "requested", "reason": "free form cancellation details",
         })
-        with self.assertRaisesRegex(ValueError, "forbidden private"):
-            treatment.validate_treatment_bundle(self.rebound(retained))
+        with self.assertRaisesRegex(ValueError, "schema constant"):
+            treatment.validate_treatment_bundle(self.rebound(raw_reason))
 
     def test_all_record_layers_reject_undeclared_fields(self) -> None:
         accessors = [
@@ -1865,6 +1955,7 @@ class TreatmentContractTests(unittest.TestCase):
             lambda bundle: bundle["telemetry_profile"][0],
             lambda bundle: bundle["telemetry_profile"][0]["observation_state_rules"],
             lambda bundle: bundle["controlled_environments"][0],
+            lambda bundle: bundle["experiment_policy_registry"][0],
             lambda bundle: bundle["qualification_evidence_registry"][0],
             lambda bundle: bundle["route_resolutions"][0],
             lambda bundle: bundle["treatment_traces"][0],
@@ -1910,7 +2001,7 @@ class TreatmentContractTests(unittest.TestCase):
                 self.assertEqual(failed["treatment_traces"][0]["treatment_disposition"], "hard_fail")
         ambiguous = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
         second_event = copy.deepcopy(ambiguous["treatment_traces"][0]["service_reroute_events"][0])
-        second_event["reason"] = "fixture-second-service-reroute"
+        second_event["reason"] = "fixture_second_service_reroute"
         second_event["event_id"] = treatment.content_id(second_event, "event_id")
         ambiguous["treatment_traces"][0]["service_reroute_events"].append(second_event)
         reroute_observation = next(item for item in ambiguous["treatment_traces"][0]["observations"] if item["field_path"] == "reroute.events")
@@ -1951,9 +2042,25 @@ class TreatmentContractTests(unittest.TestCase):
                     "qualification": bundle["qualification_evidence_registry"][0],
                 }
                 targets[record][field] = value
-                self.assert_reroute_hard_failed(
-                    bundle, trusted=trusted_external_qualification(self.bundle)
-                )
+                if record == "event":
+                    event = targets[record]
+                    event["event_id"] = treatment.content_id(event, "event_id")
+                    trace["reroute_destination_assessments"][0]["event_id"] = event["event_id"]
+                    next(item for item in trace["observations"] if item["field_path"] == "reroute.events")["value"] = [copy.deepcopy(event)]
+                if record == "qualification" and field in {
+                    "destination_candidate_route_id", "destination_agent_contract_id", "destination_named_agent",
+                }:
+                    owner = targets[record]; old_id = owner["qualification_evidence_id"]
+                    owner["qualification_evidence_id"] = treatment.content_id(owner, "qualification_evidence_id")
+                    assessment = trace["reroute_destination_assessments"][0]
+                    if assessment["prequalification_evidence_id"] == old_id:
+                        assessment["prequalification_evidence_id"] = owner["qualification_evidence_id"]
+                if record == "qualification" and field in {"qualification_status", "owner_spec_id", "evidence_digest"}:
+                    self.assert_bundle_invalid(bundle)
+                else:
+                    self.assert_reroute_hard_failed(
+                        bundle, trusted=trusted_external_qualification(self.bundle)
+                    )
 
         missing_assessment = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
         missing_assessment["treatment_traces"][0]["reroute_destination_assessments"] = []
@@ -1964,9 +2071,8 @@ class TreatmentContractTests(unittest.TestCase):
         duplicate_assessment["treatment_traces"][0]["reroute_destination_assessments"].append(
             copy.deepcopy(duplicate_assessment["treatment_traces"][0]["reroute_destination_assessments"][0])
         )
-        self.assert_reroute_hard_failed(
-            duplicate_assessment, trusted=trusted_external_qualification(self.bundle)
-        )
+        with self.assertRaisesRegex(ValueError, "reroute_destination_assessments must contain unique items"):
+            treatment.validate_treatment_bundle(self.rebound(duplicate_assessment))
 
         rerouted = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
         trace = rerouted["treatment_traces"][0]
@@ -2012,36 +2118,192 @@ class TreatmentContractTests(unittest.TestCase):
                     bundle, trusted=trusted_external_qualification(self.bundle)
                 )
 
+    def test_schema_and_runtime_reject_the_same_structural_mutations(self) -> None:
+        baseline = self.rebound(copy.deepcopy(self.bundle))
+        schema = treatment._read_json_file(treatment.SCHEMA_PATH)
+        treatment._validate_schema_instance(baseline, schema, schema)
+        treatment.validate_treatment_bundle(copy.deepcopy(baseline))
+        mutations = []
+        invalid_ref = copy.deepcopy(baseline)
+        invalid_ref["treatment_traces"][0]["observations"][0]["evidence_ref"] = "https://private.example/evidence"
+        mutations.append(("sanitized evidence reference", invalid_ref))
+        undeclared = copy.deepcopy(baseline); undeclared["treatment_traces"][0]["undeclared"] = True
+        mutations.append(("closed trace shape", undeclared))
+        opaque_trace = copy.deepcopy(baseline)
+        opaque_trace["treatment_traces"][0]["objective_binding"]["execution_trace_id"] = "opaque-trace"
+        mutations.append(("digest execution identity", opaque_trace))
+        raw_reason = copy.deepcopy(baseline)
+        raw_reason["treatment_traces"][0]["service_reroute_events"] = [{
+            "event_id": "sha256:" + "0" * 64, "surface": "app_server",
+            "threadId": "thread", "turnId": "turn", "fromModel": "a", "toModel": "b",
+            "reason": "free form reason", "evidence_digest": "sha256:" + "1" * 64,
+        }]
+        mutations.append(("enumerated reroute reason", raw_reason))
+        for label, bundle in mutations:
+            with self.subTest(label=label):
+                with self.assertRaises(ValueError): treatment._validate_schema_instance(bundle, schema, schema)
+                with self.assertRaises(ValueError): treatment.validate_treatment_bundle(bundle)
+
+    def test_bounded_file_loading_rejects_links_special_files_and_external_paths(self) -> None:
+        with tempfile.TemporaryDirectory(dir=ROOT) as directory:
+            root = Path(directory); source = root / "source.json"; source.write_text("{}", encoding="utf-8")
+            self.assertEqual(treatment._read_bounded_regular_file(source, allowed_root=root), b"{}")
+            symlink = root / "symlink.json"; symlink.symlink_to(source)
+            with self.assertRaisesRegex(ValueError, "regular non-symlink"):
+                treatment._read_bounded_regular_file(symlink, allowed_root=root)
+            hardlink = root / "hardlink.json"; os.link(source, hardlink)
+            with self.assertRaisesRegex(ValueError, "single-link"):
+                treatment._read_bounded_regular_file(source, allowed_root=root)
+            hardlink.unlink()
+            oversized = root / "oversized.json"; oversized.write_bytes(b"12345")
+            with self.assertRaisesRegex(ValueError, "maximum size"):
+                treatment._read_bounded_regular_file(oversized, allowed_root=root, max_bytes=4)
+            if hasattr(os, "mkfifo"):
+                fifo = root / "fixture-fifo"; os.mkfifo(fifo)
+                with self.assertRaisesRegex(ValueError, "regular"):
+                    treatment._read_bounded_regular_file(fifo, allowed_root=root)
+        with tempfile.TemporaryDirectory() as directory:
+            external = Path(directory) / "fixture.json"; external.write_text("{}", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "approved root"):
+                treatment._read_bounded_regular_file(external)
+            completed = subprocess.run(
+                ["python3", str(TREATMENT_MODULE_PATH), "validate", "--fixture", str(external)],
+                cwd=ROOT, text=True, capture_output=True, check=False,
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assertNotIn("Traceback", completed.stderr)
+            self.assertNotIn(str(external), completed.stderr)
+
+    def test_top_level_claims_follow_profile_classification_and_conditions(self) -> None:
+        for field in ("wall_time_ms", "retries"):
+            with self.subTest(field=field):
+                bundle = copy.deepcopy(self.bundle); bundle["treatment_traces"][0][field] = 1
+                with self.assertRaisesRegex(ValueError, "cannot retain a top-level claim"):
+                    treatment.validate_treatment_bundle(self.rebound(bundle))
+        conditional_fields = {
+            "reroute.events": [],
+            "parent.graph": copy.deepcopy(self.bundle["treatment_traces"][0]["parent_child_graph"]),
+            "lifecycle.cancellation": copy.deepcopy(self.bundle["treatment_traces"][0]["cancellation"]),
+        }
+        for field_path, value in conditional_fields.items():
+            with self.subTest(field_path=field_path):
+                bundle = copy.deepcopy(self.bundle)
+                observation = next(item for item in bundle["treatment_traces"][0]["observations"] if item["field_path"] == field_path)
+                observation.update({
+                    "observation_state": "observed_value", "value": value,
+                    "evidence_ref": "fixture://trace/conditional", "captured_at": "2026-07-17T04:01:00Z",
+                })
+                with self.assertRaisesRegex(ValueError, "condition did not occur"):
+                    treatment.validate_treatment_bundle(self.rebound(bundle))
+        occurred = make_treatment_reroute_case(copy.deepcopy(self.bundle), "synthetic_fixture")
+        observation = next(item for item in occurred["treatment_traces"][0]["observations"] if item["field_path"] == "reroute.events")
+        observation.update({"observation_state": "missing", "value": None, "evidence_ref": None, "captured_at": None})
+        with self.assertRaisesRegex(ValueError, "condition occurred without an observed value"):
+            treatment.validate_treatment_bundle(self.rebound(occurred))
+
+    def test_terminal_lifecycle_invariants_are_schema_and_runtime_authority(self) -> None:
+        cases = []
+        outcome = copy.deepcopy(self.bundle); outcome["treatment_traces"][0]["outcome"]["status"] = "failed"; cases.append(outcome)
+        failed = copy.deepcopy(self.bundle); failed["treatment_traces"][0]["terminal_state"] = "failed"; failed["treatment_traces"][0]["outcome"]["status"] = "failed"; cases.append(failed)
+        cancelled = copy.deepcopy(self.bundle); cancelled["treatment_traces"][0]["terminal_state"] = "cancelled"; cancelled["treatment_traces"][0]["outcome"]["status"] = "cancelled"; cases.append(cancelled)
+        accepted = copy.deepcopy(self.bundle); accepted["treatment_traces"][0]["acceptance"] = False; cases.append(accepted)
+        schema = treatment._read_json_file(treatment.SCHEMA_PATH)
+        for index, bundle in enumerate(cases):
+            with self.subTest(case=index):
+                rebound = self.rebound(bundle)
+                with self.assertRaises(ValueError): treatment._validate_schema_instance(rebound, schema, schema)
+                with self.assertRaises(ValueError): treatment.validate_treatment_bundle(rebound)
+
+    def test_trace_graph_rejects_orphans_nonreciprocal_edges_wrong_roots_and_cycles(self) -> None:
+        missing_root = copy.deepcopy(self.bundle)
+        missing_root["treatment_traces"][0]["parent_child_graph"]["root_execution_trace_id"] = "sha256:" + "0" * 64
+        with self.assertRaisesRegex(ValueError, "graph root has no owner"):
+            treatment.validate_treatment_bundle(self.rebound(missing_root))
+        graph = make_two_trace_graph_bundle(self.bundle)
+        nonreciprocal = copy.deepcopy(graph)
+        root_trace, child_trace = nonreciprocal["treatment_traces"]
+        root_trace["parent_child_graph"]["child_execution_trace_ids"] = []
+        root_observation = next(item for item in root_trace["observations"] if item["field_path"] == "parent.graph")
+        root_observation.update({"observation_state": "missing", "value": None, "evidence_ref": None, "captured_at": None})
+        with self.assertRaisesRegex(ValueError, "not reciprocal"):
+            treatment.validate_treatment_bundle(self.rebound(nonreciprocal))
+        wrong_root = copy.deepcopy(graph)
+        wrong_root["treatment_traces"][1]["parent_child_graph"]["root_execution_trace_id"] = wrong_root["treatment_traces"][1]["objective_binding"]["execution_trace_id"]
+        next(item for item in wrong_root["treatment_traces"][1]["observations"] if item["field_path"] == "parent.graph")["value"] = copy.deepcopy(wrong_root["treatment_traces"][1]["parent_child_graph"])
+        with self.assertRaisesRegex(ValueError, "root does not match"):
+            treatment.validate_treatment_bundle(self.rebound(wrong_root))
+        cyclic = copy.deepcopy(graph); root_trace, child_trace = cyclic["treatment_traces"]
+        root_id = root_trace["objective_binding"]["execution_trace_id"]; child_id = child_trace["objective_binding"]["execution_trace_id"]
+        root_trace["parent_configuration"]["parent_execution_trace_id"] = child_id
+        root_trace["parent_child_graph"]["parent_execution_trace_id"] = child_id
+        child_trace["parent_child_graph"]["child_execution_trace_ids"] = [root_id]
+        for trace in (root_trace, child_trace):
+            next(item for item in trace["observations"] if item["field_path"] == "treatment.parent_configuration")["value"] = copy.deepcopy(trace["parent_configuration"])
+            next(item for item in trace["observations"] if item["field_path"] == "parent.graph")["value"] = copy.deepcopy(trace["parent_child_graph"])
+        with self.assertRaisesRegex(ValueError, "cycle"):
+            treatment.validate_treatment_bundle(self.rebound(cyclic))
+
+    def test_locally_owned_identifiers_are_content_addressed(self) -> None:
+        mutations = []
+        route = copy.deepcopy(self.bundle); route["route_resolutions"][0]["resolved_at"] = "2026-07-17T04:00:01Z"; mutations.append(("route resolution ID", route))
+        policy = copy.deepcopy(self.bundle); policy["experiment_policy_registry"][0]["work_item_id"] = "G56R-002-T999"; mutations.append(("experiment policy ID", policy))
+        trace = copy.deepcopy(self.bundle); trace["treatment_traces"][0]["objective_binding"]["execution_trace_id"] = "sha256:" + "0" * 64; mutations.append(("execution trace ID", trace))
+        for message, bundle in mutations:
+            with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
+                treatment.validate_treatment_bundle(self.rebound(bundle))
+
     def test_successor_freeze_preserves_capability_payload(self) -> None:
         published = load_json(ROOT / "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json")
         prior = copy.deepcopy(published)
         prior["candidate_freeze_id"] = "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03"
         prior["telemetry_profile_id"] = "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
+        prior.pop("treatment_contract_digest", None)
+        prior["published_at"] = TREATMENT_PREDECESSOR_PUBLISHED_AT
         prior["supersedes_candidate_freeze_id"] = None
         self.assertEqual(treatment.content_id(prior, "candidate_freeze_id"), prior["candidate_freeze_id"])
-        successor = treatment.build_treatment_successor(prior, self.bundle)
+        successor = treatment.build_treatment_successor(
+            prior, self.bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+        )
         self.assertEqual(successor, published)
         self.assertEqual(successor["supersedes_candidate_freeze_id"], prior["candidate_freeze_id"])
         self.assertEqual(successor["telemetry_profile_id"], self.bundle["telemetry_profile_id"])
+        self.assertEqual(successor["treatment_contract_digest"], self.bundle["treatment_contract_digest"])
+        self.assertEqual(successor["published_at"], TREATMENT_SUCCESSOR_PUBLISHED_AT)
+        manifest = load_json(MANIFEST_PATH)
+        self.assertEqual(capabilities.validate_freeze(
+            published, manifest, predecessor=prior,
+            expected_telemetry_profile_id=self.bundle["telemetry_profile_id"],
+            expected_treatment_contract_digest=self.bundle["treatment_contract_digest"],
+        ), published)
         for key in prior:
-            if key not in {"candidate_freeze_id", "telemetry_profile_id", "supersedes_candidate_freeze_id"}:
+            if key not in {"candidate_freeze_id", "telemetry_profile_id", "published_at", "supersedes_candidate_freeze_id"}:
                 self.assertEqual(successor[key], prior[key])
+        with self.assertRaisesRegex(ValueError, "must be later"):
+            treatment.build_treatment_successor(
+                prior, self.bundle, published_at=TREATMENT_PREDECESSOR_PUBLISHED_AT,
+            )
         tampered = copy.deepcopy(prior); tampered["candidate_freeze_id"] = treatment.digest(b"forged")
         with self.assertRaisesRegex(ValueError, "prior freeze identity"):
-            treatment.build_treatment_successor(tampered, self.bundle)
+            treatment.build_treatment_successor(
+                tampered, self.bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+            )
 
     def test_successor_rejects_cross_bound_treatment_bundle(self) -> None:
         published = load_json(ROOT / "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json")
         prior = copy.deepcopy(published)
         prior["candidate_freeze_id"] = "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03"
         prior["telemetry_profile_id"] = "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
+        prior.pop("treatment_contract_digest", None)
+        prior["published_at"] = TREATMENT_PREDECESSOR_PUBLISHED_AT
         prior["supersedes_candidate_freeze_id"] = None
 
         def assert_valid_but_rejected(bundle: dict, message: str) -> None:
-            rebound = self.rebound(bundle)
+            rebound = self.rebound(rebind_treatment_owners(bundle))
             treatment.validate_treatment_bundle(copy.deepcopy(rebound))
             with self.assertRaisesRegex(ValueError, message):
-                treatment.build_treatment_successor(prior, rebound)
+                treatment.build_treatment_successor(
+                    prior, rebound, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                )
 
         foreign_client = "sha256:" + "0" * 64
         client_rebound = copy.deepcopy(self.bundle)

@@ -5,7 +5,10 @@
 The current append-only treatment successor preserves a valid capability freeze
 with zero eligible tuples:
 
-- Candidate freeze: `sha256:4563bb9c21f9c2378b70d67c5bfe6f82e2febda01b8506bf2e274081bba7b149`
+- Candidate freeze: `sha256:09dd2338d598aa1d51b2f86f7475ac26b3231993fcf239b5629963e60ee89524`
+- Telemetry profile: `sha256:357b9db49df7a981c92e2539ecabd6727a3ef55cccd69aafa46d63039ac8cb2d`
+- Treatment contract: `sha256:a1f69b4675764de29879e68e0b88253ca395f8d6f941b2b653891f96091aac8a`
+- Published at: `2026-07-18T19:40:00Z`
 - Runtime snapshot: `sha256:450a655fabafb765b19bfc9ff3cbefe4b075d6c40fdbc5fd9dbc8ce8c4cfc3fe`
 - Surface matrix: `sha256:99739c0895250de0eb0cf1a0215fd2e5168213081d41f6b2f828c274528c32b2`
 - Pinned client identity: `sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285`

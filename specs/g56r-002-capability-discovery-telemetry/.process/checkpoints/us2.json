@@ -11,18 +11,23 @@
   "implementation_checkpoint_sha": null,
   "superseded_checkpoint_sha": "c47c9d31fd1288e86f0707601078e4f03e2b12e5",
   "prior_candidate_freeze_id": "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03",
-  "candidate_freeze_id": "sha256:4563bb9c21f9c2378b70d67c5bfe6f82e2febda01b8506bf2e274081bba7b149",
-  "telemetry_profile_id": "sha256:5d6657cbdf269bf5a77461723dac1f69803c06f60989e2fe7ed18d93fa2be0ba",
-  "treatment_contract_digest": "sha256:d9c0048e1443ea6c0f5792a4075d434cd539dc0f923db18403880f26bec7e551",
+  "candidate_freeze_id": "sha256:09dd2338d598aa1d51b2f86f7475ac26b3231993fcf239b5629963e60ee89524",
+  "telemetry_profile_id": "sha256:357b9db49df7a981c92e2539ecabd6727a3ef55cccd69aafa46d63039ac8cb2d",
+  "treatment_contract_digest": "sha256:a1f69b4675764de29879e68e0b88253ca395f8d6f941b2b653891f96091aac8a",
   "verification": {
-    "focused_tests": "33/33 pass",
-    "published_successor_validation": "pass",
-    "json_schema_instance_validation": "pass",
+    "focused_tests": "39/39 pass",
+    "published_successor_validation": "actual artifact passes canonical treatment-aware validation",
+    "json_schema_instance_validation": "pass with runtime parity corpus",
+    "bounded_file_and_cli_isolation": "pass",
+    "six_id_and_trace_graph_integrity": "pass",
     "module_cli_validation": "pass",
+    "privacy_scan": "10/10 pass",
+    "docs_reference_check": "pass",
+    "full_suite": "2821/2821 pass",
     "independent_critical_high_review": "repeat_pending"
   },
   "source_fingerprint_status": "current",
-  "tasks_sha": "sha256:75eecaaa1cf8a355d441a12c34c121f3b98d6208fcc37ec7dfdcc1ff0f723b1f",
+  "tasks_sha": "sha256:6a2d2411683d41bb9183c72115e47c45c5e8df728b5eb611d6a0455753e821",
   "completed_at": null,
-  "review_iteration_started_at": "2026-07-18T19:26:33Z"
+  "review_iteration_started_at": "2026-07-18T20:22:08Z"
 }

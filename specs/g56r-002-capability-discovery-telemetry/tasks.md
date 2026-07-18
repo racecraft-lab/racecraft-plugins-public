@@ -7,11 +7,12 @@ smallest GREEN implementation, then REFACTOR and VERIFY without changing the
 predeclared dispositions.
 
 **Reviewability**: The capability adapter triggered the 400-LOC boundary and is
-now 1,844 source lines (1,645 nonblank, non-comment) after independent-review
+now 1,889 source lines (1,690 nonblank, non-comment) after treatment-successor
 integrity remediation. T001-T015 is retained under a typed
 size-only `no_safe_boundary` marker because its source, matrix, tuple, and
 freeze integrity checks cannot be separated safely. That exception permits no
-further capability-module growth. T016-T025 and T026-T039 remain separate
+further capability-module growth except finding-driven successor-validation
+integrity work. T016-T025 and T026-T039 remain separate
 ordered markers; a third production module or broken independent verification
 is still blocking.
 
@@ -74,13 +75,13 @@ non-scorable, or hard-fail disposition without fabricating a field.
 ### GREEN — Neutral Schema Validator
 
 - [x] T020 [US2] [FR-005] Implement telemetry-profile entry validation, class/claim semantics, closed inventory, profile-key uniqueness, required observation-state rules, and typed value/null/evidence validation in `tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py`; Acceptance: T017 passes with missing/native fields never inferred.
-- [x] T021 [US2] [FR-002] [FR-005] [FR-006] Implement configured-route proof, six-ID foreign-key and owning-ID uniqueness validation, controlled-environment owner lookup and consistency, exact agent/configuration/tooling treatment fields, structured treatment failures, and route-resolution validation in `tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py`; Acceptance: T018 passes, missing owners fail, repeated foreign-key references remain allowed, and configured proof establishes requested assignment only.
+- [x] T021 [US2] [FR-002] [FR-005] [FR-006] Implement configured-route proof, six-ID foreign-key and owning-ID uniqueness validation, controlled-environment and experiment-policy owner lookup and consistency, content-addressed route/policy/trace IDs, reciprocal acyclic trace-graph validation, exact agent/configuration/tooling treatment fields, structured treatment failures, and route-resolution validation in `tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py`; Acceptance: T018 passes, missing owners and malformed graphs fail, repeated foreign-key references remain allowed, and configured proof establishes requested assignment only.
 - [x] T022 [US2] [FR-006] [FR-007] Implement resource/lifecycle validation, raw service-reroute association, separate destination assessment, read-only qualification-evidence registry lookup, requested-route non-scorability, same-agent `owned_external` continuation, synthetic-fixture non-authority, and missing/mismatched/unknown/unapproved/ambiguous hard-fail rules in `tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py`; Acceptance: T019 passes, qualification evidence is consumed but never created, synthetic records cannot authorize live continuation, and every disposition preserves resolver evidence.
 
 ### REFACTOR and VERIFY
 
-- [x] T023 [US2] [FR-005] [FR-007] Refactor shared validation primitives only within `tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py`, retaining vendor-neutral record shapes and leaving Codex collection in `codex_capabilities.py`; Acceptance: focused tests remain green and no cross-vendor probing abstraction appears.
-- [x] T024 [US2] [FR-005] [FR-006] Bind the published telemetry profile and validated treatment-contract digest into `docs/ai/research/codex-g56r-002-executable-candidate-freeze.json`, creating a successor freeze ID rather than editing the prior content identity in place; Acceptance: the new freeze references the prior ID and every included tuple has permitted treatment proof or explicit exclusion.
+- [x] T023 [US2] [FR-005] [FR-007] Refactor shared validation primitives only within `tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py`, retaining vendor-neutral record shapes and leaving Codex collection in `codex_capabilities.py`; Acceptance: focused tests, executable JSON-Schema parity, bounded retained-file loading, sanitized CLI failure handling, and authority/condition/lifecycle negative cases remain green without a cross-vendor probing abstraction.
+- [x] T024 [US2] [FR-005] [FR-006] Bind the published telemetry profile and validated treatment-contract digest into `docs/ai/research/codex-g56r-002-executable-candidate-freeze.json`, creating a strictly later successor freeze ID rather than editing the prior content identity in place; Acceptance: the actual published successor directly passes the canonical treatment-aware validator, references the prior ID, and gives every included tuple permitted treatment proof or explicit exclusion.
 - [x] T025 [US2] [FR-005] [FR-007] Run the US2 independent test in `tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py` and inspect the diff for configured-as-effective, missing-reroute-as-none, service-as-resolver, or fabricated null values; Acceptance: focused tests pass and none of the four prohibited patterns exists.
 
 **Checkpoint**: Capability freeze and treatment contracts are independently

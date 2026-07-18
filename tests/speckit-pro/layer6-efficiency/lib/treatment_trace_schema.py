@@ -8,7 +8,10 @@ import copy
 import hashlib
 import importlib.util
 import json
+import os
 import re
+import stat
+import sys
 from collections.abc import Mapping
 from datetime import datetime
 from functools import lru_cache
@@ -19,6 +22,11 @@ ROOT = Path(__file__).resolve().parents[4]
 SCHEMA_PATH = ROOT / "specs/g56r-002-capability-discovery-telemetry/contracts/treatment-record.schema.json"
 MANIFEST_PATH = ROOT / "docs/ai/research/codex-agent-route-candidate-manifest.json"
 CAPABILITY_MODULE_PATH = Path(__file__).with_name("codex_capabilities.py")
+MAX_INPUT_BYTES = 8 * 1024 * 1024
+MAX_NESTING_DEPTH = 64
+MAX_COLLECTION_ITEMS = 10_000
+MAX_TOTAL_NODES = 100_000
+MAX_RETAINED_STRING_LENGTH = 8_192
 
 SCHEMA_VERSION = "1.0.0"
 SURFACES = ("app_server", "cli", "interactive_picker")
@@ -170,19 +178,44 @@ FAILURE_DISPOSITIONS = {
     "reroute_unidentifiable": "hard_fail", "reroute_ambiguous": "hard_fail",
     "reroute_different_agent": "hard_fail",
 }
+INTERNAL_DERIVED_FIELDS = frozenset({"treatment.failures"})
+DISPOSITION_REASON_CODES = frozenset(set(FAILURE_DISPOSITIONS) | {
+    "configured_route_proof_and_complete_reroute_monitoring",
+    "profile_supported_effective_treatment",
+    "effective_treatment_or_reroute_evidence_missing",
+    "service_reroute_requested_route_non_scorable",
+    "reroute_association_mismatch", "ambiguous_reroute_association",
+    "reroute_destination_missing", "reroute_destination_ambiguous",
+    "reroute_destination_unapproved", "reroute_destination_mismatch",
+    "reroute_destination_unidentifiable", "reroute_destination_manifest_mismatch",
+    "reroute_destination_different_agent", "reroute_destination_model_mismatch",
+    "reroute_destination_non_authoritative", "reroute_destination_untrusted",
+    "reroute_effective_destination_mismatch", "reroute_source_model_mismatch",
+    "orphan_reroute_destination_assessment",
+})
 
 DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 SOURCE_RE = re.compile(r"^OPENAI-DOC-[0-9]{3}$")
 REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
 EVIDENCE_REF_RE = re.compile(r"^fixture://[a-z0-9][a-z0-9._-]*(?:/[a-z0-9][a-z0-9._-]*)*$")
-ABSOLUTE_PATH_RE = re.compile(r"(?:^|[\s\"'=])(?:/(?!/)[A-Za-z0-9._~-]|[A-Za-z]:[\\/]|\\\\[A-Za-z0-9._-]+\\)")
+ABSOLUTE_PATH_RE = re.compile(r"(?i)(?:/(?:users|home|private|var|etc|tmp)/|(?:^|[\s\"'=])[A-Za-z]:[\\/]|\\\\[A-Za-z0-9._-]+\\)")
+TRAVERSAL_RE = re.compile(r"(?:^|[\\/])\.\.(?:[\\/]|$)|(?:^|[\s:=])~[\\/]")
 REMOTE_RE = re.compile(r"(?i)(?:\b(?:https?|ssh|git|file)://|\bgit@[a-z0-9.-]+:)")
-CREDENTIAL_RE = re.compile(r"(?i)\b(?:authorization|credential|secret|api[_-]?key|cookie|password)\b\s*[:=]")
+CREDENTIAL_RE = re.compile(
+    r"(?i)(?:\b(?:authorization|credential|secret|api[_-]?key|cookie|password)\b\s*[:=]"
+    r"|\bbearer\s+[A-Za-z0-9._~+/=-]+|\b(?:sk|ghp|github_pat|xox[baprs])[-_][A-Za-z0-9_-]{8,})"
+)
+FALLBACK_REASON_CODES = frozenset({"preferred_unavailable", "capability_mismatch", "policy_fallback"})
+REROUTE_REASON_CODES = frozenset({
+    "service_capacity", "service_policy", "service_availability",
+    "fixture_service_reroute", "fixture_second_service_reroute",
+})
+CANCELLATION_REASON_CODES = frozenset({"user_requested", "timeout", "superseded", "policy_denied"})
 
 
 @lru_cache(maxsize=1)
 def _current_source_ids() -> frozenset[str]:
-    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    manifest = _read_json_file(MANIFEST_PATH)
     ids = frozenset(item["official_source_ledger_id"] for item in manifest["official_source_ledger"])
     if len(ids) != 22 or any(SOURCE_RE.fullmatch(item) is None for item in ids):
         raise ValueError("canonical manifest does not expose exactly 22 current source owners")
@@ -191,7 +224,7 @@ def _current_source_ids() -> frozenset[str]:
 
 @lru_cache(maxsize=1)
 def _canonical_routes() -> dict[str, dict[str, str | None]]:
-    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    manifest = _read_json_file(MANIFEST_PATH)
     agents = {item["agent_contract_id"]: item["agent_name"] for item in manifest["agent_contracts"]}
     routes = {}
     for item in manifest["candidate_routes"]:
@@ -211,6 +244,174 @@ def canonical_bytes(value: object) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
 
 
+def _stable_file_identity(metadata: os.stat_result) -> tuple[int, ...]:
+    return (
+        metadata.st_dev, metadata.st_ino, metadata.st_size, metadata.st_mtime_ns,
+        metadata.st_ctime_ns, stat.S_IMODE(metadata.st_mode), metadata.st_nlink,
+    )
+
+
+def _read_bounded_regular_file(path: Path, *, allowed_root: Path = ROOT,
+                               max_bytes: int = MAX_INPUT_BYTES) -> bytes:
+    source = Path(os.path.abspath(path)); root = Path(os.path.abspath(allowed_root))
+    try:
+        source.relative_to(root)
+    except ValueError as exc:
+        raise ValueError("bounded input must remain inside its approved root") from exc
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        pathname_before = os.stat(source, follow_symlinks=False)
+        if not stat.S_ISREG(pathname_before.st_mode) or pathname_before.st_nlink != 1:
+            raise ValueError("bounded input must be a single-link regular non-symlink file")
+        descriptor = os.open(source, flags)
+    except OSError as exc:
+        raise ValueError("bounded input must be a readable regular non-symlink file") from exc
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
+            raise ValueError("bounded input must be a single-link regular file")
+        if _stable_file_identity(pathname_before) != _stable_file_identity(before):
+            raise ValueError("bounded input pathname changed before it was read")
+        if before.st_size > max_bytes:
+            raise ValueError("bounded input exceeds the maximum size")
+        chunks: list[bytes] = []; total = 0
+        while True:
+            chunk = os.read(descriptor, min(1024 * 1024, max_bytes + 1 - total))
+            if not chunk: break
+            chunks.append(chunk); total += len(chunk)
+            if total > max_bytes: raise ValueError("bounded input exceeds the maximum size")
+        after = os.fstat(descriptor)
+        if _stable_file_identity(after) != _stable_file_identity(before) or total != after.st_size:
+            raise ValueError("bounded input changed while it was being read")
+        current = os.stat(source, follow_symlinks=False)
+        if _stable_file_identity(current) != _stable_file_identity(after):
+            raise ValueError("bounded input pathname changed while it was being read")
+        return b"".join(chunks)
+    finally:
+        os.close(descriptor)
+
+
+def _unique_object(pairs: list[tuple[str, object]]) -> dict:
+    result: dict = {}
+    for key, value in pairs:
+        if key in result: raise ValueError(f"duplicate JSON object key: {key}")
+        result[key] = value
+    return result
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-JSON numeric constant: {value}")
+
+
+def _parse_json_bytes(raw: bytes) -> object:
+    try:
+        return json.loads(
+            raw.decode("utf-8", errors="strict"), object_pairs_hook=_unique_object,
+            parse_constant=_reject_json_constant,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("input must be strict UTF-8 JSON") from exc
+
+
+def _read_json_file(path: Path, *, allowed_root: Path = ROOT) -> object:
+    return _parse_json_bytes(_read_bounded_regular_file(path, allowed_root=allowed_root))
+
+
+def _validate_resource_bounds(value: object, *, depth: int = 0, counter: list[int] | None = None) -> None:
+    if counter is None: counter = [0]
+    counter[0] += 1
+    if counter[0] > MAX_TOTAL_NODES: raise ValueError("treatment input exceeds the maximum node count")
+    if depth > MAX_NESTING_DEPTH: raise ValueError("treatment input exceeds the maximum nesting depth")
+    if isinstance(value, str) and len(value) > MAX_RETAINED_STRING_LENGTH:
+        raise ValueError("treatment input contains an oversized retained string")
+    if isinstance(value, (list, dict)):
+        if len(value) > MAX_COLLECTION_ITEMS: raise ValueError("treatment input contains an oversized collection")
+        for item in (value.values() if isinstance(value, dict) else value):
+            _validate_resource_bounds(item, depth=depth + 1, counter=counter)
+
+
+def _json_type_matches(value: object, expected: str) -> bool:
+    return {
+        "null": value is None,
+        "boolean": isinstance(value, bool),
+        "integer": isinstance(value, int) and not isinstance(value, bool),
+        "number": isinstance(value, (int, float)) and not isinstance(value, bool),
+        "string": isinstance(value, str),
+        "array": isinstance(value, list),
+        "object": isinstance(value, dict),
+    }.get(expected, False)
+
+
+def _schema_matches(value: object, schema: object, root: dict, path: str) -> bool:
+    try:
+        _validate_schema_instance(value, schema, root, path)
+    except ValueError:
+        return False
+    return True
+
+
+def _resolve_schema_ref(root: dict, reference: str) -> object:
+    if not reference.startswith("#/"):
+        raise ValueError("treatment schema may only use local references")
+    current: object = root
+    for token in reference[2:].split("/"):
+        token = token.replace("~1", "/").replace("~0", "~")
+        if not isinstance(current, dict) or token not in current:
+            raise ValueError("treatment schema contains an unresolved local reference")
+        current = current[token]
+    return current
+
+
+def _validate_schema_instance(value: object, schema: object, root: dict, path: str = "$") -> None:
+    if schema is True: return
+    if schema is False or not isinstance(schema, dict):
+        raise ValueError(f"{path} is rejected by the treatment JSON Schema")
+    if "$ref" in schema:
+        _validate_schema_instance(value, _resolve_schema_ref(root, schema["$ref"]), root, path)
+    for branch in schema.get("allOf", []):
+        _validate_schema_instance(value, branch, root, path)
+    if "anyOf" in schema and not any(_schema_matches(value, branch, root, path) for branch in schema["anyOf"]):
+        raise ValueError(f"{path} does not match any allowed treatment schema shape")
+    if "oneOf" in schema and sum(_schema_matches(value, branch, root, path) for branch in schema["oneOf"]) != 1:
+        raise ValueError(f"{path} does not match exactly one treatment schema shape")
+    if "not" in schema and _schema_matches(value, schema["not"], root, path):
+        raise ValueError(f"{path} matches a prohibited treatment schema shape")
+    if "if" in schema:
+        branch = schema.get("then") if _schema_matches(value, schema["if"], root, path) else schema.get("else")
+        if branch is not None: _validate_schema_instance(value, branch, root, path)
+    if "const" in schema and not _same_json_value(value, schema["const"], path):
+        raise ValueError(f"{path} does not match its treatment schema constant")
+    if "enum" in schema and not any(_same_json_value(value, item, path) for item in schema["enum"]):
+        raise ValueError(f"{path} is outside its treatment schema enum")
+    if "type" in schema:
+        expected = schema["type"] if isinstance(schema["type"], list) else [schema["type"]]
+        if not any(_json_type_matches(value, item) for item in expected):
+            raise ValueError(f"{path} has the wrong treatment schema type")
+    if isinstance(value, str):
+        if len(value) < schema.get("minLength", 0): raise ValueError(f"{path} is shorter than allowed")
+        if "pattern" in schema and re.search(schema["pattern"], value) is None: raise ValueError(f"{path} does not match its pattern")
+        if schema.get("format") == "date-time": _timestamp(value, path)
+    if isinstance(value, int) and not isinstance(value, bool) and "minimum" in schema and value < schema["minimum"]:
+        raise ValueError(f"{path} is below its minimum")
+    if isinstance(value, list):
+        if len(value) < schema.get("minItems", 0): raise ValueError(f"{path} has too few items")
+        if schema.get("uniqueItems") and len({canonical_bytes(item) for item in value}) != len(value):
+            raise ValueError(f"{path} must contain unique items")
+        if isinstance(schema.get("items"), dict):
+            for index, item in enumerate(value): _validate_schema_instance(item, schema["items"], root, f"{path}[{index}]")
+    if isinstance(value, dict):
+        missing = set(schema.get("required", [])) - set(value)
+        if missing: raise ValueError(f"{path} is missing required treatment schema fields")
+        properties = schema.get("properties", {})
+        for key, item in value.items():
+            if key in properties:
+                _validate_schema_instance(item, properties[key], root, f"{path}.{key}")
+            elif schema.get("additionalProperties") is False:
+                raise ValueError(f"{path} contains an undeclared treatment schema field")
+            elif isinstance(schema.get("additionalProperties"), dict):
+                _validate_schema_instance(item, schema["additionalProperties"], root, f"{path}.{key}")
+
+
 def _same_json_value(actual: object, expected: object, label: str) -> bool:
     try:
         return canonical_bytes(actual) == canonical_bytes(expected)
@@ -223,6 +424,7 @@ def _validate_retained_strings(value: object, label: str = "treatment bundle") -
         forbidden = (
             any(ord(char) < 32 for char in value)
             or ABSOLUTE_PATH_RE.search(value)
+            or TRAVERSAL_RE.search(value)
             or REMOTE_RE.search(value)
             or CREDENTIAL_RE.search(value)
         )
@@ -246,7 +448,26 @@ def content_id(value: dict, identity_field: str) -> str:
 
 
 def schema_file_digest(path: Path = SCHEMA_PATH) -> str:
-    return digest(path.read_bytes())
+    return digest(_read_bounded_regular_file(path))
+
+
+def execution_trace_identity(trace: dict) -> str:
+    objective = trace["objective_binding"]
+    return digest({
+        "candidate_route_id": objective["candidate_route_id"],
+        "agent_contract_id": objective["agent_contract_id"],
+        "runtime_capability_snapshot_id": objective["runtime_capability_snapshot_id"],
+        "route_resolution_id": objective["route_resolution_id"],
+        "experiment_policy_id": objective["experiment_policy_id"],
+        "controlled_environment_id": trace["controlled_environment_id"],
+        "client_identity_id": trace["client_identity_id"],
+        "surface": trace["surface"],
+        "repository_revision": trace["repository_revision"],
+        "repository_tree_digest": trace["repository_tree_digest"],
+        "work_item_kind": trace["work_item_kind"],
+        "work_item_id": trace["work_item_id"],
+        "context": trace["context"],
+    })
 
 
 def telemetry_profile_id(schema_version: str, profile: list[dict], contract_digest: str) -> str:
@@ -325,6 +546,16 @@ def _contains_unknown(value: object) -> bool:
     if isinstance(value, list): return any(_contains_unknown(item) for item in value)
     if isinstance(value, dict): return any(_contains_unknown(item) for item in value.values())
     return False
+
+
+def _top_level_claim_present(field_path: str, value: object) -> bool:
+    if field_path == "reroute.events": return bool(value)
+    if field_path == "parent.graph":
+        return bool(value["parent_execution_trace_id"] or value["child_execution_trace_ids"])
+    if field_path == "lifecycle.validation": return value["status"] != "not_run"
+    if field_path == "lifecycle.cancellation": return value["state"] != "not_requested"
+    if field_path in INTERNAL_DERIVED_FIELDS: return False
+    return value is not None
 
 
 def profile_entry(profile: list[dict], client_identity_id: str, surface: str, field_path: str) -> dict:
@@ -427,6 +658,22 @@ def _validate_environment(value: object) -> dict:
     return env
 
 
+def _validate_experiment_policy(value: object) -> dict:
+    policy = _closed(value, {
+        "experiment_policy_id", "owner_spec_id", "candidate_route_id",
+        "work_item_kind", "work_item_id", "mutation_class",
+    }, "experiment policy")
+    _digest(policy["experiment_policy_id"], "experiment policy ID")
+    if policy["owner_spec_id"] != "G56R-002": raise ValueError("experiment policy is not owned by G56R-002")
+    _text(policy["candidate_route_id"], "experiment policy candidate route")
+    if policy["work_item_kind"] not in {"task", "fixture", "objective"}: raise ValueError("experiment policy work item kind is invalid")
+    _text(policy["work_item_id"], "experiment policy work item ID")
+    _text(policy["mutation_class"], "experiment policy mutation class")
+    if policy["experiment_policy_id"] != content_id(policy, "experiment_policy_id"):
+        raise ValueError("experiment policy ID is not content addressed")
+    return policy
+
+
 def _validate_qualification(value: object) -> dict:
     owner = _closed(value, {
         "qualification_evidence_id", "authority_kind", "owner_spec_id",
@@ -469,7 +716,8 @@ def _validate_resolution(value: object) -> dict:
         "assigned_route_id", "supported_effective_route_id", "fallback_index",
         "fallback_reason", "runtime_capability_snapshot_id", "resolved_at",
     }, "route resolution")
-    for field in ("route_resolution_id", "preferred_route_id", "assigned_route_id"):
+    _digest(route["route_resolution_id"], "route resolution ID")
+    for field in ("preferred_route_id", "assigned_route_id"):
         _text(route[field], f"route resolution {field}")
     attempts = _strings(route["attempted_route_ids"], "attempted routes")
     if not attempts:
@@ -485,8 +733,12 @@ def _validate_resolution(value: object) -> dict:
         raise ValueError("primary route selection cannot carry a fallback reason")
     if index > 0 and route["fallback_reason"] is None:
         raise ValueError("fallback selection requires a reason")
+    if route["fallback_reason"] is not None and route["fallback_reason"] not in FALLBACK_REASON_CODES:
+        raise ValueError("route fallback reason must use an enumerated code")
     _digest(route["runtime_capability_snapshot_id"], "route resolution snapshot")
     _timestamp(route["resolved_at"], "route resolution timestamp")
+    if route["route_resolution_id"] != content_id(route, "route_resolution_id"):
+        raise ValueError("route resolution ID is not content addressed")
     return route
 
 
@@ -510,7 +762,7 @@ def _validate_trace_structures(trace: dict) -> None:
     _validate_tool_vector(trace["expected_skills_mcp_tools"], "expected skills MCP tools")
     _validate_tool_vector(trace["loaded_skills_mcp_tools"], "loaded skills MCP tools")
     parent = _closed(trace["parent_configuration"], {"parent_execution_trace_id", "configuration_hash"}, "parent configuration")
-    _text(parent["parent_execution_trace_id"], "parent execution trace ID", nullable=True)
+    _digest(parent["parent_execution_trace_id"], "parent execution trace ID", nullable=True)
     _digest(parent["configuration_hash"], "parent configuration hash")
     overrides = _closed(trace["controlled_overrides"], {"model", "effort", "configuration_hash"}, "controlled overrides")
     _text(overrides["model"], "override model"); _text(overrides["effort"], "override effort")
@@ -526,9 +778,10 @@ def _validate_trace_structures(trace: dict) -> None:
     graph = _closed(trace["parent_child_graph"], {
         "root_execution_trace_id", "parent_execution_trace_id", "child_execution_trace_ids",
     }, "parent-child graph")
-    _text(graph["root_execution_trace_id"], "root execution trace ID")
-    _text(graph["parent_execution_trace_id"], "graph parent trace ID", nullable=True)
-    _strings(graph["child_execution_trace_ids"], "child execution trace IDs")
+    _digest(graph["root_execution_trace_id"], "root execution trace ID")
+    _digest(graph["parent_execution_trace_id"], "graph parent trace ID", nullable=True)
+    children = _strings(graph["child_execution_trace_ids"], "child execution trace IDs")
+    for child in children: _digest(child, "child execution trace ID")
     tokens = _closed(trace["raw_token_vector"], {
         "input_tokens", "output_tokens", "cached_input_tokens", "reasoning_output_tokens",
     }, "raw token vector")
@@ -550,15 +803,27 @@ def _validate_trace_structures(trace: dict) -> None:
     if cancellation["state"] not in {"not_requested", "requested", "completed"}: raise ValueError("cancellation state is invalid")
     _text(cancellation["reason"], "cancellation reason", nullable=True)
     if cancellation["state"] == "not_requested" and cancellation["reason"] is not None: raise ValueError("uncancelled work cannot carry a cancellation reason")
+    if cancellation["state"] != "not_requested" and cancellation["reason"] not in CANCELLATION_REASON_CODES:
+        raise ValueError("cancellation reason must use an enumerated code")
     failed = _closed(trace["failed_abandoned_work"], {"failed_count", "abandoned_count"}, "failed-abandoned work")
     _integer(failed["failed_count"], "failed-work count"); _integer(failed["abandoned_count"], "abandoned-work count")
     if trace["terminal_state"] not in {"completed", "failed", "cancelled", "abandoned"}: raise ValueError("terminal state is invalid")
     outcome = _closed(trace["outcome"], {"status", "evidence_digest"}, "outcome")
-    if outcome["status"] not in {"completed", "failed", "cancelled", "abandoned", "unknown"}: raise ValueError("outcome status is invalid")
-    if outcome["status"] == "unknown":
-        if outcome["evidence_digest"] is not None: raise ValueError("unknown outcome evidence must be null")
-    else: _digest(outcome["evidence_digest"], "outcome evidence")
-    if trace["acceptance"] is not None and not isinstance(trace["acceptance"], bool): raise ValueError("acceptance must be boolean or null")
+    if outcome["status"] not in {"completed", "failed", "cancelled", "abandoned"}: raise ValueError("outcome status is invalid")
+    _digest(outcome["evidence_digest"], "outcome evidence")
+    if outcome["status"] != trace["terminal_state"]: raise ValueError("terminal state and outcome status disagree")
+    if trace["acceptance"] is not None: raise ValueError("unavailable terminal acceptance must be null")
+    if trace["terminal_state"] == "completed":
+        if cancellation["state"] != "not_requested" or failed["failed_count"] or failed["abandoned_count"]:
+            raise ValueError("completed work contradicts cancellation or failed-work counters")
+    elif trace["terminal_state"] == "failed":
+        if cancellation["state"] != "not_requested" or failed["failed_count"] < 1:
+            raise ValueError("failed work requires a failed count and no completed cancellation")
+    elif trace["terminal_state"] == "abandoned":
+        if cancellation["state"] != "not_requested" or failed["abandoned_count"] < 1:
+            raise ValueError("abandoned work requires an abandoned count and no completed cancellation")
+    elif cancellation["state"] != "completed":
+        raise ValueError("cancelled work requires completed cancellation evidence")
 
 
 def _validate_failure(value: object) -> dict:
@@ -568,7 +833,7 @@ def _validate_failure(value: object) -> dict:
     }, "treatment failure")
     if failure["failure_code"] not in FAILURE_DISPOSITIONS:
         raise ValueError("treatment failure code is invalid")
-    _text(failure["affected_field"], "treatment failure affected field")
+    if failure["affected_field"] != "treatment.evidence": raise ValueError("treatment failure affected field is invalid")
     _evidence_ref(failure["expected_evidence_ref"], "expected evidence reference", nullable=True)
     _evidence_ref(failure["observed_evidence_ref"], "observed evidence reference", nullable=True)
     if failure["resulting_disposition"] != FAILURE_DISPOSITIONS[failure["failure_code"]]:
@@ -654,6 +919,7 @@ def _validate_event(value: object) -> dict:
     _digest(event["event_id"], "reroute event ID"); _digest(event["evidence_digest"], "reroute event evidence")
     if event["surface"] not in SURFACES: raise ValueError("reroute event surface is invalid")
     for field in ("threadId", "turnId", "fromModel", "toModel", "reason"): _text(event[field], f"reroute {field}")
+    if event["reason"] not in REROUTE_REASON_CODES: raise ValueError("reroute reason must use an enumerated code")
     if event["event_id"] != content_id(event, "event_id"): raise ValueError("reroute event ID is not content addressed")
     return event
 
@@ -723,17 +989,22 @@ TRACE_KEYS = {
 
 
 def _validate_trace(trace: object, profile: list[dict], environments: dict[str, dict],
-                    resolutions: dict[str, dict], qualification: dict[str, dict], trusted: dict[str, dict]) -> dict:
+                    policies: dict[str, dict], resolutions: dict[str, dict],
+                    qualification: dict[str, dict], trusted: dict[str, dict]) -> dict:
     row = _closed(trace, TRACE_KEYS, "treatment trace")
     objective = _closed(row["objective_binding"], set(OBJECTIVE_ID_FIELDS), "six-ID objective binding")
-    for field in OBJECTIVE_ID_FIELDS: _text(objective[field], f"objective {field}")
-    _digest(objective["runtime_capability_snapshot_id"], "objective runtime snapshot")
+    for field in ("candidate_route_id", "agent_contract_id"): _text(objective[field], f"objective {field}")
+    for field in ("runtime_capability_snapshot_id", "route_resolution_id", "experiment_policy_id", "execution_trace_id"):
+        _digest(objective[field], f"objective {field}")
     env_id = _digest(row["controlled_environment_id"], "trace controlled environment ID")
     if env_id not in environments: raise ValueError("trace has no controlled environment owner")
     env = environments[env_id]
     resolution_id = objective["route_resolution_id"]
     if resolution_id not in resolutions: raise ValueError("trace has no route resolution owner")
     resolution = resolutions[resolution_id]
+    policy_id = objective["experiment_policy_id"]
+    if policy_id not in policies: raise ValueError("trace has no experiment policy owner")
+    policy = policies[policy_id]
     _digest(row["client_identity_id"], "trace client identity"); _digest(row["repository_tree_digest"], "trace repository tree")
     if row["surface"] not in SURFACES or row["work_item_kind"] not in {"task", "fixture", "objective"}: raise ValueError("trace surface or work item kind is invalid")
     if not isinstance(row["repository_revision"], str) or REVISION_RE.fullmatch(row["repository_revision"]) is None: raise ValueError("trace repository revision is invalid")
@@ -759,8 +1030,15 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
     if canonical_effort is not None and row["requested_effort"] != canonical_effort:
         raise ValueError("requested effort does not bind the canonical candidate manifest")
     if resolution["runtime_capability_snapshot_id"] != objective["runtime_capability_snapshot_id"]: raise ValueError("route resolution snapshot does not join the objective")
-    if row["parent_child_graph"]["root_execution_trace_id"] != objective["execution_trace_id"]: raise ValueError("parent-child graph does not bind the execution trace")
+    policy_equalities = {
+        "candidate_route_id": objective["candidate_route_id"], "work_item_kind": row["work_item_kind"],
+        "work_item_id": row["work_item_id"], "mutation_class": row["mutation_class"],
+    }
+    if any(policy[field] != expected for field, expected in policy_equalities.items()):
+        raise ValueError("trace experiment policy binding is inconsistent")
     _validate_trace_structures(row)
+    if objective["execution_trace_id"] != execution_trace_identity(row):
+        raise ValueError("execution trace ID is not deterministically derived")
     observations = _validate_observations(row, profile)
     proof = _validate_proof(row["configured_route_proof"], row, profile)
     failures = row["treatment_failures"]
@@ -788,10 +1066,12 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
         "route.attempted_route_ids": resolution["attempted_route_ids"], "route.assigned_route_id": resolution["assigned_route_id"],
         "route.supported_effective_route_id": resolution["supported_effective_route_id"], "route.fallback_index": resolution["fallback_index"],
         "route.fallback_reason": resolution["fallback_reason"], "route.runtime_capability_snapshot_id": resolution["runtime_capability_snapshot_id"],
-        "route.resolved_at": resolution["resolved_at"], "treatment.sandbox": row["sandbox"], "treatment.approvals": row["approvals"],
+        "route.resolved_at": resolution["resolved_at"], "reroute.events": events,
+        "treatment.sandbox": row["sandbox"], "treatment.approvals": row["approvals"],
         "treatment.mutation_class": row["mutation_class"], "treatment.expected_skills_mcp_tools": row["expected_skills_mcp_tools"],
         "treatment.loaded_skills_mcp_tools": row["loaded_skills_mcp_tools"], "treatment.parent_configuration": row["parent_configuration"],
         "treatment.controlled_overrides": row["controlled_overrides"], "treatment.delivery_canary": row["delivery_canary"],
+        "treatment.failures": row["treatment_failures"],
         "parent.context": row["context"], "parent.graph": row["parent_child_graph"],
         "resources.raw_token_vector": row["raw_token_vector"], "resources.request_turn_count": row["request_turn_count"],
         "resources.wall_time_ms": row["wall_time_ms"], "lifecycle.retries": row["retries"], "lifecycle.compaction": row["compaction"],
@@ -822,6 +1102,14 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
             continue
         observed = observations[field]
         entry = profile_entry(profile, row["client_identity_id"], row["surface"], field)
+        claim_present = _top_level_claim_present(field, expected)
+        if entry["classification"] in {"unavailable", "not_applicable", "undocumented"} and claim_present:
+            raise ValueError(f"{field} cannot retain a top-level claim under its telemetry classification")
+        if entry["classification"] == "conditional":
+            if claim_present and observed["observation_state"] != "observed_value":
+                raise ValueError(f"{field} condition occurred without an observed value")
+            if not claim_present and observed["observation_state"] == "observed_value":
+                raise ValueError(f"{field} claims an observation when its condition did not occur")
         mismatch = observed["observation_state"] == "observed_value" and not _same_json_value(observed["value"], expected, f"{field} observation")
         mismatch |= observed["observation_state"] == "explicit_null" and expected is not None
         mismatch |= observed["observation_state"] == "missing" and expected is not None and entry["classification"] not in {"conditional", "undocumented"}
@@ -882,16 +1170,47 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
     elif effective_observed: expected_disposition, expected_reasons = "proven", ["profile_supported_effective_treatment"]
     else: expected_disposition, expected_reasons = "unknown", ["effective_treatment_or_reroute_evidence_missing"]
     if row["treatment_disposition"] not in {"proven", "unknown", "non_scorable_rerouted", "hard_fail"}: raise ValueError("declared treatment disposition is invalid")
-    _strings(row["disposition_reasons"], "treatment disposition reasons")
+    declared_reasons = _strings(row["disposition_reasons"], "treatment disposition reasons")
+    if any(reason not in DISPOSITION_REASON_CODES for reason in declared_reasons):
+        raise ValueError("treatment disposition reasons must use enumerated codes")
     row["treatment_disposition"] = expected_disposition; row["disposition_reasons"] = expected_reasons
     return row
 
 
+def _validate_trace_graph(traces: list[dict]) -> None:
+    by_id = {trace["objective_binding"]["execution_trace_id"]: trace for trace in traces}
+    if len(by_id) != len(traces): raise ValueError("duplicate execution trace ID")
+    for trace_id, trace in by_id.items():
+        graph = trace["parent_child_graph"]; parent = graph["parent_execution_trace_id"]
+        if graph["root_execution_trace_id"] not in by_id: raise ValueError("trace graph root has no owner")
+        if parent == trace_id or trace_id in graph["child_execution_trace_ids"]: raise ValueError("trace graph cannot contain a self edge")
+        if parent is not None and parent not in by_id: raise ValueError("trace graph parent has no owner")
+        if any(child not in by_id for child in graph["child_execution_trace_ids"]): raise ValueError("trace graph child has no owner")
+        if parent is None and graph["root_execution_trace_id"] != trace_id: raise ValueError("root trace does not own its graph root")
+        if parent is not None and trace_id not in by_id[parent]["parent_child_graph"]["child_execution_trace_ids"]:
+            raise ValueError("trace graph parent and child edges are not reciprocal")
+        for child in graph["child_execution_trace_ids"]:
+            if by_id[child]["parent_child_graph"]["parent_execution_trace_id"] != trace_id:
+                raise ValueError("trace graph child and parent edges are not reciprocal")
+    for trace_id, trace in by_id.items():
+        seen: set[str] = set(); current = trace_id
+        while by_id[current]["parent_child_graph"]["parent_execution_trace_id"] is not None:
+            if current in seen: raise ValueError("trace graph contains a cycle")
+            seen.add(current); current = by_id[current]["parent_child_graph"]["parent_execution_trace_id"]
+        if trace["parent_child_graph"]["root_execution_trace_id"] != current:
+            raise ValueError("trace graph root does not match its ancestor chain")
+
+
 def validate_treatment_bundle(bundle: object, *, schema_path: Path = SCHEMA_PATH,
                               trusted_qualification_evidence: Mapping[str, dict] | None = None) -> dict:
+    _validate_resource_bounds(bundle)
+    schema = _read_json_file(schema_path)
+    if not isinstance(schema, dict): raise ValueError("treatment contract must be a JSON Schema object")
+    _validate_resource_bounds(schema)
+    _validate_schema_instance(bundle, schema, schema)
     value = _closed(copy.deepcopy(bundle), {
         "schema_version", "treatment_contract_digest", "telemetry_profile_id", "telemetry_profile",
-        "controlled_environments", "qualification_evidence_registry", "route_resolutions",
+        "controlled_environments", "experiment_policy_registry", "qualification_evidence_registry", "route_resolutions",
         "treatment_traces", "fixture_provenance",
     }, "treatment bundle")
     _validate_retained_strings(value)
@@ -903,6 +1222,7 @@ def validate_treatment_bundle(bundle: object, *, schema_path: Path = SCHEMA_PATH
     expected_profile_id = telemetry_profile_id(value["schema_version"], profile, contract_digest)
     if value["telemetry_profile_id"] != expected_profile_id: raise ValueError("telemetry profile ID does not bind the profile and treatment contract")
     registries = (("controlled_environments", _validate_environment, "controlled_environment_id", "controlled environment"),
+                  ("experiment_policy_registry", _validate_experiment_policy, "experiment_policy_id", "experiment policy"),
                   ("qualification_evidence_registry", _validate_qualification, "qualification_evidence_id", "qualification evidence"),
                   ("route_resolutions", _validate_resolution, "route_resolution_id", "route resolution"))
     owners: dict[str, dict[str, dict]] = {}
@@ -914,7 +1234,7 @@ def validate_treatment_bundle(bundle: object, *, schema_path: Path = SCHEMA_PATH
     traces = value["treatment_traces"]
     if not isinstance(traces, list) or not traces: raise ValueError("treatment traces must be a non-empty array")
     validated = [_validate_trace(
-        item, profile, owners["controlled_environments"], owners["route_resolutions"],
+        item, profile, owners["controlled_environments"], owners["experiment_policy_registry"], owners["route_resolutions"],
         owners["qualification_evidence_registry"], trusted,
     ) for item in traces]
     referenced_environments = {item["controlled_environment_id"] for item in validated}
@@ -923,8 +1243,10 @@ def validate_treatment_bundle(bundle: object, *, schema_path: Path = SCHEMA_PATH
     referenced_resolutions = {item["objective_binding"]["route_resolution_id"] for item in validated}
     if referenced_resolutions != set(owners["route_resolutions"]):
         raise ValueError("route resolution owner registry contains a missing or orphan owner")
-    execution_ids = [item["objective_binding"]["execution_trace_id"] for item in validated]
-    if len(execution_ids) != len(set(execution_ids)): raise ValueError("duplicate execution trace ID")
+    referenced_policies = {item["objective_binding"]["experiment_policy_id"] for item in validated}
+    if referenced_policies != set(owners["experiment_policy_registry"]):
+        raise ValueError("experiment policy owner registry contains a missing or orphan owner")
+    _validate_trace_graph(validated)
     provenance = _closed(value["fixture_provenance"], {
         "schema_version", "sanitizer_version", "raw_evidence_digest", "expected_dispositions",
         "network_required", "raw_store_required", "replay_count",
@@ -937,7 +1259,9 @@ def validate_treatment_bundle(bundle: object, *, schema_path: Path = SCHEMA_PATH
         "treatment_disposition": item["treatment_disposition"],
     } for item in validated]
     if provenance["expected_dispositions"] != expected_dispositions:
-        raise ValueError("fixture expected dispositions do not match traces")
+        raise ValueError(
+            f"fixture expected dispositions do not match traces: expected {expected_dispositions!r}"
+        )
     return value
 
 
@@ -948,9 +1272,10 @@ def _capability_module():
     return module
 
 
-def build_treatment_successor(prior_freeze: dict, treatment_bundle: dict, *, manifest_path: Path = MANIFEST_PATH) -> dict:
+def build_treatment_successor(prior_freeze: dict, treatment_bundle: dict, *, published_at: str,
+                              manifest_path: Path = MANIFEST_PATH) -> dict:
     validated = validate_treatment_bundle(treatment_bundle)
-    capability = _capability_module(); manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    capability = _capability_module(); manifest = _read_json_file(manifest_path)
     if prior_freeze["candidate_freeze_id"] != digest({key: value for key, value in prior_freeze.items() if key != "candidate_freeze_id"}):
         raise ValueError("prior freeze identity is invalid")
     try: capability.validate_freeze(prior_freeze, manifest)
@@ -997,17 +1322,18 @@ def build_treatment_successor(prior_freeze: dict, treatment_bundle: dict, *, man
             raise ValueError("treatment bundle cannot prove an effort absent from the prior freeze")
     successor = copy.deepcopy(prior_freeze); prior_id = prior_freeze["candidate_freeze_id"]
     successor["telemetry_profile_id"] = validated["telemetry_profile_id"]
+    successor["treatment_contract_digest"] = validated["treatment_contract_digest"]
+    successor["published_at"] = published_at
     successor["supersedes_candidate_freeze_id"] = prior_id
     successor["candidate_freeze_id"] = digest({key: value for key, value in successor.items() if key != "candidate_freeze_id"})
     for key, value in prior_freeze.items():
-        if key not in {"candidate_freeze_id", "telemetry_profile_id", "supersedes_candidate_freeze_id"} and canonical_bytes(successor[key]) != canonical_bytes(value):
+        if key not in {"candidate_freeze_id", "telemetry_profile_id", "published_at", "supersedes_candidate_freeze_id"} and canonical_bytes(successor[key]) != canonical_bytes(value):
             raise ValueError("treatment successor changed frozen capability evidence")
-    capability_projection = copy.deepcopy(successor)
-    capability_projection["telemetry_profile_id"] = capability.PENDING_TELEMETRY_PROFILE_ID
-    capability_projection["candidate_freeze_id"] = digest({
-        key: value for key, value in capability_projection.items() if key != "candidate_freeze_id"
-    })
-    capability.validate_freeze(capability_projection, manifest, predecessor=prior_freeze)
+    capability.validate_freeze(
+        successor, manifest, predecessor=prior_freeze,
+        expected_telemetry_profile_id=validated["telemetry_profile_id"],
+        expected_treatment_contract_digest=validated["treatment_contract_digest"],
+    )
     if successor["supersedes_candidate_freeze_id"] != prior_id: raise ValueError("treatment successor does not bind the actual prior freeze")
     return successor
 
@@ -1016,7 +1342,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__); sub = parser.add_subparsers(dest="command", required=True)
     validate = sub.add_parser("validate"); validate.add_argument("--fixture", type=Path, required=True)
     args = parser.parse_args(argv)
-    bundle = json.loads(args.fixture.read_text(encoding="utf-8")); validate_treatment_bundle(bundle)
+    try:
+        bundle = _read_json_file(args.fixture)
+        if not isinstance(bundle, dict): raise ValueError("treatment fixture must be a JSON object")
+        validate_treatment_bundle(bundle)
+    except (OSError, ValueError) as exc:
+        print(f"treatment validation failed: {exc}", file=sys.stderr)
+        return 2
     print(json.dumps({"status": "valid", "telemetry_profile_id": bundle["telemetry_profile_id"]}, sort_keys=True)); return 0
 
 

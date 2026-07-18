@@ -3,7 +3,7 @@
   "spec_id": "G56R-002",
   "feature_dir": "specs/g56r-002-capability-discovery-telemetry",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-18T19:26:33Z",
+  "updated_at": "2026-07-18T20:22:08Z",
   "active_step": "Phase 7: Implement - Treatment Contracts Repeat Review",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
@@ -312,12 +312,12 @@
       "status": "review_pending",
       "tasks_completed": 10,
       "tasks_total": 10,
-      "focused_tests": "33/33 pass",
+      "focused_tests": "39/39 pass",
       "independent_review": "repeat_pending",
       "baseline_commit": "bbffc774c815594edc64cf412a2b5f91127ef213",
-      "candidate_freeze_id": "sha256:4563bb9c21f9c2378b70d67c5bfe6f82e2febda01b8506bf2e274081bba7b149",
-      "telemetry_profile_id": "sha256:5d6657cbdf269bf5a77461723dac1f69803c06f60989e2fe7ed18d93fa2be0ba",
-      "treatment_contract_digest": "sha256:d9c0048e1443ea6c0f5792a4075d434cd539dc0f923db18403880f26bec7e551",
+      "candidate_freeze_id": "sha256:09dd2338d598aa1d51b2f86f7475ac26b3231993fcf239b5629963e60ee89524",
+      "telemetry_profile_id": "sha256:357b9db49df7a981c92e2539ecabd6727a3ef55cccd69aafa46d63039ac8cb2d",
+      "treatment_contract_digest": "sha256:a1f69b4675764de29879e68e0b88253ca395f8d6f941b2b653891f96091aac8a",
       "marker_id": "us2",
       "reviewability": "size-only block with honored typed no-safe-boundary exception",
       "checkpoint": null,
@@ -327,9 +327,9 @@
   },
   "current_source_fingerprint": {
     "feature_spec_sha": "sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56",
-    "plan_declared_scope_sha": "sha256:1cb880c5182a68344bf364cc47160da8928c720448b424541261e1168b02ea81",
-    "tasks_sha": "sha256:75eecaaa1cf8a355d441a12c34c121f3b98d6208fcc37ec7dfdcc1ff0f723b1f",
-    "reviewability_sha": "sha256:171e0c86f4c4e6d7a1c22a5005c64246f22bf0104c077b1821937139f17b2530",
+    "plan_declared_scope_sha": "sha256:d9b03807ef2beac9b049e78a0f9fd99a2f5390442880b081607243b9dd21ef7c",
+    "tasks_sha": "sha256:6a2d2411683d41bb9183c72115e47c45c5e8df728b5eb611d6a0455753e821",
+    "reviewability_sha": "sha256:141b41a11cd9d3e1d8e37e3c6d82898675b7e844f66a64639ebcaf229a7e50a4",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
   },
   "pr_marker_plan": {
@@ -339,9 +339,9 @@
     "status": "checkpointing",
     "source_fingerprint": {
       "feature_spec_sha": "sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56",
-      "plan_declared_scope_sha": "sha256:1cb880c5182a68344bf364cc47160da8928c720448b424541261e1168b02ea81",
-      "tasks_sha": "sha256:75eecaaa1cf8a355d441a12c34c121f3b98d6208fcc37ec7dfdcc1ff0f723b1f",
-      "reviewability_sha": "sha256:171e0c86f4c4e6d7a1c22a5005c64246f22bf0104c077b1821937139f17b2530",
+      "plan_declared_scope_sha": "sha256:d9b03807ef2beac9b049e78a0f9fd99a2f5390442880b081607243b9dd21ef7c",
+      "tasks_sha": "sha256:6a2d2411683d41bb9183c72115e47c45c5e8df728b5eb611d6a0455753e821",
+      "reviewability_sha": "sha256:141b41a11cd9d3e1d8e37e3c6d82898675b7e844f66a64639ebcaf229a7e50a4",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
     },
     "markers": [
@@ -412,7 +412,7 @@
             "severity": "warning",
             "message": "US1 exceeds 400 reviewable LOC and is retained only under the typed no-safe-boundary size exception.",
             "source": "capability-freeze-reviewability",
-            "details": {"marker_id": "us1", "actual_source_lines": 1844, "actual_nonblank_noncomment_lines": 1645}
+            "details": {"marker_id": "us1", "actual_source_lines": 1889, "actual_nonblank_noncomment_lines": 1690}
           }
         ]
       },
@@ -470,7 +470,7 @@
             "severity": "warning",
             "message": "US2 exceeds 400 reviewable LOC and is retained only under the typed no-safe-boundary size exception.",
             "source": "treatment-contracts-reviewability",
-            "details": {"marker_id": "us2", "actual_source_lines": 1024, "actual_nonblank_noncomment_lines": 932}
+            "details": {"marker_id": "us2", "actual_source_lines": 1356, "actual_nonblank_noncomment_lines": 1234}
           }
         ]
       },
