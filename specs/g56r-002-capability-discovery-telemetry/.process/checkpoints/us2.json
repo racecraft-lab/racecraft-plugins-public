@@ -11,15 +11,20 @@
   "implementation_checkpoint_sha": null,
   "superseded_checkpoint_sha": "c47c9d31fd1288e86f0707601078e4f03e2b12e5",
   "prior_candidate_freeze_id": "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03",
-  "candidate_freeze_id": "sha256:09dd2338d598aa1d51b2f86f7475ac26b3231993fcf239b5629963e60ee89524",
-  "telemetry_profile_id": "sha256:357b9db49df7a981c92e2539ecabd6727a3ef55cccd69aafa46d63039ac8cb2d",
-  "treatment_contract_digest": "sha256:a1f69b4675764de29879e68e0b88253ca395f8d6f941b2b653891f96091aac8a",
+  "candidate_freeze_id": "sha256:6262e75df5c78ca3a46d609861f4fe45226a30c29d3f0d032b1bd8ebe35436c7",
+  "telemetry_profile_id": "sha256:4fd9007697c86aae277099d12d37339379a0f19ed58de95ce1b939cdd918aeb3",
+  "treatment_contract_digest": "sha256:6be186638b12a57a93f00bf820ae8aa016a8fa33c0e52a90820833601d4ce71a",
   "verification": {
-    "focused_tests": "39/39 pass",
+    "focused_tests": "41/41 pass",
     "published_successor_validation": "actual artifact passes canonical treatment-aware validation",
     "json_schema_instance_validation": "pass with runtime parity corpus",
     "bounded_file_and_cli_isolation": "pass",
     "six_id_and_trace_graph_integrity": "pass",
+    "external_treatment_binding_authority": "pass",
+    "per_client_profile_authority": "pass",
+    "descriptor_relative_file_loading": "pass",
+    "parser_and_path_sanitization": "pass",
+    "detailed_reroute_reasons": "pass",
     "module_cli_validation": "pass",
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass",
@@ -27,7 +32,7 @@
     "independent_critical_high_review": "repeat_pending"
   },
   "source_fingerprint_status": "current",
-  "tasks_sha": "sha256:6a2d2411683d41bb9183c72115e47c45c5e8df728b5eb611d6a0455753e821",
+  "tasks_sha": "sha256:4b78765419fc0f5d3fafdeefb2b78c19890cf7a02bc74c5bf128e21c97457867",
   "completed_at": null,
-  "review_iteration_started_at": "2026-07-18T20:22:08Z"
+  "review_iteration_started_at": "2026-07-18T20:59:20Z"
 }

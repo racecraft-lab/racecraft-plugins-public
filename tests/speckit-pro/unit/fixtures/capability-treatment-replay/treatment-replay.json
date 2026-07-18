@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "treatment_contract_digest": "sha256:a1f69b4675764de29879e68e0b88253ca395f8d6f941b2b653891f96091aac8a",
-  "telemetry_profile_id": "sha256:357b9db49df7a981c92e2539ecabd6727a3ef55cccd69aafa46d63039ac8cb2d",
+  "treatment_contract_digest": "sha256:6be186638b12a57a93f00bf820ae8aa016a8fa33c0e52a90820833601d4ce71a",
+  "telemetry_profile_id": "sha256:4fd9007697c86aae277099d12d37339379a0f19ed58de95ce1b939cdd918aeb3",
   "telemetry_profile": [
     {
       "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",

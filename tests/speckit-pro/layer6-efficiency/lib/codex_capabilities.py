@@ -1377,13 +1377,16 @@ def _store_publication_receipt_locked(freeze, retention_record_digests, raw, rep
     return receipt_digest
 
 
-def publish_with_raw_evidence_retention(freeze, output, raw_evidence_root, repository_root, *, manifest):
+def publish_with_raw_evidence_retention(
+    freeze, output, raw_evidence_root, repository_root, *, manifest,
+    expected_telemetry_profile_id=None, expected_treatment_contract_digest=None,
+):
     raw = validate_raw_evidence_root(raw_evidence_root, repository_root)
-    contract = freeze.get("treatment_contract_digest")
     freeze = validate_freeze(
         freeze, manifest,
-        expected_telemetry_profile_id=freeze.get("telemetry_profile_id") if contract is not None else None,
-        expected_treatment_contract_digest=contract, _enforce_lineage=False,
+        expected_telemetry_profile_id=expected_telemetry_profile_id,
+        expected_treatment_contract_digest=expected_treatment_contract_digest,
+        _enforce_lineage=False,
     )
     payload = canonical_bytes(freeze) + b"\n"
     with _retention_lock(raw):
@@ -1580,7 +1583,12 @@ def _validate_same_snapshot_canary_history(predecessor, results, unchanged_snaps
         raise ValueError("same-snapshot successor cannot drop or rewrite canary history")
 
 
-def build_freeze(identity, refreshes, matrix, decisions, published_at, *, manifest, predecessor=None, raw_evidence_root=None, repository_root=None):
+def build_freeze(
+    identity, refreshes, matrix, decisions, published_at, *, manifest, predecessor=None,
+    raw_evidence_root=None, repository_root=None,
+    expected_predecessor_telemetry_profile_id=None,
+    expected_predecessor_treatment_contract_digest=None,
+):
     identity = build_client_identity(identity); matrix = validate_surface_matrix(matrix); decisions = validate_tuple_decisions(decisions)
     if (raw_evidence_root is None) != (repository_root is None):
         raise ValueError("freeze raw evidence root and repository root must be provided together")
@@ -1590,11 +1598,11 @@ def build_freeze(identity, refreshes, matrix, decisions, published_at, *, manife
         for observation in matrix["observations"]:
             validate_unknown_observation_evidence(observation, raw_evidence_root, repository_root)
     if predecessor is not None:
-        predecessor_contract = predecessor.get("treatment_contract_digest")
         predecessor = validate_freeze(
             predecessor, manifest,
-            expected_telemetry_profile_id=predecessor.get("telemetry_profile_id") if predecessor_contract is not None else None,
-            expected_treatment_contract_digest=predecessor_contract, _enforce_lineage=False,
+            expected_telemetry_profile_id=expected_predecessor_telemetry_profile_id,
+            expected_treatment_contract_digest=expected_predecessor_treatment_contract_digest,
+            _enforce_lineage=False,
         )
     if len(refreshes) != 22 or len({item.get("official_source_ledger_id") for item in refreshes}) != 22:
         raise ValueError("freeze requires all 22 source refreshes")
@@ -1629,7 +1637,11 @@ def build_freeze(identity, refreshes, matrix, decisions, published_at, *, manife
             "canary_results": _successor_canary_results(predecessor, same_runtime_inputs), "published_at": published_at,
             "supersedes_candidate_freeze_id": predecessor["candidate_freeze_id"] if predecessor is not None else None}
     result["candidate_freeze_id"] = digest(_freeze_identity_payload(result))
-    return validate_freeze(result, manifest, predecessor=predecessor)
+    return validate_freeze(
+        result, manifest, predecessor=predecessor,
+        expected_predecessor_telemetry_profile_id=expected_predecessor_telemetry_profile_id,
+        expected_predecessor_treatment_contract_digest=expected_predecessor_treatment_contract_digest,
+    )
 
 
 def _documented_discovery_unavailable(observations):
@@ -1650,8 +1662,11 @@ def _validate_canary_tuple_binding(decisions, result, snapshot_id, observations)
     return admitted
 
 
-def validate_freeze(freeze, manifest, *, predecessor=None, expected_telemetry_profile_id=None,
-                    expected_treatment_contract_digest=None, _enforce_lineage=True):
+def validate_freeze(
+    freeze, manifest, *, predecessor=None, expected_telemetry_profile_id=None,
+    expected_treatment_contract_digest=None, expected_predecessor_telemetry_profile_id=None,
+    expected_predecessor_treatment_contract_digest=None, _enforce_lineage=True,
+):
     keys = {"schema_version", "candidate_freeze_id", "source_manifest_binding", "client_identity", "client_identity_id", "official_source_refreshes", "source_refresh_set_digest", "surface_matrix", "surface_matrix_id", "runtime_capability_snapshot", "runtime_capability_snapshot_id", "telemetry_profile_id", "current_ledger_digest", "surface_matrix_digest", "tuple_decision_digest", "included_candidate_route_ids", "excluded_candidates", "tuple_decisions", "approved_canary_executors", "canary_results", "published_at", "supersedes_candidate_freeze_id"}
     actual_keys = set(freeze) if isinstance(freeze, dict) else set()
     treatment_bound = "treatment_contract_digest" in actual_keys
@@ -1659,11 +1674,11 @@ def validate_freeze(freeze, manifest, *, predecessor=None, expected_telemetry_pr
     if not isinstance(freeze, dict) or actual_keys != expected_keys or freeze.get("schema_version") != SCHEMA_VERSION: raise ValueError("freeze must use the closed v1 shape")
     validate_manifest(manifest); identity = build_client_identity(freeze["client_identity"])
     if predecessor is not None:
-        predecessor_contract = predecessor.get("treatment_contract_digest")
-        predecessor_profile = predecessor.get("telemetry_profile_id") if predecessor_contract is not None else None
         predecessor = validate_freeze(
-            predecessor, manifest, expected_telemetry_profile_id=predecessor_profile,
-            expected_treatment_contract_digest=predecessor_contract, _enforce_lineage=False,
+            predecessor, manifest,
+            expected_telemetry_profile_id=expected_predecessor_telemetry_profile_id,
+            expected_treatment_contract_digest=expected_predecessor_treatment_contract_digest,
+            _enforce_lineage=False,
         )
     supersedes = freeze["supersedes_candidate_freeze_id"]
     if supersedes is None and predecessor is not None:
@@ -1727,12 +1742,15 @@ def validate_freeze(freeze, manifest, *, predecessor=None, expected_telemetry_pr
     return freeze
 
 
-def build_canary_successor(predecessor, result, manifest, published_at, *, raw_evidence_root, repository_root):
-    predecessor_contract = predecessor.get("treatment_contract_digest")
+def build_canary_successor(
+    predecessor, result, manifest, published_at, *, raw_evidence_root, repository_root,
+    expected_telemetry_profile_id=None, expected_treatment_contract_digest=None,
+):
     predecessor = validate_freeze(
         predecessor, manifest,
-        expected_telemetry_profile_id=predecessor.get("telemetry_profile_id") if predecessor_contract is not None else None,
-        expected_treatment_contract_digest=predecessor_contract, _enforce_lineage=False,
+        expected_telemetry_profile_id=expected_telemetry_profile_id,
+        expected_treatment_contract_digest=expected_treatment_contract_digest,
+        _enforce_lineage=False,
     )
     evidence_bytes = validate_canary_evidence(raw_evidence_root, repository_root, result)
     validated = validate_canary_result(result, APPROVED_CANARY_EXECUTORS, evidence_bytes=evidence_bytes)
@@ -1747,8 +1765,10 @@ def build_canary_successor(predecessor, result, manifest, published_at, *, raw_e
     successor["candidate_freeze_id"] = digest(_freeze_identity_payload(successor))
     return validate_freeze(
         successor, manifest, predecessor=predecessor,
-        expected_telemetry_profile_id=successor["telemetry_profile_id"] if predecessor_contract is not None else None,
-        expected_treatment_contract_digest=predecessor_contract,
+        expected_telemetry_profile_id=expected_telemetry_profile_id,
+        expected_treatment_contract_digest=expected_treatment_contract_digest,
+        expected_predecessor_telemetry_profile_id=expected_telemetry_profile_id,
+        expected_predecessor_treatment_contract_digest=expected_treatment_contract_digest,
     )
 
 
@@ -1827,9 +1847,9 @@ def main(argv=None):
     refresh = sub.add_parser("refresh-sources"); refresh.add_argument("--manifest", required=True); refresh.add_argument("--captured-refresh", required=True); refresh.add_argument("--raw-evidence-root", required=True); refresh.add_argument("--output", required=True)
     identify = sub.add_parser("identify-client"); identify.add_argument("--reported-version", required=True); group = identify.add_mutually_exclusive_group(required=True); group.add_argument("--build-id"); group.add_argument("--executable"); identify.add_argument("--distribution", required=True); identify.add_argument("--output", required=True)
     collect = sub.add_parser("collect"); collect.add_argument("--surface", choices=SURFACES, required=True); collect.add_argument("--client-identity", required=True); collect.add_argument("--raw-evidence-root", required=True); collect.add_argument("--work-item-kind", choices=("task", "fixture", "objective"), required=True); collect.add_argument("--work-item-id", required=True); collect.add_argument("--output", required=True)
-    canary = sub.add_parser("canary"); canary.add_argument("--manifest", required=True); canary.add_argument("--freeze", required=True); canary.add_argument("--model", required=True); canary.add_argument("--effort", required=True); canary.add_argument("--executor-result", required=True); canary.add_argument("--raw-evidence-root", required=True); canary.add_argument("--published-at"); canary.add_argument("--output", required=True)
-    freeze = sub.add_parser("freeze"); freeze.add_argument("--manifest", required=True); freeze.add_argument("--source-refresh", required=True); freeze.add_argument("--client-identity", required=True); freeze.add_argument("--app-server", required=True); freeze.add_argument("--cli", required=True); freeze.add_argument("--interactive-picker", required=True); freeze.add_argument("--raw-evidence-root", required=True); freeze.add_argument("--aliases"); freeze.add_argument("--predecessor-freeze"); freeze.add_argument("--published-at"); freeze.add_argument("--output", required=True)
-    published = sub.add_parser("validate-freeze"); published.add_argument("--manifest", required=True); published.add_argument("--freeze", required=True); published.add_argument("--predecessor-freeze"); published.add_argument("--expected-telemetry-profile-id"); published.add_argument("--expected-treatment-contract-digest")
+    canary = sub.add_parser("canary"); canary.add_argument("--manifest", required=True); canary.add_argument("--freeze", required=True); canary.add_argument("--model", required=True); canary.add_argument("--effort", required=True); canary.add_argument("--executor-result", required=True); canary.add_argument("--raw-evidence-root", required=True); canary.add_argument("--published-at"); canary.add_argument("--expected-telemetry-profile-id"); canary.add_argument("--expected-treatment-contract-digest"); canary.add_argument("--output", required=True)
+    freeze = sub.add_parser("freeze"); freeze.add_argument("--manifest", required=True); freeze.add_argument("--source-refresh", required=True); freeze.add_argument("--client-identity", required=True); freeze.add_argument("--app-server", required=True); freeze.add_argument("--cli", required=True); freeze.add_argument("--interactive-picker", required=True); freeze.add_argument("--raw-evidence-root", required=True); freeze.add_argument("--aliases"); freeze.add_argument("--predecessor-freeze"); freeze.add_argument("--expected-predecessor-telemetry-profile-id"); freeze.add_argument("--expected-predecessor-treatment-contract-digest"); freeze.add_argument("--published-at"); freeze.add_argument("--output", required=True)
+    published = sub.add_parser("validate-freeze"); published.add_argument("--manifest", required=True); published.add_argument("--freeze", required=True); published.add_argument("--predecessor-freeze"); published.add_argument("--expected-telemetry-profile-id"); published.add_argument("--expected-treatment-contract-digest"); published.add_argument("--expected-predecessor-telemetry-profile-id"); published.add_argument("--expected-predecessor-treatment-contract-digest")
     retention = sub.add_parser("retention"); retention.add_argument("--raw-evidence-root", required=True); retention.add_argument("--as-of"); retention.add_argument("--mode", choices=("verify", "cleanup"), default="verify"); retention.add_argument("--output", required=True)
     args, repo = parser.parse_args(argv), Path(__file__).resolve().parents[4]
     now = lambda: datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -1849,21 +1869,36 @@ def main(argv=None):
     if args.command == "canary":
         if not APPROVED_CANARY_EXECUTORS:
             raise ValueError("no repository-approved canary executor is available in this slice")
+        if (args.expected_telemetry_profile_id is None) != (args.expected_treatment_contract_digest is None):
+            raise ValueError("treatment-aware canary requires both expected binding arguments")
         validate_raw_evidence_root(args.raw_evidence_root, repo); _, result_bytes = read_private_external_file(args.executor_result, repo, "canary executor result"); result = _parse_json_bytes(result_bytes)
         manifest = _read(args.manifest); predecessor = _read(args.freeze, require_canonical=True)
         if (result.get("snapshot_id"), result.get("canonical_model_id"), result.get("canonical_effort")) != (predecessor.get("runtime_capability_snapshot_id"), args.model, args.effort):
             raise ValueError("canary result does not match the requested tuple")
-        successor = build_canary_successor(predecessor, result, manifest, args.published_at or now(), raw_evidence_root=args.raw_evidence_root, repository_root=repo)
-        publish_with_raw_evidence_retention(successor, args.output, args.raw_evidence_root, repo, manifest=manifest)
+        successor = build_canary_successor(
+            predecessor, result, manifest, args.published_at or now(),
+            raw_evidence_root=args.raw_evidence_root, repository_root=repo,
+            expected_telemetry_profile_id=args.expected_telemetry_profile_id,
+            expected_treatment_contract_digest=args.expected_treatment_contract_digest,
+        )
+        publish_with_raw_evidence_retention(
+            successor, args.output, args.raw_evidence_root, repo, manifest=manifest,
+            expected_telemetry_profile_id=args.expected_telemetry_profile_id,
+            expected_treatment_contract_digest=args.expected_treatment_contract_digest,
+        )
         return int(successor["canary_results"][-1]["availability_disposition"] == "unknown")
     if args.command == "validate-freeze":
         predecessor = _read(args.predecessor_freeze, require_canonical=True) if args.predecessor_freeze else None
         if (args.expected_telemetry_profile_id is None) != (args.expected_treatment_contract_digest is None):
             raise ValueError("treatment-aware freeze validation requires both expected binding arguments")
+        if (args.expected_predecessor_telemetry_profile_id is None) != (args.expected_predecessor_treatment_contract_digest is None):
+            raise ValueError("treatment-aware predecessor validation requires both expected binding arguments")
         validate_freeze(
             _read(args.freeze, require_canonical=True), _read(args.manifest), predecessor=predecessor,
             expected_telemetry_profile_id=args.expected_telemetry_profile_id,
             expected_treatment_contract_digest=args.expected_treatment_contract_digest,
+            expected_predecessor_telemetry_profile_id=args.expected_predecessor_telemetry_profile_id,
+            expected_predecessor_treatment_contract_digest=args.expected_predecessor_treatment_contract_digest,
         ); return 0
     if args.command == "retention":
         if args.mode == "verify" and args.as_of is None: raise ValueError("retention verification requires --as-of")
@@ -1877,9 +1912,13 @@ def main(argv=None):
     aliases = _read(args.aliases) if args.aliases else {}
     matrix, decisions = evaluate_surface_matrix([_read(args.app_server), _read(args.cli), _read(args.interactive_picker)], tuples, aliases=aliases)
     predecessor = _read(args.predecessor_freeze, require_canonical=True) if args.predecessor_freeze else None
+    if (args.expected_predecessor_telemetry_profile_id is None) != (args.expected_predecessor_treatment_contract_digest is None):
+        raise ValueError("treatment-aware predecessor validation requires both expected binding arguments")
     result = build_freeze(
         identity, refreshes, matrix, decisions, args.published_at or now(), manifest=manifest, predecessor=predecessor,
         raw_evidence_root=args.raw_evidence_root, repository_root=repo,
+        expected_predecessor_telemetry_profile_id=args.expected_predecessor_telemetry_profile_id,
+        expected_predecessor_treatment_contract_digest=args.expected_predecessor_treatment_contract_digest,
     )
     publish_with_raw_evidence_retention(result, args.output, args.raw_evidence_root, repo, manifest=manifest)
     return 0

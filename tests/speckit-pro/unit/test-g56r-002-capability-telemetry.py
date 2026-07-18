@@ -1531,6 +1531,16 @@ class TreatmentContractTests(unittest.TestCase):
                 entry[field] = value
                 self.assert_bundle_invalid(bundle)
 
+        split_owner = copy.deepcopy(self.bundle)
+        moved = next(item for item in split_owner["telemetry_profile"] if item["field_path"] == "treatment.sandbox")
+        moved["client_identity_id"] = "sha256:" + "0" * 64
+        split_owner["treatment_traces"][0]["observations"] = [
+            item for item in split_owner["treatment_traces"][0]["observations"]
+            if item["field_path"] != "treatment.sandbox"
+        ]
+        with self.assertRaisesRegex(ValueError, "exactly one client identity owner"):
+            treatment.validate_treatment_bundle(self.rebound(split_owner))
+
         observation_mutations = [
             ("discovery.models", "value", None),
             ("discovery.models", "value", "unknown"),
@@ -1601,7 +1611,7 @@ class TreatmentContractTests(unittest.TestCase):
                 entry[field] = value
                 self.assert_bundle_invalid(bundle)
 
-    def test_cli_and_picker_traces_validate_only_their_surface_profile(self) -> None:
+    def test_cli_and_picker_traces_cannot_retain_unprofiled_top_level_claims(self) -> None:
         cases = [
             ("cli", "route.supported_effective_route_id", "undocumented"),
             ("interactive_picker", "parent.graph", "not_applicable"),
@@ -1622,8 +1632,8 @@ class TreatmentContractTests(unittest.TestCase):
                     "field_path": field_path, "observation_state": state, "value": None,
                     "evidence_ref": None, "captured_at": None,
                 }]
-                validated = treatment.validate_treatment_bundle(self.rebound(rebind_treatment_owners(bundle)))
-                self.assertEqual(validated["treatment_traces"][0]["treatment_disposition"], "unknown")
+                with self.assertRaisesRegex(ValueError, "cannot retain a top-level claim"):
+                    treatment.validate_treatment_bundle(self.rebound(rebind_treatment_owners(bundle)))
 
     def test_conditional_reroute_event_profile_cannot_self_assert_complete_monitoring(self) -> None:
         bundle = copy.deepcopy(self.bundle)
@@ -1932,6 +1942,12 @@ class TreatmentContractTests(unittest.TestCase):
                 self.assert_bundle_invalid(bundle)
         retained_strings = [
             "note:/" + "Users" + "/example/private/cancellation.txt",
+            "/opt/customer/private.json",
+            "prefix,/opt/customer/private.json",
+            "/mnt/secrets/evidence.json",
+            "/Volumes/account-data/evidence.json",
+            "C:\\customer\\private.json",
+            "\\\\server\\share\\private.json",
             "../private/evidence.json",
             "~/private/evidence.json",
             "sk-exampleSecretToken123456",
@@ -2118,6 +2134,21 @@ class TreatmentContractTests(unittest.TestCase):
                     bundle, trusted=trusted_external_qualification(self.bundle)
                 )
 
+    def test_reroute_output_preserves_detailed_and_normalized_reasons(self) -> None:
+        cases = {
+            "missing": ["reroute_destination_missing", "reroute_unidentifiable"],
+            "owned_external": ["reroute_destination_untrusted", "reroute_unapproved"],
+            "mismatched": ["reroute_destination_different_agent", "reroute_different_agent"],
+        }
+        for authority, expected_reasons in cases.items():
+            with self.subTest(authority=authority):
+                bundle = make_treatment_reroute_case(copy.deepcopy(self.bundle), authority)
+                bundle["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
+                validated = treatment.validate_treatment_bundle(self.rebound(rebind_treatment_owners(bundle)))
+                trace = validated["treatment_traces"][0]
+                self.assertEqual(trace["treatment_disposition"], "hard_fail")
+                self.assertEqual(trace["disposition_reasons"], expected_reasons)
+
     def test_schema_and_runtime_reject_the_same_structural_mutations(self) -> None:
         baseline = self.rebound(copy.deepcopy(self.bundle))
         schema = treatment._read_json_file(treatment.SCHEMA_PATH)
@@ -2139,6 +2170,34 @@ class TreatmentContractTests(unittest.TestCase):
             "reason": "free form reason", "evidence_digest": "sha256:" + "1" * 64,
         }]
         mutations.append(("enumerated reroute reason", raw_reason))
+        explicit_null = copy.deepcopy(baseline)
+        explicit = next(item for item in explicit_null["treatment_traces"][0]["observations"] if item["observation_state"] == "explicit_null")
+        explicit["evidence_ref"] = None; explicit["captured_at"] = None
+        mutations.append(("explicit null evidence and capture time", explicit_null))
+        undocumented = copy.deepcopy(baseline)
+        undocumented_value = next(item for item in undocumented["treatment_traces"][0]["observations"] if item["observation_state"] == "undocumented")
+        undocumented_value["evidence_ref"] = "fixture://forged/undocumented"; undocumented_value["captured_at"] = "2026-07-17T04:01:00Z"
+        mutations.append(("undocumented evidence and capture time", undocumented))
+        fallback = copy.deepcopy(baseline)
+        fallback["route_resolutions"][0]["fallback_reason"] = "preferred_unavailable"
+        mutations.append(("primary route fallback reason", fallback))
+        failure_disposition = copy.deepcopy(baseline)
+        failure_disposition["treatment_traces"][0]["treatment_failures"] = [{
+            "failure_code": "agent_mismatch", "affected_field": "treatment.evidence",
+            "expected_evidence_ref": None, "observed_evidence_ref": None,
+            "resulting_disposition": "non_scorable_rerouted",
+        }]
+        mutations.append(("unreachable failure disposition", failure_disposition))
+        failure_evidence = copy.deepcopy(baseline)
+        failure_evidence["treatment_traces"][0]["treatment_failures"] = [{
+            "failure_code": "agent_mismatch", "affected_field": "treatment.evidence",
+            "expected_evidence_ref": "fixture://forged/expected", "observed_evidence_ref": None,
+            "resulting_disposition": "hard_fail",
+        }]
+        mutations.append(("unrepresentable failure evidence", failure_evidence))
+        timestamp = copy.deepcopy(baseline)
+        timestamp["route_resolutions"][0]["resolved_at"] = "2026-07-17 04:00:00Z"
+        mutations.append(("strict RFC3339 UTC timestamp", timestamp))
         for label, bundle in mutations:
             with self.subTest(label=label):
                 with self.assertRaises(ValueError): treatment._validate_schema_instance(bundle, schema, schema)
@@ -2151,6 +2210,11 @@ class TreatmentContractTests(unittest.TestCase):
             symlink = root / "symlink.json"; symlink.symlink_to(source)
             with self.assertRaisesRegex(ValueError, "regular non-symlink"):
                 treatment._read_bounded_regular_file(symlink, allowed_root=root)
+            real_directory = root / "real"; real_directory.mkdir()
+            nested_source = real_directory / "nested.json"; nested_source.write_text("{}", encoding="utf-8")
+            linked_directory = root / "linked"; linked_directory.symlink_to(real_directory, target_is_directory=True)
+            with self.assertRaisesRegex(ValueError, "regular non-symlink|real directories"):
+                treatment._read_bounded_regular_file(linked_directory / "nested.json", allowed_root=root)
             hardlink = root / "hardlink.json"; os.link(source, hardlink)
             with self.assertRaisesRegex(ValueError, "single-link"):
                 treatment._read_bounded_regular_file(source, allowed_root=root)
@@ -2162,6 +2226,25 @@ class TreatmentContractTests(unittest.TestCase):
                 fifo = root / "fixture-fifo"; os.mkfifo(fifo)
                 with self.assertRaisesRegex(ValueError, "regular"):
                     treatment._read_bounded_regular_file(fifo, allowed_root=root)
+            race_directory = root / "race"; race_directory.mkdir()
+            race_source = race_directory / "source.json"; race_source.write_text("{}", encoding="utf-8")
+            moved_directory = root / "race-original"
+            original_open = treatment.os.open
+            swapped = False
+
+            def replace_directory(path: object, flags: int, *args: object, **kwargs: object) -> int:
+                nonlocal swapped
+                if path == "source.json" and kwargs.get("dir_fd") is not None and not swapped:
+                    swapped = True
+                    race_directory.rename(moved_directory)
+                    race_directory.mkdir()
+                    (race_directory / "source.json").write_text('{"outside":"replacement"}', encoding="utf-8")
+                return original_open(path, flags, *args, **kwargs)
+
+            with mock.patch.object(treatment.os, "open", side_effect=replace_directory), self.assertRaisesRegex(
+                ValueError, "directory changed while it was being read"
+            ):
+                treatment._read_bounded_regular_file(race_source, allowed_root=root)
         with tempfile.TemporaryDirectory() as directory:
             external = Path(directory) / "fixture.json"; external.write_text("{}", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "approved root"):
@@ -2173,6 +2256,23 @@ class TreatmentContractTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 2)
             self.assertNotIn("Traceback", completed.stderr)
             self.assertNotIn(str(external), completed.stderr)
+
+        with tempfile.TemporaryDirectory(dir=ROOT) as directory:
+            root = Path(directory)
+            hostile_inputs = {
+                "deep.json": "[" * 2_000 + "0" + "]" * 2_000,
+                "duplicate.json": '{"api_key=SUPERSECRET":1,"api_key=SUPERSECRET":2}',
+            }
+            for name, payload in hostile_inputs.items():
+                with self.subTest(name=name):
+                    source = root / name; source.write_text(payload, encoding="utf-8")
+                    completed = subprocess.run(
+                        ["python3", str(TREATMENT_MODULE_PATH), "validate", "--fixture", str(source)],
+                        cwd=ROOT, text=True, capture_output=True, check=False,
+                    )
+                    self.assertEqual(completed.returncode, 2)
+                    self.assertNotIn("Traceback", completed.stderr)
+                    self.assertNotIn("SUPERSECRET", completed.stderr)
 
     def test_top_level_claims_follow_profile_classification_and_conditions(self) -> None:
         for field in ("wall_time_ms", "retries"):
@@ -2251,6 +2351,47 @@ class TreatmentContractTests(unittest.TestCase):
         for message, bundle in mutations:
             with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
                 treatment.validate_treatment_bundle(self.rebound(bundle))
+
+    def test_treatment_bound_freeze_apis_require_external_authority(self) -> None:
+        manifest = load_json(MANIFEST_PATH)
+        published = load_json(PUBLISHED_FREEZE_PATH)
+        forged = copy.deepcopy(published)
+        forged["telemetry_profile_id"] = capabilities.digest(b"forged-profile")
+        forged["treatment_contract_digest"] = capabilities.digest(b"forged-contract")
+        forged["candidate_freeze_id"] = capabilities.digest(capabilities._freeze_identity_payload(forged))
+        expected_profile = self.bundle["telemetry_profile_id"]
+        expected_contract = self.bundle["treatment_contract_digest"]
+        with tempfile.TemporaryDirectory() as directory:
+            raw_root = Path(directory) / "raw"; raw_root.mkdir(mode=0o700)
+            with self.assertRaisesRegex(ValueError, "requires the expected profile and contract binding"):
+                capabilities.publish_with_raw_evidence_retention(
+                    forged, Path(directory) / "forged.json", raw_root, ROOT, manifest=manifest,
+                )
+            with self.assertRaisesRegex(ValueError, "binding disagree"):
+                capabilities.publish_with_raw_evidence_retention(
+                    forged, Path(directory) / "forged.json", raw_root, ROOT, manifest=manifest,
+                    expected_telemetry_profile_id=expected_profile,
+                    expected_treatment_contract_digest=expected_contract,
+                )
+            decisions = capabilities._BoundDecisionSet(copy.deepcopy(published["tuple_decisions"]))
+            with mock.patch.object(capabilities, "validate_unknown_observation_evidence"), self.assertRaisesRegex(
+                ValueError, "binding disagree"
+            ):
+                capabilities.build_freeze(
+                    published["client_identity"], published["official_source_refreshes"],
+                    published["surface_matrix"], decisions, "2026-07-18T19:40:01Z",
+                    manifest=manifest, predecessor=forged,
+                    raw_evidence_root=raw_root, repository_root=ROOT,
+                    expected_predecessor_telemetry_profile_id=expected_profile,
+                    expected_predecessor_treatment_contract_digest=expected_contract,
+                )
+            with self.assertRaisesRegex(ValueError, "binding disagree"):
+                capabilities.build_canary_successor(
+                    forged, {}, manifest, "2026-07-18T19:40:01Z",
+                    raw_evidence_root=raw_root, repository_root=ROOT,
+                    expected_telemetry_profile_id=expected_profile,
+                    expected_treatment_contract_digest=expected_contract,
+                )
 
     def test_successor_freeze_preserves_capability_payload(self) -> None:
         published = load_json(ROOT / "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json")

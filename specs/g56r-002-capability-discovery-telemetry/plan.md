@@ -58,8 +58,8 @@ increments cease to be independently testable.
 not a size claim. The binding human estimate remains 297 reviewable LOC; the
 400-LOC split trigger remains enforced.
 
-**Implementation checkpoint**: The capability adapter is 1,889 source lines
-and 1,690 nonblank, non-comment lines after treatment-successor integrity
+**Implementation checkpoint**: The capability adapter is 1,928 source lines
+and 1,729 nonblank, non-comment lines after treatment-successor integrity
 remediation, so the 400-LOC trigger is active.
 Capability work T001-T015 remains one review marker under a typed size-only
 exception because source refresh, surface authority, tuple decisions, and the
@@ -120,11 +120,16 @@ production module, or coupling between later markers is a new stop condition.
 
 ### `treatment_trace_schema.py`
 
-- Validate telemetry-profile keys and classification/claim semantics.
-- Validate the six-ID objective join, controlled-environment consistency,
+- Validate single-client telemetry-profile ownership, complete keys, and
+  classification/claim semantics; absent surface bindings never authorize
+  top-level treatment claims.
+- Validate the content-addressed six-ID objective join, reciprocal acyclic trace
+  graphs, controlled-environment consistency,
   configured-route proof, typed observation-state rules, structured treatment
   failures, owning-ID uniqueness, route resolution, exact treatment,
-  resource/lifecycle fields, and separate service-reroute destination proof.
+  resource/lifecycle fields, and separate service-reroute destination proof
+  with preserved detailed failure reasons. Retained inputs use descriptor-relative
+  component walks, strict JSON bounds, and deny-by-default path sanitization.
   Controlled environments and qualification evidence live in explicit owner
   registries; synthetic qualification records exercise replay but never
   authorize live continuation.
@@ -208,7 +213,9 @@ Repository tests must pass with the network disabled and no raw evidence store.
   source invalidates only bound claims/routes; the G56R-001 historical record is
   not rewritten as current evidence.
 - A published freeze is append-only. Any source, build, evidence,
-  normalization, or disposition change creates a successor freeze ID.
+  normalization, or disposition change creates a successor freeze ID, and every
+  treatment-bound publication or successor API requires externally supplied
+  trusted profile and contract IDs.
 
 ## Project Structure
 

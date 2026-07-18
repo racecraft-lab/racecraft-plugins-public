@@ -144,7 +144,11 @@ result is appended atomically to a content-addressed successor freeze; the
 validated predecessor cannot be overwritten. Approval comes only from the
 repository-owned executor-ID allowlist, which is intentionally empty in this
 slice; an arbitrary result file cannot self-approve, so this command exits
-nonzero before consuming an executor result. Default repository tests inject a deterministic
+nonzero before consuming an executor result. When `--freeze` is already
+treatment-bound, also pass both
+`--expected-telemetry-profile-id` and `--expected-treatment-contract-digest`
+from the separately validated treatment bundle; omitting either fails closed.
+Default repository tests inject a deterministic
 allowlist and fake result and launch no process. Only a future separately
 reviewed admitted executor plus exit zero and the predeclared sentinel may
 record pinned-environment availability. Every other terminal class is unknown
@@ -208,12 +212,18 @@ Revalidate the complete published artifact after generation:
 ```sh
 python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py validate-freeze \
   --manifest docs/ai/research/codex-agent-route-candidate-manifest.json \
-  --freeze docs/ai/research/codex-g56r-002-executable-candidate-freeze.json
+  --freeze docs/ai/research/codex-g56r-002-executable-candidate-freeze.json \
+  --predecessor-freeze /tmp/g56r-002-capability-predecessor-freeze.json \
+  --expected-telemetry-profile-id sha256:4fd9007697c86aae277099d12d37339379a0f19ed58de95ce1b939cdd918aeb3 \
+  --expected-treatment-contract-digest sha256:6be186638b12a57a93f00bf820ae8aa016a8fa33c0e52a90820833601d4ce71a
 ```
 
-This rebuilds the manifest binding, sanitized source refresh, surface matrix,
-runtime snapshot, tuple decisions, derived candidate lists, canary records, and
-the whole-freeze content identity.
+The predecessor path must be the trusted, canonical US1 artifact retained by
+the operator. The expected treatment IDs come from the separately validated
+treatment bundle, never from the successor artifact itself. This rebuilds the
+manifest binding, sanitized source refresh, surface matrix, runtime snapshot,
+tuple decisions, derived candidate lists, canary records, lineage, treatment
+binding, and the whole-freeze content identity.
 
 Any later evidence change creates a successor freeze rather than editing the
 published ID in place.

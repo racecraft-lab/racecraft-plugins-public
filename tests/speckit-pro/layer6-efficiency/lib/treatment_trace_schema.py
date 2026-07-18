@@ -27,6 +27,7 @@ MAX_NESTING_DEPTH = 64
 MAX_COLLECTION_ITEMS = 10_000
 MAX_TOTAL_NODES = 100_000
 MAX_RETAINED_STRING_LENGTH = 8_192
+HAS_DESCRIPTOR_RELATIVE_IO = os.open in os.supports_dir_fd and os.stat in os.supports_dir_fd
 
 SCHEMA_VERSION = "1.0.0"
 SURFACES = ("app_server", "cli", "interactive_picker")
@@ -198,8 +199,15 @@ DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 SOURCE_RE = re.compile(r"^OPENAI-DOC-[0-9]{3}$")
 REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
 EVIDENCE_REF_RE = re.compile(r"^fixture://[a-z0-9][a-z0-9._-]*(?:/[a-z0-9][a-z0-9._-]*)*$")
-ABSOLUTE_PATH_RE = re.compile(r"(?i)(?:/(?:users|home|private|var|etc|tmp)/|(?:^|[\s\"'=])[A-Za-z]:[\\/]|\\\\[A-Za-z0-9._-]+\\)")
-TRAVERSAL_RE = re.compile(r"(?:^|[\\/])\.\.(?:[\\/]|$)|(?:^|[\s:=])~[\\/]")
+ABSOLUTE_PATH_RE = re.compile(
+    r"(?ix)(?:^//(?=[^/])|(?<![a-z0-9._~+/\-])/(?!/)"
+    r"|(?<![a-z0-9._-])[a-z]:[\\/]|(?<![\\a-z0-9._-])\\\\[a-z0-9._-]+[\\/])"
+)
+TRAVERSAL_RE = re.compile(r"(?:^|[\\/])\.\.(?:[\\/]|$)|(?<![A-Za-z0-9._~+\-])~[\\/]")
+RFC3339_UTC_RE = re.compile(
+    r"^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])"
+    r"T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\.[0-9]+)?Z$"
+)
 REMOTE_RE = re.compile(r"(?i)(?:\b(?:https?|ssh|git|file)://|\bgit@[a-z0-9.-]+:)")
 CREDENTIAL_RE = re.compile(
     r"(?i)(?:\b(?:authorization|credential|secret|api[_-]?key|cookie|password)\b\s*[:=]"
@@ -251,22 +259,70 @@ def _stable_file_identity(metadata: os.stat_result) -> tuple[int, ...]:
     )
 
 
+def _stable_directory_identity(metadata: os.stat_result) -> tuple[int, ...]:
+    return metadata.st_dev, metadata.st_ino, stat.S_IFMT(metadata.st_mode), stat.S_IMODE(metadata.st_mode)
+
+
 def _read_bounded_regular_file(path: Path, *, allowed_root: Path = ROOT,
                                max_bytes: int = MAX_INPUT_BYTES) -> bytes:
     source = Path(os.path.abspath(path)); root = Path(os.path.abspath(allowed_root))
     try:
-        source.relative_to(root)
+        relative = source.relative_to(root)
     except ValueError as exc:
         raise ValueError("bounded input must remain inside its approved root") from exc
-    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    if not relative.parts:
+        raise ValueError("bounded input must name a file below its approved root")
+    if not HAS_DESCRIPTOR_RELATIVE_IO:
+        raise ValueError("bounded input requires descriptor-relative path validation")
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    directory_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow | getattr(os, "O_DIRECTORY", 0)
+    file_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
+    directory_descriptors: list[int] = []
+    directory_identities: list[tuple[int, ...]] = []
+    descriptor: int | None = None
     try:
-        pathname_before = os.stat(source, follow_symlinks=False)
+        root_before = os.stat(root, follow_symlinks=False)
+        if not stat.S_ISDIR(root_before.st_mode):
+            raise ValueError("bounded input approved root must be a real directory")
+        root_descriptor = os.open(root, directory_flags)
+        directory_descriptors.append(root_descriptor)
+        root_open = os.fstat(root_descriptor)
+        if _stable_directory_identity(root_before) != _stable_directory_identity(root_open):
+            raise ValueError("bounded input approved root changed before it was opened")
+        directory_identities.append(_stable_directory_identity(root_open))
+        parent_descriptor = root_descriptor
+        for component in relative.parts[:-1]:
+            component_before = os.stat(component, dir_fd=parent_descriptor, follow_symlinks=False)
+            if not stat.S_ISDIR(component_before.st_mode):
+                raise ValueError("bounded input path components must be real directories")
+            child_descriptor = os.open(component, directory_flags, dir_fd=parent_descriptor)
+            child_open = os.fstat(child_descriptor)
+            if _stable_directory_identity(component_before) != _stable_directory_identity(child_open):
+                os.close(child_descriptor)
+                raise ValueError("bounded input directory changed before it was opened")
+            directory_descriptors.append(child_descriptor)
+            directory_identities.append(_stable_directory_identity(child_open))
+            parent_descriptor = child_descriptor
+        filename = relative.parts[-1]
+        pathname_before = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False)
         if not stat.S_ISREG(pathname_before.st_mode) or pathname_before.st_nlink != 1:
             raise ValueError("bounded input must be a single-link regular non-symlink file")
-        descriptor = os.open(source, flags)
+        descriptor = os.open(filename, file_flags, dir_fd=parent_descriptor)
     except OSError as exc:
+        if descriptor is not None:
+            os.close(descriptor)
+        for directory_descriptor in reversed(directory_descriptors):
+            os.close(directory_descriptor)
         raise ValueError("bounded input must be a readable regular non-symlink file") from exc
+    except ValueError:
+        if descriptor is not None:
+            os.close(descriptor)
+        for directory_descriptor in reversed(directory_descriptors):
+            os.close(directory_descriptor)
+        raise
     try:
+        if descriptor is None:
+            raise ValueError("bounded input could not be opened safely")
         before = os.fstat(descriptor)
         if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
             raise ValueError("bounded input must be a single-link regular file")
@@ -283,18 +339,42 @@ def _read_bounded_regular_file(path: Path, *, allowed_root: Path = ROOT,
         after = os.fstat(descriptor)
         if _stable_file_identity(after) != _stable_file_identity(before) or total != after.st_size:
             raise ValueError("bounded input changed while it was being read")
-        current = os.stat(source, follow_symlinks=False)
+        current = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False)
         if _stable_file_identity(current) != _stable_file_identity(after):
             raise ValueError("bounded input pathname changed while it was being read")
+        verifier_descriptors: list[int] = []
+        try:
+            root_current = os.stat(root, follow_symlinks=False)
+            verifier = os.open(root, directory_flags)
+            verifier_descriptors.append(verifier)
+            if _stable_directory_identity(root_current) != directory_identities[0] or _stable_directory_identity(os.fstat(verifier)) != directory_identities[0]:
+                raise ValueError("bounded input approved root changed while it was being read")
+            for component, expected_identity in zip(relative.parts[:-1], directory_identities[1:]):
+                next_descriptor = os.open(component, directory_flags, dir_fd=verifier)
+                verifier_descriptors.append(next_descriptor)
+                if _stable_directory_identity(os.fstat(next_descriptor)) != expected_identity:
+                    raise ValueError("bounded input directory changed while it was being read")
+                verifier = next_descriptor
+            current_path = os.stat(filename, dir_fd=verifier, follow_symlinks=False)
+            if _stable_file_identity(current_path) != _stable_file_identity(after):
+                raise ValueError("bounded input path changed while it was being read")
+        except OSError as exc:
+            raise ValueError("bounded input path changed while it was being read") from exc
+        finally:
+            for verifier_descriptor in reversed(verifier_descriptors):
+                os.close(verifier_descriptor)
         return b"".join(chunks)
     finally:
-        os.close(descriptor)
+        if descriptor is not None:
+            os.close(descriptor)
+        for directory_descriptor in reversed(directory_descriptors):
+            os.close(directory_descriptor)
 
 
 def _unique_object(pairs: list[tuple[str, object]]) -> dict:
     result: dict = {}
     for key, value in pairs:
-        if key in result: raise ValueError(f"duplicate JSON object key: {key}")
+        if key in result: raise ValueError("input contains a duplicate JSON object key")
         result[key] = value
     return result
 
@@ -309,7 +389,7 @@ def _parse_json_bytes(raw: bytes) -> object:
             raw.decode("utf-8", errors="strict"), object_pairs_hook=_unique_object,
             parse_constant=_reject_json_constant,
         )
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError) as exc:
         raise ValueError("input must be strict UTF-8 JSON") from exc
 
 
@@ -423,7 +503,7 @@ def _validate_retained_strings(value: object, label: str = "treatment bundle") -
     if isinstance(value, str):
         forbidden = (
             any(ord(char) < 32 for char in value)
-            or ABSOLUTE_PATH_RE.search(value)
+            or (EVIDENCE_REF_RE.fullmatch(value) is None and ABSOLUTE_PATH_RE.search(value))
             or TRAVERSAL_RE.search(value)
             or REMOTE_RE.search(value)
             or CREDENTIAL_RE.search(value)
@@ -520,11 +600,13 @@ def _timestamp(value: object, label: str, *, nullable: bool = False) -> str | No
     if value is None and nullable:
         return None
     _text(value, label)
+    if RFC3339_UTC_RE.fullmatch(value) is None:
+        raise ValueError(f"{label} must be an RFC3339 UTC timestamp")
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value.removesuffix("Z") + "+00:00")
     except ValueError as exc:
         raise ValueError(f"{label} must be an RFC3339 timestamp") from exc
-    if not value.endswith("Z") or parsed.utcoffset() is None:
+    if parsed.utcoffset() is None:
         raise ValueError(f"{label} must be an RFC3339 UTC timestamp")
     return value
 
@@ -629,9 +711,14 @@ def _validate_profile(profile: object) -> list[dict]:
             raise ValueError("telemetry permitted claims do not match classification semantics")
         if prohibited != AUTHORIZED_PROHIBITED_CLAIMS[(entry["surface"], entry["field_path"])]:
             raise ValueError("telemetry prohibited claims do not match field-level authority")
-    actual_inventory = {(item["surface"], item["field_path"]) for item in profile}
-    if actual_inventory != TELEMETRY_INVENTORY:
-        raise ValueError("telemetry profile does not cover the closed inventory")
+    clients = {item["client_identity_id"] for item in profile}
+    if len(clients) != 1:
+        raise ValueError("schema v1 telemetry profile must have exactly one client identity owner")
+    client = next(iter(clients))
+    actual_inventory = {_profile_key(item) for item in profile}
+    expected_inventory = {(client, surface, field) for surface, field in TELEMETRY_INVENTORY}
+    if actual_inventory != expected_inventory:
+        raise ValueError("telemetry profile client does not cover the closed inventory")
     return profile
 
 
@@ -834,8 +921,8 @@ def _validate_failure(value: object) -> dict:
     if failure["failure_code"] not in FAILURE_DISPOSITIONS:
         raise ValueError("treatment failure code is invalid")
     if failure["affected_field"] != "treatment.evidence": raise ValueError("treatment failure affected field is invalid")
-    _evidence_ref(failure["expected_evidence_ref"], "expected evidence reference", nullable=True)
-    _evidence_ref(failure["observed_evidence_ref"], "observed evidence reference", nullable=True)
+    if failure["expected_evidence_ref"] is not None or failure["observed_evidence_ref"] is not None:
+        raise ValueError("normalized treatment failure evidence references must be null")
     if failure["resulting_disposition"] != FAILURE_DISPOSITIONS[failure["failure_code"]]:
         raise ValueError("structured treatment failure disposition is invalid")
     return failure
@@ -1098,13 +1185,15 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
         "route.runtime_capability_snapshot_id", "route.resolved_at",
     }
     for field, expected in bindings.items():
-        if field not in observations:
-            continue
-        observed = observations[field]
         entry = profile_entry(profile, row["client_identity_id"], row["surface"], field)
         claim_present = _top_level_claim_present(field, expected)
         if entry["classification"] in {"unavailable", "not_applicable", "undocumented"} and claim_present:
             raise ValueError(f"{field} cannot retain a top-level claim under its telemetry classification")
+        observed = observations.get(field)
+        if observed is None:
+            if claim_present:
+                raise ValueError(f"{field} cannot retain a top-level claim without applicable telemetry authority")
+            continue
         if entry["classification"] == "conditional":
             if claim_present and observed["observation_state"] != "observed_value":
                 raise ValueError(f"{field} condition occurred without an observed value")
@@ -1164,7 +1253,9 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
     row["treatment_failures"] = normalized_failures
     failure_dispositions = {item["resulting_disposition"] for item in normalized_failures}
     if reroute_disposition == "non_scorable_rerouted" and "hard_fail" not in failure_dispositions: expected_disposition, expected_reasons = reroute_disposition, reasons
-    elif "hard_fail" in failure_dispositions: expected_disposition, expected_reasons = "hard_fail", sorted(derived_codes)
+    elif "hard_fail" in failure_dispositions:
+        expected_disposition = "hard_fail"
+        expected_reasons = sorted(set(derived_codes) | (set(reasons) if reroute_disposition == "hard_fail" else set()))
     elif "unknown" in failure_dispositions: expected_disposition, expected_reasons = "unknown", sorted(derived_codes)
     elif proof_valid: expected_disposition, expected_reasons = "proven", ["configured_route_proof_and_complete_reroute_monitoring"]
     elif effective_observed: expected_disposition, expected_reasons = "proven", ["profile_supported_effective_treatment"]
@@ -1233,6 +1324,11 @@ def validate_treatment_bundle(bundle: object, *, schema_path: Path = SCHEMA_PATH
         owners[field] = dict(zip(keys, rows))
     traces = value["treatment_traces"]
     if not isinstance(traces, list) or not traces: raise ValueError("treatment traces must be a non-empty array")
+    profile_clients = {item["client_identity_id"] for item in profile}
+    environment_clients = {item["client_identity_id"] for item in owners["controlled_environments"].values()}
+    trace_clients = {item["client_identity_id"] for item in traces}
+    if profile_clients != environment_clients or profile_clients != trace_clients:
+        raise ValueError("schema v1 telemetry profile client must own every environment and trace")
     validated = [_validate_trace(
         item, profile, owners["controlled_environments"], owners["experiment_policy_registry"], owners["route_resolutions"],
         owners["qualification_evidence_registry"], trusted,
@@ -1346,7 +1442,7 @@ def main(argv: list[str] | None = None) -> int:
         bundle = _read_json_file(args.fixture)
         if not isinstance(bundle, dict): raise ValueError("treatment fixture must be a JSON object")
         validate_treatment_bundle(bundle)
-    except (OSError, ValueError) as exc:
+    except (OSError, ValueError, RecursionError) as exc:
         print(f"treatment validation failed: {exc}", file=sys.stderr)
         return 2
     print(json.dumps({"status": "valid", "telemetry_profile_id": bundle["telemetry_profile_id"]}, sort_keys=True)); return 0

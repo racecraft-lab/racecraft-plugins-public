@@ -873,7 +873,7 @@ For every task:
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
-| 2 - Treatment contracts | Review Pending | 10 | 39/39 focused tests, canonical successor/schema parity/bounded CLI/graph validation, and independent repeat review pending |
+| 2 - Treatment contracts | Review Pending | 10 | 41/41 focused tests, externally authorized successor/schema parity/descriptor-safe CLI/graph validation, and independent repeat review pending |
 | 3 - Synthetic replay | Blocked | 0 | T026-T030 remain ordered after a clean US2 repeat-review verdict |
 | Polish and validation | Pending | 0 | Not started |
 
@@ -894,18 +894,19 @@ For every task:
 ### Treatment Checkpoint Evidence
 
 - Implementation baseline: `bbffc774c815594edc64cf412a2b5f91127ef213`
-- Successor candidate freeze: `sha256:09dd2338d598aa1d51b2f86f7475ac26b3231993fcf239b5629963e60ee89524`
+- Successor candidate freeze: `sha256:6262e75df5c78ca3a46d609861f4fe45226a30c29d3f0d032b1bd8ebe35436c7`
 - Superseded candidate freeze: `sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03`
-- Telemetry profile: `sha256:357b9db49df7a981c92e2539ecabd6727a3ef55cccd69aafa46d63039ac8cb2d`
-- Treatment contract: `sha256:a1f69b4675764de29879e68e0b88253ca395f8d6f941b2b653891f96091aac8a`
+- Telemetry profile: `sha256:4fd9007697c86aae277099d12d37339379a0f19ed58de95ce1b939cdd918aeb3`
+- Treatment contract: `sha256:6be186638b12a57a93f00bf820ae8aa016a8fa33c0e52a90820833601d4ce71a`
 - Superseded marker checkpoint: `c47c9d31fd1288e86f0707601078e4f03e2b12e5`
-- Reviewability: size-only `block` at 1,356 source / 1,234 nonblank,
+- Reviewability: size-only `block` at 1,452 source / 1,328 nonblank,
   non-comment lines; typed `no_safe_boundary` exception honored for the
   checkpoint with only T026-T030 replay growth reserved.
 - Review: REPEAT PENDING after direct canonical validation of the actual
-  successor, executable schema/runtime parity, bounded evidence-file and CLI
-  handling, content-addressed six-ID ownership, reciprocal acyclic trace-graph
-  validation, and authority/condition/lifecycle hardening. A new implementation
+  successor, external treatment-binding authority, executable schema/runtime
+  parity, descriptor-relative evidence-file and sanitized CLI handling,
+  single-client profile authority, content-addressed six-ID ownership,
+  reciprocal acyclic trace-graph validation, and detailed reroute reasons. A new implementation
   checkpoint SHA is recorded only after a clean verdict.
 
 ## PR Marker Plan Evidence
@@ -919,9 +920,9 @@ For every task:
 | Fingerprint input | SHA-256 |
 |---|---|
 | Feature spec | `sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56` |
-| Plan-declared scope | `sha256:d9b03807ef2beac9b049e78a0f9fd99a2f5390442880b081607243b9dd21ef7c` |
-| Tasks | `sha256:6a2d2411683d41bb9183c72115e47c45c5e8df728b5eb611d6a0455753e821` |
-| Reviewability evidence | `sha256:141b41a11cd9d3e1d8e37e3c6d82898675b7e844f66a64639ebcaf229a7e50a4` |
+| Plan-declared scope | `sha256:35d4122bd719ba1512da85fdeead0c990d598591b33af7c3ed38947cea1aaf9e` |
+| Tasks | `sha256:4b78765419fc0f5d3fafdeefb2b78c19890cf7a02bc74c5bf128e21c97457867` |
+| Reviewability evidence | `sha256:45ca0ba43a4d6ac0edfe456f489dd1fb5d85af12e8b5c03f6e7ea3b935ecd512` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
@@ -931,7 +932,7 @@ For every task:
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
-  size warnings. US1 is 1,889 / 1,690 source/nonblank lines and US2 is 1,356 / 1,234
+  size warnings. US1 is 1,928 / 1,729 source/nonblank lines and US2 is 1,452 / 1,328
   against the 400-LOC boundary; both use typed size-only exceptions.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.

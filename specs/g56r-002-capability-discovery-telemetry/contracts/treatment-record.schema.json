@@ -399,21 +399,24 @@
         "evidence_ref": {"$ref": "#/$defs/nullableSanitizedEvidenceRef"},
         "captured_at": {
           "oneOf": [
-            {"type": "string", "format": "date-time"},
+            {"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?Z$"},
             {"type": "null"}
           ]
         }
       },
       "allOf": [
         {
-          "if": {"properties": {"observation_state": {"const": "observed_value"}}},
+          "if": {"properties": {"observation_state": {"enum": ["observed_value", "explicit_null"]}}},
           "then": {
             "properties": {
-              "value": {"not": {"type": "null"}},
               "evidence_ref": {"$ref": "#/$defs/sanitizedEvidenceRef"},
-              "captured_at": {"type": "string", "format": "date-time"}
+              "captured_at": {"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?Z$"}
             }
           }
+        },
+        {
+          "if": {"properties": {"observation_state": {"const": "observed_value"}}},
+          "then": {"properties": {"value": {"not": {"type": "null"}}}}
         },
         {
           "if": {
@@ -430,6 +433,15 @@
             }
           },
           "then": {"properties": {"value": {"type": "null"}}}
+        },
+        {
+          "if": {"properties": {"observation_state": {"const": "undocumented"}}},
+          "then": {
+            "properties": {
+              "evidence_ref": {"type": "null"},
+              "captured_at": {"type": "null"}
+            }
+          }
         }
       ]
     },
@@ -614,8 +626,20 @@
           ]
         },
         "runtime_capability_snapshot_id": {"$ref": "#/$defs/digest"},
-        "resolved_at": {"type": "string", "format": "date-time"}
-      }
+        "resolved_at": {"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?Z$"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"fallback_index": {"const": 0}}},
+          "then": {"properties": {"fallback_reason": {"type": "null"}}},
+          "else": {
+            "properties": {
+              "fallback_index": {"minimum": 1},
+              "fallback_reason": {"enum": ["preferred_unavailable", "capability_mismatch", "policy_fallback"]}
+            }
+          }
+        }
+      ]
     },
     "serviceRerouteEvent": {
       "type": "object",
@@ -771,12 +795,23 @@
           ]
         },
         "affected_field": {"const": "treatment.evidence"},
-        "expected_evidence_ref": {"$ref": "#/$defs/nullableSanitizedEvidenceRef"},
-        "observed_evidence_ref": {"$ref": "#/$defs/nullableSanitizedEvidenceRef"},
+        "expected_evidence_ref": {"type": "null"},
+        "observed_evidence_ref": {"type": "null"},
         "resulting_disposition": {
-          "enum": ["unknown", "non_scorable_rerouted", "hard_fail"]
+          "enum": ["unknown", "hard_fail"]
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "failure_code": {"enum": ["delivery_canary_failure", "effective_treatment_unknown"]}
+            }
+          },
+          "then": {"properties": {"resulting_disposition": {"const": "unknown"}}},
+          "else": {"properties": {"resulting_disposition": {"const": "hard_fail"}}}
+        }
+      ]
     },
     "objectiveBinding": {
       "type": "object",
