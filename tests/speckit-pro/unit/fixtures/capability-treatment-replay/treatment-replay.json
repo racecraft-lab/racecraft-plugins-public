@@ -1083,10 +1083,10 @@
   ],
   "controlled_environments": [
     {
-      "controlled_environment_id": "sha256:bc1dbf2ca7893b707b7fe191b82471a774aa27774105781c06aef4e175d8a5ce",
+      "controlled_environment_id": "sha256:cc169b3d797245639c16b50be945d36d096cfe2e756bd961395830656f9e4586",
       "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
       "surface": "app_server",
-      "runtime_capability_snapshot_id": "sha256:39e6284e4a3ae9109a543b8e0ecf4c9d59181010dd3def7b874c89fab46a43f3",
+      "runtime_capability_snapshot_id": "sha256:450a655fabafb765b19bfc9ff3cbefe4b075d6c40fdbc5fd9dbc8ce8c4cfc3fe",
       "repository_revision": "ab272f05937bd08a50e40710b3f1ad3b0dc8452b",
       "repository_tree_digest": "sha256:50aa948b304f465c8bfb405dcecada993b1ee28cdb84d1237a9a06ba93e34cba",
       "candidate_route_id": "G56R-001-CR-PHASE-EXECUTOR-SOL",
@@ -1127,7 +1127,7 @@
       "supported_effective_route_id": null,
       "fallback_index": 0,
       "fallback_reason": null,
-      "runtime_capability_snapshot_id": "sha256:39e6284e4a3ae9109a543b8e0ecf4c9d59181010dd3def7b874c89fab46a43f3",
+      "runtime_capability_snapshot_id": "sha256:450a655fabafb765b19bfc9ff3cbefe4b075d6c40fdbc5fd9dbc8ce8c4cfc3fe",
       "resolved_at": "2026-07-17T04:00:00Z"
     }
   ],
@@ -1136,12 +1136,12 @@
       "objective_binding": {
         "candidate_route_id": "G56R-001-CR-PHASE-EXECUTOR-SOL",
         "agent_contract_id": "G56R-001-AC-PHASE-EXECUTOR",
-        "runtime_capability_snapshot_id": "sha256:39e6284e4a3ae9109a543b8e0ecf4c9d59181010dd3def7b874c89fab46a43f3",
+        "runtime_capability_snapshot_id": "sha256:450a655fabafb765b19bfc9ff3cbefe4b075d6c40fdbc5fd9dbc8ce8c4cfc3fe",
         "route_resolution_id": "RR-FIXTURE-001",
         "experiment_policy_id": "EP-FIXTURE-001",
         "execution_trace_id": "TRACE-FIXTURE-001"
       },
-      "controlled_environment_id": "sha256:bc1dbf2ca7893b707b7fe191b82471a774aa27774105781c06aef4e175d8a5ce",
+      "controlled_environment_id": "sha256:cc169b3d797245639c16b50be945d36d096cfe2e756bd961395830656f9e4586",
       "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
       "surface": "app_server",
       "repository_revision": "ab272f05937bd08a50e40710b3f1ad3b0dc8452b",
@@ -1391,7 +1391,7 @@
         {
           "field_path": "route.runtime_capability_snapshot_id",
           "observation_state": "observed_value",
-          "value": "sha256:39e6284e4a3ae9109a543b8e0ecf4c9d59181010dd3def7b874c89fab46a43f3",
+          "value": "sha256:450a655fabafb765b19bfc9ff3cbefe4b075d6c40fdbc5fd9dbc8ce8c4cfc3fe",
           "evidence_ref": "fixture://trace/route-runtime_capability_snapshot_id",
           "captured_at": "2026-07-17T04:01:00Z"
         },

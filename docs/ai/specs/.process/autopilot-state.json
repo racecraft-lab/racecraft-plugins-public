@@ -3,8 +3,8 @@
   "spec_id": "G56R-002",
   "feature_dir": "specs/g56r-002-capability-discovery-telemetry",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-18T19:03:30Z",
-  "active_step": "Phase 7: Implement - Synthetic Replay (T026-T030)",
+  "updated_at": "2026-07-18T19:26:33Z",
+  "active_step": "Phase 7: Implement - Treatment Contracts Repeat Review",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
   "archive_sweep": {
@@ -69,8 +69,8 @@
     {"step": "Phase 6: Analyze - Consensus", "status": "completed"},
     {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
     {"step": "Phase 7: Implement - Capability Freeze (T001-T015)", "status": "completed"},
-    {"step": "Phase 7: Implement - Treatment Contracts (T016-T025)", "status": "completed"},
-    {"step": "Phase 7: Implement - Synthetic Replay (T026-T030)", "status": "in_progress"},
+    {"step": "Phase 7: Implement - Treatment Contracts (T016-T025)", "status": "in_progress"},
+    {"step": "Phase 7: Implement - Synthetic Replay (T026-T030)", "status": "pending"},
     {"step": "Phase 7: Implement - Integration and Polish (T031-T039)", "status": "pending"},
     {"step": "Post: Doctor Extension Check", "status": "pending"},
     {"step": "Post: Verify Implementation", "status": "pending"},
@@ -309,26 +309,27 @@
       "completed_at": "2026-07-18T19:03:30Z"
     },
     "Phase 7: Implement - Treatment Contracts": {
-      "status": "completed",
+      "status": "review_pending",
       "tasks_completed": 10,
       "tasks_total": 10,
-      "focused_tests": "24/24 pass",
-      "independent_review": "pass with 0 critical and 0 high findings",
+      "focused_tests": "33/33 pass",
+      "independent_review": "repeat_pending",
       "baseline_commit": "bbffc774c815594edc64cf412a2b5f91127ef213",
       "candidate_freeze_id": "sha256:4563bb9c21f9c2378b70d67c5bfe6f82e2febda01b8506bf2e274081bba7b149",
       "telemetry_profile_id": "sha256:5d6657cbdf269bf5a77461723dac1f69803c06f60989e2fe7ed18d93fa2be0ba",
       "treatment_contract_digest": "sha256:d9c0048e1443ea6c0f5792a4075d434cd539dc0f923db18403880f26bec7e551",
       "marker_id": "us2",
       "reviewability": "size-only block with honored typed no-safe-boundary exception",
-      "checkpoint": "c47c9d31fd1288e86f0707601078e4f03e2b12e5",
-      "completed_at": "2026-07-17T06:04:36Z"
+      "checkpoint": null,
+      "superseded_checkpoint": "c47c9d31fd1288e86f0707601078e4f03e2b12e5",
+      "completed_at": null
     }
   },
   "current_source_fingerprint": {
     "feature_spec_sha": "sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56",
     "plan_declared_scope_sha": "sha256:1cb880c5182a68344bf364cc47160da8928c720448b424541261e1168b02ea81",
     "tasks_sha": "sha256:75eecaaa1cf8a355d441a12c34c121f3b98d6208fcc37ec7dfdcc1ff0f723b1f",
-    "reviewability_sha": "sha256:eae059183af27d1305ad0ce884e0650c32cc67926e8d40b67b89ee0e288e58ff",
+    "reviewability_sha": "sha256:171e0c86f4c4e6d7a1c22a5005c64246f22bf0104c077b1821937139f17b2530",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
   },
   "pr_marker_plan": {
@@ -340,7 +341,7 @@
       "feature_spec_sha": "sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56",
       "plan_declared_scope_sha": "sha256:1cb880c5182a68344bf364cc47160da8928c720448b424541261e1168b02ea81",
       "tasks_sha": "sha256:75eecaaa1cf8a355d441a12c34c121f3b98d6208fcc37ec7dfdcc1ff0f723b1f",
-      "reviewability_sha": "sha256:eae059183af27d1305ad0ce884e0650c32cc67926e8d40b67b89ee0e288e58ff",
+      "reviewability_sha": "sha256:171e0c86f4c4e6d7a1c22a5005c64246f22bf0104c077b1821937139f17b2530",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
     },
     "markers": [
@@ -445,8 +446,7 @@
           "status": "block",
           "mode": "implementation",
           "scope": "us2",
-          "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/treatment-contracts.json",
-          "head_sha": "bbffc774c815594edc64cf412a2b5f91127ef213"
+          "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/treatment-contracts.json"
         },
         "hazards": ["six-id-join", "exact-treatment", "service-reroute"],
         "subdivision": {
@@ -458,9 +458,10 @@
           }
         },
         "implementation_checkpoint": {
-          "status": "complete",
+          "status": "pending",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json",
-          "commit_sha": "c47c9d31fd1288e86f0707601078e4f03e2b12e5"
+          "commit_sha": null,
+          "superseded_commit_sha": "c47c9d31fd1288e86f0707601078e4f03e2b12e5"
         },
         "emission_mapping": {"status": "pending", "packet_path": "specs/g56r-002-capability-discovery-telemetry/.process/pr-packets/us2.json"},
         "warnings": [

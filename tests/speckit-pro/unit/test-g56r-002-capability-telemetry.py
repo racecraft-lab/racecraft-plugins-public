@@ -2015,7 +2015,7 @@ class TreatmentContractTests(unittest.TestCase):
     def test_successor_freeze_preserves_capability_payload(self) -> None:
         published = load_json(ROOT / "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json")
         prior = copy.deepcopy(published)
-        prior["candidate_freeze_id"] = "sha256:57b79448bc59f4e9dd8eb2acb61452c5c0fe6f4acc4199c48bc9a3eb4e6b3d24"
+        prior["candidate_freeze_id"] = "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03"
         prior["telemetry_profile_id"] = "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
         prior["supersedes_candidate_freeze_id"] = None
         self.assertEqual(treatment.content_id(prior, "candidate_freeze_id"), prior["candidate_freeze_id"])
@@ -2033,7 +2033,7 @@ class TreatmentContractTests(unittest.TestCase):
     def test_successor_rejects_cross_bound_treatment_bundle(self) -> None:
         published = load_json(ROOT / "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json")
         prior = copy.deepcopy(published)
-        prior["candidate_freeze_id"] = "sha256:57b79448bc59f4e9dd8eb2acb61452c5c0fe6f4acc4199c48bc9a3eb4e6b3d24"
+        prior["candidate_freeze_id"] = "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03"
         prior["telemetry_profile_id"] = "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
         prior["supersedes_candidate_freeze_id"] = None
 

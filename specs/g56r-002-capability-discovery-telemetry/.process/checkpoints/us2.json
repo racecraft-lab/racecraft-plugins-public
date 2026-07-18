@@ -2,25 +2,27 @@
   "schema_version": "marker-checkpoint.v1",
   "feature_id": "G56R-002",
   "marker_id": "us2",
-  "status": "complete",
+  "status": "review_pending",
   "task_ids": [
     "T016", "T017", "T018", "T019", "T020",
     "T021", "T022", "T023", "T024", "T025"
   ],
   "implementation_baseline_sha": "bbffc774c815594edc64cf412a2b5f91127ef213",
-  "implementation_checkpoint_sha": "c47c9d31fd1288e86f0707601078e4f03e2b12e5",
+  "implementation_checkpoint_sha": null,
+  "superseded_checkpoint_sha": "c47c9d31fd1288e86f0707601078e4f03e2b12e5",
   "prior_candidate_freeze_id": "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03",
   "candidate_freeze_id": "sha256:4563bb9c21f9c2378b70d67c5bfe6f82e2febda01b8506bf2e274081bba7b149",
   "telemetry_profile_id": "sha256:5d6657cbdf269bf5a77461723dac1f69803c06f60989e2fe7ed18d93fa2be0ba",
   "treatment_contract_digest": "sha256:d9c0048e1443ea6c0f5792a4075d434cd539dc0f923db18403880f26bec7e551",
   "verification": {
-    "focused_tests": "24/24 pass",
+    "focused_tests": "33/33 pass",
     "published_successor_validation": "pass",
     "json_schema_instance_validation": "pass",
     "module_cli_validation": "pass",
-    "independent_critical_high_review": "pass"
+    "independent_critical_high_review": "repeat_pending"
   },
   "source_fingerprint_status": "current",
   "tasks_sha": "sha256:75eecaaa1cf8a355d441a12c34c121f3b98d6208fcc37ec7dfdcc1ff0f723b1f",
-  "completed_at": "2026-07-17T06:04:36Z"
+  "completed_at": null,
+  "review_iteration_started_at": "2026-07-18T19:26:33Z"
 }
