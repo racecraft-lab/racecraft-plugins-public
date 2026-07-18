@@ -15,7 +15,7 @@
   "telemetry_profile_id": "sha256:4fd9007697c86aae277099d12d37339379a0f19ed58de95ce1b939cdd918aeb3",
   "treatment_contract_digest": "sha256:6be186638b12a57a93f00bf820ae8aa016a8fa33c0e52a90820833601d4ce71a",
   "verification": {
-    "focused_tests": "44/44 pass",
+    "focused_tests": "46/46 pass",
     "published_successor_validation": "actual artifact passes canonical treatment-aware validation",
     "json_schema_instance_validation": "pass with runtime parity corpus",
     "bounded_file_and_cli_isolation": "pass",
@@ -33,6 +33,9 @@
     "exact_declared_treatment_results": "pass",
     "single_schema_snapshot": "pass",
     "single_manifest_authority_snapshot": "pass",
+    "canonical_manifest_snapshot": "pass",
+    "descriptor_relative_private_writes": "pass",
+    "descriptor_relative_deletion_recovery": "pass",
     "discovery_treatment_reconciliation": "pass",
     "dictionary_key_privacy_and_bounds": "pass",
     "parser_and_path_sanitization": "pass",

@@ -1251,7 +1251,10 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(pending_after_registration["retained_evidence_digests"], expected_retained)
             self.assertEqual(len(pending_after_registration["pending_retention_record_digests"]), 8)
             self.assertEqual(len(pending_after_registration["retention_record_digests"]), 12)
-            with capabilities._retention_lock(raw_root):
+            raw_identity = capabilities._stable_directory_identity(
+                os.stat(raw_root, follow_symlinks=False),
+            )
+            with capabilities._retention_lock(raw_root, raw_identity):
                 with self.assertRaisesRegex(ValueError, "already in progress"):
                     capabilities.publish_with_raw_evidence_retention(
                         freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
@@ -1337,13 +1340,17 @@ class CapabilityContractTests(unittest.TestCase):
                 capabilities, "_retention_now",
                 return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
             )
-            original_fsync_directory = capabilities._fsync_directory
-            def fail_deletion_record_fsync(path: Path) -> None:
-                if Path(path).name == capabilities.DELETION_RECORDS_DIR:
-                    raise OSError("simulated deletion-record directory fsync failure")
-                original_fsync_directory(path)
-            with cleanup_clock, mock.patch.object(capabilities, "_fsync_directory", side_effect=fail_deletion_record_fsync):
-                with self.assertRaisesRegex(OSError, "deletion-record directory fsync"):
+            original_private_write = capabilities._write_private_bytes_at
+            def fail_deletion_record_write(
+                parent_descriptor: int, parent_path: Path, filename: str, payload: bytes, **kwargs: object,
+            ) -> None:
+                if Path(parent_path).name == capabilities.DELETION_RECORDS_DIR:
+                    raise OSError("simulated deletion-record write failure")
+                original_private_write(parent_descriptor, parent_path, filename, payload, **kwargs)
+            with cleanup_clock, mock.patch.object(
+                capabilities, "_write_private_bytes_at", side_effect=fail_deletion_record_write,
+            ):
+                with self.assertRaisesRegex(OSError, "deletion-record write"):
                     capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
             self.assertTrue(all(
                 (raw_root / f"{item.removeprefix('sha256:')}.json").is_file()
@@ -1354,10 +1361,13 @@ class CapabilityContractTests(unittest.TestCase):
                 capabilities, "_retention_now",
                 return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
             ), mock.patch.object(
-                capabilities, "_fsync_directory", wraps=original_fsync_directory,
-            ) as fsync_directory, mock.patch.object(capabilities.os, "fsync", wraps=original_os_fsync) as fsync:
+                capabilities, "_write_private_bytes_at", wraps=original_private_write,
+            ) as private_write, mock.patch.object(capabilities.os, "fsync", wraps=original_os_fsync) as fsync:
                 cleanup_report = capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
-            fsync_directory.assert_any_call(raw_root.resolve() / capabilities.DELETION_RECORDS_DIR)
+            self.assertTrue(any(
+                Path(call.args[1]).name == capabilities.DELETION_RECORDS_DIR
+                for call in private_write.call_args_list
+            ))
             self.assertTrue(fsync.called)
             self.assertEqual(cleanup_report["deleted_evidence_digests"], retained_report["retained_evidence_digests"])
             self.assertEqual(cleanup_report["retained_evidence_digests"], [])
@@ -1612,13 +1622,83 @@ class CapabilityContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "not supported on Windows"):
                     capabilities._write(private_output, {"private": True}, private=True)
             fchmod.assert_not_called()
-            capabilities._write(private_output, {"private": True}, private=True)
+            private_output, private_parent_identity = capabilities._private_external_file_binding(
+                private_output, ROOT, "test private output", output=True,
+            )
+            capabilities._write(
+                private_output, {"private": True}, private=True,
+                expected_parent_identity=private_parent_identity,
+            )
             self.assertEqual(capabilities._read(private_output), {"private": True})
             if hasattr(os, "mkfifo"):
                 fifo = root / "client-fifo"
                 os.mkfifo(fifo)
                 with self.assertRaisesRegex(ValueError, "regular file"):
                     capabilities.digest_regular_file(fifo)
+
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_private_write_refuses_replaced_validated_parent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            private_parent = root / "private"
+            private_parent.mkdir(mode=0o700)
+            target, parent_identity = capabilities._private_external_file_binding(
+                private_parent / "secret.json", ROOT, "test private output", output=True,
+            )
+            moved_parent = root / "validated-parent"
+            original_assert = capabilities._assert_private_directory_current
+            swapped = False
+
+            def swap_before_commit(path: Path, descriptor: int, expected_identity: object) -> None:
+                nonlocal swapped
+                if not swapped:
+                    Path(path).rename(moved_parent)
+                    Path(path).mkdir(mode=0o700)
+                    swapped = True
+                original_assert(path, descriptor, expected_identity)
+
+            with mock.patch.object(
+                capabilities, "_assert_private_directory_current", side_effect=swap_before_commit,
+            ), self.assertRaisesRegex(ValueError, "parent changed"):
+                capabilities._write_private_bytes(
+                    target, b"secret\n", expected_parent_identity=parent_identity,
+                )
+            self.assertTrue(swapped)
+            self.assertFalse(target.exists())
+            self.assertEqual(list(private_parent.iterdir()), [])
+            self.assertEqual(list(moved_parent.iterdir()), [])
+
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_deletion_recovery_refuses_replaced_raw_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            private_parent = Path(tmp)
+            raw_root = private_parent / "raw"
+            raw_root.mkdir(mode=0o700)
+            payload = b"private evidence\n"
+            evidence_digest = capabilities.digest(payload)
+            target = raw_root / f"{evidence_digest.removeprefix('sha256:')}.json"
+            target.write_bytes(payload)
+            target.chmod(0o600)
+            raw, raw_identity = capabilities._validated_raw_evidence_root_binding(raw_root, ROOT)
+            target = raw / target.name
+            moved_root = private_parent / "validated-raw"
+            original_unlink = capabilities._unlink_descriptor_relative
+
+            def unlink_then_replace(filename: str, parent_descriptor: int) -> None:
+                original_unlink(filename, parent_descriptor)
+                raw_root.rename(moved_root)
+                raw_root.mkdir(mode=0o700)
+                raise OSError("simulated failure after unlink")
+
+            with mock.patch.object(
+                capabilities, "_unlink_descriptor_relative", side_effect=unlink_then_replace,
+            ), self.assertRaisesRegex(ValueError, "parent changed"):
+                capabilities._delete_single_link_private_file(
+                    target, raw, evidence_digest, raw_identity,
+                )
+            self.assertFalse(target.exists())
+            self.assertEqual(list(raw_root.iterdir()), [])
+            self.assertEqual(list(moved_root.iterdir()), [])
 
 
 class TreatmentContractTests(unittest.TestCase):
@@ -2751,7 +2831,11 @@ class TreatmentContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=ROOT) as directory:
             manifest_path = Path(directory) / "custom-manifest.json"
             manifest_path.write_text(json.dumps(custom_manifest), encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "canonical candidate manifest"):
+            with self.assertRaisesRegex(ValueError, "canonical G56R-001"):
+                treatment.validate_treatment_bundle(
+                    copy.deepcopy(self.bundle), manifest_path=manifest_path,
+                )
+            with self.assertRaisesRegex(ValueError, "canonical G56R-001"):
                 treatment.build_treatment_successor(
                     prior, self.bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
                     manifest_path=manifest_path,

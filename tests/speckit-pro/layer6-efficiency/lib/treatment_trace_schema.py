@@ -405,6 +405,7 @@ def _read_manifest_snapshot(path: Path) -> dict:
     if not isinstance(manifest, dict):
         raise ValueError("candidate manifest must be a JSON object")
     _validate_resource_bounds(manifest)
+    _capability_module().validate_manifest(manifest)
     return manifest
 
 

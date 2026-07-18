@@ -873,7 +873,7 @@ For every task:
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
-| 2 - Treatment contracts | Review Pending | 10 | 44/44 focused tests, externally authorized successor/schema parity/descriptor-safe CLI/graph validation, and independent repeat review pending |
+| 2 - Treatment contracts | Review Pending | 10 | 46/46 focused tests, canonical manifest authority, descriptor-safe private writes/recovery, and independent repeat review pending |
 | 3 - Synthetic replay | Blocked | 0 | T026-T030 remain ordered after a clean US2 repeat-review verdict |
 | Polish and validation | Pending | 0 | Not started |
 
@@ -899,7 +899,7 @@ For every task:
 - Telemetry profile: `sha256:4fd9007697c86aae277099d12d37339379a0f19ed58de95ce1b939cdd918aeb3`
 - Treatment contract: `sha256:6be186638b12a57a93f00bf820ae8aa016a8fa33c0e52a90820833601d4ce71a`
 - Superseded marker checkpoint: `c47c9d31fd1288e86f0707601078e4f03e2b12e5`
-- Reviewability: size-only `block` at 1,455 source / 1,331 nonblank,
+- Reviewability: size-only `block` at 1,519 source / 1,391 nonblank,
   non-comment lines; typed `no_safe_boundary` exception honored for the
   checkpoint with only T026-T030 replay growth reserved.
 - Review: REPEAT PENDING after direct canonical validation of the actual
@@ -907,7 +907,8 @@ For every task:
   bounded non-extending recovery of pending retention records, executable
   schema/runtime parity, descriptor-relative private inputs, post-unlink
   hard-link and digest proof, blocking hard-link race preservation, exact declared
-  treatment-result validation, single-snapshot schema and manifest authority,
+  treatment-result validation, single-snapshot schema and canonical manifest authority,
+  descriptor-relative private writes and deletion recovery,
   discovery-to-treatment reconciliation, bounded private dictionary keys,
   sanitized CLI handling, and US2-only CLI documentation,
   single-client profile authority, content-addressed six-ID ownership,
@@ -928,7 +929,7 @@ For every task:
 | Feature spec | `sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56` |
 | Plan-declared scope | `sha256:35d4122bd719ba1512da85fdeead0c990d598591b33af7c3ed38947cea1aaf9e` |
 | Tasks | `sha256:4b78765419fc0f5d3fafdeefb2b78c19890cf7a02bc74c5bf128e21c97457867` |
-| Reviewability evidence | `sha256:8f143d8c92a28a5b6534cdd6e2fdbd02fb45300c47b4f04ff15e1d85cf040c12` |
+| Reviewability evidence | `sha256:792de3682731116afccf154868a9b0834812f2de20374a16c7e2062d1106e459` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
@@ -938,7 +939,7 @@ For every task:
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
-  size warnings. US1 is 2,202 / 1,987 source/nonblank lines and US2 is 1,518 / 1,390
+  size warnings. US1 is 2,202 / 1,987 source/nonblank lines and US2 is 1,519 / 1,391
   against the 400-LOC boundary; both use typed size-only exceptions.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.

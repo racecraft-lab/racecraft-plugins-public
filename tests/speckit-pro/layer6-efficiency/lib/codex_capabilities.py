@@ -14,6 +14,7 @@ from html.parser import HTMLParser
 import json
 import os
 import re
+import secrets
 import stat
 import subprocess
 import tempfile
@@ -1174,6 +1175,19 @@ def validate_raw_evidence_root(raw_root, repository_root):
     return raw
 
 
+def _validated_raw_evidence_root_binding(raw_root, repository_root):
+    raw = validate_raw_evidence_root(raw_root, repository_root)
+    metadata = os.stat(raw, follow_symlinks=False)
+    identity = _stable_directory_identity(metadata)
+    descriptor = _private_directory_descriptor(raw, identity)
+    try:
+        validate_raw_evidence_root(raw, repository_root)
+        _assert_private_directory_current(raw, descriptor, identity)
+    finally:
+        os.close(descriptor)
+    return raw, identity
+
+
 def _git_worktree_ancestor(path):
     current = path if path.is_dir() else path.parent
     return any((ancestor / ".git").exists() for ancestor in (current, *current.parents))
@@ -1227,14 +1241,17 @@ def materialize_source_capture(raw_root, repository_root, capture_bytes):
     captured = _parse_json_bytes(capture_bytes)
     if not isinstance(captured, list):
         raise ValueError("captured refresh must be a JSON list")
-    raw = validate_raw_evidence_root(raw_root, repository_root)
+    raw, raw_identity = _validated_raw_evidence_root_binding(raw_root, repository_root)
     capture_digest = digest(capture_bytes)
     target = raw / f"{capture_digest.removeprefix('sha256:')}.json"
     if target.exists():
         _, retained = read_content_addressed_private_file(target, repository_root, "source capture")
         if retained != capture_bytes: raise ValueError("content-addressed source capture bytes disagree")
     else:
-        _write_private_bytes(target, capture_bytes, append_only=True)
+        _write_private_bytes(
+            target, capture_bytes, append_only=True,
+            expected_parent_identity=raw_identity,
+        )
     validate_raw_evidence_root(raw, repository_root)
     _, retained = read_content_addressed_private_file(target, repository_root, "source capture")
     if retained != capture_bytes:
@@ -1270,7 +1287,7 @@ def validate_canary_evidence(raw_root, repository_root, result):
 
 
 def materialize_unknown_capture(raw_root, repository_root, surface, client_identity_id, repository_binding, work_item, captured_at):
-    raw = validate_raw_evidence_root(raw_root, repository_root)
+    raw, raw_identity = _validated_raw_evidence_root_binding(raw_root, repository_root)
     record = _unknown_capture_record(surface, client_identity_id, repository_binding, work_item, captured_at)
     stored = canonical_bytes(record) + b"\n"; evidence = digest(stored)
     target = raw / f"{evidence.removeprefix('sha256:')}.json"
@@ -1278,7 +1295,7 @@ def materialize_unknown_capture(raw_root, repository_root, surface, client_ident
         _, retained = read_content_addressed_private_file(target, repository_root, "unknown capture")
         if retained != stored: raise ValueError("content-addressed unknown capture bytes disagree")
     else:
-        _write(target, record, private=True)
+        _write(target, record, private=True, expected_parent_identity=raw_identity)
     validate_raw_evidence_root(raw, repository_root)
     _, retained = read_content_addressed_private_file(target, repository_root, "unknown capture")
     if retained != stored or digest(retained) != evidence:
@@ -1305,23 +1322,36 @@ def _format_timestamp(value):
     return value.isoformat().replace("+00:00", "Z")
 
 
-def _private_record_directory(raw, name):
+def _private_record_directory(raw, name, expected_raw_identity):
+    if not HAS_DESCRIPTOR_RELATIVE_IO or Path(name).name != name:
+        raise ValueError("raw evidence records require descriptor-relative directory creation")
     target = raw / name
-    if target.exists():
-        if target.is_symlink() or not target.is_dir():
-            raise ValueError("raw evidence record path must be a private directory")
-    else:
+    raw_descriptor = _private_directory_descriptor(raw, expected_raw_identity)
+    child_descriptor = None
+    try:
         try:
-            target.mkdir(mode=0o700)
+            os.mkdir(name, mode=0o700, dir_fd=raw_descriptor)
+            os.fsync(raw_descriptor)
         except FileExistsError:
-            if target.is_symlink() or not target.is_dir():
-                raise ValueError("raw evidence record path must be a private directory")
-    if os.name != "nt":
-        target.chmod(0o700)
-    return target
+            pass
+        metadata = os.stat(name, dir_fd=raw_descriptor, follow_symlinks=False)
+        if not stat.S_ISDIR(metadata.st_mode) or stat.S_IMODE(metadata.st_mode) != 0o700:
+            raise ValueError("raw evidence record path must be a private directory")
+        child_identity = _stable_directory_identity(metadata)
+        child_descriptor = os.open(
+            name,
+            os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_DIRECTORY", 0),
+            dir_fd=raw_descriptor,
+        )
+        _assert_private_directory_current(target, child_descriptor, child_identity)
+        _assert_private_directory_current(raw, raw_descriptor, expected_raw_identity)
+        return target, child_identity
+    finally:
+        if child_descriptor is not None: os.close(child_descriptor)
+        os.close(raw_descriptor)
 
 
-def _store_private_record(directory, value, repository_root):
+def _store_private_record(directory, value, repository_root, expected_directory_identity):
     payload = canonical_bytes(value) + b"\n"; record_digest = digest(payload)
     target = directory / f"{record_digest.removeprefix('sha256:')}.json"
     if target.exists():
@@ -1329,7 +1359,10 @@ def _store_private_record(directory, value, repository_root):
         if retained != payload: raise ValueError("content-addressed raw evidence record bytes disagree")
         return record_digest
     try:
-        _write(target, value, private=True, append_only=True)
+        _write(
+            target, value, private=True, append_only=True,
+            expected_parent_identity=expected_directory_identity,
+        )
     except FileExistsError:
         _, retained = read_content_addressed_private_file(target, repository_root, "raw evidence record")
         if retained != payload: raise ValueError("content-addressed raw evidence record bytes disagree")
@@ -1423,22 +1456,34 @@ def _freeze_raw_evidence_digests(freeze):
 
 
 @contextmanager
-def _retention_lock(raw):
-    target = raw / RETENTION_LOCK_DIR
+def _retention_lock(raw, expected_raw_identity):
+    if not HAS_DESCRIPTOR_RELATIVE_IO:
+        raise ValueError("raw evidence retention requires descriptor-relative locking")
+    raw_descriptor = _private_directory_descriptor(raw, expected_raw_identity)
+    created = False
     try:
-        target.mkdir(mode=0o700)
-    except FileExistsError as error:
-        raise ValueError("raw evidence retention operation is already in progress") from error
-    if target.is_symlink() or not target.is_dir():
-        raise ValueError("raw evidence retention lock is invalid")
-    if os.name != "nt": target.chmod(0o700)
-    try:
+        try:
+            os.mkdir(RETENTION_LOCK_DIR, mode=0o700, dir_fd=raw_descriptor)
+            created = True
+        except FileExistsError as error:
+            raise ValueError("raw evidence retention operation is already in progress") from error
+        metadata = os.stat(RETENTION_LOCK_DIR, dir_fd=raw_descriptor, follow_symlinks=False)
+        if not stat.S_ISDIR(metadata.st_mode) or stat.S_IMODE(metadata.st_mode) != 0o700:
+            raise ValueError("raw evidence retention lock is invalid")
+        os.fsync(raw_descriptor)
+        _assert_private_directory_current(raw, raw_descriptor, expected_raw_identity)
         yield
     finally:
-        target.rmdir()
+        try:
+            if created:
+                _assert_private_directory_current(raw, raw_descriptor, expected_raw_identity)
+                os.rmdir(RETENTION_LOCK_DIR, dir_fd=raw_descriptor)
+                os.fsync(raw_descriptor)
+        finally:
+            os.close(raw_descriptor)
 
 
-def _register_raw_evidence_retention_locked(freeze, raw, repository_root):
+def _register_raw_evidence_retention_locked(freeze, raw, raw_identity, repository_root):
     published = _parsed_timestamp(freeze.get("published_at"), "freeze publication timestamp")
     evidence_digests = _freeze_raw_evidence_digests(freeze)
     if not evidence_digests: return []
@@ -1452,7 +1497,7 @@ def _register_raw_evidence_retention_locked(freeze, raw, repository_root):
     )
     if set(evidence_digests) & deletion_started_digests:
         raise ValueError("raw evidence cannot be registered after deletion has begun")
-    records = _private_record_directory(raw, RETENTION_RECORDS_DIR)
+    records, records_identity = _private_record_directory(raw, RETENTION_RECORDS_DIR, raw_identity)
     existing = {}
     for record_digest, raw_record in _load_private_records(records, repository_root, "retention record"):
         record = _validate_retention_record(record_digest, raw_record)
@@ -1481,7 +1526,7 @@ def _register_raw_evidence_retention_locked(freeze, raw, repository_root):
             "registered_at": registered_at,
             "delete_after": _format_timestamp(published + timedelta(days=RAW_EVIDENCE_RETENTION_DAYS)),
         }
-        record_digests.append(_store_private_record(records, record, repository_root))
+        record_digests.append(_store_private_record(records, record, repository_root, records_identity))
     validate_raw_evidence_root(raw, repository_root)
     return sorted(record_digests)
 
@@ -1495,7 +1540,7 @@ def _publication_target_matches(path, payload):
     return True
 
 
-def _store_publication_receipt_locked(freeze, retention_record_digests, raw, repository_root):
+def _store_publication_receipt_locked(freeze, retention_record_digests, raw, raw_identity, repository_root):
     receipt = {
         "schema_version": "raw-evidence-publication.v1",
         "candidate_freeze_id": freeze["candidate_freeze_id"],
@@ -1503,8 +1548,8 @@ def _store_publication_receipt_locked(freeze, retention_record_digests, raw, rep
         "published_at": freeze["published_at"],
         "retention_record_digests": sorted(retention_record_digests),
     }
-    directory = _private_record_directory(raw, PUBLICATION_RECEIPTS_DIR)
-    receipt_digest = _store_private_record(directory, receipt, repository_root)
+    directory, directory_identity = _private_record_directory(raw, PUBLICATION_RECEIPTS_DIR, raw_identity)
+    receipt_digest = _store_private_record(directory, receipt, repository_root, directory_identity)
     _validate_publication_receipt(receipt_digest, receipt)
     return receipt_digest
 
@@ -1514,7 +1559,7 @@ def publish_with_raw_evidence_retention(
     predecessor=None, expected_telemetry_profile_id=None, expected_treatment_contract_digest=None,
     expected_predecessor_telemetry_profile_id=None, expected_predecessor_treatment_contract_digest=None,
 ):
-    raw = validate_raw_evidence_root(raw_evidence_root, repository_root)
+    raw, raw_identity = _validated_raw_evidence_root_binding(raw_evidence_root, repository_root)
     freeze = validate_freeze(
         freeze, manifest, predecessor=predecessor,
         expected_telemetry_profile_id=expected_telemetry_profile_id,
@@ -1523,7 +1568,7 @@ def publish_with_raw_evidence_retention(
         expected_predecessor_treatment_contract_digest=expected_predecessor_treatment_contract_digest,
     )
     payload = canonical_bytes(freeze) + b"\n"
-    with _retention_lock(raw):
+    with _retention_lock(raw, raw_identity):
         validate_raw_evidence_root(raw, repository_root)
         deleted_digests = {
             _validate_deletion_record(record_digest, record)["raw_evidence_digest"]
@@ -1533,10 +1578,12 @@ def publish_with_raw_evidence_retention(
             raise ValueError("raw evidence cannot be registered after deletion has begun")
         validate_source_capture_evidence(manifest, freeze["official_source_refreshes"], raw, repository_root)
         already_published = _publication_target_matches(output, payload)
-        retention_record_digests = _register_raw_evidence_retention_locked(freeze, raw, repository_root)
+        retention_record_digests = _register_raw_evidence_retention_locked(freeze, raw, raw_identity, repository_root)
         if not already_published:
             _write(output, freeze, append_only=True)
-        receipt_digest = _store_publication_receipt_locked(freeze, retention_record_digests, raw, repository_root)
+        receipt_digest = _store_publication_receipt_locked(
+            freeze, retention_record_digests, raw, raw_identity, repository_root,
+        )
         validate_raw_evidence_root(raw, repository_root)
         return {"retention_record_digests": retention_record_digests, "publication_receipt_digest": receipt_digest}
 
@@ -1549,7 +1596,15 @@ def _unlink_descriptor_relative(filename, parent_descriptor):
     os.unlink(filename, dir_fd=parent_descriptor)
 
 
-def _delete_single_link_private_file(target, raw, expected_digest):
+def _descriptor_entry_exists(parent_descriptor, filename):
+    try:
+        os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False)
+        return True
+    except FileNotFoundError:
+        return False
+
+
+def _delete_single_link_private_file(target, raw, expected_digest, expected_raw_identity):
     if not HAS_DESCRIPTOR_RELATIVE_IO:
         raise ValueError("raw evidence deletion requires descriptor-relative path validation")
     filename = Path(target).name
@@ -1563,7 +1618,10 @@ def _delete_single_link_private_file(target, raw, expected_digest):
         raw_before = os.stat(raw, follow_symlinks=False)
         parent_descriptor = os.open(raw, directory_flags)
         raw_open = os.fstat(parent_descriptor)
-        if _stable_directory_identity(raw_before) != _stable_directory_identity(raw_open):
+        if (
+            _stable_directory_identity(raw_before) != expected_raw_identity
+            or _stable_directory_identity(raw_open) != expected_raw_identity
+        ):
             raise ValueError("raw evidence root changed before deletion")
         pathname_before = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False)
         if not stat.S_ISREG(pathname_before.st_mode) or pathname_before.st_nlink != 1:
@@ -1618,11 +1676,19 @@ def _delete_single_link_private_file(target, raw, expected_digest):
         raise
     except OSError as error:
         if verified_payload is not None:
-            _write_private_bytes(target, verified_payload, append_only=not Path(target).exists())
+            _write_private_bytes_at(
+                parent_descriptor, raw, filename, verified_payload,
+                append_only=not _descriptor_entry_exists(parent_descriptor, filename),
+                expected_parent_identity=expected_raw_identity,
+            )
         raise ValueError("expired raw evidence could not be deleted safely") from error
     except ValueError:
         if verified_payload is not None:
-            _write_private_bytes(target, verified_payload, append_only=not Path(target).exists())
+            _write_private_bytes_at(
+                parent_descriptor, raw, filename, verified_payload,
+                append_only=not _descriptor_entry_exists(parent_descriptor, filename),
+                expected_parent_identity=expected_raw_identity,
+            )
         raise
     finally:
         if descriptor is not None: os.close(descriptor)
@@ -1630,7 +1696,7 @@ def _delete_single_link_private_file(target, raw, expected_digest):
 
 
 def reconcile_raw_evidence_retention(raw_evidence_root, repository_root, as_of=None, *, apply=False):
-    raw = validate_raw_evidence_root(raw_evidence_root, repository_root)
+    raw, raw_identity = _validated_raw_evidence_root_binding(raw_evidence_root, repository_root)
     if apply:
         if as_of is not None: raise ValueError("cleanup derives its deletion time from current UTC")
         current = _retention_now()
@@ -1638,12 +1704,14 @@ def reconcile_raw_evidence_retention(raw_evidence_root, repository_root, as_of=N
         effective_as_of = _format_timestamp(current)
     else:
         current = _parsed_timestamp(as_of, "retention as-of timestamp"); effective_as_of = as_of
-    with _retention_lock(raw):
+    with _retention_lock(raw, raw_identity):
         validate_raw_evidence_root(raw, repository_root)
-        return _reconcile_raw_evidence_retention_locked(raw, repository_root, effective_as_of, current, apply=apply)
+        return _reconcile_raw_evidence_retention_locked(
+            raw, raw_identity, repository_root, effective_as_of, current, apply=apply,
+        )
 
 
-def _reconcile_raw_evidence_retention_locked(raw, repository_root, as_of, current, *, apply):
+def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root, as_of, current, *, apply):
     all_retention_records = [(_validate_retention_record(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / RETENTION_RECORDS_DIR, repository_root, "retention record")]
     retention_by_digest = {record_digest: record for record, record_digest in all_retention_records}
     publication_receipts = [(_validate_publication_receipt(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / PUBLICATION_RECEIPTS_DIR, repository_root, "publication receipt")]
@@ -1715,7 +1783,7 @@ def _reconcile_raw_evidence_retention_locked(raw, repository_root, as_of, curren
                 raise ValueError("retention as-of timestamp precedes the deletion record")
             if target.exists():
                 if not apply: raise ValueError("deletion record still has retained raw evidence bytes")
-                _delete_single_link_private_file(target, raw, evidence_digest)
+                _delete_single_link_private_file(target, raw, evidence_digest, raw_identity)
             deleted.append(evidence_digest); deletion_digests.append(record_digest); continue
         if intent is not None and not target.exists():
             raise ValueError("raw evidence deletion was interrupted before link-count completion proof")
@@ -1733,12 +1801,16 @@ def _reconcile_raw_evidence_retention_locked(raw, repository_root, as_of, curren
                 "delete_after": deadline_text,
                 "deletion_started_at": as_of,
             }
-            intent_directory = _private_record_directory(raw, DELETION_INTENTS_DIR)
-            intent_digest = _store_private_record(intent_directory, intent_record, repository_root)
+            intent_directory, intent_directory_identity = _private_record_directory(
+                raw, DELETION_INTENTS_DIR, raw_identity,
+            )
+            intent_digest = _store_private_record(
+                intent_directory, intent_record, repository_root, intent_directory_identity,
+            )
             intent_by_evidence[evidence_digest] = (intent_record, intent_digest)
         else:
             intent_record, intent_digest = intent
-        retained_payload = _delete_single_link_private_file(target, raw, evidence_digest)
+        retained_payload = _delete_single_link_private_file(target, raw, evidence_digest, raw_identity)
         deletion_record = {
             "schema_version": "raw-evidence-deletion.v1",
             "raw_evidence_digest": evidence_digest,
@@ -1747,11 +1819,17 @@ def _reconcile_raw_evidence_retention_locked(raw, repository_root, as_of, curren
             "delete_after": deadline_text,
             "deleted_at": as_of,
         }
-        directory = _private_record_directory(raw, DELETION_RECORDS_DIR)
+        directory, directory_identity = _private_record_directory(raw, DELETION_RECORDS_DIR, raw_identity)
         try:
-            record_digest = _store_private_record(directory, deletion_record, repository_root)
+            record_digest = _store_private_record(
+                directory, deletion_record, repository_root, directory_identity,
+            )
         except Exception:
-            if not target.exists(): _write_private_bytes(target, retained_payload, append_only=True)
+            if not target.exists():
+                _write_private_bytes(
+                    target, retained_payload, append_only=True,
+                    expected_parent_identity=raw_identity,
+                )
             raise
         deleted.append(evidence_digest); deletion_digests.append(record_digest)
     validate_raw_evidence_root(raw, repository_root)
@@ -2058,37 +2136,99 @@ def _fsync_directory(path):
         os.close(descriptor)
 
 
-def _write_private_bytes(path, payload, *, append_only=False):
+def _private_directory_descriptor(path, expected_identity):
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow | getattr(os, "O_DIRECTORY", 0)
+    descriptor = os.open(path, flags)
+    if _stable_directory_identity(os.fstat(descriptor)) != expected_identity:
+        os.close(descriptor)
+        raise ValueError("private output parent changed after validation")
+    return descriptor
+
+
+def _assert_private_directory_current(path, descriptor, expected_identity):
+    current = os.stat(path, follow_symlinks=False)
+    if (
+        _stable_directory_identity(current) != expected_identity
+        or _stable_directory_identity(os.fstat(descriptor)) != expected_identity
+    ):
+        raise ValueError("private output parent changed after validation")
+
+
+def _write_private_bytes_at(parent_descriptor, parent_path, filename, payload, *, append_only, expected_parent_identity):
+    temporary = None; descriptor = None
+    try:
+        for _ in range(64):
+            candidate = f".g56r-002-{secrets.token_hex(16)}"
+            try:
+                descriptor = os.open(
+                    candidate,
+                    os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+                    0o600,
+                    dir_fd=parent_descriptor,
+                )
+            except FileExistsError:
+                continue
+            temporary = candidate
+            break
+        if descriptor is None or temporary is None:
+            raise ValueError("private output temporary name allocation failed")
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "wb") as stream:
+            descriptor = None
+            stream.write(payload); stream.flush(); os.fsync(stream.fileno())
+        _assert_private_directory_current(parent_path, parent_descriptor, expected_parent_identity)
+        if append_only:
+            os.link(
+                temporary, filename, src_dir_fd=parent_descriptor, dst_dir_fd=parent_descriptor,
+                follow_symlinks=False,
+            )
+            os.fsync(parent_descriptor)
+            os.unlink(temporary, dir_fd=parent_descriptor); temporary = None
+        else:
+            os.replace(
+                temporary, filename, src_dir_fd=parent_descriptor, dst_dir_fd=parent_descriptor,
+            )
+            temporary = None
+        os.fsync(parent_descriptor)
+        _assert_private_directory_current(parent_path, parent_descriptor, expected_parent_identity)
+    finally:
+        if descriptor is not None:
+            try: os.close(descriptor)
+            except OSError: pass  # Best-effort cleanup must not mask the original failure.
+        if temporary is not None:
+            try: os.unlink(temporary, dir_fd=parent_descriptor)
+            except OSError: pass  # Best-effort cleanup must not mask the original failure.
+
+
+def _write_private_bytes(path, payload, *, append_only=False, expected_parent_identity=None):
     if os.name == "nt":
         raise ValueError("operator-only private-file permissions are not supported on Windows")
+    if expected_parent_identity is None:
+        raise ValueError("private output requires its validated parent identity")
     if len(payload) > PRIVATE_REFRESH_MAX_BYTES: raise ValueError("private output exceeds the bounded size")
-    parent = Path(path).parent
-    descriptor, temporary = tempfile.mkstemp(prefix=".g56r-002-", dir=parent)
+    target = Path(path); parent = target.parent
+    parent_descriptor = _private_directory_descriptor(parent, expected_parent_identity)
     try:
-        if os.name != "nt":
-            os.fchmod(descriptor, 0o600)
-        with os.fdopen(descriptor, "wb") as stream:
-            stream.write(payload); stream.flush(); os.fsync(stream.fileno())
-        if append_only:
-            os.link(temporary, path)
-        else:
-            os.replace(temporary, path)
-        _fsync_directory(parent)
-        if append_only:
-            os.unlink(temporary)
-            _fsync_directory(parent)
-    except Exception:
-        try: os.close(descriptor)
-        except OSError: pass  # Best-effort cleanup must not mask the original failure.
-        try: os.unlink(temporary)
-        except OSError: pass  # Best-effort cleanup must not mask the original failure.
-        raise
+        _write_private_bytes_at(
+            parent_descriptor, parent, target.name, payload, append_only=append_only,
+            expected_parent_identity=expected_parent_identity,
+        )
+    finally:
+        os.close(parent_descriptor)
 
 
-def _write(path, value, *, private=False, append_only=False):
+def _write(path, value, *, private=False, append_only=False, expected_parent_identity=None):
     payload = canonical_bytes(value) + b"\n"
     if private:
-        _write_private_bytes(path, payload, append_only=append_only)
+        if os.name == "nt":
+            raise ValueError("operator-only private-file permissions are not supported on Windows")
+        if expected_parent_identity is None:
+            raise ValueError("private output requires its validated parent identity")
+        _write_private_bytes(
+            path, payload, append_only=append_only,
+            expected_parent_identity=expected_parent_identity,
+        )
         return
     if append_only:
         descriptor, temporary = tempfile.mkstemp(prefix=".g56r-002-publish-", dir=Path(path).parent)
@@ -2123,8 +2263,17 @@ def main(argv=None):
     if args.command == "refresh-sources":
         _, capture_bytes = read_content_addressed_private_file(args.captured_refresh, repo, "captured refresh")
         capture_digest, _ = materialize_source_capture(args.raw_evidence_root, repo, capture_bytes)
-        output = validate_private_external_file(args.output, repo, "normalized refresh output", output=True)
-        _write(output, normalize_source_refreshes(_read(args.manifest), _parse_json_bytes(capture_bytes), source_capture_digest=capture_digest), private=True); return 0
+        output, output_parent_identity = _private_external_file_binding(
+            args.output, repo, "normalized refresh output", output=True,
+        )
+        _write(
+            output,
+            normalize_source_refreshes(
+                _read(args.manifest), _parse_json_bytes(capture_bytes),
+                source_capture_digest=capture_digest,
+            ),
+            private=True, expected_parent_identity=output_parent_identity,
+        ); return 0
     if args.command == "identify-client":
         kind, identifier = ("vendor_build_id", args.build_id) if args.build_id else ("executable_sha256", digest_regular_file(args.executable))
         _write(args.output, build_client_identity({"reported_version": args.reported_version, "build_identifier_kind": kind, "build_identifier": identifier, "distribution": args.distribution})); return 0
@@ -2173,9 +2322,11 @@ def main(argv=None):
     if args.command == "retention":
         if args.mode == "verify" and args.as_of is None: raise ValueError("retention verification requires --as-of")
         if args.mode == "cleanup" and args.as_of is not None: raise ValueError("retention cleanup uses current UTC and does not accept --as-of")
-        output = validate_private_external_file(args.output, repo, "retention report output", output=True)
+        output, output_parent_identity = _private_external_file_binding(
+            args.output, repo, "retention report output", output=True,
+        )
         report = reconcile_raw_evidence_retention(args.raw_evidence_root, repo, args.as_of, apply=args.mode == "cleanup")
-        _write(output, report, private=True); return 0
+        _write(output, report, private=True, expected_parent_identity=output_parent_identity); return 0
     _, source_refresh_bytes = read_private_external_file(args.source_refresh, repo, "normalized source refresh")
     manifest, refreshes, identity = _read(args.manifest), _parse_json_bytes(source_refresh_bytes), build_client_identity(_read(args.client_identity)); validate_source_refreshes(manifest, refreshes)
     tuples = candidate_tuples_from_manifest(manifest, refreshes)
