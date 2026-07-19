@@ -212,6 +212,14 @@ CREDENTIAL_RE = re.compile(
     r"(?i)(?:\b(?:authorization|credential|secret|api[_-]?key|cookie|password)\b\s*[:=]"
     r"|\bbearer\s+[A-Za-z0-9._~+/=-]+|\b(?:sk|ghp|github_pat|xox[baprs])[-_][A-Za-z0-9_-]{8,})"
 )
+UNLABELED_CREDENTIAL_RE = re.compile(
+    r"(?:\b(?:AKIA|ASIA|AIDA|AROA|AIPA|ANPA|ANVA|ASCA)[A-Z0-9]{16}\b"
+    r"|\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b)"
+)
+PII_RE = re.compile(
+    r"(?i)(?:\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|\b[0-9]{3}-[0-9]{2}-[0-9]{4}\b)"
+)
+SANITIZED_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:+-]{0,127}$")
 FALLBACK_REASON_CODES = frozenset({"preferred_unavailable", "capability_mismatch", "policy_fallback"})
 REROUTE_REASON_CODES = frozenset({
     "service_capacity", "service_policy", "service_availability",
@@ -524,6 +532,8 @@ def _validate_retained_strings(value: object, label: str = "treatment bundle") -
             or TRAVERSAL_RE.search(value)
             or REMOTE_RE.search(value)
             or CREDENTIAL_RE.search(value)
+            or UNLABELED_CREDENTIAL_RE.search(value)
+            or PII_RE.search(value)
         )
         if forbidden:
             raise ValueError(f"{label} retains forbidden private or credential-bearing text")
@@ -590,6 +600,21 @@ def _text(value: object, label: str, *, nullable: bool = False) -> str | None:
     return value
 
 
+def _identifier(value: object, label: str, *, nullable: bool = False) -> str | None:
+    if value is None and nullable:
+        return None
+    if not isinstance(value, str) or SANITIZED_IDENTIFIER_RE.fullmatch(value) is None:
+        raise ValueError(f"{label} must use a bounded sanitized identifier")
+    return value
+
+
+def _correlation_id(value: object, label: str, fixture_prefix: str) -> str:
+    fixture = re.fullmatch(rf"{re.escape(fixture_prefix)}-fixture-[A-Za-z0-9._-]{{1,96}}", value) if isinstance(value, str) else None
+    if not isinstance(value, str) or DIGEST_RE.fullmatch(value) is None and fixture is None:
+        raise ValueError(f"{label} must be a digest or sanitized fixture correlation ID")
+    return value
+
+
 def _evidence_ref(value: object, label: str, *, nullable: bool = False) -> str | None:
     if value is None and nullable:
         return None
@@ -635,6 +660,13 @@ def _strings(value: object, label: str) -> list[str]:
     if len(value) != len(set(value)):
         raise ValueError(f"{label} must contain unique values")
     return value
+
+
+def _identifiers(value: object, label: str) -> list[str]:
+    values = _strings(value, label)
+    for item in values:
+        _identifier(item, label)
+    return values
 
 
 def _profile_key(entry: dict) -> tuple[str, str, str]:
@@ -757,7 +789,7 @@ def _validate_environment(value: object) -> dict:
     _text(env["candidate_route_id"], "controlled environment candidate route")
     if env["work_item_kind"] not in {"task", "fixture", "objective"}:
         raise ValueError("controlled environment work item kind is invalid")
-    _text(env["work_item_id"], "controlled environment work item ID")
+    _identifier(env["work_item_id"], "controlled environment work item ID")
     if env["controlled_environment_id"] != content_id(env, "controlled_environment_id"):
         raise ValueError("controlled environment ID is not content addressed")
     return env
@@ -772,7 +804,7 @@ def _validate_experiment_policy(value: object) -> dict:
     if policy["owner_spec_id"] != "G56R-002": raise ValueError("experiment policy is not owned by G56R-002")
     _text(policy["candidate_route_id"], "experiment policy candidate route")
     if policy["work_item_kind"] not in {"task", "fixture", "objective"}: raise ValueError("experiment policy work item kind is invalid")
-    _text(policy["work_item_id"], "experiment policy work item ID")
+    _identifier(policy["work_item_id"], "experiment policy work item ID")
     _text(policy["mutation_class"], "experiment policy mutation class")
     if policy["experiment_policy_id"] != content_id(policy, "experiment_policy_id"):
         raise ValueError("experiment policy ID is not content addressed")
@@ -850,7 +882,7 @@ def _validate_resolution(value: object) -> dict:
 def _validate_tool_vector(value: object, label: str) -> dict:
     vector = _closed(value, {"skills", "mcp_servers", "tools"}, label)
     for field in ("skills", "mcp_servers", "tools"):
-        _strings(vector[field], f"{label} {field}")
+        _identifiers(vector[field], f"{label} {field}")
     return vector
 
 
@@ -862,7 +894,7 @@ def _validate_trace_structures(trace: dict) -> None:
     approvals = _closed(trace["approvals"], {"policy", "granted_action_ids"}, "approvals")
     if approvals["policy"] not in {"never", "on_request", "on_failure", "untrusted"}:
         raise ValueError("approval policy is invalid")
-    _strings(approvals["granted_action_ids"], "approval action IDs")
+    _identifiers(approvals["granted_action_ids"], "approval action IDs")
     _text(trace["mutation_class"], "mutation class")
     _validate_tool_vector(trace["expected_skills_mcp_tools"], "expected skills MCP tools")
     _validate_tool_vector(trace["loaded_skills_mcp_tools"], "loaded skills MCP tools")
@@ -879,7 +911,8 @@ def _validate_trace_structures(trace: dict) -> None:
         if canary["evidence_digest"] is not None: raise ValueError("unrun delivery canary evidence must be null")
     else: _digest(canary["evidence_digest"], "delivery canary evidence")
     context = _closed(trace["context"], {"threadId", "turnId"}, "trace association context")
-    _text(context["threadId"], "trace threadId"); _text(context["turnId"], "trace turnId")
+    _correlation_id(context["threadId"], "trace threadId", "thread")
+    _correlation_id(context["turnId"], "trace turnId", "turn")
     graph = _closed(trace["parent_child_graph"], {
         "root_execution_trace_id", "parent_execution_trace_id", "child_execution_trace_ids",
     }, "parent-child graph")
@@ -985,7 +1018,9 @@ def _validate_proof(value: object, trace: dict, profile: list[dict]) -> dict | N
     if key["surface"] not in SURFACES: raise ValueError("configured-route profile surface is invalid")
     _text(key["field_path"], "configured-route profile field")
     profile_entry(profile, key["client_identity_id"], key["surface"], key["field_path"])
-    for field in ("named_agent", "model", "effort", "candidate_route_id", "agent_contract_id", "launch_id"): _text(proof[field], f"configured proof {field}")
+    for field in ("named_agent", "model", "effort", "candidate_route_id", "agent_contract_id"):
+        _text(proof[field], f"configured proof {field}")
+    _correlation_id(proof["launch_id"], "configured proof launch ID", "launch")
     for field in ("proof_id", "instruction_hash", "configuration_hash", "client_identity_id", "consumption_evidence_digest"): _digest(proof[field], f"configured proof {field}")
     overrides = _closed(proof["controlled_overrides"], {"model", "effort", "configuration_hash"}, "configured proof overrides")
     _text(overrides["model"], "configured proof override model"); _text(overrides["effort"], "configured proof override effort")
@@ -1023,7 +1058,9 @@ def _validate_event(value: object) -> dict:
     event = _closed(value, {"event_id", "surface", "threadId", "turnId", "fromModel", "toModel", "reason", "evidence_digest"}, "service reroute event")
     _digest(event["event_id"], "reroute event ID"); _digest(event["evidence_digest"], "reroute event evidence")
     if event["surface"] not in SURFACES: raise ValueError("reroute event surface is invalid")
-    for field in ("threadId", "turnId", "fromModel", "toModel", "reason"): _text(event[field], f"reroute {field}")
+    _correlation_id(event["threadId"], "reroute threadId", "thread")
+    _correlation_id(event["turnId"], "reroute turnId", "turn")
+    for field in ("fromModel", "toModel", "reason"): _text(event[field], f"reroute {field}")
     if event["reason"] not in REROUTE_REASON_CODES: raise ValueError("reroute reason must use an enumerated code")
     if event["event_id"] != content_id(event, "event_id"): raise ValueError("reroute event ID is not content addressed")
     return event
@@ -1118,13 +1155,20 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
         referenced_route_ids.append(resolution["supported_effective_route_id"])
     if any(route_id not in canonical_routes for route_id in referenced_route_ids):
         raise ValueError("route resolution references a route outside the canonical candidate manifest")
+    if any(
+        canonical_routes[route_id]["agent_contract_id"] != objective["agent_contract_id"]
+        for route_id in referenced_route_ids
+    ):
+        raise ValueError("route resolution references a route owned by a different agent contract")
     policy_id = objective["experiment_policy_id"]
     if policy_id not in policies: raise ValueError("trace has no experiment policy owner")
     policy = policies[policy_id]
     _digest(row["client_identity_id"], "trace client identity"); _digest(row["repository_tree_digest"], "trace repository tree")
     if row["surface"] not in SURFACES or row["work_item_kind"] not in {"task", "fixture", "objective"}: raise ValueError("trace surface or work item kind is invalid")
     if not isinstance(row["repository_revision"], str) or REVISION_RE.fullmatch(row["repository_revision"]) is None: raise ValueError("trace repository revision is invalid")
-    for field in ("work_item_id", "named_agent", "assigned_route_id", "requested_model", "requested_effort"): _text(row[field], f"trace {field}")
+    _identifier(row["work_item_id"], "trace work_item_id")
+    for field in ("named_agent", "assigned_route_id", "requested_model", "requested_effort"):
+        _text(row[field], f"trace {field}")
     _text(row["supported_effective_model"], "supported effective model", nullable=True); _text(row["supported_effective_effort"], "supported effective effort", nullable=True)
     _digest(row["instruction_hash"], "trace instruction hash"); _digest(row["configuration_hash"], "trace configuration hash")
     env_equalities = {
@@ -1178,8 +1222,27 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
     if not isinstance(events, list) or not isinstance(assessments, list): raise ValueError("reroute records must be arrays")
     events = [_validate_event(item) for item in events]; assessments = [_validate_assessment(item) for item in assessments]
     if len({item["event_id"] for item in events}) != len(events): raise ValueError("duplicate reroute event ID")
-    if row["supported_effective_effort"] is not None: derived_codes.append("effort_mismatch")
-    if row["supported_effective_model"] is not None and (len(events) != 1 or events[0]["toModel"] != row["supported_effective_model"]): derived_codes.append("model_mismatch")
+    supported_route_id = resolution["supported_effective_route_id"]
+    supported_route = canonical_routes.get(supported_route_id) if supported_route_id is not None else None
+    if events and supported_route_id is not None:
+        raise ValueError("service reroute cannot claim a resolver-supported effective route")
+    if not events and supported_route is not None:
+        if supported_route_id != resolution["assigned_route_id"]:
+            raise ValueError("supported effective route must select the assigned route without a service reroute")
+        if row["supported_effective_model"] != supported_route["model"]:
+            raise ValueError("supported effective route does not bind its canonical effective model")
+        if supported_route["effort"] is not None and row["supported_effective_effort"] != supported_route["effort"]:
+            raise ValueError("supported effective route does not bind its canonical effective effort")
+    if row["supported_effective_effort"] is not None and (
+        supported_route is None or supported_route["effort"] is None
+        or row["supported_effective_effort"] != supported_route["effort"]
+    ):
+        derived_codes.append("effort_mismatch")
+    if row["supported_effective_model"] is not None and (
+        events and (len(events) != 1 or events[0]["toModel"] != row["supported_effective_model"])
+        or not events and supported_route is None
+    ):
+        derived_codes.append("model_mismatch")
     if events and row["supported_effective_model"] is None: derived_codes.append("model_mismatch")
     reroute_observation = observations.get("reroute.events")
     if reroute_observation is not None and reroute_observation["observation_state"] == "observed_value":
@@ -1252,7 +1315,6 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
     reroute_disposition, reasons = _reroute_disposition(
         row, events, assessments, qualification, trusted, canonical_routes
     )
-    if events and resolution["supported_effective_route_id"] not in {None, resolution["assigned_route_id"]}: raise ValueError("service reroute must not rewrite resolver-selected fields")
     reason_codes = {
         "reroute_association_mismatch": "reroute_unidentifiable", "ambiguous_reroute_association": "reroute_ambiguous",
         "reroute_destination_missing": "reroute_unidentifiable", "reroute_destination_ambiguous": "reroute_ambiguous",
@@ -1333,6 +1395,8 @@ def _validate_trace_graph(traces: list[dict]) -> None:
         if parent is None and graph["root_execution_trace_id"] != trace_id: raise ValueError("root trace does not own its graph root")
         if parent is not None and trace_id not in by_id[parent]["parent_child_graph"]["child_execution_trace_ids"]:
             raise ValueError("trace graph parent and child edges are not reciprocal")
+        if parent is not None and trace["parent_configuration"]["configuration_hash"] != by_id[parent]["configuration_hash"]:
+            raise ValueError("parent configuration hash does not bind the referenced parent trace")
         for child in graph["child_execution_trace_ids"]:
             if by_id[child]["parent_child_graph"]["parent_execution_trace_id"] != trace_id:
                 raise ValueError("trace graph child and parent edges are not reciprocal")
@@ -1446,10 +1510,12 @@ def build_treatment_successor(prior_freeze: dict, treatment_bundle: dict, *, pub
         trusted_qualification_evidence=trusted_qualification_evidence,
     )
     capability = _capability_module()
-    if prior_freeze["candidate_freeze_id"] != digest({key: value for key, value in prior_freeze.items() if key != "candidate_freeze_id"}):
-        raise ValueError("prior freeze identity is invalid")
-    try: capability.validate_freeze(prior_freeze, manifest)
-    except ValueError as exc: raise ValueError(f"prior freeze identity or semantics are invalid: {exc}") from exc
+    if not isinstance(prior_freeze, dict):
+        raise ValueError("prior freeze must be a JSON object")
+    try:
+        prior_freeze = capability.validate_freeze(copy.deepcopy(prior_freeze), manifest)
+    except (AttributeError, KeyError, TypeError, ValueError) as exc:
+        raise ValueError(f"prior freeze identity or semantics are invalid: {exc}") from exc
     prior_client_id = prior_freeze["client_identity_id"]
     bundle_client_ids = {item["client_identity_id"] for item in validated["telemetry_profile"]}
     bundle_client_ids.update(item["client_identity_id"] for item in validated["controlled_environments"])

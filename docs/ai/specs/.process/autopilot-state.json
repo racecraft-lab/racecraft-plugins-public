@@ -312,11 +312,16 @@
       "status": "review_pending",
       "tasks_completed": 10,
       "tasks_total": 10,
-      "focused_tests": "47/47 pass",
+      "focused_tests": "50/50 pass",
       "canonical_manifest_snapshot": "pass",
       "canonical_route_resolution_membership": "pass",
+      "route_resolution_agent_ownership": "pass",
+      "supported_effective_route_semantics": "pass",
       "descriptor_relative_private_writes": "pass",
       "descriptor_relative_deletion_recovery": "pass",
+      "parent_configuration_owner_join": "pass",
+      "field_specific_identifier_privacy": "pass",
+      "malformed_predecessor_error_normalization": "pass",
       "independent_review": "repeat_pending",
       "baseline_commit": "bbffc774c815594edc64cf412a2b5f91127ef213",
       "candidate_freeze_id": "sha256:6262e75df5c78ca3a46d609861f4fe45226a30c29d3f0d032b1bd8ebe35436c7",
@@ -333,7 +338,7 @@
     "feature_spec_sha": "sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56",
     "plan_declared_scope_sha": "sha256:35d4122bd719ba1512da85fdeead0c990d598591b33af7c3ed38947cea1aaf9e",
     "tasks_sha": "sha256:4b78765419fc0f5d3fafdeefb2b78c19890cf7a02bc74c5bf128e21c97457867",
-    "reviewability_sha": "sha256:593ed4c77a8d3bc4bb022941dff52fec1bc1bd4c7cdfc0e61809464d888b4a2e",
+    "reviewability_sha": "sha256:e30d11161c89090e8669b1b65f57e7bae37b6c613c0e4588e5596e700f1b7938",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
   },
   "pr_marker_plan": {
@@ -345,7 +350,7 @@
       "feature_spec_sha": "sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56",
       "plan_declared_scope_sha": "sha256:35d4122bd719ba1512da85fdeead0c990d598591b33af7c3ed38947cea1aaf9e",
       "tasks_sha": "sha256:4b78765419fc0f5d3fafdeefb2b78c19890cf7a02bc74c5bf128e21c97457867",
-      "reviewability_sha": "sha256:593ed4c77a8d3bc4bb022941dff52fec1bc1bd4c7cdfc0e61809464d888b4a2e",
+      "reviewability_sha": "sha256:e30d11161c89090e8669b1b65f57e7bae37b6c613c0e4588e5596e700f1b7938",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
     },
     "markers": [
@@ -475,7 +480,7 @@
             "severity": "warning",
             "message": "US2 exceeds 400 reviewable LOC and is retained only under the typed no-safe-boundary size exception.",
             "source": "treatment-contracts-reviewability",
-            "details": {"marker_id": "us2", "actual_source_lines": 1526, "actual_nonblank_noncomment_lines": 1398}
+            "details": {"marker_id": "us2", "actual_source_lines": 1592, "actual_nonblank_noncomment_lines": 1458}
           }
         ]
       },

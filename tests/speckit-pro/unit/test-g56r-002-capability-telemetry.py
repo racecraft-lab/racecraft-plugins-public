@@ -130,6 +130,7 @@ def make_two_trace_graph_bundle(source: dict) -> dict:
     child["context"]["turnId"] = "turn-fixture-002"
     next(item for item in child["observations"] if item["field_path"] == "parent.context")["value"] = copy.deepcopy(child["context"])
     child["parent_configuration"]["parent_execution_trace_id"] = root_id
+    child["parent_configuration"]["configuration_hash"] = root_trace["configuration_hash"]
     next(item for item in child["observations"] if item["field_path"] == "treatment.parent_configuration")["value"] = copy.deepcopy(child["parent_configuration"])
     child["parent_child_graph"] = {
         "root_execution_trace_id": root_id,
@@ -2156,6 +2157,44 @@ class TreatmentContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "outside the canonical candidate manifest"):
                     treatment.validate_treatment_bundle(self.rebound(bundle))
 
+        canonical_routes = treatment._canonical_routes(load_json(MANIFEST_PATH))
+        baseline_resolution = self.bundle["route_resolutions"][0]
+        assigned_route = baseline_resolution["assigned_route_id"]
+        assigned_contract = canonical_routes[assigned_route]["agent_contract_id"]
+        same_agent_route = next(
+            route_id for route_id, route in canonical_routes.items()
+            if route_id != assigned_route and route["agent_contract_id"] == assigned_contract
+        )
+        different_agent_route = next(
+            route_id for route_id, route in canonical_routes.items()
+            if route["agent_contract_id"] != assigned_contract
+        )
+        semantic_cases = (
+            ("preferred different agent", different_agent_route, "preferred"),
+            ("attempted different agent", different_agent_route, "attempted"),
+            ("supported alternate same agent", same_agent_route, "supported"),
+            ("supported assigned route without model evidence", assigned_route, "supported"),
+        )
+        for label, route_id, mutation in semantic_cases:
+            with self.subTest(semantic_case=label):
+                bundle = copy.deepcopy(self.bundle)
+                resolution = bundle["route_resolutions"][0]
+                if mutation == "preferred":
+                    resolution["preferred_route_id"] = route_id
+                    resolution["attempted_route_ids"] = [route_id, assigned_route]
+                    resolution["fallback_index"] = 1
+                    resolution["fallback_reason"] = "preferred_unavailable"
+                elif mutation == "attempted":
+                    resolution["attempted_route_ids"].append(route_id)
+                else:
+                    resolution["supported_effective_route_id"] = route_id
+                rebind_treatment_owners(bundle)
+                expected = "different agent contract" if mutation != "supported" or route_id != assigned_route else "canonical effective model"
+                if mutation == "supported" and route_id != assigned_route:
+                    expected = "must select the assigned route"
+                with self.assertRaisesRegex(ValueError, expected):
+                    treatment.validate_treatment_bundle(self.rebound(bundle))
+
     def test_every_objective_and_environment_binding_is_owned(self) -> None:
         for field in (
             "candidate_route_id", "agent_contract_id", "runtime_capability_snapshot_id",
@@ -2403,8 +2442,8 @@ class TreatmentContractTests(unittest.TestCase):
     def test_reroute_association_and_external_qualification_are_exact(self) -> None:
         association_mutations = [
             ("event", "surface", "cli"),
-            ("event", "threadId", "different-thread"),
-            ("event", "turnId", "different-turn"),
+            ("event", "threadId", "thread-fixture-different"),
+            ("event", "turnId", "turn-fixture-different"),
             ("assessment", "destination_candidate_route_id", "different-route"),
             ("assessment", "destination_agent_contract_id", "different-contract"),
             ("assessment", "destination_named_agent", "different-agent"),
@@ -2661,6 +2700,35 @@ class TreatmentContractTests(unittest.TestCase):
                     treatment.validate_treatment_bundle(self.rebound(retained))
                 self.assertNotIn(private_key, str(private_error.exception))
 
+    def test_retained_identifiers_reject_unlabeled_credentials_pii_and_native_ids(self) -> None:
+        for value in (
+            "person" + "@" + "example.com",
+            "AKIA" + "A" * 16,
+            "123-45-6789",
+        ):
+            with self.subTest(sensitive_value=value):
+                bundle = copy.deepcopy(self.bundle)
+                bundle["fixture_provenance"]["sanitizer_version"] = value
+                with self.assertRaisesRegex(ValueError, "forbidden private") as error:
+                    treatment.validate_treatment_bundle(self.rebound(bundle))
+                self.assertNotIn(value, str(error.exception))
+
+        field_cases = []
+        native_context = copy.deepcopy(self.bundle)
+        native_context["treatment_traces"][0]["context"]["threadId"] = "native-thread-123"
+        field_cases.append(("native thread correlation", native_context))
+        unsafe_tool = copy.deepcopy(self.bundle)
+        unsafe_tool["treatment_traces"][0]["expected_skills_mcp_tools"]["tools"] = ["tool name with spaces"]
+        field_cases.append(("unsafe tool identifier", unsafe_tool))
+        unsafe_action = copy.deepcopy(self.bundle)
+        unsafe_action["treatment_traces"][0]["approvals"]["granted_action_ids"] = ["action with spaces"]
+        field_cases.append(("unsafe action identifier", unsafe_action))
+        for label, bundle in field_cases:
+            with self.subTest(identifier_case=label):
+                rebound = self.rebound(bundle)
+                with self.assertRaisesRegex(ValueError, "sanitized|correlation"):
+                    treatment.validate_treatment_bundle(rebound)
+
     def test_top_level_claims_follow_profile_classification_and_conditions(self) -> None:
         for field in ("wall_time_ms", "retries"):
             with self.subTest(field=field):
@@ -2722,6 +2790,7 @@ class TreatmentContractTests(unittest.TestCase):
         cyclic = copy.deepcopy(graph); root_trace, child_trace = cyclic["treatment_traces"]
         root_id = root_trace["objective_binding"]["execution_trace_id"]; child_id = child_trace["objective_binding"]["execution_trace_id"]
         root_trace["parent_configuration"]["parent_execution_trace_id"] = child_id
+        root_trace["parent_configuration"]["configuration_hash"] = child_trace["configuration_hash"]
         root_trace["parent_child_graph"]["parent_execution_trace_id"] = child_id
         child_trace["parent_child_graph"]["child_execution_trace_ids"] = [root_id]
         for trace in (root_trace, child_trace):
@@ -2729,6 +2798,18 @@ class TreatmentContractTests(unittest.TestCase):
             next(item for item in trace["observations"] if item["field_path"] == "parent.graph")["value"] = copy.deepcopy(trace["parent_child_graph"])
         with self.assertRaisesRegex(ValueError, "cycle"):
             treatment.validate_treatment_bundle(self.rebound(cyclic))
+
+    def test_child_parent_configuration_hash_binds_parent_trace(self) -> None:
+        graph = make_two_trace_graph_bundle(self.bundle)
+        child = graph["treatment_traces"][1]
+        child["parent_configuration"]["configuration_hash"] = "sha256:" + "2" * 64
+        next(
+            item for item in child["observations"]
+            if item["field_path"] == "treatment.parent_configuration"
+        )["value"] = copy.deepcopy(child["parent_configuration"])
+        rebind_treatment_owners(graph)
+        with self.assertRaisesRegex(ValueError, "does not bind the referenced parent trace"):
+            treatment.validate_treatment_bundle(self.rebound(graph))
 
     def test_locally_owned_identifiers_are_content_addressed(self) -> None:
         mutations = []
@@ -2878,6 +2959,16 @@ class TreatmentContractTests(unittest.TestCase):
             treatment.build_treatment_successor(
                 tampered, self.bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
             )
+
+    def test_successor_normalizes_malformed_predecessor_errors(self) -> None:
+        bundle = self.rebound(copy.deepcopy(self.bundle))
+        for malformed in (None, [], {}, {"candidate_freeze_id": treatment.digest(b"partial")}):
+            with self.subTest(predecessor=type(malformed).__name__), self.assertRaisesRegex(
+                ValueError, "prior freeze",
+            ):
+                treatment.build_treatment_successor(
+                    malformed, bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                )
 
     def test_successor_rejects_cross_bound_treatment_bundle(self) -> None:
         published = load_json(ROOT / "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json")
