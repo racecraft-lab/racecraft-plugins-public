@@ -272,6 +272,9 @@ PII_RE = re.compile(
 HOSTNAME_RE = re.compile(
     r"(?i)(?<![A-Z0-9_-])(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.){2,}[A-Z]{2,63}(?![A-Z0-9_-])"
 )
+REPLAY_HOSTNAME_RE = re.compile(
+    r"(?i)(?<![A-Z0-9_-])(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.){1,}[A-Z]{2,63}(?![A-Z0-9_-])"
+)
 INTERNAL_HOSTNAME_RE = re.compile(
     r"(?i)(?<![A-Z0-9_-])[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.(?:internal|local|lan|corp|home)(?![A-Z0-9_-])"
 )
@@ -704,7 +707,8 @@ def _contains_ip_address(value: str) -> bool:
     return False
 
 
-def _validate_retained_strings(value: object, label: str = "treatment bundle") -> None:
+def _validate_retained_strings(value: object, label: str = "treatment bundle",
+                               *, reject_two_label_hostnames: bool = False) -> None:
     if isinstance(value, str):
         forbidden = (
             any(ord(char) < 32 for char in value)
@@ -715,6 +719,7 @@ def _validate_retained_strings(value: object, label: str = "treatment bundle") -
             or UNLABELED_CREDENTIAL_RE.search(value)
             or PII_RE.search(value)
             or HOSTNAME_RE.search(value)
+            or reject_two_label_hostnames and REPLAY_HOSTNAME_RE.search(value)
             or INTERNAL_HOSTNAME_RE.search(value)
             or _contains_ip_address(value)
         )
@@ -722,11 +727,20 @@ def _validate_retained_strings(value: object, label: str = "treatment bundle") -
             raise ValueError(f"{label} retains forbidden private or credential-bearing text")
     elif isinstance(value, list):
         for index, item in enumerate(value):
-            _validate_retained_strings(item, f"{label}[{index}]")
+            _validate_retained_strings(
+                item, f"{label}[{index}]",
+                reject_two_label_hostnames=reject_two_label_hostnames,
+            )
     elif isinstance(value, dict):
         for index, (key, item) in enumerate(value.items()):
-            _validate_retained_strings(key, f"{label} object key {index}")
-            _validate_retained_strings(item, f"{label} object value {index}")
+            _validate_retained_strings(
+                key, f"{label} object key {index}",
+                reject_two_label_hostnames=reject_two_label_hostnames,
+            )
+            _validate_retained_strings(
+                item, f"{label} object value {index}",
+                reject_two_label_hostnames=reject_two_label_hostnames,
+            )
 
 
 def canonical_fixture_bytes(value: object) -> bytes:
@@ -1813,9 +1827,11 @@ def _evaluate_replay_capability_case(capability: object, case: dict, client_iden
         raise ValueError("capability replay case derived decision does not match its expectation")
 
 
-def _validate_capability_fixture(value: object) -> dict[str, dict]:
+def _validate_capability_fixture(value: object) -> tuple[dict[str, dict], str]:
     _validate_resource_bounds(value)
-    _validate_retained_strings(value, "capability replay fixture")
+    _validate_retained_strings(
+        value, "capability replay fixture", reject_two_label_hostnames=True,
+    )
     fixture = _closed(value, {
         "schema_version", "sanitizer_version", "raw_evidence_digest",
         "source_refresh_cases", "client_identity", "surface_cases",
@@ -1909,7 +1925,7 @@ def _validate_capability_fixture(value: object) -> dict[str, dict]:
     identity = capability.build_client_identity(fixture["client_identity"])
     for case in cases.values():
         _evaluate_replay_capability_case(capability, case, identity["client_identity_id"])
-    return cases
+    return cases, identity["client_identity_id"]
 
 
 def _validate_replay_capability_semantics(case_id: str, case: dict, trace: dict) -> None:
@@ -2036,13 +2052,20 @@ def _validate_replay_trace_semantics(case_class: str, trace: dict,
 
 
 def _normalized_replay_pass(capability_fixture: object, treatment_fixture: object) -> list[dict]:
-    capability_cases = _validate_capability_fixture(capability_fixture)
+    capability_cases, capability_client_identity_id = _validate_capability_fixture(capability_fixture)
     bundle = _validate_treatment_bundle(
         treatment_fixture, schema_path=SCHEMA_PATH,
         manifest=_read_manifest_snapshot(MANIFEST_PATH),
         trusted_qualification_evidence=None, synthetic_replay=True,
     )
     traces = bundle["treatment_traces"]
+    treatment_client_identity_ids = {
+        *(item["client_identity_id"] for item in bundle["telemetry_profile"]),
+        *(item["client_identity_id"] for item in bundle["controlled_environments"]),
+        *(item["client_identity_id"] for item in traces),
+    }
+    if treatment_client_identity_ids != {capability_client_identity_id}:
+        raise ValueError("capability replay client identity does not match treatment evidence")
     canonical_routes = _canonical_routes(_read_manifest_snapshot(MANIFEST_PATH))
     if len(traces) != len(REPLAY_CASES):
         raise ValueError("treatment replay fixture does not use the exact eight-case registry")
@@ -2074,7 +2097,8 @@ def _normalized_replay_pass(capability_fixture: object, treatment_fixture: objec
                 raise ValueError("replay capability source case does not preserve its predeclared exclusion")
             _validate_replay_capability_semantics(capability_case_id, source, trace)
         normalized.append({
-            "execution_trace_id": case_id,
+            "case_id": case_id,
+            "execution_trace_id": execution_trace_id,
             "case_class": case_class,
             "source_capability_case_id": capability_case_id,
             "treatment_disposition": trace["treatment_disposition"],

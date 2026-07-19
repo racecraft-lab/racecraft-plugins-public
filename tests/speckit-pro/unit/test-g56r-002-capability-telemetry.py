@@ -955,7 +955,10 @@ class CapabilityContractTests(unittest.TestCase):
         changed_contract["agent_contracts"][0]["safety_boundary"] += " changed"
         with self.assertRaisesRegex(ValueError, "canonical G56R-001"):
             capabilities.build_freeze(self.identity, refreshes, matrix, decisions, "2026-07-16T00:00:00Z", manifest=changed_contract)
-        wrong_identity = capabilities.build_client_identity({**self.fixture["client_identity"], "build_identifier": "fixture-build-002"})
+        wrong_identity = capabilities.build_client_identity({
+            **self.fixture["client_identity"],
+            "build_identifier": "sha256:" + "0" * 64,
+        })
         with self.assertRaisesRegex(ValueError, "client identity"):
             capabilities.build_freeze(wrong_identity, refreshes, matrix, decisions, "2026-07-16T00:00:00Z", manifest=self.manifest)
         tampered = copy.deepcopy(matrix); tampered["surface_matrix_id"] = capabilities.digest(b"tampered")
@@ -3353,12 +3356,16 @@ class TreatmentReplayTests(unittest.TestCase):
         self.assertEqual(result["repeat"], 2)
         normalized = [
             (
-                item["execution_trace_id"], item["case_class"], item["treatment_disposition"],
+                item["case_id"], item["case_class"], item["treatment_disposition"],
                 item["source_capability_case_id"],
             )
             for item in result["cases"]
         ]
         self.assertEqual(normalized, self.CASES)
+        self.assertEqual(
+            [item["execution_trace_id"] for item in result["cases"]],
+            [item[5] for item in treatment.REPLAY_CASES],
+        )
         success = result["cases"][0]
         self.assertEqual(success["terminal_state"], "completed")
         self.assertEqual(success["delivery_canary_status"], "passed")
@@ -3384,7 +3391,7 @@ class TreatmentReplayTests(unittest.TestCase):
         replayed = self.replay()
         simulated = next(
             item for item in replayed["cases"]
-            if item["execution_trace_id"] == "TRACE-APPROVED-SAME-AGENT-REROUTE"
+            if item["case_id"] == "TRACE-APPROVED-SAME-AGENT-REROUTE"
         )
         self.assertEqual(simulated["treatment_disposition"], "non_scorable_rerouted")
         self.assertFalse(replayed["guardrails"]["runtime_continuation_authorized"])
@@ -3669,6 +3676,8 @@ class TreatmentReplayTests(unittest.TestCase):
             "person" + chr(64) + "example.com",
             "/" + "Users" + "/fixture/private",
             "host.internal.example.com",
+            "example.com",
+            "service.corp",
             "10.0.0.1",
         )
         for value in private_values:
@@ -3683,6 +3692,19 @@ class TreatmentReplayTests(unittest.TestCase):
                     treatment.replay_fixture(
                         fixture, manifest_path, repeat=2, repository_root=repository_root,
                     )
+
+    def test_replay_binds_capability_and_treatment_client_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+            capability = json.loads(capability_path.read_bytes())
+            capability["client_identity"]["distribution"] = "alternate-build"
+            self.write_and_reseal(repository_root, FIXTURE_PATH, capability)
+            with self.assertRaisesRegex(ValueError, "client identity does not match treatment"):
+                treatment.replay_fixture(
+                    fixture, manifest_path, repeat=2, repository_root=repository_root,
+                )
 
     def test_replay_rejects_undeclared_discovery_omissions(self) -> None:
         for field_path in ("discovery.efforts", "discovery.capabilities"):
