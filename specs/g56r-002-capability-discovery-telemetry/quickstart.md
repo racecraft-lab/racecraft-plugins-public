@@ -291,17 +291,22 @@ python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py retention 
   --output /absolute/path/outside/repository/g56r-002-raw/retention-report.json
 ```
 
-Cleanup appends and directory-fsyncs an immutable record under
-`deletion-records/` before removing the expired raw bytes, then directory-fsyncs
-the raw store before reporting success. The record retains the raw digest, complete retention
-record history, governing deadline, and deletion time. Repeated cleanup is
-idempotent. Every raw file must have exactly one hard link. Append-only writes
+Cleanup first appends and directory-fsyncs an immutable intent under
+`deletion-intents/`. It then unlinks the expired raw bytes, proves through the
+still-open descriptor that the link count is zero and the content digest is
+unchanged, and directory-fsyncs the raw store. Only after those checks does it
+append and directory-fsync the immutable v2 completion proof under
+`deletion-records/`. The proof retains the raw digest, complete retention record
+history, governing deadline, deletion time, and proof method. Repeated cleanup
+is idempotent. Every raw file must have exactly one hard link. Append-only writes
 directory-fsync after both final-name publication and temporary-name removal;
 cleanup fails closed if a power-loss artifact or any alternate hard link still
-reaches governed bytes. Registration and cleanup serialize through the atomic
-`.retention-lock` directory; another operation fails closed while it exists.
-After an interrupted operator process, inspect the private store before manually
-removing a stale lock. `--as-of` is accepted only for read-only verification;
+reaches governed bytes. Registration and cleanup serialize through the persistent
+mode-`0600` `.retention-lock` advisory-lock file. A process crash releases the
+kernel lock automatically, while another live operation fails closed. Do not
+remove the lock file: unlinking it during an active operation can defeat
+serialization by allowing a second lock inode. `--as-of` is accepted only for
+read-only verification;
 cleanup always uses current UTC. Do not delete committed sanitized fixtures or
 published freeze records; repository tests continue to pass without the raw
 store. Live private-store commands fail closed on Windows until the adapter can
