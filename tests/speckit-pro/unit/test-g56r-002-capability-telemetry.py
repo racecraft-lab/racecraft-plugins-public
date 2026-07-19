@@ -2136,6 +2136,26 @@ class TreatmentContractTests(unittest.TestCase):
         validated_graph = treatment.validate_treatment_bundle(self.rebound(make_two_trace_graph_bundle(self.bundle)))
         self.assertEqual(len(validated_graph["treatment_traces"]), 2)
 
+    def test_route_resolution_references_only_canonical_manifest_routes(self) -> None:
+        for field in ("preferred_route_id", "attempted_route_ids", "supported_effective_route_id"):
+            with self.subTest(route_field=field):
+                bundle = copy.deepcopy(self.bundle)
+                resolution = bundle["route_resolutions"][0]
+                assigned_route = resolution["assigned_route_id"]
+                unknown_route = "G56R-001-CR-FORGED"
+                if field == "preferred_route_id":
+                    resolution["preferred_route_id"] = unknown_route
+                    resolution["attempted_route_ids"] = [unknown_route, assigned_route]
+                    resolution["fallback_index"] = 1
+                    resolution["fallback_reason"] = "preferred_unavailable"
+                elif field == "attempted_route_ids":
+                    resolution["attempted_route_ids"].append(unknown_route)
+                else:
+                    resolution["supported_effective_route_id"] = unknown_route
+                rebind_treatment_owners(bundle)
+                with self.assertRaisesRegex(ValueError, "outside the canonical candidate manifest"):
+                    treatment.validate_treatment_bundle(self.rebound(bundle))
+
     def test_every_objective_and_environment_binding_is_owned(self) -> None:
         for field in (
             "candidate_route_id", "agent_contract_id", "runtime_capability_snapshot_id",

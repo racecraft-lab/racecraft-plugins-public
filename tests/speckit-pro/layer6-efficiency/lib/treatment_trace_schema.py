@@ -1111,6 +1111,13 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
     resolution_id = objective["route_resolution_id"]
     if resolution_id not in resolutions: raise ValueError("trace has no route resolution owner")
     resolution = resolutions[resolution_id]
+    referenced_route_ids = [
+        resolution["preferred_route_id"], *resolution["attempted_route_ids"],
+    ]
+    if resolution["supported_effective_route_id"] is not None:
+        referenced_route_ids.append(resolution["supported_effective_route_id"])
+    if any(route_id not in canonical_routes for route_id in referenced_route_ids):
+        raise ValueError("route resolution references a route outside the canonical candidate manifest")
     policy_id = objective["experiment_policy_id"]
     if policy_id not in policies: raise ValueError("trace has no experiment policy owner")
     policy = policies[policy_id]
