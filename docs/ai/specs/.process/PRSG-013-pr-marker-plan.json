@@ -79,6 +79,7 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+        "commit_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930",
         "completed_at": "2026-06-12T04:17:51Z",
         "completed_task_ids": [
           "T001",
@@ -161,6 +162,7 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+        "commit_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930",
         "completed_at": "2026-06-12T04:17:51Z",
         "completed_task_ids": [
           "T007",
@@ -243,6 +245,7 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+        "commit_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930",
         "completed_at": "2026-06-12T04:17:51Z",
         "completed_task_ids": [
           "T016",
@@ -375,6 +378,7 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+        "commit_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930",
         "completed_at": "2026-06-12T04:17:51Z",
         "completed_task_ids": [
           "T027",

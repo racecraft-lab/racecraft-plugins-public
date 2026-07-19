@@ -227,6 +227,26 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
         with self.subTest(invalid_marker_kind="maintenance"):
             self.assertNotIn("maintenance", marker_kinds)
 
+    def test_pr_marker_plan_schema_binds_completion_and_emission_evidence(self) -> None:
+        schema = json.loads(MARKER_PLAN_SCHEMA_PATHS[0].read_text(encoding="utf-8"))
+        checkpoint = schema["$defs"]["checkpoint"]
+        emission = schema["$defs"]["emission_mapping"]
+
+        self.assertFalse(checkpoint["additionalProperties"])
+        self.assertFalse(emission["additionalProperties"])
+        self.assertEqual(
+            checkpoint["allOf"][0]["then"]["required"],
+            ["evidence_path", "commit_sha"],
+        )
+        self.assertEqual(
+            emission["allOf"][0]["then"]["required"],
+            ["packet_path"],
+        )
+        self.assertEqual(
+            emission["allOf"][1]["then"]["required"],
+            ["packet_path", "pr_number", "pr_url"],
+        )
+
 
 def build_suite() -> unittest.TestSuite:
     return unittest.defaultTestLoader.loadTestsFromTestCase(ReviewabilityMarkerGuidanceTests)

@@ -8,12 +8,12 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 1385,
-  "actual_nonblank_noncomment_lines": 1267,
+  "actual_source_lines": 2274,
+  "actual_nonblank_noncomment_lines": 2100,
   "production_modules": 1,
   "primary_surface": "harness/adapter",
   "correctness_checks": {
-    "focused_tests": "38/38 pass",
+    "focused_tests": "67/67 pass",
     "two_pass_byte_equality": "pass",
     "raw_fixture_digest_validation": "pass",
     "canonical_fixture_serialization": "pass",
@@ -22,7 +22,10 @@
     "public_synthetic_qualification_rejection": "pass",
     "capability_module_freeze": "pass",
     "declared_claim_exactness": "pass",
-    "independent_review": "repeat_pending"
+    "privacy_scan": "10/10 pass",
+    "docs_reference_check": "pass",
+    "full_suite": "2826/2826 pass",
+    "independent_review": "findings_open: untitled-chat-4E672C"
   },
   "exception": {
     "kind": "typed_size_only",

@@ -874,7 +874,7 @@ For every task:
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
 | 2 - Treatment contracts | Complete | 10 | 51/51 focused tests, 2821/2821 full suite, Windows-safe offline replay, and exact-head independent review returned `NO FINDINGS` |
-| 3 - Synthetic replay | Checkpointing | 5 | Replay code and fixtures applied; final schema rebinding and restack verification are pending |
+| 3 - Synthetic replay | Checkpointing | 5 | 67/67 focused tests, 10/10 privacy scan, 2826/2826 full suite, and current generated references pass; exact-head review findings remain open |
 | Polish and validation | Pending | 0 | Not started |
 
 ### Capability Checkpoint Evidence
@@ -928,14 +928,20 @@ For every task:
 
 ### Synthetic Replay Checkpoint Evidence
 
-- Restacked implementation commit: `cd36822c0188ad338e1a96140ef90007796792aa`
-- Capability fixture: Pending final digest verification.
-- Treatment fixture: Pending final hardened-schema rebinding and digest verification.
-- Replay output: Pending byte-identical two-pass verification.
+- Restacked implementation commit: `e835852788a62f5ceb9744ff3df866eea70ad901`
+- Capability fixture: `sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a`.
+- Treatment fixture: `sha256:3983dc1d4efe42542ffe0cb72830c970d24cecf490ddfe0c93e24be749ffaa53`.
+- Replay output: `sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda` with byte-identical two-pass verification.
 - Cases: eight exact success, null, unavailable, misdelivery, approved reroute,
   unapproved reroute, discovery-loss, and surface-disagreement classes.
-- Reviewability: Pending refresh against the restacked US3 production surface.
-- Review: Pending exact-head review after restack verification.
+- Verification: 67/67 focused tests, 10/10 privacy scan, 2826/2826 full
+  suite, and current generated references.
+- Reviewability: size-only `block` at 2,274 source / 2,100 nonblank,
+  non-comment lines in the one replay production module; finding-driven
+  remediation remains inside the typed `no_safe_boundary` exception.
+- Review: `untitled-chat-4E672C` reported open state/schema integrity and stale
+  handoff findings; the checkpoint remains pending until their exact-head
+  remediation returns `NO FINDINGS`.
 
 ## PR Marker Plan Evidence
 
@@ -949,20 +955,21 @@ For every task:
 |---|---|
 | Feature spec | `sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56` |
 | Plan-declared scope | `sha256:514e4ad5bf39dcab31c760ecd8e6db2556239509e630b69694b44c22ee684b2b` |
-| Tasks | `sha256:dd9f8f33a70aac48cf73ddf058c6fc6a1d0e82422dabfd35611c2cff783ec5e4` |
-| Reviewability evidence | `sha256:efc2f1761ef235fae4b4b4319fca380bc4f085decb2124623700139544ecaf15` |
+| Tasks | `sha256:3504d46c36d4cf7e64f777426830cf7823708d774a52376c9aa8313030c88554` |
+| Reviewability evidence | `sha256:7a93dfc38ab08e7ce6e6b27806d9089ee20f5f7a8703ed03fd2a0c1bdeb3a9b8` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
 | 2 | `us2` | T016-T025 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `1190e3c1205744fd50afb37a12c0f9527ad5ee53` | Only T026-T030 replay growth remains authorized |
-| 3 | `us3` | T026-T030; T031-T039 folded | Pending restack measurement | Checkpointing from `cd36822c0188ad338e1a96140ef90007796792aa` | Final validation and review remain pending |
+| 3 | `us3` | T026-T030; T031-T039 folded | Size-only `block`; finding-driven typed `no_safe_boundary` exception | Checkpointing from `e835852788a62f5ceb9744ff3df866eea70ad901` | Exact-head review findings remain open |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
   lines; the current US2 marker is 4,214 / 3,843 across its two modules against
-  the 400-LOC boundary. The US3 measurement will be refreshed after restack.
+  the 400-LOC boundary. The current US3 marker is 2,274 / 2,100 in its one
+  production module.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.
 - PR mappings: Pending.

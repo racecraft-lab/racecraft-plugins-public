@@ -3,7 +3,7 @@
   "spec_id": "G56R-002",
   "feature_dir": "specs/g56r-002-capability-discovery-telemetry",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-19T03:09:22Z",
+  "updated_at": "2026-07-19T22:50:25Z",
   "active_step": "Phase 7: Implement - Synthetic Replay Checkpoint",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
@@ -70,8 +70,8 @@
     {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
     {"step": "Phase 7: Implement - Capability Freeze (T001-T015)", "status": "completed"},
     {"step": "Phase 7: Implement - Treatment Contracts (T016-T025)", "status": "completed"},
-    {"step": "Phase 7: Implement - Synthetic Replay (T026-T030)", "status": "completed"},
-    {"step": "Phase 7: Implement - Integration and Polish (T031-T039)", "status": "in_progress"},
+    {"step": "Phase 7: Implement - Synthetic Replay (T026-T030)", "status": "in_progress"},
+    {"step": "Phase 7: Implement - Integration and Polish (T031-T039)", "status": "pending"},
     {"step": "Post: Doctor Extension Check", "status": "pending"},
     {"step": "Post: Verify Implementation", "status": "pending"},
     {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
@@ -347,25 +347,28 @@
       "completed_at": "2026-07-19T03:09:22Z"
     },
     "Phase 7: Implement - Synthetic Replay": {
-      "status": "completed",
+      "status": "in_progress",
       "tasks_completed": 5,
       "tasks_total": 5,
-      "focused_tests": "pending hardened-schema restack verification",
-      "independent_review": "pending exact-head review",
-      "implementation_commit": "cd36822c0188ad338e1a96140ef90007796792aa",
-      "capability_fixture_digest": "pending final digest verification",
-      "treatment_fixture_digest": "pending final hardened-schema rebinding",
-      "replay_digest": "pending byte-identical two-pass verification",
+      "focused_tests": "67/67 pass",
+      "privacy_scan": "10/10 pass",
+      "full_suite": "2826/2826 pass",
+      "docs_reference_check": "pass",
+      "independent_review": "findings_open: untitled-chat-4E672C",
+      "implementation_commit": "e835852788a62f5ceb9744ff3df866eea70ad901",
+      "capability_fixture_digest": "sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a",
+      "treatment_fixture_digest": "sha256:3983dc1d4efe42542ffe0cb72830c970d24cecf490ddfe0c93e24be749ffaa53",
+      "replay_digest": "sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda",
       "marker_id": "us3",
-      "reviewability": "pending restack measurement",
-      "checkpoint": "pending replay validation"
+      "reviewability": "size-only block at 2,274 source / 2,100 nonblank non-comment lines in one production module; finding-driven remediation remains inside the typed no-safe-boundary exception",
+      "checkpoint": "pending exact-head no-findings review"
     }
   },
   "current_source_fingerprint": {
     "feature_spec_sha": "sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56",
     "plan_declared_scope_sha": "sha256:514e4ad5bf39dcab31c760ecd8e6db2556239509e630b69694b44c22ee684b2b",
-    "tasks_sha": "sha256:dd9f8f33a70aac48cf73ddf058c6fc6a1d0e82422dabfd35611c2cff783ec5e4",
-    "reviewability_sha": "sha256:efc2f1761ef235fae4b4b4319fca380bc4f085decb2124623700139544ecaf15",
+    "tasks_sha": "sha256:3504d46c36d4cf7e64f777426830cf7823708d774a52376c9aa8313030c88554",
+    "reviewability_sha": "sha256:7a93dfc38ab08e7ce6e6b27806d9089ee20f5f7a8703ed03fd2a0c1bdeb3a9b8",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
   },
   "pr_marker_plan": {
@@ -376,8 +379,8 @@
     "source_fingerprint": {
       "feature_spec_sha": "sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56",
       "plan_declared_scope_sha": "sha256:514e4ad5bf39dcab31c760ecd8e6db2556239509e630b69694b44c22ee684b2b",
-      "tasks_sha": "sha256:dd9f8f33a70aac48cf73ddf058c6fc6a1d0e82422dabfd35611c2cff783ec5e4",
-      "reviewability_sha": "sha256:efc2f1761ef235fae4b4b4319fca380bc4f085decb2124623700139544ecaf15",
+      "tasks_sha": "sha256:3504d46c36d4cf7e64f777426830cf7823708d774a52376c9aa8313030c88554",
+      "reviewability_sha": "sha256:7a93dfc38ab08e7ce6e6b27806d9089ee20f5f7a8703ed03fd2a0c1bdeb3a9b8",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
     },
     "markers": [
@@ -566,7 +569,7 @@
           "mode": "implementation",
           "scope": "us3",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
-          "head_sha": "4a1febfd0f90348f91cef6f71ab8e809ec924231"
+          "head_sha": "e835852788a62f5ceb9744ff3df866eea70ad901"
         },
         "hazards": ["fixture-provenance", "offline-determinism", "release-readiness"],
         "subdivision": {
@@ -578,9 +581,9 @@
           }
         },
         "implementation_checkpoint": {
-          "status": "complete",
+          "status": "pending",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3.json",
-          "commit_sha": "9603b57367c5258123e1e0694bdcde0bbab140e7"
+          "commit_sha": "e835852788a62f5ceb9744ff3df866eea70ad901"
         },
         "emission_mapping": {"status": "pending", "packet_path": "specs/g56r-002-capability-discovery-telemetry/.process/pr-packets/us3.json"},
         "warnings": [
@@ -589,7 +592,7 @@
             "severity": "warning",
             "message": "US3 exceeds 400 reviewable LOC and is retained under the exhausted predeclared replay size exception.",
             "source": "synthetic-replay-reviewability",
-            "details": {"marker_id": "us3", "actual_source_lines": 1301, "actual_nonblank_noncomment_lines": 1190}
+            "details": {"marker_id": "us3", "actual_source_lines": 2274, "actual_nonblank_noncomment_lines": 2100}
           }
         ]
       }
@@ -611,7 +614,7 @@
       }
     ],
     "created_at": "2026-07-17T04:50:02Z",
-    "updated_at": "2026-07-17T06:43:26Z"
+    "updated_at": "2026-07-19T22:50:25Z"
   },
   "layer_plan": {
     "status": "skipped",

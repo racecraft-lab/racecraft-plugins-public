@@ -312,7 +312,7 @@
     },
     "checkpoint": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
         "status"
       ],
@@ -324,13 +324,72 @@
           ]
         },
         "evidence_path": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
+        },
+        "commit_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "superseded_commit_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "verification_evidence_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "head_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "completed_at": {
+          "type": "string",
+          "minLength": 1
+        },
+        "completed_task_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "validation": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "complete"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "required": [
+              "evidence_path",
+              "commit_sha"
+            ]
+          }
+        }
+      ]
     },
     "emission_mapping": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
         "status"
       ],
@@ -344,16 +403,56 @@
           ]
         },
         "packet_path": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "pr_number": {
           "type": "integer",
           "minimum": 1
         },
         "pr_url": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "marker_split"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "required": [
+              "packet_path"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "emitted"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "required": [
+              "packet_path",
+              "pr_number",
+              "pr_url"
+            ]
+          }
+        }
+      ]
     },
     "warning": {
       "type": "object",

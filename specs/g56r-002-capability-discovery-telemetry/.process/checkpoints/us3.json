@@ -2,24 +2,27 @@
   "schema_version": "marker-checkpoint.v1",
   "feature_id": "G56R-002",
   "marker_id": "us3",
-  "status": "complete",
+  "status": "pending",
   "task_ids": [
     "T026", "T027", "T028", "T029", "T030"
   ],
   "implementation_baseline_sha": "0d5df513fe95a5201c422b908e2c6b7330b91552",
-  "implementation_checkpoint_sha": "672e605dd7c056a53e8469e5a7c0ea6b83ed348f",
-  "capability_fixture_digest": "sha256:8afdd9ef74e51b5b5a793a3553a3e1001239c0756616e105833f7880165dbb1c",
-  "treatment_fixture_digest": "sha256:ff02ccc6e4862542224f8db8fb3369bf90d9c2f52af5244dfcb8e9294c825d7f",
-  "replay_digest": "sha256:1ec08d53ac31a2cdd29f74bf08e2d1ca3eb27e9c4fd5f6c6430108c0c2f08d68",
+  "implementation_checkpoint_sha": "e835852788a62f5ceb9744ff3df866eea70ad901",
+  "capability_fixture_digest": "sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a",
+  "treatment_fixture_digest": "sha256:3983dc1d4efe42542ffe0cb72830c970d24cecf490ddfe0c93e24be749ffaa53",
+  "replay_digest": "sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda",
   "verification": {
-    "focused_tests": "31/31 pass",
+    "focused_tests": "67/67 pass",
+    "privacy_scan": "10/10 pass",
+    "full_suite": "2826/2826 pass",
+    "docs_reference_check": "pass",
     "two_pass_byte_equality": "pass",
     "raw_fixture_digest_validation": "pass",
     "canonical_offline_replay": "pass",
     "eight_class_semantic_binding": "pass",
-    "independent_critical_high_review": "pass"
+    "independent_critical_high_review": "findings_open: untitled-chat-4E672C"
   },
   "source_fingerprint_status": "current",
-  "tasks_sha": "sha256:39c5e6dcaaece4b4cff0f0d226f5b9452d54dacc968d08c8de9ec40242b20076",
-  "completed_at": "2026-07-17T07:44:42Z"
+  "tasks_sha": "sha256:3504d46c36d4cf7e64f777426830cf7823708d774a52376c9aa8313030c88554",
+  "updated_at": "2026-07-19T22:50:25Z"
 }

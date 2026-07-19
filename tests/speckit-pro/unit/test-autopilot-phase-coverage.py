@@ -162,11 +162,108 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             self.assertEqual(completed.stderr, "")
             return completed.returncode, json.loads(completed.stdout)
 
+    def projected_state(
+        self,
+        *,
+        plan_status: str,
+        phase_status: str,
+        checkpoint: dict[str, object],
+        emission: dict[str, object] | None = None,
+        phase_fields: dict[str, object] | None = None,
+    ) -> dict[str, object]:
+        state = state_json()
+        phase_name = "Phase 7: Implement - Pending task decomposition"
+        phase_step = next(item for item in state["plan"] if item["step"] == phase_name)
+        phase_step["status"] = plan_status
+        state["phase_results"] = {
+            phase_name: {
+                "status": phase_status,
+                "marker_id": "us1",
+                **(phase_fields or {}),
+            }
+        }
+        state["pr_marker_plan"] = {
+            "markers": [
+                {
+                    "id": "us1",
+                    "implementation_checkpoint": checkpoint,
+                    "emission_mapping": emission or {"status": "pending"},
+                }
+            ]
+        }
+        return state
+
     def test_complete_workflow_and_state_pass(self) -> None:
         exit_code, report = self.run_validator(workflow_text(), state_json())
         self.assertEqual(exit_code, 0)
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["missing_state_post_items"], [])
+
+    def test_completed_phase_rejects_pending_verification_fields(self) -> None:
+        state = self.projected_state(
+            plan_status="completed",
+            phase_status="completed",
+            checkpoint={
+                "status": "complete",
+                "evidence_path": "specs/spec-example/.process/checkpoints/us1.json",
+                "commit_sha": "a" * 40,
+            },
+            phase_fields={"focused_tests": "pending exact-head verification"},
+        )
+        exit_code, report = self.run_validator(workflow_text(), state)
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(
+            report["completed_phase_pending_fields"],
+            ["phase_results.Phase 7: Implement - Pending task decomposition.focused_tests"],
+        )
+
+    def test_plan_phase_and_checkpoint_statuses_must_agree(self) -> None:
+        state = self.projected_state(
+            plan_status="completed",
+            phase_status="in_progress",
+            checkpoint={
+                "status": "complete",
+                "evidence_path": "specs/spec-example/.process/checkpoints/us1.json",
+                "commit_sha": "b" * 40,
+            },
+        )
+        exit_code, report = self.run_validator(workflow_text(), state)
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(len(report["projection_status_errors"]), 2)
+
+    def test_complete_checkpoint_requires_evidence_and_commit(self) -> None:
+        state = self.projected_state(
+            plan_status="completed",
+            phase_status="completed",
+            checkpoint={"status": "complete"},
+        )
+        exit_code, report = self.run_validator(workflow_text(), state)
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(
+            report["checkpoint_evidence_errors"],
+            [
+                "pr_marker_plan.markers[0].implementation_checkpoint.evidence_path",
+                "pr_marker_plan.markers[0].implementation_checkpoint.commit_sha",
+            ],
+        )
+
+    def test_emitted_mapping_requires_packet_and_pr_identity(self) -> None:
+        state = self.projected_state(
+            plan_status="in_progress",
+            phase_status="in_progress",
+            checkpoint={"status": "pending"},
+            emission={"status": "emitted"},
+        )
+        exit_code, report = self.run_validator(workflow_text(), state)
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(
+            report["emission_mapping_errors"],
+            [
+                "pr_marker_plan.markers[0].emission_mapping.packet_path",
+                "pr_marker_plan.markers[0].emission_mapping.pr_number",
+                "pr_marker_plan.markers[0].emission_mapping.pr_url",
+            ],
+        )
 
     def test_missing_confidence_gate_in_workflow_fails(self) -> None:
         exit_code, report = self.run_validator(workflow_text(include_confidence=False), state_json())

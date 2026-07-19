@@ -183,6 +183,100 @@ def validate_state(steps: list[PlanStep]) -> dict[str, list[str]]:
     }
 
 
+def _pending_value_paths(value: Any, path: str) -> list[str]:
+    if isinstance(value, str):
+        return [path] if "pending" in value.casefold() else []
+    if isinstance(value, list):
+        paths: list[str] = []
+        for index, item in enumerate(value):
+            paths.extend(_pending_value_paths(item, f"{path}[{index}]"))
+        return paths
+    if isinstance(value, dict):
+        paths = []
+        for key, item in value.items():
+            paths.extend(_pending_value_paths(item, f"{path}.{key}"))
+        return paths
+    return []
+
+
+def validate_projection_integrity(state: dict[str, Any], steps: list[PlanStep]) -> dict[str, list[str]]:
+    phase_results = state.get("phase_results")
+    marker_plan = state.get("pr_marker_plan")
+    completed_phase_pending_fields: list[str] = []
+    projection_status_errors: list[str] = []
+    checkpoint_evidence_errors: list[str] = []
+    emission_mapping_errors: list[str] = []
+
+    phases = phase_results if isinstance(phase_results, dict) else {}
+    for phase_name, raw_result in phases.items():
+        if not isinstance(phase_name, str) or not isinstance(raw_result, dict):
+            continue
+        result_status = raw_result.get("status")
+        matching_steps = [step for step in steps if step.step == phase_name or step.step.startswith(f"{phase_name} (")]
+        if result_status in {"completed", "in_progress", "pending"} and matching_steps:
+            expected_plan_status = "completed" if result_status == "completed" else result_status
+            if matching_steps[0].status != expected_plan_status:
+                projection_status_errors.append(
+                    f"plan[{matching_steps[0].step}]={matching_steps[0].status!r} "
+                    f"does not match phase_results[{phase_name}].status={result_status!r}"
+                )
+        if result_status == "completed":
+            completed_phase_pending_fields.extend(
+                _pending_value_paths(raw_result, f"phase_results.{phase_name}")
+            )
+
+    markers = marker_plan.get("markers") if isinstance(marker_plan, dict) else None
+    if isinstance(markers, list):
+        for index, raw_marker in enumerate(markers):
+            if not isinstance(raw_marker, dict):
+                continue
+            marker_id = raw_marker.get("id")
+            checkpoint = raw_marker.get("implementation_checkpoint")
+            if isinstance(checkpoint, dict):
+                checkpoint_status = checkpoint.get("status")
+                if checkpoint_status == "complete":
+                    for required in ("evidence_path", "commit_sha"):
+                        if not isinstance(checkpoint.get(required), str) or not checkpoint[required].strip():
+                            checkpoint_evidence_errors.append(
+                                f"pr_marker_plan.markers[{index}].implementation_checkpoint.{required}"
+                            )
+                matching_phases = [
+                    (phase_name, result)
+                    for phase_name, result in phases.items()
+                    if isinstance(result, dict) and result.get("marker_id") == marker_id
+                ]
+                for phase_name, result in matching_phases:
+                    phase_complete = result.get("status") == "completed"
+                    checkpoint_complete = checkpoint_status == "complete"
+                    if phase_complete != checkpoint_complete:
+                        projection_status_errors.append(
+                            f"marker {marker_id!r} checkpoint={checkpoint_status!r} "
+                            f"does not match phase_results[{phase_name}].status={result.get('status')!r}"
+                        )
+
+            emission = raw_marker.get("emission_mapping")
+            if isinstance(emission, dict):
+                emission_status = emission.get("status")
+                required_fields: tuple[str, ...] = ()
+                if emission_status == "marker_split":
+                    required_fields = ("packet_path",)
+                elif emission_status == "emitted":
+                    required_fields = ("packet_path", "pr_number", "pr_url")
+                for required in required_fields:
+                    value = emission.get(required)
+                    if value is None or isinstance(value, str) and not value.strip():
+                        emission_mapping_errors.append(
+                            f"pr_marker_plan.markers[{index}].emission_mapping.{required}"
+                        )
+
+    return {
+        "completed_phase_pending_fields": completed_phase_pending_fields,
+        "projection_status_errors": projection_status_errors,
+        "checkpoint_evidence_errors": checkpoint_evidence_errors,
+        "emission_mapping_errors": emission_mapping_errors,
+    }
+
+
 def build_report(workflow: Path, state: Path) -> dict[str, Any]:
     workflow_text = read_text(workflow)
     state_data = load_state(state)
@@ -190,7 +284,8 @@ def build_report(workflow: Path, state: Path) -> dict[str, Any]:
 
     workflow_result = validate_workflow(workflow_text)
     state_result = validate_state(plan_steps)
-    problems = {**workflow_result, **state_result}
+    projection_result = validate_projection_integrity(state_data, plan_steps)
+    problems = {**workflow_result, **state_result, **projection_result}
     passed = all(not values for values in problems.values())
 
     return {
