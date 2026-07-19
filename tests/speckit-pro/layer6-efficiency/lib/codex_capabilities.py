@@ -1686,9 +1686,34 @@ def _delete_single_link_private_file(
                 raise ValueError("deletion completion record bytes disagree after persistence failure")
         finally:
             os.close(record_descriptor)
-        if _stable_directory_identity(os.fstat(deletion_directory_descriptor))[:3] != deletion_directory_identity[:3]:
-            raise ValueError("deletion completion record directory changed after publication")
+        after_pathname = os.stat(
+            completion_filename,
+            dir_fd=deletion_directory_descriptor,
+            follow_symlinks=False,
+        )
+        if _stable_file_identity(after_pathname) != _stable_file_identity(after):
+            raise ValueError("deletion completion record pathname changed during verification")
+        _assert_private_directory_current(
+            deletion_directory, deletion_directory_descriptor, deletion_directory_identity,
+        )
+        canonical_pathname = os.stat(deletion_directory / completion_filename, follow_symlinks=False)
+        if _stable_file_identity(canonical_pathname) != _stable_file_identity(after_pathname):
+            raise ValueError("deletion completion record is not reachable through its canonical path")
         os.fsync(deletion_directory_descriptor)
+        _assert_private_directory_current(
+            deletion_directory, deletion_directory_descriptor, deletion_directory_identity,
+        )
+        final_pathname = os.stat(
+            completion_filename,
+            dir_fd=deletion_directory_descriptor,
+            follow_symlinks=False,
+        )
+        final_canonical = os.stat(deletion_directory / completion_filename, follow_symlinks=False)
+        if (
+            _stable_file_identity(final_pathname) != _stable_file_identity(after_pathname)
+            or _stable_file_identity(final_canonical) != _stable_file_identity(after_pathname)
+        ):
+            raise ValueError("deletion completion record changed after directory synchronization")
         return True
 
     try:
@@ -1913,7 +1938,7 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
             "retention_record_digests": record_digests,
             "deletion_intent_digest": intent_digest,
             "delete_after": deadline_text,
-            "deleted_at": intent_record["deletion_started_at"],
+            "deleted_at": as_of,
         }
         directory, directory_identity = _private_record_directory(raw, DELETION_RECORDS_DIR, raw_identity)
         record_digest = _delete_single_link_private_file(

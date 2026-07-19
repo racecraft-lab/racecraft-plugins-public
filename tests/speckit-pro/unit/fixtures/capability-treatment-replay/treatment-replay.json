@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
-  "treatment_contract_digest": "sha256:6be186638b12a57a93f00bf820ae8aa016a8fa33c0e52a90820833601d4ce71a",
-  "telemetry_profile_id": "sha256:4fd9007697c86aae277099d12d37339379a0f19ed58de95ce1b939cdd918aeb3",
+  "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
+  "telemetry_profile_id": "sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb",
   "telemetry_profile": [
     {
       "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
@@ -1104,28 +1104,7 @@
       "mutation_class": "repository_write"
     }
   ],
-  "qualification_evidence_registry": [
-    {
-      "qualification_evidence_id": "sha256:0dfd224a4d4b17ae8e69d08985c9160d6266ee72a2dd10de8fe98d724e5f6917",
-      "authority_kind": "owned_external",
-      "owner_spec_id": "G56R-003",
-      "destination_candidate_route_id": "G56R-001-CR-PHASE-EXECUTOR-GPT55",
-      "destination_agent_contract_id": "G56R-001-AC-PHASE-EXECUTOR",
-      "destination_named_agent": "phase-executor",
-      "qualification_status": "prequalified",
-      "evidence_digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
-    },
-    {
-      "qualification_evidence_id": "sha256:179c2a52c4e5a32673e0848368fe21ee5afa5ceb76ba21101a0c934b206f12b7",
-      "authority_kind": "synthetic_fixture",
-      "owner_spec_id": "G56R-002",
-      "destination_candidate_route_id": "G56R-001-CR-PHASE-EXECUTOR-GPT55",
-      "destination_agent_contract_id": "G56R-001-AC-PHASE-EXECUTOR",
-      "destination_named_agent": "phase-executor",
-      "qualification_status": "prequalified",
-      "evidence_digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-    }
-  ],
+  "qualification_evidence_registry": [],
   "route_resolutions": [
     {
       "route_resolution_id": "sha256:ecb38fa0ad362c65bb2e6909688ab59653963d329737db37e19bfc58ff10397c",

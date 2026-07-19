@@ -223,10 +223,14 @@ PII_RE = re.compile(
 HOSTNAME_RE = re.compile(
     r"(?i)(?<![A-Z0-9_-])(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.){2,}[A-Z]{2,63}(?![A-Z0-9_-])"
 )
+INTERNAL_HOSTNAME_RE = re.compile(
+    r"(?i)(?<![A-Z0-9_-])[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.(?:internal|local|lan|corp|home)(?![A-Z0-9_-])"
+)
 IP_CANDIDATE_RE = re.compile(
     r"(?<![A-Za-z0-9])(?:[0-9]{1,3}(?:\.[0-9]{1,3}){3}|[0-9A-Fa-f]*:[0-9A-Fa-f:]+)(?![A-Za-z0-9])"
 )
 SANITIZED_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:+-]{0,127}$")
+SPEC_ID_RE = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
 FALLBACK_REASON_CODES = frozenset({"preferred_unavailable", "capability_mismatch", "policy_fallback"})
 REROUTE_REASON_CODES = frozenset({
     "service_capacity", "service_policy", "service_availability",
@@ -552,6 +556,7 @@ def _validate_retained_strings(value: object, label: str = "treatment bundle") -
             or UNLABELED_CREDENTIAL_RE.search(value)
             or PII_RE.search(value)
             or HOSTNAME_RE.search(value)
+            or INTERNAL_HOSTNAME_RE.search(value)
             or _contains_ip_address(value)
         )
         if forbidden:
@@ -839,8 +844,10 @@ def _validate_qualification(value: object) -> dict:
     _digest(owner["qualification_evidence_id"], "qualification evidence ID")
     if owner["authority_kind"] not in {"synthetic_fixture", "owned_external"}:
         raise ValueError("qualification authority kind is invalid")
-    for field in ("owner_spec_id", "destination_candidate_route_id", "destination_agent_contract_id", "destination_named_agent"):
-        _text(owner[field], f"qualification {field}")
+    if not isinstance(owner["owner_spec_id"], str) or SPEC_ID_RE.fullmatch(owner["owner_spec_id"]) is None:
+        raise ValueError("qualification owner spec ID is invalid")
+    for field in ("destination_candidate_route_id", "destination_agent_contract_id", "destination_named_agent"):
+        _identifier(owner[field], f"qualification {field}")
     if owner["qualification_status"] != "prequalified":
         raise ValueError("qualification status is invalid")
     _digest(owner["evidence_digest"], "qualification evidence digest")
@@ -1463,6 +1470,13 @@ def _validate_treatment_bundle(
         rows = [validator(item) for item in value[field]]; keys = [item[identity] for item in rows]
         if len(keys) != len(set(keys)): raise ValueError(f"duplicate {label} owner")
         owners[field] = dict(zip(keys, rows))
+    for owner in owners["qualification_evidence_registry"].values():
+        canonical = canonical_routes.get(owner["destination_candidate_route_id"])
+        if canonical is None or (
+            owner["destination_agent_contract_id"] != canonical["agent_contract_id"]
+            or owner["destination_named_agent"] != canonical["named_agent"]
+        ):
+            raise ValueError("qualification evidence destination is not bound to the canonical manifest")
     traces = value["treatment_traces"]
     if not isinstance(traces, list) or not traces: raise ValueError("treatment traces must be a non-empty array")
     profile_clients = {item["client_identity_id"] for item in profile}
@@ -1483,6 +1497,14 @@ def _validate_treatment_bundle(
     referenced_policies = {item["objective_binding"]["experiment_policy_id"] for item in validated}
     if referenced_policies != set(owners["experiment_policy_registry"]):
         raise ValueError("experiment policy owner registry contains a missing or orphan owner")
+    referenced_qualifications = {
+        assessment["prequalification_evidence_id"]
+        for item in validated
+        for assessment in item["reroute_destination_assessments"]
+        if assessment["prequalification_evidence_id"] is not None
+    }
+    if referenced_qualifications != set(owners["qualification_evidence_registry"]):
+        raise ValueError("qualification evidence owner registry contains a missing or orphan owner")
     _validate_trace_graph(validated)
     provenance = _closed(value["fixture_provenance"], {
         "schema_version", "sanitizer_version", "raw_evidence_digest", "expected_dispositions",

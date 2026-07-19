@@ -214,8 +214,8 @@ python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py validate-f
   --manifest docs/ai/research/codex-agent-route-candidate-manifest.json \
   --freeze docs/ai/research/codex-g56r-002-executable-candidate-freeze.json \
   --predecessor-freeze /tmp/g56r-002-capability-predecessor-freeze.json \
-  --expected-telemetry-profile-id sha256:4fd9007697c86aae277099d12d37339379a0f19ed58de95ce1b939cdd918aeb3 \
-  --expected-treatment-contract-digest sha256:6be186638b12a57a93f00bf820ae8aa016a8fa33c0e52a90820833601d4ce71a
+  --expected-telemetry-profile-id sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb \
+  --expected-treatment-contract-digest sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199
 ```
 
 The predecessor path must be the trusted, canonical US1 artifact retained by

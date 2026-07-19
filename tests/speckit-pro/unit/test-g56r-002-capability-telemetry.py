@@ -151,6 +151,20 @@ def make_two_trace_graph_bundle(source: dict) -> dict:
     return rebind_treatment_owners(bundle)
 
 
+def qualification_owner(authority_kind: str) -> dict:
+    owner = {
+        "authority_kind": authority_kind,
+        "owner_spec_id": "G56R-003" if authority_kind == "owned_external" else "G56R-002",
+        "destination_candidate_route_id": "G56R-001-CR-PHASE-EXECUTOR-GPT55",
+        "destination_agent_contract_id": "G56R-001-AC-PHASE-EXECUTOR",
+        "destination_named_agent": "phase-executor",
+        "qualification_status": "prequalified",
+        "evidence_digest": "sha256:" + ("d" if authority_kind == "owned_external" else "e") * 64,
+    }
+    owner["qualification_evidence_id"] = treatment.content_id(owner, "qualification_evidence_id")
+    return owner
+
+
 def trusted_external_qualification(bundle: dict) -> dict[str, dict]:
     owner = next(item for item in bundle["qualification_evidence_registry"] if item["authority_kind"] == "owned_external")
     return {owner["qualification_evidence_id"]: copy.deepcopy(owner)}
@@ -227,8 +241,8 @@ def declare_reroute_result(bundle: dict, trusted: dict[str, dict] | None = None)
 
 def make_treatment_reroute_case(bundle: dict, authority: str) -> dict:
     trace = bundle["treatment_traces"][0]
-    owned = next(item for item in bundle["qualification_evidence_registry"] if item["authority_kind"] == "owned_external")
-    synthetic = next(item for item in bundle["qualification_evidence_registry"] if item["authority_kind"] == "synthetic_fixture")
+    owned = qualification_owner("owned_external")
+    synthetic = qualification_owner("synthetic_fixture")
     event = {
         "surface": trace["surface"], "threadId": trace["context"]["threadId"], "turnId": trace["context"]["turnId"],
         "fromModel": trace["requested_model"], "toModel": "gpt-5.5", "reason": "fixture_service_reroute",
@@ -236,6 +250,7 @@ def make_treatment_reroute_case(bundle: dict, authority: str) -> dict:
     }
     event["event_id"] = treatment.digest(event)
     selected = synthetic if authority == "synthetic_fixture" else owned
+    bundle["qualification_evidence_registry"] = [] if authority == "missing" else [selected]
     assessment = {
         "event_id": event["event_id"], "destination_candidate_route_id": selected["destination_candidate_route_id"],
         "destination_agent_contract_id": selected["destination_agent_contract_id"],
@@ -1368,13 +1383,24 @@ class CapabilityContractTests(unittest.TestCase):
                 raise SimulatedProcessTermination
             with mock.patch.object(
                 capabilities, "_retention_now",
-                return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+                return_value=capabilities._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
             ), mock.patch.object(
                 capabilities, "_delete_single_link_private_file",
                 side_effect=terminate_after_committed_deletion,
             ), self.assertRaises(SimulatedProcessTermination):
                 capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
-            self.assertEqual(len(list((raw_root / capabilities.DELETION_RECORDS_DIR).iterdir())), 1)
+            deletion_record_paths = list((raw_root / capabilities.DELETION_RECORDS_DIR).iterdir())
+            self.assertEqual(len(deletion_record_paths), 1)
+            committed_deletion = json.loads(deletion_record_paths[0].read_text())
+            self.assertEqual(committed_deletion["deleted_at"], "2026-08-16T00:00:00Z")
+            committed_intent_path = (
+                raw_root / capabilities.DELETION_INTENTS_DIR
+                / f"{committed_deletion['deletion_intent_digest'].removeprefix('sha256:')}.json"
+            )
+            self.assertEqual(
+                json.loads(committed_intent_path.read_text())["deletion_started_at"],
+                "2026-08-15T00:00:00Z",
+            )
             self.assertEqual(sum(
                 (raw_root / f"{item.removeprefix('sha256:')}.json").is_file()
                 for item in retained_report["retained_evidence_digests"]
@@ -1396,7 +1422,7 @@ class CapabilityContractTests(unittest.TestCase):
                 original_assert_private_directory(path, descriptor, expected_identity)
             with mock.patch.object(
                 capabilities, "_retention_now",
-                return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+                return_value=capabilities._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
             ), mock.patch.object(
                 capabilities, "_assert_private_directory_current",
                 side_effect=change_mode_after_second_completion,
@@ -1412,7 +1438,7 @@ class CapabilityContractTests(unittest.TestCase):
             original_os_fsync = capabilities.os.fsync
             with mock.patch.object(
                 capabilities, "_retention_now",
-                return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+                return_value=capabilities._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
             ), mock.patch.object(
                 capabilities, "_write_private_bytes_at", wraps=original_private_write,
             ) as private_write, mock.patch.object(capabilities.os, "fsync", wraps=original_os_fsync) as fsync:
@@ -1427,20 +1453,20 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(len(cleanup_report["deletion_record_digests"]), 4)
             with mock.patch.object(
                 capabilities, "_retention_now",
-                return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+                return_value=capabilities._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
             ):
                 self.assertEqual(capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True), cleanup_report)
             cleanup_output = raw_root / "cleanup-report.json"
             with mock.patch.object(
                 capabilities, "_retention_now",
-                return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+                return_value=capabilities._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
             ):
                 self.assertEqual(capabilities.main([
                     "retention", "--raw-evidence-root", str(raw_root),
                     "--mode", "cleanup", "--output", str(cleanup_output),
                 ]), 0)
             self.assertEqual(json.loads(cleanup_output.read_text()), cleanup_report)
-            verified_deleted = capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-15T00:00:00Z")
+            verified_deleted = capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-16T00:00:00Z")
             self.assertEqual(verified_deleted["deleted_evidence_digests"], cleanup_report["deleted_evidence_digests"])
             with self.assertRaisesRegex(ValueError, "precedes the deletion"):
                 capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-14T23:59:59Z")
@@ -2329,6 +2355,19 @@ class TreatmentContractTests(unittest.TestCase):
         orphan_policy["experiment_policy_registry"].append(policy)
         with self.assertRaisesRegex(ValueError, "experiment policy owner registry"):
             treatment.validate_treatment_bundle(self.rebound(orphan_policy))
+        orphan_qualification = copy.deepcopy(self.bundle)
+        orphan_qualification["qualification_evidence_registry"] = [qualification_owner("owned_external")]
+        with self.assertRaisesRegex(ValueError, "qualification evidence owner registry"):
+            treatment.validate_treatment_bundle(self.rebound(orphan_qualification))
+        private_qualification = copy.deepcopy(self.bundle)
+        private_owner = qualification_owner("owned_external")
+        private_owner["destination_named_agent"] = "native-account-123"
+        private_owner["qualification_evidence_id"] = treatment.content_id(
+            private_owner, "qualification_evidence_id",
+        )
+        private_qualification["qualification_evidence_registry"] = [private_owner]
+        with self.assertRaisesRegex(ValueError, "canonical manifest"):
+            treatment.validate_treatment_bundle(self.rebound(private_qualification))
         duplicate_trace = copy.deepcopy(self.bundle)
         duplicate_trace["treatment_traces"].append(copy.deepcopy(duplicate_trace["treatment_traces"][0]))
         self.assert_bundle_invalid(duplicate_trace)
@@ -2478,7 +2517,10 @@ class TreatmentContractTests(unittest.TestCase):
             lambda bundle: bundle["telemetry_profile"][0]["observation_state_rules"],
             lambda bundle: bundle["controlled_environments"][0],
             lambda bundle: bundle["experiment_policy_registry"][0],
-            lambda bundle: bundle["qualification_evidence_registry"][0],
+            lambda bundle: (
+                bundle["qualification_evidence_registry"].append(qualification_owner("synthetic_fixture"))
+                or bundle["qualification_evidence_registry"][0]
+            ),
             lambda bundle: bundle["route_resolutions"][0],
             lambda bundle: bundle["treatment_traces"][0],
             lambda bundle: bundle["treatment_traces"][0]["objective_binding"],
@@ -2511,7 +2553,7 @@ class TreatmentContractTests(unittest.TestCase):
     def test_reroutes_are_separate_read_only_and_fail_closed(self) -> None:
         resolver_before_reroute = copy.deepcopy(self.bundle["route_resolutions"][0])
         approved = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
-        trusted = trusted_external_qualification(self.bundle)
+        trusted = trusted_external_qualification(approved)
         declare_reroute_result(approved, trusted)
         result = treatment.validate_treatment_bundle(
             self.rebound(approved), trusted_qualification_evidence=trusted
@@ -2529,7 +2571,7 @@ class TreatmentContractTests(unittest.TestCase):
         ambiguous["treatment_traces"][0]["service_reroute_events"].append(second_event)
         reroute_observation = next(item for item in ambiguous["treatment_traces"][0]["observations"] if item["field_path"] == "reroute.events")
         reroute_observation["value"].append(copy.deepcopy(second_event))
-        trusted = trusted_external_qualification(self.bundle)
+        trusted = trusted_external_qualification(ambiguous)
         declare_reroute_result(ambiguous, trusted)
         failed = treatment.validate_treatment_bundle(
             self.rebound(ambiguous), trusted_qualification_evidence=trusted
@@ -2557,6 +2599,7 @@ class TreatmentContractTests(unittest.TestCase):
         for record, field, value in association_mutations:
             with self.subTest(record=record, field=field):
                 bundle = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
+                trusted = trusted_external_qualification(bundle)
                 trace = bundle["treatment_traces"][0]
                 targets = {
                     "event": trace["service_reroute_events"][0],
@@ -2577,18 +2620,17 @@ class TreatmentContractTests(unittest.TestCase):
                     assessment = trace["reroute_destination_assessments"][0]
                     if assessment["prequalification_evidence_id"] == old_id:
                         assessment["prequalification_evidence_id"] = owner["qualification_evidence_id"]
-                if record == "qualification" and field in {"qualification_status", "owner_spec_id", "evidence_digest"}:
+                if record == "qualification":
                     self.assert_bundle_invalid(bundle)
                 else:
                     self.assert_reroute_hard_failed(
-                        bundle, trusted=trusted_external_qualification(self.bundle)
+                        bundle, trusted=trusted
                     )
 
         missing_assessment = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
         missing_assessment["treatment_traces"][0]["reroute_destination_assessments"] = []
-        self.assert_reroute_hard_failed(
-            missing_assessment, trusted=trusted_external_qualification(self.bundle)
-        )
+        missing_assessment["qualification_evidence_registry"] = []
+        self.assert_reroute_hard_failed(missing_assessment)
         duplicate_assessment = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
         duplicate_assessment["treatment_traces"][0]["reroute_destination_assessments"].append(
             copy.deepcopy(duplicate_assessment["treatment_traces"][0]["reroute_destination_assessments"][0])
@@ -2619,13 +2661,12 @@ class TreatmentContractTests(unittest.TestCase):
         self.assertEqual(assessment["prequalification_evidence_id"], old_id)
         assessment["prequalification_evidence_id"] = owner["qualification_evidence_id"]
         forged_owner["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
-        self.assert_reroute_hard_failed(
-            forged_owner, trusted=trusted_external_qualification(self.bundle)
-        )
+        self.assert_bundle_invalid(forged_owner)
 
         for field, value in (("fromModel", "unrelated-model"), ("toModel", "unrelated-model")):
             with self.subTest(event_field=field):
                 bundle = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
+                trusted = trusted_external_qualification(bundle)
                 trace = bundle["treatment_traces"][0]
                 event = trace["service_reroute_events"][0]
                 event[field] = value
@@ -2637,7 +2678,7 @@ class TreatmentContractTests(unittest.TestCase):
                     next(item for item in trace["observations"] if item["field_path"] == "assignment.supported_effective_model")["value"] = value
                 bundle["fixture_provenance"]["expected_dispositions"][0]["treatment_disposition"] = "hard_fail"
                 self.assert_reroute_hard_failed(
-                    bundle, trusted=trusted_external_qualification(self.bundle)
+                    bundle, trusted=trusted
                 )
 
     def test_reroute_output_preserves_detailed_and_normalized_reasons(self) -> None:
@@ -2805,6 +2846,7 @@ class TreatmentContractTests(unittest.TestCase):
             "AKIA" + "A" * 16,
             "123-45-6789",
             "internal-build.customer.example",
+            "builder.internal",
             "192.0.2.42",
             "2001:db8::42",
         ):

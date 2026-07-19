@@ -62,6 +62,14 @@
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
     },
+    "sanitizedIdentifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:+-]{0,127}$"
+    },
+    "specId": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]*-[0-9]{3}$"
+    },
     "sanitizedEvidenceRef": {
       "type": "string",
       "pattern": "^fixture://[a-z0-9][a-z0-9._-]*(?:/[a-z0-9][a-z0-9._-]*)*$"
@@ -730,10 +738,10 @@
       "properties": {
         "qualification_evidence_id": {"$ref": "#/$defs/digest"},
         "authority_kind": {"enum": ["synthetic_fixture", "owned_external"]},
-        "owner_spec_id": {"type": "string", "minLength": 1},
-        "destination_candidate_route_id": {"type": "string", "minLength": 1},
-        "destination_agent_contract_id": {"type": "string", "minLength": 1},
-        "destination_named_agent": {"type": "string", "minLength": 1},
+        "owner_spec_id": {"$ref": "#/$defs/specId"},
+        "destination_candidate_route_id": {"$ref": "#/$defs/sanitizedIdentifier"},
+        "destination_agent_contract_id": {"$ref": "#/$defs/sanitizedIdentifier"},
+        "destination_named_agent": {"$ref": "#/$defs/sanitizedIdentifier"},
         "qualification_status": {"const": "prequalified"},
         "evidence_digest": {"$ref": "#/$defs/digest"}
       }
