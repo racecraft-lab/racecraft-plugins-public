@@ -24,6 +24,8 @@
     "publication_predecessor_lineage": "pass",
     "pending_retention_recovery": "pass",
     "pending_retention_non_extension": "pass",
+    "crash_released_retention_lock": "pass",
+    "post_unlink_completion_proof": "pass",
     "per_client_profile_authority": "pass",
     "descriptor_relative_file_loading": "pass",
     "descriptor_relative_private_inputs": "pass",

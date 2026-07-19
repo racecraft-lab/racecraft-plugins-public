@@ -1262,6 +1262,9 @@ class CapabilityContractTests(unittest.TestCase):
                     )
                 with self.assertRaisesRegex(ValueError, "already in progress"):
                     capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-14T23:59:59Z")
+            retention_lock_path = raw_root / capabilities.RETENTION_LOCK_FILE
+            self.assertTrue(retention_lock_path.is_file())
+            self.assertEqual(stat.S_IMODE(retention_lock_path.stat().st_mode), 0o600)
             retained_report = capabilities.reconcile_raw_evidence_retention(
                 raw_root, ROOT, "2026-08-14T23:59:59Z",
             )
@@ -1357,6 +1360,25 @@ class CapabilityContractTests(unittest.TestCase):
                 (raw_root / f"{item.removeprefix('sha256:')}.json").is_file()
                 for item in retained_report["retained_evidence_digests"]
             ))
+            original_delete = capabilities._delete_single_link_private_file
+            class SimulatedProcessTermination(BaseException):
+                pass
+            def terminate_after_committed_deletion(*args: object, **kwargs: object) -> None:
+                original_delete(*args, **kwargs)
+                raise SimulatedProcessTermination
+            with mock.patch.object(
+                capabilities, "_retention_now",
+                return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+            ), mock.patch.object(
+                capabilities, "_delete_single_link_private_file",
+                side_effect=terminate_after_committed_deletion,
+            ), self.assertRaises(SimulatedProcessTermination):
+                capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
+            self.assertEqual(len(list((raw_root / capabilities.DELETION_RECORDS_DIR).iterdir())), 1)
+            self.assertEqual(sum(
+                (raw_root / f"{item.removeprefix('sha256:')}.json").is_file()
+                for item in retained_report["retained_evidence_digests"]
+            ), 3)
             original_os_fsync = capabilities.os.fsync
             with mock.patch.object(
                 capabilities, "_retention_now",
@@ -1682,6 +1704,18 @@ class CapabilityContractTests(unittest.TestCase):
             target.chmod(0o600)
             raw, raw_identity = capabilities._validated_raw_evidence_root_binding(raw_root, ROOT)
             target = raw / target.name
+            deletion_directory, deletion_directory_identity = capabilities._private_record_directory(
+                raw, capabilities.DELETION_RECORDS_DIR, raw_identity,
+            )
+            deletion_record = {
+                "schema_version": "raw-evidence-deletion.v2",
+                "completion_proof": "post-unlink-nlink-zero-rehashed-v1",
+                "raw_evidence_digest": evidence_digest,
+                "retention_record_digests": [capabilities.digest(b"retention record")],
+                "deletion_intent_digest": capabilities.digest(b"deletion intent"),
+                "delete_after": "2026-08-15T00:00:00Z",
+                "deleted_at": "2026-08-15T00:00:00Z",
+            }
             moved_root = private_parent / "validated-raw"
             original_unlink = capabilities._unlink_descriptor_relative
 
@@ -1696,10 +1730,18 @@ class CapabilityContractTests(unittest.TestCase):
             ), self.assertRaisesRegex(ValueError, "parent changed"):
                 capabilities._delete_single_link_private_file(
                     target, raw, evidence_digest, raw_identity,
+                    deletion_record=deletion_record,
+                    deletion_directory=deletion_directory,
+                    deletion_directory_identity=deletion_directory_identity,
+                    repository_root=ROOT,
                 )
             self.assertFalse(target.exists())
             self.assertEqual(list(raw_root.iterdir()), [])
-            self.assertEqual(list(moved_root.iterdir()), [])
+            self.assertEqual(
+                [path.name for path in moved_root.iterdir()],
+                [capabilities.DELETION_RECORDS_DIR],
+            )
+            self.assertEqual(list((moved_root / capabilities.DELETION_RECORDS_DIR).iterdir()), [])
 
 
 class TreatmentContractTests(unittest.TestCase):

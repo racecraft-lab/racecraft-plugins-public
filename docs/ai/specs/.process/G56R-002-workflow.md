@@ -873,7 +873,7 @@ For every task:
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
-| 2 - Treatment contracts | Review Pending | 10 | 50/50 focused tests, route ownership and effective-route semantics, parent-owner joins, field-specific privacy, malformed-predecessor normalization, and independent repeat review pending |
+| 2 - Treatment contracts | Review Pending | 10 | 50/50 focused tests, route and parent ownership, field-specific privacy, crash-safe retention/deletion recovery, malformed-predecessor normalization, and independent repeat review pending |
 | 3 - Synthetic replay | Blocked | 0 | T026-T030 remain ordered after a clean US2 repeat-review verdict |
 | Polish and validation | Pending | 0 | Not started |
 
@@ -904,7 +904,8 @@ For every task:
   checkpoint with only T026-T030 replay growth reserved.
 - Review: REPEAT PENDING after direct canonical validation of the actual
   successor, external treatment-binding and predecessor-lineage authority,
-  bounded non-extending recovery of pending retention records, executable
+  bounded non-extending recovery of pending retention records, crash-released
+  advisory locking, durable post-unlink completion proof, executable
   schema/runtime parity, descriptor-relative private inputs, post-unlink
   hard-link and digest proof, blocking hard-link race preservation, exact declared
   treatment-result validation, single-snapshot schema, canonical manifest authority,
@@ -933,7 +934,7 @@ For every task:
 | Feature spec | `sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56` |
 | Plan-declared scope | `sha256:35d4122bd719ba1512da85fdeead0c990d598591b33af7c3ed38947cea1aaf9e` |
 | Tasks | `sha256:4b78765419fc0f5d3fafdeefb2b78c19890cf7a02bc74c5bf128e21c97457867` |
-| Reviewability evidence | `sha256:e30d11161c89090e8669b1b65f57e7bae37b6c613c0e4588e5596e700f1b7938` |
+| Reviewability evidence | `sha256:7f6276a26779a441dc378a18f045d41879510a39bbf8d7f99380a46e90fc9bc6` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |

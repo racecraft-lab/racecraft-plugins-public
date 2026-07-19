@@ -37,7 +37,7 @@ RETENTION_RECORDS_DIR = "retention-records"
 DELETION_RECORDS_DIR = "deletion-records"
 PUBLICATION_RECEIPTS_DIR = "publication-receipts"
 DELETION_INTENTS_DIR = "deletion-intents"
-RETENTION_LOCK_DIR = ".retention-lock"
+RETENTION_LOCK_FILE = ".retention-lock"
 HAS_DESCRIPTOR_RELATIVE_IO = os.open in os.supports_dir_fd and os.stat in os.supports_dir_fd
 ERROR_TERMINALS = ("timeout", "output_cap_exceeded", "launch_error", "transport_error", "authentication_error", "rate_limited", "malformed_response", "explicit_rejection", "service_reroute", "ambiguous_error")
 _UNSET = object()
@@ -1398,9 +1398,14 @@ def _validate_retention_record(record_digest, record):
 
 
 def _validate_deletion_record(record_digest, record):
-    keys = {"schema_version", "raw_evidence_digest", "retention_record_digests", "deletion_intent_digest", "delete_after", "deleted_at"}
-    if not isinstance(record, dict) or set(record) != keys or record["schema_version"] != "raw-evidence-deletion.v1":
-        raise ValueError("raw evidence deletion record must use the closed v1 shape")
+    keys = {"schema_version", "completion_proof", "raw_evidence_digest", "retention_record_digests", "deletion_intent_digest", "delete_after", "deleted_at"}
+    if (
+        not isinstance(record, dict)
+        or set(record) != keys
+        or record["schema_version"] != "raw-evidence-deletion.v2"
+        or record["completion_proof"] != "post-unlink-nlink-zero-rehashed-v1"
+    ):
+        raise ValueError("raw evidence deletion record must use the closed v2 completion-proof shape")
     _need_digest(record_digest, "deletion record digest"); _need_digest(record["raw_evidence_digest"], "raw_evidence_digest")
     refs = record["retention_record_digests"]
     if not isinstance(refs, list) or not refs or refs != sorted(set(refs)):
@@ -1459,26 +1464,41 @@ def _freeze_raw_evidence_digests(freeze):
 def _retention_lock(raw, expected_raw_identity):
     if not HAS_DESCRIPTOR_RELATIVE_IO:
         raise ValueError("raw evidence retention requires descriptor-relative locking")
+    try:
+        import fcntl
+    except ImportError as error:
+        raise ValueError("raw evidence retention requires advisory file locking") from error
     raw_descriptor = _private_directory_descriptor(raw, expected_raw_identity)
-    created = False
+    lock_descriptor = None
     try:
         try:
-            os.mkdir(RETENTION_LOCK_DIR, mode=0o700, dir_fd=raw_descriptor)
-            created = True
-        except FileExistsError as error:
-            raise ValueError("raw evidence retention operation is already in progress") from error
-        metadata = os.stat(RETENTION_LOCK_DIR, dir_fd=raw_descriptor, follow_symlinks=False)
-        if not stat.S_ISDIR(metadata.st_mode) or stat.S_IMODE(metadata.st_mode) != 0o700:
+            lock_descriptor = os.open(
+                RETENTION_LOCK_FILE,
+                os.O_RDWR | os.O_CREAT | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+                0o600,
+                dir_fd=raw_descriptor,
+            )
+        except OSError as error:
+            raise ValueError("raw evidence retention lock is invalid") from error
+        metadata = os.fstat(lock_descriptor)
+        if not stat.S_ISREG(metadata.st_mode) or stat.S_IMODE(metadata.st_mode) != 0o600 or metadata.st_nlink != 1:
             raise ValueError("raw evidence retention lock is invalid")
+        try:
+            fcntl.flock(lock_descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as error:
+            raise ValueError("raw evidence retention operation is already in progress") from error
+        os.fsync(lock_descriptor)
         os.fsync(raw_descriptor)
         _assert_private_directory_current(raw, raw_descriptor, expected_raw_identity)
         yield
     finally:
         try:
-            if created:
+            if lock_descriptor is not None:
                 _assert_private_directory_current(raw, raw_descriptor, expected_raw_identity)
-                os.rmdir(RETENTION_LOCK_DIR, dir_fd=raw_descriptor)
-                os.fsync(raw_descriptor)
+                try:
+                    fcntl.flock(lock_descriptor, fcntl.LOCK_UN)
+                finally:
+                    os.close(lock_descriptor)
         finally:
             os.close(raw_descriptor)
 
@@ -1604,17 +1624,29 @@ def _descriptor_entry_exists(parent_descriptor, filename):
         return False
 
 
-def _delete_single_link_private_file(target, raw, expected_digest, expected_raw_identity):
+def _delete_single_link_private_file(
+    target, raw, expected_digest, expected_raw_identity, *,
+    deletion_record, deletion_directory, deletion_directory_identity, repository_root,
+):
     if not HAS_DESCRIPTOR_RELATIVE_IO:
         raise ValueError("raw evidence deletion requires descriptor-relative path validation")
     filename = Path(target).name
     if Path(target).parent != raw:
         raise ValueError("raw evidence deletion target must be an immediate child of its private root")
+    deletion_payload = canonical_bytes(deletion_record) + b"\n"
+    deletion_record_digest = digest(deletion_payload)
+    _validate_deletion_record(deletion_record_digest, deletion_record)
+    if deletion_record["raw_evidence_digest"] != expected_digest or Path(deletion_directory).parent != raw:
+        raise ValueError("deletion completion record does not bind its private evidence target")
     nofollow = getattr(os, "O_NOFOLLOW", 0)
     directory_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow | getattr(os, "O_DIRECTORY", 0)
     file_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
-    parent_descriptor = descriptor = None; verified_payload = None
+    parent_descriptor = descriptor = deletion_directory_descriptor = None
+    verified_payload = None; deletion_proved = False
     try:
+        deletion_directory_descriptor = _private_directory_descriptor(
+            deletion_directory, deletion_directory_identity,
+        )
         raw_before = os.stat(raw, follow_symlinks=False)
         parent_descriptor = os.open(raw, directory_flags)
         raw_open = os.fstat(parent_descriptor)
@@ -1671,16 +1703,37 @@ def _delete_single_link_private_file(target, raw, expected_digest, expected_raw_
         raw_after = os.stat(raw, follow_symlinks=False)
         if _stable_directory_identity(raw_after) != _stable_directory_identity(raw_open):
             raise ValueError("raw evidence root changed during deletion")
-        return payload
+        deletion_proved = True
+        stored_digest = _store_private_record(
+            deletion_directory, deletion_record, repository_root, deletion_directory_identity,
+        )
+        if stored_digest != deletion_record_digest:
+            raise ValueError("deletion completion record identity changed while it was stored")
+        os.fsync(deletion_directory_descriptor)
+        _assert_private_directory_current(
+            deletion_directory, deletion_directory_descriptor, deletion_directory_identity,
+        )
+        return deletion_record_digest
     except _BlockingHardLinkRace:
         raise
     except OSError as error:
         if verified_payload is not None:
+            completion_target = deletion_directory / f"{deletion_record_digest.removeprefix('sha256:')}.json"
+            if completion_target.exists():
+                _, retained = read_content_addressed_private_file(
+                    completion_target, repository_root, "deletion completion record",
+                )
+                if retained != deletion_payload:
+                    raise ValueError("deletion completion record bytes disagree after persistence failure") from error
+                os.fsync(deletion_directory_descriptor)
+                return deletion_record_digest
             _write_private_bytes_at(
                 parent_descriptor, raw, filename, verified_payload,
                 append_only=not _descriptor_entry_exists(parent_descriptor, filename),
                 expected_parent_identity=expected_raw_identity,
             )
+            if deletion_proved:
+                raise
         raise ValueError("expired raw evidence could not be deleted safely") from error
     except ValueError:
         if verified_payload is not None:
@@ -1693,6 +1746,7 @@ def _delete_single_link_private_file(target, raw, expected_digest, expected_raw_
     finally:
         if descriptor is not None: os.close(descriptor)
         if parent_descriptor is not None: os.close(parent_descriptor)
+        if deletion_directory_descriptor is not None: os.close(deletion_directory_descriptor)
 
 
 def reconcile_raw_evidence_retention(raw_evidence_root, repository_root, as_of=None, *, apply=False):
@@ -1782,8 +1836,7 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
             if current < _parsed_timestamp(record["deleted_at"], "deletion timestamp"):
                 raise ValueError("retention as-of timestamp precedes the deletion record")
             if target.exists():
-                if not apply: raise ValueError("deletion record still has retained raw evidence bytes")
-                _delete_single_link_private_file(target, raw, evidence_digest, raw_identity)
+                raise ValueError("deletion completion record still has retained raw evidence bytes")
             deleted.append(evidence_digest); deletion_digests.append(record_digest); continue
         if intent is not None and not target.exists():
             raise ValueError("raw evidence deletion was interrupted before link-count completion proof")
@@ -1810,27 +1863,23 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
             intent_by_evidence[evidence_digest] = (intent_record, intent_digest)
         else:
             intent_record, intent_digest = intent
-        retained_payload = _delete_single_link_private_file(target, raw, evidence_digest, raw_identity)
         deletion_record = {
-            "schema_version": "raw-evidence-deletion.v1",
+            "schema_version": "raw-evidence-deletion.v2",
+            "completion_proof": "post-unlink-nlink-zero-rehashed-v1",
             "raw_evidence_digest": evidence_digest,
             "retention_record_digests": record_digests,
             "deletion_intent_digest": intent_digest,
             "delete_after": deadline_text,
-            "deleted_at": as_of,
+            "deleted_at": intent_record["deletion_started_at"],
         }
         directory, directory_identity = _private_record_directory(raw, DELETION_RECORDS_DIR, raw_identity)
-        try:
-            record_digest = _store_private_record(
-                directory, deletion_record, repository_root, directory_identity,
-            )
-        except Exception:
-            if not target.exists():
-                _write_private_bytes(
-                    target, retained_payload, append_only=True,
-                    expected_parent_identity=raw_identity,
-                )
-            raise
+        record_digest = _delete_single_link_private_file(
+            target, raw, evidence_digest, raw_identity,
+            deletion_record=deletion_record,
+            deletion_directory=directory,
+            deletion_directory_identity=directory_identity,
+            repository_root=repository_root,
+        )
         deleted.append(evidence_digest); deletion_digests.append(record_digest)
     validate_raw_evidence_root(raw, repository_root)
     return {
