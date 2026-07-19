@@ -65,7 +65,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Tasks | `$speckit-tasks` | Complete | 39 TDD-first tasks; G5 passed |
 | Analyze | `$speckit-analyze` | Complete | Nine findings remediated; G6 passed |
 | Confidence Gate | G6.5 | Complete | Advisory score 0.99 passed the 0.90 threshold |
-| Implement | `$speckit-implement` | In Progress | T016-T025 are rebound to the current capability freeze; independent repeat review is pending and replay is blocked |
+| Implement | `$speckit-implement` | In Progress | T016-T025 completed at the clean US2 checkpoint; T026-T030 synthetic replay is in progress |
 | Post | Post-Implementation | Pending | Complete verification, reviewability, PR, remediation, and retrospective work |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
