@@ -8,8 +8,8 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 4103,
-  "actual_nonblank_noncomment_lines": 3740,
+  "actual_source_lines": 4214,
+  "actual_nonblank_noncomment_lines": 3843,
   "production_modules": 2,
   "primary_surface": "harness/adapters",
   "module_measurements": {
@@ -18,8 +18,8 @@
       "nonblank_noncomment_lines": 2243
     },
     "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
-      "source_lines": 1633,
-      "nonblank_noncomment_lines": 1497
+      "source_lines": 1744,
+      "nonblank_noncomment_lines": 1600
     }
   },
   "correctness_checks": {
@@ -27,6 +27,7 @@
     "published_successor_validation": "actual artifact passes canonical treatment-aware validation",
     "json_schema_instance_validation": "pass with runtime parity corpus",
     "bounded_file_and_cli_isolation": "pass",
+    "windows_safe_offline_replay": "pass",
     "six_id_and_trace_graph_integrity": "pass",
     "external_treatment_binding_authority": "pass",
     "publication_predecessor_lineage": "pass",

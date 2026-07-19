@@ -28,6 +28,7 @@ MAX_COLLECTION_ITEMS = 10_000
 MAX_TOTAL_NODES = 100_000
 MAX_RETAINED_STRING_LENGTH = 8_192
 HAS_DESCRIPTOR_RELATIVE_IO = os.open in os.supports_dir_fd and os.stat in os.supports_dir_fd
+IS_WINDOWS = os.name == "nt"
 
 SCHEMA_VERSION = "1.0.0"
 SURFACES = ("app_server", "cli", "interactive_picker")
@@ -285,6 +286,116 @@ def _stable_directory_identity(metadata: os.stat_result) -> tuple[int, ...]:
     return metadata.st_dev, metadata.st_ino, stat.S_IFMT(metadata.st_mode), stat.S_IMODE(metadata.st_mode)
 
 
+def _normalized_path(path: Path) -> str:
+    return os.path.normcase(os.path.abspath(path))
+
+
+def _windows_final_path_from_descriptor(descriptor: int) -> Path:
+    try:
+        import ctypes
+        import msvcrt
+        from ctypes import wintypes
+    except ImportError as exc:  # pragma: no cover - available on supported Windows Python
+        raise ValueError("bounded input cannot inspect its Windows file handle") from exc
+    get_final_path = ctypes.WinDLL("kernel32", use_last_error=True).GetFinalPathNameByHandleW
+    get_final_path.argtypes = [wintypes.HANDLE, wintypes.LPWSTR, wintypes.DWORD, wintypes.DWORD]
+    get_final_path.restype = wintypes.DWORD
+    handle = wintypes.HANDLE(msvcrt.get_osfhandle(descriptor))
+    required = get_final_path(handle, None, 0, 0)
+    if required == 0:
+        raise ValueError("bounded input cannot resolve its Windows file handle")
+    buffer = ctypes.create_unicode_buffer(required + 1)
+    written = get_final_path(handle, buffer, len(buffer), 0)
+    if written == 0 or written >= len(buffer):
+        raise ValueError("bounded input cannot resolve its Windows file handle")
+    value = buffer.value
+    if value.startswith("\\\\?\\UNC\\"):
+        value = "\\\\" + value[8:]
+    elif value.startswith("\\\\?\\"):
+        value = value[4:]
+    return Path(value)
+
+
+def _handle_bound_path_snapshot(source: Path, root: Path, relative: Path) -> tuple[
+    tuple[int, ...], list[tuple[int, ...]], os.stat_result, Path,
+]:
+    try:
+        canonical_root = root.resolve(strict=True)
+        canonical_source = source.resolve(strict=True)
+        if _normalized_path(canonical_root) != _normalized_path(root):
+            raise ValueError("bounded input approved root must be a real directory")
+        if _normalized_path(canonical_source) != _normalized_path(source):
+            raise ValueError("bounded input path components must be real directories and the file non-symlink")
+        canonical_source.relative_to(canonical_root)
+        root_metadata = os.stat(root, follow_symlinks=False)
+        if not stat.S_ISDIR(root_metadata.st_mode):
+            raise ValueError("bounded input approved root must be a real directory")
+        directory_identities: list[tuple[int, ...]] = []
+        current = root
+        for component in relative.parts[:-1]:
+            current /= component
+            metadata = os.stat(current, follow_symlinks=False)
+            if not stat.S_ISDIR(metadata.st_mode) or stat.S_ISLNK(metadata.st_mode):
+                raise ValueError("bounded input path components must be real directories")
+            directory_identities.append(_stable_directory_identity(metadata))
+        pathname = os.stat(source, follow_symlinks=False)
+    except OSError as exc:
+        raise ValueError("bounded input must be a readable regular non-symlink file") from exc
+    except ValueError:
+        raise
+    if not stat.S_ISREG(pathname.st_mode) or stat.S_ISLNK(pathname.st_mode) or pathname.st_nlink != 1:
+        raise ValueError("bounded input must be a single-link regular non-symlink file")
+    return _stable_directory_identity(root_metadata), directory_identities, pathname, canonical_source
+
+
+def _read_bounded_regular_file_by_handle(source: Path, root: Path, relative: Path, max_bytes: int) -> bytes:
+    root_identity, directory_identities, pathname_before, canonical_source = _handle_bound_path_snapshot(
+        source, root, relative,
+    )
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOINHERIT", 0)
+    descriptor: int | None = None
+    try:
+        descriptor = os.open(source, flags)
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
+            raise ValueError("bounded input must be a single-link regular file")
+        if _stable_file_identity(pathname_before) != _stable_file_identity(before):
+            raise ValueError("bounded input pathname changed before it was read")
+        if IS_WINDOWS and _normalized_path(_windows_final_path_from_descriptor(descriptor)) != _normalized_path(canonical_source):
+            raise ValueError("bounded input Windows handle escaped its approved path")
+        if before.st_size > max_bytes:
+            raise ValueError("bounded input exceeds the maximum size")
+        chunks: list[bytes] = []
+        total = 0
+        while True:
+            chunk = os.read(descriptor, min(1024 * 1024, max_bytes + 1 - total))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            total += len(chunk)
+            if total > max_bytes:
+                raise ValueError("bounded input exceeds the maximum size")
+        after = os.fstat(descriptor)
+        if _stable_file_identity(after) != _stable_file_identity(before) or total != after.st_size:
+            raise ValueError("bounded input changed while it was being read")
+        current_root, current_directories, current_pathname, current_canonical = _handle_bound_path_snapshot(
+            source, root, relative,
+        )
+        if (
+            current_root != root_identity
+            or current_directories != directory_identities
+            or _stable_file_identity(current_pathname) != _stable_file_identity(after)
+            or _normalized_path(current_canonical) != _normalized_path(canonical_source)
+        ):
+            raise ValueError("bounded input path changed while it was being read")
+        return b"".join(chunks)
+    except OSError as exc:
+        raise ValueError("bounded input must be a readable regular non-symlink file") from exc
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+
 def _read_bounded_regular_file(path: Path, *, allowed_root: Path = ROOT,
                                max_bytes: int = MAX_INPUT_BYTES) -> bytes:
     source = Path(os.path.abspath(path)); root = Path(os.path.abspath(allowed_root))
@@ -295,7 +406,7 @@ def _read_bounded_regular_file(path: Path, *, allowed_root: Path = ROOT,
     if not relative.parts:
         raise ValueError("bounded input must name a file below its approved root")
     if not HAS_DESCRIPTOR_RELATIVE_IO:
-        raise ValueError("bounded input requires descriptor-relative path validation")
+        return _read_bounded_regular_file_by_handle(source, root, relative, max_bytes)
     nofollow = getattr(os, "O_NOFOLLOW", 0)
     directory_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow | getattr(os, "O_DIRECTORY", 0)
     file_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow

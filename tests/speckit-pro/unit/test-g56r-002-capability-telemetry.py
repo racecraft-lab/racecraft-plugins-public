@@ -2754,8 +2754,35 @@ class TreatmentContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=ROOT) as directory:
             root = Path(directory); source = root / "source.json"; source.write_text("{}", encoding="utf-8")
             self.assertEqual(treatment._read_bounded_regular_file(source, allowed_root=root), b"{}")
+            with mock.patch.object(treatment, "HAS_DESCRIPTOR_RELATIVE_IO", False):
+                self.assertEqual(treatment._read_bounded_regular_file(source, allowed_root=root), b"{}")
+                self.assertEqual(
+                    treatment.validate_treatment_bundle(copy.deepcopy(self.bundle))["telemetry_profile_id"],
+                    self.bundle["telemetry_profile_id"],
+                )
+            with mock.patch.object(
+                treatment, "HAS_DESCRIPTOR_RELATIVE_IO", False,
+            ), mock.patch.object(
+                treatment, "IS_WINDOWS", True,
+            ), mock.patch.object(
+                treatment, "_windows_final_path_from_descriptor", return_value=source.resolve(),
+            ) as final_path:
+                self.assertEqual(treatment._read_bounded_regular_file(source, allowed_root=root), b"{}")
+                self.assertEqual(final_path.call_count, 1)
+            with mock.patch.object(
+                treatment, "HAS_DESCRIPTOR_RELATIVE_IO", False,
+            ), mock.patch.object(
+                treatment, "IS_WINDOWS", True,
+            ), mock.patch.object(
+                treatment, "_windows_final_path_from_descriptor", return_value=root.parent / "escaped.json",
+            ), self.assertRaisesRegex(ValueError, "Windows handle escaped"):
+                treatment._read_bounded_regular_file(source, allowed_root=root)
             symlink = root / "symlink.json"; symlink.symlink_to(source)
             with self.assertRaisesRegex(ValueError, "regular non-symlink"):
+                treatment._read_bounded_regular_file(symlink, allowed_root=root)
+            with mock.patch.object(
+                treatment, "HAS_DESCRIPTOR_RELATIVE_IO", False,
+            ), self.assertRaisesRegex(ValueError, "non-symlink"):
                 treatment._read_bounded_regular_file(symlink, allowed_root=root)
             real_directory = root / "real"; real_directory.mkdir()
             nested_source = real_directory / "nested.json"; nested_source.write_text("{}", encoding="utf-8")
@@ -2793,6 +2820,25 @@ class TreatmentContractTests(unittest.TestCase):
                 ValueError, "directory changed while it was being read"
             ):
                 treatment._read_bounded_regular_file(race_source, allowed_root=root)
+            fallback_source = root / "fallback-race.json"
+            fallback_source.write_text("{}", encoding="utf-8")
+            fallback_original = root / "fallback-original.json"
+            fallback_swapped = False
+
+            def replace_fallback_file(path: object, flags: int, *args: object, **kwargs: object) -> int:
+                nonlocal fallback_swapped
+                if Path(path) == fallback_source and not fallback_swapped:
+                    fallback_swapped = True
+                    fallback_source.rename(fallback_original)
+                    fallback_source.write_text('{"replacement":true}', encoding="utf-8")
+                return original_open(path, flags, *args, **kwargs)
+
+            with mock.patch.object(
+                treatment, "HAS_DESCRIPTOR_RELATIVE_IO", False,
+            ), mock.patch.object(
+                treatment.os, "open", side_effect=replace_fallback_file,
+            ), self.assertRaisesRegex(ValueError, "pathname changed before it was read"):
+                treatment._read_bounded_regular_file(fallback_source, allowed_root=root)
         with tempfile.TemporaryDirectory() as directory:
             external = Path(directory) / "fixture.json"; external.write_text("{}", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "approved root"):

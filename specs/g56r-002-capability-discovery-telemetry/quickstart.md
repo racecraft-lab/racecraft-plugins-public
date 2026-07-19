@@ -237,7 +237,11 @@ python3 tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py valida
 
 The US2 validator checks the closed telemetry inventory, six-ID joins, typed
 null states, configured-route proof, resource/lifecycle fields, and separate
-resolver/service-reroute records. The digest-manifest replay command and its
+resolver/service-reroute records. This offline repository command is supported
+on macOS, Linux, and Windows: it uses descriptor-relative traversal where
+available and verifies the final Windows file handle against the approved
+repository path. Operator-only raw-evidence commands remain POSIX-only. The
+digest-manifest replay command and its
 two-pass normalized-output comparison are T026-T030 work and remain unavailable
 until the US3 replay increment is implemented.
 

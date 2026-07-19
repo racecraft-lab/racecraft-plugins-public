@@ -8,8 +8,8 @@ predeclared dispositions.
 
 **Reviewability**: The capability adapter triggered the 400-LOC boundary and is
 now 2,470 source lines (2,243 nonblank, non-comment) after finding-driven US2
-retention remediation. The treatment validator is 1,633 source lines (1,497
-nonblank, non-comment), for 4,103 source lines (3,740 nonblank, non-comment)
+retention remediation. The treatment validator is 1,744 source lines (1,600
+nonblank, non-comment), for 4,214 source lines (3,843 nonblank, non-comment)
 across the two production modules in the current US2 marker. T001-T015 is retained under a typed
 size-only `no_safe_boundary` marker because its source, matrix, tuple, and
 freeze integrity checks cannot be separated safely. That exception permits no

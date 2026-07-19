@@ -16,16 +16,16 @@
   "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
   "reviewability_measurements": {
     "production_modules": 2,
-    "source_lines": 4103,
-    "nonblank_noncomment_lines": 3740,
+    "source_lines": 4214,
+    "nonblank_noncomment_lines": 3843,
     "modules": {
       "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {
         "source_lines": 2470,
         "nonblank_noncomment_lines": 2243
       },
       "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
-        "source_lines": 1633,
-        "nonblank_noncomment_lines": 1497
+        "source_lines": 1744,
+        "nonblank_noncomment_lines": 1600
       }
     }
   },
@@ -34,6 +34,7 @@
     "published_successor_validation": "actual artifact passes canonical treatment-aware validation",
     "json_schema_instance_validation": "pass with runtime parity corpus",
     "bounded_file_and_cli_isolation": "pass",
+    "windows_safe_offline_replay": "pass",
     "six_id_and_trace_graph_integrity": "pass",
     "external_treatment_binding_authority": "pass",
     "publication_predecessor_lineage": "pass",
@@ -81,7 +82,7 @@
     "independent_critical_high_review": "repeat_pending"
   },
   "source_fingerprint_status": "current",
-  "tasks_sha": "sha256:f6c694fd44a5250163afd34a9b3f4b56c79ade8df3828b051961f3823dddbe45",
+  "tasks_sha": "sha256:dd9f8f33a70aac48cf73ddf058c6fc6a1d0e82422dabfd35611c2cff783ec5e4",
   "completed_at": null,
   "review_iteration_started_at": "2026-07-18T20:59:20Z"
 }

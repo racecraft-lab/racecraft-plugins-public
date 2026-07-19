@@ -899,18 +899,19 @@ For every task:
 - Telemetry profile: `sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb`
 - Treatment contract: `sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199`
 - Superseded marker checkpoint: `c47c9d31fd1288e86f0707601078e4f03e2b12e5`
-- Reviewability: size-only `block` at 4,103 source / 3,740 nonblank,
+- Reviewability: size-only `block` at 4,214 source / 3,843 nonblank,
   non-comment lines across the current two production modules
   (`codex_capabilities.py`: 2,470 / 2,243; `treatment_trace_schema.py`:
-  1,633 / 1,497); typed `no_safe_boundary` exception honored for the
+  1,744 / 1,600); typed `no_safe_boundary` exception honored for the
   checkpoint with only T026-T030 replay growth reserved.
 - Review: REPEAT PENDING after direct canonical validation of the actual
   successor, external treatment-binding and predecessor-lineage authority,
   bounded non-extending recovery of pending retention records, crash-released
   advisory locking with unconditional failure-path release, durable post-unlink
   completion proof without contradictory byte restoration, executable
-  schema/runtime parity, descriptor-relative private inputs, post-unlink
-  hard-link and digest proof, blocking hard-link race preservation, exact declared
+  schema/runtime parity, descriptor-relative private inputs, Windows
+  handle-bound offline replay, post-unlink hard-link and digest proof, blocking
+  hard-link race preservation, exact declared
   treatment-result validation, single-snapshot schema, canonical manifest authority,
   manifest-bound preferred, attempted, assigned, and supported effective routes,
   same-agent route ownership, resolver-supported effective-route semantics,
@@ -935,9 +936,9 @@ For every task:
 | Fingerprint input | SHA-256 |
 |---|---|
 | Feature spec | `sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56` |
-| Plan-declared scope | `sha256:a0f3e247c35db6fc19d734f0d02f56ce63b9c7493d4851b302189332952e5042` |
-| Tasks | `sha256:f6c694fd44a5250163afd34a9b3f4b56c79ade8df3828b051961f3823dddbe45` |
-| Reviewability evidence | `sha256:f8e51aa8579242f00b6a7bcb1e41f8cc72169ef08e17fbdf416173d797020b47` |
+| Plan-declared scope | `sha256:514e4ad5bf39dcab31c760ecd8e6db2556239509e630b69694b44c22ee684b2b` |
+| Tasks | `sha256:dd9f8f33a70aac48cf73ddf058c6fc6a1d0e82422dabfd35611c2cff783ec5e4` |
+| Reviewability evidence | `sha256:863b2f79499492c43d97d47bf1ddd26729f61aa3651b1872749304c1238be42d` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
@@ -948,7 +949,7 @@ For every task:
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
-  lines; the current US2 marker is 4,103 / 3,740 across its two modules against
+  lines; the current US2 marker is 4,214 / 3,843 across its two modules against
   the 400-LOC boundary. Both use typed size-only exceptions.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.
