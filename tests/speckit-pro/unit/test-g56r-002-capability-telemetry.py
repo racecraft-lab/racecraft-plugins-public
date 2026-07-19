@@ -3422,6 +3422,102 @@ class TreatmentReplayTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "duplicate JSON key"):
                 treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
 
+    def test_replay_requires_declared_manifest_authority(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            alternate_manifest = repository_root / "caller-resealed-manifest.json"
+            shutil.copyfile(manifest_path, alternate_manifest)
+            with self.assertRaisesRegex(ValueError, "declared repository manifest"):
+                treatment.replay_fixture(
+                    fixture, alternate_manifest, repeat=2, repository_root=repository_root,
+                )
+
+    def test_replay_bounded_loading_rejects_oversized_links_fifos_and_swaps(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            manifest_path.write_bytes(b" " * (treatment.MAX_INPUT_BYTES + 1))
+            with self.assertRaisesRegex(ValueError, "maximum size"):
+                treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+            link_target = repository_root / "capability-copy.json"
+            shutil.copyfile(capability_path, link_target)
+            capability_path.unlink()
+            capability_path.symlink_to(link_target)
+            with self.assertRaisesRegex(ValueError, "regular non-symlink"):
+                treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+
+        if hasattr(os, "mkfifo"):
+            with tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+                capability_path.unlink()
+                os.mkfifo(capability_path)
+                with self.assertRaisesRegex(ValueError, "regular non-symlink"):
+                    treatment.replay_fixture(
+                        fixture, manifest_path, repeat=2, repository_root=repository_root,
+                    )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            original_fixture = fixture.with_name("treatment-replay-original.json")
+            original_open = treatment.os.open
+            swapped = False
+
+            def replace_fixture(path: object, flags: int, *args: object, **kwargs: object) -> int:
+                nonlocal swapped
+                descriptor_relative_target = path == fixture.name and kwargs.get("dir_fd") is not None
+                handle_target = Path(path) == fixture if kwargs.get("dir_fd") is None else False
+                if (descriptor_relative_target or handle_target) and not swapped:
+                    swapped = True
+                    fixture.rename(original_fixture)
+                    fixture.write_bytes(b"{}\n")
+                return original_open(path, flags, *args, **kwargs)
+
+            with mock.patch.object(
+                treatment.os, "open", side_effect=replace_fixture,
+            ), self.assertRaisesRegex(ValueError, "pathname changed before it was read"):
+                treatment.replay_fixture(
+                    fixture, manifest_path, repeat=2, repository_root=repository_root,
+                )
+
+    def test_replay_cli_does_not_disclose_duplicate_keys(self) -> None:
+        secret = "password=SensitiveToken123"
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary).resolve()
+            module_path = repository_root / TREATMENT_MODULE_PATH.relative_to(ROOT)
+            module_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(TREATMENT_MODULE_PATH, module_path)
+            fixture_path = repository_root / TREATMENT_FIXTURE_PATH.relative_to(ROOT)
+            fixture_path.parent.mkdir(parents=True, exist_ok=True)
+            fixture_path.write_bytes(b"{}\n")
+            manifest_path = repository_root / DIGEST_MANIFEST_PATH.relative_to(ROOT)
+            manifest_path.write_bytes(
+                f'{{"{secret}":1,"{secret}":2}}\n'.encode("utf-8")
+            )
+            completed = subprocess.run(
+                [
+                    sys.executable, str(module_path), "replay",
+                    "--fixture", str(fixture_path),
+                    "--digest-manifest", str(manifest_path),
+                    "--repeat", "2",
+                ],
+                cwd=repository_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assertIn("duplicate JSON key", completed.stderr)
+            self.assertNotIn(secret, completed.stderr)
+
     def test_rehashed_undeclared_fixture_field_fails_after_digest_verification(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             repository_root = Path(temporary)
@@ -3515,6 +3611,30 @@ class TreatmentReplayTests(unittest.TestCase):
                 self.write_and_reseal(repository_root, FIXTURE_PATH, capability)
                 with self.assertRaisesRegex(ValueError, message):
                     treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+
+        tuple_mutations = {
+            "candidate_route_id": "ROUTE-FOREIGN",
+            "agent_contract_id": "AGENT-FOREIGN",
+            "named_agent": "foreign-agent",
+            "model": "foreign-model",
+            "effort": "low",
+        }
+        for field, value in tuple_mutations.items():
+            with self.subTest(linked_tuple_field=field), tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+                capability = json.loads(capability_path.read_bytes())
+                case = next(
+                    item for item in capability["surface_cases"]
+                    if item["case_id"] == "partial_surface"
+                )
+                case["source_tuples"][0][field] = value
+                self.write_and_reseal(repository_root, FIXTURE_PATH, capability)
+                with self.assertRaisesRegex(ValueError, "source tuple does not match treatment trace"):
+                    treatment.replay_fixture(
+                        fixture, manifest_path, repeat=2, repository_root=repository_root,
+                    )
 
     def test_replay_is_canonical_offline_and_exactly_two_passes(self) -> None:
         for path in (FIXTURE_PATH, TREATMENT_FIXTURE_PATH, DIGEST_MANIFEST_PATH):

@@ -33,6 +33,7 @@ IS_WINDOWS = os.name == "nt"
 
 CAPABILITY_FIXTURE_PATH = "tests/speckit-pro/unit/fixtures/capability-treatment-replay/capability-matrix.json"
 TREATMENT_FIXTURE_PATH = "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"
+REPLAY_DIGEST_MANIFEST_PATH = "tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json"
 REPLAY_FIXTURE_PATHS = (CAPABILITY_FIXTURE_PATH, TREATMENT_FIXTURE_PATH)
 REPLAY_CASES = (
     ("TRACE-SUCCESS", "success", "unknown", ("effective_treatment_unknown",), None),
@@ -1699,7 +1700,7 @@ def _unique_json(raw: bytes, label: str) -> object:
         value: dict[str, object] = {}
         for key, item in pairs:
             if key in value:
-                raise ValueError(f"{label} contains a duplicate JSON key: {key}")
+                raise ValueError(f"{label} contains a duplicate JSON key")
             value[key] = item
         return value
 
@@ -1733,8 +1734,8 @@ def _manifest_entries(value: object) -> list[dict[str, str]]:
 
 
 def _fixture_target(repository_root: Path, fixture_path: str) -> Path:
-    root = repository_root.resolve()
-    target = (root / fixture_path).resolve()
+    root = Path(os.path.abspath(repository_root))
+    target = Path(os.path.abspath(root / fixture_path))
     if not target.is_relative_to(root):
         raise ValueError("fixture path escapes the repository root")
     return target
@@ -1833,7 +1834,19 @@ def _validate_capability_fixture(value: object) -> dict[str, dict]:
     return cases
 
 
-def _validate_replay_capability_semantics(case_id: str, case: dict) -> None:
+def _validate_replay_capability_semantics(case_id: str, case: dict, trace: dict) -> None:
+    expected_source = {
+        "candidate_route_id": trace["objective_binding"]["candidate_route_id"],
+        "agent_contract_id": trace["objective_binding"]["agent_contract_id"],
+        "named_agent": trace["named_agent"],
+        "model": trace["requested_model"],
+        "effort": trace["requested_effort"],
+    }
+    if len(case["source_tuples"]) != 1 or any(
+        case["source_tuples"][0][field] != value
+        for field, value in expected_source.items()
+    ):
+        raise ValueError("linked replay capability source tuple does not match treatment trace")
     sources = {(item["model"], item["effort"]) for item in case["source_tuples"]}
     if not sources or any(not item["source_admitted"] for item in case["source_tuples"]):
         raise ValueError("replay capability source case must contain admitted source tuples")
@@ -1945,7 +1958,7 @@ def _normalized_replay_pass(capability_fixture: object, treatment_fixture: objec
             source = capability_cases[capability_case_id]
             if source["expected_validity"] != "valid" or source["expected_decision"] != "excluded":
                 raise ValueError("replay capability source case does not preserve its predeclared exclusion")
-            _validate_replay_capability_semantics(capability_case_id, source)
+            _validate_replay_capability_semantics(capability_case_id, source, trace)
         normalized.append({
             "execution_trace_id": case_id,
             "case_class": case_class,
@@ -1963,15 +1976,22 @@ def replay_fixture(fixture_path: Path, digest_manifest_path: Path, *, repeat: in
                    repository_root: Path = ROOT) -> dict:
     if isinstance(repeat, bool) or not isinstance(repeat, int) or repeat != 2:
         raise ValueError("replay repeat must be exactly 2")
-    manifest_raw = digest_manifest_path.read_bytes()
+    manifest_target = _fixture_target(repository_root, REPLAY_DIGEST_MANIFEST_PATH)
+    treatment_target = _fixture_target(repository_root, TREATMENT_FIXTURE_PATH)
+    if _normalized_path(digest_manifest_path) != _normalized_path(manifest_target):
+        raise ValueError("replay digest manifest argument must select the declared repository manifest")
+    if _normalized_path(fixture_path) != _normalized_path(treatment_target):
+        raise ValueError("replay fixture argument must select the declared treatment fixture")
+    manifest_raw = _read_bounded_regular_file(manifest_target, allowed_root=repository_root)
     manifest = _unique_json(manifest_raw, "fixture digest manifest")
     if manifest_raw != canonical_fixture_bytes(manifest):
         raise ValueError("fixture digest manifest must use canonical compact UTF-8 JSON plus LF")
     entries = _manifest_entries(manifest)
     targets = {entry["fixture_path"]: _fixture_target(repository_root, entry["fixture_path"]) for entry in entries}
-    if fixture_path.resolve() != targets[TREATMENT_FIXTURE_PATH]:
-        raise ValueError("replay fixture argument must select the declared treatment fixture")
-    raw_fixtures = {path: targets[path].read_bytes() for path in REPLAY_FIXTURE_PATHS}
+    raw_fixtures = {
+        path: _read_bounded_regular_file(targets[path], allowed_root=repository_root)
+        for path in REPLAY_FIXTURE_PATHS
+    }
     for entry in entries:
         if digest(raw_fixtures[entry["fixture_path"]]) != entry["fixture_digest"]:
             raise ValueError(f"fixture digest mismatch before parsing: {entry['fixture_path']}")
