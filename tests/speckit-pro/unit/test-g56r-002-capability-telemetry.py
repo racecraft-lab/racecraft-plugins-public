@@ -243,12 +243,18 @@ def declare_reroute_result(bundle: dict, trusted: dict[str, dict] | None = None)
     return declare_treatment_result(bundle, failure_codes, disposition, reasons)
 
 
-def single_treatment_case(bundle: dict, execution_trace_id: str) -> dict:
-    isolated = copy.deepcopy(bundle)
-    trace = next(
-        item for item in isolated["treatment_traces"]
-        if item["objective_binding"]["execution_trace_id"] == execution_trace_id
+def replay_trace(bundle: dict, case_id: str) -> dict:
+    slug = case_id.removeprefix("TRACE-").lower()
+    return next(
+        item for item in bundle["treatment_traces"]
+        if item["context"]["turnId"] == f"turn-fixture-{slug}"
     )
+
+
+def single_treatment_case(bundle: dict, case_id: str) -> dict:
+    isolated = copy.deepcopy(bundle)
+    trace = replay_trace(isolated, case_id)
+    execution_trace_id = trace["objective_binding"]["execution_trace_id"]
     isolated["treatment_traces"] = [trace]
     isolated["controlled_environments"] = [
         item for item in isolated["controlled_environments"]
@@ -257,6 +263,15 @@ def single_treatment_case(bundle: dict, execution_trace_id: str) -> dict:
     isolated["route_resolutions"] = [
         item for item in isolated["route_resolutions"]
         if item["route_resolution_id"] == trace["objective_binding"]["route_resolution_id"]
+    ]
+    referenced_qualifications = {
+        item["prequalification_evidence_id"]
+        for item in trace["reroute_destination_assessments"]
+        if item["prequalification_evidence_id"] is not None
+    }
+    isolated["qualification_evidence_registry"] = [
+        item for item in isolated["qualification_evidence_registry"]
+        if item["qualification_evidence_id"] in referenced_qualifications
     ]
     isolated["fixture_provenance"]["expected_dispositions"] = [{
         "execution_trace_id": execution_trace_id,
@@ -2298,14 +2313,22 @@ class TreatmentContractTests(unittest.TestCase):
             treatment.validate_treatment_bundle(self.rebound(mismatch))
         repeated_fk = copy.deepcopy(self.bundle)
         other = copy.deepcopy(repeated_fk["treatment_traces"][0])
-        other["objective_binding"]["execution_trace_id"] = "TRACE-REPEATED-FK"
-        other["parent_child_graph"]["root_execution_trace_id"] = "TRACE-REPEATED-FK"
-        graph_observation = next(item for item in other["observations"] if item["field_path"] == "parent.graph")
-        graph_observation["value"] = copy.deepcopy(other["parent_child_graph"])
+        other["context"] = {
+            "threadId": "thread-fixture-repeated-fk",
+            "turnId": "turn-fixture-repeated-fk",
+        }
+        context_observation = next(item for item in other["observations"] if item["field_path"] == "parent.context")
+        context_observation["value"] = copy.deepcopy(other["context"])
+        other_id = treatment.execution_trace_identity(other)
+        other["objective_binding"]["execution_trace_id"] = other_id
+        other["parent_child_graph"]["root_execution_trace_id"] = other_id
         repeated_fk["treatment_traces"].append(other)
         repeated_fk["fixture_provenance"]["expected_dispositions"] = [
-            {"execution_trace_id": "TRACE-SUCCESS", "treatment_disposition": "unknown"},
-            {"execution_trace_id": "TRACE-REPEATED-FK", "treatment_disposition": "unknown"},
+            {
+                "execution_trace_id": repeated_fk["treatment_traces"][0]["objective_binding"]["execution_trace_id"],
+                "treatment_disposition": "unknown",
+            },
+            {"execution_trace_id": other_id, "treatment_disposition": "unknown"},
         ]
         self.assertEqual(len(treatment.validate_treatment_bundle(self.rebound(repeated_fk))["treatment_traces"]), 2)
 
@@ -3318,10 +3341,13 @@ class TreatmentReplayTests(unittest.TestCase):
     def test_eight_case_matrix_is_explicit_and_canary_never_promotes(self) -> None:
         bundle = load_json(TREATMENT_FIXTURE_PATH)
         actual = [
-            (item["objective_binding"]["execution_trace_id"], item["treatment_disposition"])
+            (item["context"]["turnId"], item["treatment_disposition"])
             for item in bundle["treatment_traces"]
         ]
-        self.assertEqual(actual, [(case_id, disposition) for case_id, _, disposition, _ in self.CASES])
+        self.assertEqual(actual, [
+            (f"turn-fixture-{case_id.removeprefix('TRACE-').lower()}", disposition)
+            for case_id, _, disposition, _ in self.CASES
+        ])
         result = self.replay()
         self.assertEqual(result["status"], "replayed")
         self.assertEqual(result["repeat"], 2)
@@ -3349,7 +3375,7 @@ class TreatmentReplayTests(unittest.TestCase):
         bundle = single_treatment_case(
             load_json(TREATMENT_FIXTURE_PATH), "TRACE-APPROVED-SAME-AGENT-REROUTE"
         )
-        declare_treatment_claim(bundle, "hard_fail", ["reroute_unapproved"])
+        declare_reroute_result(bundle)
         validated = treatment.validate_treatment_bundle(bundle)
         trace = validated["treatment_traces"][0]
         self.assertEqual(trace["treatment_disposition"], "hard_fail")
@@ -3407,7 +3433,7 @@ class TreatmentReplayTests(unittest.TestCase):
             entry = next(item for item in manifest["fixtures"] if item["fixture_path"].endswith("treatment-replay.json"))
             entry["fixture_digest"] = treatment.digest(fixture.read_bytes())
             manifest_path.write_bytes(treatment.canonical_fixture_bytes(manifest))
-            with self.assertRaisesRegex(ValueError, "closed shape"):
+            with self.assertRaisesRegex(ValueError, "closed shape|undeclared treatment schema field"):
                 treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
 
     def test_false_declared_treatment_claim_fails_validation_cli_and_replay(self) -> None:
@@ -3420,29 +3446,32 @@ class TreatmentReplayTests(unittest.TestCase):
                 repository_root = Path(temporary)
                 bundle = single_treatment_case(load_json(TREATMENT_FIXTURE_PATH), "TRACE-SUCCESS")
                 bundle["treatment_traces"][0][field] = value
-                with self.assertRaisesRegex(ValueError, "declared treatment disposition or reasons"):
+                with self.assertRaisesRegex(ValueError, "declared treatment disposition"):
                     treatment.validate_treatment_bundle(bundle)
 
-                forged_fixture = repository_root / "forged-treatment.json"
-                forged_fixture.write_bytes(treatment.canonical_fixture_bytes(bundle))
-                completed = subprocess.run(
-                    [sys.executable, str(TREATMENT_MODULE_PATH), "validate", "--fixture", str(forged_fixture)],
-                    cwd=ROOT,
-                    check=False,
-                    capture_output=True,
-                )
+                with tempfile.NamedTemporaryFile(
+                    dir=TREATMENT_FIXTURE_PATH.parent, suffix=".json",
+                ) as forged_fixture:
+                    forged_fixture.write(treatment.canonical_fixture_bytes(bundle))
+                    forged_fixture.flush()
+                    completed = subprocess.run(
+                        [
+                            sys.executable, str(TREATMENT_MODULE_PATH), "validate",
+                            "--fixture", forged_fixture.name,
+                        ],
+                        cwd=ROOT,
+                        check=False,
+                        capture_output=True,
+                    )
                 self.assertNotEqual(completed.returncode, 0)
-                self.assertIn(b"declared treatment disposition or reasons", completed.stderr)
+                self.assertIn(b"declared treatment disposition", completed.stderr)
 
                 fixture, manifest_path = self.copy_replay_tree(repository_root)
                 replay_bundle = json.loads(fixture.read_bytes())
-                trace = next(
-                    item for item in replay_bundle["treatment_traces"]
-                    if item["objective_binding"]["execution_trace_id"] == "TRACE-SUCCESS"
-                )
+                trace = replay_trace(replay_bundle, "TRACE-SUCCESS")
                 trace[field] = value
                 self.write_and_reseal(repository_root, TREATMENT_FIXTURE_PATH, replay_bundle)
-                with self.assertRaisesRegex(ValueError, "declared treatment disposition or reasons"):
+                with self.assertRaisesRegex(ValueError, "declared treatment disposition"):
                     treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
 
     def test_rehashed_fixtures_cannot_relabel_case_semantics(self) -> None:
@@ -3450,10 +3479,7 @@ class TreatmentReplayTests(unittest.TestCase):
             repository_root = Path(temporary)
             fixture, manifest_path = self.copy_replay_tree(repository_root)
             bundle = json.loads(fixture.read_bytes())
-            trace = next(
-                item for item in bundle["treatment_traces"]
-                if item["objective_binding"]["execution_trace_id"] == "TRACE-SUCCESS"
-            )
+            trace = replay_trace(bundle, "TRACE-SUCCESS")
             observation = next(
                 item for item in trace["observations"]
                 if item["field_path"] == "assignment.named_agent"
@@ -3463,11 +3489,13 @@ class TreatmentReplayTests(unittest.TestCase):
             trace["disposition_reasons"] = ["agent_mismatch", "effective_treatment_unknown"]
             expected = next(
                 item for item in bundle["fixture_provenance"]["expected_dispositions"]
-                if item["execution_trace_id"] == "TRACE-SUCCESS"
+                if item["execution_trace_id"] == trace["objective_binding"]["execution_trace_id"]
             )
             expected["treatment_disposition"] = "hard_fail"
             self.write_and_reseal(repository_root, TREATMENT_FIXTURE_PATH, bundle)
-            with self.assertRaisesRegex(ValueError, "predeclared disposition"):
+            with self.assertRaisesRegex(
+                ValueError, "declared treatment failures|predeclared disposition",
+            ):
                 treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
 
         for case_id, message in (

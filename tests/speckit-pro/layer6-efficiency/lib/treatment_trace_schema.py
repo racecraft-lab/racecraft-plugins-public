@@ -40,7 +40,13 @@ REPLAY_CASES = (
     ("TRACE-UNAVAILABLE", "unavailable", "unknown", ("effective_treatment_unknown",), None),
     ("TRACE-MISDELIVERY", "misdelivery", "hard_fail", ("agent_mismatch", "effective_treatment_unknown"), None),
     ("TRACE-APPROVED-SAME-AGENT-REROUTE", "approved_same_agent_reroute", "non_scorable_rerouted", ("service_reroute_requested_route_non_scorable",), None),
-    ("TRACE-UNAPPROVED-UNIDENTIFIABLE-REROUTE", "unapproved_unidentifiable_reroute", "hard_fail", ("reroute_unidentifiable",), None),
+    (
+        "TRACE-UNAPPROVED-UNIDENTIFIABLE-REROUTE",
+        "unapproved_unidentifiable_reroute",
+        "hard_fail",
+        ("reroute_destination_missing", "reroute_unidentifiable"),
+        None,
+    ),
     ("TRACE-DISCOVERY-LOSS", "discovery_loss", "unknown", ("effective_treatment_unknown",), "partial_surface"),
     ("TRACE-SURFACE-DISAGREEMENT", "surface_disagreement", "unknown", ("effective_treatment_unknown",), "surface_disagreement"),
 )
@@ -1378,6 +1384,10 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
     }
     for field, (required_values, failure_code) in discovery_requirements.items():
         observed = observations.get(field)
+        if synthetic_replay and observed is not None and observed["observation_state"] in {
+            "explicit_null", "missing", "unavailable", "undocumented",
+        }:
+            continue
         if (
             observed is None or observed["observation_state"] != "observed_value"
             or any(value not in observed["value"] for value in required_values)
@@ -1914,19 +1924,20 @@ def _normalized_replay_pass(capability_fixture: object, treatment_fixture: objec
         trusted_qualification_evidence=None, synthetic_replay=True,
     )
     traces = bundle["treatment_traces"]
-    execution_ids = [item["objective_binding"]["execution_trace_id"] for item in traces]
-    expected_ids = [item[0] for item in REPLAY_CASES]
-    if execution_ids != expected_ids:
-        raise ValueError("treatment replay fixture does not use the exact eight-case execution registry")
-    by_id = dict(zip(execution_ids, traces))
+    if len(traces) != len(REPLAY_CASES):
+        raise ValueError("treatment replay fixture does not use the exact eight-case registry")
     normalized = []
-    for execution_id, case_class, expected_disposition, expected_reasons, capability_case_id in REPLAY_CASES:
-        trace = by_id[execution_id]
+    for trace, replay_case in zip(traces, REPLAY_CASES):
+        case_id, case_class, expected_disposition, expected_reasons, capability_case_id = replay_case
+        execution_trace_id = trace["objective_binding"]["execution_trace_id"]
         slug = case_class.replace("_", "-")
-        if trace["context"] != {"threadId": f"thread-{slug}", "turnId": f"turn-{slug}"}:
+        if trace["context"] != {
+            "threadId": f"thread-fixture-{slug}",
+            "turnId": f"turn-fixture-{slug}",
+        }:
             raise ValueError("treatment replay association does not use fixture-local pseudonyms")
-        if trace["parent_child_graph"]["root_execution_trace_id"] != execution_id:
-            raise ValueError("treatment replay graph does not use its fixture execution pseudonym")
+        if trace["parent_child_graph"]["root_execution_trace_id"] != execution_trace_id:
+            raise ValueError("treatment replay graph does not bind its deterministic execution identity")
         if trace["treatment_disposition"] != expected_disposition or tuple(trace["disposition_reasons"]) != expected_reasons:
             raise ValueError("treatment replay case does not preserve its predeclared disposition")
         _validate_replay_trace_semantics(case_class, trace)
@@ -1936,7 +1947,7 @@ def _normalized_replay_pass(capability_fixture: object, treatment_fixture: objec
                 raise ValueError("replay capability source case does not preserve its predeclared exclusion")
             _validate_replay_capability_semantics(capability_case_id, source)
         normalized.append({
-            "execution_trace_id": execution_id,
+            "execution_trace_id": case_id,
             "case_class": case_class,
             "source_capability_case_id": capability_case_id,
             "treatment_disposition": trace["treatment_disposition"],

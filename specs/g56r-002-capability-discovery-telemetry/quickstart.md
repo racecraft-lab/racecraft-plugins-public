@@ -228,22 +228,22 @@ binding, and the whole-freeze content identity.
 Any later evidence change creates a successor freeze rather than editing the
 published ID in place.
 
-## 7. Validate the Treatment Bundle
+## 7. Replay the Sanitized Treatment Bundle
 
 ```sh
-python3 tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py validate \
-  --fixture tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json
+python3 tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py replay \
+  --fixture tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json \
+  --digest-manifest tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json \
+  --repeat 2
 ```
 
-The US2 validator checks the closed telemetry inventory, six-ID joins, typed
-null states, configured-route proof, resource/lifecycle fields, and separate
-resolver/service-reroute records. This offline repository command is supported
-on macOS, Linux, and Windows: it uses descriptor-relative traversal where
-available and verifies the final Windows file handle against the approved
-repository path. Operator-only raw-evidence commands remain POSIX-only. The
-digest-manifest replay command and its
-two-pass normalized-output comparison are T026-T030 work and remain unavailable
-until the US3 replay increment is implemented.
+The replay command verifies both fixture digests before parsing, validates the
+closed telemetry inventory and content-addressed six-ID joins, and compares two
+normalized passes byte for byte. It admits synthetic qualification only inside
+this bounded replay path; the public `validate` path continues to reject that
+qualification as runtime authority. This offline repository command is
+supported on macOS, Linux, and Windows. Operator-only raw-evidence commands
+remain POSIX-only.
 
 ## 8. Repository Verification
 
