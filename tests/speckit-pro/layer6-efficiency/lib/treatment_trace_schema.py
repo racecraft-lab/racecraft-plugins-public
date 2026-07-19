@@ -36,21 +36,47 @@ TREATMENT_FIXTURE_PATH = "tests/speckit-pro/unit/fixtures/capability-treatment-r
 REPLAY_DIGEST_MANIFEST_PATH = "tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json"
 REPLAY_FIXTURE_PATHS = (CAPABILITY_FIXTURE_PATH, TREATMENT_FIXTURE_PATH)
 REPLAY_CASES = (
-    ("TRACE-SUCCESS", "success", "unknown", ("effective_treatment_unknown",), None),
-    ("TRACE-EXPLICIT-NULL", "explicit_null", "unknown", ("effective_treatment_unknown",), None),
-    ("TRACE-UNAVAILABLE", "unavailable", "unknown", ("effective_treatment_unknown",), None),
-    ("TRACE-MISDELIVERY", "misdelivery", "hard_fail", ("agent_mismatch", "effective_treatment_unknown"), None),
-    ("TRACE-APPROVED-SAME-AGENT-REROUTE", "approved_same_agent_reroute", "non_scorable_rerouted", ("service_reroute_requested_route_non_scorable",), None),
+    ("TRACE-SUCCESS", "success", "unknown", ("effective_treatment_unknown",), None, "sha256:e8b73e9a64580eb85b0fc482c702f629b7f368de8dbb1e89d5e4e37cfc5766f2"),
+    ("TRACE-EXPLICIT-NULL", "explicit_null", "unknown", ("effective_treatment_unknown",), None, "sha256:21067534aafd4cd11c7641f78b21b87d0a60f16a601b1b523baebc88e3d76e69"),
+    ("TRACE-UNAVAILABLE", "unavailable", "unknown", ("effective_treatment_unknown",), None, "sha256:a1547f4a1eeaf32e173e8275305997c69b8336ce4cd4153e5c981351bff0172d"),
+    ("TRACE-MISDELIVERY", "misdelivery", "hard_fail", ("agent_mismatch", "effective_treatment_unknown"), None, "sha256:f6ec4e7b3f705d65c2bd46532abfda661c51398499ae0d73720271eeabab4cae"),
+    ("TRACE-APPROVED-SAME-AGENT-REROUTE", "approved_same_agent_reroute", "non_scorable_rerouted", ("service_reroute_requested_route_non_scorable",), None, "sha256:8b6d51927aeeb4cbd97e9a53bd367b7938abfa8e555bc3bac4ca23b97b9de312"),
     (
         "TRACE-UNAPPROVED-UNIDENTIFIABLE-REROUTE",
         "unapproved_unidentifiable_reroute",
         "hard_fail",
         ("reroute_destination_missing", "reroute_unidentifiable"),
         None,
+        "sha256:ac347882d6b84ddcbaa91209495e985de3c72e5b3cfbefb83776469403fe9c25",
     ),
-    ("TRACE-DISCOVERY-LOSS", "discovery_loss", "unknown", ("effective_treatment_unknown",), "partial_surface"),
-    ("TRACE-SURFACE-DISAGREEMENT", "surface_disagreement", "unknown", ("effective_treatment_unknown",), "surface_disagreement"),
+    ("TRACE-DISCOVERY-LOSS", "discovery_loss", "unknown", ("effective_treatment_unknown",), "partial_surface", "sha256:1df39f99442e0bc7e3d2a78c616d04e8009ac174cb483d4f312b80415f74ebd1"),
+    ("TRACE-SURFACE-DISAGREEMENT", "surface_disagreement", "unknown", ("effective_treatment_unknown",), "surface_disagreement", "sha256:5ca1a8b4c004e69522671b9acc4ccedc6ca4adddb8918fe976aee33d7315e810"),
 )
+REPLAY_DISCOVERY_MODEL_DELTAS = {
+    "explicit_null": ("explicit_null", None),
+    "discovery_loss": ("missing", None),
+}
+REPLAY_TRACE_BASELINE_DIGESTS = {
+    "TRACE-SUCCESS": "sha256:e79b7b33aacf6c41e5dfec9ed7cb7668d658eefcc0fc7f84b412a727dbebae91",
+    "TRACE-EXPLICIT-NULL": "sha256:e16a8035cdfcbf3c3742a91ee5a5dc377ec38094169af080e67db2575830e794",
+    "TRACE-UNAVAILABLE": "sha256:9ff04fc8c42d9fde007d79dbbda06ac2ac2fac1ab0247b838eebd7eda2adae0f",
+    "TRACE-MISDELIVERY": "sha256:248eb26e9f430d2ce5293e35f0068ee9622063bb9d92198ee809f306b532625b",
+    "TRACE-APPROVED-SAME-AGENT-REROUTE": "sha256:d40bdea7d2b551f58875a521a141ccc2b3f9d7c5c72bcd5265487d5586ddbf87",
+    "TRACE-UNAPPROVED-UNIDENTIFIABLE-REROUTE": "sha256:e466217dfaa2df09d4bce607a2613754fae509cf31bc83da7ae3ee20f67771e2",
+    "TRACE-DISCOVERY-LOSS": "sha256:f4d0887f015307b75e0df2a307026aa617c592943d369a7b6693080d403f4087",
+    "TRACE-SURFACE-DISAGREEMENT": "sha256:bff29cfbc3dcb78761e3af65d65040ab446acc7257039f3ce9404fe1d92bf485",
+}
+REPLAY_RUNTIME_EFFORT_AUTHORITY = {
+    "schema_version": "1.0.0",
+    "authority_kind": "synthetic_replay_configuration",
+    "runtime_capability_snapshot_id": "sha256:450a655fabafb765b19bfc9ff3cbefe4b075d6c40fdbc5fd9dbc8ce8c4cfc3fe",
+    "candidate_route_id": "G56R-001-CR-PHASE-EXECUTOR-SOL",
+    "agent_contract_id": "G56R-001-AC-PHASE-EXECUTOR",
+    "named_agent": "phase-executor",
+    "model": "gpt-5.6-sol",
+    "effort": "high",
+}
+REPLAY_RUNTIME_EFFORT_AUTHORITY_ID = "sha256:2f629183baad7dd544e7200eb9bab1490ac253f85a3bb91e73670298180fe20c"
 
 SCHEMA_VERSION = "1.0.0"
 SURFACES = ("app_server", "cli", "interactive_picker")
@@ -1741,7 +1767,55 @@ def _fixture_target(repository_root: Path, fixture_path: str) -> Path:
     return target
 
 
+def _replay_capability_authority_tuples(capability: object, source_tuples: list[dict]) -> list[dict]:
+    tuples = copy.deepcopy(source_tuples)
+    for item in tuples:
+        instruction = capability.digest(b"fixture-instruction")
+        item.update({
+            "candidate_route_digest": capability.digest({"route": item["candidate_route_id"]}),
+            "source_ref": "fixtures/fixture-agent.toml",
+            "source_sha256": capability.digest(b"fixture-agent-source"),
+            "instruction_sha256": instruction,
+            "role_instruction_sha256": instruction,
+            "agent_contract_digest": capability.digest(b"fixture-contract"),
+            "official_source_bindings": [{
+                "official_source_ledger_id": "OPENAI-DOC-001",
+                "source_refresh_digest": capability.digest(b"fixture-source-refresh"),
+            }],
+            "effort_surface_bindings": [{
+                "effort_surface_record_id": "FIXTURE-ESR-001",
+                "effort_surface_record_digest": capability.digest(b"fixture-effort-record"),
+                "official_source_ledger_id": "OPENAI-DOC-001",
+                "source_refresh_digest": capability.digest(b"fixture-source-refresh"),
+            }],
+        })
+    return capability._AuthorityTupleSet(tuples)
+
+
+def _evaluate_replay_capability_case(capability: object, case: dict, client_identity_id: str) -> None:
+    observations = [
+        capability.fixture_observation(surface, payload, client_identity_id)
+        for surface, payload in case["surfaces"].items()
+    ]
+    options = {"aliases": case.get("aliases", {})}
+    if "expected_integrity_digest" in case:
+        options["expected_integrity_digest"] = case["expected_integrity_digest"]
+    matrix, decisions = capability.evaluate_surface_matrix(
+        observations,
+        _replay_capability_authority_tuples(capability, case["source_tuples"]),
+        **options,
+    )
+    capability.validate_surface_matrix(matrix)
+    if matrix["validity"] != case["expected_validity"]:
+        raise ValueError("capability replay case derived validity does not match its expectation")
+    derived_decision = decisions[0]["decision"] if decisions else "none"
+    if derived_decision != case["expected_decision"]:
+        raise ValueError("capability replay case derived decision does not match its expectation")
+
+
 def _validate_capability_fixture(value: object) -> dict[str, dict]:
+    _validate_resource_bounds(value)
+    _validate_retained_strings(value, "capability replay fixture")
     fixture = _closed(value, {
         "schema_version", "sanitizer_version", "raw_evidence_digest",
         "source_refresh_cases", "client_identity", "surface_cases",
@@ -1831,6 +1905,10 @@ def _validate_capability_fixture(value: object) -> dict[str, dict]:
         cases[case_id] = raw
     if tuple(cases) != case_ids:
         raise ValueError("capability surface fixture does not use the exact case registry")
+    capability = _capability_module()
+    identity = capability.build_client_identity(fixture["client_identity"])
+    for case in cases.values():
+        _evaluate_replay_capability_case(capability, case, identity["client_identity_id"])
     return cases
 
 
@@ -1883,7 +1961,25 @@ def _validate_replay_capability_semantics(case_id: str, case: dict, trace: dict)
         raise ValueError("unsupported linked replay capability case")
 
 
-def _validate_replay_trace_semantics(case_class: str, trace: dict) -> None:
+def _validate_replay_effort_authority(trace: dict) -> None:
+    if digest(REPLAY_RUNTIME_EFFORT_AUTHORITY) != REPLAY_RUNTIME_EFFORT_AUTHORITY_ID:
+        raise ValueError("synthetic replay effort authority identity is invalid")
+    actual = {
+        "schema_version": SCHEMA_VERSION,
+        "authority_kind": "synthetic_replay_configuration",
+        "runtime_capability_snapshot_id": trace["objective_binding"]["runtime_capability_snapshot_id"],
+        "candidate_route_id": trace["objective_binding"]["candidate_route_id"],
+        "agent_contract_id": trace["objective_binding"]["agent_contract_id"],
+        "named_agent": trace["named_agent"],
+        "model": trace["requested_model"],
+        "effort": trace["requested_effort"],
+    }
+    if actual != REPLAY_RUNTIME_EFFORT_AUTHORITY:
+        raise ValueError("replay trace does not bind the pinned synthetic runtime effort authority")
+
+
+def _validate_replay_trace_semantics(case_class: str, trace: dict,
+                                     required_capabilities: list[str]) -> None:
     observations = {item["field_path"]: item for item in trace["observations"]}
     events = trace["service_reroute_events"]
     assessments = trace["reroute_destination_assessments"]
@@ -1897,6 +1993,16 @@ def _validate_replay_trace_semantics(case_class: str, trace: dict) -> None:
         raise ValueError("replay trace must preserve the predeclared completed canary lifecycle")
     if case_class not in {"approved_same_agent_reroute", "unapproved_unidentifiable_reroute"} and (events or assessments):
         raise ValueError("non-reroute replay class must not contain reroute records")
+    model_state, model_value = REPLAY_DISCOVERY_MODEL_DELTAS.get(
+        case_class, ("observed_value", [trace["requested_model"]]),
+    )
+    discovery_baseline = (
+        ("discovery.models", model_state, model_value),
+        ("discovery.efforts", "observed_value", [trace["requested_effort"]]),
+        ("discovery.capabilities", "observed_value", required_capabilities),
+    )
+    if any(not observed(field, state, value) for field, state, value in discovery_baseline):
+        raise ValueError("replay trace changes undeclared baseline discovery observations")
 
     if case_class == "success":
         valid = observed("discovery.models", "observed_value", [trace["requested_model"]])
@@ -1937,11 +2043,12 @@ def _normalized_replay_pass(capability_fixture: object, treatment_fixture: objec
         trusted_qualification_evidence=None, synthetic_replay=True,
     )
     traces = bundle["treatment_traces"]
+    canonical_routes = _canonical_routes(_read_manifest_snapshot(MANIFEST_PATH))
     if len(traces) != len(REPLAY_CASES):
         raise ValueError("treatment replay fixture does not use the exact eight-case registry")
     normalized = []
     for trace, replay_case in zip(traces, REPLAY_CASES):
-        case_id, case_class, expected_disposition, expected_reasons, capability_case_id = replay_case
+        case_id, case_class, expected_disposition, expected_reasons, capability_case_id, expected_trace_id = replay_case
         execution_trace_id = trace["objective_binding"]["execution_trace_id"]
         slug = case_class.replace("_", "-")
         if trace["context"] != {
@@ -1951,9 +2058,16 @@ def _normalized_replay_pass(capability_fixture: object, treatment_fixture: objec
             raise ValueError("treatment replay association does not use fixture-local pseudonyms")
         if trace["parent_child_graph"]["root_execution_trace_id"] != execution_trace_id:
             raise ValueError("treatment replay graph does not bind its deterministic execution identity")
+        _validate_replay_effort_authority(trace)
         if trace["treatment_disposition"] != expected_disposition or tuple(trace["disposition_reasons"]) != expected_reasons:
             raise ValueError("treatment replay case does not preserve its predeclared disposition")
-        _validate_replay_trace_semantics(case_class, trace)
+        required_capabilities = canonical_routes[trace["objective_binding"]["candidate_route_id"]]["required_capabilities"]
+        _validate_replay_trace_semantics(case_class, trace, required_capabilities)
+        if (
+            execution_trace_id != expected_trace_id
+            or digest(trace) != REPLAY_TRACE_BASELINE_DIGESTS[case_id]
+        ):
+            raise ValueError("treatment replay case changed outside its immutable baseline")
         if capability_case_id is not None:
             source = capability_cases[capability_case_id]
             if source["expected_validity"] != "valid" or source["expected_decision"] != "excluded":
@@ -2008,6 +2122,7 @@ def replay_fixture(fixture_path: Path, digest_manifest_path: Path, *, repeat: in
         "canary_promotes_treatment": False,
         "network_accessed": False,
         "raw_store_accessed": False,
+        "synthetic_runtime_effort_authority_id": REPLAY_RUNTIME_EFFORT_AUTHORITY_ID,
     }
     pass_outputs = []
     for _ in range(repeat):

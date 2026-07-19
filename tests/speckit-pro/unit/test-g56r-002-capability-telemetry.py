@@ -3369,6 +3369,7 @@ class TreatmentReplayTests(unittest.TestCase):
             "canary_promotes_treatment": False,
             "network_accessed": False,
             "raw_store_accessed": False,
+            "synthetic_runtime_effort_authority_id": treatment.REPLAY_RUNTIME_EFFORT_AUTHORITY_ID,
         })
 
     def test_synthetic_reroute_is_replay_only_and_public_validation_hard_fails(self) -> None:
@@ -3635,6 +3636,133 @@ class TreatmentReplayTests(unittest.TestCase):
                     treatment.replay_fixture(
                         fixture, manifest_path, repeat=2, repository_root=repository_root,
                     )
+
+    def test_replay_recomputes_every_capability_case_outcome(self) -> None:
+        case_ids = [item["case_id"] for item in load_json(FIXTURE_PATH)["surface_cases"]]
+        for case_id in case_ids:
+            with self.subTest(case_id=case_id), tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+                capability = json.loads(capability_path.read_bytes())
+                case = next(item for item in capability["surface_cases"] if item["case_id"] == case_id)
+                if case_id == "duplicate_normalization_key":
+                    case["surfaces"]["app_server"]["entries"].pop()
+                elif case_id == "aggregate_hash_failure":
+                    case.pop("expected_integrity_digest")
+                else:
+                    entries = case["surfaces"]["app_server"]["entries"]
+                    duplicate = copy.deepcopy(entries[0]) if entries else {
+                        "model": "mutated-model", "effort": "high",
+                        "available": True, "hidden": False,
+                    }
+                    entries.extend([copy.deepcopy(duplicate), copy.deepcopy(duplicate)])
+                self.write_and_reseal(repository_root, FIXTURE_PATH, capability)
+                with self.assertRaisesRegex(ValueError, "derived validity|derived decision"):
+                    treatment.replay_fixture(
+                        fixture, manifest_path, repeat=2, repository_root=repository_root,
+                    )
+
+    def test_replay_capability_fixture_enforces_privacy(self) -> None:
+        private_values = (
+            "api_key=SUPERSECRET",
+            "person" + chr(64) + "example.com",
+            "/" + "Users" + "/fixture/private",
+            "host.internal.example.com",
+            "10.0.0.1",
+        )
+        for value in private_values:
+            with self.subTest(value=value), tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+                capability = json.loads(capability_path.read_bytes())
+                capability["client_identity"]["distribution"] = value
+                self.write_and_reseal(repository_root, FIXTURE_PATH, capability)
+                with self.assertRaisesRegex(ValueError, "forbidden private or credential-bearing text"):
+                    treatment.replay_fixture(
+                        fixture, manifest_path, repeat=2, repository_root=repository_root,
+                    )
+
+    def test_replay_rejects_undeclared_discovery_omissions(self) -> None:
+        for field_path in ("discovery.efforts", "discovery.capabilities"):
+            with self.subTest(field_path=field_path), tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                bundle = json.loads(fixture.read_bytes())
+                trace = replay_trace(bundle, "TRACE-SUCCESS")
+                observation = next(
+                    item for item in trace["observations"]
+                    if item["field_path"] == field_path
+                )
+                observation.update({
+                    "observation_state": "missing", "value": None,
+                    "evidence_ref": None, "captured_at": None,
+                })
+                rebind_treatment_owners(bundle)
+                self.write_and_reseal(repository_root, TREATMENT_FIXTURE_PATH, bundle)
+                with self.assertRaisesRegex(ValueError, "baseline discovery observations"):
+                    treatment.replay_fixture(
+                        fixture, manifest_path, repeat=2, repository_root=repository_root,
+                    )
+
+    def test_replay_binds_synthetic_effort_to_pinned_authority(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            bundle = json.loads(fixture.read_bytes())
+            trace = replay_trace(bundle, "TRACE-DISCOVERY-LOSS")
+            trace["requested_effort"] = "low"
+            trace["controlled_overrides"]["effort"] = "low"
+            proof = trace["configured_route_proof"]
+            proof["effort"] = "low"
+            proof["controlled_overrides"]["effort"] = "low"
+            proof["proof_id"] = treatment.content_id(proof, "proof_id")
+            for field_path, value in (
+                ("discovery.efforts", ["low"]),
+                ("assignment.effort", "low"),
+                ("treatment.controlled_overrides", copy.deepcopy(trace["controlled_overrides"])),
+            ):
+                next(
+                    item for item in trace["observations"]
+                    if item["field_path"] == field_path
+                )["value"] = value
+            rebind_treatment_owners(bundle)
+            self.write_and_reseal(repository_root, TREATMENT_FIXTURE_PATH, bundle)
+
+            capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+            capability = json.loads(capability_path.read_bytes())
+            case = next(
+                item for item in capability["surface_cases"]
+                if item["case_id"] == "partial_surface"
+            )
+            case["source_tuples"][0]["effort"] = "low"
+            for payload in case["surfaces"].values():
+                for entry in payload["entries"]:
+                    entry["effort"] = "low"
+            self.write_and_reseal(repository_root, FIXTURE_PATH, capability)
+            with self.assertRaisesRegex(ValueError, "pinned synthetic runtime effort authority"):
+                treatment.replay_fixture(
+                    fixture, manifest_path, repeat=2, repository_root=repository_root,
+                )
+
+    def test_replay_rejects_resealed_changes_outside_declared_case_deltas(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            bundle = json.loads(fixture.read_bytes())
+            trace = replay_trace(bundle, "TRACE-SUCCESS")
+            trace["request_turn_count"]["turns"] = 2
+            next(
+                item for item in trace["observations"]
+                if item["field_path"] == "resources.request_turn_count"
+            )["value"] = copy.deepcopy(trace["request_turn_count"])
+            rebind_treatment_owners(bundle)
+            self.write_and_reseal(repository_root, TREATMENT_FIXTURE_PATH, bundle)
+            with self.assertRaisesRegex(ValueError, "outside its immutable baseline"):
+                treatment.replay_fixture(
+                    fixture, manifest_path, repeat=2, repository_root=repository_root,
+                )
 
     def test_replay_is_canonical_offline_and_exactly_two_passes(self) -> None:
         for path in (FIXTURE_PATH, TREATMENT_FIXTURE_PATH, DIGEST_MANIFEST_PATH):
