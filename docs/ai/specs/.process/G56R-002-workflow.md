@@ -873,7 +873,7 @@ For every task:
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
-| 2 - Treatment contracts | Review Pending | 10 | 50/50 focused tests, route and parent ownership, field-specific privacy, crash-safe retention/deletion recovery, malformed-predecessor normalization, and independent repeat review pending |
+| 2 - Treatment contracts | Review Pending | 10 | 51/51 focused tests, route and parent ownership, hostname/IP privacy, crash-safe retention/deletion recovery, malformed-predecessor normalization, and independent repeat review pending |
 | 3 - Synthetic replay | Blocked | 0 | T026-T030 remain ordered after a clean US2 repeat-review verdict |
 | Polish and validation | Pending | 0 | Not started |
 
@@ -899,13 +899,14 @@ For every task:
 - Telemetry profile: `sha256:4fd9007697c86aae277099d12d37339379a0f19ed58de95ce1b939cdd918aeb3`
 - Treatment contract: `sha256:6be186638b12a57a93f00bf820ae8aa016a8fa33c0e52a90820833601d4ce71a`
 - Superseded marker checkpoint: `c47c9d31fd1288e86f0707601078e4f03e2b12e5`
-- Reviewability: size-only `block` at 1,592 source / 1,458 nonblank,
+- Reviewability: size-only `block` at 1,611 source / 1,475 nonblank,
   non-comment lines; typed `no_safe_boundary` exception honored for the
   checkpoint with only T026-T030 replay growth reserved.
 - Review: REPEAT PENDING after direct canonical validation of the actual
   successor, external treatment-binding and predecessor-lineage authority,
   bounded non-extending recovery of pending retention records, crash-released
-  advisory locking, durable post-unlink completion proof, executable
+  advisory locking with unconditional failure-path release, durable post-unlink
+  completion proof without contradictory byte restoration, executable
   schema/runtime parity, descriptor-relative private inputs, post-unlink
   hard-link and digest proof, blocking hard-link race preservation, exact declared
   treatment-result validation, single-snapshot schema, canonical manifest authority,
@@ -913,7 +914,7 @@ For every task:
   same-agent route ownership, resolver-supported effective-route semantics,
   descriptor-relative private writes and deletion recovery,
   discovery-to-treatment reconciliation, bounded private dictionary keys,
-  field-specific identifier privacy, parent configuration owner joins,
+  field-specific identifier and hostname/IP privacy, parent configuration owner joins,
   sanitized CLI handling, and US2-only CLI documentation,
   single-client profile authority, content-addressed six-ID ownership,
   reciprocal acyclic trace-graph validation, externally trusted successor
@@ -934,7 +935,7 @@ For every task:
 | Feature spec | `sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56` |
 | Plan-declared scope | `sha256:35d4122bd719ba1512da85fdeead0c990d598591b33af7c3ed38947cea1aaf9e` |
 | Tasks | `sha256:4b78765419fc0f5d3fafdeefb2b78c19890cf7a02bc74c5bf128e21c97457867` |
-| Reviewability evidence | `sha256:7f6276a26779a441dc378a18f045d41879510a39bbf8d7f99380a46e90fc9bc6` |
+| Reviewability evidence | `sha256:03bd9aedf99c5c4c2755f1b7ea05bf3c9fda823192d70fd75f46b77fb365f444` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
@@ -944,7 +945,7 @@ For every task:
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
-  size warnings. US1 is 2,202 / 1,987 source/nonblank lines and US2 is 1,592 / 1,458
+  size warnings. US1 is 2,202 / 1,987 source/nonblank lines and US2 is 1,611 / 1,475
   against the 400-LOC boundary; both use typed size-only exceptions.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.

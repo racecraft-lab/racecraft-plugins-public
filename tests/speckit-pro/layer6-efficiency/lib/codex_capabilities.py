@@ -1494,11 +1494,13 @@ def _retention_lock(raw, expected_raw_identity):
     finally:
         try:
             if lock_descriptor is not None:
-                _assert_private_directory_current(raw, raw_descriptor, expected_raw_identity)
                 try:
-                    fcntl.flock(lock_descriptor, fcntl.LOCK_UN)
+                    _assert_private_directory_current(raw, raw_descriptor, expected_raw_identity)
                 finally:
-                    os.close(lock_descriptor)
+                    try:
+                        fcntl.flock(lock_descriptor, fcntl.LOCK_UN)
+                    finally:
+                        os.close(lock_descriptor)
         finally:
             os.close(raw_descriptor)
 
@@ -1643,6 +1645,52 @@ def _delete_single_link_private_file(
     file_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
     parent_descriptor = descriptor = deletion_directory_descriptor = None
     verified_payload = None; deletion_proved = False
+    completion_filename = f"{deletion_record_digest.removeprefix('sha256:')}.json"
+
+    def completion_record_is_durable():
+        if deletion_directory_descriptor is None:
+            return False
+        try:
+            pathname = os.stat(
+                completion_filename,
+                dir_fd=deletion_directory_descriptor,
+                follow_symlinks=False,
+            )
+        except FileNotFoundError:
+            return False
+        if (
+            not stat.S_ISREG(pathname.st_mode)
+            or stat.S_IMODE(pathname.st_mode) != 0o600
+            or pathname.st_nlink != 1
+            or pathname.st_size != len(deletion_payload)
+        ):
+            raise ValueError("deletion completion record is not a private single-link file")
+        record_descriptor = os.open(
+            completion_filename, file_flags, dir_fd=deletion_directory_descriptor,
+        )
+        try:
+            opened = os.fstat(record_descriptor)
+            if _stable_file_identity(pathname) != _stable_file_identity(opened):
+                raise ValueError("deletion completion record changed before verification")
+            chunks, total = [], 0
+            while total < len(deletion_payload):
+                chunk = os.read(record_descriptor, len(deletion_payload) - total)
+                if not chunk:
+                    break
+                chunks.append(chunk); total += len(chunk)
+            after = os.fstat(record_descriptor)
+            if (
+                _stable_file_identity(after) != _stable_file_identity(opened)
+                or b"".join(chunks) != deletion_payload
+            ):
+                raise ValueError("deletion completion record bytes disagree after persistence failure")
+        finally:
+            os.close(record_descriptor)
+        if _stable_directory_identity(os.fstat(deletion_directory_descriptor))[:3] != deletion_directory_identity[:3]:
+            raise ValueError("deletion completion record directory changed after publication")
+        os.fsync(deletion_directory_descriptor)
+        return True
+
     try:
         deletion_directory_descriptor = _private_directory_descriptor(
             deletion_directory, deletion_directory_identity,
@@ -1718,14 +1766,7 @@ def _delete_single_link_private_file(
         raise
     except OSError as error:
         if verified_payload is not None:
-            completion_target = deletion_directory / f"{deletion_record_digest.removeprefix('sha256:')}.json"
-            if completion_target.exists():
-                _, retained = read_content_addressed_private_file(
-                    completion_target, repository_root, "deletion completion record",
-                )
-                if retained != deletion_payload:
-                    raise ValueError("deletion completion record bytes disagree after persistence failure") from error
-                os.fsync(deletion_directory_descriptor)
+            if deletion_proved and completion_record_is_durable():
                 return deletion_record_digest
             _write_private_bytes_at(
                 parent_descriptor, raw, filename, verified_payload,
@@ -1737,6 +1778,8 @@ def _delete_single_link_private_file(
         raise ValueError("expired raw evidence could not be deleted safely") from error
     except ValueError:
         if verified_payload is not None:
+            if deletion_proved and completion_record_is_durable():
+                return deletion_record_digest
             _write_private_bytes_at(
                 parent_descriptor, raw, filename, verified_payload,
                 append_only=not _descriptor_entry_exists(parent_descriptor, filename),

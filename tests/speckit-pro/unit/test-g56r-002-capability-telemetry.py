@@ -1379,6 +1379,36 @@ class CapabilityContractTests(unittest.TestCase):
                 (raw_root / f"{item.removeprefix('sha256:')}.json").is_file()
                 for item in retained_report["retained_evidence_digests"]
             ), 3)
+            deletion_directory = raw_root / capabilities.DELETION_RECORDS_DIR
+            original_assert_private_directory = capabilities._assert_private_directory_current
+            completion_directory_mode_changed = False
+            def change_mode_after_second_completion(
+                path: Path, descriptor: int, expected_identity: object,
+            ) -> None:
+                nonlocal completion_directory_mode_changed
+                if (
+                    not completion_directory_mode_changed
+                    and Path(path).name == capabilities.DELETION_RECORDS_DIR
+                    and len(list(Path(path).glob("*.json"))) == 2
+                ):
+                    Path(path).chmod(0o755)
+                    completion_directory_mode_changed = True
+                original_assert_private_directory(path, descriptor, expected_identity)
+            with mock.patch.object(
+                capabilities, "_retention_now",
+                return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+            ), mock.patch.object(
+                capabilities, "_assert_private_directory_current",
+                side_effect=change_mode_after_second_completion,
+            ), self.assertRaises(ValueError):
+                capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
+            self.assertTrue(completion_directory_mode_changed)
+            self.assertEqual(len(list(deletion_directory.iterdir())), 2)
+            self.assertEqual(sum(
+                (raw_root / f"{item.removeprefix('sha256:')}.json").is_file()
+                for item in retained_report["retained_evidence_digests"]
+            ), 2)
+            deletion_directory.chmod(0o700)
             original_os_fsync = capabilities.os.fsync
             with mock.patch.object(
                 capabilities, "_retention_now",
@@ -1690,6 +1720,33 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertFalse(target.exists())
             self.assertEqual(list(private_parent.iterdir()), [])
             self.assertEqual(list(moved_parent.iterdir()), [])
+
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_retention_lock_releases_descriptor_after_validation_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            raw_root = Path(tmp) / "raw"
+            raw_root.mkdir(mode=0o700)
+            raw_identity = capabilities._stable_directory_identity(
+                os.stat(raw_root, follow_symlinks=False),
+            )
+            original_assert = capabilities._assert_private_directory_current
+            assertions = 0
+
+            def fail_release_validation(path: Path, descriptor: int, expected_identity: object) -> None:
+                nonlocal assertions
+                assertions += 1
+                if assertions == 2:
+                    raise ValueError("simulated release validation failure")
+                original_assert(path, descriptor, expected_identity)
+
+            with mock.patch.object(
+                capabilities, "_assert_private_directory_current",
+                side_effect=fail_release_validation,
+            ), self.assertRaisesRegex(ValueError, "release validation failure"):
+                with capabilities._retention_lock(raw_root, raw_identity):
+                    pass
+            with capabilities._retention_lock(raw_root, raw_identity):
+                pass
 
     @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_deletion_recovery_refuses_replaced_raw_root(self) -> None:
@@ -2747,6 +2804,9 @@ class TreatmentContractTests(unittest.TestCase):
             "person" + "@" + "example.com",
             "AKIA" + "A" * 16,
             "123-45-6789",
+            "internal-build.customer.example",
+            "192.0.2.42",
+            "2001:db8::42",
         ):
             with self.subTest(sensitive_value=value):
                 bundle = copy.deepcopy(self.bundle)

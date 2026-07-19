@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import copy
 import hashlib
+import ipaddress
 import importlib.util
 import json
 import os
@@ -218,6 +219,12 @@ UNLABELED_CREDENTIAL_RE = re.compile(
 )
 PII_RE = re.compile(
     r"(?i)(?:\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|\b[0-9]{3}-[0-9]{2}-[0-9]{4}\b)"
+)
+HOSTNAME_RE = re.compile(
+    r"(?i)(?<![A-Z0-9_-])(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.){2,}[A-Z]{2,63}(?![A-Z0-9_-])"
+)
+IP_CANDIDATE_RE = re.compile(
+    r"(?<![A-Za-z0-9])(?:[0-9]{1,3}(?:\.[0-9]{1,3}){3}|[0-9A-Fa-f]*:[0-9A-Fa-f:]+)(?![A-Za-z0-9])"
 )
 SANITIZED_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:+-]{0,127}$")
 FALLBACK_REASON_CODES = frozenset({"preferred_unavailable", "capability_mismatch", "policy_fallback"})
@@ -524,6 +531,16 @@ def _same_json_value(actual: object, expected: object, label: str) -> bool:
         raise ValueError(f"{label} must be canonical JSON") from exc
 
 
+def _contains_ip_address(value: str) -> bool:
+    for candidate in IP_CANDIDATE_RE.findall(value):
+        try:
+            ipaddress.ip_address(candidate)
+        except ValueError:
+            continue
+        return True
+    return False
+
+
 def _validate_retained_strings(value: object, label: str = "treatment bundle") -> None:
     if isinstance(value, str):
         forbidden = (
@@ -534,6 +551,8 @@ def _validate_retained_strings(value: object, label: str = "treatment bundle") -
             or CREDENTIAL_RE.search(value)
             or UNLABELED_CREDENTIAL_RE.search(value)
             or PII_RE.search(value)
+            or HOSTNAME_RE.search(value)
+            or _contains_ip_address(value)
         )
         if forbidden:
             raise ValueError(f"{label} retains forbidden private or credential-bearing text")
