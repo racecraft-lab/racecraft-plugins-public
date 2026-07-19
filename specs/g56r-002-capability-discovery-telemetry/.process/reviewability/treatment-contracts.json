@@ -4,14 +4,24 @@
   "marker_id": "us2",
   "status": "block",
   "mode": "implementation",
-  "scope": "T016-T025 treatment contracts",
+  "scope": "T016-T025 treatment contracts and capability retention",
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 1633,
-  "actual_nonblank_noncomment_lines": 1497,
-  "production_modules": 1,
-  "primary_surface": "harness/adapter",
+  "actual_source_lines": 4103,
+  "actual_nonblank_noncomment_lines": 3740,
+  "production_modules": 2,
+  "primary_surface": "harness/adapters",
+  "module_measurements": {
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {
+      "source_lines": 2470,
+      "nonblank_noncomment_lines": 2243
+    },
+    "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
+      "source_lines": 1633,
+      "nonblank_noncomment_lines": 1497
+    }
+  },
   "correctness_checks": {
     "focused_tests": "51/51 pass",
     "published_successor_validation": "actual artifact passes canonical treatment-aware validation",
@@ -73,7 +83,7 @@
     "status": "honored_for_checkpoint",
     "subdivision": "no_safe_boundary",
     "rationale": "Field source and per-client classification authority, executable schema parity, descriptor-relative retained-evidence loading, parser and path sanitization, six-ID owner joins, trace-graph validation, failure derivation, detailed reroute qualification, and externally authorized successor cross-binding form one integrity boundary that T023 explicitly keeps in the treatment module.",
-    "growth_limit": "Only finding-driven review remediation and the predeclared T026-T030 offline replay dispatch may extend treatment_trace_schema.py before final freeze; no feature expansion is authorized."
+    "growth_limit": "Only finding-driven review remediation may extend the two current modules, and only the predeclared T026-T030 offline replay dispatch may extend treatment_trace_schema.py before final freeze; no feature expansion or third production module is authorized."
   },
   "later_markers": [
     "us3:T026-T039"
@@ -81,6 +91,8 @@
   "evidence_commands": [
     "wc -l tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py",
     "awk 'NF && $0 !~ /^[[:space:]]*#/ {n++} END{print n}' tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py",
+    "wc -l tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py",
+    "awk 'NF && $0 !~ /^[[:space:]]*#/ {n++} END{print n}' tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py",
     "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
     "python3 tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py validate --fixture tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"
   ]

@@ -58,9 +58,11 @@ increments cease to be independently testable.
 not a size claim. The binding human estimate remains 297 reviewable LOC; the
 400-LOC split trigger remains enforced.
 
-**Implementation checkpoint**: The capability adapter is 1,928 source lines
-and 1,729 nonblank, non-comment lines after treatment-successor integrity
-remediation, so the 400-LOC trigger is active.
+**Implementation checkpoint**: The capability adapter is 2,470 source lines
+and 2,243 nonblank, non-comment lines after finding-driven US2 retention
+remediation. The treatment validator is 1,633 source lines and 1,497 nonblank,
+non-comment lines, so the current two-module US2 marker totals 4,103 source
+lines and 3,740 nonblank, non-comment lines and the 400-LOC trigger is active.
 Capability work T001-T015 remains one review marker under a typed size-only
 exception because source refresh, surface authority, tuple decisions, and the
 published freeze validator share one integrity boundary and have no safe

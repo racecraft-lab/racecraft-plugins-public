@@ -14,6 +14,21 @@
   "candidate_freeze_id": "sha256:dcf75cea52244ba175324d83fb021f70f96c64e1e82d963451e91da5127c40d6",
   "telemetry_profile_id": "sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb",
   "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
+  "reviewability_measurements": {
+    "production_modules": 2,
+    "source_lines": 4103,
+    "nonblank_noncomment_lines": 3740,
+    "modules": {
+      "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {
+        "source_lines": 2470,
+        "nonblank_noncomment_lines": 2243
+      },
+      "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
+        "source_lines": 1633,
+        "nonblank_noncomment_lines": 1497
+      }
+    }
+  },
   "verification": {
     "focused_tests": "51/51 pass",
     "published_successor_validation": "actual artifact passes canonical treatment-aware validation",
@@ -66,7 +81,7 @@
     "independent_critical_high_review": "repeat_pending"
   },
   "source_fingerprint_status": "current",
-  "tasks_sha": "sha256:4b78765419fc0f5d3fafdeefb2b78c19890cf7a02bc74c5bf128e21c97457867",
+  "tasks_sha": "sha256:f6c694fd44a5250163afd34a9b3f4b56c79ade8df3828b051961f3823dddbe45",
   "completed_at": null,
   "review_iteration_started_at": "2026-07-18T20:59:20Z"
 }
