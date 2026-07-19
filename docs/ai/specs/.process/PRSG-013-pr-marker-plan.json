@@ -64,10 +64,11 @@
       ],
       "declared_tests": [],
       "reviewability": {
-        "status": "block",
-        "mode": "tasks",
-        "scope": "foundation",
-        "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json"
+      "status": "block",
+      "mode": "tasks",
+      "scope": "foundation",
+      "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json",
+      "head_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930"
       },
       "hazards": [
         "change-shape:modify-heavy"
@@ -79,7 +80,9 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+        "verification_evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
         "commit_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930",
+        "head_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930",
         "completed_at": "2026-06-12T04:17:51Z",
         "completed_task_ids": [
           "T001",
@@ -147,10 +150,11 @@
         "tests/speckit-pro/unit/test-plan-layers.sh"
       ],
       "reviewability": {
-        "status": "block",
-        "mode": "tasks",
-        "scope": "us1",
-        "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json"
+      "status": "block",
+      "mode": "tasks",
+      "scope": "us1",
+      "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json",
+      "head_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930"
       },
       "hazards": [
         "change-shape:modify-heavy"
@@ -162,7 +166,9 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+        "verification_evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
         "commit_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930",
+        "head_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930",
         "completed_at": "2026-06-12T04:17:51Z",
         "completed_task_ids": [
           "T007",
@@ -230,10 +236,11 @@
         "tests/speckit-pro/unit/test-plan-layers.sh"
       ],
       "reviewability": {
-        "status": "block",
-        "mode": "tasks",
-        "scope": "us2",
-        "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json"
+      "status": "block",
+      "mode": "tasks",
+      "scope": "us2",
+      "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json",
+      "head_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930"
       },
       "hazards": [
         "change-shape:modify-heavy"
@@ -245,7 +252,9 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+        "verification_evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
         "commit_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930",
+        "head_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930",
         "completed_at": "2026-06-12T04:17:51Z",
         "completed_task_ids": [
           "T016",
@@ -363,10 +372,11 @@
         "tests/speckit-pro/run-all.sh"
       ],
       "reviewability": {
-        "status": "block",
-        "mode": "tasks",
-        "scope": "us3",
-        "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json"
+      "status": "block",
+      "mode": "tasks",
+      "scope": "us3",
+      "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json",
+      "head_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930"
       },
       "hazards": [
         "change-shape:modify-heavy"
@@ -378,7 +388,9 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+        "verification_evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
         "commit_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930",
+        "head_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930",
         "completed_at": "2026-06-12T04:17:51Z",
         "completed_task_ids": [
           "T027",

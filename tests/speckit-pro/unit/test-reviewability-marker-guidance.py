@@ -231,12 +231,35 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
         schema = json.loads(MARKER_PLAN_SCHEMA_PATHS[0].read_text(encoding="utf-8"))
         checkpoint = schema["$defs"]["checkpoint"]
         emission = schema["$defs"]["emission_mapping"]
+        marker = schema["$defs"]["marker"]
 
         self.assertFalse(checkpoint["additionalProperties"])
         self.assertFalse(emission["additionalProperties"])
         self.assertEqual(
             checkpoint["allOf"][0]["then"]["required"],
-            ["evidence_path", "commit_sha"],
+            [
+                "evidence_path",
+                "verification_evidence_path",
+                "commit_sha",
+                "head_sha",
+                "completed_at",
+                "completed_task_ids",
+                "summary",
+                "validation",
+            ],
+        )
+        self.assertEqual(
+            marker["allOf"][0]["then"]["properties"]["implementation_checkpoint"]["properties"]["status"],
+            {"const": "complete"},
+        )
+        self.assertEqual(
+            marker["allOf"][1]["then"]["properties"]["reviewability"]["required"],
+            ["head_sha"],
+        )
+        self.assertEqual(
+            schema["allOf"][0]["then"]["properties"]["markers"]["items"]["properties"]
+            ["emission_mapping"]["properties"]["status"],
+            {"const": "emitted"},
         )
         self.assertEqual(
             emission["allOf"][0]["then"]["required"],

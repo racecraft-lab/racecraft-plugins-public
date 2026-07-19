@@ -142,6 +142,17 @@ def state_json(*, include_confidence: bool = True, include_post: bool = True, co
 
 
 class AutopilotPhaseCoverageTests(unittest.TestCase):
+    def run_validator_paths(self, workflow_path: Path, state_path: Path) -> tuple[int, dict[str, object]]:
+        completed = subprocess.run(
+            [sys.executable, str(VALIDATOR), "--workflow", str(workflow_path), "--state", str(state_path)],
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=False,
+        )
+        self.assertEqual(completed.stderr, "")
+        return completed.returncode, json.loads(completed.stdout)
+
     def run_validator(self, workflow: str, state: dict[str, object] | str) -> tuple[int, dict[str, object]]:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -152,15 +163,21 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 state_path.write_text(state, encoding="utf-8")
             else:
                 state_path.write_text(json.dumps(state), encoding="utf-8")
-            completed = subprocess.run(
-                [sys.executable, str(VALIDATOR), "--workflow", str(workflow_path), "--state", str(state_path)],
-                text=True,
-                capture_output=True,
-                shell=False,
-                check=False,
-            )
-            self.assertEqual(completed.stderr, "")
-            return completed.returncode, json.loads(completed.stdout)
+            return self.run_validator_paths(workflow_path, state_path)
+
+    @staticmethod
+    def complete_checkpoint(*, commit_sha: str = "a" * 40) -> dict[str, object]:
+        return {
+            "status": "complete",
+            "evidence_path": "specs/spec-example/.process/checkpoints/us1.json",
+            "verification_evidence_path": "docs/ai/specs/.process/SPEC-workflow.md",
+            "commit_sha": commit_sha,
+            "head_sha": commit_sha,
+            "completed_at": "2026-07-19T00:00:00Z",
+            "completed_task_ids": ["T001"],
+            "summary": "Implemented marker us1.",
+            "validation": ["focused tests passed"],
+        }
 
     def projected_state(
         self,
@@ -186,6 +203,11 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             "markers": [
                 {
                     "id": "us1",
+                    "task_ids": ["T001"],
+                    "folded_polish_task_ids": [],
+                    "reviewability": {
+                        "head_sha": checkpoint.get("head_sha"),
+                    },
                     "implementation_checkpoint": checkpoint,
                     "emission_mapping": emission or {"status": "pending"},
                 }
@@ -203,11 +225,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         state = self.projected_state(
             plan_status="completed",
             phase_status="completed",
-            checkpoint={
-                "status": "complete",
-                "evidence_path": "specs/spec-example/.process/checkpoints/us1.json",
-                "commit_sha": "a" * 40,
-            },
+            checkpoint=self.complete_checkpoint(),
             phase_fields={"focused_tests": "pending exact-head verification"},
         )
         exit_code, report = self.run_validator(workflow_text(), state)
@@ -221,17 +239,23 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         state = self.projected_state(
             plan_status="completed",
             phase_status="in_progress",
-            checkpoint={
-                "status": "complete",
-                "evidence_path": "specs/spec-example/.process/checkpoints/us1.json",
-                "commit_sha": "b" * 40,
-            },
+            checkpoint=self.complete_checkpoint(commit_sha="b" * 40),
         )
         exit_code, report = self.run_validator(workflow_text(), state)
         self.assertEqual(exit_code, 1)
         self.assertEqual(len(report["projection_status_errors"]), 2)
 
-    def test_complete_checkpoint_requires_evidence_and_commit(self) -> None:
+    def test_checkpointing_phase_must_not_project_as_completed(self) -> None:
+        state = self.projected_state(
+            plan_status="completed",
+            phase_status="checkpointing",
+            checkpoint={"status": "pending"},
+        )
+        exit_code, report = self.run_validator(workflow_text(), state)
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(len(report["projection_status_errors"]), 1)
+
+    def test_complete_checkpoint_requires_terminal_evidence(self) -> None:
         state = self.projected_state(
             plan_status="completed",
             phase_status="completed",
@@ -243,8 +267,47 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             report["checkpoint_evidence_errors"],
             [
                 "pr_marker_plan.markers[0].implementation_checkpoint.evidence_path",
+                "pr_marker_plan.markers[0].implementation_checkpoint.verification_evidence_path",
                 "pr_marker_plan.markers[0].implementation_checkpoint.commit_sha",
+                "pr_marker_plan.markers[0].implementation_checkpoint.head_sha",
+                "pr_marker_plan.markers[0].implementation_checkpoint.completed_at",
+                "pr_marker_plan.markers[0].implementation_checkpoint.summary",
+                "pr_marker_plan.markers[0].implementation_checkpoint.completed_task_ids",
+                "pr_marker_plan.markers[0].implementation_checkpoint.validation",
             ],
+        )
+
+    def test_complete_checkpoint_binds_task_coverage_and_reviewed_head(self) -> None:
+        checkpoint = self.complete_checkpoint(commit_sha="b" * 40)
+        checkpoint["head_sha"] = "c" * 40
+        checkpoint["completed_task_ids"] = ["T999"]
+        state = self.projected_state(
+            plan_status="completed",
+            phase_status="completed",
+            checkpoint=checkpoint,
+        )
+        exit_code, report = self.run_validator(workflow_text(), state)
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(
+            report["checkpoint_evidence_errors"],
+            [
+                "pr_marker_plan.markers[0].implementation_checkpoint.completed_task_ids coverage",
+                "pr_marker_plan.markers[0].implementation_checkpoint commit/head mismatch",
+            ],
+        )
+
+    def test_malformed_marker_task_arrays_fail_without_crashing(self) -> None:
+        state = self.projected_state(
+            plan_status="completed",
+            phase_status="completed",
+            checkpoint=self.complete_checkpoint(),
+        )
+        state["pr_marker_plan"]["markers"][0]["task_ids"] = "T001"
+        exit_code, report = self.run_validator(workflow_text(), state)
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(
+            report["checkpoint_evidence_errors"],
+            ["pr_marker_plan.markers[0] marker task coverage"],
         )
 
     def test_emitted_mapping_requires_packet_and_pr_identity(self) -> None:
@@ -262,8 +325,122 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 "pr_marker_plan.markers[0].emission_mapping.packet_path",
                 "pr_marker_plan.markers[0].emission_mapping.pr_number",
                 "pr_marker_plan.markers[0].emission_mapping.pr_url",
+                "pr_marker_plan.markers[0] emission requires a complete checkpoint",
             ],
         )
+
+    def test_top_level_emitted_requires_every_marker_mapping_emitted(self) -> None:
+        state = self.projected_state(
+            plan_status="completed",
+            phase_status="completed",
+            checkpoint=self.complete_checkpoint(),
+        )
+        state["pr_marker_plan"]["status"] = "emitted"
+        exit_code, report = self.run_validator(workflow_text(), state)
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(
+            report["emission_mapping_errors"],
+            ["pr_marker_plan.status emitted requires marker 0 terminal emitted mapping"],
+        )
+
+    def test_changed_file_manifest_must_match_base_to_head(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            workflow_path = root / "workflow.md"
+            state_path = root / "autopilot-state.json"
+            tracked_path = root / "tracked.txt"
+            manifest_path = root / "changed-file-manifest.json"
+            workflow_path.write_text(workflow_text(), encoding="utf-8")
+            state = state_json()
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            tracked_path.write_text("base\n", encoding="utf-8")
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(root),
+                    "-c",
+                    "user.name=SpecKit Tests",
+                    "-c",
+                    "user.email=git@github.com",
+                    "-c",
+                    "commit.gpgsign=false",
+                    "commit",
+                    "-qm",
+                    "base",
+                ],
+                check=True,
+            )
+            base_commit = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout.strip()
+            tracked_path.write_text("changed\n", encoding="utf-8")
+            state["changed_file_manifest"] = "changed-file-manifest.json"
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            manifest = {
+                "schema_version": "changed-file-manifest.v1",
+                "base_commit": base_commit,
+                "files": [
+                    {
+                        "path": "autopilot-state.json",
+                        "operation": "MODIFIED",
+                        "category": "process",
+                        "provenance": "authored",
+                        "marker_ids": ["us1"],
+                    },
+                    {
+                        "path": "changed-file-manifest.json",
+                        "operation": "NEW",
+                        "category": "process",
+                        "provenance": "authored",
+                        "marker_ids": ["us1"],
+                    },
+                    {
+                        "path": "tracked.txt",
+                        "operation": "MODIFIED",
+                        "category": "implementation",
+                        "provenance": "authored",
+                        "marker_ids": ["us1"],
+                    },
+                ],
+            }
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(root),
+                    "-c",
+                    "user.name=SpecKit Tests",
+                    "-c",
+                    "user.email=git@github.com",
+                    "-c",
+                    "commit.gpgsign=false",
+                    "commit",
+                    "-qm",
+                    "head",
+                ],
+                check=True,
+            )
+
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(report["changed_file_manifest_errors"], [])
+
+            manifest["files"][2]["operation"] = "NEW"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(
+                report["changed_file_manifest_errors"],
+                [f"declared changed-file manifest does not match {base_commit}..HEAD"],
+            )
 
     def test_missing_confidence_gate_in_workflow_fails(self) -> None:
         exit_code, report = self.run_validator(workflow_text(include_confidence=False), state_json())

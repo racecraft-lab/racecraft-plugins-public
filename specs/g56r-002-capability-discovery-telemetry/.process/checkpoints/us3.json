@@ -7,22 +7,26 @@
     "T026", "T027", "T028", "T029", "T030"
   ],
   "implementation_baseline_sha": "0d5df513fe95a5201c422b908e2c6b7330b91552",
-  "implementation_checkpoint_sha": "6f30b6f1a93819d469084c7da8e8a36367684d30",
+  "implementation_checkpoint_sha": "ab08b9dcba36097650cf2d5bebb72d8a7d33c119",
   "capability_fixture_digest": "sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a",
   "treatment_fixture_digest": "sha256:3983dc1d4efe42542ffe0cb72830c970d24cecf490ddfe0c93e24be749ffaa53",
   "replay_digest": "sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda",
   "verification": {
     "focused_tests": "67/67 pass",
     "privacy_scan": "10/10 pass",
-    "full_suite": "2826/2826 pass",
+    "full_suite": "2831/2831 pass",
     "docs_reference_check": "pass",
     "two_pass_byte_equality": "pass",
     "raw_fixture_digest_validation": "pass",
     "canonical_offline_replay": "pass",
     "eight_class_semantic_binding": "pass",
-    "independent_critical_high_review": "findings_open: untitled-chat-F85A77"
+    "independent_critical_high_review": "findings_open: untitled-chat-DCD935"
   },
-  "source_fingerprint_status": "current",
+  "source_fingerprint_status": "current_marker_scope",
+  "source_fingerprint_contract": "marker-task-lines.v1",
   "tasks_sha": "sha256:ea2a5f09f18b276dd719d748a5d5f8fb47c56a62a75e6d1da09124c2c3438072",
-  "updated_at": "2026-07-19T23:05:37Z"
+  "tasks_sha_scope": "checkpoint_time_whole_file",
+  "current_tasks_sha": "sha256:900dabf0cbdad700d30263c216fc18486a4d92aade0c39a984389451b0aefd59",
+  "marker_tasks_sha": "sha256:0549f955b6e0a56b176378614d3bd2c6cc014f030d63f4dfb170d99f49259995",
+  "updated_at": "2026-07-19T23:42:00Z"
 }

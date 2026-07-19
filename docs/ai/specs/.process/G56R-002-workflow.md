@@ -928,21 +928,23 @@ For every task:
 
 ### Synthetic Replay Checkpoint Evidence
 
-- Reviewed remediation head: `6f30b6f1a93819d469084c7da8e8a36367684d30`
+- Reviewed remediation head: `ab08b9dcba36097650cf2d5bebb72d8a7d33c119`
 - Capability fixture: `sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a`.
 - Treatment fixture: `sha256:3983dc1d4efe42542ffe0cb72830c970d24cecf490ddfe0c93e24be749ffaa53`.
 - Replay output: `sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda` with byte-identical two-pass verification.
 - Cases: eight exact success, null, unavailable, misdelivery, approved reroute,
   unapproved reroute, discovery-loss, and surface-disagreement classes.
-- Verification: 67/67 focused tests, 10/10 privacy scan, 2826/2826 full
+- Verification: 67/67 focused tests, 10/10 privacy scan, 2831/2831 full
   suite, and current generated references.
 - Reviewability: size-only `block` at 2,274 source / 2,100 nonblank,
   non-comment lines in the one replay production module; finding-driven
   remediation remains inside the typed `no_safe_boundary` exception.
-- Review: `untitled-chat-F85A77` confirmed the prior state/schema and stale
-  handoff findings were remediated, then reported the remaining T038-T039 task
-  projection mismatch. The checkpoint remains pending until its exact-head
-  remediation returns `NO FINDINGS`.
+- Review: `untitled-chat-DCD935` confirmed the T038-T039 projection fix, then
+  reported five terminal-evidence findings: incomplete checkpoint and emission
+  binding, whole-file task fingerprint drift, Phase 0 projection drift,
+  committed-freeze lineage wording, and incomplete base-to-head file scope.
+  The checkpoint remains pending until this exact-head remediation returns
+  `NO FINDINGS`.
 - Folded polish: T031-T037 are complete; T038 and T039 are intentionally
   unchecked until reviewability evidence and release readiness are rerun for
   the same clean head.
@@ -958,16 +960,16 @@ For every task:
 | Fingerprint input | SHA-256 |
 |---|---|
 | Feature spec | `sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56` |
-| Plan-declared scope | `sha256:514e4ad5bf39dcab31c760ecd8e6db2556239509e630b69694b44c22ee684b2b` |
-| Tasks | `sha256:ea2a5f09f18b276dd719d748a5d5f8fb47c56a62a75e6d1da09124c2c3438072` |
-| Reviewability evidence | `sha256:bc35d72e5fbea3574c26cac2ce91cecd720fab32af4f0d7d6c9faf3b2f379c76` |
+| Plan-declared scope | `sha256:0e26453e71e0f96203e32432457d3a910c87027c47741af332dc2c87611be09b` |
+| Tasks | `sha256:900dabf0cbdad700d30263c216fc18486a4d92aade0c39a984389451b0aefd59` |
+| Reviewability evidence | `sha256:160eab4b4986d7c162fd99c94abdcac9133777b3f8afcf094ef93283ae8732ae` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
 | 2 | `us2` | T016-T025 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `1190e3c1205744fd50afb37a12c0f9527ad5ee53` | Only T026-T030 replay growth remains authorized |
-| 3 | `us3` | T026-T030; T031-T039 folded | Size-only `block`; finding-driven typed `no_safe_boundary` exception | Checkpointing from reviewed head `6f30b6f1a93819d469084c7da8e8a36367684d30` | T038-T039 finalization remains open |
+| 3 | `us3` | T026-T030; T031-T039 folded | Size-only `block`; finding-driven typed `no_safe_boundary` exception | Checkpointing from reviewed head `ab08b9dcba36097650cf2d5bebb72d8a7d33c119` | T038-T039 finalization remains open |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank

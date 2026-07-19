@@ -109,10 +109,14 @@ redundant top-level ID. The candidate-freeze ID hashes the complete published
 payload except the ID itself, so a replay or mutation cannot preserve the same
 identity.
 
-This is the first committed G56R-002 freeze. Earlier identities produced during
-the rejected, uncommitted implementation review were drafts rather than
-published predecessors. The CLI nevertheless accepts explicit predecessor IDs
-for every later freeze and runtime-snapshot successor.
+Candidate freeze
+`sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03`
+was the first committed G56R-002 capability freeze. Treatment-bound candidate
+freeze `sha256:dcf75cea52244ba175324d83fb021f70f96c64e1e82d963451e91da5127c40d6`
+is its committed successor. Earlier identities produced during rejected,
+uncommitted implementation reviews were drafts and are neither published
+predecessors nor part of this lineage. The CLI requires explicit predecessor
+IDs for every later freeze and runtime-snapshot successor.
 
 Raw captures, if any, remain in an operator-only content-addressed store outside
 the repository with directory mode `0700` and file mode `0600`; symlinks,

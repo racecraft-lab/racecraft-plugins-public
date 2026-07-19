@@ -42,7 +42,8 @@
         "status": "warn",
         "mode": "marker",
         "scope": "foundation",
-        "evidence_path": "specs/prsg-013-reviewability-markers/.process/marker-plan/foundation-reviewability.json"
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/marker-plan/foundation-reviewability.json",
+        "head_sha": "ffffffffffffffffffffffffffffffffffffffff"
       },
       "hazards": [],
       "subdivision": {
@@ -51,11 +52,18 @@
       },
       "implementation_checkpoint": {
         "status": "complete",
-        "evidence_path": "specs/prsg-013-reviewability-markers/.process/markers/foundation-checkpoint.md"
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/markers/foundation-checkpoint.md",
+        "verification_evidence_path": "specs/prsg-013-reviewability-markers/.process/marker-plan/foundation-reviewability.json",
+        "commit_sha": "ffffffffffffffffffffffffffffffffffffffff",
+        "head_sha": "ffffffffffffffffffffffffffffffffffffffff",
+        "completed_at": "2026-07-19T00:00:00Z",
+        "completed_task_ids": ["T004"],
+        "summary": "Completed the foundation marker.",
+        "validation": ["foundation marker verification passed"]
       },
       "emission_mapping": {
         "status": "marker_split",
-        "packet_path": ""
+        "packet_path": "specs/prsg-013-reviewability-markers/.process/emission/foundation/packet.json"
       },
       "warnings": [
         {
@@ -96,7 +104,8 @@
         "status": "pass",
         "mode": "marker",
         "scope": "us1",
-        "evidence_path": "specs/prsg-013-reviewability-markers/.process/marker-plan/us1-reviewability.json"
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/marker-plan/us1-reviewability.json",
+        "head_sha": "1111111111111111111111111111111111111111"
       },
       "hazards": [],
       "subdivision": {
@@ -105,11 +114,18 @@
       },
       "implementation_checkpoint": {
         "status": "complete",
-        "evidence_path": "specs/prsg-013-reviewability-markers/.process/markers/us1-checkpoint.md"
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/markers/us1-checkpoint.md",
+        "verification_evidence_path": "specs/prsg-013-reviewability-markers/.process/marker-plan/us1-reviewability.json",
+        "commit_sha": "1111111111111111111111111111111111111111",
+        "head_sha": "1111111111111111111111111111111111111111",
+        "completed_at": "2026-07-19T00:00:00Z",
+        "completed_task_ids": ["T027", "T028", "T029", "T032"],
+        "summary": "Completed the US1 marker.",
+        "validation": ["US1 marker verification passed"]
       },
       "emission_mapping": {
         "status": "marker_split",
-        "packet_path": ""
+        "packet_path": "specs/prsg-013-reviewability-markers/.process/emission/us1/packet.json"
       },
       "warnings": []
     },
@@ -140,7 +156,8 @@
         "status": "warn",
         "mode": "marker",
         "scope": "us2-part1",
-        "evidence_path": "specs/prsg-013-reviewability-markers/.process/marker-plan/us2-part1-reviewability.json"
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/marker-plan/us2-part1-reviewability.json",
+        "head_sha": "2222222222222222222222222222222222222222"
       },
       "hazards": ["schema-only marker remains reviewable"],
       "subdivision": {
@@ -151,11 +168,18 @@
       },
       "implementation_checkpoint": {
         "status": "complete",
-        "evidence_path": "specs/prsg-013-reviewability-markers/.process/markers/us2-part1-checkpoint.md"
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/markers/us2-part1-checkpoint.md",
+        "verification_evidence_path": "specs/prsg-013-reviewability-markers/.process/marker-plan/us2-part1-reviewability.json",
+        "commit_sha": "2222222222222222222222222222222222222222",
+        "head_sha": "2222222222222222222222222222222222222222",
+        "completed_at": "2026-07-19T00:00:00Z",
+        "completed_task_ids": ["T033", "T034", "T035"],
+        "summary": "Completed the first US2 marker part.",
+        "validation": ["US2 part 1 marker verification passed"]
       },
       "emission_mapping": {
         "status": "marker_split",
-        "packet_path": ""
+        "packet_path": "specs/prsg-013-reviewability-markers/.process/emission/us2-part1/packet.json"
       },
       "warnings": []
     }

@@ -58,6 +58,37 @@
       "type": "string"
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "emitted"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "markers": {
+            "items": {
+              "properties": {
+                "emission_mapping": {
+                  "properties": {
+                    "status": {
+                      "const": "emitted"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "source_fingerprint": {
       "type": "object",
@@ -199,7 +230,70 @@
             "$ref": "#/$defs/warning"
           }
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "emission_mapping": {
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "marker_split",
+                      "emitted"
+                    ]
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              }
+            },
+            "required": [
+              "emission_mapping"
+            ]
+          },
+          "then": {
+            "properties": {
+              "implementation_checkpoint": {
+                "properties": {
+                  "status": {
+                    "const": "complete"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "implementation_checkpoint": {
+                "properties": {
+                  "status": {
+                    "const": "complete"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              }
+            },
+            "required": [
+              "implementation_checkpoint"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reviewability": {
+                "required": [
+                  "head_sha"
+                ]
+              }
+            }
+          }
+        }
+      ]
     },
     "source_boundary": {
       "type": "object",
@@ -349,6 +443,8 @@
         },
         "completed_task_ids": {
           "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "type": "string",
             "minLength": 1
@@ -360,6 +456,8 @@
         },
         "validation": {
           "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "type": "string",
             "minLength": 1
@@ -381,7 +479,13 @@
           "then": {
             "required": [
               "evidence_path",
-              "commit_sha"
+              "verification_evidence_path",
+              "commit_sha",
+              "head_sha",
+              "completed_at",
+              "completed_task_ids",
+              "summary",
+              "validation"
             ]
           }
         }

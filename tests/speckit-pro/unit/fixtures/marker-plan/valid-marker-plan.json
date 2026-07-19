@@ -44,7 +44,8 @@
         "status": "warn",
         "mode": "marker",
         "scope": "foundation",
-        "evidence_path": "specs/prsg-013-reviewability-markers/.process/reviewability/foundation.json"
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/reviewability/foundation.json",
+        "head_sha": "ffffffffffffffffffffffffffffffffffffffff"
       },
       "hazards": [],
       "subdivision": {
@@ -53,7 +54,14 @@
       },
       "implementation_checkpoint": {
         "status": "complete",
-        "evidence_path": "specs/prsg-013-reviewability-markers/.process/checkpoints/foundation.json"
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/checkpoints/foundation.json",
+        "verification_evidence_path": "specs/prsg-013-reviewability-markers/.process/reviewability/foundation.json",
+        "commit_sha": "ffffffffffffffffffffffffffffffffffffffff",
+        "head_sha": "ffffffffffffffffffffffffffffffffffffffff",
+        "completed_at": "2026-07-19T00:00:00Z",
+        "completed_task_ids": ["T004"],
+        "summary": "Completed the foundation marker.",
+        "validation": ["foundation marker verification passed"]
       },
       "emission_mapping": {
         "status": "pending",
@@ -104,7 +112,8 @@
         "status": "block",
         "mode": "marker",
         "scope": "us1",
-        "evidence_path": "specs/prsg-013-reviewability-markers/.process/reviewability/us1.json"
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/reviewability/us1.json",
+        "head_sha": "1111111111111111111111111111111111111111"
       },
       "hazards": [],
       "subdivision": {
@@ -115,7 +124,14 @@
       },
       "implementation_checkpoint": {
         "status": "complete",
-        "evidence_path": "specs/prsg-013-reviewability-markers/.process/checkpoints/us1.json"
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/checkpoints/us1.json",
+        "verification_evidence_path": "specs/prsg-013-reviewability-markers/.process/reviewability/us1.json",
+        "commit_sha": "1111111111111111111111111111111111111111",
+        "head_sha": "1111111111111111111111111111111111111111",
+        "completed_at": "2026-07-19T00:00:00Z",
+        "completed_task_ids": ["T009", "T010", "T012", "T013", "T014", "T015"],
+        "summary": "Completed the US1 marker.",
+        "validation": ["US1 marker verification passed"]
       },
       "emission_mapping": {
         "status": "pending",
@@ -166,7 +182,8 @@
         "status": "pass",
         "mode": "marker",
         "scope": "us2",
-        "evidence_path": "specs/prsg-013-reviewability-markers/.process/reviewability/us2.json"
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/reviewability/us2.json",
+        "head_sha": "2222222222222222222222222222222222222222"
       },
       "hazards": [],
       "subdivision": {
@@ -175,7 +192,14 @@
       },
       "implementation_checkpoint": {
         "status": "complete",
-        "evidence_path": "specs/prsg-013-reviewability-markers/.process/checkpoints/us2.json"
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/checkpoints/us2.json",
+        "verification_evidence_path": "specs/prsg-013-reviewability-markers/.process/reviewability/us2.json",
+        "commit_sha": "2222222222222222222222222222222222222222",
+        "head_sha": "2222222222222222222222222222222222222222",
+        "completed_at": "2026-07-19T00:00:00Z",
+        "completed_task_ids": ["T016", "T017", "T018", "T040"],
+        "summary": "Completed the US2 marker and folded polish.",
+        "validation": ["US2 marker verification passed"]
       },
       "emission_mapping": {
         "status": "pending",

@@ -40,7 +40,9 @@ canary hard-bounded to 30 seconds and 64 KiB combined output
 
 **Constraints**: No third-party packages, Bash, `jq`, raw live responses in Git,
 retries within a snapshot, inferred platform facts, qualification, scoring,
-installer changes, agent changes, payload regeneration, or fallback ordering
+installer changes, agent changes, unrelated payload changes, or fallback ordering.
+Finding-driven shared schema or validator hardening must regenerate its existing
+payload and installed-cache proof copies from source.
 
 **Scale/Scope**: Twelve named-agent contracts, the G56R-001 source-bound route
 set, one pinned client identity, three observation surfaces, and the eight
@@ -56,7 +58,9 @@ increments cease to be independently testable.
 2 modified files. The helper does not classify Python modules below
 `tests/speckit-pro/` as production, so its zero is a path-classification limit,
 not a size claim. The binding human estimate remains 297 reviewable LOC; the
-400-LOC split trigger remains enforced.
+400-LOC split trigger remains enforced. The exact current base-to-head path set
+is governed separately by the changed-file manifest below because independent
+review remediation expanded process, schema, and generated-proof surfaces.
 
 **Implementation checkpoint**: The capability adapter is 2,470 source lines
 and 2,243 nonblank, non-comment lines after finding-driven US2 retention
@@ -75,16 +79,14 @@ in `docs/ai/specs/.process/autopilot-state.json`.
 
 ## Declared File Operations
 
-- NEW tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py
-- NEW tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py
-- NEW tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py
-- NEW tests/speckit-pro/unit/fixtures/capability-treatment-replay/capability-matrix.json
-- NEW tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json
-- NEW tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json
-- MODIFIED tests/speckit-pro/suite-manifest.json
-- MODIFIED docs-site/src/content/docs/reference/tests.md
-- NEW docs/ai/research/codex-g56r-002-executable-candidate-freeze.json
-- NEW docs/ai/research/codex-g56r-002-capability-evidence.md
+The authoritative operation set is
+`specs/g56r-002-capability-discovery-telemetry/.process/changed-file-manifest.json`.
+It classifies every path from base
+`166006e999ad6924c26379e32299a10693c46ba2` through the current `HEAD` by
+operation, marker ownership, process/generated category, and provenance. The
+manifest includes itself and this plan. T039 must compare the manifest exactly
+to `git diff --name-status 166006e999ad6924c26379e32299a10693c46ba2..HEAD`;
+an omitted, extra, or differently classified operation keeps T039 incomplete.
 
 ## Constitution Check
 

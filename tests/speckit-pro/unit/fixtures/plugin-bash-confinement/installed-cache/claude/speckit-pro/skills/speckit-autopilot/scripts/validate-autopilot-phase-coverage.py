@@ -4,7 +4,10 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -70,6 +73,17 @@ ORDERED_STATE_CHECKPOINTS = (
     "Post: Doctor Extension Check",
     "Post: Retrospective",
 )
+
+TASK_LINE_RE = re.compile(r"^- \[[ xX]\] (T[0-9]+)\b")
+COMPLETE_CHECKPOINT_STRING_FIELDS = (
+    "evidence_path",
+    "verification_evidence_path",
+    "commit_sha",
+    "head_sha",
+    "completed_at",
+    "summary",
+)
+COMPLETE_CHECKPOINT_LIST_FIELDS = ("completed_task_ids", "validation")
 
 
 @dataclass(frozen=True)
@@ -199,13 +213,142 @@ def _pending_value_paths(value: Any, path: str) -> list[str]:
     return []
 
 
-def validate_projection_integrity(state: dict[str, Any], steps: list[PlanStep]) -> dict[str, list[str]]:
+def _repository_root(path: Path) -> Path | None:
+    for candidate in (path.parent, *path.parents):
+        if (candidate / ".git").exists():
+            return candidate
+    return None
+
+
+def _repo_file(repo_root: Path, raw_path: object) -> Path | None:
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        return None
+    relative = Path(raw_path)
+    if relative.is_absolute():
+        return None
+    resolved = (repo_root / relative).resolve()
+    try:
+        resolved.relative_to(repo_root.resolve())
+    except ValueError:
+        return None
+    return resolved
+
+
+def _sha256_bytes(value: bytes) -> str:
+    return f"sha256:{hashlib.sha256(value).hexdigest()}"
+
+
+def _string_list(value: object) -> list[str] | None:
+    if not isinstance(value, list) or not all(isinstance(item, str) and item for item in value):
+        return None
+    return value
+
+
+def _marker_tasks_sha(tasks_path: Path, task_ids: set[str]) -> str | None:
+    selected: list[str] = []
+    found: set[str] = set()
+    for line in read_text(tasks_path).splitlines():
+        match = TASK_LINE_RE.match(line)
+        if match and match.group(1) in task_ids:
+            selected.append(line)
+            found.add(match.group(1))
+    if found != task_ids:
+        return None
+    return _sha256_bytes(("\n".join(selected) + "\n").encode("utf-8"))
+
+
+def _load_json_object(path: Path) -> dict[str, Any] | None:
+    try:
+        value = json.loads(read_text(path))
+    except (ValidationError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def validate_changed_file_manifest(state: dict[str, Any], state_path: Path) -> dict[str, list[str]]:
+    manifest_ref = state.get("changed_file_manifest")
+    if manifest_ref is None:
+        return {"changed_file_manifest_errors": []}
+    repo_root = _repository_root(state_path)
+    if repo_root is None:
+        return {"changed_file_manifest_errors": ["repository root is unavailable"]}
+    manifest_path = _repo_file(repo_root, manifest_ref)
+    manifest = _load_json_object(manifest_path) if manifest_path and manifest_path.is_file() else None
+    if manifest is None:
+        return {"changed_file_manifest_errors": ["changed-file manifest is missing or invalid"]}
+    base_commit = manifest.get("base_commit")
+    entries = manifest.get("files")
+    if not isinstance(base_commit, str) or not re.fullmatch(r"[0-9a-f]{40}", base_commit):
+        return {"changed_file_manifest_errors": ["changed-file manifest base_commit is invalid"]}
+    if not isinstance(entries, list):
+        return {"changed_file_manifest_errors": ["changed-file manifest files must be an array"]}
+
+    declared: dict[str, str] = {}
+    structural_errors: list[str] = []
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            structural_errors.append(f"files[{index}] must be an object")
+            continue
+        path = entry.get("path")
+        operation = entry.get("operation")
+        if not isinstance(path, str) or not path or path in declared:
+            structural_errors.append(f"files[{index}].path is invalid or duplicated")
+            continue
+        if operation not in {"NEW", "MODIFIED", "DELETED", "RENAMED"}:
+            structural_errors.append(f"files[{index}].operation is invalid")
+            continue
+        if not isinstance(entry.get("category"), str) or not entry["category"]:
+            structural_errors.append(f"files[{index}].category is required")
+        if not isinstance(entry.get("provenance"), str) or not entry["provenance"]:
+            structural_errors.append(f"files[{index}].provenance is required")
+        marker_ids = entry.get("marker_ids")
+        if _string_list(marker_ids) is None:
+            structural_errors.append(f"files[{index}].marker_ids must be a string array")
+        declared[path] = operation
+    if structural_errors:
+        return {"changed_file_manifest_errors": structural_errors}
+
+    completed = subprocess.run(
+        ["git", "-C", str(repo_root), "diff", "--name-status", f"{base_commit}..HEAD"],
+        text=True,
+        capture_output=True,
+        shell=False,
+        check=False,
+    )
+    if completed.returncode != 0:
+        return {"changed_file_manifest_errors": ["git diff for changed-file manifest failed"]}
+    observed: dict[str, str] = {}
+    status_map = {"A": "NEW", "M": "MODIFIED", "D": "DELETED"}
+    for line in completed.stdout.splitlines():
+        fields = line.split("\t")
+        status = fields[0]
+        if status.startswith("R") and len(fields) == 3:
+            observed[fields[2]] = "RENAMED"
+        elif status[:1] in status_map and len(fields) == 2:
+            observed[fields[1]] = status_map[status[:1]]
+        else:
+            return {"changed_file_manifest_errors": [f"unsupported git diff record: {line}"]}
+    errors = [
+        f"declared changed-file manifest does not match {base_commit}..HEAD"
+    ] if declared != observed else []
+    return {"changed_file_manifest_errors": errors}
+
+
+def validate_projection_integrity(
+    state: dict[str, Any], steps: list[PlanStep], state_path: Path,
+) -> dict[str, list[str]]:
     phase_results = state.get("phase_results")
     marker_plan = state.get("pr_marker_plan")
     completed_phase_pending_fields: list[str] = []
     projection_status_errors: list[str] = []
     checkpoint_evidence_errors: list[str] = []
+    checkpoint_source_fingerprint_errors: list[str] = []
+    checkpoint_file_errors: list[str] = []
     emission_mapping_errors: list[str] = []
+    repo_root = _repository_root(state_path)
+    feature_dir = state.get("feature_dir")
+    tasks_path = _repo_file(repo_root, f"{feature_dir}/tasks.md") if repo_root and isinstance(feature_dir, str) else None
+    current_tasks_sha = _sha256_bytes(tasks_path.read_bytes()) if tasks_path and tasks_path.is_file() else None
 
     phases = phase_results if isinstance(phase_results, dict) else {}
     for phase_name, raw_result in phases.items():
@@ -213,7 +356,7 @@ def validate_projection_integrity(state: dict[str, Any], steps: list[PlanStep]) 
             continue
         result_status = raw_result.get("status")
         matching_steps = [step for step in steps if step.step == phase_name or step.step.startswith(f"{phase_name} (")]
-        if result_status in {"completed", "in_progress", "pending"} and matching_steps:
+        if result_status in {"completed", "in_progress", "pending", "checkpointing"} and matching_steps:
             expected_plan_status = "completed" if result_status == "completed" else result_status
             if matching_steps[0].status != expected_plan_status:
                 projection_status_errors.append(
@@ -235,11 +378,74 @@ def validate_projection_integrity(state: dict[str, Any], steps: list[PlanStep]) 
             if isinstance(checkpoint, dict):
                 checkpoint_status = checkpoint.get("status")
                 if checkpoint_status == "complete":
-                    for required in ("evidence_path", "commit_sha"):
+                    for required in COMPLETE_CHECKPOINT_STRING_FIELDS:
                         if not isinstance(checkpoint.get(required), str) or not checkpoint[required].strip():
                             checkpoint_evidence_errors.append(
                                 f"pr_marker_plan.markers[{index}].implementation_checkpoint.{required}"
                             )
+                    for required in COMPLETE_CHECKPOINT_LIST_FIELDS:
+                        value = checkpoint.get(required)
+                        if not isinstance(value, list) or not value or not all(isinstance(item, str) and item for item in value):
+                            checkpoint_evidence_errors.append(
+                                f"pr_marker_plan.markers[{index}].implementation_checkpoint.{required}"
+                            )
+                    task_ids = _string_list(raw_marker.get("task_ids"))
+                    folded_task_ids = _string_list(raw_marker.get("folded_polish_task_ids"))
+                    expected_tasks = set(task_ids or ()) | set(folded_task_ids or ())
+                    completed_tasks = _string_list(checkpoint.get("completed_task_ids"))
+                    if task_ids is None or folded_task_ids is None:
+                        checkpoint_evidence_errors.append(
+                            f"pr_marker_plan.markers[{index}] marker task coverage"
+                        )
+                    elif completed_tasks is not None and set(completed_tasks) != expected_tasks:
+                        checkpoint_evidence_errors.append(
+                            f"pr_marker_plan.markers[{index}].implementation_checkpoint.completed_task_ids coverage"
+                        )
+                    if checkpoint.get("commit_sha") != checkpoint.get("head_sha"):
+                        checkpoint_evidence_errors.append(
+                            f"pr_marker_plan.markers[{index}].implementation_checkpoint commit/head mismatch"
+                        )
+                    reviewability = raw_marker.get("reviewability")
+                    reviewed_head = reviewability.get("head_sha") if isinstance(reviewability, dict) else None
+                    if reviewed_head != checkpoint.get("head_sha"):
+                        checkpoint_evidence_errors.append(
+                            f"pr_marker_plan.markers[{index}] checkpoint/reviewability head mismatch"
+                        )
+                    if repo_root:
+                        for required in ("evidence_path", "verification_evidence_path"):
+                            target = _repo_file(repo_root, checkpoint.get(required))
+                            if target is None or not target.is_file():
+                                checkpoint_file_errors.append(
+                                    f"pr_marker_plan.markers[{index}].implementation_checkpoint.{required}"
+                                )
+
+                evidence_path = _repo_file(repo_root, checkpoint.get("evidence_path")) if repo_root else None
+                evidence = _load_json_object(evidence_path) if evidence_path and evidence_path.is_file() else None
+                if evidence is not None and tasks_path and current_tasks_sha:
+                    marker_task_values = _string_list(raw_marker.get("task_ids"))
+                    marker_task_ids = set(marker_task_values or ())
+                    evidence_task_values = _string_list(evidence.get("task_ids"))
+                    expected_marker_sha = (
+                        _marker_tasks_sha(tasks_path, marker_task_ids)
+                        if marker_task_values is not None
+                        else None
+                    )
+                    checks = {
+                        "marker_id": evidence.get("marker_id") == marker_id,
+                        "task_ids": (
+                            marker_task_values is not None
+                            and evidence_task_values is not None
+                            and set(evidence_task_values) == marker_task_ids
+                        ),
+                        "source_fingerprint_contract": evidence.get("source_fingerprint_contract") == "marker-task-lines.v1",
+                        "source_fingerprint_status": evidence.get("source_fingerprint_status") == "current_marker_scope",
+                        "current_tasks_sha": evidence.get("current_tasks_sha") == current_tasks_sha,
+                        "marker_tasks_sha": evidence.get("marker_tasks_sha") == expected_marker_sha,
+                    }
+                    checkpoint_source_fingerprint_errors.extend(
+                        f"pr_marker_plan.markers[{index}] checkpoint {field}"
+                        for field, passed in checks.items() if not passed
+                    )
                 matching_phases = [
                     (phase_name, result)
                     for phase_name, result in phases.items()
@@ -268,11 +474,26 @@ def validate_projection_integrity(state: dict[str, Any], steps: list[PlanStep]) 
                         emission_mapping_errors.append(
                             f"pr_marker_plan.markers[{index}].emission_mapping.{required}"
                         )
+                if emission_status in {"marker_split", "emitted"}:
+                    if not isinstance(checkpoint, dict) or checkpoint.get("status") != "complete":
+                        emission_mapping_errors.append(
+                            f"pr_marker_plan.markers[{index}] emission requires a complete checkpoint"
+                        )
+
+        if marker_plan.get("status") == "emitted":
+            for index, raw_marker in enumerate(markers):
+                emission = raw_marker.get("emission_mapping") if isinstance(raw_marker, dict) else None
+                if not isinstance(emission, dict) or emission.get("status") != "emitted":
+                    emission_mapping_errors.append(
+                        f"pr_marker_plan.status emitted requires marker {index} terminal emitted mapping"
+                    )
 
     return {
         "completed_phase_pending_fields": completed_phase_pending_fields,
         "projection_status_errors": projection_status_errors,
         "checkpoint_evidence_errors": checkpoint_evidence_errors,
+        "checkpoint_source_fingerprint_errors": checkpoint_source_fingerprint_errors,
+        "checkpoint_file_errors": checkpoint_file_errors,
         "emission_mapping_errors": emission_mapping_errors,
     }
 
@@ -284,8 +505,9 @@ def build_report(workflow: Path, state: Path) -> dict[str, Any]:
 
     workflow_result = validate_workflow(workflow_text)
     state_result = validate_state(plan_steps)
-    projection_result = validate_projection_integrity(state_data, plan_steps)
-    problems = {**workflow_result, **state_result, **projection_result}
+    projection_result = validate_projection_integrity(state_data, plan_steps, state)
+    manifest_result = validate_changed_file_manifest(state_data, state)
+    problems = {**workflow_result, **state_result, **projection_result, **manifest_result}
     passed = all(not values for values in problems.values())
 
     return {
