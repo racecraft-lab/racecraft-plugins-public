@@ -77,7 +77,8 @@
     "us2_cli_documentation": "pass",
     "successor_cross_binding": "pass",
     "malformed_predecessor_error_normalization": "pass",
-    "independent_review": "repeat_pending"
+    "independent_review": "pass",
+    "independent_review_chat_id": "windows-telemetry-review-D88461"
   },
   "exception": {
     "kind": "typed_size_only",

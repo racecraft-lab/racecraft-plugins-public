@@ -2,13 +2,13 @@
   "schema_version": "marker-checkpoint.v1",
   "feature_id": "G56R-002",
   "marker_id": "us2",
-  "status": "review_pending",
+  "status": "complete",
   "task_ids": [
     "T016", "T017", "T018", "T019", "T020",
     "T021", "T022", "T023", "T024", "T025"
   ],
   "implementation_baseline_sha": "bbffc774c815594edc64cf412a2b5f91127ef213",
-  "implementation_checkpoint_sha": null,
+  "implementation_checkpoint_sha": "1190e3c1205744fd50afb37a12c0f9527ad5ee53",
   "superseded_checkpoint_sha": "c47c9d31fd1288e86f0707601078e4f03e2b12e5",
   "prior_candidate_freeze_id": "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03",
   "candidate_freeze_id": "sha256:dcf75cea52244ba175324d83fb021f70f96c64e1e82d963451e91da5127c40d6",
@@ -79,10 +79,11 @@
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass",
     "full_suite": "2821/2821 pass",
-    "independent_critical_high_review": "repeat_pending"
+    "independent_critical_high_review": "pass",
+    "independent_review_chat_id": "windows-telemetry-review-D88461"
   },
   "source_fingerprint_status": "current",
   "tasks_sha": "sha256:dd9f8f33a70aac48cf73ddf058c6fc6a1d0e82422dabfd35611c2cff783ec5e4",
-  "completed_at": null,
+  "completed_at": "2026-07-19T03:09:22Z",
   "review_iteration_started_at": "2026-07-18T20:59:20Z"
 }
