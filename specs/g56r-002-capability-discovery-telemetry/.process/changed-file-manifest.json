@@ -1,7 +1,7 @@
 {
   "schema_version": "changed-file-manifest.v1",
   "feature_id": "G56R-002",
-  "base_commit": "166006e999ad6924c26379e32299a10693c46ba2",
+  "base_commit": "48d72a5dfe1dd971bef6ddcdcd7a67752c9975ec",
   "comparison_ref": "HEAD",
   "files": [
     {
@@ -166,90 +166,6 @@
       "marker_ids": ["us3"]
     },
     {
-      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py",
-      "operation": "MODIFIED",
-      "category": "implementation",
-      "provenance": "authored",
-      "marker_ids": ["us3"]
-    },
-    {
-      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py",
-      "operation": "NEW",
-      "category": "implementation",
-      "provenance": "authored",
-      "marker_ids": ["us3"]
-    },
-    {
-      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py",
-      "operation": "NEW",
-      "category": "implementation",
-      "provenance": "authored",
-      "marker_ids": ["us3"]
-    },
-    {
-      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py",
-      "operation": "NEW",
-      "category": "implementation",
-      "provenance": "authored",
-      "marker_ids": ["us3"]
-    },
-    {
-      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py",
-      "operation": "NEW",
-      "category": "implementation",
-      "provenance": "authored",
-      "marker_ids": ["us3"]
-    },
-    {
-      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py",
-      "operation": "NEW",
-      "category": "implementation",
-      "provenance": "authored",
-      "marker_ids": ["us3"]
-    },
-    {
-      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py",
-      "operation": "NEW",
-      "category": "implementation",
-      "provenance": "authored",
-      "marker_ids": ["us3"]
-    },
-    {
-      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py",
-      "operation": "NEW",
-      "category": "implementation",
-      "provenance": "authored",
-      "marker_ids": ["us3"]
-    },
-    {
-      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py",
-      "operation": "NEW",
-      "category": "implementation",
-      "provenance": "authored",
-      "marker_ids": ["us3"]
-    },
-    {
-      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py",
-      "operation": "NEW",
-      "category": "implementation",
-      "provenance": "authored",
-      "marker_ids": ["us3"]
-    },
-    {
-      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py",
-      "operation": "NEW",
-      "category": "implementation",
-      "provenance": "authored",
-      "marker_ids": ["us3"]
-    },
-    {
-      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py",
-      "operation": "NEW",
-      "category": "implementation",
-      "provenance": "authored",
-      "marker_ids": ["us3"]
-    },
-    {
       "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_authority.py",
       "operation": "NEW",
       "category": "implementation",
@@ -313,15 +229,15 @@
       "marker_ids": ["us3"]
     },
     {
-      "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_successor.py",
-      "operation": "NEW",
+      "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py",
+      "operation": "MODIFIED",
       "category": "implementation",
       "provenance": "authored",
       "marker_ids": ["us3"]
     },
     {
-      "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py",
-      "operation": "MODIFIED",
+      "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_successor.py",
+      "operation": "NEW",
       "category": "implementation",
       "provenance": "authored",
       "marker_ids": ["us3"]

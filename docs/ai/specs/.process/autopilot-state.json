@@ -71,8 +71,8 @@
     {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
     {"step": "Phase 7: Implement - Capability Freeze (T001-T015)", "status": "completed"},
     {"step": "Phase 7: Implement - Treatment Contracts (T016-T025)", "status": "completed"},
-    {"step": "Phase 7: Implement - Synthetic Replay (T026-T030)", "status": "completed"},
-    {"step": "Phase 7: Implement - Integration and Polish (T031-T039)", "status": "completed"},
+    {"step": "Phase 7: Implement - Synthetic Replay (T026-T030)", "status": "pending"},
+    {"step": "Phase 7: Implement - Integration and Polish (T031-T039)", "status": "pending"},
     {"step": "Post: Doctor Extension Check", "status": "pending"},
     {"step": "Post: Verify Implementation", "status": "pending"},
     {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
@@ -313,7 +313,7 @@
       "status": "completed",
       "tasks_completed": 10,
       "tasks_total": 10,
-      "focused_tests": "51/51 pass",
+      "focused_tests": "53/53 pass",
       "windows_safe_offline_replay": "pass",
       "canonical_manifest_snapshot": "pass",
       "canonical_route_resolution_membership": "pass",
@@ -325,6 +325,9 @@
       "retention_lock_failure_release": "pass",
       "post_unlink_completion_proof": "pass",
       "post_persistence_valueerror_recovery": "pass",
+      "completion_probe_failure_restoration": "pass",
+      "exact_public_facade_exports": "pass",
+      "private_trust_primitives_hidden": "pass",
       "canonical_completion_record_reachability": "pass",
       "retry_completion_timestamp_accuracy": "pass",
       "parent_configuration_owner_join": "pass",
@@ -336,16 +339,18 @@
       "qualification_identifier_schema_parity": "pass",
       "malformed_predecessor_error_normalization": "pass",
       "independent_review": "pass",
-      "independent_review_chat_id": "windows-telemetry-review-D88461",
+      "independent_review_chat_id": "audit-us2-remediation-F4E33F",
+      "independent_review_findings": [],
       "baseline_commit": "bbffc774c815594edc64cf412a2b5f91127ef213",
       "candidate_freeze_id": "sha256:dcf75cea52244ba175324d83fb021f70f96c64e1e82d963451e91da5127c40d6",
       "telemetry_profile_id": "sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb",
       "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
       "marker_id": "us2",
-      "reviewability": "size-only block at 4,214 source / 3,843 nonblank non-comment lines across 2 production modules with honored typed no-safe-boundary exception",
-      "checkpoint": "1190e3c1205744fd50afb37a12c0f9527ad5ee53",
-      "superseded_checkpoint": "c47c9d31fd1288e86f0707601078e4f03e2b12e5",
-      "completed_at": "2026-07-19T03:09:22Z"
+      "reviewability": "aggregate size-only block at 4,409 source / 3,996 nonblank non-comment lines across 13 production modules; 12 capability modules are safely split with a 363-line maximum, the facade exports exactly the supported API, and only the treatment module retains a typed size-only exception",
+      "checkpoint": "42cdf743346c880c1b7e8cb172e842a82ab6f343",
+      "superseded_checkpoint": "8a179bdbb6aef08849bbfc4ed07c547c26f8194a",
+      "implementation_completed_at": "2026-07-20T03:06:58Z",
+      "completed_at": "2026-07-20T03:50:24Z"
     },
     "Phase 7: Implement - Synthetic Replay": {
       "status": "pending",
@@ -384,12 +389,12 @@
     }
   },
   "current_source_fingerprint": {
-    "feature_spec_sha": "sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56",
-    "plan_declared_scope_sha": "sha256:14ba3fca340c75af86e370254e0c3fbc72f6615daad3c5ee550dc1b21f168cf4",
-    "tasks_sha": "sha256:d16c801273daa9e56c08c34068879b779aedaacc698615a5ba522e350addbdab",
-    "reviewability_sha": "sha256:7219ed60c4390c84adfb31add7a9705c1cfd2c546b20ddc4487b621d93a79692",
+    "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
+    "plan_declared_scope_sha": "sha256:0e01edd70c936c0a68756214fd773894ef5214c504622c6d8c0717d4fe316621",
+    "tasks_sha": "sha256:8be512cab1e165d5e4da374e11f22d8c0fba158542c6347c6e1e875a7eed217c",
+    "reviewability_sha": "sha256:8a788cab3506cacf789fb625327c7883787bf371efc457bcc6e3b1116fd852d8",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
-    "changed_file_manifest_sha": "sha256:6768d7be78fab50abdc6d33c6ac38212f2745bde89b7410b58dc71cee9814893"
+    "changed_file_manifest_sha": "sha256:c455f7eba60244120a145e61fc7a1385816d8a57ecb81a4f5e6eb39e50dd4793"
   },
   "pr_marker_plan": {
     "schema_version": "pr-marker-plan.v2",
@@ -397,12 +402,12 @@
     "feature_id": "G56R-002",
     "status": "checkpointing",
     "source_fingerprint": {
-      "feature_spec_sha": "sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56",
-      "plan_declared_scope_sha": "sha256:14ba3fca340c75af86e370254e0c3fbc72f6615daad3c5ee550dc1b21f168cf4",
-      "tasks_sha": "sha256:d16c801273daa9e56c08c34068879b779aedaacc698615a5ba522e350addbdab",
-      "reviewability_sha": "sha256:7219ed60c4390c84adfb31add7a9705c1cfd2c546b20ddc4487b621d93a79692",
+      "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
+      "plan_declared_scope_sha": "sha256:0e01edd70c936c0a68756214fd773894ef5214c504622c6d8c0717d4fe316621",
+      "tasks_sha": "sha256:8be512cab1e165d5e4da374e11f22d8c0fba158542c6347c6e1e875a7eed217c",
+      "reviewability_sha": "sha256:8a788cab3506cacf789fb625327c7883787bf371efc457bcc6e3b1116fd852d8",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
-      "changed_file_manifest_sha": "sha256:6768d7be78fab50abdc6d33c6ac38212f2745bde89b7410b58dc71cee9814893"
+      "changed_file_manifest_sha": "sha256:c455f7eba60244120a145e61fc7a1385816d8a57ecb81a4f5e6eb39e50dd4793"
     },
     "markers": [
       {
@@ -462,7 +467,7 @@
             "source_fingerprint_status": "current_marker_scope",
             "source_fingerprint_contract": "marker-task-lines.v2",
             "tasks_sha_scope": "checkpoint_time_whole_file",
-            "current_tasks_sha": "sha256:d16c801273daa9e56c08c34068879b779aedaacc698615a5ba522e350addbdab",
+            "current_tasks_sha": "sha256:8be512cab1e165d5e4da374e11f22d8c0fba158542c6347c6e1e875a7eed217c",
             "checkpoint_marker_tasks_sha": "sha256:a82dea018084b65bae400dd3377318bb3ba82f15ad724f69059fed968ea52ee6",
             "current_marker_tasks_sha": "sha256:a82dea018084b65bae400dd3377318bb3ba82f15ad724f69059fed968ea52ee6",
             "validated_at": "2026-07-20T02:17:00Z"
@@ -495,76 +500,121 @@
           "end_task_id": "T025"
         },
         "title_description": "add exact-treatment contracts",
-        "task_ids": ["T016", "T017", "T018", "T019", "T020", "T021", "T022", "T023", "T024", "T025"],
+        "task_ids": [
+          "T016",
+          "T017",
+          "T018",
+          "T019",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T025"
+        ],
         "folded_polish_task_ids": [],
         "folded_polish_target_reason": "Treatment is independently checkpointed before replay integration.",
         "declared_files": [],
-        "declared_tests": ["python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"],
+        "declared_tests": [
+          "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"
+        ],
         "reviewability": {
           "status": "block",
           "mode": "implementation",
           "scope": "us2",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/treatment-contracts.json",
-          "head_sha": "1190e3c1205744fd50afb37a12c0f9527ad5ee53"
+          "head_sha": "42cdf743346c880c1b7e8cb172e842a82ab6f343"
         },
-        "hazards": ["six-id-join", "exact-treatment", "service-reroute"],
+        "hazards": [
+          "six-id-join",
+          "exact-treatment",
+          "service-reroute"
+        ],
         "subdivision": {
           "status": "no_safe_boundary",
           "details": {
-            "reason": "Field authority, owner joins, failure derivation, reroute qualification, and successor cross-binding share one integrity boundary.",
+            "reason": "Capability responsibilities are safely subdivided behind a stable facade with an exact supported-name export list and no private trust primitives; field authority, owner joins, failure derivation, reroute qualification, and successor cross-binding remain the treatment module's integrity-coupled boundary.",
+            "capability_subdivision": {
+              "status": "safe_split",
+              "production_modules": 12,
+              "max_module_source_lines": 363
+            },
             "exception_kind": "typed_size_only",
-            "growth_limit": "Only finding-driven review remediation may extend the two current modules, and only the predeclared T026-T030 offline replay dispatch may extend treatment_trace_schema.py before final freeze; no feature expansion or third production module is authorized."
+            "growth_limit": "Capability modules must remain below 400 source lines with no public API loss. Only finding-driven remediation and the predeclared T026-T030 offline replay dispatch may extend treatment_trace_schema.py before final freeze."
           }
         },
         "implementation_checkpoint": {
           "status": "complete",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json",
-          "checkpoint_evidence_sha": "sha256:63c73f81c6bb45be2c48911a97e6788eda4f70aecfa30cffa8ed8a29924f31b9",
-          "checkpoint_evidence_commit_sha": "dee8acd34b9924561412a98956d80316979987f6",
-          "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json",
-          "commit_sha": "1190e3c1205744fd50afb37a12c0f9527ad5ee53",
-          "head_sha": "1190e3c1205744fd50afb37a12c0f9527ad5ee53",
-          "completed_at": "2026-07-19T03:09:22Z",
-          "completed_task_ids": ["T016", "T017", "T018", "T019", "T020", "T021", "T022", "T023", "T024", "T025"],
-          "summary": "Treatment contracts, successor lineage, telemetry joins, and independent review completed.",
+          "checkpoint_evidence_sha": "sha256:4ae251bd0ba2e7dea865e8f14f8413269124c005d58836cd24ae83bc2cef2926",
+          "checkpoint_evidence_commit_sha": "48d72a5dfe1dd971bef6ddcdcd7a67752c9975ec",
+          "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/treatment-contracts.json",
+          "commit_sha": "42cdf743346c880c1b7e8cb172e842a82ab6f343",
+          "head_sha": "42cdf743346c880c1b7e8cb172e842a82ab6f343",
+          "completed_at": "2026-07-20T03:50:24Z",
+          "completed_task_ids": [
+            "T016",
+            "T017",
+            "T018",
+            "T019",
+            "T020",
+            "T021",
+            "T022",
+            "T023",
+            "T024",
+            "T025"
+          ],
+          "summary": "Treatment contracts, safe capability subdivision, recovery durability, exact facade boundary, and independent review completed.",
           "validation": [
-            "51/51 focused tests pass",
+            "53/53 focused tests pass",
             "2821/2821 full suite pass",
-            "exact-head RepoPrompt review returned NO FINDINGS"
+            "RepoPrompt CE review audit-us2-remediation-F4E33F: NO FINDINGS",
+            "Exact-head evidence delta review exact-head-audit-2D238D: NO FINDINGS"
           ],
           "freshness": {
-            "source_fingerprint_status": "current_marker_scope",
             "source_fingerprint_contract": "marker-task-lines.v2",
+            "source_fingerprint_status": "current_marker_scope",
             "tasks_sha_scope": "checkpoint_time_whole_file",
-            "current_tasks_sha": "sha256:d16c801273daa9e56c08c34068879b779aedaacc698615a5ba522e350addbdab",
+            "current_tasks_sha": "sha256:8be512cab1e165d5e4da374e11f22d8c0fba158542c6347c6e1e875a7eed217c",
             "checkpoint_marker_tasks_sha": "sha256:c6921a6ae1cd126adcd5f4295dda7b6331ca32d40e60f265fbe13d2f348e9ace",
             "current_marker_tasks_sha": "sha256:c6921a6ae1cd126adcd5f4295dda7b6331ca32d40e60f265fbe13d2f348e9ace",
-            "validated_at": "2026-07-20T02:17:00Z"
+            "validated_at": "2026-07-20T04:07:50Z"
           },
-          "superseded_commit_sha": "c47c9d31fd1288e86f0707601078e4f03e2b12e5"
+          "superseded_commit_sha": "8a179bdbb6aef08849bbfc4ed07c547c26f8194a"
         },
-        "emission_mapping": {"status": "pending", "packet_path": "specs/g56r-002-capability-discovery-telemetry/.process/pr-packets/us2.json"},
+        "emission_mapping": {
+          "status": "pending",
+          "packet_path": "specs/g56r-002-capability-discovery-telemetry/.process/pr-packets/us2.json"
+        },
         "warnings": [
           {
             "code": "MARKER_SIZE_WARNING",
             "severity": "warning",
-            "message": "US2 exceeds 400 reviewable LOC and is retained only under the typed no-safe-boundary size exception.",
+            "message": "US2 exceeds 400 aggregate reviewable LOC; capability code is safely subdivided and only the treatment module retains the typed size-only exception.",
             "source": "treatment-contracts-reviewability",
             "details": {
               "marker_id": "us2",
-              "actual_source_lines": 4214,
-              "actual_nonblank_noncomment_lines": 3843,
-              "production_modules": 2,
+              "actual_source_lines": 4409,
+              "actual_nonblank_noncomment_lines": 3996,
+              "production_modules": 13,
               "module_measurements": {
-                "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {"source_lines": 2470, "nonblank_noncomment_lines": 2243},
-                "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {"source_lines": 1744, "nonblank_noncomment_lines": 1600}
+                "capability_group": {
+                  "production_modules": 12,
+                  "source_lines": 2665,
+                  "nonblank_noncomment_lines": 2396,
+                  "max_module_source_lines": 363
+                },
+                "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
+                  "source_lines": 1744,
+                  "nonblank_noncomment_lines": 1600
+                }
               }
             }
           }
         ]
       },
       {
-      "id": "us3",
+        "id": "us3",
         "review_order": 3,
         "kind": "user_story",
         "parent_marker_id": null,
@@ -575,88 +625,290 @@
           "end_task_id": "T030"
         },
         "title_description": "add deterministic treatment replay",
-        "task_ids": ["T026", "T027", "T028", "T029", "T030"],
-        "folded_polish_task_ids": ["T031", "T032", "T033", "T034", "T035", "T036", "T037", "T038", "T039"],
+        "task_ids": [
+          "T026",
+          "T027",
+          "T028",
+          "T029",
+          "T030"
+        ],
+        "folded_polish_task_ids": [
+          "T031",
+          "T032",
+          "T033",
+          "T034",
+          "T035",
+          "T036",
+          "T037",
+          "T038",
+          "T039"
+        ],
         "folded_polish_target_reason": "Integration, generated references, verification, and release gates validate the replay marker as a whole.",
         "declared_files": [
-          {"operation": "MODIFIED", "path": "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json"},
-          {"operation": "MODIFIED", "path": "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"},
-          {"operation": "MODIFIED", "path": "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json"},
-          {"operation": "MODIFIED", "path": "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"},
-          {"operation": "MODIFIED", "path": "docs-site/src/content/docs/reference/tests.md"},
-          {"operation": "MODIFIED", "path": "docs/ai/research/codex-g56r-002-capability-evidence.md"},
-          {"operation": "MODIFIED", "path": "docs/ai/specs/.process/G56R-002-workflow.md"},
-          {"operation": "MODIFIED", "path": "docs/ai/specs/.process/PRSG-013-pr-marker-plan.json"},
-          {"operation": "MODIFIED", "path": "docs/ai/specs/.process/PRSG-013-workflow.md"},
-          {"operation": "MODIFIED", "path": "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json"},
-          {"operation": "MODIFIED", "path": "docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json"},
-          {"operation": "MODIFIED", "path": "docs/ai/specs/.process/XPLAT-009-release-readiness-result.json"},
-          {"operation": "MODIFIED", "path": "docs/ai/specs/.process/autopilot-state.json"},
-          {"operation": "MODIFIED", "path": "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json"},
-          {"operation": "MODIFIED", "path": "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"},
-          {"operation": "NEW", "path": "specs/g56r-002-capability-discovery-telemetry/.process/changed-file-manifest.json"},
-          {"operation": "NEW", "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3.json"},
-          {"operation": "NEW", "path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json"},
-          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/SPEC-MOC.md"},
-          {"operation": "NEW", "path": "specs/g56r-002-capability-discovery-telemetry/contracts/marker-checkpoint.schema.json"},
-          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/plan.md"},
-          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/quickstart.md"},
-          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/tasks.md"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_authority.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_bundle.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_cli.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_fields.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_fixture.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_io.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_json_schema.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_model.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_replay.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_successor.py"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/suite-manifest.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/capability-matrix.json"},
-          {"operation": "NEW", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/marker-plan/current-source-fingerprint.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/marker-plan/fingerprint-mismatch-marker-plan.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/marker-plan/placeholder-pr-marker-plan.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/marker-plan/reviewer-ready-pr-marker-plan.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/marker-plan/stale-marker-plan.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/marker-plan/stale-pr-marker-plan.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/marker-plan/stale-state/state.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/marker-plan/valid-autopilot-state.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/marker-plan/valid-marker-plan.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/marker-plan/valid-pr-marker-plan.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-file-root.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-mutable.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-source-root.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-mutable.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-root-mismatch.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-same-root.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-single-product.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-source-mismatch.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-traversal-root.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/test-autopilot-phase-coverage.py"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/test-reviewability-marker-guidance.py"}
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/tests.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/research/codex-g56r-002-capability-evidence.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/G56R-002-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/PRSG-013-pr-marker-plan.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/PRSG-013-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/XPLAT-009-release-readiness-result.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
+          },
+          {
+            "operation": "NEW",
+            "path": "specs/g56r-002-capability-discovery-telemetry/.process/changed-file-manifest.json"
+          },
+          {
+            "operation": "NEW",
+            "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3.json"
+          },
+          {
+            "operation": "NEW",
+            "path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/g56r-002-capability-discovery-telemetry/SPEC-MOC.md"
+          },
+          {
+            "operation": "NEW",
+            "path": "specs/g56r-002-capability-discovery-telemetry/contracts/marker-checkpoint.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/g56r-002-capability-discovery-telemetry/plan.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/g56r-002-capability-discovery-telemetry/quickstart.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/g56r-002-capability-discovery-telemetry/tasks.md"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_authority.py"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_bundle.py"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_cli.py"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_fields.py"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_fixture.py"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_io.py"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_json_schema.py"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_model.py"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_replay.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_successor.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/suite-manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/capability-matrix.json"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/marker-plan/current-source-fingerprint.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/marker-plan/fingerprint-mismatch-marker-plan.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/marker-plan/placeholder-pr-marker-plan.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/marker-plan/reviewer-ready-pr-marker-plan.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/marker-plan/stale-marker-plan.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/marker-plan/stale-pr-marker-plan.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/marker-plan/stale-state/state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/marker-plan/valid-autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/marker-plan/valid-marker-plan.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/marker-plan/valid-pr-marker-plan.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-file-root.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-mutable.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-source-root.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-mutable.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-root-mismatch.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-same-root.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-single-product.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-source-mismatch.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-traversal-root.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/test-autopilot-phase-coverage.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/test-reviewability-marker-guidance.py"
+          }
         ],
         "declared_tests": [
           "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
@@ -671,7 +923,11 @@
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
           "head_sha": "3d7bd9eff79a1889830c74b6bcd22ae8945098c0"
         },
-        "hazards": ["fixture-provenance", "offline-determinism", "release-readiness"],
+        "hazards": [
+          "fixture-provenance",
+          "offline-determinism",
+          "release-readiness"
+        ],
         "subdivision": {
           "status": "safe_split",
           "details": {
@@ -693,7 +949,22 @@
           "commit_sha": "3d7bd9eff79a1889830c74b6bcd22ae8945098c0",
           "head_sha": "3d7bd9eff79a1889830c74b6bcd22ae8945098c0",
           "completed_at": "2026-07-20T02:15:18Z",
-          "completed_task_ids": ["T026", "T027", "T028", "T029", "T030", "T031", "T032", "T033", "T034", "T035", "T036", "T037", "T038", "T039"],
+          "completed_task_ids": [
+            "T026",
+            "T027",
+            "T028",
+            "T029",
+            "T030",
+            "T031",
+            "T032",
+            "T033",
+            "T034",
+            "T035",
+            "T036",
+            "T037",
+            "T038",
+            "T039"
+          ],
           "summary": "Historical pre-restack checkpoint retained; current restacked head awaits full validation and exact-head independent review.",
           "validation": [
             "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
@@ -706,20 +977,29 @@
             "source_fingerprint_contract": "marker-task-lines.v2",
             "source_fingerprint_status": "current_marker_scope",
             "tasks_sha_scope": "checkpoint_time_whole_file",
-            "current_tasks_sha": "sha256:d16c801273daa9e56c08c34068879b779aedaacc698615a5ba522e350addbdab",
+            "current_tasks_sha": "sha256:8be512cab1e165d5e4da374e11f22d8c0fba158542c6347c6e1e875a7eed217c",
             "checkpoint_marker_tasks_sha": "sha256:0549f955b6e0a56b176378614d3bd2c6cc014f030d63f4dfb170d99f49259995",
             "current_marker_tasks_sha": "sha256:0549f955b6e0a56b176378614d3bd2c6cc014f030d63f4dfb170d99f49259995",
             "validated_at": "2026-07-20T02:17:00Z"
           }
         },
-        "emission_mapping": {"status": "pending", "packet_path": "specs/g56r-002-capability-discovery-telemetry/.process/pr-packets/us3.json"},
+        "emission_mapping": {
+          "status": "pending",
+          "packet_path": "specs/g56r-002-capability-discovery-telemetry/.process/pr-packets/us3.json"
+        },
         "warnings": [
           {
             "code": "MARKER_SIZE_WARNING",
             "severity": "warning",
             "message": "US3 exceeds 400 aggregate reviewable LOC and is safely subdivided into focused modules below 400 source lines.",
             "source": "synthetic-replay-reviewability",
-            "details": {"marker_id": "us3", "actual_source_lines": 5043, "actual_nonblank_noncomment_lines": 4559, "production_modules": 23, "max_module_source_lines": 381}
+            "details": {
+              "marker_id": "us3",
+              "actual_source_lines": 5043,
+              "actual_nonblank_noncomment_lines": 4559,
+              "production_modules": 23,
+              "max_module_source_lines": 381
+            }
           }
         ]
       }

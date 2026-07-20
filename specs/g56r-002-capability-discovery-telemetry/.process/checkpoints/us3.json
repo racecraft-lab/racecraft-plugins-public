@@ -2,7 +2,7 @@
   "schema_version": "marker-checkpoint.v1",
   "feature_id": "G56R-002",
   "marker_id": "us3",
-  "status": "complete",
+  "status": "pending",
   "task_ids": [
     "T026", "T027", "T028", "T029", "T030"
   ],
@@ -25,7 +25,12 @@
     "release_readiness_title_gate": "pass",
     "changed_file_manifest": "78/78 exact"
   },
-  "source_fingerprint_status": "current",
+  "source_fingerprint_contract": "marker-task-lines.v2",
+  "source_fingerprint_status": "current_marker_scope",
   "tasks_sha": "sha256:d16c801273daa9e56c08c34068879b779aedaacc698615a5ba522e350addbdab",
-  "completed_at": "2026-07-20T02:15:18Z"
+  "tasks_sha_scope": "checkpoint_time_whole_file",
+  "current_tasks_sha": "sha256:8be512cab1e165d5e4da374e11f22d8c0fba158542c6347c6e1e875a7eed217c",
+  "checkpoint_marker_tasks_sha": "sha256:0549f955b6e0a56b176378614d3bd2c6cc014f030d63f4dfb170d99f49259995",
+  "current_marker_tasks_sha": "sha256:0549f955b6e0a56b176378614d3bd2c6cc014f030d63f4dfb170d99f49259995",
+  "updated_at": "2026-07-20T04:07:50Z"
 }

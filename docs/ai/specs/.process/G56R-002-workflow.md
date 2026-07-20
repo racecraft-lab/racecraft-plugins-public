@@ -956,7 +956,8 @@ For every task:
 - Evidence finalization after the source head is metadata-only; it does not
   change implementation or verification inputs.
 - Folded polish: T031-T039 are complete. The final reviewability, title, and
-  78-file base-to-head manifest gates pass.
+  Historical 78-file base-to-head manifest gates passed before restack; the
+  current 66-file manifest is pending final current-head validation.
 
 ## PR Marker Plan Evidence
 
@@ -969,12 +970,12 @@ For every task:
 
 | Fingerprint input | SHA-256 |
 |---|---|
-| Feature spec | `sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56` |
-| Plan-declared scope | `sha256:14ba3fca340c75af86e370254e0c3fbc72f6615daad3c5ee550dc1b21f168cf4` |
-| Tasks | `sha256:d16c801273daa9e56c08c34068879b779aedaacc698615a5ba522e350addbdab` |
-| Reviewability evidence | `sha256:7219ed60c4390c84adfb31add7a9705c1cfd2c546b20ddc4487b621d93a79692` |
+| Feature spec | `sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046` |
+| Plan-declared scope | `sha256:0e01edd70c936c0a68756214fd773894ef5214c504622c6d8c0717d4fe316621` |
+| Tasks | `sha256:8be512cab1e165d5e4da374e11f22d8c0fba158542c6347c6e1e875a7eed217c` |
+| Reviewability evidence | `sha256:8a788cab3506cacf789fb625327c7883787bf371efc457bcc6e3b1116fd852d8` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
-| Changed-file manifest | `sha256:6768d7be78fab50abdc6d33c6ac38212f2745bde89b7410b58dc71cee9814893` |
+| Changed-file manifest | `sha256:c455f7eba60244120a145e61fc7a1385816d8a57ecb81a4f5e6eb39e50dd4793` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|

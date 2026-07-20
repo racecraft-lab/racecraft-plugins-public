@@ -81,10 +81,10 @@ heads. The authoritative current marker state is persisted in
 The authoritative operation set is
 `specs/g56r-002-capability-discovery-telemetry/.process/changed-file-manifest.json`.
 It classifies every path from base
-`166006e999ad6924c26379e32299a10693c46ba2` through the current `HEAD` by
+`48d72a5dfe1dd971bef6ddcdcd7a67752c9975ec` through the current `HEAD` by
 operation, marker ownership, process/generated category, and provenance. The
 manifest includes itself and this plan. T039 must compare the manifest exactly
-to `git diff --name-status 166006e999ad6924c26379e32299a10693c46ba2..HEAD`;
+to `git diff --name-status 48d72a5dfe1dd971bef6ddcdcd7a67752c9975ec..HEAD`;
 an omitted, extra, or differently classified operation keeps T039 incomplete.
 
 ## Constitution Check
