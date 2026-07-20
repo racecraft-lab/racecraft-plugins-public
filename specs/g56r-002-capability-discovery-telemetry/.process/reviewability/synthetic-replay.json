@@ -5,9 +5,9 @@
   "status": "block",
   "mode": "implementation",
   "scope": "T026-T030 deterministic synthetic replay",
-  "head_sha": "17fe36df500b31552a7dcfe62da6285684839886",
+  "head_sha": "22507c2667d7698fd65e1ce74dff8e97317a42eb",
   "head_scope": "current_remediation_source",
-  "current_restack_review_status": "live-range-review-9FBA02 twelfth P1 review at 2b406341 remediated at 17fe36df; exact live-head re-review pending",
+  "current_restack_review_status": "live-range-review-9FBA02 thirteenth P1 review at 2496446d remediated at 22507c26; exact live-head re-review pending",
   "reason_class": "aggregate_size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
@@ -21,7 +21,7 @@
   },
   "primary_surface": "harness/adapter",
   "correctness_checks": {
-    "focused_tests": "88/88 pass; validator 34/34 pass; contract parity 71/71 pass after live-range remediation",
+    "focused_tests": "88/88 pass; validator 35/35 pass; contract parity 76/76 pass after live-range remediation",
     "two_pass_byte_equality": "pass",
     "raw_fixture_digest_validation": "pass",
     "canonical_fixture_serialization": "pass",
@@ -38,10 +38,12 @@
     "pending_checkpoint_authority": "pass",
     "canonical_schema_head_authority": "pass",
     "visible_workflow_evidence": "pass",
+    "full_visible_workflow_contract": "pass",
+    "legacy_v1_schema_compatibility": "pass",
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass after restack",
-    "full_suite": "2850/2850 pass after live-range remediation",
-    "independent_review": "live-range-review-9FBA02 twelfth P1 review at 2b406341 remediated at 17fe36df; exact live-head re-review pending"
+    "full_suite": "2856/2856 pass after live-range remediation",
+    "independent_review": "live-range-review-9FBA02 thirteenth P1 review at 2496446d remediated at 22507c26; exact live-head re-review pending"
   },
   "decomposition": {
     "status": "complete",
