@@ -898,7 +898,7 @@ For every task:
 - Superseded candidate freeze: `sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03`
 - Telemetry profile: `sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb`
 - Treatment contract: `sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199`
-- Superseded marker checkpoint: `c47c9d31fd1288e86f0707601078e4f03e2b12e5`
+- Superseded marker checkpoint: `8a179bdbb6aef08849bbfc4ed07c547c26f8194a`
 - Reviewability: size-only `block` at 4,214 source / 3,843 nonblank,
   non-comment lines across the current two production modules
   (`codex_capabilities.py`: 2,470 / 2,243; `treatment_trace_schema.py`:

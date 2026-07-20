@@ -234,6 +234,24 @@ def _freeze_raw_evidence_digests(freeze):
     return sorted(digests)
 
 
+def _assert_retention_lock_current(raw_descriptor, lock_descriptor, expected_lock_identity):
+    try:
+        path_metadata = os.stat(
+            RETENTION_LOCK_FILE, dir_fd=raw_descriptor, follow_symlinks=False,
+        )
+        descriptor_metadata = os.fstat(lock_descriptor)
+    except OSError as error:
+        raise ValueError("raw evidence retention lock path changed") from error
+    for metadata in (path_metadata, descriptor_metadata):
+        if not stat.S_ISREG(metadata.st_mode) or stat.S_IMODE(metadata.st_mode) != 0o600 or metadata.st_nlink != 1:
+            raise ValueError("raw evidence retention lock is invalid")
+    if (
+        _stable_file_identity(path_metadata) != expected_lock_identity
+        or _stable_file_identity(descriptor_metadata) != expected_lock_identity
+    ):
+        raise ValueError("raw evidence retention lock path changed")
+
+
 @contextmanager
 def _retention_lock(raw, expected_raw_identity):
     if not HAS_DESCRIPTOR_RELATIVE_IO:
@@ -244,7 +262,14 @@ def _retention_lock(raw, expected_raw_identity):
         raise ValueError("raw evidence retention requires advisory file locking") from error
     raw_descriptor = _private_directory_descriptor(raw, expected_raw_identity)
     lock_descriptor = None
+    lock_identity = None
+    raw_locked = False
     try:
+        try:
+            fcntl.flock(raw_descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            raw_locked = True
+        except BlockingIOError as error:
+            raise ValueError("raw evidence retention operation is already in progress") from error
         try:
             lock_descriptor = os.open(
                 RETENTION_LOCK_FILE,
@@ -257,26 +282,44 @@ def _retention_lock(raw, expected_raw_identity):
         metadata = os.fstat(lock_descriptor)
         if not stat.S_ISREG(metadata.st_mode) or stat.S_IMODE(metadata.st_mode) != 0o600 or metadata.st_nlink != 1:
             raise ValueError("raw evidence retention lock is invalid")
+        lock_identity = _stable_file_identity(metadata)
+        _assert_retention_lock_current(
+            raw_descriptor, lock_descriptor, lock_identity,
+        )
         try:
             fcntl.flock(lock_descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as error:
             raise ValueError("raw evidence retention operation is already in progress") from error
         os.fsync(lock_descriptor)
         os.fsync(raw_descriptor)
+        _assert_retention_lock_current(
+            raw_descriptor, lock_descriptor, lock_identity,
+        )
         _assert_private_directory_current(raw, raw_descriptor, expected_raw_identity)
+        _assert_retention_lock_current(
+            raw_descriptor, lock_descriptor, lock_identity,
+        )
         yield
     finally:
         try:
             if lock_descriptor is not None:
                 try:
                     _assert_private_directory_current(raw, raw_descriptor, expected_raw_identity)
+                    if lock_identity is not None:
+                        _assert_retention_lock_current(
+                            raw_descriptor, lock_descriptor, lock_identity,
+                        )
                 finally:
                     try:
                         fcntl.flock(lock_descriptor, fcntl.LOCK_UN)
                     finally:
                         os.close(lock_descriptor)
         finally:
-            os.close(raw_descriptor)
+            try:
+                if raw_locked:
+                    fcntl.flock(raw_descriptor, fcntl.LOCK_UN)
+            finally:
+                os.close(raw_descriptor)
 
 
 def _register_raw_evidence_retention_locked(freeze, raw, raw_identity, repository_root):

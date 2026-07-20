@@ -112,6 +112,9 @@ PHASE_VERIFICATION_GATE_ALIASES = {
 WORKFLOW_CHECKPOINT_CLAIM_RE = re.compile(
     r"(?m)^-\s+(?:Implementation checkpoint|Current remediation source head):\s+`([0-9a-f]{40})`\s*$"
 )
+WORKFLOW_SUPERSEDED_CHECKPOINT_CLAIM_RE = re.compile(
+    r"(?m)^-\s+Superseded marker checkpoint:\s+`([0-9a-f]{40})`\s*$"
+)
 
 
 @dataclass(frozen=True)
@@ -217,6 +220,7 @@ def validate_workflow_checkpoint_bindings(
         return {"workflow_checkpoint_errors": errors}
 
     expected: dict[str, str] = {}
+    expected_superseded: dict[str, str] = {}
     for marker in markers:
         if not isinstance(marker, dict) or not isinstance(marker.get("id"), str):
             continue
@@ -224,6 +228,13 @@ def validate_workflow_checkpoint_bindings(
         commit_sha = checkpoint.get("commit_sha") if isinstance(checkpoint, dict) else None
         if isinstance(commit_sha, str) and re.fullmatch(r"[0-9a-f]{40}", commit_sha):
             expected[marker["id"]] = commit_sha
+        superseded_sha = (
+            checkpoint.get("superseded_commit_sha")
+            if isinstance(checkpoint, dict)
+            else None
+        )
+        if isinstance(superseded_sha, str) and re.fullmatch(r"[0-9a-f]{40}", superseded_sha):
+            expected_superseded[marker["id"]] = superseded_sha
     if not expected:
         return {"workflow_checkpoint_errors": errors}
 
@@ -232,6 +243,12 @@ def validate_workflow_checkpoint_bindings(
         if claimed_sha not in expected_shas:
             errors.append(
                 f"workflow checkpoint claim {claimed_sha} does not match any pr_marker_plan marker commit_sha"
+            )
+    expected_superseded_shas = set(expected_superseded.values())
+    for claimed_sha in WORKFLOW_SUPERSEDED_CHECKPOINT_CLAIM_RE.findall(text):
+        if claimed_sha not in expected_superseded_shas:
+            errors.append(
+                f"workflow superseded checkpoint claim {claimed_sha} does not match any pr_marker_plan marker superseded_commit_sha"
             )
 
     section_token = "## PR Marker Plan Evidence"

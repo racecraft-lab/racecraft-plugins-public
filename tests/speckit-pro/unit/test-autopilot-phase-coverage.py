@@ -302,13 +302,18 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
     def test_workflow_checkpoint_claims_bind_marker_plan_commits(self) -> None:
         expected_commit = "a" * 40
         wrong_commit = "b" * 40
+        expected_superseded = "c" * 40
+        wrong_superseded = "d" * 40
+        checkpoint = self.complete_checkpoint(commit_sha=expected_commit)
+        checkpoint["superseded_commit_sha"] = expected_superseded
         state = self.projected_state(
             plan_status="completed",
             phase_status="completed",
-            checkpoint=self.complete_checkpoint(commit_sha=expected_commit),
+            checkpoint=checkpoint,
         )
         workflow = workflow_text() + (
-            f"\n- Implementation checkpoint: `{wrong_commit}`\n\n"
+            f"\n- Implementation checkpoint: `{wrong_commit}`\n"
+            f"- Superseded marker checkpoint: `{wrong_superseded}`\n\n"
             "## PR Marker Plan Evidence\n\n"
             "| Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |\n"
             "|---|---|---|---|---|---|\n"
@@ -320,11 +325,15 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             report["workflow_checkpoint_errors"],
             [
                 f"workflow checkpoint claim {wrong_commit} does not match any pr_marker_plan marker commit_sha",
+                f"workflow superseded checkpoint claim {wrong_superseded} does not match any pr_marker_plan marker superseded_commit_sha",
                 f"workflow PR Marker Plan Evidence marker 'us1' checkpoint does not bind {expected_commit}",
             ],
         )
         _, corrected = self.run_validator(
-            workflow.replace(wrong_commit, expected_commit), state,
+            workflow.replace(wrong_commit, expected_commit).replace(
+                wrong_superseded, expected_superseded,
+            ),
+            state,
         )
         self.assertEqual(corrected["workflow_checkpoint_errors"], [])
 

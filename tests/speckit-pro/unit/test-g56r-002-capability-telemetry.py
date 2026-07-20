@@ -2266,6 +2266,63 @@ class CapabilityContractTests(unittest.TestCase):
             with capability_retention_records._retention_lock(raw_root, raw_identity):
                 pass
 
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_replaced_retention_lock_cannot_overlap_cleanup_and_materialization(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            raw = Path(temporary) / "raw"
+            raw.mkdir(mode=0o700)
+            capture_bytes = b"[]\n"
+            registered = capability_contract._parsed_timestamp(
+                "2026-06-01T00:00:00Z", "test registration clock",
+            )
+            current = capability_contract._parsed_timestamp(
+                "2026-07-02T00:00:00Z", "test cleanup clock",
+            )
+            with mock.patch.object(
+                capability_capture_retention, "_retention_now", return_value=registered,
+            ):
+                _, target = capabilities.materialize_source_capture(
+                    raw, ROOT, capture_bytes,
+                )
+            original_unlink = capability_retention._unlink_descriptor_relative
+            attempts: list[BaseException] = []
+            replaced = False
+
+            def materialize() -> None:
+                try:
+                    capabilities.materialize_source_capture(raw, ROOT, capture_bytes)
+                except BaseException as exc:  # pragma: no branch - asserted below
+                    attempts.append(exc)
+
+            def replace_lock_then_unlink(filename: str, parent_descriptor: int) -> None:
+                nonlocal replaced
+                if not replaced:
+                    lock_path = raw / capabilities.RETENTION_LOCK_FILE
+                    lock_path.rename(raw / ".retention-lock-held")
+                    lock_path.touch(mode=0o600)
+                    lock_path.chmod(0o600)
+                    worker = threading.Thread(target=materialize, daemon=True)
+                    worker.start(); worker.join(timeout=2)
+                    if worker.is_alive():
+                        self.fail("replacement-lock materialization blocked")
+                    replaced = True
+                original_unlink(filename, parent_descriptor)
+
+            with mock.patch.object(
+                capability_retention, "_retention_now", return_value=current,
+            ), mock.patch.object(
+                capability_retention,
+                "_unlink_descriptor_relative",
+                side_effect=replace_lock_then_unlink,
+            ), self.assertRaisesRegex(ValueError, "lock path changed"):
+                capabilities.reconcile_raw_evidence_retention(
+                    raw, ROOT, apply=True,
+                )
+            self.assertTrue(replaced)
+            self.assertTrue(attempts)
+            self.assertIn("already in progress", str(attempts[0]))
+            self.assertFalse(target.exists())
+
     @unittest.skipUnless(
         capabilities.HAS_DESCRIPTOR_RELATIVE_IO
         and hasattr(os, "mkfifo")
