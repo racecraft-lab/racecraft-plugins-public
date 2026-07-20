@@ -5,9 +5,9 @@
   "status": "block",
   "mode": "implementation",
   "scope": "T026-T030 deterministic synthetic replay",
-  "head_sha": "a048c80875465eafd9187b848f4b3b3139cf326b",
+  "head_sha": "b43333f0268c442696f8bd48ce4f8f225da56a6a",
   "head_scope": "current_remediation_source",
-  "current_restack_review_status": "live-range-review-9FBA02 fourteenth P1 review at a0e4e62c remediated at a048c808; exact live-head re-review pending",
+  "current_restack_review_status": "live-range-review-9FBA02 fifteenth review at 723e4882 remediated at b43333f0; exact live-head re-review pending",
   "reason_class": "aggregate_size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
@@ -43,10 +43,14 @@
     "indented_workflow_visibility": "pass",
     "pending_commit_provenance": "pass",
     "unique_phase_evidence_owner": "pass",
+    "raw_html_workflow_visibility": "pass",
+    "pending_evidence_authority": "pass",
+    "immutable_checkpoint_correction_chain": "pass",
+    "json_primitive_type_equality": "pass",
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass after restack",
     "full_suite": "2856/2856 pass after live-range remediation",
-    "independent_review": "live-range-review-9FBA02 fourteenth P1 review at a0e4e62c remediated at a048c808; exact live-head re-review pending"
+    "independent_review": "live-range-review-9FBA02 fifteenth review at 723e4882 remediated at b43333f0; exact live-head re-review pending"
   },
   "decomposition": {
     "status": "complete",
