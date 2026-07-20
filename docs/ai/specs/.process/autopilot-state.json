@@ -5,7 +5,7 @@
   "changed_file_manifest": "specs/g56r-002-capability-discovery-telemetry/.process/changed-file-manifest.json",
   "changed_file_manifest_base_commit": "48d72a5dfe1dd971bef6ddcdcd7a67752c9975ec",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-20T05:49:22Z",
+  "updated_at": "2026-07-20T05:56:59Z",
   "active_step": "Phase 7: Validate Restacked Synthetic Replay",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
@@ -359,7 +359,7 @@
       "tasks_total": 5,
       "focused_tests": "72/72 pass after exact-range review remediation",
       "privacy_scan": "10/10 pass",
-      "full_suite": "pending after lifecycle-evidence remediation",
+      "full_suite": "2842/2842 pass after lifecycle-evidence remediation",
       "docs_reference_check": "pass after restack",
       "independent_review": "exact-range-review-905F43 lifecycle findings remediated; exact-head re-review pending",
       "independent_review_chat_id": "exact-range-review-905F43",
@@ -387,10 +387,10 @@
       "pending_task_ids": [],
       "focused_tests": "72/72 pass after exact-range review remediation",
       "privacy_scan": "10/10 pass",
-      "full_suite": "pending after lifecycle-evidence remediation",
+      "full_suite": "2842/2842 pass after lifecycle-evidence remediation",
       "docs_reference_check": "pass after restack",
       "release_readiness_title_gate": "pass",
-      "changed_file_manifest": "68-file current-head validation pending",
+      "changed_file_manifest": "68/68 exact after lifecycle-evidence remediation",
       "independent_review": "exact-range-review-905F43 lifecycle findings remediated; exact-head re-review pending",
       "independent_review_chat_id": "exact-range-review-905F43",
       "independent_review_findings": [
@@ -405,7 +405,7 @@
     "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
     "plan_declared_scope_sha": "sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f",
     "tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
-    "reviewability_sha": "sha256:5df9c18cef0d5465252f5f21c5ef0d1f677597569d94cfc09a81a340c8074978",
+    "reviewability_sha": "sha256:13f16848fb1464b164f42355331a881e6beb2032d8f75d8b6220401974dff6b4",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
     "changed_file_manifest_sha": "sha256:6a49cc0d5ae63b6c7ae1c1b662260cc9c4e5fe0208d3f23bfa1d0ab1ce987eab"
   },
@@ -418,7 +418,7 @@
       "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
       "plan_declared_scope_sha": "sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f",
       "tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
-      "reviewability_sha": "sha256:5df9c18cef0d5465252f5f21c5ef0d1f677597569d94cfc09a81a340c8074978",
+      "reviewability_sha": "sha256:13f16848fb1464b164f42355331a881e6beb2032d8f75d8b6220401974dff6b4",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
       "changed_file_manifest_sha": "sha256:6a49cc0d5ae63b6c7ae1c1b662260cc9c4e5fe0208d3f23bfa1d0ab1ce987eab"
     },
@@ -965,7 +965,7 @@
         "implementation_checkpoint": {
           "status": "pending",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3.json",
-          "checkpoint_evidence_sha": "sha256:6540e9eaba23038e122988e97d5793a82cdc22dccff254dbc2b6ca1632b70883",
+          "checkpoint_evidence_sha": "sha256:e8db500e0b0f55756c30e3da9f95d201c226497df7c0fcdc69b47975681e8f56",
           "checkpoint_evidence_commit_sha": "6ef2fbf8b9c4adc9d683ab1c3be09495f75f150b",
           "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
           "commit_sha": "1430eb0f6414064900044cd153b8adfb7ba5917c",
@@ -990,8 +990,8 @@
           "validation": [
             "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
             "python3 tests/speckit-pro/unit/test-reviewability-marker-guidance.py",
-            "python3 -u tests/speckit-pro/run-all.py: pending after lifecycle-evidence remediation",
-            "release-readiness title and 68-file changed-file manifest gates: pending refreshed validation",
+            "python3 -u tests/speckit-pro/run-all.py: 2842/2842 pass",
+            "release-readiness title and 68-file changed-file manifest gates: pass",
             "RepoPrompt CE exact-range-review-905F43 lifecycle findings remediated; exact-head re-review pending"
           ],
           "freshness": {
@@ -1001,7 +1001,7 @@
             "current_tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
             "checkpoint_marker_tasks_sha": "sha256:0549f955b6e0a56b176378614d3bd2c6cc014f030d63f4dfb170d99f49259995",
             "current_marker_tasks_sha": "sha256:0549f955b6e0a56b176378614d3bd2c6cc014f030d63f4dfb170d99f49259995",
-            "validated_at": "2026-07-20T05:48:22Z"
+            "validated_at": "2026-07-20T05:56:59Z"
           }
         },
         "emission_mapping": {

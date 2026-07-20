@@ -874,8 +874,8 @@ For every task:
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
 | 2 - Treatment contracts | Complete | 10 | 51/51 focused tests, 2821/2821 full suite, Windows-safe offline replay, and exact-head independent review returned `NO FINDINGS` |
-| 3 - Synthetic replay | In Progress | 5 | Lifecycle-evidence remediation passes 72/72 telemetry tests and 27/27 validator tests; refreshed full-suite and exact-head re-review are pending |
-| Polish and validation | In Progress | 9 | T031-T039 remain implemented; reference and generated artifacts are current; refreshed 68-file manifest and release-title gates are pending |
+| 3 - Synthetic replay | In Progress | 5 | Lifecycle-evidence remediation passes 72/72 telemetry tests, 27/27 validator tests, and the 2842/2842 full suite; exact-head re-review is pending |
+| Polish and validation | In Progress | 9 | T031-T039 remain implemented; reference and generated artifacts are current; the 68/68 manifest and live release-title gates pass |
 
 ### Capability Checkpoint Evidence
 
@@ -945,7 +945,7 @@ For every task:
 - Replay output: `sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda` with byte-identical two-pass verification.
 - Cases: eight exact success, null, unavailable, misdelivery, approved reroute,
   unapproved reroute, discovery-loss, and surface-disagreement classes.
-- Verification: 72/72 focused tests, 10/10 privacy scan, 2841/2841 full
+- Verification: 72/72 focused tests, 10/10 privacy scan, 2842/2842 full
   suite, current generated references, and byte-identical two-pass replay.
 - Reviewability: aggregate size-only `block` at 5,168 source / 4,665 nonblank,
   non-comment lines across 24 safely subdivided modules; the largest module is
@@ -994,7 +994,7 @@ For every task:
 | Feature spec | `sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046` |
 | Plan-declared scope | `sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f` |
 | Tasks | `sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782` |
-| Reviewability evidence | `sha256:5df9c18cef0d5465252f5f21c5ef0d1f677597569d94cfc09a81a340c8074978` |
+| Reviewability evidence | `sha256:13f16848fb1464b164f42355331a881e6beb2032d8f75d8b6220401974dff6b4` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 | Changed-file manifest | `sha256:6a49cc0d5ae63b6c7ae1c1b662260cc9c4e5fe0208d3f23bfa1d0ab1ce987eab` |
 
@@ -1002,7 +1002,7 @@ For every task:
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
 | 2 | `us2` | T016-T025 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `1190e3c1205744fd50afb37a12c0f9527ad5ee53` | Only T026-T030 replay growth remains authorized |
-| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Remediation source `1430eb0f6414064900044cd153b8adfb7ba5917c`; refreshed evidence pending; exact-head re-review pending | No correctness or safety exception remains |
+| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Remediation source `1430eb0f6414064900044cd153b8adfb7ba5917c`; refreshed validation passes; exact-head re-review pending | No correctness or safety exception remains |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
