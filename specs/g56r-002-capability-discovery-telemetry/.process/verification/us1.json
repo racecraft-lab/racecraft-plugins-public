@@ -4,6 +4,7 @@
   "marker_id": "us1",
   "status": "pass",
   "generated_at": "2026-07-18T19:03:30Z",
+  "verified_commit_sha": "2b7096dacdaa7a6af62b3c12b36e83cf4515213e",
   "required_gate_ids": [
     "focused_tests",
     "published_freeze_validation",

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import subprocess
 from dataclasses import dataclass
@@ -494,12 +495,17 @@ def _marker_tasks_sha(tasks_path: Path, task_ids: set[str]) -> str | None:
     return _marker_tasks_sha_text(read_text(tasks_path), task_ids)
 
 
+def _git_env() -> dict[str, str]:
+    return {**os.environ, "GIT_NO_REPLACE_OBJECTS": "1"}
+
+
 def _git_file_at_commit(repo_root: Path, commit_sha: object, relative_path: str) -> bytes | None:
     if not isinstance(commit_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", commit_sha):
         return None
     completed = subprocess.run(
         ["git", "-C", str(repo_root), "show", f"{commit_sha}:{relative_path}"],
         capture_output=True,
+        env=_git_env(),
         shell=False,
         check=False,
     )
@@ -512,6 +518,7 @@ def _git_commit_exists(repo_root: Path, commit_sha: object) -> bool:
     completed = subprocess.run(
         ["git", "-C", str(repo_root), "cat-file", "-e", f"{commit_sha}^{{commit}}"],
         capture_output=True,
+        env=_git_env(),
         shell=False,
         check=False,
     )
@@ -522,6 +529,7 @@ def _git_commit_is_ancestor(repo_root: Path, ancestor_sha: str, descendant_sha: 
     completed = subprocess.run(
         ["git", "-C", str(repo_root), "merge-base", "--is-ancestor", ancestor_sha, descendant_sha],
         capture_output=True,
+        env=_git_env(),
         shell=False,
         check=False,
     )
@@ -530,6 +538,34 @@ def _git_commit_is_ancestor(repo_root: Path, ancestor_sha: str, descendant_sha: 
 
 def _git_commit_is_ancestor_of_head(repo_root: Path, commit_sha: str) -> bool:
     return _git_commit_is_ancestor(repo_root, commit_sha, "HEAD")
+
+
+def _git_tree_entries(repo_root: Path, commit_sha: object) -> dict[str, str] | None:
+    if not isinstance(commit_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", commit_sha):
+        return None
+    completed = subprocess.run(
+        ["git", "-C", str(repo_root), "ls-tree", "-r", "-z", "--full-tree", commit_sha],
+        capture_output=True,
+        env=_git_env(),
+        shell=False,
+        check=False,
+    )
+    if completed.returncode != 0:
+        return None
+    entries: dict[str, str] = {}
+    for raw_record in completed.stdout.split(b"\0"):
+        if not raw_record:
+            continue
+        try:
+            raw_identity, raw_path = raw_record.split(b"\t", 1)
+            identity = raw_identity.decode("ascii")
+            path = raw_path.decode("utf-8")
+        except (UnicodeDecodeError, ValueError):
+            return None
+        if path in entries:
+            return None
+        entries[path] = identity
+    return entries
 
 
 def _load_json_object(path: Path) -> dict[str, Any] | None:
@@ -558,10 +594,64 @@ def validate_changed_file_manifest(
     expected_head_commit: str | None = None,
 ) -> dict[str, list[str]]:
     marker_plan = state.get("pr_marker_plan")
-    strict_contract = (
-        isinstance(marker_plan, dict)
-        and marker_plan.get("schema_version") == "pr-marker-plan.v2"
+    repo_root = _repository_root(state_path)
+    resolved_head = (
+        subprocess.run(
+            ["git", "-C", str(repo_root), "rev-parse", "--verify", "HEAD^{commit}"],
+            text=True,
+            capture_output=True,
+            env=_git_env(),
+            shell=False,
+            check=False,
+        )
+        if repo_root
+        else None
     )
+    current_head = (
+        resolved_head.stdout.strip()
+        if resolved_head is not None and resolved_head.returncode == 0
+        else None
+    )
+    authority_head = (
+        expected_head_commit
+        if isinstance(expected_head_commit, str)
+        and re.fullmatch(r"[0-9a-f]{40}", expected_head_commit)
+        else current_head
+    )
+    state_ref: str | None = None
+    committed_state_bytes: bytes | None = None
+    committed_state: dict[str, Any] | None = None
+    if repo_root and isinstance(authority_head, str):
+        try:
+            state_ref = state_path.resolve().relative_to(repo_root.resolve()).as_posix()
+        except ValueError:
+            state_ref = None
+        if state_ref and _is_normalized_repo_path(state_ref):
+            committed_state_bytes = _git_file_at_commit(repo_root, authority_head, state_ref)
+            committed_state = _load_json_bytes(committed_state_bytes)
+    committed_marker_plan = (
+        committed_state.get("pr_marker_plan") if isinstance(committed_state, dict) else None
+    )
+    strict_contract = any(
+        isinstance(candidate, dict)
+        and candidate.get("schema_version") == "pr-marker-plan.v2"
+        for candidate in (marker_plan, committed_marker_plan)
+    )
+    authority_errors: list[str] = []
+    if strict_contract:
+        if committed_state_bytes is None or committed_state is None:
+            authority_errors.append(
+                "autopilot state is absent or invalid at the authorized PR head"
+            )
+        else:
+            try:
+                worktree_state_bytes = state_path.read_bytes()
+            except OSError:
+                worktree_state_bytes = None
+            if worktree_state_bytes != committed_state_bytes:
+                authority_errors.append(
+                    "autopilot state differs from the authorized PR head"
+                )
     manifest_ref = state.get("changed_file_manifest")
     if manifest_ref is None:
         if strict_contract:
@@ -573,13 +663,30 @@ def validate_changed_file_manifest(
         return {"changed_file_manifest_errors": []}
     if not _is_normalized_repo_path(manifest_ref):
         return {"changed_file_manifest_errors": ["changed-file manifest reference is invalid"]}
-    repo_root = _repository_root(state_path)
     if repo_root is None:
         return {"changed_file_manifest_errors": ["repository root is unavailable"]}
     manifest_path = _repo_file(repo_root, manifest_ref)
     manifest = _load_json_object(manifest_path) if manifest_path and manifest_path.is_file() else None
     if manifest is None:
         return {"changed_file_manifest_errors": ["changed-file manifest is missing or invalid"]}
+    if strict_contract:
+        committed_manifest_bytes = (
+            _git_file_at_commit(repo_root, authority_head, manifest_ref)
+            if isinstance(authority_head, str)
+            else None
+        )
+        try:
+            worktree_manifest_bytes = manifest_path.read_bytes() if manifest_path else None
+        except OSError:
+            worktree_manifest_bytes = None
+        if committed_manifest_bytes is None:
+            authority_errors.append(
+                "changed-file manifest is absent from the authorized PR head"
+            )
+        elif worktree_manifest_bytes != committed_manifest_bytes:
+            authority_errors.append(
+                "changed-file manifest differs from the authorized PR head"
+            )
     try:
         manifest_schema = json.loads(read_text(CHANGED_FILE_MANIFEST_SCHEMA_PATH))
     except (ValidationError, json.JSONDecodeError):
@@ -606,6 +713,7 @@ def validate_changed_file_manifest(
     if schema_errors or identity_errors:
         return {
             "changed_file_manifest_errors": [
+                *authority_errors,
                 *(f"changed-file manifest schema: {error}" for error in schema_errors),
                 *identity_errors,
             ],
@@ -640,14 +748,6 @@ def validate_changed_file_manifest(
         elif declared_base != base_commit:
             base_errors.append("changed-file manifest base_commit does not match state authority")
     comparison_commit = expected_head_commit if strict_contract else "HEAD"
-    resolved_head = subprocess.run(
-        ["git", "-C", str(repo_root), "rev-parse", "--verify", "HEAD^{commit}"],
-        text=True,
-        capture_output=True,
-        shell=False,
-        check=False,
-    )
-    current_head = resolved_head.stdout.strip() if resolved_head.returncode == 0 else None
     if strict_contract and current_head != expected_head_commit:
         base_errors.append("repository HEAD does not match external PR head authority")
     if not _git_commit_exists(repo_root, base_commit):
@@ -659,7 +759,7 @@ def validate_changed_file_manifest(
     elif not _git_commit_is_ancestor(repo_root, base_commit, comparison_commit):
         base_errors.append("changed-file manifest base_commit is not an ancestor of the authorized head")
     if base_errors:
-        return {"changed_file_manifest_errors": base_errors}
+        return {"changed_file_manifest_errors": [*authority_errors, *base_errors]}
 
     declared: dict[str, tuple[str, str | None]] = {}
     expected_owners: dict[str, set[str]] = {}
@@ -708,16 +808,22 @@ def validate_changed_file_manifest(
     if rename_sources & set(declared):
         structural_errors.append("changed-file manifest rename source paths overlap destination paths")
     if structural_errors:
-        return {"changed_file_manifest_errors": structural_errors}
+        return {
+            "changed_file_manifest_errors": [*authority_errors, *structural_errors]
+        }
 
     completed = subprocess.run(
         [
-            "git", "-C", str(repo_root), "-c", "diff.renames=true", "diff",
-            "--no-ext-diff", "--find-renames=50%", "--name-status",
+            "git", "-C", str(repo_root),
+            "-c", "diff.renames=true",
+            "-c", "diff.renameLimit=0",
+            "diff", "--no-ext-diff", "--find-renames=50%",
+            "--ignore-submodules=none", "--name-status",
             f"{base_commit}..{comparison_commit}",
         ],
         text=True,
         capture_output=True,
+        env=_git_env(),
         shell=False,
         check=False,
     )
@@ -734,9 +840,11 @@ def validate_changed_file_manifest(
             observed[fields[1]] = (status_map[status[:1]], None)
         else:
             return {"changed_file_manifest_errors": [f"unsupported git diff record: {line}"]}
-    errors = [
-        f"declared changed-file manifest does not match {base_commit}..{comparison_commit}"
-    ] if declared != observed else []
+    errors = list(authority_errors)
+    if declared != observed:
+        errors.append(
+            f"declared changed-file manifest does not match {base_commit}..{comparison_commit}"
+        )
 
     expected_manifest_sha = _sha256_bytes(manifest_path.read_bytes())
     current_fingerprint = state.get("current_source_fingerprint")
@@ -816,6 +924,65 @@ def validate_changed_file_manifest(
             errors.append(
                 f"pr_marker_plan marker ownership for rename source {source_path} does not match changed-file manifest"
             )
+    if strict_contract:
+        authorized_tree = _git_tree_entries(repo_root, comparison_commit)
+        if authorized_tree is None:
+            errors.append("authorized PR head tree is unavailable for checkpoint content binding")
+        else:
+            verified_trees: dict[str, dict[str, str] | None] = {}
+            for marker_index, marker in enumerate(markers):
+                if not isinstance(marker, dict):
+                    continue
+                checkpoint = marker.get("implementation_checkpoint")
+                if not isinstance(checkpoint, dict) or checkpoint.get("status") != "complete":
+                    continue
+                marker_id = marker.get("id")
+                verified_commit = checkpoint.get("commit_sha")
+                if isinstance(verified_commit, str) and verified_commit not in verified_trees:
+                    verified_trees[verified_commit] = _git_tree_entries(repo_root, verified_commit)
+                verified_tree = (
+                    verified_trees.get(verified_commit)
+                    if isinstance(verified_commit, str)
+                    else None
+                )
+                if verified_tree is None:
+                    errors.append(
+                        f"completed marker {marker_id or marker_index} verified commit tree is unavailable"
+                    )
+                    continue
+                carrier_paths = {
+                    path
+                    for path in (
+                        state_ref,
+                        manifest_ref,
+                        checkpoint.get("evidence_path"),
+                        checkpoint.get("verification_evidence_path"),
+                    )
+                    if isinstance(path, str)
+                }
+                marker_files = marker.get("declared_files")
+                if not isinstance(marker_files, list):
+                    continue
+                for record in marker_files:
+                    if not isinstance(record, dict):
+                        continue
+                    path = record.get("path")
+                    if not isinstance(path, str) or path in carrier_paths:
+                        continue
+                    if verified_tree.get(path) != authorized_tree.get(path):
+                        errors.append(
+                            f"completed marker {marker_id or marker_index} file {path} differs from its verified commit"
+                        )
+                    source_path = record.get("source_path")
+                    if (
+                        record.get("operation") == "RENAMED"
+                        and isinstance(source_path, str)
+                        and source_path not in carrier_paths
+                        and verified_tree.get(source_path) != authorized_tree.get(source_path)
+                    ):
+                        errors.append(
+                            f"completed marker {marker_id or marker_index} rename source {source_path} differs from its verified commit"
+                        )
     return {"changed_file_manifest_errors": errors}
 
 
@@ -1290,6 +1457,11 @@ def validate_projection_integrity(
                             "generated_at": (
                                 isinstance(verification_report, dict)
                                 and _is_utc_timestamp(verification_report.get("generated_at"))
+                            ),
+                            "verified_commit_sha": (
+                                isinstance(verification_report, dict)
+                                and verification_report.get("verified_commit_sha")
+                                == claimed_commit
                             ),
                             "required_gate_ids": report_gate_sets_match,
                             "results": report_results_match,

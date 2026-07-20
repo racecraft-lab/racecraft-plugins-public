@@ -608,6 +608,8 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             tracked_path = root / "tracked.txt"
             rename_source_path = root / "rename-source.txt"
             rename_target_path = root / "rename-target.txt"
+            deleted_path = root / "deleted.txt"
+            new_path = root / "new.txt"
             manifest_path = root / "changed-file-manifest.json"
             tasks_path = root / "specs/spec-example/tasks.md"
             evidence_path = root / "specs/spec-example/.process/checkpoints/us1.json"
@@ -617,7 +619,8 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             state["spec_id"] = "SPEC-EXAMPLE"
             state_path.write_text(json.dumps(state), encoding="utf-8")
             tracked_path.write_text("base\n", encoding="utf-8")
-            rename_source_path.write_text("rename payload\n", encoding="utf-8")
+            rename_source_path.write_text("rename payload " * 20 + "\n", encoding="utf-8")
+            deleted_path.write_text("deleted content " * 20 + "\n", encoding="utf-8")
             tasks_path.parent.mkdir(parents=True)
             tasks_path.write_text("# Tasks\n\n- [x] T001 Marker task\n- [ ] T002 Other task\n", encoding="utf-8")
             subprocess.run(["git", "init", "-q", str(root)], check=True)
@@ -639,6 +642,27 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ],
                 check=True,
             )
+            initial_commit = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout.strip()
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "update-index", "--add", "--cacheinfo",
+                    f"160000,{initial_commit},vendor/submodule",
+                ],
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "base gitlink",
+                ],
+                check=True,
+            )
             base_commit = subprocess.run(
                 ["git", "-C", str(root), "rev-parse", "HEAD"],
                 text=True,
@@ -648,10 +672,52 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             self._expected_manifest_base_commit = base_commit
             tracked_path.write_text("changed\n", encoding="utf-8")
             rename_source_path.rename(rename_target_path)
+            rename_target_path.write_text(
+                rename_target_path.read_text(encoding="utf-8") + "changed\n",
+                encoding="utf-8",
+            )
+            deleted_path.unlink()
+            new_path.write_text("new content " * 20 + "\n", encoding="utf-8")
             subprocess.run(
                 ["git", "-C", str(root), "config", "diff.renames", "false"],
                 check=True,
             )
+            subprocess.run(
+                ["git", "-C", str(root), "config", "diff.renameLimit", "1"],
+                check=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(root), "config", "diff.ignoreSubmodules", "all"],
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "add", "-A", "tracked.txt",
+                    "rename-source.txt", "rename-target.txt", "deleted.txt", "new.txt",
+                ],
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "update-index", "--cacheinfo",
+                    f"160000,{base_commit},vendor/submodule",
+                ],
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "implementation",
+                ],
+                check=True,
+            )
+            implementation_commit = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout.strip()
             state["changed_file_manifest"] = "changed-file-manifest.json"
             state["changed_file_manifest_base_commit"] = base_commit
             task_bytes = tasks_path.read_bytes()
@@ -672,6 +738,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                         "marker_id": "us1",
                         "status": "pass",
                         "generated_at": "2026-07-19T00:00:00Z",
+                        "verified_commit_sha": implementation_commit,
                         "required_gate_ids": ["focused_tests"],
                         "results": verification_results,
                     }
@@ -689,7 +756,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                         "marker_id": "us1",
                         "status": "complete",
                         "task_ids": ["T001", "T002"],
-                        "implementation_checkpoint_sha": base_commit,
+                        "implementation_checkpoint_sha": implementation_commit,
                         "verification": verification_results,
                         "verification_evidence_sha": verification_evidence_sha,
                         "required_verification_gate_ids": ["focused_tests"],
@@ -717,6 +784,9 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                     "path": "rename-target.txt",
                     "operation": "RENAMED",
                 },
+                {"path": "deleted.txt", "operation": "DELETED"},
+                {"path": "new.txt", "operation": "NEW"},
+                {"path": "vendor/submodule", "operation": "MODIFIED"},
             ]
             state["pr_marker_plan"] = {
                 "schema_version": "pr-marker-plan.v2",
@@ -745,7 +815,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                             "status": "pass",
                             "mode": "implementation",
                             "scope": "us1",
-                            "head_sha": base_commit,
+                            "head_sha": implementation_commit,
                         },
                         "hazards": [],
                         "subdivision": {"status": "none", "details": {}},
@@ -756,8 +826,8 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                             "checkpoint_evidence_commit_sha": "pending evidence commit",
                             "verification_evidence_path": "specs/spec-example/.process/verification/us1.json",
                             "verification_evidence_sha": verification_evidence_sha,
-                            "commit_sha": base_commit,
-                            "head_sha": base_commit,
+                            "commit_sha": implementation_commit,
+                            "head_sha": implementation_commit,
                             "completed_at": "2026-07-19T00:00:00Z",
                             "completed_task_ids": ["T001", "T002"],
                             "required_verification_gate_ids": ["focused_tests"],
@@ -829,6 +899,27 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                         "provenance": "authored",
                         "marker_ids": ["us1"],
                     },
+                    {
+                        "path": "deleted.txt",
+                        "operation": "DELETED",
+                        "category": "implementation",
+                        "provenance": "authored",
+                        "marker_ids": ["us1"],
+                    },
+                    {
+                        "path": "new.txt",
+                        "operation": "NEW",
+                        "category": "implementation",
+                        "provenance": "authored",
+                        "marker_ids": ["us1"],
+                    },
+                    {
+                        "path": "vendor/submodule",
+                        "operation": "MODIFIED",
+                        "category": "implementation",
+                        "provenance": "authored",
+                        "marker_ids": ["us1"],
+                    },
                 ],
             }
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
@@ -848,7 +939,16 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 "checkpoint_evidence_sha"
             ] = evidence_sha
             state_path.write_text(json.dumps(state), encoding="utf-8")
-            subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "add",
+                    "autopilot-state.json",
+                    "changed-file-manifest.json",
+                    "specs/spec-example/.process/checkpoints/us1.json",
+                    "specs/spec-example/.process/verification/us1.json",
+                ],
+                check=True,
+            )
             subprocess.run(
                 [
                     "git",
@@ -899,6 +999,79 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             self.assertEqual(exit_code, 0, report)
             self.assertEqual(report["changed_file_manifest_errors"], [])
             self.assertEqual(report["checkpoint_source_fingerprint_errors"], [])
+
+            tracked_path.write_text("changed after verification\n", encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", "tracked.txt"], check=True)
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "unverified content change",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "completed marker us1 file tracked.txt differs from its verified commit",
+                report["changed_file_manifest_errors"],
+            )
+            tracked_path.write_text("changed\n", encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", "tracked.txt"], check=True)
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "restore verified content",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 0, report)
+
+            replacement_head = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout.strip()
+            subprocess.run(
+                ["git", "-C", str(root), "replace", replacement_head, base_commit],
+                check=True,
+            )
+            try:
+                exit_code, report = self.run_validator_paths(workflow_path, state_path)
+                self.assertEqual(exit_code, 0, report)
+            finally:
+                subprocess.run(
+                    ["git", "-C", str(root), "replace", "-d", replacement_head],
+                    check=True,
+                )
+
+            clean_state_bytes = state_path.read_bytes()
+            dirty_state = json.loads(clean_state_bytes)
+            dirty_state["branch"] = "forged-worktree-state"
+            state_path.write_text(json.dumps(dirty_state), encoding="utf-8")
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "autopilot state differs from the authorized PR head",
+                report["changed_file_manifest_errors"],
+            )
+            state_path.write_bytes(clean_state_bytes)
+            state = json.loads(clean_state_bytes)
+
+            clean_manifest_bytes = manifest_path.read_bytes()
+            dirty_manifest = json.loads(clean_manifest_bytes)
+            dirty_manifest["files"][4]["category"] = "test"
+            manifest_path.write_text(json.dumps(dirty_manifest), encoding="utf-8")
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "changed-file manifest differs from the authorized PR head",
+                report["changed_file_manifest_errors"],
+            )
+            manifest_path.write_bytes(clean_manifest_bytes)
 
             missing_authority = subprocess.run(
                 [
@@ -1081,6 +1254,18 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             checkpoint["checkpoint_evidence_sha"] = evidence_sha
             checkpoint["verification_evidence_sha"] = verification_evidence_sha
             state_path.write_text(json.dumps(state), encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(root), "add", "autopilot-state.json"],
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "bind restored verification evidence",
+                ],
+                check=True,
+            )
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 0, report)
 
@@ -1175,9 +1360,11 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 "pr_marker_plan.markers[0] implementation commit is not an ancestor of evidence commit",
                 report["checkpoint_evidence_errors"],
             )
-            checkpoint["commit_sha"] = base_commit
-            checkpoint["head_sha"] = base_commit
-            state["pr_marker_plan"]["markers"][0]["reviewability"]["head_sha"] = base_commit
+            checkpoint["commit_sha"] = implementation_commit
+            checkpoint["head_sha"] = implementation_commit
+            state["pr_marker_plan"]["markers"][0]["reviewability"][
+                "head_sha"
+            ] = implementation_commit
 
             valid_evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
             failed_evidence = json.loads(json.dumps(valid_evidence))
@@ -1263,6 +1450,18 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             checkpoint["checkpoint_evidence_commit_sha"] = evidence_commit
             checkpoint["checkpoint_evidence_sha"] = evidence_sha
             state_path.write_text(json.dumps(state), encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(root), "add", "autopilot-state.json"],
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "bind restored complete evidence",
+                ],
+                check=True,
+            )
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 0, report)
 
