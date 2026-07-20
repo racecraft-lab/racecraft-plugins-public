@@ -940,8 +940,8 @@ For every task:
 - Prior remediation source head: `3608f0dbeaca34be5585375f87e7f3ebc5feba6b`
 - Current verification-authority findings head: `61014105efd7c99e04e6a40008c85e9d718a4db7`
 - Initial whole-range findings head: `41643ee0b93eab88758c655bdbcb23cd05fe6473`
-- Latest exact-head findings head: `2496446d8ba53f7edd9399db2c221acb84fa0768`
-- Current remediation source head [us3]: `22507c2667d7698fd65e1ce74dff8e97317a42eb`
+- Latest exact-head findings head: `a0e4e62c6a173a4d51dc6fb070d16d95aa443c9c`
+- Current remediation source head [us3]: `a048c80875465eafd9187b848f4b3b3139cf326b`
 - Capability fixture: `sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a`.
 - Treatment fixture: `sha256:935c2b104cb1036ef5befb8a36c2fd47c71845b4b5a7d901c26827ca9a2b3788`.
 - Replay output: `sha256:c8a69de446be0ba98ec876ee37c715b008e21c97dcebc067866405a9d92d5eb4` with byte-identical two-pass verification.
@@ -1081,6 +1081,17 @@ For every task:
   while pending evidence and commit fields live only in the v2 conditional. Full-
   workflow fence/comment and every-mirror legacy-v1 regressions pass at
   `22507c2667d7698fd65e1ce74dff8e97317a42eb`; exact live-head re-review is pending.
+- Exact live-head re-review at
+  `a0e4e62c6a173a4d51dc6fb070d16d95aa443c9c` found three further P1 boundaries:
+  indented code could satisfy workflow requirements, pending checkpoint commits
+  were not bound to evidence and authorized-head ancestry, and evidence owners
+  could shadow one another across top-level and verification containers. The
+  visible projection now excludes four-space and tab-indented code, every v2
+  checkpoint commit must match its evidence and exist in the authorized history,
+  and phase claims require one unique owner across all permitted locations.
+  Indented-workflow, mismatched/nonexistent/unrelated-commit, top-level-shadow,
+  and cross-container duplicate-owner regressions pass at
+  `a048c80875465eafd9187b848f4b3b3139cf326b`; exact live-head re-review is pending.
 - Evidence finalization after the source head is metadata-only; it does not
   change implementation or verification inputs.
 - Folded polish: T031-T039 are complete. The current reviewability and title
@@ -1101,7 +1112,7 @@ For every task:
 | Feature spec | `sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046` |
 | Plan-declared scope | `sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f` |
 | Tasks | `sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782` |
-| Reviewability evidence | `sha256:be4fbca666643b50814fcc3e3c3c8b3e5933e4a59931786da0935043c20605bc` |
+| Reviewability evidence | `sha256:f04bca5185a93129a3364b982b0d1ba1d52022db0fde4aa3e48f36a680926c01` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 | Changed-file manifest | `sha256:a5ff91aa88daa59aaa1828ffe090bf55bfe60acc7bd68ab1f7ed7d48a5f13e16` |
 
@@ -1109,7 +1120,7 @@ For every task:
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
 | 2 | `us2` | T016-T025 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `42cdf743346c880c1b7e8cb172e842a82ab6f343` | Only T026-T030 replay growth remains authorized |
-| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Remediation source `22507c2667d7698fd65e1ce74dff8e97317a42eb`; focused and full validation pass; exact live-head review pending | No correctness or safety exception remains |
+| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Remediation source `a048c80875465eafd9187b848f4b3b3139cf326b`; focused and full validation pass; exact live-head review pending | No correctness or safety exception remains |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
