@@ -68,7 +68,7 @@ two-monolith size exception. The current remediation preserves two public entry
 points while separating source refresh, observations, matrix/canary logic,
 private retention, freeze construction, JSON-schema validation, trace graphs,
 fixture replay, and successor construction into focused modules. The current
-implementation spans 23 modules and 4,935 source lines, but the largest module
+implementation spans 23 modules and 5,107 source lines, but the largest module
 is 381 lines, below the 400-line per-module boundary. The aggregate size block
 is handled by the existing US1/US2/US3 marker and stacked-PR checkpoints; no
 current `no_safe_boundary` implementation exception remains. Historical

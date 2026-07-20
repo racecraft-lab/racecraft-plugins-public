@@ -9,7 +9,7 @@ predeclared dispositions.
 **Reviewability**: The original capability and treatment monoliths crossed the
 400-line boundary. Finding-driven remediation now preserves two public entry
 points while safely subdividing their responsibilities into 23 focused modules;
-the largest is 381 source lines. The aggregate 4,935-line surface remains split
+the largest is 381 source lines. The aggregate 5,107-line surface remains split
 across the independently verified US1/US2/US3 markers and stacked PRs. No
 current `no_safe_boundary` exception remains. T038 must verify the module cap,
 public API compatibility, and independent marker evidence.

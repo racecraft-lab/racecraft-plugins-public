@@ -4,7 +4,7 @@
   "feature_dir": "specs/g56r-002-capability-discovery-telemetry",
   "changed_file_manifest": "specs/g56r-002-capability-discovery-telemetry/.process/changed-file-manifest.json",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-20T04:07:50Z",
+  "updated_at": "2026-07-20T04:49:56Z",
   "active_step": "Phase 7: Validate Restacked Synthetic Replay",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
@@ -356,19 +356,26 @@
       "status": "pending",
       "tasks_completed": 5,
       "tasks_total": 5,
-      "focused_tests": "69/69 pass after restack",
+      "focused_tests": "70/70 pass after review remediation",
       "privacy_scan": "10/10 pass",
-      "full_suite": "2839/2839 pass after restack",
+      "full_suite": "2840/2840 pass after review remediation",
       "docs_reference_check": "pass after restack",
-      "independent_review": "pending exact-head review after restack",
-      "implementation_commit": "096605e6a4987c0f580c525bc377a68c438a9a22",
+      "independent_review": "review-us3-replay-20A28F findings remediated; exact-head re-review pending",
+      "independent_review_chat_id": "review-us3-replay-20A28F",
+      "independent_review_findings": [
+        "public treatment facade exposed a replay-only private validator",
+        "replay accepted capability dependencies loaded from another checkout",
+        "pr-marker-plan.v2 allowed the changed-file manifest reference to be omitted",
+        "completed checkpoint commits were not bound to immutable evidence or verified in HEAD ancestry"
+      ],
+      "implementation_commit": "688b3054d2734b4825361b3c18977ed1e3ada4da",
       "evidence_finalization_scope": "The following commit changes evidence metadata only; implementation and verification inputs remain those at implementation_commit.",
       "capability_fixture_digest": "sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a",
       "treatment_fixture_digest": "sha256:3983dc1d4efe42542ffe0cb72830c970d24cecf490ddfe0c93e24be749ffaa53",
       "replay_digest": "sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda",
       "marker_id": "us3",
-      "reviewability": "aggregate size-only block at 5,043 source / 4,559 nonblank non-comment lines across 23 safely subdivided modules; maximum module size is 381 lines",
-      "checkpoint": "3d7bd9eff79a1889830c74b6bcd22ae8945098c0",
+      "reviewability": "aggregate size-only block at 5,107 source / 4,619 nonblank non-comment lines across 23 safely subdivided modules; maximum module size is 381 lines",
+      "checkpoint": "688b3054d2734b4825361b3c18977ed1e3ada4da",
       "checkpoint_evidence_commit": "e258f189f6d004af25ba2f735408a455fe01aa44",
       "completed_at": "2026-07-20T02:15:18Z"
     },
@@ -378,21 +385,28 @@
       "tasks_total": 9,
       "completed_task_ids": ["T031", "T032", "T033", "T034", "T035", "T036", "T037", "T038", "T039"],
       "pending_task_ids": [],
-      "focused_tests": "69/69 pass after restack",
+      "focused_tests": "70/70 pass after review remediation",
       "privacy_scan": "10/10 pass",
-      "full_suite": "2839/2839 pass after restack",
+      "full_suite": "2840/2840 pass after review remediation",
       "docs_reference_check": "pass after restack",
       "release_readiness_title_gate": "pass",
       "changed_file_manifest": "66/66 exact after restack",
-      "independent_review": "pending exact-head review after restack",
+      "independent_review": "review-us3-replay-20A28F findings remediated; exact-head re-review pending",
+      "independent_review_chat_id": "review-us3-replay-20A28F",
+      "independent_review_findings": [
+        "public treatment facade exposed a replay-only private validator",
+        "replay accepted capability dependencies loaded from another checkout",
+        "pr-marker-plan.v2 allowed the changed-file manifest reference to be omitted",
+        "completed checkpoint commits were not bound to immutable evidence or verified in HEAD ancestry"
+      ],
       "completed_at": "2026-07-20T02:15:18Z"
     }
   },
   "current_source_fingerprint": {
     "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
-    "plan_declared_scope_sha": "sha256:0e01edd70c936c0a68756214fd773894ef5214c504622c6d8c0717d4fe316621",
-    "tasks_sha": "sha256:8be512cab1e165d5e4da374e11f22d8c0fba158542c6347c6e1e875a7eed217c",
-    "reviewability_sha": "sha256:8a11e52f88a2601dc96bee5d23fa4dddcae99397f2ac59e46683739d9c99e964",
+    "plan_declared_scope_sha": "sha256:44dda1ea23a86cb30aff70120266798e26e384ade59e0969465d9ca7d589faa7",
+    "tasks_sha": "sha256:783199a2a1bb36d652d91bcac96a995313dd6f6258bec5e2248451ffd6995898",
+    "reviewability_sha": "sha256:de737925e0e50ac23fa8c19b840d30a7097dcd1543d3da90990ac6e1bae52e8a",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
     "changed_file_manifest_sha": "sha256:c455f7eba60244120a145e61fc7a1385816d8a57ecb81a4f5e6eb39e50dd4793"
   },
@@ -403,9 +417,9 @@
     "status": "checkpointing",
     "source_fingerprint": {
       "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
-      "plan_declared_scope_sha": "sha256:0e01edd70c936c0a68756214fd773894ef5214c504622c6d8c0717d4fe316621",
-      "tasks_sha": "sha256:8be512cab1e165d5e4da374e11f22d8c0fba158542c6347c6e1e875a7eed217c",
-      "reviewability_sha": "sha256:8a11e52f88a2601dc96bee5d23fa4dddcae99397f2ac59e46683739d9c99e964",
+      "plan_declared_scope_sha": "sha256:44dda1ea23a86cb30aff70120266798e26e384ade59e0969465d9ca7d589faa7",
+      "tasks_sha": "sha256:783199a2a1bb36d652d91bcac96a995313dd6f6258bec5e2248451ffd6995898",
+      "reviewability_sha": "sha256:de737925e0e50ac23fa8c19b840d30a7097dcd1543d3da90990ac6e1bae52e8a",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
       "changed_file_manifest_sha": "sha256:c455f7eba60244120a145e61fc7a1385816d8a57ecb81a4f5e6eb39e50dd4793"
     },
@@ -467,7 +481,7 @@
             "source_fingerprint_status": "current_marker_scope",
             "source_fingerprint_contract": "marker-task-lines.v2",
             "tasks_sha_scope": "checkpoint_time_whole_file",
-            "current_tasks_sha": "sha256:8be512cab1e165d5e4da374e11f22d8c0fba158542c6347c6e1e875a7eed217c",
+            "current_tasks_sha": "sha256:783199a2a1bb36d652d91bcac96a995313dd6f6258bec5e2248451ffd6995898",
             "checkpoint_marker_tasks_sha": "sha256:a82dea018084b65bae400dd3377318bb3ba82f15ad724f69059fed968ea52ee6",
             "current_marker_tasks_sha": "sha256:a82dea018084b65bae400dd3377318bb3ba82f15ad724f69059fed968ea52ee6",
             "validated_at": "2026-07-20T02:17:00Z"
@@ -575,7 +589,7 @@
             "source_fingerprint_contract": "marker-task-lines.v2",
             "source_fingerprint_status": "current_marker_scope",
             "tasks_sha_scope": "checkpoint_time_whole_file",
-            "current_tasks_sha": "sha256:8be512cab1e165d5e4da374e11f22d8c0fba158542c6347c6e1e875a7eed217c",
+            "current_tasks_sha": "sha256:783199a2a1bb36d652d91bcac96a995313dd6f6258bec5e2248451ffd6995898",
             "checkpoint_marker_tasks_sha": "sha256:c6921a6ae1cd126adcd5f4295dda7b6331ca32d40e60f265fbe13d2f348e9ace",
             "current_marker_tasks_sha": "sha256:c6921a6ae1cd126adcd5f4295dda7b6331ca32d40e60f265fbe13d2f348e9ace",
             "validated_at": "2026-07-20T04:07:50Z"
@@ -921,7 +935,7 @@
           "mode": "implementation",
           "scope": "us3",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
-          "head_sha": "3d7bd9eff79a1889830c74b6bcd22ae8945098c0"
+          "head_sha": "688b3054d2734b4825361b3c18977ed1e3ada4da"
         },
         "hazards": [
           "fixture-provenance",
@@ -943,12 +957,11 @@
         "implementation_checkpoint": {
           "status": "pending",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3.json",
-          "checkpoint_evidence_sha": "sha256:aa8641f03e4af3a989876f0c9319473d4865ad8cb9716b2404cc91d513d90ac1",
+          "checkpoint_evidence_sha": "sha256:6afa401fee07802b9c2079b9e35baac5df729dab63afc6a81ab90a8eae7d24d3",
           "checkpoint_evidence_commit_sha": "e258f189f6d004af25ba2f735408a455fe01aa44",
           "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
-          "commit_sha": "3d7bd9eff79a1889830c74b6bcd22ae8945098c0",
-          "head_sha": "3d7bd9eff79a1889830c74b6bcd22ae8945098c0",
-          "completed_at": "2026-07-20T02:15:18Z",
+          "commit_sha": "688b3054d2734b4825361b3c18977ed1e3ada4da",
+          "head_sha": "688b3054d2734b4825361b3c18977ed1e3ada4da",
           "completed_task_ids": [
             "T026",
             "T027",
@@ -965,22 +978,22 @@
             "T038",
             "T039"
           ],
-          "summary": "Historical pre-restack checkpoint retained; current restacked head awaits full validation and exact-head independent review.",
+          "summary": "Current remediation source head passes local validation and awaits exact-head independent re-review.",
           "validation": [
             "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
             "python3 tests/speckit-pro/unit/test-reviewability-marker-guidance.py",
-            "python3 -u tests/speckit-pro/run-all.py: 2839/2839 pass",
+            "python3 -u tests/speckit-pro/run-all.py: 2840/2840 pass",
             "release-readiness title and 66-file changed-file manifest gates: pass",
-            "RepoPrompt CE exact-head review (pending after restack)"
+            "RepoPrompt CE review-us3-replay-20A28F findings remediated; exact-head re-review pending"
           ],
           "freshness": {
             "source_fingerprint_contract": "marker-task-lines.v2",
             "source_fingerprint_status": "current_marker_scope",
             "tasks_sha_scope": "checkpoint_time_whole_file",
-            "current_tasks_sha": "sha256:8be512cab1e165d5e4da374e11f22d8c0fba158542c6347c6e1e875a7eed217c",
+            "current_tasks_sha": "sha256:783199a2a1bb36d652d91bcac96a995313dd6f6258bec5e2248451ffd6995898",
             "checkpoint_marker_tasks_sha": "sha256:0549f955b6e0a56b176378614d3bd2c6cc014f030d63f4dfb170d99f49259995",
             "current_marker_tasks_sha": "sha256:0549f955b6e0a56b176378614d3bd2c6cc014f030d63f4dfb170d99f49259995",
-            "validated_at": "2026-07-20T02:17:00Z"
+            "validated_at": "2026-07-20T04:49:56Z"
           }
         },
         "emission_mapping": {
@@ -995,8 +1008,8 @@
             "source": "synthetic-replay-reviewability",
             "details": {
               "marker_id": "us3",
-              "actual_source_lines": 5043,
-              "actual_nonblank_noncomment_lines": 4559,
+              "actual_source_lines": 5107,
+              "actual_nonblank_noncomment_lines": 4619,
               "production_modules": 23,
               "max_module_source_lines": 381
             }
