@@ -16,7 +16,10 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path, PurePosixPath
 
-from treatment_trace_capability import *
+if __package__:
+    from .treatment_trace_capability import *
+else:
+    from treatment_trace_capability import *
 
 
 ROOT = Path(__file__).resolve().parents[4]

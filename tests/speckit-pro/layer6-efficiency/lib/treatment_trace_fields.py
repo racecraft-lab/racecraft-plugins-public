@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from treatment_trace_model import *
+if __package__:
+    from .treatment_trace_model import *
+else:
+    from treatment_trace_model import *
 
 def _validate_tool_vector(value: object, label: str) -> dict:
     vector = _closed(value, {"skills", "mcp_servers", "tools"}, label)

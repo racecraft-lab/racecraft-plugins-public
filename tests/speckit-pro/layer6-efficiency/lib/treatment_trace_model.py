@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from treatment_trace_json_schema import *
+if __package__:
+    from .treatment_trace_json_schema import *
+else:
+    from treatment_trace_json_schema import *
 
 def canonical_fixture_bytes(value: object) -> bytes:
     return canonical_bytes(value) + b"\n"

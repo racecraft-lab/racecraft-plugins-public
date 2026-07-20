@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from treatment_trace_bundle import *
+if __package__:
+    from .treatment_trace_bundle import *
+else:
+    from treatment_trace_bundle import *
 
 def validate_treatment_bundle(
     bundle: object, *, schema_path: Path = SCHEMA_PATH, manifest_path: Path = MANIFEST_PATH,

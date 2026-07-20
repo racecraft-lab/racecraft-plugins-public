@@ -5,7 +5,10 @@ from __future__ import annotations
 
 import sys
 
-from treatment_trace_successor import *
+if __package__:
+    from .treatment_trace_successor import *
+else:
+    from treatment_trace_successor import *
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__); sub = parser.add_subparsers(dest="command", required=True)

@@ -822,8 +822,38 @@
         "path": {
           "type": "string",
           "minLength": 1
+        },
+        "source_path": {
+          "type": "string",
+          "minLength": 1
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "operation": {
+                "const": "RENAMED"
+              }
+            },
+            "required": [
+              "operation"
+            ]
+          },
+          "then": {
+            "required": [
+              "source_path"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "source_path"
+              ]
+            }
+          }
+        }
+      ]
     },
     "reviewability": {
       "type": "object",

@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from treatment_trace_replay import *
+if __package__:
+    from .treatment_trace_replay import *
+else:
+    from treatment_trace_replay import *
 
 
 def build_treatment_successor(prior_freeze: dict, treatment_bundle: dict, *, published_at: str,

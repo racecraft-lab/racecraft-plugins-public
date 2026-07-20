@@ -127,11 +127,21 @@ capability_private = sys.modules[f"{CAPABILITY_RUNTIME_PACKAGE}.codex_capability
 capability_publish_io = sys.modules[f"{CAPABILITY_RUNTIME_PACKAGE}.codex_capability_publish_io"]
 capability_retention = sys.modules[f"{CAPABILITY_RUNTIME_PACKAGE}.codex_capability_retention"]
 capability_retention_records = sys.modules[f"{CAPABILITY_RUNTIME_PACKAGE}.codex_capability_retention_records"]
-treatment_bundle = sys.modules["treatment_trace_bundle"]
-treatment_authority = sys.modules["treatment_trace_authority"]
-treatment_fields = sys.modules["treatment_trace_fields"]
-treatment_io = sys.modules["treatment_trace_io"]
-treatment_json_schema = sys.modules["treatment_trace_json_schema"]
+TREATMENT_INTERNALS = treatment.__treatment_internal_modules__
+treatment_bundle = TREATMENT_INTERNALS["treatment_trace_bundle"]
+treatment_authority = TREATMENT_INTERNALS["treatment_trace_authority"]
+treatment_fields = TREATMENT_INTERNALS["treatment_trace_fields"]
+treatment_io = TREATMENT_INTERNALS["treatment_trace_io"]
+treatment_json_schema = TREATMENT_INTERNALS["treatment_trace_json_schema"]
+
+
+def load_treatment_facade(name: str):
+    facade_spec = importlib.util.spec_from_file_location(name, TREATMENT_MODULE_PATH)
+    if facade_spec is None or facade_spec.loader is None:
+        raise RuntimeError(f"cannot load {TREATMENT_MODULE_PATH}")
+    facade = importlib.util.module_from_spec(facade_spec)
+    facade_spec.loader.exec_module(facade)
+    return facade
 
 
 def load_json(path: Path) -> dict:
@@ -484,6 +494,28 @@ class CapabilityContractTests(unittest.TestCase):
         self.assertNotIn("_validate_treatment_bundle", vars(treatment))
         self.assertTrue(callable(capabilities.main))
         self.assertTrue(callable(treatment.main))
+
+    def test_treatment_facade_ignores_same_path_stale_canonical_dependency(self) -> None:
+        stale_cli = types.ModuleType("treatment_trace_cli")
+        stale_cli.__file__ = str(TREATMENT_MODULE_PATH.with_name("treatment_trace_cli.py"))
+        stale_cli.main = lambda _argv=None: self.fail("same-path stale treatment dependency was reused")
+        with mock.patch.dict(sys.modules, {"treatment_trace_cli": stale_cli}):
+            facade = load_treatment_facade("g56r_002_treatment_stale_regression")
+            self.assertIs(sys.modules["treatment_trace_cli"], stale_cli)
+        self.assertTrue(callable(facade.validate_treatment_bundle))
+        self.assertFalse(any(name.startswith("_g56r_treatment_runtime_") for name in sys.modules))
+
+    def test_treatment_facade_does_not_execute_earlier_sys_path_shadow(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            shadow_root = Path(temporary)
+            shadow_root.joinpath("treatment_trace_cli.py").write_text(
+                "raise RuntimeError('shadow treatment dependency executed')\n",
+                encoding="utf-8",
+            )
+            with mock.patch.object(sys, "path", [str(shadow_root), *sys.path]):
+                facade = load_treatment_facade("g56r_002_treatment_shadow_regression")
+        self.assertTrue(callable(facade.replay_fixture))
+        self.assertFalse(any(name.startswith("_g56r_treatment_runtime_") for name in sys.modules))
 
     def observations(self, case: dict) -> list[dict]:
         return [
@@ -3522,6 +3554,10 @@ class TreatmentReplayTests(unittest.TestCase):
                 importlib.machinery.SourceFileLoader,
                 "exec_module",
                 new=blocking_exec_module,
+            ), mock.patch.object(
+                sys,
+                "path",
+                [str(TREATMENT_MODULE_PATH.parent), *sys.path],
             ):
                 worker.start()
                 self.assertTrue(entered.wait(timeout=5))

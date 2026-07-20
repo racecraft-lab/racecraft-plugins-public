@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from treatment_trace_fields import *
+if __package__:
+    from .treatment_trace_fields import *
+else:
+    from treatment_trace_fields import *
 
 def _validate_trace(trace: object, profile: list[dict], environments: dict[str, dict],
                     policies: dict[str, dict], resolutions: dict[str, dict],

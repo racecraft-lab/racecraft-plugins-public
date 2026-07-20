@@ -5,8 +5,22 @@
   "comparison_ref": "HEAD",
   "files": [
     {
+      "path": "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json",
+      "operation": "NEW",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
       "path": "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
       "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/verification-report.schema.json",
+      "operation": "NEW",
       "category": "generated_artifact",
       "provenance": "generated",
       "marker_ids": ["us3"]
@@ -19,8 +33,22 @@
       "marker_ids": ["us3"]
     },
     {
+      "path": "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json",
+      "operation": "NEW",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
       "path": "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
       "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/verification-report.schema.json",
+      "operation": "NEW",
       "category": "generated_artifact",
       "provenance": "generated",
       "marker_ids": ["us3"]
@@ -96,8 +124,22 @@
       "marker_ids": ["us3"]
     },
     {
+      "path": "speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json",
+      "operation": "NEW",
+      "category": "plugin_source",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
       "path": "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
       "operation": "MODIFIED",
+      "category": "plugin_source",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "speckit-pro/skills/speckit-autopilot/contracts/verification-report.schema.json",
+      "operation": "NEW",
       "category": "plugin_source",
       "provenance": "authored",
       "marker_ids": ["us3"]
@@ -143,6 +185,20 @@
       "category": "process",
       "provenance": "authored",
       "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us1.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us1"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us2.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us2"]
     },
     {
       "path": "specs/g56r-002-capability-discovery-telemetry/SPEC-MOC.md",
@@ -516,8 +572,22 @@
       "marker_ids": ["us3"]
     },
     {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json",
+      "operation": "NEW",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
       "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
       "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/contracts/verification-report.schema.json",
+      "operation": "NEW",
       "category": "generated_artifact",
       "provenance": "generated",
       "marker_ids": ["us3"]
@@ -530,8 +600,22 @@
       "marker_ids": ["us3"]
     },
     {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json",
+      "operation": "NEW",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
       "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
       "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/verification-report.schema.json",
+      "operation": "NEW",
       "category": "generated_artifact",
       "provenance": "generated",
       "marker_ids": ["us3"]

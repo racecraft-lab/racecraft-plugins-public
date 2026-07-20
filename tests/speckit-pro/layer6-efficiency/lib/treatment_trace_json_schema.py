@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from treatment_trace_io import *
+if __package__:
+    from .treatment_trace_io import *
+else:
+    from treatment_trace_io import *
 
 def _read_manifest_snapshot(path: Path) -> dict:
     manifest = _read_json_file(path)

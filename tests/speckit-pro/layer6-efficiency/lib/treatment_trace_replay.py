@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from treatment_trace_fixture import *
+if __package__:
+    from .treatment_trace_fixture import *
+else:
+    from treatment_trace_fixture import *
 
 def _validate_replay_capability_semantics(case_id: str, case: dict, trace: dict) -> None:
     expected_source = {

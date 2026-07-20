@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from treatment_trace_authority import *
+if __package__:
+    from .treatment_trace_authority import *
+else:
+    from treatment_trace_authority import *
 
 def canonical_bytes(value: object) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")

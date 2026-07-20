@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.local/speckit-pro/changed-file-manifest.schema.json",
+  "title": "SpecKit changed-file manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "feature_id",
+    "base_commit",
+    "comparison_ref",
+    "files"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "changed-file-manifest.v1"
+    },
+    "feature_id": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9-]+$"
+    },
+    "base_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "comparison_ref": {
+      "const": "HEAD"
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/file"
+      }
+    }
+  },
+  "$defs": {
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "operation",
+        "category",
+        "provenance",
+        "marker_ids"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operation": {
+          "enum": [
+            "NEW",
+            "MODIFIED",
+            "DELETED",
+            "RENAMED"
+          ]
+        },
+        "category": {
+          "enum": [
+            "generated_artifact",
+            "implementation",
+            "plugin_source",
+            "process",
+            "research",
+            "test"
+          ]
+        },
+        "provenance": {
+          "enum": [
+            "authored",
+            "generated"
+          ]
+        },
+        "marker_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "operation": {
+                "const": "RENAMED"
+              }
+            },
+            "required": [
+              "operation"
+            ]
+          },
+          "then": {
+            "required": [
+              "source_path"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "source_path"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

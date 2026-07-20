@@ -1,0 +1,36 @@
+{
+  "schema_version": "verification-report.v1",
+  "feature_id": "G56R-002",
+  "marker_id": "us1",
+  "status": "pass",
+  "generated_at": "2026-07-18T19:03:30Z",
+  "required_gate_ids": [
+    "focused_tests",
+    "published_freeze_validation",
+    "json_schema_instance_validation",
+    "deterministic_replay",
+    "independent_critical_high_review"
+  ],
+  "results": {
+    "focused_tests": {
+      "status": "pass",
+      "evidence": "11/11 pass"
+    },
+    "published_freeze_validation": {
+      "status": "pass",
+      "evidence": "pass"
+    },
+    "json_schema_instance_validation": {
+      "status": "pass",
+      "evidence": "pass"
+    },
+    "deterministic_replay": {
+      "status": "pass",
+      "evidence": "pass"
+    },
+    "independent_critical_high_review": {
+      "status": "pass",
+      "evidence": "pass"
+    }
+  }
+}

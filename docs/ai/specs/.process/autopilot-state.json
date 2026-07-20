@@ -409,7 +409,7 @@
     "tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
     "reviewability_sha": "sha256:0a7d7b258d2557fe8bc99240bf8d8f55932622cd6e12c361de9d8a6a6f3963d2",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
-    "changed_file_manifest_sha": "sha256:b7145c5d5ffe0614bdf5e507488360854345e9feb8fa2ae1ab70e97bf4afc827"
+    "changed_file_manifest_sha": "sha256:2ed599a68d1dc443a90c5d7aad967a73ecef9f78fbe35a8fc446dc2e09f07681"
   },
   "pr_marker_plan": {
     "schema_version": "pr-marker-plan.v2",
@@ -422,7 +422,7 @@
       "tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
       "reviewability_sha": "sha256:0a7d7b258d2557fe8bc99240bf8d8f55932622cd6e12c361de9d8a6a6f3963d2",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
-      "changed_file_manifest_sha": "sha256:b7145c5d5ffe0614bdf5e507488360854345e9feb8fa2ae1ab70e97bf4afc827"
+      "changed_file_manifest_sha": "sha256:2ed599a68d1dc443a90c5d7aad967a73ecef9f78fbe35a8fc446dc2e09f07681"
     },
     "markers": [
       {
@@ -444,6 +444,10 @@
           {
             "operation": "MODIFIED",
             "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1.json"
+          },
+          {
+            "operation": "NEW",
+            "path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us1.json"
           }
         ],
         "declared_tests": [
@@ -472,8 +476,8 @@
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1.json",
           "checkpoint_evidence_sha": "sha256:62ee0f20bb573314206e8acb9c4fd53b5c251ca9aa71e0e14bf691b3d351328a",
           "checkpoint_evidence_commit_sha": "a0990236bf7fbbc01eb9e637ad63acee3dbfcec9",
-          "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/capability-freeze.json",
-          "verification_evidence_sha": "sha256:05e653cbd39b0300d9b27df30cc2419f524e861fcada383abe49646454dbfeff",
+          "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us1.json",
+          "verification_evidence_sha": "sha256:659779425c73ff7b57c1cf97a259a6f4385fdff8d2e78f848b86c7e04b29cf2f",
           "commit_sha": "2b7096dacdaa7a6af62b3c12b36e83cf4515213e",
           "head_sha": "2b7096dacdaa7a6af62b3c12b36e83cf4515213e",
           "completed_at": "2026-07-18T19:03:30Z",
@@ -546,6 +550,10 @@
           {
             "operation": "MODIFIED",
             "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json"
+          },
+          {
+            "operation": "NEW",
+            "path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us2.json"
           }
         ],
         "declared_tests": [
@@ -581,8 +589,8 @@
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json",
           "checkpoint_evidence_sha": "sha256:16e6f539cb790f9367c64ee14a044e0759cd03680b62f59a7abb9f1dbe87e3e3",
           "checkpoint_evidence_commit_sha": "a0990236bf7fbbc01eb9e637ad63acee3dbfcec9",
-          "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/treatment-contracts.json",
-          "verification_evidence_sha": "sha256:6291117acccb3f4bd7b44a55735d9451dceb87d23e805218672d2b1e11d9b5ee",
+          "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us2.json",
+          "verification_evidence_sha": "sha256:66832f9c6df6f7971abb4c17900939646ae6659774ea70612a19a0af5babb105",
           "commit_sha": "42cdf743346c880c1b7e8cb172e842a82ab6f343",
           "head_sha": "42cdf743346c880c1b7e8cb172e842a82ab6f343",
           "completed_at": "2026-07-20T03:50:24Z",
@@ -687,16 +695,32 @@
         "folded_polish_target_reason": "Integration, generated references, verification, and release gates validate the replay marker as a whole.",
         "declared_files": [
           {
+            "operation": "NEW",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json"
+          },
+          {
             "operation": "MODIFIED",
             "path": "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json"
+          },
+          {
+            "operation": "NEW",
+            "path": "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/verification-report.schema.json"
           },
           {
             "operation": "MODIFIED",
             "path": "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
           },
           {
+            "operation": "NEW",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json"
+          },
+          {
             "operation": "MODIFIED",
             "path": "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json"
+          },
+          {
+            "operation": "NEW",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/verification-report.schema.json"
           },
           {
             "operation": "MODIFIED",
@@ -739,8 +763,16 @@
             "path": "docs/ai/specs/.process/autopilot-state.json"
           },
           {
+            "operation": "NEW",
+            "path": "speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json"
+          },
+          {
             "operation": "MODIFIED",
             "path": "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json"
+          },
+          {
+            "operation": "NEW",
+            "path": "speckit-pro/skills/speckit-autopilot/contracts/verification-report.schema.json"
           },
           {
             "operation": "MODIFIED",
@@ -971,16 +1003,32 @@
             "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json"
           },
           {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json"
+          },
+          {
             "operation": "MODIFIED",
             "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/contracts/verification-report.schema.json"
           },
           {
             "operation": "MODIFIED",
             "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
           },
           {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json"
+          },
+          {
             "operation": "MODIFIED",
             "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json"
+          },
+          {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/verification-report.schema.json"
           },
           {
             "operation": "MODIFIED",

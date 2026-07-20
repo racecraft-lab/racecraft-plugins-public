@@ -80,6 +80,12 @@ UTC_TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 WINDOWS_ABSOLUTE_PATH_RE = re.compile(r"^[A-Za-z]:")
 SUPPORTED_MARKER_PLAN_VERSIONS = frozenset({"pr-marker-plan.v1", "pr-marker-plan.v2"})
 MARKER_PLAN_SCHEMA_PATH = Path(__file__).resolve().parents[1] / "contracts" / "pr-marker-plan.schema.json"
+CHANGED_FILE_MANIFEST_SCHEMA_PATH = (
+    Path(__file__).resolve().parents[1] / "contracts" / "changed-file-manifest.schema.json"
+)
+VERIFICATION_REPORT_SCHEMA_PATH = (
+    Path(__file__).resolve().parents[1] / "contracts" / "verification-report.schema.json"
+)
 MARKER_PLAN_STATUSES = frozenset({
     "planned", "checkpointing", "emission_ready", "emitting", "emitted",
     "collapsed", "stale", "invalid",
@@ -568,6 +574,36 @@ def validate_changed_file_manifest(state: dict[str, Any], state_path: Path) -> d
     manifest = _load_json_object(manifest_path) if manifest_path and manifest_path.is_file() else None
     if manifest is None:
         return {"changed_file_manifest_errors": ["changed-file manifest is missing or invalid"]}
+    try:
+        manifest_schema = json.loads(read_text(CHANGED_FILE_MANIFEST_SCHEMA_PATH))
+    except (ValidationError, json.JSONDecodeError):
+        return {"changed_file_manifest_errors": ["canonical changed-file manifest schema is malformed"]}
+    if not isinstance(manifest_schema, dict):
+        return {"changed_file_manifest_errors": ["canonical changed-file manifest schema root is invalid"]}
+    schema_errors = _json_schema_errors(
+        manifest,
+        manifest_schema,
+        manifest_schema,
+        "changed_file_manifest",
+    )
+    expected_feature_id = state.get("spec_id")
+    marker_feature_id = marker_plan.get("feature_id") if isinstance(marker_plan, dict) else None
+    identity_errors: list[str] = []
+    if not isinstance(expected_feature_id, str) or not expected_feature_id:
+        identity_errors.append("autopilot state spec_id is invalid")
+    if manifest.get("feature_id") != expected_feature_id:
+        identity_errors.append("changed-file manifest feature_id does not match state authority")
+    if manifest.get("feature_id") != marker_feature_id:
+        identity_errors.append("changed-file manifest feature_id does not match marker-plan authority")
+    if manifest.get("comparison_ref") != "HEAD":
+        identity_errors.append("changed-file manifest comparison_ref must be HEAD")
+    if schema_errors or identity_errors:
+        return {
+            "changed_file_manifest_errors": [
+                *(f"changed-file manifest schema: {error}" for error in schema_errors),
+                *identity_errors,
+            ],
+        }
     base_commit = manifest.get("base_commit")
     entries = manifest.get("files")
     if not isinstance(base_commit, str) or not re.fullmatch(r"[0-9a-f]{40}", base_commit):
@@ -588,8 +624,10 @@ def validate_changed_file_manifest(state: dict[str, Any], state_path: Path) -> d
     if base_errors:
         return {"changed_file_manifest_errors": base_errors}
 
-    declared: dict[str, str] = {}
+    declared: dict[str, tuple[str, str | None]] = {}
     expected_owners: dict[str, set[str]] = {}
+    expected_source_owners: dict[str, set[str]] = {}
+    rename_sources: set[str] = set()
     structural_errors: list[str] = []
     for index, entry in enumerate(entries):
         if not isinstance(entry, dict):
@@ -613,8 +651,25 @@ def validate_changed_file_manifest(state: dict[str, Any], state_path: Path) -> d
         marker_values = _string_list(marker_ids)
         if marker_values is None or len(marker_values) != 1:
             structural_errors.append(f"files[{index}].marker_ids must contain exactly one marker owner")
-        declared[path] = operation
+        source_path = entry.get("source_path")
+        if operation == "RENAMED":
+            if (
+                not _is_normalized_repo_path(source_path)
+                or source_path == path
+                or source_path in rename_sources
+            ):
+                structural_errors.append(
+                    f"files[{index}].source_path is invalid, unsafe, duplicated, or unchanged"
+                )
+            else:
+                rename_sources.add(source_path)
+                expected_source_owners[source_path] = set(marker_values or ())
+        elif source_path is not None:
+            structural_errors.append(f"files[{index}].source_path is only valid for RENAMED")
+        declared[path] = (operation, source_path if isinstance(source_path, str) else None)
         expected_owners[path] = set(marker_values or ())
+    if rename_sources & set(declared):
+        structural_errors.append("changed-file manifest rename source paths overlap destination paths")
     if structural_errors:
         return {"changed_file_manifest_errors": structural_errors}
 
@@ -627,15 +682,15 @@ def validate_changed_file_manifest(state: dict[str, Any], state_path: Path) -> d
     )
     if completed.returncode != 0:
         return {"changed_file_manifest_errors": ["git diff for changed-file manifest failed"]}
-    observed: dict[str, str] = {}
+    observed: dict[str, tuple[str, str | None]] = {}
     status_map = {"A": "NEW", "M": "MODIFIED", "D": "DELETED"}
     for line in completed.stdout.splitlines():
         fields = line.split("\t")
         status = fields[0]
         if status.startswith("R") and len(fields) == 3:
-            observed[fields[2]] = "RENAMED"
+            observed[fields[2]] = ("RENAMED", fields[1])
         elif status[:1] in status_map and len(fields) == 2:
-            observed[fields[1]] = status_map[status[:1]]
+            observed[fields[1]] = (status_map[status[:1]], None)
         else:
             return {"changed_file_manifest_errors": [f"unsupported git diff record: {line}"]}
     errors = [
@@ -659,8 +714,9 @@ def validate_changed_file_manifest(state: dict[str, Any], state_path: Path) -> d
     if not isinstance(markers, list):
         errors.append("changed-file manifest requires pr_marker_plan.markers")
         return {"changed_file_manifest_errors": errors}
-    marker_operations: dict[str, str] = {}
+    marker_operations: dict[str, tuple[str, str | None]] = {}
     actual_owners: dict[str, set[str]] = {}
+    actual_source_owners: dict[str, set[str]] = {}
     declared_marker_ids = {
         marker.get("id") for marker in markers
         if isinstance(marker, dict) and isinstance(marker.get("id"), str)
@@ -686,25 +742,39 @@ def validate_changed_file_manifest(state: dict[str, Any], state_path: Path) -> d
                 continue
             path = record.get("path")
             operation = record.get("operation")
+            source_path = record.get("source_path")
             if not isinstance(path, str) or not path or path in seen_marker_paths:
                 errors.append(
                     f"pr_marker_plan.markers[{marker_index}].declared_files[{file_index}].path is invalid or duplicated"
                 )
                 continue
             seen_marker_paths.add(path)
-            if operation != declared.get(path):
+            operation_record = (
+                operation,
+                source_path if isinstance(source_path, str) else None,
+            )
+            if operation_record != declared.get(path):
                 errors.append(
-                    f"pr_marker_plan marker {marker_id} operation for {path} does not match changed-file manifest"
+                    f"pr_marker_plan marker {marker_id} operation/source for {path} does not match changed-file manifest"
                 )
-            if path in marker_operations and marker_operations[path] != operation:
+            if path in marker_operations and marker_operations[path] != operation_record:
                 errors.append(f"pr_marker_plan declared operation conflict for {path}")
-            marker_operations[path] = operation
+            marker_operations[path] = operation_record
             actual_owners.setdefault(path, set()).add(marker_id)
+            if operation == "RENAMED" and isinstance(source_path, str):
+                actual_source_owners.setdefault(source_path, set()).add(marker_id)
     if set(marker_operations) != set(declared):
         errors.append("pr_marker_plan declared_files union does not match changed-file manifest")
     for path, owners in expected_owners.items():
         if actual_owners.get(path, set()) != owners:
             errors.append(f"pr_marker_plan marker ownership for {path} does not match changed-file manifest")
+    if set(actual_source_owners) != set(expected_source_owners):
+        errors.append("pr_marker_plan rename source union does not match changed-file manifest")
+    for source_path, owners in expected_source_owners.items():
+        if actual_source_owners.get(source_path, set()) != owners:
+            errors.append(
+                f"pr_marker_plan marker ownership for rename source {source_path} does not match changed-file manifest"
+            )
     return {"changed_file_manifest_errors": errors}
 
 
@@ -836,6 +906,8 @@ def validate_projection_integrity(
             if isinstance(declared_files, list):
                 for file_index, record in enumerate(declared_files):
                     path = record.get("path") if isinstance(record, dict) else None
+                    operation = record.get("operation") if isinstance(record, dict) else None
+                    source_path = record.get("source_path") if isinstance(record, dict) else None
                     if strict_contract and (
                         not _is_normalized_repo_path(path)
                         or repo_root and _repo_file(repo_root, path) is None
@@ -844,13 +916,30 @@ def validate_projection_integrity(
                             f"pr_marker_plan.markers[{index}].declared_files[{file_index}].path is not a normalized repository-relative path"
                         )
                         continue
-                    owner = file_owners.get(path)
-                    if owner is not None:
+                    owned_paths = [("file", path)]
+                    if operation == "RENAMED":
+                        if strict_contract and (
+                            not _is_normalized_repo_path(source_path)
+                            or source_path == path
+                            or repo_root and _repo_file(repo_root, source_path) is None
+                        ):
+                            marker_plan_status_errors.append(
+                                f"pr_marker_plan.markers[{index}].declared_files[{file_index}].source_path is not a normalized repository-relative rename source"
+                            )
+                            continue
+                        owned_paths.append(("rename source", source_path))
+                    elif source_path is not None:
                         marker_plan_status_errors.append(
-                            f"pr_marker_plan file {path!r} is owned by both {owner!r} and {marker_id!r}"
+                            f"pr_marker_plan.markers[{index}].declared_files[{file_index}].source_path is only valid for RENAMED"
                         )
-                    else:
-                        file_owners[path] = marker_id
+                    for path_kind, owned_path in owned_paths:
+                        owner = file_owners.get(owned_path)
+                        if owner is not None:
+                            marker_plan_status_errors.append(
+                                f"pr_marker_plan {path_kind} {owned_path!r} is owned by both {owner!r} and {marker_id!r}"
+                            )
+                        else:
+                            file_owners[owned_path] = marker_id
 
             reviewability = raw_marker.get("reviewability")
             if strict_contract and isinstance(reviewability, dict) and "evidence_path" in reviewability:
@@ -1021,6 +1110,35 @@ def validate_projection_integrity(
                     evidence = _load_json_object(evidence_path) if evidence_path and evidence_path.is_file() else None
                 if checkpoint_status == "complete" and strict_contract and repo_root:
                     claimed_commit = checkpoint.get("commit_sha")
+                    verification_report = _load_json_bytes(committed_verification_bytes)
+                    if not isinstance(verification_report, dict):
+                        checkpoint_evidence_errors.append(
+                            f"pr_marker_plan.markers[{index}] verification report must be a JSON object"
+                        )
+                    else:
+                        try:
+                            verification_schema = json.loads(
+                                read_text(VERIFICATION_REPORT_SCHEMA_PATH)
+                            )
+                        except (ValidationError, json.JSONDecodeError):
+                            checkpoint_evidence_errors.append(
+                                f"pr_marker_plan.markers[{index}] canonical verification report schema is malformed"
+                            )
+                        else:
+                            if not isinstance(verification_schema, dict):
+                                checkpoint_evidence_errors.append(
+                                    f"pr_marker_plan.markers[{index}] canonical verification report schema root is invalid"
+                                )
+                            else:
+                                checkpoint_evidence_errors.extend(
+                                    f"pr_marker_plan.markers[{index}] verification report schema: {error}"
+                                    for error in _json_schema_errors(
+                                        verification_report,
+                                        verification_schema,
+                                        verification_schema,
+                                        "verification_report",
+                                    )
+                                )
                     if not isinstance(evidence, dict):
                         checkpoint_evidence_errors.append(
                             f"pr_marker_plan.markers[{index}] checkpoint evidence must be a JSON object"
@@ -1034,6 +1152,16 @@ def validate_projection_integrity(
                             evidence.get("required_verification_gate_ids")
                         )
                         verification = evidence.get("verification")
+                        report_gate_ids = (
+                            _string_list(verification_report.get("required_gate_ids"))
+                            if isinstance(verification_report, dict)
+                            else None
+                        )
+                        report_results = (
+                            verification_report.get("results")
+                            if isinstance(verification_report, dict)
+                            else None
+                        )
                         gate_sets_match = (
                             required_gate_ids is not None
                             and evidence_gate_ids is not None
@@ -1053,6 +1181,28 @@ def validate_projection_integrity(
                                 and bool(result["evidence"].strip())
                                 for result in verification.values()
                             )
+                        )
+                        report_gate_sets_match = (
+                            gate_sets_match
+                            and report_gate_ids is not None
+                            and required_gate_ids == evidence_gate_ids == report_gate_ids
+                            and isinstance(report_results, dict)
+                            and set(report_results) == set(required_gate_ids)
+                        )
+                        report_passing_results = (
+                            report_gate_sets_match
+                            and all(
+                                isinstance(result, dict)
+                                and set(result) == {"status", "evidence"}
+                                and result.get("status") == "pass"
+                                and isinstance(result.get("evidence"), str)
+                                and bool(result["evidence"].strip())
+                                for result in report_results.values()
+                            )
+                        )
+                        report_results_match = (
+                            report_passing_results
+                            and report_results == verification
                         )
                         evidence_checks = {
                             "schema_version": evidence.get("schema_version") == "marker-checkpoint.v1",
@@ -1077,6 +1227,35 @@ def validate_projection_integrity(
                         checkpoint_evidence_errors.extend(
                             f"pr_marker_plan.markers[{index}] checkpoint evidence {field} is invalid"
                             for field, passed in evidence_checks.items() if not passed
+                        )
+                        verification_report_checks = {
+                            "schema_version": (
+                                isinstance(verification_report, dict)
+                                and verification_report.get("schema_version")
+                                == "verification-report.v1"
+                            ),
+                            "feature_id": (
+                                isinstance(verification_report, dict)
+                                and verification_report.get("feature_id") == expected_feature_id
+                            ),
+                            "marker_id": (
+                                isinstance(verification_report, dict)
+                                and verification_report.get("marker_id") == marker_id
+                            ),
+                            "status": (
+                                isinstance(verification_report, dict)
+                                and verification_report.get("status") == "pass"
+                            ),
+                            "generated_at": (
+                                isinstance(verification_report, dict)
+                                and _is_utc_timestamp(verification_report.get("generated_at"))
+                            ),
+                            "required_gate_ids": report_gate_sets_match,
+                            "results": report_results_match,
+                        }
+                        checkpoint_evidence_errors.extend(
+                            f"pr_marker_plan.markers[{index}] verification report {field} is invalid"
+                            for field, passed in verification_report_checks.items() if not passed
                         )
                         if evidence.get("implementation_checkpoint_sha") != claimed_commit:
                             checkpoint_evidence_errors.append(

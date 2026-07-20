@@ -74,7 +74,7 @@
       }
     }
   },
-  "verification_evidence_sha": "sha256:6291117acccb3f4bd7b44a55735d9451dceb87d23e805218672d2b1e11d9b5ee",
+    "verification_evidence_sha": "sha256:66832f9c6df6f7971abb4c17900939646ae6659774ea70612a19a0af5babb105",
   "required_verification_gate_ids": [
     "focused_tests",
     "privacy_scan",

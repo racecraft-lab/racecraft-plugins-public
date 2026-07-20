@@ -45,6 +45,12 @@ MARKER_PLAN_SCHEMA_PATHS = (
     REPO_ROOT
     / "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
 )
+CHANGED_FILE_MANIFEST_SCHEMA_PATHS = tuple(
+    path.with_name("changed-file-manifest.schema.json") for path in MARKER_PLAN_SCHEMA_PATHS
+)
+VERIFICATION_REPORT_SCHEMA_PATHS = tuple(
+    path.with_name("verification-report.schema.json") for path in MARKER_PLAN_SCHEMA_PATHS
+)
 MARKER_CHECKPOINT_SCHEMA_PATH = (
     REPO_ROOT
     / "specs/g56r-002-capability-discovery-telemetry/contracts/marker-checkpoint.schema.json"
@@ -346,6 +352,28 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
         self.assertEqual(
             strict_emission["allOf"][1]["then"]["required"],
             ["packet_path", "pr_number", "pr_url"],
+        )
+
+    def test_manifest_and_verification_schemas_are_closed_and_mirrored(self) -> None:
+        manifest_bodies = [path.read_bytes() for path in CHANGED_FILE_MANIFEST_SCHEMA_PATHS]
+        verification_bodies = [path.read_bytes() for path in VERIFICATION_REPORT_SCHEMA_PATHS]
+        self.assertTrue(all(body == manifest_bodies[0] for body in manifest_bodies[1:]))
+        self.assertTrue(all(body == verification_bodies[0] for body in verification_bodies[1:]))
+
+        manifest_schema = json.loads(manifest_bodies[0])
+        self.assertFalse(manifest_schema["additionalProperties"])
+        self.assertEqual(manifest_schema["properties"]["schema_version"]["const"], "changed-file-manifest.v1")
+        self.assertEqual(manifest_schema["properties"]["comparison_ref"]["const"], "HEAD")
+        rename_rule = manifest_schema["$defs"]["file"]["allOf"][0]
+        self.assertEqual(rename_rule["if"]["properties"]["operation"]["const"], "RENAMED")
+        self.assertEqual(rename_rule["then"]["required"], ["source_path"])
+
+        verification_schema = json.loads(verification_bodies[0])
+        self.assertFalse(verification_schema["additionalProperties"])
+        self.assertEqual(verification_schema["properties"]["status"]["const"], "pass")
+        self.assertEqual(
+            verification_schema["$defs"]["passing_result"]["properties"]["status"]["const"],
+            "pass",
         )
 
     def test_completed_marker_evidence_is_immutable_and_freshness_is_separate(self) -> None:

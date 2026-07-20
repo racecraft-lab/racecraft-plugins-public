@@ -12,7 +12,7 @@
   "implementation_checkpoint_sha": "2b7096dacdaa7a6af62b3c12b36e83cf4515213e",
   "superseded_checkpoint_sha": "f262695d0c1b519e73d93058a944ccdc377ad62f",
   "candidate_freeze_id": "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03",
-  "verification_evidence_sha": "sha256:05e653cbd39b0300d9b27df30cc2419f524e861fcada383abe49646454dbfeff",
+    "verification_evidence_sha": "sha256:659779425c73ff7b57c1cf97a259a6f4385fdff8d2e78f848b86c7e04b29cf2f",
   "required_verification_gate_ids": [
     "focused_tests",
     "published_freeze_validation",
