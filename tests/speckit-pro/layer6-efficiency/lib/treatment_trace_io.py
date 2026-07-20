@@ -89,7 +89,10 @@ def _read_bounded_regular_file_by_handle(source: Path, root: Path, relative: Pat
     root_identity, directory_identities, pathname_before, canonical_source = _handle_bound_path_snapshot(
         source, root, relative,
     )
-    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOINHERIT", 0)
+    flags = (
+        os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOINHERIT", 0)
+        | getattr(os, "O_NONBLOCK", 0)
+    )
     descriptor: int | None = None
     try:
         descriptor = os.open(source, flags)
@@ -146,7 +149,10 @@ def _read_bounded_regular_file(path: Path, *, allowed_root: Path = ROOT,
         return _read_bounded_regular_file_by_handle(source, root, relative, max_bytes)
     nofollow = getattr(os, "O_NOFOLLOW", 0)
     directory_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow | getattr(os, "O_DIRECTORY", 0)
-    file_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
+    file_flags = (
+        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
+        | getattr(os, "O_NONBLOCK", 0)
+    )
     directory_descriptors: list[int] = []
     directory_identities: list[tuple[int, ...]] = []
     descriptor: int | None = None

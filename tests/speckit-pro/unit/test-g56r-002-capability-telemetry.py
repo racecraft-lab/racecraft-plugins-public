@@ -23,6 +23,7 @@ import types
 import unittest
 from pathlib import Path
 from unittest import mock
+from uuid import uuid4
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -127,12 +128,48 @@ capability_private = CAPABILITY_INTERNALS["codex_capability_private"]
 capability_publish_io = CAPABILITY_INTERNALS["codex_capability_publish_io"]
 capability_retention = CAPABILITY_INTERNALS["codex_capability_retention"]
 capability_retention_records = CAPABILITY_INTERNALS["codex_capability_retention_records"]
-TREATMENT_INTERNALS = treatment.__treatment_internal_modules__
+
+
+def load_treatment_test_internals() -> dict[str, types.ModuleType]:
+    dependency_names = (
+        "treatment_trace_capability", "treatment_trace_authority", "treatment_trace_io",
+        "treatment_trace_json_schema", "treatment_trace_model", "treatment_trace_fields",
+        "treatment_trace_bundle", "treatment_trace_fixture", "treatment_trace_replay",
+        "treatment_trace_successor", "treatment_trace_cli",
+    )
+    package_name = f"_g56r_treatment_test_runtime_{uuid4().hex}"
+    package = types.ModuleType(package_name)
+    package.__package__ = package_name
+    package.__path__ = [str(TREATMENT_MODULE_PATH.parent)]
+    package.__spec__ = importlib.machinery.ModuleSpec(package_name, loader=None, is_package=True)
+    sys.modules[package_name] = package
+    try:
+        cli_name = f"{package_name}.treatment_trace_cli"
+        cli_spec = importlib.util.spec_from_file_location(
+            cli_name, TREATMENT_MODULE_PATH.with_name("treatment_trace_cli.py"),
+        )
+        if cli_spec is None or cli_spec.loader is None:
+            raise RuntimeError("cannot load treatment test dependencies")
+        cli = importlib.util.module_from_spec(cli_spec)
+        sys.modules[cli_name] = cli
+        cli_spec.loader.exec_module(cli)
+        return {
+            name: sys.modules[f"{package_name}.{name}"]
+            for name in dependency_names
+        }
+    finally:
+        for module_name in tuple(sys.modules):
+            if module_name == package_name or module_name.startswith(f"{package_name}."):
+                sys.modules.pop(module_name, None)
+
+
+TREATMENT_INTERNALS = load_treatment_test_internals()
 treatment_bundle = TREATMENT_INTERNALS["treatment_trace_bundle"]
 treatment_authority = TREATMENT_INTERNALS["treatment_trace_authority"]
 treatment_fields = TREATMENT_INTERNALS["treatment_trace_fields"]
 treatment_io = TREATMENT_INTERNALS["treatment_trace_io"]
 treatment_json_schema = TREATMENT_INTERNALS["treatment_trace_json_schema"]
+treatment_successor = TREATMENT_INTERNALS["treatment_trace_successor"]
 
 
 def load_treatment_facade(name: str):
@@ -502,6 +539,7 @@ class CapabilityContractTests(unittest.TestCase):
             EXPECTED_TREATMENT_PUBLIC_API,
         )
         self.assertNotIn("_validate_treatment_bundle", vars(treatment))
+        self.assertNotIn("__treatment_internal_modules__", vars(treatment))
         self.assertTrue(callable(capabilities.main))
         self.assertTrue(callable(treatment.main))
 
@@ -3158,6 +3196,57 @@ class TreatmentContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "regular"):
                     treatment_io._read_bounded_regular_file(fifo, allowed_root=root)
 
+            if hasattr(os, "mkfifo") and hasattr(os, "O_NONBLOCK"):
+                modes = [False]
+                if treatment_io.HAS_DESCRIPTOR_RELATIVE_IO:
+                    modes.append(True)
+                for descriptor_relative in modes:
+                    with self.subTest(file_to_fifo_race=descriptor_relative):
+                        race_fifo = root / f"race-fifo-{descriptor_relative}.json"
+                        race_fifo.write_text("{}", encoding="utf-8")
+                        race_original = root / f"race-fifo-{descriptor_relative}-original.json"
+                        original_open = treatment_io.os.open
+                        swapped = False
+                        failures: list[BaseException] = []
+
+                        def replace_file_with_fifo(
+                            path: object, flags: int, *args: object, **kwargs: object,
+                        ) -> int:
+                            nonlocal swapped
+                            descriptor_target = (
+                                path == race_fifo.name
+                                and kwargs.get("dir_fd") is not None
+                            )
+                            handle_target = (
+                                kwargs.get("dir_fd") is None
+                                and Path(path) == race_fifo
+                            )
+                            if (descriptor_target or handle_target) and not swapped:
+                                swapped = True
+                                race_fifo.rename(race_original)
+                                os.mkfifo(race_fifo)
+                            return original_open(path, flags, *args, **kwargs)
+
+                        def read_swapped_fifo() -> None:
+                            try:
+                                treatment_io._read_bounded_regular_file(
+                                    race_fifo, allowed_root=root,
+                                )
+                            except BaseException as exc:  # pragma: no branch - asserted below
+                                failures.append(exc)
+
+                        with mock.patch.object(
+                            treatment_io, "HAS_DESCRIPTOR_RELATIVE_IO", descriptor_relative,
+                        ), mock.patch.object(
+                            treatment_io.os, "open", side_effect=replace_file_with_fifo,
+                        ):
+                            worker = threading.Thread(target=read_swapped_fifo, daemon=True)
+                            worker.start()
+                            worker.join(timeout=2)
+                        self.assertFalse(worker.is_alive(), "file-to-FIFO swap blocked the reader")
+                        self.assertTrue(failures)
+                        self.assertIsInstance(failures[0], ValueError)
+
             race_directory = root / "race"; race_directory.mkdir()
             race_source = race_directory / "source.json"; race_source.write_text("{}", encoding="utf-8")
             moved_directory = root / "race-original"
@@ -3446,7 +3535,7 @@ class TreatmentContractTests(unittest.TestCase):
         ), mock.patch.object(
             treatment_bundle, "_read_bounded_regular_file", side_effect=track_authority_reads,
         ):
-            successor = treatment.build_treatment_successor(
+            successor = treatment_successor.build_treatment_successor(
                 prior, self.bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
             )
         self.assertEqual(bounded_reads.count(treatment.SCHEMA_PATH), 1)
@@ -3918,6 +4007,19 @@ class TreatmentReplayTests(unittest.TestCase):
             manifest_path.write_bytes(treatment.canonical_fixture_bytes(manifest))
             with self.assertRaisesRegex(ValueError, "closed shape|undeclared treatment schema field"):
                 treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+
+    def test_capability_fixture_provenance_has_an_independent_immutable_baseline(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+            capability = json.loads(capability_path.read_bytes())
+            capability["raw_evidence_digest"] = "sha256:" + "0" * 64
+            self.write_and_reseal(repository_root, FIXTURE_PATH, capability)
+            with self.assertRaisesRegex(ValueError, "capability replay fixture changed outside"):
+                treatment.replay_fixture(
+                    fixture, manifest_path, repeat=2, repository_root=repository_root,
+                )
 
     def test_false_declared_treatment_claim_fails_validation_cli_and_replay(self) -> None:
         mutations = (

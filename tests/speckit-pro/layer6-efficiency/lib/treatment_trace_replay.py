@@ -236,6 +236,8 @@ def replay_fixture(fixture_path: Path, digest_manifest_path: Path, *, repeat: in
             "cases": _normalized_replay_pass(parsed[CAPABILITY_FIXTURE_PATH], parsed[TREATMENT_FIXTURE_PATH]),
             "guardrails": copy.deepcopy(guardrails),
         })
+    if digest(raw_fixtures[CAPABILITY_FIXTURE_PATH]) != CAPABILITY_FIXTURE_BASELINE_DIGEST:
+        raise ValueError("capability replay fixture changed outside its immutable baseline")
     serialized = [canonical_fixture_bytes(item) for item in pass_outputs]
     if serialized[0] != serialized[1]:
         raise ValueError("two-pass replay output is not byte-identical")

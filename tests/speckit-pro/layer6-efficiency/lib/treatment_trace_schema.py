@@ -44,7 +44,6 @@ try:
     for _export_name in _cli.__all__:
         globals()[_export_name] = getattr(_cli, _export_name)
 
-    __treatment_internal_modules__ = {}
     for _dependency_name in _TREATMENT_DEPENDENCY_NAMES:
         _qualified_name = f"{_runtime_package}.{_dependency_name}"
         _dependency = sys.modules.get(_qualified_name)
@@ -56,7 +55,6 @@ try:
             raise RuntimeError(f"treatment dependency {_dependency_name} cannot be resolved") from exc
         if _actual_path != _expected_path:
             raise RuntimeError(f"treatment dependency {_dependency_name} does not resolve to {_expected_path}")
-        __treatment_internal_modules__[_dependency_name] = _dependency
 finally:
     for _module_name in tuple(sys.modules):
         if _module_name == _runtime_package or _module_name.startswith(f"{_runtime_package}."):
