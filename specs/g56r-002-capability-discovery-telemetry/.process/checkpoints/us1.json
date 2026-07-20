@@ -23,7 +23,7 @@
   "source_fingerprint_contract": "marker-task-lines.v2",
   "tasks_sha": "sha256:4ab7bafd49ffaf63341f0f690e1e9fd3f0a1ccebea0f97febb6bf9fc82cd96eb",
   "tasks_sha_scope": "checkpoint_time_whole_file",
-  "current_tasks_sha": "sha256:900dabf0cbdad700d30263c216fc18486a4d92aade0c39a984389451b0aefd59",
+  "current_tasks_sha": "sha256:216b86cb34bbcc40c7f6e23b153379ec047616885f89ae6c11a41674df68b447",
   "checkpoint_marker_tasks_sha": "sha256:a82dea018084b65bae400dd3377318bb3ba82f15ad724f69059fed968ea52ee6",
   "current_marker_tasks_sha": "sha256:a82dea018084b65bae400dd3377318bb3ba82f15ad724f69059fed968ea52ee6",
   "completed_at": "2026-07-18T19:03:30Z",

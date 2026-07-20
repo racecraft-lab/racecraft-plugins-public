@@ -8,7 +8,8 @@
     "plan_declared_scope_sha": "sha256:555c366e659bc1723e283d2b4d3c42a415950b0fae1b3639ae30f26bdc2f0056",
     "tasks_sha": "sha256:51dde76432d2326bff72d6bbd86ce1451ebf39a35bd1ba2bc42f6f1047a5c9d7",
     "reviewability_sha": "sha256:f440668daa09459968775005ef51c6ef32cddf58b37a335995edc99c035e8768",
-    "hazard_route_sha": "sha256:57eb0ef319cb1075f5cd033a12944e52fa59edaace2562f3692f4919b8ca9f23"
+    "hazard_route_sha": "sha256:57eb0ef319cb1075f5cd033a12944e52fa59edaace2562f3692f4919b8ca9f23",
+    "changed_file_manifest_sha": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
   },
   "markers": [
     {
@@ -79,6 +80,11 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
+        "checkpoint_evidence_sha": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+        "checkpoint_evidence_sha": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+        "checkpoint_evidence_sha": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+        "checkpoint_evidence_sha": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+        "checkpoint_evidence_sha": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
         "verification_evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
         "commit_sha": "f9c4ad69066055bd3c85521d62c8c87fe17db1f3",
         "head_sha": "f9c4ad69066055bd3c85521d62c8c87fe17db1f3",

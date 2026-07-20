@@ -5,13 +5,18 @@
   "status": "block",
   "mode": "implementation",
   "scope": "T026-T030 deterministic synthetic replay",
-  "head_sha": "11fdd01d9f28d793b46b57a54f1525a1ceb5b77b",
-  "reason_class": "size_only",
+  "head_sha": "1c15d3ca4b68088ff8bd939199f0f96b63f34947",
+  "reason_class": "aggregate_size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 2274,
-  "actual_nonblank_noncomment_lines": 2100,
-  "production_modules": 1,
+  "actual_source_lines": 4935,
+  "actual_nonblank_noncomment_lines": 4454,
+  "production_modules": 23,
+  "max_module_source_lines": 381,
+  "module_groups": {
+    "capability": {"modules": 12, "public_entrypoint": "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py"},
+    "treatment": {"modules": 11, "public_entrypoint": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"}
+  },
   "primary_surface": "harness/adapter",
   "correctness_checks": {
     "focused_tests": "67/67 pass",
@@ -25,24 +30,23 @@
     "declared_claim_exactness": "pass",
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass",
-    "full_suite": "2833/2833 pass",
-    "independent_review": "findings_open: untitled-chat-60E508"
+    "full_suite": "2834/2834 pass",
+    "independent_review": "findings_open: untitled-chat-8DCBF9"
   },
-  "exception": {
-    "kind": "typed_size_only",
-    "status": "honored_for_checkpoint",
-    "subdivision": "no_safe_boundary",
-    "rationale": "Fixture provenance, raw-byte digest-before-parse validation, exact eight-class disposition semantics, synthetic reroute isolation, and two-pass normalized replay extend the predeclared treatment integrity boundary from T026-T030.",
-    "growth_limit": "The predeclared replay extension is complete; only finding-driven review remediation may extend treatment_trace_schema.py after this checkpoint, and no feature expansion is authorized."
+  "decomposition": {
+    "status": "complete",
+    "subdivision": "safe_split",
+    "rationale": "The two public entry points now delegate to focused source, observation, matrix, private-retention, freeze, schema, trace, replay, and successor modules.",
+    "invariant": "Every implementation module is below the 400-line reviewability boundary; the public entry points preserve their import and CLI contracts.",
+    "max_module_source_lines": 381
   },
   "later_markers": [
     "polish:T031-T039"
   ],
   "evidence_commands": [
-    "wc -l tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py",
-    "awk 'NF && $0 !~ /^[[:space:]]*#/ {n++} END{print n}' tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py",
+    "wc -l tests/speckit-pro/layer6-efficiency/lib/codex_capabilit*.py tests/speckit-pro/layer6-efficiency/lib/treatment_trace_*.py",
     "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
     "python3 tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py replay --fixture tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json --digest-manifest tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json --repeat 2",
-    "git diff --exit-code 942c9162 -- tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py"
+    "python3 -u tests/speckit-pro/run-all.py"
   ]
 }

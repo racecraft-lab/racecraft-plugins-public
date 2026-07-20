@@ -6,17 +6,13 @@
 smallest GREEN implementation, then REFACTOR and VERIFY without changing the
 predeclared dispositions.
 
-**Reviewability**: The capability adapter triggered the 400-LOC boundary and is
-now 2,470 source lines (2,243 nonblank, non-comment) after finding-driven US2
-retention remediation. The treatment validator is 1,744 source lines (1,600
-nonblank, non-comment), for 4,214 source lines (3,843 nonblank, non-comment)
-across the two production modules in the current US2 marker. T001-T015 is retained under a typed
-size-only `no_safe_boundary` marker because its source, matrix, tuple, and
-freeze integrity checks cannot be separated safely. That exception permits no
-further capability-module growth except finding-driven successor-validation
-integrity work. T016-T025 and T026-T039 remain separate
-ordered markers; a third production module or broken independent verification
-is still blocking.
+**Reviewability**: The original capability and treatment monoliths crossed the
+400-line boundary. Finding-driven remediation now preserves two public entry
+points while safely subdividing their responsibilities into 23 focused modules;
+the largest is 381 source lines. The aggregate 4,935-line surface remains split
+across the independently verified US1/US2/US3 markers and stacked PRs. No
+current `no_safe_boundary` exception remains. T038 must verify the module cap,
+public API compatibility, and independent marker evidence.
 
 **Format**: Every task includes an exact path, user-story marker, functional
 requirement references, and an objective acceptance check. `[P]` is used only
@@ -118,7 +114,7 @@ without network or raw-store access.
 - [x] T035 [US1] [FR-001] [FR-008] Run `python3 -u tests/speckit-pro/run-all.py --layer 1` and the focused G56R-002 test; Acceptance: both pass with no generated-reference or source-authority regression.
 - [x] T036 [US2] [FR-005] [FR-008] Run `python3 -u tests/speckit-pro/run-all.py`, `pnpm --dir docs-site reference:check`, JSON validation, and `git diff --check`; Acceptance: the full deterministic suite and all hygiene checks pass.
 - [x] T037 [US3] [FR-008] Audit tracked changes and history against the prohibited-scope contract in `docs/ai/specs/.process/G56R-002-workflow.md` for raw live responses, credentials, absolute paths, repository remotes, corpus/scorer/qualification/ranking/preference/fallback-order/installer/agent/payload/default/version changes, Bash, `jq`, third-party packages, or a cross-vendor prober; Acceptance: all prohibited-scope counts are zero or confined to explicit non-goal prose.
-- [ ] T038 [US1] [FR-003] [FR-008] Re-run the reviewability gate against `docs/ai/specs/.process/G56R-002-workflow.md` and inspect implementation LOC/files; Acceptance: one primary surface and two production modules remain, the current marker plan preserves independently verified US1/US2/US3 checkpoints, the honored US1 size-only exception authorizes no further capability-module growth, and no correctness or safety block remains.
+- [ ] T038 [US1] [FR-003] [FR-008] Re-run the reviewability gate against `docs/ai/specs/.process/G56R-002-workflow.md` and inspect implementation LOC/files; Acceptance: two public entry points preserve their APIs, every focused implementation module remains below 400 source lines, the current marker plan preserves independently verified US1/US2/US3 checkpoints, and no correctness or safety exception remains.
 - [ ] T039 [US1] [FR-001] [FR-008] Validate the final PR title and the authoritative `specs/g56r-002-capability-discovery-telemetry/.process/changed-file-manifest.json` against the exact base-to-`HEAD` diff through the release-readiness gate invoked by `.github/workflows/pr-checks.yml` using a lowercase conventional scope; Acceptance: `<type>(<lowercase-scope>): <plain English description>` passes and every `git diff --name-status 166006e999ad6924c26379e32299a10693c46ba2..HEAD` operation matches the manifest with no omitted or extra path.
 
 ## Dependencies & Execution Order
@@ -135,7 +131,7 @@ without network or raw-store access.
 ### Incremental Delivery
 
 1. Deliver and verify the US1 capability-freeze contract before opening the
-   treatment module.
+   treatment ownership group.
 2. Add US2 telemetry and exact-treatment validation without changing US1
    candidate dispositions.
 3. Add US3 offline replay without network, raw-store, scorer, or qualification
@@ -145,7 +141,7 @@ without network or raw-store access.
 ## Parallel Opportunities
 
 - **2 tasks**: T032 and T033 after T031.
-- No implementation task is parallelized across the two production modules;
+- No implementation task is parallelized across the two public ownership groups;
   the accepted increment order is the safer review path.
 
 ## Traceability Summary

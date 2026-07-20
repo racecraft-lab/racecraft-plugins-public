@@ -8,7 +8,8 @@
     "plan_declared_scope_sha": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "tasks_sha": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     "reviewability_sha": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-    "hazard_route_sha": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    "hazard_route_sha": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "changed_file_manifest_sha": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
   },
   "markers": [
     {
@@ -53,6 +54,7 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "specs/prsg-013-reviewability-markers/.process/markers/foundation-checkpoint.md",
+        "checkpoint_evidence_sha": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
         "verification_evidence_path": "specs/prsg-013-reviewability-markers/.process/marker-plan/foundation-reviewability.json",
         "commit_sha": "ffffffffffffffffffffffffffffffffffffffff",
         "head_sha": "ffffffffffffffffffffffffffffffffffffffff",
@@ -115,6 +117,7 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "specs/prsg-013-reviewability-markers/.process/markers/us1-checkpoint.md",
+        "checkpoint_evidence_sha": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
         "verification_evidence_path": "specs/prsg-013-reviewability-markers/.process/marker-plan/us1-reviewability.json",
         "commit_sha": "1111111111111111111111111111111111111111",
         "head_sha": "1111111111111111111111111111111111111111",
@@ -169,6 +172,7 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "specs/prsg-013-reviewability-markers/.process/markers/us2-part1-checkpoint.md",
+        "checkpoint_evidence_sha": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
         "verification_evidence_path": "specs/prsg-013-reviewability-markers/.process/marker-plan/us2-part1-reviewability.json",
         "commit_sha": "2222222222222222222222222222222222222222",
         "head_sha": "2222222222222222222222222222222222222222",

@@ -234,6 +234,99 @@
           }
         }
       }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "stale"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "markers": {
+            "items": {
+              "properties": {
+                "emission_mapping": {
+                  "properties": {
+                    "status": {
+                      "const": "pending"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "warnings": {
+            "contains": {
+              "properties": {
+                "code": {
+                  "const": "MARKER_PLAN_STALE"
+                },
+                "severity": {
+                  "enum": [
+                    "warning",
+                    "error"
+                  ]
+                }
+              },
+              "required": [
+                "code",
+                "severity"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "invalid"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "markers": {
+            "items": {
+              "properties": {
+                "emission_mapping": {
+                  "properties": {
+                    "status": {
+                      "const": "pending"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "warnings": {
+            "contains": {
+              "properties": {
+                "code": {
+                  "const": "MARKER_PLAN_INVALID"
+                },
+                "severity": {
+                  "const": "error"
+                }
+              },
+              "required": [
+                "code",
+                "severity"
+              ]
+            }
+          }
+        }
+      }
     }
   ],
   "$defs": {
@@ -245,7 +338,8 @@
         "plan_declared_scope_sha",
         "tasks_sha",
         "reviewability_sha",
-        "hazard_route_sha"
+        "hazard_route_sha",
+        "changed_file_manifest_sha"
       ],
       "properties": {
         "feature_spec_sha": {
@@ -265,6 +359,10 @@
           "pattern": "^sha256:[0-9a-f]{64}$"
         },
         "hazard_route_sha": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "changed_file_manifest_sha": {
           "type": "string",
           "pattern": "^sha256:[0-9a-f]{64}$"
         }
@@ -588,6 +686,10 @@
           "type": "string",
           "pattern": "^[0-9a-f]{40}$"
         },
+        "checkpoint_evidence_sha": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
         "completed_at": {
           "type": "string",
           "minLength": 1
@@ -630,6 +732,7 @@
           "then": {
             "required": [
               "evidence_path",
+              "checkpoint_evidence_sha",
               "verification_evidence_path",
               "commit_sha",
               "head_sha",

@@ -6,10 +6,11 @@
 
 ## Summary
 
-Add two Python 3.11 standard-library modules to the existing Layer 6 harness.
-The first normalizes pinned Codex surface evidence, applies claim-scoped source
+Add two Python 3.11 standard-library public entry points and focused internal
+modules to the existing Layer 6 harness. The capability entry point normalizes
+pinned Codex surface evidence, applies claim-scoped source
 admission, enforces the bounded canary contract, and emits a content-addressed
-candidate freeze. The second validates telemetry profiles, route-resolution and
+candidate freeze. The treatment entry point validates telemetry profiles, route-resolution and
 exact-treatment records, and deterministic synthetic replay. One sanitized
 research handoff and two compact replay fixtures prove the contracts without
 committing raw live responses or performing qualification.
@@ -49,8 +50,8 @@ set, one pinned client identity, three observation surfaces, and the eight
 required replay classes
 
 **Reviewability Budget**: Primary surface `harness/adapter`; secondary surface
-`schema/data contract`; target 265 reviewable LOC, approximately 2 production
-modules and 10 implementation files. The scaffold estimate is 297 LOC. Stay one
+`schema/data contract`; target 265 reviewable LOC, approximately 2 public
+entry points and 10 implementation files. The scaffold estimate is 297 LOC. Stay one
 slice unless the authoritative plan estimate exceeds 400 LOC or the three
 increments cease to be independently testable.
 
@@ -62,20 +63,18 @@ not a size claim. The binding human estimate remains 297 reviewable LOC; the
 is governed separately by the changed-file manifest below because independent
 review remediation expanded process, schema, and generated-proof surfaces.
 
-**Implementation checkpoint**: The capability adapter is 2,470 source lines
-and 2,243 nonblank, non-comment lines after finding-driven US2 retention
-remediation. The treatment validator is 1,744 source lines and 1,600 nonblank,
-non-comment lines, so the current two-module US2 marker totals 4,214 source
-lines and 3,843 nonblank, non-comment lines and the 400-LOC trigger is active.
-Capability work T001-T015 remains one review marker under a typed size-only
-exception because source refresh, surface authority, tuple decisions, and the
-published freeze validator share one integrity boundary and have no safe
-internal split. This exception permits the completed capability checkpoint
-only; later growth is limited to finding-driven successor-validation integrity
-work in `codex_capabilities.py`. Treatment
-work T016-T025 remains a separate module and marker, while replay plus polish
-T026-T039 remains a third marker. The authoritative marker state is persisted
-in `docs/ai/specs/.process/autopilot-state.json`.
+**Implementation checkpoint**: Independent review rejected the original
+two-monolith size exception. The current remediation preserves two public entry
+points while separating source refresh, observations, matrix/canary logic,
+private retention, freeze construction, JSON-schema validation, trace graphs,
+fixture replay, and successor construction into focused modules. The current
+implementation spans 23 modules and 4,935 source lines, but the largest module
+is 381 lines, below the 400-line per-module boundary. The aggregate size block
+is handled by the existing US1/US2/US3 marker and stacked-PR checkpoints; no
+current `no_safe_boundary` implementation exception remains. Historical
+checkpoint evidence retains the measurements that were true at those immutable
+heads. The authoritative current marker state is persisted in
+`docs/ai/specs/.process/autopilot-state.json`.
 
 ## Declared File Operations
 
@@ -94,40 +93,42 @@ an omitted, extra, or differently classified operation keeps T039 incomplete.
 
 | Principle | Decision | Evidence |
 |---|---|---|
-| Library-first and CLI contracts | Pass | Two importable modules own collection/normalization and schema/replay behavior; no new framework |
+| Library-first and CLI contracts | Pass | Two stable public entry points delegate to focused collection, normalization, retention, schema, and replay modules; no new framework |
 | Test-first development | Pass | Each increment starts with focused failing fixtures and unit assertions before implementation |
 | Integration testing | Pass | Offline replay covers surface joins, treatment, reroutes, hashes, and failure dispositions |
 | Observability | Pass | Every desired field has a profile entry with source, completeness, claim, typed state, and evidence |
 | Simplicity and YAGNI | Pass | Reuse Layer 6 and the shared G56R taxonomy; no cross-vendor prober or installer seam |
 | Source authority | Pass | Only current canonical OpenAI documentation admits platform claims; runtime data can only narrow |
-| Reviewability | Typed size-only exception | Capability implementation exceeded 400 LOC; T001-T015 has no safe internal integrity boundary, and T016-T039 remains split into two later markers |
+| Reviewability | Pass after safe subdivision | Aggregate size remains marker-split, while every current implementation module is below 400 source lines |
 
-No correctness or safety exception is requested. The capability marker carries
-only the typed size exception above. Any further growth of that module, a third
-production module, or coupling between later markers is a new stop condition.
+No correctness, safety, or current size exception is requested. Growth that
+pushes any focused module to 400 lines, recreates mixed responsibilities, or
+couples independently reviewed markers is a new stop condition.
 
 ## Architecture and Ownership
 
-### `codex_capabilities.py`
+### Capability entry point and focused modules
 
-- Validate `client_identity_id`, surface collection metadata, canonical
+- `codex_capabilities.py` preserves the public import and CLI boundary.
+- Contract, source, observation, and matrix modules validate `client_identity_id`, surface collection metadata, canonical
   model/effort normalization, hidden visibility, and disagreement records.
-- Revalidate current source-record digests and carry claim-scoped invalidations;
+- Private-I/O and retention modules revalidate current source-record digests, carry claim-scoped invalidations,
   never modify historical `OSL-*` rows.
-- Validate one injected, approved `CanaryExecutor` result per
+- Freeze and canary modules validate one injected, approved `CanaryExecutor` result per
   `(snapshot, model, effort)`, including the 30-second, 64 KiB, zero-retry,
   process-tree-termination contract and closed result envelope. A
   repository-owned, versioned, default-empty executor-ID allowlist is the trust
   anchor; fail closed without a separately reviewed admitted executor.
-- Sanitize allowlisted evidence, emit canonical JSON/SHA-256, and build the
+- Publication modules sanitize allowlisted evidence, emit canonical JSON/SHA-256, and build the
   append-only candidate freeze.
 
-### `treatment_trace_schema.py`
+### Treatment entry point and focused modules
 
-- Validate single-client telemetry-profile ownership, complete keys, and
+- `treatment_trace_schema.py` preserves the public validation/replay CLI boundary.
+- Authority, model, and field modules validate single-client telemetry-profile ownership, complete keys, and
   classification/claim semantics; absent surface bindings never authorize
   top-level treatment claims.
-- Validate the content-addressed six-ID objective join, reciprocal acyclic trace
+- Bundle modules validate the content-addressed six-ID objective join, reciprocal acyclic trace
   graphs, controlled-environment consistency,
   configured-route proof, typed observation-state rules, structured treatment
   failures, owning-ID uniqueness, route resolution, exact treatment,
@@ -137,14 +138,14 @@ production module, or coupling between later markers is a new stop condition.
   Controlled environments and qualification evidence live in explicit owner
   registries; synthetic qualification records exercise replay but never
   authorize live continuation.
-- Replay committed fixtures twice offline and reject hash drift, undeclared
+- Fixture and replay modules replay committed fixtures twice offline and reject hash drift, undeclared
   fields, raw-store dependencies, inferred values, or nondeterminism.
 
 ### Orchestration seam
 
-Do not modify `run-efficiency-benchmarks.py`. Each module exposes importable
-pure functions plus a narrow `main(argv)` for operator collection or offline
-validation. The focused unit test loads the underscore-named modules directly,
+Do not modify `run-efficiency-benchmarks.py`. Each public entry point exposes
+the existing importable functions plus a narrow `main(argv)` for operator
+collection or offline validation. The focused unit test loads the entry points directly,
 matching the existing Layer 6 library pattern. This keeps qualification and the
 current benchmark runner out of G56R-002.
 
@@ -257,13 +258,14 @@ docs/ai/research/
 ```
 
 **Structure Decision**: Keep vendor-specific collection and neutral evidence
-validation in two adjacent Layer 6 modules. Keep deterministic tests in the
+validation behind two adjacent Layer 6 public entry points, with focused
+single-responsibility sibling modules below 400 lines. Keep deterministic tests in the
 default unit layer, live collection out of CI, and the sanitized handoff beside
 the G56R-001 research artifacts.
 
 ## PR Review Packet Source
 
-The final packet must summarize the two-module contract, why runtime evidence
+The final packet must summarize the two-entry-point and focused-module contract, why runtime evidence
 only narrows the official ledger, non-goals, review order (schemas → fixtures →
 adapter → trace validator → handoff), file/LOC budget, FR/SC traceability,
 focused/full verification, any unknown tuples or unobserved surfaces, raw-store

@@ -353,15 +353,15 @@
       "tasks_total": 5,
       "focused_tests": "67/67 pass",
       "privacy_scan": "10/10 pass",
-      "full_suite": "2833/2833 pass",
+      "full_suite": "2834/2834 pass",
       "docs_reference_check": "pass",
-      "independent_review": "findings_open: untitled-chat-60E508",
-      "implementation_commit": "11fdd01d9f28d793b46b57a54f1525a1ceb5b77b",
+      "independent_review": "findings_open: untitled-chat-8DCBF9",
+      "implementation_commit": "1c15d3ca4b68088ff8bd939199f0f96b63f34947",
       "capability_fixture_digest": "sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a",
       "treatment_fixture_digest": "sha256:3983dc1d4efe42542ffe0cb72830c970d24cecf490ddfe0c93e24be749ffaa53",
       "replay_digest": "sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda",
       "marker_id": "us3",
-      "reviewability": "size-only block at 2,274 source / 2,100 nonblank non-comment lines in one production module; finding-driven remediation remains inside the typed no-safe-boundary exception",
+      "reviewability": "aggregate size-only block at 4,935 source / 4,454 nonblank non-comment lines across 23 safely subdivided modules; maximum module size is 381 lines",
       "checkpoint": "pending exact-head no-findings review"
     },
     "Phase 7: Implement - Integration and Polish": {
@@ -372,18 +372,19 @@
       "pending_task_ids": ["T038", "T039"],
       "focused_tests": "67/67 pass",
       "privacy_scan": "10/10 pass",
-      "full_suite": "2833/2833 pass",
+      "full_suite": "2834/2834 pass",
       "docs_reference_check": "pass",
       "release_readiness_title_gate": "must rerun after the next exact-head review",
-      "independent_review": "findings_open: untitled-chat-60E508"
+      "independent_review": "findings_open: untitled-chat-8DCBF9"
     }
   },
   "current_source_fingerprint": {
     "feature_spec_sha": "sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56",
-    "plan_declared_scope_sha": "sha256:0e26453e71e0f96203e32432457d3a910c87027c47741af332dc2c87611be09b",
-    "tasks_sha": "sha256:900dabf0cbdad700d30263c216fc18486a4d92aade0c39a984389451b0aefd59",
-    "reviewability_sha": "sha256:771feb0098b8162c917484a882067c81760417a4312e41e62852323a92aae0d8",
-    "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
+    "plan_declared_scope_sha": "sha256:047bb177694c0d92b6113193db69a4ab498405f68dc6c7a094f9024deb50767e",
+    "tasks_sha": "sha256:216b86cb34bbcc40c7f6e23b153379ec047616885f89ae6c11a41674df68b447",
+    "reviewability_sha": "sha256:bfb3c1460cc1e92809daa5298e2bcdabcdfa78f537684000c947afad016176a1",
+    "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
+    "changed_file_manifest_sha": "sha256:e27f6eeb1bc3fc53076936427d7843ab5ccbda0b29eaf037cc2bfbc5bad9e91e"
   },
   "pr_marker_plan": {
     "schema_version": "pr-marker-plan.v1",
@@ -392,10 +393,11 @@
     "status": "checkpointing",
     "source_fingerprint": {
       "feature_spec_sha": "sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56",
-      "plan_declared_scope_sha": "sha256:0e26453e71e0f96203e32432457d3a910c87027c47741af332dc2c87611be09b",
-      "tasks_sha": "sha256:900dabf0cbdad700d30263c216fc18486a4d92aade0c39a984389451b0aefd59",
-      "reviewability_sha": "sha256:771feb0098b8162c917484a882067c81760417a4312e41e62852323a92aae0d8",
-      "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
+      "plan_declared_scope_sha": "sha256:047bb177694c0d92b6113193db69a4ab498405f68dc6c7a094f9024deb50767e",
+      "tasks_sha": "sha256:216b86cb34bbcc40c7f6e23b153379ec047616885f89ae6c11a41674df68b447",
+      "reviewability_sha": "sha256:bfb3c1460cc1e92809daa5298e2bcdabcdfa78f537684000c947afad016176a1",
+      "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
+      "changed_file_manifest_sha": "sha256:e27f6eeb1bc3fc53076936427d7843ab5ccbda0b29eaf037cc2bfbc5bad9e91e"
     },
     "markers": [
       {
@@ -414,12 +416,7 @@
         "folded_polish_task_ids": [],
         "folded_polish_target_reason": "No polish tasks fold into the integrity-coupled capability checkpoint.",
         "declared_files": [
-          {"operation": "MODIFIED", "path": "docs/ai/specs/.process/G56R-002-workflow.md"},
-          {"operation": "MODIFIED", "path": "docs/ai/specs/.process/autopilot-state.json"},
-          {"operation": "NEW", "path": "specs/g56r-002-capability-discovery-telemetry/.process/changed-file-manifest.json"},
-          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1.json"},
-          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/plan.md"},
-          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/tasks.md"}
+          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1.json"}
         ],
         "declared_tests": [
           "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
@@ -445,6 +442,7 @@
         "implementation_checkpoint": {
           "status": "complete",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1.json",
+          "checkpoint_evidence_sha": "sha256:90893ed1c71f8db1bc5b84f5e8d491ff8724745f3c43b9f58cc748a95b3e05d2",
           "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1.json",
           "commit_sha": "2b7096dacdaa7a6af62b3c12b36e83cf4515213e",
           "head_sha": "2b7096dacdaa7a6af62b3c12b36e83cf4515213e",
@@ -488,12 +486,7 @@
         "folded_polish_task_ids": [],
         "folded_polish_target_reason": "Treatment is independently checkpointed before replay integration.",
         "declared_files": [
-          {"operation": "MODIFIED", "path": "docs/ai/specs/.process/G56R-002-workflow.md"},
-          {"operation": "MODIFIED", "path": "docs/ai/specs/.process/autopilot-state.json"},
-          {"operation": "NEW", "path": "specs/g56r-002-capability-discovery-telemetry/.process/changed-file-manifest.json"},
-          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json"},
-          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/plan.md"},
-          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/tasks.md"}
+          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json"}
         ],
         "declared_tests": ["python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"],
         "reviewability": {
@@ -515,6 +508,7 @@
         "implementation_checkpoint": {
           "status": "complete",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json",
+          "checkpoint_evidence_sha": "sha256:546abed20e5596ec9c348dd93570beb8106ad1c85c2a03964328333da2f3f676",
           "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json",
           "commit_sha": "1190e3c1205744fd50afb37a12c0f9527ad5ee53",
           "head_sha": "1190e3c1205744fd50afb37a12c0f9527ad5ee53",
@@ -568,6 +562,7 @@
           {"operation": "MODIFIED", "path": "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"},
           {"operation": "MODIFIED", "path": "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json"},
           {"operation": "MODIFIED", "path": "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"},
+          {"operation": "MODIFIED", "path": "docs-site/src/content/docs/reference/tests.md"},
           {"operation": "MODIFIED", "path": "docs/ai/research/codex-g56r-002-capability-evidence.md"},
           {"operation": "MODIFIED", "path": "docs/ai/specs/.process/G56R-002-workflow.md"},
           {"operation": "MODIFIED", "path": "docs/ai/specs/.process/PRSG-013-pr-marker-plan.json"},
@@ -586,6 +581,28 @@
           {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/plan.md"},
           {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/quickstart.md"},
           {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/tasks.md"},
+          {"operation": "MODIFIED", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_authority.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_bundle.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_cli.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_fields.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_fixture.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_io.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_json_schema.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_model.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_replay.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_successor.py"},
           {"operation": "MODIFIED", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"},
           {"operation": "MODIFIED", "path": "tests/speckit-pro/suite-manifest.json"},
           {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/capability-matrix.json"},
@@ -631,15 +648,19 @@
           "mode": "implementation",
           "scope": "us3",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
-          "head_sha": "11fdd01d9f28d793b46b57a54f1525a1ceb5b77b"
+          "head_sha": "1c15d3ca4b68088ff8bd939199f0f96b63f34947"
         },
         "hazards": ["fixture-provenance", "offline-determinism", "release-readiness"],
         "subdivision": {
-          "status": "no_safe_boundary",
+          "status": "safe_split",
           "details": {
-            "reason": "Fixture provenance, digest-before-parse validation, eight-class semantics, and byte-identical normalized replay share one acceptance boundary.",
-            "exception_kind": "typed_size_only",
-            "growth_limit": "No further treatment_trace_schema.py growth after this checkpoint."
+            "reason": "Capability, private-retention, freeze, schema, trace, replay, and successor responsibilities now have focused module boundaries.",
+            "public_entrypoints": [
+              "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py",
+              "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"
+            ],
+            "module_count": 23,
+            "max_module_source_lines": 381
           }
         },
         "implementation_checkpoint": {
@@ -652,9 +673,9 @@
           {
             "code": "MARKER_SIZE_WARNING",
             "severity": "warning",
-            "message": "US3 exceeds 400 reviewable LOC and is retained under the exhausted predeclared replay size exception.",
+            "message": "US3 exceeds 400 aggregate reviewable LOC and is safely subdivided into focused modules below 400 source lines.",
             "source": "synthetic-replay-reviewability",
-            "details": {"marker_id": "us3", "actual_source_lines": 2274, "actual_nonblank_noncomment_lines": 2100}
+            "details": {"marker_id": "us3", "actual_source_lines": 4935, "actual_nonblank_noncomment_lines": 4454, "production_modules": 23, "max_module_source_lines": 381}
           }
         ]
       }
@@ -670,7 +691,7 @@
       {
         "code": "TREATMENT_SIZE_BLOCK",
         "severity": "warning",
-        "message": "The treatment marker exceeds the 400-LOC reviewability threshold; the typed size-only exception permits only the planned replay extension.",
+        "message": "The treatment marker exceeds the aggregate 400-LOC threshold and is safely subdivided into focused modules below the per-module boundary.",
         "source": "treatment-contracts-reviewability",
         "details": {"marker_ids": ["us2", "us3"], "final_marker_split": "pending", "packet_validation": "pending", "pr_mappings": "pending"}
       }

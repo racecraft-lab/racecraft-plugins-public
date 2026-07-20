@@ -248,6 +248,7 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
             checkpoint["allOf"][0]["then"]["required"],
             [
                 "evidence_path",
+                "checkpoint_evidence_sha",
                 "verification_evidence_path",
                 "commit_sha",
                 "head_sha",
@@ -270,7 +271,10 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
             ["properties"]
             for branch in schema["allOf"]
         }
-        self.assertEqual(set(status_rules), {"planned", "checkpointing", "emission_ready", "emitted", "collapsed"})
+        self.assertEqual(
+            set(status_rules),
+            {"planned", "checkpointing", "emission_ready", "emitted", "collapsed", "stale", "invalid"},
+        )
         self.assertEqual(status_rules["planned"]["implementation_checkpoint"]["properties"]["status"], {"const": "pending"})
         self.assertEqual(status_rules["planned"]["emission_mapping"]["properties"]["status"], {"const": "pending"})
         self.assertEqual(status_rules["checkpointing"]["emission_mapping"]["properties"]["status"], {"const": "pending"})
@@ -283,6 +287,25 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
         self.assertEqual(
             status_rules["collapsed"]["emission_mapping"]["properties"]["status"],
             {"const": "hazard_collapsed"},
+        )
+        self.assertEqual(status_rules["stale"]["emission_mapping"]["properties"]["status"], {"const": "pending"})
+        self.assertEqual(status_rules["invalid"]["emission_mapping"]["properties"]["status"], {"const": "pending"})
+        lifecycle_branches = {
+            branch["if"]["properties"]["status"]["const"]: branch["then"]
+            for branch in schema["allOf"]
+        }
+        self.assertEqual(
+            lifecycle_branches["stale"]["properties"]["warnings"]["contains"]["properties"]["code"],
+            {"const": "MARKER_PLAN_STALE"},
+        )
+        self.assertEqual(
+            lifecycle_branches["invalid"]["properties"]["warnings"]["contains"]["properties"]["code"],
+            {"const": "MARKER_PLAN_INVALID"},
+        )
+        self.assertIn("changed_file_manifest_sha", schema["$defs"]["source_fingerprint"]["required"])
+        self.assertEqual(
+            checkpoint["properties"]["checkpoint_evidence_sha"]["pattern"],
+            r"^sha256:[0-9a-f]{64}$",
         )
         for field_schema in schema["$defs"]["source_fingerprint"]["properties"].values():
             self.assertEqual(field_schema["pattern"], r"^sha256:[0-9a-f]{64}$")

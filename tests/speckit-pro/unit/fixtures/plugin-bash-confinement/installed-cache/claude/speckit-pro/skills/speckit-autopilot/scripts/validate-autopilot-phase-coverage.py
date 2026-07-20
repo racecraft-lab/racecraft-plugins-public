@@ -77,6 +77,7 @@ ORDERED_STATE_CHECKPOINTS = (
 TASK_LINE_RE = re.compile(r"^- \[[ xX]\] (T[0-9]+)\b")
 COMPLETE_CHECKPOINT_STRING_FIELDS = (
     "evidence_path",
+    "checkpoint_evidence_sha",
     "verification_evidence_path",
     "commit_sha",
     "head_sha",
@@ -322,8 +323,8 @@ def validate_changed_file_manifest(state: dict[str, Any], state_path: Path) -> d
             structural_errors.append(f"files[{index}].provenance is invalid")
         marker_ids = entry.get("marker_ids")
         marker_values = _string_list(marker_ids)
-        if not marker_values or len(set(marker_values)) != len(marker_values):
-            structural_errors.append(f"files[{index}].marker_ids must be a non-empty unique string array")
+        if marker_values is None or len(marker_values) != 1:
+            structural_errors.append(f"files[{index}].marker_ids must contain exactly one marker owner")
         declared[path] = operation
         expected_owners[path] = set(marker_values or ())
     if structural_errors:
@@ -354,12 +355,32 @@ def validate_changed_file_manifest(state: dict[str, Any], state_path: Path) -> d
     ] if declared != observed else []
 
     marker_plan = state.get("pr_marker_plan")
+    expected_manifest_sha = _sha256_bytes(manifest_path.read_bytes())
+    current_fingerprint = state.get("current_source_fingerprint")
+    plan_fingerprint = marker_plan.get("source_fingerprint") if isinstance(marker_plan, dict) else None
+    for label, fingerprint in (
+        ("current_source_fingerprint", current_fingerprint),
+        ("pr_marker_plan.source_fingerprint", plan_fingerprint),
+    ):
+        if not isinstance(fingerprint, dict) or fingerprint.get("changed_file_manifest_sha") != expected_manifest_sha:
+            errors.append(f"{label}.changed_file_manifest_sha does not match the changed-file manifest")
+    if isinstance(current_fingerprint, dict) and isinstance(plan_fingerprint, dict):
+        if current_fingerprint != plan_fingerprint:
+            errors.append("current and marker-plan source fingerprints do not match")
+
     markers = marker_plan.get("markers") if isinstance(marker_plan, dict) else None
     if not isinstance(markers, list):
         errors.append("changed-file manifest requires pr_marker_plan.markers")
         return {"changed_file_manifest_errors": errors}
     marker_operations: dict[str, str] = {}
     actual_owners: dict[str, set[str]] = {}
+    declared_marker_ids = {
+        marker.get("id") for marker in markers
+        if isinstance(marker, dict) and isinstance(marker.get("id"), str)
+    }
+    for path, owners in expected_owners.items():
+        if not owners <= declared_marker_ids:
+            errors.append(f"changed-file manifest marker owner for {path} is not declared")
     for marker_index, marker in enumerate(markers):
         if not isinstance(marker, dict) or not isinstance(marker.get("id"), str):
             errors.append(f"pr_marker_plan.markers[{marker_index}] is invalid")
@@ -485,6 +506,13 @@ def validate_projection_integrity(
                                 checkpoint_file_errors.append(
                                     f"pr_marker_plan.markers[{index}].implementation_checkpoint.{required}"
                                 )
+                        evidence_target = _repo_file(repo_root, checkpoint.get("evidence_path"))
+                        if evidence_target is not None and evidence_target.is_file():
+                            expected_evidence_sha = _sha256_bytes(evidence_target.read_bytes())
+                            if checkpoint.get("checkpoint_evidence_sha") != expected_evidence_sha:
+                                checkpoint_file_errors.append(
+                                    f"pr_marker_plan.markers[{index}].implementation_checkpoint.checkpoint_evidence_sha"
+                                )
 
                 evidence_path = _repo_file(repo_root, checkpoint.get("evidence_path")) if repo_root else None
                 evidence = _load_json_object(evidence_path) if evidence_path and evidence_path.is_file() else None
@@ -586,6 +614,8 @@ def validate_projection_integrity(
             "emission_ready": ({"complete"}, {"pending", "marker_split"}),
             "emitted": ({"complete"}, {"emitted"}),
             "collapsed": ({"complete"}, {"hazard_collapsed"}),
+            "stale": ({"pending", "complete"}, {"pending"}),
+            "invalid": ({"pending", "complete"}, {"pending"}),
         }
         plan_status = marker_plan.get("status")
         if plan_status in status_constraints:
@@ -603,6 +633,22 @@ def validate_projection_integrity(
                     marker_plan_status_errors.append(
                         f"pr_marker_plan.status {plan_status} rejects marker {index} emission {emission_status!r}"
                     )
+        diagnostic_warnings = {
+            "stale": ("MARKER_PLAN_STALE", {"warning", "error"}),
+            "invalid": ("MARKER_PLAN_INVALID", {"error"}),
+        }
+        if plan_status in diagnostic_warnings:
+            code, severities = diagnostic_warnings[plan_status]
+            warnings = marker_plan.get("warnings")
+            if not isinstance(warnings, list) or not any(
+                isinstance(warning, dict)
+                and warning.get("code") == code
+                and warning.get("severity") in severities
+                for warning in warnings
+            ):
+                marker_plan_status_errors.append(
+                    f"pr_marker_plan.status {plan_status} requires diagnostic warning {code}"
+                )
 
     return {
         "completed_phase_pending_fields": completed_phase_pending_fields,

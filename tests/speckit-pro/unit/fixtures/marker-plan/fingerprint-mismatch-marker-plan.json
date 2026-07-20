@@ -8,7 +8,8 @@
     "plan_declared_scope_sha": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "tasks_sha": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
     "reviewability_sha": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-    "hazard_route_sha": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    "hazard_route_sha": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "changed_file_manifest_sha": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
   },
   "markers": [
     {
@@ -50,6 +51,7 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "specs/prsg-013-reviewability-markers/.process/checkpoints/foundation.json",
+        "checkpoint_evidence_sha": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
         "verification_evidence_path": "specs/prsg-013-reviewability-markers/.process/reviewability/foundation.json",
         "commit_sha": "ffffffffffffffffffffffffffffffffffffffff",
         "head_sha": "ffffffffffffffffffffffffffffffffffffffff",
