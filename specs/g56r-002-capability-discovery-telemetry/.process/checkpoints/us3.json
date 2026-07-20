@@ -14,7 +14,7 @@
   "treatment_fixture_digest": "sha256:935c2b104cb1036ef5befb8a36c2fd47c71845b4b5a7d901c26827ca9a2b3788",
   "replay_digest": "sha256:c8a69de446be0ba98ec876ee37c715b008e21c97dcebc067866405a9d92d5eb4",
   "verification": {
-    "focused_tests": "88/88 pass; validator 35/35 pass; contract parity 76/76 pass",
+    "focused_tests": "88/88 pass; validator 35/35 pass; contract parity 77/77 pass",
     "privacy_scan": "10/10 pass",
     "full_suite": "2856/2856 pass",
     "docs_reference_check": "pass",

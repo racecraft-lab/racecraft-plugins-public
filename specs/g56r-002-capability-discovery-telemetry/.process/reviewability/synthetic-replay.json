@@ -21,7 +21,7 @@
   },
   "primary_surface": "harness/adapter",
   "correctness_checks": {
-    "focused_tests": "88/88 pass; validator 35/35 pass; contract parity 76/76 pass after live-range remediation",
+    "focused_tests": "88/88 pass; validator 35/35 pass; contract parity 77/77 pass after live-range remediation",
     "two_pass_byte_equality": "pass",
     "raw_fixture_digest_validation": "pass",
     "canonical_fixture_serialization": "pass",

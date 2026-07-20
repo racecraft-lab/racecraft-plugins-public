@@ -874,7 +874,7 @@ For every task:
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
 | 2 - Treatment contracts | Complete | 10 | 51/51 focused tests, 2821/2821 full suite, Windows-safe offline replay, and exact-head independent review returned `NO FINDINGS` |
-| 3 - Synthetic replay | In Progress | 5 | Live-range remediation passes 88/88 telemetry tests, 35/35 validator tests, 76/76 contract tests, and the 2856/2856 full suite; exact live-head re-review is pending |
+| 3 - Synthetic replay | In Progress | 5 | Live-range remediation passes 88/88 telemetry tests, 35/35 validator tests, 77/77 contract tests, and the 2856/2856 full suite; exact live-head re-review is pending |
 | Polish and validation | In Progress | 9 | T031-T039 remain implemented; reference and generated artifacts are current; the 107/107 manifest and live release-title gates pass |
 
 ### Capability Checkpoint Evidence
@@ -947,7 +947,7 @@ For every task:
 - Replay output: `sha256:c8a69de446be0ba98ec876ee37c715b008e21c97dcebc067866405a9d92d5eb4` with byte-identical two-pass verification.
 - Cases: eight exact success, null, unavailable, misdelivery, approved reroute,
   unapproved reroute, discovery-loss, and surface-disagreement classes.
-- Verification: 88/88 focused tests, 35/35 validator tests, 76/76 contract tests, and the 2856/2856
+- Verification: 88/88 focused tests, 35/35 validator tests, 77/77 contract tests, and the 2856/2856
   full suite pass. Generated references and byte-identical replay remain current.
 - Reviewability: aggregate size-only `block` at 5,773 source / 5,237 nonblank,
   non-comment lines across 26 safely subdivided modules; the largest module is
