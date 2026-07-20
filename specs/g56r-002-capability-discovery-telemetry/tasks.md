@@ -7,15 +7,14 @@ smallest GREEN implementation, then REFACTOR and VERIFY without changing the
 predeclared dispositions.
 
 **Reviewability**: The capability adapter triggered the 400-LOC boundary and is
-now 2,470 source lines (2,243 nonblank, non-comment) after finding-driven US2
-retention remediation. The treatment validator is 1,744 source lines (1,600
-nonblank, non-comment), for 4,214 source lines (3,843 nonblank, non-comment)
-across the two production modules in the current US2 marker. T001-T015 is retained under a typed
-size-only `no_safe_boundary` marker because its source, matrix, tuple, and
-freeze integrity checks cannot be separated safely. That exception permits no
-further capability-module growth except finding-driven successor-validation
-integrity work. T016-T025 and T026-T039 remain separate
-ordered markers; a third production module or broken independent verification
+now safely subdivided behind its stable facade into 12 focused modules totaling
+2,562 source lines (2,295 nonblank, non-comment); every capability module is at
+or below 355 source lines. The treatment validator remains 1,744 source lines
+(1,600 nonblank, non-comment), for 4,306 source lines (3,895 nonblank,
+non-comment) across 13 production modules in the current US2 marker. T001-T015
+no longer relies on a `no_safe_boundary` exception. The treatment-only size
+exception remains scoped to T016-T025, while T026-T039 remains a separate
+ordered marker; a fourteenth production module or broken independent verification
 is still blocking.
 
 **Format**: Every task includes an exact path, user-story marker, functional
@@ -118,7 +117,7 @@ without network or raw-store access.
 - [ ] T035 [US1] [FR-001] [FR-008] Run `python3 -u tests/speckit-pro/run-all.py --layer 1` and the focused G56R-002 test; Acceptance: both pass with no generated-reference or source-authority regression.
 - [ ] T036 [US2] [FR-005] [FR-008] Run `python3 -u tests/speckit-pro/run-all.py`, `pnpm --dir docs-site reference:check`, JSON validation, and `git diff --check`; Acceptance: the full deterministic suite and all hygiene checks pass.
 - [ ] T037 [US3] [FR-008] Audit tracked changes and history against the prohibited-scope contract in `docs/ai/specs/.process/G56R-002-workflow.md` for raw live responses, credentials, absolute paths, repository remotes, corpus/scorer/qualification/ranking/preference/fallback-order/installer/agent/payload/default/version changes, Bash, `jq`, third-party packages, or a cross-vendor prober; Acceptance: all prohibited-scope counts are zero or confined to explicit non-goal prose.
-- [ ] T038 [US1] [FR-003] [FR-008] Re-run the reviewability gate against `docs/ai/specs/.process/G56R-002-workflow.md` and inspect implementation LOC/files; Acceptance: one primary surface and two production modules remain, the current marker plan preserves independently verified US1/US2/US3 checkpoints, the honored US1 size-only exception authorizes no further capability-module growth, and no correctness or safety block remains.
+- [ ] T038 [US1] [FR-003] [FR-008] Re-run the reviewability gate against `docs/ai/specs/.process/G56R-002-workflow.md` and inspect implementation LOC/files; Acceptance: the stable capability facade preserves its public API, every focused capability module remains below 400 source lines, the current marker plan preserves independently verified US1/US2/US3 checkpoints, and no correctness or safety exception remains for capability code.
 - [ ] T039 [US1] [FR-001] [FR-008] Validate the final PR title and changed-file contract through the release-readiness gate invoked by `.github/workflows/pr-checks.yml` using a lowercase conventional scope; Acceptance: `<type>(<lowercase-scope>): <plain English description>` passes with the exact planned changed-file set.
 
 ## Dependencies & Execution Order
@@ -145,7 +144,7 @@ without network or raw-store access.
 ## Parallel Opportunities
 
 - **2 tasks**: T032 and T033 after T031.
-- No implementation task is parallelized across the two production modules;
+- No implementation task is parallelized across the 13 production modules;
   the accepted increment order is the safer review path.
 
 ## Traceability Summary

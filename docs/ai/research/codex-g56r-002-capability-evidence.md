@@ -122,9 +122,11 @@ bytes exist and a content-addressed publication receipt is directory-fsynced.
 An interrupted publication can be recovered idempotently; unreceipted records
 remain pending and cannot extend deletion. The deterministic
 `retention` command verifies pre-deadline presence, fails closed on missing or
-overdue bytes, and in `cleanup` mode appends and directory-fsyncs the complete
-deletion record before removing the expired bytes, then directory-fsyncs the
-raw store. Replaying cleanup is idempotent; the digest,
+overdue bytes, and in `cleanup` mode first appends and directory-fsyncs a
+deletion-intent record. It then unlinks the expired bytes descriptor-relative,
+proves the open descriptor has zero links with unchanged content identity,
+directory-fsyncs the raw store, and only then appends and directory-fsyncs the
+terminal deletion record. Replaying cleanup is idempotent; the digest,
 retention history, and deletion record remain auditable after the bytes are
 gone. Registration and cleanup share an atomic private-root lock, so a newer
 publication cannot extend a digest while cleanup is deleting it. Destructive

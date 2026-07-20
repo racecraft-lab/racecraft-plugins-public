@@ -3,7 +3,7 @@
   "spec_id": "G56R-002",
   "feature_dir": "specs/g56r-002-capability-discovery-telemetry",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-19T03:09:22Z",
+  "updated_at": "2026-07-20T03:01:51Z",
   "active_step": "Phase 7: Implement - Synthetic Replay",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
@@ -312,7 +312,7 @@
       "status": "completed",
       "tasks_completed": 10,
       "tasks_total": 10,
-      "focused_tests": "51/51 pass",
+      "focused_tests": "52/52 pass",
       "windows_safe_offline_replay": "pass",
       "canonical_manifest_snapshot": "pass",
       "canonical_route_resolution_membership": "pass",
@@ -334,24 +334,28 @@
       "qualification_manifest_binding": "pass",
       "qualification_identifier_schema_parity": "pass",
       "malformed_predecessor_error_normalization": "pass",
-      "independent_review": "pass",
-      "independent_review_chat_id": "windows-telemetry-review-D88461",
+      "independent_review": "findings_open",
+      "independent_review_chat_id": "untitled-chat-869257",
+      "independent_review_findings": [
+        "P1: retention prose must distinguish the durable deletion intent from the terminal completion record",
+        "P1: capability trust and failure responsibilities require safe module boundaries behind the stable facade"
+      ],
       "baseline_commit": "bbffc774c815594edc64cf412a2b5f91127ef213",
       "candidate_freeze_id": "sha256:dcf75cea52244ba175324d83fb021f70f96c64e1e82d963451e91da5127c40d6",
       "telemetry_profile_id": "sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb",
       "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
       "marker_id": "us2",
-      "reviewability": "size-only block at 4,214 source / 3,843 nonblank non-comment lines across 2 production modules with honored typed no-safe-boundary exception",
+      "reviewability": "aggregate size-only block at 4,306 source / 3,895 nonblank non-comment lines across 13 production modules; 12 capability modules are safely split with a 355-line maximum and only the treatment module retains a typed size-only exception",
       "checkpoint": "1190e3c1205744fd50afb37a12c0f9527ad5ee53",
       "superseded_checkpoint": "c47c9d31fd1288e86f0707601078e4f03e2b12e5",
       "completed_at": "2026-07-19T03:09:22Z"
     }
   },
   "current_source_fingerprint": {
-    "feature_spec_sha": "sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56",
-    "plan_declared_scope_sha": "sha256:514e4ad5bf39dcab31c760ecd8e6db2556239509e630b69694b44c22ee684b2b",
-    "tasks_sha": "sha256:dd9f8f33a70aac48cf73ddf058c6fc6a1d0e82422dabfd35611c2cff783ec5e4",
-    "reviewability_sha": "sha256:efc2f1761ef235fae4b4b4319fca380bc4f085decb2124623700139544ecaf15",
+    "feature_spec_sha": "sha256:ac12781701e27e9eda8428f4b8e5babe3b8687da5fed7bc4d66f6632a7b5b9ce",
+    "plan_declared_scope_sha": "sha256:fe22a04dea4d0743952be02e507295c3222edc46ee2365f0d7ad9c692925f170",
+    "tasks_sha": "sha256:e9b1ca24a1ab777fd005f0192995a02b5a23c4d6d66a02d942f85720af7c1aca",
+    "reviewability_sha": "sha256:eade7136c491e7767cd6c0adc970d9e926262287d32ee9c80880634d70cd6ba4",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
   },
   "pr_marker_plan": {
@@ -360,10 +364,10 @@
     "feature_id": "G56R-002",
     "status": "checkpointing",
     "source_fingerprint": {
-      "feature_spec_sha": "sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56",
-      "plan_declared_scope_sha": "sha256:514e4ad5bf39dcab31c760ecd8e6db2556239509e630b69694b44c22ee684b2b",
-      "tasks_sha": "sha256:dd9f8f33a70aac48cf73ddf058c6fc6a1d0e82422dabfd35611c2cff783ec5e4",
-      "reviewability_sha": "sha256:efc2f1761ef235fae4b4b4319fca380bc4f085decb2124623700139544ecaf15",
+      "feature_spec_sha": "sha256:ac12781701e27e9eda8428f4b8e5babe3b8687da5fed7bc4d66f6632a7b5b9ce",
+      "plan_declared_scope_sha": "sha256:fe22a04dea4d0743952be02e507295c3222edc46ee2365f0d7ad9c692925f170",
+      "tasks_sha": "sha256:e9b1ca24a1ab777fd005f0192995a02b5a23c4d6d66a02d942f85720af7c1aca",
+      "reviewability_sha": "sha256:eade7136c491e7767cd6c0adc970d9e926262287d32ee9c80880634d70cd6ba4",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
     },
     "markers": [
@@ -455,10 +459,22 @@
         "folded_polish_target_reason": "Treatment is independently checkpointed before replay integration.",
         "declared_files": [
           {"operation": "MODIFIED", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py"},
           {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"},
           {"operation": "NEW", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"},
           {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"},
           {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/contracts/treatment-record.schema.json"},
+          {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/spec.md"},
           {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/plan.md"},
           {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/quickstart.md"},
           {"operation": "NEW", "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json"},
@@ -482,9 +498,10 @@
         "subdivision": {
           "status": "no_safe_boundary",
           "details": {
-            "reason": "Field authority, owner joins, failure derivation, reroute qualification, and successor cross-binding share one integrity boundary.",
+            "reason": "Capability responsibilities are safely subdivided behind the stable facade; field authority, owner joins, failure derivation, reroute qualification, and successor cross-binding remain the treatment module's integrity-coupled boundary.",
+            "capability_subdivision": {"status": "safe_split", "production_modules": 12, "max_module_source_lines": 355},
             "exception_kind": "typed_size_only",
-            "growth_limit": "Only finding-driven review remediation may extend the two current modules, and only the predeclared T026-T030 offline replay dispatch may extend treatment_trace_schema.py before final freeze; no feature expansion or third production module is authorized."
+            "growth_limit": "Capability modules must remain below 400 source lines with no public API loss. Only finding-driven remediation and the predeclared T026-T030 offline replay dispatch may extend treatment_trace_schema.py before final freeze."
           }
         },
         "implementation_checkpoint": {
@@ -498,15 +515,15 @@
           {
             "code": "MARKER_SIZE_WARNING",
             "severity": "warning",
-            "message": "US2 exceeds 400 reviewable LOC and is retained only under the typed no-safe-boundary size exception.",
+            "message": "US2 exceeds 400 aggregate reviewable LOC; capability code is safely subdivided and only the treatment module retains the typed size-only exception.",
             "source": "treatment-contracts-reviewability",
             "details": {
               "marker_id": "us2",
-              "actual_source_lines": 4214,
-              "actual_nonblank_noncomment_lines": 3843,
-              "production_modules": 2,
+              "actual_source_lines": 4306,
+              "actual_nonblank_noncomment_lines": 3895,
+              "production_modules": 13,
               "module_measurements": {
-                "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {"source_lines": 2470, "nonblank_noncomment_lines": 2243},
+                "capability_group": {"production_modules": 12, "source_lines": 2562, "nonblank_noncomment_lines": 2295, "max_module_source_lines": 355},
                 "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {"source_lines": 1744, "nonblank_noncomment_lines": 1600}
               }
             }
@@ -558,7 +575,7 @@
       {
         "code": "CAPABILITY_SIZE_BLOCK",
         "severity": "warning",
-        "message": "The capability marker exceeds the 400-LOC reviewability threshold; marker-scoped checkpoints and PR emission are required.",
+        "message": "The aggregate capability marker exceeds 400 reviewable LOC, but its stable facade and focused modules are safely subdivided below the per-module threshold; marker-scoped checkpoints and PR emission remain required.",
         "source": "capability-freeze-reviewability",
         "details": {"marker_ids": ["us1", "us2", "us3"], "final_marker_split": "pending", "packet_validation": "pending", "pr_mappings": "pending"}
       },
@@ -571,7 +588,7 @@
       }
     ],
     "created_at": "2026-07-17T04:50:02Z",
-    "updated_at": "2026-07-17T06:04:36Z"
+    "updated_at": "2026-07-20T03:01:51Z"
   },
   "layer_plan": {
     "status": "skipped",

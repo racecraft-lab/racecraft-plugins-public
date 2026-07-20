@@ -786,7 +786,8 @@ Focus on:
 - Independent contract consensus: PASS on A-001 through A-005, with no
   G56R-003 qualification leakage after the destination-assessment boundary.
 - Independent repository consensus: PASS on A-006 through A-008; the digest
-  manifest adds one data file while retaining two production modules.
+  manifest adds one data file while the current implementation uses 13
+  production modules.
 - Independent source-manifest audit: 22 current source records, 0 active
   historical `OSL-*` rows, and malformed effort tokens explicitly quarantined.
 - Final remediation review: PASS after environment/qualification owner
@@ -873,7 +874,7 @@ For every task:
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
-| 2 - Treatment contracts | Complete | 10 | 51/51 focused tests, 2821/2821 full suite, Windows-safe offline replay, and exact-head independent review returned `NO FINDINGS` |
+| 2 - Treatment contracts | Complete | 10 | 52/52 focused tests, 2821/2821 full suite, Windows-safe offline replay, and prior exact-head independent review returned `NO FINDINGS` |
 | 3 - Synthetic replay | In Progress | 0 | T026-T030 are unblocked after the clean US2 checkpoint and continue in the next marker branch |
 | Polish and validation | Pending | 0 | Not started |
 
@@ -899,11 +900,12 @@ For every task:
 - Telemetry profile: `sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb`
 - Treatment contract: `sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199`
 - Superseded marker checkpoint: `c47c9d31fd1288e86f0707601078e4f03e2b12e5`
-- Reviewability: size-only `block` at 4,214 source / 3,843 nonblank,
-  non-comment lines across the current two production modules
-  (`codex_capabilities.py`: 2,470 / 2,243; `treatment_trace_schema.py`:
-  1,744 / 1,600); typed `no_safe_boundary` exception honored for the
-  checkpoint with only T026-T030 replay growth reserved.
+- Reviewability: aggregate size-only `block` at 4,306 source / 3,895
+  nonblank, non-comment lines across 13 production modules. The stable
+  capability facade and 11 focused internal modules total 2,562 / 2,295 with
+  a 355-line maximum; capability code no longer uses a `no_safe_boundary`
+  exception. `treatment_trace_schema.py` remains 1,744 / 1,600 under its
+  treatment-only typed exception, with only T026-T030 replay growth reserved.
 - Review: PASS after direct canonical validation of the actual
   successor, external treatment-binding and predecessor-lineage authority,
   bounded non-extending recovery of pending retention records, crash-released
@@ -922,8 +924,13 @@ For every task:
   single-client profile authority, content-addressed six-ID ownership,
   reciprocal acyclic trace-graph validation, externally trusted successor
   reroutes, detailed reroute reasons, and normalized malformed-predecessor
-  errors. The exact-head RepoPrompt review returned `NO FINDINGS`
-  (`windows-telemetry-review-D88461`).
+  errors. The prior exact-head RepoPrompt review returned `NO FINDINGS`
+  (`windows-telemetry-review-D88461`). A later current-head re-audit
+  (`untitled-chat-869257`) reported two P1 findings: stale retention-order prose
+  and an unjustified capability `no_safe_boundary` claim. This remediation
+  corrects the deletion-intent/completion sequence and safely splits capability
+  trust and failure responsibilities behind the stable facade; exact-head
+  re-review remains pending.
 - Implementation checkpoint: `1190e3c1205744fd50afb37a12c0f9527ad5ee53`
 
 ## PR Marker Plan Evidence
@@ -936,22 +943,24 @@ For every task:
 
 | Fingerprint input | SHA-256 |
 |---|---|
-| Feature spec | `sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56` |
-| Plan-declared scope | `sha256:514e4ad5bf39dcab31c760ecd8e6db2556239509e630b69694b44c22ee684b2b` |
-| Tasks | `sha256:dd9f8f33a70aac48cf73ddf058c6fc6a1d0e82422dabfd35611c2cff783ec5e4` |
-| Reviewability evidence | `sha256:efc2f1761ef235fae4b4b4319fca380bc4f085decb2124623700139544ecaf15` |
+| Feature spec | `sha256:ac12781701e27e9eda8428f4b8e5babe3b8687da5fed7bc4d66f6632a7b5b9ce` |
+| Plan-declared scope | `sha256:fe22a04dea4d0743952be02e507295c3222edc46ee2365f0d7ad9c692925f170` |
+| Tasks | `sha256:e9b1ca24a1ab777fd005f0192995a02b5a23c4d6d66a02d942f85720af7c1aca` |
+| Reviewability evidence | `sha256:eade7136c491e7767cd6c0adc970d9e926262287d32ee9c80880634d70cd6ba4` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
-| 2 | `us2` | T016-T025 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `1190e3c1205744fd50afb37a12c0f9527ad5ee53` | Only T026-T030 replay growth remains authorized |
+| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Complete at `1190e3c1205744fd50afb37a12c0f9527ad5ee53` | Only T026-T030 replay growth remains authorized |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
-  lines; the current US2 marker is 4,214 / 3,843 across its two modules against
-  the 400-LOC boundary. Both use typed size-only exceptions.
+  lines under its historical typed exception; the current US2 marker is 4,306 /
+  3,895 across 13 modules against the aggregate 400-LOC boundary. Capability
+  modules are safely split with a 355-line maximum; only the treatment module
+  retains a typed size-only exception.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.
 - PR mappings: Pending.
