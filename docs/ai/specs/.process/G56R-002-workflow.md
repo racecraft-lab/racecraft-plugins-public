@@ -874,8 +874,8 @@ For every task:
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
 | 2 - Treatment contracts | Complete | 10 | 51/51 focused tests, 2821/2821 full suite, Windows-safe offline replay, and exact-head independent review returned `NO FINDINGS` |
-| 3 - Synthetic replay | In Progress | 5 | Restacked implementation passes 69/69 focused tests; full validation and exact-head review are pending |
-| Polish and validation | In Progress | 9 | T031-T039 remain implemented; restacked reference, manifest, release, and review gates are being refreshed |
+| 3 - Synthetic replay | In Progress | 5 | Restacked implementation passes 69/69 focused tests and 2839/2839 full-suite checks; exact-head review is pending |
+| Polish and validation | In Progress | 9 | T031-T039 remain implemented; reference, 66-file manifest, and release-title gates pass, with exact-head review pending |
 
 ### Capability Checkpoint Evidence
 
@@ -939,7 +939,7 @@ For every task:
 - Replay output: `sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda` with byte-identical two-pass verification.
 - Cases: eight exact success, null, unavailable, misdelivery, approved reroute,
   unapproved reroute, discovery-loss, and surface-disagreement classes.
-- Verification: 68/68 focused tests, 10/10 privacy scan, 2839/2839 full
+- Verification: 69/69 focused tests, 10/10 privacy scan, 2839/2839 full
   suite, and current generated references.
 - Reviewability: aggregate size-only `block` at 4,935 source / 4,454 nonblank,
   non-comment lines across 23 safely subdivided modules; the largest module is
@@ -973,7 +973,7 @@ For every task:
 | Feature spec | `sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046` |
 | Plan-declared scope | `sha256:0e01edd70c936c0a68756214fd773894ef5214c504622c6d8c0717d4fe316621` |
 | Tasks | `sha256:8be512cab1e165d5e4da374e11f22d8c0fba158542c6347c6e1e875a7eed217c` |
-| Reviewability evidence | `sha256:8a788cab3506cacf789fb625327c7883787bf371efc457bcc6e3b1116fd852d8` |
+| Reviewability evidence | `sha256:8a11e52f88a2601dc96bee5d23fa4dddcae99397f2ac59e46683739d9c99e964` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 | Changed-file manifest | `sha256:c455f7eba60244120a145e61fc7a1385816d8a57ecb81a4f5e6eb39e50dd4793` |
 

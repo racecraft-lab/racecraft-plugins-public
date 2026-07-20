@@ -358,8 +358,8 @@
       "tasks_total": 5,
       "focused_tests": "69/69 pass after restack",
       "privacy_scan": "10/10 pass",
-      "full_suite": "pending after restack",
-      "docs_reference_check": "pending after regeneration",
+      "full_suite": "2839/2839 pass after restack",
+      "docs_reference_check": "pass after restack",
       "independent_review": "pending exact-head review after restack",
       "implementation_commit": "096605e6a4987c0f580c525bc377a68c438a9a22",
       "evidence_finalization_scope": "The following commit changes evidence metadata only; implementation and verification inputs remain those at implementation_commit.",
@@ -380,10 +380,10 @@
       "pending_task_ids": [],
       "focused_tests": "69/69 pass after restack",
       "privacy_scan": "10/10 pass",
-      "full_suite": "pending after restack",
-      "docs_reference_check": "pending after regeneration",
+      "full_suite": "2839/2839 pass after restack",
+      "docs_reference_check": "pass after restack",
       "release_readiness_title_gate": "pass",
-      "changed_file_manifest": "pending restacked base-to-head refresh",
+      "changed_file_manifest": "66/66 exact after restack",
       "independent_review": "pending exact-head review after restack",
       "completed_at": "2026-07-20T02:15:18Z"
     }
@@ -392,7 +392,7 @@
     "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
     "plan_declared_scope_sha": "sha256:0e01edd70c936c0a68756214fd773894ef5214c504622c6d8c0717d4fe316621",
     "tasks_sha": "sha256:8be512cab1e165d5e4da374e11f22d8c0fba158542c6347c6e1e875a7eed217c",
-    "reviewability_sha": "sha256:8a788cab3506cacf789fb625327c7883787bf371efc457bcc6e3b1116fd852d8",
+    "reviewability_sha": "sha256:8a11e52f88a2601dc96bee5d23fa4dddcae99397f2ac59e46683739d9c99e964",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
     "changed_file_manifest_sha": "sha256:c455f7eba60244120a145e61fc7a1385816d8a57ecb81a4f5e6eb39e50dd4793"
   },
@@ -405,7 +405,7 @@
       "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
       "plan_declared_scope_sha": "sha256:0e01edd70c936c0a68756214fd773894ef5214c504622c6d8c0717d4fe316621",
       "tasks_sha": "sha256:8be512cab1e165d5e4da374e11f22d8c0fba158542c6347c6e1e875a7eed217c",
-      "reviewability_sha": "sha256:8a788cab3506cacf789fb625327c7883787bf371efc457bcc6e3b1116fd852d8",
+      "reviewability_sha": "sha256:8a11e52f88a2601dc96bee5d23fa4dddcae99397f2ac59e46683739d9c99e964",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
       "changed_file_manifest_sha": "sha256:c455f7eba60244120a145e61fc7a1385816d8a57ecb81a4f5e6eb39e50dd4793"
     },
@@ -969,8 +969,8 @@
           "validation": [
             "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
             "python3 tests/speckit-pro/unit/test-reviewability-marker-guidance.py",
-            "python3 -u tests/speckit-pro/run-all.py (pending after restack)",
-            "release-readiness title and changed-file manifest gates (pending after restack)",
+            "python3 -u tests/speckit-pro/run-all.py: 2839/2839 pass",
+            "release-readiness title and 66-file changed-file manifest gates: pass",
             "RepoPrompt CE exact-head review (pending after restack)"
           ],
           "freshness": {

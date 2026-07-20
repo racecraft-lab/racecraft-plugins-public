@@ -13,7 +13,7 @@
   "treatment_fixture_digest": "sha256:3983dc1d4efe42542ffe0cb72830c970d24cecf490ddfe0c93e24be749ffaa53",
   "replay_digest": "sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda",
   "verification": {
-    "focused_tests": "68/68 pass",
+    "focused_tests": "69/69 pass",
     "privacy_scan": "10/10 pass",
     "full_suite": "2839/2839 pass",
     "docs_reference_check": "pass",
@@ -21,9 +21,9 @@
     "raw_fixture_digest_validation": "pass",
     "canonical_offline_replay": "pass",
     "eight_class_semantic_binding": "pass",
-    "independent_critical_high_review": "pass: untitled-chat-A24ABC",
+    "independent_critical_high_review": "pending exact-head review after restack",
     "release_readiness_title_gate": "pass",
-    "changed_file_manifest": "78/78 exact"
+    "changed_file_manifest": "66/66 exact"
   },
   "source_fingerprint_contract": "marker-task-lines.v2",
   "source_fingerprint_status": "current_marker_scope",

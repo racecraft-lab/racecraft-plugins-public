@@ -31,8 +31,8 @@
     "capability_module_freeze": "pass",
     "declared_claim_exactness": "pass",
     "privacy_scan": "10/10 pass",
-    "docs_reference_check": "pending after regeneration",
-    "full_suite": "pending after restack",
+    "docs_reference_check": "pass after restack",
+    "full_suite": "2839/2839 pass after restack",
     "independent_review": "pending exact-head review after restack"
   },
   "decomposition": {
