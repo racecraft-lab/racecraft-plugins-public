@@ -1092,6 +1092,9 @@ For every task:
   Indented-workflow, mismatched/nonexistent/unrelated-commit, top-level-shadow,
   and cross-container duplicate-owner regressions pass at
   `a048c80875465eafd9187b848f4b3b3139cf326b`; exact live-head re-review is pending.
+- Historical US1 and US2 checkpoint evidence now removes duplicate phase-claim
+  owners while preserving their canonical verification records; the migrated
+  immutable evidence is committed at `d570dd1818d42396ee524b2ccb99152a8dc5dc80`.
 - Evidence finalization after the source head is metadata-only; it does not
   change implementation or verification inputs.
 - Folded polish: T031-T039 are complete. The current reviewability and title
