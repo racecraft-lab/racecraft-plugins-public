@@ -359,7 +359,7 @@
       "tasks_total": 5,
       "focused_tests": "88/88 pass; validator 35/35 pass; contract parity 77/77 pass",
       "privacy_scan": "10/10 pass",
-      "full_suite": "2856/2856 pass",
+      "full_suite": "2857/2857 pass",
       "docs_reference_check": "pass",
       "exact_head_workflow_binding": "pass",
       "pending_phase_evidence_ownership": "pass",
@@ -405,7 +405,7 @@
       "pending_task_ids": [],
       "focused_tests": "88/88 pass; validator 35/35 pass; contract parity 77/77 pass",
       "privacy_scan": "10/10 pass",
-      "full_suite": "2856/2856 pass",
+      "full_suite": "2857/2857 pass",
       "docs_reference_check": "pass",
       "release_readiness_title_gate": "pass",
       "changed_file_manifest": "107/107 exact",
@@ -1205,7 +1205,7 @@
           "validation": [
             "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
             "python3 tests/speckit-pro/unit/test-reviewability-marker-guidance.py",
-            "python3 -u tests/speckit-pro/run-all.py: 2856/2856 pass",
+            "python3 -u tests/speckit-pro/run-all.py: 2857/2857 pass",
             "release-readiness title and 107-file changed-file manifest gates: pass",
             "RepoPrompt CE live-range-review-9FBA02 fifteenth review at 723e4882 remediated at b43333f0; exact live-head re-review pending"
           ],

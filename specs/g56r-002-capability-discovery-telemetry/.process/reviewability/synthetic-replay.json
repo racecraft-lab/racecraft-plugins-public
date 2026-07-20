@@ -49,7 +49,7 @@
     "json_primitive_type_equality": "pass",
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass after restack",
-    "full_suite": "2856/2856 pass after live-range remediation",
+    "full_suite": "2857/2857 pass after live-range remediation",
     "independent_review": "live-range-review-9FBA02 fifteenth review at 723e4882 remediated at b43333f0; exact live-head re-review pending"
   },
   "decomposition": {

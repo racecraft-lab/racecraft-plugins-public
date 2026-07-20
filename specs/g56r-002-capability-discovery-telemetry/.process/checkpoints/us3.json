@@ -16,7 +16,7 @@
   "verification": {
     "focused_tests": "88/88 pass; validator 35/35 pass; contract parity 77/77 pass",
     "privacy_scan": "10/10 pass",
-    "full_suite": "2856/2856 pass",
+    "full_suite": "2857/2857 pass",
     "docs_reference_check": "pass",
     "two_pass_byte_equality": "pass",
     "raw_fixture_digest_validation": "pass",
