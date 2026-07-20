@@ -310,6 +310,28 @@ def _git_file_at_commit(repo_root: Path, commit_sha: object, relative_path: str)
     return completed.stdout if completed.returncode == 0 else None
 
 
+def _git_commit_exists(repo_root: Path, commit_sha: object) -> bool:
+    if not isinstance(commit_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", commit_sha):
+        return False
+    completed = subprocess.run(
+        ["git", "-C", str(repo_root), "cat-file", "-e", f"{commit_sha}^{{commit}}"],
+        capture_output=True,
+        shell=False,
+        check=False,
+    )
+    return completed.returncode == 0
+
+
+def _git_commit_is_ancestor_of_head(repo_root: Path, commit_sha: str) -> bool:
+    completed = subprocess.run(
+        ["git", "-C", str(repo_root), "merge-base", "--is-ancestor", commit_sha, "HEAD"],
+        capture_output=True,
+        shell=False,
+        check=False,
+    )
+    return completed.returncode == 0
+
+
 def _load_json_object(path: Path) -> dict[str, Any] | None:
     try:
         value = json.loads(read_text(path))
@@ -329,9 +351,22 @@ def _load_json_bytes(value: bytes | None) -> dict[str, Any] | None:
 
 
 def validate_changed_file_manifest(state: dict[str, Any], state_path: Path) -> dict[str, list[str]]:
+    marker_plan = state.get("pr_marker_plan")
+    strict_contract = (
+        isinstance(marker_plan, dict)
+        and marker_plan.get("schema_version") == "pr-marker-plan.v2"
+    )
     manifest_ref = state.get("changed_file_manifest")
     if manifest_ref is None:
+        if strict_contract:
+            return {
+                "changed_file_manifest_errors": [
+                    "pr-marker-plan.v2 requires a changed_file_manifest reference",
+                ],
+            }
         return {"changed_file_manifest_errors": []}
+    if not _is_normalized_repo_path(manifest_ref):
+        return {"changed_file_manifest_errors": ["changed-file manifest reference is invalid"]}
     repo_root = _repository_root(state_path)
     if repo_root is None:
         return {"changed_file_manifest_errors": ["repository root is unavailable"]}
@@ -400,7 +435,6 @@ def validate_changed_file_manifest(state: dict[str, Any], state_path: Path) -> d
         f"declared changed-file manifest does not match {base_commit}..HEAD"
     ] if declared != observed else []
 
-    marker_plan = state.get("pr_marker_plan")
     expected_manifest_sha = _sha256_bytes(manifest_path.read_bytes())
     current_fingerprint = state.get("current_source_fingerprint")
     plan_fingerprint = marker_plan.get("source_fingerprint") if isinstance(marker_plan, dict) else None
@@ -716,6 +750,21 @@ def validate_projection_integrity(
                 if checkpoint_status != "complete":
                     evidence_path = _repo_file(repo_root, evidence_ref) if repo_root else None
                     evidence = _load_json_object(evidence_path) if evidence_path and evidence_path.is_file() else None
+                if checkpoint_status == "complete" and strict_contract and isinstance(evidence, dict):
+                    claimed_commit = checkpoint.get("commit_sha")
+                    if evidence.get("implementation_checkpoint_sha") != claimed_commit:
+                        checkpoint_evidence_errors.append(
+                            f"pr_marker_plan.markers[{index}] checkpoint/evidence implementation commit mismatch"
+                        )
+                    if repo_root:
+                        if not _git_commit_exists(repo_root, claimed_commit):
+                            checkpoint_evidence_errors.append(
+                                f"pr_marker_plan.markers[{index}].implementation_checkpoint.commit_sha is not an existing commit"
+                            )
+                        elif not _git_commit_is_ancestor_of_head(repo_root, claimed_commit):
+                            checkpoint_evidence_errors.append(
+                                f"pr_marker_plan.markers[{index}].implementation_checkpoint.commit_sha is not an ancestor of HEAD"
+                            )
                 if strict_contract and evidence is not None and tasks_path and current_tasks_sha:
                     marker_task_values = _string_list(raw_marker.get("task_ids"))
                     marker_task_ids = set(marker_task_values or ())

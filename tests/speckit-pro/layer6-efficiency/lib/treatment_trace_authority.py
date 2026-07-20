@@ -23,6 +23,22 @@ ROOT = Path(__file__).resolve().parents[4]
 SCHEMA_PATH = ROOT / "specs/g56r-002-capability-discovery-telemetry/contracts/treatment-record.schema.json"
 MANIFEST_PATH = ROOT / "docs/ai/research/codex-agent-route-candidate-manifest.json"
 CAPABILITY_MODULE_PATH = Path(__file__).with_name("codex_capabilities.py")
+_CAPABILITY_DEPENDENCY_FILES = {
+    name: Path(__file__).with_name(f"{name}.py")
+    for name in (
+        "codex_capability_cli",
+        "codex_capability_contract",
+        "codex_capability_freeze",
+        "codex_capability_io",
+        "codex_capability_matrix",
+        "codex_capability_observations",
+        "codex_capability_private",
+        "codex_capability_publish_io",
+        "codex_capability_retention",
+        "codex_capability_retention_records",
+        "codex_capability_sources",
+    )
+}
 MAX_INPUT_BYTES = 8 * 1024 * 1024
 MAX_NESTING_DEPTH = 64
 MAX_COLLECTION_ITEMS = 10_000
@@ -322,12 +338,40 @@ def _canonical_routes(manifest: dict) -> dict[str, dict[str, object]]:
     return routes
 
 
+def _validated_capability_dependency(name: str, *, required: bool) -> object | None:
+    module = sys.modules.get(name)
+    if module is None:
+        if required:
+            raise RuntimeError(f"capability dependency {name} was not loaded")
+        return None
+    module_file = getattr(module, "__file__", None)
+    expected = _CAPABILITY_DEPENDENCY_FILES[name].resolve(strict=True)
+    try:
+        resolved = Path(module_file).resolve(strict=True) if isinstance(module_file, str) else None
+    except OSError as exc:
+        raise RuntimeError(f"capability dependency {name} cannot be resolved") from exc
+    if resolved != expected:
+        raise RuntimeError(f"capability dependency {name} does not resolve to {expected}")
+    return module
+
+
+def _capability_authority_tuple_set(tuples: list[dict]) -> list[dict]:
+    contract = _validated_capability_dependency(
+        "codex_capability_contract", required=True,
+    )
+    return contract._AuthorityTupleSet(tuples)
+
+
 def _capability_module():
+    for dependency_name in _CAPABILITY_DEPENDENCY_FILES:
+        _validated_capability_dependency(dependency_name, required=False)
     spec = importlib.util.spec_from_file_location("g56r_002_capability_for_treatment", CAPABILITY_MODULE_PATH)
     if spec is None or spec.loader is None:
         raise RuntimeError("cannot load capability freeze validator")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    for dependency_name in _CAPABILITY_DEPENDENCY_FILES:
+        _validated_capability_dependency(dependency_name, required=True)
     return module
 
 __all__ = [name for name in globals() if not name.startswith("__")]

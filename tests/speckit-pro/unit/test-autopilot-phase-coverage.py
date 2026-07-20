@@ -727,6 +727,63 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             self.assertEqual(report["changed_file_manifest_errors"], [])
             self.assertEqual(report["checkpoint_source_fingerprint_errors"], [])
 
+            checkpoint = state["pr_marker_plan"]["markers"][0]["implementation_checkpoint"]
+            checkpoint["commit_sha"] = evidence_commit
+            checkpoint["head_sha"] = evidence_commit
+            state["pr_marker_plan"]["markers"][0]["reviewability"]["head_sha"] = evidence_commit
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "pr_marker_plan.markers[0] checkpoint/evidence implementation commit mismatch",
+                report["checkpoint_evidence_errors"],
+            )
+
+            missing_commit = "f" * 40
+            checkpoint["commit_sha"] = missing_commit
+            checkpoint["head_sha"] = missing_commit
+            state["pr_marker_plan"]["markers"][0]["reviewability"]["head_sha"] = missing_commit
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "pr_marker_plan.markers[0].implementation_checkpoint.commit_sha is not an existing commit",
+                report["checkpoint_evidence_errors"],
+            )
+
+            unrelated_commit = subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(root),
+                    "-c",
+                    "user.name=SpecKit Tests",
+                    "-c",
+                    "user.email=git@github.com",
+                    "commit-tree",
+                    f"{base_commit}^{{tree}}",
+                ],
+                input="unrelated checkpoint\n",
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout.strip()
+            checkpoint["commit_sha"] = unrelated_commit
+            checkpoint["head_sha"] = unrelated_commit
+            state["pr_marker_plan"]["markers"][0]["reviewability"]["head_sha"] = unrelated_commit
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "pr_marker_plan.markers[0].implementation_checkpoint.commit_sha is not an ancestor of HEAD",
+                report["checkpoint_evidence_errors"],
+            )
+
+            checkpoint["commit_sha"] = base_commit
+            checkpoint["head_sha"] = base_commit
+            state["pr_marker_plan"]["markers"][0]["reviewability"]["head_sha"] = base_commit
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+
             checkpoint_evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
             checkpoint_evidence["verification"]["focused_tests"] = "changed"
             evidence_path.write_text(json.dumps(checkpoint_evidence), encoding="utf-8")
@@ -807,6 +864,23 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 "pr_marker_plan.markers[0] checkpoint marker_scope_unchanged",
                 report["checkpoint_source_fingerprint_errors"],
             )
+
+    def test_v2_marker_plan_requires_changed_file_manifest_reference(self) -> None:
+        state = self.projected_state(
+            plan_status="in_progress",
+            phase_status="in_progress",
+            checkpoint={"status": "pending"},
+        )
+        state["pr_marker_plan"]["status"] = "checkpointing"
+        state.pop("changed_file_manifest", None)
+        state.pop("current_source_fingerprint", None)
+        state["pr_marker_plan"].pop("source_fingerprint", None)
+        exit_code, report = self.run_validator(workflow_text(), state)
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(
+            report["changed_file_manifest_errors"],
+            ["pr-marker-plan.v2 requires a changed_file_manifest reference"],
+        )
 
     def test_missing_confidence_gate_in_workflow_fails(self) -> None:
         exit_code, report = self.run_validator(workflow_text(include_confidence=False), state_json())

@@ -16,6 +16,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -123,7 +124,10 @@ capability_publish_io = sys.modules["codex_capability_publish_io"]
 capability_retention = sys.modules["codex_capability_retention"]
 capability_retention_records = sys.modules["codex_capability_retention_records"]
 treatment_bundle = sys.modules["treatment_trace_bundle"]
+treatment_authority = sys.modules["treatment_trace_authority"]
+treatment_fields = sys.modules["treatment_trace_fields"]
 treatment_io = sys.modules["treatment_trace_io"]
+treatment_json_schema = sys.modules["treatment_trace_json_schema"]
 
 
 def load_json(path: Path) -> dict:
@@ -276,9 +280,9 @@ def declare_reroute_result(bundle: dict, trusted: dict[str, dict] | None = None)
     qualification = {
         item["qualification_evidence_id"]: item for item in bundle["qualification_evidence_registry"]
     }
-    disposition, detailed_reasons = treatment._reroute_disposition(
+    disposition, detailed_reasons = treatment_fields._reroute_disposition(
         trace, events, trace["reroute_destination_assessments"],
-        qualification, trusted or {}, treatment._canonical_routes(load_json(MANIFEST_PATH)),
+        qualification, trusted or {}, treatment_authority._canonical_routes(load_json(MANIFEST_PATH)),
     )
     directly_derived = []
     if trace["supported_effective_effort"] is not None:
@@ -468,7 +472,12 @@ class CapabilityContractTests(unittest.TestCase):
             EXPECTED_CAPABILITY_PUBLIC_API,
         )
         self.assertNotIn("_delete_single_link_private_file", vars(capabilities))
-        self.assertEqual(EXPECTED_TREATMENT_PUBLIC_API - set(vars(treatment)), frozenset())
+        self.assertEqual(frozenset(treatment.__all__), EXPECTED_TREATMENT_PUBLIC_API)
+        self.assertEqual(
+            frozenset(name for name in vars(treatment) if not name.startswith("_")),
+            EXPECTED_TREATMENT_PUBLIC_API,
+        )
+        self.assertNotIn("_validate_treatment_bundle", vars(treatment))
         self.assertTrue(callable(capabilities.main))
         self.assertTrue(callable(treatment.main))
 
@@ -2205,7 +2214,7 @@ class TreatmentContractTests(unittest.TestCase):
 
     def test_manifest_and_predecessor_null_effort_remain_unknown(self) -> None:
         trace = self.bundle["treatment_traces"][0]
-        route = treatment._canonical_routes(load_json(MANIFEST_PATH))[trace["assigned_route_id"]]
+        route = treatment_authority._canonical_routes(load_json(MANIFEST_PATH))[trace["assigned_route_id"]]
         self.assertIn("effort", route)
         self.assertIsNone(route["effort"])
         validated = treatment.validate_treatment_bundle(copy.deepcopy(self.bundle))
@@ -2452,7 +2461,7 @@ class TreatmentContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "outside the canonical candidate manifest"):
                     treatment.validate_treatment_bundle(self.rebound(bundle))
 
-        canonical_routes = treatment._canonical_routes(load_json(MANIFEST_PATH))
+        canonical_routes = treatment_authority._canonical_routes(load_json(MANIFEST_PATH))
         baseline_resolution = self.bundle["route_resolutions"][0]
         assigned_route = baseline_resolution["assigned_route_id"]
         assigned_contract = canonical_routes[assigned_route]["agent_contract_id"]
@@ -2868,8 +2877,8 @@ class TreatmentContractTests(unittest.TestCase):
 
     def test_schema_and_runtime_reject_the_same_structural_mutations(self) -> None:
         baseline = self.rebound(copy.deepcopy(self.bundle))
-        schema = treatment._read_json_file(treatment.SCHEMA_PATH)
-        treatment._validate_schema_instance(baseline, schema, schema)
+        schema = treatment_io._read_json_file(treatment.SCHEMA_PATH)
+        treatment_json_schema._validate_schema_instance(baseline, schema, schema)
         treatment.validate_treatment_bundle(copy.deepcopy(baseline))
         mutations = []
         invalid_ref = copy.deepcopy(baseline)
@@ -2917,15 +2926,15 @@ class TreatmentContractTests(unittest.TestCase):
         mutations.append(("strict RFC3339 UTC timestamp", timestamp))
         for label, bundle in mutations:
             with self.subTest(label=label):
-                with self.assertRaises(ValueError): treatment._validate_schema_instance(bundle, schema, schema)
+                with self.assertRaises(ValueError): treatment_json_schema._validate_schema_instance(bundle, schema, schema)
                 with self.assertRaises(ValueError): treatment.validate_treatment_bundle(bundle)
 
     def test_bounded_file_loading_rejects_links_special_files_and_external_paths(self) -> None:
         with tempfile.TemporaryDirectory(dir=ROOT) as directory:
             root = Path(directory); source = root / "source.json"; source.write_text("{}", encoding="utf-8")
-            self.assertEqual(treatment._read_bounded_regular_file(source, allowed_root=root), b"{}")
+            self.assertEqual(treatment_io._read_bounded_regular_file(source, allowed_root=root), b"{}")
             with mock.patch.object(treatment_io, "HAS_DESCRIPTOR_RELATIVE_IO", False):
-                self.assertEqual(treatment._read_bounded_regular_file(source, allowed_root=root), b"{}")
+                self.assertEqual(treatment_io._read_bounded_regular_file(source, allowed_root=root), b"{}")
                 self.assertEqual(
                     treatment.validate_treatment_bundle(copy.deepcopy(self.bundle))["telemetry_profile_id"],
                     self.bundle["telemetry_profile_id"],
@@ -2937,7 +2946,7 @@ class TreatmentContractTests(unittest.TestCase):
             ), mock.patch.object(
                 treatment_io, "_windows_final_path_from_descriptor", return_value=source.resolve(),
             ) as final_path:
-                self.assertEqual(treatment._read_bounded_regular_file(source, allowed_root=root), b"{}")
+                self.assertEqual(treatment_io._read_bounded_regular_file(source, allowed_root=root), b"{}")
                 self.assertEqual(final_path.call_count, 1)
             with mock.patch.object(
                 treatment_io, "HAS_DESCRIPTOR_RELATIVE_IO", False,
@@ -2946,35 +2955,35 @@ class TreatmentContractTests(unittest.TestCase):
             ), mock.patch.object(
                 treatment_io, "_windows_final_path_from_descriptor", return_value=root.parent / "escaped.json",
             ), self.assertRaisesRegex(ValueError, "Windows handle escaped"):
-                treatment._read_bounded_regular_file(source, allowed_root=root)
+                treatment_io._read_bounded_regular_file(source, allowed_root=root)
             symlink = root / "symlink.json"; symlink.symlink_to(source)
             with self.assertRaisesRegex(ValueError, "regular non-symlink"):
-                treatment._read_bounded_regular_file(symlink, allowed_root=root)
+                treatment_io._read_bounded_regular_file(symlink, allowed_root=root)
             with mock.patch.object(
                 treatment_io, "HAS_DESCRIPTOR_RELATIVE_IO", False,
             ), self.assertRaisesRegex(ValueError, "non-symlink"):
-                treatment._read_bounded_regular_file(symlink, allowed_root=root)
+                treatment_io._read_bounded_regular_file(symlink, allowed_root=root)
             real_directory = root / "real"; real_directory.mkdir()
             nested_source = real_directory / "nested.json"; nested_source.write_text("{}", encoding="utf-8")
             linked_directory = root / "linked"; linked_directory.symlink_to(real_directory, target_is_directory=True)
             with self.assertRaisesRegex(ValueError, "regular non-symlink|real directories"):
-                treatment._read_bounded_regular_file(linked_directory / "nested.json", allowed_root=root)
+                treatment_io._read_bounded_regular_file(linked_directory / "nested.json", allowed_root=root)
             hardlink = root / "hardlink.json"; os.link(source, hardlink)
             with self.assertRaisesRegex(ValueError, "single-link"):
-                treatment._read_bounded_regular_file(source, allowed_root=root)
+                treatment_io._read_bounded_regular_file(source, allowed_root=root)
             hardlink.unlink()
             oversized = root / "oversized.json"; oversized.write_bytes(b"12345")
             with self.assertRaisesRegex(ValueError, "maximum size"):
-                treatment._read_bounded_regular_file(oversized, allowed_root=root, max_bytes=4)
+                treatment_io._read_bounded_regular_file(oversized, allowed_root=root, max_bytes=4)
             if hasattr(os, "mkfifo"):
                 fifo = root / "fixture-fifo"; os.mkfifo(fifo)
                 with self.assertRaisesRegex(ValueError, "regular"):
-                    treatment._read_bounded_regular_file(fifo, allowed_root=root)
+                    treatment_io._read_bounded_regular_file(fifo, allowed_root=root)
 
             race_directory = root / "race"; race_directory.mkdir()
             race_source = race_directory / "source.json"; race_source.write_text("{}", encoding="utf-8")
             moved_directory = root / "race-original"
-            original_open = treatment.os.open
+            original_open = treatment_io.os.open
             swapped = False
 
             def replace_directory(path: object, flags: int, *args: object, **kwargs: object) -> int:
@@ -2986,10 +2995,10 @@ class TreatmentContractTests(unittest.TestCase):
                     (race_directory / "source.json").write_text('{"outside":"replacement"}', encoding="utf-8")
                 return original_open(path, flags, *args, **kwargs)
 
-            with mock.patch.object(treatment.os, "open", side_effect=replace_directory), self.assertRaisesRegex(
+            with mock.patch.object(treatment_io.os, "open", side_effect=replace_directory), self.assertRaisesRegex(
                 ValueError, "directory changed while it was being read"
             ):
-                treatment._read_bounded_regular_file(race_source, allowed_root=root)
+                treatment_io._read_bounded_regular_file(race_source, allowed_root=root)
             fallback_source = root / "fallback-race.json"
             fallback_source.write_text("{}", encoding="utf-8")
             fallback_original = root / "fallback-original.json"
@@ -3006,13 +3015,13 @@ class TreatmentContractTests(unittest.TestCase):
             with mock.patch.object(
                 treatment_io, "HAS_DESCRIPTOR_RELATIVE_IO", False,
             ), mock.patch.object(
-                treatment.os, "open", side_effect=replace_fallback_file,
+                treatment_io.os, "open", side_effect=replace_fallback_file,
             ), self.assertRaisesRegex(ValueError, "pathname changed before it was read"):
-                treatment._read_bounded_regular_file(fallback_source, allowed_root=root)
+                treatment_io._read_bounded_regular_file(fallback_source, allowed_root=root)
         with tempfile.TemporaryDirectory() as directory:
             external = Path(directory) / "fixture.json"; external.write_text("{}", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "approved root"):
-                treatment._read_bounded_regular_file(external)
+                treatment_io._read_bounded_regular_file(external)
             completed = subprocess.run(
                 ["python3", str(TREATMENT_MODULE_PATH), "validate", "--fixture", str(external)],
                 cwd=ROOT, text=True, capture_output=True, check=False,
@@ -3122,11 +3131,11 @@ class TreatmentContractTests(unittest.TestCase):
         failed = copy.deepcopy(self.bundle); failed["treatment_traces"][0]["terminal_state"] = "failed"; failed["treatment_traces"][0]["outcome"]["status"] = "failed"; cases.append(failed)
         cancelled = copy.deepcopy(self.bundle); cancelled["treatment_traces"][0]["terminal_state"] = "cancelled"; cancelled["treatment_traces"][0]["outcome"]["status"] = "cancelled"; cases.append(cancelled)
         accepted = copy.deepcopy(self.bundle); accepted["treatment_traces"][0]["acceptance"] = False; cases.append(accepted)
-        schema = treatment._read_json_file(treatment.SCHEMA_PATH)
+        schema = treatment_io._read_json_file(treatment.SCHEMA_PATH)
         for index, bundle in enumerate(cases):
             with self.subTest(case=index):
                 rebound = self.rebound(bundle)
-                with self.assertRaises(ValueError): treatment._validate_schema_instance(rebound, schema, schema)
+                with self.assertRaises(ValueError): treatment_json_schema._validate_schema_instance(rebound, schema, schema)
                 with self.assertRaises(ValueError): treatment.validate_treatment_bundle(rebound)
 
     def test_trace_graph_rejects_orphans_nonreciprocal_edges_wrong_roots_and_cycles(self) -> None:
@@ -3248,7 +3257,7 @@ class TreatmentContractTests(unittest.TestCase):
         prior["supersedes_candidate_freeze_id"] = None
         self.assertEqual(treatment.content_id(prior, "candidate_freeze_id"), prior["candidate_freeze_id"])
         bounded_reads: list[Path] = []
-        original_read = treatment._read_bounded_regular_file
+        original_read = treatment_io._read_bounded_regular_file
 
         def track_authority_reads(path: Path, **kwargs: object) -> bytes:
             bounded_reads.append(Path(path))
@@ -3439,6 +3448,17 @@ class TreatmentReplayTests(unittest.TestCase):
             repository_root=ROOT,
         )
 
+    def test_replay_rejects_capability_dependency_from_another_checkout(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            stale_path = Path(temporary) / "codex_capability_contract.py"
+            stale_path.write_text("# stale dependency\n", encoding="utf-8")
+            stale_contract = types.ModuleType("codex_capability_contract")
+            stale_contract.__file__ = str(stale_path)
+            with mock.patch.dict(
+                sys.modules, {"codex_capability_contract": stale_contract},
+            ), self.assertRaisesRegex(RuntimeError, "does not resolve"):
+                treatment_authority._capability_module()
+
     def test_eight_case_matrix_is_explicit_and_canary_never_promotes(self) -> None:
         bundle = load_json(TREATMENT_FIXTURE_PATH)
         actual = [
@@ -3574,7 +3594,7 @@ class TreatmentReplayTests(unittest.TestCase):
             repository_root = Path(temporary)
             fixture, manifest_path = self.copy_replay_tree(repository_root)
             original_fixture = fixture.with_name("treatment-replay-original.json")
-            original_open = treatment.os.open
+            original_open = treatment_io.os.open
             swapped = False
 
             def replace_fixture(path: object, flags: int, *args: object, **kwargs: object) -> int:
@@ -3588,7 +3608,7 @@ class TreatmentReplayTests(unittest.TestCase):
                 return original_open(path, flags, *args, **kwargs)
 
             with mock.patch.object(
-                treatment.os, "open", side_effect=replace_fixture,
+                treatment_io.os, "open", side_effect=replace_fixture,
             ), self.assertRaisesRegex(ValueError, "pathname changed before it was read"):
                 treatment.replay_fixture(
                     fixture, manifest_path, repeat=2, repository_root=repository_root,
