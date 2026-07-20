@@ -78,6 +78,7 @@ ORDERED_STATE_CHECKPOINTS = (
 TASK_LINE_RE = re.compile(r"^- \[[ xX]\] (T[0-9]+)\b")
 UTC_TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 WINDOWS_ABSOLUTE_PATH_RE = re.compile(r"^[A-Za-z]:")
+SUPPORTED_MARKER_PLAN_VERSIONS = frozenset({"pr-marker-plan.v1", "pr-marker-plan.v2"})
 COMPLETE_CHECKPOINT_STRING_FIELDS = (
     "evidence_path",
     "checkpoint_evidence_sha",
@@ -281,6 +282,17 @@ def _timestamp_errors(value: object, prefix: str) -> list[str]:
     return errors
 
 
+def _marker_plan_version_errors(marker_plan: object) -> list[str]:
+    if marker_plan is None:
+        return []
+    if not isinstance(marker_plan, dict):
+        return ["pr_marker_plan must be an object"]
+    version = marker_plan.get("schema_version")
+    if version not in SUPPORTED_MARKER_PLAN_VERSIONS:
+        return ["pr_marker_plan.schema_version must be pr-marker-plan.v1 or pr-marker-plan.v2"]
+    return []
+
+
 def _marker_tasks_sha_text(tasks_text: str, task_ids: set[str]) -> str | None:
     selected: list[str] = []
     found: set[str] = set()
@@ -380,6 +392,19 @@ def validate_changed_file_manifest(state: dict[str, Any], state_path: Path) -> d
         return {"changed_file_manifest_errors": ["changed-file manifest base_commit is invalid"]}
     if not isinstance(entries, list):
         return {"changed_file_manifest_errors": ["changed-file manifest files must be an array"]}
+    base_errors: list[str] = []
+    if strict_contract:
+        declared_base = state.get("changed_file_manifest_base_commit")
+        if not isinstance(declared_base, str) or not re.fullmatch(r"[0-9a-f]{40}", declared_base):
+            base_errors.append("pr-marker-plan.v2 requires changed_file_manifest_base_commit")
+        elif declared_base != base_commit:
+            base_errors.append("changed-file manifest base_commit does not match state authority")
+    if not _git_commit_exists(repo_root, base_commit):
+        base_errors.append("changed-file manifest base_commit is not an existing commit")
+    elif not _git_commit_is_ancestor_of_head(repo_root, base_commit):
+        base_errors.append("changed-file manifest base_commit is not an ancestor of HEAD")
+    if base_errors:
+        return {"changed_file_manifest_errors": base_errors}
 
     declared: dict[str, str] = {}
     expected_owners: dict[str, set[str]] = {}
@@ -521,6 +546,7 @@ def validate_projection_integrity(
         isinstance(marker_plan, dict)
         and marker_plan.get("schema_version") == "pr-marker-plan.v2"
     )
+    marker_plan_status_errors.extend(_marker_plan_version_errors(marker_plan))
 
     phases = phase_results if isinstance(phase_results, dict) else {}
     for phase_name, raw_result in phases.items():
@@ -766,7 +792,13 @@ def validate_projection_integrity(
                                 f"pr_marker_plan.markers[{index}].implementation_checkpoint.commit_sha is not an ancestor of HEAD"
                             )
                 if strict_contract and evidence is not None and tasks_path and current_tasks_sha:
-                    marker_task_values = _string_list(raw_marker.get("task_ids"))
+                    primary_task_values = _string_list(raw_marker.get("task_ids"))
+                    folded_task_values = _string_list(raw_marker.get("folded_polish_task_ids"))
+                    marker_task_values = (
+                        [*primary_task_values, *folded_task_values]
+                        if primary_task_values is not None and folded_task_values is not None
+                        else None
+                    )
                     marker_task_ids = set(marker_task_values or ())
                     evidence_task_values = _string_list(evidence.get("task_ids"))
                     freshness = checkpoint.get("freshness") if checkpoint_status == "complete" else evidence

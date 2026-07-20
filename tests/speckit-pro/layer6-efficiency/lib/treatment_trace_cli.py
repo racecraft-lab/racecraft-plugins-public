@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import sys
+
 from treatment_trace_successor import *
 
 def main(argv: list[str] | None = None) -> int:

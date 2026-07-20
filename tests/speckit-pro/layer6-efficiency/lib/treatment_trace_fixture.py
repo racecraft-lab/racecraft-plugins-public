@@ -90,7 +90,7 @@ def _replay_capability_authority_tuples(capability: object, source_tuples: list[
                 "source_refresh_digest": capability.digest(b"fixture-source-refresh"),
             }],
         })
-    return _capability_authority_tuple_set(tuples)
+    return _capability_authority_tuple_set(capability, tuples)
 
 
 def _evaluate_replay_capability_case(capability: object, case: dict, client_identity_id: str) -> None:

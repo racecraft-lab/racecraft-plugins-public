@@ -560,9 +560,12 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             ).stdout.strip()
             tracked_path.write_text("changed\n", encoding="utf-8")
             state["changed_file_manifest"] = "changed-file-manifest.json"
+            state["changed_file_manifest_base_commit"] = base_commit
             task_bytes = tasks_path.read_bytes()
             tasks_sha = f"sha256:{hashlib.sha256(task_bytes).hexdigest()}"
-            marker_sha = "sha256:" + hashlib.sha256(b"- [x] T001 Marker task\n").hexdigest()
+            marker_sha = "sha256:" + hashlib.sha256(
+                b"- [x] T001 Marker task\n- [ ] T002 Other task\n"
+            ).hexdigest()
             evidence_path.parent.mkdir(parents=True)
             evidence_path.write_text(
                 json.dumps(
@@ -571,7 +574,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                         "feature_id": "SPEC-EXAMPLE",
                         "marker_id": "us1",
                         "status": "complete",
-                        "task_ids": ["T001"],
+                        "task_ids": ["T001", "T002"],
                         "implementation_checkpoint_sha": base_commit,
                         "verification": {"focused_tests": "pass"},
                         "source_fingerprint_status": "current",
@@ -601,7 +604,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                         "parent_marker_id": None,
                         "source_boundary": {"story_id": 1},
                         "task_ids": ["T001"],
-                        "folded_polish_task_ids": [],
+                        "folded_polish_task_ids": ["T002"],
                         "declared_files": marker_files,
                         "reviewability": {"head_sha": base_commit},
                         "implementation_checkpoint": {
@@ -613,7 +616,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                             "commit_sha": base_commit,
                             "head_sha": base_commit,
                             "completed_at": "2026-07-19T00:00:00Z",
-                            "completed_task_ids": ["T001"],
+                            "completed_task_ids": ["T001", "T002"],
                             "summary": "Completed us1.",
                             "validation": ["focused tests passed"],
                             "freshness": {
@@ -727,6 +730,52 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             self.assertEqual(report["changed_file_manifest_errors"], [])
             self.assertEqual(report["checkpoint_source_fingerprint_errors"], [])
 
+            unrelated_commit = subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(root),
+                    "-c",
+                    "user.name=SpecKit Tests",
+                    "-c",
+                    "user.email=git@github.com",
+                    "commit-tree",
+                    f"{base_commit}^{{tree}}",
+                ],
+                input="unrelated manifest base\n",
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout.strip()
+            manifest["base_commit"] = unrelated_commit
+            state["changed_file_manifest_base_commit"] = unrelated_commit
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            unrelated_manifest_sha = "sha256:" + hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+            state["current_source_fingerprint"]["changed_file_manifest_sha"] = unrelated_manifest_sha
+            state["pr_marker_plan"]["source_fingerprint"]["changed_file_manifest_sha"] = unrelated_manifest_sha
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "changed-file manifest base_commit is not an ancestor of HEAD",
+                report["changed_file_manifest_errors"],
+            )
+
+            manifest["base_commit"] = base_commit
+            state["changed_file_manifest_base_commit"] = unrelated_commit
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            state["current_source_fingerprint"]["changed_file_manifest_sha"] = manifest_sha
+            state["pr_marker_plan"]["source_fingerprint"]["changed_file_manifest_sha"] = manifest_sha
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "changed-file manifest base_commit does not match state authority",
+                report["changed_file_manifest_errors"],
+            )
+            state["changed_file_manifest_base_commit"] = base_commit
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+
             checkpoint = state["pr_marker_plan"]["markers"][0]["implementation_checkpoint"]
             checkpoint["commit_sha"] = evidence_commit
             checkpoint["head_sha"] = evidence_commit
@@ -751,23 +800,6 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 report["checkpoint_evidence_errors"],
             )
 
-            unrelated_commit = subprocess.run(
-                [
-                    "git",
-                    "-C",
-                    str(root),
-                    "-c",
-                    "user.name=SpecKit Tests",
-                    "-c",
-                    "user.email=git@github.com",
-                    "commit-tree",
-                    f"{base_commit}^{{tree}}",
-                ],
-                input="unrelated checkpoint\n",
-                text=True,
-                capture_output=True,
-                check=True,
-            ).stdout.strip()
             checkpoint["commit_sha"] = unrelated_commit
             checkpoint["head_sha"] = unrelated_commit
             state["pr_marker_plan"]["markers"][0]["reviewability"]["head_sha"] = unrelated_commit
@@ -853,7 +885,10 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
 
             manifest["files"][3]["marker_ids"] = ["us1"]
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
-            tasks_path.write_text("# Tasks\n\n- [x] T001 Changed marker task\n- [ ] T002 Other task\n", encoding="utf-8")
+            tasks_path.write_text(
+                "# Tasks\n\n- [x] T001 Marker task\n- [ ] T002 Changed folded task\n",
+                encoding="utf-8",
+            )
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
@@ -881,6 +916,25 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             report["changed_file_manifest_errors"],
             ["pr-marker-plan.v2 requires a changed_file_manifest reference"],
         )
+
+    def test_marker_plan_rejects_missing_or_unsupported_schema_version(self) -> None:
+        for version in (None, "pr-marker-plan.v3"):
+            with self.subTest(version=version):
+                state = self.projected_state(
+                    plan_status="in_progress",
+                    phase_status="in_progress",
+                    checkpoint={"status": "pending"},
+                )
+                if version is None:
+                    state["pr_marker_plan"].pop("schema_version")
+                else:
+                    state["pr_marker_plan"]["schema_version"] = version
+                exit_code, report = self.run_validator(workflow_text(), state)
+                self.assertEqual(exit_code, 1)
+                self.assertIn(
+                    "pr_marker_plan.schema_version must be pr-marker-plan.v1 or pr-marker-plan.v2",
+                    report["marker_plan_status_errors"],
+                )
 
     def test_missing_confidence_gate_in_workflow_fails(self) -> None:
         exit_code, report = self.run_validator(workflow_text(include_confidence=False), state_json())

@@ -3459,6 +3459,35 @@ class TreatmentReplayTests(unittest.TestCase):
             ), self.assertRaisesRegex(RuntimeError, "does not resolve"):
                 treatment_authority._capability_module()
 
+    def test_replay_reloads_same_path_stale_capability_dependency(self) -> None:
+        stale_contract = types.ModuleType("codex_capability_contract")
+        stale_contract.__file__ = str(
+            TREATMENT_MODULE_PATH.with_name("codex_capability_contract.py")
+        )
+        stale_contract._AuthorityTupleSet = lambda _tuples: self.fail(
+            "same-path stale capability dependency was reused"
+        )
+        with mock.patch.dict(
+            sys.modules, {"codex_capability_contract": stale_contract},
+        ):
+            capability = treatment_authority._capability_module()
+            self.assertIs(sys.modules["codex_capability_contract"], stale_contract)
+        self.assertEqual(
+            treatment_authority._capability_authority_tuple_set(capability, []),
+            [],
+        )
+
+    def test_replay_does_not_execute_shadow_dependency_earlier_on_sys_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            shadow_root = Path(temporary)
+            shadow_root.joinpath("codex_capability_contract.py").write_text(
+                "raise RuntimeError('shadow capability dependency executed')\n",
+                encoding="utf-8",
+            )
+            with mock.patch.object(sys, "path", [str(shadow_root), *sys.path]):
+                capability = treatment_authority._capability_module()
+            self.assertTrue(callable(capability.validate_manifest))
+
     def test_eight_case_matrix_is_explicit_and_canary_never_promotes(self) -> None:
         bundle = load_json(TREATMENT_FIXTURE_PATH)
         actual = [
