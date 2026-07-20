@@ -5,23 +5,23 @@
   "status": "block",
   "mode": "implementation",
   "scope": "T026-T030 deterministic synthetic replay",
-  "head_sha": "688b3054d2734b4825361b3c18977ed1e3ada4da",
+  "head_sha": "3608f0dbeaca34be5585375f87e7f3ebc5feba6b",
   "head_scope": "current_remediation_source",
   "current_restack_review_status": "pending exact-head re-review",
   "reason_class": "aggregate_size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 5107,
-  "actual_nonblank_noncomment_lines": 4619,
-  "production_modules": 23,
+  "actual_source_lines": 5168,
+  "actual_nonblank_noncomment_lines": 4665,
+  "production_modules": 24,
   "max_module_source_lines": 381,
   "module_groups": {
     "capability": {"modules": 12, "public_entrypoint": "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py"},
-    "treatment": {"modules": 11, "public_entrypoint": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"}
+    "treatment": {"modules": 12, "public_entrypoint": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"}
   },
   "primary_surface": "harness/adapter",
   "correctness_checks": {
-    "focused_tests": "70/70 pass after review remediation",
+    "focused_tests": "72/72 pass after exact-range review remediation",
     "two_pass_byte_equality": "pass",
     "raw_fixture_digest_validation": "pass",
     "canonical_fixture_serialization": "pass",
@@ -32,13 +32,13 @@
     "declared_claim_exactness": "pass",
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass after restack",
-    "full_suite": "2840/2840 pass after review remediation",
-    "independent_review": "review-us3-replay-20A28F findings remediated; exact-head re-review pending"
+    "full_suite": "2841/2841 pass after exact-range review remediation",
+    "independent_review": "exact-range-review-905F43 findings remediated; exact-head re-review pending"
   },
   "decomposition": {
     "status": "complete",
     "subdivision": "safe_split",
-    "rationale": "The two public entry points now delegate to focused source, observation, matrix, private-retention, freeze, schema, trace, replay, and successor modules.",
+    "rationale": "The two public entry points now delegate to focused source, observation, matrix, private-retention, freeze, schema, trace, replay, successor, and checkout-bound capability-loader modules.",
     "invariant": "Every implementation module is below the 400-line reviewability boundary; the public entry points preserve their import and CLI contracts.",
     "max_module_source_lines": 381
   },

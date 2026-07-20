@@ -180,6 +180,13 @@
       "marker_ids": ["us3"]
     },
     {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_capability.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
       "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_cli.py",
       "operation": "NEW",
       "category": "implementation",
