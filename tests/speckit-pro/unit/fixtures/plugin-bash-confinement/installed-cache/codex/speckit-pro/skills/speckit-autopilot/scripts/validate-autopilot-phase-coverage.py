@@ -127,10 +127,22 @@ def read_text(path: Path) -> str:
         raise ValidationError(f"could not read file: {path}: {exc}") from exc
 
 
+def _strict_json_loads(value: str | bytes) -> Any:
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, item in pairs:
+            if key in result:
+                raise ValueError(f"duplicate JSON key: {key}")
+            result[key] = item
+        return result
+
+    return json.loads(value, object_pairs_hook=reject_duplicate_keys)
+
+
 def load_state(path: Path) -> dict[str, Any]:
     try:
-        state = json.loads(read_text(path))
-    except json.JSONDecodeError as exc:
+        state = _strict_json_loads(read_text(path))
+    except (json.JSONDecodeError, ValueError) as exc:
         raise ValidationError(f"invalid state JSON: {path}: {exc}") from exc
     if not isinstance(state, dict):
         raise ValidationError("autopilot state must be a JSON object")
@@ -470,8 +482,8 @@ def _marker_plan_shape_errors(marker_plan: object) -> list[str]:
     if not isinstance(marker_plan, dict) or marker_plan.get("schema_version") != "pr-marker-plan.v2":
         return []
     try:
-        schema = json.loads(read_text(MARKER_PLAN_SCHEMA_PATH))
-    except json.JSONDecodeError:
+        schema = _strict_json_loads(read_text(MARKER_PLAN_SCHEMA_PATH))
+    except (json.JSONDecodeError, ValueError):
         return ["canonical pr-marker-plan schema is malformed"]
     if not isinstance(schema, dict):
         return ["canonical pr-marker-plan schema root must be an object"]
@@ -570,8 +582,8 @@ def _git_tree_entries(repo_root: Path, commit_sha: object) -> dict[str, str] | N
 
 def _load_json_object(path: Path) -> dict[str, Any] | None:
     try:
-        value = json.loads(read_text(path))
-    except (ValidationError, json.JSONDecodeError):
+        value = _strict_json_loads(read_text(path))
+    except (ValidationError, json.JSONDecodeError, ValueError):
         return None
     return value if isinstance(value, dict) else None
 
@@ -580,8 +592,8 @@ def _load_json_bytes(value: bytes | None) -> dict[str, Any] | None:
     if value is None:
         return None
     try:
-        parsed = json.loads(value.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError):
+        parsed = _strict_json_loads(value.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
         return None
     return parsed if isinstance(parsed, dict) else None
 
@@ -688,8 +700,8 @@ def validate_changed_file_manifest(
                 "changed-file manifest differs from the authorized PR head"
             )
     try:
-        manifest_schema = json.loads(read_text(CHANGED_FILE_MANIFEST_SCHEMA_PATH))
-    except (ValidationError, json.JSONDecodeError):
+        manifest_schema = _strict_json_loads(read_text(CHANGED_FILE_MANIFEST_SCHEMA_PATH))
+    except (ValidationError, json.JSONDecodeError, ValueError):
         return {"changed_file_manifest_errors": ["canonical changed-file manifest schema is malformed"]}
     if not isinstance(manifest_schema, dict):
         return {"changed_file_manifest_errors": ["canonical changed-file manifest schema root is invalid"]}
@@ -1010,9 +1022,13 @@ def validate_projection_integrity(
     marker_plan_status_errors.extend(_marker_plan_shape_errors(marker_plan))
 
     phases = phase_results if isinstance(phase_results, dict) else {}
+    phases_by_marker: dict[str, dict[str, Any]] = {}
     for phase_name, raw_result in phases.items():
         if not isinstance(phase_name, str) or not isinstance(raw_result, dict):
             continue
+        phase_marker_id = raw_result.get("marker_id")
+        if isinstance(phase_marker_id, str) and phase_marker_id:
+            phases_by_marker[phase_marker_id] = raw_result
         result_status = raw_result.get("status")
         matching_steps = [step for step in steps if step.step == phase_name or step.step.startswith(f"{phase_name} (")]
         if result_status in {"completed", "in_progress", "pending", "checkpointing"} and matching_steps:
@@ -1316,6 +1332,32 @@ def validate_projection_integrity(
                 if checkpoint_status != "complete":
                     evidence_path = _repo_file(repo_root, evidence_ref) if repo_root else None
                     evidence = _load_json_object(evidence_path) if evidence_path and evidence_path.is_file() else None
+                phase_result = phases_by_marker.get(marker_id)
+                if strict_contract and isinstance(evidence, dict) and isinstance(phase_result, dict):
+                    direct_bindings = {
+                        "capability_fixture_digest": "capability_fixture_digest",
+                        "treatment_fixture_digest": "treatment_fixture_digest",
+                        "replay_digest": "replay_digest",
+                        "implementation_commit": "implementation_checkpoint_sha",
+                        "checkpoint": "implementation_checkpoint_sha",
+                    }
+                    for phase_field, evidence_field in direct_bindings.items():
+                        if (
+                            phase_field in phase_result
+                            and evidence_field in evidence
+                            and phase_result[phase_field] != evidence[evidence_field]
+                        ):
+                            checkpoint_evidence_errors.append(
+                                f"pr_marker_plan.markers[{index}] phase_results {phase_field} does not match checkpoint evidence"
+                            )
+                    verification = evidence.get("verification")
+                    if isinstance(verification, dict):
+                        for gate_id, result in verification.items():
+                            expected = result.get("evidence") if isinstance(result, dict) else result
+                            if gate_id in phase_result and phase_result[gate_id] != expected:
+                                checkpoint_evidence_errors.append(
+                                    f"pr_marker_plan.markers[{index}] phase_results {gate_id} does not match checkpoint evidence"
+                                )
                 if checkpoint_status == "complete" and strict_contract and repo_root:
                     claimed_commit = checkpoint.get("commit_sha")
                     verification_report = _load_json_bytes(committed_verification_bytes)
@@ -1325,10 +1367,10 @@ def validate_projection_integrity(
                         )
                     else:
                         try:
-                            verification_schema = json.loads(
+                            verification_schema = _strict_json_loads(
                                 read_text(VERIFICATION_REPORT_SCHEMA_PATH)
                             )
-                        except (ValidationError, json.JSONDecodeError):
+                        except (ValidationError, json.JSONDecodeError, ValueError):
                             checkpoint_evidence_errors.append(
                                 f"pr_marker_plan.markers[{index}] canonical verification report schema is malformed"
                             )
@@ -1484,8 +1526,8 @@ def validate_projection_integrity(
                         )
                         if checkpoint_schema is not None and checkpoint_schema.is_file():
                             try:
-                                schema_value = json.loads(read_text(checkpoint_schema))
-                            except json.JSONDecodeError:
+                                schema_value = _strict_json_loads(read_text(checkpoint_schema))
+                            except (json.JSONDecodeError, ValueError):
                                 checkpoint_evidence_errors.append(
                                     f"pr_marker_plan.markers[{index}] checkpoint evidence schema is malformed"
                                 )

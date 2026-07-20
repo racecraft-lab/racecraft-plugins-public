@@ -38,7 +38,10 @@ def _read_bounded_regular_file(
         raise ValueError("bounded input requires descriptor-relative path validation")
     nofollow = getattr(os, "O_NOFOLLOW", 0)
     directory_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow | getattr(os, "O_DIRECTORY", 0)
-    file_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
+    file_flags = (
+        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
+        | getattr(os, "O_NONBLOCK", 0)
+    )
     directory_descriptors, directory_identities = [], []
     descriptor = None
     try:
@@ -132,7 +135,10 @@ def _read_bounded_regular_file(
 
 
 def digest_regular_file(path):
-    source = Path(os.path.abspath(path)); flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    source = Path(os.path.abspath(path)); flags = (
+        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_NONBLOCK", 0)
+    )
     try:
         pathname_before = os.stat(source, follow_symlinks=False)
         if not stat.S_ISREG(pathname_before.st_mode): raise ValueError("client executable must be a regular file that is not a symlink")

@@ -1964,6 +1964,60 @@ class CapabilityContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "regular file"):
                     capabilities.digest_regular_file(fifo)
 
+    @unittest.skipUnless(
+        capabilities.HAS_DESCRIPTOR_RELATIVE_IO
+        and hasattr(os, "mkfifo")
+        and hasattr(os, "O_NONBLOCK"),
+        "descriptor-relative FIFO races require POSIX support",
+    )
+    def test_capability_file_to_fifo_swaps_do_not_block(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            operations = (
+                ("bounded", lambda path: capability_io._read_bounded_regular_file(path, allowed_root=root)),
+                ("executable", capabilities.digest_regular_file),
+            )
+            for label, operation in operations:
+                with self.subTest(operation=label):
+                    source = root / f"{label}.json"
+                    source.write_text("{}", encoding="utf-8")
+                    original = root / f"{label}-original.json"
+                    original_open = capability_io.os.open
+                    swapped = False
+                    failures: list[BaseException] = []
+
+                    def replace_file_with_fifo(
+                        path: object, flags: int, *args: object, **kwargs: object,
+                    ) -> int:
+                        nonlocal swapped
+                        descriptor_target = (
+                            path == source.name and kwargs.get("dir_fd") is not None
+                        )
+                        executable_target = (
+                            kwargs.get("dir_fd") is None and Path(path) == source
+                        )
+                        if (descriptor_target or executable_target) and not swapped:
+                            swapped = True
+                            source.rename(original)
+                            os.mkfifo(source)
+                        return original_open(path, flags, *args, **kwargs)
+
+                    def run_operation() -> None:
+                        try:
+                            operation(source)
+                        except BaseException as exc:  # pragma: no branch - asserted below
+                            failures.append(exc)
+
+                    with mock.patch.object(
+                        capability_io.os, "open", side_effect=replace_file_with_fifo,
+                    ):
+                        worker = threading.Thread(target=run_operation, daemon=True)
+                        worker.start()
+                        worker.join(timeout=2)
+                    self.assertFalse(worker.is_alive(), f"{label} FIFO swap blocked the reader")
+                    self.assertTrue(failures)
+                    self.assertIsInstance(failures[0], ValueError)
+
     @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_private_write_refuses_replaced_validated_parent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

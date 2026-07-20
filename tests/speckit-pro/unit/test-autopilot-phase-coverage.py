@@ -1000,6 +1000,50 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             self.assertEqual(report["changed_file_manifest_errors"], [])
             self.assertEqual(report["checkpoint_source_fingerprint_errors"], [])
 
+            phase_name = "Phase 7: Implement - Pending task decomposition"
+            state["phase_results"] = {
+                phase_name: {
+                    "status": "pending",
+                    "marker_id": "us1",
+                    "focused_tests": "stale result",
+                    "implementation_commit": "f" * 40,
+                }
+            }
+            checkpoint = state["pr_marker_plan"]["markers"][0]["implementation_checkpoint"]
+            checkpoint["status"] = "pending"
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", "autopilot-state.json"], check=True)
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "stale pending phase evidence",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "pr_marker_plan.markers[0] phase_results focused_tests does not match checkpoint evidence",
+                report["checkpoint_evidence_errors"],
+            )
+            self.assertIn(
+                "pr_marker_plan.markers[0] phase_results implementation_commit does not match checkpoint evidence",
+                report["checkpoint_evidence_errors"],
+            )
+            state.pop("phase_results")
+            checkpoint["status"] = "complete"
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", "autopilot-state.json"], check=True)
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "restore current phase evidence",
+                ],
+                check=True,
+            )
+
             tracked_path.write_text("changed after verification\n", encoding="utf-8")
             subprocess.run(["git", "-C", str(root), "add", "tracked.txt"], check=True)
             subprocess.run(
@@ -1790,6 +1834,23 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         self.assertEqual(report["status"], "input_error")
         self.assertEqual(report["code"], "input_error")
         self.assertIn("invalid state JSON", report["message"])
+
+    def test_duplicate_state_authority_keys_are_input_errors(self) -> None:
+        base = json.dumps(state_json())[:-1]
+        duplicates = (
+            ', "pr_marker_plan": {"schema_version": "pr-marker-plan.v2", '
+            '"schema_version": "pr-marker-plan.v1"}}',
+            ', "changed_file_manifest": "first.json", '
+            '"changed_file_manifest": "second.json"}',
+        )
+        for duplicate in duplicates:
+            with self.subTest(duplicate=duplicate):
+                exit_code, report = self.run_validator(
+                    workflow_text(), base + duplicate,
+                )
+                self.assertEqual(exit_code, 2)
+                self.assertEqual(report["status"], "input_error")
+                self.assertIn("duplicate JSON key", report["message"])
 
     def test_report_schema_allows_input_error_without_plan_fields(self) -> None:
         schema = json.loads(REPORT_SCHEMA.read_text(encoding="utf-8"))
