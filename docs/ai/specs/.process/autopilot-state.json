@@ -5,7 +5,7 @@
   "changed_file_manifest": "specs/g56r-002-capability-discovery-telemetry/.process/changed-file-manifest.json",
   "changed_file_manifest_base_commit": "48d72a5dfe1dd971bef6ddcdcd7a67752c9975ec",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-20T05:56:59Z",
+  "updated_at": "2026-07-20T05:58:23Z",
   "active_step": "Phase 7: Validate Restacked Synthetic Replay",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
@@ -376,7 +376,7 @@
       "marker_id": "us3",
       "reviewability": "aggregate size-only block at 5,168 source / 4,665 nonblank non-comment lines across 24 safely subdivided modules; maximum module size is 381 lines",
       "checkpoint": "1430eb0f6414064900044cd153b8adfb7ba5917c",
-      "checkpoint_evidence_commit": "6ef2fbf8b9c4adc9d683ab1c3be09495f75f150b",
+      "checkpoint_evidence_commit": "784003dc4500cd0a8a4492e2b38743d3dc8952ec",
       "completed_at": "2026-07-20T02:15:18Z"
     },
     "Phase 7: Implement - Integration and Polish": {
@@ -966,7 +966,7 @@
           "status": "pending",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3.json",
           "checkpoint_evidence_sha": "sha256:e8db500e0b0f55756c30e3da9f95d201c226497df7c0fcdc69b47975681e8f56",
-          "checkpoint_evidence_commit_sha": "6ef2fbf8b9c4adc9d683ab1c3be09495f75f150b",
+          "checkpoint_evidence_commit_sha": "784003dc4500cd0a8a4492e2b38743d3dc8952ec",
           "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
           "commit_sha": "1430eb0f6414064900044cd153b8adfb7ba5917c",
           "head_sha": "1430eb0f6414064900044cd153b8adfb7ba5917c",
