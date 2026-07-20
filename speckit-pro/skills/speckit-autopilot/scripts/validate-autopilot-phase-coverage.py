@@ -111,12 +111,15 @@ PHASE_VERIFICATION_GATE_ALIASES = {
 }
 PHASE_DIRECT_EVIDENCE_BINDINGS = {
     "baseline_commit": ("implementation_baseline_sha", "clean_collection_baseline_sha"),
+    "candidate_freeze_id": ("candidate_freeze_id",),
     "capability_fixture_digest": ("capability_fixture_digest",),
     "checkpoint": ("implementation_checkpoint_sha",),
     "implementation_commit": ("implementation_checkpoint_sha",),
     "replay_digest": ("replay_digest",),
     "superseded_checkpoint": ("superseded_checkpoint_sha",),
+    "telemetry_profile_id": ("telemetry_profile_id",),
     "treatment_fixture_digest": ("treatment_fixture_digest",),
+    "treatment_contract_digest": ("treatment_contract_digest",),
 }
 PHASE_RESULT_PROJECTION_FIELDS = frozenset({
     "completed_at",
@@ -294,6 +297,8 @@ def _visible_markdown(text: str) -> str:
             in_html_comment = True
             offset = comment_start + 4
         line = "".join(line_parts)
+        if re.match(r"^(?: {4}| {0,3}\t)", line):
+            continue
         if fence_character is None:
             opening_fence = re.match(r"^[ \t]{0,3}(`{3,}|~{3,})", line)
             if opening_fence:
@@ -848,16 +853,17 @@ def _phase_evidence_owner(
     phase_field: str,
     evidence: dict[str, Any],
 ) -> tuple[str | None, Any]:
-    direct_fields = PHASE_DIRECT_EVIDENCE_BINDINGS.get(phase_field)
-    if direct_fields is not None:
-        present = [field for field in direct_fields if field in evidence]
-        if len(present) != 1:
-            return ("multiple" if present else None), None
-        field = present[0]
-        return f"checkpoint_evidence.{field}", evidence[field]
-
-    if phase_field in evidence:
-        return f"checkpoint_evidence.{phase_field}", evidence[phase_field]
+    candidates: list[tuple[str, Any, bool]] = []
+    direct_fields = PHASE_DIRECT_EVIDENCE_BINDINGS.get(phase_field, ())
+    for field in direct_fields:
+        if field in evidence:
+            candidates.append(
+                (f"checkpoint_evidence.{field}", evidence[field], True)
+            )
+    if phase_field in evidence and phase_field not in direct_fields:
+        candidates.append(
+            (f"checkpoint_evidence.{phase_field}", evidence[phase_field], False)
+        )
 
     evidence_gate_ids = [
         gate_id
@@ -869,15 +875,19 @@ def _phase_evidence_owner(
         container = evidence.get(container_name)
         if not isinstance(container, dict):
             continue
-        present = [gate_id for gate_id in evidence_gate_ids if gate_id in container]
-        if len(present) > 1:
-            return "multiple", None
-        if present:
-            value = container[present[0]]
+        for gate_id in evidence_gate_ids:
+            if gate_id not in container:
+                continue
+            value = container[gate_id]
             if isinstance(value, dict):
                 value = value.get("evidence")
-            return f"checkpoint_evidence.{container_name}.{present[0]}", value
-    return None, None
+            candidates.append(
+                (f"checkpoint_evidence.{container_name}.{gate_id}", value, True)
+            )
+    if len(candidates) != 1:
+        return ("multiple" if candidates else None), None
+    owner, value, permitted = candidates[0]
+    return (owner, value) if permitted else (None, None)
 
 
 def _git_commit_exists(repo_root: Path, commit_sha: object) -> bool:
@@ -1838,6 +1848,26 @@ def validate_projection_integrity(
                         checkpoint_evidence_errors.append(
                             f"pr_marker_plan.markers[{index}] checkpoint evidence status does not match checkpoint status"
                         )
+                    claimed_commit = checkpoint.get("commit_sha")
+                    if claimed_commit != evidence.get("implementation_checkpoint_sha"):
+                        checkpoint_evidence_errors.append(
+                            f"pr_marker_plan.markers[{index}] checkpoint commit_sha does not match checkpoint evidence implementation_checkpoint_sha"
+                        )
+                    if repo_root is not None:
+                        if not _git_commit_exists(repo_root, claimed_commit):
+                            checkpoint_evidence_errors.append(
+                                f"pr_marker_plan.markers[{index}] checkpoint commit_sha is not an existing commit"
+                            )
+                        elif not (
+                            isinstance(expected_head_commit, str)
+                            and re.fullmatch(r"[0-9a-f]{40}", expected_head_commit)
+                            and _git_commit_is_ancestor(
+                                repo_root, claimed_commit, expected_head_commit,
+                            )
+                        ):
+                            checkpoint_evidence_errors.append(
+                                f"pr_marker_plan.markers[{index}] checkpoint commit_sha is not an ancestor of the authorized PR head"
+                            )
                     for phase_name, phase_result in phases_by_marker.get(marker_id, []):
                         for phase_field, phase_value in phase_result.items():
                             if phase_field in PHASE_RESULT_PROJECTION_FIELDS:

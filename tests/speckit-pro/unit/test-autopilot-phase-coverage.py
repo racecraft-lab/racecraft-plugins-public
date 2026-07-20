@@ -310,10 +310,17 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         self.assertEqual(report["missing_state_post_items"], [])
 
     def test_hidden_full_workflow_does_not_satisfy_visible_contract(self) -> None:
+        complete_workflow = workflow_text()
         hidden_workflows = {
-            "fenced": f"# Wrapper\n\n````markdown\n{workflow_text()}\n````\n",
-            "closed_comment": f"# Wrapper\n\n<!--\n{workflow_text()}\n-->\n",
-            "unclosed_comment": f"# Wrapper\n\n<!--\n{workflow_text()}",
+            "fenced": f"# Wrapper\n\n````markdown\n{complete_workflow}\n````\n",
+            "closed_comment": f"# Wrapper\n\n<!--\n{complete_workflow}\n-->\n",
+            "unclosed_comment": f"# Wrapper\n\n<!--\n{complete_workflow}",
+            "four_space_indented": "# Wrapper\n\n" + "\n".join(
+                f"    {line}" for line in complete_workflow.splitlines()
+            ),
+            "tab_indented": "# Wrapper\n\n" + "\n".join(
+                f"\t{line}" for line in complete_workflow.splitlines()
+            ),
         }
         for hidden_kind, workflow in hidden_workflows.items():
             with self.subTest(hidden_kind=hidden_kind):
@@ -1400,6 +1407,126 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                     "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
                     "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
                     "commit", "-qm", "bind valid pending phase evidence",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 0, report)
+
+            checkpoint["commit_sha"] = base_commit
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", "autopilot-state.json"], check=True)
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "mismatch pending checkpoint commit",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "pr_marker_plan.markers[0] checkpoint commit_sha does not match checkpoint evidence implementation_checkpoint_sha",
+                report["checkpoint_evidence_errors"],
+            )
+
+            checkpoint["commit_sha"] = "f" * 40
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", "autopilot-state.json"], check=True)
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "nonexistent pending checkpoint commit",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "pr_marker_plan.markers[0] checkpoint commit_sha is not an existing commit",
+                report["checkpoint_evidence_errors"],
+            )
+
+            unrelated_commit = subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit-tree", "HEAD^{tree}", "-m", "unrelated checkpoint commit",
+                ],
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout.strip()
+            checkpoint["commit_sha"] = unrelated_commit
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", "autopilot-state.json"], check=True)
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "unrelated pending checkpoint commit",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "pr_marker_plan.markers[0] checkpoint commit_sha is not an ancestor of the authorized PR head",
+                report["checkpoint_evidence_errors"],
+            )
+
+            checkpoint["commit_sha"] = implementation_commit
+            top_level_shadow = json.loads(json.dumps(pending_evidence))
+            top_level_shadow["full_suite"] = "all pass"
+            evidence_path.write_text(json.dumps(top_level_shadow), encoding="utf-8")
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(root), "add", str(evidence_path), "autopilot-state.json"],
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "shadow pending verification owner",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                f"pr_marker_plan.markers[0] phase_results[{phase_name}] full_suite has multiple checkpoint evidence owners",
+                report["checkpoint_evidence_errors"],
+            )
+
+            duplicate_container = json.loads(json.dumps(pending_evidence))
+            duplicate_container["verification_details"] = {"full_suite": "all pass"}
+            evidence_path.write_text(json.dumps(duplicate_container), encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", str(evidence_path)], check=True)
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "duplicate pending verification containers",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                f"pr_marker_plan.markers[0] phase_results[{phase_name}] full_suite has multiple checkpoint evidence owners",
+                report["checkpoint_evidence_errors"],
+            )
+
+            evidence_path.write_text(json.dumps(pending_evidence), encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", str(evidence_path)], check=True)
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "restore unique pending evidence owners",
                 ],
                 check=True,
             )
