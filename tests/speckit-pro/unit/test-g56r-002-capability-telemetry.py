@@ -540,6 +540,10 @@ class CapabilityContractTests(unittest.TestCase):
         )
         self.assertNotIn("_validate_treatment_bundle", vars(treatment))
         self.assertNotIn("__treatment_internal_modules__", vars(treatment))
+        self.assertIn(
+            "not an in-process security boundary",
+            " ".join(treatment.__doc__.split()),
+        )
         self.assertTrue(callable(capabilities.main))
         self.assertTrue(callable(treatment.main))
 

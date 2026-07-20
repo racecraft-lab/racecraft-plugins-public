@@ -245,6 +245,11 @@ qualification as runtime authority. This offline repository command is
 supported on macOS, Linux, and Windows. Operator-only raw-evidence commands
 remain POSIX-only.
 
+`treatment_trace_schema.py` is a compatibility and namespace-hygiene facade,
+not an in-process security boundary. Run untrusted Python callers in a separate
+process; a caller that can mutate module globals can also invalidate in-process
+assumptions before invoking any Python validation API.
+
 ## 8. Repository Verification
 
 ```sh

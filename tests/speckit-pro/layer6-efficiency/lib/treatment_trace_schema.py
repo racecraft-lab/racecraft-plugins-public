@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Public treatment validation and replay API for G56R-002."""
+"""Public treatment validation and replay API for G56R-002.
+
+This compatibility facade provides namespace hygiene, not an in-process
+security boundary. Run callers that can mutate Python module state in a
+separate process before relying on validation or replay results.
+"""
 
 from __future__ import annotations
 
