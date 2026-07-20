@@ -874,8 +874,8 @@ For every task:
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
 | 2 - Treatment contracts | Complete | 10 | 51/51 focused tests, 2821/2821 full suite, Windows-safe offline replay, and exact-head independent review returned `NO FINDINGS` |
-| 3 - Synthetic replay | In Progress | 5 | Verification-authority remediation passes 73/73 telemetry tests, 28/28 validator tests, and the 2843/2843 full suite; exact-head re-review is pending |
-| Polish and validation | In Progress | 9 | T031-T039 remain implemented; reference and generated artifacts are current; the 80/80 manifest and live release-title gates pass |
+| 3 - Synthetic replay | In Progress | 5 | Review-authority remediation passes 75/75 telemetry tests, 28/28 validator tests, 71/71 contract tests, and the 2844/2844 full suite; exact-head re-review is pending |
+| Polish and validation | In Progress | 9 | T031-T039 remain implemented; reference and generated artifacts are current; the 92/92 manifest and live release-title gates pass |
 
 ### Capability Checkpoint Evidence
 
@@ -945,7 +945,7 @@ For every task:
 - Replay output: `sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda` with byte-identical two-pass verification.
 - Cases: eight exact success, null, unavailable, misdelivery, approved reroute,
   unapproved reroute, discovery-loss, and surface-disagreement classes.
-- Verification: 73/73 focused tests, 28/28 validator tests, and the 2843/2843
+- Verification: 75/75 focused tests, 28/28 validator tests, 71/71 contract tests, and the 2844/2844
   full suite pass. Generated references and byte-identical replay remain current.
 - Reviewability: aggregate size-only `block` at 5,168 source / 4,665 nonblank,
   non-comment lines across 24 safely subdivided modules; the largest module is
@@ -983,7 +983,7 @@ For every task:
   change implementation or verification inputs.
 - Folded polish: T031-T039 are complete. The final reviewability, title, and
   Historical 78-file base-to-head manifest gates passed before restack; the
-  current 80/80 manifest passes exact current-head validation.
+  current 92/92 manifest passes exact current-head validation.
 
 ## PR Marker Plan Evidence
 

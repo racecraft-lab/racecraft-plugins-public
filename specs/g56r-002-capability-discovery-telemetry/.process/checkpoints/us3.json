@@ -14,9 +14,9 @@
   "treatment_fixture_digest": "sha256:3983dc1d4efe42542ffe0cb72830c970d24cecf490ddfe0c93e24be749ffaa53",
   "replay_digest": "sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda",
   "verification": {
-    "focused_tests": "73/73 pass; validator 28/28 pass",
+    "focused_tests": "75/75 pass; validator 28/28 pass; contract parity 71/71 pass",
     "privacy_scan": "10/10 pass",
-    "full_suite": "2843/2843 pass",
+    "full_suite": "2844/2844 pass",
     "docs_reference_check": "pass",
     "two_pass_byte_equality": "pass",
     "raw_fixture_digest_validation": "pass",
@@ -24,7 +24,7 @@
     "eight_class_semantic_binding": "pass",
     "independent_critical_high_review": "exact-range-review-905F43 verification-authority findings remediated; exact-head re-review pending",
     "release_readiness_title_gate": "pass",
-    "changed_file_manifest": "80/80 exact"
+    "changed_file_manifest": "92/92 exact"
   },
   "source_fingerprint_contract": "marker-task-lines.v2",
   "source_fingerprint_status": "current_marker_scope",
@@ -33,5 +33,5 @@
   "current_tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
   "checkpoint_marker_tasks_sha": "sha256:937ba1ff7f1cc7a8a8886de399f16affa63059098e936b7fa8b5ba3007c43072",
   "current_marker_tasks_sha": "sha256:937ba1ff7f1cc7a8a8886de399f16affa63059098e936b7fa8b5ba3007c43072",
-  "updated_at": "2026-07-20T06:41:46Z"
+  "updated_at": "2026-07-20T07:18:16Z"
 }

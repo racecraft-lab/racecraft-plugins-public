@@ -21,7 +21,7 @@
   },
   "primary_surface": "harness/adapter",
   "correctness_checks": {
-    "focused_tests": "73/73 pass; validator 28/28 pass after verification-authority remediation",
+    "focused_tests": "75/75 pass; validator 28/28 pass; contract parity 71/71 pass after review-authority remediation",
     "two_pass_byte_equality": "pass",
     "raw_fixture_digest_validation": "pass",
     "canonical_fixture_serialization": "pass",
@@ -32,7 +32,7 @@
     "declared_claim_exactness": "pass",
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass after restack",
-    "full_suite": "2843/2843 pass after verification-authority remediation",
+    "full_suite": "2844/2844 pass after review-authority remediation",
     "independent_review": "exact-range-review-905F43 verification-authority findings remediated; exact-head re-review pending"
   },
   "decomposition": {
