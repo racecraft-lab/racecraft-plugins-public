@@ -244,10 +244,10 @@ def _string_list(value: object) -> list[str] | None:
     return value
 
 
-def _marker_tasks_sha(tasks_path: Path, task_ids: set[str]) -> str | None:
+def _marker_tasks_sha_text(tasks_text: str, task_ids: set[str]) -> str | None:
     selected: list[str] = []
     found: set[str] = set()
-    for line in read_text(tasks_path).splitlines():
+    for line in tasks_text.splitlines():
         match = TASK_LINE_RE.match(line)
         if match and match.group(1) in task_ids:
             selected.append(line)
@@ -255,6 +255,22 @@ def _marker_tasks_sha(tasks_path: Path, task_ids: set[str]) -> str | None:
     if found != task_ids:
         return None
     return _sha256_bytes(("\n".join(selected) + "\n").encode("utf-8"))
+
+
+def _marker_tasks_sha(tasks_path: Path, task_ids: set[str]) -> str | None:
+    return _marker_tasks_sha_text(read_text(tasks_path), task_ids)
+
+
+def _git_file_at_commit(repo_root: Path, commit_sha: object, relative_path: str) -> bytes | None:
+    if not isinstance(commit_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", commit_sha):
+        return None
+    completed = subprocess.run(
+        ["git", "-C", str(repo_root), "show", f"{commit_sha}:{relative_path}"],
+        capture_output=True,
+        shell=False,
+        check=False,
+    )
+    return completed.stdout if completed.returncode == 0 else None
 
 
 def _load_json_object(path: Path) -> dict[str, Any] | None:
@@ -284,6 +300,7 @@ def validate_changed_file_manifest(state: dict[str, Any], state_path: Path) -> d
         return {"changed_file_manifest_errors": ["changed-file manifest files must be an array"]}
 
     declared: dict[str, str] = {}
+    expected_owners: dict[str, set[str]] = {}
     structural_errors: list[str] = []
     for index, entry in enumerate(entries):
         if not isinstance(entry, dict):
@@ -297,14 +314,18 @@ def validate_changed_file_manifest(state: dict[str, Any], state_path: Path) -> d
         if operation not in {"NEW", "MODIFIED", "DELETED", "RENAMED"}:
             structural_errors.append(f"files[{index}].operation is invalid")
             continue
-        if not isinstance(entry.get("category"), str) or not entry["category"]:
-            structural_errors.append(f"files[{index}].category is required")
-        if not isinstance(entry.get("provenance"), str) or not entry["provenance"]:
-            structural_errors.append(f"files[{index}].provenance is required")
+        if entry.get("category") not in {
+            "generated_artifact", "implementation", "plugin_source", "process", "research", "test",
+        }:
+            structural_errors.append(f"files[{index}].category is invalid")
+        if entry.get("provenance") not in {"authored", "generated"}:
+            structural_errors.append(f"files[{index}].provenance is invalid")
         marker_ids = entry.get("marker_ids")
-        if _string_list(marker_ids) is None:
-            structural_errors.append(f"files[{index}].marker_ids must be a string array")
+        marker_values = _string_list(marker_ids)
+        if not marker_values or len(set(marker_values)) != len(marker_values):
+            structural_errors.append(f"files[{index}].marker_ids must be a non-empty unique string array")
         declared[path] = operation
+        expected_owners[path] = set(marker_values or ())
     if structural_errors:
         return {"changed_file_manifest_errors": structural_errors}
 
@@ -331,6 +352,51 @@ def validate_changed_file_manifest(state: dict[str, Any], state_path: Path) -> d
     errors = [
         f"declared changed-file manifest does not match {base_commit}..HEAD"
     ] if declared != observed else []
+
+    marker_plan = state.get("pr_marker_plan")
+    markers = marker_plan.get("markers") if isinstance(marker_plan, dict) else None
+    if not isinstance(markers, list):
+        errors.append("changed-file manifest requires pr_marker_plan.markers")
+        return {"changed_file_manifest_errors": errors}
+    marker_operations: dict[str, str] = {}
+    actual_owners: dict[str, set[str]] = {}
+    for marker_index, marker in enumerate(markers):
+        if not isinstance(marker, dict) or not isinstance(marker.get("id"), str):
+            errors.append(f"pr_marker_plan.markers[{marker_index}] is invalid")
+            continue
+        marker_id = marker["id"]
+        marker_files = marker.get("declared_files")
+        if not isinstance(marker_files, list):
+            errors.append(f"pr_marker_plan.markers[{marker_index}].declared_files must be an array")
+            continue
+        seen_marker_paths: set[str] = set()
+        for file_index, record in enumerate(marker_files):
+            if not isinstance(record, dict):
+                errors.append(
+                    f"pr_marker_plan.markers[{marker_index}].declared_files[{file_index}] must be an object"
+                )
+                continue
+            path = record.get("path")
+            operation = record.get("operation")
+            if not isinstance(path, str) or not path or path in seen_marker_paths:
+                errors.append(
+                    f"pr_marker_plan.markers[{marker_index}].declared_files[{file_index}].path is invalid or duplicated"
+                )
+                continue
+            seen_marker_paths.add(path)
+            if operation != declared.get(path):
+                errors.append(
+                    f"pr_marker_plan marker {marker_id} operation for {path} does not match changed-file manifest"
+                )
+            if path in marker_operations and marker_operations[path] != operation:
+                errors.append(f"pr_marker_plan declared operation conflict for {path}")
+            marker_operations[path] = operation
+            actual_owners.setdefault(path, set()).add(marker_id)
+    if set(marker_operations) != set(declared):
+        errors.append("pr_marker_plan declared_files union does not match changed-file manifest")
+    for path, owners in expected_owners.items():
+        if actual_owners.get(path, set()) != owners:
+            errors.append(f"pr_marker_plan marker ownership for {path} does not match changed-file manifest")
     return {"changed_file_manifest_errors": errors}
 
 
@@ -345,6 +411,7 @@ def validate_projection_integrity(
     checkpoint_source_fingerprint_errors: list[str] = []
     checkpoint_file_errors: list[str] = []
     emission_mapping_errors: list[str] = []
+    marker_plan_status_errors: list[str] = []
     repo_root = _repository_root(state_path)
     feature_dir = state.get("feature_dir")
     tasks_path = _repo_file(repo_root, f"{feature_dir}/tasks.md") if repo_root and isinstance(feature_dir, str) else None
@@ -425,10 +492,32 @@ def validate_projection_integrity(
                     marker_task_values = _string_list(raw_marker.get("task_ids"))
                     marker_task_ids = set(marker_task_values or ())
                     evidence_task_values = _string_list(evidence.get("task_ids"))
-                    expected_marker_sha = (
+                    expected_current_marker_sha = (
                         _marker_tasks_sha(tasks_path, marker_task_ids)
                         if marker_task_values is not None
                         else None
+                    )
+                    feature_tasks_path = f"{feature_dir}/tasks.md"
+                    checkpoint_tasks_bytes = (
+                        _git_file_at_commit(
+                            repo_root,
+                            evidence.get("implementation_checkpoint_sha"),
+                            feature_tasks_path,
+                        )
+                        if repo_root and isinstance(feature_dir, str)
+                        else None
+                    )
+                    try:
+                        checkpoint_tasks_text = checkpoint_tasks_bytes.decode("utf-8") if checkpoint_tasks_bytes else None
+                    except UnicodeDecodeError:
+                        checkpoint_tasks_text = None
+                    expected_checkpoint_marker_sha = (
+                        _marker_tasks_sha_text(checkpoint_tasks_text, marker_task_ids)
+                        if checkpoint_tasks_text is not None and marker_task_values is not None
+                        else None
+                    )
+                    checkpoint_tasks_sha = (
+                        _sha256_bytes(checkpoint_tasks_bytes) if checkpoint_tasks_bytes is not None else None
                     )
                     checks = {
                         "marker_id": evidence.get("marker_id") == marker_id,
@@ -437,10 +526,21 @@ def validate_projection_integrity(
                             and evidence_task_values is not None
                             and set(evidence_task_values) == marker_task_ids
                         ),
-                        "source_fingerprint_contract": evidence.get("source_fingerprint_contract") == "marker-task-lines.v1",
+                        "source_fingerprint_contract": evidence.get("source_fingerprint_contract") == "marker-task-lines.v2",
                         "source_fingerprint_status": evidence.get("source_fingerprint_status") == "current_marker_scope",
+                        "tasks_sha_scope": evidence.get("tasks_sha_scope") == "checkpoint_time_whole_file",
+                        "tasks_sha": evidence.get("tasks_sha") == checkpoint_tasks_sha,
                         "current_tasks_sha": evidence.get("current_tasks_sha") == current_tasks_sha,
-                        "marker_tasks_sha": evidence.get("marker_tasks_sha") == expected_marker_sha,
+                        "checkpoint_marker_tasks_sha": (
+                            evidence.get("checkpoint_marker_tasks_sha") == expected_checkpoint_marker_sha
+                        ),
+                        "current_marker_tasks_sha": (
+                            evidence.get("current_marker_tasks_sha") == expected_current_marker_sha
+                        ),
+                        "marker_scope_unchanged": (
+                            expected_checkpoint_marker_sha is not None
+                            and expected_checkpoint_marker_sha == expected_current_marker_sha
+                        ),
                     }
                     checkpoint_source_fingerprint_errors.extend(
                         f"pr_marker_plan.markers[{index}] checkpoint {field}"
@@ -474,18 +574,34 @@ def validate_projection_integrity(
                         emission_mapping_errors.append(
                             f"pr_marker_plan.markers[{index}].emission_mapping.{required}"
                         )
-                if emission_status in {"marker_split", "emitted"}:
+                if emission_status in {"marker_split", "emitted", "hazard_collapsed"}:
                     if not isinstance(checkpoint, dict) or checkpoint.get("status") != "complete":
                         emission_mapping_errors.append(
                             f"pr_marker_plan.markers[{index}] emission requires a complete checkpoint"
                         )
 
-        if marker_plan.get("status") == "emitted":
+        status_constraints = {
+            "planned": ({"pending"}, {"pending"}),
+            "checkpointing": ({"pending", "complete"}, {"pending"}),
+            "emission_ready": ({"complete"}, {"pending", "marker_split"}),
+            "emitted": ({"complete"}, {"emitted"}),
+            "collapsed": ({"complete"}, {"hazard_collapsed"}),
+        }
+        plan_status = marker_plan.get("status")
+        if plan_status in status_constraints:
+            allowed_checkpoints, allowed_emissions = status_constraints[plan_status]
             for index, raw_marker in enumerate(markers):
+                checkpoint = raw_marker.get("implementation_checkpoint") if isinstance(raw_marker, dict) else None
                 emission = raw_marker.get("emission_mapping") if isinstance(raw_marker, dict) else None
-                if not isinstance(emission, dict) or emission.get("status") != "emitted":
-                    emission_mapping_errors.append(
-                        f"pr_marker_plan.status emitted requires marker {index} terminal emitted mapping"
+                checkpoint_status = checkpoint.get("status") if isinstance(checkpoint, dict) else None
+                emission_status = emission.get("status") if isinstance(emission, dict) else None
+                if checkpoint_status not in allowed_checkpoints:
+                    marker_plan_status_errors.append(
+                        f"pr_marker_plan.status {plan_status} rejects marker {index} checkpoint {checkpoint_status!r}"
+                    )
+                if emission_status not in allowed_emissions:
+                    marker_plan_status_errors.append(
+                        f"pr_marker_plan.status {plan_status} rejects marker {index} emission {emission_status!r}"
                     )
 
     return {
@@ -495,6 +611,7 @@ def validate_projection_integrity(
         "checkpoint_source_fingerprint_errors": checkpoint_source_fingerprint_errors,
         "checkpoint_file_errors": checkpoint_file_errors,
         "emission_mapping_errors": emission_mapping_errors,
+        "marker_plan_status_errors": marker_plan_status_errors,
     }
 
 

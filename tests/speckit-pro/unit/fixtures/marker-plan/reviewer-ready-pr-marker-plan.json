@@ -4,11 +4,11 @@
   "feature_id": "prsg-012-reviewer-ready-pr-packet-contract",
   "status": "emission_ready",
   "source_fingerprint": {
-    "feature_spec_sha": "2868f175a1317a76337610bc3d815dab6ccb3e11ae5ac7eb2441a7118d57ec63",
-    "plan_declared_scope_sha": "555c366e659bc1723e283d2b4d3c42a415950b0fae1b3639ae30f26bdc2f0056",
-    "tasks_sha": "51dde76432d2326bff72d6bbd86ce1451ebf39a35bd1ba2bc42f6f1047a5c9d7",
-    "reviewability_sha": "f440668daa09459968775005ef51c6ef32cddf58b37a335995edc99c035e8768",
-    "hazard_route_sha": "57eb0ef319cb1075f5cd033a12944e52fa59edaace2562f3692f4919b8ca9f23"
+    "feature_spec_sha": "sha256:2868f175a1317a76337610bc3d815dab6ccb3e11ae5ac7eb2441a7118d57ec63",
+    "plan_declared_scope_sha": "sha256:555c366e659bc1723e283d2b4d3c42a415950b0fae1b3639ae30f26bdc2f0056",
+    "tasks_sha": "sha256:51dde76432d2326bff72d6bbd86ce1451ebf39a35bd1ba2bc42f6f1047a5c9d7",
+    "reviewability_sha": "sha256:f440668daa09459968775005ef51c6ef32cddf58b37a335995edc99c035e8768",
+    "hazard_route_sha": "sha256:57eb0ef319cb1075f5cd033a12944e52fa59edaace2562f3692f4919b8ca9f23"
   },
   "markers": [
     {

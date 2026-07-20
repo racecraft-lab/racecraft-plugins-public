@@ -63,7 +63,43 @@
       "if": {
         "properties": {
           "status": {
-            "const": "emitted"
+            "const": "planned"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "markers": {
+            "items": {
+              "properties": {
+                "implementation_checkpoint": {
+                  "properties": {
+                    "status": {
+                      "const": "pending"
+                    }
+                  }
+                },
+                "emission_mapping": {
+                  "properties": {
+                    "status": {
+                      "const": "pending"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "checkpointing"
           }
         },
         "required": [
@@ -78,7 +114,118 @@
                 "emission_mapping": {
                   "properties": {
                     "status": {
+                      "const": "pending"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "emission_ready"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "markers": {
+            "items": {
+              "properties": {
+                "implementation_checkpoint": {
+                  "properties": {
+                    "status": {
+                      "const": "complete"
+                    }
+                  }
+                },
+                "emission_mapping": {
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "pending",
+                        "marker_split"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "emitted"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "markers": {
+            "items": {
+              "properties": {
+                "implementation_checkpoint": {
+                  "properties": {
+                    "status": {
+                      "const": "complete"
+                    }
+                  }
+                },
+                "emission_mapping": {
+                  "properties": {
+                    "status": {
                       "const": "emitted"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "collapsed"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "markers": {
+            "items": {
+              "properties": {
+                "implementation_checkpoint": {
+                  "properties": {
+                    "status": {
+                      "const": "complete"
+                    }
+                  }
+                },
+                "emission_mapping": {
+                  "properties": {
+                    "status": {
+                      "const": "hazard_collapsed"
                     }
                   }
                 }
@@ -103,23 +250,23 @@
       "properties": {
         "feature_spec_sha": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^sha256:[0-9a-f]{64}$"
         },
         "plan_declared_scope_sha": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^sha256:[0-9a-f]{64}$"
         },
         "tasks_sha": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^sha256:[0-9a-f]{64}$"
         },
         "reviewability_sha": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^sha256:[0-9a-f]{64}$"
         },
         "hazard_route_sha": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^sha256:[0-9a-f]{64}$"
         }
       }
     },
@@ -240,7 +387,8 @@
                   "status": {
                     "enum": [
                       "marker_split",
-                      "emitted"
+                      "emitted",
+                      "hazard_collapsed"
                     ]
                   }
                 },
@@ -337,7 +485,8 @@
           "enum": [
             "NEW",
             "MODIFIED",
-            "DELETED"
+            "DELETED",
+            "RENAMED"
           ]
         },
         "path": {
@@ -376,10 +525,12 @@
           "type": "string"
         },
         "head_sha": {
-          "type": "string"
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
         },
         "commit_sha": {
-          "type": "string"
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
         }
       }
     },

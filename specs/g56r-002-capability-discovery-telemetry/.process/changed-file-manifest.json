@@ -145,6 +145,13 @@
       "marker_ids": ["us3"]
     },
     {
+      "path": "specs/g56r-002-capability-discovery-telemetry/contracts/marker-checkpoint.schema.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
       "path": "specs/g56r-002-capability-discovery-telemetry/plan.md",
       "operation": "MODIFIED",
       "category": "process",
@@ -201,7 +208,49 @@
       "marker_ids": ["us3"]
     },
     {
+      "path": "tests/speckit-pro/unit/fixtures/marker-plan/current-source-fingerprint.json",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/marker-plan/fingerprint-mismatch-marker-plan.json",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/marker-plan/placeholder-pr-marker-plan.json",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
       "path": "tests/speckit-pro/unit/fixtures/marker-plan/reviewer-ready-pr-marker-plan.json",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/marker-plan/stale-marker-plan.json",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/marker-plan/stale-pr-marker-plan.json",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/marker-plan/stale-state/state.json",
       "operation": "MODIFIED",
       "category": "test",
       "provenance": "authored",

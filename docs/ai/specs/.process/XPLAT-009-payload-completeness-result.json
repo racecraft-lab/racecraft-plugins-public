@@ -267,11 +267,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 12712,
+            "byte_count": 16203,
             "kind": "skill",
             "path": "skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
             "required": true,
-            "sha256": "1123aaed5f9b58272c2fb86aa3af34d89866aeaaa77847a4d717dc46a98cb210",
+            "sha256": "fe666e2d5c94743af0809d5bd1464c3d265e993f1a296b1f8fd272d29e9e11d1",
             "source_path": "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
             "transform": "none"
           },
@@ -474,11 +474,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 23059,
+            "byte_count": 29465,
             "kind": "skill",
             "path": "skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
             "required": true,
-            "sha256": "c3798be287d74be095cd639167a52e43735dc84bbc9c16b56331461fcaec4323",
+            "sha256": "821c7133117fdc879f5dce2435a74ab9935e32b7a341bac5e15a1198a640e5e7",
             "source_path": "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
             "transform": "none"
           },
@@ -1124,11 +1124,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 12712,
+            "byte_count": 16203,
             "kind": "skill",
             "path": "skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
             "required": true,
-            "sha256": "1123aaed5f9b58272c2fb86aa3af34d89866aeaaa77847a4d717dc46a98cb210",
+            "sha256": "fe666e2d5c94743af0809d5bd1464c3d265e993f1a296b1f8fd272d29e9e11d1",
             "source_path": "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
             "transform": "none"
           },
@@ -1331,11 +1331,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 23059,
+            "byte_count": 29465,
             "kind": "skill",
             "path": "skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
             "required": true,
-            "sha256": "c3798be287d74be095cd639167a52e43735dc84bbc9c16b56331461fcaec4323",
+            "sha256": "821c7133117fdc879f5dce2435a74ab9935e32b7a341bac5e15a1198a640e5e7",
             "source_path": "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
             "transform": "none"
           },
@@ -1746,7 +1746,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "f36e90eb28c76d1ecbd37c4c5d5e6d06f4b84b644dea5982df81aed855712d0a",
+        "file_tree_hash": "a02e1d0b9e4d7ed65d1824d043bc410fba2a86c562e538148e1577aaa16a5728",
         "generated_root": "dist/claude/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
@@ -2032,11 +2032,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 12712,
+            "byte_count": 16203,
             "kind": "skill",
             "path": "skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
             "required": true,
-            "sha256": "1123aaed5f9b58272c2fb86aa3af34d89866aeaaa77847a4d717dc46a98cb210",
+            "sha256": "fe666e2d5c94743af0809d5bd1464c3d265e993f1a296b1f8fd272d29e9e11d1",
             "source_path": "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
             "transform": "none"
           },
@@ -2293,11 +2293,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 23059,
+            "byte_count": 29465,
             "kind": "skill",
             "path": "skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
             "required": true,
-            "sha256": "c3798be287d74be095cd639167a52e43735dc84bbc9c16b56331461fcaec4323",
+            "sha256": "821c7133117fdc879f5dce2435a74ab9935e32b7a341bac5e15a1198a640e5e7",
             "source_path": "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
             "transform": "none"
           },
@@ -3042,11 +3042,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 12712,
+            "byte_count": 16203,
             "kind": "skill",
             "path": "skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
             "required": true,
-            "sha256": "1123aaed5f9b58272c2fb86aa3af34d89866aeaaa77847a4d717dc46a98cb210",
+            "sha256": "fe666e2d5c94743af0809d5bd1464c3d265e993f1a296b1f8fd272d29e9e11d1",
             "source_path": "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
             "transform": "none"
           },
@@ -3303,11 +3303,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 23059,
+            "byte_count": 29465,
             "kind": "skill",
             "path": "skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
             "required": true,
-            "sha256": "c3798be287d74be095cd639167a52e43735dc84bbc9c16b56331461fcaec4323",
+            "sha256": "821c7133117fdc879f5dce2435a74ab9935e32b7a341bac5e15a1198a640e5e7",
             "source_path": "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
             "transform": "none"
           },
@@ -3781,7 +3781,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "201cc507c165d395eec2cb403dc8d43d6720f95ac47f60c19737014754fa8f7b",
+        "file_tree_hash": "3626c0ed9dd2bc9ceedcaee683459d015e849455118e47bd5ea8810e463cc2a3",
         "generated_root": "dist/codex/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],

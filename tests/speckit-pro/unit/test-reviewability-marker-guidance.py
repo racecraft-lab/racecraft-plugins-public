@@ -45,6 +45,15 @@ MARKER_PLAN_SCHEMA_PATHS = (
     REPO_ROOT
     / "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
 )
+MARKER_CHECKPOINT_SCHEMA_PATH = (
+    REPO_ROOT
+    / "specs/g56r-002-capability-discovery-telemetry/contracts/marker-checkpoint.schema.json"
+)
+MARKER_CHECKPOINT_PATHS = tuple(
+    REPO_ROOT
+    / f"specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us{index}.json"
+    for index in range(1, 4)
+)
 
 
 CHECKS = (
@@ -256,11 +265,28 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
             marker["allOf"][1]["then"]["properties"]["reviewability"]["required"],
             ["head_sha"],
         )
+        status_rules = {
+            branch["if"]["properties"]["status"]["const"]: branch["then"]["properties"]["markers"]["items"]
+            ["properties"]
+            for branch in schema["allOf"]
+        }
+        self.assertEqual(set(status_rules), {"planned", "checkpointing", "emission_ready", "emitted", "collapsed"})
+        self.assertEqual(status_rules["planned"]["implementation_checkpoint"]["properties"]["status"], {"const": "pending"})
+        self.assertEqual(status_rules["planned"]["emission_mapping"]["properties"]["status"], {"const": "pending"})
+        self.assertEqual(status_rules["checkpointing"]["emission_mapping"]["properties"]["status"], {"const": "pending"})
+        self.assertEqual(status_rules["emission_ready"]["implementation_checkpoint"]["properties"]["status"], {"const": "complete"})
         self.assertEqual(
-            schema["allOf"][0]["then"]["properties"]["markers"]["items"]["properties"]
-            ["emission_mapping"]["properties"]["status"],
-            {"const": "emitted"},
+            status_rules["emission_ready"]["emission_mapping"]["properties"]["status"],
+            {"enum": ["pending", "marker_split"]},
         )
+        self.assertEqual(status_rules["emitted"]["emission_mapping"]["properties"]["status"], {"const": "emitted"})
+        self.assertEqual(
+            status_rules["collapsed"]["emission_mapping"]["properties"]["status"],
+            {"const": "hazard_collapsed"},
+        )
+        for field_schema in schema["$defs"]["source_fingerprint"]["properties"].values():
+            self.assertEqual(field_schema["pattern"], r"^sha256:[0-9a-f]{64}$")
+        self.assertEqual(schema["$defs"]["reviewability"]["properties"]["head_sha"]["pattern"], r"^[0-9a-f]{40}$")
         self.assertEqual(
             emission["allOf"][0]["then"]["required"],
             ["packet_path"],
@@ -269,6 +295,32 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
             emission["allOf"][1]["then"]["required"],
             ["packet_path", "pr_number", "pr_url"],
         )
+
+    def test_marker_checkpoint_schema_binds_checkpoint_and_current_marker_digests(self) -> None:
+        schema = json.loads(MARKER_CHECKPOINT_SCHEMA_PATH.read_text(encoding="utf-8"))
+        required = set(schema["required"])
+        self.assertTrue(
+            {
+                "implementation_checkpoint_sha",
+                "source_fingerprint_contract",
+                "tasks_sha",
+                "current_tasks_sha",
+                "checkpoint_marker_tasks_sha",
+                "current_marker_tasks_sha",
+            }.issubset(required)
+        )
+        contract = schema["properties"]["source_fingerprint_contract"]
+        self.assertEqual(contract["const"], "marker-task-lines.v2")
+        self.assertIn("preserve file order and line bytes", contract["description"])
+        self.assertIn("append one final LF", contract["description"])
+        for path in MARKER_CHECKPOINT_PATHS:
+            checkpoint = json.loads(path.read_text(encoding="utf-8"))
+            self.assertTrue(required.issubset(checkpoint))
+            self.assertEqual(checkpoint["source_fingerprint_contract"], "marker-task-lines.v2")
+            self.assertEqual(
+                checkpoint["checkpoint_marker_tasks_sha"],
+                checkpoint["current_marker_tasks_sha"],
+            )
 
 
 def build_suite() -> unittest.TestSuite:
