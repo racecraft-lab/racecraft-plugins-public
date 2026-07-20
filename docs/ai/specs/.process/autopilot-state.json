@@ -474,8 +474,8 @@
         "implementation_checkpoint": {
           "status": "complete",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1.json",
-          "checkpoint_evidence_sha": "sha256:62ee0f20bb573314206e8acb9c4fd53b5c251ca9aa71e0e14bf691b3d351328a",
-          "checkpoint_evidence_commit_sha": "a0990236bf7fbbc01eb9e637ad63acee3dbfcec9",
+          "checkpoint_evidence_sha": "sha256:c1b01aa3e06c0642c6ab3b079b64c802429dba830b1d47e25fde39b03395b813",
+          "checkpoint_evidence_commit_sha": "09768854a2cb42b511617a69a93642053bcbc75b",
           "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us1.json",
           "verification_evidence_sha": "sha256:659779425c73ff7b57c1cf97a259a6f4385fdff8d2e78f848b86c7e04b29cf2f",
           "commit_sha": "2b7096dacdaa7a6af62b3c12b36e83cf4515213e",
@@ -587,8 +587,8 @@
         "implementation_checkpoint": {
           "status": "complete",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json",
-          "checkpoint_evidence_sha": "sha256:16e6f539cb790f9367c64ee14a044e0759cd03680b62f59a7abb9f1dbe87e3e3",
-          "checkpoint_evidence_commit_sha": "a0990236bf7fbbc01eb9e637ad63acee3dbfcec9",
+          "checkpoint_evidence_sha": "sha256:a0579b003d108c4031c4f42238950426f20136facaef8277131539c5eb2e1b0c",
+          "checkpoint_evidence_commit_sha": "09768854a2cb42b511617a69a93642053bcbc75b",
           "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us2.json",
           "verification_evidence_sha": "sha256:66832f9c6df6f7971abb4c17900939646ae6659774ea70612a19a0af5babb105",
           "commit_sha": "42cdf743346c880c1b7e8cb172e842a82ab6f343",
