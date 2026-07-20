@@ -1080,9 +1080,10 @@
         "implementation_checkpoint": {
           "status": "pending",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3.json",
-          "checkpoint_evidence_sha": "sha256:cae76eb1f21b38f25326c43f9adff85a3228c0a84a61613d1b3a2bdd986258e8",
-          "checkpoint_evidence_commit_sha": "642c85e481a24fca107a80e2760303105ee199d1",
+          "checkpoint_evidence_sha": "sha256:361de4791f841e6e3d70d1a758ac5d75ef88dfe2ad9f695e08e010c51dad3d3d",
+          "checkpoint_evidence_commit_sha": "1ab30255e8068b44cfd5c76f918babde5ec2e007",
           "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
+          "verification_evidence_sha": "sha256:87489b7c3f181aefc8a53fa14ecd7ba3a9624196d5681c8de9735612d30f7482",
           "commit_sha": "4f8ad40ca69b129103799fb2f1a4aa4f4afb0785",
           "head_sha": "4f8ad40ca69b129103799fb2f1a4aa4f4afb0785",
           "completed_task_ids": [
