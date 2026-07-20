@@ -8,13 +8,13 @@
     "T033", "T034", "T035", "T036", "T037", "T038", "T039"
   ],
   "implementation_baseline_sha": "0d5df513fe95a5201c422b908e2c6b7330b91552",
-  "implementation_checkpoint_sha": "7f846a02254c6337eb207fee7dba6a06cd485a00",
-  "last_reviewed_head_sha": "a7cbcb6081b12129c617995b8fe585550de547ec",
+  "implementation_checkpoint_sha": "a324f4e95bfddb7b37e4612879d5b57c9d2af412",
+  "last_reviewed_head_sha": "9ddc51c820d8f1e4763f3c6adad1751ca9f500dc",
   "capability_fixture_digest": "sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a",
   "treatment_fixture_digest": "sha256:935c2b104cb1036ef5befb8a36c2fd47c71845b4b5a7d901c26827ca9a2b3788",
   "replay_digest": "sha256:c8a69de446be0ba98ec876ee37c715b008e21c97dcebc067866405a9d92d5eb4",
   "verification": {
-    "focused_tests": "86/86 pass; validator 33/33 pass; contract parity 71/71 pass",
+    "focused_tests": "87/87 pass; validator 33/33 pass; contract parity 71/71 pass",
     "privacy_scan": "10/10 pass",
     "full_suite": "2849/2849 pass",
     "docs_reference_check": "pass",
@@ -22,9 +22,9 @@
     "raw_fixture_digest_validation": "pass",
     "canonical_offline_replay": "pass",
     "eight_class_semantic_binding": "pass",
-    "independent_critical_high_review": "live-range-review-9FBA02 eighth P1 review at a7cbcb60 remediated at 7f846a02; exact live-head re-review pending",
+    "independent_critical_high_review": "live-range-review-9FBA02 ninth P1 review at 9ddc51c8 remediated at a324f4e9; exact live-head re-review pending",
     "release_readiness_title_gate": "pass",
-    "changed_file_manifest": "104/104 exact"
+    "changed_file_manifest": "105/105 exact"
   },
   "source_fingerprint_contract": "marker-task-lines.v2",
   "source_fingerprint_status": "current_marker_scope",
@@ -33,5 +33,5 @@
   "current_tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
   "checkpoint_marker_tasks_sha": "sha256:937ba1ff7f1cc7a8a8886de399f16affa63059098e936b7fa8b5ba3007c43072",
   "current_marker_tasks_sha": "sha256:937ba1ff7f1cc7a8a8886de399f16affa63059098e936b7fa8b5ba3007c43072",
-  "updated_at": "2026-07-20T12:49:42Z"
+  "updated_at": "2026-07-20T13:17:05Z"
 }
