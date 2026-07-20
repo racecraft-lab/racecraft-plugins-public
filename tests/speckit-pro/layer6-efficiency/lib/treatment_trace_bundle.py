@@ -2,13 +2,10 @@
 """Execution trace and treatment bundle graph validation."""
 
 from __future__ import annotations
-
 if __package__:
     from .treatment_trace_fields import *
 else:
     from treatment_trace_fields import *
-
-
 def _effective_effort_route(
     events: list[dict], assessments: list[dict], supported_route: dict | None,
     canonical_routes: dict[str, dict[str, object]],
@@ -21,8 +18,6 @@ def _effective_effort_route(
     if len(matches) != 1:
         return None
     return canonical_routes.get(matches[0]["destination_candidate_route_id"])
-
-
 def _validate_trace(trace: object, profile: list[dict], environments: dict[str, dict],
                     policies: dict[str, dict], resolutions: dict[str, dict],
                     qualification: dict[str, dict], trusted: dict[str, dict],
@@ -284,8 +279,6 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
             f"expected {expected_reasons!r}"
         )
     return row
-
-
 def _validate_trace_graph(traces: list[dict]) -> None:
     by_id = {trace["objective_binding"]["execution_trace_id"]: trace for trace in traces}
     if len(by_id) != len(traces): raise ValueError("duplicate execution trace ID")
@@ -310,8 +303,6 @@ def _validate_trace_graph(traces: list[dict]) -> None:
             seen.add(current); current = by_id[current]["parent_child_graph"]["parent_execution_trace_id"]
         if trace["parent_child_graph"]["root_execution_trace_id"] != current:
             raise ValueError("trace graph root does not match its ancestor chain")
-
-
 def _validate_treatment_bundle(
     bundle: object, *, schema_path: Path, manifest: dict,
     trusted_qualification_evidence: Mapping[str, dict] | None,
