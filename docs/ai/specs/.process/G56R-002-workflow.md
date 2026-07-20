@@ -899,7 +899,7 @@ For every task:
 - Superseded candidate freeze: `sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03`
 - Telemetry profile: `sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb`
 - Treatment contract: `sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199`
-- Superseded marker checkpoint: `c47c9d31fd1288e86f0707601078e4f03e2b12e5`
+- Superseded marker checkpoint: `1190e3c1205744fd50afb37a12c0f9527ad5ee53`
 - Reviewability: aggregate size-only `block` at 4,306 source / 3,895
   nonblank, non-comment lines across 13 production modules. The stable
   capability facade and 11 focused internal modules total 2,562 / 2,295 with
@@ -931,7 +931,7 @@ For every task:
   corrects the deletion-intent/completion sequence and safely splits capability
   trust and failure responsibilities behind the stable facade; exact-head
   re-review remains pending.
-- Implementation checkpoint: `1190e3c1205744fd50afb37a12c0f9527ad5ee53`
+- Implementation checkpoint: `8a179bdbb6aef08849bbfc4ed07c547c26f8194a`
 
 ## PR Marker Plan Evidence
 
@@ -952,7 +952,7 @@ For every task:
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
-| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Complete at `1190e3c1205744fd50afb37a12c0f9527ad5ee53` | Only T026-T030 replay growth remains authorized |
+| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Complete at `8a179bdbb6aef08849bbfc4ed07c547c26f8194a` | Only T026-T030 replay growth remains authorized |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
