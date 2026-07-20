@@ -5,14 +5,14 @@
   "status": "block",
   "mode": "implementation",
   "scope": "T026-T030 deterministic synthetic replay",
-  "head_sha": "0810750235ffc934dde411ee2a7a5470943e2461",
+  "head_sha": "06c94413b8ca68eb9886dc38ccf74f5805cffdad",
   "head_scope": "current_remediation_source",
-  "current_restack_review_status": "live-range-review-9FBA02 fifth P1 finding at ab879cd4 remediated at 08107502; exact live-head re-review pending",
+  "current_restack_review_status": "live-range-review-9FBA02 sixth P1 finding at 60054601 remediated at 06c94413; exact live-head re-review pending",
   "reason_class": "aggregate_size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 5663,
-  "actual_nonblank_noncomment_lines": 5146,
+  "actual_source_lines": 5694,
+  "actual_nonblank_noncomment_lines": 5171,
   "production_modules": 25,
   "max_module_source_lines": 396,
   "module_groups": {
@@ -21,7 +21,7 @@
   },
   "primary_surface": "harness/adapter",
   "correctness_checks": {
-    "focused_tests": "84/84 pass; validator 32/32 pass; contract parity 71/71 pass after live-range remediation",
+    "focused_tests": "85/85 pass; validator 32/32 pass; contract parity 71/71 pass after live-range remediation",
     "two_pass_byte_equality": "pass",
     "raw_fixture_digest_validation": "pass",
     "canonical_fixture_serialization": "pass",
@@ -33,7 +33,7 @@
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass after restack",
     "full_suite": "2848/2848 pass after live-range remediation",
-    "independent_review": "live-range-review-9FBA02 fifth P1 finding at ab879cd4 remediated at 08107502; exact live-head re-review pending"
+    "independent_review": "live-range-review-9FBA02 sixth P1 finding at 60054601 remediated at 06c94413; exact live-head re-review pending"
   },
   "decomposition": {
     "status": "complete",
