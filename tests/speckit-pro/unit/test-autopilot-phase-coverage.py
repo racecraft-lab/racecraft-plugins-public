@@ -333,15 +333,32 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 f"workflow PR Marker Plan Evidence marker 'us1' checkpoint does not bind {expected_commit}",
             ],
         )
-        _, corrected = self.run_validator(
-            workflow.replace(wrong_commit, expected_commit).replace(
+        corrected_workflow = workflow.replace(wrong_commit, expected_commit).replace(
                 wrong_superseded, expected_superseded,
-            ).replace("[us2]", "[us1]").replace(
+            ).replace(
+                f"- Current remediation source head [us2]: `{expected_commit}`\n", "",
+            ).replace(
                 f"- Implementation checkpoint: `{expected_commit}`\n", "",
-            ),
-            state,
-        )
+            )
+        _, corrected = self.run_validator(corrected_workflow, state)
         self.assertEqual(corrected["workflow_checkpoint_errors"], [])
+
+        missing_section_workflow = corrected_workflow.split(
+            "## PR Marker Plan Evidence", 1,
+        )[0]
+        _, missing_section = self.run_validator(missing_section_workflow, state)
+        self.assertIn(
+            "workflow must contain exactly one PR Marker Plan Evidence section",
+            missing_section["workflow_checkpoint_errors"],
+        )
+        missing_claim_workflow = corrected_workflow.replace(
+            f"- Implementation checkpoint [us1]: `{expected_commit}`\n", "",
+        )
+        _, missing_claim = self.run_validator(missing_claim_workflow, state)
+        self.assertIn(
+            "workflow must contain exactly one current checkpoint claim for marker 'us1'",
+            missing_claim["workflow_checkpoint_errors"],
+        )
 
     def test_completed_phase_rejects_pending_verification_fields(self) -> None:
         state = self.projected_state(
@@ -664,6 +681,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             workflow_path = root / "workflow.md"
+            alternate_workflow_path = root / "alternate-workflow.md"
             state_path = root / "autopilot-state.json"
             tracked_path = root / "tracked.txt"
             rename_source_path = root / "rename-source.txt"
@@ -678,7 +696,9 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             evidence_path = root / "specs/spec-example/.process/checkpoints/us1.json"
             verification_path = root / "specs/spec-example/.process/verification/us1.json"
             workflow_path.write_text(workflow_text(), encoding="utf-8")
+            alternate_workflow_path.write_text(workflow_text(), encoding="utf-8")
             state = state_json()
+            state["workflow_file"] = "workflow.md"
             state["spec_id"] = "SPEC-EXAMPLE"
             state_path.write_text(json.dumps(state), encoding="utf-8")
             tracked_path.write_text("base\n", encoding="utf-8")
@@ -810,6 +830,15 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 capture_output=True,
                 check=True,
             ).stdout.strip()
+            workflow_path.write_text(
+                workflow_text()
+                + f"\n- Implementation checkpoint [us1]: `{implementation_commit}`\n\n"
+                + "## PR Marker Plan Evidence\n\n"
+                + "| Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |\n"
+                + "|---|---|---|---|---|---|\n"
+                + f"| 1 | `us1` | T001-T002 | Pass | Complete at `{implementation_commit}` | None |\n",
+                encoding="utf-8",
+            )
             state["changed_file_manifest"] = "changed-file-manifest.json"
             state["changed_file_manifest_base_commit"] = base_commit
             task_bytes = tasks_path.read_bytes()
@@ -868,6 +897,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             )
             marker_files = [
                 {"path": "autopilot-state.json", "operation": "MODIFIED"},
+                {"path": "workflow.md", "operation": "MODIFIED"},
                 {"path": "changed-file-manifest.json", "operation": "NEW"},
                 {
                     "path": "specs/spec-example/.process/checkpoints/us1.json",
@@ -963,6 +993,13 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                         "marker_ids": ["us1"],
                     },
                     {
+                        "path": "workflow.md",
+                        "operation": "MODIFIED",
+                        "category": "process",
+                        "provenance": "authored",
+                        "marker_ids": ["us1"],
+                    },
+                    {
                         "path": "changed-file-manifest.json",
                         "operation": "NEW",
                         "category": "process",
@@ -1021,6 +1058,10 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                     },
                 ],
             }
+            tracked_manifest_entry = next(
+                entry for entry in manifest["files"] if entry["path"] == "tracked.txt"
+            )
+            tracked_manifest_index = manifest["files"].index(tracked_manifest_entry)
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
             manifest_sha = "sha256:" + hashlib.sha256(manifest_path.read_bytes()).hexdigest()
             evidence_sha = "sha256:" + hashlib.sha256(evidence_path.read_bytes()).hexdigest()
@@ -1042,6 +1083,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 [
                     "git", "-C", str(root), "add",
                     "autopilot-state.json",
+                    "workflow.md",
                     "changed-file-manifest.json",
                     "specs/spec-example/.process/checkpoints/us1.json",
                     "specs/spec-example/.process/verification/us1.json",
@@ -1108,6 +1150,15 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 report["workflow_checkpoint_errors"],
             )
             workflow_path.write_bytes(committed_workflow)
+
+            exit_code, report = self.run_validator_paths(
+                alternate_workflow_path, state_path,
+            )
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "supplied workflow does not match autopilot state workflow_file authority",
+                report["workflow_checkpoint_errors"],
+            )
 
             phase_name = "Phase 7: Implement - Pending task decomposition"
             phase_step = next(
@@ -1443,7 +1494,11 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                     )
 
             mutated_manifest = json.loads(json.dumps(manifest))
-            mutated_manifest["files"][5]["source_path"] = "wrong-source.txt"
+            next(
+                entry
+                for entry in mutated_manifest["files"]
+                if entry.get("operation") == "RENAMED"
+            )["source_path"] = "wrong-source.txt"
             manifest_path.write_text(json.dumps(mutated_manifest), encoding="utf-8")
             mutated_sha = "sha256:" + hashlib.sha256(manifest_path.read_bytes()).hexdigest()
             state["current_source_fingerprint"]["changed_file_manifest_sha"] = mutated_sha
@@ -1866,7 +1921,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             checkpoint["checkpoint_evidence_sha"] = evidence_sha
             state_path.write_text(json.dumps(state), encoding="utf-8")
 
-            manifest["files"][4]["category"] = "test"
+            tracked_manifest_entry["category"] = "test"
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
@@ -1874,10 +1929,10 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 "current_source_fingerprint.changed_file_manifest_sha does not match the changed-file manifest",
                 report["changed_file_manifest_errors"],
             )
-            manifest["files"][4]["category"] = "implementation"
+            tracked_manifest_entry["category"] = "implementation"
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
 
-            manifest["files"][4]["operation"] = "NEW"
+            tracked_manifest_entry["operation"] = "NEW"
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
@@ -1893,8 +1948,8 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 report["changed_file_manifest_errors"],
             )
 
-            manifest["files"][4]["operation"] = "MODIFIED"
-            manifest["files"][4]["marker_ids"] = ["us2"]
+            tracked_manifest_entry["operation"] = "MODIFIED"
+            tracked_manifest_entry["marker_ids"] = ["us2"]
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
@@ -1903,16 +1958,16 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 report["changed_file_manifest_errors"],
             )
 
-            manifest["files"][4]["marker_ids"] = ["us1", "us2"]
+            tracked_manifest_entry["marker_ids"] = ["us1", "us2"]
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
-                "files[4].marker_ids must contain exactly one marker owner",
+                f"files[{tracked_manifest_index}].marker_ids must contain exactly one marker owner",
                 report["changed_file_manifest_errors"],
             )
 
-            manifest["files"][4]["marker_ids"] = ["us1"]
+            tracked_manifest_entry["marker_ids"] = ["us1"]
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
             tasks_path.write_text(
                 "# Tasks\n\n- [x] T001 Marker task\n- [ ] T002 Changed folded task\n",

@@ -267,7 +267,8 @@ def validate_workflow_checkpoint_bindings(
     if not expected:
         return {"workflow_checkpoint_errors": errors}
 
-    for marker_id, claimed_sha in WORKFLOW_CHECKPOINT_CLAIM_RE.findall(text):
+    checkpoint_claims = WORKFLOW_CHECKPOINT_CLAIM_RE.findall(text)
+    for marker_id, claimed_sha in checkpoint_claims:
         if expected.get(marker_id) != claimed_sha:
             errors.append(
                 f"workflow checkpoint claim for marker {marker_id!r} does not match its pr_marker_plan commit_sha"
@@ -279,11 +280,24 @@ def validate_workflow_checkpoint_bindings(
             )
     if WORKFLOW_UNSCOPED_CHECKPOINT_CLAIM_RE.search(text):
         errors.append("workflow checkpoint claims must name their marker")
+    if marker_plan.get("schema_version") == "pr-marker-plan.v2":
+        for marker_id in expected:
+            claim_count = sum(
+                claimed_marker_id == marker_id
+                for claimed_marker_id, _claimed_sha in checkpoint_claims
+            )
+            if claim_count != 1:
+                errors.append(
+                    f"workflow must contain exactly one current checkpoint claim for marker {marker_id!r}"
+                )
 
     section_token = "## PR Marker Plan Evidence"
-    if section_token in text:
+    section_count = len(re.findall(r"(?m)^## PR Marker Plan Evidence\s*$", text))
+    if marker_plan.get("schema_version") == "pr-marker-plan.v2" and section_count != 1:
+        errors.append("workflow must contain exactly one PR Marker Plan Evidence section")
+    if section_count == 1:
         section = text.split(section_token, 1)[1].split("\n## ", 1)[0]
-        found_markers: set[str] = set()
+        marker_row_counts = {marker_id: 0 for marker_id in expected}
         for line in section.splitlines():
             if not line.startswith("|") or not line.endswith("|"):
                 continue
@@ -293,16 +307,16 @@ def validate_workflow_checkpoint_bindings(
             marker_id = cells[1].strip("` ")
             if marker_id not in expected:
                 continue
-            found_markers.add(marker_id)
+            marker_row_counts[marker_id] += 1
             checkpoint_shas = set(re.findall(r"\b[0-9a-f]{40}\b", cells[4]))
             if expected[marker_id] not in checkpoint_shas:
                 errors.append(
                     f"workflow PR Marker Plan Evidence marker {marker_id!r} checkpoint does not bind {expected[marker_id]}"
                 )
-        for marker_id in expected:
-            if marker_id not in found_markers:
+        for marker_id, row_count in marker_row_counts.items():
+            if row_count != 1:
                 errors.append(
-                    f"workflow PR Marker Plan Evidence is missing marker {marker_id!r}"
+                    f"workflow PR Marker Plan Evidence must contain exactly one row for marker {marker_id!r}"
                 )
     return {"workflow_checkpoint_errors": errors}
 
@@ -674,6 +688,15 @@ def _authorized_workflow_text(
         return worktree_text, ["workflow file is outside the authorized repository"]
     if not _is_normalized_repo_path(workflow_ref):
         return worktree_text, ["workflow file reference is not repository-relative"]
+    state_workflow_ref = state.get("workflow_file")
+    if not _is_normalized_repo_path(state_workflow_ref):
+        return worktree_text, [
+            "autopilot state workflow_file is not a normalized repository-relative path"
+        ]
+    if state_workflow_ref != workflow_ref:
+        return worktree_text, [
+            "supplied workflow does not match autopilot state workflow_file authority"
+        ]
     committed_bytes = _git_file_at_commit(repo_root, expected_head_commit, workflow_ref)
     if committed_bytes is None:
         return worktree_text, ["workflow is absent from the authorized PR head"]
@@ -1169,6 +1192,7 @@ def validate_changed_file_manifest(
                     path
                     for path in (
                         state_ref,
+                        state.get("workflow_file"),
                         manifest_ref,
                         checkpoint.get("evidence_path"),
                         checkpoint.get("verification_evidence_path"),

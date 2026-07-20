@@ -686,11 +686,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 101227,
+              "byte_count": 102513,
               "kind": "skill",
               "path": "skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
               "required": true,
-              "sha256": "cd4a0020a23c950e400a011293ae7701bf5aaa6deeb1dd7ced6196b902d5abc2",
+              "sha256": "6efe4fe41a5ee62d37c0c5661ec37105d87c2eea971e59cd2a72aae3b552cd3d",
               "source_path": "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
               "transform": "none"
             },
@@ -1561,11 +1561,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 101227,
+              "byte_count": 102513,
               "kind": "skill",
               "path": "skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
               "required": true,
-              "sha256": "cd4a0020a23c950e400a011293ae7701bf5aaa6deeb1dd7ced6196b902d5abc2",
+              "sha256": "6efe4fe41a5ee62d37c0c5661ec37105d87c2eea971e59cd2a72aae3b552cd3d",
               "source_path": "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
               "transform": "none"
             },
@@ -1976,7 +1976,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "2a275fb33ce4506c85cdb546e072dc6667e93c32efb8ceadc068660f990932c8",
+          "file_tree_hash": "413b1fa2cd95e20bea5696756c544fed54732006addc892fd8590b33a5bd165a",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -2538,11 +2538,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 101227,
+              "byte_count": 102513,
               "kind": "skill",
               "path": "skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
               "required": true,
-              "sha256": "cd4a0020a23c950e400a011293ae7701bf5aaa6deeb1dd7ced6196b902d5abc2",
+              "sha256": "6efe4fe41a5ee62d37c0c5661ec37105d87c2eea971e59cd2a72aae3b552cd3d",
               "source_path": "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
               "transform": "none"
             },
@@ -3566,11 +3566,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 101227,
+              "byte_count": 102513,
               "kind": "skill",
               "path": "skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
               "required": true,
-              "sha256": "cd4a0020a23c950e400a011293ae7701bf5aaa6deeb1dd7ced6196b902d5abc2",
+              "sha256": "6efe4fe41a5ee62d37c0c5661ec37105d87c2eea971e59cd2a72aae3b552cd3d",
               "source_path": "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
               "transform": "none"
             },
@@ -4044,7 +4044,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "ea0fa5efa0e80ecdc783c46bd80ddaed79a9f11fb0351c238e141e0e8767a69d",
+          "file_tree_hash": "c591847a2354750471f8878af245fc1df8d6b55936352bc3c13ddb6176d3cdee",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
