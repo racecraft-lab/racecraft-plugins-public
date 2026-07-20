@@ -5,7 +5,7 @@
   "changed_file_manifest": "specs/g56r-002-capability-discovery-telemetry/.process/changed-file-manifest.json",
   "changed_file_manifest_base_commit": "48d72a5dfe1dd971bef6ddcdcd7a67752c9975ec",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-20T08:20:04Z",
+  "updated_at": "2026-07-20T09:53:48Z",
   "active_step": "Phase 7: Validate Restacked Synthetic Replay",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
@@ -407,9 +407,9 @@
     "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
     "plan_declared_scope_sha": "sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f",
     "tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
-    "reviewability_sha": "sha256:87489b7c3f181aefc8a53fa14ecd7ba3a9624196d5681c8de9735612d30f7482",
+    "reviewability_sha": "sha256:cfb042b983f908f45ddbc6696bac467cdc9a10a0482e6c00920c295cc4cc3a9d",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
-    "changed_file_manifest_sha": "sha256:e7baae5f70c787494fa355cb55a854489bce65e7c0b5498e57c5a81e7cc9d87d"
+    "changed_file_manifest_sha": "sha256:a1b4661d87a85cb4bf3ad57b33b31cc3b7a9de45141281ce4ef6a5d74b2dedf4"
   },
   "pr_marker_plan": {
     "schema_version": "pr-marker-plan.v2",
@@ -420,9 +420,9 @@
       "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
       "plan_declared_scope_sha": "sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f",
       "tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
-      "reviewability_sha": "sha256:87489b7c3f181aefc8a53fa14ecd7ba3a9624196d5681c8de9735612d30f7482",
+      "reviewability_sha": "sha256:cfb042b983f908f45ddbc6696bac467cdc9a10a0482e6c00920c295cc4cc3a9d",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
-      "changed_file_manifest_sha": "sha256:e7baae5f70c787494fa355cb55a854489bce65e7c0b5498e57c5a81e7cc9d87d"
+      "changed_file_manifest_sha": "sha256:a1b4661d87a85cb4bf3ad57b33b31cc3b7a9de45141281ce4ef6a5d74b2dedf4"
     },
     "markers": [
       {
@@ -748,6 +748,10 @@
           },
           {
             "operation": "MODIFIED",
+            "path": "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json"
+          },
+          {
+            "operation": "MODIFIED",
             "path": "docs/ai/specs/.process/G56R-002-workflow.md"
           },
           {
@@ -821,6 +825,10 @@
           {
             "operation": "NEW",
             "path": "specs/g56r-002-capability-discovery-telemetry/contracts/marker-checkpoint.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/g56r-002-capability-discovery-telemetry/contracts/treatment-record.schema.json"
           },
           {
             "operation": "MODIFIED",
@@ -1094,7 +1102,7 @@
           "mode": "implementation",
           "scope": "us3",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
-          "head_sha": "4f8ad40ca69b129103799fb2f1a4aa4f4afb0785"
+          "head_sha": "8313f044b304f1c8d1717c4fe61a8826be6c0ab9"
         },
         "hazards": [
           "fixture-provenance",
@@ -1110,18 +1118,18 @@
               "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"
             ],
             "module_count": 24,
-            "max_module_source_lines": 381
+            "max_module_source_lines": 396
           }
         },
         "implementation_checkpoint": {
           "status": "pending",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3.json",
-          "checkpoint_evidence_sha": "sha256:361de4791f841e6e3d70d1a758ac5d75ef88dfe2ad9f695e08e010c51dad3d3d",
+          "checkpoint_evidence_sha": "sha256:110c08a33427bb76679f00c02bf54a5a09f46f49b0275cb21fbc6c85404e471a",
           "checkpoint_evidence_commit_sha": "1ab30255e8068b44cfd5c76f918babde5ec2e007",
           "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
-          "verification_evidence_sha": "sha256:87489b7c3f181aefc8a53fa14ecd7ba3a9624196d5681c8de9735612d30f7482",
-          "commit_sha": "4f8ad40ca69b129103799fb2f1a4aa4f4afb0785",
-          "head_sha": "4f8ad40ca69b129103799fb2f1a4aa4f4afb0785",
+          "verification_evidence_sha": "sha256:cfb042b983f908f45ddbc6696bac467cdc9a10a0482e6c00920c295cc4cc3a9d",
+          "commit_sha": "8313f044b304f1c8d1717c4fe61a8826be6c0ab9",
+          "head_sha": "8313f044b304f1c8d1717c4fe61a8826be6c0ab9",
           "completed_task_ids": [
             "T026",
             "T027",
@@ -1138,13 +1146,13 @@
             "T038",
             "T039"
           ],
-          "summary": "Current verification-authority remediation passes focused validation and awaits full-suite and exact-head re-review.",
+          "summary": "Current remediation passes focused and full validation and awaits exact live-head re-review.",
           "validation": [
             "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
             "python3 tests/speckit-pro/unit/test-reviewability-marker-guidance.py",
             "python3 -u tests/speckit-pro/run-all.py: 2844/2844 pass",
-            "release-readiness title and 80-file changed-file manifest gates: pass",
-            "RepoPrompt CE exact-range-review-905F43 verification-authority findings remediated; exact-head re-review pending"
+            "release-readiness title and 103-file changed-file manifest gates: pass",
+            "RepoPrompt CE focused schema, authority/model, bundle/successor, and replay/I/O reviews: NO FINDINGS through bb665837; exact live-head re-review pending"
           ],
           "freshness": {
             "source_fingerprint_contract": "marker-task-lines.v2",
@@ -1153,7 +1161,7 @@
             "current_tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
             "checkpoint_marker_tasks_sha": "sha256:0549f955b6e0a56b176378614d3bd2c6cc014f030d63f4dfb170d99f49259995",
             "current_marker_tasks_sha": "sha256:0549f955b6e0a56b176378614d3bd2c6cc014f030d63f4dfb170d99f49259995",
-            "validated_at": "2026-07-20T06:41:46Z"
+              "validated_at": "2026-07-20T09:53:48Z"
           }
         },
         "emission_mapping": {
@@ -1168,10 +1176,10 @@
             "source": "synthetic-replay-reviewability",
             "details": {
               "marker_id": "us3",
-              "actual_source_lines": 5168,
-              "actual_nonblank_noncomment_lines": 4665,
+              "actual_source_lines": 5376,
+              "actual_nonblank_noncomment_lines": 4880,
               "production_modules": 24,
-              "max_module_source_lines": 381
+              "max_module_source_lines": 396
             }
           }
         ]
@@ -1194,7 +1202,7 @@
       }
     ],
     "created_at": "2026-07-17T04:50:02Z",
-    "updated_at": "2026-07-20T07:18:16Z"
+    "updated_at": "2026-07-20T09:53:48Z"
   },
   "layer_plan": {
     "status": "skipped",

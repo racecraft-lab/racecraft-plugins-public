@@ -5,23 +5,23 @@
   "status": "block",
   "mode": "implementation",
   "scope": "T026-T030 deterministic synthetic replay",
-  "head_sha": "4f8ad40ca69b129103799fb2f1a4aa4f4afb0785",
+  "head_sha": "8313f044b304f1c8d1717c4fe61a8826be6c0ab9",
   "head_scope": "current_remediation_source",
-  "current_restack_review_status": "pending exact-head re-review",
+  "current_restack_review_status": "focused reviews report NO FINDINGS through bb665837; exact live-head review pending",
   "reason_class": "aggregate_size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 5168,
-  "actual_nonblank_noncomment_lines": 4665,
+  "actual_source_lines": 5376,
+  "actual_nonblank_noncomment_lines": 4880,
   "production_modules": 24,
-  "max_module_source_lines": 381,
+  "max_module_source_lines": 396,
   "module_groups": {
     "capability": {"modules": 12, "public_entrypoint": "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py"},
     "treatment": {"modules": 12, "public_entrypoint": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"}
   },
   "primary_surface": "harness/adapter",
   "correctness_checks": {
-    "focused_tests": "75/75 pass; validator 28/28 pass; contract parity 71/71 pass after review-authority remediation",
+    "focused_tests": "78/78 pass; validator 28/28 pass; contract parity 71/71 pass after review-authority remediation",
     "two_pass_byte_equality": "pass",
     "raw_fixture_digest_validation": "pass",
     "canonical_fixture_serialization": "pass",
@@ -33,14 +33,14 @@
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass after restack",
     "full_suite": "2844/2844 pass after review-authority remediation",
-    "independent_review": "exact-range-review-905F43 verification-authority findings remediated; exact-head re-review pending"
+    "independent_review": "focused schema, authority/model, bundle/successor, and replay/I/O reviews returned NO FINDINGS through bb665837; exact live-head review pending"
   },
   "decomposition": {
     "status": "complete",
     "subdivision": "safe_split",
     "rationale": "The two public entry points now delegate to focused source, observation, matrix, private-retention, freeze, schema, trace, replay, successor, and checkout-bound capability-loader modules.",
     "invariant": "Every implementation module is below the 400-line reviewability boundary; the public entry points preserve their import and CLI contracts.",
-    "max_module_source_lines": 381
+    "max_module_source_lines": 396
   },
   "later_markers": [
     "polish:T031-T039"

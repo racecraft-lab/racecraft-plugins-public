@@ -96,6 +96,13 @@
       "marker_ids": ["us3"]
     },
     {
+      "path": "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json",
+      "operation": "MODIFIED",
+      "category": "research",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
       "path": "docs/ai/specs/.process/G56R-002-workflow.md",
       "operation": "MODIFIED",
       "category": "process",
@@ -252,6 +259,13 @@
     {
       "path": "specs/g56r-002-capability-discovery-telemetry/contracts/marker-checkpoint.schema.json",
       "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/contracts/treatment-record.schema.json",
+      "operation": "MODIFIED",
       "category": "process",
       "provenance": "authored",
       "marker_ids": ["us3"]

@@ -65,7 +65,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Tasks | `$speckit-tasks` | Complete | 39 TDD-first tasks; G5 passed |
 | Analyze | `$speckit-analyze` | Complete | Nine findings remediated; G6 passed |
 | Confidence Gate | G6.5 | Complete | Advisory score 0.99 passed the 0.90 threshold |
-| Implement | `$speckit-implement` | In Progress | T001-T039 are implemented; the restacked US3 head awaits full validation and exact-head review |
+| Implement | `$speckit-implement` | In Progress | T001-T039 are implemented; the restacked US3 head passes full validation and awaits exact live-head review |
 | Post | Post-Implementation | Pending | Complete verification, reviewability, PR, remediation, and retrospective work |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -929,8 +929,8 @@ For every task:
 ### Synthetic Replay Checkpoint Evidence
 
 > The evidence below records the historical pre-restack checkpoint. The current
-> US3 head is review-pending until the refreshed full-suite, manifest,
-> release-readiness, and exact-head independent-review gates pass.
+> US3 head is review-pending until the exact live-head independent-review gate
+> passes. The refreshed full-suite, manifest, and release-readiness gates pass.
 
 - Historical reviewed remediation source head: `096605e6a4987c0f580c525bc377a68c438a9a22`
 - Historical exact reviewed PR head: `3d7bd9eff79a1889830c74b6bcd22ae8945098c0`
@@ -939,17 +939,18 @@ For every task:
 - Current exact-range findings head: `ff0c4d57f630dcc4058e1d4180ef24aaabae277c`
 - Prior remediation source head: `3608f0dbeaca34be5585375f87e7f3ebc5feba6b`
 - Current verification-authority findings head: `61014105efd7c99e04e6a40008c85e9d718a4db7`
-- Current remediation source head: `4f8ad40ca69b129103799fb2f1a4aa4f4afb0785`
+- Last focused-review source head: `bb665837ba72851402ed10f2af21808554585983`
+- Current remediation source head: `8313f044b304f1c8d1717c4fe61a8826be6c0ab9`
 - Capability fixture: `sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a`.
-- Treatment fixture: `sha256:3983dc1d4efe42542ffe0cb72830c970d24cecf490ddfe0c93e24be749ffaa53`.
-- Replay output: `sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda` with byte-identical two-pass verification.
+- Treatment fixture: `sha256:935c2b104cb1036ef5befb8a36c2fd47c71845b4b5a7d901c26827ca9a2b3788`.
+- Replay output: `sha256:c8a69de446be0ba98ec876ee37c715b008e21c97dcebc067866405a9d92d5eb4` with byte-identical two-pass verification.
 - Cases: eight exact success, null, unavailable, misdelivery, approved reroute,
   unapproved reroute, discovery-loss, and surface-disagreement classes.
-- Verification: 75/75 focused tests, 28/28 validator tests, 71/71 contract tests, and the 2844/2844
+- Verification: 78/78 focused tests, 28/28 validator tests, 71/71 contract tests, and the 2844/2844
   full suite pass. Generated references and byte-identical replay remain current.
-- Reviewability: aggregate size-only `block` at 5,168 source / 4,665 nonblank,
+- Reviewability: aggregate size-only `block` at 5,376 source / 4,880 nonblank,
   non-comment lines across 24 safely subdivided modules; the largest module is
-  381 lines and the two public entry points retain their APIs.
+  396 lines and the two public entry points retain their APIs.
 - Review: `untitled-chat-B2AE31` confirmed the first remediation but reported
   seven deeper gaps: non-monotonic partial emission, generic marker ownership
   uniqueness, mutable completed evidence, stale exact-head metadata, v1
@@ -977,13 +978,18 @@ For every task:
   reported four remaining gaps: incomplete nested v2 schema enforcement, mutable
   verification reports, failed verification values qualifying as complete, and
   transient canonical module exposure during private capability loading. All four
-  are remediated in source through `4f8ad40ca69b129103799fb2f1a4aa4f4afb0785`; exact-head
-  re-review is pending.
+  are remediated in source.
+- Focused follow-up reviews for the schema (`untitled-chat-A46475`), authority
+  and model binding (`untitled-chat-B6D973`), bundle and successor validation
+  (`untitled-chat-1632BA`), and replay/I/O boundaries
+  (`untitled-chat-73BE33`) each returned `NO FINDINGS` through
+  `bb665837ba72851402ed10f2af21808554585983`. The exact live-head review remains
+  pending after the layout-only 396-line reviewability correction.
 - Evidence finalization after the source head is metadata-only; it does not
   change implementation or verification inputs.
-- Folded polish: T031-T039 are complete. The final reviewability, title, and
-  Historical 78-file base-to-head manifest gates passed before restack; the
-  current 101/101 manifest passes exact current-head validation.
+- Folded polish: T031-T039 are complete. The current reviewability and title
+  gates pass. Historical 78-file base-to-head manifest gates passed before
+  restack; the current 103/103 manifest passes exact current-head validation.
 
 ## PR Marker Plan Evidence
 
@@ -999,21 +1005,21 @@ For every task:
 | Feature spec | `sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046` |
 | Plan-declared scope | `sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f` |
 | Tasks | `sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782` |
-| Reviewability evidence | `sha256:0a7d7b258d2557fe8bc99240bf8d8f55932622cd6e12c361de9d8a6a6f3963d2` |
+| Reviewability evidence | `sha256:cfb042b983f908f45ddbc6696bac467cdc9a10a0482e6c00920c295cc4cc3a9d` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
-| Changed-file manifest | `sha256:b7145c5d5ffe0614bdf5e507488360854345e9feb8fa2ae1ab70e97bf4afc827` |
+| Changed-file manifest | `sha256:a1b4661d87a85cb4bf3ad57b33b31cc3b7a9de45141281ce4ef6a5d74b2dedf4` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
 | 2 | `us2` | T016-T025 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `1190e3c1205744fd50afb37a12c0f9527ad5ee53` | Only T026-T030 replay growth remains authorized |
-| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Remediation source `4f8ad40ca69b129103799fb2f1a4aa4f4afb0785`; focused validation passes; exact-head re-review pending | No correctness or safety exception remains |
+| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Remediation source `8313f044b304f1c8d1717c4fe61a8826be6c0ab9`; focused and full validation pass; exact live-head review pending | No correctness or safety exception remains |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
   lines; the current US2 marker is 4,214 / 3,843 across its two modules against
   the 400-LOC boundary at its immutable checkpoint. The current US3 remediation
-  is 5,168 / 4,665 across 24 focused modules with a 381-line maximum.
+  is 5,376 / 4,880 across 24 focused modules with a 396-line maximum.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.
 - PR mappings: Pending.
