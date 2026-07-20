@@ -299,6 +299,35 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["missing_state_post_items"], [])
 
+    def test_workflow_checkpoint_claims_bind_marker_plan_commits(self) -> None:
+        expected_commit = "a" * 40
+        wrong_commit = "b" * 40
+        state = self.projected_state(
+            plan_status="completed",
+            phase_status="completed",
+            checkpoint=self.complete_checkpoint(commit_sha=expected_commit),
+        )
+        workflow = workflow_text() + (
+            f"\n- Implementation checkpoint: `{wrong_commit}`\n\n"
+            "## PR Marker Plan Evidence\n\n"
+            "| Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |\n"
+            "|---|---|---|---|---|---|\n"
+            f"| 1 | `us1` | T001 | Pass | Complete at `{wrong_commit}` | None |\n"
+        )
+        exit_code, report = self.run_validator(workflow, state)
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(
+            report["workflow_checkpoint_errors"],
+            [
+                f"workflow checkpoint claim {wrong_commit} does not match any pr_marker_plan marker commit_sha",
+                f"workflow PR Marker Plan Evidence marker 'us1' checkpoint does not bind {expected_commit}",
+            ],
+        )
+        _, corrected = self.run_validator(
+            workflow.replace(wrong_commit, expected_commit), state,
+        )
+        self.assertEqual(corrected["workflow_checkpoint_errors"], [])
+
     def test_completed_phase_rejects_pending_verification_fields(self) -> None:
         state = self.projected_state(
             plan_status="completed",

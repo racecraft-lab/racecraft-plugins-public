@@ -109,6 +109,9 @@ COMPLETE_CHECKPOINT_OBJECT_FIELDS = ("freshness",)
 PHASE_VERIFICATION_GATE_ALIASES = {
     "independent_critical_high_review": "independent_review",
 }
+WORKFLOW_CHECKPOINT_CLAIM_RE = re.compile(
+    r"(?m)^-\s+(?:Implementation checkpoint|Current remediation source head):\s+`([0-9a-f]{40})`\s*$"
+)
 
 
 @dataclass(frozen=True)
@@ -200,6 +203,62 @@ def validate_workflow(text: str) -> dict[str, list[str]]:
         "missing_workflow_tokens": missing_tokens,
         "missing_workflow_post_items": missing_post_items,
     }
+
+
+def validate_workflow_checkpoint_bindings(
+    text: str, state: dict[str, Any],
+) -> dict[str, list[str]]:
+    errors: list[str] = []
+    marker_plan = state.get("pr_marker_plan")
+    if not isinstance(marker_plan, dict):
+        return {"workflow_checkpoint_errors": errors}
+    markers = marker_plan.get("markers")
+    if not isinstance(markers, list):
+        return {"workflow_checkpoint_errors": errors}
+
+    expected: dict[str, str] = {}
+    for marker in markers:
+        if not isinstance(marker, dict) or not isinstance(marker.get("id"), str):
+            continue
+        checkpoint = marker.get("implementation_checkpoint")
+        commit_sha = checkpoint.get("commit_sha") if isinstance(checkpoint, dict) else None
+        if isinstance(commit_sha, str) and re.fullmatch(r"[0-9a-f]{40}", commit_sha):
+            expected[marker["id"]] = commit_sha
+    if not expected:
+        return {"workflow_checkpoint_errors": errors}
+
+    expected_shas = set(expected.values())
+    for claimed_sha in WORKFLOW_CHECKPOINT_CLAIM_RE.findall(text):
+        if claimed_sha not in expected_shas:
+            errors.append(
+                f"workflow checkpoint claim {claimed_sha} does not match any pr_marker_plan marker commit_sha"
+            )
+
+    section_token = "## PR Marker Plan Evidence"
+    if section_token in text:
+        section = text.split(section_token, 1)[1].split("\n## ", 1)[0]
+        found_markers: set[str] = set()
+        for line in section.splitlines():
+            if not line.startswith("|") or not line.endswith("|"):
+                continue
+            cells = [cell.strip() for cell in line[1:-1].split("|")]
+            if len(cells) < 5:
+                continue
+            marker_id = cells[1].strip("` ")
+            if marker_id not in expected:
+                continue
+            found_markers.add(marker_id)
+            checkpoint_shas = set(re.findall(r"\b[0-9a-f]{40}\b", cells[4]))
+            if expected[marker_id] not in checkpoint_shas:
+                errors.append(
+                    f"workflow PR Marker Plan Evidence marker {marker_id!r} checkpoint does not bind {expected[marker_id]}"
+                )
+        for marker_id in expected:
+            if marker_id not in found_markers:
+                errors.append(
+                    f"workflow PR Marker Plan Evidence is missing marker {marker_id!r}"
+                )
+    return {"workflow_checkpoint_errors": errors}
 
 
 def validate_state(steps: list[PlanStep]) -> dict[str, list[str]]:
@@ -1821,6 +1880,9 @@ def build_report(
     plan_steps = extract_plan_steps(state_data)
 
     workflow_result = validate_workflow(workflow_text)
+    workflow_checkpoint_result = validate_workflow_checkpoint_bindings(
+        workflow_text, state_data,
+    )
     state_result = validate_state(plan_steps)
     projection_result = validate_projection_integrity(
         state_data,
@@ -1834,7 +1896,13 @@ def build_report(
         expected_base_commit=expected_base_commit,
         expected_head_commit=expected_head_commit,
     )
-    problems = {**workflow_result, **state_result, **projection_result, **manifest_result}
+    problems = {
+        **workflow_result,
+        **workflow_checkpoint_result,
+        **state_result,
+        **projection_result,
+        **manifest_result,
+    }
     passed = all(not values for values in problems.values())
 
     return {
