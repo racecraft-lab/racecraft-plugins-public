@@ -118,15 +118,15 @@ if treatment_spec is None or treatment_spec.loader is None:
 treatment = importlib.util.module_from_spec(treatment_spec)
 treatment_spec.loader.exec_module(treatment)
 
-CAPABILITY_RUNTIME_PACKAGE = "_g56r_capability_runtime"
-capability_contract = sys.modules[f"{CAPABILITY_RUNTIME_PACKAGE}.codex_capability_contract"]
-capability_freeze = sys.modules[f"{CAPABILITY_RUNTIME_PACKAGE}.codex_capability_freeze"]
-capability_io = sys.modules[f"{CAPABILITY_RUNTIME_PACKAGE}.codex_capability_io"]
-capability_observations = sys.modules[f"{CAPABILITY_RUNTIME_PACKAGE}.codex_capability_observations"]
-capability_private = sys.modules[f"{CAPABILITY_RUNTIME_PACKAGE}.codex_capability_private"]
-capability_publish_io = sys.modules[f"{CAPABILITY_RUNTIME_PACKAGE}.codex_capability_publish_io"]
-capability_retention = sys.modules[f"{CAPABILITY_RUNTIME_PACKAGE}.codex_capability_retention"]
-capability_retention_records = sys.modules[f"{CAPABILITY_RUNTIME_PACKAGE}.codex_capability_retention_records"]
+CAPABILITY_INTERNALS = capabilities.__capability_internal_modules__
+capability_contract = CAPABILITY_INTERNALS["codex_capability_contract"]
+capability_freeze = CAPABILITY_INTERNALS["codex_capability_freeze"]
+capability_io = CAPABILITY_INTERNALS["codex_capability_io"]
+capability_observations = CAPABILITY_INTERNALS["codex_capability_observations"]
+capability_private = CAPABILITY_INTERNALS["codex_capability_private"]
+capability_publish_io = CAPABILITY_INTERNALS["codex_capability_publish_io"]
+capability_retention = CAPABILITY_INTERNALS["codex_capability_retention"]
+capability_retention_records = CAPABILITY_INTERNALS["codex_capability_retention_records"]
 TREATMENT_INTERNALS = treatment.__treatment_internal_modules__
 treatment_bundle = TREATMENT_INTERNALS["treatment_trace_bundle"]
 treatment_authority = TREATMENT_INTERNALS["treatment_trace_authority"]
@@ -139,6 +139,15 @@ def load_treatment_facade(name: str):
     facade_spec = importlib.util.spec_from_file_location(name, TREATMENT_MODULE_PATH)
     if facade_spec is None or facade_spec.loader is None:
         raise RuntimeError(f"cannot load {TREATMENT_MODULE_PATH}")
+    facade = importlib.util.module_from_spec(facade_spec)
+    facade_spec.loader.exec_module(facade)
+    return facade
+
+
+def load_capability_facade(name: str):
+    facade_spec = importlib.util.spec_from_file_location(name, MODULE_PATH)
+    if facade_spec is None or facade_spec.loader is None:
+        raise RuntimeError(f"cannot load {MODULE_PATH}")
     facade = importlib.util.module_from_spec(facade_spec)
     facade_spec.loader.exec_module(facade)
     return facade
@@ -504,6 +513,29 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertIs(sys.modules["treatment_trace_cli"], stale_cli)
         self.assertTrue(callable(facade.validate_treatment_bundle))
         self.assertFalse(any(name.startswith("_g56r_treatment_runtime_") for name in sys.modules))
+
+    def test_capability_facade_ignores_predictable_preloaded_runtime_dependency(self) -> None:
+        package_name = "_g56r_capability_runtime"
+        package = types.ModuleType(package_name)
+        package.__path__ = [str(MODULE_PATH.parent.resolve())]
+        forged_freeze = types.ModuleType(f"{package_name}.codex_capability_freeze")
+        forged_freeze.__file__ = str(MODULE_PATH.with_name("codex_capability_freeze.py"))
+        forged_freeze.validate_freeze = lambda _value: self.fail(
+            "predictable preloaded capability dependency was reused"
+        )
+        with mock.patch.dict(
+            sys.modules,
+            {
+                package_name: package,
+                forged_freeze.__name__: forged_freeze,
+            },
+        ):
+            facade = load_capability_facade("g56r_002_capability_preload_regression")
+            self.assertIs(sys.modules[forged_freeze.__name__], forged_freeze)
+        self.assertTrue(callable(facade.validate_freeze))
+        self.assertFalse(
+            any(name.startswith("_g56r_capability_runtime_") for name in sys.modules)
+        )
 
     def test_treatment_facade_does_not_execute_earlier_sys_path_shadow(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
