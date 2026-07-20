@@ -874,8 +874,8 @@ For every task:
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
-| 2 - Treatment contracts | Review pending | 10 | 53/53 focused tests and the prior 2821/2821 full suite pass; current-head review findings are under remediation |
-| 3 - Synthetic replay | In Progress | 0 | T026-T030 exist on the next marker branch; restack and exact-head review follow the clean US2 verdict |
+| 2 - Treatment contracts | Complete | 10 | 53/53 focused tests, 2821/2821 full suite, and exact-head RepoPrompt review returned `NO FINDINGS` |
+| 3 - Synthetic replay | In Progress | 0 | T026-T030 exist on the next marker branch; restack and exact-head review follow this clean US2 checkpoint |
 | Polish and validation | Pending | 0 | Not started |
 
 ### Capability Checkpoint Evidence
@@ -934,8 +934,12 @@ For every task:
   (`review-us2-remediation-1AE3C9`) reported three further findings: a durability
   probe could bypass restoration, wildcard exports leaked internal trust
   primitives, and the checkpoint was labeled complete while review remained
-  open. The current remediation restores on an untrusted completion probe,
-  constrains the facade to its exact supported API, and marks US2 review-pending.
+  open. The remediation restored raw bytes when the completion probe was
+  untrusted, constrained the facade to its exact supported API, and marked US2
+  review-pending for the
+  next audit.
+  The exact-head re-audit returned `NO FINDINGS`
+  (`audit-us2-remediation-F4E33F`).
 - Implementation checkpoint: `42cdf743346c880c1b7e8cb172e842a82ab6f343`
 
 ## PR Marker Plan Evidence
@@ -951,13 +955,13 @@ For every task:
 | Feature spec | `sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046` |
 | Plan-declared scope | `sha256:4e6f8cd5f9ac4f5ecd59cd84936558d21b37abcd5df74c248e1d07744e48b2bf` |
 | Tasks | `sha256:b5d612ef42a570443ee397da0bda8fa604fea586efd2b58c2197c51a49066446` |
-| Reviewability evidence | `sha256:be28b0f821f14aa698bce38bdcf0423e8a36e9606710c52b2332ea904d6b09f3` |
+| Reviewability evidence | `sha256:6291117acccb3f4bd7b44a55735d9451dceb87d23e805218672d2b1e11d9b5ee` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
-| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `42cdf743346c880c1b7e8cb172e842a82ab6f343` | Only T026-T030 replay growth remains authorized |
+| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Complete at `42cdf743346c880c1b7e8cb172e842a82ab6f343` | Only T026-T030 replay growth remains authorized |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level

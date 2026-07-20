@@ -2,7 +2,7 @@
   "schema_version": "marker-checkpoint.v1",
   "feature_id": "G56R-002",
   "marker_id": "us2",
-  "status": "review_pending",
+  "status": "complete",
   "task_ids": [
     "T016", "T017", "T018", "T019", "T020",
     "T021", "T022", "T023", "T024", "T025"
@@ -129,17 +129,13 @@
     "completion_probe_failure_restoration": "pass",
     "exact_public_facade_exports": "pass",
     "private_trust_primitives_hidden": "pass",
-    "independent_critical_high_review": "findings_open",
-    "independent_review_chat_id": "review-us2-remediation-1AE3C9",
-    "independent_review_findings": [
-      "P1: a failed completion-durability probe can bypass restoration after unlink",
-      "P2: wildcard facade exports expose unsupported internal trust primitives",
-      "P1: the checkpoint cannot report complete while independent review is findings-open"
-    ]
+    "independent_critical_high_review": "pass",
+    "independent_review_chat_id": "audit-us2-remediation-F4E33F",
+    "independent_review_findings": []
   },
   "source_fingerprint_status": "current",
   "tasks_sha": "sha256:b5d612ef42a570443ee397da0bda8fa604fea586efd2b58c2197c51a49066446",
   "implementation_completed_at": "2026-07-20T03:06:58Z",
-  "review_updated_at": "2026-07-20T03:41:30Z",
+  "review_updated_at": "2026-07-20T03:50:24Z",
   "review_iteration_started_at": "2026-07-18T20:59:20Z"
 }

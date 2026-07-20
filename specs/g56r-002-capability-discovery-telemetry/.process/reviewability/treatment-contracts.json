@@ -89,13 +89,9 @@
     "completion_probe_failure_restoration": "pass",
     "exact_public_facade_exports": "pass",
     "private_trust_primitives_hidden": "pass",
-    "independent_review": "findings_open",
-    "independent_review_chat_id": "review-us2-remediation-1AE3C9",
-    "independent_review_findings": [
-      "P1: a failed completion-durability probe can bypass restoration after unlink",
-      "P2: wildcard facade exports expose unsupported internal trust primitives",
-      "P1: the checkpoint cannot report complete while independent review is findings-open"
-    ]
+    "independent_review": "pass",
+    "independent_review_chat_id": "audit-us2-remediation-F4E33F",
+    "independent_review_findings": []
   },
   "exception": {
     "kind": "typed_size_only",
