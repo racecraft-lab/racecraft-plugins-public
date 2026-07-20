@@ -887,6 +887,10 @@
             "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py"
           },
           {
+            "operation": "NEW",
+            "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_lock.py"
+          },
+          {
             "operation": "MODIFIED",
             "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py"
           },
