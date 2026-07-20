@@ -939,7 +939,7 @@ For every task:
 - Current exact-range findings head: `ff0c4d57f630dcc4058e1d4180ef24aaabae277c`
 - Prior remediation source head: `3608f0dbeaca34be5585375f87e7f3ebc5feba6b`
 - Current verification-authority findings head: `61014105efd7c99e04e6a40008c85e9d718a4db7`
-- Current remediation source head: `2f0dde984f1a6a39689d9b4ded159b2720c0604b`
+- Current remediation source head: `4f8ad40ca69b129103799fb2f1a4aa4f4afb0785`
 - Capability fixture: `sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a`.
 - Treatment fixture: `sha256:3983dc1d4efe42542ffe0cb72830c970d24cecf490ddfe0c93e24be749ffaa53`.
 - Replay output: `sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda` with byte-identical two-pass verification.
@@ -977,7 +977,7 @@ For every task:
   reported four remaining gaps: incomplete nested v2 schema enforcement, mutable
   verification reports, failed verification values qualifying as complete, and
   transient canonical module exposure during private capability loading. All four
-  are remediated at `2f0dde984f1a6a39689d9b4ded159b2720c0604b`; exact-head
+  are remediated in source through `4f8ad40ca69b129103799fb2f1a4aa4f4afb0785`; exact-head
   re-review is pending.
 - Evidence finalization after the source head is metadata-only; it does not
   change implementation or verification inputs.
@@ -999,7 +999,7 @@ For every task:
 | Feature spec | `sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046` |
 | Plan-declared scope | `sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f` |
 | Tasks | `sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782` |
-| Reviewability evidence | `sha256:165608b959105256c8082db2a9a6691baeb742fa4ca08af2a1c2bd252b12e6bf` |
+| Reviewability evidence | `sha256:0906bb1257699f469756705a019c1f25e126b118d94f7e68e39e28de08194759` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 | Changed-file manifest | `sha256:b7145c5d5ffe0614bdf5e507488360854345e9feb8fa2ae1ab70e97bf4afc827` |
 
@@ -1007,7 +1007,7 @@ For every task:
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
 | 2 | `us2` | T016-T025 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `1190e3c1205744fd50afb37a12c0f9527ad5ee53` | Only T026-T030 replay growth remains authorized |
-| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Remediation source `2f0dde984f1a6a39689d9b4ded159b2720c0604b`; focused validation passes; exact-head re-review pending | No correctness or safety exception remains |
+| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Remediation source `4f8ad40ca69b129103799fb2f1a4aa4f4afb0785`; focused validation passes; exact-head re-review pending | No correctness or safety exception remains |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank

@@ -5,7 +5,7 @@
   "changed_file_manifest": "specs/g56r-002-capability-discovery-telemetry/.process/changed-file-manifest.json",
   "changed_file_manifest_base_commit": "48d72a5dfe1dd971bef6ddcdcd7a67752c9975ec",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-20T06:29:24Z",
+  "updated_at": "2026-07-20T06:36:22Z",
   "active_step": "Phase 7: Validate Restacked Synthetic Replay",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
@@ -369,14 +369,14 @@
         "failed or false verification values could satisfy complete checkpoints",
         "fresh capability loading temporarily exposed private modules under canonical import names"
       ],
-      "implementation_commit": "2f0dde984f1a6a39689d9b4ded159b2720c0604b",
+      "implementation_commit": "4f8ad40ca69b129103799fb2f1a4aa4f4afb0785",
       "evidence_finalization_scope": "The following commit changes evidence metadata only; implementation and verification inputs remain those at implementation_commit.",
       "capability_fixture_digest": "sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a",
       "treatment_fixture_digest": "sha256:3983dc1d4efe42542ffe0cb72830c970d24cecf490ddfe0c93e24be749ffaa53",
       "replay_digest": "sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda",
       "marker_id": "us3",
       "reviewability": "aggregate size-only block at 5,168 source / 4,665 nonblank non-comment lines across 24 safely subdivided modules; maximum module size is 381 lines",
-      "checkpoint": "2f0dde984f1a6a39689d9b4ded159b2720c0604b",
+      "checkpoint": "4f8ad40ca69b129103799fb2f1a4aa4f4afb0785",
       "checkpoint_evidence_commit": "a0990236bf7fbbc01eb9e637ad63acee3dbfcec9",
       "completed_at": "2026-07-20T02:15:18Z"
     },
@@ -407,7 +407,7 @@
     "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
     "plan_declared_scope_sha": "sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f",
     "tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
-    "reviewability_sha": "sha256:165608b959105256c8082db2a9a6691baeb742fa4ca08af2a1c2bd252b12e6bf",
+    "reviewability_sha": "sha256:0906bb1257699f469756705a019c1f25e126b118d94f7e68e39e28de08194759",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
     "changed_file_manifest_sha": "sha256:b7145c5d5ffe0614bdf5e507488360854345e9feb8fa2ae1ab70e97bf4afc827"
   },
@@ -420,7 +420,7 @@
       "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
       "plan_declared_scope_sha": "sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f",
       "tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
-      "reviewability_sha": "sha256:165608b959105256c8082db2a9a6691baeb742fa4ca08af2a1c2bd252b12e6bf",
+      "reviewability_sha": "sha256:0906bb1257699f469756705a019c1f25e126b118d94f7e68e39e28de08194759",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
       "changed_file_manifest_sha": "sha256:b7145c5d5ffe0614bdf5e507488360854345e9feb8fa2ae1ab70e97bf4afc827"
     },
@@ -1010,7 +1010,7 @@
           "mode": "implementation",
           "scope": "us3",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
-          "head_sha": "2f0dde984f1a6a39689d9b4ded159b2720c0604b"
+          "head_sha": "4f8ad40ca69b129103799fb2f1a4aa4f4afb0785"
         },
         "hazards": [
           "fixture-provenance",
@@ -1032,11 +1032,11 @@
         "implementation_checkpoint": {
           "status": "pending",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3.json",
-          "checkpoint_evidence_sha": "sha256:b6e28e69a05baae0afa795e8e5de1be14aad0cd2a6ed89aab48c37383712e977",
+          "checkpoint_evidence_sha": "sha256:631d7183cfe7467a094e2d506c16a7785477c34325d53049698c19f227047c40",
           "checkpoint_evidence_commit_sha": "a0990236bf7fbbc01eb9e637ad63acee3dbfcec9",
           "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
-          "commit_sha": "2f0dde984f1a6a39689d9b4ded159b2720c0604b",
-          "head_sha": "2f0dde984f1a6a39689d9b4ded159b2720c0604b",
+          "commit_sha": "4f8ad40ca69b129103799fb2f1a4aa4f4afb0785",
+          "head_sha": "4f8ad40ca69b129103799fb2f1a4aa4f4afb0785",
           "completed_task_ids": [
             "T026",
             "T027",
@@ -1068,7 +1068,7 @@
             "current_tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
             "checkpoint_marker_tasks_sha": "sha256:0549f955b6e0a56b176378614d3bd2c6cc014f030d63f4dfb170d99f49259995",
             "current_marker_tasks_sha": "sha256:0549f955b6e0a56b176378614d3bd2c6cc014f030d63f4dfb170d99f49259995",
-            "validated_at": "2026-07-20T06:25:02Z"
+            "validated_at": "2026-07-20T06:36:22Z"
           }
         },
         "emission_mapping": {
