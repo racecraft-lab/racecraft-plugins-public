@@ -2093,6 +2093,78 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(list(moved_parent.iterdir()), [])
 
     @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_public_output_rejects_symlinks_and_survives_substitution_races(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            external = root / "external.json"
+            external.write_text("external must remain unchanged\n", encoding="utf-8")
+            target = root / "public-output.json"
+            target.symlink_to(external)
+
+            with self.assertRaisesRegex(ValueError, "cannot replace a symlink"):
+                capability_private._write(target, {"safe": True})
+            self.assertTrue(target.is_symlink())
+            self.assertEqual(
+                external.read_text(encoding="utf-8"), "external must remain unchanged\n",
+            )
+
+            target.unlink()
+            target.write_text("previous output\n", encoding="utf-8")
+            displaced = root / "displaced-output.json"
+            original_replace = capability_private.os.replace
+            raced = False
+
+            def substitute_symlink_before_replace(
+                source: object, destination: object, *args: object, **kwargs: object,
+            ) -> None:
+                nonlocal raced
+                if (
+                    not raced
+                    and destination == target.name
+                    and kwargs.get("dst_dir_fd") is not None
+                ):
+                    target.rename(displaced)
+                    target.symlink_to(external)
+                    raced = True
+                original_replace(source, destination, *args, **kwargs)
+
+            with mock.patch.object(
+                capability_private.os, "replace", side_effect=substitute_symlink_before_replace,
+            ):
+                capability_private._write(target, {"safe": True})
+            self.assertTrue(raced)
+            self.assertFalse(target.is_symlink())
+            self.assertEqual(capability_publish_io._read(target), {"safe": True})
+            self.assertEqual(
+                external.read_text(encoding="utf-8"), "external must remain unchanged\n",
+            )
+
+            output_parent = root / "output-parent"
+            output_parent.mkdir()
+            moved_parent = root / "validated-output-parent"
+            parent_target = output_parent / "result.json"
+            original_assert = capability_private._assert_private_directory_current
+            parent_swapped = False
+
+            def replace_parent(path: Path, descriptor: int, expected_identity: object) -> None:
+                nonlocal parent_swapped
+                if not parent_swapped:
+                    Path(path).rename(moved_parent)
+                    Path(path).mkdir()
+                    parent_swapped = True
+                original_assert(path, descriptor, expected_identity)
+
+            with mock.patch.object(
+                capability_private,
+                "_assert_private_directory_current",
+                side_effect=replace_parent,
+            ), self.assertRaisesRegex(ValueError, "parent changed"):
+                capability_private._write(parent_target, {"safe": True})
+            self.assertTrue(parent_swapped)
+            self.assertEqual(list(output_parent.iterdir()), [])
+            self.assertEqual(list(moved_parent.iterdir()), [])
+
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_abandoned_prepublication_capture_is_recovered_and_deleted(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             raw = Path(temporary) / "raw"

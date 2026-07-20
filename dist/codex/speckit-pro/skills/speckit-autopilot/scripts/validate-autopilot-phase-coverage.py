@@ -109,6 +109,32 @@ COMPLETE_CHECKPOINT_OBJECT_FIELDS = ("freshness",)
 PHASE_VERIFICATION_GATE_ALIASES = {
     "independent_critical_high_review": "independent_review",
 }
+PHASE_DIRECT_EVIDENCE_BINDINGS = {
+    "baseline_commit": ("implementation_baseline_sha", "clean_collection_baseline_sha"),
+    "capability_fixture_digest": ("capability_fixture_digest",),
+    "checkpoint": ("implementation_checkpoint_sha",),
+    "implementation_commit": ("implementation_checkpoint_sha",),
+    "replay_digest": ("replay_digest",),
+    "superseded_checkpoint": ("superseded_checkpoint_sha",),
+    "treatment_fixture_digest": ("treatment_fixture_digest",),
+}
+PHASE_RESULT_PROJECTION_FIELDS = frozenset({
+    "completed_at",
+    "completed_task_ids",
+    "evidence_finalization_scope",
+    "implementation_completed_at",
+    "independent_review_chat_id",
+    "independent_review_findings",
+    "marker_id",
+    "pending_task_ids",
+    "reviewability",
+    "runtime_capability_snapshot_id",
+    "status",
+    "surface_matrix_id",
+    "tasks_completed",
+    "tasks_total",
+    "updated_at",
+})
 WORKFLOW_CHECKPOINT_CLAIM_RE = re.compile(
     r"(?m)^-\s+(?:Implementation checkpoint|Current remediation source head)\s+\[([a-z0-9][a-z0-9_-]*)\]:\s+`([0-9a-f]{40})`\s*$"
 )
@@ -618,6 +644,89 @@ def _git_file_at_commit(repo_root: Path, commit_sha: object, relative_path: str)
     return completed.stdout if completed.returncode == 0 else None
 
 
+def _authorized_workflow_text(
+    workflow: Path,
+    state_path: Path,
+    state: dict[str, Any],
+    expected_head_commit: str | None,
+) -> tuple[str, list[str]]:
+    worktree_text = read_text(workflow)
+    marker_plan = state.get("pr_marker_plan")
+    if not (
+        isinstance(marker_plan, dict)
+        and marker_plan.get("schema_version") == "pr-marker-plan.v2"
+    ):
+        return worktree_text, []
+    if expected_head_commit is None:
+        return worktree_text, []
+    repo_root = _repository_root(state_path)
+    if repo_root is None:
+        return worktree_text, ["workflow repository root is unavailable"]
+    if not isinstance(expected_head_commit, str) or not re.fullmatch(
+        r"[0-9a-f]{40}", expected_head_commit
+    ):
+        return worktree_text, [
+            "pr-marker-plan.v2 workflow validation requires external expected_head_commit authority"
+        ]
+    try:
+        workflow_ref = workflow.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        return worktree_text, ["workflow file is outside the authorized repository"]
+    if not _is_normalized_repo_path(workflow_ref):
+        return worktree_text, ["workflow file reference is not repository-relative"]
+    committed_bytes = _git_file_at_commit(repo_root, expected_head_commit, workflow_ref)
+    if committed_bytes is None:
+        return worktree_text, ["workflow is absent from the authorized PR head"]
+    try:
+        committed_text = committed_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        return worktree_text, ["workflow at the authorized PR head is not UTF-8"]
+    try:
+        worktree_bytes = workflow.read_bytes()
+    except OSError:
+        worktree_bytes = None
+    errors = []
+    if worktree_bytes != committed_bytes:
+        errors.append("workflow differs from the authorized PR head")
+    return committed_text, errors
+
+
+def _phase_evidence_owner(
+    phase_field: str,
+    evidence: dict[str, Any],
+) -> tuple[str | None, Any]:
+    direct_fields = PHASE_DIRECT_EVIDENCE_BINDINGS.get(phase_field)
+    if direct_fields is not None:
+        present = [field for field in direct_fields if field in evidence]
+        if len(present) != 1:
+            return ("multiple" if present else None), None
+        field = present[0]
+        return f"checkpoint_evidence.{field}", evidence[field]
+
+    if phase_field in evidence:
+        return f"checkpoint_evidence.{phase_field}", evidence[phase_field]
+
+    evidence_gate_ids = [
+        gate_id
+        for gate_id, projected_field in PHASE_VERIFICATION_GATE_ALIASES.items()
+        if projected_field == phase_field
+    ]
+    evidence_gate_ids.append(phase_field)
+    for container_name in ("verification", "verification_details"):
+        container = evidence.get(container_name)
+        if not isinstance(container, dict):
+            continue
+        present = [gate_id for gate_id in evidence_gate_ids if gate_id in container]
+        if len(present) > 1:
+            return "multiple", None
+        if present:
+            value = container[present[0]]
+            if isinstance(value, dict):
+                value = value.get("evidence")
+            return f"checkpoint_evidence.{container_name}.{present[0]}", value
+    return None, None
+
+
 def _git_commit_exists(repo_root: Path, commit_sha: object) -> bool:
     if not isinstance(commit_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", commit_sha):
         return False
@@ -1119,6 +1228,43 @@ def validate_projection_integrity(
     marker_plan_status_errors.extend(_marker_plan_version_errors(marker_plan))
     marker_plan_status_errors.extend(_marker_plan_shape_errors(marker_plan))
 
+    checkpoint_evidence_schema: dict[str, Any] | None = None
+    if strict_contract and repo_root:
+        if not _is_normalized_repo_path(feature_dir):
+            checkpoint_evidence_errors.append(
+                "pr-marker-plan.v2 checkpoint evidence requires a normalized feature_dir"
+            )
+        else:
+            checkpoint_schema_ref = (
+                f"{feature_dir}/contracts/marker-checkpoint.schema.json"
+            )
+            committed_schema_bytes = _git_file_at_commit(
+                repo_root, expected_head_commit, checkpoint_schema_ref,
+            )
+            checkpoint_schema_path = _repo_file(repo_root, checkpoint_schema_ref)
+            if committed_schema_bytes is None:
+                checkpoint_evidence_errors.append(
+                    "checkpoint evidence schema is absent from the authorized PR head"
+                )
+            else:
+                try:
+                    worktree_schema_bytes = (
+                        checkpoint_schema_path.read_bytes()
+                        if checkpoint_schema_path and checkpoint_schema_path.is_file()
+                        else None
+                    )
+                except OSError:
+                    worktree_schema_bytes = None
+                if worktree_schema_bytes != committed_schema_bytes:
+                    checkpoint_file_errors.append(
+                        "checkpoint evidence schema differs from the authorized PR head"
+                    )
+                checkpoint_evidence_schema = _load_json_bytes(committed_schema_bytes)
+                if checkpoint_evidence_schema is None:
+                    checkpoint_evidence_errors.append(
+                        "checkpoint evidence schema at the authorized PR head is malformed"
+                    )
+
     markers = marker_plan.get("markers") if isinstance(marker_plan, dict) else None
     declared_marker_ids = {
         marker.get("id")
@@ -1482,37 +1628,39 @@ def validate_projection_integrity(
                         f"pr_marker_plan.markers[{index}] checkpoint evidence must be a JSON object"
                     )
                 if strict_contract and isinstance(evidence, dict):
+                    if checkpoint_evidence_schema is not None:
+                        checkpoint_evidence_errors.extend(
+                            f"pr_marker_plan.markers[{index}] checkpoint evidence schema: {error}"
+                            for error in _json_schema_errors(
+                                evidence,
+                                checkpoint_evidence_schema,
+                                checkpoint_evidence_schema,
+                                "checkpoint_evidence",
+                            )
+                        )
+                    if evidence.get("status") != checkpoint_status:
+                        checkpoint_evidence_errors.append(
+                            f"pr_marker_plan.markers[{index}] checkpoint evidence status does not match checkpoint status"
+                        )
                     for phase_name, phase_result in phases_by_marker.get(marker_id, []):
-                        direct_bindings = {
-                            "capability_fixture_digest": "capability_fixture_digest",
-                            "treatment_fixture_digest": "treatment_fixture_digest",
-                            "replay_digest": "replay_digest",
-                            "implementation_commit": "implementation_checkpoint_sha",
-                            "checkpoint": "implementation_checkpoint_sha",
-                        }
-                        for phase_field, evidence_field in direct_bindings.items():
-                            if (
-                                phase_field in phase_result
-                                and evidence_field in evidence
-                                and phase_result[phase_field] != evidence[evidence_field]
-                            ):
+                        for phase_field, phase_value in phase_result.items():
+                            if phase_field in PHASE_RESULT_PROJECTION_FIELDS:
+                                continue
+                            owner, evidence_value = _phase_evidence_owner(
+                                phase_field, evidence,
+                            )
+                            if owner is None:
+                                checkpoint_evidence_errors.append(
+                                    f"pr_marker_plan.markers[{index}] phase_results[{phase_name}] {phase_field} has no checkpoint evidence owner"
+                                )
+                            elif owner == "multiple":
+                                checkpoint_evidence_errors.append(
+                                    f"pr_marker_plan.markers[{index}] phase_results[{phase_name}] {phase_field} has multiple checkpoint evidence owners"
+                                )
+                            elif phase_value != evidence_value:
                                 checkpoint_evidence_errors.append(
                                     f"pr_marker_plan.markers[{index}] phase_results[{phase_name}] {phase_field} does not match checkpoint evidence"
                                 )
-                        verification = evidence.get("verification")
-                        if isinstance(verification, dict):
-                            for gate_id, result in verification.items():
-                                expected = result.get("evidence") if isinstance(result, dict) else result
-                                phase_gate_id = PHASE_VERIFICATION_GATE_ALIASES.get(
-                                    gate_id, gate_id,
-                                )
-                                if (
-                                    phase_gate_id in phase_result
-                                    and phase_result[phase_gate_id] != expected
-                                ):
-                                    checkpoint_evidence_errors.append(
-                                        f"pr_marker_plan.markers[{index}] phase_results[{phase_name}] {phase_gate_id} does not match checkpoint evidence"
-                                    )
                 if checkpoint_status == "complete" and strict_contract and repo_root:
                     claimed_commit = checkpoint.get("commit_sha")
                     verification_report = _load_json_bytes(committed_verification_bytes)
@@ -1671,36 +1819,6 @@ def validate_projection_integrity(
                             checkpoint_evidence_errors.append(
                                 f"pr_marker_plan.markers[{index}] checkpoint/evidence implementation commit mismatch"
                             )
-                        checkpoint_schema = (
-                            _repo_file(
-                                repo_root,
-                                f"{feature_dir}/contracts/marker-checkpoint.schema.json",
-                            )
-                            if isinstance(feature_dir, str)
-                            else None
-                        )
-                        if checkpoint_schema is not None and checkpoint_schema.is_file():
-                            try:
-                                schema_value = _strict_json_loads(read_text(checkpoint_schema))
-                            except (json.JSONDecodeError, ValueError):
-                                checkpoint_evidence_errors.append(
-                                    f"pr_marker_plan.markers[{index}] checkpoint evidence schema is malformed"
-                                )
-                            else:
-                                if not isinstance(schema_value, dict):
-                                    checkpoint_evidence_errors.append(
-                                        f"pr_marker_plan.markers[{index}] checkpoint evidence schema root is invalid"
-                                    )
-                                else:
-                                    checkpoint_evidence_errors.extend(
-                                        f"pr_marker_plan.markers[{index}] checkpoint evidence schema: {error}"
-                                        for error in _json_schema_errors(
-                                            evidence,
-                                            schema_value,
-                                            schema_value,
-                                            "checkpoint_evidence",
-                                        )
-                                    )
                     if repo_root:
                         if not _git_commit_exists(repo_root, claimed_commit):
                             checkpoint_evidence_errors.append(
@@ -1895,13 +2013,18 @@ def build_report(
     expected_base_commit: str | None = None,
     expected_head_commit: str | None = None,
 ) -> dict[str, Any]:
-    workflow_text = read_text(workflow)
     state_data = load_state(state)
+    workflow_text, workflow_authority_errors = _authorized_workflow_text(
+        workflow, state, state_data, expected_head_commit,
+    )
     plan_steps = extract_plan_steps(state_data)
 
     workflow_result = validate_workflow(workflow_text)
     workflow_checkpoint_result = validate_workflow_checkpoint_bindings(
         workflow_text, state_data,
+    )
+    workflow_checkpoint_result["workflow_checkpoint_errors"].extend(
+        workflow_authority_errors
     )
     state_result = validate_state(plan_steps)
     projection_result = validate_projection_integrity(

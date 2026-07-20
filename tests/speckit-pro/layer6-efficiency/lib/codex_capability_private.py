@@ -24,7 +24,7 @@ def _assert_private_directory_current(path, descriptor, expected_identity):
         _stable_directory_identity(current) != expected_identity
         or _stable_directory_identity(os.fstat(descriptor)) != expected_identity
     ):
-        raise ValueError("private output parent changed after validation")
+        raise ValueError("output parent changed after validation")
 
 
 def _fsync_directory(path):
@@ -38,7 +38,10 @@ def _fsync_directory(path):
         os.close(descriptor)
 
 
-def _write_private_bytes_at(parent_descriptor, parent_path, filename, payload, *, append_only, expected_parent_identity):
+def _write_private_bytes_at(
+    parent_descriptor, parent_path, filename, payload, *, append_only,
+    expected_parent_identity, private=True,
+):
     temporary = None; descriptor = None
     try:
         for _ in range(64):
@@ -47,7 +50,7 @@ def _write_private_bytes_at(parent_descriptor, parent_path, filename, payload, *
                 descriptor = os.open(
                     candidate,
                     os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
-                    0o600,
+                    0o600 if private else 0o666,
                     dir_fd=parent_descriptor,
                 )
             except FileExistsError:
@@ -56,7 +59,8 @@ def _write_private_bytes_at(parent_descriptor, parent_path, filename, payload, *
             break
         if descriptor is None or temporary is None:
             raise ValueError("private output temporary name allocation failed")
-        os.fchmod(descriptor, 0o600)
+        if private:
+            os.fchmod(descriptor, 0o600)
         with os.fdopen(descriptor, "wb") as stream:
             descriptor = None
             stream.write(payload); stream.flush(); os.fsync(stream.fileno())
@@ -101,6 +105,42 @@ def _write_private_bytes(path, payload, *, append_only=False, expected_parent_id
         os.close(parent_descriptor)
 
 
+def _public_output_binding(path):
+    if not HAS_DESCRIPTOR_RELATIVE_IO:
+        raise ValueError("safe public output requires descriptor-relative I/O")
+    target = Path(os.path.abspath(path))
+    parent = target.parent
+    parent_metadata = os.stat(parent, follow_symlinks=False)
+    if not stat.S_ISDIR(parent_metadata.st_mode):
+        raise ValueError("public output parent must be a real directory")
+    return target, _stable_directory_identity(parent_metadata)
+
+
+def _write_public_bytes(path, payload, *, append_only=False):
+    target, parent_identity = _public_output_binding(path)
+    parent = target.parent
+    parent_descriptor = _private_directory_descriptor(parent, parent_identity)
+    try:
+        try:
+            target_metadata = os.stat(
+                target.name, dir_fd=parent_descriptor, follow_symlinks=False,
+            )
+        except FileNotFoundError:
+            target_metadata = None
+        if target_metadata is not None and stat.S_ISLNK(target_metadata.st_mode):
+            raise ValueError("public output cannot replace a symlink")
+        if target_metadata is not None and not stat.S_ISREG(target_metadata.st_mode):
+            raise ValueError("public output target must be a regular file when present")
+        _write_private_bytes_at(
+            parent_descriptor, parent, target.name, payload,
+            append_only=append_only,
+            expected_parent_identity=parent_identity,
+            private=False,
+        )
+    finally:
+        os.close(parent_descriptor)
+
+
 def _write(path, value, *, private=False, append_only=False, expected_parent_identity=None):
     payload = canonical_bytes(value) + b"\n"
     if private:
@@ -113,22 +153,7 @@ def _write(path, value, *, private=False, append_only=False, expected_parent_ide
             expected_parent_identity=expected_parent_identity,
         )
         return
-    if append_only:
-        descriptor, temporary = tempfile.mkstemp(prefix=".g56r-002-publish-", dir=Path(path).parent)
-        try:
-            with os.fdopen(descriptor, "wb") as stream:
-                stream.write(payload); stream.flush(); os.fsync(stream.fileno())
-            os.link(temporary, path)
-            _fsync_directory(Path(path).parent)
-        except Exception:
-            try: os.close(descriptor)
-            except OSError: pass  # Best-effort cleanup must not mask the original failure.
-            raise
-        finally:
-            try: os.unlink(temporary)
-            except OSError: pass  # Best-effort cleanup must not mask the original failure.
-        return
-    Path(path).write_bytes(payload)
+    _write_public_bytes(path, payload, append_only=append_only)
 
 
 def validate_raw_evidence_root(raw_root, repository_root):

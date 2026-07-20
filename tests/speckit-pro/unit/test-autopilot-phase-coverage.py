@@ -672,6 +672,9 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             new_path = root / "new.txt"
             manifest_path = root / "changed-file-manifest.json"
             tasks_path = root / "specs/spec-example/tasks.md"
+            checkpoint_schema_path = (
+                root / "specs/spec-example/contracts/marker-checkpoint.schema.json"
+            )
             evidence_path = root / "specs/spec-example/.process/checkpoints/us1.json"
             verification_path = root / "specs/spec-example/.process/verification/us1.json"
             workflow_path.write_text(workflow_text(), encoding="utf-8")
@@ -683,6 +686,35 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             deleted_path.write_text("deleted content " * 20 + "\n", encoding="utf-8")
             tasks_path.parent.mkdir(parents=True)
             tasks_path.write_text("# Tasks\n\n- [x] T001 Marker task\n- [ ] T002 Other task\n", encoding="utf-8")
+            checkpoint_schema_path.parent.mkdir(parents=True)
+            checkpoint_schema_path.write_text(
+                json.dumps(
+                    {
+                        "type": "object",
+                        "required": [
+                            "schema_version", "feature_id", "marker_id", "status",
+                            "task_ids", "implementation_checkpoint_sha", "verification",
+                            "source_fingerprint_status", "tasks_sha",
+                        ],
+                        "properties": {
+                            "schema_version": {"const": "marker-checkpoint.v1"},
+                            "feature_id": {"const": "SPEC-EXAMPLE"},
+                            "marker_id": {"const": "us1"},
+                            "status": {"enum": ["pending", "complete"]},
+                            "task_ids": {"type": "array", "minItems": 1},
+                            "implementation_checkpoint_sha": {
+                                "type": "string", "pattern": "^[0-9a-f]{40}$",
+                            },
+                            "verification": {"type": "object", "minProperties": 1},
+                            "source_fingerprint_status": {"type": "string"},
+                            "tasks_sha": {
+                                "type": "string", "pattern": "^sha256:[0-9a-f]{64}$",
+                            },
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
             subprocess.run(["git", "init", "-q", str(root)], check=True)
             subprocess.run(["git", "-C", str(root), "add", "."], check=True)
             subprocess.run(
@@ -1067,6 +1099,16 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             self.assertEqual(report["changed_file_manifest_errors"], [])
             self.assertEqual(report["checkpoint_source_fingerprint_errors"], [])
 
+            committed_workflow = workflow_path.read_bytes()
+            workflow_path.write_bytes(committed_workflow + b"\nmutable worktree claim\n")
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "workflow differs from the authorized PR head",
+                report["workflow_checkpoint_errors"],
+            )
+            workflow_path.write_bytes(committed_workflow)
+
             phase_name = "Phase 7: Implement - Pending task decomposition"
             phase_step = next(
                 item for item in state["plan"] if item["step"] == phase_name
@@ -1165,10 +1207,81 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 report["checkpoint_evidence_errors"],
             )
             evidence_path.write_bytes(committed_evidence)
+
+            pending_evidence = json.loads(committed_evidence)
+            pending_evidence["status"] = "pending"
+            pending_evidence.pop("completed_at")
+            pending_evidence.update(checkpoint["freshness"])
+            pending_evidence["verification"]["full_suite"] = "all pass"
+            state["phase_results"][phase_name].update(
+                {
+                    "focused_tests": "pass",
+                    "implementation_commit": implementation_commit,
+                    "full_suite": "all pass",
+                }
+            )
+            state["phase_results"]["Phase 7: Implement - Integration and Polish"][
+                "focused_tests"
+            ] = "pass"
+            state["pr_marker_plan"]["status"] = "checkpointing"
+            evidence_path.write_text(json.dumps(pending_evidence), encoding="utf-8")
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(root), "add", str(evidence_path), "autopilot-state.json"],
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "bind valid pending phase evidence",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 0, report)
+
+            missing_pending_evidence = json.loads(json.dumps(pending_evidence))
+            missing_pending_evidence.pop("implementation_checkpoint_sha")
+            missing_pending_evidence["verification"].pop("full_suite")
+            evidence_path.write_text(
+                json.dumps(missing_pending_evidence), encoding="utf-8",
+            )
+            subprocess.run(["git", "-C", str(root), "add", str(evidence_path)], check=True)
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "remove pending evidence owners",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertTrue(
+                any(
+                    "implementation_checkpoint_sha" in error
+                    for error in report["checkpoint_evidence_errors"]
+                )
+            )
+            self.assertIn(
+                f"pr_marker_plan.markers[0] phase_results[{phase_name}] implementation_commit has no checkpoint evidence owner",
+                report["checkpoint_evidence_errors"],
+            )
+            self.assertIn(
+                f"pr_marker_plan.markers[0] phase_results[{phase_name}] full_suite has no checkpoint evidence owner",
+                report["checkpoint_evidence_errors"],
+            )
+
+            evidence_path.write_bytes(committed_evidence)
             state.pop("phase_results")
             checkpoint["status"] = "complete"
+            state["pr_marker_plan"]["status"] = "emission_ready"
             state_path.write_text(json.dumps(state), encoding="utf-8")
-            subprocess.run(["git", "-C", str(root), "add", "autopilot-state.json"], check=True)
+            subprocess.run(
+                ["git", "-C", str(root), "add", str(evidence_path), "autopilot-state.json"],
+                check=True,
+            )
             subprocess.run(
                 [
                     "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
