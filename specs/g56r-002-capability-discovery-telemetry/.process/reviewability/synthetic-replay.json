@@ -5,14 +5,14 @@
   "status": "block",
   "mode": "implementation",
   "scope": "T026-T030 deterministic synthetic replay",
-  "head_sha": "a324f4e95bfddb7b37e4612879d5b57c9d2af412",
+  "head_sha": "19b748ae3f108d68a05ceb282968c76b4debe340",
   "head_scope": "current_remediation_source",
-  "current_restack_review_status": "live-range-review-9FBA02 ninth P1 review at 9ddc51c8 remediated at a324f4e9; exact live-head re-review pending",
+  "current_restack_review_status": "live-range-review-9FBA02 tenth P1 review at 8c84eb42 remediated at 19b748ae; exact live-head re-review pending",
   "reason_class": "aggregate_size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 5748,
-  "actual_nonblank_noncomment_lines": 5216,
+  "actual_source_lines": 5773,
+  "actual_nonblank_noncomment_lines": 5237,
   "production_modules": 26,
   "max_module_source_lines": 396,
   "module_groups": {
@@ -21,7 +21,7 @@
   },
   "primary_surface": "harness/adapter",
   "correctness_checks": {
-    "focused_tests": "87/87 pass; validator 33/33 pass; contract parity 71/71 pass after live-range remediation",
+    "focused_tests": "88/88 pass; validator 33/33 pass; contract parity 71/71 pass after live-range remediation",
     "two_pass_byte_equality": "pass",
     "raw_fixture_digest_validation": "pass",
     "canonical_fixture_serialization": "pass",
@@ -30,10 +30,13 @@
     "public_synthetic_qualification_rejection": "pass",
     "capability_module_freeze": "pass",
     "declared_claim_exactness": "pass",
+    "exact_head_workflow_binding": "pass",
+    "pending_phase_evidence_ownership": "pass",
+    "public_output_symlink_safety": "pass",
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass after restack",
     "full_suite": "2849/2849 pass after live-range remediation",
-    "independent_review": "live-range-review-9FBA02 ninth P1 review at 9ddc51c8 remediated at a324f4e9; exact live-head re-review pending"
+    "independent_review": "live-range-review-9FBA02 tenth P1 review at 8c84eb42 remediated at 19b748ae; exact live-head re-review pending"
   },
   "decomposition": {
     "status": "complete",
