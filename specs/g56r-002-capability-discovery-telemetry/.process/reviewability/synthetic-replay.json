@@ -5,7 +5,7 @@
   "status": "block",
   "mode": "implementation",
   "scope": "T026-T030 deterministic synthetic replay",
-  "head_sha": "06c94413b8ca68eb9886dc38ccf74f5805cffdad",
+  "head_sha": "06c94413387849b9373cb0223889f698ca6c7f65",
   "head_scope": "current_remediation_source",
   "current_restack_review_status": "live-range-review-9FBA02 sixth P1 finding at 60054601 remediated at 06c94413; exact live-head re-review pending",
   "reason_class": "aggregate_size_only",

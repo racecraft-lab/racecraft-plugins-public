@@ -8,7 +8,7 @@
     "T033", "T034", "T035", "T036", "T037", "T038", "T039"
   ],
   "implementation_baseline_sha": "0d5df513fe95a5201c422b908e2c6b7330b91552",
-  "implementation_checkpoint_sha": "06c94413b8ca68eb9886dc38ccf74f5805cffdad",
+  "implementation_checkpoint_sha": "06c94413387849b9373cb0223889f698ca6c7f65",
   "last_reviewed_head_sha": "60054601dc7364aae5dfb29299b5c4f15e45653a",
   "capability_fixture_digest": "sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a",
   "treatment_fixture_digest": "sha256:935c2b104cb1036ef5befb8a36c2fd47c71845b4b5a7d901c26827ca9a2b3788",
