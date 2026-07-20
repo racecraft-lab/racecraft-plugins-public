@@ -874,8 +874,8 @@ For every task:
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
 | 2 - Treatment contracts | Complete | 10 | 51/51 focused tests, 2821/2821 full suite, Windows-safe offline replay, and exact-head independent review returned `NO FINDINGS` |
-| 3 - Synthetic replay | Checkpointing | 5 | Replay implementation and deterministic verification pass; its marker checkpoint remains open until exact-head review clears |
-| Polish and validation | In progress | 7 | T031-T037 pass; T038 reviewability/checkpoint finalization and T039 final-head release readiness remain unchecked |
+| 3 - Synthetic replay | Complete | 5 | Replay implementation, immutable checkpoint evidence, and exact-head independent review pass |
+| Polish and validation | Complete | 9 | T031-T039 pass, including the final reviewability and release-readiness gates |
 
 ### Capability Checkpoint Evidence
 
@@ -929,6 +929,7 @@ For every task:
 ### Synthetic Replay Checkpoint Evidence
 
 - Reviewed remediation source head: `096605e6a4987c0f580c525bc377a68c438a9a22`
+- Exact reviewed PR head: `3d7bd9eff79a1889830c74b6bcd22ae8945098c0`
 - Capability fixture: `sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a`.
 - Treatment fixture: `sha256:3983dc1d4efe42542ffe0cb72830c970d24cecf490ddfe0c93e24be749ffaa53`.
 - Replay output: `sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda` with byte-identical two-pass verification.
@@ -946,13 +947,12 @@ For every task:
   documentation. Re-review `untitled-chat-3AC330` confirmed those seven fixes
   and reported one remaining v1 compatibility gap: top-level timestamps still
   inherited v2-only strict UTC validation. The current remediation moves that
-  strictness into the v2 conditional and remains pending until its exact
-  source-bearing head returns `NO FINDINGS`.
+  strictness into the v2 conditional. Exact-head re-review
+  `untitled-chat-A24ABC` returned `NO FINDINGS`.
 - Evidence finalization after the source head is metadata-only; it does not
   change implementation or verification inputs.
-- Folded polish: T031-T037 are complete; T038 and T039 are intentionally
-  unchecked until reviewability evidence and release readiness are rerun for
-  the same clean head.
+- Folded polish: T031-T039 are complete. The final reviewability, title, and
+  78-file base-to-head manifest gates pass.
 
 ## PR Marker Plan Evidence
 
@@ -961,14 +961,14 @@ For every task:
 - Authoritative state: top-level `pr_marker_plan` in
   `docs/ai/specs/.process/autopilot-state.json`
 - Fingerprint status: Current
-- Plan status: `checkpointing`
+- Plan status: `emission_ready`
 
 | Fingerprint input | SHA-256 |
 |---|---|
 | Feature spec | `sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56` |
 | Plan-declared scope | `sha256:14ba3fca340c75af86e370254e0c3fbc72f6615daad3c5ee550dc1b21f168cf4` |
-| Tasks | `sha256:216b86cb34bbcc40c7f6e23b153379ec047616885f89ae6c11a41674df68b447` |
-| Reviewability evidence | `sha256:6fb82605fc7e192d548b467b42ca166677591346f198115a4e454bf9c8d64108` |
+| Tasks | `sha256:d16c801273daa9e56c08c34068879b779aedaacc698615a5ba522e350addbdab` |
+| Reviewability evidence | `sha256:7219ed60c4390c84adfb31add7a9705c1cfd2c546b20ddc4487b621d93a79692` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 | Changed-file manifest | `sha256:6768d7be78fab50abdc6d33c6ac38212f2745bde89b7410b58dc71cee9814893` |
 
@@ -976,7 +976,7 @@ For every task:
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
 | 2 | `us2` | T016-T025 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `1190e3c1205744fd50afb37a12c0f9527ad5ee53` | Only T026-T030 replay growth remains authorized |
-| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Checkpointing from source head `096605e6a4987c0f580c525bc377a68c438a9a22` | T038-T039 finalization remains open |
+| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Complete at reviewed head `3d7bd9eff79a1889830c74b6bcd22ae8945098c0`; immutable evidence commit `e258f189f6d004af25ba2f735408a455fe01aa44` | No correctness or safety exception remains |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
