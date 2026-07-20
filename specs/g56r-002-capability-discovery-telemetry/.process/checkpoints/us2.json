@@ -2,7 +2,7 @@
   "schema_version": "marker-checkpoint.v1",
   "feature_id": "G56R-002",
   "marker_id": "us2",
-  "status": "complete",
+  "status": "review_pending",
   "task_ids": [
     "T016", "T017", "T018", "T019", "T020",
     "T021", "T022", "T023", "T024", "T025"
@@ -16,13 +16,13 @@
   "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
   "reviewability_measurements": {
     "production_modules": 13,
-    "source_lines": 4306,
-    "nonblank_noncomment_lines": 3895,
-    "max_capability_module_source_lines": 355,
+    "source_lines": 4409,
+    "nonblank_noncomment_lines": 3996,
+    "max_capability_module_source_lines": 363,
     "modules": {
       "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {
-        "source_lines": 19,
-        "nonblank_noncomment_lines": 11
+        "source_lines": 114,
+        "nonblank_noncomment_lines": 105
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py": {
         "source_lines": 112,
@@ -57,8 +57,8 @@
         "nonblank_noncomment_lines": 10
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {
-        "source_lines": 355,
-        "nonblank_noncomment_lines": 339
+        "source_lines": 363,
+        "nonblank_noncomment_lines": 346
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {
         "source_lines": 269,
@@ -75,7 +75,7 @@
     }
   },
   "verification": {
-    "focused_tests": "52/52 pass",
+    "focused_tests": "53/53 pass",
     "published_successor_validation": "actual artifact passes canonical treatment-aware validation",
     "json_schema_instance_validation": "pass with runtime parity corpus",
     "bounded_file_and_cli_isolation": "pass",
@@ -125,16 +125,21 @@
     "docs_reference_check": "pass",
     "full_suite": "2821/2821 pass",
     "capability_public_api_preserved": "pass",
-    "capability_safe_module_boundaries": "pass; 12 capability modules, maximum 355 source lines",
+    "capability_safe_module_boundaries": "pass; 12 capability modules, maximum 363 source lines",
+    "completion_probe_failure_restoration": "pass",
+    "exact_public_facade_exports": "pass",
+    "private_trust_primitives_hidden": "pass",
     "independent_critical_high_review": "findings_open",
-    "independent_review_chat_id": "untitled-chat-869257",
+    "independent_review_chat_id": "review-us2-remediation-1AE3C9",
     "independent_review_findings": [
-      "P1: retention prose must distinguish the durable deletion intent from the terminal completion record",
-      "P1: capability trust and failure responsibilities require safe module boundaries behind the stable facade"
+      "P1: a failed completion-durability probe can bypass restoration after unlink",
+      "P2: wildcard facade exports expose unsupported internal trust primitives",
+      "P1: the checkpoint cannot report complete while independent review is findings-open"
     ]
   },
   "source_fingerprint_status": "current",
-  "tasks_sha": "sha256:e9b1ca24a1ab777fd005f0192995a02b5a23c4d6d66a02d942f85720af7c1aca",
-  "completed_at": "2026-07-20T03:06:58Z",
+  "tasks_sha": "sha256:b5d612ef42a570443ee397da0bda8fa604fea586efd2b58c2197c51a49066446",
+  "implementation_completed_at": "2026-07-20T03:06:58Z",
+  "review_updated_at": "2026-07-20T03:33:36Z",
   "review_iteration_started_at": "2026-07-18T20:59:20Z"
 }

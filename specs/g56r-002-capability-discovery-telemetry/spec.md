@@ -426,7 +426,8 @@ validate every fixture hash.
 - The capability adapter crossed the 400-LOC boundary during implementation and
   is now safely subdivided behind its stable public facade into focused source,
   observation, matrix, private I/O, retention, freeze, contract, and CLI
-  modules. Every capability module remains below 400 source lines, so T001-T015
+  modules. The facade exports exactly the supported public API and no private
+  trust primitives. Every capability module remains below 400 source lines, so T001-T015
   no longer relies on a `typed_size_only` / `no_safe_boundary` exception.
 - The feature remains one guarded slice with three ordered review markers:
   source/surface freeze, telemetry/treatment contracts, and sanitized replay.

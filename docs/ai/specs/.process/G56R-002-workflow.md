@@ -874,8 +874,8 @@ For every task:
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
-| 2 - Treatment contracts | Complete | 10 | 52/52 focused tests, 2821/2821 full suite, Windows-safe offline replay, and prior exact-head independent review returned `NO FINDINGS` |
-| 3 - Synthetic replay | In Progress | 0 | T026-T030 are unblocked after the clean US2 checkpoint and continue in the next marker branch |
+| 2 - Treatment contracts | Review pending | 10 | 53/53 focused tests and the prior 2821/2821 full suite pass; current-head review findings are under remediation |
+| 3 - Synthetic replay | In Progress | 0 | T026-T030 exist on the next marker branch; restack and exact-head review follow the clean US2 verdict |
 | Polish and validation | Pending | 0 | Not started |
 
 ### Capability Checkpoint Evidence
@@ -900,10 +900,10 @@ For every task:
 - Telemetry profile: `sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb`
 - Treatment contract: `sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199`
 - Superseded marker checkpoint: `1190e3c1205744fd50afb37a12c0f9527ad5ee53`
-- Reviewability: aggregate size-only `block` at 4,306 source / 3,895
+- Reviewability: aggregate size-only `block` at 4,409 source / 3,996
   nonblank, non-comment lines across 13 production modules. The stable
-  capability facade and 11 focused internal modules total 2,562 / 2,295 with
-  a 355-line maximum; capability code no longer uses a `no_safe_boundary`
+  capability facade and 11 focused internal modules total 2,665 / 2,396 with
+  a 363-line maximum; capability code no longer uses a `no_safe_boundary`
   exception. `treatment_trace_schema.py` remains 1,744 / 1,600 under its
   treatment-only typed exception, with only T026-T030 replay growth reserved.
 - Review: PASS after direct canonical validation of the actual
@@ -929,8 +929,13 @@ For every task:
   (`untitled-chat-869257`) reported two P1 findings: stale retention-order prose
   and an unjustified capability `no_safe_boundary` claim. This remediation
   corrects the deletion-intent/completion sequence and safely splits capability
-  trust and failure responsibilities behind the stable facade; exact-head
-  re-review remains pending.
+  trust and failure responsibilities behind the stable facade. A follow-up
+  exact-head audit
+  (`review-us2-remediation-1AE3C9`) reported three further findings: a durability
+  probe could bypass restoration, wildcard exports leaked internal trust
+  primitives, and the checkpoint was labeled complete while review remained
+  open. The current remediation restores on an untrusted completion probe,
+  constrains the facade to its exact supported API, and marks US2 review-pending.
 - Implementation checkpoint: `8a179bdbb6aef08849bbfc4ed07c547c26f8194a`
 
 ## PR Marker Plan Evidence
@@ -943,23 +948,23 @@ For every task:
 
 | Fingerprint input | SHA-256 |
 |---|---|
-| Feature spec | `sha256:ac12781701e27e9eda8428f4b8e5babe3b8687da5fed7bc4d66f6632a7b5b9ce` |
-| Plan-declared scope | `sha256:fe22a04dea4d0743952be02e507295c3222edc46ee2365f0d7ad9c692925f170` |
-| Tasks | `sha256:e9b1ca24a1ab777fd005f0192995a02b5a23c4d6d66a02d942f85720af7c1aca` |
-| Reviewability evidence | `sha256:eade7136c491e7767cd6c0adc970d9e926262287d32ee9c80880634d70cd6ba4` |
+| Feature spec | `sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046` |
+| Plan-declared scope | `sha256:4e6f8cd5f9ac4f5ecd59cd84936558d21b37abcd5df74c248e1d07744e48b2bf` |
+| Tasks | `sha256:b5d612ef42a570443ee397da0bda8fa604fea586efd2b58c2197c51a49066446` |
+| Reviewability evidence | `sha256:be28b0f821f14aa698bce38bdcf0423e8a36e9606710c52b2332ea904d6b09f3` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
-| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Complete at `8a179bdbb6aef08849bbfc4ed07c547c26f8194a` | Only T026-T030 replay growth remains authorized |
+| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `8a179bdbb6aef08849bbfc4ed07c547c26f8194a` | Only T026-T030 replay growth remains authorized |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
-  lines under its historical typed exception; the current US2 marker is 4,306 /
-  3,895 across 13 modules against the aggregate 400-LOC boundary. Capability
-  modules are safely split with a 355-line maximum; only the treatment module
+  lines under its historical typed exception; the current US2 marker is 4,409 /
+  3,996 across 13 modules against the aggregate 400-LOC boundary. Capability
+  modules are safely split with a 363-line maximum; only the treatment module
   retains a typed size-only exception.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.

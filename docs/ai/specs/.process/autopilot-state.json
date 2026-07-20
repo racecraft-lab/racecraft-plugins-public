@@ -3,7 +3,7 @@
   "spec_id": "G56R-002",
   "feature_dir": "specs/g56r-002-capability-discovery-telemetry",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-20T03:06:58Z",
+  "updated_at": "2026-07-20T03:33:36Z",
   "active_step": "Phase 7: Implement - Synthetic Replay",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
@@ -309,10 +309,10 @@
       "completed_at": "2026-07-18T19:03:30Z"
     },
     "Phase 7: Implement - Treatment Contracts": {
-      "status": "completed",
+      "status": "review_pending",
       "tasks_completed": 10,
       "tasks_total": 10,
-      "focused_tests": "52/52 pass",
+      "focused_tests": "53/53 pass",
       "windows_safe_offline_replay": "pass",
       "canonical_manifest_snapshot": "pass",
       "canonical_route_resolution_membership": "pass",
@@ -324,6 +324,9 @@
       "retention_lock_failure_release": "pass",
       "post_unlink_completion_proof": "pass",
       "post_persistence_valueerror_recovery": "pass",
+      "completion_probe_failure_restoration": "pass",
+      "exact_public_facade_exports": "pass",
+      "private_trust_primitives_hidden": "pass",
       "canonical_completion_record_reachability": "pass",
       "retry_completion_timestamp_accuracy": "pass",
       "parent_configuration_owner_join": "pass",
@@ -335,27 +338,28 @@
       "qualification_identifier_schema_parity": "pass",
       "malformed_predecessor_error_normalization": "pass",
       "independent_review": "findings_open",
-      "independent_review_chat_id": "untitled-chat-869257",
+      "independent_review_chat_id": "review-us2-remediation-1AE3C9",
       "independent_review_findings": [
-        "P1: retention prose must distinguish the durable deletion intent from the terminal completion record",
-        "P1: capability trust and failure responsibilities require safe module boundaries behind the stable facade"
+        "P1: a failed completion-durability probe can bypass restoration after unlink",
+        "P2: wildcard facade exports expose unsupported internal trust primitives",
+        "P1: the checkpoint cannot report complete while independent review is findings-open"
       ],
       "baseline_commit": "bbffc774c815594edc64cf412a2b5f91127ef213",
       "candidate_freeze_id": "sha256:dcf75cea52244ba175324d83fb021f70f96c64e1e82d963451e91da5127c40d6",
       "telemetry_profile_id": "sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb",
       "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
       "marker_id": "us2",
-      "reviewability": "aggregate size-only block at 4,306 source / 3,895 nonblank non-comment lines across 13 production modules; 12 capability modules are safely split with a 355-line maximum and only the treatment module retains a typed size-only exception",
+      "reviewability": "aggregate size-only block at 4,409 source / 3,996 nonblank non-comment lines across 13 production modules; 12 capability modules are safely split with a 363-line maximum, the facade exports exactly the supported API, and only the treatment module retains a typed size-only exception",
       "checkpoint": "8a179bdbb6aef08849bbfc4ed07c547c26f8194a",
       "superseded_checkpoint": "1190e3c1205744fd50afb37a12c0f9527ad5ee53",
-      "completed_at": "2026-07-20T03:06:58Z"
+      "implementation_completed_at": "2026-07-20T03:06:58Z"
     }
   },
   "current_source_fingerprint": {
-    "feature_spec_sha": "sha256:ac12781701e27e9eda8428f4b8e5babe3b8687da5fed7bc4d66f6632a7b5b9ce",
-    "plan_declared_scope_sha": "sha256:fe22a04dea4d0743952be02e507295c3222edc46ee2365f0d7ad9c692925f170",
-    "tasks_sha": "sha256:e9b1ca24a1ab777fd005f0192995a02b5a23c4d6d66a02d942f85720af7c1aca",
-    "reviewability_sha": "sha256:eade7136c491e7767cd6c0adc970d9e926262287d32ee9c80880634d70cd6ba4",
+    "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
+    "plan_declared_scope_sha": "sha256:4e6f8cd5f9ac4f5ecd59cd84936558d21b37abcd5df74c248e1d07744e48b2bf",
+    "tasks_sha": "sha256:b5d612ef42a570443ee397da0bda8fa604fea586efd2b58c2197c51a49066446",
+    "reviewability_sha": "sha256:be28b0f821f14aa698bce38bdcf0423e8a36e9606710c52b2332ea904d6b09f3",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
   },
   "pr_marker_plan": {
@@ -364,10 +368,10 @@
     "feature_id": "G56R-002",
     "status": "checkpointing",
     "source_fingerprint": {
-      "feature_spec_sha": "sha256:ac12781701e27e9eda8428f4b8e5babe3b8687da5fed7bc4d66f6632a7b5b9ce",
-      "plan_declared_scope_sha": "sha256:fe22a04dea4d0743952be02e507295c3222edc46ee2365f0d7ad9c692925f170",
-      "tasks_sha": "sha256:e9b1ca24a1ab777fd005f0192995a02b5a23c4d6d66a02d942f85720af7c1aca",
-      "reviewability_sha": "sha256:eade7136c491e7767cd6c0adc970d9e926262287d32ee9c80880634d70cd6ba4",
+      "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
+      "plan_declared_scope_sha": "sha256:4e6f8cd5f9ac4f5ecd59cd84936558d21b37abcd5df74c248e1d07744e48b2bf",
+      "tasks_sha": "sha256:b5d612ef42a570443ee397da0bda8fa604fea586efd2b58c2197c51a49066446",
+      "reviewability_sha": "sha256:be28b0f821f14aa698bce38bdcf0423e8a36e9606710c52b2332ea904d6b09f3",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
     },
     "markers": [
@@ -498,14 +502,14 @@
         "subdivision": {
           "status": "no_safe_boundary",
           "details": {
-            "reason": "Capability responsibilities are safely subdivided behind the stable facade; field authority, owner joins, failure derivation, reroute qualification, and successor cross-binding remain the treatment module's integrity-coupled boundary.",
-            "capability_subdivision": {"status": "safe_split", "production_modules": 12, "max_module_source_lines": 355},
+            "reason": "Capability responsibilities are safely subdivided behind a stable facade with an exact supported-name export list and no private trust primitives; field authority, owner joins, failure derivation, reroute qualification, and successor cross-binding remain the treatment module's integrity-coupled boundary.",
+            "capability_subdivision": {"status": "safe_split", "production_modules": 12, "max_module_source_lines": 363},
             "exception_kind": "typed_size_only",
             "growth_limit": "Capability modules must remain below 400 source lines with no public API loss. Only finding-driven remediation and the predeclared T026-T030 offline replay dispatch may extend treatment_trace_schema.py before final freeze."
           }
         },
         "implementation_checkpoint": {
-          "status": "complete",
+          "status": "review_pending",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json",
           "commit_sha": "8a179bdbb6aef08849bbfc4ed07c547c26f8194a",
           "superseded_commit_sha": "1190e3c1205744fd50afb37a12c0f9527ad5ee53"
@@ -519,11 +523,11 @@
             "source": "treatment-contracts-reviewability",
             "details": {
               "marker_id": "us2",
-              "actual_source_lines": 4306,
-              "actual_nonblank_noncomment_lines": 3895,
+              "actual_source_lines": 4409,
+              "actual_nonblank_noncomment_lines": 3996,
               "production_modules": 13,
               "module_measurements": {
-                "capability_group": {"production_modules": 12, "source_lines": 2562, "nonblank_noncomment_lines": 2295, "max_module_source_lines": 355},
+                "capability_group": {"production_modules": 12, "source_lines": 2665, "nonblank_noncomment_lines": 2396, "max_module_source_lines": 363},
                 "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {"source_lines": 1744, "nonblank_noncomment_lines": 1600}
               }
             }
@@ -588,7 +592,7 @@
       }
     ],
     "created_at": "2026-07-17T04:50:02Z",
-    "updated_at": "2026-07-20T03:06:58Z"
+    "updated_at": "2026-07-20T03:33:36Z"
   },
   "layer_plan": {
     "status": "skipped",
