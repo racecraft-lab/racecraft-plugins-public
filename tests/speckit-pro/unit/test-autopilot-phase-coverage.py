@@ -172,6 +172,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             "status": "complete",
             "evidence_path": "specs/spec-example/.process/checkpoints/us1.json",
             "checkpoint_evidence_sha": "sha256:" + "a" * 64,
+            "checkpoint_evidence_commit_sha": commit_sha,
             "verification_evidence_path": "docs/ai/specs/.process/SPEC-workflow.md",
             "commit_sha": commit_sha,
             "head_sha": commit_sha,
@@ -179,6 +180,15 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             "completed_task_ids": ["T001"],
             "summary": "Implemented marker us1.",
             "validation": ["focused tests passed"],
+            "freshness": {
+                "source_fingerprint_status": "current_marker_scope",
+                "source_fingerprint_contract": "marker-task-lines.v2",
+                "tasks_sha_scope": "checkpoint_time_whole_file",
+                "current_tasks_sha": "sha256:" + "b" * 64,
+                "checkpoint_marker_tasks_sha": "sha256:" + "c" * 64,
+                "current_marker_tasks_sha": "sha256:" + "c" * 64,
+                "validated_at": "2026-07-19T00:00:00Z",
+            },
         }
 
     def projected_state(
@@ -202,11 +212,17 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             }
         }
         state["pr_marker_plan"] = {
+            "schema_version": "pr-marker-plan.v2",
             "markers": [
                 {
                     "id": "us1",
+                    "review_order": 1,
+                    "kind": "user_story",
+                    "parent_marker_id": None,
+                    "source_boundary": {"story_id": 1},
                     "task_ids": ["T001"],
                     "folded_polish_task_ids": [],
+                    "declared_files": [],
                     "reviewability": {
                         "head_sha": checkpoint.get("head_sha"),
                     },
@@ -270,6 +286,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             [
                 "pr_marker_plan.markers[0].implementation_checkpoint.evidence_path",
                 "pr_marker_plan.markers[0].implementation_checkpoint.checkpoint_evidence_sha",
+                "pr_marker_plan.markers[0].implementation_checkpoint.checkpoint_evidence_commit_sha",
                 "pr_marker_plan.markers[0].implementation_checkpoint.verification_evidence_path",
                 "pr_marker_plan.markers[0].implementation_checkpoint.commit_sha",
                 "pr_marker_plan.markers[0].implementation_checkpoint.head_sha",
@@ -277,8 +294,25 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 "pr_marker_plan.markers[0].implementation_checkpoint.summary",
                 "pr_marker_plan.markers[0].implementation_checkpoint.completed_task_ids",
                 "pr_marker_plan.markers[0].implementation_checkpoint.validation",
+                "pr_marker_plan.markers[0].implementation_checkpoint.freshness",
             ],
         )
+
+    def test_legacy_v1_plan_remains_readable_without_v2_evidence_fields(self) -> None:
+        state = self.projected_state(
+            plan_status="completed",
+            phase_status="completed",
+            checkpoint={"status": "complete", "evidence_path": "legacy-checkpoint.json"},
+        )
+        state["pr_marker_plan"].update(
+            {
+                "schema_version": "pr-marker-plan.v1",
+                "status": "emission_ready",
+                "updated_at": "legacy timestamp accepted by v1",
+            }
+        )
+        exit_code, report = self.run_validator(workflow_text(), state)
+        self.assertEqual(exit_code, 0, report)
 
     def test_complete_checkpoint_binds_task_coverage_and_reviewed_head(self) -> None:
         checkpoint = self.complete_checkpoint(commit_sha="b" * 40)
@@ -352,8 +386,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             ("checkpointing", self.complete_checkpoint(), {"status": "marker_split", "packet_path": "packet.json"}, "emission 'marker_split'"),
             ("emission_ready", {"status": "pending"}, {"status": "pending"}, "checkpoint 'pending'"),
             ("collapsed", self.complete_checkpoint(), {"status": "pending"}, "emission 'pending'"),
-            ("stale", self.complete_checkpoint(), {"status": "emitted"}, "emission 'emitted'"),
-            ("invalid", {"status": "pending"}, {"status": "marker_split", "packet_path": "packet.json"}, "emission 'marker_split'"),
+            ("emitting", self.complete_checkpoint(), {"status": "pending"}, "requires both emitted and unfinished"),
         )
         for plan_status, checkpoint, emission, expected in cases:
             with self.subTest(plan_status=plan_status):
@@ -390,6 +423,100 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ]
                 _exit_code, report = self.run_validator(workflow_text(), state)
                 self.assertEqual(report["marker_plan_status_errors"], [])
+
+    def test_stale_and_invalid_plans_preserve_terminal_emission_mappings(self) -> None:
+        cases = (
+            (
+                "stale",
+                "MARKER_PLAN_STALE",
+                "warning",
+                {"status": "emitted", "packet_path": "packet.json", "pr_number": 42, "pr_url": "https://example.test/pr/42"},
+            ),
+            ("invalid", "MARKER_PLAN_INVALID", "error", {"status": "hazard_collapsed"}),
+        )
+        for plan_status, warning_code, severity, emission in cases:
+            with self.subTest(plan_status=plan_status):
+                state = self.projected_state(
+                    plan_status="completed",
+                    phase_status="completed",
+                    checkpoint=self.complete_checkpoint(),
+                    emission=emission,
+                )
+                state["pr_marker_plan"].update(
+                    {
+                        "status": plan_status,
+                        "warnings": [{"code": warning_code, "severity": severity}],
+                    }
+                )
+                _exit_code, report = self.run_validator(workflow_text(), state)
+                self.assertEqual(report["marker_plan_status_errors"], [])
+                self.assertEqual(report["emission_mapping_errors"], [])
+
+    def test_emitting_plan_supports_partial_monotonic_emission(self) -> None:
+        state = self.projected_state(
+            plan_status="completed",
+            phase_status="completed",
+            checkpoint=self.complete_checkpoint(),
+            emission={"status": "emitted", "packet_path": "us1.json", "pr_number": 41, "pr_url": "https://example.test/pr/41"},
+        )
+        second = json.loads(json.dumps(state["pr_marker_plan"]["markers"][0]))
+        second.update(
+            {
+                "id": "us2",
+                "review_order": 2,
+                "source_boundary": {"story_id": 2},
+                "task_ids": ["T002"],
+                "implementation_checkpoint": self.complete_checkpoint(commit_sha="b" * 40),
+                "emission_mapping": {"status": "pending", "packet_path": "us2.json"},
+            }
+        )
+        second["implementation_checkpoint"]["completed_task_ids"] = ["T002"]
+        second["reviewability"]["head_sha"] = "b" * 40
+        state["pr_marker_plan"].update({"status": "emitting", "markers": [state["pr_marker_plan"]["markers"][0], second]})
+        _exit_code, report = self.run_validator(workflow_text(), state)
+        self.assertEqual(report["marker_plan_status_errors"], [])
+        self.assertEqual(report["emission_mapping_errors"], [])
+
+    def test_marker_contract_rejects_duplicate_identity_task_and_file_ownership(self) -> None:
+        state = self.projected_state(
+            plan_status="in_progress",
+            phase_status="in_progress",
+            checkpoint={"status": "pending"},
+        )
+        first = state["pr_marker_plan"]["markers"][0]
+        first["declared_files"] = [{"operation": "MODIFIED", "path": "src/shared.py"}]
+        second = json.loads(json.dumps(first))
+        state["pr_marker_plan"]["markers"].append(second)
+        _exit_code, report = self.run_validator(workflow_text(), state)
+        errors = report["marker_plan_status_errors"]
+        self.assertIn("pr_marker_plan marker id 'us1' is duplicated", errors)
+        self.assertIn("pr_marker_plan review_order 1 is duplicated", errors)
+        self.assertIn("pr_marker_plan task 'T001' is owned by both 'us1' and 'us1'", errors)
+        self.assertIn("pr_marker_plan file 'src/shared.py' is owned by both 'us1' and 'us1'", errors)
+
+    def test_marker_contract_rejects_unsafe_paths_invalid_identity_and_non_utc_timestamps(self) -> None:
+        state = self.projected_state(
+            plan_status="in_progress",
+            phase_status="in_progress",
+            checkpoint={"status": "pending", "evidence_path": "../outside.json"},
+            emission={"status": "pending", "packet_path": "C:/outside.json", "pr_number": 7},
+        )
+        marker = state["pr_marker_plan"]["markers"][0]
+        marker["id"] = "us1-part1"
+        marker["declared_files"] = [{"operation": "MODIFIED", "path": "../outside.py"}]
+        marker["reviewability"]["evidence_path"] = "/tmp/evidence.json"
+        state["pr_marker_plan"]["updated_at"] = "2026-07-19 00:00:00"
+        _exit_code, report = self.run_validator(workflow_text(), state)
+        self.assertTrue(any("id, kind, story_id" in error for error in report["marker_plan_status_errors"]))
+        self.assertTrue(any("declared_files[0].path" in error for error in report["marker_plan_status_errors"]))
+        self.assertTrue(any("reviewability.evidence_path" in error for error in report["marker_plan_status_errors"]))
+        self.assertIn(
+            "pr_marker_plan.updated_at must be an RFC 3339 UTC timestamp",
+            report["marker_plan_status_errors"],
+        )
+        self.assertTrue(any("implementation_checkpoint.evidence_path" in error for error in report["checkpoint_file_errors"]))
+        self.assertTrue(any("emission_mapping.packet_path" in error for error in report["emission_mapping_errors"]))
+        self.assertTrue(any("pr_number is only valid after emission" in error for error in report["emission_mapping_errors"]))
 
     def test_changed_file_manifest_must_match_base_to_head(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -447,14 +574,9 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                         "task_ids": ["T001"],
                         "implementation_checkpoint_sha": base_commit,
                         "verification": {"focused_tests": "pass"},
-                        "source_fingerprint_status": "current_marker_scope",
-                        "source_fingerprint_contract": "marker-task-lines.v2",
+                        "source_fingerprint_status": "current",
                         "tasks_sha": tasks_sha,
-                        "tasks_sha_scope": "checkpoint_time_whole_file",
-                        "current_tasks_sha": tasks_sha,
-                        "checkpoint_marker_tasks_sha": marker_sha,
-                        "current_marker_tasks_sha": marker_sha,
-                        "updated_at": "2026-07-19T00:00:00Z",
+                        "completed_at": "2026-07-19T00:00:00Z",
                     }
                 ),
                 encoding="utf-8",
@@ -469,25 +591,40 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 {"path": "tracked.txt", "operation": "MODIFIED"},
             ]
             state["pr_marker_plan"] = {
+                "schema_version": "pr-marker-plan.v2",
                 "status": "emission_ready",
                 "markers": [
                     {
                         "id": "us1",
+                        "review_order": 1,
+                        "kind": "user_story",
+                        "parent_marker_id": None,
+                        "source_boundary": {"story_id": 1},
                         "task_ids": ["T001"],
                         "folded_polish_task_ids": [],
                         "declared_files": marker_files,
                         "reviewability": {"head_sha": base_commit},
                         "implementation_checkpoint": {
-                        "status": "complete",
-                        "evidence_path": "specs/spec-example/.process/checkpoints/us1.json",
-                        "checkpoint_evidence_sha": "pending manifest setup",
-                        "verification_evidence_path": "workflow.md",
+                            "status": "complete",
+                            "evidence_path": "specs/spec-example/.process/checkpoints/us1.json",
+                            "checkpoint_evidence_sha": "pending manifest setup",
+                            "checkpoint_evidence_commit_sha": "pending evidence commit",
+                            "verification_evidence_path": "workflow.md",
                             "commit_sha": base_commit,
                             "head_sha": base_commit,
                             "completed_at": "2026-07-19T00:00:00Z",
                             "completed_task_ids": ["T001"],
                             "summary": "Completed us1.",
                             "validation": ["focused tests passed"],
+                            "freshness": {
+                                "source_fingerprint_status": "current_marker_scope",
+                                "source_fingerprint_contract": "marker-task-lines.v2",
+                                "tasks_sha_scope": "checkpoint_time_whole_file",
+                                "current_tasks_sha": tasks_sha,
+                                "checkpoint_marker_tasks_sha": marker_sha,
+                                "current_marker_tasks_sha": marker_sha,
+                                "validated_at": "2026-07-19T00:00:00Z",
+                            },
                         },
                         "emission_mapping": {"status": "pending"},
                     }
@@ -552,13 +689,41 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                     "commit.gpgsign=false",
                     "commit",
                     "-qm",
+                    "evidence",
+                ],
+                check=True,
+            )
+            evidence_commit = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout.strip()
+            state["pr_marker_plan"]["markers"][0]["implementation_checkpoint"][
+                "checkpoint_evidence_commit_sha"
+            ] = evidence_commit
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", "autopilot-state.json"], check=True)
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(root),
+                    "-c",
+                    "user.name=SpecKit Tests",
+                    "-c",
+                    "user.email=git@github.com",
+                    "-c",
+                    "commit.gpgsign=false",
+                    "commit",
+                    "-qm",
                     "head",
                 ],
                 check=True,
             )
 
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
-            self.assertEqual(exit_code, 0)
+            self.assertEqual(exit_code, 0, report)
             self.assertEqual(report["changed_file_manifest_errors"], [])
             self.assertEqual(report["checkpoint_source_fingerprint_errors"], [])
 
@@ -568,11 +733,23 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
-                "pr_marker_plan.markers[0].implementation_checkpoint.checkpoint_evidence_sha",
+                "pr_marker_plan.markers[0].implementation_checkpoint immutable evidence differs from checkpoint commit",
                 report["checkpoint_file_errors"],
             )
             checkpoint_evidence["verification"]["focused_tests"] = "pass"
             evidence_path.write_text(json.dumps(checkpoint_evidence), encoding="utf-8")
+
+            checkpoint = state["pr_marker_plan"]["markers"][0]["implementation_checkpoint"]
+            checkpoint["checkpoint_evidence_sha"] = "sha256:" + "0" * 64
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "pr_marker_plan.markers[0].implementation_checkpoint.checkpoint_evidence_sha",
+                report["checkpoint_file_errors"],
+            )
+            checkpoint["checkpoint_evidence_sha"] = evidence_sha
+            state_path.write_text(json.dumps(state), encoding="utf-8")
 
             manifest["files"][3]["category"] = "test"
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")

@@ -82,14 +82,8 @@
     "independent_critical_high_review": "pass",
     "independent_review_chat_id": "windows-telemetry-review-D88461"
   },
-  "source_fingerprint_status": "current_marker_scope",
-  "source_fingerprint_contract": "marker-task-lines.v2",
+  "source_fingerprint_status": "current",
   "tasks_sha": "sha256:dd9f8f33a70aac48cf73ddf058c6fc6a1d0e82422dabfd35611c2cff783ec5e4",
-  "tasks_sha_scope": "checkpoint_time_whole_file",
-  "current_tasks_sha": "sha256:216b86cb34bbcc40c7f6e23b153379ec047616885f89ae6c11a41674df68b447",
-  "checkpoint_marker_tasks_sha": "sha256:c6921a6ae1cd126adcd5f4295dda7b6331ca32d40e60f265fbe13d2f348e9ace",
-  "current_marker_tasks_sha": "sha256:c6921a6ae1cd126adcd5f4295dda7b6331ca32d40e60f265fbe13d2f348e9ace",
   "completed_at": "2026-07-19T03:09:22Z",
-  "review_iteration_started_at": "2026-07-18T20:59:20Z",
-  "updated_at": "2026-07-19T03:09:22Z"
+  "review_iteration_started_at": "2026-07-18T20:59:20Z"
 }

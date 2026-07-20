@@ -15,7 +15,11 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "pr-marker-plan.v1"
+      "enum": [
+        "pr-marker-plan.v1",
+        "pr-marker-plan.v2"
+      ],
+      "description": "v1 remains readable for legacy plans. v2 opts into strict lifecycle, immutable checkpoint evidence, manifest binding, normalized paths, and UTC timestamp validation."
     },
     "kind": {
       "const": "pr_marker_plan"
@@ -29,6 +33,7 @@
         "planned",
         "checkpointing",
         "emission_ready",
+        "emitting",
         "emitted",
         "collapsed",
         "stale",
@@ -52,21 +57,238 @@
       }
     },
     "created_at": {
-      "type": "string"
+      "$ref": "#/$defs/utc_timestamp"
     },
     "updated_at": {
-      "type": "string"
+      "$ref": "#/$defs/utc_timestamp"
     }
   },
   "allOf": [
     {
       "if": {
         "properties": {
+          "schema_version": {
+            "const": "pr-marker-plan.v2"
+          }
+        },
+        "required": [
+          "schema_version"
+        ]
+      },
+      "then": {
+        "properties": {
+          "source_fingerprint": {
+            "required": [
+              "changed_file_manifest_sha"
+            ],
+            "properties": {
+              "feature_spec_sha": {"pattern": "^sha256:[0-9a-f]{64}$"},
+              "plan_declared_scope_sha": {"pattern": "^sha256:[0-9a-f]{64}$"},
+              "tasks_sha": {"pattern": "^sha256:[0-9a-f]{64}$"},
+              "reviewability_sha": {"pattern": "^sha256:[0-9a-f]{64}$"},
+              "hazard_route_sha": {"pattern": "^sha256:[0-9a-f]{64}$"},
+              "changed_file_manifest_sha": {"pattern": "^sha256:[0-9a-f]{64}$"}
+            }
+          },
+          "markers": {
+            "items": {
+              "properties": {
+                "task_ids": {"uniqueItems": true},
+                "folded_polish_task_ids": {"uniqueItems": true},
+                "declared_files": {
+                  "uniqueItems": true,
+                  "items": {
+                    "properties": {
+                      "path": {"$ref": "#/$defs/repo_path"}
+                    }
+                  }
+                },
+                "reviewability": {
+                  "properties": {
+                    "evidence_path": {"$ref": "#/$defs/repo_path"},
+                    "head_sha": {"pattern": "^[0-9a-f]{40}$"},
+                    "commit_sha": {"pattern": "^[0-9a-f]{40}$"}
+                  }
+                },
+                "implementation_checkpoint": {
+                  "properties": {
+                    "evidence_path": {"$ref": "#/$defs/repo_path"},
+                    "verification_evidence_path": {"$ref": "#/$defs/repo_path"},
+                    "commit_sha": {"pattern": "^[0-9a-f]{40}$"},
+                    "superseded_commit_sha": {"pattern": "^[0-9a-f]{40}$"},
+                    "head_sha": {"pattern": "^[0-9a-f]{40}$"},
+                    "checkpoint_evidence_commit_sha": {"pattern": "^[0-9a-f]{40}$"},
+                    "checkpoint_evidence_sha": {"pattern": "^sha256:[0-9a-f]{64}$"},
+                    "completed_at": {"$ref": "#/$defs/utc_timestamp"},
+                    "freshness": {"$ref": "#/$defs/checkpoint_freshness"}
+                  },
+                  "allOf": [
+                    {
+                      "if": {
+                        "properties": {"status": {"const": "complete"}},
+                        "required": ["status"]
+                      },
+                      "then": {
+                        "required": [
+                          "evidence_path",
+                          "checkpoint_evidence_sha",
+                          "checkpoint_evidence_commit_sha",
+                          "verification_evidence_path",
+                          "commit_sha",
+                          "head_sha",
+                          "completed_at",
+                          "completed_task_ids",
+                          "summary",
+                          "validation",
+                          "freshness"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "emission_mapping": {
+                  "properties": {
+                    "packet_path": {"$ref": "#/$defs/repo_path"}
+                  },
+                  "allOf": [
+                    {
+                      "if": {
+                        "properties": {"status": {"const": "marker_split"}},
+                        "required": ["status"]
+                      },
+                      "then": {"required": ["packet_path"]}
+                    },
+                    {
+                      "if": {
+                        "properties": {"status": {"const": "emitted"}},
+                        "required": ["status"]
+                      },
+                      "then": {"required": ["packet_path", "pr_number", "pr_url"]},
+                      "else": {
+                        "not": {
+                          "anyOf": [
+                            {"required": ["pr_number"]},
+                            {"required": ["pr_url"]}
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "emission_mapping": {
+                        "properties": {
+                          "status": {"enum": ["marker_split", "emitted", "hazard_collapsed"]}
+                        },
+                        "required": ["status"]
+                      }
+                    },
+                    "required": ["emission_mapping"]
+                  },
+                  "then": {
+                    "properties": {
+                      "implementation_checkpoint": {
+                        "properties": {"status": {"const": "complete"}}
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "implementation_checkpoint": {
+                        "properties": {"status": {"const": "complete"}},
+                        "required": ["status"]
+                      }
+                    },
+                    "required": ["implementation_checkpoint"]
+                  },
+                  "then": {
+                    "properties": {"reviewability": {"required": ["head_sha"]}}
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "const": "pr-marker-plan.v2"
+          },
+          "status": {
+            "const": "emitting"
+          }
+        },
+        "required": [
+          "schema_version",
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "markers": {
+            "items": {
+              "properties": {
+                "implementation_checkpoint": {
+                  "properties": {
+                    "status": {"const": "complete"}
+                  }
+                },
+                "emission_mapping": {
+                  "properties": {
+                    "status": {"enum": ["pending", "marker_split", "emitted"]}
+                  }
+                }
+              }
+            },
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {
+                    "emission_mapping": {
+                      "properties": {"status": {"const": "emitted"}},
+                      "required": ["status"]
+                    }
+                  },
+                  "required": ["emission_mapping"]
+                }
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "emission_mapping": {
+                      "properties": {"status": {"enum": ["pending", "marker_split"]}},
+                      "required": ["status"]
+                    }
+                  },
+                  "required": ["emission_mapping"]
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "const": "pr-marker-plan.v2"
+          },
           "status": {
             "const": "planned"
           }
         },
         "required": [
+          "schema_version",
           "status"
         ]
       },
@@ -98,11 +320,15 @@
     {
       "if": {
         "properties": {
+          "schema_version": {
+            "const": "pr-marker-plan.v2"
+          },
           "status": {
             "const": "checkpointing"
           }
         },
         "required": [
+          "schema_version",
           "status"
         ]
       },
@@ -127,11 +353,15 @@
     {
       "if": {
         "properties": {
+          "schema_version": {
+            "const": "pr-marker-plan.v2"
+          },
           "status": {
             "const": "emission_ready"
           }
         },
         "required": [
+          "schema_version",
           "status"
         ]
       },
@@ -166,11 +396,15 @@
     {
       "if": {
         "properties": {
+          "schema_version": {
+            "const": "pr-marker-plan.v2"
+          },
           "status": {
             "const": "emitted"
           }
         },
         "required": [
+          "schema_version",
           "status"
         ]
       },
@@ -202,11 +436,15 @@
     {
       "if": {
         "properties": {
+          "schema_version": {
+            "const": "pr-marker-plan.v2"
+          },
           "status": {
             "const": "collapsed"
           }
         },
         "required": [
+          "schema_version",
           "status"
         ]
       },
@@ -238,11 +476,15 @@
     {
       "if": {
         "properties": {
+          "schema_version": {
+            "const": "pr-marker-plan.v2"
+          },
           "status": {
             "const": "stale"
           }
         },
         "required": [
+          "schema_version",
           "status"
         ]
       },
@@ -254,7 +496,12 @@
                 "emission_mapping": {
                   "properties": {
                     "status": {
-                      "const": "pending"
+                      "enum": [
+                        "pending",
+                        "marker_split",
+                        "emitted",
+                        "hazard_collapsed"
+                      ]
                     }
                   }
                 }
@@ -286,11 +533,15 @@
     {
       "if": {
         "properties": {
+          "schema_version": {
+            "const": "pr-marker-plan.v2"
+          },
           "status": {
             "const": "invalid"
           }
         },
         "required": [
+          "schema_version",
           "status"
         ]
       },
@@ -302,7 +553,12 @@
                 "emission_mapping": {
                   "properties": {
                     "status": {
-                      "const": "pending"
+                      "enum": [
+                        "pending",
+                        "marker_split",
+                        "emitted",
+                        "hazard_collapsed"
+                      ]
                     }
                   }
                 }
@@ -330,6 +586,38 @@
     }
   ],
   "$defs": {
+    "repo_path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*//)(?!.*\\\\).+$",
+      "description": "Normalized repository-relative POSIX path without traversal or absolute-path syntax. Runtime validation also rejects symlink escapes."
+    },
+    "utc_timestamp": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "checkpoint_freshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_fingerprint_status",
+        "source_fingerprint_contract",
+        "tasks_sha_scope",
+        "current_tasks_sha",
+        "checkpoint_marker_tasks_sha",
+        "current_marker_tasks_sha",
+        "validated_at"
+      ],
+      "properties": {
+        "source_fingerprint_status": {"const": "current_marker_scope"},
+        "source_fingerprint_contract": {"const": "marker-task-lines.v2"},
+        "tasks_sha_scope": {"const": "checkpoint_time_whole_file"},
+        "current_tasks_sha": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "checkpoint_marker_tasks_sha": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "current_marker_tasks_sha": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "validated_at": {"$ref": "#/$defs/utc_timestamp"}
+      }
+    },
     "source_fingerprint": {
       "type": "object",
       "additionalProperties": false,
@@ -338,33 +626,32 @@
         "plan_declared_scope_sha",
         "tasks_sha",
         "reviewability_sha",
-        "hazard_route_sha",
-        "changed_file_manifest_sha"
+        "hazard_route_sha"
       ],
       "properties": {
         "feature_spec_sha": {
           "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
+          "minLength": 1
         },
         "plan_declared_scope_sha": {
           "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
+          "minLength": 1
         },
         "tasks_sha": {
           "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
+          "minLength": 1
         },
         "reviewability_sha": {
           "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
+          "minLength": 1
         },
         "hazard_route_sha": {
           "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
+          "minLength": 1
         },
         "changed_file_manifest_sha": {
           "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
+          "minLength": 1
         }
       }
     },
@@ -475,71 +762,7 @@
             "$ref": "#/$defs/warning"
           }
         }
-      },
-      "allOf": [
-        {
-          "if": {
-            "properties": {
-              "emission_mapping": {
-                "properties": {
-                  "status": {
-                    "enum": [
-                      "marker_split",
-                      "emitted",
-                      "hazard_collapsed"
-                    ]
-                  }
-                },
-                "required": [
-                  "status"
-                ]
-              }
-            },
-            "required": [
-              "emission_mapping"
-            ]
-          },
-          "then": {
-            "properties": {
-              "implementation_checkpoint": {
-                "properties": {
-                  "status": {
-                    "const": "complete"
-                  }
-                }
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "implementation_checkpoint": {
-                "properties": {
-                  "status": {
-                    "const": "complete"
-                  }
-                },
-                "required": [
-                  "status"
-                ]
-              }
-            },
-            "required": [
-              "implementation_checkpoint"
-            ]
-          },
-          "then": {
-            "properties": {
-              "reviewability": {
-                "required": [
-                  "head_sha"
-                ]
-              }
-            }
-          }
-        }
-      ]
+      }
     },
     "source_boundary": {
       "type": "object",
@@ -624,11 +847,11 @@
         },
         "head_sha": {
           "type": "string",
-          "pattern": "^[0-9a-f]{40}$"
+          "minLength": 1
         },
         "commit_sha": {
           "type": "string",
-          "pattern": "^[0-9a-f]{40}$"
+          "minLength": 1
         }
       }
     },
@@ -655,7 +878,7 @@
     },
     "checkpoint": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "status"
       ],
@@ -672,11 +895,11 @@
         },
         "commit_sha": {
           "type": "string",
-          "pattern": "^[0-9a-f]{40}$"
+          "minLength": 1
         },
         "superseded_commit_sha": {
           "type": "string",
-          "pattern": "^[0-9a-f]{40}$"
+          "minLength": 1
         },
         "verification_evidence_path": {
           "type": "string",
@@ -684,11 +907,15 @@
         },
         "head_sha": {
           "type": "string",
-          "pattern": "^[0-9a-f]{40}$"
+          "minLength": 1
+        },
+        "checkpoint_evidence_commit_sha": {
+          "type": "string",
+          "minLength": 1
         },
         "checkpoint_evidence_sha": {
           "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
+          "minLength": 1
         },
         "completed_at": {
           "type": "string",
@@ -715,39 +942,15 @@
             "type": "string",
             "minLength": 1
           }
+        },
+        "freshness": {
+          "$ref": "#/$defs/checkpoint_freshness"
         }
-      },
-      "allOf": [
-        {
-          "if": {
-            "properties": {
-              "status": {
-                "const": "complete"
-              }
-            },
-            "required": [
-              "status"
-            ]
-          },
-          "then": {
-            "required": [
-              "evidence_path",
-              "checkpoint_evidence_sha",
-              "verification_evidence_path",
-              "commit_sha",
-              "head_sha",
-              "completed_at",
-              "completed_task_ids",
-              "summary",
-              "validation"
-            ]
-          }
-        }
-      ]
+      }
     },
     "emission_mapping": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "status"
       ],
@@ -772,45 +975,7 @@
           "type": "string",
           "minLength": 1
         }
-      },
-      "allOf": [
-        {
-          "if": {
-            "properties": {
-              "status": {
-                "const": "marker_split"
-              }
-            },
-            "required": [
-              "status"
-            ]
-          },
-          "then": {
-            "required": [
-              "packet_path"
-            ]
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "status": {
-                "const": "emitted"
-              }
-            },
-            "required": [
-              "status"
-            ]
-          },
-          "then": {
-            "required": [
-              "packet_path",
-              "pr_number",
-              "pr_url"
-            ]
-          }
-        }
-      ]
+      }
     },
     "warning": {
       "type": "object",

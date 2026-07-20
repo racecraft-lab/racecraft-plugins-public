@@ -56,6 +56,52 @@ EXPECTED_TELEMETRY_INVENTORY = frozenset(
     | {("cli", "route.supported_effective_route_id"), ("interactive_picker", "parent.graph")}
 )
 
+EXPECTED_CAPABILITY_PUBLIC_API = frozenset({
+    "APPROVED_CANARY_EXECUTORS", "APPROVED_LIVE_COLLECTION_METHODS",
+    "CANONICAL_MANIFEST_DIGEST", "CANONICAL_MANIFEST_SCHEMA_VERSION",
+    "CANONICAL_MANIFEST_SNAPSHOT_ID", "DELETION_INTENTS_DIR", "DELETION_RECORDS_DIR",
+    "ERROR_TERMINALS", "EXTRACT_NORMALIZATION", "HAS_DESCRIPTOR_RELATIVE_IO",
+    "PENDING_TELEMETRY_PROFILE_ID", "PRIVATE_REFRESH_MAX_BYTES", "PUBLICATION_RECEIPTS_DIR",
+    "RAW_EVIDENCE_PENDING_DAYS", "RAW_EVIDENCE_RETENTION_DAYS", "RETENTION_LOCK_FILE",
+    "RETENTION_RECORDS_DIR", "SCHEMA_VERSION", "SURFACES", "build_canary_successor",
+    "build_client_identity", "build_freeze", "build_repository_binding",
+    "build_runtime_snapshot", "candidate_tuples_from_manifest", "candidate_tuples_from_published",
+    "canonical_bytes", "digest", "digest_regular_file", "evaluate_surface_matrix",
+    "fixture_observation", "main", "materialize_source_capture", "materialize_unknown_capture",
+    "normalize_source_refreshes", "publish_with_raw_evidence_retention",
+    "read_content_addressed_private_file", "read_private_external_file",
+    "reconcile_raw_evidence_retention", "repository_binding_from_checkout", "sanitize",
+    "unknown_observation", "validate_canary_evidence", "validate_canary_result",
+    "validate_canary_results", "validate_content_addressed_private_file", "validate_freeze",
+    "validate_manifest", "validate_observation", "validate_private_external_file",
+    "validate_published_source_refreshes", "validate_raw_evidence_root",
+    "validate_repository_binding", "validate_source_capture_evidence", "validate_source_refreshes",
+    "validate_surface_matrix", "validate_tuple_decisions", "validate_unknown_observation_evidence",
+    "validate_work_item",
+})
+
+EXPECTED_TREATMENT_PUBLIC_API = frozenset({
+    "ABSOLUTE_PATH_RE", "APP_SERVER_FIELDS", "AUTHORIZED_PROFILE_CLASSIFICATIONS",
+    "AUTHORIZED_PROFILE_CONDITIONS", "AUTHORIZED_PROFILE_SOURCES", "AUTHORIZED_PROHIBITED_CLAIMS",
+    "CANCELLATION_REASON_CODES", "CAPABILITY_FIXTURE_PATH", "CAPABILITY_MODULE_PATH",
+    "CLAIM_BY_CLASS", "CLASSIFICATIONS", "COMPLETENESS_BY_CLASS", "CREDENTIAL_RE",
+    "DIGEST_RE", "DISPOSITION_REASON_CODES", "EVIDENCE_REF_RE", "FAILURE_DISPOSITIONS",
+    "FALLBACK_REASON_CODES", "HAS_DESCRIPTOR_RELATIVE_IO", "HOSTNAME_RE",
+    "INTERNAL_DERIVED_FIELDS", "INTERNAL_HOSTNAME_RE", "IP_CANDIDATE_RE", "IS_WINDOWS",
+    "MANIFEST_PATH", "MAX_COLLECTION_ITEMS", "MAX_INPUT_BYTES", "MAX_NESTING_DEPTH",
+    "MAX_RETAINED_STRING_LENGTH", "MAX_TOTAL_NODES", "OBJECTIVE_ID_FIELDS",
+    "OBSERVATION_STATES", "PII_RE", "REMOTE_RE", "REPLAY_CASES",
+    "REPLAY_DIGEST_MANIFEST_PATH", "REPLAY_DISCOVERY_MODEL_DELTAS", "REPLAY_FIXTURE_PATHS",
+    "REPLAY_HOSTNAME_RE", "REPLAY_RUNTIME_EFFORT_AUTHORITY", "REPLAY_RUNTIME_EFFORT_AUTHORITY_ID",
+    "REPLAY_TRACE_BASELINE_DIGESTS", "REROUTE_REASON_CODES", "REVISION_RE", "RFC3339_UTC_RE",
+    "ROOT", "SANITIZED_IDENTIFIER_RE", "SCHEMA_PATH", "SCHEMA_VERSION", "SOURCE_RE",
+    "SPEC_ID_RE", "SURFACES", "TELEMETRY_INVENTORY", "TRACE_KEYS", "TRAVERSAL_RE",
+    "TREATMENT_FIXTURE_PATH", "UNLABELED_CREDENTIAL_RE", "build_treatment_successor",
+    "canonical_bytes", "canonical_fixture_bytes", "content_id", "digest",
+    "execution_trace_identity", "main", "profile_entry", "replay_fixture", "schema_file_digest",
+    "telemetry_profile_id", "validate_treatment_bundle",
+})
+
 spec = importlib.util.spec_from_file_location("g56r_002_codex_capabilities", MODULE_PATH)
 if spec is None or spec.loader is None:
     raise RuntimeError(f"cannot load {MODULE_PATH}")
@@ -411,6 +457,12 @@ class CapabilityContractTests(unittest.TestCase):
         cls.fixture = load_json(FIXTURE_PATH)
         cls.manifest = load_json(MANIFEST_PATH)
         cls.identity = capabilities.build_client_identity(cls.fixture["client_identity"])
+
+    def test_decomposed_entrypoints_preserve_pre_split_public_api(self) -> None:
+        self.assertEqual(EXPECTED_CAPABILITY_PUBLIC_API - set(vars(capabilities)), frozenset())
+        self.assertEqual(EXPECTED_TREATMENT_PUBLIC_API - set(vars(treatment)), frozenset())
+        self.assertTrue(callable(capabilities.main))
+        self.assertTrue(callable(treatment.main))
 
     def observations(self, case: dict) -> list[dict]:
         return [

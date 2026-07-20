@@ -240,15 +240,26 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
         schema = json.loads(MARKER_PLAN_SCHEMA_PATHS[0].read_text(encoding="utf-8"))
         checkpoint = schema["$defs"]["checkpoint"]
         emission = schema["$defs"]["emission_mapping"]
-        marker = schema["$defs"]["marker"]
+        strict = schema["allOf"][0]["then"]["properties"]
+        strict_source = strict["source_fingerprint"]
+        strict_marker = strict["markers"]["items"]
+        strict_checkpoint = strict_marker["properties"]["implementation_checkpoint"]
+        strict_emission = strict_marker["properties"]["emission_mapping"]
 
-        self.assertFalse(checkpoint["additionalProperties"])
-        self.assertFalse(emission["additionalProperties"])
         self.assertEqual(
-            checkpoint["allOf"][0]["then"]["required"],
+            schema["properties"]["schema_version"]["enum"],
+            ["pr-marker-plan.v1", "pr-marker-plan.v2"],
+        )
+        self.assertNotIn("changed_file_manifest_sha", schema["$defs"]["source_fingerprint"]["required"])
+        self.assertIn("changed_file_manifest_sha", strict_source["required"])
+        self.assertTrue(checkpoint["additionalProperties"])
+        self.assertTrue(emission["additionalProperties"])
+        self.assertEqual(
+            strict_checkpoint["allOf"][0]["then"]["required"],
             [
                 "evidence_path",
                 "checkpoint_evidence_sha",
+                "checkpoint_evidence_commit_sha",
                 "verification_evidence_path",
                 "commit_sha",
                 "head_sha",
@@ -256,24 +267,26 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
                 "completed_task_ids",
                 "summary",
                 "validation",
+                "freshness",
             ],
         )
         self.assertEqual(
-            marker["allOf"][0]["then"]["properties"]["implementation_checkpoint"]["properties"]["status"],
+            strict_marker["allOf"][0]["then"]["properties"]["implementation_checkpoint"]["properties"]["status"],
             {"const": "complete"},
         )
         self.assertEqual(
-            marker["allOf"][1]["then"]["properties"]["reviewability"]["required"],
+            strict_marker["allOf"][1]["then"]["properties"]["reviewability"]["required"],
             ["head_sha"],
         )
         status_rules = {
             branch["if"]["properties"]["status"]["const"]: branch["then"]["properties"]["markers"]["items"]
             ["properties"]
             for branch in schema["allOf"]
+            if "status" in branch["if"]["properties"]
         }
         self.assertEqual(
             set(status_rules),
-            {"planned", "checkpointing", "emission_ready", "emitted", "collapsed", "stale", "invalid"},
+            {"planned", "checkpointing", "emission_ready", "emitting", "emitted", "collapsed", "stale", "invalid"},
         )
         self.assertEqual(status_rules["planned"]["implementation_checkpoint"]["properties"]["status"], {"const": "pending"})
         self.assertEqual(status_rules["planned"]["emission_mapping"]["properties"]["status"], {"const": "pending"})
@@ -283,16 +296,22 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
             status_rules["emission_ready"]["emission_mapping"]["properties"]["status"],
             {"enum": ["pending", "marker_split"]},
         )
+        self.assertEqual(
+            status_rules["emitting"]["emission_mapping"]["properties"]["status"],
+            {"enum": ["pending", "marker_split", "emitted"]},
+        )
         self.assertEqual(status_rules["emitted"]["emission_mapping"]["properties"]["status"], {"const": "emitted"})
         self.assertEqual(
             status_rules["collapsed"]["emission_mapping"]["properties"]["status"],
             {"const": "hazard_collapsed"},
         )
-        self.assertEqual(status_rules["stale"]["emission_mapping"]["properties"]["status"], {"const": "pending"})
-        self.assertEqual(status_rules["invalid"]["emission_mapping"]["properties"]["status"], {"const": "pending"})
+        terminal_preserving_statuses = {"enum": ["pending", "marker_split", "emitted", "hazard_collapsed"]}
+        self.assertEqual(status_rules["stale"]["emission_mapping"]["properties"]["status"], terminal_preserving_statuses)
+        self.assertEqual(status_rules["invalid"]["emission_mapping"]["properties"]["status"], terminal_preserving_statuses)
         lifecycle_branches = {
             branch["if"]["properties"]["status"]["const"]: branch["then"]
             for branch in schema["allOf"]
+            if "status" in branch["if"]["properties"]
         }
         self.assertEqual(
             lifecycle_branches["stale"]["properties"]["warnings"]["contains"]["properties"]["code"],
@@ -302,47 +321,64 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
             lifecycle_branches["invalid"]["properties"]["warnings"]["contains"]["properties"]["code"],
             {"const": "MARKER_PLAN_INVALID"},
         )
-        self.assertIn("changed_file_manifest_sha", schema["$defs"]["source_fingerprint"]["required"])
         self.assertEqual(
-            checkpoint["properties"]["checkpoint_evidence_sha"]["pattern"],
+            strict_checkpoint["properties"]["checkpoint_evidence_sha"]["pattern"],
             r"^sha256:[0-9a-f]{64}$",
         )
-        for field_schema in schema["$defs"]["source_fingerprint"]["properties"].values():
+        for field_schema in strict_source["properties"].values():
             self.assertEqual(field_schema["pattern"], r"^sha256:[0-9a-f]{64}$")
-        self.assertEqual(schema["$defs"]["reviewability"]["properties"]["head_sha"]["pattern"], r"^[0-9a-f]{40}$")
         self.assertEqual(
-            emission["allOf"][0]["then"]["required"],
+            strict_marker["properties"]["reviewability"]["properties"]["head_sha"]["pattern"],
+            r"^[0-9a-f]{40}$",
+        )
+        self.assertIn("without traversal", schema["$defs"]["repo_path"]["description"])
+        self.assertEqual(schema["$defs"]["utc_timestamp"]["pattern"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+        self.assertEqual(
+            strict_emission["allOf"][0]["then"]["required"],
             ["packet_path"],
         )
         self.assertEqual(
-            emission["allOf"][1]["then"]["required"],
+            strict_emission["allOf"][1]["then"]["required"],
             ["packet_path", "pr_number", "pr_url"],
         )
 
-    def test_marker_checkpoint_schema_binds_checkpoint_and_current_marker_digests(self) -> None:
+    def test_completed_marker_evidence_is_immutable_and_freshness_is_separate(self) -> None:
         schema = json.loads(MARKER_CHECKPOINT_SCHEMA_PATH.read_text(encoding="utf-8"))
         required = set(schema["required"])
         self.assertTrue(
             {
                 "implementation_checkpoint_sha",
-                "source_fingerprint_contract",
                 "tasks_sha",
-                "current_tasks_sha",
-                "checkpoint_marker_tasks_sha",
-                "current_marker_tasks_sha",
             }.issubset(required)
         )
-        contract = schema["properties"]["source_fingerprint_contract"]
-        self.assertEqual(contract["const"], "marker-task-lines.v2")
-        self.assertIn("preserve file order and line bytes", contract["description"])
-        self.assertIn("append one final LF", contract["description"])
-        for path in MARKER_CHECKPOINT_PATHS:
+        self.assertNotIn("current_tasks_sha", required)
+        self.assertIn("immutable", schema["description"].lower())
+        mutable_fields = {
+            "source_fingerprint_contract",
+            "tasks_sha_scope",
+            "current_tasks_sha",
+            "checkpoint_marker_tasks_sha",
+            "current_marker_tasks_sha",
+            "updated_at",
+        }
+        for path in MARKER_CHECKPOINT_PATHS[:2]:
             checkpoint = json.loads(path.read_text(encoding="utf-8"))
             self.assertTrue(required.issubset(checkpoint))
-            self.assertEqual(checkpoint["source_fingerprint_contract"], "marker-task-lines.v2")
+            self.assertEqual(checkpoint["status"], "complete")
+            self.assertEqual(checkpoint["source_fingerprint_status"], "current")
+            self.assertFalse(mutable_fields & set(checkpoint))
+
+        state = json.loads(
+            (REPO_ROOT / "docs/ai/specs/.process/autopilot-state.json").read_text(encoding="utf-8")
+        )
+        for marker in state["pr_marker_plan"]["markers"][:2]:
+            implementation_checkpoint = marker["implementation_checkpoint"]
+            self.assertRegex(implementation_checkpoint["checkpoint_evidence_commit_sha"], r"^[0-9a-f]{40}$")
+            freshness = implementation_checkpoint["freshness"]
+            self.assertEqual(freshness["source_fingerprint_contract"], "marker-task-lines.v2")
             self.assertEqual(
-                checkpoint["checkpoint_marker_tasks_sha"],
-                checkpoint["current_marker_tasks_sha"],
+                freshness["checkpoint_marker_tasks_sha"],
+                freshness["current_marker_tasks_sha"],
             )
 
 

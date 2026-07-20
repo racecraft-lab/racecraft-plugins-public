@@ -8,7 +8,7 @@
   ],
   "implementation_baseline_sha": "0d5df513fe95a5201c422b908e2c6b7330b91552",
   "implementation_checkpoint_sha": "6f30b6f1a93819d469084c7da8e8a36367684d30",
-  "last_reviewed_head_sha": "1c15d3ca4b68088ff8bd939199f0f96b63f34947",
+  "last_reviewed_head_sha": "3df135e624b6c001c691d85a72dfe1588f5ee095",
   "capability_fixture_digest": "sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a",
   "treatment_fixture_digest": "sha256:3983dc1d4efe42542ffe0cb72830c970d24cecf490ddfe0c93e24be749ffaa53",
   "replay_digest": "sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda",
@@ -21,7 +21,7 @@
     "raw_fixture_digest_validation": "pass",
     "canonical_offline_replay": "pass",
     "eight_class_semantic_binding": "pass",
-    "independent_critical_high_review": "findings_open: untitled-chat-8DCBF9"
+    "independent_critical_high_review": "findings_open: untitled-chat-B2AE31"
   },
   "source_fingerprint_status": "current_marker_scope",
   "source_fingerprint_contract": "marker-task-lines.v2",

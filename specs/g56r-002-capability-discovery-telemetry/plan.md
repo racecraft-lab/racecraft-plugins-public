@@ -242,8 +242,29 @@ specs/g56r-002-capability-discovery-telemetry/
 
 ```text
 tests/speckit-pro/layer6-efficiency/lib/
-├── codex_capabilities.py
-└── treatment_trace_schema.py
+├── codex_capabilities.py                  # public capability import/CLI boundary
+├── codex_capability_cli.py                # command dispatch
+├── codex_capability_contract.py           # bounds and contract validation
+├── codex_capability_freeze.py             # freeze construction/publication
+├── codex_capability_io.py                 # strict JSON and descriptor I/O
+├── codex_capability_matrix.py             # matrix and canary decisions
+├── codex_capability_observations.py       # observation normalization
+├── codex_capability_private.py            # private retained-byte writes
+├── codex_capability_publish_io.py         # publication read-back
+├── codex_capability_retention.py          # cleanup and retention lifecycle
+├── codex_capability_retention_records.py  # append-only retention records
+├── codex_capability_sources.py            # source refresh/admission
+├── treatment_trace_schema.py              # public treatment import/CLI boundary
+├── treatment_trace_authority.py           # authority and owner joins
+├── treatment_trace_bundle.py              # bundle validation
+├── treatment_trace_cli.py                 # command dispatch
+├── treatment_trace_fields.py              # closed field inventory
+├── treatment_trace_fixture.py             # fixture validation
+├── treatment_trace_io.py                  # retained-file and path I/O
+├── treatment_trace_json_schema.py         # executable schema parity
+├── treatment_trace_model.py               # neutral record validation
+├── treatment_trace_replay.py              # deterministic replay
+└── treatment_trace_successor.py           # successor lineage validation
 
 tests/speckit-pro/unit/
 ├── test-g56r-002-capability-telemetry.py
