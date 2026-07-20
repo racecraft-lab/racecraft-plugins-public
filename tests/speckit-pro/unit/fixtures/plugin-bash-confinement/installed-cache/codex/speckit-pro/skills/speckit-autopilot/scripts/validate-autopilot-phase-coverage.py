@@ -227,9 +227,29 @@ def first_index_exact(steps: list[str], value: str) -> int | None:
 
 
 def validate_workflow(text: str) -> dict[str, list[str]]:
-    missing_sections = [section for section in WORKFLOW_SECTIONS if section not in text]
-    missing_tokens = [token for token in WORKFLOW_TOKENS if token not in text]
-    missing_post_items = [post for post in POST_STEPS if post not in text]
+    visible_text = _visible_markdown(text)
+    visible_lines = [line.strip() for line in visible_text.splitlines()]
+    table_rows = [
+        line for line in visible_lines if line.startswith("|") and line.endswith("|")
+    ]
+    table_cells = {
+        cell.strip()
+        for row in table_rows
+        for cell in row[1:-1].split("|")
+    }
+    missing_sections = [
+        section
+        for section in WORKFLOW_SECTIONS
+        if not any(
+            line.startswith(section) if section.endswith(":") else line == section
+            for line in visible_lines
+        )
+    ]
+    missing_tokens = [
+        token for token in WORKFLOW_TOKENS
+        if not any(row.startswith(token) for row in table_rows)
+    ]
+    missing_post_items = [post for post in POST_STEPS if post not in table_cells]
     return {
         "missing_workflow_sections": missing_sections,
         "missing_workflow_tokens": missing_tokens,
@@ -239,11 +259,41 @@ def validate_workflow(text: str) -> dict[str, list[str]]:
 
 def _visible_markdown(text: str) -> str:
     """Return Markdown outside HTML comments and fenced code blocks."""
-    uncommented = re.sub(r"<!--.*?-->", "", text, flags=re.DOTALL)
     visible_lines: list[str] = []
     fence_character: str | None = None
     fence_length = 0
-    for line in uncommented.splitlines():
+    in_html_comment = False
+    for raw_line in text.splitlines():
+        if fence_character is not None:
+            closing_fence = re.match(r"^[ \t]{0,3}(`{3,}|~{3,})[ \t]*$", raw_line)
+            if (
+                closing_fence
+                and closing_fence.group(1)[0] == fence_character
+                and len(closing_fence.group(1)) >= fence_length
+            ):
+                fence_character = None
+                fence_length = 0
+            continue
+
+        line_parts: list[str] = []
+        offset = 0
+        while offset < len(raw_line):
+            if in_html_comment:
+                comment_end = raw_line.find("-->", offset)
+                if comment_end < 0:
+                    offset = len(raw_line)
+                    break
+                in_html_comment = False
+                offset = comment_end + 3
+                continue
+            comment_start = raw_line.find("<!--", offset)
+            if comment_start < 0:
+                line_parts.append(raw_line[offset:])
+                break
+            line_parts.append(raw_line[offset:comment_start])
+            in_html_comment = True
+            offset = comment_start + 4
+        line = "".join(line_parts)
         if fence_character is None:
             opening_fence = re.match(r"^[ \t]{0,3}(`{3,}|~{3,})", line)
             if opening_fence:
@@ -251,15 +301,6 @@ def _visible_markdown(text: str) -> str:
                 fence_length = len(opening_fence.group(1))
                 continue
             visible_lines.append(line)
-            continue
-        closing_fence = re.match(r"^[ \t]{0,3}(`{3,}|~{3,})[ \t]*$", line)
-        if (
-            closing_fence
-            and closing_fence.group(1)[0] == fence_character
-            and len(closing_fence.group(1)) >= fence_length
-        ):
-            fence_character = None
-            fence_length = 0
     return "\n".join(visible_lines)
 
 

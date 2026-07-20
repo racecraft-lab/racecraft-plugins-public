@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import re
+import runpy
 import sys
 import unittest
 from pathlib import Path
@@ -242,6 +243,64 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
         with self.subTest(invalid_marker_kind="maintenance"):
             self.assertNotIn("maintenance", marker_kinds)
 
+    def test_every_marker_plan_schema_accepts_legacy_v1_pending_checkpoint(self) -> None:
+        schema_errors = runpy.run_path(
+            str(
+                REPO_ROOT
+                / "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
+            )
+        )["_json_schema_errors"]
+        legacy_plan = {
+            "schema_version": "pr-marker-plan.v1",
+            "kind": "pr_marker_plan",
+            "feature_id": "LEGACY-001",
+            "status": "planned",
+            "source_fingerprint": {
+                "feature_spec_sha": "legacy-spec",
+                "plan_declared_scope_sha": "legacy-plan",
+                "tasks_sha": "legacy-tasks",
+                "reviewability_sha": "legacy-reviewability",
+                "hazard_route_sha": "legacy-hazards",
+            },
+            "markers": [
+                {
+                    "id": "us1",
+                    "review_order": 1,
+                    "kind": "user_story",
+                    "parent_marker_id": None,
+                    "source_boundary": {
+                        "section": "User Story 1",
+                        "story_id": 1,
+                        "start_task_id": "T001",
+                        "end_task_id": "T001",
+                    },
+                    "task_ids": ["T001"],
+                    "folded_polish_task_ids": [],
+                    "folded_polish_target_reason": "",
+                    "declared_files": [],
+                    "declared_tests": [],
+                    "reviewability": {
+                        "status": "not_estimated",
+                        "mode": "implementation",
+                        "scope": "us1",
+                    },
+                    "hazards": [],
+                    "subdivision": {"status": "none", "details": {}},
+                    "implementation_checkpoint": {"status": "pending"},
+                    "emission_mapping": {"status": "pending"},
+                    "warnings": [],
+                }
+            ],
+            "warnings": [],
+        }
+        for schema_path in MARKER_PLAN_SCHEMA_PATHS:
+            with self.subTest(schema_path=schema_path.relative_to(REPO_ROOT)):
+                schema = json.loads(schema_path.read_text(encoding="utf-8"))
+                self.assertEqual(
+                    schema_errors(legacy_plan, schema, schema, "pr_marker_plan"),
+                    [],
+                )
+
     def test_pr_marker_plan_schema_binds_completion_and_emission_evidence(self) -> None:
         schema = json.loads(MARKER_PLAN_SCHEMA_PATHS[0].read_text(encoding="utf-8"))
         checkpoint = schema["$defs"]["checkpoint"]
@@ -264,6 +323,7 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
         self.assertEqual(strict["updated_at"], {"$ref": "#/$defs/utc_timestamp"})
         self.assertTrue(checkpoint["additionalProperties"])
         self.assertTrue(emission["additionalProperties"])
+        self.assertEqual(checkpoint["required"], ["status"])
         self.assertEqual(
             strict_checkpoint["allOf"][0]["then"]["required"],
             [
@@ -281,6 +341,10 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
                 "validation",
                 "freshness",
             ],
+        )
+        self.assertEqual(
+            strict_checkpoint["allOf"][1]["then"]["required"],
+            ["evidence_path", "commit_sha"],
         )
         self.assertEqual(
             strict_marker["allOf"][0]["then"]["properties"]["implementation_checkpoint"]["properties"]["status"],

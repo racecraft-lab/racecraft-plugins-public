@@ -309,6 +309,20 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["missing_state_post_items"], [])
 
+    def test_hidden_full_workflow_does_not_satisfy_visible_contract(self) -> None:
+        hidden_workflows = {
+            "fenced": f"# Wrapper\n\n````markdown\n{workflow_text()}\n````\n",
+            "closed_comment": f"# Wrapper\n\n<!--\n{workflow_text()}\n-->\n",
+            "unclosed_comment": f"# Wrapper\n\n<!--\n{workflow_text()}",
+        }
+        for hidden_kind, workflow in hidden_workflows.items():
+            with self.subTest(hidden_kind=hidden_kind):
+                exit_code, report = self.run_validator(workflow, state_json())
+                self.assertEqual(exit_code, 1)
+                self.assertEqual(len(report["missing_workflow_sections"]), 9)
+                self.assertEqual(len(report["missing_workflow_tokens"]), 3)
+                self.assertEqual(len(report["missing_workflow_post_items"]), 12)
+
     def test_workflow_checkpoint_claims_bind_marker_plan_commits(self) -> None:
         expected_commit = "a" * 40
         wrong_commit = "b" * 40

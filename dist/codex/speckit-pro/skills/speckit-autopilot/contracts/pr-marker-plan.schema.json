@@ -152,6 +152,15 @@
                           "freshness"
                         ]
                       }
+                    },
+                    {
+                      "if": {
+                        "properties": {"status": {"const": "pending"}},
+                        "required": ["status"]
+                      },
+                      "then": {
+                        "required": ["evidence_path", "commit_sha"]
+                      }
                     }
                   ]
                 },
@@ -919,9 +928,7 @@
       "type": "object",
       "additionalProperties": true,
       "required": [
-        "status",
-        "evidence_path",
-        "commit_sha"
+        "status"
       ],
       "properties": {
         "status": {
