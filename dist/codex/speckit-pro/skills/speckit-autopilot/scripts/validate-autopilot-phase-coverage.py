@@ -106,6 +106,9 @@ COMPLETE_CHECKPOINT_LIST_FIELDS = (
     "completed_task_ids", "required_verification_gate_ids", "validation",
 )
 COMPLETE_CHECKPOINT_OBJECT_FIELDS = ("freshness",)
+PHASE_VERIFICATION_GATE_ALIASES = {
+    "independent_critical_high_review": "independent_review",
+}
 
 
 @dataclass(frozen=True)
@@ -1421,9 +1424,15 @@ def validate_projection_integrity(
                         if isinstance(verification, dict):
                             for gate_id, result in verification.items():
                                 expected = result.get("evidence") if isinstance(result, dict) else result
-                                if gate_id in phase_result and phase_result[gate_id] != expected:
+                                phase_gate_id = PHASE_VERIFICATION_GATE_ALIASES.get(
+                                    gate_id, gate_id,
+                                )
+                                if (
+                                    phase_gate_id in phase_result
+                                    and phase_result[phase_gate_id] != expected
+                                ):
                                     checkpoint_evidence_errors.append(
-                                        f"pr_marker_plan.markers[{index}] phase_results[{phase_name}] {gate_id} does not match checkpoint evidence"
+                                        f"pr_marker_plan.markers[{index}] phase_results[{phase_name}] {phase_gate_id} does not match checkpoint evidence"
                                     )
                 if checkpoint_status == "complete" and strict_contract and repo_root:
                     claimed_commit = checkpoint.get("commit_sha")

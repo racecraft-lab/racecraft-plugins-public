@@ -743,8 +743,15 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             ).hexdigest()
             evidence_path.parent.mkdir(parents=True)
             verification_path.parent.mkdir(parents=True)
+            verification_gate_ids = [
+                "focused_tests", "independent_critical_high_review",
+            ]
             verification_results = {
                 "focused_tests": {"status": "pass", "evidence": "pass"},
+                "independent_critical_high_review": {
+                    "status": "pass",
+                    "evidence": "independent review clean",
+                },
             }
             verification_path.write_text(
                 json.dumps(
@@ -755,7 +762,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                         "status": "pass",
                         "generated_at": "2026-07-19T00:00:00Z",
                         "verified_commit_sha": implementation_commit,
-                        "required_gate_ids": ["focused_tests"],
+                        "required_gate_ids": verification_gate_ids,
                         "results": verification_results,
                     }
                 ),
@@ -775,7 +782,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                         "implementation_checkpoint_sha": implementation_commit,
                         "verification": verification_results,
                         "verification_evidence_sha": verification_evidence_sha,
-                        "required_verification_gate_ids": ["focused_tests"],
+                        "required_verification_gate_ids": verification_gate_ids,
                         "source_fingerprint_status": "current",
                         "tasks_sha": tasks_sha,
                         "completed_at": "2026-07-19T00:00:00Z",
@@ -846,7 +853,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                             "head_sha": implementation_commit,
                             "completed_at": "2026-07-19T00:00:00Z",
                             "completed_task_ids": ["T001", "T002"],
-                            "required_verification_gate_ids": ["focused_tests"],
+                            "required_verification_gate_ids": verification_gate_ids,
                             "summary": "Completed us1.",
                             "validation": ["focused tests passed"],
                             "freshness": {
@@ -1017,6 +1024,48 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             self.assertEqual(report["checkpoint_source_fingerprint_errors"], [])
 
             phase_name = "Phase 7: Implement - Pending task decomposition"
+            phase_step = next(
+                item for item in state["plan"] if item["step"] == phase_name
+            )
+            phase_step["status"] = "completed"
+            state["phase_results"] = {
+                phase_name: {
+                    "status": "completed",
+                    "marker_id": "us1",
+                    "independent_review": "fabricated pass",
+                },
+            }
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", "autopilot-state.json"], check=True)
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "fabricated completed review claim",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                f"pr_marker_plan.markers[0] phase_results[{phase_name}] independent_review does not match checkpoint evidence",
+                report["checkpoint_evidence_errors"],
+            )
+            phase_step["status"] = "pending"
+            state.pop("phase_results")
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", "autopilot-state.json"], check=True)
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "restore phase projection",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 0, report)
+
             state["phase_results"] = {
                 phase_name: {
                     "status": "pending",
