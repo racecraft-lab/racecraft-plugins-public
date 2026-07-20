@@ -5,7 +5,7 @@
   "status": "block",
   "mode": "implementation",
   "scope": "T026-T030 deterministic synthetic replay",
-  "head_sha": "af4f8832764b46247c4d37cd4d2458757923a083",
+  "head_sha": "096605e6a4987c0f580c525bc377a68c438a9a22",
   "reason_class": "aggregate_size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
@@ -31,7 +31,7 @@
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass",
     "full_suite": "2839/2839 pass",
-    "independent_review": "findings_open: untitled-chat-B2AE31"
+    "independent_review": "findings_open: untitled-chat-3AC330"
   },
   "decomposition": {
     "status": "complete",
