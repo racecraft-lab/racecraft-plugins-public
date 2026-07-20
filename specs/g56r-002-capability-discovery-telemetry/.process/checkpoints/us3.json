@@ -2,13 +2,13 @@
   "schema_version": "marker-checkpoint.v1",
   "feature_id": "G56R-002",
   "marker_id": "us3",
-  "status": "pending",
+  "status": "complete",
   "task_ids": [
     "T026", "T027", "T028", "T029", "T030"
   ],
   "implementation_baseline_sha": "0d5df513fe95a5201c422b908e2c6b7330b91552",
-  "implementation_checkpoint_sha": "6f30b6f1a93819d469084c7da8e8a36367684d30",
-  "last_reviewed_head_sha": "096605e6a4987c0f580c525bc377a68c438a9a22",
+  "implementation_checkpoint_sha": "db582b30217062190e065abb5c639b72e7a02e45",
+  "last_reviewed_head_sha": "3d7bd9eff79a1889830c74b6bcd22ae8945098c0",
   "capability_fixture_digest": "sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a",
   "treatment_fixture_digest": "sha256:3983dc1d4efe42542ffe0cb72830c970d24cecf490ddfe0c93e24be749ffaa53",
   "replay_digest": "sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda",
@@ -21,14 +21,11 @@
     "raw_fixture_digest_validation": "pass",
     "canonical_offline_replay": "pass",
     "eight_class_semantic_binding": "pass",
-    "independent_critical_high_review": "findings_open: untitled-chat-3AC330"
+    "independent_critical_high_review": "pass: untitled-chat-A24ABC",
+    "release_readiness_title_gate": "pass",
+    "changed_file_manifest": "78/78 exact"
   },
-  "source_fingerprint_status": "current_marker_scope",
-  "source_fingerprint_contract": "marker-task-lines.v2",
-  "tasks_sha": "sha256:3504d46c36d4cf7e64f777426830cf7823708d774a52376c9aa8313030c88554",
-  "tasks_sha_scope": "checkpoint_time_whole_file",
-  "current_tasks_sha": "sha256:216b86cb34bbcc40c7f6e23b153379ec047616885f89ae6c11a41674df68b447",
-  "checkpoint_marker_tasks_sha": "sha256:0549f955b6e0a56b176378614d3bd2c6cc014f030d63f4dfb170d99f49259995",
-  "current_marker_tasks_sha": "sha256:0549f955b6e0a56b176378614d3bd2c6cc014f030d63f4dfb170d99f49259995",
-  "updated_at": "2026-07-20T02:04:47Z"
+  "source_fingerprint_status": "current",
+  "tasks_sha": "sha256:d16c801273daa9e56c08c34068879b779aedaacc698615a5ba522e350addbdab",
+  "completed_at": "2026-07-20T02:15:18Z"
 }
