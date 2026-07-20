@@ -64,18 +64,98 @@ def _store_private_record(directory, value, repository_root, expected_directory_
 
 
 def _load_private_records(directory, repository_root, label):
-    if not directory.exists(): return []
-    if directory.is_symlink() or not directory.is_dir(): raise ValueError(f"{label} path must be a private directory")
-    entries = sorted(directory.iterdir(), key=lambda path: path.name)
-    if any(path.is_symlink() or not path.is_file() or path.suffix != ".json" for path in entries):
-        raise ValueError(f"{label} directory contains an undeclared entry")
-    records = []
-    for path in entries:
-        _, raw = read_content_addressed_private_file(path, repository_root, label)
-        record = _parse_json_bytes(raw)
-        if raw != canonical_bytes(record) + b"\n": raise ValueError(f"{label} must use canonical JSON bytes")
-        records.append((digest(raw), record))
-    return records
+    lexical_target = Path(os.path.abspath(directory))
+    if lexical_target.name != Path(directory).name:
+        raise ValueError(f"{label} path must be an immediate private-root child")
+    raw, raw_identity = _validated_raw_evidence_root_binding(
+        lexical_target.parent, repository_root,
+    )
+    target = raw / lexical_target.name
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    directory_flags = (
+        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
+        | getattr(os, "O_DIRECTORY", 0)
+    )
+    file_flags = (
+        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
+        | getattr(os, "O_NONBLOCK", 0)
+    )
+    raw_descriptor = _private_directory_descriptor(raw, raw_identity)
+    directory_descriptor = None
+    try:
+        try:
+            pathname = os.stat(target.name, dir_fd=raw_descriptor, follow_symlinks=False)
+        except FileNotFoundError:
+            _assert_private_directory_current(raw, raw_descriptor, raw_identity)
+            return []
+        if not stat.S_ISDIR(pathname.st_mode) or stat.S_IMODE(pathname.st_mode) != 0o700:
+            raise ValueError(f"{label} path must be a private directory")
+        directory_identity = _stable_directory_identity(pathname)
+        directory_descriptor = os.open(
+            target.name, directory_flags, dir_fd=raw_descriptor,
+        )
+        if _stable_directory_identity(os.fstat(directory_descriptor)) != directory_identity:
+            raise ValueError(f"{label} directory changed before enumeration")
+        names = sorted(os.listdir(directory_descriptor))
+        records = []
+        for name in names:
+            if Path(name).name != name or Path(name).suffix != ".json":
+                raise ValueError(f"{label} directory contains an undeclared entry")
+            entry = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
+            if (
+                not stat.S_ISREG(entry.st_mode)
+                or stat.S_IMODE(entry.st_mode) != 0o600
+                or entry.st_nlink != 1
+                or entry.st_size > PRIVATE_REFRESH_MAX_BYTES
+            ):
+                raise ValueError(f"{label} directory contains an undeclared entry")
+            descriptor = os.open(name, file_flags, dir_fd=directory_descriptor)
+            try:
+                before = os.fstat(descriptor)
+                if _stable_file_identity(entry) != _stable_file_identity(before):
+                    raise ValueError(f"{label} record changed before it was read")
+                chunks, total = [], 0
+                while True:
+                    chunk = os.read(
+                        descriptor,
+                        min(1024 * 1024, PRIVATE_REFRESH_MAX_BYTES + 1 - total),
+                    )
+                    if not chunk:
+                        break
+                    chunks.append(chunk); total += len(chunk)
+                    if total > PRIVATE_REFRESH_MAX_BYTES:
+                        raise ValueError(f"{label} exceeds the bounded private-file size")
+                after = os.fstat(descriptor)
+                current = os.stat(
+                    name, dir_fd=directory_descriptor, follow_symlinks=False,
+                )
+                if (
+                    _stable_file_identity(before) != _stable_file_identity(after)
+                    or _stable_file_identity(current) != _stable_file_identity(after)
+                    or total != after.st_size
+                ):
+                    raise ValueError(f"{label} record changed while it was being read")
+            finally:
+                os.close(descriptor)
+            raw_bytes = b"".join(chunks)
+            record_digest = digest(raw_bytes)
+            if name != f"{record_digest.removeprefix('sha256:')}.json":
+                raise ValueError(f"{label} must use its exact content digest as the filename")
+            record = _parse_json_bytes(raw_bytes)
+            if raw_bytes != canonical_bytes(record) + b"\n":
+                raise ValueError(f"{label} must use canonical JSON bytes")
+            records.append((record_digest, record))
+        if sorted(os.listdir(directory_descriptor)) != names:
+            raise ValueError(f"{label} directory changed during enumeration")
+        _assert_private_directory_current(target, directory_descriptor, directory_identity)
+        _assert_private_directory_current(raw, raw_descriptor, raw_identity)
+        return records
+    except OSError as error:
+        raise ValueError(f"{label} directory could not be read safely") from error
+    finally:
+        if directory_descriptor is not None:
+            os.close(directory_descriptor)
+        os.close(raw_descriptor)
 
 
 def _validate_retention_record(record_digest, record):

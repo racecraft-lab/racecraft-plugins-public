@@ -64,7 +64,12 @@ def _capability_module() -> object:
             facade = importlib.util.module_from_spec(facade_spec)
             sys.modules[facade_name] = facade
             facade_spec.loader.exec_module(facade)
-            contract = sys.modules.get(f"{package_name}.codex_capability_contract")
+            dependencies = getattr(facade, "__capability_internal_modules__", None)
+            contract = (
+                dependencies.get("codex_capability_contract")
+                if isinstance(dependencies, dict)
+                else None
+            )
             tuple_factory = getattr(contract, "_AuthorityTupleSet", None)
             if not callable(tuple_factory):
                 raise RuntimeError("capability authority tuple factory is unavailable")

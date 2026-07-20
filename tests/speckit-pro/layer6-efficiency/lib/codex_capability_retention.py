@@ -37,7 +37,10 @@ def _delete_single_link_private_file(
         raise ValueError("deletion completion record does not bind its private evidence target")
     nofollow = getattr(os, "O_NOFOLLOW", 0)
     directory_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow | getattr(os, "O_DIRECTORY", 0)
-    file_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
+    file_flags = (
+        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
+        | getattr(os, "O_NONBLOCK", 0)
+    )
     parent_descriptor = descriptor = deletion_directory_descriptor = None
     verified_payload = None; deletion_proved = False
     completion_filename = f"{deletion_record_digest.removeprefix('sha256:')}.json"

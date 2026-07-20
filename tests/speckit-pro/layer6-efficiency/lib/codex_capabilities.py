@@ -27,18 +27,14 @@ def _load_runtime_dependencies() -> dict[str, object]:
         "codex_capability_publish_io",
         "codex_capability_cli",
     )
-    created_package = None
-    package_name = __package__
-    if not package_name:
-        package_name = f"_g56r_capability_runtime_{uuid4().hex}"
-        if package_name in sys.modules:
-            raise RuntimeError("capability runtime package identifier collided")
-        package = ModuleType(package_name)
-        package.__package__ = package_name
-        package.__path__ = [str(LIB_DIR)]
-        package.__spec__ = ModuleSpec(package_name, loader=None, is_package=True)
-        sys.modules[package_name] = package
-        created_package = package_name
+    package_name = f"_g56r_capability_runtime_{uuid4().hex}"
+    if package_name in sys.modules:
+        raise RuntimeError("capability runtime package identifier collided")
+    package = ModuleType(package_name)
+    package.__package__ = package_name
+    package.__path__ = [str(LIB_DIR)]
+    package.__spec__ = ModuleSpec(package_name, loader=None, is_package=True)
+    sys.modules[package_name] = package
     try:
         package = sys.modules.get(package_name)
         try:
@@ -71,13 +67,9 @@ def _load_runtime_dependencies() -> dict[str, object]:
                 )
         return dependencies
     finally:
-        if created_package is not None:
-            for module_name in tuple(sys.modules):
-                if (
-                    module_name == created_package
-                    or module_name.startswith(f"{created_package}.")
-                ):
-                    sys.modules.pop(module_name, None)
+        for module_name in tuple(sys.modules):
+            if module_name == package_name or module_name.startswith(f"{package_name}."):
+                sys.modules.pop(module_name, None)
 
 _EXPORTS_BY_MODULE = (
     ("codex_capability_cli", ("main",)),

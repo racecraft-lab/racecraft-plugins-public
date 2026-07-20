@@ -580,6 +580,46 @@ class CapabilityContractTests(unittest.TestCase):
             any(name.startswith("_g56r_capability_runtime_") for name in sys.modules)
         )
 
+    def test_package_mode_capability_facade_ignores_same_path_stale_dependency(self) -> None:
+        package_name = f"_g56r_capability_package_{uuid4().hex}"
+        package = types.ModuleType(package_name)
+        package.__package__ = package_name
+        package.__path__ = [str(MODULE_PATH.parent)]
+        package.__spec__ = importlib.machinery.ModuleSpec(
+            package_name, loader=None, is_package=True,
+        )
+        stale_name = f"{package_name}.codex_capability_contract"
+        stale_contract = types.ModuleType(stale_name)
+        stale_contract.__dict__.update(vars(capability_contract))
+        stale_contract.__name__ = stale_name
+        stale_contract.__package__ = package_name
+        stale_contract.__file__ = str(
+            MODULE_PATH.with_name("codex_capability_contract.py")
+        )
+        stale_contract.digest = lambda _value: "forged-same-path-digest"
+        facade_name = f"{package_name}.codex_capabilities"
+        facade_spec = importlib.util.spec_from_file_location(facade_name, MODULE_PATH)
+        if facade_spec is None or facade_spec.loader is None:
+            self.fail("cannot load package-mode capability facade")
+        facade = importlib.util.module_from_spec(facade_spec)
+        try:
+            sys.modules.update({
+                package_name: package,
+                stale_name: stale_contract,
+                facade_name: facade,
+            })
+            facade_spec.loader.exec_module(facade)
+            self.assertIs(sys.modules[stale_name], stale_contract)
+            self.assertEqual(facade.digest(b"probe"), capabilities.digest(b"probe"))
+            self.assertNotEqual(facade.digest(b"probe"), "forged-same-path-digest")
+        finally:
+            for module_name in tuple(sys.modules):
+                if module_name == package_name or module_name.startswith(f"{package_name}."):
+                    sys.modules.pop(module_name, None)
+        self.assertFalse(
+            any(name.startswith("_g56r_capability_runtime_") for name in sys.modules)
+        )
+
     def test_treatment_facade_does_not_execute_earlier_sys_path_shadow(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             shadow_root = Path(temporary)
@@ -2076,6 +2116,141 @@ class CapabilityContractTests(unittest.TestCase):
                     pass
             with capability_retention_records._retention_lock(raw_root, raw_identity):
                 pass
+
+    @unittest.skipUnless(
+        capabilities.HAS_DESCRIPTOR_RELATIVE_IO
+        and hasattr(os, "mkfifo")
+        and hasattr(os, "O_NONBLOCK"),
+        "descriptor-relative FIFO races require POSIX support",
+    )
+    def test_retention_deletion_fifo_swaps_do_not_block(self) -> None:
+        for swap_completion in (False, True):
+            with self.subTest(completion_record=swap_completion), tempfile.TemporaryDirectory() as temporary:
+                raw = Path(temporary) / "raw"
+                raw.mkdir(mode=0o700)
+                payload = b"retained evidence\n"
+                evidence_digest = capabilities.digest(payload)
+                target = raw / f"{evidence_digest.removeprefix('sha256:')}.json"
+                target.write_bytes(payload); target.chmod(0o600)
+                raw_identity = capability_io._stable_directory_identity(
+                    os.stat(raw, follow_symlinks=False),
+                )
+                deletion_directory, deletion_identity = (
+                    capability_retention_records._private_record_directory(
+                        raw, capabilities.DELETION_RECORDS_DIR, raw_identity,
+                    )
+                )
+                deletion_record = {
+                    "schema_version": "raw-evidence-deletion.v2",
+                    "completion_proof": "post-unlink-nlink-zero-rehashed-v1",
+                    "raw_evidence_digest": evidence_digest,
+                    "retention_record_digests": [capabilities.digest(b"retention")],
+                    "deletion_intent_digest": capabilities.digest(b"intent"),
+                    "delete_after": "2026-08-15T00:00:00Z",
+                    "deleted_at": "2026-08-15T00:00:00Z",
+                }
+                completion_payload = capabilities.canonical_bytes(deletion_record) + b"\n"
+                completion_digest = capabilities.digest(completion_payload)
+                completion_path = deletion_directory / f"{completion_digest.removeprefix('sha256:')}.json"
+                if swap_completion:
+                    completion_path.write_bytes(completion_payload)
+                    completion_path.chmod(0o600)
+                swap_path = completion_path if swap_completion else target
+                moved_path = swap_path.with_name(f"{swap_path.name}.original")
+                original_open = capability_retention.os.open
+                swapped = False
+                failures: list[BaseException] = []
+
+                def replace_file_with_fifo(
+                    path: object, flags: int, *args: object, **kwargs: object,
+                ) -> int:
+                    nonlocal swapped
+                    if (
+                        path == swap_path.name
+                        and kwargs.get("dir_fd") is not None
+                        and not swapped
+                    ):
+                        swapped = True
+                        swap_path.rename(moved_path)
+                        os.mkfifo(swap_path)
+                    return original_open(path, flags, *args, **kwargs)
+
+                def delete_target() -> None:
+                    try:
+                        capability_retention._delete_single_link_private_file(
+                            target,
+                            raw,
+                            evidence_digest,
+                            raw_identity,
+                            deletion_record=deletion_record,
+                            deletion_directory=deletion_directory,
+                            deletion_directory_identity=deletion_identity,
+                            repository_root=ROOT,
+                        )
+                    except BaseException as exc:  # pragma: no branch - asserted below
+                        failures.append(exc)
+
+                store_patch = (
+                    mock.patch.object(
+                        capability_retention,
+                        "_store_private_record",
+                        side_effect=OSError("simulated completion persistence failure"),
+                    )
+                    if swap_completion
+                    else mock.patch.object(
+                        capability_retention,
+                        "_store_private_record",
+                        wraps=capability_retention._store_private_record,
+                    )
+                )
+                with mock.patch.object(
+                    capability_retention.os, "open", side_effect=replace_file_with_fifo,
+                ), store_patch:
+                    worker = threading.Thread(target=delete_target, daemon=True)
+                    worker.start(); worker.join(timeout=2)
+                self.assertFalse(worker.is_alive(), "retention FIFO swap blocked cleanup")
+                self.assertTrue(swapped)
+                self.assertTrue(failures)
+
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_retention_record_directory_swap_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            raw = root / "raw"; raw.mkdir(mode=0o700)
+            records = raw / capabilities.RETENTION_RECORDS_DIR
+            records.mkdir(mode=0o700)
+            attacker = root / "attacker"; attacker.mkdir(mode=0o700)
+            forged_payload = b'{"forged":true}\n'
+            forged = attacker / f"{capabilities.digest(forged_payload).removeprefix('sha256:')}.json"
+            forged.write_bytes(forged_payload); forged.chmod(0o600)
+            moved = raw / f"{capabilities.RETENTION_RECORDS_DIR}.original"
+            original_open = capability_retention_records.os.open
+            swapped = False
+
+            def replace_directory_with_symlink(
+                path: object, flags: int, *args: object, **kwargs: object,
+            ) -> int:
+                nonlocal swapped
+                if (
+                    path == capabilities.RETENTION_RECORDS_DIR
+                    and kwargs.get("dir_fd") is not None
+                    and not swapped
+                ):
+                    swapped = True
+                    records.rename(moved)
+                    records.symlink_to(attacker, target_is_directory=True)
+                return original_open(path, flags, *args, **kwargs)
+
+            with mock.patch.object(
+                capability_retention_records.os,
+                "open",
+                side_effect=replace_directory_with_symlink,
+            ), self.assertRaisesRegex(ValueError, "could not be read safely"):
+                capability_retention_records._load_private_records(
+                    records, ROOT, "retention record",
+                )
+            self.assertTrue(swapped)
+            self.assertEqual(list(moved.iterdir()), [])
 
     @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_deletion_recovery_refuses_replaced_raw_root(self) -> None:
@@ -3823,7 +3998,7 @@ class TreatmentReplayTests(unittest.TestCase):
 
         def blocking_exec_module(loader, module):
             if (
-                module.__name__.startswith("_g56r_treatment_capability_")
+                module.__name__.startswith("_g56r_capability_runtime_")
                 and module.__name__.endswith(".codex_capability_contract")
             ):
                 entered.set()
