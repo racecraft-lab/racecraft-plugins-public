@@ -57,10 +57,10 @@
       }
     },
     "created_at": {
-      "$ref": "#/$defs/utc_timestamp"
+      "type": "string"
     },
     "updated_at": {
-      "$ref": "#/$defs/utc_timestamp"
+      "type": "string"
     }
   },
   "allOf": [
@@ -77,6 +77,12 @@
       },
       "then": {
         "properties": {
+          "created_at": {
+            "$ref": "#/$defs/utc_timestamp"
+          },
+          "updated_at": {
+            "$ref": "#/$defs/utc_timestamp"
+          },
           "source_fingerprint": {
             "required": [
               "changed_file_manifest_sha"

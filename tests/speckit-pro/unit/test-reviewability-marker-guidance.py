@@ -252,6 +252,10 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
         )
         self.assertNotIn("changed_file_manifest_sha", schema["$defs"]["source_fingerprint"]["required"])
         self.assertIn("changed_file_manifest_sha", strict_source["required"])
+        self.assertEqual(schema["properties"]["created_at"], {"type": "string"})
+        self.assertEqual(schema["properties"]["updated_at"], {"type": "string"})
+        self.assertEqual(strict["created_at"], {"$ref": "#/$defs/utc_timestamp"})
+        self.assertEqual(strict["updated_at"], {"$ref": "#/$defs/utc_timestamp"})
         self.assertTrue(checkpoint["additionalProperties"])
         self.assertTrue(emission["additionalProperties"])
         self.assertEqual(

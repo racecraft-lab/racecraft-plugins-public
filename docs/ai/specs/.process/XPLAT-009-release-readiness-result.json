@@ -461,11 +461,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 25729,
+              "byte_count": 25865,
               "kind": "skill",
               "path": "skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
               "required": true,
-              "sha256": "bd37d33406d04d7dccf8556297d84b045d6946f9b61708bda832ee89b509a87b",
+              "sha256": "0136e86481121de08d7e036b517e6a0ec50cea46dd7627484a9b8bf7d5030a1c",
               "source_path": "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
               "transform": "none"
             },
@@ -1318,11 +1318,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 25729,
+              "byte_count": 25865,
               "kind": "skill",
               "path": "skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
               "required": true,
-              "sha256": "bd37d33406d04d7dccf8556297d84b045d6946f9b61708bda832ee89b509a87b",
+              "sha256": "0136e86481121de08d7e036b517e6a0ec50cea46dd7627484a9b8bf7d5030a1c",
               "source_path": "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
               "transform": "none"
             },
@@ -1940,7 +1940,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "7aa67a092270854594658ac0f72ad1062f3692484ed447c2e823c07b7fe7d826",
+          "file_tree_hash": "50e72e3e56a4115122ad869abc9c034ae351ea6cb34853abafbf26d6329a1bb3",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -2223,11 +2223,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 25729,
+              "byte_count": 25865,
               "kind": "skill",
               "path": "skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
               "required": true,
-              "sha256": "bd37d33406d04d7dccf8556297d84b045d6946f9b61708bda832ee89b509a87b",
+              "sha256": "0136e86481121de08d7e036b517e6a0ec50cea46dd7627484a9b8bf7d5030a1c",
               "source_path": "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
               "transform": "none"
             },
@@ -3233,11 +3233,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 25729,
+              "byte_count": 25865,
               "kind": "skill",
               "path": "skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
               "required": true,
-              "sha256": "bd37d33406d04d7dccf8556297d84b045d6946f9b61708bda832ee89b509a87b",
+              "sha256": "0136e86481121de08d7e036b517e6a0ec50cea46dd7627484a9b8bf7d5030a1c",
               "source_path": "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
               "transform": "none"
             },
@@ -3972,7 +3972,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "0298bf0d19e07506328a6e0c396d7d2343be67b28cbb667382b336361601a8af",
+          "file_tree_hash": "242d84134142e4d6b415942bea2fb3eefa5bc693ff30a93036ac33e92c7256e1",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
