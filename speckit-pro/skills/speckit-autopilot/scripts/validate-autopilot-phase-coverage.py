@@ -136,13 +136,20 @@ def _strict_json_loads(value: str | bytes) -> Any:
             result[key] = item
         return result
 
-    return json.loads(value, object_pairs_hook=reject_duplicate_keys)
+    def reject_non_finite_constant(constant: str) -> None:
+        raise ValueError(f"non-finite JSON number is not allowed: {constant}")
+
+    return json.loads(
+        value,
+        object_pairs_hook=reject_duplicate_keys,
+        parse_constant=reject_non_finite_constant,
+    )
 
 
 def load_state(path: Path) -> dict[str, Any]:
     try:
         state = _strict_json_loads(read_text(path))
-    except (json.JSONDecodeError, ValueError) as exc:
+    except (json.JSONDecodeError, RecursionError, ValueError) as exc:
         raise ValidationError(f"invalid state JSON: {path}: {exc}") from exc
     if not isinstance(state, dict):
         raise ValidationError("autopilot state must be a JSON object")
@@ -435,10 +442,15 @@ def _json_schema_errors(
         if isinstance(minimum_items, int) and len(value) < minimum_items:
             errors.append(f"{path} has too few items")
         if schema.get("uniqueItems") is True:
-            serialized = [
-                json.dumps(item, sort_keys=True, separators=(",", ":"), allow_nan=False)
-                for item in value
-            ]
+            try:
+                serialized = [
+                    json.dumps(item, sort_keys=True, separators=(",", ":"), allow_nan=False)
+                    for item in value
+                ]
+            except (RecursionError, TypeError, ValueError) as exc:
+                raise ValidationError(
+                    f"could not safely compare unique JSON values at {path}"
+                ) from exc
             if len(set(serialized)) != len(serialized):
                 errors.append(f"{path} must contain unique items")
         item_schema = schema.get("items")
@@ -583,7 +595,7 @@ def _git_tree_entries(repo_root: Path, commit_sha: object) -> dict[str, str] | N
 def _load_json_object(path: Path) -> dict[str, Any] | None:
     try:
         value = _strict_json_loads(read_text(path))
-    except (ValidationError, json.JSONDecodeError, ValueError):
+    except (ValidationError, json.JSONDecodeError, RecursionError, ValueError):
         return None
     return value if isinstance(value, dict) else None
 
@@ -593,7 +605,7 @@ def _load_json_bytes(value: bytes | None) -> dict[str, Any] | None:
         return None
     try:
         parsed = _strict_json_loads(value.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError, ValueError):
         return None
     return parsed if isinstance(parsed, dict) else None
 
@@ -999,7 +1011,11 @@ def validate_changed_file_manifest(
 
 
 def validate_projection_integrity(
-    state: dict[str, Any], steps: list[PlanStep], state_path: Path,
+    state: dict[str, Any],
+    steps: list[PlanStep],
+    state_path: Path,
+    *,
+    expected_head_commit: str | None = None,
 ) -> dict[str, list[str]]:
     phase_results = state.get("phase_results")
     marker_plan = state.get("pr_marker_plan")
@@ -1021,14 +1037,33 @@ def validate_projection_integrity(
     marker_plan_status_errors.extend(_marker_plan_version_errors(marker_plan))
     marker_plan_status_errors.extend(_marker_plan_shape_errors(marker_plan))
 
+    markers = marker_plan.get("markers") if isinstance(marker_plan, dict) else None
+    declared_marker_ids = {
+        marker.get("id")
+        for marker in markers or []
+        if isinstance(marker, dict)
+        and isinstance(marker.get("id"), str)
+        and marker["id"]
+    }
     phases = phase_results if isinstance(phase_results, dict) else {}
-    phases_by_marker: dict[str, dict[str, Any]] = {}
+    phases_by_marker: dict[str, list[tuple[str, dict[str, Any]]]] = {}
     for phase_name, raw_result in phases.items():
         if not isinstance(phase_name, str) or not isinstance(raw_result, dict):
             continue
         phase_marker_id = raw_result.get("marker_id")
         if isinstance(phase_marker_id, str) and phase_marker_id:
-            phases_by_marker[phase_marker_id] = raw_result
+            phases_by_marker.setdefault(phase_marker_id, []).append(
+                (phase_name, raw_result)
+            )
+        if strict_contract and phase_name.startswith("Phase 7: Implement"):
+            if not isinstance(phase_marker_id, str) or not phase_marker_id:
+                marker_plan_status_errors.append(
+                    f"phase_results[{phase_name}] must declare exactly one marker_id"
+                )
+            elif phase_marker_id not in declared_marker_ids:
+                marker_plan_status_errors.append(
+                    f"phase_results[{phase_name}] marker_id {phase_marker_id!r} is not declared by pr_marker_plan"
+                )
         result_status = raw_result.get("status")
         matching_steps = [step for step in steps if step.step == phase_name or step.step.startswith(f"{phase_name} (")]
         if result_status in {"completed", "in_progress", "pending", "checkpointing"} and matching_steps:
@@ -1043,7 +1078,6 @@ def validate_projection_integrity(
                 _pending_value_paths(raw_result, f"phase_results.{phase_name}")
             )
 
-    markers = marker_plan.get("markers") if isinstance(marker_plan, dict) else None
     if isinstance(markers, list):
         if strict_contract:
             marker_plan_status_errors.extend(_timestamp_errors(marker_plan, "pr_marker_plan"))
@@ -1317,6 +1351,25 @@ def validate_projection_integrity(
                                 )
 
                 evidence_ref = checkpoint.get("evidence_path")
+                authorized_evidence_bytes: bytes | None = None
+                if strict_contract and repo_root and isinstance(evidence_ref, str):
+                    authorized_evidence_bytes = _git_file_at_commit(
+                        repo_root, expected_head_commit, evidence_ref,
+                    )
+                    if authorized_evidence_bytes is None:
+                        checkpoint_file_errors.append(
+                            f"pr_marker_plan.markers[{index}] checkpoint evidence is absent from the authorized PR head"
+                        )
+                    else:
+                        evidence_path = _repo_file(repo_root, evidence_ref)
+                        if (
+                            evidence_path is None
+                            or not evidence_path.is_file()
+                            or evidence_path.read_bytes() != authorized_evidence_bytes
+                        ):
+                            checkpoint_file_errors.append(
+                                f"pr_marker_plan.markers[{index}] checkpoint evidence differs from the authorized PR head"
+                            )
                 immutable_evidence_bytes = (
                     _git_file_at_commit(
                         repo_root,
@@ -1328,36 +1381,50 @@ def validate_projection_integrity(
                     and isinstance(evidence_ref, str)
                     else None
                 )
-                evidence = _load_json_bytes(immutable_evidence_bytes)
-                if checkpoint_status != "complete":
+                evidence = _load_json_bytes(
+                    authorized_evidence_bytes
+                    if strict_contract
+                    else immutable_evidence_bytes
+                )
+                if checkpoint_status != "complete" and not strict_contract:
                     evidence_path = _repo_file(repo_root, evidence_ref) if repo_root else None
                     evidence = _load_json_object(evidence_path) if evidence_path and evidence_path.is_file() else None
-                phase_result = phases_by_marker.get(marker_id)
-                if strict_contract and isinstance(evidence, dict) and isinstance(phase_result, dict):
-                    direct_bindings = {
-                        "capability_fixture_digest": "capability_fixture_digest",
-                        "treatment_fixture_digest": "treatment_fixture_digest",
-                        "replay_digest": "replay_digest",
-                        "implementation_commit": "implementation_checkpoint_sha",
-                        "checkpoint": "implementation_checkpoint_sha",
-                    }
-                    for phase_field, evidence_field in direct_bindings.items():
-                        if (
-                            phase_field in phase_result
-                            and evidence_field in evidence
-                            and phase_result[phase_field] != evidence[evidence_field]
-                        ):
-                            checkpoint_evidence_errors.append(
-                                f"pr_marker_plan.markers[{index}] phase_results {phase_field} does not match checkpoint evidence"
-                            )
-                    verification = evidence.get("verification")
-                    if isinstance(verification, dict):
-                        for gate_id, result in verification.items():
-                            expected = result.get("evidence") if isinstance(result, dict) else result
-                            if gate_id in phase_result and phase_result[gate_id] != expected:
+                if (
+                    strict_contract
+                    and repo_root is not None
+                    and expected_head_commit is not None
+                    and isinstance(evidence_ref, str)
+                    and not isinstance(evidence, dict)
+                ):
+                    checkpoint_evidence_errors.append(
+                        f"pr_marker_plan.markers[{index}] checkpoint evidence must be a JSON object"
+                    )
+                if strict_contract and isinstance(evidence, dict):
+                    for phase_name, phase_result in phases_by_marker.get(marker_id, []):
+                        direct_bindings = {
+                            "capability_fixture_digest": "capability_fixture_digest",
+                            "treatment_fixture_digest": "treatment_fixture_digest",
+                            "replay_digest": "replay_digest",
+                            "implementation_commit": "implementation_checkpoint_sha",
+                            "checkpoint": "implementation_checkpoint_sha",
+                        }
+                        for phase_field, evidence_field in direct_bindings.items():
+                            if (
+                                phase_field in phase_result
+                                and evidence_field in evidence
+                                and phase_result[phase_field] != evidence[evidence_field]
+                            ):
                                 checkpoint_evidence_errors.append(
-                                    f"pr_marker_plan.markers[{index}] phase_results {gate_id} does not match checkpoint evidence"
+                                    f"pr_marker_plan.markers[{index}] phase_results[{phase_name}] {phase_field} does not match checkpoint evidence"
                                 )
+                        verification = evidence.get("verification")
+                        if isinstance(verification, dict):
+                            for gate_id, result in verification.items():
+                                expected = result.get("evidence") if isinstance(result, dict) else result
+                                if gate_id in phase_result and phase_result[gate_id] != expected:
+                                    checkpoint_evidence_errors.append(
+                                        f"pr_marker_plan.markers[{index}] phase_results[{phase_name}] {gate_id} does not match checkpoint evidence"
+                                    )
                 if checkpoint_status == "complete" and strict_contract and repo_root:
                     claimed_commit = checkpoint.get("commit_sha")
                     verification_report = _load_json_bytes(committed_verification_bytes)
@@ -1746,7 +1813,12 @@ def build_report(
 
     workflow_result = validate_workflow(workflow_text)
     state_result = validate_state(plan_steps)
-    projection_result = validate_projection_integrity(state_data, plan_steps, state)
+    projection_result = validate_projection_integrity(
+        state_data,
+        plan_steps,
+        state,
+        expected_head_commit=expected_head_commit,
+    )
     manifest_result = validate_changed_file_manifest(
         state_data,
         state,

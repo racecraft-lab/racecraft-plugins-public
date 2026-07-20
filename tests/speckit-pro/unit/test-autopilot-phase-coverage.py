@@ -154,7 +154,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         ]
         try:
             state = json.loads(state_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, RecursionError):
             state = {}
         expected_base = getattr(self, "_expected_manifest_base_commit", None)
         if state.get("changed_file_manifest") is not None and expected_base is not None:
@@ -332,6 +332,22 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         exit_code, report = self.run_validator(workflow_text(), state)
         self.assertEqual(exit_code, 1)
         self.assertEqual(len(report["projection_status_errors"]), 1)
+
+    def test_every_implementation_phase_requires_a_declared_marker_owner(self) -> None:
+        state = self.projected_state(
+            plan_status="pending",
+            phase_status="pending",
+            checkpoint={"status": "pending"},
+        )
+        state["phase_results"]["Phase 7: Implement - Integration and Polish"] = {
+            "status": "pending",
+        }
+        exit_code, report = self.run_validator(workflow_text(), state)
+        self.assertEqual(exit_code, 1)
+        self.assertIn(
+            "phase_results[Phase 7: Implement - Integration and Polish] must declare exactly one marker_id",
+            report["marker_plan_status_errors"],
+        )
 
     def test_complete_checkpoint_requires_terminal_evidence(self) -> None:
         state = self.projected_state(
@@ -1007,7 +1023,12 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                     "marker_id": "us1",
                     "focused_tests": "stale result",
                     "implementation_commit": "f" * 40,
-                }
+                },
+                "Phase 7: Implement - Integration and Polish": {
+                    "status": "pending",
+                    "marker_id": "us1",
+                    "focused_tests": "folded stale result",
+                },
             }
             checkpoint = state["pr_marker_plan"]["markers"][0]["implementation_checkpoint"]
             checkpoint["status"] = "pending"
@@ -1024,13 +1045,33 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
-                "pr_marker_plan.markers[0] phase_results focused_tests does not match checkpoint evidence",
+                f"pr_marker_plan.markers[0] phase_results[{phase_name}] focused_tests does not match checkpoint evidence",
                 report["checkpoint_evidence_errors"],
             )
             self.assertIn(
-                "pr_marker_plan.markers[0] phase_results implementation_commit does not match checkpoint evidence",
+                f"pr_marker_plan.markers[0] phase_results[{phase_name}] implementation_commit does not match checkpoint evidence",
                 report["checkpoint_evidence_errors"],
             )
+            self.assertIn(
+                "pr_marker_plan.markers[0] phase_results[Phase 7: Implement - Integration and Polish] focused_tests does not match checkpoint evidence",
+                report["checkpoint_evidence_errors"],
+            )
+            committed_evidence = evidence_path.read_bytes()
+            forged_evidence = json.loads(committed_evidence)
+            forged_evidence["verification"]["focused_tests"]["evidence"] = "stale result"
+            forged_evidence["implementation_checkpoint_sha"] = "f" * 40
+            evidence_path.write_text(json.dumps(forged_evidence), encoding="utf-8")
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "pr_marker_plan.markers[0] checkpoint evidence differs from the authorized PR head",
+                report["checkpoint_file_errors"],
+            )
+            self.assertIn(
+                f"pr_marker_plan.markers[0] phase_results[{phase_name}] focused_tests does not match checkpoint evidence",
+                report["checkpoint_evidence_errors"],
+            )
+            evidence_path.write_bytes(committed_evidence)
             state.pop("phase_results")
             checkpoint["status"] = "complete"
             state_path.write_text(json.dumps(state), encoding="utf-8")
@@ -1851,6 +1892,26 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 self.assertEqual(exit_code, 2)
                 self.assertEqual(report["status"], "input_error")
                 self.assertIn("duplicate JSON key", report["message"])
+
+    def test_non_finite_state_numbers_are_input_errors(self) -> None:
+        base = json.dumps(state_json())[:-1]
+        for constant in ("NaN", "Infinity", "-Infinity"):
+            with self.subTest(constant=constant):
+                exit_code, report = self.run_validator(
+                    workflow_text(), f'{base}, "task_ids": [{constant}]}}',
+                )
+                self.assertEqual(exit_code, 2)
+                self.assertEqual(report["status"], "input_error")
+                self.assertIn("non-finite JSON number", report["message"])
+
+    def test_excessively_nested_state_is_input_error(self) -> None:
+        nested = "[" * 4096 + "0" + "]" * 4096
+        exit_code, report = self.run_validator(
+            workflow_text(), f'{{"plan": {nested}}}',
+        )
+        self.assertEqual(exit_code, 2)
+        self.assertEqual(report["status"], "input_error")
+        self.assertIn("invalid state JSON", report["message"])
 
     def test_report_schema_allows_input_error_without_plan_fields(self) -> None:
         schema = json.loads(REPORT_SCHEMA.read_text(encoding="utf-8"))
