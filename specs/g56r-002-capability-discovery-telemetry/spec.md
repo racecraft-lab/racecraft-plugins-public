@@ -423,12 +423,12 @@ validate every fixture hash.
 
 ### Reviewability Notes *(if applicable)*
 
-- The capability adapter crossed the 400-LOC boundary during implementation.
-  A `typed_size_only` / `no_safe_boundary` exception is honored for T001-T015
-  because source refresh, raw-evidence retention, surface authority, tuple
-  decisions, and freeze validation form one integrity boundary. It grants no
-  correctness or safety exception and permits only reviewer-required integrity
-  remediation after the checkpoint.
+- The capability adapter crossed the 400-LOC boundary during implementation and
+  is now safely subdivided behind its stable public facade into focused source,
+  observation, matrix, private I/O, retention, freeze, contract, and CLI
+  modules. The facade exports exactly the supported public API and no private
+  trust primitives. Every capability module remains below 400 source lines, so T001-T015
+  no longer relies on a `typed_size_only` / `no_safe_boundary` exception.
 - The feature remains one guarded slice with three ordered review markers:
   source/surface freeze, telemetry/treatment contracts, and sanitized replay.
   Treatment and replay remain separate; any new capability feature growth or

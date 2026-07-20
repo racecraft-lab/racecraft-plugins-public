@@ -65,7 +65,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Tasks | `$speckit-tasks` | Complete | 39 TDD-first tasks; G5 passed |
 | Analyze | `$speckit-analyze` | Complete | Nine findings remediated; G6 passed |
 | Confidence Gate | G6.5 | Complete | Advisory score 0.99 passed the 0.90 threshold |
-| Implement | `$speckit-implement` | Complete | T001-T039 and all three immutable marker checkpoints are complete; exact-head review returned `NO FINDINGS` |
+| Implement | `$speckit-implement` | In Progress | T001-T039 are implemented; the restacked US3 head awaits full validation and exact-head review |
 | Post | Post-Implementation | Pending | Complete verification, reviewability, PR, remediation, and retrospective work |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -874,8 +874,8 @@ For every task:
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
 | 2 - Treatment contracts | Complete | 10 | 51/51 focused tests, 2821/2821 full suite, Windows-safe offline replay, and exact-head independent review returned `NO FINDINGS` |
-| 3 - Synthetic replay | Complete | 5 | Replay implementation, immutable checkpoint evidence, and exact-head independent review pass |
-| Polish and validation | Complete | 9 | T031-T039 pass, including the final reviewability and release-readiness gates |
+| 3 - Synthetic replay | In Progress | 5 | Restacked implementation passes 69/69 focused tests; full validation and exact-head review are pending |
+| Polish and validation | In Progress | 9 | T031-T039 remain implemented; restacked reference, manifest, release, and review gates are being refreshed |
 
 ### Capability Checkpoint Evidence
 
@@ -928,6 +928,10 @@ For every task:
 
 ### Synthetic Replay Checkpoint Evidence
 
+> The evidence below records the historical pre-restack checkpoint. The current
+> US3 head is review-pending until the refreshed full-suite, manifest,
+> release-readiness, and exact-head independent-review gates pass.
+
 - Reviewed remediation source head: `096605e6a4987c0f580c525bc377a68c438a9a22`
 - Exact reviewed PR head: `3d7bd9eff79a1889830c74b6bcd22ae8945098c0`
 - Capability fixture: `sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a`.
@@ -976,13 +980,13 @@ For every task:
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
 | 2 | `us2` | T016-T025 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `1190e3c1205744fd50afb37a12c0f9527ad5ee53` | Only T026-T030 replay growth remains authorized |
-| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Complete at reviewed head `3d7bd9eff79a1889830c74b6bcd22ae8945098c0`; immutable evidence commit `e258f189f6d004af25ba2f735408a455fe01aa44` | No correctness or safety exception remains |
+| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Review pending after restack; historical reviewed head `3d7bd9eff79a1889830c74b6bcd22ae8945098c0` and evidence commit `e258f189f6d004af25ba2f735408a455fe01aa44` retained | No correctness or safety exception remains |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
   lines; the current US2 marker is 4,214 / 3,843 across its two modules against
   the 400-LOC boundary at its immutable checkpoint. The current US3 remediation
-  is 4,935 / 4,454 across 23 focused modules with a 381-line maximum.
+  is 5,043 / 4,559 across 23 focused modules with a 381-line maximum.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.
 - PR mappings: Pending.

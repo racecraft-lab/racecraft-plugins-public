@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import sys
+
 from treatment_trace_bundle import *
 
 def validate_treatment_bundle(
@@ -90,7 +92,10 @@ def _replay_capability_authority_tuples(capability: object, source_tuples: list[
                 "source_refresh_digest": capability.digest(b"fixture-source-refresh"),
             }],
         })
-    return capability._AuthorityTupleSet(tuples)
+    contract = sys.modules.get("codex_capability_contract")
+    if contract is None:
+        raise RuntimeError("capability contract module was not loaded")
+    return contract._AuthorityTupleSet(tuples)
 
 
 def _evaluate_replay_capability_case(capability: object, case: dict, client_identity_id: str) -> None:

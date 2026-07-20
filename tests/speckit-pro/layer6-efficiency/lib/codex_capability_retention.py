@@ -108,6 +108,14 @@ def _delete_single_link_private_file(
             raise ValueError("deletion completion record changed after directory synchronization")
         return True
 
+    def durable_completion_survived_failure():
+        if not deletion_proved:
+            return False
+        try:
+            return completion_record_is_durable()
+        except (OSError, ValueError):
+            return False
+
     try:
         deletion_directory_descriptor = _private_directory_descriptor(
             deletion_directory, deletion_directory_identity,
@@ -183,7 +191,7 @@ def _delete_single_link_private_file(
         raise
     except OSError as error:
         if verified_payload is not None:
-            if deletion_proved and completion_record_is_durable():
+            if durable_completion_survived_failure():
                 return deletion_record_digest
             _write_private_bytes_at(
                 parent_descriptor, raw, filename, verified_payload,
@@ -195,7 +203,7 @@ def _delete_single_link_private_file(
         raise ValueError("expired raw evidence could not be deleted safely") from error
     except ValueError:
         if verified_payload is not None:
-            if deletion_proved and completion_record_is_durable():
+            if durable_completion_survived_failure():
                 return deletion_record_digest
             _write_private_bytes_at(
                 parent_descriptor, raw, filename, verified_payload,

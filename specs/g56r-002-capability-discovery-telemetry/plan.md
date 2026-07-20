@@ -109,7 +109,9 @@ couples independently reviewed markers is a new stop condition.
 
 ### Capability entry point and focused modules
 
-- `codex_capabilities.py` preserves the public import and CLI boundary.
+- `codex_capabilities.py` preserves the public import and CLI boundary through an
+  exact supported export set; private trust primitives remain available only
+  from their owning focused modules.
 - Contract, source, observation, and matrix modules validate `client_identity_id`, surface collection metadata, canonical
   model/effort normalization, hidden visibility, and disagreement records.
 - Private-I/O and retention modules revalidate current source-record digests, carry claim-scoped invalidations,
@@ -205,12 +207,14 @@ Repository tests must pass with the network disabled and no raw evidence store.
   into that store. Publication stages content-addressed retention records and
   makes them governing only by appending a receipt after the exact freeze bytes
   exist; failed-publication records cannot extend deletion. Deterministic
-  verification fails on missing or overdue bytes, and cleanup
-  appends and directory-fsyncs a content-addressed deletion record before
-  removing the raw bytes and directory-fsyncing the raw root. Registration and
-  cleanup share an atomic private-root lock, and destructive cleanup derives its
-  timestamp from current UTC. Append-only writes directory-fsync both final-name
-  publication and temporary-name removal; any alternate hard link blocks cleanup.
+  verification fails on missing or overdue bytes. Cleanup first persists a
+  content-addressed deletion intent, then unlinks the raw bytes through the
+  validated parent descriptor, proves zero links and the verified content
+  identity, directory-fsyncs the raw root, and only then persists the terminal
+  deletion completion record. Registration and cleanup share an atomic
+  private-root lock, and destructive cleanup derives its timestamp from current
+  UTC. Append-only writes directory-fsync both final-name publication and
+  temporary-name removal; any alternate hard link blocks cleanup.
 - Committed fixtures are deny-by-default sanitized, schema-allowlisted,
   canonical UTF-8 JSON with sorted keys and compact separators, and SHA-256
   bound to exact bytes by the adjacent out-of-band digest manifest.

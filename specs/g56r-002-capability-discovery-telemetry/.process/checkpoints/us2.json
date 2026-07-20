@@ -8,20 +8,65 @@
     "T021", "T022", "T023", "T024", "T025"
   ],
   "implementation_baseline_sha": "bbffc774c815594edc64cf412a2b5f91127ef213",
-  "implementation_checkpoint_sha": "1190e3c1205744fd50afb37a12c0f9527ad5ee53",
-  "superseded_checkpoint_sha": "c47c9d31fd1288e86f0707601078e4f03e2b12e5",
+  "implementation_checkpoint_sha": "42cdf743346c880c1b7e8cb172e842a82ab6f343",
+  "superseded_checkpoint_sha": "8a179bdbb6aef08849bbfc4ed07c547c26f8194a",
   "prior_candidate_freeze_id": "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03",
   "candidate_freeze_id": "sha256:dcf75cea52244ba175324d83fb021f70f96c64e1e82d963451e91da5127c40d6",
   "telemetry_profile_id": "sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb",
   "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
   "reviewability_measurements": {
-    "production_modules": 2,
-    "source_lines": 4214,
-    "nonblank_noncomment_lines": 3843,
+    "production_modules": 13,
+    "source_lines": 4409,
+    "nonblank_noncomment_lines": 3996,
+    "max_capability_module_source_lines": 363,
     "modules": {
       "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {
-        "source_lines": 2470,
-        "nonblank_noncomment_lines": 2243
+        "source_lines": 114,
+        "nonblank_noncomment_lines": 105
+      },
+      "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py": {
+        "source_lines": 112,
+        "nonblank_noncomment_lines": 105
+      },
+      "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py": {
+        "source_lines": 241,
+        "nonblank_noncomment_lines": 199
+      },
+      "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py": {
+        "source_lines": 314,
+        "nonblank_noncomment_lines": 287
+      },
+      "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py": {
+        "source_lines": 162,
+        "nonblank_noncomment_lines": 149
+      },
+      "tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py": {
+        "source_lines": 218,
+        "nonblank_noncomment_lines": 201
+      },
+      "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py": {
+        "source_lines": 350,
+        "nonblank_noncomment_lines": 307
+      },
+      "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {
+        "source_lines": 294,
+        "nonblank_noncomment_lines": 253
+      },
+      "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py": {
+        "source_lines": 15,
+        "nonblank_noncomment_lines": 10
+      },
+      "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {
+        "source_lines": 363,
+        "nonblank_noncomment_lines": 346
+      },
+      "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {
+        "source_lines": 269,
+        "nonblank_noncomment_lines": 238
+      },
+      "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {
+        "source_lines": 213,
+        "nonblank_noncomment_lines": 196
       },
       "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
         "source_lines": 1744,
@@ -30,7 +75,7 @@
     }
   },
   "verification": {
-    "focused_tests": "51/51 pass",
+    "focused_tests": "53/53 pass",
     "published_successor_validation": "actual artifact passes canonical treatment-aware validation",
     "json_schema_instance_validation": "pass with runtime parity corpus",
     "bounded_file_and_cli_isolation": "pass",
@@ -79,11 +124,18 @@
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass",
     "full_suite": "2821/2821 pass",
+    "capability_public_api_preserved": "pass",
+    "capability_safe_module_boundaries": "pass; 12 capability modules, maximum 363 source lines",
+    "completion_probe_failure_restoration": "pass",
+    "exact_public_facade_exports": "pass",
+    "private_trust_primitives_hidden": "pass",
     "independent_critical_high_review": "pass",
-    "independent_review_chat_id": "windows-telemetry-review-D88461"
+    "independent_review_chat_id": "audit-us2-remediation-F4E33F",
+    "independent_review_findings": []
   },
   "source_fingerprint_status": "current",
-  "tasks_sha": "sha256:dd9f8f33a70aac48cf73ddf058c6fc6a1d0e82422dabfd35611c2cff783ec5e4",
-  "completed_at": "2026-07-19T03:09:22Z",
+  "tasks_sha": "sha256:b5d612ef42a570443ee397da0bda8fa604fea586efd2b58c2197c51a49066446",
+  "implementation_completed_at": "2026-07-20T03:06:58Z",
+  "review_updated_at": "2026-07-20T03:50:24Z",
   "review_iteration_started_at": "2026-07-18T20:59:20Z"
 }

@@ -4,8 +4,8 @@
   "feature_dir": "specs/g56r-002-capability-discovery-telemetry",
   "changed_file_manifest": "specs/g56r-002-capability-discovery-telemetry/.process/changed-file-manifest.json",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-20T02:17:00Z",
-  "active_step": "Post: Doctor Extension Check",
+  "updated_at": "2026-07-20T04:07:50Z",
+  "active_step": "Phase 7: Validate Restacked Synthetic Replay",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
   "archive_sweep": {
@@ -348,38 +348,38 @@
       "completed_at": "2026-07-19T03:09:22Z"
     },
     "Phase 7: Implement - Synthetic Replay": {
-      "status": "completed",
+      "status": "pending",
       "tasks_completed": 5,
       "tasks_total": 5,
-      "focused_tests": "68/68 pass",
+      "focused_tests": "69/69 pass after restack",
       "privacy_scan": "10/10 pass",
-      "full_suite": "2839/2839 pass",
-      "docs_reference_check": "pass",
-      "independent_review": "pass: untitled-chat-A24ABC",
+      "full_suite": "pending after restack",
+      "docs_reference_check": "pending after regeneration",
+      "independent_review": "pending exact-head review after restack",
       "implementation_commit": "096605e6a4987c0f580c525bc377a68c438a9a22",
       "evidence_finalization_scope": "The following commit changes evidence metadata only; implementation and verification inputs remain those at implementation_commit.",
       "capability_fixture_digest": "sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a",
       "treatment_fixture_digest": "sha256:3983dc1d4efe42542ffe0cb72830c970d24cecf490ddfe0c93e24be749ffaa53",
       "replay_digest": "sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda",
       "marker_id": "us3",
-      "reviewability": "aggregate size-only block at 4,935 source / 4,454 nonblank non-comment lines across 23 safely subdivided modules; maximum module size is 381 lines",
+      "reviewability": "aggregate size-only block at 5,043 source / 4,559 nonblank non-comment lines across 23 safely subdivided modules; maximum module size is 381 lines",
       "checkpoint": "3d7bd9eff79a1889830c74b6bcd22ae8945098c0",
       "checkpoint_evidence_commit": "e258f189f6d004af25ba2f735408a455fe01aa44",
       "completed_at": "2026-07-20T02:15:18Z"
     },
     "Phase 7: Implement - Integration and Polish": {
-      "status": "completed",
+      "status": "pending",
       "tasks_completed": 9,
       "tasks_total": 9,
       "completed_task_ids": ["T031", "T032", "T033", "T034", "T035", "T036", "T037", "T038", "T039"],
       "pending_task_ids": [],
-      "focused_tests": "68/68 pass",
+      "focused_tests": "69/69 pass after restack",
       "privacy_scan": "10/10 pass",
-      "full_suite": "2839/2839 pass",
-      "docs_reference_check": "pass",
+      "full_suite": "pending after restack",
+      "docs_reference_check": "pending after regeneration",
       "release_readiness_title_gate": "pass",
-      "changed_file_manifest": "78/78 exact",
-      "independent_review": "pass: untitled-chat-A24ABC",
+      "changed_file_manifest": "pending restacked base-to-head refresh",
+      "independent_review": "pending exact-head review after restack",
       "completed_at": "2026-07-20T02:15:18Z"
     }
   },
@@ -395,7 +395,7 @@
     "schema_version": "pr-marker-plan.v2",
     "kind": "pr_marker_plan",
     "feature_id": "G56R-002",
-    "status": "emission_ready",
+    "status": "checkpointing",
     "source_fingerprint": {
       "feature_spec_sha": "sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56",
       "plan_declared_scope_sha": "sha256:14ba3fca340c75af86e370254e0c3fbc72f6615daad3c5ee550dc1b21f168cf4",
@@ -406,7 +406,7 @@
     },
     "markers": [
       {
-        "id": "us1",
+      "id": "us1",
         "review_order": 1,
         "kind": "user_story",
         "parent_marker_id": null,
@@ -564,7 +564,7 @@
         ]
       },
       {
-        "id": "us3",
+      "id": "us3",
         "review_order": 3,
         "kind": "user_story",
         "parent_marker_id": null,
@@ -685,7 +685,7 @@
           }
         },
         "implementation_checkpoint": {
-          "status": "complete",
+          "status": "pending",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3.json",
           "checkpoint_evidence_sha": "sha256:aa8641f03e4af3a989876f0c9319473d4865ad8cb9716b2404cc91d513d90ac1",
           "checkpoint_evidence_commit_sha": "e258f189f6d004af25ba2f735408a455fe01aa44",
@@ -694,13 +694,13 @@
           "head_sha": "3d7bd9eff79a1889830c74b6bcd22ae8945098c0",
           "completed_at": "2026-07-20T02:15:18Z",
           "completed_task_ids": ["T026", "T027", "T028", "T029", "T030", "T031", "T032", "T033", "T034", "T035", "T036", "T037", "T038", "T039"],
-          "summary": "Synthetic replay, folded integration work, reviewability, release readiness, and exact-head independent review completed.",
+          "summary": "Historical pre-restack checkpoint retained; current restacked head awaits full validation and exact-head independent review.",
           "validation": [
             "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
             "python3 tests/speckit-pro/unit/test-reviewability-marker-guidance.py",
-            "python3 -u tests/speckit-pro/run-all.py",
-            "release-readiness title and 78-file manifest gates",
-            "RepoPrompt CE review untitled-chat-A24ABC: NO FINDINGS"
+            "python3 -u tests/speckit-pro/run-all.py (pending after restack)",
+            "release-readiness title and changed-file manifest gates (pending after restack)",
+            "RepoPrompt CE exact-head review (pending after restack)"
           ],
           "freshness": {
             "source_fingerprint_contract": "marker-task-lines.v2",
@@ -719,7 +719,7 @@
             "severity": "warning",
             "message": "US3 exceeds 400 aggregate reviewable LOC and is safely subdivided into focused modules below 400 source lines.",
             "source": "synthetic-replay-reviewability",
-            "details": {"marker_id": "us3", "actual_source_lines": 4935, "actual_nonblank_noncomment_lines": 4454, "production_modules": 23, "max_module_source_lines": 381}
+            "details": {"marker_id": "us3", "actual_source_lines": 5043, "actual_nonblank_noncomment_lines": 4559, "production_modules": 23, "max_module_source_lines": 381}
           }
         ]
       }
@@ -741,7 +741,7 @@
       }
     ],
     "created_at": "2026-07-17T04:50:02Z",
-    "updated_at": "2026-07-20T02:17:00Z"
+    "updated_at": "2026-07-20T04:07:50Z"
   },
   "layer_plan": {
     "status": "skipped",
