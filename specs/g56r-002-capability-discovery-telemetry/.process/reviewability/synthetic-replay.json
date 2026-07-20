@@ -5,9 +5,9 @@
   "status": "block",
   "mode": "implementation",
   "scope": "T026-T030 deterministic synthetic replay",
-  "head_sha": "fb038346894260d1b3ceeaa6cd1966e4435bdb5a",
+  "head_sha": "043f2d2e2dae5612ba162dffa6876c7b35a95888",
   "head_scope": "current_remediation_source",
-  "current_restack_review_status": "live-range-review-9FBA02 second P1 findings at 3e4b13b remediated at fb038346; exact live-head re-review pending",
+  "current_restack_review_status": "live-range-review-9FBA02 third findings at 91a66e04 remediated at 043f2d2e; exact live-head re-review pending",
   "reason_class": "aggregate_size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
@@ -21,7 +21,7 @@
   },
   "primary_surface": "harness/adapter",
   "correctness_checks": {
-    "focused_tests": "82/82 pass; validator 29/29 pass; contract parity 71/71 pass after live-range remediation",
+    "focused_tests": "82/82 pass; validator 32/32 pass; contract parity 71/71 pass after live-range remediation",
     "two_pass_byte_equality": "pass",
     "raw_fixture_digest_validation": "pass",
     "canonical_fixture_serialization": "pass",
@@ -32,8 +32,8 @@
     "declared_claim_exactness": "pass",
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass after restack",
-    "full_suite": "2845/2845 pass after live-range remediation",
-    "independent_review": "live-range-review-9FBA02 second P1 findings at 3e4b13b remediated at fb038346; exact live-head re-review pending"
+    "full_suite": "2848/2848 pass after live-range remediation",
+    "independent_review": "live-range-review-9FBA02 third findings at 91a66e04 remediated at 043f2d2e; exact live-head re-review pending"
   },
   "decomposition": {
     "status": "complete",
