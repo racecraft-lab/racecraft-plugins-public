@@ -550,7 +550,13 @@ def _load_json_bytes(value: bytes | None) -> dict[str, Any] | None:
     return parsed if isinstance(parsed, dict) else None
 
 
-def validate_changed_file_manifest(state: dict[str, Any], state_path: Path) -> dict[str, list[str]]:
+def validate_changed_file_manifest(
+    state: dict[str, Any],
+    state_path: Path,
+    *,
+    expected_base_commit: str | None = None,
+    expected_head_commit: str | None = None,
+) -> dict[str, list[str]]:
     marker_plan = state.get("pr_marker_plan")
     strict_contract = (
         isinstance(marker_plan, dict)
@@ -612,15 +618,46 @@ def validate_changed_file_manifest(state: dict[str, Any], state_path: Path) -> d
         return {"changed_file_manifest_errors": ["changed-file manifest files must be an array"]}
     base_errors: list[str] = []
     if strict_contract:
+        if not isinstance(expected_base_commit, str) or not re.fullmatch(
+            r"[0-9a-f]{40}", expected_base_commit
+        ):
+            base_errors.append(
+                "pr-marker-plan.v2 changed-file manifest requires external expected_base_commit authority"
+            )
+        elif base_commit != expected_base_commit:
+            base_errors.append(
+                "changed-file manifest base_commit does not match external PR base authority"
+            )
+        if not isinstance(expected_head_commit, str) or not re.fullmatch(
+            r"[0-9a-f]{40}", expected_head_commit
+        ):
+            base_errors.append(
+                "pr-marker-plan.v2 changed-file manifest requires external expected_head_commit authority"
+            )
         declared_base = state.get("changed_file_manifest_base_commit")
         if not isinstance(declared_base, str) or not re.fullmatch(r"[0-9a-f]{40}", declared_base):
             base_errors.append("pr-marker-plan.v2 requires changed_file_manifest_base_commit")
         elif declared_base != base_commit:
             base_errors.append("changed-file manifest base_commit does not match state authority")
+    comparison_commit = expected_head_commit if strict_contract else "HEAD"
+    resolved_head = subprocess.run(
+        ["git", "-C", str(repo_root), "rev-parse", "--verify", "HEAD^{commit}"],
+        text=True,
+        capture_output=True,
+        shell=False,
+        check=False,
+    )
+    current_head = resolved_head.stdout.strip() if resolved_head.returncode == 0 else None
+    if strict_contract and current_head != expected_head_commit:
+        base_errors.append("repository HEAD does not match external PR head authority")
     if not _git_commit_exists(repo_root, base_commit):
         base_errors.append("changed-file manifest base_commit is not an existing commit")
-    elif not _git_commit_is_ancestor_of_head(repo_root, base_commit):
-        base_errors.append("changed-file manifest base_commit is not an ancestor of HEAD")
+    elif not isinstance(comparison_commit, str) or not _git_commit_exists(
+        repo_root, comparison_commit
+    ):
+        base_errors.append("external PR head authority is not an existing commit")
+    elif not _git_commit_is_ancestor(repo_root, base_commit, comparison_commit):
+        base_errors.append("changed-file manifest base_commit is not an ancestor of the authorized head")
     if base_errors:
         return {"changed_file_manifest_errors": base_errors}
 
@@ -674,7 +711,11 @@ def validate_changed_file_manifest(state: dict[str, Any], state_path: Path) -> d
         return {"changed_file_manifest_errors": structural_errors}
 
     completed = subprocess.run(
-        ["git", "-C", str(repo_root), "diff", "--name-status", f"{base_commit}..HEAD"],
+        [
+            "git", "-C", str(repo_root), "-c", "diff.renames=true", "diff",
+            "--no-ext-diff", "--find-renames=50%", "--name-status",
+            f"{base_commit}..{comparison_commit}",
+        ],
         text=True,
         capture_output=True,
         shell=False,
@@ -694,7 +735,7 @@ def validate_changed_file_manifest(state: dict[str, Any], state_path: Path) -> d
         else:
             return {"changed_file_manifest_errors": [f"unsupported git diff record: {line}"]}
     errors = [
-        f"declared changed-file manifest does not match {base_commit}..HEAD"
+        f"declared changed-file manifest does not match {base_commit}..{comparison_commit}"
     ] if declared != observed else []
 
     expected_manifest_sha = _sha256_bytes(manifest_path.read_bytes())
@@ -1478,7 +1519,13 @@ def validate_projection_integrity(
     }
 
 
-def build_report(workflow: Path, state: Path) -> dict[str, Any]:
+def build_report(
+    workflow: Path,
+    state: Path,
+    *,
+    expected_base_commit: str | None = None,
+    expected_head_commit: str | None = None,
+) -> dict[str, Any]:
     workflow_text = read_text(workflow)
     state_data = load_state(state)
     plan_steps = extract_plan_steps(state_data)
@@ -1486,7 +1533,12 @@ def build_report(workflow: Path, state: Path) -> dict[str, Any]:
     workflow_result = validate_workflow(workflow_text)
     state_result = validate_state(plan_steps)
     projection_result = validate_projection_integrity(state_data, plan_steps, state)
-    manifest_result = validate_changed_file_manifest(state_data, state)
+    manifest_result = validate_changed_file_manifest(
+        state_data,
+        state,
+        expected_base_commit=expected_base_commit,
+        expected_head_commit=expected_head_commit,
+    )
     problems = {**workflow_result, **state_result, **projection_result, **manifest_result}
     passed = all(not values for values in problems.values())
 
@@ -1503,10 +1555,23 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workflow", required=True, type=Path, help="Autopilot workflow markdown file")
     parser.add_argument("--state", required=True, type=Path, help="autopilot-state.json file")
+    parser.add_argument(
+        "--expected-base-commit",
+        help="live PR baseRefOid authority required when pr-marker-plan.v2 uses a changed-file manifest",
+    )
+    parser.add_argument(
+        "--expected-head-commit",
+        help="live PR headRefOid authority required when pr-marker-plan.v2 uses a changed-file manifest",
+    )
     args = parser.parse_args(argv)
 
     try:
-        report = build_report(args.workflow, args.state)
+        report = build_report(
+            args.workflow,
+            args.state,
+            expected_base_commit=args.expected_base_commit,
+            expected_head_commit=args.expected_head_commit,
+        )
     except ValidationError as exc:
         print(json.dumps({"status": "input_error", "code": exc.code, "message": str(exc)}, sort_keys=True))
         return 2

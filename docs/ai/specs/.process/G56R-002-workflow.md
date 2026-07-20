@@ -875,7 +875,7 @@ For every task:
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
 | 2 - Treatment contracts | Complete | 10 | 51/51 focused tests, 2821/2821 full suite, Windows-safe offline replay, and exact-head independent review returned `NO FINDINGS` |
 | 3 - Synthetic replay | In Progress | 5 | Review-authority remediation passes 75/75 telemetry tests, 28/28 validator tests, 71/71 contract tests, and the 2844/2844 full suite; exact-head re-review is pending |
-| Polish and validation | In Progress | 9 | T031-T039 remain implemented; reference and generated artifacts are current; the 92/92 manifest and live release-title gates pass |
+| Polish and validation | In Progress | 9 | T031-T039 remain implemented; reference and generated artifacts are current; the 101/101 manifest and live release-title gates pass |
 
 ### Capability Checkpoint Evidence
 
@@ -983,7 +983,7 @@ For every task:
   change implementation or verification inputs.
 - Folded polish: T031-T039 are complete. The final reviewability, title, and
   Historical 78-file base-to-head manifest gates passed before restack; the
-  current 92/92 manifest passes exact current-head validation.
+  current 101/101 manifest passes exact current-head validation.
 
 ## PR Marker Plan Evidence
 

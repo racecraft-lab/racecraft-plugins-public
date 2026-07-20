@@ -24,7 +24,7 @@
     "eight_class_semantic_binding": "pass",
     "independent_critical_high_review": "exact-range-review-905F43 verification-authority findings remediated; exact-head re-review pending",
     "release_readiness_title_gate": "pass",
-    "changed_file_manifest": "92/92 exact"
+    "changed_file_manifest": "101/101 exact"
   },
   "source_fingerprint_contract": "marker-task-lines.v2",
   "source_fingerprint_status": "current_marker_scope",

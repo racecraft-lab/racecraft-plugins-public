@@ -144,8 +144,36 @@ def state_json(*, include_confidence: bool = True, include_post: bool = True, co
 
 class AutopilotPhaseCoverageTests(unittest.TestCase):
     def run_validator_paths(self, workflow_path: Path, state_path: Path) -> tuple[int, dict[str, object]]:
+        command = [
+            sys.executable,
+            str(VALIDATOR),
+            "--workflow",
+            str(workflow_path),
+            "--state",
+            str(state_path),
+        ]
+        try:
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            state = {}
+        expected_base = getattr(self, "_expected_manifest_base_commit", None)
+        if state.get("changed_file_manifest") is not None and expected_base is not None:
+            expected_head = subprocess.run(
+                ["git", "-C", str(state_path.parent), "rev-parse", "HEAD"],
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout.strip()
+            command.extend(
+                [
+                    "--expected-base-commit",
+                    expected_base,
+                    "--expected-head-commit",
+                    expected_head,
+                ]
+            )
         completed = subprocess.run(
-            [sys.executable, str(VALIDATOR), "--workflow", str(workflow_path), "--state", str(state_path)],
+            command,
             text=True,
             capture_output=True,
             shell=False,
@@ -617,8 +645,13 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 capture_output=True,
                 check=True,
             ).stdout.strip()
+            self._expected_manifest_base_commit = base_commit
             tracked_path.write_text("changed\n", encoding="utf-8")
             rename_source_path.rename(rename_target_path)
+            subprocess.run(
+                ["git", "-C", str(root), "config", "diff.renames", "false"],
+                check=True,
+            )
             state["changed_file_manifest"] = "changed-file-manifest.json"
             state["changed_file_manifest_base_commit"] = base_commit
             task_bytes = tasks_path.read_bytes()
@@ -866,6 +899,58 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             self.assertEqual(exit_code, 0, report)
             self.assertEqual(report["changed_file_manifest_errors"], [])
             self.assertEqual(report["checkpoint_source_fingerprint_errors"], [])
+
+            missing_authority = subprocess.run(
+                [
+                    sys.executable,
+                    str(VALIDATOR),
+                    "--workflow",
+                    str(workflow_path),
+                    "--state",
+                    str(state_path),
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            missing_authority_report = json.loads(missing_authority.stdout)
+            self.assertEqual(missing_authority.returncode, 1)
+            self.assertTrue(
+                any(
+                    "requires external expected_base_commit authority" in error
+                    for error in missing_authority_report["changed_file_manifest_errors"]
+                )
+            )
+            self.assertTrue(
+                any(
+                    "requires external expected_head_commit authority" in error
+                    for error in missing_authority_report["changed_file_manifest_errors"]
+                )
+            )
+
+            stale_head_authority = subprocess.run(
+                [
+                    sys.executable,
+                    str(VALIDATOR),
+                    "--workflow",
+                    str(workflow_path),
+                    "--state",
+                    str(state_path),
+                    "--expected-base-commit",
+                    base_commit,
+                    "--expected-head-commit",
+                    base_commit,
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            stale_head_report = json.loads(stale_head_authority.stdout)
+            self.assertEqual(stale_head_authority.returncode, 1)
+            self.assertIn(
+                "repository HEAD does not match external PR head authority",
+                stale_head_report["changed_file_manifest_errors"],
+            )
 
             manifest_authority_cases = (
                 ("schema_version", "changed-file-manifest.v999", "schema constant"),
@@ -1208,7 +1293,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
-                "changed-file manifest base_commit is not an ancestor of HEAD",
+                "changed-file manifest base_commit does not match external PR base authority",
                 report["changed_file_manifest_errors"],
             )
 
@@ -1306,9 +1391,12 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
-            self.assertIn(
-                f"declared changed-file manifest does not match {base_commit}..HEAD",
-                report["changed_file_manifest_errors"],
+            self.assertTrue(
+                any(
+                    error.startswith("declared changed-file manifest does not match ")
+                    for error in report["changed_file_manifest_errors"]
+                ),
+                report,
             )
             self.assertIn(
                 "pr_marker_plan marker us1 operation/source for tracked.txt does not match changed-file manifest",

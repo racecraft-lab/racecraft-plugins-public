@@ -391,7 +391,7 @@
       "full_suite": "2844/2844 pass after review-authority remediation",
       "docs_reference_check": "pass after restack",
       "release_readiness_title_gate": "pass",
-      "changed_file_manifest": "92/92 exact after review-authority remediation",
+      "changed_file_manifest": "101/101 exact after PR-authority remediation",
       "independent_review": "exact-range-review-905F43 verification-authority findings remediated; exact-head re-review pending",
       "independent_review_chat_id": "exact-range-review-905F43",
       "independent_review_findings": [
@@ -409,7 +409,7 @@
     "tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
     "reviewability_sha": "sha256:87489b7c3f181aefc8a53fa14ecd7ba3a9624196d5681c8de9735612d30f7482",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
-    "changed_file_manifest_sha": "sha256:2ed599a68d1dc443a90c5d7aad967a73ecef9f78fbe35a8fc446dc2e09f07681"
+    "changed_file_manifest_sha": "sha256:e7baae5f70c787494fa355cb55a854489bce65e7c0b5498e57c5a81e7cc9d87d"
   },
   "pr_marker_plan": {
     "schema_version": "pr-marker-plan.v2",
@@ -422,7 +422,7 @@
       "tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
       "reviewability_sha": "sha256:87489b7c3f181aefc8a53fa14ecd7ba3a9624196d5681c8de9735612d30f7482",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
-      "changed_file_manifest_sha": "sha256:2ed599a68d1dc443a90c5d7aad967a73ecef9f78fbe35a8fc446dc2e09f07681"
+      "changed_file_manifest_sha": "sha256:e7baae5f70c787494fa355cb55a854489bce65e7c0b5498e57c5a81e7cc9d87d"
     },
     "markers": [
       {
@@ -711,6 +711,10 @@
             "path": "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
           },
           {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
             "operation": "NEW",
             "path": "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json"
           },
@@ -721,6 +725,14 @@
           {
             "operation": "NEW",
             "path": "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/verification-report.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution-codex.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/task-list-canonical-codex.md"
           },
           {
             "operation": "MODIFIED",
@@ -761,6 +773,18 @@
           {
             "operation": "MODIFIED",
             "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md"
           },
           {
             "operation": "NEW",
@@ -1019,6 +1043,10 @@
             "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
           },
           {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
             "operation": "NEW",
             "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json"
           },
@@ -1029,6 +1057,14 @@
           {
             "operation": "NEW",
             "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/verification-report.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution-codex.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/references/task-list-canonical-codex.md"
           },
           {
             "operation": "MODIFIED",
