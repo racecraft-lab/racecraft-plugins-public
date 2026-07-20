@@ -602,6 +602,43 @@ class CapabilityContractTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             capabilities.validate_surface_matrix(duplicate_surface)
 
+    def test_treatment_observation_schema_binds_every_field_to_its_value_shape(self) -> None:
+        schema = load_json(
+            ROOT
+            / "specs/g56r-002-capability-discovery-telemetry/contracts/treatment-record.schema.json"
+        )
+        field_schema = schema["$defs"]["telemetryFieldPath"]
+        variants = schema["$defs"]["observationTypedValue"]["oneOf"]
+        owned_fields = []
+        for variant in variants:
+            selector = variant["properties"]["field_path"]
+            owned_fields.extend(
+                selector["enum"] if "enum" in selector else [selector["const"]]
+            )
+        self.assertEqual(set(owned_fields), set(field_schema["enum"]))
+        self.assertEqual(len(owned_fields), len(set(owned_fields)))
+
+        for field_path, value in (
+            ("treatment.sandbox", False),
+            ("resources.wall_time_ms", -1),
+            ("reroute.events", ["arbitrary"]),
+        ):
+            with self.subTest(field_path=field_path):
+                observation = {
+                    "field_path": field_path,
+                    "observation_state": "observed_value",
+                    "value": value,
+                    "evidence_ref": "fixture://trace/typed-observation",
+                    "captured_at": "2026-07-20T00:00:00Z",
+                }
+                with self.assertRaisesRegex(ValueError, "schema shape"):
+                    treatment_json_schema._validate_schema_instance(
+                        observation,
+                        schema["$defs"]["observationValue"],
+                        schema,
+                        "observation",
+                    )
+
     def authority_tuples(self, case: dict) -> list[dict]:
         tuples = copy.deepcopy(case["source_tuples"])
         for item in tuples:
@@ -2104,7 +2141,7 @@ class TreatmentContractTests(unittest.TestCase):
         forged = copy.deepcopy(self.bundle)
         obs = next(item for item in forged["treatment_traces"][0]["observations"] if item["field_path"] == "terminal.acceptance")
         obs["value"] = False
-        with self.assertRaisesRegex(ValueError, "wrong treatment schema type"):
+        with self.assertRaisesRegex(ValueError, "does not match exactly one treatment schema shape"):
             treatment.validate_treatment_bundle(self.rebound(forged))
         duplicate = copy.deepcopy(self.bundle)
         duplicate["telemetry_profile"].append(copy.deepcopy(duplicate["telemetry_profile"][0]))
